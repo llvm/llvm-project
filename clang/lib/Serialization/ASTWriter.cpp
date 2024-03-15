@@ -4623,10 +4623,12 @@ ASTWriter::ASTWriter(llvm::BitstreamWriter &Stream,
                      SmallVectorImpl<char> &Buffer,
                      InMemoryModuleCache &ModuleCache,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-                     bool IncludeTimestamps, bool BuildingImplicitModule)
+                     bool IncludeTimestamps, bool BuildingImplicitModule,
+                     bool GeneratingReducedBMI)
     : Stream(Stream), Buffer(Buffer), ModuleCache(ModuleCache),
       IncludeTimestamps(IncludeTimestamps),
-      BuildingImplicitModule(BuildingImplicitModule) {
+      BuildingImplicitModule(BuildingImplicitModule),
+      GeneratingReducedBMI(GeneratingReducedBMI) {
   for (const auto &Ext : Extensions) {
     if (auto Writer = Ext->createExtensionWriter(*this))
       ModuleFileExtensionWriters.push_back(std::move(Writer));
@@ -5457,18 +5459,20 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
 
     // Add a trailing update record, if any. These must go last because we
     // lazily load their attached statement.
-    if (HasUpdatedBody) {
-      const auto *Def = cast<FunctionDecl>(D);
-      Record.push_back(UPD_CXX_ADDED_FUNCTION_DEFINITION);
-      Record.push_back(Def->isInlined());
-      Record.AddSourceLocation(Def->getInnerLocStart());
-      Record.AddFunctionDefinition(Def);
-    } else if (HasAddedVarDefinition) {
-      const auto *VD = cast<VarDecl>(D);
-      Record.push_back(UPD_CXX_ADDED_VAR_DEFINITION);
-      Record.push_back(VD->isInline());
-      Record.push_back(VD->isInlineSpecified());
-      Record.AddVarDeclInit(VD);
+    if (!GeneratingReducedBMI || !CanElideDeclDef(D)) {
+      if (HasUpdatedBody) {
+        const auto *Def = cast<FunctionDecl>(D);
+        Record.push_back(UPD_CXX_ADDED_FUNCTION_DEFINITION);
+        Record.push_back(Def->isInlined());
+        Record.AddSourceLocation(Def->getInnerLocStart());
+        Record.AddFunctionDefinition(Def);
+      } else if (HasAddedVarDefinition) {
+        const auto *VD = cast<VarDecl>(D);
+        Record.push_back(UPD_CXX_ADDED_VAR_DEFINITION);
+        Record.push_back(VD->isInline());
+        Record.push_back(VD->isInlineSpecified());
+        Record.AddVarDeclInit(VD);
+      }
     }
 
     OffsetsRecord.push_back(GetDeclRef(D));
@@ -6056,6 +6060,9 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   BitsPacker DefinitionBits;
 
+  bool ShouldSkipCheckingODR = D->shouldSkipCheckingODR();
+  DefinitionBits.addBit(ShouldSkipCheckingODR);
+
 #define FIELD(Name, Width, Merge)                                              \
   if (!DefinitionBits.canWriteNextNBits(Width)) {                              \
     Record->push_back(DefinitionBits);                                         \
@@ -6069,11 +6076,10 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
   Record->push_back(DefinitionBits);
 
   // We only perform ODR checks for decls not in GMF.
-  if (!shouldSkipCheckingODR(D)) {
+  if (!ShouldSkipCheckingODR)
     // getODRHash will compute the ODRHash if it has not been previously
     // computed.
     Record->push_back(D->getODRHash());
-  }
 
   bool ModulesDebugInfo =
       Writer->Context->getLangOpts().ModulesDebugInfo && !D->isDependentType();

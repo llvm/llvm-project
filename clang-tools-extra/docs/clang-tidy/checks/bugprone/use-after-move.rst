@@ -177,6 +177,18 @@ When analyzing the order in which moves, uses and reinitializations happen (see
 section `Unsequenced moves, uses, and reinitializations`_), the move is assumed
 to occur in whichever function the result of the ``std::move`` is passed to.
 
+The check also handles perfect-forwarding with ``std::forward`` so the
+following code will also trigger a use-after-move warning.
+
+.. code-block:: c++
+
+  void consume(int);
+
+  void f(int&& i) {
+    consume(std::forward<int>(i));
+    consume(std::forward<int>(i)); // use-after-move
+  }
+
 Use
 ---
 

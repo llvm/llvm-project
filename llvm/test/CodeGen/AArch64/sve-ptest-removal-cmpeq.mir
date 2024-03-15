@@ -174,7 +174,7 @@ body:             |
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
     %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
-    %3:ppr = PTRUE_B 31
+    %3:ppr = PTRUE_B 31, implicit $vg
     PTEST_PP killed %3, killed %2, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
@@ -409,14 +409,14 @@ body:             |
 
     ; CHECK-LABEL: name: cmpeq_imm_nxv16i8_ptest_not_all_active
     ; CHECK: %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
-    ; CHECK-NEXT: %3:ppr = PTRUE_B 0
+    ; CHECK-NEXT: %3:ppr = PTRUE_B 0, implicit $vg
     ; CHECK-NEXT: PTEST_PP killed %3, killed %2, implicit-def $nzcv
     ; CHECK-NEXT: %4:gpr32 = COPY $wzr
     ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
     %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
-    %3:ppr = PTRUE_B 0
+    %3:ppr = PTRUE_B 0, implicit $vg
     PTEST_PP killed %3, killed %2, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
@@ -446,14 +446,14 @@ body:             |
 
     ; CHECK-LABEL: name: cmpeq_imm_nxv16i8_ptest_of_halfs
     ; CHECK: %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
-    ; CHECK-NEXT: %3:ppr = PTRUE_H 31
+    ; CHECK-NEXT: %3:ppr = PTRUE_H 31, implicit $vg
     ; CHECK-NEXT: PTEST_PP killed %3, killed %2, implicit-def $nzcv
     ; CHECK-NEXT: %4:gpr32 = COPY $wzr
     ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
     %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
-    %3:ppr = PTRUE_H 31
+    %3:ppr = PTRUE_H 31, implicit $vg
     PTEST_PP killed %3, killed %2, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv

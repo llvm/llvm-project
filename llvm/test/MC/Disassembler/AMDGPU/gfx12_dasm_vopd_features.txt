@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX12 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX12 %s
 
 #===------------------------------------------------------------------------===#
 # Check instructions with several literals

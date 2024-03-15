@@ -190,18 +190,7 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
   clearList(PendingRelocations);
 }
 
-BinarySection::~BinarySection() {
-  if (isReordered()) {
-    delete[] getData();
-    return;
-  }
-
-  if (!isAllocatable() && !hasValidSectionID() &&
-      (!hasSectionRef() ||
-       OutputContents.data() != getContentsOrQuit(Section).data())) {
-    delete[] getOutputData();
-  }
-}
+BinarySection::~BinarySection() { updateContents(nullptr, 0); }
 
 void BinarySection::clearRelocations() { clearList(Relocations); }
 

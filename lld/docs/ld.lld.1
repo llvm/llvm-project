@@ -164,6 +164,10 @@ to set the compression level to 6.
 The compression level is 5.
 .El
 .Pp
+.It Fl -compress-sections Ns = Ns Ar section-glob=[none|zlib|zstd]
+Compress output sections that match the glob and do not have the SHF_ALLOC flag.
+This is like a generalized
+.Cm --compress-debug-sections.
 .It Fl -cref
 Output cross reference table. If
 .Fl Map
@@ -790,6 +794,9 @@ Set the
 flag to indicate to the runtime linker that the object is an interposer.
 During symbol resolution interposers are searched after the application
 but before other dependencies.
+.Pp
+.It Cm lrodata-after-bss
+Place .lrodata after .bss.
 .Pp
 .It Cm muldefs
 Do not error if a symbol is defined multiple times.

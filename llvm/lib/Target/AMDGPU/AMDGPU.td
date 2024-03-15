@@ -9,6 +9,7 @@
 include "llvm/TableGen/SearchableTable.td"
 include "llvm/Target/Target.td"
 include "AMDGPUFeatures.td"
+include "AMDGPUPredicateControl.td"
 
 def p0 : PtrValueType<i64, 0>;
 def p1 : PtrValueType<i64, 1>;
@@ -647,6 +648,12 @@ def FeatureDot10Insts : SubtargetFeature<"dot10-insts",
   "HasDot10Insts",
   "true",
   "Has v_dot2_f32_f16 instruction"
+>;
+
+def FeatureDot11Insts : SubtargetFeature<"dot11-insts",
+  "HasDot11Insts",
+  "true",
+  "Has v_dot4_f32_fp8_fp8, v_dot4_f32_fp8_bf8, v_dot4_f32_bf8_fp8, v_dot4_f32_bf8_bf8 instructions"
 >;
 
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
@@ -1520,6 +1527,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDot8Insts,
    FeatureDot9Insts,
    FeatureDot10Insts,
+   FeatureDot11Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
    FeatureWavefrontSize32,
@@ -1873,6 +1881,12 @@ def D16PreservesUnusedBits :
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 
+def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
+
+def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts)>;
+
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
@@ -1889,16 +1903,16 @@ def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
 
 def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
-def NotHasTrue16BitInsts : Predicate<"!Subtarget->hasTrue16BitInsts()">;
+def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">;
 
 // Control use of True16 instructions. The real True16 instructions are
 // True16 instructions as they are defined in the ISA. Fake True16
 // instructions have the same encoding as real ones but syntactically
 // only allow 32-bit registers in operands and use low halves thereof.
-def UseRealTrue16Insts : Predicate<"Subtarget->useRealTrue16Insts()">,
+def UseRealTrue16Insts : True16PredicateClass<"Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
-def UseFakeTrue16Insts : Predicate<"Subtarget->hasTrue16BitInsts() && "
-                                   "!Subtarget->useRealTrue16Insts()">;
+def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
+                                              "!Subtarget->useRealTrue16Insts()">;
 
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
@@ -2021,6 +2035,9 @@ def HasDot9Insts : Predicate<"Subtarget->hasDot9Insts()">,
 
 def HasDot10Insts : Predicate<"Subtarget->hasDot10Insts()">,
   AssemblerPredicate<(all_of FeatureDot10Insts)>;
+
+def HasDot11Insts : Predicate<"Subtarget->hasDot11Insts()">,
+  AssemblerPredicate<(all_of FeatureDot11Insts)>;
 
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;

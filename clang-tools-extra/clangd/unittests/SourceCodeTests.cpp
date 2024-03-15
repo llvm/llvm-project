@@ -1090,6 +1090,44 @@ TEST(ApplyEditsTest, EndLineOutOfRange) {
                     FailedWithMessage("Line value is out of range (100)"));
 }
 
+TEST(FormatStyleForFile, LanguageGuessingHeuristic) {
+  StringRef ObjCContent = "@interface Foo\n@end\n";
+  StringRef CppContent = "class Foo {};\n";
+  using LK = format::FormatStyle::LanguageKind;
+  struct TestCase {
+    llvm::StringRef Filename;
+    llvm::StringRef Contents;
+    bool FormatFile;
+    LK ExpectedLanguage;
+  } TestCases[] = {
+      // If the file extension identifies the file as ObjC, the guessed
+      // language should be ObjC regardless of content or FormatFile flag.
+      {"foo.mm", ObjCContent, true, LK::LK_ObjC},
+      {"foo.mm", ObjCContent, false, LK::LK_ObjC},
+      {"foo.mm", CppContent, true, LK::LK_ObjC},
+      {"foo.mm", CppContent, false, LK::LK_ObjC},
+
+      // If the file extension is ambiguous like .h, FormatFile=true should
+      // result in using libFormat's heuristic to guess the language based
+      // on the file contents.
+      {"foo.h", ObjCContent, true, LK::LK_ObjC},
+      {"foo.h", CppContent, true, LK::LK_Cpp},
+
+      // With FomatFile=false, the language guessing heuristic should be
+      // bypassed
+      {"foo.h", ObjCContent, false, LK::LK_Cpp},
+      {"foo.h", CppContent, false, LK::LK_Cpp},
+  };
+
+  MockFS FS;
+  for (const auto &[Filename, Contents, FormatFile, ExpectedLanguage] :
+       TestCases) {
+    EXPECT_EQ(
+        getFormatStyleForFile(Filename, Contents, FS, FormatFile).Language,
+        ExpectedLanguage);
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

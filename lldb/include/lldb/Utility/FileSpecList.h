@@ -238,6 +238,10 @@ public:
   const_iterator begin() const { return m_files.begin(); }
   const_iterator end() const { return m_files.end(); }
 
+  llvm::iterator_range<const_iterator> files() const {
+    return llvm::make_range(begin(), end());
+  }
+
 protected:
   collection m_files; ///< A collection of FileSpec objects.
 };

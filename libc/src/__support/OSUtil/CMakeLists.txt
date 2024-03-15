@@ -9,7 +9,7 @@ if(NOT TARGET ${target_os_util})
 endif()
 
 # The OSUtil is an object library in GPU mode.
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(NOT LIBC_TARGET_OS_IS_GPU)
   add_header_library(
     osutil
     HDRS

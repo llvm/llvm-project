@@ -263,7 +263,7 @@ define <vscale x 2 x i64> @vwsll_vi_nxv2i64(<vscale x 2 x i32> %a, <vscale x 2 x
 ; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 2 x i32> %a to <vscale x 2 x i64>
-  %z = call <vscale x 2 x i64> @llvm.vp.shl.nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i64> shufflevector(<vscale x 2 x i64> insertelement(<vscale x 2 x i64> poison, i64 2, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
+  %z = call <vscale x 2 x i64> @llvm.vp.shl.nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i64> splat (i64 2), <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i64> %z
 }
 
@@ -497,7 +497,7 @@ define <vscale x 4 x i32> @vwsll_vi_nxv4i32(<vscale x 4 x i16> %a, <vscale x 4 x
 ; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 4 x i16> %a to <vscale x 4 x i32>
-  %z = call <vscale x 4 x i32> @llvm.vp.shl.nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32> shufflevector(<vscale x 4 x i32> insertelement(<vscale x 4 x i32> poison, i32 2, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i1> %m, i32 %vl)
+  %z = call <vscale x 4 x i32> @llvm.vp.shl.nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32> splat (i32 2), <vscale x 4 x i1> %m, i32 %vl)
   ret <vscale x 4 x i32> %z
 }
 
@@ -703,6 +703,6 @@ define <vscale x 8 x i16> @vwsll_vi_nxv8i16(<vscale x 8 x i8> %a, <vscale x 8 x 
 ; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 8 x i8> %a to <vscale x 8 x i16>
-  %z = call <vscale x 8 x i16> @llvm.vp.shl.nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16> shufflevector(<vscale x 8 x i16> insertelement(<vscale x 8 x i16> poison, i16 2, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer), <vscale x 8 x i1> %m, i32 %vl)
+  %z = call <vscale x 8 x i16> @llvm.vp.shl.nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16> splat (i16 2), <vscale x 8 x i1> %m, i32 %vl)
   ret <vscale x 8 x i16> %z
 }

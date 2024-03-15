@@ -9,13 +9,18 @@
 ! See Fortran 2018, clause 17.2
 
 module ieee_features
+  implicit none
 
-  type :: ieee_features_type
+  ! Set PRIVATE by default to explicitly only export what is meant
+  ! to be exported by this MODULE.
+  private
+
+  type, public :: ieee_features_type
     private
     integer(kind=1) :: feature = 0
   end type ieee_features_type
 
-  type(ieee_features_type), parameter :: &
+  type(ieee_features_type), parameter, public :: &
     ieee_datatype = ieee_features_type(1), &
     ieee_denormal = ieee_features_type(2), &
     ieee_divide = ieee_features_type(3), &

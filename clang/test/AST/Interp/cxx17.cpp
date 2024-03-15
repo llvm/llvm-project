@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify %s
-// RUN: %clang_cc1 -std=c++17 -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++17 -verify=ref,both %s
 
 struct F { int a; int b;};
 constexpr F getF() {
@@ -81,22 +81,15 @@ constexpr int b() {
 }
 static_assert(b() == 11);
 
-/// The diagnostics between the two interpreters are different here.
+/// The diagnostics between the two interpreters used to be different here.
 struct S { int a; };
-constexpr S getS() { // expected-error {{constexpr function never produces a constant expression}} \\
-                     // ref-error {{constexpr function never produces a constant expression}}
-  (void)(1/0); // expected-note 2{{division by zero}} \
-               // expected-warning {{division by zero}} \
-               // ref-note 2{{division by zero}} \
-               // ref-warning {{division by zero}}
+constexpr S getS() { // both-error {{constexpr function never produces a constant expression}}
+  (void)(1/0); // both-note 2{{division by zero}} \
+               // both-warning {{division by zero}}
   return S{12};
 }
-constexpr S s = getS(); // expected-error {{must be initialized by a constant expression}} \
-                        // expected-note {{in call to 'getS()'}} \
-                        // ref-error {{must be initialized by a constant expression}} \\
-                        // ref-note {{in call to 'getS()'}} \
-                        // ref-note {{declared here}}
-static_assert(s.a == 12, ""); // expected-error {{not an integral constant expression}} \
-                              // expected-note {{read of uninitialized object}} \
-                              // ref-error {{not an integral constant expression}} \
-                              // ref-note {{initializer of 's' is not a constant expression}}
+constexpr S s = getS(); // both-error {{must be initialized by a constant expression}} \
+                        // both-note {{in call to 'getS()'}} \
+                        // both-note {{declared here}}
+static_assert(s.a == 12, ""); // both-error {{not an integral constant expression}} \
+                              // both-note {{initializer of 's' is not a constant expression}}

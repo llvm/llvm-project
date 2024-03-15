@@ -84,6 +84,4 @@ class AArch64LinuxTaggedMemoryReadTestCase(TestBase):
         # First check we actually got something.
         self.assertRegex(out, "data found at location: 0x[0-9A-Fa-f]+")
         # Then that the location found does not display the tag bits.
-        self.assertNotRegexpMatches(
-            out, "data found at location: 0x(34|56)[0-9A-Fa-f]+"
-        )
+        self.assertNotRegex(out, "data found at location: 0x(34|56)[0-9A-Fa-f]+")

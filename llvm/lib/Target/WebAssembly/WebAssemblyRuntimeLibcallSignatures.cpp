@@ -524,10 +524,10 @@ struct StaticLibcallNameMap {
 
 } // end anonymous namespace
 
-void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
-                               RTLIB::Libcall LC,
-                               SmallVectorImpl<wasm::ValType> &Rets,
-                               SmallVectorImpl<wasm::ValType> &Params) {
+void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
+                                      RTLIB::Libcall LC,
+                                      SmallVectorImpl<wasm::ValType> &Rets,
+                                      SmallVectorImpl<wasm::ValType> &Params) {
   assert(Rets.empty());
   assert(Params.empty());
 
@@ -889,10 +889,10 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
 
 // TODO: If the RTLIB::Libcall-taking flavor of GetSignature remains unused
 // other than here, just roll its logic into this version.
-void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
-                               StringRef Name,
-                               SmallVectorImpl<wasm::ValType> &Rets,
-                               SmallVectorImpl<wasm::ValType> &Params) {
+void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
+                                      StringRef Name,
+                                      SmallVectorImpl<wasm::ValType> &Rets,
+                                      SmallVectorImpl<wasm::ValType> &Params) {
   static StaticLibcallNameMap LibcallNameMap;
   auto &Map = LibcallNameMap.Map;
   auto Val = Map.find(Name);

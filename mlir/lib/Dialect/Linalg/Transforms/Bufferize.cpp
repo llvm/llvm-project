@@ -21,7 +21,7 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGBUFFERIZE
+#define GEN_PASS_DEF_LINALGBUFFERIZEPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -32,7 +32,9 @@ namespace {
 /// Converts Linalg operations that work on tensor-type operands or results to
 /// work on buffers.
 struct LinalgBufferizePass
-    : public impl::LinalgBufferizeBase<LinalgBufferizePass> {
+    : public impl::LinalgBufferizePassBase<LinalgBufferizePass> {
+  using impl::LinalgBufferizePassBase<
+      LinalgBufferizePass>::LinalgBufferizePassBase;
   void runOnOperation() override {
     BufferizationOptions options = getPartialBufferizationOptions();
     options.opFilter.allowDialect<linalg::LinalgDialect>();
@@ -48,7 +50,3 @@ struct LinalgBufferizePass
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createLinalgBufferizePass() {
-  return std::make_unique<LinalgBufferizePass>();
-}

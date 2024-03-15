@@ -1,7 +1,7 @@
 add_object_library(
   global
   SRCS
-    global.cpp 
+    global.cpp
   HDRS
     global.h
 )

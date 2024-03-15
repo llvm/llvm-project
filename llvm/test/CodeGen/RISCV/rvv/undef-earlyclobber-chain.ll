@@ -79,18 +79,18 @@ start:
 Cond1:                             ; preds = %start
     %v15 = tail call <vscale x 1 x i16> @llvm.experimental.stepvector.nxv1i16()
     %v17 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %v15, i64 0)
-    %vs12.i.i.i = add <vscale x 1 x i16> %v15, shufflevector (<vscale x 1 x i16> insertelement (<vscale x 1 x i16> poison, i16 1, i32 0), <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer)
+    %vs12.i.i.i = add <vscale x 1 x i16> %v15, splat (i16 1)
     %v18 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %vs12.i.i.i, i64 0)
-    %vs16.i.i.i = add <vscale x 1 x i16> %v15, shufflevector (<vscale x 1 x i16> insertelement (<vscale x 1 x i16> poison, i16 3, i32 0), <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer)
+    %vs16.i.i.i = add <vscale x 1 x i16> %v15, splat (i16 3)
     %v20 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %vs16.i.i.i, i64 0)
     br label %UseSR
 
 Cond2:                           ; preds = %start
     %v15.2 = tail call <vscale x 1 x i16> @llvm.experimental.stepvector.nxv1i16()
     %v17.2 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %v15.2, i64 1)
-    %vs12.i.i.i.2 = add <vscale x 1 x i16> %v15.2, shufflevector (<vscale x 1 x i16> insertelement (<vscale x 1 x i16> poison, i16 1, i32 0), <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer)
+    %vs12.i.i.i.2 = add <vscale x 1 x i16> %v15.2, splat (i16 1)
     %v18.2 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %vs12.i.i.i.2, i64 1)
-    %vs16.i.i.i.2 = add <vscale x 1 x i16> %v15.2, shufflevector (<vscale x 1 x i16> insertelement (<vscale x 1 x i16> poison, i16 3, i32 0), <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer)
+    %vs16.i.i.i.2 = add <vscale x 1 x i16> %v15.2, splat (i16 3)
     %v20.2 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %vs16.i.i.i.2, i64 1)
     br label %UseSR
 
@@ -132,9 +132,9 @@ define internal void @SubRegLivenessUndef() {
 loopIR.preheader.i.i:
   %v15 = tail call <vscale x 1 x i16> @llvm.experimental.stepvector.nxv1i16()
   %v17 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %v15, i64 0)
-  %vs12.i.i.i = add <vscale x 1 x i16> %v15, shufflevector (<vscale x 1 x i16> insertelement (<vscale x 1 x i16> poison, i16 1, i32 0), <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer)
+  %vs12.i.i.i = add <vscale x 1 x i16> %v15, splat (i16 1)
   %v18 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %vs12.i.i.i, i64 0)
-  %vs16.i.i.i = add <vscale x 1 x i16> %v15, shufflevector (<vscale x 1 x i16> insertelement (<vscale x 1 x i16> poison, i16 3, i32 0), <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer)
+  %vs16.i.i.i = add <vscale x 1 x i16> %v15, splat (i16 3)
   %v20 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %vs16.i.i.i, i64 0)
   br label %loopIR3.i.i
 

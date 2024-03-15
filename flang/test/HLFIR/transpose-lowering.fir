@@ -18,6 +18,7 @@ func.func @_QPtranspose1(%arg0: !fir.ref<!fir.array<1x2xi32>> {fir.bindc_name = 
 // CHECK-LABEL: func.func @_QPtranspose1(
 // CHECK:           %[[ARG0:.*]]: !fir.ref<!fir.array<1x2xi32>> {fir.bindc_name = "m"}
 // CHECK:           %[[ARG1:.*]]: !fir.ref<!fir.array<2x1xi32>> {fir.bindc_name = "res"}
+// CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 // CHECK-DAG:     %[[M_VAR:.*]]:2 = hlfir.declare %[[ARG0]]
 // CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[ARG1]]
 
@@ -40,7 +41,6 @@ func.func @_QPtranspose1(%arg0: !fir.ref<!fir.array<1x2xi32>> {fir.bindc_name = 
 // CHECK-NEXT:    %[[SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
 // TODO: fix alias analysis in hlfir.assign bufferization
 // CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
-// CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         %[[ASEXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?x?xi32>>, i1) -> !hlfir.expr<?x?xi32>
 // CHECK:         hlfir.assign %[[ASEXPR]] to %[[RES_VAR]]#0
 // CHECK:         hlfir.destroy %[[ASEXPR]]

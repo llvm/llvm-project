@@ -10,7 +10,7 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -169,7 +169,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     %d0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
 
@@ -207,22 +207,36 @@ module {
     // CHECK-SAME: ( 0, 0, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 0 ),
     // CHECK-SAME: ( 0, 0, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 192 ) )
     //
-    // CHECK-NEXT: ( 96, 192, 0, 0 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 2
+    // CHECK-NEXT: dim = ( 8, 8 )
+    // CHECK-NEXT: lvl = ( 8, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 2
+    // CHECK-NEXT: crd[0] : ( 0, 7
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2
+    // CHECK-NEXT: crd[1] : ( 0, 7
+    // CHECK-NEXT: values : ( 96, 192
+    // CHECK-NEXT: ----
     //
-    // CHECK-NEXT: ( 96, 192, 0, 0 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 2
+    // CHECK-NEXT: dim = ( 8, 8 )
+    // CHECK-NEXT: lvl = ( 8, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 2
+    // CHECK-NEXT: crd[0] : ( 0, 7
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2
+    // CHECK-NEXT: crd[1] : ( 0, 7
+    // CHECK-NEXT: values : ( 96, 192
+    // CHECK-NEXT: ----
     //
-    %m2 = sparse_tensor.values %2 : tensor<8x8xf64, #SM> to memref<?xf64>
-    %m3 = sparse_tensor.values %3 : tensor<8x8xf64, #SM> to memref<?xf64>
     %v0 = vector.transfer_read %0[%c0, %c0], %d0
         : tensor<8x8xf64>, vector<8x8xf64>
     %v1 = vector.transfer_read %1[%c0, %c0], %d0
         : tensor<8x8xf64>, vector<8x8xf64>
-    %v2 = vector.transfer_read %m2[%c0], %d0 : memref<?xf64>, vector<4xf64>
-    %v3 = vector.transfer_read %m3[%c0], %d0 : memref<?xf64>, vector<4xf64>
     vector.print %v0 : vector<8x8xf64>
     vector.print %v1 : vector<8x8xf64>
-    vector.print %v2 : vector<4xf64>
-    vector.print %v3 : vector<4xf64>
+    sparse_tensor.print %2 : tensor<8x8xf64, #SM>
+    sparse_tensor.print %3 : tensor<8x8xf64, #SM>
 
     // Release the resources.
     bufferization.dealloc_tensor %s : tensor<8x8xf64, #SM>

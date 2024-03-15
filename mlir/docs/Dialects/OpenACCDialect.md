@@ -9,8 +9,8 @@ by giving the compiler the freedom of how to parallelize for specific
 architectures. OpenACC also provides the ability to optimize the
 parallelism through increasingly more prescriptive clauses.
 
-This dialect models the constructs from the [OpenACC 3.3 specification]
-(https://www.openacc.org/sites/default/files/inline-images/Specification/OpenACC-3.3-final.pdf)
+This dialect models the constructs from the 
+[OpenACC 3.3 specification](https://www.openacc.org/sites/default/files/inline-images/Specification/OpenACC-3.3-final.pdf)
 
 This document describes the design of the OpenACC dialect in MLIR. It
 lists and explains design goals and design choices along with their
@@ -451,3 +451,4 @@ dominates another.
 ## Operations TOC
 
 [include "Dialects/OpenACCDialectOps.md"]
+

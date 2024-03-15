@@ -1,4 +1,5 @@
 #!@Python3_EXECUTABLE@
+import os
 import subprocess
 import sys
 
@@ -17,8 +18,12 @@ has_libcxx = @LLDB_HAS_LIBCXX@
 libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 libcxx_include_dir = "@LIBCXX_GENERATED_INCLUDE_DIR@"
 libcxx_include_target_dir = "@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@"
+use_vendor_packages = @LLDB_TEST_USE_VENDOR_PACKAGES@
 
 if __name__ == '__main__':
+    if use_vendor_packages:
+        os.putenv("LLDB_TEST_USE_VENDOR_PACKAGES", "1")
+
     wrapper_args = sys.argv[1:]
     dotest_args = []
     # split on an empty string will produce [''] and if you

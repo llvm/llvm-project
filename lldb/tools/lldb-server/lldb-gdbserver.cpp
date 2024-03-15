@@ -235,7 +235,7 @@ void ConnectToRemote(MainLoop &mainloop,
             Status error = writeSocketIdToPipe(named_pipe_path, socket_id);
             if (error.Fail())
               llvm::errs() << llvm::formatv(
-                  "failed to write to the named peipe '{0}': {1}\n",
+                  "failed to write to the named pipe '{0}': {1}\n",
                   named_pipe_path, error.AsCString());
           }
           // If we have an unnamed pipe to write the socket id back to, do

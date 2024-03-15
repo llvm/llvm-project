@@ -297,10 +297,14 @@ class ProfiledBinary {
   // Use to avoid redundant warning.
   bool MissingMMapWarned = false;
 
-  void setPreferredTextSegmentAddresses(const ELFObjectFileBase *O);
+  bool IsCOFF = false;
+
+  void setPreferredTextSegmentAddresses(const ObjectFile *O);
 
   template <class ELFT>
   void setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
+                                        StringRef FileName);
+  void setPreferredTextSegmentAddresses(const COFFObjectFile *Obj,
                                         StringRef FileName);
 
   void checkPseudoProbe(const ELFObjectFileBase *Obj);
@@ -308,11 +312,11 @@ class ProfiledBinary {
   void decodePseudoProbe(const ELFObjectFileBase *Obj);
 
   void
-  checkUseFSDiscriminator(const ELFObjectFileBase *Obj,
+  checkUseFSDiscriminator(const ObjectFile *Obj,
                           std::map<SectionRef, SectionSymbolsTy> &AllSymbols);
 
   // Set up disassembler and related components.
-  void setUpDisassembler(const ELFObjectFileBase *Obj);
+  void setUpDisassembler(const ObjectFile *Obj);
   symbolize::LLVMSymbolizer::Options getSymbolizerOpts() const;
 
   // Load debug info of subprograms from DWARF section.
@@ -333,7 +337,7 @@ class ProfiledBinary {
   void warnNoFuncEntry();
 
   /// Dissassemble the text section and build various address maps.
-  void disassemble(const ELFObjectFileBase *O);
+  void disassemble(const ObjectFile *O);
 
   /// Helper function to dissassemble the symbol and extract info for unwinding
   bool dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
@@ -361,6 +365,8 @@ public:
   StringRef getName() const { return llvm::sys::path::filename(Path); }
   uint64_t getBaseAddress() const { return BaseAddress; }
   void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
+
+  bool isCOFF() const { return IsCOFF; }
 
   // Canonicalize to use preferred load address as base address.
   uint64_t canonicalizeVirtualAddress(uint64_t Address) {

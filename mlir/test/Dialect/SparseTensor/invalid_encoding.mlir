@@ -54,6 +54,12 @@ func.func private @tensor_dimlevel_size_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
+// expected-error@+1 {{Batch lvlType can only be leading levels}}
+#a = #sparse_tensor.encoding<{map = (d0, d1, d2) -> (d0 : batch, d1 : compressed, d2: batch)}>
+func.func private @non_leading_batch(%arg0: tensor<?x?x?i32, #a>) -> ()
+
+// -----
+
 // expected-error@+1 {{use of undeclared identifier}}
 #a = #sparse_tensor.encoding<{map = (d0) -> (d0 : dense, d1 : compressed)}>
 func.func private @tensor_sizes_mismatch(%arg0: tensor<8xi32, #a>) -> ()

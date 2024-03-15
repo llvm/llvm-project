@@ -758,7 +758,7 @@ android-ndk-*)
     # level. When tests are run against a device with a newer API level, test
     # programs can be built for any supported API level, but building for the
     # newest API (i.e. the system image's API) is probably the most interesting.
-    PARAMS="target_triple=$(triple_of_arch ${ARCH})$(api_of_emu_img ${ANDROID_EMU_IMG})"
+    PARAMS="executor=${MONOREPO_ROOT}/libcxx/utils/adb_run.py;target_triple=$(triple_of_arch ${ARCH})$(api_of_emu_img ${ANDROID_EMU_IMG})"
     generate-cmake-android -C "${MONOREPO_ROOT}/runtimes/cmake/android/Arch-${ARCH}.cmake" \
                            -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AndroidNDK.cmake" \
                            -DCMAKE_SYSROOT=/opt/android/ndk/sysroot \

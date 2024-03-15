@@ -10,6 +10,7 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_VEC_EXT_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_VEC_EXT_H
 
+#include <__assert>
 #include <__bit/bit_ceil.h>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>

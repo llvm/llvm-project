@@ -6849,13 +6849,6 @@ int bar(int n, double *ptr) {
 // CHECK0-NEXT:    ret void
 //
 //
-// CHECK0-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK0-SAME: () #[[ATTR5:[0-9]+]] {
-// CHECK0-NEXT:  entry:
-// CHECK0-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK0-NEXT:    ret void
-//
-//
 // CHECK1-LABEL: define {{[^@]+}}@_Z3fooiPd
 // CHECK1-SAME: (i32 noundef signext [[N:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
@@ -7624,13 +7617,6 @@ int bar(int n, double *ptr) {
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // CHECK1-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP2]], 1
 // CHECK1-NEXT:    store i32 [[ADD2]], ptr [[ARRAYIDX]], align 4
-// CHECK1-NEXT:    ret void
-//
-//
-// CHECK1-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK1-SAME: () #[[ATTR5:[0-9]+]] {
-// CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -8405,13 +8391,6 @@ int bar(int n, double *ptr) {
 // CHECK2-NEXT:    ret void
 //
 //
-// CHECK2-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK2-SAME: () #[[ATTR5:[0-9]+]] {
-// CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK2-NEXT:    ret void
-//
-//
 // CHECK3-LABEL: define {{[^@]+}}@_Z3fooiPd
 // CHECK3-SAME: (i32 noundef [[N:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK3-NEXT:  entry:
@@ -9180,13 +9159,6 @@ int bar(int n, double *ptr) {
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // CHECK3-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP2]], 1
 // CHECK3-NEXT:    store i32 [[ADD2]], ptr [[ARRAYIDX]], align 4
-// CHECK3-NEXT:    ret void
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK3-SAME: () #[[ATTR5:[0-9]+]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK3-NEXT:    ret void
 //
 //

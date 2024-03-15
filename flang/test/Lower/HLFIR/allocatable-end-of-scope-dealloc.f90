@@ -224,7 +224,7 @@ contains
     allocate(x)
   end subroutine
 end subroutine
-! CHECK-LABEL:   func.func @_QFno_dealloc_host_assocPinternal
+! CHECK-LABEL:   func.func private @_QFno_dealloc_host_assocPinternal
 ! CHECK-NOT: freemem
 ! CHECK-NOT: Deallocate
 ! CHECK: return

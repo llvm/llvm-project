@@ -103,7 +103,7 @@ enum { overflow = 123456 * 234567 };
 // expected-warning@-2 {{not an integral constant expression}}
 // expected-note@-3 {{value 28958703552 is outside the range of representable values}}
 #else 
-// expected-warning@-5 {{overflow in expression; result is -1106067520 with type 'int'}}
+// expected-warning@-5 {{overflow in expression; result is -1'106'067'520 with type 'int'}}
 #endif
 
 // FIXME: This is not consistent with the above case.
@@ -112,7 +112,7 @@ enum NoFold : int { overflow2 = 123456 * 234567 };
 // expected-error@-2 {{enumerator value is not a constant expression}}
 // expected-note@-3 {{value 28958703552 is outside the range of representable values}}
 #else
-// expected-warning@-5 {{overflow in expression; result is -1106067520 with type 'int'}}
+// expected-warning@-5 {{overflow in expression; result is -1'106'067'520 with type 'int'}}
 // expected-warning@-6 {{extension}}
 #endif
 

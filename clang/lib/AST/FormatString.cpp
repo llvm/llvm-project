@@ -403,6 +403,10 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         else if (ETy->isUnscopedEnumerationType())
           argTy = ETy->getDecl()->getIntegerType();
       }
+
+      if (argTy->isSaturatedFixedPointType())
+        argTy = C.getCorrespondingUnsaturatedType(argTy);
+
       argTy = C.getCanonicalType(argTy).getUnqualifiedType();
 
       if (T == argTy)
@@ -761,6 +765,16 @@ const char *ConversionSpecifier::toString() const {
 
   // MS specific specifiers.
   case ZArg: return "Z";
+
+  // ISO/IEC TR 18037 (fixed-point) specific specifiers.
+  case rArg:
+    return "r";
+  case RArg:
+    return "R";
+  case kArg:
+    return "k";
+  case KArg:
+    return "K";
   }
   return nullptr;
 }
@@ -825,6 +839,9 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target,
       if (LO.OpenCL && CS.isDoubleArg())
         return !VectorNumElts.isInvalid();
 
+      if (CS.isFixedPointArg())
+        return true;
+
       if (Target.getTriple().isOSMSVCRT()) {
         switch (CS.getKind()) {
           case ConversionSpecifier::cArg:
@@ -876,6 +893,9 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target,
           return false;
         return true;
       }
+
+      if (CS.isFixedPointArg())
+        return true;
 
       switch (CS.getKind()) {
         case ConversionSpecifier::bArg:
@@ -1043,6 +1063,11 @@ bool FormatSpecifier::hasStandardConversionSpecifier(
     case ConversionSpecifier::UArg:
     case ConversionSpecifier::ZArg:
       return false;
+    case ConversionSpecifier::rArg:
+    case ConversionSpecifier::RArg:
+    case ConversionSpecifier::kArg:
+    case ConversionSpecifier::KArg:
+      return LangOpt.FixedPoint;
   }
   llvm_unreachable("Invalid ConversionSpecifier Kind!");
 }

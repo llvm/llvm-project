@@ -101,13 +101,13 @@ namespace dependent {
   struct B {
     template<typename T> struct X { X(T); };
     X(int) -> X<int>;
-    template<typename T> using Y = X<T>; // expected-note {{template}}
+    template<typename T> using Y = X<T>;
   };
   template<typename T> void f() {
     typename T::X tx = 0;
-    typename T::Y ty = 0; // expected-error {{alias template 'Y' requires template arguments; argument deduction only allowed for class templates}}
+    typename T::Y ty = 0;
   }
-  template void f<B>(); // expected-note {{in instantiation of}}
+  template void f<B>();
 
   template<typename T> struct C { C(T); };
   template<typename T> C(T) -> C<T>;

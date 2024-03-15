@@ -13,7 +13,7 @@
 // CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "gfx803"
 // CHECK: "-cc1" "-triple" "nvptx64-nvidia-cuda" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "sm_52"
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
-// CHECK: clang-linker-wrapper{{.*}}"--"{{.*}} "-o" "a.out"
+// CHECK: clang-linker-wrapper{{.*}} "-o" "a.out"
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp=libomp \
 // RUN:     --offload-arch=sm_70 --offload-arch=gfx908:sramecc+:xnack- \

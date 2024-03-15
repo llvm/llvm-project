@@ -13,6 +13,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
 class RewritePatternSet;
@@ -36,6 +37,11 @@ void registerAllOpLoweringDialects(DialectRegistry &registry);
 TypedValue<IndexType>
 createCollectiveProcessGroupSize(MeshOp mesh, ArrayRef<MeshAxis> axes,
                                  ImplicitLocOpBuilder &builder);
+
+// Get process linear index along the given mesh axes.
+TypedValue<IndexType> createProcessLinearIndex(StringRef mesh,
+                                               ArrayRef<MeshAxis> meshAxes,
+                                               ImplicitLocOpBuilder &builder);
 
 } // namespace mesh
 } // namespace mlir

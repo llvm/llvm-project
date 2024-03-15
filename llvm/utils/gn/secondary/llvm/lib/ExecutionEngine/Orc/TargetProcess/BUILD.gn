@@ -9,6 +9,7 @@ static_library("TargetProcess") {
     "ExecutorSharedMemoryMapperService.cpp",
     "JITLoaderGDB.cpp",
     "JITLoaderPerf.cpp",
+    "JITLoaderVTune.cpp",
     "OrcRTBootstrap.cpp",
     "RegisterEHFrames.cpp",
     "SimpleExecutorDylibManager.cpp",

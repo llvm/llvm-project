@@ -31,12 +31,27 @@
 // RUN: diff %t.tgt1 %t.res.tgt1
 // RUN: diff %t.tgt2 %t.res.tgt2
 //
-// COMPRESS: Compression method used
-// DECOMPRESS: Decompression method
+// COMPRESS: Compression method used: zstd
+// COMPRESS: Compression level: 3 
+// DECOMPRESS: Decompression method: zstd
+// DECOMPRESS: Hashes match: Yes
 // NOHOST-NOT: host-
 // NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx900
 // NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx906
 //
+
+// Check -compression-level= option
+
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc -compress -verbose -compression-level=9 2>&1 | \
+// RUN:   FileCheck -check-prefix=LEVEL %s
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.hip.bundle.bc -unbundle
+// RUN: diff %t.tgt1 %t.res.tgt1
+// RUN: diff %t.tgt2 %t.res.tgt2
+//
+// LEVEL: Compression method used: zstd
+// LEVEL: Compression level: 9
 
 //
 // Check -bundle-align option.

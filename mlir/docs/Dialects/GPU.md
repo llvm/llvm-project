@@ -50,6 +50,7 @@ An example of how the compilation workflow look is:
 ```
 mlir-opt example.mlir                   \
   --pass-pipeline="builtin.module(      \
+    gpu-kernel-outlining,               \ # Outline gpu.launch body to a kernel.
     nvvm-attach-target{chip=sm_90 O=3}, \ # Attach an NVVM target to a gpu.module op.
     gpu.module(convert-gpu-to-nvvm),    \ # Convert GPU to NVVM.
     gpu-to-llvm,                        \ # Convert GPU to LLVM.

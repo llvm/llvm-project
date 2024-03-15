@@ -115,6 +115,9 @@ class DSDIR_Real<DSDIR_Pseudo lds, dag ins, string asm, int subtarget> :
   SIMCInstr <lds.Mnemonic, subtarget> {
   let isPseudo = 0;
   let isCodeGenOnly = 0;
+
+  // copy SubtargetPredicate from pseudo.
+  let SubtargetPredicate = lds.SubtargetPredicate;
 }
 
 //===----------------------------------------------------------------------===//

@@ -113,19 +113,7 @@ public:
                             eCommandRequiresThread | eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused) {
-    CommandArgumentEntry arg;
-    CommandArgumentData index_arg;
-
-    // Define the first (and only) variant of this arg.
-    index_arg.arg_type = eArgTypeFrameIndex;
-    index_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(index_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeFrameIndex, eArgRepeatOptional);
   }
 
   ~CommandObjectFrameDiagnose() override = default;
@@ -269,32 +257,10 @@ public:
                             eCommandRequiresThread | eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused) {
-    CommandArgumentEntry arg;
-    CommandArgumentData index_arg;
-
-    // Define the first (and only) variant of this arg.
-    index_arg.arg_type = eArgTypeFrameIndex;
-    index_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(index_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeFrameIndex, eArgRepeatOptional);
   }
 
   ~CommandObjectFrameSelect() override = default;
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    if (request.GetCursorIndex() != 0)
-      return;
-
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eFrameIndexCompletion, request, nullptr);
-  }
 
   Options *GetOptions() override { return &m_options; }
 
@@ -419,19 +385,7 @@ However, 'frame variable' is more efficient, since it uses debug information and
 memory reads directly, rather than parsing and evaluating an expression, which
 may even involve JITing and running code in the target program.)");
 
-    CommandArgumentEntry arg;
-    CommandArgumentData var_name_arg;
-
-    // Define the first (and only) variant of this arg.
-    var_name_arg.arg_type = eArgTypeVarName;
-    var_name_arg.arg_repetition = eArgRepeatStar;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(var_name_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeVarName, eArgRepeatStar);
 
     m_option_group.Append(&m_option_variable, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Append(&m_option_format,
@@ -445,15 +399,6 @@ may even involve JITing and running code in the target program.)");
   ~CommandObjectFrameVariable() override = default;
 
   Options *GetOptions() override { return &m_option_group; }
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    // Arguments are the standard source file completer.
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eVariablePathCompletion, request,
-        nullptr);
-  }
 
 protected:
   llvm::StringRef GetScopeString(VariableSP var_sp) {
@@ -958,8 +903,7 @@ public:
       : CommandObjectParsed(interpreter, "frame recognizer delete",
                             "Delete an existing frame recognizer by id.",
                             nullptr) {
-    CommandArgumentData thread_arg{eArgTypeRecognizerID, eArgRepeatPlain};
-    m_arguments.push_back({thread_arg});
+    AddSimpleArgumentList(eArgTypeRecognizerID);
   }
 
   ~CommandObjectFrameRecognizerDelete() override = default;
@@ -1084,19 +1028,7 @@ public:
             interpreter, "frame recognizer info",
             "Show which frame recognizer is applied a stack frame (if any).",
             nullptr) {
-    CommandArgumentEntry arg;
-    CommandArgumentData index_arg;
-
-    // Define the first (and only) variant of this arg.
-    index_arg.arg_type = eArgTypeFrameIndex;
-    index_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(index_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeFrameIndex);
   }
 
   ~CommandObjectFrameRecognizerInfo() override = default;

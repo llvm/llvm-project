@@ -27,6 +27,8 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 
@@ -509,15 +511,17 @@ static void PrivateAutoCompleteMembers(
       CompilerType member_compiler_type = compiler_type.GetFieldAtIndex(
           i, member_name, nullptr, nullptr, nullptr);
 
-      if (partial_member_name.empty() ||
-          llvm::StringRef(member_name).starts_with(partial_member_name)) {
+      if (partial_member_name.empty()) {
+        request.AddCompletion((prefix_path + member_name).str());
+      } else if (llvm::StringRef(member_name)
+                     .starts_with(partial_member_name)) {
         if (member_name == partial_member_name) {
           PrivateAutoComplete(
               frame, partial_path,
               prefix_path + member_name, // Anything that has been resolved
                                          // already will be in here
               member_compiler_type.GetCanonicalType(), request);
-        } else {
+        } else if (partial_path.empty()) {
           request.AddCompletion((prefix_path + member_name).str());
         }
       }
@@ -566,7 +570,9 @@ static void PrivateAutoComplete(
       case eTypeClassObjCObjectPointer:
       case eTypeClassPointer: {
         bool omit_empty_base_classes = true;
-        if (compiler_type.GetNumChildren(omit_empty_base_classes, nullptr) > 0)
+        if (llvm::expectedToStdOptional(
+                compiler_type.GetNumChildren(omit_empty_base_classes, nullptr))
+                .value_or(0))
           request.AddCompletion((prefix_path + "->").str());
         else {
           request.AddCompletion(prefix_path.str());

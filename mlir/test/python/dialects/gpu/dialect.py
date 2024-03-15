@@ -27,6 +27,6 @@ def testMMAElementWiseAttr():
     module = Module.create()
     with InsertionPoint(module.body):
         gpu.BlockDimOp(gpu.Dimension.y)
-    # CHECK: %0 = gpu.block_dim  y
+    # CHECK: %block_dim_y = gpu.block_dim  y
     print(module)
     pass

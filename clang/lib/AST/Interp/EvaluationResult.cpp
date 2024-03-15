@@ -105,6 +105,8 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
       Result &= CheckFieldsInitialized(S, Loc, FieldPtr, FieldPtr.getRecord());
     } else if (FieldType->isIncompleteArrayType()) {
       // Nothing to do here.
+    } else if (F.Decl->isUnnamedBitfield()) {
+      // Nothing do do here.
     } else if (FieldType->isArrayType()) {
       const auto *CAT =
           cast<ConstantArrayType>(FieldType->getAsArrayTypeUnsafe());

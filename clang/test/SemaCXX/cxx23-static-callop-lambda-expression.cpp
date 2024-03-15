@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %s
-
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
 
 namespace ns1 {
   auto lstatic = []() static { return 3; }; 

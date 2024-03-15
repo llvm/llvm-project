@@ -28,11 +28,11 @@ public:
   bool MightHaveChildren() override { return true; }
   lldb::ChildCacheState Update() override;
 
-  size_t CalculateNumChildren() override {
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
     return m_container_sp ? m_container_sp->GetNumChildren() : 0;
   }
 
-  ValueObjectSP GetChildAtIndex(size_t idx) override {
+  ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     return m_container_sp ? m_container_sp->GetChildAtIndex(idx)
                           : nullptr;
   }

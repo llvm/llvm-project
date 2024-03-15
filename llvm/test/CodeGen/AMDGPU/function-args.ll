@@ -2775,9 +2775,9 @@ define void @void_func_v32i32_i1_i8_i16_bf16(<32 x i32> %arg0, i1 %arg1, i8 %arg
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    buffer_store_dwordx4 v[20:23], off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:20
 ; CI-NEXT:    buffer_store_dwordx4 v[16:19], off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:20
 ; CI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:16
 ; CI-NEXT:    buffer_load_ubyte v17, off, s[0:3], s32 offset:4
 ; CI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:8
@@ -2791,8 +2791,9 @@ define void @void_func_v32i32_i1_i8_i16_bf16(<32 x i32> %arg0, i1 %arg1, i8 %arg
 ; CI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_cvt_f16_f32_e32 v16, v16
+; CI-NEXT:    v_mul_f32_e32 v20, 1.0, v20
 ; CI-NEXT:    v_and_b32_e32 v0, 1, v17
-; CI-NEXT:    v_lshrrev_b32_e32 v20, 16, v20
+; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v20
 ; CI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    buffer_store_byte v18, off, s[4:7], 0
@@ -2801,7 +2802,7 @@ define void @void_func_v32i32_i1_i8_i16_bf16(<32 x i32> %arg0, i1 %arg1, i8 %arg
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    buffer_store_short v16, off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    buffer_store_short v20, off, s[4:7], 0
+; CI-NEXT:    buffer_store_short v1, off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3108,22 +3109,14 @@ define void @void_func_v32i32_v2i16_v2f16_v2bf16_v4bf16(<32 x i32> %arg0, <2 x i
 ; CI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:20
 ; CI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:28
 ; CI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:24
 ; CI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:12
 ; CI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:16
 ; CI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:8
+; CI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:28
 ; CI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:4
-; CI-NEXT:    v_lshrrev_b32_e32 v10, 16, v16
-; CI-NEXT:    v_lshrrev_b32_e32 v11, 16, v17
-; CI-NEXT:    v_lshrrev_b32_e32 v16, 16, v18
-; CI-NEXT:    v_lshrrev_b32_e32 v17, 16, v19
-; CI-NEXT:    v_lshrrev_b32_e32 v12, 16, v12
-; CI-NEXT:    v_lshrrev_b32_e32 v9, 16, v20
-; CI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; CI-NEXT:    v_cvt_f16_f32_e32 v14, v14
 ; CI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
@@ -3132,21 +3125,35 @@ define void @void_func_v32i32_v2i16_v2f16_v2bf16_v4bf16(<32 x i32> %arg0, <2 x i
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    buffer_store_short v8, off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v14, v14
+; CI-NEXT:    v_cvt_f16_f32_e32 v13, v13
+; CI-NEXT:    v_mul_f32_e32 v9, 1.0, v20
+; CI-NEXT:    v_mul_f32_e32 v10, 1.0, v16
+; CI-NEXT:    v_mul_f32_e32 v11, 1.0, v17
+; CI-NEXT:    v_mul_f32_e32 v16, 1.0, v18
+; CI-NEXT:    v_mul_f32_e32 v17, 1.0, v19
+; CI-NEXT:    v_mul_f32_e32 v12, 1.0, v12
+; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v9
+; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v10
+; CI-NEXT:    v_lshrrev_b32_e32 v2, 16, v11
+; CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v16
+; CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v17
+; CI-NEXT:    v_lshrrev_b32_e32 v5, 16, v12
 ; CI-NEXT:    buffer_store_short v14, off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    buffer_store_short v13, off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    buffer_store_short v12, off, s[4:7], 0
+; CI-NEXT:    buffer_store_short v5, off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    buffer_store_short v17, off, s[4:7], 0
+; CI-NEXT:    buffer_store_short v4, off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    buffer_store_short v16, off, s[4:7], 0
+; CI-NEXT:    buffer_store_short v3, off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    buffer_store_short v11, off, s[4:7], 0
+; CI-NEXT:    buffer_store_short v2, off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    buffer_store_short v10, off, s[4:7], 0
+; CI-NEXT:    buffer_store_short v1, off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    buffer_store_short v9, off, s[4:7], 0
+; CI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4633,6 +4640,7 @@ define void @void_func_bf16(bfloat %arg0) #0 {
 ; CI-LABEL: void_func_bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, -1
@@ -4664,7 +4672,9 @@ define void @void_func_v2bf16(<2 x bfloat> %arg0) #0 {
 ; CI-LABEL: void_func_v2bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; CI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; CI-NEXT:    v_alignbit_b32 v0, v1, v0, 16
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, -1
@@ -4696,9 +4706,12 @@ define void @void_func_v3bf16(<3 x bfloat> %arg0) #0 {
 ; CI-LABEL: void_func_v3bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; CI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; CI-NEXT:    v_alignbit_b32 v0, v1, v0, 16
-; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
+; CI-NEXT:    v_mul_f32_e32 v1, 1.0, v2
+; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, -1
 ; CI-NEXT:    buffer_store_short v1, off, s[4:7], 0
@@ -4733,8 +4746,12 @@ define void @void_func_v4bf16(<4 x bfloat> %arg0) #0 {
 ; CI-LABEL: void_func_v4bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; CI-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; CI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
 ; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; CI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; CI-NEXT:    v_alignbit_b32 v2, v3, v2, 16
 ; CI-NEXT:    v_alignbit_b32 v1, v1, v0, 16
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
@@ -4767,10 +4784,18 @@ define void @void_func_v8bf16(<8 x bfloat> %arg0) #0 {
 ; CI-LABEL: void_func_v8bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_mul_f32_e32 v7, 1.0, v7
+; CI-NEXT:    v_mul_f32_e32 v5, 1.0, v5
+; CI-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; CI-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
+; CI-NEXT:    v_mul_f32_e32 v6, 1.0, v6
 ; CI-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
+; CI-NEXT:    v_mul_f32_e32 v4, 1.0, v4
 ; CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; CI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
 ; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; CI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; CI-NEXT:    v_alignbit_b32 v6, v7, v6, 16
 ; CI-NEXT:    v_alignbit_b32 v5, v5, v4, 16
 ; CI-NEXT:    v_alignbit_b32 v4, v3, v2, 16
@@ -4805,21 +4830,37 @@ define void @void_func_v16bf16(<16 x bfloat> %arg0) #0 {
 ; CI-LABEL: void_func_v16bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_mul_f32_e32 v5, 1.0, v5
+; CI-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; CI-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; CI-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
+; CI-NEXT:    v_mul_f32_e32 v4, 1.0, v4
 ; CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; CI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
 ; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; CI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; CI-NEXT:    v_alignbit_b32 v5, v5, v4, 16
 ; CI-NEXT:    v_alignbit_b32 v4, v3, v2, 16
 ; CI-NEXT:    v_alignbit_b32 v3, v1, v0, 16
-; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v15
-; CI-NEXT:    v_alignbit_b32 v14, v0, v14, 16
-; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v13
-; CI-NEXT:    v_alignbit_b32 v13, v0, v12, 16
-; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v11
-; CI-NEXT:    v_alignbit_b32 v12, v0, v10, 16
-; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v9
+; CI-NEXT:    v_mul_f32_e32 v0, 1.0, v15
+; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; CI-NEXT:    v_mul_f32_e32 v1, 1.0, v14
+; CI-NEXT:    v_alignbit_b32 v14, v0, v1, 16
+; CI-NEXT:    v_mul_f32_e32 v0, 1.0, v13
+; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; CI-NEXT:    v_mul_f32_e32 v1, 1.0, v12
+; CI-NEXT:    v_alignbit_b32 v13, v0, v1, 16
+; CI-NEXT:    v_mul_f32_e32 v0, 1.0, v11
+; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; CI-NEXT:    v_mul_f32_e32 v1, 1.0, v10
+; CI-NEXT:    v_alignbit_b32 v12, v0, v1, 16
+; CI-NEXT:    v_mul_f32_e32 v0, 1.0, v9
+; CI-NEXT:    v_mul_f32_e32 v7, 1.0, v7
+; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; CI-NEXT:    v_mul_f32_e32 v1, 1.0, v8
 ; CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; CI-NEXT:    v_alignbit_b32 v11, v0, v8, 16
+; CI-NEXT:    v_mul_f32_e32 v6, 1.0, v6
+; CI-NEXT:    v_alignbit_b32 v11, v0, v1, 16
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, -1
 ; CI-NEXT:    v_alignbit_b32 v6, v7, v6, 16

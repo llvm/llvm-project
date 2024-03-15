@@ -10,6 +10,7 @@
 #include "SourceCode.h"
 #include "TestTU.h"
 #include "support/TestTracer.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/Casting.h"
 #include "gmock/gmock.h"
@@ -891,6 +892,33 @@ TEST(SelectionTest, DeclContextLambda) {
   auto ST = SelectionTree::createRight(AST.getASTContext(), AST.getTokens(),
                                        Test.point("1"), Test.point("1"));
   EXPECT_TRUE(ST.commonAncestor()->getDeclContext().isFunctionOrMethod());
+}
+
+TEST(SelectionTest, UsingConcepts) {
+  llvm::Annotations Test(R"cpp(
+namespace ns {
+template <typename T>
+concept Foo = true;
+}
+
+using ns::Foo;
+
+template <Fo^o... T, Fo^o auto U>
+auto Func(Fo^o auto V) -> Fo^o decltype(auto) {
+  Fo^o auto W = V;
+  return W;
+}
+)cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.ExtraArgs.emplace_back("-std=c++2c");
+  auto AST = TU.build();
+  for (auto Point : Test.points()) {
+    auto ST = SelectionTree::createRight(AST.getASTContext(), AST.getTokens(),
+                                         Point, Point);
+    auto *C = ST.commonAncestor()->ASTNode.get<ConceptReference>();
+    EXPECT_TRUE(C && C->getFoundDecl() &&
+                C->getFoundDecl()->getKind() == Decl::UsingShadow);
+  }
 }
 
 } // namespace

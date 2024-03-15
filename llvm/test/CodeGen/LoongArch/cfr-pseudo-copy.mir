@@ -17,8 +17,8 @@ body:             |
     ; CHECK: liveins: $fcc0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $fcc1 = PseudoCopyCFR $fcc0
-    ; CHECK-NEXT: $r4 = MOVCF2GR killed $fcc1
-    ; CHECK-NEXT: PseudoRET implicit killed $r4
+    ; CHECK-NEXT: $r4 = MOVCF2GR $fcc1
+    ; CHECK-NEXT: PseudoRET implicit $r4
     $fcc1 = COPY $fcc0
     $r4 = COPY $fcc1
     PseudoRET implicit killed $r4

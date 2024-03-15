@@ -406,6 +406,7 @@ define amdgpu_gfx void @strict_wwm_call(ptr addrspace(8) inreg %tmp14, i32 inreg
 ; GFX9-O0-NEXT:    s_mov_b64 s[0:1], s[44:45]
 ; GFX9-O0-NEXT:    s_mov_b64 s[2:3], s[46:47]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-O0-NEXT:    ; implicit-def: $sgpr44_sgpr45
 ; GFX9-O0-NEXT:    s_swappc_b64 s[30:31], s[42:43]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX9-O0-NEXT:    v_add_u32_e64 v1, v1, v2
@@ -632,6 +633,7 @@ define amdgpu_gfx void @strict_wwm_call_i64(ptr addrspace(8) inreg %tmp14, i64 i
 ; GFX9-O0-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v1, v3
+; GFX9-O0-NEXT:    ; implicit-def: $sgpr36_sgpr37
 ; GFX9-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-O0-NEXT:    s_swappc_b64 s[30:31], s[34:35]
 ; GFX9-O0-NEXT:    s_or_saveexec_b64 s[46:47], -1

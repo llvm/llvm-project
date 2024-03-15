@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_JMP_BUF_H__
-#define __LLVM_LIBC_TYPES_JMP_BUF_H__
+#ifndef LLVM_LIBC_TYPES_JMP_BUF_H
+#define LLVM_LIBC_TYPES_JMP_BUF_H
 
 typedef struct {
 #ifdef __x86_64__
@@ -39,4 +39,4 @@ typedef struct {
 
 typedef __jmp_buf jmp_buf[1];
 
-#endif // __LLVM_LIBC_TYPES_JMP_BUF_H__
+#endif // LLVM_LIBC_TYPES_JMP_BUF_H

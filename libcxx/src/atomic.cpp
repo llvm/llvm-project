@@ -178,6 +178,7 @@ _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_contention_t
 _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_contention_t const volatile* __location) {
   __libcpp_contention_notify(&__libcpp_contention_state(__location)->__contention_state, __location, false);
 }
+// This function is never used, but still exported for ABI compatibility.
 _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t
 __libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile* __location) {
   return __libcpp_contention_monitor_for_wait(&__libcpp_contention_state(__location)->__contention_state, __location);

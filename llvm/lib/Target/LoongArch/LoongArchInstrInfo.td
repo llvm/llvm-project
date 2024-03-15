@@ -1048,7 +1048,7 @@ class PatGprImm_32<SDPatternOperator OpNode, LAInst Inst, Operand ImmOpnd>
 /// Predicates
 def AddLike: PatFrags<(ops node:$A, node:$B),
                       [(add node:$A, node:$B), (or node:$A, node:$B)], [{
-    return N->getOpcode() == ISD::ADD || isOrEquivalentToAdd(N);
+    return CurDAG->isBaseWithConstantOffset(SDValue(N, 0));
 }]>;
 
 /// Simple arithmetic operations

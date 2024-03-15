@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-17,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx98-17,cxx11-17,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx98-17,cxx11-17,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx98-17,cxx11-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 
 namespace dr600 { // dr600: 2.8
@@ -584,8 +584,8 @@ namespace dr647 { // dr647: 3.1
   struct C {
     constexpr C(NonLiteral);
     constexpr C(NonLiteral, int) {}
-    // since-cxx11-error@-1 {{constexpr constructor's 1st parameter type 'NonLiteral' is not a literal type}}
-    //   since-cxx11-note@#dr647-NonLiteral {{'NonLiteral' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+    // cxx11-20-error@-1 {{constexpr constructor's 1st parameter type 'NonLiteral' is not a literal type}}
+    //   cxx11-20-note@#dr647-NonLiteral {{'NonLiteral' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
     constexpr C() try {} catch (...) {}
     // cxx11-17-error@-1 {{function try block in constexpr constructor is a C++20 extension}}
     // cxx11-error@-2 {{use of this statement in a constexpr constructor is a C++14 extension}}
@@ -609,15 +609,15 @@ namespace dr647 { // dr647: 3.1
           d(0) {}
 
     constexpr E(int)
-    // since-cxx11-error@-1 {{constexpr constructor never produces a constant expression}}
-    //   since-cxx11-note@#dr647-int-d {{non-constexpr constructor 'D' cannot be used in a constant expression}}
-    //   since-cxx11-note@#dr647-D-float-ctor {{declared here}}
+    // cxx11-20-error@-1 {{constexpr constructor never produces a constant expression}}
+    //   cxx11-20-note@#dr647-int-d {{non-constexpr constructor 'D' cannot be used in a constant expression}}
+    //   cxx11-20-note@#dr647-D-float-ctor {{declared here}}
         : n(0),
           d(0.0f) {} // #dr647-int-d
     constexpr E(float f)
-    // since-cxx11-error@-1 {{never produces a constant expression}}
-    //   since-cxx11-note@#dr647-float-d {{non-constexpr constructor}}
-    //   since-cxx11-note@#dr647-D-float-ctor {{declared here}}
+    // cxx11-20-error@-1 {{never produces a constant expression}}
+    //   cxx11-20-note@#dr647-float-d {{non-constexpr constructor}}
+    //   cxx11-20-note@#dr647-D-float-ctor {{declared here}}
         : n(get()),
           d(D(0) + f) {} // #dr647-float-d
   };

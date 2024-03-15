@@ -163,7 +163,7 @@ class BasicExprCommandsTestCase(TestBase):
         self.DebugSBValue(val)
 
         callee_break = target.BreakpointCreateByName("a_function_to_call", None)
-        self.assertTrue(callee_break.GetNumLocations() > 0)
+        self.assertGreater(callee_break.GetNumLocations(), 0)
 
         # Make sure ignoring breakpoints works from the command line:
         self.expect(

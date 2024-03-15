@@ -599,7 +599,7 @@ class InternalMmapVectorNoCtor {
     T *new_data =
         (T *)MmapOrDie(new_capacity_bytes, "InternalMmapVector", raw_report);
     internal_memcpy(new_data, data_, size_ * sizeof(T));
-    UnmapOrDie(data_, capacity_bytes_);
+    UnmapOrDie(data_, capacity_bytes_, raw_report);
     data_ = new_data;
     capacity_bytes_ = new_capacity_bytes;
   }
@@ -1098,7 +1098,7 @@ inline u32 GetNumberOfCPUsCached() {
 
 }  // namespace __sanitizer
 
-inline void *operator new(__sanitizer::operator_new_size_type size,
+inline void *operator new(__sanitizer::usize size,
                           __sanitizer::LowLevelAllocator &alloc) {
   return alloc.Allocate(size);
 }

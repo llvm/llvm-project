@@ -82,11 +82,4 @@ MDString *getOCLKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
   return getOCLKernelArgAttribute(F, ArgIdx, "kernel_arg_type_qual");
 }
 
-MDString *getOCLKernelArgType(const Function &F, unsigned ArgIdx) {
-  assert(
-      F.getCallingConv() == CallingConv::SPIR_KERNEL &&
-      "Kernel attributes are attached/belong only to OpenCL kernel functions");
-  return getOCLKernelArgAttribute(F, ArgIdx, "kernel_arg_type");
-}
-
 } // namespace llvm

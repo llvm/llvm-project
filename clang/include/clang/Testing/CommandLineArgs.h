@@ -28,6 +28,7 @@ enum TestLanguage {
   Lang_CXX14,
   Lang_CXX17,
   Lang_CXX20,
+  Lang_CXX23,
   Lang_OpenCL,
   Lang_OBJC,
   Lang_OBJCXX

@@ -156,7 +156,7 @@ sure you don't forget anything:
 - Did you add all new named declarations to the ``std`` module?
 - If you added a header:
 
-  - Did you add it to ``include/module.modulemap.in``?
+  - Did you add it to ``include/module.modulemap``?
   - Did you add it to ``include/CMakeLists.txt``?
   - If it's a public header, did you update ``utils/libcxx/header_information.py``?
 

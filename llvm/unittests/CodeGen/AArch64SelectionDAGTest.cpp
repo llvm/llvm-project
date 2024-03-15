@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/SourceMgr.h"
@@ -726,6 +728,72 @@ TEST_F(AArch64SelectionDAGTest, ReplaceAllUsesWith) {
   EXPECT_EQ(DAG->getHeapAllocSite(New.getNode()), MD);
   EXPECT_TRUE(DAG->getNoMergeSiteInfo(New.getNode()));
   EXPECT_EQ(DAG->getPCSections(New.getNode()), MD);
+}
+
+TEST_F(AArch64SelectionDAGTest, computeKnownBits_extload_known01) {
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  auto Int64VT = EVT::getIntegerVT(Context, 64);
+  auto Ptr = DAG->getConstant(0, Loc, Int64VT);
+  auto PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG->getMachineFunction(), 0);
+  AAMDNodes AA;
+  MDBuilder MDHelper(*DAG->getContext());
+  MDNode *Range = MDHelper.createRange(APInt(8, 0), APInt(8, 2));
+  MachineMemOperand *MMO = DAG->getMachineFunction().getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, 8, Align(8), AA, Range);
+
+  auto ALoad = DAG->getExtLoad(ISD::EXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
+                               Ptr, Int8VT, MMO);
+  KnownBits Known = DAG->computeKnownBits(ALoad);
+  EXPECT_EQ(Known.Zero, APInt(32, 0xfe));
+  EXPECT_EQ(Known.One, APInt(32, 0));
+
+  auto ZLoad = DAG->getExtLoad(ISD::ZEXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
+                               Ptr, Int8VT, MMO);
+  Known = DAG->computeKnownBits(ZLoad);
+  EXPECT_EQ(Known.Zero, APInt(32, 0xfffffffe));
+  EXPECT_EQ(Known.One, APInt(32, 0));
+
+  auto SLoad = DAG->getExtLoad(ISD::SEXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
+                               Ptr, Int8VT, MMO);
+  Known = DAG->computeKnownBits(SLoad);
+  EXPECT_EQ(Known.Zero, APInt(32, 0xfffffffe));
+  EXPECT_EQ(Known.One, APInt(32, 0));
+}
+
+TEST_F(AArch64SelectionDAGTest, computeKnownBits_extload_knownnegative) {
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  auto Int64VT = EVT::getIntegerVT(Context, 64);
+  auto Ptr = DAG->getConstant(0, Loc, Int64VT);
+  auto PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG->getMachineFunction(), 0);
+  AAMDNodes AA;
+  MDBuilder MDHelper(*DAG->getContext());
+  MDNode *Range = MDHelper.createRange(APInt(8, 0xf0), APInt(8, 0xff));
+  MachineMemOperand *MMO = DAG->getMachineFunction().getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, 8, Align(8), AA, Range);
+
+  auto ALoad = DAG->getExtLoad(ISD::EXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
+                               Ptr, Int8VT, MMO);
+  KnownBits Known = DAG->computeKnownBits(ALoad);
+  EXPECT_EQ(Known.Zero, APInt(32, 0));
+  EXPECT_EQ(Known.One, APInt(32, 0xf0));
+
+  auto ZLoad = DAG->getExtLoad(ISD::ZEXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
+                               Ptr, Int8VT, MMO);
+  Known = DAG->computeKnownBits(ZLoad);
+  EXPECT_EQ(Known.Zero, APInt(32, 0xffffff00));
+  EXPECT_EQ(Known.One, APInt(32, 0x000000f0));
+
+  auto SLoad = DAG->getExtLoad(ISD::SEXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
+                               Ptr, Int8VT, MMO);
+  Known = DAG->computeKnownBits(SLoad);
+  EXPECT_EQ(Known.Zero, APInt(32, 0));
+  EXPECT_EQ(Known.One, APInt(32, 0xfffffff0));
 }
 
 } // end namespace llvm

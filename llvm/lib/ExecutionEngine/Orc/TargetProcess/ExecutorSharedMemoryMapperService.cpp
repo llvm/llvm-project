@@ -62,15 +62,15 @@ ExecutorSharedMemoryMapperService::reserve(uint64_t Size) {
   int SharedMemoryFile =
       shm_open(SharedMemoryName.c_str(), O_RDWR | O_CREAT | O_EXCL, 0700);
   if (SharedMemoryFile < 0)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
 
   // by default size is 0
   if (ftruncate(SharedMemoryFile, Size) < 0)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
 
   void *Addr = mmap(nullptr, Size, PROT_NONE, MAP_SHARED, SharedMemoryFile, 0);
   if (Addr == MAP_FAILED)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
 
   close(SharedMemoryFile);
 
@@ -140,7 +140,7 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
       NativeProt |= PROT_EXEC;
 
     if (mprotect(Segment.Addr.toPtr<void *>(), Segment.Size, NativeProt))
-      return errorCodeToError(std::error_code(errno, std::generic_category()));
+      return errorCodeToError(errnoAsErrorCode());
 
 #elif defined(_WIN32)
 
@@ -240,8 +240,7 @@ Error ExecutorSharedMemoryMapperService::release(
 #if defined(LLVM_ON_UNIX)
 
     if (munmap(Base.toPtr<void *>(), Size) != 0)
-      Err = joinErrors(std::move(Err), errorCodeToError(std::error_code(
-                                           errno, std::generic_category())));
+      Err = joinErrors(std::move(Err), errorCodeToError(errnoAsErrorCode()));
 
 #elif defined(_WIN32)
     (void)Size;

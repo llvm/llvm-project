@@ -525,6 +525,10 @@ public:
   // Return whether this parser accept star as start of statement
   virtual bool starIsStartOfStatement() { return false; };
 
+  virtual MCSymbolRefExpr::VariantKind
+  getVariantKindForName(StringRef Name) const {
+    return MCSymbolRefExpr::getVariantKindForName(Name);
+  }
   virtual const MCExpr *applyModifierToExpr(const MCExpr *E,
                                             MCSymbolRefExpr::VariantKind,
                                             MCContext &Ctx) {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_TIMEVAL_H__
-#define __LLVM_LIBC_TYPES_TIMEVAL_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_TIMEVAL_H
+#define LLVM_LIBC_TYPES_STRUCT_TIMEVAL_H
 
 #include <llvm-libc-types/suseconds_t.h>
 #include <llvm-libc-types/time_t.h>
@@ -17,4 +17,4 @@ struct timeval {
   suseconds_t tv_usec; // Micro seconds
 };
 
-#endif // __LLVM_LIBC_TYPES_TIMEVAL_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_TIMEVAL_H

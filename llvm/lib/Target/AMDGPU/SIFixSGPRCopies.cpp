@@ -973,9 +973,8 @@ bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
     Info->Score = 0;
     return true;
   }
-  Info->Siblings = SiblingPenalty[*std::max_element(
-      Info->SChain.begin(), Info->SChain.end(),
-      [&](MachineInstr *A, MachineInstr *B) -> bool {
+  Info->Siblings = SiblingPenalty[*llvm::max_element(
+      Info->SChain, [&](MachineInstr *A, MachineInstr *B) -> bool {
         return SiblingPenalty[A].size() < SiblingPenalty[B].size();
       })];
   Info->Siblings.remove_if([&](unsigned ID) { return ID == Info->ID; });

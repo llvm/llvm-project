@@ -827,8 +827,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[SIVAR1]], ptr [[TMP12]], align 8
 // CHECK1-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l209.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -947,8 +947,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[SIVAR1]], ptr [[TMP12]], align 8
 // CHECK1-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l214.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -1069,8 +1069,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[SIVAR1]], ptr [[TMP12]], align 8
 // CHECK1-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l220.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -1212,8 +1212,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[AND_VAR1]], ptr [[TMP13]], align 8
 // CHECK1-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l226.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP14]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP0]], align 1
@@ -1379,8 +1379,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[OR_VAR1]], ptr [[TMP13]], align 8
 // CHECK1-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l232.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP14]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP0]], align 1
@@ -1537,8 +1537,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP12]], align 8
 // CHECK1-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l238.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -1657,8 +1657,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP12]], align 8
 // CHECK1-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l243.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -1777,8 +1777,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP12]], align 8
 // CHECK1-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l248.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -1906,8 +1906,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[SIVAR1]], ptr [[TMP14]], align 8
 // CHECK1-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l254.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -2053,8 +2053,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[SIVAR1]], ptr [[TMP14]], align 8
 // CHECK1-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l260.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -2724,8 +2724,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[T_VAR1]], ptr [[TMP12]], align 8
 // CHECK1-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -2853,8 +2853,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[T_VAR1]], ptr [[TMP14]], align 8
 // CHECK1-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l37.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -2984,8 +2984,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[T_VAR1]], ptr [[TMP14]], align 8
 // CHECK1-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l43.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -3137,8 +3137,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[AND_VAR1]], ptr [[TMP15]], align 8
 // CHECK1-NEXT:    [[TMP16:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP16]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP17:%.*]] = load i8, ptr [[TMP0]], align 1
@@ -3314,8 +3314,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[OR_VAR1]], ptr [[TMP15]], align 8
 // CHECK1-NEXT:    [[TMP16:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l55.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP16]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP17:%.*]] = load i8, ptr [[TMP0]], align 1
@@ -3481,8 +3481,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP14]], align 8
 // CHECK1-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l61.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -3610,8 +3610,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP14]], align 8
 // CHECK1-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l66.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -3739,8 +3739,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP14]], align 8
 // CHECK1-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l71.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -3880,8 +3880,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[T_VAR1]], ptr [[TMP17]], align 8
 // CHECK1-NEXT:    [[TMP18:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l77.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP18]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -4039,8 +4039,8 @@ int main() {
 // CHECK1-NEXT:    store ptr [[T_VAR1]], ptr [[TMP17]], align 8
 // CHECK1-NEXT:    [[TMP18:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l83.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP18]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -4093,13 +4093,6 @@ int main() {
 // CHECK1:       cond.end:
 // CHECK1-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP10]], [[COND_TRUE]] ], [ [[TMP11]], [[COND_FALSE]] ]
 // CHECK1-NEXT:    store i32 [[COND]], ptr [[TMP7]], align 4
-// CHECK1-NEXT:    ret void
-//
-//
-// CHECK1-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK1-SAME: () #[[ATTR7:[0-9]+]] {
-// CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -4662,8 +4655,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[SIVAR1]], ptr [[TMP12]], align 4
 // CHECK3-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l209.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -4782,8 +4775,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[SIVAR1]], ptr [[TMP12]], align 4
 // CHECK3-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l214.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -4904,8 +4897,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[SIVAR1]], ptr [[TMP12]], align 4
 // CHECK3-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l220.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -5047,8 +5040,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[AND_VAR1]], ptr [[TMP13]], align 4
 // CHECK3-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l226.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP14]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP0]], align 1
@@ -5214,8 +5207,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[OR_VAR1]], ptr [[TMP13]], align 4
 // CHECK3-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l232.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP14]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP0]], align 1
@@ -5372,8 +5365,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP12]], align 4
 // CHECK3-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l238.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -5492,8 +5485,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP12]], align 4
 // CHECK3-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l243.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -5612,8 +5605,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP12]], align 4
 // CHECK3-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l248.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -5741,8 +5734,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[SIVAR1]], ptr [[TMP14]], align 4
 // CHECK3-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l254.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -5888,8 +5881,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[SIVAR1]], ptr [[TMP14]], align 4
 // CHECK3-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l260.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -6559,8 +6552,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[T_VAR1]], ptr [[TMP12]], align 4
 // CHECK3-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -6687,8 +6680,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[T_VAR1]], ptr [[TMP14]], align 4
 // CHECK3-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l37.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -6817,8 +6810,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[T_VAR1]], ptr [[TMP14]], align 4
 // CHECK3-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l43.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -6969,8 +6962,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[AND_VAR1]], ptr [[TMP15]], align 4
 // CHECK3-NEXT:    [[TMP16:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP16]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP17:%.*]] = load i8, ptr [[TMP0]], align 1
@@ -7145,8 +7138,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[OR_VAR1]], ptr [[TMP15]], align 4
 // CHECK3-NEXT:    [[TMP16:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l55.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP16]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP17:%.*]] = load i8, ptr [[TMP0]], align 1
@@ -7311,8 +7304,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP14]], align 4
 // CHECK3-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l61.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -7439,8 +7432,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP14]], align 4
 // CHECK3-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l66.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -7567,8 +7560,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP14]], align 4
 // CHECK3-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l71.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -7706,8 +7699,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[T_VAR1]], ptr [[TMP17]], align 4
 // CHECK3-NEXT:    [[TMP18:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l77.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP18]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -7863,8 +7856,8 @@ int main() {
 // CHECK3-NEXT:    store ptr [[T_VAR1]], ptr [[TMP17]], align 4
 // CHECK3-NEXT:    [[TMP18:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP3]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l83.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP18]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK3-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK3-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -7917,13 +7910,6 @@ int main() {
 // CHECK3:       cond.end:
 // CHECK3-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP10]], [[COND_TRUE]] ], [ [[TMP11]], [[COND_FALSE]] ]
 // CHECK3-NEXT:    store i32 [[COND]], ptr [[TMP7]], align 4
-// CHECK3-NEXT:    ret void
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK3-SAME: () #[[ATTR7:[0-9]+]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK3-NEXT:    ret void
 //
 //
@@ -8040,8 +8026,8 @@ int main() {
 // CHECK9-NEXT:    store ptr [[SIVAR1]], ptr [[TMP13]], align 8
 // CHECK9-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l96.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK9-NEXT:    switch i32 [[TMP14]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK9-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK9-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK9-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK9-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK9-NEXT:    ]
 // CHECK9:       .omp.reduction.case1:
 // CHECK9-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -8164,8 +8150,8 @@ int main() {
 // CHECK9-NEXT:    store ptr [[SIVAR1]], ptr [[TMP13]], align 8
 // CHECK9-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l112.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK9-NEXT:    switch i32 [[TMP14]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK9-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK9-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK9-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK9-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK9-NEXT:    ]
 // CHECK9:       .omp.reduction.case1:
 // CHECK9-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -8290,8 +8276,8 @@ int main() {
 // CHECK9-NEXT:    store ptr [[SIVAR1]], ptr [[TMP13]], align 8
 // CHECK9-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l122.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK9-NEXT:    switch i32 [[TMP14]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK9-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK9-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK9-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK9-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK9-NEXT:    ]
 // CHECK9:       .omp.reduction.case1:
 // CHECK9-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -8445,8 +8431,8 @@ int main() {
 // CHECK9-NEXT:    store ptr [[AND_VAR1]], ptr [[TMP14]], align 8
 // CHECK9-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l133.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK9-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK9-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK9-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK9-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK9-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK9-NEXT:    ]
 // CHECK9:       .omp.reduction.case1:
 // CHECK9-NEXT:    [[TMP16:%.*]] = load i8, ptr [[TMP0]], align 1
@@ -8624,8 +8610,8 @@ int main() {
 // CHECK9-NEXT:    store ptr [[OR_VAR1]], ptr [[TMP14]], align 8
 // CHECK9-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l144.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK9-NEXT:    switch i32 [[TMP15]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK9-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK9-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK9-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK9-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK9-NEXT:    ]
 // CHECK9:       .omp.reduction.case1:
 // CHECK9-NEXT:    [[TMP16:%.*]] = load i8, ptr [[TMP0]], align 1
@@ -8794,8 +8780,8 @@ int main() {
 // CHECK9-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP13]], align 8
 // CHECK9-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l155.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK9-NEXT:    switch i32 [[TMP14]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK9-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK9-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK9-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK9-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK9-NEXT:    ]
 // CHECK9:       .omp.reduction.case1:
 // CHECK9-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -8926,8 +8912,8 @@ int main() {
 // CHECK9-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP13]], align 8
 // CHECK9-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l166.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK9-NEXT:    switch i32 [[TMP14]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK9-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK9-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK9-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK9-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK9-NEXT:    ]
 // CHECK9:       .omp.reduction.case1:
 // CHECK9-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -9058,8 +9044,8 @@ int main() {
 // CHECK9-NEXT:    store ptr [[BIT_VAR1]], ptr [[TMP13]], align 8
 // CHECK9-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l177.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK9-NEXT:    switch i32 [[TMP14]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK9-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK9-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK9-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK9-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK9-NEXT:    ]
 // CHECK9:       .omp.reduction.case1:
 // CHECK9-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -9191,8 +9177,8 @@ int main() {
 // CHECK9-NEXT:    store ptr [[MAX_VAR1]], ptr [[TMP15]], align 8
 // CHECK9-NEXT:    [[TMP16:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l188.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK9-NEXT:    switch i32 [[TMP16]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK9-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK9-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK9-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK9-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK9-NEXT:    ]
 // CHECK9:       .omp.reduction.case1:
 // CHECK9-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -9342,8 +9328,8 @@ int main() {
 // CHECK9-NEXT:    store ptr [[MIN_VAR1]], ptr [[TMP15]], align 8
 // CHECK9-NEXT:    [[TMP16:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l199.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK9-NEXT:    switch i32 [[TMP16]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK9-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK9-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK9-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK9-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK9-NEXT:    ]
 // CHECK9:       .omp.reduction.case1:
 // CHECK9-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -9396,12 +9382,5 @@ int main() {
 // CHECK9:       cond.end:
 // CHECK9-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP10]], [[COND_TRUE]] ], [ [[TMP11]], [[COND_FALSE]] ]
 // CHECK9-NEXT:    store i32 [[COND]], ptr [[TMP7]], align 4
-// CHECK9-NEXT:    ret void
-//
-//
-// CHECK9-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK9-SAME: () #[[ATTR6:[0-9]+]] {
-// CHECK9-NEXT:  entry:
-// CHECK9-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK9-NEXT:    ret void
 //

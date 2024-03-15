@@ -156,11 +156,11 @@ define void @storesTIInit(double %Val) #0 {
 ; SMALL32:       # %bb.0: # %entry
 ; SMALL32-NEXT:    mflr 0
 ; SMALL32-NEXT:    stwu 1, -32(1)
-; SMALL32-NEXT:    lwz 3, L..C4(2) # target-flags(ppc-tlsgdm) @TIInit
-; SMALL32-NEXT:    lwz 4, L..C5(2) # target-flags(ppc-tlsgd) @TIInit
+; SMALL32-NEXT:    lwz 3, L..C4(2) # target-flags(ppc-tlsldm) @"_$TLSML"
 ; SMALL32-NEXT:    stw 0, 40(1)
-; SMALL32-NEXT:    bla .__tls_get_addr[PR]
-; SMALL32-NEXT:    stfd 1, 0(3)
+; SMALL32-NEXT:    bla .__tls_get_mod[PR]
+; SMALL32-NEXT:    lwz 4, L..C5(2) # target-flags(ppc-tlsld) @TIInit
+; SMALL32-NEXT:    stfdx 1, 3, 4
 ; SMALL32-NEXT:    addi 1, 1, 32
 ; SMALL32-NEXT:    lwz 0, 8(1)
 ; SMALL32-NEXT:    mtlr 0
@@ -171,12 +171,12 @@ define void @storesTIInit(double %Val) #0 {
 ; LARGE32-NEXT:    mflr 0
 ; LARGE32-NEXT:    stwu 1, -32(1)
 ; LARGE32-NEXT:    stw 0, 40(1)
-; LARGE32-NEXT:    addis 3, L..C4@u(2)
-; LARGE32-NEXT:    addis 4, L..C5@u(2)
-; LARGE32-NEXT:    lwz 3, L..C4@l(3)
-; LARGE32-NEXT:    lwz 4, L..C5@l(4)
-; LARGE32-NEXT:    bla .__tls_get_addr[PR]
-; LARGE32-NEXT:    stfd 1, 0(3)
+; LARGE32-NEXT:    addis 6, L..C4@u(2)
+; LARGE32-NEXT:    addis 3, L..C5@u(2)
+; LARGE32-NEXT:    lwz 3, L..C5@l(3)
+; LARGE32-NEXT:    bla .__tls_get_mod[PR]
+; LARGE32-NEXT:    lwz 4, L..C4@l(6)
+; LARGE32-NEXT:    stfdx 1, 3, 4
 ; LARGE32-NEXT:    addi 1, 1, 32
 ; LARGE32-NEXT:    lwz 0, 8(1)
 ; LARGE32-NEXT:    mtlr 0
@@ -186,11 +186,11 @@ define void @storesTIInit(double %Val) #0 {
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    mflr 0
 ; SMALL64-NEXT:    stdu 1, -48(1)
-; SMALL64-NEXT:    ld 3, L..C4(2) # target-flags(ppc-tlsgdm) @TIInit
-; SMALL64-NEXT:    ld 4, L..C5(2) # target-flags(ppc-tlsgd) @TIInit
+; SMALL64-NEXT:    ld 3, L..C4(2) # target-flags(ppc-tlsldm) @"_$TLSML"
 ; SMALL64-NEXT:    std 0, 64(1)
-; SMALL64-NEXT:    bla .__tls_get_addr[PR]
-; SMALL64-NEXT:    stfd 1, 0(3)
+; SMALL64-NEXT:    bla .__tls_get_mod[PR]
+; SMALL64-NEXT:    ld 4, L..C5(2) # target-flags(ppc-tlsld) @TIInit
+; SMALL64-NEXT:    stfdx 1, 3, 4
 ; SMALL64-NEXT:    addi 1, 1, 48
 ; SMALL64-NEXT:    ld 0, 16(1)
 ; SMALL64-NEXT:    mtlr 0
@@ -201,12 +201,12 @@ define void @storesTIInit(double %Val) #0 {
 ; LARGE64-NEXT:    mflr 0
 ; LARGE64-NEXT:    stdu 1, -48(1)
 ; LARGE64-NEXT:    addis 3, L..C4@u(2)
-; LARGE64-NEXT:    addis 4, L..C5@u(2)
 ; LARGE64-NEXT:    std 0, 64(1)
+; LARGE64-NEXT:    addis 6, L..C5@u(2)
 ; LARGE64-NEXT:    ld 3, L..C4@l(3)
-; LARGE64-NEXT:    ld 4, L..C5@l(4)
-; LARGE64-NEXT:    bla .__tls_get_addr[PR]
-; LARGE64-NEXT:    stfd 1, 0(3)
+; LARGE64-NEXT:    bla .__tls_get_mod[PR]
+; LARGE64-NEXT:    ld 4, L..C5@l(6)
+; LARGE64-NEXT:    stfdx 1, 3, 4
 ; LARGE64-NEXT:    addi 1, 1, 48
 ; LARGE64-NEXT:    ld 0, 16(1)
 ; LARGE64-NEXT:    mtlr 0
@@ -452,13 +452,13 @@ define double @loadsTIInit() #1 {
 ; SMALL32:       # %bb.0: # %entry
 ; SMALL32-NEXT:    mflr 0
 ; SMALL32-NEXT:    stwu 1, -32(1)
-; SMALL32-NEXT:    lwz 3, L..C4(2) # target-flags(ppc-tlsgdm) @TIInit
-; SMALL32-NEXT:    lwz 4, L..C5(2) # target-flags(ppc-tlsgd) @TIInit
+; SMALL32-NEXT:    lwz 3, L..C4(2) # target-flags(ppc-tlsldm) @"_$TLSML"
 ; SMALL32-NEXT:    stw 0, 40(1)
-; SMALL32-NEXT:    bla .__tls_get_addr[PR]
-; SMALL32-NEXT:    lwz 4, L..C8(2) # @GInit
-; SMALL32-NEXT:    lfd 0, 0(3)
-; SMALL32-NEXT:    lfd 1, 0(4)
+; SMALL32-NEXT:    bla .__tls_get_mod[PR]
+; SMALL32-NEXT:    lwz 4, L..C5(2) # target-flags(ppc-tlsld) @TIInit
+; SMALL32-NEXT:    lfdx 0, 3, 4
+; SMALL32-NEXT:    lwz 3, L..C8(2) # @GInit
+; SMALL32-NEXT:    lfd 1, 0(3)
 ; SMALL32-NEXT:    fadd 1, 0, 1
 ; SMALL32-NEXT:    addi 1, 1, 32
 ; SMALL32-NEXT:    lwz 0, 8(1)
@@ -470,12 +470,12 @@ define double @loadsTIInit() #1 {
 ; LARGE32-NEXT:    mflr 0
 ; LARGE32-NEXT:    stwu 1, -32(1)
 ; LARGE32-NEXT:    stw 0, 40(1)
-; LARGE32-NEXT:    addis 3, L..C4@u(2)
-; LARGE32-NEXT:    addis 4, L..C5@u(2)
-; LARGE32-NEXT:    lwz 3, L..C4@l(3)
-; LARGE32-NEXT:    lwz 4, L..C5@l(4)
-; LARGE32-NEXT:    bla .__tls_get_addr[PR]
-; LARGE32-NEXT:    lfd 0, 0(3)
+; LARGE32-NEXT:    addis 6, L..C4@u(2)
+; LARGE32-NEXT:    addis 3, L..C5@u(2)
+; LARGE32-NEXT:    lwz 3, L..C5@l(3)
+; LARGE32-NEXT:    bla .__tls_get_mod[PR]
+; LARGE32-NEXT:    lwz 4, L..C4@l(6)
+; LARGE32-NEXT:    lfdx 0, 3, 4
 ; LARGE32-NEXT:    addis 3, L..C8@u(2)
 ; LARGE32-NEXT:    lwz 3, L..C8@l(3)
 ; LARGE32-NEXT:    lfd 1, 0(3)
@@ -489,13 +489,13 @@ define double @loadsTIInit() #1 {
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    mflr 0
 ; SMALL64-NEXT:    stdu 1, -48(1)
-; SMALL64-NEXT:    ld 3, L..C4(2) # target-flags(ppc-tlsgdm) @TIInit
-; SMALL64-NEXT:    ld 4, L..C5(2) # target-flags(ppc-tlsgd) @TIInit
+; SMALL64-NEXT:    ld 3, L..C4(2) # target-flags(ppc-tlsldm) @"_$TLSML"
 ; SMALL64-NEXT:    std 0, 64(1)
-; SMALL64-NEXT:    bla .__tls_get_addr[PR]
-; SMALL64-NEXT:    ld 4, L..C8(2) # @GInit
-; SMALL64-NEXT:    lfd 0, 0(3)
-; SMALL64-NEXT:    lfd 1, 0(4)
+; SMALL64-NEXT:    bla .__tls_get_mod[PR]
+; SMALL64-NEXT:    ld 4, L..C5(2) # target-flags(ppc-tlsld) @TIInit
+; SMALL64-NEXT:    lfdx 0, 3, 4
+; SMALL64-NEXT:    ld 3, L..C8(2) # @GInit
+; SMALL64-NEXT:    lfd 1, 0(3)
 ; SMALL64-NEXT:    fadd 1, 0, 1
 ; SMALL64-NEXT:    addi 1, 1, 48
 ; SMALL64-NEXT:    ld 0, 16(1)
@@ -507,14 +507,14 @@ define double @loadsTIInit() #1 {
 ; LARGE64-NEXT:    mflr 0
 ; LARGE64-NEXT:    stdu 1, -48(1)
 ; LARGE64-NEXT:    addis 3, L..C4@u(2)
-; LARGE64-NEXT:    addis 4, L..C5@u(2)
 ; LARGE64-NEXT:    std 0, 64(1)
+; LARGE64-NEXT:    addis 6, L..C5@u(2)
 ; LARGE64-NEXT:    ld 3, L..C4@l(3)
-; LARGE64-NEXT:    ld 4, L..C5@l(4)
-; LARGE64-NEXT:    bla .__tls_get_addr[PR]
-; LARGE64-NEXT:    addis 4, L..C8@u(2)
-; LARGE64-NEXT:    lfd 0, 0(3)
-; LARGE64-NEXT:    ld 3, L..C8@l(4)
+; LARGE64-NEXT:    bla .__tls_get_mod[PR]
+; LARGE64-NEXT:    ld 4, L..C5@l(6)
+; LARGE64-NEXT:    addis 5, L..C8@u(2)
+; LARGE64-NEXT:    lfdx 0, 3, 4
+; LARGE64-NEXT:    ld 3, L..C8@l(5)
 ; LARGE64-NEXT:    lfd 1, 0(3)
 ; LARGE64-NEXT:    fadd 1, 0, 1
 ; LARGE64-NEXT:    addi 1, 1, 48
@@ -610,12 +610,16 @@ entry:
   ret double %add
 }
 
-; External symbol reference checks for .__tls_get_addr
+; External symbol reference checks for .__tls_get_addr/.__tls_get_mod
 
 ; SMALL32: .extern .__tls_get_addr[PR]
+; SMALL32: .extern .__tls_get_mod[PR]
 ; SMALL64: .extern .__tls_get_addr[PR]
+; SMALL64: .extern .__tls_get_mod[PR]
 ; LARGE32: .extern .__tls_get_addr[PR]
+; LARGE32: .extern .__tls_get_mod[PR]
 ; LARGE64: .extern .__tls_get_addr[PR]
+; LARGE64: .extern .__tls_get_mod[PR]
 
 ; TOC entry checks
 
@@ -629,9 +633,10 @@ entry:
 ; SMALL32-LABEL:  L..C3:
 ; SMALL32-NEXT:   .tc TGInit[TC],TGInit[TL]@gd
 ; SMALL32-LABEL:  L..C4:
-; SMALL32-NEXT:   .tc .TIInit[TC],TIInit[TL]@m
+; SMALL32-NEXT:   .tc _Renamed..5f24__TLSML[TC],_Renamed..5f24__TLSML[TC]@ml
+; SMALL32-NEXT:   .rename _Renamed..5f24__TLSML[TC],"_$TLSML"
 ; SMALL32-LABEL:  L..C5:
-; SMALL32-NEXT:   .tc TIInit[TC],TIInit[TL]@gd
+; SMALL32-NEXT:   .tc TIInit[TC],TIInit[TL]@ld
 ; SMALL32-LABEL:  L..C6:
 ; SMALL32-NEXT:   .tc .TWInit[TC],TWInit[TL]@m
 ; SMALL32-LABEL:  L..C7:
@@ -649,9 +654,10 @@ entry:
 ; LARGE32-LABEL:  L..C3:
 ; LARGE32-NEXT:   .tc TGInit[TE],TGInit[TL]@gd
 ; LARGE32-LABEL:  L..C4:
-; LARGE32-NEXT:   .tc .TIInit[TE],TIInit[TL]@m
+; LARGE32-NEXT:   .tc TIInit[TE],TIInit[TL]@ld
 ; LARGE32-LABEL:  L..C5:
-; LARGE32-NEXT:   .tc TIInit[TE],TIInit[TL]@gd
+; LARGE32-NEXT:   .tc _Renamed..5f24__TLSML[TC],_Renamed..5f24__TLSML[TC]@ml
+; LARGE32-NEXT:   .rename _Renamed..5f24__TLSML[TC],"_$TLSML"
 ; LARGE32-LABEL:  L..C6:
 ; LARGE32-NEXT:   .tc .TWInit[TE],TWInit[TL]@m
 ; LARGE32-LABEL:  L..C7:
@@ -669,9 +675,10 @@ entry:
 ; SMALL64-LABEL:  L..C3:
 ; SMALL64-NEXT:  .tc TGInit[TC],TGInit[TL]@gd
 ; SMALL64-LABEL:  L..C4:
-; SMALL64-NEXT:  .tc .TIInit[TC],TIInit[TL]@m
+; SMALL64-NEXT:  .tc _Renamed..5f24__TLSML[TC],_Renamed..5f24__TLSML[TC]@ml
+; SMALL64-NEXT:  .rename _Renamed..5f24__TLSML[TC],"_$TLSML"
 ; SMALL64-LABEL:  L..C5:
-; SMALL64-NEXT:  .tc TIInit[TC],TIInit[TL]@gd
+; SMALL64-NEXT:  .tc TIInit[TC],TIInit[TL]@ld
 ; SMALL64-LABEL:  L..C6:
 ; SMALL64-NEXT:  .tc .TWInit[TC],TWInit[TL]@m
 ; SMALL64-LABEL:  L..C7:
@@ -689,9 +696,10 @@ entry:
 ; LARGE64-LABEL:  L..C3:
 ; LARGE64-NEXT:  .tc TGInit[TE],TGInit[TL]@gd
 ; LARGE64-LABEL:  L..C4:
-; LARGE64-NEXT:  .tc .TIInit[TE],TIInit[TL]@m
+; LARGE64-NEXT:  .tc _Renamed..5f24__TLSML[TC],_Renamed..5f24__TLSML[TC]@ml
+; LARGE64-NEXT:  .rename _Renamed..5f24__TLSML[TC],"_$TLSML"
 ; LARGE64-LABEL:  L..C5:
-; LARGE64-NEXT:  .tc TIInit[TE],TIInit[TL]@gd
+; LARGE64-NEXT:  .tc TIInit[TE],TIInit[TL]@ld
 ; LARGE64-LABEL:  L..C6:
 ; LARGE64-NEXT:  .tc .TWInit[TE],TWInit[TL]@m
 ; LARGE64-LABEL:  L..C7:

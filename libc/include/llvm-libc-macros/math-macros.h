@@ -6,8 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_MATH_MACROS_H
-#define __LLVM_LIBC_MACROS_MATH_MACROS_H
+#ifndef LLVM_LIBC_MACROS_MATH_MACROS_H
+#define LLVM_LIBC_MACROS_MATH_MACROS_H
+
+#include "limits-macros.h"
+
+#define FP_NAN 0
+#define FP_INFINITE 1
+#define FP_ZERO 2
+#define FP_SUBNORMAL 3
+#define FP_NORMAL 4
 
 #define MATH_ERRNO 1
 #define MATH_ERREXCEPT 2
@@ -16,8 +24,11 @@
 #define INFINITY __builtin_inf()
 #define NAN __builtin_nanf("")
 
-#define FP_ILOGB0 (-__INT_MAX__ - 1)
-#define FP_ILOGBNAN __INT_MAX__
+#define FP_ILOGB0 (-INT_MAX - 1)
+#define FP_ILOGBNAN INT_MAX
+
+#define FP_LLOGB0 (-LONG_MAX - 1)
+#define FP_LLOGBNAN LONG_MAX
 
 #define isfinite(x) __builtin_isfinite(x)
 #define isinf(x) __builtin_isinf(x)
@@ -25,10 +36,12 @@
 
 #ifdef __FAST_MATH__
 #define math_errhandling 0
-#elif defined __NO_MATH_ERRNO__
+#elif defined(__NO_MATH_ERRNO__)
 #define math_errhandling (MATH_ERREXCEPT)
+#elif defined(__NVPTX__) || defined(__AMDGPU__)
+#define math_errhandling (MATH_ERRNO)
 #else
 #define math_errhandling (MATH_ERRNO | MATH_ERREXCEPT)
 #endif
 
-#endif // __LLVM_LIBC_MACROS_MATH_MACROS_H
+#endif // LLVM_LIBC_MACROS_MATH_MACROS_H

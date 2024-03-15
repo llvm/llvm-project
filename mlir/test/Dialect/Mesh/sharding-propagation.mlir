@@ -1,4 +1,4 @@
-// RUN: mlir-opt -sharding-propagation %s | FileCheck %s
+// RUN: mlir-opt --pass-pipeline="builtin.module(func.func(sharding-propagation))" %s | FileCheck %s
 
 mesh.mesh @mesh_1d(shape = ?)
 mesh.mesh @mesh_2d(shape = 2x4)

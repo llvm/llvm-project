@@ -214,7 +214,7 @@ class LldbGdbServerTestCase(
         register_sets = {
             reg_info["set"]: 1 for reg_info in reg_infos if "set" in reg_info
         }
-        self.assertTrue(len(register_sets) >= 1)
+        self.assertGreaterEqual(len(register_sets), 1)
 
     def targetHasAVX(self):
         triple = self.dbg.GetSelectedPlatform().GetTriple()
@@ -344,7 +344,7 @@ class LldbGdbServerTestCase(
         # Gather register info entries.
         reg_infos = self.parse_register_info_packets(context)
         self.assertIsNotNone(reg_infos)
-        self.assertTrue(len(reg_infos) > 0)
+        self.assertGreater(len(reg_infos), 0)
 
         byte_order = self.get_target_byte_order()
 
@@ -1072,7 +1072,7 @@ class LldbGdbServerTestCase(
     def test_qSupported_returns_known_stub_features(self):
         supported_dict = self.get_qSupported_dict()
         self.assertIsNotNone(supported_dict)
-        self.assertTrue(len(supported_dict) > 0)
+        self.assertGreater(len(supported_dict), 0)
 
     def test_qSupported_auvx(self):
         expected = (
@@ -1267,7 +1267,7 @@ class LldbGdbServerTestCase(
             for reg_info in reg_infos
             if self.is_bit_flippable_register(reg_info)
         ]
-        self.assertTrue(len(gpr_reg_infos) > 0)
+        self.assertGreater(len(gpr_reg_infos), 0)
 
         # Write flipped bit pattern of existing value to each register.
         (successful_writes, failed_writes) = self.flip_all_bits_in_each_register_value(
@@ -1278,7 +1278,7 @@ class LldbGdbServerTestCase(
                 successful_writes, failed_writes
             )
         )
-        self.assertTrue(successful_writes > 0)
+        self.assertGreater(successful_writes, 0)
 
     # Note: as of this moment, a hefty number of the GPR writes are failing
     # with E32 (everything except rax-rdx, rdi, rsi, rbp).
@@ -1310,7 +1310,7 @@ class LldbGdbServerTestCase(
         reg_index = self.select_modifiable_register(reg_infos)
         self.assertIsNotNone(reg_index)
         reg_byte_size = int(reg_infos[reg_index]["bitsize"]) // 8
-        self.assertTrue(reg_byte_size > 0)
+        self.assertGreater(reg_byte_size, 0)
 
         expected_reg_values = []
         register_increment = 1

@@ -3038,7 +3038,7 @@ ProgramStateRef RangeConstraintManager::setRange(ProgramStateRef State,
 
 //===------------------------------------------------------------------------===
 // assumeSymX methods: protected interface for RangeConstraintManager.
-//===------------------------------------------------------------------------===/
+//===------------------------------------------------------------------------===
 
 // The syntax for ranges below is mathematical, using [x, y] for closed ranges
 // and (x, y) for open ranges. These ranges are modular, corresponding with

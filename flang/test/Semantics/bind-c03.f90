@@ -13,7 +13,13 @@ module m
     end
   end interface
 
+  interface proc3
+    subroutine proc3() bind(c)
+    end
+  end interface
+
   procedure(proc1), bind(c) :: pc1 ! no error
+  procedure(proc3), bind(c) :: pc4 ! no error
 
   !ERROR: An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement
   procedure(proc2), bind(c) :: pc2

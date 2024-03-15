@@ -66,7 +66,7 @@ define float @constant_fold_maxnum_f32_p0_n0() {
 
 define float @constant_fold_maxnum_f32_n0_p0() {
 ; CHECK-LABEL: @constant_fold_maxnum_f32_n0_p0(
-; CHECK-NEXT:    ret float -0.000000e+00
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %x = call float @llvm.maxnum.f32(float -0.0, float 0.0)
   ret float %x
@@ -458,11 +458,24 @@ define float @negated_op_extra_use(float %x) {
 ; CHECK-LABEL: @negated_op_extra_use(
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[NEGX]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maxnum.f32(float [[NEGX]], float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %negx = fneg float %x
   call void @use(float %negx)
   %r = call float @llvm.maxnum.f32(float %negx, float %x)
+  ret float %r
+}
+
+define float @negated_op_extra_use_comm(float %x) {
+; CHECK-LABEL: @negated_op_extra_use_comm(
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    call void @use(float [[NEGX]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %negx = fneg float %x
+  call void @use(float %negx)
+  %r = call float @llvm.maxnum.f32(float %x, float %negx)
   ret float %r
 }

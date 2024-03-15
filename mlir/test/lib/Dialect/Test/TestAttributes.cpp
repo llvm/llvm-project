@@ -82,7 +82,7 @@ Attribute TestI64ElementsAttr::parse(AsmParser &parser, Type type) {
 void TestI64ElementsAttr::print(AsmPrinter &printer) const {
   printer << "<[";
   llvm::interleaveComma(getElements(), printer);
-  printer << "] : " << getType() << ">";
+  printer << "]>";
 }
 
 LogicalResult

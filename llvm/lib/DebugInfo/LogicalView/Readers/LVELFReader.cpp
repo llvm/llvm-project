@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This implements the LVELFReader class.
-// It supports ELF and Mach-O formats.
+// It supports ELF, Mach-O and Wasm binary formats.
 //
 //===----------------------------------------------------------------------===//
 
@@ -415,6 +415,8 @@ void LVELFReader::processOneAttribute(const DWARFDie &Die, LVOffset *OffsetPtr,
       if (FoundLowPC) {
         if (CurrentLowPC == MaxAddress)
           CurrentElement->setIsDiscarded();
+        // Consider the case of WebAssembly.
+        CurrentLowPC += WasmCodeSectionOffset;
         if (CurrentElement->isCompileUnit())
           setCUBaseAddress(CurrentLowPC);
       }
@@ -429,10 +431,17 @@ void LVELFReader::processOneAttribute(const DWARFDie &Die, LVOffset *OffsetPtr,
         CurrentHighPC = *Address;
       if (std::optional<uint64_t> Offset = FormValue.getAsUnsignedConstant())
         // High PC is an offset from LowPC.
-        CurrentHighPC = CurrentLowPC + *Offset;
+        // Don't add the WebAssembly offset if we have seen a DW_AT_low_pc, as
+        // the CurrentLowPC has already that offset added. Basically, use the
+        // original DW_AT_loc_pc value.
+        CurrentHighPC =
+            (FoundLowPC ? CurrentLowPC - WasmCodeSectionOffset : CurrentLowPC) +
+            *Offset;
       // Store the real upper limit for the address range.
       if (UpdateHighAddress && CurrentHighPC > 0)
         --CurrentHighPC;
+      // Consider the case of WebAssembly.
+      CurrentHighPC += WasmCodeSectionOffset;
       if (CurrentElement->isCompileUnit())
         setCUHighAddress(CurrentHighPC);
     }
@@ -466,6 +475,9 @@ void LVELFReader::processOneAttribute(const DWARFDie &Die, LVOffset *OffsetPtr,
         // Store the real upper limit for the address range.
         if (UpdateHighAddress && Range.HighPC > 0)
           --Range.HighPC;
+        // Consider the case of WebAssembly.
+        Range.LowPC += WasmCodeSectionOffset;
+        Range.HighPC += WasmCodeSectionOffset;
         // Add the pair of addresses.
         CurrentScope->addObject(Range.LowPC, Range.HighPC);
         // If the scope is the CU, do not update the ranges set.
@@ -735,7 +747,8 @@ void LVELFReader::createLineAndFileRecords(
       // and they will be released when its scope parent is deleted.
       LVLineDebug *Line = createLineDebug();
       CULines.push_back(Line);
-      Line->setAddress(Row.Address.Address);
+      // Consider the case of WebAssembly.
+      Line->setAddress(Row.Address.Address + WasmCodeSectionOffset);
       Line->setFilename(
           CompileUnit->getFilename(IncrementIndex ? Row.File + 1 : Row.File));
       Line->setLineNumber(Row.Line);

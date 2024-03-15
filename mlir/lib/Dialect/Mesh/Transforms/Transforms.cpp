@@ -208,4 +208,17 @@ createCollectiveProcessGroupSize(MeshOp mesh, ArrayRef<MeshAxis> axes,
       .cast<TypedValue<IndexType>>();
 }
 
+TypedValue<IndexType> createProcessLinearIndex(StringRef mesh,
+                                               ArrayRef<MeshAxis> meshAxes,
+                                               ImplicitLocOpBuilder &builder) {
+  ResultRange processInGroupMultiIndex =
+      builder.create<ProcessMultiIndexOp>(mesh, meshAxes).getResults();
+  Operation::result_range processGroupShape =
+      builder.create<MeshShapeOp>(mesh, meshAxes).getResult();
+  OpFoldResult processInGroupLinearIndex = affine::linearizeIndex(
+      llvm::to_vector_of<OpFoldResult>(processInGroupMultiIndex),
+      llvm::to_vector_of<OpFoldResult>(processGroupShape), builder);
+  return cast<TypedValue<IndexType>>(processInGroupLinearIndex.get<Value>());
+}
+
 } // namespace mlir::mesh

@@ -129,7 +129,6 @@ define <vscale x 32 x i8> @ld1_x2_i8_z0_z8(<vscale x 16 x i8> %unused, <vscale x
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -145,6 +144,7 @@ define <vscale x 32 x i8> @ld1_x2_i8_z0_z8(<vscale x 16 x i8> %unused, <vscale x
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -284,7 +284,6 @@ define <vscale x 32 x i8> @ld1_x2_i8_z0_z8_scalar(<vscale x 16 x i8> %unused, <v
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -300,6 +299,7 @@ define <vscale x 32 x i8> @ld1_x2_i8_z0_z8_scalar(<vscale x 16 x i8> %unused, <v
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -440,7 +440,6 @@ define <vscale x 16 x i16> @ld1_x2_i16_z0_z8(<vscale x 8 x i16> %unused, <vscale
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -456,6 +455,7 @@ define <vscale x 16 x i16> @ld1_x2_i16_z0_z8(<vscale x 8 x i16> %unused, <vscale
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -595,7 +595,6 @@ define <vscale x 16 x i16> @ld1_x2_i16_z0_z8_scalar(<vscale x 8 x i16> %unused, 
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -611,6 +610,7 @@ define <vscale x 16 x i16> @ld1_x2_i16_z0_z8_scalar(<vscale x 8 x i16> %unused, 
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -751,7 +751,6 @@ define <vscale x 8 x i32> @ld1_x2_i32_z0_z8(<vscale x 4 x i32> %unused, <vscale 
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -767,6 +766,7 @@ define <vscale x 8 x i32> @ld1_x2_i32_z0_z8(<vscale x 4 x i32> %unused, <vscale 
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -906,7 +906,6 @@ define <vscale x 8 x i32> @ld1_x2_i32_z0_z8_scalar(<vscale x 4 x i32> %unused, <
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -922,6 +921,7 @@ define <vscale x 8 x i32> @ld1_x2_i32_z0_z8_scalar(<vscale x 4 x i32> %unused, <
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -1062,7 +1062,6 @@ define <vscale x 4 x i64> @ld1_x2_i64_z0_z8(<vscale x 2 x i64> %unused, <vscale 
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -1078,6 +1077,7 @@ define <vscale x 4 x i64> @ld1_x2_i64_z0_z8(<vscale x 2 x i64> %unused, <vscale 
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -1217,7 +1217,6 @@ define <vscale x 4 x i64> @ld1_x2_i64_z0_z8_scalar(<vscale x 2 x i64> %unused, <
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -1233,6 +1232,7 @@ define <vscale x 4 x i64> @ld1_x2_i64_z0_z8_scalar(<vscale x 2 x i64> %unused, <
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -1380,7 +1380,6 @@ define <vscale x 64 x i8> @ld1_x4_i8_z0_z4_z8_z12(<vscale x 16 x i8> %unused, <v
 ; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -1395,6 +1394,7 @@ define <vscale x 64 x i8> @ld1_x4_i8_z0_z4_z8_z12(<vscale x 16 x i8> %unused, <v
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -1545,7 +1545,6 @@ define <vscale x 64 x i8> @ld1_x4_i8_z0_z4_z8_z12_scalar(<vscale x 16 x i8> %unu
 ; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -1560,6 +1559,7 @@ define <vscale x 64 x i8> @ld1_x4_i8_z0_z4_z8_z12_scalar(<vscale x 16 x i8> %unu
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -1711,7 +1711,6 @@ define <vscale x 32 x i16> @ld1_x4_i16_z0_z4_z8_z12(<vscale x 8 x i16> %unused, 
 ; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -1726,6 +1725,7 @@ define <vscale x 32 x i16> @ld1_x4_i16_z0_z4_z8_z12(<vscale x 8 x i16> %unused, 
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -1877,7 +1877,6 @@ define <vscale x 32 x i16> @ld1_x4_i16_z0_z4_z8_z12_scalar(<vscale x 8 x i16> %u
 ; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -1892,6 +1891,7 @@ define <vscale x 32 x i16> @ld1_x4_i16_z0_z4_z8_z12_scalar(<vscale x 8 x i16> %u
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -2043,7 +2043,6 @@ define <vscale x 16 x i32> @ld1_x4_i32_z0_z4_z8_z12(<vscale x 4 x i32> %unused, 
 ; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -2058,6 +2057,7 @@ define <vscale x 16 x i32> @ld1_x4_i32_z0_z4_z8_z12(<vscale x 4 x i32> %unused, 
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -2209,7 +2209,6 @@ define <vscale x 16 x i32> @ld1_x4_i32_z0_z4_z8_z12_scalar(<vscale x 4 x i32> %u
 ; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -2224,6 +2223,7 @@ define <vscale x 16 x i32> @ld1_x4_i32_z0_z4_z8_z12_scalar(<vscale x 4 x i32> %u
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -2375,7 +2375,6 @@ define <vscale x 8 x i64> @ld1_x4_i64_z0_z4_z8_z12(<vscale x 2 x i64> %unused, <
 ; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -2390,6 +2389,7 @@ define <vscale x 8 x i64> @ld1_x4_i64_z0_z4_z8_z12(<vscale x 2 x i64> %unused, <
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret
@@ -2541,7 +2541,6 @@ define <vscale x 8 x i64> @ld1_x4_i64_z0_z4_z8_z12_scalar(<vscale x 2 x i64> %un
 ; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
-; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -2556,6 +2555,7 @@ define <vscale x 8 x i64> @ld1_x4_i64_z0_z4_z8_z12_scalar(<vscale x 2 x i64> %un
 ; CONTIGUOUS-NEXT:    ldr z11, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ret

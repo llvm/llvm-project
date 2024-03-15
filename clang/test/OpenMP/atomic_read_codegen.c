@@ -128,13 +128,11 @@ int main(void) {
 // CHECK: store i64
 #pragma omp atomic read
   ullv = ullx;
-// CHECK: load atomic i32, ptr {{.*}} monotonic, align 4
-// CHECK: bitcast i32 {{.*}} to float
+// CHECK: load atomic float, ptr {{.*}} monotonic, align 4
 // CHECK: store float
 #pragma omp atomic read
   fv = fx;
-// CHECK: load atomic i64, ptr {{.*}} monotonic, align 8
-// CHECK: bitcast i64 {{.*}} to double
+// CHECK: load atomic double, ptr {{.*}} monotonic, align 8
 // CHECK: store double
 #pragma omp atomic read
   dv = dx;
@@ -194,11 +192,11 @@ int main(void) {
 // CHECK: store i64
 #pragma omp atomic read
   lv = cix;
-// CHECK: load atomic i32, ptr {{.*}} monotonic, align 4
+// CHECK: load atomic float, ptr {{.*}} monotonic, align 4
 // CHECK: store i64
 #pragma omp atomic read
   ulv = fx;
-// CHECK: load atomic i64, ptr {{.*}} monotonic, align 8
+// CHECK: load atomic double, ptr {{.*}} monotonic, align 8
 // CHECK: store i64
 #pragma omp atomic read
   llv = dx;

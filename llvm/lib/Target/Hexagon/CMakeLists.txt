@@ -33,6 +33,7 @@ add_llvm_target(HexagonCodeGen
   HexagonFrameLowering.cpp
   HexagonGenExtract.cpp
   HexagonGenInsert.cpp
+  HexagonGenMemAbsolute.cpp
   HexagonGenMux.cpp
   HexagonGenPredicate.cpp
   HexagonHardwareLoops.cpp
@@ -42,6 +43,7 @@ add_llvm_target(HexagonCodeGen
   HexagonISelDAGToDAGHVX.cpp
   HexagonISelLowering.cpp
   HexagonISelLoweringHVX.cpp
+  HexagonLoopAlign.cpp
   HexagonLoopIdiomRecognition.cpp
   HexagonMachineFunctionInfo.cpp
   HexagonMachineScheduler.cpp
@@ -50,7 +52,6 @@ add_llvm_target(HexagonCodeGen
   HexagonOptAddrMode.cpp
   HexagonOptimizeSZextends.cpp
   HexagonPeephole.cpp
-  HexagonPostIncOpt.cpp
   HexagonRDFOpt.cpp
   HexagonRegisterInfo.cpp
   HexagonSelectionDAGInfo.cpp
@@ -61,6 +62,7 @@ add_llvm_target(HexagonCodeGen
   HexagonTargetMachine.cpp
   HexagonTargetObjectFile.cpp
   HexagonTargetTransformInfo.cpp
+  HexagonTfrCleanup.cpp
   HexagonVectorCombine.cpp
   HexagonVectorLoopCarriedReuse.cpp
   HexagonVectorPrint.cpp

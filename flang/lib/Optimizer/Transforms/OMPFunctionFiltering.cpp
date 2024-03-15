@@ -79,12 +79,15 @@ public:
           // Remove the callOp
           callOp->erase();
         }
-        if (!hasTargetRegion)
+        if (!hasTargetRegion) {
           funcOp.erase();
-        else if (declareTargetOp)
+          return WalkResult::skip();
+        }
+        if (declareTargetOp)
           declareTargetOp.setDeclareTarget(declareType,
                                            omp::DeclareTargetCaptureClause::to);
       }
+      return WalkResult::advance();
     });
   }
 };

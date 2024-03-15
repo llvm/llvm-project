@@ -85,12 +85,15 @@ ConstString ValueObjectDynamicValue::GetDisplayTypeName() {
   return m_parent->GetDisplayTypeName();
 }
 
-size_t ValueObjectDynamicValue::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t>
+ValueObjectDynamicValue::CalculateNumChildren(uint32_t max) {
   const bool success = UpdateValueIfNeeded(false);
   if (success && m_dynamic_type_info.HasType()) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
     auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
-    return children_count <= max ? children_count : max;
+    if (!children_count)
+      return children_count;
+    return *children_count <= max ? *children_count : max;
   } else
     return m_parent->GetNumChildren(max);
 }

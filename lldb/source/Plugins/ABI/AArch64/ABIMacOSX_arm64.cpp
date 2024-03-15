@@ -814,11 +814,11 @@ addr_t ABIMacOSX_arm64::FixCodeAddress(addr_t pc) {
     mask = process_sp->GetCodeAddressMask();
     if (pc & pac_sign_extension) {
       addr_t highmem_mask = process_sp->GetHighmemCodeAddressMask();
-      if (highmem_mask)
+      if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
         mask = highmem_mask;
     }
   }
-  if (mask == 0)
+  if (mask == LLDB_INVALID_ADDRESS_MASK)
     mask = tbi_mask;
 
   return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
@@ -833,11 +833,11 @@ addr_t ABIMacOSX_arm64::FixDataAddress(addr_t pc) {
     mask = process_sp->GetDataAddressMask();
     if (pc & pac_sign_extension) {
       addr_t highmem_mask = process_sp->GetHighmemDataAddressMask();
-      if (highmem_mask)
+      if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
         mask = highmem_mask;
     }
   }
-  if (mask == 0)
+  if (mask == LLDB_INVALID_ADDRESS_MASK)
     mask = tbi_mask;
 
   return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);

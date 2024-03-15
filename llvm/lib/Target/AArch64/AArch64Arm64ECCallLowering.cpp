@@ -119,8 +119,8 @@ void AArch64Arm64ECCallLowering::getThunkType(FunctionType *FT,
   getThunkArgTypes(FT, AttrList, TT, Out, Arm64ArgTypes, X64ArgTypes,
                    HasSretPtr);
 
-  Arm64Ty = FunctionType::get(Arm64RetTy, Arm64ArgTypes,
-                              TT == ThunkType::Entry && FT->isVarArg());
+  Arm64Ty = FunctionType::get(Arm64RetTy, Arm64ArgTypes, false);
+
   X64Ty = FunctionType::get(X64RetTy, X64ArgTypes, false);
 }
 
@@ -158,13 +158,13 @@ void AArch64Arm64ECCallLowering::getThunkArgTypes(
       X64ArgTypes.push_back(I64Ty);
     }
 
+    // x4
+    Arm64ArgTypes.push_back(PtrTy);
+    X64ArgTypes.push_back(PtrTy);
+    // x5
+    Arm64ArgTypes.push_back(I64Ty);
     if (TT != ThunkType::Entry) {
-      // x4
-      Arm64ArgTypes.push_back(PtrTy);
-      X64ArgTypes.push_back(PtrTy);
-      // x5
-      Arm64ArgTypes.push_back(I64Ty);
-      // FIXME: x5 isn't actually passed/used by the x64 side; revisit once we
+      // FIXME: x5 isn't actually used by the x64 side; revisit once we
       // have proper isel for varargs
       X64ArgTypes.push_back(I64Ty);
     }
@@ -473,10 +473,11 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
 
   bool TransformDirectToSRet = X64RetType->isVoidTy() && !RetTy->isVoidTy();
   unsigned ThunkArgOffset = TransformDirectToSRet ? 2 : 1;
+  unsigned PassthroughArgSize = F->isVarArg() ? 5 : Thunk->arg_size();
 
   // Translate arguments to call.
   SmallVector<Value *> Args;
-  for (unsigned i = ThunkArgOffset, e = Thunk->arg_size(); i != e; ++i) {
+  for (unsigned i = ThunkArgOffset, e = PassthroughArgSize; i != e; ++i) {
     Value *Arg = Thunk->getArg(i);
     Type *ArgTy = Arm64Ty->getParamType(i - ThunkArgOffset);
     if (ArgTy->isArrayTy() || ArgTy->isStructTy() ||
@@ -491,6 +492,22 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
       }
     }
     Args.push_back(Arg);
+  }
+
+  if (F->isVarArg()) {
+    // The 5th argument to variadic entry thunks is used to model the x64 sp
+    // which is passed to the thunk in x4, this can be passed to the callee as
+    // the variadic argument start address after skipping over the 32 byte
+    // shadow store.
+
+    // The EC thunk CC will assign any argument marked as InReg to x4.
+    Thunk->addParamAttr(5, Attribute::InReg);
+    Value *Arg = Thunk->getArg(5);
+    Arg = IRB.CreatePtrAdd(Arg, IRB.getInt64(0x20));
+    Args.push_back(Arg);
+
+    // Pass in a zero variadic argument size (in x5).
+    Args.push_back(IRB.getInt64(0));
   }
 
   // Call the function passed to the thunk.
@@ -712,7 +729,7 @@ bool AArch64Arm64ECCallLowering::processFunction(
   // name (emitting the definition) can grab it from the metadata.
   //
   // FIXME: Handle functions with weak linkage?
-  if (F.hasExternalLinkage() || F.hasWeakLinkage() || F.hasLinkOnceLinkage()) {
+  if (!F.hasLocalLinkage() || F.hasAddressTaken()) {
     if (std::optional<std::string> MangledName =
             getArm64ECMangledFunctionName(F.getName().str())) {
       F.setMetadata("arm64ec_unmangled_name",

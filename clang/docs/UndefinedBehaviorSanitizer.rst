@@ -190,10 +190,11 @@ Available checks are:
   -  ``-fsanitize=signed-integer-overflow``: Signed integer overflow, where the
      result of a signed integer computation cannot be represented in its type.
      This includes all the checks covered by ``-ftrapv``, as well as checks for
-     signed division overflow (``INT_MIN/-1``), but not checks for
-     lossy implicit conversions performed before the computation
-     (see ``-fsanitize=implicit-conversion``). Both of these two issues are
-     handled by ``-fsanitize=implicit-conversion`` group of checks.
+     signed division overflow (``INT_MIN/-1``). Note that checks are still
+     added even when ``-fwrapv`` is enabled. This sanitizer does not check for
+     lossy implicit conversions performed before the computation (see
+     ``-fsanitize=implicit-conversion``). Both of these two issues are handled
+     by ``-fsanitize=implicit-conversion`` group of checks.
   -  ``-fsanitize=unreachable``: If control flow reaches an unreachable
      program point.
   -  ``-fsanitize=unsigned-integer-overflow``: Unsigned integer overflow, where

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
+#include <algorithm>
 #include <atomic>
 #include <numeric>
 #include <regex>

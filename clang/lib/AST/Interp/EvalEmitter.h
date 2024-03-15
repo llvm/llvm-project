@@ -41,8 +41,7 @@ public:
   InterpState &getState() { return S; }
 
 protected:
-  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
-              APValue &Result);
+  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
 
   virtual ~EvalEmitter();
 
@@ -74,7 +73,7 @@ protected:
   /// Lambda captures.
   llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
   /// Offset of the This parameter in a lambda record.
-  unsigned LambdaThisCapture = 0;
+  ParamOffset LambdaThisCapture{0, false};
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
 

@@ -508,7 +508,7 @@ struct FromElementsOpInterface
     }
 
     // Create constants for the range of possible indices [0, max{shape_i}).
-    auto maxDim = *std::max_element(shape.begin(), shape.end());
+    auto maxDim = *llvm::max_element(shape);
     SmallVector<Value, 2> constants;
     constants.reserve(maxDim);
     for (int i = 0; i < maxDim; ++i)

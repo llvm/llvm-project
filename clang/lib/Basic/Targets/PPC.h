@@ -362,8 +362,16 @@ public:
 
   // We support __builtin_cpu_supports/__builtin_cpu_is on targets that
   // have Glibc since it is Glibc that provides the HWCAP[2] in the auxv.
+  static constexpr int MINIMUM_AIX_OS_MAJOR = 7;
+  static constexpr int MINIMUM_AIX_OS_MINOR = 2;
   bool supportsCpuSupports() const override { return getTriple().isOSGlibc(); }
-  bool supportsCpuIs() const override { return getTriple().isOSGlibc(); }
+  bool supportsCpuIs() const override {
+    llvm::Triple Triple = getTriple();
+    // AIX 7.2 is the minimum requirement to support __builtin_cpu_is().
+    return Triple.isOSGlibc() ||
+           (Triple.isOSAIX() &&
+            !Triple.isOSVersionLT(MINIMUM_AIX_OS_MAJOR, MINIMUM_AIX_OS_MINOR));
+  }
   bool validateCpuSupports(StringRef Feature) const override;
   bool validateCpuIs(StringRef Name) const override;
 };

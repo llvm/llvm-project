@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-unused-return-value %t \
 // RUN: -config='{CheckOptions: \
 // RUN:  {bugprone-unused-return-value.CheckedFunctions: \
-// RUN:    "::fun;::ns::Outer::Inner::memFun;::ns::Type::staticFun;::ns::ClassTemplate::memFun;::ns::ClassTemplate::staticFun"}}' \
+// RUN:    "::fun;::ns::Outer::Inner::memFun;::ns::Type::staticFun;::ns::ClassTemplate::(mem|static)Fun"}}' \
 // RUN: --
 
 namespace std {

@@ -298,8 +298,7 @@ public:
                                        .isa<fir::SequenceType>());
     });
     mlir::RewritePatternSet patterns(&context);
-    patterns.insert<EmboxConversion, ArrayCoorConversion, ReboxConversion,
-                    DeclareOpConversion>(&context);
+    fir::populatePreCGRewritePatterns(patterns);
     if (mlir::failed(
             mlir::applyPartialConversion(op, target, std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(&context),
@@ -326,4 +325,9 @@ public:
 
 std::unique_ptr<mlir::Pass> fir::createFirCodeGenRewritePass() {
   return std::make_unique<CodeGenRewrite>();
+}
+
+void fir::populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns) {
+  patterns.insert<EmboxConversion, ArrayCoorConversion, ReboxConversion,
+                  DeclareOpConversion>(patterns.getContext());
 }

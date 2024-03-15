@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_FENV_MACROS_H
-#define __LLVM_LIBC_MACROS_FENV_MACROS_H
+#ifndef LLVM_LIBC_MACROS_FENV_MACROS_H
+#define LLVM_LIBC_MACROS_FENV_MACROS_H
 
 #define FE_DIVBYZERO 1
 #define FE_INEXACT 2
@@ -24,4 +24,4 @@
 
 #define FE_DFL_ENV ((fenv_t *)-1)
 
-#endif // __LLVM_LIBC_MACROS_FENV_MACROS_H
+#endif // LLVM_LIBC_MACROS_FENV_MACROS_H

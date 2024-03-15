@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
-#define LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
+#ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_RINTTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_SMOKE_RINTTEST_H
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -54,4 +54,4 @@ public:
   using LlvmLibcRIntTest = RIntTestTemplate<F>;                                \
   TEST_F(LlvmLibcRIntTest, specialNumbers) { testSpecialNumbers(&func); }
 
-#endif // LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
+#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_RINTTEST_H

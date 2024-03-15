@@ -716,12 +716,10 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       } else if (ISD == ISD::EXTRACT_VECTOR_ELT) {
         // It's an extract.  Maybe we can do a cheap move-from VSR.
         unsigned EltSize = Val->getScalarSizeInBits();
-        if (EltSize == 64) {
-          // FIXME: no need to worry about endian, P9 has both mfvsrd/mfvsrld.
-          unsigned MfvsrdIndex = ST->isLittleEndian() ? 1 : 0;
-          if (Index == MfvsrdIndex)
-            return 1;
-        } else if (EltSize == 32) {
+        // P9 has both mfvsrd and mfvsrld for 64 bit integer.
+        if (EltSize == 64 && Index != -1U)
+          return 1;
+        else if (EltSize == 32) {
           unsigned MfvsrwzIndex = ST->isLittleEndian() ? 2 : 1;
           if (Index == MfvsrwzIndex)
             return 1;

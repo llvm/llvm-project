@@ -396,6 +396,7 @@ cc_test(
         ":static_analyzer_test_headers",
         "//clang:analysis",
         "//clang:ast",
+        "//clang:ast_matchers",
         "//clang:basic",
         "//clang:frontend",
         "//clang:static_analyzer_core",

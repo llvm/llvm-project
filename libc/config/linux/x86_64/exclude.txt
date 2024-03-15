@@ -9,12 +9,12 @@ try_compile(
 )
 
 if(NOT has_sys_random)
-  list(APPEND TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS 
+  list(APPEND TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS
     libc.src.sys.stat.stat
   )
   # If we're doing a fullbuild we provide the random header ourselves.
   if(NOT LLVM_LIBC_FULL_BUILD)
-    list(APPEND TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS 
+    list(APPEND TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS
       libc.src.sys.random.getrandom
     )
   endif()

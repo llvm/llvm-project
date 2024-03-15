@@ -110,12 +110,16 @@ public:
   /// that value is returned. Otherwise, returns NULL.
   virtual const llvm::APSInt *getKnownValue(ProgramStateRef state, SVal val) = 0;
 
-  /// Tries to get the minimal possible (integer) value of a given SVal. If the
-  /// constraint manager cannot provide an useful answer, this returns NULL.
+  /// Tries to get the minimal possible (integer) value of a given SVal. This
+  /// always returns the value of a ConcreteInt, but may return NULL if the
+  /// value is symbolic and the constraint manager cannot provide a useful
+  /// answer.
   virtual const llvm::APSInt *getMinValue(ProgramStateRef state, SVal val) = 0;
 
-  /// Tries to get the maximal possible (integer) value of a given SVal. If the
-  /// constraint manager cannot provide an useful answer, this returns NULL.
+  /// Tries to get the maximal possible (integer) value of a given SVal. This
+  /// always returns the value of a ConcreteInt, but may return NULL if the
+  /// value is symbolic and the constraint manager cannot provide a useful
+  /// answer.
   virtual const llvm::APSInt *getMaxValue(ProgramStateRef state, SVal val) = 0;
 
   /// Simplify symbolic expressions within a given SVal. Return an SVal

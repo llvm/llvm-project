@@ -645,3 +645,40 @@ class b {
 
 
 }
+
+#if __cplusplus >= 202002L
+namespace nw{
+  template<class T>
+  concept AlwaysTrue=true;
+
+  struct S{
+    template<class T>
+    void operator+(const T&)const{}
+
+    template<AlwaysTrue T>
+    int operator-(const T&)const{return 0;}
+
+    template<AlwaysTrue T>
+    int operator*(const T&)const{ // expected-note {{candidate function}}
+      return 0;
+    }
+  };
+
+  template<AlwaysTrue T>
+  int operator+(const S&, const T&){return 0;}
+
+  template<class T>
+  void operator-(const S&, const T&){}
+
+  template<AlwaysTrue T>
+  int operator*(const S&, const T&){ // expected-note {{candidate function}}
+    return 0;
+  }
+
+  void foo(){
+    int a = S{} + 1;
+    int b = S{} - 1;
+    int c = S{} * 1; // expected-error {{use of overloaded operator '*' is ambiguous (with operand types 'S' and 'int')}}
+  }
+}
+#endif

@@ -6,6 +6,8 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+#include <stddef.h>
+
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
 
@@ -59,8 +61,25 @@ const __llvm_profile_data *__llvm_profile_begin_data(void) {
 }
 const __llvm_profile_data *__llvm_profile_end_data(void) { return &DataEnd; }
 
+// Type profiling isn't implemented under MSVC ABI, so return NULL (rather than
+// implementing linker magic on Windows) to make it more explicit. To elaborate,
+// the current type profiling implementation maps a profiled vtable address to a
+// vtable variable through vtables mangled name. Under MSVC ABI, the variable
+// name for vtables might not be the mangled name (see
+// MicrosoftCXXABI::getAddrOfVTable in MicrosoftCXXABI.cpp for more details on
+// how a vtable name is computed). Note the mangled name is still in the vtable
+// IR (just not variable name) for mapping purpose, but more implementation work
+// is required.
+const VTableProfData *__llvm_profile_begin_vtables(void) { return NULL; }
+const VTableProfData *__llvm_profile_end_vtables(void) { return NULL; }
+
 const char *__llvm_profile_begin_names(void) { return &NamesStart + 1; }
 const char *__llvm_profile_end_names(void) { return &NamesEnd; }
+
+// Type profiling isn't supported on Windows, so return NULl to make it more
+// explicit.
+const char *__llvm_profile_begin_vtabnames(void) { return NULL; }
+const char *__llvm_profile_end_vtabnames(void) { return NULL; }
 
 char *__llvm_profile_begin_counters(void) { return &CountersStart + 1; }
 char *__llvm_profile_end_counters(void) { return &CountersEnd; }
@@ -74,12 +93,13 @@ ValueProfNode *__llvm_profile_end_vnodes(void) { return &VNodesEnd; }
 ValueProfNode *CurrentVNode = &VNodesStart + 1;
 ValueProfNode *EndVNode = &VNodesEnd;
 
-/* lld-link provides __buildid symbol which ponits to the 16 bytes build id when
+/* lld-link provides __buildid symbol which points to the 16 bytes build id when
  * using /build-id flag. https://lld.llvm.org/windows_support.html#lld-flags */
 #define BUILD_ID_LEN 16
-COMPILER_RT_WEAK uint8_t __buildid[BUILD_ID_LEN];
+COMPILER_RT_WEAK uint8_t __buildid[BUILD_ID_LEN] = {0};
 COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
-  if (*__buildid) {
+  static const uint8_t zeros[BUILD_ID_LEN] = {0};
+  if (memcmp(__buildid, zeros, BUILD_ID_LEN) != 0) {
     if (Writer &&
         lprofWriteOneBinaryId(Writer, BUILD_ID_LEN, __buildid, 0) == -1)
       return -1;

@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx11-14,cxx14-17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx11,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx11,cxx11-14,cxx14-17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx23,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx23,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace dr1512 { // dr1512: 4
   void f(char *p) {
@@ -407,7 +407,7 @@ namespace dr1573 { // dr1573: 3.9
   B b(1, 'x', 4.0, "hello"); // ok
 
   // inherited constructor is effectively constexpr if the user-written constructor would be
-  struct C { C(); constexpr C(int) {} };
+  struct C { C(); constexpr C(int) {} }; // #dr1573-C
   struct D : C { using C::C; };
   constexpr D d = D(0); // ok
   struct E : C { using C::C; A a; }; // #dr1573-E
@@ -420,8 +420,11 @@ namespace dr1573 { // dr1573: 3.9
   struct F : C { using C::C; C c; }; // #dr1573-F
   constexpr F f = F(0);
   // since-cxx11-error@-1 {{constexpr variable 'f' must be initialized by a constant expression}}
-  //   since-cxx11-note@-2 {{constructor inherited from base class 'C' cannot be used in a constant expression; derived class cannot be implicitly initialized}}
-  //   since-cxx11-note@#dr1573-F {{declared here}}
+  //   cxx11-20-note@-2 {{constructor inherited from base class 'C' cannot be used in a constant expression; derived class cannot be implicitly initialized}}
+  //   since-cxx23-note@-3 {{in implicit initialization for inherited constructor of 'F'}}
+  //   since-cxx23-note@#dr1573-F {{non-constexpr constructor 'C' cannot be used in a constant expression}}
+  //   cxx11-20-note@#dr1573-F {{declared here}}
+  //   since-cxx23-note@#dr1573-C {{declared here}}
 
   // inherited constructor is effectively deleted if the user-written constructor would be
   struct G { G(int); };

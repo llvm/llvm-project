@@ -113,11 +113,15 @@ module {
     //
     // Print the result for verification.
     //
-    // CHECK: ( 11, 41.4, 42, 102.5, 93, 44.1, 164, 105.2, 255 )
-    //
-    %vm = sparse_tensor.values %0 : tensor<?x?xf32, #CSR> to memref<?xf32>
-    %vv = vector.transfer_read %vm[%c0], %d0 : memref<?xf32>, vector<9xf32>
-    vector.print %vv : vector<9xf32>
+    // CHECK:   ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 9
+    // CHECK-NEXT: dim = ( 5, 5 )
+    // CHECK-NEXT: lvl = ( 5, 5 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 5, 7, 9,
+    // CHECK-NEXT: crd[1] : ( 0, 3, 1, 4, 2, 0, 3, 1, 4,
+    // CHECK-NEXT: values : ( 11, 41.4, 42, 102.5, 93, 44.1, 164, 105.2, 255,
+    // CHECK-NEXT: ----
+    sparse_tensor.print %0 : tensor<?x?xf32, #CSR>
 
     // Create a much sparser sampling matrix.
     %t = arith.constant sparse<[[0,0], [0,1], [1,0], [3,4], [7,7]],
@@ -137,11 +141,16 @@ module {
     //
     // Print the result for verification.
     //
-    // CHECK: ( ( 17, 18, 0, 0, 0, 0, 0, 0 ), ( 19, 0, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 20, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 21 ) )
+    // CHECK:     ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 5
+    // CHECK-NEXT: dim = ( 8, 8 )
+    // CHECK-NEXT: lvl = ( 8, 8 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 3, 4, 4, 4, 4, 5,
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 4, 7,
+    // CHECK-NEXT: values : ( 17, 18, 19, 20, 21,
+    // CHECK-NEXT: ----
     //
-    %d = sparse_tensor.convert %1 : tensor<?x?xf32, #CSR> to tensor<?x?xf32>
-    %mm = vector.transfer_read %d[%c0, %c0], %d0 : tensor<?x?xf32>, vector<8x8xf32>
-    vector.print %mm : vector<8x8xf32>
+    sparse_tensor.print %1 : tensor<?x?xf32, #CSR>
 
     // Release the resources.
     bufferization.dealloc_tensor %0 : tensor<?x?xf32, #CSR>

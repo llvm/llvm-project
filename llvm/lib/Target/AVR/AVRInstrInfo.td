@@ -88,30 +88,25 @@ def AVRSwap : SDNode<"AVRISD::SWAP", SDTIntUnaryOp>;
 //===----------------------------------------------------------------------===//
 
 def imm8_neg_XFORM : SDNodeXForm<imm, [{
-                                   return CurDAG->getTargetConstant(
-                                       -N->getAPIntValue(), SDLoc(N), MVT::i8);
-                                 }]>;
+  return CurDAG->getTargetConstant(-N->getAPIntValue(), SDLoc(N), MVT::i8);
+}]>;
 
-def imm16_neg_XFORM
-    : SDNodeXForm<imm, [{
-                    return CurDAG->getTargetConstant(-N->getAPIntValue(),
-                                                     SDLoc(N), MVT::i16);
-                  }]>;
+def imm16_neg_XFORM : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(-N->getAPIntValue(), SDLoc(N), MVT::i16);
+}]>;
 
 def imm0_63_neg : PatLeaf<(imm), [{
-                            int64_t val = -N->getSExtValue();
-                            return val >= 0 && val < 64;
-                          }],
-                          imm16_neg_XFORM>;
+  int64_t val = -N->getSExtValue();
+  return val >= 0 && val < 64;
+}], imm16_neg_XFORM>;
 
 def uimm6 : PatLeaf<(imm), [{ return isUInt<6>(N->getZExtValue()); }]>;
 
 // imm_com8_XFORM - Return the complement of a imm_com8 value
-def imm_com8_XFORM
-    : SDNodeXForm<imm, [{
-                    return CurDAG->getTargetConstant(
-                        ~((uint8_t) N->getZExtValue()), SDLoc(N), MVT::i8);
-                  }]>;
+def imm_com8_XFORM : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(
+      ~((uint8_t) N->getZExtValue()), SDLoc(N), MVT::i8);
+}]>;
 
 // imm_com8 - Match an immediate that is a complement
 // of a 8-bit immediate.
@@ -121,53 +116,47 @@ def imm_com8_XFORM
 def imm_com8_asmoperand : AsmOperandClass { let Name = "ImmCom8"; }
 def imm_com8 : Operand<i8> { let ParserMatchClass = imm_com8_asmoperand; }
 
-def ioaddr_XFORM
-    : SDNodeXForm<imm, [{
-                    uint8_t offset = Subtarget->getIORegisterOffset();
-                    return CurDAG->getTargetConstant(
-                        uint8_t(N->getZExtValue()) - offset, SDLoc(N), MVT::i8);
-                  }]>;
+def ioaddr_XFORM : SDNodeXForm<imm, [{
+  uint8_t offset = Subtarget->getIORegisterOffset();
+  return CurDAG->getTargetConstant(
+      uint8_t(N->getZExtValue()) - offset, SDLoc(N), MVT::i8);
+}]>;
 
-def iobitpos8_XFORM
-    : SDNodeXForm<imm, [{
-                    return CurDAG->getTargetConstant(
-                        Log2_32(uint8_t(N->getZExtValue())), SDLoc(N), MVT::i8);
-                  }]>;
+def iobitpos8_XFORM : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(
+      Log2_32(uint8_t(N->getZExtValue())), SDLoc(N), MVT::i8);
+}]>;
 
 def iobitposn8_XFORM : SDNodeXForm<imm, [{
-                                     return CurDAG->getTargetConstant(
-                                         Log2_32(uint8_t(~N->getZExtValue())),
-                                         SDLoc(N), MVT::i8);
-                                   }]>;
+  return CurDAG->getTargetConstant(
+      Log2_32(uint8_t(~N->getZExtValue())), SDLoc(N), MVT::i8);
+}]>;
 
 def ioaddr8 : PatLeaf<(imm), [{
-                        uint8_t offset = Subtarget->getIORegisterOffset();
-                        uint64_t val = N->getZExtValue() - offset;
-                        return val < 0x40;
-                      }],
-                      ioaddr_XFORM>;
+  uint8_t offset = Subtarget->getIORegisterOffset();
+  uint64_t val = N->getZExtValue() - offset;
+  return val < 0x40;
+}], ioaddr_XFORM>;
 
 def lowioaddr8 : PatLeaf<(imm), [{
-                           uint8_t offset = Subtarget->getIORegisterOffset();
-                           uint64_t val = N->getZExtValue() - offset;
-                           return val < 0x20;
-                         }],
-                         ioaddr_XFORM>;
+  uint8_t offset = Subtarget->getIORegisterOffset();
+  uint64_t val = N->getZExtValue() - offset;
+  return val < 0x20;
+}], ioaddr_XFORM>;
 
 def ioaddr16 : PatLeaf<(imm), [{
-                         uint8_t offset = Subtarget->getIORegisterOffset();
-                         uint64_t val = N->getZExtValue() - offset;
-                         return val < 0x3f;
-                       }],
-                       ioaddr_XFORM>;
+  uint8_t offset = Subtarget->getIORegisterOffset();
+  uint64_t val = N->getZExtValue() - offset;
+  return val < 0x3f;
+}], ioaddr_XFORM>;
 
-def iobitpos8
-    : PatLeaf<(imm), [{ return isPowerOf2_32(uint8_t(N->getZExtValue())); }],
-              iobitpos8_XFORM>;
+def iobitpos8 : PatLeaf<(imm), [{
+  return isPowerOf2_32(uint8_t(N->getZExtValue()));
+}], iobitpos8_XFORM>;
 
-def iobitposn8
-    : PatLeaf<(imm), [{ return isPowerOf2_32(uint8_t(~N->getZExtValue())); }],
-              iobitposn8_XFORM>;
+def iobitposn8 : PatLeaf<(imm), [{
+  return isPowerOf2_32(uint8_t(~N->getZExtValue()));
+}], iobitposn8_XFORM>;
 
 def MemriAsmOperand : AsmOperandClass {
   let Name = "Memri";

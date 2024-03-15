@@ -359,15 +359,19 @@ struct CountedRegion : public CounterMappingRegion {
   uint64_t ExecutionCount;
   uint64_t FalseExecutionCount;
   bool Folded;
-
-  CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount)
-      : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
-        FalseExecutionCount(0), Folded(false) {}
+  bool HasSingleByteCoverage;
 
   CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
-                uint64_t FalseExecutionCount)
+                bool HasSingleByteCoverage)
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
-        FalseExecutionCount(FalseExecutionCount), Folded(false) {}
+        FalseExecutionCount(0), Folded(false),
+        HasSingleByteCoverage(HasSingleByteCoverage) {}
+
+  CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
+                uint64_t FalseExecutionCount, bool HasSingleByteCoverage)
+      : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
+        FalseExecutionCount(FalseExecutionCount), Folded(false),
+        HasSingleByteCoverage(HasSingleByteCoverage) {}
 };
 
 /// MCDC Record grouping all information together.
@@ -380,8 +384,59 @@ struct MCDCRecord {
   /// are effectively ignored.
   enum CondState { MCDC_DontCare = -1, MCDC_False = 0, MCDC_True = 1 };
 
-  using TestVector = llvm::SmallVector<CondState>;
-  using TestVectors = llvm::SmallVector<TestVector>;
+  /// Emulate SmallVector<CondState> with a pair of BitVector.
+  ///
+  ///          True  False DontCare (Impossible)
+  /// Values:  True  False False    True
+  /// Visited: True  True  False    False
+  class TestVector {
+    BitVector Values;  /// True/False (False when DontCare)
+    BitVector Visited; /// ~DontCare
+
+  public:
+    /// Default values are filled with DontCare.
+    TestVector(unsigned N) : Values(N), Visited(N) {}
+
+    /// Emulate RHS SmallVector::operator[]
+    CondState operator[](int I) const {
+      return (Visited[I] ? (Values[I] ? MCDC_True : MCDC_False)
+                         : MCDC_DontCare);
+    }
+
+    /// Equivalent to buildTestVector's Index.
+    auto getIndex() const { return Values.getData()[0]; }
+
+    /// Set the condition \p Val at position \p I.
+    /// This emulates LHS SmallVector::operator[].
+    void set(int I, CondState Val) {
+      Visited[I] = (Val != MCDC_DontCare);
+      Values[I] = (Val == MCDC_True);
+    }
+
+    /// Emulate SmallVector::push_back.
+    void push_back(CondState Val) {
+      Visited.push_back(Val != MCDC_DontCare);
+      Values.push_back(Val == MCDC_True);
+      assert(Values.size() == Visited.size());
+    }
+
+    /// For each element:
+    /// - False if either is DontCare
+    /// - False if both have the same value
+    /// - True if both have the opposite value
+    /// ((A.Values ^ B.Values) & A.Visited & B.Visited)
+    /// Dedicated to findIndependencePairs().
+    auto getDifferences(const TestVector &B) const {
+      const auto &A = *this;
+      BitVector AB = A.Values;
+      AB ^= B.Values;
+      AB &= A.Visited;
+      AB &= B.Visited;
+      return AB;
+    }
+  };
+
+  using TestVectors = llvm::SmallVector<std::pair<TestVector, CondState>>;
   using BoolVector = llvm::SmallVector<bool>;
   using TVRowPair = std::pair<unsigned, unsigned>;
   using TVPairMap = llvm::DenseMap<unsigned, TVRowPair>;
@@ -422,13 +477,13 @@ public:
   /// accessing conditions in the TestVectors requires a translation from a
   /// ordinal position to actual condition ID. This is done via PosToID[].
   CondState getTVCondition(unsigned TestVectorIndex, unsigned Condition) {
-    return TV[TestVectorIndex][PosToID[Condition]];
+    return TV[TestVectorIndex].first[PosToID[Condition]];
   }
 
   /// Return the Result evaluation for an executed test vector.
   /// See MCDCRecordProcessor::RecordTestVector().
   CondState getTVResult(unsigned TestVectorIndex) {
-    return TV[TestVectorIndex][getNumConditions()];
+    return TV[TestVectorIndex].second;
   }
 
   /// Determine whether a given condition (indicated by Condition) is covered
@@ -550,6 +605,55 @@ public:
   }
 };
 
+namespace mcdc {
+/// Compute TestVector Indices "TVIdx" from the Conds graph.
+///
+/// Clang CodeGen handles the bitmap index based on TVIdx.
+/// llvm-cov reconstructs conditions from TVIdx.
+///
+/// For each leaf "The final decision",
+/// - TVIdx should be unique.
+/// - TVIdx has the Width.
+///   - The width represents the number of possible paths.
+///   - The minimum width is 1 "deterministic".
+/// - The order of leaves are sorted by Width DESC. It expects
+///   latter TVIdx(s) (with Width=1) could be pruned and altered to
+///   other simple branch conditions.
+///
+class TVIdxBuilder {
+public:
+  struct MCDCNode {
+    int InCount = 0; /// Reference count; temporary use
+    int Width;       /// Number of accumulated paths (>= 1)
+    ConditionIDs NextIDs;
+  };
+
+#ifndef NDEBUG
+  /// This is no longer needed after the assignment.
+  /// It may be used in assert() for reconfirmation.
+  SmallVector<MCDCNode> SavedNodes;
+#endif
+
+  /// Output: Index for TestVectors bitmap (These are not CondIDs)
+  SmallVector<std::array<int, 2>> Indices;
+
+  /// Output: The number of test vectors.
+  /// Error with HardMaxTVs if the number has exploded.
+  int NumTestVectors;
+
+  /// Hard limit of test vectors
+  static constexpr auto HardMaxTVs =
+      std::numeric_limits<decltype(NumTestVectors)>::max();
+
+public:
+  /// Calculate and assign Indices
+  /// \param NextIDs The list of {FalseID, TrueID} indexed by ID
+  ///        The first element [0] should be the root node.
+  /// \param Offset Offset of index to final decisions.
+  TVIdxBuilder(const SmallVectorImpl<ConditionIDs> &NextIDs, int Offset = 0);
+};
+} // namespace mcdc
+
 /// A Counter mapping context is used to connect the counters, expressions
 /// and the obtained counter values.
 class CounterMappingContext {
@@ -612,10 +716,11 @@ struct FunctionRecord {
   }
 
   void pushRegion(CounterMappingRegion Region, uint64_t Count,
-                  uint64_t FalseCount) {
+                  uint64_t FalseCount, bool HasSingleByteCoverage) {
     if (Region.Kind == CounterMappingRegion::BranchRegion ||
         Region.Kind == CounterMappingRegion::MCDCBranchRegion) {
-      CountedBranchRegions.emplace_back(Region, Count, FalseCount);
+      CountedBranchRegions.emplace_back(Region, Count, FalseCount,
+                                        HasSingleByteCoverage);
       // If both counters are hard-coded to zero, then this region represents a
       // constant-folded branch.
       if (Region.Count.isZero() && Region.FalseCount.isZero())
@@ -624,7 +729,8 @@ struct FunctionRecord {
     }
     if (CountedRegions.empty())
       ExecutionCount = Count;
-    CountedRegions.emplace_back(Region, Count, FalseCount);
+    CountedRegions.emplace_back(Region, Count, FalseCount,
+                                HasSingleByteCoverage);
   }
 };
 

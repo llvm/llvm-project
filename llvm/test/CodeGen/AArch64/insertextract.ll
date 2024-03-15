@@ -39,9 +39,6 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for insert_v4i64_0
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for insert_v4i64_2
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for insert_v4i64_c
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_v32i8_0
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_v32i8_2
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_v32i8_c
 
 define <2 x double> @insert_v2f64_0(<2 x double> %a, double %b, i32 %c) {
 ; CHECK-LABEL: insert_v2f64_0:
@@ -236,7 +233,6 @@ define <3 x float> @insert_v3f32_0(<3 x float> %a, float %b, i32 %c) {
 ; CHECK-GI-NEXT:    mov s0, v0.s[2]
 ; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-GI-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -257,7 +253,6 @@ define <3 x float> @insert_v3f32_2(<3 x float> %a, float %b, i32 %c) {
 ; CHECK-GI-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-GI-NEXT:    mov v0.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    mov v0.s[2], v1.s[0]
-; CHECK-GI-NEXT:    mov v0.s[3], v0.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = insertelement <3 x float> %a, float %b, i32 2
@@ -769,7 +764,6 @@ define <3 x i32> @insert_v3i32_0(<3 x i32> %a, i32 %b, i32 %c) {
 ; CHECK-GI-NEXT:    mov v0.s[1], w8
 ; CHECK-GI-NEXT:    fmov w8, s2
 ; CHECK-GI-NEXT:    mov v0.s[2], w8
-; CHECK-GI-NEXT:    mov v0.s[3], w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = insertelement <3 x i32> %a, i32 %b, i32 0
@@ -788,7 +782,6 @@ define <3 x i32> @insert_v3i32_2(<3 x i32> %a, i32 %b, i32 %c) {
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    fmov s1, w0
 ; CHECK-GI-NEXT:    mov v0.s[2], v1.s[0]
-; CHECK-GI-NEXT:    mov v0.s[3], v0.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = insertelement <3 x i32> %a, i32 %b, i32 2
@@ -1670,16 +1663,36 @@ entry:
 }
 
 define i8 @extract_v32i8_c(<32 x i8> %a, i32 %c) {
-; CHECK-LABEL: extract_v32i8_c:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    stp q0, q1, [sp, #-32]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    and x8, x0, #0x1f
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    ldrb w0, [x9, x8]
-; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v32i8_c:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    and x8, x0, #0x1f
+; CHECK-SD-NEXT:    mov x9, sp
+; CHECK-SD-NEXT:    ldrb w0, [x9, x8]
+; CHECK-SD-NEXT:    add sp, sp, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v32i8_c:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-GI-NEXT:    sub x9, sp, #48
+; CHECK-GI-NEXT:    mov x29, sp
+; CHECK-GI-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-GI-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -8
+; CHECK-GI-NEXT:    .cfi_offset w29, -16
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    stp q0, q1, [sp]
+; CHECK-GI-NEXT:    mov x10, sp
+; CHECK-GI-NEXT:    and x8, x8, #0x1f
+; CHECK-GI-NEXT:    lsl x9, x8, #1
+; CHECK-GI-NEXT:    sub x8, x9, x8
+; CHECK-GI-NEXT:    ldrb w0, [x10, x8]
+; CHECK-GI-NEXT:    mov sp, x29
+; CHECK-GI-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ret
 entry:
   %d = extractelement <32 x i8> %a, i32 %c
   ret i8 %d

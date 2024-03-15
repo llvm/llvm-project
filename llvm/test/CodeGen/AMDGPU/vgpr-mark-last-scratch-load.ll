@@ -28,6 +28,7 @@ define amdgpu_cs void @max_6_vgprs(ptr addrspace(1) %p) "amdgpu-num-vgpr"="6" {
 ; CHECK-NEXT:    scratch_store_b32 off, v0, off offset:12 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    global_store_b32 v[0:1], v5, off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off th:TH_LOAD_LU ; 4-byte Folded Reload
@@ -116,6 +117,7 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
 ; CHECK-NEXT:    scratch_store_b32 off, v0, off offset:32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    global_store_b32 v[0:1], v10, off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:16 th:TH_LOAD_LU ; 4-byte Folded Reload
@@ -174,6 +176,7 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
 ; CHECK-NEXT:    scratch_store_b32 off, v0, off offset:32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    global_store_b32 v[0:1], v10, off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:16 th:TH_LOAD_LU ; 4-byte Folded Reload
@@ -208,6 +211,7 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off th:TH_LOAD_LU ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_LU ; 4-byte Folded Reload

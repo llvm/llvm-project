@@ -1135,31 +1135,86 @@ define %s_i8i32x4 @test_s_i1i32x4(%s_i8i32x4 %a) {
 ; CHECK-DAG:        ld.param.u8     %r{{.*}}, [test_s_i1i32x4p_param_0+2];
 ; CHECK-DAG:        ld.param.u8     %r{{.*}}, [test_s_i1i32x4p_param_0+1];
 ; CHECK-DAG:        ld.param.u8     %r{{.*}}, [test_s_i1i32x4p_param_0];
-; --- TODO
-; --- Unaligned parameter store/ return value load is broken in both nvcc
-; --- and llvm and needs to be fixed.
 ; CHECK:        .param .align 1 .b8 param0[25];
-; CHECK-DAG:        st.param.b32    [param0+0],
-; CHECK-DAG:        st.param.b32    [param0+4],
+; CHECK-DAG:        st.param.b8     [param0+0],
+; CHECK-DAG:        st.param.b8     [param0+1],
+; CHECK-DAG:        st.param.b8     [param0+2],
+; CHECK-DAG:        st.param.b8     [param0+3],
+; CHECK-DAG:        st.param.b8     [param0+4],
+; CHECK-DAG:        st.param.b8     [param0+5],
+; CHECK-DAG:        st.param.b8     [param0+6],
+; CHECK-DAG:        st.param.b8     [param0+7],
 ; CHECK-DAG:        st.param.b8     [param0+8],
-; CHECK-DAG:        st.param.b32    [param0+9],
-; CHECK-DAG:        st.param.b32    [param0+13],
-; CHECK-DAG:        st.param.b64    [param0+17],
+; CHECK-DAG:        st.param.b8     [param0+9],
+; CHECK-DAG:        st.param.b8     [param0+10],
+; CHECK-DAG:        st.param.b8     [param0+11],
+; CHECK-DAG:        st.param.b8     [param0+12],
+; CHECK-DAG:        st.param.b8     [param0+13],
+; CHECK-DAG:        st.param.b8     [param0+14],
+; CHECK-DAG:        st.param.b8     [param0+15],
+; CHECK-DAG:        st.param.b8     [param0+16],
+; CHECK-DAG:        st.param.b8     [param0+17],
+; CHECK-DAG:        st.param.b8     [param0+18],
+; CHECK-DAG:        st.param.b8     [param0+19],
+; CHECK-DAG:        st.param.b8     [param0+20],
+; CHECK-DAG:        st.param.b8     [param0+21],
+; CHECK-DAG:        st.param.b8     [param0+22],
+; CHECK-DAG:        st.param.b8     [param0+23],
+; CHECK-DAG:        st.param.b8     [param0+24],
 ; CHECK:            .param .align 1 .b8 retval0[25];
 ; CHECK:            call.uni (retval0),
 ; CHECK-NEXT:       test_s_i1i32x4p,
-; CHECK-DAG:        ld.param.b32    %r41, [retval0+0];
-; CHECK-DAG:        ld.param.b32    %r42, [retval0+4];
-; CHECK-DAG:        ld.param.b8     %rs2, [retval0+8];
-; CHECK-DAG:        ld.param.b32    %r43, [retval0+9];
-; CHECK-DAG:        ld.param.b32    %r44, [retval0+13];
-; CHECK-DAG:        ld.param.b64    %rd23, [retval0+17];
-; CHECK-DAG:        st.param.b32    [func_retval0+0],
-; CHECK-DAG:        st.param.b32    [func_retval0+4],
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+0];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+1];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+2];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+3];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+4];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+5];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+6];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+7];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+8];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+9];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+10];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+11];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+12];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+13];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+14];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+15];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+16];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+17];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+18];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+19];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+20];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+21];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+22];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+23];
+; CHECK-DAG:        ld.param.b8 %rs{{[0-9]+}}, [retval0+24];
+; CHECK:            } // callseq
+; CHECK-DAG:        st.param.b8     [func_retval0+0],
+; CHECK-DAG:        st.param.b8     [func_retval0+1],
+; CHECK-DAG:        st.param.b8     [func_retval0+2],
+; CHECK-DAG:        st.param.b8     [func_retval0+3],
+; CHECK-DAG:        st.param.b8     [func_retval0+4],
+; CHECK-DAG:        st.param.b8     [func_retval0+5],
+; CHECK-DAG:        st.param.b8     [func_retval0+6],
+; CHECK-DAG:        st.param.b8     [func_retval0+7],
 ; CHECK-DAG:        st.param.b8     [func_retval0+8],
-; CHECK-DAG:        st.param.b32    [func_retval0+9],
-; CHECK-DAG:        st.param.b32    [func_retval0+13],
-; CHECK-DAG:        st.param.b64    [func_retval0+17],
+; CHECK-DAG:        st.param.b8     [func_retval0+9],
+; CHECK-DAG:        st.param.b8     [func_retval0+10],
+; CHECK-DAG:        st.param.b8     [func_retval0+11],
+; CHECK-DAG:        st.param.b8     [func_retval0+12],
+; CHECK-DAG:        st.param.b8     [func_retval0+13],
+; CHECK-DAG:        st.param.b8     [func_retval0+14],
+; CHECK-DAG:        st.param.b8     [func_retval0+15],
+; CHECK-DAG:        st.param.b8     [func_retval0+16],
+; CHECK-DAG:        st.param.b8     [func_retval0+17],
+; CHECK-DAG:        st.param.b8     [func_retval0+18],
+; CHECK-DAG:        st.param.b8     [func_retval0+19],
+; CHECK-DAG:        st.param.b8     [func_retval0+20],
+; CHECK-DAG:        st.param.b8     [func_retval0+21],
+; CHECK-DAG:        st.param.b8     [func_retval0+22],
+; CHECK-DAG:        st.param.b8     [func_retval0+23],
+; CHECK-DAG:        st.param.b8     [func_retval0+24],
 
 define %s_i8i32x4p @test_s_i1i32x4p(%s_i8i32x4p %a) {
        %r = tail call %s_i8i32x4p @test_s_i1i32x4p(%s_i8i32x4p %a);

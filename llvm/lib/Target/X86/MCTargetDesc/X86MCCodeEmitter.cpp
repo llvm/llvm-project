@@ -200,8 +200,12 @@ public:
   void setB(const MCInst &MI, unsigned OpNum) {
     B = getRegEncoding(MI, OpNum) >> 3 & 1;
   }
-  void set4V(const MCInst &MI, unsigned OpNum) {
-    set4V(getRegEncoding(MI, OpNum));
+  void set4V(const MCInst &MI, unsigned OpNum, bool IsImm = false) {
+    // OF, SF, ZF and CF reuse VEX_4V bits but are not reversed
+    if (IsImm)
+      set4V(~(MI.getOperand(OpNum).getImm()));
+    else
+      set4V(getRegEncoding(MI, OpNum));
   }
   void setL(bool V) { VEX_L = V; }
   void setPP(unsigned V) { VEX_PP = V; }
@@ -252,6 +256,11 @@ public:
     EVEX_aaa = getRegEncoding(MI, OpNum);
   }
   void setNF(bool V) { EVEX_aaa |= V << 2; }
+  void setSC(const MCInst &MI, unsigned OpNum) {
+    unsigned Encoding = MI.getOperand(OpNum).getImm();
+    EVEX_V2 = ~(Encoding >> 3) & 0x1;
+    EVEX_aaa = Encoding & 0x7;
+  }
 
   X86OpcodePrefixHelper(const MCRegisterInfo &MRI)
       : W(0), R(0), X(0), B(0), M(0), R2(0), X2(0), B2(0), VEX_4V(0), VEX_L(0),
@@ -753,17 +762,8 @@ void X86MCCodeEmitter::emitMemModRMByte(
   bool AllowDisp8 = !UseDisp32;
 
   // Determine whether a SIB byte is needed.
-  if ( // The SIB byte must be used if there is an index register or the
-       // encoding requires a SIB byte.
-      !ForceSIB && IndexReg.getReg() == 0 &&
-      // The SIB byte must be used if the base is ESP/RSP/R12/R20/R28, all of
-      // which encode to an R/M value of 4, which indicates that a SIB byte is
-      // present.
-      BaseRegNo != N86::ESP &&
-      // If there is no base register and we're in 64-bit mode, we need a SIB
-      // byte to emit an addr that is just 'disp32' (the non-RIP relative form).
-      (!STI.hasFeature(X86::Is64Bit) || BaseReg != 0)) {
-
+  if (!ForceSIB && !X86II::needSIB(BaseReg, IndexReg.getReg(),
+                                   STI.hasFeature(X86::Is64Bit))) {
     if (BaseReg == 0) { // [disp32]     in X86-32 mode
       emitByte(modRMByte(0, RegOpcodeField, 5), CB);
       emitImmediate(Disp, MI.getLoc(), 4, FK_Data_4, StartByte, CB, Fixups);
@@ -1054,6 +1054,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   uint8_t EVEX_rc = 0;
 
   unsigned CurOp = X86II::getOperandBias(Desc);
+  bool HasTwoConditionalOps = TSFlags & X86II::TwoConditionalOps;
 
   switch (TSFlags & X86II::FormMask) {
   default:
@@ -1095,6 +1096,10 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
       Prefix.set4VV2(MI, CurOp++);
 
     Prefix.setRR2(MI, CurOp++);
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
     break;
   }
   case X86II::MRMSrcMemFSIB:
@@ -1124,7 +1129,11 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, MemOperand + X86::AddrBaseReg);
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     Prefix.setV2(MI, MemOperand + X86::AddrIndexReg, HasVEX_4V);
-
+    CurOp += X86::AddrNumOperands;
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
     break;
   }
   case X86II::MRMSrcMem4VOp3: {
@@ -1164,7 +1173,11 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, MemOperand + X86::AddrBaseReg);
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     Prefix.setV2(MI, MemOperand + X86::AddrIndexReg, HasVEX_4V);
-
+    CurOp += X86::AddrNumOperands + 1; // Skip first imm.
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
     break;
   }
   case X86II::MRMSrcReg: {
@@ -1191,6 +1204,11 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, CurOp);
     Prefix.setX(MI, CurOp, 4);
     ++CurOp;
+
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
 
     if (TSFlags & X86II::EVEX_B) {
       if (HasEVEX_RC) {
@@ -1245,6 +1263,10 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
       Prefix.set4VV2(MI, CurOp++);
 
     Prefix.setRR2(MI, CurOp++);
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
     if (TSFlags & X86II::EVEX_B)
       EncodeRC = true;
     break;
@@ -1275,6 +1297,10 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, CurOp);
     Prefix.setX(MI, CurOp, 4);
     ++CurOp;
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, ++CurOp, /*IsImm=*/true);
+      Prefix.setSC(MI, ++CurOp);
+    }
     break;
   }
   }
@@ -1534,6 +1560,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
   unsigned OpcodeOffset = 0;
 
   bool IsND = X86II::hasNewDataDest(TSFlags);
+  bool HasTwoConditionalOps = TSFlags & X86II::TwoConditionalOps;
 
   uint64_t Form = TSFlags & X86II::FormMask;
   switch (Form) {
@@ -1923,18 +1950,23 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     // If there is a remaining operand, it must be a trailing immediate. Emit it
     // according to the right size for the instruction. Some instructions
     // (SSE4a extrq and insertq) have two trailing immediates.
-    while (CurOp != NumOps && NumOps - CurOp <= 2) {
+
+    // Skip two trainling conditional operands encoded in EVEX prefix
+    unsigned RemaningOps = NumOps - CurOp - 2 * HasTwoConditionalOps;
+    while (RemaningOps) {
       emitImmediate(MI.getOperand(CurOp++), MI.getLoc(),
                     X86II::getSizeOfImm(TSFlags), getImmFixupKind(TSFlags),
                     StartByte, CB, Fixups);
+      --RemaningOps;
     }
+    CurOp += 2 * HasTwoConditionalOps;
   }
 
   if ((TSFlags & X86II::OpMapMask) == X86II::ThreeDNow)
     emitByte(X86II::getBaseOpcodeFor(TSFlags), CB);
 
-  assert(CB.size() - StartByte <= 15 &&
-         "The size of instruction must be no longer than 15.");
+  if (CB.size() - StartByte > 15)
+    Ctx.reportError(MI.getLoc(), "instruction length exceeds the limit of 15");
 #ifndef NDEBUG
   // FIXME: Verify.
   if (/*!Desc.isVariadic() &&*/ CurOp != NumOps) {

@@ -5,7 +5,7 @@ add_mlir_library(MLIRTransforms
   ControlFlowSink.cpp
   CSE.cpp
   GenerateRuntimeVerification.cpp
-  Inliner.cpp
+  InlinerPass.cpp
   LocationSnapshot.cpp
   LoopInvariantCodeMotion.cpp
   Mem2Reg.cpp

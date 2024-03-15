@@ -66,7 +66,7 @@ class WatchpointIteratorTestCase(TestBase):
         self.assertEqual(target.GetNumWatchpoints(), 1)
         self.assertTrue(watchpoint.IsEnabled())
         watch_id = watchpoint.GetID()
-        self.assertTrue(watch_id != 0)
+        self.assertNotEqual(watch_id, 0)
 
         # Continue.  Expect the program to stop due to the variable being
         # written to.

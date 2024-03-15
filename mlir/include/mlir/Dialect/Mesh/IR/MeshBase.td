@@ -46,6 +46,12 @@ def Mesh_ReductionKind : I32EnumAttr<"ReductionKind",
   I32EnumAttrCase<"Sum", 1, "sum">,
   I32EnumAttrCase<"Max", 2, "max">,
   I32EnumAttrCase<"Min", 3, "min">,
+  I32EnumAttrCase<"Product", 4, "product">,
+  // Arithmetic mean.
+  I32EnumAttrCase<"Average", 5, "average">,
+  I32EnumAttrCase<"BitwiseAnd", 6, "bitwise_and">,
+  I32EnumAttrCase<"BitwiseOr", 7, "bitwise_or">,
+  I32EnumAttrCase<"BitwiseXor", 8, "bitwise_xor">,
   I32EnumAttrCase<"Generic", 100, "generic">
 ]> {
   let genSpecializedAttr = 0;

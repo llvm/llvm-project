@@ -208,7 +208,7 @@ public:
 
         int64_t Dummy1;
         bool Dummy2;
-        unsigned Dummy3;
+        LocationSize Dummy3 = 0;
         SmallVector<const MachineOperand *, 4> BaseOps;
         if (Type <= LAST_REAL_HARDCLAUSE_TYPE) {
           if (!SII->getMemOperandsWithOffsetWidth(MI, BaseOps, Dummy1, Dummy2,

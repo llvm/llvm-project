@@ -22,3 +22,11 @@ int array2[recurse2]; // both-warning {{variable length arrays in C++}} \
                       // both-note {{initializer of 'recurse2' is not a constant expression}} \
                       // expected-error {{variable length array declaration not allowed at file scope}} \
                       // ref-warning {{variable length array folded to constant array as an extension}}
+
+struct S {
+  int m;
+};
+constexpr S s = { 5 };
+constexpr const int *p = &s.m + 1;
+
+constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // ok

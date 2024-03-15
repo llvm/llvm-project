@@ -651,6 +651,9 @@ enum CommandArgumentType {
   eArgTypeTargetID,
   eArgTypeStopHookID,
   eArgTypeCompletionType,
+  eArgTypeRemotePath,
+  eArgTypeRemoteFilename,
+  eArgTypeModule,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1318,6 +1321,22 @@ enum SymbolDownload {
   eSymbolDownloadOff = 0,
   eSymbolDownloadBackground = 1,
   eSymbolDownloadForeground = 2,
+};
+
+/// Used in the SBProcess AddressMask/FixAddress methods.
+enum AddressMaskType {
+  eAddressMaskTypeCode = 0,
+  eAddressMaskTypeData,
+  eAddressMaskTypeAny,
+  eAddressMaskTypeAll = eAddressMaskTypeAny
+};
+
+/// Used in the SBProcess AddressMask/FixAddress methods.
+enum AddressMaskRange {
+  eAddressMaskRangeLow = 0,
+  eAddressMaskRangeHigh,
+  eAddressMaskRangeAny,
+  eAddressMaskRangeAll = eAddressMaskRangeAny,
 };
 
 } // namespace lldb

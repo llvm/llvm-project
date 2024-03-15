@@ -1,4 +1,4 @@
-; RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
+; RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
 
 flat_atomic_add_f32 v1, v[0:1], v2 offset:-8000000 th:TH_ATOMIC_RETURN
 // GFX12: encoding: [0x7c,0x80,0x15,0xec,0x01,0x00,0x10,0x01,0x00,0x00,0xee,0x85]

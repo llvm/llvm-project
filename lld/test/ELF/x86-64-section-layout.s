@@ -12,8 +12,11 @@
 # RUN: ld.lld --section-start=.note=0x200300 a1.o -o a1
 # RUN: llvm-readelf -S -sX a1 | FileCheck %s --check-prefix=CHECK1
 
-# RUN: ld.lld -T b.lds -z norelro a.o -o b
+# RUN: ld.lld -T b.lds -z norelro a.o -z lrodata-after-bss -z nolrodata-after-bss -o b --fatal-warnings
 # RUN: llvm-readelf -S -l b | FileCheck %s --check-prefix=CHECK2
+
+# RUN: ld.lld --section-start=.note=0x200300 a.o -z lrodata-after-bss -o a3
+# RUN: llvm-readelf -S -l -sX a3 | FileCheck %s --check-prefix=CHECK3
 
 # CHECK:       Name              Type            Address          Off    Size   ES Flg Lk Inf Al
 # CHECK-NEXT:                    NULL            0000000000000000 000000 000000 00      0   0  0
@@ -79,6 +82,39 @@
 # CHECK2-NEXT:   LOAD  0x000304 0x0000000000200304 0x0000000000200304 0x000001 0x000001 R E 0x1000
 # CHECK2-NEXT:   LOAD  0x000305 0x0000000000200305 0x0000000000200305 0x001805 0x002a06 RW  0x1000
 # CHECK2-NEXT:   TLS   0x000305 0x0000000000200305 0x0000000000200305 0x000001 0x000003 R   0x1
+
+# CHECK3:       Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+# CHECK3-NEXT:                    NULL            0000000000000000 000000 000000 00      0   0  0
+# CHECK3-NEXT:  .note             NOTE            0000000000200300 000300 000001 00   A  0   0  1
+# CHECK3-NEXT:  .rodata           PROGBITS        0000000000200301 000301 000001 00   A  0   0  1
+# CHECK3-NEXT:  .text             PROGBITS        0000000000201304 000304 000001 00  AX  0   0  4
+# CHECK3-NEXT:  .tdata            PROGBITS        0000000000202305 000305 000001 00 WAT  0   0  1
+# CHECK3-NEXT:  .tbss             NOBITS          0000000000202306 000306 000002 00 WAT  0   0  1
+# CHECK3-NEXT:  .relro_padding    NOBITS          0000000000202306 000306 000cfa 00  WA  0   0  1
+# CHECK3-NEXT:  .data             PROGBITS        0000000000203306 000306 000001 00  WA  0   0  1
+# CHECK3-NEXT:  .bss              NOBITS          0000000000203307 000307 001800 00  WA  0   0  1
+## We spend (size(.bss) + size(.lbss)) % MAXPAGESIZE bytes.
+# CHECK3-NEXT:  .lbss             NOBITS          0000000000204b07 000307 001201 00 WAl  0   0  1
+# CHECK3-NEXT:  .lrodata          PROGBITS        0000000000206d08 000d08 000002 00  Al  0   0  1
+# CHECK3-NEXT:  .ldata            PROGBITS        0000000000207d0a 000d0a 000002 00 WAl  0   0  1
+# CHECK3-NEXT:  .ldata2           PROGBITS        0000000000207d0c 000d0c 000001 00 WAl  0   0  1
+# CHECK3-NEXT:  .comment          PROGBITS        0000000000000000 000d0d {{.*}} 01  MS  0   0  1
+
+# CHECK3:       Program Headers:
+# CHECK3-NEXT:    Type  Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK3-NEXT:    PHDR  0x000040 0x0000000000200040 0x0000000000200040 {{.*}}   {{.*}}   R   0x8
+# CHECK3-NEXT:    LOAD  0x000000 0x0000000000200000 0x0000000000200000 0x000302 0x000302 R   0x1000
+# CHECK3-NEXT:    LOAD  0x000304 0x0000000000201304 0x0000000000201304 0x000001 0x000001 R E 0x1000
+# CHECK3-NEXT:    LOAD  0x000305 0x0000000000202305 0x0000000000202305 0x000001 0x000cfb RW  0x1000
+# CHECK3-NEXT:    LOAD  0x000306 0x0000000000203306 0x0000000000203306 0x000001 0x002a02 RW  0x1000
+# CHECK3-NEXT:    LOAD  0x000d08 0x0000000000206d08 0x0000000000206d08 0x000002 0x000002 R   0x1000
+# CHECK3-NEXT:    LOAD  0x000d0a 0x0000000000207d0a 0x0000000000207d0a 0x000003 0x000003 RW  0x1000
+# CHECK3-NEXT:    TLS   0x000305 0x0000000000202305 0x0000000000202305 0x000001 0x000003 R   0x1
+
+# CHECK3:       0000000000201304     0 NOTYPE  GLOBAL DEFAULT [[#]] (.text)   _start
+# CHECK3-NEXT:  0000000000201305     0 NOTYPE  GLOBAL DEFAULT [[#]] (.text)   _etext
+# CHECK3-NEXT:  0000000000203307     0 NOTYPE  GLOBAL DEFAULT [[#]] (.data)   _edata
+# CHECK3-NEXT:  0000000000207d0d     0 NOTYPE  GLOBAL DEFAULT [[#]] (.ldata2) _end
 
 #--- a.s
 .globl _start, _etext, _edata, _end

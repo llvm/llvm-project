@@ -593,7 +593,7 @@ void HexagonCommonGEP::common() {
   using ProjMap = std::map<const NodeSet *, GepNode *>;
   ProjMap PM;
   for (const NodeSet &S : EqRel) {
-    GepNode *Min = *std::min_element(S.begin(), S.end(), NodeOrder);
+    GepNode *Min = *llvm::min_element(S, NodeOrder);
     std::pair<ProjMap::iterator,bool> Ins = PM.insert(std::make_pair(&S, Min));
     (void)Ins;
     assert(Ins.second && "Cannot add minimal element");

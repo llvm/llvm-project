@@ -45,6 +45,14 @@ public:
                /*AddressSpace=*/0};
   }
 
+  /// Get a low-level token; just a scalar with zero bits (or no size).
+  static constexpr LLT token() {
+    return LLT{/*isPointer=*/false, /*isVector=*/false,
+               /*isScalar=*/true,   ElementCount::getFixed(0),
+               /*SizeInBits=*/0,
+               /*AddressSpace=*/0};
+  }
+
   /// Get a low-level pointer in the given address space.
   static constexpr LLT pointer(unsigned AddressSpace, unsigned SizeInBits) {
     assert(SizeInBits > 0 && "invalid pointer size");
@@ -134,17 +142,17 @@ public:
 
   explicit LLT(MVT VT);
 
-  constexpr bool isValid() const { return IsScalar || IsPointer || IsVector; }
-
+  constexpr bool isValid() const { return IsScalar || RawData != 0; }
   constexpr bool isScalar() const { return IsScalar; }
-
-  constexpr bool isPointer() const { return IsPointer && !IsVector; }
-
-  constexpr bool isPointerVector() const { return IsPointer && IsVector; }
-
-  constexpr bool isPointerOrPointerVector() const { return IsPointer; }
-
-  constexpr bool isVector() const { return IsVector; }
+  constexpr bool isToken() const { return IsScalar && RawData == 0; };
+  constexpr bool isVector() const { return isValid() && IsVector; }
+  constexpr bool isPointer() const {
+    return isValid() && IsPointer && !IsVector;
+  }
+  constexpr bool isPointerVector() const { return IsPointer && isVector(); }
+  constexpr bool isPointerOrPointerVector() const {
+    return IsPointer && isValid();
+  }
 
   /// Returns the number of elements in a vector LLT. Must only be called on
   /// vector types.
@@ -314,6 +322,28 @@ private:
   /// described in static const *Field variables. Each of these variables
   /// is a 2-element array, with the first element describing the bitfield size
   /// and the second element describing the bitfield offset.
+  ///
+  /// +--------+---------+--------+----------+----------------------+
+  /// |isScalar|isPointer|isVector| RawData  |Notes                 |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   0    |    0    |   0    |    0     |Invalid               |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   0    |    0    |   1    |    0     |Tombstone Key         |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   0    |    1    |   0    |    0     |Empty Key             |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   1    |    0    |   0    |    0     |Token                 |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   1    |    0    |   0    | non-zero |Scalar                |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   0    |    1    |   0    | non-zero |Pointer               |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   0    |    0    |   1    | non-zero |Vector of non-pointer |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   0    |    1    |   1    | non-zero |Vector of pointer     |
+  /// +--------+---------+--------+----------+----------------------+
+  ///
+  /// Everything else is reserved.
   typedef int BitFieldInfo[2];
   ///
   /// This is how the bitfields are packed per Kind:

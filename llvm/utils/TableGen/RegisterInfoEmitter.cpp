@@ -803,8 +803,8 @@ void RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(
     OS << "  // Sequence " << Idx << "\n";
     Idx += Sequence.size() + 1;
   }
-  auto *IntType = getMinimalTypeForRange(*std::max_element(
-      SubReg2SequenceIndexMap.begin(), SubReg2SequenceIndexMap.end()));
+  auto *IntType =
+      getMinimalTypeForRange(*llvm::max_element(SubReg2SequenceIndexMap));
   OS << "  };\n"
         "  static const "
      << IntType << " CompositeSequences[] = {\n";

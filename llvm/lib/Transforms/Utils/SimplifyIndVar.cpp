@@ -25,6 +25,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -300,7 +301,7 @@ bool SimplifyIndvar::eliminateSDiv(BinaryOperator *SDiv) {
   if (SE->isKnownNonNegative(N) && SE->isKnownNonNegative(D)) {
     auto *UDiv = BinaryOperator::Create(
         BinaryOperator::UDiv, SDiv->getOperand(0), SDiv->getOperand(1),
-        SDiv->getName() + ".udiv", SDiv);
+        SDiv->getName() + ".udiv", SDiv->getIterator());
     UDiv->setIsExact(SDiv->isExact());
     SDiv->replaceAllUsesWith(UDiv);
     LLVM_DEBUG(dbgs() << "INDVARS: Simplified sdiv: " << *SDiv << '\n');
@@ -317,7 +318,7 @@ bool SimplifyIndvar::eliminateSDiv(BinaryOperator *SDiv) {
 void SimplifyIndvar::replaceSRemWithURem(BinaryOperator *Rem) {
   auto *N = Rem->getOperand(0), *D = Rem->getOperand(1);
   auto *URem = BinaryOperator::Create(BinaryOperator::URem, N, D,
-                                      Rem->getName() + ".urem", Rem);
+                                      Rem->getName() + ".urem", Rem->getIterator());
   Rem->replaceAllUsesWith(URem);
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified srem: " << *Rem << '\n');
   ++NumSimplifiedSRem;
@@ -338,9 +339,9 @@ void SimplifyIndvar::replaceRemWithNumerator(BinaryOperator *Rem) {
 void SimplifyIndvar::replaceRemWithNumeratorOrZero(BinaryOperator *Rem) {
   auto *T = Rem->getType();
   auto *N = Rem->getOperand(0), *D = Rem->getOperand(1);
-  ICmpInst *ICmp = new ICmpInst(Rem, ICmpInst::ICMP_EQ, N, D);
+  ICmpInst *ICmp = new ICmpInst(Rem->getIterator(), ICmpInst::ICMP_EQ, N, D);
   SelectInst *Sel =
-      SelectInst::Create(ICmp, ConstantInt::get(T, 0), N, "iv.rem", Rem);
+      SelectInst::Create(ICmp, ConstantInt::get(T, 0), N, "iv.rem", Rem->getIterator());
   Rem->replaceAllUsesWith(Sel);
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified rem: " << *Rem << '\n');
   ++NumElimRem;
@@ -410,7 +411,7 @@ bool SimplifyIndvar::eliminateOverflowIntrinsic(WithOverflowInst *WO) {
   // intrinsic as well.
 
   BinaryOperator *NewResult = BinaryOperator::Create(
-      WO->getBinaryOp(), WO->getLHS(), WO->getRHS(), "", WO);
+      WO->getBinaryOp(), WO->getLHS(), WO->getRHS(), "", WO->getIterator());
 
   if (WO->isSigned())
     NewResult->setHasNoSignedWrap(true);
@@ -448,7 +449,7 @@ bool SimplifyIndvar::eliminateSaturatingIntrinsic(SaturatingInst *SI) {
     return false;
 
   BinaryOperator *BO = BinaryOperator::Create(
-      SI->getBinaryOp(), SI->getLHS(), SI->getRHS(), SI->getName(), SI);
+      SI->getBinaryOp(), SI->getLHS(), SI->getRHS(), SI->getName(), SI->getIterator());
   if (SI->isSigned())
     BO->setHasNoSignedWrap();
   else
@@ -643,10 +644,21 @@ bool SimplifyIndvar::replaceIVUserWithLoopInvariant(Instruction *I) {
   }
 
   auto *Invariant = Rewriter.expandCodeFor(S, I->getType(), IP);
+  bool NeedToEmitLCSSAPhis = false;
+  if (!LI->replacementPreservesLCSSAForm(I, Invariant))
+    NeedToEmitLCSSAPhis = true;
 
   I->replaceAllUsesWith(Invariant);
   LLVM_DEBUG(dbgs() << "INDVARS: Replace IV user: " << *I
                     << " with loop invariant: " << *S << '\n');
+
+  if (NeedToEmitLCSSAPhis) {
+    SmallVector<Instruction *, 1> NeedsLCSSAPhis;
+    NeedsLCSSAPhis.push_back(cast<Instruction>(Invariant));
+    formLCSSAForInstructions(NeedsLCSSAPhis, *DT, *LI, SE);
+    LLVM_DEBUG(dbgs() << " INDVARS: Replacement breaks LCSSA form"
+                      << " inserting LCSSA Phis" << '\n');
+  }
   ++NumFoldedUser;
   Changed = true;
   DeadInsts.emplace_back(I);
@@ -1131,7 +1143,8 @@ protected:
   const SCEV *getSCEVByOpCode(const SCEV *LHS, const SCEV *RHS,
                               unsigned OpCode) const;
 
-  Instruction *widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter);
+  Instruction *widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter,
+                          PHINode *OrigPhi, PHINode *WidePhi);
 
   bool widenLoopCompare(NarrowIVDefUse DU);
   bool widenWithVariantUse(NarrowIVDefUse DU);
@@ -1368,6 +1381,77 @@ const SCEV *WidenIV::getSCEVByOpCode(const SCEV *LHS, const SCEV *RHS,
   };
 }
 
+namespace {
+
+// Represents a interesting integer binary operation for
+// getExtendedOperandRecurrence. This may be a shl that is being treated as a
+// multiply or a 'or disjoint' that is being treated as 'add nsw nuw'.
+struct BinaryOp {
+  unsigned Opcode;
+  std::array<Value *, 2> Operands;
+  bool IsNSW = false;
+  bool IsNUW = false;
+
+  explicit BinaryOp(Instruction *Op)
+      : Opcode(Op->getOpcode()),
+        Operands({Op->getOperand(0), Op->getOperand(1)}) {
+    if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(Op)) {
+      IsNSW = OBO->hasNoSignedWrap();
+      IsNUW = OBO->hasNoUnsignedWrap();
+    }
+  }
+
+  explicit BinaryOp(Instruction::BinaryOps Opcode, Value *LHS, Value *RHS,
+                    bool IsNSW = false, bool IsNUW = false)
+      : Opcode(Opcode), Operands({LHS, RHS}), IsNSW(IsNSW), IsNUW(IsNUW) {}
+};
+
+} // end anonymous namespace
+
+static std::optional<BinaryOp> matchBinaryOp(Instruction *Op) {
+  switch (Op->getOpcode()) {
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+    return BinaryOp(Op);
+  case Instruction::Or: {
+    // Convert or disjoint into add nuw nsw.
+    if (cast<PossiblyDisjointInst>(Op)->isDisjoint())
+      return BinaryOp(Instruction::Add, Op->getOperand(0), Op->getOperand(1),
+                      /*IsNSW=*/true, /*IsNUW=*/true);
+    break;
+  }
+  case Instruction::Shl: {
+    if (ConstantInt *SA = dyn_cast<ConstantInt>(Op->getOperand(1))) {
+      unsigned BitWidth = cast<IntegerType>(SA->getType())->getBitWidth();
+
+      // If the shift count is not less than the bitwidth, the result of
+      // the shift is undefined. Don't try to analyze it, because the
+      // resolution chosen here may differ from the resolution chosen in
+      // other parts of the compiler.
+      if (SA->getValue().ult(BitWidth)) {
+        // We can safely preserve the nuw flag in all cases. It's also safe to
+        // turn a nuw nsw shl into a nuw nsw mul. However, nsw in isolation
+        // requires special handling. It can be preserved as long as we're not
+        // left shifting by bitwidth - 1.
+        bool IsNUW = Op->hasNoUnsignedWrap();
+        bool IsNSW = Op->hasNoSignedWrap() &&
+                     (IsNUW || SA->getValue().ult(BitWidth - 1));
+
+        ConstantInt *X =
+            ConstantInt::get(Op->getContext(),
+                             APInt::getOneBitSet(BitWidth, SA->getZExtValue()));
+        return BinaryOp(Instruction::Mul, Op->getOperand(0), X, IsNSW, IsNUW);
+      }
+    }
+
+    break;
+  }
+  }
+
+  return std::nullopt;
+}
+
 /// No-wrap operations can transfer sign extension of their result to their
 /// operands. Generate the SCEV value for the widened operation without
 /// actually modifying the IR yet. If the expression after extending the
@@ -1375,24 +1459,22 @@ const SCEV *WidenIV::getSCEVByOpCode(const SCEV *LHS, const SCEV *RHS,
 /// extension used.
 WidenIV::WidenedRecTy
 WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
-  // Handle the common case of add<nsw/nuw>
-  const unsigned OpCode = DU.NarrowUse->getOpcode();
-  // Only Add/Sub/Mul instructions supported yet.
-  if (OpCode != Instruction::Add && OpCode != Instruction::Sub &&
-      OpCode != Instruction::Mul)
+  auto Op = matchBinaryOp(DU.NarrowUse);
+  if (!Op)
     return {nullptr, ExtendKind::Unknown};
+
+  assert((Op->Opcode == Instruction::Add || Op->Opcode == Instruction::Sub ||
+          Op->Opcode == Instruction::Mul) &&
+         "Unexpected opcode");
 
   // One operand (NarrowDef) has already been extended to WideDef. Now determine
   // if extending the other will lead to a recurrence.
-  const unsigned ExtendOperIdx =
-      DU.NarrowUse->getOperand(0) == DU.NarrowDef ? 1 : 0;
-  assert(DU.NarrowUse->getOperand(1-ExtendOperIdx) == DU.NarrowDef && "bad DU");
+  const unsigned ExtendOperIdx = Op->Operands[0] == DU.NarrowDef ? 1 : 0;
+  assert(Op->Operands[1 - ExtendOperIdx] == DU.NarrowDef && "bad DU");
 
-  const OverflowingBinaryOperator *OBO =
-    cast<OverflowingBinaryOperator>(DU.NarrowUse);
   ExtendKind ExtKind = getExtendKind(DU.NarrowDef);
-  if (!(ExtKind == ExtendKind::Sign && OBO->hasNoSignedWrap()) &&
-      !(ExtKind == ExtendKind::Zero && OBO->hasNoUnsignedWrap())) {
+  if (!(ExtKind == ExtendKind::Sign && Op->IsNSW) &&
+      !(ExtKind == ExtendKind::Zero && Op->IsNUW)) {
     ExtKind = ExtendKind::Unknown;
 
     // For a non-negative NarrowDef, we can choose either type of
@@ -1400,16 +1482,15 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
     // (see above), and we only hit this code if we need to check
     // the opposite case.
     if (DU.NeverNegative) {
-      if (OBO->hasNoSignedWrap()) {
+      if (Op->IsNSW) {
         ExtKind = ExtendKind::Sign;
-      } else if (OBO->hasNoUnsignedWrap()) {
+      } else if (Op->IsNUW) {
         ExtKind = ExtendKind::Zero;
       }
     }
   }
 
-  const SCEV *ExtendOperExpr =
-      SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx));
+  const SCEV *ExtendOperExpr = SE->getSCEV(Op->Operands[ExtendOperIdx]);
   if (ExtKind == ExtendKind::Sign)
     ExtendOperExpr = SE->getSignExtendExpr(ExtendOperExpr, WideType);
   else if (ExtKind == ExtendKind::Zero)
@@ -1430,7 +1511,7 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
   if (ExtendOperIdx == 0)
     std::swap(lhs, rhs);
   const SCEVAddRecExpr *AddRec =
-      dyn_cast<SCEVAddRecExpr>(getSCEVByOpCode(lhs, rhs, OpCode));
+      dyn_cast<SCEVAddRecExpr>(getSCEVByOpCode(lhs, rhs, Op->Opcode));
 
   if (!AddRec || AddRec->getLoop() != L)
     return {nullptr, ExtendKind::Unknown};
@@ -1731,7 +1812,9 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
 
 /// Determine whether an individual user of the narrow IV can be widened. If so,
 /// return the wide clone of the user.
-Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewriter) {
+Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
+                                 SCEVExpander &Rewriter, PHINode *OrigPhi,
+                                 PHINode *WidePhi) {
   assert(ExtendKindMap.count(DU.NarrowDef) &&
          "Should already know the kind of extension used to widen NarrowDef");
 
@@ -1752,7 +1835,7 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
 
         PHINode *WidePhi =
           PHINode::Create(DU.WideDef->getType(), 1, UsePhi->getName() + ".wide",
-                          UsePhi);
+                          UsePhi->getIterator());
         WidePhi->addIncoming(DU.WideDef, UsePhi->getIncomingBlock(0));
         BasicBlock *WidePhiBB = WidePhi->getParent();
         IRBuilder<> Builder(WidePhiBB, WidePhiBB->getFirstInsertionPt());
@@ -1825,11 +1908,18 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
     if (!WideAddRec.first)
       return nullptr;
 
-    // Reuse the IV increment that SCEVExpander created as long as it dominates
-    // NarrowUse.
+    // Reuse the IV increment that SCEVExpander created. Recompute flags, unless
+    // the flags for both increments agree and it is safe to use the ones from
+    // the original inc. In that case, the new use of the wide increment won't
+    // be more poisonous.
+    bool NeedToRecomputeFlags =
+        !SCEVExpander::canReuseFlagsFromOriginalIVInc(OrigPhi, WidePhi,
+                                                      DU.NarrowUse, WideInc) ||
+        DU.NarrowUse->hasNoUnsignedWrap() != WideInc->hasNoUnsignedWrap() ||
+        DU.NarrowUse->hasNoSignedWrap() != WideInc->hasNoSignedWrap();
     Instruction *WideUse = nullptr;
     if (WideAddRec.first == WideIncExpr &&
-        Rewriter.hoistIVInc(WideInc, DU.NarrowUse))
+        Rewriter.hoistIVInc(WideInc, DU.NarrowUse, NeedToRecomputeFlags))
       WideUse = WideInc;
     else {
       WideUse = cloneIVUser(DU, WideAddRec.first);
@@ -1996,11 +2086,9 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
       // the same opcode. It is not safe to re-use the flags from the original
       // increment, if it is more complex and SCEV expansion may have yielded a
       // more simplified wider increment.
-      bool MatchingOps =
-          match(OrigInc, m_c_BinOp(m_Specific(OrigPhi), m_Value())) &&
-          match(WideInc, m_c_BinOp(m_Specific(WidePhi), m_Value())) &&
-          OrigInc->getOpcode() == WideInc->getOpcode();
-      if (MatchingOps && isa<OverflowingBinaryOperator>(OrigInc) &&
+      if (SCEVExpander::canReuseFlagsFromOriginalIVInc(OrigPhi, WidePhi,
+                                                       OrigInc, WideInc) &&
+          isa<OverflowingBinaryOperator>(OrigInc) &&
           isa<OverflowingBinaryOperator>(WideInc)) {
         WideInc->setHasNoUnsignedWrap(WideInc->hasNoUnsignedWrap() ||
                                       OrigInc->hasNoUnsignedWrap());
@@ -2024,7 +2112,7 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
 
     // Process a def-use edge. This may replace the use, so don't hold a
     // use_iterator across it.
-    Instruction *WideUse = widenIVUse(DU, Rewriter);
+    Instruction *WideUse = widenIVUse(DU, Rewriter, OrigPhi, WidePhi);
 
     // Follow all def-use edges from the previous narrow use.
     if (WideUse)

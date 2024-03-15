@@ -102,7 +102,8 @@ void TBAABuilder::attachTBAATag(AliasAnalysisOpInterface op, Type baseFIRType,
     return;
 
   mlir::LLVM::LLVMFuncOp func = op->getParentOfType<mlir::LLVM::LLVMFuncOp>();
-  assert(func && "func.func should have already been converted to llvm.func");
+  if (!func)
+    return;
 
   ++tagAttachmentCounter;
   if (tagAttachmentLimit != kTagAttachmentUnlimited &&

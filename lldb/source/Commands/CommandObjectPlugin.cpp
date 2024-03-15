@@ -19,29 +19,10 @@ public:
       : CommandObjectParsed(interpreter, "plugin load",
                             "Import a dylib that implements an LLDB plugin.",
                             nullptr) {
-    CommandArgumentEntry arg1;
-    CommandArgumentData cmd_arg;
-
-    // Define the first (and only) variant of this arg.
-    cmd_arg.arg_type = eArgTypeFilename;
-    cmd_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(cmd_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeFilename);
   }
 
   ~CommandObjectPluginLoad() override = default;
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
-  }
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {

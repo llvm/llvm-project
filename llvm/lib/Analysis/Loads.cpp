@@ -364,7 +364,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
 
   if (Size.getBitWidth() > 64)
     return false;
-  const uint64_t LoadSize = Size.getZExtValue();
+  const TypeSize LoadSize = TypeSize::getFixed(Size.getZExtValue());
 
   // Otherwise, be a little bit aggressive by scanning the local block where we
   // want to check to see if the pointer is already being loaded or stored
@@ -414,11 +414,11 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
 
     // Handle trivial cases.
     if (AccessedPtr == V &&
-        LoadSize <= DL.getTypeStoreSize(AccessedTy))
+        TypeSize::isKnownLE(LoadSize, DL.getTypeStoreSize(AccessedTy)))
       return true;
 
     if (AreEquivalentAddressValues(AccessedPtr->stripPointerCasts(), V) &&
-        LoadSize <= DL.getTypeStoreSize(AccessedTy))
+        TypeSize::isKnownLE(LoadSize, DL.getTypeStoreSize(AccessedTy)))
       return true;
   }
   return false;

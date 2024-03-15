@@ -18,7 +18,6 @@
 
 #include "HexagonDepITypes.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
-#include "llvm/MC/MCInstrDesc.h"
 
 namespace llvm {
 
@@ -49,7 +48,7 @@ namespace HexagonII {
 
   // MCInstrDesc TSFlags
   // *** Must match HexagonInstrFormat*.td ***
-  enum HexagonTSFlagsVal {
+  enum {
     // This 7-bit field describes the insn type.
     TypePos = 0,
     TypeMask = 0x7f,
@@ -174,11 +173,6 @@ namespace HexagonII {
     hasUnaryRestrictionMask = 0x1,
   };
 
-  inline unsigned getTSFlags(const MCInstrDesc &MID, HexagonTSFlagsVal Pos,
-                             unsigned Mask) {
-    return (MID.TSFlags >> Pos) & Mask;
-  }
-
   // *** The code above must match HexagonInstrFormat*.td *** //
 
   // Hexagon specific MO operand flag mask.
@@ -280,10 +274,6 @@ namespace HexagonII {
     INST_ICLASS_XTYPE_4   = 0xe0000000,
     INST_ICLASS_ALU32_3   = 0xf0000000
   };
-
-  inline bool isCVI(const MCInstrDesc &MID) {
-    return getTSFlags(MID, isCVIPos, isCVIMask) != 0;
-  }
 
   LLVM_ATTRIBUTE_UNUSED
   static unsigned getMemAccessSizeInBytes(MemAccessSize S) {

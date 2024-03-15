@@ -35,17 +35,13 @@ class TestCase(TestBase):
         )
 
     def verify_key_in_dict(self, key, d, description):
-        self.assertEqual(
-            key in d,
-            True,
-            'make sure key "%s" is in dictionary %s' % (key, description),
+        self.assertIn(
+            key, d, 'make sure key "%s" is in dictionary %s' % (key, description)
         )
 
     def verify_key_not_in_dict(self, key, d, description):
-        self.assertEqual(
-            key in d,
-            False,
-            'make sure key "%s" is in dictionary %s' % (key, description),
+        self.assertNotIn(
+            key, d, 'make sure key "%s" is in dictionary %s' % (key, description)
         )
 
     def verify_keys(self, dict, description, keys_exist, keys_missing=None):
@@ -120,9 +116,7 @@ class TestCase(TestBase):
         self.verify_success_fail_count(stats, "frameVariable", 1, 0)
 
         # Test that "stopCount" is available when the process has run
-        self.assertEqual(
-            "stopCount" in stats, True, 'ensure "stopCount" is in target JSON'
-        )
+        self.assertIn("stopCount", stats, 'ensure "stopCount" is in target JSON')
         self.assertGreater(
             stats["stopCount"], 0, 'make sure "stopCount" is greater than zero'
         )
@@ -484,9 +478,9 @@ class TestCase(TestBase):
         exe = self.getBuildArtifact(exe_name)
         dsym = self.getBuildArtifact(exe_name + ".dSYM")
         # Make sure the executable file exists after building.
-        self.assertEqual(os.path.exists(exe), True)
+        self.assertTrue(os.path.exists(exe))
         # Make sure the dSYM file exists after building.
-        self.assertEqual(os.path.isdir(dsym), True)
+        self.assertTrue(os.path.isdir(dsym))
 
         # Create the target
         target = self.createTestTarget(file_path=exe)
@@ -532,9 +526,9 @@ class TestCase(TestBase):
         exe = self.getBuildArtifact(exe_name)
         dsym = self.getBuildArtifact(exe_name + ".dSYM")
         # Make sure the executable file exists after building.
-        self.assertEqual(os.path.exists(exe), True)
+        self.assertTrue(os.path.exists(exe))
         # Make sure the dSYM file doesn't exist after building.
-        self.assertEqual(os.path.isdir(dsym), False)
+        self.assertFalse(os.path.isdir(dsym))
 
         # Create the target
         target = self.createTestTarget(file_path=exe)
@@ -585,11 +579,11 @@ class TestCase(TestBase):
         dsym = self.getBuildArtifact(exe_name + ".dSYM")
         main_obj = self.getBuildArtifact("main.o")
         # Make sure the executable file exists after building.
-        self.assertEqual(os.path.exists(exe), True)
+        self.assertTrue(os.path.exists(exe))
         # Make sure the dSYM file doesn't exist after building.
-        self.assertEqual(os.path.isdir(dsym), False)
+        self.assertFalse(os.path.isdir(dsym))
         # Make sure the main.o object file exists after building.
-        self.assertEqual(os.path.exists(main_obj), True)
+        self.assertTrue(os.path.exists(main_obj))
 
         # Delete the main.o file that contains the debug info so we force an
         # error when we run to main and try to get variables
@@ -600,11 +594,11 @@ class TestCase(TestBase):
         # Get stats and verify we had errors.
         stats = self.get_stats()
         exe_stats = self.find_module_in_metrics(exe, stats)
-        self.assertTrue(exe_stats is not None)
+        self.assertIsNotNone(exe_stats)
 
         # Make sure we have "debugInfoHadVariableErrors" variable that is set to
         # false before failing to get local variables due to missing .o file.
-        self.assertEqual(exe_stats["debugInfoHadVariableErrors"], False)
+        self.assertFalse(exe_stats["debugInfoHadVariableErrors"])
 
         # Verify that the top level statistic that aggregates the number of
         # modules with debugInfoHadVariableErrors is zero
@@ -620,11 +614,11 @@ class TestCase(TestBase):
         # Get stats and verify we had errors.
         stats = self.get_stats()
         exe_stats = self.find_module_in_metrics(exe, stats)
-        self.assertTrue(exe_stats is not None)
+        self.assertIsNotNone(exe_stats)
 
         # Make sure we have "hadFrameVariableErrors" variable that is set to
         # true after failing to get local variables due to missing .o file.
-        self.assertEqual(exe_stats["debugInfoHadVariableErrors"], True)
+        self.assertTrue(exe_stats["debugInfoHadVariableErrors"])
 
         # Verify that the top level statistic that aggregates the number of
         # modules with debugInfoHadVariableErrors is greater than zero

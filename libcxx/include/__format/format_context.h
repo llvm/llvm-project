@@ -18,7 +18,7 @@
 #include <__format/format_arg_store.h>
 #include <__format/format_args.h>
 #include <__format/format_error.h>
-#include <__format/format_fwd.h>
+#include <__fwd/format.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/concepts.h>
 #include <__memory/addressof.h>

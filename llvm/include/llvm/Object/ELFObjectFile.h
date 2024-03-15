@@ -389,25 +389,35 @@ protected:
   }
 
   Error getBuildAttributes(ELFAttributeParser &Attributes) const override {
+    uint32_t Type;
+    switch (getEMachine()) {
+    case ELF::EM_ARM:
+      Type = ELF::SHT_ARM_ATTRIBUTES;
+      break;
+    case ELF::EM_RISCV:
+      Type = ELF::SHT_RISCV_ATTRIBUTES;
+      break;
+    default:
+      return Error::success();
+    }
+
     auto SectionsOrErr = EF.sections();
     if (!SectionsOrErr)
       return SectionsOrErr.takeError();
-
     for (const Elf_Shdr &Sec : *SectionsOrErr) {
-      if (Sec.sh_type == ELF::SHT_ARM_ATTRIBUTES ||
-          Sec.sh_type == ELF::SHT_RISCV_ATTRIBUTES) {
-        auto ErrorOrContents = EF.getSectionContents(Sec);
-        if (!ErrorOrContents)
-          return ErrorOrContents.takeError();
+      if (Sec.sh_type != Type)
+        continue;
+      auto ErrorOrContents = EF.getSectionContents(Sec);
+      if (!ErrorOrContents)
+        return ErrorOrContents.takeError();
 
-        auto Contents = ErrorOrContents.get();
-        if (Contents[0] != ELFAttrs::Format_Version || Contents.size() == 1)
-          return Error::success();
+      auto Contents = ErrorOrContents.get();
+      if (Contents[0] != ELFAttrs::Format_Version || Contents.size() == 1)
+        return Error::success();
 
-        if (Error E = Attributes.parse(Contents, ELFT::TargetEndianness))
-          return E;
-        break;
-      }
+      if (Error E = Attributes.parse(Contents, ELFT::TargetEndianness))
+        return E;
+      break;
     }
     return Error::success();
   }

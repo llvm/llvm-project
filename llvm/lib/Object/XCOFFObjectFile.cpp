@@ -65,6 +65,12 @@ template <typename T> uint16_t XCOFFSectionHeader<T>::getSectionType() const {
 }
 
 template <typename T>
+uint32_t XCOFFSectionHeader<T>::getSectionSubtype() const {
+  const T &DerivedXCOFFSectionHeader = static_cast<const T &>(*this);
+  return DerivedXCOFFSectionHeader.Flags & ~SectionFlagsTypeMask;
+}
+
+template <typename T>
 bool XCOFFSectionHeader<T>::isReservedSectionType() const {
   return getSectionType() & SectionFlagsReservedMask;
 }

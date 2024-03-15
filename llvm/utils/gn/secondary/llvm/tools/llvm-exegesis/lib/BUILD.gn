@@ -45,6 +45,7 @@ static_library("lib") {
     "SubprocessMemory.cpp",
     "Target.cpp",
     "UopsBenchmarkRunner.cpp",
+    "ValidationEvent.cpp",
   ]
 
   deps += targets_with_exegesis

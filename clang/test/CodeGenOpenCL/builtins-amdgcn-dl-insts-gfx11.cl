@@ -15,8 +15,8 @@ typedef unsigned short __attribute__((ext_vector_type(2))) ushort2;
 // CHECK-NEXT: [[s2:%[0-9]+]] = bitcast <2 x i16> %v2ssB to <2 x bfloat>
 // CHECK-NEXT: [[s3:%[0-9]+]] = bitcast i16 %sC to bfloat
 // CHECK-NEXT: [[d:%[0-9]+]] = tail call bfloat @llvm.amdgcn.fdot2.bf16.bf16(<2 x bfloat> [[s1]], <2 x bfloat> [[s2]], bfloat [[s3]])
-// CHECK: call float @llvm.amdgcn.fdot2.f32.bf16(<2 x i16> %v2ssA, <2 x i16> %v2ssB, float %fC, i1 false)
-// CHECK: call float @llvm.amdgcn.fdot2.f32.bf16(<2 x i16> %v2ssA, <2 x i16> %v2ssB, float %fC, i1 true)
+// CHECK: call float @llvm.amdgcn.fdot2.f32.bf16(<2 x bfloat> [[s1]], <2 x bfloat> [[s2]], float %fC, i1 false)
+// CHECK: call float @llvm.amdgcn.fdot2.f32.bf16(<2 x bfloat> [[s1]], <2 x bfloat> [[s2]], float %fC, i1 true)
 // CHECK: call i32 @llvm.amdgcn.udot4(i32 %uiA, i32 %uiB, i32 %uiC, i1 false)
 // CHECK: call i32 @llvm.amdgcn.udot4(i32 %uiA, i32 %uiB, i32 %uiC, i1 true)
 // CHECK: call i32 @llvm.amdgcn.sudot4(i1 true, i32 %A, i1 false, i32 %B, i32 %C, i1 false)

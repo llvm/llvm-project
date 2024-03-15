@@ -71,6 +71,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-rename
   clang-refactor
   clang-diff
+  clang-installapi
   clang-scan-deps
   clang-linker-wrapper
   clang-offload-bundler
@@ -135,6 +136,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-strip
     llvm-symbolizer
     llvm-windres
+    obj2yaml
     opt
     split-file
     yaml2obj

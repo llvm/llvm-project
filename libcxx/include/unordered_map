@@ -584,7 +584,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 */
 
 #include <__algorithm/is_permutation.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__availability>
 #include <__config>
 #include <__functional/is_transparent.h>
@@ -877,7 +877,7 @@ public:
     return *this;
   }
 
-  template <class _ValueTp, class = __enable_if_t<__is_same_uncvref<_ValueTp, value_type>::value> >
+  template <class _ValueTp, __enable_if_t<__is_same_uncvref<_ValueTp, value_type>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI __hash_value_type& operator=(_ValueTp&& __v) {
     __ref() = std::forward<_ValueTp>(__v);
     return *this;
@@ -1245,12 +1245,12 @@ public:
     return __table_.__insert_unique(std::move(__x)).first;
   }
 
-  template <class _Pp, class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
+  template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_Pp&& __x) {
     return __table_.__insert_unique(std::forward<_Pp>(__x));
   }
 
-  template <class _Pp, class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
+  template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator, _Pp&& __x) {
     return insert(std::forward<_Pp>(__x)).first;
   }
@@ -2052,12 +2052,12 @@ public:
     return __table_.__insert_multi(__p.__i_, std::move(__x));
   }
 
-  template <class _Pp, class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
+  template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(_Pp&& __x) {
     return __table_.__insert_multi(std::forward<_Pp>(__x));
   }
 
-  template <class _Pp, class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
+  template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _Pp&& __x) {
     return __table_.__insert_multi(__p.__i_, std::forward<_Pp>(__x));
   }

@@ -13,6 +13,9 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CHECKERHELPERS_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CHECKERHELPERS_H
 
+#include "ProgramState_Fwd.h"
+#include "SVals.h"
+
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/OperatorKinds.h"
@@ -109,6 +112,9 @@ public:
 
 OperatorKind operationKindFromOverloadedOperator(OverloadedOperatorKind OOK,
                                                  bool IsBinary);
+
+std::optional<DefinedSVal> getPointeeDefVal(SVal PtrSVal,
+                                            ProgramStateRef State);
 
 } // namespace ento
 

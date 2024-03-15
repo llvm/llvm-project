@@ -42,12 +42,25 @@ void __attribute__((target_version("ssbs+fp16fml"))) two(void) {}
 //expected-error@+1 {{'main' cannot be a multiversioned function}}
 int __attribute__((target_version("lse"))) main(void) { return 1; }
 
-//expected-note@+1 {{previous definition is here}}
-int hoo(void) { return 1; }
-//expected-note@-1 {{previous definition is here}}
-//expected-warning@+2 {{attribute declaration must precede definition}}
-//expected-error@+1 {{redefinition of 'hoo'}}
-int __attribute__((target_version("dit"))) hoo(void) { return 2; }
+// It is ok for the default version to appear first.
+int default_first(void) { return 1; }
+int __attribute__((target_version("dit"))) default_first(void) { return 2; }
+int __attribute__((target_version("mops"))) default_first(void) { return 3; }
+
+// It is ok if the default version is between other versions.
+int __attribute__((target_version("simd"))) default_middle(void) {return 0; }
+int __attribute__((target_version("default"))) default_middle(void) { return 1; }
+int __attribute__((target_version("aes"))) default_middle(void) { return 2; }
+
+// It is ok for the default version to be the last one.
+int __attribute__((target_version("rdm"))) default_last(void) {return 0; }
+int __attribute__((target_version("lse+aes"))) default_last(void) { return 1; }
+int __attribute__((target_version("default"))) default_last(void) { return 2; }
+
+// It is also ok to forward declare the default.
+int __attribute__((target_version("default"))) default_fwd_declare(void);
+int __attribute__((target_version("sve"))) default_fwd_declare(void) { return 0; }
+int default_fwd_declare(void) { return 1; }
 
 //expected-warning@+1 {{unsupported '' in the 'target_version' attribute string; 'target_version' attribute ignored}}
 int __attribute__((target_version(""))) unsup1(void) { return 1; }

@@ -1749,6 +1749,37 @@ class AXSI4<dag oops, dag iops, IndexMode im, InstrItinClass itin,
   let Inst{8}     = 0;          // Single precision
 }
 
+// Single Precision with fixed registers.
+// For when the registers-to-be-stored/loaded are fixed, e.g. VLLDM and VLSTM
+class AXSI4FR<string asm, bit et, bit load>
+    : InstARM<AddrMode4, 4, IndexModeNone, VFPLdStMulFrm, VFPDomain, "", NoItinerary> {
+  // Instruction operands.
+  bits<4> Rn;
+  bits<13> regs;    // Does not affect encoding, for assembly/disassembly only.
+  list<Predicate> Predicates = [HasVFP2];
+  let OutOperandList = (outs);
+  let InOperandList = (ins GPRnopc:$Rn, pred:$p, dpr_reglist:$regs);
+  let AsmString = asm;
+  let Pattern = [];
+  let DecoderNamespace = "VFP";
+  // Encode instruction operands.
+  let Inst{19-16} = Rn;
+  let Inst{31-28} = 0b1110;
+  let Inst{27-25} = 0b110;
+  let Inst{24}    = 0b0;
+  let Inst{23}    = 0b0;
+  let Inst{22}    = 0b0;
+  let Inst{21}    = 0b1;
+  let Inst{20}    = load;       // Distinguishes vlldm from vlstm
+  let Inst{15-12} = 0b0000;
+  let Inst{11-9}  = 0b101;
+  let Inst{8}     = 0;          // Single precision
+  let Inst{7}     = et;         // encoding type, 0 for T1 and 1 for T2.
+  let Inst{6-0}   = 0b0000000;
+  let mayLoad     = load;
+  let mayStore    = !eq(load, 0);
+}
+
 // Double precision, unary
 class ADuI<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3, bits<2> opcod4,
            bit opcod5, dag oops, dag iops, InstrItinClass itin, string opc,

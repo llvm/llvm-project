@@ -524,7 +524,7 @@ static const DerivedTypeSpec *HasDefaultInitialization(const Symbol &symbol) {
                 directs.begin(), directs.end(), [](const Symbol &component) {
                   return !IsAllocatable(component) &&
                       HasDeclarationInitializer(component);
-                })) {
+                }) != directs.end()) {
           return derived;
         }
       }

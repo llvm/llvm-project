@@ -316,6 +316,11 @@ def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp"> 
     buffers for results need to be allocated in the caller. This currently only
     works for static shaped memrefs.
   }];
+  let options = [
+    Option<"addResultAttribute", "add-result-attr", "bool",
+       /*default=*/"false",
+       "Add the attribute 'bufferize.result' to all output parameters.">,
+  ];
   let constructor = "mlir::bufferization::createBufferResultsToOutParamsPass()";
   let dependentDialects = ["memref::MemRefDialect"];
 }

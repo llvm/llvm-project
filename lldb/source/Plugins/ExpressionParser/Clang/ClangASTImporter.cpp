@@ -10,9 +10,11 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/raw_ostream.h"
@@ -26,6 +28,7 @@
 
 #include <memory>
 #include <optional>
+#include <type_traits>
 
 using namespace lldb_private;
 using namespace clang;
@@ -517,6 +520,236 @@ bool ClangASTImporter::CompleteType(const CompilerType &compiler_type) {
   return false;
 }
 
+/// Copy layout information from \ref source_map to the \ref destination_map.
+///
+/// In the process of copying over layout info, we may need to import
+/// decls from the \ref source_map. This function will use the supplied
+/// \ref importer to import the necessary decls into \ref dest_ctx.
+///
+/// \param[in,out] dest_ctx Destination ASTContext into which we import
+///                         decls from the \ref source_map.
+/// \param[out]    destination_map A map from decls in \ref dest_ctx to an
+///                                integral offest, which will be copies
+///                                of the decl/offest pairs in \ref source_map
+///                                if successful.
+/// \param[in]     source_map A map from decls to integral offests. These will
+///                           be copied into \ref destination_map.
+/// \param[in,out] importer Used to import decls into \ref dest_ctx.
+///
+/// \returns On success, will return 'true' and the offsets in \ref
+/// destination_map
+///          are usable copies of \ref source_map.
+template <class D, class O>
+static bool ImportOffsetMap(clang::ASTContext *dest_ctx,
+                            llvm::DenseMap<const D *, O> &destination_map,
+                            llvm::DenseMap<const D *, O> &source_map,
+                            ClangASTImporter &importer) {
+  // When importing fields into a new record, clang has a hard requirement that
+  // fields be imported in field offset order.  Since they are stored in a
+  // DenseMap with a pointer as the key type, this means we cannot simply
+  // iterate over the map, as the order will be non-deterministic.  Instead we
+  // have to sort by the offset and then insert in sorted order.
+  typedef llvm::DenseMap<const D *, O> MapType;
+  typedef typename MapType::value_type PairType;
+  std::vector<PairType> sorted_items;
+  sorted_items.reserve(source_map.size());
+  sorted_items.assign(source_map.begin(), source_map.end());
+  llvm::sort(sorted_items, llvm::less_second());
+
+  for (const auto &item : sorted_items) {
+    DeclFromUser<D> user_decl(const_cast<D *>(item.first));
+    DeclFromParser<D> parser_decl(user_decl.Import(dest_ctx, importer));
+    if (parser_decl.IsInvalid())
+      return false;
+    destination_map.insert(
+        std::pair<const D *, O>(parser_decl.decl, item.second));
+  }
+
+  return true;
+}
+
+/// Given a CXXRecordDecl, will calculate and populate \ref base_offsets
+/// with the integral offsets of any of its (possibly virtual) base classes.
+///
+/// \param[in] record_layout ASTRecordLayout of \ref record.
+/// \param[in] record The record that we're calculating the base layouts of.
+/// \param[out] base_offsets Map of base-class decl to integral offset which
+///                          this function will fill in.
+///
+/// \returns On success, will return 'true' and the offsets in \ref base_offsets
+///          are usable.
+template <bool IsVirtual>
+bool ExtractBaseOffsets(const ASTRecordLayout &record_layout,
+                        DeclFromUser<const CXXRecordDecl> &record,
+                        llvm::DenseMap<const clang::CXXRecordDecl *,
+                                       clang::CharUnits> &base_offsets) {
+  for (CXXRecordDecl::base_class_const_iterator
+           bi = (IsVirtual ? record->vbases_begin() : record->bases_begin()),
+           be = (IsVirtual ? record->vbases_end() : record->bases_end());
+       bi != be; ++bi) {
+    if (!IsVirtual && bi->isVirtual())
+      continue;
+
+    const clang::Type *origin_base_type = bi->getType().getTypePtr();
+    const clang::RecordType *origin_base_record_type =
+        origin_base_type->getAs<RecordType>();
+
+    if (!origin_base_record_type)
+      return false;
+
+    DeclFromUser<RecordDecl> origin_base_record(
+        origin_base_record_type->getDecl());
+
+    if (origin_base_record.IsInvalid())
+      return false;
+
+    DeclFromUser<CXXRecordDecl> origin_base_cxx_record(
+        DynCast<CXXRecordDecl>(origin_base_record));
+
+    if (origin_base_cxx_record.IsInvalid())
+      return false;
+
+    CharUnits base_offset;
+
+    if (IsVirtual)
+      base_offset =
+          record_layout.getVBaseClassOffset(origin_base_cxx_record.decl);
+    else
+      base_offset =
+          record_layout.getBaseClassOffset(origin_base_cxx_record.decl);
+
+    base_offsets.insert(std::pair<const CXXRecordDecl *, CharUnits>(
+        origin_base_cxx_record.decl, base_offset));
+  }
+
+  return true;
+}
+
+bool ClangASTImporter::importRecordLayoutFromOrigin(
+    const RecordDecl *record, uint64_t &size, uint64_t &alignment,
+    llvm::DenseMap<const clang::FieldDecl *, uint64_t> &field_offsets,
+    llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
+        &base_offsets,
+    llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
+        &vbase_offsets) {
+
+  Log *log = GetLog(LLDBLog::Expressions);
+
+  clang::ASTContext &dest_ctx = record->getASTContext();
+  LLDB_LOG(log,
+           "LayoutRecordType on (ASTContext*){0} '{1}' for (RecordDecl*)"
+           "{2} [name = '{3}']",
+           &dest_ctx,
+           TypeSystemClang::GetASTContext(&dest_ctx)->getDisplayName(), record,
+           record->getName());
+
+  DeclFromParser<const RecordDecl> parser_record(record);
+  DeclFromUser<const RecordDecl> origin_record(parser_record.GetOrigin(*this));
+
+  if (origin_record.IsInvalid())
+    return false;
+
+  std::remove_reference_t<decltype(field_offsets)> origin_field_offsets;
+  std::remove_reference_t<decltype(base_offsets)> origin_base_offsets;
+  std::remove_reference_t<decltype(vbase_offsets)> origin_virtual_base_offsets;
+
+  TypeSystemClang::GetCompleteDecl(
+      &origin_record->getASTContext(),
+      const_cast<RecordDecl *>(origin_record.decl));
+
+  clang::RecordDecl *definition = origin_record.decl->getDefinition();
+  if (!definition || !definition->isCompleteDefinition())
+    return false;
+
+  const ASTRecordLayout &record_layout(
+      origin_record->getASTContext().getASTRecordLayout(origin_record.decl));
+
+  int field_idx = 0, field_count = record_layout.getFieldCount();
+
+  for (RecordDecl::field_iterator fi = origin_record->field_begin(),
+                                  fe = origin_record->field_end();
+       fi != fe; ++fi) {
+    if (field_idx >= field_count)
+      return false; // Layout didn't go well.  Bail out.
+
+    uint64_t field_offset = record_layout.getFieldOffset(field_idx);
+
+    origin_field_offsets.insert(
+        std::pair<const FieldDecl *, uint64_t>(*fi, field_offset));
+
+    field_idx++;
+  }
+
+  DeclFromUser<const CXXRecordDecl> origin_cxx_record(
+      DynCast<const CXXRecordDecl>(origin_record));
+
+  if (origin_cxx_record.IsValid()) {
+    if (!ExtractBaseOffsets<false>(record_layout, origin_cxx_record,
+                                   origin_base_offsets) ||
+        !ExtractBaseOffsets<true>(record_layout, origin_cxx_record,
+                                  origin_virtual_base_offsets))
+      return false;
+  }
+
+  if (!ImportOffsetMap(&dest_ctx, field_offsets, origin_field_offsets, *this) ||
+      !ImportOffsetMap(&dest_ctx, base_offsets, origin_base_offsets, *this) ||
+      !ImportOffsetMap(&dest_ctx, vbase_offsets, origin_virtual_base_offsets,
+                       *this))
+    return false;
+
+  size = record_layout.getSize().getQuantity() * dest_ctx.getCharWidth();
+  alignment =
+      record_layout.getAlignment().getQuantity() * dest_ctx.getCharWidth();
+
+  if (log) {
+    LLDB_LOG(log, "LRT returned:");
+    LLDB_LOG(log, "LRT   Original = (RecordDecl*){0}",
+             static_cast<const void *>(origin_record.decl));
+    LLDB_LOG(log, "LRT   Size = {0}", size);
+    LLDB_LOG(log, "LRT   Alignment = {0}", alignment);
+    LLDB_LOG(log, "LRT   Fields:");
+    for (RecordDecl::field_iterator fi = record->field_begin(),
+                                    fe = record->field_end();
+         fi != fe; ++fi) {
+      LLDB_LOG(log,
+               "LRT     (FieldDecl*){0}, Name = '{1}', Type = '{2}', Offset = "
+               "{3} bits",
+               *fi, fi->getName(), fi->getType().getAsString(),
+               field_offsets[*fi]);
+    }
+    DeclFromParser<const CXXRecordDecl> parser_cxx_record =
+        DynCast<const CXXRecordDecl>(parser_record);
+    if (parser_cxx_record.IsValid()) {
+      LLDB_LOG(log, "LRT   Bases:");
+      for (CXXRecordDecl::base_class_const_iterator
+               bi = parser_cxx_record->bases_begin(),
+               be = parser_cxx_record->bases_end();
+           bi != be; ++bi) {
+        bool is_virtual = bi->isVirtual();
+
+        QualType base_type = bi->getType();
+        const RecordType *base_record_type = base_type->getAs<RecordType>();
+        DeclFromParser<RecordDecl> base_record(base_record_type->getDecl());
+        DeclFromParser<CXXRecordDecl> base_cxx_record =
+            DynCast<CXXRecordDecl>(base_record);
+
+        LLDB_LOG(log,
+                 "LRT     {0}(CXXRecordDecl*){1}, Name = '{2}', Offset = "
+                 "{3} chars",
+                 (is_virtual ? "Virtual " : ""), base_cxx_record.decl,
+                 base_cxx_record.decl->getName(),
+                 (is_virtual
+                      ? vbase_offsets[base_cxx_record.decl].getQuantity()
+                      : base_offsets[base_cxx_record.decl].getQuantity()));
+      }
+    } else {
+      LLDB_LOG(log, "LRD   Not a CXXRecord, so no bases");
+    }
+  }
+
+  return true;
+}
+
 bool ClangASTImporter::LayoutRecordType(
     const clang::RecordDecl *record_decl, uint64_t &bit_size,
     uint64_t &alignment,
@@ -527,7 +760,6 @@ bool ClangASTImporter::LayoutRecordType(
         &vbase_offsets) {
   RecordDeclToLayoutMap::iterator pos =
       m_record_decl_to_layout_map.find(record_decl);
-  bool success = false;
   base_offsets.clear();
   vbase_offsets.clear();
   if (pos != m_record_decl_to_layout_map.end()) {
@@ -537,13 +769,23 @@ bool ClangASTImporter::LayoutRecordType(
     base_offsets.swap(pos->second.base_offsets);
     vbase_offsets.swap(pos->second.vbase_offsets);
     m_record_decl_to_layout_map.erase(pos);
-    success = true;
-  } else {
-    bit_size = 0;
-    alignment = 0;
-    field_offsets.clear();
+    return true;
   }
-  return success;
+
+  // It's possible that we calculated the layout in a different
+  // ClangASTImporter instance. Try to import such layout if
+  // our decl has an origin.
+  if (auto origin = GetDeclOrigin(record_decl); origin.Valid())
+    if (importRecordLayoutFromOrigin(record_decl, bit_size, alignment,
+                                     field_offsets, base_offsets,
+                                     vbase_offsets))
+      return true;
+
+  bit_size = 0;
+  alignment = 0;
+  field_offsets.clear();
+
+  return false;
 }
 
 void ClangASTImporter::SetRecordLayout(clang::RecordDecl *decl,

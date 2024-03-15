@@ -396,12 +396,10 @@ define <32 x double> @vfwadd_vf_v32f32(ptr %x, float %y) {
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vi v0, v24, 16
+; CHECK-NEXT:    vslidedown.vi v8, v24, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vfmv.v.f v16, fa0
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v16
-; CHECK-NEXT:    vfwadd.wv v16, v8, v0
-; CHECK-NEXT:    vfwadd.wv v8, v8, v24
+; CHECK-NEXT:    vfwadd.vf v16, v8, fa0
+; CHECK-NEXT:    vfwadd.vf v8, v24, fa0
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, ptr %x
   %b = insertelement <32 x float> poison, float %y, i32 0

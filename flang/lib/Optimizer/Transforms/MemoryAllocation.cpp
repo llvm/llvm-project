@@ -200,7 +200,8 @@ public:
       return keepStackAllocation(alloca, &func.front(), options);
     });
 
-    patterns.insert<AllocaOpConversion>(context, analysis.getReturns(func));
+    llvm::SmallVector<mlir::Operation *> returnOps = analysis.getReturns(func);
+    patterns.insert<AllocaOpConversion>(context, returnOps);
     if (mlir::failed(
             mlir::applyPartialConversion(func, target, std::move(patterns)))) {
       mlir::emitError(func.getLoc(),

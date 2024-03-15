@@ -14,6 +14,7 @@ func.func @_QPmatmul1(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "lh
 // CHECK:           %[[ARG0:.*]]: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "lhs"}
 // CHECK:           %[[ARG1:.*]]: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "rhs"}
 // CHECK:           %[[ARG2:.*]]: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "res"}
+// CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 // CHECK-DAG:     %[[LHS_VAR:.*]]:2 = hlfir.declare %[[ARG0]]
 // CHECK-DAG:     %[[RHS_VAR:.*]]:2 = hlfir.declare %[[ARG1]]
 // CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[ARG2]]
@@ -37,7 +38,6 @@ func.func @_QPmatmul1(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "lh
 // TODO: fix alias analysis in hlfir.assign bufferization
 // CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
 // TODO: add shape information from original intrinsic op
-// CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         %[[ASEXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?x?xi32>>, i1) -> !hlfir.expr<?x?xi32>
 // CHECK:         hlfir.assign %[[ASEXPR]] to %[[RES_VAR]]#0
 // CHECK:         hlfir.destroy %[[ASEXPR]]

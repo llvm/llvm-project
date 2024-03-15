@@ -450,6 +450,8 @@ LANGOPT(RegCall4, 1, 0, "Set __regcall4 as a default calling convention to respe
 
 LANGOPT(MatrixTypes, 1, 0, "Enable or disable the builtin matrix type")
 
+LANGOPT(CXXAssumptions, 1, 1, "Enable or disable codegen and compile-time checks for C++23's [[assume]] attribute")
+
 ENUM_LANGOPT(StrictFlexArraysLevel, StrictFlexArraysLevelKind, 2,
              StrictFlexArraysLevelKind::Default,
              "Rely on strict definition of flexible arrays")

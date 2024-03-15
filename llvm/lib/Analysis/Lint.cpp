@@ -77,6 +77,11 @@
 
 using namespace llvm;
 
+static const char LintAbortOnErrorArgName[] = "lint-abort-on-error";
+static cl::opt<bool>
+    LintAbortOnError(LintAbortOnErrorArgName, cl::init(false),
+                     cl::desc("In the Lint pass, abort on errors."));
+
 namespace {
 namespace MemRef {
 static const unsigned Read = 1;
@@ -715,6 +720,10 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   Lint L(Mod, DL, AA, AC, DT, TLI);
   L.visit(F);
   dbgs() << L.MessagesStr.str();
+  if (LintAbortOnError && !L.MessagesStr.str().empty())
+    report_fatal_error(Twine("Linter found errors, aborting. (enabled by --") +
+                           LintAbortOnErrorArgName + ")",
+                       false);
   return PreservedAnalyses::all();
 }
 

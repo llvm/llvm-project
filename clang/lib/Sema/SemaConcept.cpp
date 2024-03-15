@@ -586,7 +586,8 @@ bool Sema::addInstantiatedCapturesToScope(
 
 bool Sema::SetupConstraintScope(
     FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
-    MultiLevelTemplateArgumentList MLTAL, LocalInstantiationScope &Scope) {
+    const MultiLevelTemplateArgumentList &MLTAL,
+    LocalInstantiationScope &Scope) {
   if (FD->isTemplateInstantiation() && FD->getPrimaryTemplate()) {
     FunctionTemplateDecl *PrimaryTemplate = FD->getPrimaryTemplate();
     InstantiatingTemplate Inst(

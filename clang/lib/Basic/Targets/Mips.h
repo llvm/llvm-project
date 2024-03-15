@@ -237,12 +237,14 @@ public:
     case 'r': // CPU registers.
     case 'd': // Equivalent to "r" unless generating MIPS16 code.
     case 'y': // Equivalent to "r", backward compatibility only.
-    case 'f': // floating-point registers.
     case 'c': // $25 for indirect jumps
     case 'l': // lo register
     case 'x': // hilo register pair
       Info.setAllowsRegister();
       return true;
+    case 'f': // floating-point registers.
+      Info.setAllowsRegister();
+      return FloatABI != SoftFloat;
     case 'I': // Signed 16-bit constant
     case 'J': // Integer 0
     case 'K': // Unsigned 16-bit constant

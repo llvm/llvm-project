@@ -107,9 +107,8 @@
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__functional/operations.h>
-#include <__fwd/hash.h>
+#include <__fwd/functional.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>

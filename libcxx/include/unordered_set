@@ -532,7 +532,7 @@ template <class Value, class Hash, class Pred, class Alloc>
 // clang-format on
 
 #include <__algorithm/is_permutation.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__availability>
 #include <__config>
 #include <__functional/is_transparent.h>

@@ -257,6 +257,9 @@ SmallVector<int64_t> getI64SubArray(ArrayAttr arrayAttr, unsigned dropFront = 0,
 std::pair<AffineExpr, SmallVector<OpFoldResult>>
 computeLinearIndex(OpFoldResult sourceOffset, ArrayRef<OpFoldResult> strides,
                    ArrayRef<OpFoldResult> indices);
+std::pair<AffineExpr, SmallVector<OpFoldResult>>
+computeLinearIndex(OpFoldResult sourceOffset, ArrayRef<int64_t> strides,
+                   ArrayRef<Value> indices);
 
 //===----------------------------------------------------------------------===//
 // Utilities for decomposing larger shapes

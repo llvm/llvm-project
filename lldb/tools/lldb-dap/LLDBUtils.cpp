@@ -9,6 +9,8 @@
 #include "LLDBUtils.h"
 #include "DAP.h"
 
+#include <mutex>
+
 namespace lldb_dap {
 
 bool RunLLDBCommands(llvm::StringRef prefix,
@@ -37,7 +39,15 @@ bool RunLLDBCommands(llvm::StringRef prefix,
       }
     }
 
-    interp.HandleCommand(command.str().c_str(), result);
+    {
+      // Prevent simultaneous calls to HandleCommand, e.g. EventThreadFunction
+      // may asynchronously call RunExitCommands when we are already calling
+      // RunTerminateCommands.
+      static std::mutex handle_command_mutex;
+      std::lock_guard<std::mutex> locker(handle_command_mutex);
+      interp.HandleCommand(command.str().c_str(), result);
+    }
+
     const bool got_error = !result.Succeeded();
     // The if statement below is assuming we always print out `!` prefixed
     // lines. The only time we don't print is when we have `quiet_on_success ==

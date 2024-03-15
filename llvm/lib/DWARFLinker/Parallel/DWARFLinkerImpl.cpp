@@ -192,7 +192,7 @@ Error DWARFLinkerImpl::link() {
       Context->InputDWARFFile.unload();
     }
   } else {
-    ThreadPool Pool(llvm::parallel::strategy);
+    DefaultThreadPool Pool(llvm::parallel::strategy);
     for (std::unique_ptr<LinkContext> &Context : ObjectContexts)
       Pool.async([&]() {
         // Link object file.

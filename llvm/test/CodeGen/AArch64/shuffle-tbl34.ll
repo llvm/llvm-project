@@ -353,13 +353,17 @@ define <8 x i8> @shuffle4_v8i8_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x 
 define <8 x i16> @shuffle4_v4i8_zext(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) {
 ; CHECK-LABEL: shuffle4_v4i8_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    uzp1 v1.8b, v2.8b, v3.8b
+; CHECK-NEXT:    fmov d5, d2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NEXT:    ushll v2.8h, v0.8b, #0
+; CHECK-NEXT:    fmov d4, d0
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI8_0]
-; CHECK-NEXT:    ushll v3.8h, v1.8b, #0
-; CHECK-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
+; CHECK-NEXT:    mov v4.d[1], v1.d[0]
+; CHECK-NEXT:    mov v5.d[1], v3.d[0]
+; CHECK-NEXT:    bic v4.8h, #255, lsl #8
+; CHECK-NEXT:    bic v5.8h, #255, lsl #8
+; CHECK-NEXT:    tbl v0.16b, { v4.16b, v5.16b }, v0.16b
 ; CHECK-NEXT:    ret
   %x = shufflevector <4 x i8> %a, <4 x i8> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %y = shufflevector <4 x i8> %c, <4 x i8> %d, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

@@ -153,6 +153,12 @@ public:
     TR = t;
   }
 
+  /// If this expression is an enumeration constant, return the
+  /// enumeration type under which said constant was declared.
+  /// Otherwise return the expression's type.
+  /// Note this effectively circumvents the weak typing of C's enum constants
+  QualType getEnumCoercedType(const ASTContext &Ctx) const;
+
   ExprDependence getDependence() const {
     return static_cast<ExprDependence>(ExprBits.Dependent);
   }
@@ -470,6 +476,13 @@ public:
   /// return a non-null pointer even for r-values loaded from
   /// bit-fields, but it will return null for a conditional bit-field.
   FieldDecl *getSourceBitField();
+
+  /// If this expression refers to an enum constant, retrieve its declaration
+  EnumConstantDecl *getEnumConstantDecl();
+
+  const EnumConstantDecl *getEnumConstantDecl() const {
+    return const_cast<Expr *>(this)->getEnumConstantDecl();
+  }
 
   const FieldDecl *getSourceBitField() const {
     return const_cast<Expr*>(this)->getSourceBitField();
@@ -1860,6 +1873,17 @@ public:
       return getStrDataAsUInt32()[i];
     }
     llvm_unreachable("Unsupported character width!");
+  }
+
+  // Get code unit but preserve sign info.
+  int64_t getCodeUnitS(size_t I, uint64_t BitWidth) const {
+    int64_t V = getCodeUnit(I);
+    if (isOrdinary() || isWide()) {
+      unsigned Width = getCharByteWidth() * BitWidth;
+      llvm::APInt AInt(Width, (uint64_t)V);
+      V = AInt.getSExtValue();
+    }
+    return V;
   }
 
   unsigned getByteLength() const { return getCharByteWidth() * getLength(); }
@@ -5819,7 +5843,7 @@ class GenericSelectionExpr final
         std::conditional_t<Const, const Stmt *const *, Stmt **>;
     using TSIPtrPtrTy = std::conditional_t<Const, const TypeSourceInfo *const *,
                                            TypeSourceInfo **>;
-    StmtPtrPtrTy E; // = nullptr; FIXME: Once support for gcc 4.8 is dropped.
+    StmtPtrPtrTy E = nullptr;
     TSIPtrPtrTy TSI; // Kept in sync with E.
     unsigned Offset = 0, SelectedOffset = 0;
     AssociationIteratorTy(StmtPtrPtrTy E, TSIPtrPtrTy TSI, unsigned Offset,

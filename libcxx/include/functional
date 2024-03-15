@@ -513,7 +513,6 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 */
 
 #include <__algorithm/search.h>
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__compare/compare_three_way.h>
 #include <__config>
 #include <__functional/binary_function.h>

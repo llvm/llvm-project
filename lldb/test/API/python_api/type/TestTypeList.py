@@ -18,6 +18,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.source = "main.cpp"
         self.line = line_number(self.source, "// Break at this line")
 
+    @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     def test(self):
         """Exercise SBType and SBTypeList API."""
         d = {"EXE": self.exe_name}
@@ -54,7 +55,7 @@ class TypeAndTypeListTestCase(TestBase):
                 % type_list.GetSize()
             )
         # a second Task make be scared up by the Objective-C runtime
-        self.assertTrue(len(type_list) >= 1)
+        self.assertGreaterEqual(len(type_list), 1)
         for type in type_list:
             self.assertTrue(type)
             self.DebugSBType(type)
@@ -133,7 +134,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.DebugSBType(union_type)
 
         # Check that we don't find indirectly nested types
-        self.assertTrue(enum_type.size == 1)
+        self.assertEqual(enum_type.size, 1)
 
         invalid_type = task_type.FindDirectNestedType("E2")
         self.assertFalse(invalid_type)

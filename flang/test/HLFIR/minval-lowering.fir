@@ -37,6 +37,7 @@ func.func @_QPminval2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"
 // CHECK:           %[[ARG0:.*]]: !fir.box<!fir.array<?x?xi32>>
 // CHECK:           %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[ARG2:.*]]: !fir.ref<index>
+// CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 // CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 // CHECK-DAG:     %[[RES:.*]]:2 = hlfir.declare %[[ARG1]]
 // CHECK-DAG:     %[[DIM_VAR:.*]]:2 = hlfir.declare %[[ARG2]]
@@ -63,7 +64,6 @@ func.func @_QPminval2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"
 // CHECK-NEXT:    %[[SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
 // TODO: fix alias analysis in hlfir.assign bufferization
 // CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
-// CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         %[[ASEXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
 // CHECK:         hlfir.assign %[[ASEXPR]] to %[[RES]]#0
 // CHECK:         hlfir.destroy %[[ASEXPR]]
@@ -151,6 +151,7 @@ func.func @_QPminval5(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "s"})
 }
 // CHECK-LABEL: func.func @_QPminval5(
 // CHECK:           %[[ARG0:.*]]: !fir.ref<!fir.array<2xi32>>
+// CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 // CHECK-DAG:     %[[RET_BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
 // CHECK-DAG:     %[[RET_ADDR:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
@@ -161,7 +162,6 @@ func.func @_QPminval5(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "s"})
 // CHECK-DAG:     %[[RES_VAR:.*]] = hlfir.declare %[[ARG0]](%[[RES_SHAPE:.*]])
 
 // CHECK-DAG:     %[[MASK_ALLOC:.*]] = fir.alloca !fir.logical<4>
-// CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 // CHECK-DAG:     %[[MASK_VAL:.*]]  = fir.convert %[[TRUE]] : (i1) -> !fir.logical<4>
 // CHECK-DAG:     fir.store %[[MASK_VAL]] to %[[MASK_ALLOC]] : !fir.ref<!fir.logical<4>>
 // CHECK-DAG:     %[[MASK_BOX:.*]] = fir.embox %[[MASK_ALLOC]]
@@ -190,6 +190,7 @@ func.func @_QPminval6(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_n
 // CHECK-LABEL: func.func @_QPminval6(
 // CHECK:           %[[ARG0:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[ARG1:.*]]: !fir.boxchar<1>
+// CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 // CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 // CHECK-DAG:     %[[UNBOXED:.*]]:2 = fir.unboxchar %[[ARG1]]
 // CHECK-DAG:     %[[RES:.*]]:2 = hlfir.declare %[[UNBOXED]]#0 typeparams %[[UNBOXED]]#1
@@ -210,7 +211,6 @@ func.func @_QPminval6(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_n
 // CHECK:         %[[BOX_ELESIZE:.*]] = fir.box_elesize %[[RET]]
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]
 // CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]] typeparams %[[BOX_ELESIZE]] {uniq_name = ".tmp.intrinsic_result"}
-// CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         %[[ASEXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 // CHECK:         hlfir.assign %[[ASEXPR]] to %[[RES]]#0
 // CHECK:         hlfir.destroy %[[ASEXPR]]

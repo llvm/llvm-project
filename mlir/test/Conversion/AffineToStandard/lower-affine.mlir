@@ -371,16 +371,14 @@ func.func @if_for() {
 // CHECK-NEXT:   %[[c1:.*]] = arith.constant 1 : index
 // CHECK-NEXT:   for %{{.*}} = %[[c0]] to %[[c42]] step %[[c1]] {
 // CHECK-NEXT:     %[[cm1:.*]] = arith.constant -1 : index
-// CHECK-NEXT:     %[[a:.*]] = arith.muli %{{.*}}, %[[cm1]] : index
-// CHECK-NEXT:     %[[b:.*]] = arith.addi %[[a]], %{{.*}} : index
-// CHECK-NEXT:     %[[c:.*]] = arith.cmpi sgt, %{{.*}}, %[[b]] : index
-// CHECK-NEXT:     %[[d:.*]] = arith.select %[[c]], %{{.*}}, %[[b]] : index
+// CHECK-NEXT:     %[[mul0:.*]] = arith.muli %{{.*}}, %[[cm1]] : index
+// CHECK-NEXT:     %[[add0:.*]] = arith.addi %[[mul0]], %{{.*}} : index
+// CHECK-NEXT:     %[[max:.*]] = arith.maxsi %{{.*}}, %[[add0]] : index
 // CHECK-NEXT:     %[[c10:.*]] = arith.constant 10 : index
-// CHECK-NEXT:     %[[e:.*]] = arith.addi %{{.*}}, %[[c10]] : index
-// CHECK-NEXT:     %[[f:.*]] = arith.cmpi slt, %{{.*}}, %[[e]] : index
-// CHECK-NEXT:     %[[g:.*]] = arith.select %[[f]], %{{.*}}, %[[e]] : index
+// CHECK-NEXT:     %[[add1:.*]] = arith.addi %{{.*}}, %[[c10]] : index
+// CHECK-NEXT:     %[[min:.*]] = arith.minsi %{{.*}}, %[[add1]] : index
 // CHECK-NEXT:     %[[c1_0:.*]] = arith.constant 1 : index
-// CHECK-NEXT:     for %{{.*}} = %[[d]] to %[[g]] step %[[c1_0]] {
+// CHECK-NEXT:     for %{{.*}} = %[[max]] to %[[min]] step %[[c1_0]] {
 // CHECK-NEXT:       call @body2(%{{.*}}, %{{.*}}) : (index, index) -> ()
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
@@ -397,25 +395,19 @@ func.func @loop_min_max(%N : index) {
 
 #map_7_values = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4, d5, d6)>
 
-// Check that the "min" (cmpi slt + select) reduction sequence is emitted
+// Check that the "min" reduction sequence is emitted
 // correctly for an affine map with 7 results.
 
 // CHECK-LABEL: func @min_reduction_tree
 // CHECK-NEXT:   %[[c0:.*]] = arith.constant 0 : index
-// CHECK-NEXT:   %[[c01:.+]] = arith.cmpi slt, %{{.*}}, %{{.*}} : index
-// CHECK-NEXT:   %[[r01:.+]] = arith.select %[[c01]], %{{.*}}, %{{.*}} : index
-// CHECK-NEXT:   %[[c012:.+]] = arith.cmpi slt, %[[r01]], %{{.*}} : index
-// CHECK-NEXT:   %[[r012:.+]] = arith.select %[[c012]], %[[r01]], %{{.*}} : index
-// CHECK-NEXT:   %[[c0123:.+]] = arith.cmpi slt, %[[r012]], %{{.*}} : index
-// CHECK-NEXT:   %[[r0123:.+]] = arith.select %[[c0123]], %[[r012]], %{{.*}} : index
-// CHECK-NEXT:   %[[c01234:.+]] = arith.cmpi slt, %[[r0123]], %{{.*}} : index
-// CHECK-NEXT:   %[[r01234:.+]] = arith.select %[[c01234]], %[[r0123]], %{{.*}} : index
-// CHECK-NEXT:   %[[c012345:.+]] = arith.cmpi slt, %[[r01234]], %{{.*}} : index
-// CHECK-NEXT:   %[[r012345:.+]] = arith.select %[[c012345]], %[[r01234]], %{{.*}} : index
-// CHECK-NEXT:   %[[c0123456:.+]] = arith.cmpi slt, %[[r012345]], %{{.*}} : index
-// CHECK-NEXT:   %[[r0123456:.+]] = arith.select %[[c0123456]], %[[r012345]], %{{.*}} : index
+// CHECK-NEXT:   %[[min:.+]] = arith.minsi %{{.*}}, %{{.*}} : index
+// CHECK-NEXT:   %[[min_0:.+]] = arith.minsi %[[min]], %{{.*}} : index
+// CHECK-NEXT:   %[[min_1:.+]] = arith.minsi %[[min_0]], %{{.*}} : index
+// CHECK-NEXT:   %[[min_2:.+]] = arith.minsi %[[min_1]], %{{.*}} : index
+// CHECK-NEXT:   %[[min_3:.+]] = arith.minsi %[[min_2]], %{{.*}} : index
+// CHECK-NEXT:   %[[min_4:.+]] = arith.minsi %[[min_3]], %{{.*}} : index
 // CHECK-NEXT:   %[[c1:.*]] = arith.constant 1 : index
-// CHECK-NEXT:   for %{{.*}} = %[[c0]] to %[[r0123456]] step %[[c1]] {
+// CHECK-NEXT:   for %{{.*}} = %[[c0]] to %[[min_4]] step %[[c1]] {
 // CHECK-NEXT:     call @body(%{{.*}}) : (index) -> ()
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
@@ -690,8 +682,7 @@ func.func @affine_min(%arg0: index, %arg1: index) -> index{
   // CHECK: %[[Cm2:.*]] = arith.constant -1
   // CHECK: %[[neg2:.*]] = arith.muli %[[ARG0]], %[[Cm2:.*]]
   // CHECK: %[[second:.*]] = arith.addi %[[ARG1]], %[[neg2]]
-  // CHECK: %[[cmp:.*]] = arith.cmpi slt, %[[first]], %[[second]]
-  // CHECK: arith.select %[[cmp]], %[[first]], %[[second]]
+  // CHECK: arith.minsi %[[first]], %[[second]]
   %0 = affine.min affine_map<(d0,d1) -> (d0 - d1, d1 - d0)>(%arg0, %arg1)
   return %0 : index
 }
@@ -705,8 +696,7 @@ func.func @affine_max(%arg0: index, %arg1: index) -> index{
   // CHECK: %[[Cm2:.*]] = arith.constant -1
   // CHECK: %[[neg2:.*]] = arith.muli %[[ARG0]], %[[Cm2:.*]]
   // CHECK: %[[second:.*]] = arith.addi %[[ARG1]], %[[neg2]]
-  // CHECK: %[[cmp:.*]] = arith.cmpi sgt, %[[first]], %[[second]]
-  // CHECK: arith.select %[[cmp]], %[[first]], %[[second]]
+  // CHECK: arith.maxsi %[[first]], %[[second]]
   %0 = affine.max affine_map<(d0,d1) -> (d0 - d1, d1 - d0)>(%arg0, %arg1)
   return %0 : index
 }
@@ -937,3 +927,57 @@ func.func @affine_parallel_with_reductions_i64(%arg0: memref<3x3xi64>, %arg1: me
 // CHECK:      scf.reduce.return %[[RES]] : i64
 // CHECK:    }
 // CHECK:  }
+
+///////////////////////////////////////////////////////////////////////
+
+func.func @test_dilinearize_index(%linear_index: index) -> (index, index, index) {
+  %b0 = arith.constant 16 : index
+  %b1 = arith.constant 224 : index
+  %b2 = arith.constant 224 : index
+  %1:3 = affine.delinearize_index %linear_index into (%b0, %b1, %b2) : index, index, index
+  return %1#0, %1#1, %1#2 : index, index, index
+}
+// CHECK-LABEL:   func.func @test_dilinearize_index(
+// CHECK-SAME:                                      %[[VAL_0:.*]]: index) -> (index, index, index) {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 16 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 224 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant 224 : index
+// CHECK:           %[[VAL_4:.*]] = arith.constant 50176 : index
+// CHECK:           %[[VAL_5:.*]] = arith.constant 50176 : index
+// CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_7:.*]] = arith.constant -1 : index
+// CHECK:           %[[VAL_8:.*]] = arith.cmpi slt, %[[VAL_0]], %[[VAL_6]] : index
+// CHECK:           %[[VAL_9:.*]] = arith.subi %[[VAL_7]], %[[VAL_0]] : index
+// CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_8]], %[[VAL_9]], %[[VAL_0]] : index
+// CHECK:           %[[VAL_11:.*]] = arith.divsi %[[VAL_10]], %[[VAL_5]] : index
+// CHECK:           %[[VAL_12:.*]] = arith.subi %[[VAL_7]], %[[VAL_11]] : index
+// CHECK:           %[[VAL_13:.*]] = arith.select %[[VAL_8]], %[[VAL_12]], %[[VAL_11]] : index
+// CHECK:           %[[VAL_14:.*]] = arith.constant 50176 : index
+// CHECK:           %[[VAL_15:.*]] = arith.remsi %[[VAL_0]], %[[VAL_14]] : index
+// CHECK:           %[[VAL_16:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_17:.*]] = arith.cmpi slt, %[[VAL_15]], %[[VAL_16]] : index
+// CHECK:           %[[VAL_18:.*]] = arith.addi %[[VAL_15]], %[[VAL_14]] : index
+// CHECK:           %[[VAL_19:.*]] = arith.select %[[VAL_17]], %[[VAL_18]], %[[VAL_15]] : index
+// CHECK:           %[[VAL_20:.*]] = arith.constant 50176 : index
+// CHECK:           %[[VAL_21:.*]] = arith.remsi %[[VAL_0]], %[[VAL_20]] : index
+// CHECK:           %[[VAL_22:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_23:.*]] = arith.cmpi slt, %[[VAL_21]], %[[VAL_22]] : index
+// CHECK:           %[[VAL_24:.*]] = arith.addi %[[VAL_21]], %[[VAL_20]] : index
+// CHECK:           %[[VAL_25:.*]] = arith.select %[[VAL_23]], %[[VAL_24]], %[[VAL_21]] : index
+// CHECK:           %[[VAL_26:.*]] = arith.constant 224 : index
+// CHECK:           %[[VAL_27:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_28:.*]] = arith.constant -1 : index
+// CHECK:           %[[VAL_29:.*]] = arith.cmpi slt, %[[VAL_25]], %[[VAL_27]] : index
+// CHECK:           %[[VAL_30:.*]] = arith.subi %[[VAL_28]], %[[VAL_25]] : index
+// CHECK:           %[[VAL_31:.*]] = arith.select %[[VAL_29]], %[[VAL_30]], %[[VAL_25]] : index
+// CHECK:           %[[VAL_32:.*]] = arith.divsi %[[VAL_31]], %[[VAL_26]] : index
+// CHECK:           %[[VAL_33:.*]] = arith.subi %[[VAL_28]], %[[VAL_32]] : index
+// CHECK:           %[[VAL_34:.*]] = arith.select %[[VAL_29]], %[[VAL_33]], %[[VAL_32]] : index
+// CHECK:           %[[VAL_35:.*]] = arith.constant 224 : index
+// CHECK:           %[[VAL_36:.*]] = arith.remsi %[[VAL_0]], %[[VAL_35]] : index
+// CHECK:           %[[VAL_37:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_38:.*]] = arith.cmpi slt, %[[VAL_36]], %[[VAL_37]] : index
+// CHECK:           %[[VAL_39:.*]] = arith.addi %[[VAL_36]], %[[VAL_35]] : index
+// CHECK:           %[[VAL_40:.*]] = arith.select %[[VAL_38]], %[[VAL_39]], %[[VAL_36]] : index
+// CHECK:           return %[[VAL_13]], %[[VAL_34]], %[[VAL_40]] : index, index, index
+// CHECK:         }

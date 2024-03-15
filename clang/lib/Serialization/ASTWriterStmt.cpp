@@ -2855,7 +2855,7 @@ void ASTStmtWriter::VisitOpenACCAssociatedStmtConstruct(
 
 void ASTStmtWriter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
   VisitStmt(S);
-  VisitOpenACCConstructStmt(S);
+  VisitOpenACCAssociatedStmtConstruct(S);
   Code = serialization::STMT_OPENACC_COMPUTE_CONSTRUCT;
 }
 

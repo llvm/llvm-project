@@ -206,12 +206,12 @@ bool FoldBranchToCommonDest(BranchInst *BI, llvm::DomTreeUpdater *DTU = nullptr,
 /// to create a stack slot for X.
 AllocaInst *DemoteRegToStack(Instruction &X,
                              bool VolatileLoads = false,
-                             Instruction *AllocaPoint = nullptr);
+                             std::optional<BasicBlock::iterator> AllocaPoint = std::nullopt);
 
 /// This function takes a virtual register computed by a phi node and replaces
 /// it with a slot in the stack frame, allocated via alloca. The phi node is
 /// deleted and it returns the pointer to the alloca inserted.
-AllocaInst *DemotePHIToStack(PHINode *P, Instruction *AllocaPoint = nullptr);
+AllocaInst *DemotePHIToStack(PHINode *P, std::optional<BasicBlock::iterator> AllocaPoint = std::nullopt);
 
 /// If the specified pointer points to an object that we control, try to modify
 /// the object's alignment to PrefAlign. Returns a minimum known alignment of
@@ -356,6 +356,13 @@ Value *salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
 /// or deleted. Returns true if any debug users were updated.
 bool replaceAllDbgUsesWith(Instruction &From, Value &To, Instruction &DomPoint,
                            DominatorTree &DT);
+
+/// If a terminator in an unreachable basic block has an operand of type
+/// Instruction, transform it into poison. Return true if any operands
+/// are changed to poison. Original Values prior to being changed to poison
+/// are returned in \p PoisonedValues.
+bool handleUnreachableTerminator(Instruction *I,
+                                 SmallVectorImpl<Value *> &PoisonedValues);
 
 /// Remove all instructions from a basic block other than its terminator
 /// and any present EH pad instructions. Returns a pair where the first element

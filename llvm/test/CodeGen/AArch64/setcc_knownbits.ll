@@ -21,9 +21,7 @@ define noundef i1 @logger(i32 noundef %logLevel, ptr %ea, ptr %pll) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_2: // %land.rhs
 ; CHECK-NEXT:    ldr x8, [x1]
-; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ldrb w0, [x8]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i32, ptr %pll, align 4

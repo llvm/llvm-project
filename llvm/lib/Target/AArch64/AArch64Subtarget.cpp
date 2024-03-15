@@ -43,10 +43,10 @@ static cl::opt<bool>
 UseAddressTopByteIgnored("aarch64-use-tbi", cl::desc("Assume that top byte of "
                          "an address is ignored"), cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    UseNonLazyBind("aarch64-enable-nonlazybind",
-                   cl::desc("Call nonlazybind functions via direct GOT load"),
-                   cl::init(false), cl::Hidden);
+static cl::opt<bool> MachOUseNonLazyBind(
+    "aarch64-macho-enable-nonlazybind",
+    cl::desc("Call nonlazybind functions via direct GOT load for Mach-O"),
+    cl::Hidden);
 
 static cl::opt<bool> UseAA("aarch64-use-aa", cl::init(true),
                            cl::desc("Enable the use of AA during codegen."));
@@ -140,6 +140,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA76:
   case CortexA77:
   case CortexA78:
+  case CortexA78AE:
   case CortexA78C:
   case CortexR82:
   case CortexX1:
@@ -397,7 +398,7 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   if (GV->isTagged())
     return AArch64II::MO_GOT;
 
-  if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV)) {
+  if (!TM.shouldAssumeDSOLocal(GV)) {
     if (GV->hasDLLImportStorageClass()) {
       return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
     }
@@ -433,8 +434,8 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
 
   // NonLazyBind goes via GOT unless we know it's available locally.
   auto *F = dyn_cast<Function>(GV);
-  if (UseNonLazyBind && F && F->hasFnAttribute(Attribute::NonLazyBind) &&
-      !TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+  if ((!isTargetMachO() || MachOUseNonLazyBind) && F &&
+      F->hasFnAttribute(Attribute::NonLazyBind) && !TM.shouldAssumeDSOLocal(GV))
     return AArch64II::MO_GOT;
 
   if (getTargetTriple().isOSWindows()) {

@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
@@ -49,14 +50,15 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
                               DenseMap<Value, Position *> &inputs,
                               AttributePosition *pos) {
   assert(isa<pdl::AttributeType>(val.getType()) && "expected attribute type");
-  pdl::AttributeOp attr = cast<pdl::AttributeOp>(val.getDefiningOp());
   predList.emplace_back(pos, builder.getIsNotNull());
 
-  // If the attribute has a type or value, add a constraint.
-  if (Value type = attr.getValueType())
-    getTreePredicates(predList, type, builder, inputs, builder.getType(pos));
-  else if (Attribute value = attr.getValueAttr())
-    predList.emplace_back(pos, builder.getAttributeConstraint(value));
+  if (auto attr = dyn_cast<pdl::AttributeOp>(val.getDefiningOp())) {
+    // If the attribute has a type or value, add a constraint.
+    if (Value type = attr.getValueType())
+      getTreePredicates(predList, type, builder, inputs, builder.getType(pos));
+    else if (Attribute value = attr.getValueAttr())
+      predList.emplace_back(pos, builder.getAttributeConstraint(value));
+  }
 }
 
 /// Collect all of the predicates for the given operand position.
@@ -270,10 +272,28 @@ static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
     allPositions.push_back(inputs.lookup(arg));
 
   // Push the constraint to the furthest position.
-  Position *pos = *std::max_element(allPositions.begin(), allPositions.end(),
-                                    comparePosDepth);
-  PredicateBuilder::Predicate pred =
-      builder.getConstraint(op.getName(), allPositions, op.getIsNegated());
+  Position *pos = *llvm::max_element(allPositions, comparePosDepth);
+  ResultRange results = op.getResults();
+  PredicateBuilder::Predicate pred = builder.getConstraint(
+      op.getName(), allPositions, SmallVector<Type>(results.getTypes()),
+      op.getIsNegated());
+
+  // For each result register a position so it can be used later
+  for (auto [i, result] : llvm::enumerate(results)) {
+    ConstraintQuestion *q = cast<ConstraintQuestion>(pred.first);
+    ConstraintPosition *pos = builder.getConstraintPosition(q, i);
+    auto [it, inserted] = inputs.try_emplace(result, pos);
+    // If this is an input value that has been visited in the tree, add a
+    // constraint to ensure that both instances refer to the same value.
+    if (!inserted) {
+      Position *first = pos;
+      Position *second = it->second;
+      if (comparePosDepth(second, first))
+        std::tie(second, first) = std::make_pair(first, second);
+
+      predList.emplace_back(second, builder.getEqualTo(first));
+    }
+  }
   predList.emplace_back(pos, pred);
 }
 
@@ -875,6 +895,49 @@ static void insertExitNode(std::unique_ptr<MatcherNode> *root) {
   *root = std::make_unique<ExitNode>();
 }
 
+/// Sorts the range begin/end with the partial order given by cmp.
+template <typename Iterator, typename Compare>
+static void stableTopologicalSort(Iterator begin, Iterator end, Compare cmp) {
+  while (begin != end) {
+    // Cannot compute sortBeforeOthers in the predicate of stable_partition
+    // because stable_partition will not keep the [begin, end) range intact
+    // while it runs.
+    llvm::SmallPtrSet<typename Iterator::value_type, 16> sortBeforeOthers;
+    for (auto i = begin; i != end; ++i) {
+      if (std::none_of(begin, end, [&](auto const &b) { return cmp(b, *i); }))
+        sortBeforeOthers.insert(*i);
+    }
+
+    auto const next = std::stable_partition(begin, end, [&](auto const &a) {
+      return sortBeforeOthers.contains(a);
+    });
+    assert(next != begin && "not a partial ordering");
+    begin = next;
+  }
+}
+
+/// Returns true if 'b' depends on a result of 'a'.
+static bool dependsOn(OrderedPredicate *a, OrderedPredicate *b) {
+  auto *cqa = dyn_cast<ConstraintQuestion>(a->question);
+  if (!cqa)
+    return false;
+
+  auto positionDependsOnA = [&](Position *p) {
+    auto *cp = dyn_cast<ConstraintPosition>(p);
+    return cp && cp->getQuestion() == cqa;
+  };
+
+  if (auto *cqb = dyn_cast<ConstraintQuestion>(b->question)) {
+    // Does any argument of b use a?
+    return llvm::any_of(cqb->getArgs(), positionDependsOnA);
+  }
+  if (auto *equalTo = dyn_cast<EqualToQuestion>(b->question)) {
+    return positionDependsOnA(b->position) ||
+           positionDependsOnA(equalTo->getValue());
+  }
+  return positionDependsOnA(b->position);
+}
+
 /// Given a module containing PDL pattern operations, generate a matcher tree
 /// using the patterns within the given module and return the root matcher node.
 std::unique_ptr<MatcherNode>
@@ -954,6 +1017,10 @@ MatcherNode::generateMatcherTree(ModuleOp module, PredicateBuilder &builder,
   llvm::sort(ordered, [](OrderedPredicate *lhs, OrderedPredicate *rhs) {
     return *lhs < *rhs;
   });
+
+  // Mostly keep the now established order, but also ensure that
+  // ConstraintQuestions come after the results they use.
+  stableTopologicalSort(ordered.begin(), ordered.end(), dependsOn);
 
   // Build the matchers for each of the pattern predicate lists.
   std::unique_ptr<MatcherNode> root;

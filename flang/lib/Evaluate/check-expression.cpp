@@ -250,6 +250,8 @@ public:
         }
       }
       return false;
+    } else if (!CheckVarOrComponent(ultimate)) {
+      return false;
     } else if (!ultimate.attrs().test(semantics::Attr::TARGET)) {
       if (messages_) {
         messages_->Say(
@@ -267,7 +269,7 @@ public:
       }
       return false;
     } else {
-      return CheckVarOrComponent(ultimate);
+      return true;
     }
   }
   bool operator()(const StaticDataObject &) const { return false; }
@@ -318,24 +320,23 @@ public:
 private:
   bool CheckVarOrComponent(const semantics::Symbol &symbol) {
     const Symbol &ultimate{symbol.GetUltimate()};
-    if (IsAllocatable(ultimate)) {
-      if (messages_) {
-        messages_->Say(
-            "An initial data target may not be a reference to an ALLOCATABLE '%s'"_err_en_US,
-            ultimate.name());
-        emittedMessage_ = true;
-      }
-      return false;
-    } else if (ultimate.Corank() > 0) {
-      if (messages_) {
-        messages_->Say(
-            "An initial data target may not be a reference to a coarray '%s'"_err_en_US,
-            ultimate.name());
-        emittedMessage_ = true;
-      }
-      return false;
+    const char *unacceptable{nullptr};
+    if (ultimate.Corank() > 0) {
+      unacceptable = "a coarray";
+    } else if (IsAllocatable(ultimate)) {
+      unacceptable = "an ALLOCATABLE";
+    } else if (IsPointer(ultimate)) {
+      unacceptable = "a POINTER";
+    } else {
+      return true;
     }
-    return true;
+    if (messages_) {
+      messages_->Say(
+          "An initial data target may not be a reference to %s '%s'"_err_en_US,
+          unacceptable, ultimate.name());
+      emittedMessage_ = true;
+    }
+    return false;
   }
 
   parser::ContextualMessages *messages_;

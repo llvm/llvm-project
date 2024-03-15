@@ -9,12 +9,18 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H
 
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/optional.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"
 
 #include <stddef.h>
+
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+#include "src/__support/fixed_point/fx_rep.h"
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 
 namespace LIBC_NAMESPACE {
 namespace printf_core {
@@ -28,6 +34,14 @@ template <> struct int_type_of<double> {
 template <> struct int_type_of<long double> {
   using type = fputil::FPBits<long double>::StorageType;
 };
+
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+template <typename T>
+struct int_type_of<cpp::enable_if<cpp::is_fixed_point_v<T>, T>> {
+  using type = typename fixed_point::FXRep<T>::StorageType;
+};
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+
 template <typename T> using int_type_of_v = typename int_type_of<T>::type;
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
@@ -206,6 +220,25 @@ public:
         }
         break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+      // Capitalization represents sign, but we only need to get the right
+      // bitwidth here so we ignore that.
+      case ('r'):
+      case ('R'):
+        // all fract sizes we support are less than 32 bits, and currently doing
+        // va_args with fixed point types just doesn't work.
+        // TODO: Move to fixed point types once va_args supports it.
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, uint32_t, conv_index);
+        break;
+      case ('k'):
+      case ('K'):
+        if (lm == LengthModifier::l) {
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, uint64_t, conv_index);
+        } else {
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, uint32_t, conv_index);
+        }
+        break;
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
       case ('n'):
 #endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
@@ -399,6 +432,22 @@ private:
       else if (cur_type_desc == type_desc_from_type<long double>())
         args_cur.template next_var<long double>();
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+      // Floating point numbers may be stored separately from the other
+      // arguments.
+      else if (cur_type_desc == type_desc_from_type<short fract>())
+        args_cur.template next_var<short fract>();
+      else if (cur_type_desc == type_desc_from_type<fract>())
+        args_cur.template next_var<fract>();
+      else if (cur_type_desc == type_desc_from_type<long fract>())
+        args_cur.template next_var<long fract>();
+      else if (cur_type_desc == type_desc_from_type<short accum>())
+        args_cur.template next_var<short accum>();
+      else if (cur_type_desc == type_desc_from_type<accum>())
+        args_cur.template next_var<accum>();
+      else if (cur_type_desc == type_desc_from_type<long accum>())
+        args_cur.template next_var<long accum>();
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
       // pointers may be stored separately from normal values.
       else if (cur_type_desc == type_desc_from_type<void *>())
         args_cur.template next_var<void *>();
@@ -528,6 +577,22 @@ private:
             conv_size = type_desc_from_type<long double>();
           break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+        // Capitalization represents sign, but we only need to get the right
+        // bitwidth here so we ignore that.
+        case ('r'):
+        case ('R'):
+          conv_size = type_desc_from_type<uint32_t>();
+          break;
+        case ('k'):
+        case ('K'):
+          if (lm == LengthModifier::l) {
+            conv_size = type_desc_from_type<uint64_t>();
+          } else {
+            conv_size = type_desc_from_type<uint32_t>();
+          }
+          break;
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
         case ('n'):
 #endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT

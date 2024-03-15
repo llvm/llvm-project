@@ -11,6 +11,9 @@
 // RUN: %clang_cc1 -std=c++20 -fskip-odr-check-in-gmf  %t/b.cppm -fprebuilt-module-path=%t \
 // RUN:   -emit-module-interface -DSKIP_ODR_CHECK_IN_GMF -o %t/b.pcm -verify
 
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/a.cppm -o %t/a.pcm
+// RUN: %clang_cc1 -std=c++20 %t/b.cppm -fprebuilt-module-path=%t -emit-reduced-module-interface -o %t/b.pcm -verify
+
 //--- foo.h
 
 namespace std

@@ -601,7 +601,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
 
     // Now parse all DIEs in case we have cross compile unit references in a
     // thread pool.
-    ThreadPool pool(hardware_concurrency(NumThreads));
+    DefaultThreadPool pool(hardware_concurrency(NumThreads));
     for (const auto &CU : DICtx.compile_units())
       pool.async([&CU]() { CU->getUnitDIE(false /*CUDieOnly*/); });
     pool.wait();

@@ -37,7 +37,7 @@
 // CHECK:             %[[VAL_19:.*]] = scf.for %[[VAL_20:.*]] = %[[VAL_16]] to %[[VAL_18]] step %[[VAL_2]] iter_args(%[[VAL_21:.*]] = %[[VAL_14]]) -> (tensor<4x3xf64, #sparse{{[0-9]*}}>) {
 // CHECK:               %[[VAL_22:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_20]]] : memref<?xindex>
 // CHECK:               %[[VAL_23:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_20]]] : memref<?xf64>
-// CHECK:               %[[VAL_24:.*]] = sparse_tensor.insert %[[VAL_23]] into %[[VAL_21]]{{\[}}%[[VAL_15]], %[[VAL_22]]] : tensor<4x3xf64, #sparse{{[0-9]*}}>
+// CHECK:               %[[VAL_24:.*]] = tensor.insert %[[VAL_23]] into %[[VAL_21]]{{\[}}%[[VAL_15]], %[[VAL_22]]] : tensor<4x3xf64, #sparse{{[0-9]*}}>
 // CHECK:               scf.yield %[[VAL_24]] : tensor<4x3xf64, #sparse{{[0-9]*}}>
 // CHECK:             }
 // CHECK:             scf.yield %[[VAL_25:.*]] : tensor<4x3xf64, #sparse{{[0-9]*}}>

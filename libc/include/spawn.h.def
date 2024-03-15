@@ -13,4 +13,4 @@
 
 %%public_api()
 
-#endif // LLVM_LIBC_SPAWN_H 
+#endif // LLVM_LIBC_SPAWN_H

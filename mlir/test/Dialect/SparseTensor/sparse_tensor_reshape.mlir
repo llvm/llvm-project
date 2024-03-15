@@ -29,7 +29,7 @@
 // CHECK:             %[[DI:.*]] = arith.addi %[[T]], %[[SI1]] : index
 // CHECK:             %[[D:.*]] = arith.divui %[[DI]], %[[C10]] : index
 // CHECK:             %[[R:.*]] = arith.remui %[[DI]], %[[C10]] : index
-// CHECK:             %[[R1:.*]] = sparse_tensor.insert %[[SV]] into %[[A1]]{{\[}}%[[D]], %[[R]]]
+// CHECK:             %[[R1:.*]] = tensor.insert %[[SV]] into %[[A1]]{{\[}}%[[D]], %[[R]]]
 // CHECK:              scf.yield %[[R1]]
 // CHECK:            }
 // CHECK:            scf.yield %[[RET_1]]

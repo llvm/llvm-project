@@ -303,10 +303,3 @@ void foo(int **t1d)
 // CHECK-NEXT:    store i32 4, ptr [[ADD_PTR2]], align 4
 // CHECK-NEXT:    ret void
 //
-//
-// CHECK-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK-NEXT:    ret void
-//

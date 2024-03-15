@@ -144,7 +144,7 @@ class DynamicValueTestCase(TestBase):
         anotherA_dynamic_typename = anotherA_dynamic.GetTypeName()
         self.assertNotEqual(anotherA_dynamic_typename.find("B"), -1)
 
-        self.assertTrue(anotherA_dynamic_addr < anotherA_static_addr)
+        self.assertLess(anotherA_dynamic_addr, anotherA_static_addr)
 
         anotherA_m_b_value_dynamic = anotherA_dynamic.GetChildMemberWithName(
             "m_b_value", True
@@ -204,7 +204,7 @@ class DynamicValueTestCase(TestBase):
 
         # And that the static address is greater than the dynamic one
 
-        self.assertTrue(this_static_loc > this_dynamic_loc)
+        self.assertGreater(this_static_loc, this_dynamic_loc)
 
         # Now read m_b_value which is only in the dynamic value:
 
@@ -252,4 +252,4 @@ class DynamicValueTestCase(TestBase):
         contained_b_addr = int(contained_b.GetValue(), 16)
         contained_b_static_addr = int(contained_b_static.GetValue(), 16)
 
-        self.assertTrue(contained_b_addr < contained_b_static_addr)
+        self.assertLess(contained_b_addr, contained_b_static_addr)

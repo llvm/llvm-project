@@ -762,7 +762,7 @@ define <vscale x 2 x i1> @select_one(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y,
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmorn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
+  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i1> %a
 }
 
@@ -782,7 +782,7 @@ define <vscale x 2 x i1> @select_x_one(<vscale x 2 x i1> %x, <vscale x 2 x i1> %
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmorn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
+  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i1> %a
 }
 
@@ -802,7 +802,7 @@ define <vscale x 2 x i1> @select_one_x(<vscale x 2 x i1> %x, <vscale x 2 x i1> %
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %y, i32 %evl)
+  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i1> %y, i32 %evl)
  ret <vscale x 2 x i1> %a
 }
 

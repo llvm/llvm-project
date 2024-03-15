@@ -16,6 +16,7 @@
 #define BOLT_CORE_DIE_BUILDER_H
 
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/DebugNames.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
@@ -124,9 +125,10 @@ private:
   std::vector<std::unique_ptr<DIEAbbrev>> Abbreviations;
   BinaryContext &BC;
   DWARFContext *DwarfContext{nullptr};
-  bool IsDWO{false};
+  DWARFUnit *SkeletonCU{nullptr};
   uint64_t UnitSize{0};
   llvm::DenseSet<uint64_t> AllProcessed;
+  DWARF5AcceleratorTable &DebugNamesTable;
 
   /// Returns current state of the DIEBuilder
   State &getState() { return *BuilderState.get(); }
@@ -206,8 +208,8 @@ private:
   /// Update references once the layout is finalized.
   void updateReferences();
 
-  /// Update the Offset and Size of DIE.
-  uint32_t computeDIEOffset(const DWARFUnit &CU, DIE &Die, uint32_t &CurOffset);
+  /// Update the Offset and Size of DIE, populate DebugNames table.
+  uint32_t finalizeDIEs(DWARFUnit &CU, DIE &Die, uint32_t &CurOffset);
 
   void registerUnit(DWARFUnit &DU, bool NeedSort);
 
@@ -264,8 +266,13 @@ private:
   /// current Section.
   DIE *constructDIEFast(DWARFDie &DDie, DWARFUnit &U, uint32_t UnitId);
 
+  /// Returns true if this DIEBUilder is for DWO Unit.
+  bool isDWO() const { return SkeletonCU != nullptr; }
+
 public:
-  DIEBuilder(BinaryContext &BC, DWARFContext *DwarfContext, bool IsDWO = false);
+  DIEBuilder(BinaryContext &BC, DWARFContext *DwarfContext,
+             DWARF5AcceleratorTable &DebugNamesTable,
+             DWARFUnit *SkeletonCU = nullptr);
 
   /// Returns enum to what we are currently processing.
   ProcessingType getCurrentProcessingState() { return getState().Type; }

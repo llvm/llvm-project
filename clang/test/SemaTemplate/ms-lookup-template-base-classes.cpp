@@ -71,6 +71,13 @@ public:
 
 template class B<int>;
 
+template<typename T> struct C;
+
+// Test lookup with incomplete lookup context
+template<typename T>
+auto C<T>::f() -> decltype(x) { } // expected-error {{use of undeclared identifier 'x'}}
+                                  // expected-error@-1 {{out-of-line definition of 'f' from class 'C<T>' without definition}}
+
 }
 
 

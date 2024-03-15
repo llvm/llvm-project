@@ -1,0 +1,192 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-dualcu-main.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-dualcu-helper.s \
+; RUN: -split-dwarf-file=helper.dwo -o helper.o
+; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe -fno-pic -no-pie
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --create-debug-names-section=true
+; RUN: llvm-dwarfdump --debug-info --debug-names main.exe.bolt > %t/foo.txt
+; RUN: cat %t/foo.txt | FileCheck -check-prefix=BOLT %s
+
+;; Tests BOLT generates .debug_names with --create-debug-names-section.
+;; Also applicable when binary has split dwarf CUs that do not contribute to .debug_names pre-bolt.
+
+; BOLT: [[OFFSET1:0x[0-9a-f]*]]: Compile Unit
+; BOLT: [[OFFSET2:0x[0-9a-f]*]]: Compile Unit
+; BOLT:       Name Index @ 0x0 {
+; BOLT-NEXT:   Header {
+; BOLT-NEXT:     Length: 0x148
+; BOLT-NEXT:     Format: DWARF32
+; BOLT-NEXT:     Version: 5
+; BOLT-NEXT:     CU count: 2
+; BOLT-NEXT:     Local TU count: 0
+; BOLT-NEXT:     Foreign TU count: 0
+; BOLT-NEXT:     Bucket count: 11
+; BOLT-NEXT:     Name count: 11
+; BOLT-NEXT:     Abbreviations table size: 0x19
+; BOLT-NEXT:     Augmentation: 'BOLT'
+; BOLT-NEXT:   }
+; BOLT-NEXT:   Compilation Unit offsets [
+; BOLT-NEXT:     CU[0]: [[OFFSET1]]
+; BOLT-NEXT:     CU[1]: [[OFFSET2]]
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Abbreviations [
+; BOLT-NEXT:     Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
+; BOLT-NEXT:       Tag: DW_TAG_variable
+; BOLT-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
+; BOLT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:     }
+; BOLT-NEXT:     Abbreviation [[ABBREV2:0x[0-9a-f]*]] {
+; BOLT-NEXT:       Tag: DW_TAG_base_type
+; BOLT-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
+; BOLT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:     }
+; BOLT-NEXT:     Abbreviation [[ABBREV3:0x[0-9a-f]*]] {
+; BOLT-NEXT:       Tag: DW_TAG_subprogram
+; BOLT-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
+; BOLT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:     }
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Bucket 0 [
+; BOLT-NEXT:     Name 1 {
+; BOLT-NEXT:       Hash: 0x2B61E
+; BOLT-NEXT:       String: {{.+}} "y"
+; BOLT-NEXT:       Entry @ {{.+}} {
+; BOLT-NEXT:         Abbrev: [[ABBREV1]]
+; BOLT-NEXT:         Tag: DW_TAG_variable
+; BOLT-NEXT:         DW_IDX_compile_unit: 0x00
+; BOLT-NEXT:         DW_IDX_die_offset: 0x00000029
+; BOLT-NEXT:       }
+; BOLT-NEXT:     }
+; BOLT-NEXT:     Name 2 {
+; BOLT-NEXT:       Hash: 0x7C952063
+; BOLT-NEXT:       String: {{.+}} "char"
+; BOLT-NEXT:       Entry @ {{.+}} {
+; BOLT-NEXT:         Abbrev: [[ABBREV2]]
+; BOLT-NEXT:         Tag: DW_TAG_base_type
+; BOLT-NEXT:         DW_IDX_compile_unit: 0x00
+; BOLT-NEXT:         DW_IDX_die_offset: 0x0000008c
+; BOLT-NEXT:       }
+; BOLT-NEXT:     }
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Bucket 1 [
+; BOLT-NEXT:     Name 3 {
+; BOLT-NEXT:       Hash: 0x2B609
+; BOLT-NEXT:       String: {{.+}} "d"
+; BOLT-NEXT:       Entry @ {{.+}} {
+; BOLT-NEXT:         Abbrev: [[ABBREV1]]
+; BOLT-NEXT:         Tag: DW_TAG_variable
+; BOLT-NEXT:         DW_IDX_compile_unit: 0x01
+; BOLT-NEXT:         DW_IDX_die_offset: 0x00000029
+; BOLT-NEXT:       }
+; BOLT-NEXT:     }
+; BOLT-NEXT:     Name 4 {
+; BOLT-NEXT:       Hash: 0x2B61F
+; BOLT-NEXT:       String: {{.+}} "z"
+; BOLT-NEXT:       Entry @ {{.+}} {
+; BOLT-NEXT:         Abbrev: [[ABBREV1]]
+; BOLT-NEXT:         Tag: DW_TAG_variable
+; BOLT-NEXT:         DW_IDX_compile_unit: 0x01
+; BOLT-NEXT:         DW_IDX_die_offset: 0x0000001a
+; BOLT-NEXT:       }
+; BOLT-NEXT:     }
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Bucket 2 [
+; BOLT-NEXT:     Name 5 {
+; BOLT-NEXT:       Hash: 0xB88B3D2
+; BOLT-NEXT:       String: {{.+}} "use"
+; BOLT-NEXT:       Entry @ {{.+}} {
+; BOLT-NEXT:         Abbrev: [[ABBREV3]]
+; BOLT-NEXT:         Tag: DW_TAG_subprogram
+; BOLT-NEXT:         DW_IDX_compile_unit: 0x00
+; BOLT-NEXT:         DW_IDX_die_offset: 0x00000034
+; BOLT-NEXT:       }
+; BOLT-NEXT:     }
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Bucket 3 [
+; BOLT-NEXT:     Name 6 {
+; BOLT-NEXT:       Hash: 0x45A3B006
+; BOLT-NEXT:       String: {{.+}} "_Z6helperii"
+; BOLT-NEXT:       Entry @ {{.+}} {
+; BOLT-NEXT:         Abbrev: [[ABBREV3]]
+; BOLT-NEXT:         Tag: DW_TAG_subprogram
+; BOLT-NEXT:         DW_IDX_compile_unit: 0x01
+; BOLT-NEXT:         DW_IDX_die_offset: 0x00000034
+; BOLT-NEXT:       }
+; BOLT-NEXT:     }
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Bucket 4 [
+; BOLT-NEXT:     EMPTY
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Bucket 5 [
+; BOLT-NEXT:     Name 7 {
+; BOLT-NEXT:       Hash: 0x8C06E589
+; BOLT-NEXT:       String: {{.+}} "_Z3usePiS_"
+; BOLT-NEXT:       Entry @ {{.+}} {
+; BOLT-NEXT:         Abbrev: [[ABBREV3]]
+; BOLT-NEXT:         Tag: DW_TAG_subprogram
+; BOLT-NEXT:         DW_IDX_compile_unit: 0x00
+; BOLT-NEXT:         DW_IDX_die_offset: 0x00000034
+; BOLT-NEXT:       }
+; BOLT-NEXT:     }
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Bucket 6 [
+; BOLT-NEXT:     Name 8 {
+; BOLT-NEXT:       Hash: 0xB888030
+; BOLT-NEXT:       String: {{.+}} "int"
+; BOLT-NEXT:       Entry @ {{.+}} {
+; BOLT-NEXT:         Abbrev: [[ABBREV2]]
+; BOLT-NEXT:         Tag: DW_TAG_base_type
+; BOLT-NEXT:         DW_IDX_compile_unit: 0x00
+; BOLT-NEXT:         DW_IDX_die_offset: 0x00000025
+; BOLT-NEXT:       }
+; BOLT-NEXT:       Entry @ {{.+}} {
+; BOLT-NEXT:         Abbrev: [[ABBREV2]]
+; BOLT-NEXT:         Tag: DW_TAG_base_type
+; BOLT-NEXT:         DW_IDX_compile_unit: 0x01
+; BOLT-NEXT:         DW_IDX_die_offset: 0x00000025
+; BOLT-NEXT:       }
+; BOLT-NEXT:     }
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Bucket 7 [
+; BOLT-NEXT:     Name 9 {
+; BOLT-NEXT:       Hash: 0x1D853E5
+; BOLT-NEXT:       String: {{.+}} "helper"
+; BOLT-NEXT:       Entry @ {{.+}} {
+; BOLT-NEXT:         Abbrev: [[ABBREV3]]
+; BOLT-NEXT:         Tag: DW_TAG_subprogram
+; BOLT-NEXT:         DW_IDX_compile_unit: 0x01
+; BOLT-NEXT:         DW_IDX_die_offset: 0x00000034
+; BOLT-NEXT:       }
+; BOLT-NEXT:     }
+; BOLT-NEXT:     Name 10 {
+; BOLT-NEXT:       Hash: 0x7C9A7F6A
+; BOLT-NEXT:       String: {{.+}} "main"
+; BOLT-NEXT:       Entry @ {{.+}} {
+; BOLT-NEXT:         Abbrev: [[ABBREV3]]
+; BOLT-NEXT:         Tag: DW_TAG_subprogram
+; BOLT-NEXT:         DW_IDX_compile_unit: 0x00
+; BOLT-NEXT:         DW_IDX_die_offset: 0x00000057
+; BOLT-NEXT:       }
+; BOLT-NEXT:     }
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Bucket 8 [
+; BOLT-NEXT:     EMPTY
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Bucket 9 [
+; BOLT-NEXT:     EMPTY
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Bucket 10 [
+; BOLT-NEXT:     Name 11 {
+; BOLT-NEXT:       Hash: 0x2B61D
+; BOLT-NEXT:       String: {{.+}} "x"
+; BOLT-NEXT:       Entry @ {{.+}} {
+; BOLT-NEXT:         Abbrev: [[ABBREV1]]
+; BOLT-NEXT:         Tag: DW_TAG_variable
+; BOLT-NEXT:         DW_IDX_compile_unit: 0x00
+; BOLT-NEXT:         DW_IDX_die_offset: 0x0000001a
+; BOLT-NEXT:       }
+; BOLT-NEXT:     }
+; BOLT-NEXT:   ]

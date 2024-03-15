@@ -3576,10 +3576,6 @@ static void GenerateHasAttrSpellingStringSwitch(
       const Record *R = Attr->getValueAsDef("Target");
       std::vector<StringRef> Arches = R->getValueAsListOfStrings("Arches");
       GenerateTargetSpecificAttrChecks(R, Arches, Test, nullptr);
-
-      // If this is the C++11 variety, also add in the LangOpts test.
-      if (Variety == "CXX11")
-        Test += " && LangOpts.CPlusPlus11";
     } else if (!Attr->getValueAsListOfDefs("TargetSpecificSpellings").empty()) {
       // Add target checks if this spelling is target-specific.
       const std::vector<Record *> TargetSpellings =
@@ -3597,13 +3593,7 @@ static void GenerateHasAttrSpellingStringSwitch(
           }
         }
       }
-
-      if (Variety == "CXX11")
-        Test += " && LangOpts.CPlusPlus11";
-    } else if (Variety == "CXX11")
-      // C++11 mode should be checked against LangOpts, which is presumed to be
-      // present in the caller.
-      Test = "LangOpts.CPlusPlus11";
+    }
 
     std::string TestStr = !Test.empty()
                               ? Test + " ? " + llvm::itostr(Version) + " : 0"

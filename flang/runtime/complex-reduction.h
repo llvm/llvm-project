@@ -15,6 +15,7 @@
 #ifndef FORTRAN_RUNTIME_COMPLEX_REDUCTION_H_
 #define FORTRAN_RUNTIME_COMPLEX_REDUCTION_H_
 
+#include "flang/Common/float128.h"
 #include "flang/Runtime/entry-names.h"
 #include <complex.h>
 
@@ -40,14 +41,18 @@ float_Complex_t RTNAME(SumComplex3)(REDUCTION_ARGS);
 float_Complex_t RTNAME(SumComplex4)(REDUCTION_ARGS);
 double_Complex_t RTNAME(SumComplex8)(REDUCTION_ARGS);
 long_double_Complex_t RTNAME(SumComplex10)(REDUCTION_ARGS);
-long_double_Complex_t RTNAME(SumComplex16)(REDUCTION_ARGS);
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CFloat128ComplexType RTNAME(SumComplex16)(REDUCTION_ARGS);
+#endif
 
 float_Complex_t RTNAME(ProductComplex2)(REDUCTION_ARGS);
 float_Complex_t RTNAME(ProductComplex3)(REDUCTION_ARGS);
 float_Complex_t RTNAME(ProductComplex4)(REDUCTION_ARGS);
 double_Complex_t RTNAME(ProductComplex8)(REDUCTION_ARGS);
 long_double_Complex_t RTNAME(ProductComplex10)(REDUCTION_ARGS);
-long_double_Complex_t RTNAME(ProductComplex16)(REDUCTION_ARGS);
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CFloat128ComplexType RTNAME(ProductComplex16)(REDUCTION_ARGS);
+#endif
 
 #define DOT_PRODUCT_ARGS \
   const struct CppDescriptor *x, const struct CppDescriptor *y, \
@@ -60,6 +65,8 @@ float_Complex_t RTNAME(DotProductComplex3)(DOT_PRODUCT_ARGS);
 float_Complex_t RTNAME(DotProductComplex4)(DOT_PRODUCT_ARGS);
 double_Complex_t RTNAME(DotProductComplex8)(DOT_PRODUCT_ARGS);
 long_double_Complex_t RTNAME(DotProductComplex10)(DOT_PRODUCT_ARGS);
-long_double_Complex_t RTNAME(DotProductComplex16)(DOT_PRODUCT_ARGS);
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CFloat128ComplexType RTNAME(DotProductComplex16)(DOT_PRODUCT_ARGS);
+#endif
 
 #endif // FORTRAN_RUNTIME_COMPLEX_REDUCTION_H_

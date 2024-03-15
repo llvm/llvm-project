@@ -77,14 +77,18 @@ jobs:
           cp ./.github/workflows/containers/github-action-ci/storage.conf ~/.config/containers/storage.conf
           podman info
 
+        # Download the container image into /mnt/podman rather than
+        # $GITHUB_WORKSPACE to avoid space limitations on the default drive
+        # and use the permissions setup for /mnt/podman.
       - name: Download stage1-toolchain
         uses: actions/download-artifact@v4
         with:
           name: stage1-toolchain
+          path: /mnt/podman
 
       - name: Load stage1-toolchain
         run: |
-          podman load -i stage1-toolchain.tar
+          podman load -i /mnt/podman/stage1-toolchain.tar
 
       - name: Build Container
         working-directory: ./.github/workflows/containers/github-action-ci/

@@ -149,6 +149,14 @@ def _llvm_configure_impl(repository_ctx):
         llvm_cmake,
     )
 
+    # Grab version info and merge it with the other vars
+    version = _extract_cmake_settings(
+        repository_ctx,
+        "cmake/Modules/LLVMVersion.cmake",
+    )
+    version = {k: v for k, v in version.items() if v != None}
+    vars.update(version)
+
     _write_dict_to_file(
         repository_ctx,
         filepath = "vars.bzl",

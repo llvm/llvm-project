@@ -26,7 +26,7 @@ Implementation Status
 
 * To check date and time functions enabled for Windows:
 
-  - `windows-x86_64 <https://github.com/llvm/llvm-project/tree/main/libc/config/windows/entrypoints.txt>`_ 
+  - `windows-x86_64 <https://github.com/llvm/llvm-project/tree/main/libc/config/windows/entrypoints.txt>`_
 
   - windows-aarch64 - to be added
 
@@ -38,11 +38,11 @@ Implementation Status
 
 * To check date and time functions enabled for GPU:
 
-  - `gpu-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/entrypoints.txt>`_ 
+  - `gpu-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/entrypoints.txt>`_
 
 * To check date and time functions enabled for embedded system:
 
-  - `barebone-aarch32 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/arm/entrypoints.txt>`_ 
+  - `barebone-aarch32 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/arm/entrypoints.txt>`_
 
   - barebone-riscv32 - to be added
 

@@ -196,11 +196,11 @@ std::int32_t RTNAME(GetCommand)(const Descriptor *value,
 }
 
 static std::size_t LengthWithoutTrailingSpaces(const Descriptor &d) {
-  std::size_t s{d.ElementBytes() - 1};
-  while (*d.OffsetElement(s) == ' ') {
+  std::size_t s{d.ElementBytes()}; // This can be 0.
+  while (s != 0 && *d.OffsetElement(s - 1) == ' ') {
     --s;
   }
-  return s + 1;
+  return s;
 }
 
 std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,

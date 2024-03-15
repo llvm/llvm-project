@@ -55,7 +55,7 @@
 // RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARM-BAREMETAL %s
-// CHECK-CLANGRT-ARM-BAREMETAL: libclang_rt.builtins-armv7m.a
+// CHECK-CLANGRT-ARM-BAREMETAL: libclang_rt.builtins.a
 
 // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name \
 // RUN:     --target=armv7m-vendor-none-eabi \

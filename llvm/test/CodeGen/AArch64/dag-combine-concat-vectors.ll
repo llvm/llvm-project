@@ -63,7 +63,7 @@ define fastcc i8 @allocno_reload_assign() {
   br label %1
 
 1:                                                ; preds = %1, %0
-  call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x ptr> zeroinitializer, i32 0, <vscale x 16 x i1> xor (<vscale x 16 x i1> shufflevector (<vscale x 16 x i1> icmp eq (<vscale x 16 x ptr> insertelement (<vscale x 16 x ptr> poison, ptr null, i64 0), <vscale x 16 x ptr> zeroinitializer), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i32 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer)))
+  call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x ptr> zeroinitializer, i32 0, <vscale x 16 x i1> xor (<vscale x 16 x i1> shufflevector (<vscale x 16 x i1> icmp eq (<vscale x 16 x ptr> insertelement (<vscale x 16 x ptr> poison, ptr null, i64 0), <vscale x 16 x ptr> zeroinitializer), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), <vscale x 16 x i1> splat (i1 true)))
   br label %1
 }
 

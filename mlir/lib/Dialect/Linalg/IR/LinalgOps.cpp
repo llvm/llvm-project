@@ -815,6 +815,22 @@ struct FoldFillWithCopy : OpRewritePattern<linalg::CopyOp> {
   }
 };
 
+/// Fold fill with transpose.
+struct FoldFillWithTranspose : OpRewritePattern<linalg::TransposeOp> {
+  using OpRewritePattern<linalg::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    if (auto fillOp = transposeOp.getInput().getDefiningOp<FillOp>()) {
+      rewriter.replaceOpWithNewOp<FillOp>(
+          transposeOp, transposeOp.getResultTypes(), fillOp.getInputs(),
+          transposeOp.getDpsInitOperand(0)->get());
+      return success();
+    }
+    return failure();
+  }
+};
+
 } // namespace
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -823,7 +839,7 @@ void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
       .add<FoldFillWithCopy, FoldFillWithTensorExtract, FoldFillWithPack,
            FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
            FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
-           FoldInsertPadIntoFill>(context);
+           FoldInsertPadIntoFill, FoldFillWithTranspose>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1784,6 +1800,22 @@ void TransposeOp::getEffects(
         &effects) {
   getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
                         getDpsInits());
+}
+
+LogicalResult TransposeOp::fold(FoldAdaptor adaptor,
+                                SmallVectorImpl<OpFoldResult> &result) {
+  // Single dimension transpose.
+  if (getPermutation().size() == 0) {
+    result.push_back(getInput());
+    return success();
+  }
+  // Identity permutation.
+  if (isIdentityPermutation(getPermutation())) {
+    result.push_back(getInput());
+    return success();
+  }
+
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//

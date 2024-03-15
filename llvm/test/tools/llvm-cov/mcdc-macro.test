@@ -89,11 +89,12 @@ Instructions for regenerating the test:
 cd %S/Inputs # Or copy mcdc-macro.c into the working directory
 
 clang -fcoverage-mcdc -fprofile-instr-generate -fcoverage-compilation-dir=. \
-    -O3 -mllvm -enable-name-compression=false \
+    -Os -mllvm -enable-name-compression=false \
     -fcoverage-mapping mcdc-macro.c -c
 
 # Instructions for generating proftext
 clang -fprofile-instr-generate mcdc-macro.o
+rm -f default.prof*
 ./a.out
 llvm-profdata merge --sparse -o default.profdata default.profraw
 llvm-profdata merge --text -o mcdc-macro.proftext default.profdata

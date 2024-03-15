@@ -1,0 +1,79 @@
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/coff-profile.perfscript --binary=%S/Inputs/coff-profile.exe --output=%t
+; RUN: FileCheck %s --input-file %t
+
+CHECK:      main:31837:0
+CHECK-NEXT:  0: 0
+CHECK-NEXT:  3.1: 0
+CHECK-NEXT:  3.2: 0
+CHECK-NEXT:  8: 0
+CHECK-NEXT:  65501: 0
+CHECK-NEXT:  1: ??$init@HG@MyNameSpace2@@YAXHPEAG@Z:0
+CHECK-NEXT:   1: 0
+CHECK-NEXT:   1.1: 0
+CHECK-NEXT:   1.2: 0
+CHECK-NEXT:   2: 0
+CHECK-NEXT:   65514: 0
+CHECK-NEXT:  4: ?work1@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:3193
+CHECK-NEXT:   0: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:3193
+CHECK-NEXT:    1.1: 31
+CHECK-NEXT:    1.2: 31
+CHECK-NEXT:    2: 31
+CHECK-NEXT:    3: 31
+CHECK-NEXT:    65530: 0
+CHECK-NEXT:  5: ?work2@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:28644
+CHECK-NEXT:   0: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:28644
+CHECK-NEXT:    1.1: 341
+CHECK-NEXT:    1.2: 341
+CHECK-NEXT:    2: 341
+CHECK-NEXT:    3: 341
+CHECK-NEXT:    65530: 0
+CHECK-NEXT:  7: ?print@MyNameSpace2@@YAXPEAGH@Z:0
+CHECK-NEXT:   1: 0
+
+; Original code
+; clang-cl.exe -O2 -gdwarf -gline-tables-only coff-profile.cpp -fuse-ld=lld -Xclang -fdebug-info-for-profiling -link -debug:dwarf
+
+#include <stdio.h>
+
+namespace MyNameSpace1 {
+
+template <typename T1, typename T2> class MyClass {
+  void work(T1 map[], T2 n, T2 m) {
+    for (int i = 1; i < n; i++) {
+      map[i] = map[i - 1] * map[i - 1];
+      map[i] += (i * map[i - 1]) / m + i % m;
+    }
+  }
+
+public:
+  void work1(T1 map[], T2 n) { work(map, n, 7); }
+  void work2(T1 map[], T2 n) { work(map, n, 3); }
+};
+
+} // namespace MyNameSpace1
+
+namespace MyNameSpace2 {
+
+template <typename T1, typename T2> void init(T1 c, T2 *p) {
+  for (int i = 0; i < c * 1000000; i++) {
+    p[i] = i / 3 + (i * i) % 3;
+  }
+}
+
+void print(unsigned short *p, int i) {
+  printf("%d %d %d\n", p[i * i * 100], p[i * i * 100 + 1], p[i * i * 100 + 2]);
+}
+
+} // namespace MyNameSpace2
+
+unsigned short M[3000000];
+int main(int argc, char *argv[]) {
+  MyNameSpace2::init(argc, M);
+  MyNameSpace1::MyClass<unsigned short, int> Obj;
+  for (int i = 0; i <= argc * 10; i++) {
+    Obj.work1(&M[argc], argc * 100000);
+    Obj.work2(&M[argc * argc], argc * 1000000);
+  }
+  MyNameSpace2::print(M, argc);
+  return 0;
+}

@@ -130,3 +130,103 @@ define i1 @and_ugt_fail(i8 %xx) {
   %r = icmp ugt i8 %x_p2, 127
   ret i1 %r
 }
+
+define i1 @urem_okay(i8 %x) {
+; CHECK-LABEL: @urem_okay(
+; CHECK-NEXT:    ret i1 true
+;
+  %val = urem i8 34, %x
+  %r = icmp ule i8 %val, 35
+  ret i1 %r
+}
+
+define i1 @urem_fail(i8 %x) {
+; CHECK-LABEL: @urem_fail(
+; CHECK-NEXT:    [[VAL:%.*]] = urem i8 34, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[VAL]], 33
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %val = urem i8 34, %x
+  %r = icmp ule i8 %val, 33
+  ret i1 %r
+}
+
+define i1 @srem_posC_okay0(i8 %x) {
+; CHECK-LABEL: @srem_posC_okay0(
+; CHECK-NEXT:    ret i1 true
+;
+  %val = srem i8 34, %x
+  %r = icmp sle i8 %val, 34
+  ret i1 %r
+}
+
+define i1 @srem_posC_okay1(i8 %x) {
+; CHECK-LABEL: @srem_posC_okay1(
+; CHECK-NEXT:    ret i1 true
+;
+  %val = srem i8 34, %x
+  %r = icmp sge i8 %val, -3
+  ret i1 %r
+}
+
+define i1 @srem_negC_okay0(i8 %x) {
+; CHECK-LABEL: @srem_negC_okay0(
+; CHECK-NEXT:    ret i1 true
+;
+  %val = srem i8 -34, %x
+  %r = icmp sle i8 %val, 0
+  ret i1 %r
+}
+
+define i1 @srem_negC_okay1(i8 %x) {
+; CHECK-LABEL: @srem_negC_okay1(
+; CHECK-NEXT:    ret i1 true
+;
+  %val = srem i8 -34, %x
+  %r = icmp sge i8 %val, -34
+  ret i1 %r
+}
+
+define i1 @srem_posC_fail0(i8 %x) {
+; CHECK-LABEL: @srem_posC_fail0(
+; CHECK-NEXT:    [[VAL:%.*]] = srem i8 34, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[VAL]], 32
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %val = srem i8 34, %x
+  %r = icmp sle i8 %val, 32
+  ret i1 %r
+}
+
+define i1 @srem_posC_fail1(i8 %x) {
+; CHECK-LABEL: @srem_posC_fail1(
+; CHECK-NEXT:    [[VAL:%.*]] = srem i8 34, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sge i8 [[VAL]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %val = srem i8 34, %x
+  %r = icmp sge i8 %val, 1
+  ret i1 %r
+}
+
+define i1 @srem_negC_fail0(i8 %x) {
+; CHECK-LABEL: @srem_negC_fail0(
+; CHECK-NEXT:    [[VAL:%.*]] = srem i8 -34, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[VAL]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %val = srem i8 -34, %x
+  %r = icmp sle i8 %val, -1
+  ret i1 %r
+}
+
+define i1 @srem_negC_fail1(i8 %x) {
+; CHECK-LABEL: @srem_negC_fail1(
+; CHECK-NEXT:    [[VAL:%.*]] = srem i8 -34, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sge i8 [[VAL]], -33
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %val = srem i8 -34, %x
+  %r = icmp sge i8 %val, -33
+  ret i1 %r
+}

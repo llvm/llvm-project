@@ -2244,6 +2244,7 @@ public:
   bool isFloatingType() const;     // C99 6.2.5p11 (real floating + complex)
   bool isHalfType() const;         // OpenCL 6.1.1.1, NEON (IEEE 754-2008 half)
   bool isFloat16Type() const;      // C11 extension ISO/IEC TS 18661
+  bool isFloat32Type() const;
   bool isBFloat16Type() const;
   bool isFloat128Type() const;
   bool isIbm128Type() const;
@@ -7450,6 +7451,10 @@ inline bool Type::isHalfType() const {
 
 inline bool Type::isFloat16Type() const {
   return isSpecificBuiltinType(BuiltinType::Float16);
+}
+
+inline bool Type::isFloat32Type() const {
+  return isSpecificBuiltinType(BuiltinType::Float);
 }
 
 inline bool Type::isBFloat16Type() const {

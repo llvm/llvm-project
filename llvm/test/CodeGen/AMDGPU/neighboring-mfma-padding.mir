@@ -12,17 +12,21 @@ body: |
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_2_pass
     ; gfx908-DEFAULT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD25-LABEL: name: mfma_padding_2_pass
     ; gfx908-PAD25: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD25-NEXT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD50-LABEL: name: mfma_padding_2_pass
     ; gfx908-PAD50: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD50-NEXT: S_NOP 0
     ; gfx908-PAD50-NEXT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD75-LABEL: name: mfma_padding_2_pass
     ; gfx908-PAD75: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD75-NEXT: S_NOP 0
     ; gfx908-PAD75-NEXT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD100-LABEL: name: mfma_padding_2_pass
     ; gfx908-PAD100: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD100-NEXT: S_NOP 1
@@ -39,18 +43,22 @@ body: |
     ; gfx908-DEFAULT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-DEFAULT-NEXT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD25-LABEL: name: mfma_padding_2_pass_1_intervening_valu
     ; gfx908-PAD25: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD25-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD25-NEXT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD50-LABEL: name: mfma_padding_2_pass_1_intervening_valu
     ; gfx908-PAD50: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD50-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD50-NEXT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD75-LABEL: name: mfma_padding_2_pass_1_intervening_valu
     ; gfx908-PAD75: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD75-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD75-NEXT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD100-LABEL: name: mfma_padding_2_pass_1_intervening_valu
     ; gfx908-PAD100: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD100-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -69,20 +77,24 @@ body: |
     ; gfx908-DEFAULT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: DBG_VALUE
     ; gfx908-DEFAULT-NEXT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD25-LABEL: name: mfma_padding_2_pass_dbg
     ; gfx908-PAD25: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD25-NEXT: DBG_VALUE
     ; gfx908-PAD25-NEXT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD50-LABEL: name: mfma_padding_2_pass_dbg
     ; gfx908-PAD50: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD50-NEXT: DBG_VALUE
     ; gfx908-PAD50-NEXT: S_NOP 0
     ; gfx908-PAD50-NEXT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD75-LABEL: name: mfma_padding_2_pass_dbg
     ; gfx908-PAD75: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD75-NEXT: DBG_VALUE
     ; gfx908-PAD75-NEXT: S_NOP 0
     ; gfx908-PAD75-NEXT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD100-LABEL: name: mfma_padding_2_pass_dbg
     ; gfx908-PAD100: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD100-NEXT: DBG_VALUE
@@ -100,18 +112,22 @@ body: |
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_8_pass
     ; gfx908-DEFAULT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD25-LABEL: name: mfma_padding_8_pass
     ; gfx908-PAD25: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD25-NEXT: S_NOP 1
     ; gfx908-PAD25-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD50-LABEL: name: mfma_padding_8_pass
     ; gfx908-PAD50: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD50-NEXT: S_NOP 3
     ; gfx908-PAD50-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD75-LABEL: name: mfma_padding_8_pass
     ; gfx908-PAD75: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD75-NEXT: S_NOP 5
     ; gfx908-PAD75-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD100-LABEL: name: mfma_padding_8_pass
     ; gfx908-PAD100: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD100-NEXT: S_NOP 7
@@ -129,23 +145,27 @@ body: |
     ; gfx908-DEFAULT-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-DEFAULT-NEXT: $vgpr3 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-DEFAULT-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD25-LABEL: name: mfma_padding_8_pass_2_intervening_valu
     ; gfx908-PAD25: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD25-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD25-NEXT: $vgpr3 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD25-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD50-LABEL: name: mfma_padding_8_pass_2_intervening_valu
     ; gfx908-PAD50: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD50-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD50-NEXT: $vgpr3 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD50-NEXT: S_NOP 1
     ; gfx908-PAD50-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD75-LABEL: name: mfma_padding_8_pass_2_intervening_valu
     ; gfx908-PAD75: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD75-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD75-NEXT: $vgpr3 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD75-NEXT: S_NOP 3
     ; gfx908-PAD75-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD100-LABEL: name: mfma_padding_8_pass_2_intervening_valu
     ; gfx908-PAD100: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD100-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -165,19 +185,23 @@ body: |
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_16_pass
     ; gfx908-DEFAULT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD25-LABEL: name: mfma_padding_16_pass
     ; gfx908-PAD25: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD25-NEXT: S_NOP 3
     ; gfx908-PAD25-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD50-LABEL: name: mfma_padding_16_pass
     ; gfx908-PAD50: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD50-NEXT: S_NOP 7
     ; gfx908-PAD50-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD75-LABEL: name: mfma_padding_16_pass
     ; gfx908-PAD75: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD75-NEXT: S_NOP 7
     ; gfx908-PAD75-NEXT: S_NOP 3
     ; gfx908-PAD75-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD100-LABEL: name: mfma_padding_16_pass
     ; gfx908-PAD100: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD100-NEXT: S_NOP 7
@@ -198,6 +222,7 @@ body: |
     ; gfx908-DEFAULT-NEXT: $vgpr4 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-DEFAULT-NEXT: $vgpr5 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-DEFAULT-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD25-LABEL: name: mfma_padding_16_pass_4_intervening_valu
     ; gfx908-PAD25: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD25-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -205,6 +230,7 @@ body: |
     ; gfx908-PAD25-NEXT: $vgpr4 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD25-NEXT: $vgpr5 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD25-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD50-LABEL: name: mfma_padding_16_pass_4_intervening_valu
     ; gfx908-PAD50: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD50-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -213,6 +239,7 @@ body: |
     ; gfx908-PAD50-NEXT: $vgpr5 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD50-NEXT: S_NOP 3
     ; gfx908-PAD50-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD75-LABEL: name: mfma_padding_16_pass_4_intervening_valu
     ; gfx908-PAD75: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD75-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -221,6 +248,7 @@ body: |
     ; gfx908-PAD75-NEXT: $vgpr5 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD75-NEXT: S_NOP 7
     ; gfx908-PAD75-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD100-LABEL: name: mfma_padding_16_pass_4_intervening_valu
     ; gfx908-PAD100: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD100-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -261,6 +289,7 @@ body: |
     ; gfx908-DEFAULT-NEXT: $vgpr16 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-DEFAULT-NEXT: $vgpr17 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-DEFAULT-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD25-LABEL: name: mfma_padding_16_pass_16_intervening_valu
     ; gfx908-PAD25: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD25-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -280,6 +309,7 @@ body: |
     ; gfx908-PAD25-NEXT: $vgpr16 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD25-NEXT: $vgpr17 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD25-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD50-LABEL: name: mfma_padding_16_pass_16_intervening_valu
     ; gfx908-PAD50: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD50-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -299,6 +329,7 @@ body: |
     ; gfx908-PAD50-NEXT: $vgpr16 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD50-NEXT: $vgpr17 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD50-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD75-LABEL: name: mfma_padding_16_pass_16_intervening_valu
     ; gfx908-PAD75: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD75-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -318,6 +349,7 @@ body: |
     ; gfx908-PAD75-NEXT: $vgpr16 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD75-NEXT: $vgpr17 = V_MOV_B32_e32 1, implicit $exec
     ; gfx908-PAD75-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD100-LABEL: name: mfma_padding_16_pass_16_intervening_valu
     ; gfx908-PAD100: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD100-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -366,15 +398,19 @@ body: |
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_16_pass_occ_1
     ; gfx908-DEFAULT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD25-LABEL: name: mfma_padding_16_pass_occ_1
     ; gfx908-PAD25: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD25-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD50-LABEL: name: mfma_padding_16_pass_occ_1
     ; gfx908-PAD50: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD50-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD75-LABEL: name: mfma_padding_16_pass_occ_1
     ; gfx908-PAD75: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD75-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ;
     ; gfx908-PAD100-LABEL: name: mfma_padding_16_pass_occ_1
     ; gfx908-PAD100: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-PAD100-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -400,6 +436,7 @@ body: |
   ; gfx908-DEFAULT-NEXT: bb.2:
   ; gfx908-DEFAULT-NEXT:   $vgpr3 = V_MOV_B32_e32 1, implicit $exec
   ; gfx908-DEFAULT-NEXT:   early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ;
   ; gfx908-PAD25-LABEL: name: mfma_padding_16_pass_2_preds
   ; gfx908-PAD25: bb.0:
   ; gfx908-PAD25-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -416,6 +453,7 @@ body: |
   ; gfx908-PAD25-NEXT:   $vgpr3 = V_MOV_B32_e32 1, implicit $exec
   ; gfx908-PAD25-NEXT:   S_NOP 1
   ; gfx908-PAD25-NEXT:   early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ;
   ; gfx908-PAD50-LABEL: name: mfma_padding_16_pass_2_preds
   ; gfx908-PAD50: bb.0:
   ; gfx908-PAD50-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -432,6 +470,7 @@ body: |
   ; gfx908-PAD50-NEXT:   $vgpr3 = V_MOV_B32_e32 1, implicit $exec
   ; gfx908-PAD50-NEXT:   S_NOP 5
   ; gfx908-PAD50-NEXT:   early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ;
   ; gfx908-PAD75-LABEL: name: mfma_padding_16_pass_2_preds
   ; gfx908-PAD75: bb.0:
   ; gfx908-PAD75-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -449,6 +488,7 @@ body: |
   ; gfx908-PAD75-NEXT:   S_NOP 7
   ; gfx908-PAD75-NEXT:   S_NOP 1
   ; gfx908-PAD75-NEXT:   early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ;
   ; gfx908-PAD100-LABEL: name: mfma_padding_16_pass_2_preds
   ; gfx908-PAD100: bb.0:
   ; gfx908-PAD100-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)

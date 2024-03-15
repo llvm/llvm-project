@@ -1069,6 +1069,21 @@ TLI_DEFINE_ENUM_INTERNAL(ctermid)
 TLI_DEFINE_STRING_INTERNAL("ctermid")
 TLI_DEFINE_SIG_INTERNAL(Ptr, Ptr)
 
+/// double erf(double x);
+TLI_DEFINE_ENUM_INTERNAL(erf)
+TLI_DEFINE_STRING_INTERNAL("erf")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl)
+
+/// float erff(float x);
+TLI_DEFINE_ENUM_INTERNAL(erff)
+TLI_DEFINE_STRING_INTERNAL("erff")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt)
+
+/// long double erfl(long double x);
+TLI_DEFINE_ENUM_INTERNAL(erfl)
+TLI_DEFINE_STRING_INTERNAL("erfl")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
+
 /// int execl(const char *path, const char *arg, ...);
 TLI_DEFINE_ENUM_INTERNAL(execl)
 TLI_DEFINE_STRING_INTERNAL("execl")

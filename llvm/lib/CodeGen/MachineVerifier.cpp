@@ -39,6 +39,8 @@
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineConvergenceVerifier.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -219,6 +221,11 @@ namespace {
     LiveIntervals *LiveInts = nullptr;
     LiveStacks *LiveStks = nullptr;
     SlotIndexes *Indexes = nullptr;
+
+    // This is calculated only when trying to verify convergence control tokens.
+    // Similar to the LLVM IR verifier, we calculate this locally instead of
+    // relying on the pass manager.
+    MachineDomTree DT;
 
     void visitMachineFunctionBefore();
     void visitMachineBasicBlockBefore(const MachineBasicBlock *MBB);
@@ -1294,6 +1301,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (OffsetTy.isPointerOrPointerVector())
       report("gep offset operand must not be a pointer", MI);
 
+    if (PtrTy.isPointerOrPointerVector()) {
+      const DataLayout &DL = MF->getDataLayout();
+      unsigned AS = PtrTy.getAddressSpace();
+      unsigned IndexSizeInBits = DL.getIndexSize(AS) * 8;
+      if (OffsetTy.getScalarSizeInBits() != IndexSizeInBits) {
+        report("gep offset operand must match index size for address space",
+               MI);
+      }
+    }
+
     // TODO: Is the offset allowed to be a scalar with a vector?
     break;
   }
@@ -1596,6 +1613,115 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("G_BSWAP size must be a multiple of 16 bits", MI);
     break;
   }
+  case TargetOpcode::G_VSCALE: {
+    if (!MI->getOperand(1).isCImm()) {
+      report("G_VSCALE operand must be cimm", MI);
+      break;
+    }
+    if (MI->getOperand(1).getCImm()->isZero()) {
+      report("G_VSCALE immediate cannot be zero", MI);
+      break;
+    }
+    break;
+  }
+  case TargetOpcode::G_INSERT_SUBVECTOR: {
+    const MachineOperand &Src0Op = MI->getOperand(1);
+    if (!Src0Op.isReg()) {
+      report("G_INSERT_SUBVECTOR first source must be a register", MI);
+      break;
+    }
+
+    const MachineOperand &Src1Op = MI->getOperand(2);
+    if (!Src1Op.isReg()) {
+      report("G_INSERT_SUBVECTOR second source must be a register", MI);
+      break;
+    }
+
+    const MachineOperand &IndexOp = MI->getOperand(3);
+    if (!IndexOp.isImm()) {
+      report("G_INSERT_SUBVECTOR index must be an immediate", MI);
+      break;
+    }
+
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT Src0Ty = MRI->getType(Src0Op.getReg());
+    LLT Src1Ty = MRI->getType(Src1Op.getReg());
+
+    if (!DstTy.isVector()) {
+      report("Destination type must be a vector", MI);
+      break;
+    }
+
+    if (!Src0Ty.isVector()) {
+      report("First source must be a vector", MI);
+      break;
+    }
+
+    if (!Src1Ty.isVector()) {
+      report("Second source must be a vector", MI);
+      break;
+    }
+
+    if (DstTy != Src0Ty) {
+      report("Destination type must match the first source vector type", MI);
+      break;
+    }
+
+    if (Src0Ty.getElementType() != Src1Ty.getElementType()) {
+      report("Element type of source vectors must be the same", MI);
+      break;
+    }
+
+    if (IndexOp.getImm() != 0 &&
+        Src1Ty.getElementCount().getKnownMinValue() % IndexOp.getImm() != 0) {
+      report("Index must be a multiple of the second source vector's "
+             "minimum vector length",
+             MI);
+      break;
+    }
+    break;
+  }
+  case TargetOpcode::G_EXTRACT_SUBVECTOR: {
+    const MachineOperand &SrcOp = MI->getOperand(1);
+    if (!SrcOp.isReg()) {
+      report("G_EXTRACT_SUBVECTOR first source must be a register", MI);
+      break;
+    }
+
+    const MachineOperand &IndexOp = MI->getOperand(2);
+    if (!IndexOp.isImm()) {
+      report("G_EXTRACT_SUBVECTOR index must be an immediate", MI);
+      break;
+    }
+
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(SrcOp.getReg());
+
+    if (!DstTy.isVector()) {
+      report("Destination type must be a vector", MI);
+      break;
+    }
+
+    if (!SrcTy.isVector()) {
+      report("First source must be a vector", MI);
+      break;
+    }
+
+    if (DstTy.getElementType() != SrcTy.getElementType()) {
+      report("Element type of vectors must be the same", MI);
+      break;
+    }
+
+    if (IndexOp.getImm() != 0 &&
+        SrcTy.getElementCount().getKnownMinValue() % IndexOp.getImm() != 0) {
+      report("Index must be a multiple of the source vector's minimum vector "
+             "length",
+             MI);
+      break;
+    }
+
+    break;
+  }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     const MachineOperand &MaskOp = MI->getOperand(3);
     if (!MaskOp.isShuffleMask()) {
@@ -1630,6 +1756,24 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       if (Idx >= 2 * SrcNumElts)
         report("Out of bounds shuffle index", MI);
     }
+
+    break;
+  }
+
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+
+    if (!DstTy.isScalableVector())
+      report("Destination type must be a scalable vector", MI);
+
+    if (!SrcTy.isScalar())
+      report("Source type must be a scalar", MI);
+
+    if (DstTy.getScalarType() != SrcTy)
+      report("Element type of the destination must be the same type as the "
+             "source type",
+             MI);
 
     break;
   }
@@ -2955,7 +3099,30 @@ void MachineVerifier::checkPHIOps(const MachineBasicBlock &MBB) {
   }
 }
 
+static void
+verifyConvergenceControl(const MachineFunction &MF, MachineDomTree &DT,
+                         std::function<void(const Twine &Message)> FailureCB) {
+  MachineConvergenceVerifier CV;
+  CV.initialize(&errs(), FailureCB, MF);
+
+  for (const auto &MBB : MF) {
+    CV.visit(MBB);
+    for (const auto &MI : MBB.instrs())
+      CV.visit(MI);
+  }
+
+  if (CV.sawTokens()) {
+    DT.recalculate(const_cast<MachineFunction &>(MF));
+    CV.verify(DT);
+  }
+}
+
 void MachineVerifier::visitMachineFunctionAfter() {
+  auto FailureCB = [this](const Twine &Message) {
+    report(Message.str().c_str(), MF);
+  };
+  verifyConvergenceControl(*MF, DT, FailureCB);
+
   calcRegsPassed();
 
   for (const MachineBasicBlock &MBB : *MF)

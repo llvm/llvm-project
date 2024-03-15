@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_MESSAGE_MAPPER_H
-#define LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_MESSAGE_MAPPER_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_MESSAGE_MAPPER_H
+#define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_MESSAGE_MAPPER_H
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/optional.h"
@@ -100,4 +100,4 @@ constexpr MsgTable<N1 + N2> operator+(const MsgTable<N1> &t1,
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_MESSAGE_MAPPER_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_MESSAGE_MAPPER_H

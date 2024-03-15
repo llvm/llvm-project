@@ -578,6 +578,11 @@ TEST(APFloatTest, MinNum) {
   EXPECT_EQ(1.0, minnum(f2, f1).convertToDouble());
   EXPECT_EQ(1.0, minnum(f1, nan).convertToDouble());
   EXPECT_EQ(1.0, minnum(nan, f1).convertToDouble());
+
+  APFloat zp(0.0);
+  APFloat zn(-0.0);
+  EXPECT_EQ(-0.0, minnum(zp, zn).convertToDouble());
+  EXPECT_EQ(-0.0, minnum(zn, zp).convertToDouble());
 }
 
 TEST(APFloatTest, MaxNum) {
@@ -589,6 +594,11 @@ TEST(APFloatTest, MaxNum) {
   EXPECT_EQ(2.0, maxnum(f2, f1).convertToDouble());
   EXPECT_EQ(1.0, maxnum(f1, nan).convertToDouble());
   EXPECT_EQ(1.0, maxnum(nan, f1).convertToDouble());
+
+  APFloat zp(0.0);
+  APFloat zn(-0.0);
+  EXPECT_EQ(0.0, maxnum(zp, zn).convertToDouble());
+  EXPECT_EQ(0.0, maxnum(zn, zp).convertToDouble());
 }
 
 TEST(APFloatTest, Minimum) {

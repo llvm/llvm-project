@@ -1483,6 +1483,25 @@ def JUMP_TABLE_DEBUG_INFO : StandardPseudoInstruction {
   let isMeta = true;
 }
 
+let hasSideEffects = false, isMeta = true, isConvergent = true in {
+def CONVERGENCECTRL_ANCHOR : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins);
+}
+def CONVERGENCECTRL_ENTRY : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins);
+}
+def CONVERGENCECTRL_LOOP : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src);
+}
+def CONVERGENCECTRL_GLUE : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$src);
+}
+}
+
 // Generic opcodes used in GlobalISel.
 include "llvm/Target/GenericOpcodes.td"
 

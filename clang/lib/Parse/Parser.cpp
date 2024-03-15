@@ -685,7 +685,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     // FIXME: We need a better way to disambiguate C++ clang modules and
     // standard C++ modules.
     if (!getLangOpts().CPlusPlusModules || !Mod->isHeaderUnit())
-      Actions.ActOnModuleInclude(Loc, Mod);
+      Actions.ActOnAnnotModuleInclude(Loc, Mod);
     else {
       DeclResult Import =
           Actions.ActOnModuleImport(Loc, SourceLocation(), Loc, Mod);
@@ -697,15 +697,17 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
   }
 
   case tok::annot_module_begin:
-    Actions.ActOnModuleBegin(Tok.getLocation(), reinterpret_cast<Module *>(
-                                                    Tok.getAnnotationValue()));
+    Actions.ActOnAnnotModuleBegin(
+        Tok.getLocation(),
+        reinterpret_cast<Module *>(Tok.getAnnotationValue()));
     ConsumeAnnotationToken();
     ImportState = Sema::ModuleImportState::NotACXX20Module;
     return false;
 
   case tok::annot_module_end:
-    Actions.ActOnModuleEnd(Tok.getLocation(), reinterpret_cast<Module *>(
-                                                  Tok.getAnnotationValue()));
+    Actions.ActOnAnnotModuleEnd(
+        Tok.getLocation(),
+        reinterpret_cast<Module *>(Tok.getAnnotationValue()));
     ConsumeAnnotationToken();
     ImportState = Sema::ModuleImportState::NotACXX20Module;
     return false;
@@ -2708,9 +2710,9 @@ bool Parser::parseMisplacedModuleImport() {
       // happens.
       if (MisplacedModuleBeginCount) {
         --MisplacedModuleBeginCount;
-        Actions.ActOnModuleEnd(Tok.getLocation(),
-                               reinterpret_cast<Module *>(
-                                   Tok.getAnnotationValue()));
+        Actions.ActOnAnnotModuleEnd(
+            Tok.getLocation(),
+            reinterpret_cast<Module *>(Tok.getAnnotationValue()));
         ConsumeAnnotationToken();
         continue;
       }
@@ -2720,18 +2722,18 @@ bool Parser::parseMisplacedModuleImport() {
       return true;
     case tok::annot_module_begin:
       // Recover by entering the module (Sema will diagnose).
-      Actions.ActOnModuleBegin(Tok.getLocation(),
-                               reinterpret_cast<Module *>(
-                                   Tok.getAnnotationValue()));
+      Actions.ActOnAnnotModuleBegin(
+          Tok.getLocation(),
+          reinterpret_cast<Module *>(Tok.getAnnotationValue()));
       ConsumeAnnotationToken();
       ++MisplacedModuleBeginCount;
       continue;
     case tok::annot_module_include:
       // Module import found where it should not be, for instance, inside a
       // namespace. Recover by importing the module.
-      Actions.ActOnModuleInclude(Tok.getLocation(),
-                                 reinterpret_cast<Module *>(
-                                     Tok.getAnnotationValue()));
+      Actions.ActOnAnnotModuleInclude(
+          Tok.getLocation(),
+          reinterpret_cast<Module *>(Tok.getAnnotationValue()));
       ConsumeAnnotationToken();
       // If there is another module import, process it.
       continue;

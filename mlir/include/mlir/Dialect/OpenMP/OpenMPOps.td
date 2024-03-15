@@ -162,7 +162,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
     and how to initialize the copy from the original item in the copy region.
 
     Examples:
-    ---------
+
     * `private(x)` would be emitted as:
     ```mlir
     omp.private {type = private} @x.privatizer : !fir.ref<i32> alloc {
@@ -268,6 +268,9 @@ def ParallelOp : OpenMP_Op<"parallel", [
 
     The optional $proc_bind_val attribute controls the thread affinity for the execution
     of the parallel region.
+
+    The optional byref attribute controls whether reduction arguments are passed by
+    reference or by value.
   }];
 
   let arguments = (ins Optional<I1>:$if_expr_var,
@@ -278,7 +281,8 @@ def ParallelOp : OpenMP_Op<"parallel", [
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
              OptionalAttr<ProcBindKindAttr>:$proc_bind_val,
              Variadic<AnyType>:$private_vars,
-             OptionalAttr<SymbolRefArrayAttr>:$privatizers);
+             OptionalAttr<SymbolRefArrayAttr>:$privatizers,
+             UnitAttr:$byref);
 
   let regions = (region AnyRegion:$region);
 
@@ -299,6 +303,7 @@ def ParallelOp : OpenMP_Op<"parallel", [
                 $allocators_vars, type($allocators_vars)
               ) `)`
           | `proc_bind` `(` custom<ClauseAttr>($proc_bind_val) `)`
+          | `byref` $byref
     ) custom<ParallelRegion>($region, $reduction_vars, type($reduction_vars),
                              $reductions, $private_vars, type($private_vars),
                              $privatizers) attr-dict
@@ -570,6 +575,9 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     The optional `order` attribute specifies which order the iterations of the
     associate loops are executed in. Currently the only option for this
     attribute is "concurrent".
+
+    The optional `byref` attribute indicates that reduction arguments should be
+    passed by reference.
   }];
 
   let arguments = (ins Variadic<IntLikeType>:$lowerBound,
@@ -584,6 +592,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              OptionalAttr<ScheduleModifierAttr>:$schedule_modifier,
              UnitAttr:$simd_modifier,
              UnitAttr:$nowait,
+             UnitAttr:$byref,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
              OptionalAttr<OrderKindAttr>:$order_val,
              UnitAttr:$inclusive);
@@ -613,6 +622,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                 $schedule_val, $schedule_modifier, $simd_modifier,
                 $schedule_chunk_var, type($schedule_chunk_var)) `)`
           |`nowait` $nowait
+          |`byref` $byref
           |`ordered` `(` $ordered_val `)`
           |`order` `(` custom<ClauseAttr>($order_val) `)`
     ) custom<WsLoop>($region, $lowerBound, $upperBound, $step,
@@ -1337,10 +1347,10 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
     - `var_type`: The type of the variable to copy.
     - `var_ptr_ptr`: Used when the variable copied is a member of a class, structure
       or derived type and refers to the originating struct.
-    - `members`:  Used to indicate mapped child members for the current MapInfoOp, 
-       represented as other MapInfoOp's, utilised in cases where a parent structure 
-       type and members of the structure type are being mapped at the same time. 
-       For example: map(to: parent, parent->member, parent->member2[:10])  
+    - `members`:  Used to indicate mapped child members for the current MapInfoOp,
+       represented as other MapInfoOp's, utilised in cases where a parent structure
+       type and members of the structure type are being mapped at the same time.
+       For example: map(to: parent, parent->member, parent->member2[:10])
     - `bounds`: Used when copying slices of array's, pointers or pointer members of
        objects (e.g. derived types or classes), indicates the bounds to be copied
        of the variable. When it's an array slice it is in rank order where rank 0
@@ -1381,7 +1391,7 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
 // 2.14.2 target data Construct
 //===---------------------------------------------------------------------===//
 
-def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments, 
+def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments,
                                              MapClauseOwningOpInterface]>{
   let summary = "target data construct";
   let description = [{
@@ -1439,7 +1449,7 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments,
 //===---------------------------------------------------------------------===//
 
 def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
-                                                 [AttrSizedOperandSegments, 
+                                                 [AttrSizedOperandSegments,
                                                   MapClauseOwningOpInterface]>{
   let  summary = "target enter data construct";
   let description = [{

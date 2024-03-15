@@ -1062,6 +1062,14 @@ DNBGetTSDAddressForThread(nub_process_t pid, nub_thread_t tid,
   return INVALID_NUB_ADDRESS;
 }
 
+std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
+DNBGetMainBinaryCPUTypes(nub_process_t pid) {
+  MachProcessSP procSP;
+  if (GetProcessSP(pid, procSP))
+    return procSP->GetMainBinaryCPUTypes(pid);
+  return {};
+}
+
 JSONGenerator::ObjectSP
 DNBGetAllLoadedLibrariesInfos(nub_process_t pid, bool report_load_commands) {
   MachProcessSP procSP;

@@ -188,8 +188,10 @@ public:
   const BBAddrMap &getAddrMap() const { return AddrMap; }
 
   // Returns the PGO string associated with the entry of index `PGOBBEntryIndex`
-  // in `PGOMap`.
-  std::string constructPGOLabelString(size_t PGOBBEntryIndex) const {
+  // in `PGOMap`. If PrettyPGOAnalysis is true, prints BFI as relative frequency
+  // and BPI as percentage. Otherwise raw values are displayed.
+  std::string constructPGOLabelString(size_t PGOBBEntryIndex,
+                                      bool PrettyPGOAnalysis) const {
     if (!PGOMap.FeatEnable.hasPGOAnalysis())
       return "";
     std::string PGOString;
@@ -211,7 +213,12 @@ public:
           PGOMap.BBEntries[PGOBBEntryIndex];
 
       if (PGOMap.FeatEnable.BBFreq) {
-        PGOSS << "Frequency: " << Twine(PGOBBEntry.BlockFreq.getFrequency());
+        PGOSS << "Frequency: ";
+        if (PrettyPGOAnalysis)
+          printRelativeBlockFreq(PGOSS, PGOMap.BBEntries.front().BlockFreq,
+                                 PGOBBEntry.BlockFreq);
+        else
+          PGOSS << Twine(PGOBBEntry.BlockFreq.getFrequency());
         if (PGOMap.FeatEnable.BrProb && PGOBBEntry.Successors.size() > 0) {
           PGOSS << ", ";
         }
@@ -220,9 +227,12 @@ public:
         PGOSS << "Successors: ";
         interleaveComma(
             PGOBBEntry.Successors, PGOSS,
-            [&PGOSS](const PGOAnalysisMap::PGOBBEntry::SuccessorEntry &SE) {
+            [&](const PGOAnalysisMap::PGOBBEntry::SuccessorEntry &SE) {
               PGOSS << "BB" << SE.ID << ":";
-              PGOSS.write_hex(SE.Prob.getNumerator());
+              if (PrettyPGOAnalysis)
+                PGOSS << "[" << SE.Prob << "]";
+              else
+                PGOSS.write_hex(SE.Prob.getNumerator());
             });
       }
     }
@@ -331,6 +341,7 @@ static bool HasStopAddressFlag;
 
 bool objdump::SymbolTable;
 static bool SymbolizeOperands;
+static bool PrettyPGOAnalysisMap;
 static bool DynamicSymbolTable;
 std::string objdump::TripleName;
 bool objdump::UnwindInfo;
@@ -1410,8 +1421,8 @@ static void collectBBAddrMapLabels(
 
     std::string LabelString = ("BB" + Twine(BBEntry.ID)).str();
     Labels[BBAddress].push_back(
-        {LabelString,
-         FunctionMap->constructPGOLabelString(NumBBEntriesBeforeRange + I)});
+        {LabelString, FunctionMap->constructPGOLabelString(
+                          NumBBEntriesBeforeRange + I, PrettyPGOAnalysisMap)});
   }
 }
 
@@ -3473,6 +3484,10 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   HasStopAddressFlag = InputArgs.hasArg(OBJDUMP_stop_address_EQ);
   SymbolTable = InputArgs.hasArg(OBJDUMP_syms);
   SymbolizeOperands = InputArgs.hasArg(OBJDUMP_symbolize_operands);
+  PrettyPGOAnalysisMap = InputArgs.hasArg(OBJDUMP_pretty_pgo_analysis_map);
+  if (PrettyPGOAnalysisMap && !SymbolizeOperands)
+    reportCmdLineWarning("--symbolize-operands must be enabled for "
+                         "--pretty-pgo-analysis-map to have an effect");
   DynamicSymbolTable = InputArgs.hasArg(OBJDUMP_dynamic_syms);
   TripleName = InputArgs.getLastArgValue(OBJDUMP_triple_EQ).str();
   UnwindInfo = InputArgs.hasArg(OBJDUMP_unwind_info);

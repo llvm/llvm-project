@@ -732,3 +732,18 @@ void GH67492() {
   constexpr auto test = 42;
   auto lambda = (test, []() noexcept(true) {});
 }
+
+namespace GH83267 {
+auto l = [](auto a) { return 1; };
+using type = decltype(l);
+
+template<>
+auto type::operator()(int a) const { // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+  return c; // expected-error {{use of undeclared identifier 'c'}}
+}
+
+auto ll = [](auto a) { return 1; }; // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+using t = decltype(ll);
+template auto t::operator()<int>(int a) const; // expected-note {{in instantiation}}
+
+}

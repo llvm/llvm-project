@@ -3,7 +3,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
 // RUN:     -rtlib=compiler-rt -### %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix ARM-EABI
-// ARM-EABI: "-lclang_rt.builtins-arm"
+// ARM-EABI: "{{[^"]*}}libclang_rt.builtins.a"
 
 // RUN: %clang -target arm-linux-gnueabi \
 // RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \

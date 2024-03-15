@@ -130,7 +130,8 @@ void llvm::install_bad_alloc_error_handler(fatal_error_handler_t handler,
 #if LLVM_ENABLE_THREADS == 1
   std::lock_guard<std::mutex> Lock(BadAllocErrorHandlerMutex);
 #endif
-  assert(!ErrorHandler && "Bad alloc error handler already registered!\n");
+  assert(!BadAllocErrorHandler &&
+         "Bad alloc error handler already registered!\n");
   BadAllocErrorHandler = handler;
   BadAllocErrorHandlerUserData = user_data;
 }

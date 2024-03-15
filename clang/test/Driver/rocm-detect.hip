@@ -102,7 +102,7 @@
 // RUN: rm -rf %t/rocm-spack
 // RUN: cp -r %S/Inputs/rocm-spack %t
 // RUN: ln -fs %clang %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang
-// RUN: %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
+// RUN: %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -no-canonical-prefixes -v \
 // RUN:   -resource-dir=%t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/lib/clang \
 // RUN:   -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=SPACK %s
@@ -111,7 +111,7 @@
 // ROCm release. --hip-path and --rocm-device-lib-path can be used to specify them.
 
 // RUN: cp -r %t/rocm-spack/hip-* %t/rocm-spack/hip-4.0.0-abcd
-// RUN: %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
+// RUN: %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -no-canonical-prefixes -v \
 // RUN:   -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 \
 // RUN:   --hip-path=%t/rocm-spack/hip-4.0.0-abcd \
 // RUN:    %s 2>&1 | FileCheck -check-prefixes=SPACK-SET %s

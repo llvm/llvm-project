@@ -133,7 +133,8 @@ public:
   bool isF80() const;
   bool isF128() const;
 
-  /// Return true if this is an integer type with the specified width.
+  /// Return true if this is an integer type (with the specified width).
+  bool isInteger() const;
   bool isInteger(unsigned width) const;
   /// Return true if this is a signless integer type (with the specified width).
   bool isSignlessInteger() const;

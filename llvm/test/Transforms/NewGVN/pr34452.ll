@@ -9,7 +9,7 @@ source_filename = "bugpoint-output-09f7a24.bc"
 define void @sgrep() local_unnamed_addr #0 {
 ; CHECK-LABEL: @sgrep(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @WHOLELINE, align 4, !tbaa !1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @WHOLELINE, align 4, !tbaa [[TBAA1:![0-9]+]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[TOBOOL]], i32 2048, i32 2047
 ; CHECK-NEXT:    br label [[WHILE_BODY_US:%.*]]

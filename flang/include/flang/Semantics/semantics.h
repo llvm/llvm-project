@@ -16,6 +16,7 @@
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Parser/message.h"
+#include "flang/Semantics/module-dependences.h"
 #include <iosfwd>
 #include <set>
 #include <string>
@@ -108,6 +109,7 @@ public:
   parser::Messages &messages() { return messages_; }
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
   parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
+  ModuleDependences &moduleDependences() { return moduleDependences_; }
 
   SemanticsContext &set_location(
       const std::optional<parser::CharBlock> &location) {
@@ -293,6 +295,7 @@ private:
   const Scope *ppcBuiltinsScope_{nullptr}; // module __ppc_intrinsics
   std::list<parser::Program> modFileParseTrees_;
   std::unique_ptr<CommonBlockMap> commonBlockMap_;
+  ModuleDependences moduleDependences_;
 };
 
 class Semantics {

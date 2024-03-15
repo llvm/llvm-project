@@ -604,6 +604,16 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     break;
   }
 
+  case Stmt::OpenACCComputeConstructClass: {
+    unsigned NewParentScope = Scopes.size();
+    OpenACCComputeConstruct *CC = cast<OpenACCComputeConstruct>(S);
+    Scopes.push_back(GotoScope(
+        ParentScope, diag::note_acc_branch_into_compute_construct,
+        diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
+    BuildScopeInformation(CC->getStructuredBlock(), NewParentScope);
+    return;
+  }
+
   default:
     if (auto *ED = dyn_cast<OMPExecutableDirective>(S)) {
       if (!ED->isStandaloneDirective()) {
@@ -936,11 +946,16 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
       if (Scopes[I].InDiag == diag::note_protected_by_seh_finally) {
         S.Diag(From->getBeginLoc(), diag::warn_jump_out_of_seh_finally);
         break;
-      }
-      if (Scopes[I].InDiag == diag::note_omp_protected_structured_block) {
+      } else if (Scopes[I].InDiag ==
+                 diag::note_omp_protected_structured_block) {
         S.Diag(From->getBeginLoc(), diag::err_goto_into_protected_scope);
         S.Diag(To->getBeginLoc(), diag::note_omp_exits_structured_block);
         break;
+      } else if (Scopes[I].InDiag ==
+                 diag::note_acc_branch_into_compute_construct) {
+        S.Diag(From->getBeginLoc(), diag::err_goto_into_protected_scope);
+        S.Diag(Scopes[I].Loc, diag::note_acc_branch_out_of_compute_construct);
+        return;
       }
     }
   }

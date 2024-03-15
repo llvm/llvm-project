@@ -36,7 +36,7 @@
 // UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx12.{{0|1|2}}
 
 // Windows doesn't support the necessary APIs to mitigate this issue.
-// UNSUPPORTED: target={{.+}}-windows-{{.+}}
+// XFAIL: target={{.+}}-windows-{{.+}}
 
 #include <cstdio>
 #include <filesystem>

@@ -389,7 +389,7 @@ class BreakpointNames(TestBase):
         )
 
     def check_permission_results(self, bp_name):
-        self.assertEqual(bp_name.GetAllowDelete(), False, "Didn't set allow delete.")
+        self.assertFalse(bp_name.GetAllowDelete(), "Didn't set allow delete.")
         protected_bkpt = self.target.BreakpointCreateByLocation(self.main_file_spec, 10)
         protected_id = protected_bkpt.GetID()
 
@@ -402,14 +402,11 @@ class BreakpointNames(TestBase):
         self.assertSuccess(success, "Couldn't add this name to the breakpoint")
 
         self.target.DisableAllBreakpoints()
-        self.assertEqual(
-            protected_bkpt.IsEnabled(),
-            True,
-            "Didnt' keep breakpoint from being disabled",
+        self.assertTrue(
+            protected_bkpt.IsEnabled(), "Didnt' keep breakpoint from being disabled"
         )
-        self.assertEqual(
+        self.assertFalse(
             unprotected_bkpt.IsEnabled(),
-            False,
             "Protected too many breakpoints from disabling.",
         )
 
@@ -418,14 +415,11 @@ class BreakpointNames(TestBase):
         result = lldb.SBCommandReturnObject()
         self.dbg.GetCommandInterpreter().HandleCommand("break disable", result)
         self.assertTrue(result.Succeeded())
-        self.assertEqual(
-            protected_bkpt.IsEnabled(),
-            True,
-            "Didnt' keep breakpoint from being disabled",
+        self.assertTrue(
+            protected_bkpt.IsEnabled(), "Didnt' keep breakpoint from being disabled"
         )
-        self.assertEqual(
+        self.assertFalse(
             unprotected_bkpt.IsEnabled(),
-            False,
             "Protected too many breakpoints from disabling.",
         )
 

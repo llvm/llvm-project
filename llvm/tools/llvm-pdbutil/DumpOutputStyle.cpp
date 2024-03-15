@@ -1070,8 +1070,7 @@ Error DumpOutputStyle::dumpStringTableFromPdb() {
     if (IS->name_ids().empty())
       P.formatLine("Empty");
     else {
-      auto MaxID =
-          std::max_element(IS->name_ids().begin(), IS->name_ids().end());
+      auto MaxID = llvm::max_element(IS->name_ids());
       uint32_t Digits = NumDigits(*MaxID);
 
       P.formatLine("{0} | {1}", fmt_align("ID", AlignStyle::Right, Digits),
@@ -1836,9 +1835,9 @@ Error DumpOutputStyle::dumpSectionContribs() {
   class Visitor : public ISectionContribVisitor {
   public:
     Visitor(LinePrinter &P, ArrayRef<std::string> Names) : P(P), Names(Names) {
-      auto Max = std::max_element(
-          Names.begin(), Names.end(),
-          [](StringRef S1, StringRef S2) { return S1.size() < S2.size(); });
+      auto Max = llvm::max_element(Names, [](StringRef S1, StringRef S2) {
+        return S1.size() < S2.size();
+      });
       MaxNameLen = (Max == Names.end() ? 0 : Max->size());
     }
     void visit(const SectionContrib &SC) override {

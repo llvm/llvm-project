@@ -108,7 +108,7 @@ template <class T> static void append(std::vector<uint8_t> &B, const T &Data) {
 }
 
 static void writeStringTable(std::vector<uint8_t> &B,
-                             ArrayRef<const std::string> Strings) {
+                             ArrayRef<const std::string_view> Strings) {
   // The COFF string table consists of a 4-byte value which is the size of the
   // table, including the length field itself.  This value is followed by the
   // string content itself, which is an array of null-terminated C-style
@@ -171,9 +171,6 @@ static Expected<std::string> replace(StringRef S, StringRef From,
   return (Twine(S.substr(0, Pos)) + To + S.substr(Pos + From.size())).str();
 }
 
-static const std::string NullImportDescriptorSymbolName =
-    "__NULL_IMPORT_DESCRIPTOR";
-
 namespace {
 // This class constructs various small object files necessary to support linking
 // symbols imported from a DLL.  The contents are pretty strictly defined and
@@ -192,8 +189,9 @@ class ObjectFactory {
 public:
   ObjectFactory(StringRef S, MachineTypes M)
       : NativeMachine(M), ImportName(S), Library(llvm::sys::path::stem(S)),
-        ImportDescriptorSymbolName(("__IMPORT_DESCRIPTOR_" + Library).str()),
-        NullThunkSymbolName(("\x7f" + Library + "_NULL_THUNK_DATA").str()) {}
+        ImportDescriptorSymbolName((ImportDescriptorPrefix + Library).str()),
+        NullThunkSymbolName(
+            (NullThunkDataPrefix + Library + NullThunkDataSuffix).str()) {}
 
   // Creates an Import Descriptor.  This is a small object file which contains a
   // reference to the terminators and contains the library name (entry) for the

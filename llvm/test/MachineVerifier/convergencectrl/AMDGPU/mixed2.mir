@@ -1,0 +1,15 @@
+# RUN: not --crash llc -mtriple=amdgcn -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+---
+name:            mixed2
+body:             |
+  bb.0:
+    %0:sgpr_64 = IMPLICIT_DEF
+    %1:sgpr_64 = SI_CALL %0, 1
+    ; CHECK: Cannot mix controlled and uncontrolled convergence in the same function.
+    ; CHECK: CONVERGENCECTRL_ANCHOR
+    %2:sgpr_64 = CONVERGENCECTRL_ANCHOR
+    ; CHECK: Cannot mix controlled and uncontrolled convergence in the same function.
+    ; CHECK: SI_CALL %{{[0-9]}}:sgpr_64, 2
+    %3:sgpr_64 = SI_CALL %0, 2, implicit %2:sgpr_64
+
+...

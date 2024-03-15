@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -atomic-expand %s 2>&1 | FileCheck --check-prefix=GCN %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=atomic-expand %s 2>&1 | FileCheck --check-prefix=GCN %s
 
 define i32 @atomic_load_global_align1(ptr addrspace(1) %ptr) {
 ; GCN-LABEL: @atomic_load_global_align1(

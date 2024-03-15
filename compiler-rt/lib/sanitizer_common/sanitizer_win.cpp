@@ -144,7 +144,7 @@ void *MmapOrDie(uptr size, const char *mem_type, bool raw_report) {
   return rv;
 }
 
-void UnmapOrDie(void *addr, uptr size) {
+void UnmapOrDie(void *addr, uptr size, bool raw_report) {
   if (!size || !addr)
     return;
 
@@ -156,10 +156,7 @@ void UnmapOrDie(void *addr, uptr size) {
   // fails try MEM_DECOMMIT.
   if (VirtualFree(addr, 0, MEM_RELEASE) == 0) {
     if (VirtualFree(addr, size, MEM_DECOMMIT) == 0) {
-      Report("ERROR: %s failed to "
-             "deallocate 0x%zx (%zd) bytes at address %p (error code: %d)\n",
-             SanitizerToolName, size, size, addr, GetLastError());
-      CHECK("unable to unmap" && 0);
+      ReportMunmapFailureAndDie(addr, size, GetLastError(), raw_report);
     }
   }
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_FLOAT_T_H__
-#define __LLVM_LIBC_TYPES_FLOAT_T_H__
+#ifndef LLVM_LIBC_TYPES_FLOAT_T_H
+#define LLVM_LIBC_TYPES_FLOAT_T_H
 
 #if !defined(__FLT_EVAL_METHOD__) || __FLT_EVAL_METHOD__ == 0
 #define __LLVM_LIBC_FLOAT_T float
@@ -21,4 +21,4 @@
 
 typedef __LLVM_LIBC_FLOAT_T float_t;
 
-#endif // __LLVM_LIBC_TYPES_FLOAT_T_H__
+#endif // LLVM_LIBC_TYPES_FLOAT_T_H

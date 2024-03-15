@@ -30,6 +30,7 @@ define amdgpu_ps <4 x float> @load_2darraymsaa(<8 x i32> inreg %rsrc, i32 %s, i3
   ; GFX6-NEXT:   $vgpr2 = COPY [[UV2]](s32)
   ; GFX6-NEXT:   $vgpr3 = COPY [[UV3]](s32)
   ; GFX6-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ;
   ; GFX10NSA-LABEL: name: load_2darraymsaa
   ; GFX10NSA: bb.1 (%ir-block.0):
   ; GFX10NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -88,6 +89,7 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, ptr ad
   ; GFX6-NEXT:   $vgpr2 = COPY [[UV2]](s32)
   ; GFX6-NEXT:   $vgpr3 = COPY [[UV3]](s32)
   ; GFX6-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ;
   ; GFX10NSA-LABEL: name: load_2darraymsaa_tfe
   ; GFX10NSA: bb.1 (%ir-block.0):
   ; GFX10NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $vgpr0, $vgpr1, $vgpr2, $vgpr3

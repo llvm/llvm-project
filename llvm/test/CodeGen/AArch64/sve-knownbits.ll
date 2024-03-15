@@ -6,8 +6,8 @@ define <vscale x 8 x i16> @test_knownzero(<vscale x 8 x i16> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    ret
-  %a1 = shl <vscale x 8 x i16> %x, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 8, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
-  %a2 = and <vscale x 8 x i16> %a1, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 8, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %a1 = shl <vscale x 8 x i16> %x, splat (i16 8)
+  %a2 = and <vscale x 8 x i16> %a1, splat (i16 8)
   ret <vscale x 8 x i16> %a2
 }
 

@@ -697,10 +697,6 @@ public:
   bool matchMulOBy0(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Match:
-  /// (G_*ADDO x, 0) -> x + no carry out
-  bool matchAddOBy0(MachineInstr &MI, BuildFnTy &MatchInfo);
-
-  /// Match:
   /// (G_*ADDE x, y, 0) -> (G_*ADDO x, y)
   /// (G_*SUBE x, y, 0) -> (G_*SUBO x, y)
   bool matchAddEToAddO(MachineInstr &MI, BuildFnTy &MatchInfo);
@@ -810,11 +806,14 @@ public:
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine ands,
+  /// Combine ands.
   bool matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine ors,
+  /// Combine ors.
   bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine addos.
+  bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -919,6 +918,7 @@ private:
   bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);
   bool isConstantSplatVector(Register Src, int64_t SplatValue,
                              bool AllowUndefs);
+  bool isConstantOrConstantVectorI(Register Src) const;
 
   std::optional<APInt> getConstantOrConstantSplatVector(Register Src);
 
@@ -927,6 +927,9 @@ private:
   /// into a single comparison using range-based reasoning.
   bool tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
                                       BuildFnTy &MatchInfo);
+
+  // Simplify (cmp cc0 x, y) (&& or ||) (cmp cc1 x, y) -> cmp cc2 x, y.
+  bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 

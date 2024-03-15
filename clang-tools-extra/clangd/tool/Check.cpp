@@ -226,7 +226,7 @@ public:
 
     // FIXME: Check that resource-dir/built-in-headers exist?
 
-    Style = getFormatStyleForFile(File, Inputs.Contents, TFS);
+    Style = getFormatStyleForFile(File, Inputs.Contents, TFS, false);
 
     return true;
   }

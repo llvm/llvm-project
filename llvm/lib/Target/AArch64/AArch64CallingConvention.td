@@ -213,6 +213,9 @@ def CC_AArch64_Arm64EC_VarArg : CallingConv<[
 // address is passed in X9.
 let Entry = 1 in
 def CC_AArch64_Arm64EC_Thunk : CallingConv<[
+  // ARM64EC-specific: the InReg attribute can be used to access the x64 sp passed into entry thunks in x4 from the IR.
+  CCIfInReg<CCIfType<[i64], CCAssignToReg<[X4]>>>,
+
   // Byval aggregates are passed by pointer
   CCIfByVal<CCPassIndirect<i64>>,
 

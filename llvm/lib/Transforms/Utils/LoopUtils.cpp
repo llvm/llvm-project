@@ -468,6 +468,7 @@ llvm::collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
 
 bool llvm::isAlmostDeadIV(PHINode *PN, BasicBlock *LatchBlock, Value *Cond) {
   int LatchIdx = PN->getBasicBlockIndex(LatchBlock);
+  assert(LatchIdx != -1 && "LatchBlock is not a case in this PHINode");
   Value *IncV = PN->getIncomingValue(LatchIdx);
 
   for (User *U : PN->users())
@@ -632,8 +633,8 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
 
         // RemoveDIs: do the same as below for DPValues.
         if (Block->IsNewDbgInfoFormat) {
-          for (DPValue &DPV :
-               llvm::make_early_inc_range(I.getDbgValueRange())) {
+          for (DPValue &DPV : llvm::make_early_inc_range(
+                   filterDbgVars(I.getDbgRecordRange()))) {
             DebugVariable Key(DPV.getVariable(), DPV.getExpression(),
                               DPV.getDebugLoc().get());
             if (!DeadDebugSet.insert(Key).second)
@@ -676,7 +677,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // repeatedly inserted before the first instruction. To replicate this
     // behaviour, do it backwards.
     for (DPValue *DPV : llvm::reverse(DeadDPValues))
-      ExitBlock->insertDPValueBefore(DPV, InsertDbgValueBefore);
+      ExitBlock->insertDbgRecordBefore(DPV, InsertDbgValueBefore);
   }
 
   // Remove the block from the reference counting scheme, so that we can

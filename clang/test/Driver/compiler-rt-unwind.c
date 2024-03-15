@@ -52,7 +52,7 @@
 // RUN:     --target=x86_64-unknown-linux -rtlib=compiler-rt \
 // RUN:     --gcc-toolchain="" -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT %s
-// RTLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins-x86_64.a"
+// RTLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins.a"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=compiler-rt --unwindlib=libunwind \
@@ -62,7 +62,7 @@
 // RUN:     --target=x86_64-unknown-linux -rtlib=compiler-rt --unwindlib=libunwind \
 // RUN:     --gcc-toolchain="" -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s
-// RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins-x86_64.a"
+// RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins.a"
 // RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-SAME: "--as-needed"
 // RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-SAME: "-lunwind"
 // RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-SAME: "--no-as-needed"
@@ -71,14 +71,14 @@
 // RUN:     --target=x86_64-unknown-linux -rtlib=compiler-rt --unwindlib=libgcc \
 // RUN:     --gcc-toolchain="" -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT-UNWINDLIB-GCC %s
-// RTLIB-COMPILER-RT-UNWINDLIB-GCC: "{{.*}}libclang_rt.builtins-x86_64.a"
+// RTLIB-COMPILER-RT-UNWINDLIB-GCC: "{{.*}}libclang_rt.builtins.a"
 // RTLIB-COMPILER-RT-UNWINDLIB-GCC-SAME: "-lgcc_s"
 //
 // RUN: %clang -### %s 2>&1              \
 // RUN:     --target=x86_64-unknown-linux -rtlib=compiler-rt --unwindlib=libgcc \
 // RUN:     -static --gcc-toolchain="" -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT-UNWINDLIB-GCC-STATIC %s
-// RTLIB-COMPILER-RT-UNWINDLIB-GCC-STATIC: "{{.*}}libclang_rt.builtins-x86_64.a"
+// RTLIB-COMPILER-RT-UNWINDLIB-GCC-STATIC: "{{.*}}libclang_rt.builtins.a"
 // RTLIB-COMPILER-RT-UNWINDLIB-GCC-STATIC-SAME: "-lgcc_eh"
 //
 // RUN: not %clang %s 2> %t.err              \

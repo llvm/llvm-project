@@ -4,6 +4,54 @@
 
 ; Round towards minus infinity (fcvtms).
 
+define i32 @testmswbf(bfloat %a) {
+; CHECK-LABEL: testmswbf:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    frintm s0, s0
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    add w8, w10, w8
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    fcvtzs w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %r = call bfloat @llvm.floor.bf16(bfloat %a) nounwind readnone
+  %i = call i32 @llvm.fptosi.sat.i32.bf16(bfloat %r)
+  ret i32 %i
+}
+
+define i64 @testmsxbf(bfloat %a) {
+; CHECK-LABEL: testmsxbf:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    frintm s0, s0
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    add w8, w10, w8
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    fcvtzs x0, s0
+; CHECK-NEXT:    ret
+entry:
+  %r = call bfloat @llvm.floor.bf16(bfloat %a) nounwind readnone
+  %i = call i64 @llvm.fptosi.sat.i64.bf16(bfloat %r)
+  ret i64 %i
+}
+
 define i32 @testmswh(half %a) {
 ; CHECK-CVT-LABEL: testmswh:
 ; CHECK-CVT:       // %bb.0: // %entry
@@ -89,6 +137,54 @@ entry:
 }
 
 ; Round towards plus infinity (fcvtps).
+
+define i32 @testpswbf(bfloat %a) {
+; CHECK-LABEL: testpswbf:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    frintp s0, s0
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    add w8, w10, w8
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    fcvtzs w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %r = call bfloat @llvm.ceil.bf16(bfloat %a) nounwind readnone
+  %i = call i32 @llvm.fptosi.sat.i32.bf16(bfloat %r)
+  ret i32 %i
+}
+
+define i64 @testpsxbf(bfloat %a) {
+; CHECK-LABEL: testpsxbf:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    frintp s0, s0
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    add w8, w10, w8
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    fcvtzs x0, s0
+; CHECK-NEXT:    ret
+entry:
+  %r = call bfloat @llvm.ceil.bf16(bfloat %a) nounwind readnone
+  %i = call i64 @llvm.fptosi.sat.i64.bf16(bfloat %r)
+  ret i64 %i
+}
 
 define i32 @testpswh(half %a) {
 ; CHECK-CVT-LABEL: testpswh:
@@ -346,6 +442,8 @@ entry:
   ret i64 %i
 }
 
+declare i32 @llvm.fptosi.sat.i32.bf16 (bfloat)
+declare i64 @llvm.fptosi.sat.i64.bf16 (bfloat)
 declare i32 @llvm.fptosi.sat.i32.f16 (half)
 declare i64 @llvm.fptosi.sat.i64.f16 (half)
 declare i32 @llvm.fptosi.sat.i32.f32 (float)
@@ -353,6 +451,10 @@ declare i64 @llvm.fptosi.sat.i64.f32 (float)
 declare i32 @llvm.fptosi.sat.i32.f64 (double)
 declare i64 @llvm.fptosi.sat.i64.f64 (double)
 
+declare bfloat @llvm.floor.bf16(bfloat) nounwind readnone
+declare bfloat @llvm.ceil.bf16(bfloat) nounwind readnone
+declare bfloat @llvm.trunc.bf16(bfloat) nounwind readnone
+declare bfloat @llvm.round.bf16(bfloat) nounwind readnone
 declare half @llvm.floor.f16(half) nounwind readnone
 declare half @llvm.ceil.f16(half) nounwind readnone
 declare half @llvm.trunc.f16(half) nounwind readnone

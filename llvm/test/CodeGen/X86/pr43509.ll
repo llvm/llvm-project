@@ -7,7 +7,7 @@ define <8 x i8> @foo(<8 x float> %arg) {
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpltps %ymm1, %ymm0, %k1
 ; CHECK-NEXT:    vcmpgtps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %k1 {%k1}
-; CHECK-NEXT:    vmovdqu8 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z}
+; CHECK-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 bb:

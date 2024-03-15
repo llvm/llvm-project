@@ -286,6 +286,8 @@ static opt<bool> Verify("verify", desc("Verify the DWARF debug info."),
                         cat(DwarfDumpCategory));
 static opt<ErrorDetailLevel> ErrorDetails(
     "error-display", init(Unspecified),
+    desc("Set the level of detail and summary to display when verifying "
+         "(implies --verify)"),
     values(clEnumValN(NoDetailsOrSummary, "quiet",
                       "Only display whether errors occurred."),
            clEnumValN(NoDetailsOnlySummary, "summary",
@@ -295,6 +297,11 @@ static opt<ErrorDetailLevel> ErrorDetails(
            clEnumValN(BothDetailsAndSummary, "full",
                       "Display each error as well as a summary. [default]")),
     cat(DwarfDumpCategory));
+static opt<std::string> JsonErrSummaryFile(
+    "verify-json", init(""),
+    desc("Output JSON-formatted error summary to the specified file. "
+         "(Implies --verify)"),
+    value_desc("filename.json"), cat(DwarfDumpCategory));
 static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
                        cat(DwarfDumpCategory));
 static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture."),
@@ -349,6 +356,7 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
                        ErrorDetails != NoDetailsOrSummary;
     DumpOpts.ShowAggregateErrors = ErrorDetails != OnlyDetailsNoSummary &&
                                    ErrorDetails != NoDetailsOnlySummary;
+    DumpOpts.JsonErrSummaryFile = JsonErrSummaryFile;
     return DumpOpts.noImplicitRecursion();
   }
   return DumpOpts;
@@ -834,8 +842,10 @@ int main(int argc, char **argv) {
                           "-verbose is currently not supported";
     return 1;
   }
-  if (!Verify && ErrorDetails != Unspecified)
-    WithColor::warning() << "-error-detail has no affect without -verify";
+  // -error-detail and -json-summary-file both imply -verify
+  if (ErrorDetails != Unspecified || !JsonErrSummaryFile.empty()) {
+    Verify = true;
+  }
 
   std::error_code EC;
   ToolOutputFile OutputFile(OutputFilename, EC, sys::fs::OF_TextWithCRLF);

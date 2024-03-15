@@ -55,7 +55,7 @@ class AArch64ZATestCase(TestBase):
 
         # Write back the current vg to confirm read/write works at all.
         current_svg = self.match("register read vg", ["(0x[0-9]+)"])
-        self.assertTrue(current_svg is not None)
+        self.assertIsNotNone(current_svg)
         self.expect("register write vg {}".format(current_svg.group()))
 
         # Aka 128, 256 and 512 bit.

@@ -3387,7 +3387,7 @@ define <vscale x 16 x i1> @fcmp_oeq_vf_nx16f64(<vscale x 16 x double> %va) {
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    srli a0, a0, 3
 ; RV32-NEXT:    add a1, a0, a0
-; RV32-NEXT:    vsetvli zero, a1, e8, mf4, tu, ma
+; RV32-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; RV32-NEXT:    vslideup.vx v0, v24, a0
 ; RV32-NEXT:    ret
 ;
@@ -3400,7 +3400,7 @@ define <vscale x 16 x i1> @fcmp_oeq_vf_nx16f64(<vscale x 16 x double> %va) {
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    srli a0, a0, 3
 ; RV64-NEXT:    add a1, a0, a0
-; RV64-NEXT:    vsetvli zero, a1, e8, mf4, tu, ma
+; RV64-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; RV64-NEXT:    vslideup.vx v0, v24, a0
 ; RV64-NEXT:    ret
 ;
@@ -3413,7 +3413,7 @@ define <vscale x 16 x i1> @fcmp_oeq_vf_nx16f64(<vscale x 16 x double> %va) {
 ; ZVFHMIN32-NEXT:    csrr a0, vlenb
 ; ZVFHMIN32-NEXT:    srli a0, a0, 3
 ; ZVFHMIN32-NEXT:    add a1, a0, a0
-; ZVFHMIN32-NEXT:    vsetvli zero, a1, e8, mf4, tu, ma
+; ZVFHMIN32-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; ZVFHMIN32-NEXT:    vslideup.vx v0, v24, a0
 ; ZVFHMIN32-NEXT:    ret
 ;
@@ -3426,7 +3426,7 @@ define <vscale x 16 x i1> @fcmp_oeq_vf_nx16f64(<vscale x 16 x double> %va) {
 ; ZVFHMIN64-NEXT:    csrr a0, vlenb
 ; ZVFHMIN64-NEXT:    srli a0, a0, 3
 ; ZVFHMIN64-NEXT:    add a1, a0, a0
-; ZVFHMIN64-NEXT:    vsetvli zero, a1, e8, mf4, tu, ma
+; ZVFHMIN64-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; ZVFHMIN64-NEXT:    vslideup.vx v0, v24, a0
 ; ZVFHMIN64-NEXT:    ret
   %vc = fcmp oeq <vscale x 16 x double> %va, zeroinitializer

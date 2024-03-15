@@ -437,8 +437,10 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
   if (Ty->getNumParams())
     setValueSubclassData(1);   // Set the "has lazy arguments" bit.
 
-  if (ParentModule)
+  if (ParentModule) {
     ParentModule->getFunctionList().push_back(this);
+    IsNewDbgInfoFormat = ParentModule->IsNewDbgInfoFormat;
+  }
 
   HasLLVMReservedName = getName().starts_with("llvm.");
   // Ensure intrinsics have the right parameter attributes.
@@ -696,6 +698,10 @@ Attribute Function::getFnAttribute(Attribute::AttrKind Kind) const {
 
 Attribute Function::getFnAttribute(StringRef Kind) const {
   return AttributeSets.getFnAttr(Kind);
+}
+
+Attribute Function::getRetAttribute(Attribute::AttrKind Kind) const {
+  return AttributeSets.getRetAttr(Kind);
 }
 
 uint64_t Function::getFnAttributeAsParsedInteger(StringRef Name,

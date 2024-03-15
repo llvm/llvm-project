@@ -36,7 +36,7 @@ Function Name  Available
 =============  =========
 bzero          |check|
 bcmp           |check|
-bcopy          |check|       
+bcopy          |check|
 memcpy         |check|
 memset         |check|
 memcmp         |check|
@@ -99,14 +99,14 @@ These functions are not in strings.h, but are still primarily string
 functions, and are therefore tracked along with the rest of the string
 functions.
 
-The String to float functions were implemented using the Eisel-Lemire algorithm 
+The String to float functions were implemented using the Eisel-Lemire algorithm
 (read more about the algorithm here: `The Eisel-Lemire ParseNumberF64 Algorithm
 <https://nigeltao.github.io/blog/2020/eisel-lemire.html>`_). This improved
 the performance of string to float and double, and allowed it to complete this
 comprehensive test 15% faster than glibc: `Parse Number FXX Test Data
-<https://github.com/nigeltao/parse-number-fxx-test-data>`_. The test was done 
+<https://github.com/nigeltao/parse-number-fxx-test-data>`_. The test was done
 with LLVM-libc built on 2022-04-14 and Debian GLibc version 2.33-6. The targets
-``libc_str_to_float_comparison_test`` and 
+``libc_str_to_float_comparison_test`` and
 ``libc_system_str_to_float_comparison_test`` were built and run on the test data
 10 times each, skipping the first run since it was an outlier.
 
@@ -142,7 +142,7 @@ strerror_r     |check|
 Localized String Functions
 ==========================
 
-These functions require locale.h, and will be finished when locale support is 
+These functions require locale.h, and will be finished when locale support is
 implemented in LLVM-libc.
 
 =============  =========
@@ -160,7 +160,7 @@ Many String functions have an equivalent _s version, which is intended to be
 more secure and safe than the previous standard. These functions add runtime
 error detection and overflow protection. While they can be seen as an
 improvement, adoption remains relatively low among users. In addition, they are
-being considered for removal, see 
+being considered for removal, see
 `Field Experience With Annex K — Bounds Checking Interfaces
-<http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1967.htm>`_. For these reasons, 
+<http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1967.htm>`_. For these reasons,
 there is no ongoing work to implement them.

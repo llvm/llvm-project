@@ -462,13 +462,6 @@ void ST::test_present_members() {
 // CHECK-USE-PPC64LE-NEXT:    ret void
 //
 //
-// CHECK-USE-PPC64LE-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK-USE-PPC64LE-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK-USE-PPC64LE-NEXT:  entry:
-// CHECK-USE-PPC64LE-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK-USE-PPC64LE-NEXT:    ret void
-//
-//
 // CHECK-USE-I386-LABEL: define {{[^@]+}}@_Z20explicit_maps_singlei
 // CHECK-USE-I386-SAME: (i32 noundef [[II:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-USE-I386-NEXT:  entry:
@@ -770,13 +763,6 @@ void ST::test_present_members() {
 // CHECK-USE-I386-NEXT:    ret void
 //
 //
-// CHECK-USE-I386-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK-USE-I386-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK-USE-I386-NEXT:  entry:
-// CHECK-USE-I386-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK-USE-I386-NEXT:    ret void
-//
-//
 // CHECK-NOUSE-PPC64LE-LABEL: define {{[^@]+}}@_Z20explicit_maps_singlei
 // CHECK-NOUSE-PPC64LE-SAME: (i32 noundef signext [[II:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NOUSE-PPC64LE-NEXT:  entry:
@@ -1033,13 +1019,6 @@ void ST::test_present_members() {
 // CHECK-NOUSE-PPC64LE-NEXT:    ret void
 //
 //
-// CHECK-NOUSE-PPC64LE-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK-NOUSE-PPC64LE-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK-NOUSE-PPC64LE-NEXT:  entry:
-// CHECK-NOUSE-PPC64LE-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK-NOUSE-PPC64LE-NEXT:    ret void
-//
-//
 // CHECK-NOUSE-I386-LABEL: define {{[^@]+}}@_Z20explicit_maps_singlei
 // CHECK-NOUSE-I386-SAME: (i32 noundef [[II:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NOUSE-I386-NEXT:  entry:
@@ -1293,12 +1272,5 @@ void ST::test_present_members() {
 // CHECK-NOUSE-I386-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2ST20test_present_membersEv_l125
 // CHECK-NOUSE-I386-SAME: () #[[ATTR1]] {
 // CHECK-NOUSE-I386-NEXT:  entry:
-// CHECK-NOUSE-I386-NEXT:    ret void
-//
-//
-// CHECK-NOUSE-I386-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK-NOUSE-I386-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK-NOUSE-I386-NEXT:  entry:
-// CHECK-NOUSE-I386-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK-NOUSE-I386-NEXT:    ret void
 //

@@ -622,7 +622,7 @@ void DefFormat::genCustomParser(CustomDirective *el, FmtContext &ctx,
   }
   os.unindent() << ");\n";
   if (isOptional) {
-    os << "if (!odsCustomResult) return {};\n";
+    os << "if (!odsCustomResult.has_value()) return {};\n";
     os << "if (::mlir::failed(*odsCustomResult)) return ::mlir::failure();\n";
   } else {
     os << "if (::mlir::failed(odsCustomResult)) return {};\n";

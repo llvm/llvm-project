@@ -221,6 +221,7 @@ private:
 // Avoids unneccesary copies of the environment.
 class JoinedStateBuilder {
   AnalysisContext &AC;
+  Environment::ExprJoinBehavior JoinBehavior;
   std::vector<const TypeErasedDataflowAnalysisState *> All;
   std::deque<TypeErasedDataflowAnalysisState> Owned;
 
@@ -228,11 +229,13 @@ class JoinedStateBuilder {
   join(const TypeErasedDataflowAnalysisState &L,
        const TypeErasedDataflowAnalysisState &R) {
     return {AC.Analysis.joinTypeErased(L.Lattice, R.Lattice),
-            Environment::join(L.Env, R.Env, AC.Analysis)};
+            Environment::join(L.Env, R.Env, AC.Analysis, JoinBehavior)};
   }
 
 public:
-  JoinedStateBuilder(AnalysisContext &AC) : AC(AC) {}
+  JoinedStateBuilder(AnalysisContext &AC,
+                     Environment::ExprJoinBehavior JoinBehavior)
+      : AC(AC), JoinBehavior(JoinBehavior) {}
 
   void addOwned(TypeErasedDataflowAnalysisState State) {
     Owned.push_back(std::move(State));
@@ -248,12 +251,12 @@ public:
       // initialize the state of each basic block differently.
       return {AC.Analysis.typeErasedInitialElement(), AC.InitEnv.fork()};
     if (All.size() == 1)
-      // Join the environment with itself so that we discard the entries from
-      // `ExprToLoc` and `ExprToVal`.
+      // Join the environment with itself so that we discard expression state if
+      // desired.
       // FIXME: We could consider writing special-case code for this that only
       // does the discarding, but it's not clear if this is worth it.
-      return {All[0]->Lattice,
-              Environment::join(All[0]->Env, All[0]->Env, AC.Analysis)};
+      return {All[0]->Lattice, Environment::join(All[0]->Env, All[0]->Env,
+                                                 AC.Analysis, JoinBehavior)};
 
     auto Result = join(*All[0], *All[1]);
     for (unsigned I = 2; I < All.size(); ++I)
@@ -307,7 +310,22 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     }
   }
 
-  JoinedStateBuilder Builder(AC);
+  // If any of the predecessor blocks contains an expression consumed in a
+  // different block, we need to keep expression state.
+  // Note that in this case, we keep expression state for all predecessors,
+  // rather than only those predecessors that actually contain an expression
+  // consumed in a different block. While this is potentially suboptimal, it's
+  // actually likely, if we have control flow within a full expression, that
+  // all predecessors have expression state consumed in a different block.
+  Environment::ExprJoinBehavior JoinBehavior = Environment::DiscardExprState;
+  for (const CFGBlock *Pred : Preds) {
+    if (Pred && AC.CFCtx.containsExprConsumedInDifferentBlock(*Pred)) {
+      JoinBehavior = Environment::KeepExprState;
+      break;
+    }
+  }
+
+  JoinedStateBuilder Builder(AC, JoinBehavior);
   for (const CFGBlock *Pred : Preds) {
     // Skip if the `Block` is unreachable or control flow cannot get past it.
     if (!Pred || Pred->hasNoReturnElement())
@@ -388,7 +406,6 @@ builtinTransferInitializer(const CFGInitializer &Elt,
     }
   }
   assert(Member != nullptr);
-  assert(MemberLoc != nullptr);
 
   // FIXME: Instead of these case distinctions, we would ideally want to be able
   // to simply use `Environment::createObject()` here, the same way that we do
@@ -404,6 +421,7 @@ builtinTransferInitializer(const CFGInitializer &Elt,
 
     ParentLoc->setChild(*Member, InitExprLoc);
   } else if (auto *InitExprVal = Env.getValue(*InitExpr)) {
+    assert(MemberLoc != nullptr);
     if (Member->getType()->isRecordType()) {
       auto *InitValStruct = cast<RecordValue>(InitExprVal);
       // FIXME: Rather than performing a copy here, we should really be

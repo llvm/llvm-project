@@ -33,6 +33,10 @@ int main() {
   if (omp_target_memcpy(dev_ptr, &host_var1, sizeof(int), 0, 0, dev, host))
     abort();
 
+  // D2D transfer
+  if (omp_target_memcpy(dev_ptr, dev_ptr, sizeof(int), 0, 0, dev, dev))
+    abort();
+
   // D2H transfer
   if (omp_target_memcpy(&host_var2, dev_ptr, sizeof(int), 0, 0, host, dev))
     abort();
@@ -46,16 +50,25 @@ int main() {
 
 // clang-format off
 /// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=1
+/// CHECK-SAME: src_device_num=[[HOST:[0-9]+]]
+/// CHECK-SAME: dest_device_num=[[DEVICE:[0-9]+]]
 /// CHECK-NOT: code=(nil)
-/// CHECK: code=[[CODE1:.*]]
+/// CHECK: code=[[CODE1:0x[0-f]+]]
 /// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=2
+/// CHECK-SAME: src_device_num=[[HOST]] {{.+}} dest_device_num=[[DEVICE]]
 /// CHECK-NOT: code=(nil)
 /// CHECK-NOT: code=[[CODE1]]
-/// CHECK: code=[[CODE2:.*]]
+/// CHECK: code=[[CODE2:0x[0-f]+]]
 /// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=3
+/// CHECK-SAME: src_device_num=[[DEVICE]] {{.+}} dest_device_num=[[DEVICE]]
 /// CHECK-NOT: code=(nil)
 /// CHECK-NOT: code=[[CODE2]]
-/// CHECK: code=[[CODE3:.*]]
-/// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=4
+/// CHECK: code=[[CODE3:0x[0-f]+]]
+/// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=3
+/// CHECK-SAME: src_device_num=[[DEVICE]] {{.+}} dest_device_num=[[HOST]]
 /// CHECK-NOT: code=(nil)
 /// CHECK-NOT: code=[[CODE3]]
+/// CHECK: code=[[CODE4:0x[0-f]+]]
+/// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=4
+/// CHECK-NOT: code=(nil)
+/// CHECK-NOT: code=[[CODE4]]

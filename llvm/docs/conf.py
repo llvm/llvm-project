@@ -26,7 +26,18 @@ sys.path.insert(0, os.path.abspath("."))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["myst_parser", "sphinx.ext.intersphinx", "sphinx.ext.todo"]
+extensions = ["sphinx.ext.intersphinx", "sphinx.ext.todo"]
+
+# When building man pages, we do not use the markdown pages,
+# So, we can continue without the myst_parser dependencies.
+# Doing so reduces dependencies of some packaged llvm distributions.
+try:
+    import myst_parser
+
+    extensions.append("myst_parser")
+except ImportError:
+    if not tags.has("builder-man"):
+        raise
 
 # Automatic anchors for markdown titles
 from llvm_slug import make_slug

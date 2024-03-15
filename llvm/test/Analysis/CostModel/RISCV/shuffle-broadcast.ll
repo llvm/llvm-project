@@ -45,9 +45,9 @@ define void  @broadcast_scalable() #0{
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %38 = shufflevector <vscale x 2 x i1> undef, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %39 = shufflevector <vscale x 4 x i1> undef, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %40 = shufflevector <vscale x 8 x i1> undef, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %41 = shufflevector <vscale x 16 x i1> undef, <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %42 = shufflevector <vscale x 32 x i1> undef, <vscale x 32 x i1> undef, <vscale x 32 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: %43 = shufflevector <vscale x 64 x i1> undef, <vscale x 64 x i1> undef, <vscale x 64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %41 = shufflevector <vscale x 16 x i1> undef, <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %42 = shufflevector <vscale x 32 x i1> undef, <vscale x 32 x i1> undef, <vscale x 32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %43 = shufflevector <vscale x 64 x i1> undef, <vscale x 64 x i1> undef, <vscale x 64 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'broadcast_scalable'
@@ -92,9 +92,9 @@ define void  @broadcast_scalable() #0{
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %38 = shufflevector <vscale x 2 x i1> undef, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %39 = shufflevector <vscale x 4 x i1> undef, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %40 = shufflevector <vscale x 8 x i1> undef, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %41 = shufflevector <vscale x 16 x i1> undef, <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %42 = shufflevector <vscale x 32 x i1> undef, <vscale x 32 x i1> undef, <vscale x 32 x i32> zeroinitializer
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %43 = shufflevector <vscale x 64 x i1> undef, <vscale x 64 x i1> undef, <vscale x 64 x i32> zeroinitializer
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %41 = shufflevector <vscale x 16 x i1> undef, <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %42 = shufflevector <vscale x 32 x i1> undef, <vscale x 32 x i1> undef, <vscale x 32 x i32> zeroinitializer
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %43 = shufflevector <vscale x 64 x i1> undef, <vscale x 64 x i1> undef, <vscale x 64 x i32> zeroinitializer
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %zero = shufflevector <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x i32> zeroinitializer

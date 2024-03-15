@@ -75,8 +75,8 @@ class SendSignalTestCase(TestBase):
         self.assertEqual(len(threads), 1, "One thread stopped for a signal.")
         thread = threads[0]
 
-        self.assertTrue(
-            thread.GetStopReasonDataCount() >= 1, "There was data in the event."
+        self.assertGreaterEqual(
+            thread.GetStopReasonDataCount(), 1, "There was data in the event."
         )
         self.assertEqual(
             thread.GetStopReasonDataAtIndex(0),

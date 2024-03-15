@@ -69,7 +69,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BRIND, MVT::Other, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
 
-  setOperationAction(ISD::GlobalAddress, MVT::i64, Custom);
+  setOperationAction({ISD::GlobalAddress, ISD::ConstantPool}, MVT::i64, Custom);
 
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
@@ -308,6 +308,8 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBR_CC(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
+  case ISD::ConstantPool:
+    return LowerConstantPool(Op, DAG);
   case ISD::SELECT_CC:
     return LowerSELECT_CC(Op, DAG);
   case ISD::SDIV:
@@ -691,18 +693,41 @@ const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 }
 
+static SDValue getTargetNode(GlobalAddressSDNode *N, const SDLoc &DL, EVT Ty,
+                             SelectionDAG &DAG, unsigned Flags) {
+  return DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, Flags);
+}
+
+static SDValue getTargetNode(ConstantPoolSDNode *N, const SDLoc &DL, EVT Ty,
+                             SelectionDAG &DAG, unsigned Flags) {
+  return DAG.getTargetConstantPool(N->getConstVal(), Ty, N->getAlign(),
+                                   N->getOffset(), Flags);
+}
+
+template <class NodeTy>
+SDValue BPFTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
+                                   unsigned Flags) const {
+  SDLoc DL(N);
+
+  SDValue GA = getTargetNode(N, DL, MVT::i64, DAG, Flags);
+
+  return DAG.getNode(BPFISD::Wrapper, DL, MVT::i64, GA);
+}
+
 SDValue BPFTargetLowering::LowerGlobalAddress(SDValue Op,
                                               SelectionDAG &DAG) const {
-  auto *N = cast<GlobalAddressSDNode>(Op);
+  GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   if (N->getOffset() != 0)
     report_fatal_error("invalid offset for global address: " +
                        Twine(N->getOffset()));
+  return getAddr(N, DAG);
+}
 
-  SDLoc DL(Op);
-  const GlobalValue *GV = N->getGlobal();
-  SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i64);
+SDValue BPFTargetLowering::LowerConstantPool(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  ConstantPoolSDNode *N = cast<ConstantPoolSDNode>(Op);
 
-  return DAG.getNode(BPFISD::Wrapper, DL, MVT::i64, GA);
+  return getAddr(N, DAG);
 }
 
 unsigned

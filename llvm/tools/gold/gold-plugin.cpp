@@ -857,7 +857,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
 
   // Disable the new X86 relax relocations since gold might not support them.
   // FIXME: Check the gold version or add a new option to enable them.
-  Conf.Options.RelaxELFRelocations = false;
+  Conf.Options.MCOptions.X86RelaxRelocations = false;
 
   // Toggle function/data sections.
   if (!codegen::getExplicitFunctionSections())

@@ -459,6 +459,10 @@ private:
   void Select_ARITH_FENCE(SDNode *N);
   void Select_MEMBARRIER(SDNode *N);
 
+  void Select_CONVERGENCECTRL_ANCHOR(SDNode *N);
+  void Select_CONVERGENCECTRL_ENTRY(SDNode *N);
+  void Select_CONVERGENCECTRL_LOOP(SDNode *N);
+
   void pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops, SDValue Operand,
                                 SDLoc DL);
   void Select_STACKMAP(SDNode *N);

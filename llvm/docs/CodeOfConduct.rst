@@ -135,6 +135,17 @@ events as part of each events' information. In person reports will still be
 kept confidential exactly as above, but also feel free to (anonymously if
 needed) email conduct@llvm.org.
 
+Bans
+====
+
+The code of conduct committee may decide to ban an individual from the
+community for violating the code of conduct. The goal of a ban is to protect
+community members from having to interact with people who are consistently not
+respecting the code of conduct. Please refer to the
+:doc:`Developer Policy<DeveloperPolicy>` section on Bans for how to handle
+interactions with former community members. If you need further guidance,
+please contact conduct@llvm.org.
+
 Code of Conduct Committee
 =========================
 

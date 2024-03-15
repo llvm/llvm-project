@@ -36,7 +36,7 @@ func.func @matmul_f32() {
 
   // Print and verify the output
   // F32-LABEL: SVE: START OF TEST OUTPUT
-  vector.print str "SVE: START OF TEST OUTPUT"
+  vector.print str "SVE: START OF TEST OUTPUT\n"
 
   // F32-NEXT: Unranked Memref {{.*}} rank = 2 offset = 0 sizes = [5, 15] strides = [15, 1] data =
   // F32-COUNT-5: [29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788]
@@ -44,7 +44,7 @@ func.func @matmul_f32() {
   call @printMemrefF32(%xf) : (tensor<*xf32>) -> ()
 
   // F32-NEXT: SVE: END OF TEST OUTPUT
-  vector.print str "SVE: END OF TEST OUTPUT"
+  vector.print str "SVE: END OF TEST OUTPUT\n"
 
   return
 }
@@ -73,7 +73,7 @@ func.func @matmul_mixed_ty() {
 
   // Print and verify the output
   // MIXED-LABEL: SVE: START OF TEST OUTPUT
-  vector.print str "SVE: START OF TEST OUTPUT"
+  vector.print str "SVE: START OF TEST OUTPUT\n"
 
   // MIXED-NEXT: Unranked Memref {{.*}} rank = 2 offset = 0 sizes = [5, 15] strides = [15, 1] data =
   // MIXED-COUNT-5: [45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387]
@@ -81,7 +81,7 @@ func.func @matmul_mixed_ty() {
   call @printMemrefI32(%xf) : (tensor<*xi32>) -> ()
 
   // MIXED-NEXT: SVE: END OF TEST OUTPUT
-  vector.print str "SVE: END OF TEST OUTPUT"
+  vector.print str "SVE: END OF TEST OUTPUT\n"
 
   return
 }

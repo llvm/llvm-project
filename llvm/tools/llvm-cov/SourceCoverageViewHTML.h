@@ -19,8 +19,6 @@ namespace llvm {
 
 using namespace coverage;
 
-class ThreadPool;
-
 struct FileCoverageSummary;
 
 /// A coverage printer for html output.

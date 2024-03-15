@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefix=GFX12 %s
 
 v_dot2_f32_bf16 v5, v1, v2, v3
 // GFX12: [0x05,0x40,0x1a,0xcc,0x01,0x05,0x0e,0x1c]

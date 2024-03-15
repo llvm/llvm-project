@@ -197,23 +197,23 @@ scratch_load_lds_ushort v2, off
 // GFX940: scratch_load_lds_sshort v2, off         ; encoding: [0x00,0x60,0xa4,0xdc,0x02,0x00,0x7f,0x00]
 scratch_load_lds_sshort v2, off
 
-// NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 // GFX940: s_getreg_b32 s1, hwreg(HW_REG_XCC_ID)   ; encoding: [0x14,0xf8,0x81,0xb8]
 s_getreg_b32 s1, hwreg(HW_REG_XCC_ID)
 
-// NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 // GFX940: s_getreg_b32 s1, hwreg(HW_REG_SQ_PERF_SNAPSHOT_DATA) ; encoding: [0x15,0xf8,0x81,0xb8]
 s_getreg_b32 s1, hwreg(HW_REG_SQ_PERF_SNAPSHOT_DATA)
 
-// NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 // GFX940: s_getreg_b32 s1, hwreg(HW_REG_SQ_PERF_SNAPSHOT_DATA1) ; encoding: [0x16,0xf8,0x81,0xb8]
 s_getreg_b32 s1, hwreg(HW_REG_SQ_PERF_SNAPSHOT_DATA1)
 
-// NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 // GFX940: s_getreg_b32 s1, hwreg(HW_REG_SQ_PERF_SNAPSHOT_PC_LO) ; encoding: [0x17,0xf8,0x81,0xb8]
 s_getreg_b32 s1, hwreg(HW_REG_SQ_PERF_SNAPSHOT_PC_LO)
 
-// NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 // GFX940: s_getreg_b32 s1, hwreg(HW_REG_SQ_PERF_SNAPSHOT_PC_HI) ; encoding: [0x18,0xf8,0x81,0xb8]
 s_getreg_b32 s1, hwreg(HW_REG_SQ_PERF_SNAPSHOT_PC_HI)
 

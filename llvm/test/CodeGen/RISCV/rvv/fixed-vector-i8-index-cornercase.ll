@@ -148,17 +148,17 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v24, a1
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 0
+; CHECK-NEXT:    vmv.v.i v7, 0
 ; CHECK-NEXT:    lui a1, 1047552
 ; CHECK-NEXT:    addiw a1, a1, 1
 ; CHECK-NEXT:    slli a1, a1, 23
 ; CHECK-NEXT:    addi a1, a1, 1
 ; CHECK-NEXT:    slli a1, a1, 18
-; CHECK-NEXT:    vslide1down.vx v0, v0, a1
+; CHECK-NEXT:    vslide1down.vx v0, v7, a1
 ; CHECK-NEXT:    lui a1, 4
-; CHECK-NEXT:    vmv.s.x v1, a1
+; CHECK-NEXT:    vmv.s.x v7, a1
 ; CHECK-NEXT:    vsetivli zero, 7, e64, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v0, v1, 6
+; CHECK-NEXT:    vslideup.vi v0, v7, 6
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, mu
 ; CHECK-NEXT:    vrgather.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    addi sp, s0, -1536

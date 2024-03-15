@@ -18,6 +18,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -87,6 +88,7 @@ static std::vector<std::string> InputFilenames;
 static std::string ConvertFilename;
 static std::vector<std::string> ArchFilters;
 static std::string OutputFilename;
+static std::string JsonSummaryFile;
 static bool Verify;
 static unsigned NumThreads;
 static uint64_t SegmentSize;
@@ -137,6 +139,9 @@ static void parseArgs(int argc, char **argv) {
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_out_file_EQ))
     OutputFilename = A->getValue();
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_json_summary_file_EQ))
+    JsonSummaryFile = A->getValue();
 
   Verify = Args.hasArg(OPT_verify);
 
@@ -515,10 +520,34 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     // Call error() if we have an error and it will exit with a status of 1
     if (auto Err = convertFileToGSYM(Aggregation))
       error("DWARF conversion failed: ", std::move(Err));
+
     // Report the errors from aggregator:
     Aggregation.EnumerateResults([&](StringRef category, unsigned count) {
       OS << category << " occurred " << count << " time(s)\n";
     });
+    if (!JsonSummaryFile.empty()) {
+      std::error_code EC;
+      raw_fd_ostream JsonStream(JsonSummaryFile, EC, sys::fs::OF_Text);
+      if (EC) {
+        OS << "error opening aggregate error json file '" << JsonSummaryFile
+           << "' for writing: " << EC.message() << '\n';
+        return 1;
+      }
+
+      llvm::json::Object Categories;
+      uint64_t ErrorCount = 0;
+      Aggregation.EnumerateResults([&](StringRef Category, unsigned Count) {
+        llvm::json::Object Val;
+        Val.try_emplace("count", Count);
+        Categories.try_emplace(Category, std::move(Val));
+        ErrorCount += Count;
+      });
+      llvm::json::Object RootNode;
+      RootNode.try_emplace("error-categories", std::move(Categories));
+      RootNode.try_emplace("error-count", ErrorCount);
+
+      JsonStream << llvm::json::Value(std::move(RootNode));
+    }
     return 0;
   }
 

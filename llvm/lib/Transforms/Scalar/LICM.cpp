@@ -2234,7 +2234,7 @@ bool llvm::promoteLoopAccessesToScalars(
   if (FoundLoadToPromote || !StoreIsGuanteedToExecute) {
     PreheaderLoad =
         new LoadInst(AccessTy, SomePtr, SomePtr->getName() + ".promoted",
-                     Preheader->getTerminator());
+                     Preheader->getTerminator()->getIterator());
     if (SawUnorderedAtomic)
       PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
     PreheaderLoad->setAlignment(Alignment);

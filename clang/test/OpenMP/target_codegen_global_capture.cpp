@@ -1074,13 +1074,6 @@ int tbar2(short a, short b, short c, short d){
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK1-SAME: () #[[ATTR3:[0-9]+]] {
-// CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK1-NEXT:    ret void
-//
-//
 // CHECK3-LABEL: define {{[^@]+}}@_Z3foossss
 // CHECK3-SAME: (i16 noundef signext [[A:%.*]], i16 noundef signext [[B:%.*]], i16 noundef signext [[C:%.*]], i16 noundef signext [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK3-NEXT:  entry:
@@ -1986,12 +1979,5 @@ int tbar2(short a, short b, short c, short d){
 // CHECK3-NEXT:    [[ADD4:%.*]] = fadd double [[CONV3]], 1.000000e+00
 // CHECK3-NEXT:    [[CONV5:%.*]] = fptrunc double [[ADD4]] to float
 // CHECK3-NEXT:    store float [[CONV5]], ptr [[TMP2]], align 4
-// CHECK3-NEXT:    ret void
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK3-SAME: () #[[ATTR3:[0-9]+]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK3-NEXT:    ret void
 //

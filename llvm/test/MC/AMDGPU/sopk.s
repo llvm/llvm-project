@@ -158,12 +158,39 @@ s_getreg_b32 s2, hwreg(51, 1, 31)
 // GFX10: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x02,0xb9]
 // GFX11: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x82,0xb8]
 
+s_getreg_b32 s2, {id: 51, offset: 1, size: 31}
+// SICI: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x02,0xb9]
+// VI9:  s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x82,0xb8]
+// GFX10: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x02,0xb9]
+// GFX11: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x82,0xb8]
+
 // HW register code of unknown HW register, default offset/width
 s_getreg_b32 s2, hwreg(51)
 // SICI: s_getreg_b32 s2, hwreg(51) ; encoding: [0x33,0xf8,0x02,0xb9]
 // VI9:  s_getreg_b32 s2, hwreg(51) ; encoding: [0x33,0xf8,0x82,0xb8]
 // GFX10: s_getreg_b32 s2, hwreg(51) ; encoding: [0x33,0xf8,0x02,0xb9]
 // GFX11: s_getreg_b32 s2, hwreg(51) ; encoding: [0x33,0xf8,0x82,0xb8]
+
+// Structured form using default values.
+s_getreg_b32 s2, {id: 51}
+// SICI: s_getreg_b32 s2, hwreg(51) ; encoding: [0x33,0xf8,0x02,0xb9]
+// VI9:  s_getreg_b32 s2, hwreg(51) ; encoding: [0x33,0xf8,0x82,0xb8]
+// GFX10: s_getreg_b32 s2, hwreg(51) ; encoding: [0x33,0xf8,0x02,0xb9]
+// GFX11: s_getreg_b32 s2, hwreg(51) ; encoding: [0x33,0xf8,0x82,0xb8]
+
+// Fields may come in any order.
+s_getreg_b32 s2, {size: 32, id: 51}
+// SICI: s_getreg_b32 s2, hwreg(51) ; encoding: [0x33,0xf8,0x02,0xb9]
+// VI9:  s_getreg_b32 s2, hwreg(51) ; encoding: [0x33,0xf8,0x82,0xb8]
+// GFX10: s_getreg_b32 s2, hwreg(51) ; encoding: [0x33,0xf8,0x02,0xb9]
+// GFX11: s_getreg_b32 s2, hwreg(51) ; encoding: [0x33,0xf8,0x82,0xb8]
+
+// Empty field lists are allowed.
+s_getreg_b32 s2, {}
+// SICI: s_getreg_b32 s2, hwreg(0) ; encoding: [0x00,0xf8,0x02,0xb9]
+// VI9:  s_getreg_b32 s2, hwreg(0) ; encoding: [0x00,0xf8,0x82,0xb8]
+// GFX10: s_getreg_b32 s2, hwreg(0) ; encoding: [0x00,0xf8,0x02,0xb9]
+// GFX11: s_getreg_b32 s2, hwreg(0) ; encoding: [0x00,0xf8,0x82,0xb8]
 
 // HW register code of unknown HW register, valid symbolic name range but no name available
 s_getreg_b32 s2, hwreg(10)
@@ -271,17 +298,17 @@ s_setreg_b32 hwreg(HW_REG_HW_ID), s2
 // SICI: s_setreg_b32 hwreg(HW_REG_HW_ID), s2       ; encoding: [0x04,0xf8,0x82,0xb9]
 // VI9:  s_setreg_b32 hwreg(HW_REG_HW_ID), s2       ; encoding: [0x04,0xf8,0x02,0xb9]
 // GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID1), s2   ; encoding: [0x17,0xf8,0x82,0xb9]
-// NOGFX11: :[[@LINE-4]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// NOGFX11: :[[@LINE-4]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 
 s_setreg_b32 hwreg(HW_REG_HW_ID1), s2
-// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
-// NOGFX9: :[[@LINE-2]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
+// NOGFX9: :[[@LINE-2]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 // GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID1), s2      ; encoding: [0x17,0xf8,0x82,0xb9]
 // GFX11: s_setreg_b32 hwreg(HW_REG_HW_ID1), s2 ; encoding: [0x17,0xf8,0x02,0xb9]
 
 s_setreg_b32 hwreg(HW_REG_HW_ID2), s2
-// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
-// NOGFX9: :[[@LINE-2]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
+// NOGFX9: :[[@LINE-2]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 // GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID2), s2      ; encoding: [0x18,0xf8,0x82,0xb9]
 // GFX11: s_setreg_b32 hwreg(HW_REG_HW_ID2), s2 ; encoding: [0x18,0xf8,0x02,0xb9]
 
@@ -427,7 +454,19 @@ s_getreg_b32 s2, hwreg(reg + 1, offset - 1, width + 1)
 // GFX10: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x02,0xb9]
 // GFX11: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x82,0xb8]
 
+s_getreg_b32 s2, {id: reg + 1, offset: offset - 1, size: width + 1}
+// SICI: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x02,0xb9]
+// VI9:  s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x82,0xb8]
+// GFX10: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x02,0xb9]
+// GFX11: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x82,0xb8]
+
 s_getreg_b32 s2, hwreg(1 + reg, -1 + offset, 1 + width)
+// SICI: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x02,0xb9]
+// VI9:  s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x82,0xb8]
+// GFX10: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x02,0xb9]
+// GFX11: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x82,0xb8]
+
+s_getreg_b32 s2, {id: 1 + reg, offset: -1 + offset, size: 1 + width}
 // SICI: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x02,0xb9]
 // VI9:  s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x82,0xb8]
 // GFX10: s_getreg_b32 s2, hwreg(51, 1, 31) ; encoding: [0x73,0xf0,0x02,0xb9]

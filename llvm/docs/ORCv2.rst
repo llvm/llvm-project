@@ -738,7 +738,7 @@ or creating any Modules attached to it. E.g.
 
     ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
 
-    ThreadPool TP(NumThreads);
+    DefaultThreadPool TP(NumThreads);
     JITStack J;
 
     for (auto &ModulePath : ModulePaths) {

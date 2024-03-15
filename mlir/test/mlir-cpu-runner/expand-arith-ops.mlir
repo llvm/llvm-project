@@ -13,10 +13,21 @@ func.func @trunc_bf16(%a : f32) {
 }
 
 func.func @main() {
-  // CHECK: 1.00781
-  %roundOneI = arith.constant 0x3f808000 : i32
-  %roundOneF = arith.bitcast %roundOneI : i32 to f32
-  call @trunc_bf16(%roundOneF): (f32) -> ()
+  // Note: this is a tie (low 16 bits are 0x8000). We expect the rounding behavior
+  // to break ties "to nearest-even", which in this case means downwards,
+  // since bit 16 is not set.
+  // CHECK: 1
+  %value_1_00391_I = arith.constant 0x3f808000 : i32
+  %value_1_00391_F = arith.bitcast %value_1_00391_I : i32 to f32
+  call @trunc_bf16(%value_1_00391_F): (f32) -> ()
+
+  // Note: this is a tie (low 16 bits are 0x8000). We expect the rounding behavior
+  // to break ties "to nearest-even", which in this case means upwards,
+  // since bit 16 is set.
+  // CHECK-NEXT: 1.0156
+  %value_1_01172_I = arith.constant 0x3f818000 : i32
+  %value_1_01172_F = arith.bitcast %value_1_01172_I : i32 to f32
+  call @trunc_bf16(%value_1_01172_F): (f32) -> ()
 
   // CHECK-NEXT: -1
   %noRoundNegOneI = arith.constant 0xbf808000 : i32
@@ -38,15 +49,27 @@ func.func @main() {
   %neginff = arith.bitcast %neginfi : i32 to f32
   call @trunc_bf16(%neginff): (f32) -> ()
 
-  // CHECK-NEXT: 3.38953e+38
-  %bigi = arith.constant 0x7f7fffff : i32
-  %bigf = arith.bitcast %bigi : i32 to f32
-  call @trunc_bf16(%bigf): (f32) -> ()
+  // Note: this rounds upwards. As the mantissa was already saturated, this rounding
+  // causes the exponent to be incremented. As the exponent was already the
+  // maximum exponent value for finite values, this increment of the exponent
+  // causes this to overflow to +inf.
+  // CHECK-NEXT: inf
+  %big_overflowing_i = arith.constant 0x7f7fffff : i32
+  %big_overflowing_f = arith.bitcast %big_overflowing_i : i32 to f32
+  call @trunc_bf16(%big_overflowing_f): (f32) -> ()
 
-  // CHECK-NEXT: -3.38953e+38
-  %negbigi = arith.constant 0xff7fffff : i32
-  %negbigf = arith.bitcast %negbigi : i32 to f32
-  call @trunc_bf16(%negbigf): (f32) -> ()
+  // Same as the previous testcase but negative.
+  // CHECK-NEXT: -inf
+  %negbig_overflowing_i = arith.constant 0xff7fffff : i32
+  %negbig_overflowing_f = arith.bitcast %negbig_overflowing_i : i32 to f32
+  call @trunc_bf16(%negbig_overflowing_f): (f32) -> ()
+
+  // In contrast to the previous two testcases, the upwards-rounding here
+  // does not cause overflow.
+  // CHECK-NEXT: 3.38953e+38
+  %big_nonoverflowing_i = arith.constant 0x7f7effff : i32
+  %big_nonoverflowing_f = arith.bitcast %big_nonoverflowing_i : i32 to f32
+  call @trunc_bf16(%big_nonoverflowing_f): (f32) -> ()
 
   // CHECK-NEXT: 1.625
   %exprolli = arith.constant 0x3fcfffff : i32

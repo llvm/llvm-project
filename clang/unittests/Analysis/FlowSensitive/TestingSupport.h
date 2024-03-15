@@ -432,6 +432,8 @@ llvm::Error checkDataflowWithNoopAnalysis(
         {});
 
 /// Returns the `ValueDecl` for the given identifier.
+/// The returned pointer is guaranteed to be non-null; the function asserts if
+/// no `ValueDecl` with the given name is found.
 ///
 /// Requirements:
 ///
@@ -475,6 +477,15 @@ ValueT &getValueForDecl(ASTContext &ASTCtx, const Environment &Env,
   return *cast<ValueT>(Env.getValue(*VD));
 }
 
+/// Returns the storage location for the field called `Name` of `Loc`.
+/// Optionally casts the field storage location to `T`.
+template <typename T = StorageLocation>
+std::enable_if_t<std::is_base_of_v<StorageLocation, T>, T &>
+getFieldLoc(const RecordStorageLocation &Loc, llvm::StringRef Name,
+            ASTContext &ASTCtx) {
+  return *cast<T>(Loc.getChild(*findValueDecl(ASTCtx, Name)));
+}
+
 /// Returns the value of a `Field` on the record referenced by `Loc.`
 /// Returns null if `Loc` is null.
 inline Value *getFieldValue(const RecordStorageLocation *Loc,
@@ -485,6 +496,14 @@ inline Value *getFieldValue(const RecordStorageLocation *Loc,
   if (FieldLoc == nullptr)
     return nullptr;
   return Env.getValue(*FieldLoc);
+}
+
+/// Returns the value of a `Field` on the record referenced by `Loc.`
+/// Returns null if `Loc` is null.
+inline Value *getFieldValue(const RecordStorageLocation *Loc,
+                            llvm::StringRef Name, ASTContext &ASTCtx,
+                            const Environment &Env) {
+  return getFieldValue(Loc, *findValueDecl(ASTCtx, Name), Env);
 }
 
 /// Creates and owns constraints which are boolean values.

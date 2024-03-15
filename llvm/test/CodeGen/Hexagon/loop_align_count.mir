@@ -1,0 +1,131 @@
+# RUN: llc -march=hexagon -O3 -run-pass hexagon-loop-align -o - %s\
+# RUN: -debug-only=hexagon-loop-align -verify-machineinstrs 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Test that we only count til endloop instruction and we align this
+# loop to 32.
+# CHECK: Loop Align Pass:
+# CHECK: Instruction Count : 16
+# CHECK: bb.5 (align 32)
+---
+name: fred
+tracksRegLiveness: true
+
+body:             |
+  bb.0:
+    successors: %bb.1(0x50000000), %bb.8(0x30000000)
+    liveins: $r0, $r1, $r2, $r3, $r4, $r5
+
+    renamable $p0 = C2_cmpgti renamable $r2, 0
+    J2_jumpf killed renamable $p0, %bb.8, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+    liveins: $r0, $r1, $r2, $r3, $r4, $r5
+
+    renamable $r7 = A2_addi killed renamable $r2, 1
+    renamable $r8 = S2_asr_i_r renamable $r1, 31
+    renamable $p0 = C2_cmpgti renamable $r1, 63
+    renamable $r2 = S2_asr_i_r renamable $r3, 2
+    renamable $r6 = S2_asr_i_r renamable $r3, 1
+    renamable $r9 = S2_lsr_i_r killed renamable $r7, 1
+    renamable $r1 = S2_lsr_i_r_acc killed renamable $r1, killed renamable $r8, 26
+    renamable $r7 = A2_tfrsi 0
+    renamable $r1 = S2_asr_i_r killed renamable $r1, 6
+    J2_loop1r %bb.2, killed renamable $r9, implicit-def $lc1, implicit-def $sa1
+    renamable $r8 = nsw A2_add renamable $r6, renamable $r2
+
+  bb.2:
+    successors: %bb.3(0x40000000), %bb.7(0x40000000)
+    liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8
+
+    J2_jumpf renamable $p0, %bb.7, implicit-def dead $pc
+    J2_jump %bb.3, implicit-def dead $pc
+
+  bb.3:
+    successors: %bb.4(0x80000000)
+    liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8
+
+    renamable $r13 = exact S2_asr_i_r renamable $r7, 1
+    renamable $r12 = COPY renamable $r4
+    renamable $r9 = COPY renamable $r4
+    renamable $r14 = nsw A2_addi renamable $r7, 1
+    renamable $r15 = nsw M2_mpyi killed renamable $r13, renamable $r3
+    renamable $r9 = M2_maci killed renamable $r9, killed renamable $r14, renamable $r5
+    renamable $r13 = A2_add renamable $r8, renamable $r15
+    renamable $r28 = A2_add renamable $r15, renamable $r2
+    renamable $r10 = A2_add renamable $r15, renamable $r6
+    renamable $r12 = M2_maci killed renamable $r12, renamable $r7, renamable $r5
+    renamable $r13 = S2_addasl_rrri renamable $r0, killed renamable $r13, 1
+    renamable $r14 = S2_addasl_rrri renamable $r0, killed renamable $r15, 1
+    renamable $r15 = S2_addasl_rrri renamable $r0, killed renamable $r28, 1
+    renamable $r28 = S2_addasl_rrri renamable $r0, killed renamable $r10, 1
+
+  bb.4:
+    successors: %bb.5(0x40000000), %bb.6(0x40000000)
+    liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r12, $r13, $r14, $r15, $r28
+
+    renamable $v0, renamable $r14 = V6_vL32b_pi killed renamable $r14, 64
+    renamable $p1 = C2_cmpgtui renamable $r1, 1
+    renamable $r10 = A2_addi renamable $r1, -1
+    renamable $v2, renamable $r28 = V6_vL32b_pi killed renamable $r28, 64
+    renamable $v1 = V6_vaddh renamable $v0, renamable $v2
+    renamable $v3, renamable $r15 = V6_vL32b_pi killed renamable $r15, 64
+    renamable $v0 = V6_vsubh killed renamable $v0, killed renamable $v2
+    J2_loop0r %bb.5, killed renamable $r10, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    renamable $v4, renamable $r13 = V6_vL32b_pi killed renamable $r13, 64
+    renamable $v2 = V6_vaddh renamable $v3, renamable $v4
+    J2_jumpf killed renamable $p1, %bb.6, implicit-def $pc
+    J2_jump %bb.5, implicit-def $pc
+
+  bb.5:
+    successors: %bb.5(0x7c000000), %bb.6(0x04000000)
+    liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r12, $r13, $r14, $r15, $r28, $v0, $v1, $v2, $v3, $v4
+
+    renamable $v3 = V6_vsubh killed renamable $v3, killed renamable $v4
+    renamable $v4, renamable $r14 = V6_vL32b_pi killed renamable $r14, 64
+    renamable $v5 = V6_vnavgh renamable $v1, renamable $v2
+    renamable $v1 = V6_vavgh killed renamable $v1, killed renamable $v2
+    renamable $v2, renamable $r28 = V6_vL32b_pi killed renamable $r28, 64
+    renamable $v1 = V6_vsathub killed renamable $v5, killed renamable $v1
+    renamable $v5 = V6_vnavgh renamable $v0, renamable $v3
+    renamable $v6 = V6_vavgh killed renamable $v0, killed renamable $v3
+    renamable $r12 = V6_vS32b_pi killed renamable $r12, 64, killed renamable $v1
+    renamable $v1 = V6_vaddh renamable $v4, renamable $v2
+    renamable $v3, renamable $r15 = V6_vL32b_pi killed renamable $r15, 64
+    renamable $v0 = V6_vsubh killed renamable $v4, killed renamable $v2
+    renamable $v4, renamable $r13 = V6_vL32b_pi killed renamable $r13, 64
+    renamable $v2 = V6_vaddh renamable $v3, renamable $v4
+    renamable $v5 = V6_vsathub killed renamable $v5, killed renamable $v6
+    renamable $r9 = V6_vS32b_pi killed renamable $r9, 64, killed renamable $v5
+    ENDLOOP0 %bb.5, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.6, implicit-def $pc
+
+  bb.6:
+    successors: %bb.7(0x80000000)
+    liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r12, $v0, $v1, $v2, $v3, $v4
+
+    renamable $v3 = V6_vsubh killed renamable $v3, killed renamable $v4
+    renamable $v4 = V6_vavgh renamable $v1, renamable $v2
+    renamable $v1 = V6_vnavgh killed renamable $v1, killed renamable $v2
+    renamable $v2 = V6_vavgh renamable $v0, renamable $v3
+    renamable $v0 = V6_vnavgh killed renamable $v0, killed renamable $v3
+    renamable $v1 = V6_vsathub killed renamable $v1, killed renamable $v4
+    dead renamable $r12 = V6_vS32b_pi killed renamable $r12, 64, killed renamable $v1
+    renamable $v0 = V6_vsathub killed renamable $v0, killed renamable $v2
+    dead renamable $r9 = V6_vS32b_pi killed renamable $r9, 64, killed renamable $v0
+    J2_jump %bb.7, implicit-def $pc
+
+  bb.7:
+    successors: %bb.2(0x7c000000), %bb.8(0x04000000)
+    liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8
+
+    renamable $r7 = nsw A2_addi killed renamable $r7, 2
+    ENDLOOP1 %bb.2, implicit-def $pc, implicit-def $lc1, implicit $sa1, implicit $lc1
+    J2_jump %bb.8, implicit-def dead $pc
+
+  bb.8:
+    PS_jmpret $r31, implicit-def dead $pc
+
+...

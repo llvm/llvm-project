@@ -67,13 +67,18 @@ public:
         if (option_arg.getAsInteger(0, m_count)) {
           m_count = UINT32_MAX;
           error.SetErrorStringWithFormat(
-              "invalid integer value for option '%c'", short_option);
+              "invalid integer value for option '%c': %s", short_option,
+              option_arg.data());
         }
+        // A count of 0 means all frames.
+        if (m_count == 0)
+          m_count = UINT32_MAX;
         break;
       case 's':
         if (option_arg.getAsInteger(0, m_start))
           error.SetErrorStringWithFormat(
-              "invalid integer value for option '%c'", short_option);
+              "invalid integer value for option '%c': %s", short_option,
+              option_arg.data());
         break;
       case 'e': {
         bool success;
@@ -81,7 +86,8 @@ public:
             OptionArgParser::ToBoolean(option_arg, false, &success);
         if (!success)
           error.SetErrorStringWithFormat(
-              "invalid boolean value for option '%c'", short_option);
+              "invalid boolean value for option '%c': %s", short_option,
+              option_arg.data());
       } break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -228,9 +234,9 @@ protected:
           thread->GetIndexID());
       return false;
     }
-    if (m_options.m_extended_backtrace) { 
-      if (!INTERRUPT_REQUESTED(GetDebugger(), 
-                              "Interrupt skipped extended backtrace")) {
+    if (m_options.m_extended_backtrace) {
+      if (!INTERRUPT_REQUESTED(GetDebugger(),
+                               "Interrupt skipped extended backtrace")) {
         DoExtendedBacktrace(thread, result);
       }
     }
@@ -272,8 +278,9 @@ public:
       bool avoid_no_debug =
           OptionArgParser::ToBoolean(option_arg, true, &success);
       if (!success)
-        error.SetErrorStringWithFormat("invalid boolean value for option '%c'",
-                                       short_option);
+        error.SetErrorStringWithFormat(
+            "invalid boolean value for option '%c': %s", short_option,
+            option_arg.data());
       else {
         m_step_in_avoid_no_debug = avoid_no_debug ? eLazyBoolYes : eLazyBoolNo;
       }
@@ -284,8 +291,9 @@ public:
       bool avoid_no_debug =
           OptionArgParser::ToBoolean(option_arg, true, &success);
       if (!success)
-        error.SetErrorStringWithFormat("invalid boolean value for option '%c'",
-                                       short_option);
+        error.SetErrorStringWithFormat(
+            "invalid boolean value for option '%c': %s", short_option,
+            option_arg.data());
       else {
         m_step_out_avoid_no_debug = avoid_no_debug ? eLazyBoolYes : eLazyBoolNo;
       }
@@ -293,8 +301,9 @@ public:
 
     case 'c':
       if (option_arg.getAsInteger(0, m_step_count))
-        error.SetErrorStringWithFormat("invalid step count '%s'",
-                                       option_arg.str().c_str());
+        error.SetErrorStringWithFormat(
+            "invalid integer value for option '%c': %s", short_option,
+            option_arg.data());
       break;
 
     case 'm': {
@@ -374,19 +383,7 @@ public:
                                 eCommandProcessMustBePaused),
         m_step_type(step_type), m_step_scope(step_scope),
         m_class_options("scripted step") {
-    CommandArgumentEntry arg;
-    CommandArgumentData thread_id_arg;
-
-    // Define the first (and only) variant of this arg.
-    thread_id_arg.arg_type = eArgTypeThreadID;
-    thread_id_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(thread_id_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeThreadID, eArgRepeatOptional);
 
     if (step_type == eStepTypeScripted) {
       m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
@@ -403,10 +400,7 @@ public:
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex())
       return;
-
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eThreadIndexCompletion, request,
-        nullptr);
+    CommandObject::HandleArgumentCompletion(request, opt_element_vector);
   }
 
   Options *GetOptions() override { return &m_all_options; }
@@ -646,30 +640,10 @@ public:
             nullptr,
             eCommandRequiresThread | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {
-    CommandArgumentEntry arg;
-    CommandArgumentData thread_idx_arg;
-
-    // Define the first (and only) variant of this arg.
-    thread_idx_arg.arg_type = eArgTypeThreadIndex;
-    thread_idx_arg.arg_repetition = eArgRepeatPlus;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(thread_idx_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatPlus);
   }
 
   ~CommandObjectThreadContinue() override = default;
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eThreadIndexCompletion, request,
-        nullptr);
-  }
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
@@ -897,19 +871,7 @@ public:
             nullptr,
             eCommandRequiresThread | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {
-    CommandArgumentEntry arg;
-    CommandArgumentData line_num_arg;
-
-    // Define the first (and only) variant of this arg.
-    line_num_arg.arg_type = eArgTypeLineNum;
-    line_num_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(line_num_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeLineNum);
   }
 
   ~CommandObjectThreadUntil() override = default;
@@ -1550,19 +1512,7 @@ public:
                          eCommandRequiresFrame | eCommandTryTargetAPILock |
                              eCommandProcessMustBeLaunched |
                              eCommandProcessMustBePaused) {
-    CommandArgumentEntry arg;
-    CommandArgumentData expression_arg;
-
-    // Define the first (and only) variant of this arg.
-    expression_arg.arg_type = eArgTypeExpression;
-    expression_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(expression_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeExpression, eArgRepeatOptional);
   }
 
   ~CommandObjectThreadReturn() override = default;
@@ -1930,19 +1880,7 @@ public:
                                 eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused) {
-    CommandArgumentEntry arg;
-    CommandArgumentData plan_index_arg;
-
-    // Define the first (and only) variant of this arg.
-    plan_index_arg.arg_type = eArgTypeUnsignedInteger;
-    plan_index_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(plan_index_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeUnsignedInteger);
   }
 
   ~CommandObjectThreadPlanDiscard() override = default;
@@ -2003,19 +1941,7 @@ public:
                                 eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused) {
-    CommandArgumentEntry arg;
-    CommandArgumentData tid_arg;
-
-    // Define the first (and only) variant of this arg.
-    tid_arg.arg_type = eArgTypeThreadID;
-    tid_arg.arg_repetition = eArgRepeatStar;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(tid_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeThreadID, eArgRepeatStar);
   }
 
   ~CommandObjectThreadPlanPrune() override = default;
@@ -2232,8 +2158,7 @@ public:
             eCommandRequiresProcess | eCommandRequiresThread |
                 eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
                 eCommandProcessMustBePaused | eCommandProcessMustBeTraced) {
-    CommandArgumentData thread_arg{eArgTypeThreadIndex, eArgRepeatOptional};
-    m_arguments.push_back({thread_arg});
+    AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatOptional);
   }
 
   ~CommandObjectTraceDumpFunctionCalls() override = default;
@@ -2406,8 +2331,7 @@ public:
             eCommandRequiresProcess | eCommandRequiresThread |
                 eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
                 eCommandProcessMustBePaused | eCommandProcessMustBeTraced) {
-    CommandArgumentData thread_arg{eArgTypeThreadIndex, eArgRepeatOptional};
-    m_arguments.push_back({thread_arg});
+    AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatOptional);
   }
 
   ~CommandObjectTraceDumpInstructions() override = default;

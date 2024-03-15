@@ -45,8 +45,8 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
         error = lldb.SBError()
         thread.StepInto("", 4, error)
         self.assertTrue(error.Fail())
-        self.assertTrue(
-            "Could not create hardware breakpoint for thread plan" in error.GetCString()
+        self.assertIn(
+            "Could not create hardware breakpoint for thread plan", error.GetCString()
         )
 
     @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
@@ -67,8 +67,8 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
         error = lldb.SBError()
         thread.StepOut(error)
         self.assertTrue(error.Fail())
-        self.assertTrue(
-            "Could not create hardware breakpoint for thread plan" in error.GetCString()
+        self.assertIn(
+            "Could not create hardware breakpoint for thread plan", error.GetCString()
         )
 
     @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
@@ -107,6 +107,6 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
         # Ensure we fail when stepping through the API.
         error = thread.StepOverUntil(lldb.SBFrame(), lldb.SBFileSpec(), 5)
         self.assertTrue(error.Fail())
-        self.assertTrue(
-            "Could not create hardware breakpoint for thread plan" in error.GetCString()
+        self.assertIn(
+            "Could not create hardware breakpoint for thread plan", error.GetCString()
         )

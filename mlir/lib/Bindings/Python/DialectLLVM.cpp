@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir-c/Diagnostics.h"
 #include "mlir-c/Dialect/LLVM.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
@@ -18,36 +17,6 @@ using namespace llvm;
 using namespace mlir;
 using namespace mlir::python;
 using namespace mlir::python::adaptors;
-
-/// RAII scope intercepting all diagnostics into a string. The message must be
-/// checked before this goes out of scope.
-class CollectDiagnosticsToStringScope {
-public:
-  explicit CollectDiagnosticsToStringScope(MlirContext ctx) : context(ctx) {
-    handlerID = mlirContextAttachDiagnosticHandler(ctx, &handler, &errorMessage,
-                                                   /*deleteUserData=*/nullptr);
-  }
-  ~CollectDiagnosticsToStringScope() {
-    assert(errorMessage.empty() && "unchecked error message");
-    mlirContextDetachDiagnosticHandler(context, handlerID);
-  }
-
-  [[nodiscard]] std::string takeMessage() { return std::move(errorMessage); }
-
-private:
-  static MlirLogicalResult handler(MlirDiagnostic diag, void *data) {
-    auto printer = +[](MlirStringRef message, void *data) {
-      *static_cast<std::string *>(data) +=
-          StringRef(message.data, message.length);
-    };
-    mlirDiagnosticPrint(diag, printer, data);
-    return mlirLogicalResultSuccess();
-  }
-
-  MlirContext context;
-  MlirDiagnosticHandlerID handlerID;
-  std::string errorMessage = "";
-};
 
 void populateDialectLLVMSubmodule(const pybind11::module &m) {
   auto llvmStructType =

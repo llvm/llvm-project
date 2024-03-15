@@ -219,6 +219,25 @@ TEST_F(X86SnippetFileTest, SnippetAddress) {
   EXPECT_EQ(Snippet.Key.SnippetAddress, 0x10000);
 }
 
+TEST_F(X86SnippetFileTest, LoopRegister) {
+  auto Snippets = TestCommon(R"(
+    # LLVM-EXEGESIS-LOOP-REGISTER R11
+  )");
+  ASSERT_TRUE(static_cast<bool>(Snippets));
+  EXPECT_THAT(*Snippets, SizeIs(1));
+  const auto &Snippet = (*Snippets)[0];
+  EXPECT_EQ(Snippet.Key.LoopRegister, X86::R11);
+}
+
+TEST_F(X86SnippetFileTest, LoopRegisterInvalidRegister) {
+  auto Error = TestCommon(R"(
+    # LLVM-EXEGESIS-LOOP-REGISTER INVALID
+  )")
+                   .takeError();
+  EXPECT_TRUE(static_cast<bool>(Error));
+  consumeError(std::move(Error));
+}
+
 } // namespace
 } // namespace exegesis
 } // namespace llvm

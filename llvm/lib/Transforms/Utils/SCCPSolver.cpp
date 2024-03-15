@@ -177,7 +177,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     Value *Op0 = Inst.getOperand(0);
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
-    NewInst = new ZExtInst(Op0, Inst.getType(), "", &Inst);
+    NewInst = new ZExtInst(Op0, Inst.getType(), "", Inst.getIterator());
     NewInst->setNonNeg();
     break;
   }
@@ -186,7 +186,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     Value *Op0 = Inst.getOperand(0);
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
-    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", &Inst);
+    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", Inst.getIterator());
     NewInst->setIsExact(Inst.isExact());
     break;
   }
@@ -199,7 +199,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
       return false;
     auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
                                                            : Instruction::URem;
-    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
+    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", Inst.getIterator());
     if (Inst.getOpcode() == Instruction::SDiv)
       NewInst->setIsExact(Inst.isExact());
     break;
@@ -1486,7 +1486,13 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
   // Try to simplify to a constant range.
   ConstantRange A = getConstantRange(V1State, I.getType());
   ConstantRange B = getConstantRange(V2State, I.getType());
-  ConstantRange R = A.binaryOp(cast<BinaryOperator>(&I)->getOpcode(), B);
+
+  auto *BO = cast<BinaryOperator>(&I);
+  ConstantRange R = ConstantRange::getEmpty(I.getType()->getScalarSizeInBits());
+  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(BO))
+    R = A.overflowingBinaryOp(BO->getOpcode(), B, OBO->getNoWrapKind());
+  else
+    R = A.binaryOp(BO->getOpcode(), B);
   mergeInValue(&I, ValueLatticeElement::getRange(R));
 
   // TODO: Currently we do not exploit special values that produce something

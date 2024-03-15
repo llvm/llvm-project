@@ -443,15 +443,24 @@ static vector::TransferWriteOp cloneWriteOp(RewriterBase &rewriter,
 /// d1) and return vector<16x2x64>
 static VectorType getDistributedType(VectorType originalType, AffineMap map,
                                      int64_t warpSize) {
-  if (map.getNumResults() != 1)
-    return VectorType();
   SmallVector<int64_t> targetShape(originalType.getShape().begin(),
                                    originalType.getShape().end());
   for (unsigned i = 0, e = map.getNumResults(); i < e; i++) {
     unsigned position = map.getDimPosition(i);
-    if (targetShape[position] % warpSize != 0)
-      return VectorType();
+    if (targetShape[position] % warpSize != 0) {
+      if (warpSize % targetShape[position] != 0) {
+        return VectorType();
+      }
+      warpSize /= targetShape[position];
+      targetShape[position] = 1;
+      continue;
+    }
     targetShape[position] = targetShape[position] / warpSize;
+    warpSize = 1;
+    break;
+  }
+  if (warpSize != 1) {
+    return VectorType();
   }
   VectorType targetType =
       VectorType::get(targetShape, originalType.getElementType());
@@ -526,7 +535,30 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
     // 4. Reindex the write using the distribution map.
     auto newWarpOp =
         newWriteOp.getVector().getDefiningOp<WarpExecuteOnLane0Op>();
+
+    // Delinearize the lane id based on the way threads are divided across the
+    // vector. To get the number of threads per vector dimension, divide the
+    // sequential size by the distributed size along each dim.
     rewriter.setInsertionPoint(newWriteOp);
+    SmallVector<OpFoldResult> delinearizedIdSizes;
+    for (auto [seqSize, distSize] :
+         llvm::zip_equal(writtenVectorType.getShape(), targetType.getShape())) {
+      assert(seqSize % distSize == 0 && "Invalid distributed vector shape");
+      delinearizedIdSizes.push_back(rewriter.getIndexAttr(seqSize / distSize));
+    }
+    SmallVector<Value> delinearized;
+    if (map.getNumResults() > 1) {
+      delinearized = rewriter
+                         .create<mlir::affine::AffineDelinearizeIndexOp>(
+                             newWarpOp.getLoc(), newWarpOp.getLaneid(),
+                             delinearizedIdSizes)
+                         .getResults();
+    } else {
+      // If there is only one map result, we can elide the delinearization
+      // op and use the lane id directly.
+      delinearized.append(targetType.getRank(), newWarpOp.getLaneid());
+    }
+
     AffineMap indexMap = map.compose(newWriteOp.getPermutationMap());
     Location loc = newWriteOp.getLoc();
     SmallVector<Value> indices(newWriteOp.getIndices().begin(),
@@ -539,11 +571,11 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
         continue;
       unsigned indexPos = indexExpr.getPosition();
       unsigned vectorPos = cast<AffineDimExpr>(std::get<1>(it)).getPosition();
+      Value laneId = delinearized[vectorPos];
       auto scale =
           rewriter.getAffineConstantExpr(targetType.getDimSize(vectorPos));
       indices[indexPos] = affine::makeComposedAffineApply(
-          rewriter, loc, d0 + scale * d1,
-          {indices[indexPos], newWarpOp.getLaneid()});
+          rewriter, loc, d0 + scale * d1, {indices[indexPos], laneId});
     }
     newWriteOp.getIndicesMutable().assign(indices);
 

@@ -365,8 +365,8 @@ void CodeEmitterGen::emitInstructionBaseValues(
   if (HwMode == -1)
     o << "  static const uint64_t InstBits[] = {\n";
   else
-    o << "  static const uint64_t InstBits_" << HWM.getMode(HwMode).Name
-      << "[] = {\n";
+    o << "  static const uint64_t InstBits_"
+      << HWM.getModeName(HwMode, /*IncludeDefault=*/true) << "[] = {\n";
 
   for (const CodeGenInstruction *CGI : NumberedInstructions) {
     Record *R = CGI->TheDef;
@@ -434,10 +434,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
       Target.getInstructionsByEnumValue();
 
-  if (any_of(NumberedInstructions, [](const CodeGenInstruction *CGI) {
-        Record *R = CGI->TheDef;
-        return R->getValue("Inst") && isa<DagInit>(R->getValueInit("Inst"));
-      })) {
+  if (Target.hasVariableLengthEncodings()) {
     emitVarLenCodeEmitter(Records, o);
   } else {
     const CodeGenHwModes &HWM = Target.getHwModes();
@@ -495,8 +492,8 @@ void CodeEmitterGen::run(raw_ostream &o) {
       o << "  switch (HwMode) {\n";
       o << "  default: llvm_unreachable(\"Unknown hardware mode!\"); break;\n";
       for (unsigned I : HwModes) {
-        o << "  case " << I << ": InstBits = InstBits_" << HWM.getMode(I).Name
-          << "; break;\n";
+        o << "  case " << I << ": InstBits = InstBits_"
+          << HWM.getModeName(I, /*IncludeDefault=*/true) << "; break;\n";
       }
       o << "  };\n";
     }

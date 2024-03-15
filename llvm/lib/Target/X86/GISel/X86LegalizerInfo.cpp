@@ -39,6 +39,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   bool HasVLX = Subtarget.hasVLX();
   bool HasDQI = Subtarget.hasAVX512() && Subtarget.hasDQI();
   bool HasBWI = Subtarget.hasAVX512() && Subtarget.hasBWI();
+  bool UseX87 = !Subtarget.useSoftFloat() && Subtarget.hasX87();
 
   const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
   const LLT s1 = LLT::scalar(1);
@@ -212,6 +213,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         return typeInSet(0, {s8, s16, s32})(Query) ||
                (Is64Bit && typeInSet(0, {s64})(Query));
       })
+      .libcallFor({s64})
       .clampScalar(0, s8, sMaxScalar);
 
   // integer shifts
@@ -415,17 +417,19 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // fp constants
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalIf([=](const LegalityQuery &Query) -> bool {
-        return (HasSSE1 && typeInSet(0, {s32})(Query)) ||
-               (HasSSE2 && typeInSet(0, {s64})(Query));
+        return (typeInSet(0, {s32, s64})(Query)) ||
+               (UseX87 && typeInSet(0, {s80})(Query));
       });
 
   // fp arithmetic
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
       .legalIf([=](const LegalityQuery &Query) {
-        return (HasSSE1 && typeInSet(0, {s32, v4s32})(Query)) ||
-               (HasSSE2 && typeInSet(0, {s64, v2s64})(Query)) ||
+        return (typeInSet(0, {s32, s64})(Query)) ||
+               (HasSSE1 && typeInSet(0, {v4s32})(Query)) ||
+               (HasSSE2 && typeInSet(0, {v2s64})(Query)) ||
                (HasAVX && typeInSet(0, {v8s32, v4s64})(Query)) ||
-               (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query));
+               (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query)) ||
+               (UseX87 && typeInSet(0, {s80})(Query));
       });
 
   // fp comparison

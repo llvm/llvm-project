@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX12 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX12 %s
 
 # GFX12: s_load_i8 s5, s[2:3], s0 offset:0x0            ; encoding: [0x41,0x01,0x01,0xf4,0x00,0x00,0x00,0x00]
 0x41,0x01,0x01,0xf4,0x00,0x00,0x00,0x00

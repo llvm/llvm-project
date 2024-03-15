@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_SIGSET_T_H__
-#define __LLVM_LIBC_TYPES_SIGSET_T_H__
+#ifndef LLVM_LIBC_TYPES_SIGSET_T_H
+#define LLVM_LIBC_TYPES_SIGSET_T_H
 
 #include <llvm-libc-macros/signal-macros.h>
 
@@ -17,4 +17,4 @@ typedef struct {
   unsigned long __signals[__NSIGSET_WORDS];
 } sigset_t;
 
-#endif // __LLVM_LIBC_TYPES_SIGSET_T_H__
+#endif // LLVM_LIBC_TYPES_SIGSET_T_H

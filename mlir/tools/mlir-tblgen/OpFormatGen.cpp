@@ -1025,7 +1025,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
   body << ");\n";
 
   if (isOptional) {
-    body << "    if (!odsResult) return {};\n"
+    body << "    if (!odsResult.has_value()) return {};\n"
          << "    if (::mlir::failed(*odsResult)) return ::mlir::failure();\n";
   } else {
     body << "    if (odsResult) return ::mlir::failure();\n";
@@ -1285,13 +1285,13 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
                                 region->name);
       }
     } else if (auto *custom = dyn_cast<CustomDirective>(firstElement)) {
-      body << "  if (auto result = [&]() -> ::mlir::OptionalParseResult {\n";
+      body << "  if (auto optResult = [&]() -> ::mlir::OptionalParseResult {\n";
       genCustomDirectiveParser(custom, body, useProperties, opCppClassName,
                                /*isOptional=*/true);
       body << "    return ::mlir::success();\n"
-           << "  }(); result.has_value() && ::mlir::failed(*result)) {\n"
+           << "  }(); optResult.has_value() && ::mlir::failed(*optResult)) {\n"
            << "    return ::mlir::failure();\n"
-           << "  } else if (result.has_value()) {\n";
+           << "  } else if (optResult.has_value()) {\n";
     }
 
     genElementParsers(firstElement, thenElements.drop_front(),
@@ -1414,7 +1414,7 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
     }
     body.unindent() << "}\n";
     body.unindent();
-  } else if (dyn_cast<PropDictDirective>(element)) {
+  } else if (isa<PropDictDirective>(element)) {
     body << "  if (parseProperties(parser, result))\n"
          << "    return ::mlir::failure();\n";
   } else if (auto *customDir = dyn_cast<CustomDirective>(element)) {
@@ -2239,7 +2239,7 @@ void OperationFormat::genElementPrinter(FormatElement *element,
   }
 
   // Emit the attribute dictionary.
-  if (dyn_cast<PropDictDirective>(element)) {
+  if (isa<PropDictDirective>(element)) {
     genPropDictPrinter(*this, op, body);
     lastWasPunctuation = false;
     return;

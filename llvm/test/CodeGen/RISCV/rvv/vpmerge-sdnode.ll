@@ -379,7 +379,7 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
-; CHECK-NEXT:    vmv1r.v v1, v0
+; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    vmv8r.v v24, v16
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
@@ -401,7 +401,7 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; CHECK-NEXT:    mv a3, a1
 ; CHECK-NEXT:  .LBB28_2:
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, tu, ma
-; CHECK-NEXT:    vmv1r.v v0, v1
+; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v24, v0

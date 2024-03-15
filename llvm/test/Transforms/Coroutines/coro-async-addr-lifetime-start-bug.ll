@@ -22,8 +22,8 @@ declare void @my_other_async_function(ptr %async.ctxt)
      i32 128    ; Initial async context size without space for frame
 }>
 
-define swifttailcc void @my_other_async_function_fp.apply(ptr %fnPtr, ptr %async.ctxt) alwaysinline {
-  tail call swifttailcc void %fnPtr(ptr %async.ctxt)
+define swiftcc void @my_other_async_function_fp.apply(ptr %fnPtr, ptr %async.ctxt) {
+  tail call swiftcc void %fnPtr(ptr %async.ctxt)
   ret void
 }
 
@@ -36,7 +36,7 @@ entry:
   ret ptr %resume_ctxt
 }
 
-define swifttailcc void @my_async_function(ptr swiftasync %async.ctxt) {
+define swiftcc void @my_async_function(ptr swiftasync %async.ctxt) {
 entry:
   %escaped_addr = alloca i64
 

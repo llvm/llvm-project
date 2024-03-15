@@ -1,7 +1,7 @@
 # llvm-exegesis
 
-`llvm-exegesis` is a benchmarking tool that accepts or assembles a snippet and
-can measure characteristics of that snippet by executing it while keeping track
+`llvm-exegesis` is a benchmarking tool that accepts or generates snippets and
+can measure characteristics of those snippets by executing it while keeping track
 of performance counters.
 
 ### Currently Supported Platforms
@@ -32,7 +32,7 @@ architectures:
 * MIPS
 * PowerPC (PowerPC64LE only)
 
-Note that not benchmarking functionality is guaranteed to work on all platforms.
+Note that not all benchmarking functionality is guaranteed to work on all platforms.
 
 Memory annotations are currently only supported on 64-bit X86. There is no
 inherent limitations for porting memory annotations to other architectures, but

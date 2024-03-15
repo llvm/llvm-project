@@ -15,6 +15,8 @@ class TestRunLocker(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @expectedFailureAll(oslist=["windows"])
+    # Is flaky on Linux AArch64 buildbot.
+    @skipIf(oslist=["linux"], archs=["aarch64"])
     def test_run_locker(self):
         """Test that the run locker is set correctly when we launch"""
         self.build()

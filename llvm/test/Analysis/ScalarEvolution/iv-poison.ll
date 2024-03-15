@@ -17,7 +17,6 @@ define i2 @iv_nsw_poison(i2 %arg) {
 ; CHECK-NEXT:  Loop %bb1: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %bb1: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %bb1: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %bb1: Unpredictable predicated backedge-taken count.
 ;
 bb:
   br label %bb1
@@ -49,7 +48,6 @@ define i4 @iv_nsw_poison2(i4 %0, i4 %end, i4 %start) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -81,7 +79,6 @@ define i2 @iv_both_adds_nsw(i2 %arg) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 bb:
   br label %loop
@@ -113,7 +110,6 @@ define i4 @iv_both_adds_nsw_extra_use(i4 %arg) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 bb:
   br label %loop
@@ -147,7 +143,6 @@ define i4 @iv_both_adds_nsw_extra_use_incs_reordered(i4 %arg) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 bb:
   br label %loop
@@ -181,7 +176,6 @@ define i4 @iv_nsw_poison_extra_use(i4 %0, i4 %end, i4 %start) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -216,7 +210,6 @@ define i2 @iv_nuw_poison(i2 %arg, i2 %start) {
 ; CHECK-NEXT:  Loop %bb1: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %bb1: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %bb1: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %bb1: Unpredictable predicated backedge-taken count.
 ;
 bb:
   br label %bb1
@@ -248,7 +241,6 @@ define i4 @iv_nuw_poison2(i4 %0, i4 %end, i4 %start) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -280,7 +272,6 @@ define i2 @iv_both_adds_nuw(i2 %arg, i2 %start) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 bb:
   br label %loop
@@ -312,7 +303,6 @@ define i4 @iv_both_adds_nuw_extra_use(i4 %arg, i4 %start) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 bb:
   br label %loop
@@ -346,7 +336,6 @@ define i4 @iv_both_adds_nuw_extra_use_incs_reordered(i4 %arg, i4 %start) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 bb:
   br label %loop
@@ -380,7 +369,6 @@ define i4 @iv_nuw_poison_extra_use(i4 %0, i4 %end, i4 %start) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop

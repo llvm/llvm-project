@@ -23,7 +23,11 @@ endif()
 
 set(SWIG_COMMON_FLAGS
   -c++
-  -w361,362 # Ignore warnings about ignored operator overloads
+  # Ignored warnings:
+  # 361: operator! ignored.
+  # 362: operator= ignored.
+  # 509: Overloaded method declaration effectively ignored, shadowed by previous declaration.
+  -w361,362,509
   -features autodoc
   -I${LLDB_SOURCE_DIR}/include
   -I${CMAKE_CURRENT_SOURCE_DIR}

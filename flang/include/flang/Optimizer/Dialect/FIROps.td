@@ -27,7 +27,7 @@ include "mlir/IR/BuiltinAttributes.td"
 // Base class for FIR operations.
 // All operations automatically get a prefix of "fir.".
 class fir_Op<string mnemonic, list<Trait> traits>
-  : Op<fir_Dialect, mnemonic, traits>;
+  : Op<FIROpsDialect, mnemonic, traits>;
 
 // Base class for FIR operations that take a single argument
 class fir_SimpleOp<string mnemonic, list<Trait> traits>
@@ -2454,6 +2454,7 @@ def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
     SymbolRefAttr:$callee,
     I32:$grid_x,
     I32:$grid_y,
+    I32:$grid_z,
     I32:$block_x,
     I32:$block_y,
     I32:$block_z,
@@ -2463,8 +2464,8 @@ def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
   );
 
   let assemblyFormat = [{
-    $callee `<` `<` `<` $grid_x `,` $grid_y `,` $block_x `,` $block_y `,`
-        $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
+    $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
+        $block_y `,` $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
         `` `(` ( $args^ `:` type($args) )? `)` attr-dict
   }];
 
@@ -3125,6 +3126,33 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
   let builders = [
     OpBuilder<(ins "mlir::Value":$boxRef, "fir::BoxFieldAttr":$field)>
   ];
+}
+
+def fir_CUDAKernelOp : fir_Op<"cuda_kernel", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+
+  let arguments = (ins
+    Variadic<I32>:$grid, // empty means `*`
+    Variadic<I32>:$block, // empty means `*`
+    Optional<I32>:$stream,
+    Variadic<Index>:$lowerbound,
+    Variadic<Index>:$upperbound,
+    Variadic<Index>:$step,
+    OptionalAttr<I64Attr>:$n
+  );
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    `<` `<` `<` custom<CUFKernelValues>($grid, type($grid)) `,` 
+                custom<CUFKernelValues>($block, type($block))
+        ( `,` `stream` `=` $stream^ )? `>` `>` `>`
+        custom<CUFKernelLoopControl>($region, $lowerbound, type($lowerbound),
+            $upperbound, type($upperbound), $step, type($step))
+        attr-dict
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif

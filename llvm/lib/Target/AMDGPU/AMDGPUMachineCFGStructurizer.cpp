@@ -2292,7 +2292,7 @@ MachineBasicBlock *AMDGPUMachineCFGStructurizer::createIfRegion(
             MachineOperand::CreateReg(Reg, false, false, true);
         ArrayRef<MachineOperand> Cond(RegOp);
         LLVM_DEBUG(dbgs() << "RegionExitReg: ");
-        LLVM_DEBUG(Cond[0].print(dbgs(), TRI));
+        LLVM_DEBUG(RegOp.print(dbgs(), TRI));
         LLVM_DEBUG(dbgs() << "\n");
         TII->insertBranch(*RegionExit, CurrentRegion->getEntry(), RegionExit,
                           Cond, DebugLoc());

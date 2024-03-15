@@ -2815,6 +2815,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_depend);
+  if ((std::holds_alternative<parser::OmpDependClause::Source>(x.v.u) ||
+          std::holds_alternative<parser::OmpDependClause::Sink>(x.v.u)) &&
+      GetContext().directive != llvm::omp::OMPD_ordered) {
+    context_.Say(GetContext().clauseSource,
+        "DEPEND(SOURCE) or DEPEND(SINK : vec) can be used only with the ordered"
+        " directive. Used here in the %s construct."_err_en_US,
+        parser::ToUpperCaseLetters(getDirectiveName(GetContext().directive)));
+  }
   if (const auto *inOut{std::get_if<parser::OmpDependClause::InOut>(&x.v.u)}) {
     const auto &designators{std::get<std::list<parser::Designator>>(inOut->t)};
     for (const auto &ele : designators) {
@@ -2940,7 +2948,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDevicePtr &x) {
         if (name->symbol) {
           if (!(IsBuiltinCPtr(*(name->symbol)))) {
             context_.Say(itr->second->source,
-                "'%s' in USE_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
+                "Use of non-C_PTR type '%s' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead"_warn_en_US,
                 name->ToString());
           } else {
             useDevicePtrNameList.push_back(*name);

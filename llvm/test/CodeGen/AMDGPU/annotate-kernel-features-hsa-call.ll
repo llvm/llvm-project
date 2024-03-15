@@ -1012,7 +1012,7 @@ attributes #6 = { "enqueued-block" }
 
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ;.
 ; AKF_HSA: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; AKF_HSA: attributes #[[ATTR1]] = { nounwind "target-cpu"="fiji" }
@@ -1055,7 +1055,7 @@ attributes #6 = { "enqueued-block" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR28]] = { nounwind }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR29]] = { "enqueued-block" }
 ;.
-; AKF_HSA: [[META0:![0-9]+]] = !{i32 1, !"amdgpu_code_object_version", i32 500}
+; AKF_HSA: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ;.
-; ATTRIBUTOR_HSA: [[META0:![0-9]+]] = !{i32 1, !"amdgpu_code_object_version", i32 500}
+; ATTRIBUTOR_HSA: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ;.

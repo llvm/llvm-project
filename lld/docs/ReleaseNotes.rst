@@ -26,6 +26,10 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
+* ``--compress-sections <section-glib>=[none|zlib|zstd]`` is added to compress
+  matched output sections without the ``SHF_ALLOC`` flag.
+  (`#84855 <https://github.com/llvm/llvm-project/pull/84855>`_)
+
 Breaking changes
 ----------------
 

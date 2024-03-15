@@ -239,6 +239,8 @@ const char *MipsTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case MipsISD::MAQ_S_W_PHR:       return "MipsISD::MAQ_S_W_PHR";
   case MipsISD::MAQ_SA_W_PHL:      return "MipsISD::MAQ_SA_W_PHL";
   case MipsISD::MAQ_SA_W_PHR:      return "MipsISD::MAQ_SA_W_PHR";
+  case MipsISD::DOUBLE_SELECT_I:   return "MipsISD::DOUBLE_SELECT_I";
+  case MipsISD::DOUBLE_SELECT_I64: return "MipsISD::DOUBLE_SELECT_I64";
   case MipsISD::DPAU_H_QBL:        return "MipsISD::DPAU_H_QBL";
   case MipsISD::DPAU_H_QBR:        return "MipsISD::DPAU_H_QBR";
   case MipsISD::DPSU_H_QBL:        return "MipsISD::DPSU_H_QBL";
@@ -2652,8 +2654,8 @@ SDValue MipsTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
 
   if (!(Subtarget.hasMips4() || Subtarget.hasMips32())) {
     SDVTList VTList = DAG.getVTList(VT, VT);
-    return DAG.getNode(Subtarget.isGP64bit() ? Mips::PseudoD_SELECT_I64
-                                             : Mips::PseudoD_SELECT_I,
+    return DAG.getNode(Subtarget.isGP64bit() ? MipsISD::DOUBLE_SELECT_I64
+                                             : MipsISD::DOUBLE_SELECT_I,
                        DL, VTList, Cond, ShiftRightHi,
                        IsSRA ? Ext : DAG.getConstant(0, DL, VT), Or,
                        ShiftRightHi);
@@ -4128,14 +4130,18 @@ MipsTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'd': // Address register. Same as 'r' unless generating MIPS16 code.
     case 'y': // Same as 'r'. Exists for compatibility.
     case 'r':
-      if (VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8 || VT == MVT::i1) {
+      if ((VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8 ||
+           VT == MVT::i1) ||
+          (VT == MVT::f32 && Subtarget.useSoftFloat())) {
         if (Subtarget.inMips16Mode())
           return std::make_pair(0U, &Mips::CPU16RegsRegClass);
         return std::make_pair(0U, &Mips::GPR32RegClass);
       }
-      if (VT == MVT::i64 && !Subtarget.isGP64bit())
+      if ((VT == MVT::i64 || (VT == MVT::f64 && Subtarget.useSoftFloat())) &&
+          !Subtarget.isGP64bit())
         return std::make_pair(0U, &Mips::GPR32RegClass);
-      if (VT == MVT::i64 && Subtarget.isGP64bit())
+      if ((VT == MVT::i64 || (VT == MVT::f64 && Subtarget.useSoftFloat())) &&
+          Subtarget.isGP64bit())
         return std::make_pair(0U, &Mips::GPR64RegClass);
       // This will generate an error message
       return std::make_pair(0U, nullptr);
