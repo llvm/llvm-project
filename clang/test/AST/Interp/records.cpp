@@ -1238,3 +1238,9 @@ namespace InvalidCtorInitializer {
   // no crash on evaluating the constexpr ctor.
   constexpr int Z = X().Y; // both-error {{constexpr variable 'Z' must be initialized by a constant expression}}
 }
+
+extern int f(); // both-note {{here}}
+struct HasNonConstExprMemInit {
+  int x = f(); // both-note {{non-constexpr function}}
+  constexpr HasNonConstExprMemInit() {} // both-error {{never produces a constant expression}}
+};
