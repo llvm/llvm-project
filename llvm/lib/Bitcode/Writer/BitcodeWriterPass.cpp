@@ -18,12 +18,11 @@
 #include "llvm/Pass.h"
 using namespace llvm;
 
-extern bool WriteNewDbgInfoFormatToBitcode;
-
 PreservedAnalyses BitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
-  bool ConvertToOldDbgFormatForWrite =
-      M.IsNewDbgInfoFormat && !WriteNewDbgInfoFormatToBitcode;
-  if (ConvertToOldDbgFormatForWrite)
+  // RemoveDIs: there's no bitcode representation of the DbgRecord debug-info,
+  // convert to dbg.values before writing out.
+  bool IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
+  if (IsNewDbgInfoFormat)
     M.convertFromNewDbgValues();
 
   const ModuleSummaryIndex *Index =
@@ -31,7 +30,7 @@ PreservedAnalyses BitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
                        : nullptr;
   WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index, EmitModuleHash);
 
-  if (ConvertToOldDbgFormatForWrite)
+  if (IsNewDbgInfoFormat)
     M.convertToNewDbgValues();
 
   return PreservedAnalyses::all();
@@ -57,15 +56,16 @@ namespace {
     StringRef getPassName() const override { return "Bitcode Writer"; }
 
     bool runOnModule(Module &M) override {
-      bool ConvertToOldDbgFormatForWrite =
-          M.IsNewDbgInfoFormat && !WriteNewDbgInfoFormatToBitcode;
-      if (ConvertToOldDbgFormatForWrite)
+      // RemoveDIs: there's no bitcode representation of the DbgRecord
+      // debug-info, convert to dbg.values before writing out.
+      bool IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
+      if (IsNewDbgInfoFormat)
         M.convertFromNewDbgValues();
 
       WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, /*Index=*/nullptr,
                          /*EmitModuleHash=*/false);
 
-      if (ConvertToOldDbgFormatForWrite)
+      if (IsNewDbgInfoFormat)
         M.convertToNewDbgValues();
       return false;
     }
