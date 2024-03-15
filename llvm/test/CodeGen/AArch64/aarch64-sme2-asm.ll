@@ -5,7 +5,7 @@ entry:
 ; CHECK:  %0:ppr = COPY $p0
 ; CHECK:  STR_PXI %0, %stack.0.predcnt.addr, 0 :: (store unknown-size into %ir.predcnt.addr, align 2)
 ; CHECK:  %1:pnr_p8to15 = COPY %0
-; CHECK:  INLINEASM &"ld1w {z0.s,z1.s,z2.s,z3.s}, $0/z, [x10]", 1 /* sideeffect attdialect */, 458761 /* reguse:PNR_p8to15 */, %1
+; CHECK:  INLINEASM &"ld1w {z0.s,z1.s,z2.s,z3.s}, $0/z, [x10]", 1 /* sideeffect attdialect */, {{[0-9]+}} /* reguse:PNR_p8to15 */, %1
 ; CHECK:  RET_ReallyLR
   %predcnt.addr = alloca target("aarch64.svcount"), align 2
   store target("aarch64.svcount") %predcnt, ptr %predcnt.addr, align 2
@@ -19,7 +19,7 @@ entry:
 ; CHECK:  %0:ppr = COPY $p0
 ; CHECK:  STR_PXI %0, %stack.0.predcnt.addr, 0 :: (store unknown-size into %ir.predcnt.addr, align 2)
 ; CHECK:  %1:pnr = COPY %0
-; CHECK:  INLINEASM &"ld1w {z0.s,z1.s,z2.s,z3.s}, $0/z, [x10]", 1 /* sideeffect attdialect */, 262153 /* reguse:PNR */, %1
+; CHECK:  INLINEASM &"ld1w {z0.s,z1.s,z2.s,z3.s}, $0/z, [x10]", 1 /* sideeffect attdialect */, {{[0-9]+}} /* reguse:PNR */, %1
 ; CHECK:  RET_ReallyLR
   %predcnt.addr = alloca target("aarch64.svcount"), align 2
   store target("aarch64.svcount") %predcnt, ptr %predcnt.addr, align 2
@@ -33,7 +33,7 @@ entry:
 ; CHECK:  %0:ppr = COPY $p0
 ; CHECK:  STR_PXI %0, %stack.0.predcnt.addr, 0 :: (store unknown-size into %ir.predcnt.addr, align 2)
 ; CHECK:  %1:pnr_3b = COPY %0
-; CHECK:  INLINEASM &"fadd z0.h, $0/m, z0.h, #0.5", 1 /* sideeffect attdialect */, 393225 /* reguse:PNR_3b */, %1
+; CHECK:  INLINEASM &"fadd z0.h, $0/m, z0.h, #0.5", 1 /* sideeffect attdialect */, {{[0-9]+}} /* reguse:PNR_3b */, %1
 ; CHECK:  RET_ReallyLR
   %predcnt.addr = alloca target("aarch64.svcount"), align 2
   store target("aarch64.svcount") %predcnt, ptr %predcnt.addr, align 2

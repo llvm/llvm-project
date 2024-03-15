@@ -20,11 +20,10 @@
 
 #include "OpenMP/InternalTypes.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <deque>
 #include <functional>
-#include <stddef.h>
-#include <stdint.h>
 #include <type_traits>
 
 #include "llvm/ADT/SmallVector.h"

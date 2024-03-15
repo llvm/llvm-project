@@ -7,6 +7,7 @@ add_clang_library(clangTidyUtils
   Aliasing.cpp
   ASTUtils.cpp
   DeclRefExprUtils.cpp
+  DesignatedInitializers.cpp
   ExceptionAnalyzer.cpp
   ExceptionSpecAnalyzer.cpp
   ExprSequence.cpp

@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV: %[[#IMAGE_TYPE:]] = OpTypeImage
 ; CHECK-SPIRV: %[[#IMAGE_ARG:]] = OpFunctionParameter %[[#IMAGE_TYPE]]

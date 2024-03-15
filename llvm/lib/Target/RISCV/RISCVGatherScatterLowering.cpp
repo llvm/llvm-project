@@ -229,7 +229,7 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
 
     // Build scalar phi and increment.
     BasePtr =
-        PHINode::Create(Start->getType(), 2, Phi->getName() + ".scalar", Phi);
+        PHINode::Create(Start->getType(), 2, Phi->getName() + ".scalar", Phi->getIterator());
     Inc = BinaryOperator::CreateAdd(BasePtr, Step, Inc->getName() + ".scalar",
                                     Inc);
     BasePtr->addIncoming(Start, Phi->getIncomingBlock(1 - IncrementingBlock));

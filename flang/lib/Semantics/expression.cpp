@@ -875,8 +875,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CharLiteralConstant &x) {
 MaybeExpr ExpressionAnalyzer::Analyze(
     const parser::HollerithLiteralConstant &x) {
   int kind{GetDefaultKind(TypeCategory::Character)};
-  auto value{x.v};
-  return AnalyzeString(std::move(value), kind);
+  auto result{AnalyzeString(std::string{x.v}, kind)};
+  if (auto *constant{UnwrapConstantValue<Ascii>(result)}) {
+    constant->set_wasHollerith(true);
+  }
+  return result;
 }
 
 // .TRUE. and .FALSE. of various kinds
@@ -973,7 +976,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
         }
       }
       if (!isWholeAssumedSizeArrayOk_ &&
-          semantics::IsAssumedSizeArray(*n.symbol)) { // C1002, C1014, C1231
+          semantics::IsAssumedSizeArray(
+              ResolveAssociations(*n.symbol))) { // C1002, C1014, C1231
         AttachDeclaration(
             SayAt(n,
                 "Whole assumed-size array '%s' may not appear here without subscripts"_err_en_US,
@@ -1298,7 +1302,8 @@ static NamedEntity IgnoreAnySubscripts(Designator<SomeDerived> &&designator) {
       std::move(designator.u));
 }
 
-// Components of parent derived types are explicitly represented as such.
+// Components, but not bindings, of parent derived types are explicitly
+// represented as such.
 std::optional<Component> ExpressionAnalyzer::CreateComponent(DataRef &&base,
     const Symbol &component, const semantics::Scope &scope,
     bool C919bAlreadyEnforced) {
@@ -1306,7 +1311,8 @@ std::optional<Component> ExpressionAnalyzer::CreateComponent(DataRef &&base,
       base.Rank() > 0) { // C919b
     Say("An allocatable or pointer component reference must be applied to a scalar base"_err_en_US);
   }
-  if (&component.owner() == &scope) {
+  if (&component.owner() == &scope ||
+      component.has<semantics::ProcBindingDetails>()) {
     return Component{std::move(base), component};
   }
   if (const Symbol *typeSymbol{scope.GetSymbol()}) {
@@ -1329,15 +1335,29 @@ std::optional<Component> ExpressionAnalyzer::CreateComponent(DataRef &&base,
 
 // Derived type component references and type parameter inquiries
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
-  MaybeExpr base{Analyze(sc.base)};
   Symbol *sym{sc.component.symbol};
-  if (!base || !sym || context_.HasError(sym)) {
+  if (context_.HasError(sym)) {
+    return std::nullopt;
+  }
+  const auto *misc{sym->detailsIf<semantics::MiscDetails>()};
+  bool isTypeParamInquiry{sym->has<semantics::TypeParamDetails>() ||
+      (misc &&
+          (misc->kind() == semantics::MiscDetails::Kind::KindParamInquiry ||
+              misc->kind() == semantics::MiscDetails::Kind::LenParamInquiry))};
+  MaybeExpr base;
+  if (isTypeParamInquiry) {
+    auto restorer{AllowWholeAssumedSizeArray()};
+    base = Analyze(sc.base);
+  } else {
+    base = Analyze(sc.base);
+  }
+  if (!base) {
     return std::nullopt;
   }
   const auto &name{sc.component.source};
   if (auto *dtExpr{UnwrapExpr<Expr<SomeDerived>>(*base)}) {
     const auto *dtSpec{GetDerivedTypeSpec(dtExpr->GetType())};
-    if (sym->detailsIf<semantics::TypeParamDetails>()) {
+    if (isTypeParamInquiry) {
       if (auto *designator{UnwrapExpr<Designator<SomeDerived>>(*dtExpr)}) {
         if (std::optional<DynamicType> dyType{DynamicType::From(*sym)}) {
           if (dyType->category() == TypeCategory::Integer) {
@@ -1350,8 +1370,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
         Say(name, "Type parameter is not INTEGER"_err_en_US);
       } else {
         Say(name,
-            "A type parameter inquiry must be applied to "
-            "a designator"_err_en_US);
+            "A type parameter inquiry must be applied to a designator"_err_en_US);
       }
     } else if (!dtSpec || !dtSpec->scope()) {
       CHECK(context_.AnyFatalError() || !foldingContext_.messages().empty());
@@ -1393,8 +1412,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
           return AsGenericExpr(std::move(realExpr));
         }
       }
-    } else if (kind == MiscKind::KindParamInquiry ||
-        kind == MiscKind::LenParamInquiry) {
+    } else if (isTypeParamInquiry) { // %kind or %len
       ActualArgument arg{std::move(*base)};
       SetArgSourceLocation(arg, name);
       return MakeFunctionRef(name, ActualArguments{std::move(arg)});
@@ -3129,7 +3147,8 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
       if (auto iter{implicitInterfaces_.find(name)};
           iter != implicitInterfaces_.end()) {
         std::string whyNot;
-        if (!chars->IsCompatibleWith(iter->second.second, &whyNot)) {
+        if (!chars->IsCompatibleWith(iter->second.second,
+                /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
           if (auto *msg{Say(callSite,
                   "Reference to the procedure '%s' has an implicit interface that is distinct from another reference: %s"_warn_en_US,
                   name, whyNot)}) {
@@ -3169,7 +3188,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     }
     ok &= semantics::CheckArguments(*chars, arguments, context_,
         context_.FindScope(callSite), treatExternalAsImplicit,
-        specificIntrinsic);
+        /*ignoreImplicitVsExplicit=*/false, specificIntrinsic);
   }
   if (procSymbol && !IsPureProcedure(*procSymbol)) {
     if (const semantics::Scope *
@@ -3188,7 +3207,8 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
       if (auto globalChars{characteristics::Procedure::Characterize(
               *global, context_.foldingContext())}) {
         semantics::CheckArguments(*globalChars, arguments, context_,
-            context_.FindScope(callSite), true,
+            context_.FindScope(callSite), /*treatExternalAsImplicit=*/true,
+            /*ignoreImplicitVsExplicit=*/false,
             nullptr /*not specific intrinsic*/);
       }
     }
@@ -3741,9 +3761,12 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Selector &selector) {
         }
       }
     }
+    // Not a Variable -> FunctionReference
+    auto restorer{AllowWholeAssumedSizeArray()};
+    return Analyze(selector.u);
+  } else { // Expr
+    return Analyze(selector.u);
   }
-  // Not a Variable -> FunctionReference; handle normally as Variable or Expr
-  return Analyze(selector.u);
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::DataStmtConstant &x) {
@@ -3999,6 +4022,7 @@ void ArgumentAnalyzer::Analyze(
     const parser::ActualArgSpec &arg, bool isSubroutine) {
   // TODO: C1534: Don't allow a "restricted" specific intrinsic to be passed.
   std::optional<ActualArgument> actual;
+  auto restorer{context_.AllowWholeAssumedSizeArray()};
   common::visit(
       common::visitors{
           [&](const common::Indirection<parser::Expr> &x) {
@@ -4613,8 +4637,9 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
     SemanticsContext &context, common::TypeCategory category,
     const std::optional<parser::KindSelector> &selector) {
   evaluate::ExpressionAnalyzer analyzer{context};
+  CHECK(context.location().has_value());
   auto restorer{
-      analyzer.GetContextualMessages().SetLocation(context.location().value())};
+      analyzer.GetContextualMessages().SetLocation(*context.location())};
   return analyzer.AnalyzeKindSelector(category, selector);
 }
 

@@ -66,6 +66,7 @@ public:
     CortexA76,
     CortexA77,
     CortexA78,
+    CortexA78AE,
     CortexA78C,
     CortexA710,
     CortexA715,

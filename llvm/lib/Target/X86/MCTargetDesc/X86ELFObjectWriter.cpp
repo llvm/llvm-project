@@ -207,7 +207,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     // Older versions of ld.bfd/ld.gold/lld
     // do not support GOTPCRELX/REX_GOTPCRELX,
     // and we want to keep back-compatibility.
-    if (!Ctx.getAsmInfo()->canRelaxRelocations())
+    if (!Ctx.getTargetOptions()->X86RelaxRelocations)
       return ELF::R_X86_64_GOTPCREL;
     switch (unsigned(Kind)) {
     default:
@@ -259,7 +259,7 @@ static unsigned getRelocType32(MCContext &Ctx, SMLoc Loc,
       return ELF::R_386_GOTPC;
     // Older versions of ld.bfd/ld.gold/lld do not support R_386_GOT32X and we
     // want to maintain compatibility.
-    if (!Ctx.getAsmInfo()->canRelaxRelocations())
+    if (!Ctx.getTargetOptions()->X86RelaxRelocations)
       return ELF::R_386_GOT32;
 
     return Kind == MCFixupKind(X86::reloc_signed_4byte_relax)

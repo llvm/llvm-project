@@ -720,7 +720,7 @@ private:
 
   unsigned getScratchMemoryRegister(const Triple &TT) const override;
 
-  unsigned getLoopCounterRegister(const Triple &) const override;
+  unsigned getDefaultLoopCounterRegister(const Triple &) const override;
 
   unsigned getMaxMemoryAccessSize() const override { return 64; }
 
@@ -733,7 +733,8 @@ private:
 
   void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
                                    MachineBasicBlock &TargetMBB,
-                                   const MCInstrInfo &MII) const override;
+                                   const MCInstrInfo &MII,
+                                   unsigned LoopRegister) const override;
 
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
                                const APInt &Value) const override;
@@ -852,7 +853,7 @@ const unsigned ExegesisX86Target::kUnavailableRegistersSSE[12] = {
 // We're using one of R8-R15 because these registers are never hardcoded in
 // instructions (e.g. MOVS writes to EDI, ESI, EDX), so they have less
 // conflicts.
-constexpr const unsigned kLoopCounterReg = X86::R8;
+constexpr const unsigned kDefaultLoopCounterReg = X86::R8;
 
 } // namespace
 
@@ -870,11 +871,12 @@ unsigned ExegesisX86Target::getScratchMemoryRegister(const Triple &TT) const {
   return TT.isOSWindows() ? X86::RCX : X86::RDI;
 }
 
-unsigned ExegesisX86Target::getLoopCounterRegister(const Triple &TT) const {
+unsigned
+ExegesisX86Target::getDefaultLoopCounterRegister(const Triple &TT) const {
   if (!TT.isArch64Bit()) {
     return 0;
   }
-  return kLoopCounterReg;
+  return kDefaultLoopCounterReg;
 }
 
 Error ExegesisX86Target::randomizeTargetMCOperand(
@@ -882,6 +884,10 @@ Error ExegesisX86Target::randomizeTargetMCOperand(
     const BitVector &ForbiddenRegs) const {
   const Operand &Op = Instr.getPrimaryOperand(Var);
   switch (Op.getExplicitOperandInfo().OperandType) {
+  case X86::OperandType::OPERAND_COND_CODE:
+    AssignedValue =
+        MCOperand::createImm(randomIndex(X86::CondCode::LAST_VALID_COND));
+    return Error::success();
   case X86::OperandType::OPERAND_ROUNDING_CONTROL:
     AssignedValue =
         MCOperand::createImm(randomIndex(X86::STATIC_ROUNDING::TO_ZERO));
@@ -912,10 +918,10 @@ void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
 
 void ExegesisX86Target::decrementLoopCounterAndJump(
     MachineBasicBlock &MBB, MachineBasicBlock &TargetMBB,
-    const MCInstrInfo &MII) const {
+    const MCInstrInfo &MII, unsigned LoopRegister) const {
   BuildMI(&MBB, DebugLoc(), MII.get(X86::ADD64ri8))
-      .addDef(kLoopCounterReg)
-      .addUse(kLoopCounterReg)
+      .addDef(LoopRegister)
+      .addUse(LoopRegister)
       .addImm(-1);
   BuildMI(&MBB, DebugLoc(), MII.get(X86::JCC_1))
       .addMBB(&TargetMBB)

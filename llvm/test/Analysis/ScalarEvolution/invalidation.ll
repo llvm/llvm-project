@@ -39,9 +39,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; debug pass printing continuing to match, ASan and other tools can catch it.
 define void @test(i32 %n) {
 ; CHECK-LABEL: Classifying expressions for: @test
-; CHECK: Loop %loop: backedge-taken count is 14
-; CHECK: Loop %loop: constant max backedge-taken count is 14
-; CHECK: Loop %loop: Predicated backedge-taken count is 14
+; CHECK: Loop %loop: backedge-taken count is i32 14
+; CHECK: Loop %loop: constant max backedge-taken count is i32 14
 
 entry:
   br label %loop

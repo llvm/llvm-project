@@ -66,7 +66,7 @@ LogicalResult failableParallelForEach(MLIRContext *context, IteratorT begin,
   };
 
   // Otherwise, process the elements in parallel.
-  llvm::ThreadPool &threadPool = context->getThreadPool();
+  llvm::ThreadPoolInterface &threadPool = context->getThreadPool();
   llvm::ThreadPoolTaskGroup tasksGroup(threadPool);
   size_t numActions = std::min(numElements, threadPool.getMaxConcurrency());
   for (unsigned i = 0; i < numActions; ++i)

@@ -55,5 +55,18 @@ module m
     real, managed :: ma(n) ! ok
     !WARNING: Pointer 'dp' may not be associated in a device subprogram
     real, device, pointer :: dp
+    real, constant :: rc ! ok
   end subroutine
+
+  subroutine host()
+    !ERROR: Object 'rc' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram
+    real, constant :: rc
+  end subroutine
+
+  attributes(global) subroutine devsubr2()
+    real, shared :: rs
+
+    rs = 1 ! ok
+  end subroutine
+
 end module
