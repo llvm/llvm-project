@@ -9,11 +9,11 @@ from mlir.dialects import scf
 from mlir.passmanager import PassManager
 
 
-def setup_passes(mlir_module):
-    """Setup pass pipeline parameters for benchmark functions."""
-    opt = (
-        "parallelization-strategy=none"
-    )
+def setup_passes(mlir_module, optimization_options=None):
+    if optimization_options is None:
+        optimization_options = {"parallelization-strategy": "none"}
+
+    opt = ", ".join([f"{key}={value}" for key, value in optimization_options.items()])
     pipeline = f"builtin.module(sparsifier{{{opt}}})"
     PassManager.parse(pipeline).run(mlir_module.operation)
 
