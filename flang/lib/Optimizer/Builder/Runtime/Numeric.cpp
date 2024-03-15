@@ -118,6 +118,20 @@ struct ForcedMod16 {
   }
 };
 
+/// Placeholder for real*16 version of Modulo Intrinsic
+struct ForcedModulo16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ModuloReal16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto fltTy = mlir::FloatType::getF128(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {fltTy, fltTy, strTy, intTy},
+                                     {fltTy});
+    };
+  }
+};
+
 /// Placeholder for real*10 version of Nearest Intrinsic
 struct ForcedNearest10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Nearest10));
@@ -312,6 +326,33 @@ mlir::Value fir::runtime::genMod(fir::FirOpBuilder &builder, mlir::Location loc,
     func = fir::runtime::getRuntimeFunc<ForcedMod16>(loc, builder);
   else
     fir::intrinsicTypeTODO(builder, fltTy, loc, "MOD");
+
+  auto funcTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, funcTy.getInput(3));
+  auto args = fir::runtime::createArguments(builder, loc, funcTy, a, p,
+                                            sourceFile, sourceLine);
+
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
+/// Generate call to Modulo intrinsic runtime routine.
+mlir::Value fir::runtime::genModulo(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Value a,
+                                    mlir::Value p) {
+  mlir::func::FuncOp func;
+  mlir::Type fltTy = a.getType();
+
+  if (fltTy != p.getType())
+    fir::emitFatalError(loc, "arguments type mismatch in MOD");
+
+  // MODULO is lowered into math operations in intrinsics lowering,
+  // so genModulo() should only be used for F128 data type now.
+  if (fltTy.isF128())
+    func = fir::runtime::getRuntimeFunc<ForcedModulo16>(loc, builder);
+  else
+    fir::intrinsicTypeTODO(builder, fltTy, loc, "MODULO");
 
   auto funcTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);

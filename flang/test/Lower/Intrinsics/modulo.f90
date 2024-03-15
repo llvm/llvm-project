@@ -40,17 +40,6 @@ end subroutine
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<f128>{{.*}}, %[[arg1:.*]]: !fir.ref<f128>{{.*}}, %[[arg2:.*]]: !fir.ref<f128>{{.*}}) {
 subroutine modulo_testr16(r, a, p)
   real(16) :: r, a, p
-  ! CHECK-DAG: %[[a:.*]] = fir.load %[[arg1]] : !fir.ref<f128>
-  ! CHECK-DAG: %[[p:.*]] = fir.load %[[arg2]] : !fir.ref<f128>
-  ! CHECK-DAG: %[[rem:.*]] = arith.remf %[[a]], %[[p]] {{.*}}: f128
-  ! CHECK-DAG: %[[zero:.*]] = arith.constant 0.000000e+00 : f128
-  ! CHECK-DAG: %[[remNotZero:.*]] = arith.cmpf une, %[[rem]], %[[zero]] {{.*}} : f128
-  ! CHECK-DAG: %[[aNeg:.*]] = arith.cmpf olt, %[[a]], %[[zero]] {{.*}} : f128
-  ! CHECK-DAG: %[[pNeg:.*]] = arith.cmpf olt, %[[p]], %[[zero]] {{.*}} : f128
-  ! CHECK-DAG: %[[signDifferent:.*]] = arith.xori %[[aNeg]], %[[pNeg]] : i1
-  ! CHECK-DAG: %[[mustAddP:.*]] = arith.andi %[[remNotZero]], %[[signDifferent]] : i1
-  ! CHECK-DAG: %[[remPlusP:.*]] = arith.addf %[[rem]], %[[p]] {{.*}}: f128
-  ! CHECK: %[[res:.*]] = arith.select %[[mustAddP]], %[[remPlusP]], %[[rem]] : f128
-  ! CHECK: fir.store %[[res]] to %[[arg0]] : !fir.ref<f128>
+  ! CHECK: fir.call @_FortranAModuloReal16({{.*}}){{.*}}: (f128, f128, !fir.ref<i8>, i32) -> f128
   r = modulo(a, p)
 end subroutine
