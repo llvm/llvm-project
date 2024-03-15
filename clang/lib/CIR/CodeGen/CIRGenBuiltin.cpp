@@ -439,6 +439,29 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(buildScalarExpr(E->getArg(0)));
   }
 
+  case Builtin::BI__builtin_prefetch: {
+    auto evaluateOperandAsInt = [&](const Expr *Arg) {
+      Expr::EvalResult Res;
+      [[maybe_unused]] bool EvalSucceed =
+          Arg->EvaluateAsInt(Res, CGM.getASTContext());
+      assert(EvalSucceed && "expression should be able to evaluate as int");
+      return Res.Val.getInt().getZExtValue();
+    };
+
+    bool IsWrite = false;
+    if (E->getNumArgs() > 1)
+      IsWrite = evaluateOperandAsInt(E->getArg(1));
+
+    int Locality = 0;
+    if (E->getNumArgs() > 2)
+      Locality = evaluateOperandAsInt(E->getArg(2));
+
+    mlir::Value Address = buildScalarExpr(E->getArg(0));
+    builder.create<mlir::cir::PrefetchOp>(getLoc(E->getSourceRange()), Address,
+                                          Locality, IsWrite);
+    return RValue::get(nullptr);
+  }
+
   // C++ std:: builtins.
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:

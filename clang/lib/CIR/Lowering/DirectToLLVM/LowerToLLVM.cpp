@@ -2575,7 +2575,21 @@ class CIRInlineAsmOpLowering
         /*is_align_stack*/ mlir::UnitAttr(),
         mlir::LLVM::AsmDialectAttr::get(getContext(), llDialect),
         rewriter.getArrayAttr(opAttrs));
+    return mlir::success();
+  }
+};
 
+class CIRPrefetchLowering
+    : public mlir::OpConversionPattern<mlir::cir::PrefetchOp> {
+public:
+  using OpConversionPattern<mlir::cir::PrefetchOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::PrefetchOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::Prefetch>(
+        op, adaptor.getAddr(), adaptor.getIsWrite(), adaptor.getLocality(),
+        /*DataCache*/ 1);
     return mlir::success();
   }
 };
@@ -2730,8 +2744,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRVectorExtractLowering, CIRVectorCmpOpLowering, CIRVectorSplatLowering,
       CIRVectorTernaryLowering, CIRStackSaveLowering, CIRStackRestoreLowering,
       CIRUnreachableLowering, CIRTrapLowering, CIRInlineAsmOpLowering,
-      CIRSetBitfieldLowering, CIRGetBitfieldLowering>(converter,
-                                                      patterns.getContext());
+      CIRSetBitfieldLowering, CIRGetBitfieldLowering, CIRPrefetchLowering>(
+      converter, patterns.getContext());
 }
 
 namespace {
