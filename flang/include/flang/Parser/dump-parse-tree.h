@@ -233,6 +233,7 @@ public:
   NODE(parser, CriticalStmt)
   NODE(parser, CUDAAttributesStmt)
   NODE(parser, CUFKernelDoConstruct)
+  NODE(CUFKernelDoConstruct, StarOrExpr)
   NODE(CUFKernelDoConstruct, Directive)
   NODE(parser, CycleStmt)
   NODE(parser, DataComponentDefStmt)
