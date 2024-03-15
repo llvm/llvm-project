@@ -587,9 +587,9 @@ public:
   /// SetJmpFn - LLVM _setjmp function.
   llvm::FunctionCallee getSetJmpFn() {
     // This is specifically the prototype for x86.
-    llvm::Type *params[] = { CGM.Int32Ty->getPointerTo() };
+    llvm::Type *params[] = {IntTy->getPointerTo()};
     return CGM.CreateRuntimeFunction(
-        llvm::FunctionType::get(CGM.Int32Ty, params, false), "_setjmp",
+        llvm::FunctionType::get(IntTy, params, false), "_setjmp",
         llvm::AttributeList::get(CGM.getLLVMContext(),
                                  llvm::AttributeList::FunctionIndex,
                                  llvm::Attribute::NonLazyBind));
@@ -5946,16 +5946,37 @@ ObjCTypesHelper::ObjCTypesHelper(CodeGen::CodeGenModule &cgm)
   ModuleTy = llvm::StructType::create("struct._objc_module", LongTy, LongTy,
                                       Int8PtrTy, SymtabPtrTy);
 
-  // FIXME: This is the size of the setjmp buffer and should be target
-  // specific. 18 is what's used on 32-bit X86.
-  uint64_t SetJmpBufferSize = 18;
+  // FIXME: Not a perfect solution, but one that better fits the other
+  // architectures Values are derived from setjmp.h on Darwin
+  uint64_t SetJmpBufferSize = 0;
+  switch (CGM.getTarget().getTriple().getArch()) {
+  case llvm::Triple::arm:
+    if (CGM.getTarget().getTriple().getSubArch() !=
+        llvm::Triple::ARMSubArch_v7k) {
+      SetJmpBufferSize = (10 + 16 + 2);
+      break;
+    }
+    [[fallthrough]];
+  case llvm::Triple::aarch64:
+    SetJmpBufferSize = ((14 + 8 + 2) * 2);
+    break;
+  case llvm::Triple::x86_64:
+    SetJmpBufferSize = ((9 * 2) + 3 + 16);
+    break;
+  case llvm::Triple::x86:
+  default:
+    // 18 is what's used on 32-bit X86 and on all architectures on prior
+    // versions of clang.
+    SetJmpBufferSize = 18;
+    break;
+  }
 
   // Exceptions
   llvm::Type *StackPtrTy = llvm::ArrayType::get(CGM.Int8PtrTy, 4);
 
   ExceptionDataTy = llvm::StructType::create(
       "struct._objc_exception_data",
-      llvm::ArrayType::get(CGM.Int32Ty, SetJmpBufferSize), StackPtrTy);
+      llvm::ArrayType::get(CGM.IntTy, SetJmpBufferSize), StackPtrTy);
 }
 
 ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(CodeGen::CodeGenModule &cgm)
