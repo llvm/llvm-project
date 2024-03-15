@@ -215,6 +215,18 @@ class JMP_RI<BPFJumpOp Opc, string OpcodeStr, PatLeaf Cond>
   let BPFClass = BPF_JMP;
 }
 
+class JMP_JCOND<BPFJumpOp Opc, string OpcodeStr, list<dag> Pattern>
+    : TYPE_ALU_JMP<Opc.Value, BPF_K.Value,
+                   (outs),
+                   (ins brtarget:$BrDst),
+                   !strconcat(OpcodeStr, " $BrDst"),
+                   Pattern> {
+  bits<16> BrDst;
+
+  let Inst{47-32} = BrDst;
+  let BPFClass = BPF_JMP;
+}
+
 class JMP_RR_32<BPFJumpOp Opc, string OpcodeStr, PatLeaf Cond>
     : TYPE_ALU_JMP<Opc.Value, BPF_X.Value,
                    (outs),
@@ -267,6 +279,7 @@ defm JULE : J<BPF_JLE, "<=", BPF_CC_LEU, BPF_CC_LEU_32>;
 defm JSLT : J<BPF_JSLT, "s<", BPF_CC_LT, BPF_CC_LT_32>;
 defm JSLE : J<BPF_JSLE, "s<=", BPF_CC_LE, BPF_CC_LE_32>;
 defm JSET : J<BPF_JSET, "&", NoCond, NoCond>;
+def JCOND : JMP_JCOND<BPF_JCOND, "may_goto", []>;
 }
 
 // ALU instructions
