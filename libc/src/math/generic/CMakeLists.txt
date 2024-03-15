@@ -1891,6 +1891,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nextdownl
+  SRCS
+    nextdownl.cpp
+  HDRS
+    ../nextdownl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   nextdownf
   SRCS
     nextdownf.cpp
@@ -1921,6 +1933,18 @@ add_entrypoint_object(
     nextup.cpp
   HDRS
     ../nextup.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nextupl
+  SRCS
+    nextupl.cpp
+  HDRS
+    ../nextupl.h
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
