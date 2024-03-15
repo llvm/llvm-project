@@ -750,11 +750,11 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     if (!llvm::is_contained(*DAL, A))
       DAL->append(A);
 
-  if ((!DAL->hasArg(options::OPT_march_EQ) &&
-       OffloadKind != Action::OFK_None) ||
-      (DAL->getLastArgValue(options::OPT_march_EQ) == "generic")) {
+  if (!DAL->hasArg(options::OPT_march_EQ) && OffloadKind != Action::OFK_None) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
                       CudaArchToString(CudaArch::CudaDefault));
+  } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "generic") {
+    DAL->eraseArg(options::OPT_march_EQ);
   } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "native") {
     auto GPUsOrErr = getSystemGPUArchs(Args);
     if (!GPUsOrErr) {

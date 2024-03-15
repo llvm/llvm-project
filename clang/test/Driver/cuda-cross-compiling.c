@@ -80,6 +80,8 @@
 //
 // RUN: not %clang -target nvptx64-nvidia-cuda %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=MISSING %s
+// RUN: not %clang -target nvptx64-nvidia-cuda -march=generic %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=MISSING %s
 
 // MISSING: error: Must pass in an explicit nvptx64 gpu architecture to 'ptxas'
 // MISSING: error: Must pass in an explicit nvptx64 gpu architecture to 'nvlink'
