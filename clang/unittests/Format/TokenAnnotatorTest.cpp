@@ -1776,9 +1776,22 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("MyType");
   Tokens = annotate("int iso_time(MyType);", Style);
+  ASSERT_TRUE(IsCpp);
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_TypeName);
+
+  Style.Language = FormatStyle::LK_CSharp;
+  Tokens = annotate("int iso_time(time_t);", Style);
+  ASSERT_FALSE(IsCpp);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+
+  Style.Language = FormatStyle::LK_ObjC;
+  Tokens = annotate("int iso_time(time_t);", Style);
+  ASSERT_TRUE(IsCpp);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsCtorAndDtorDeclNames) {
