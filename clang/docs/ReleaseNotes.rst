@@ -276,8 +276,8 @@ Bug Fixes to C++ Support
 - Correctly immediate-escalate lambda conversion functions.
   (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
 - Fixed a crash while checking constraints of a trailing requires-expression of a lambda, that the
-  expression references to an entity declared outside of the lambda. This is a reduction from
-  (`#64808 <https://github.com/llvm/llvm-project/issues/64808>`_).
+  expression references to an entity declared outside of the lambda. Fixes
+  (#GH64808)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

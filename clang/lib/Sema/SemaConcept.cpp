@@ -692,7 +692,7 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
   // and constraints checking relies on whether we are in a lambda call operator
   // (and may refer to its parameters), so check the call operator instead.
   // Note that the declarations outside of the lambda should also be
-  // incorporated. Turning on the 'ForOverloadResolution' flag results in the
+  // considered. Turning on the 'ForOverloadResolution' flag results in the
   // LocalInstantiationScope not looking into its parents, but we can still
   // access Decls from the parents while building a lambda RAII scope later.
   if (const auto *MD = dyn_cast<CXXConversionDecl>(FD);
