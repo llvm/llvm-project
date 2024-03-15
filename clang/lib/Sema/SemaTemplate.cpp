@@ -3018,6 +3018,23 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
 FunctionTemplateDecl *Sema::DeclareImplicitDeductionGuideFromInitList(
     TemplateDecl *Template, MutableArrayRef<QualType> ParamTypes,
     SourceLocation Loc) {
+  llvm::FoldingSetNodeID ID;
+  ID.AddPointer(Template);
+  for (auto &T : ParamTypes)
+    T.getCanonicalType().Profile(ID);
+  unsigned Hash = ID.ComputeHash();
+  
+  auto Found = AggregateDeductionCandidates.find(Hash);
+  if (Found != AggregateDeductionCandidates.end()) {
+    CXXDeductionGuideDecl *GD = Found->getSecond();
+    return GD->getDescribedFunctionTemplate();
+  }
+  
+  // if (auto *AliasTemplate = llvm::dyn_cast<TypeAliasTemplateDecl>(Template)) {
+  //   DeclareImplicitDeductionGuidesForTypeAlias(*this, AliasTemplate, Loc);
+  //   return;
+  // }
+
   if (CXXRecordDecl *DefRecord =
           cast<CXXRecordDecl>(Template->getTemplatedDecl())->getDefinition()) {
     if (TemplateDecl *DescribedTemplate =
@@ -3050,10 +3067,13 @@ FunctionTemplateDecl *Sema::DeclareImplicitDeductionGuideFromInitList(
       Transform.NestedPattern ? Transform.NestedPattern : Transform.Template;
   ContextRAII SavedContext(*this, Pattern->getTemplatedDecl());
 
-  auto *DG = cast<FunctionTemplateDecl>(
+  auto *FTD = cast<FunctionTemplateDecl>(
       Transform.buildSimpleDeductionGuide(ParamTypes));
   SavedContext.pop();
-  return DG;
+  auto *GD = cast<CXXDeductionGuideDecl>(FTD->getTemplatedDecl());
+  GD->setDeductionCandidateKind(DeductionCandidate::Aggregate);
+  AggregateDeductionCandidates[Hash] = GD;
+  return FTD;
 }
 
 void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
