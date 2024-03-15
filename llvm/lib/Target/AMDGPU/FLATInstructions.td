@@ -174,7 +174,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   bits<8> vaddr;
   bits<24> offset;
 
-  let Inst{6-0} = !if(ps.enabled_saddr, saddr, 0x7f);
+  let Inst{6-0} = !if(ps.enabled_saddr, saddr, SGPR_NULL_gfx11plus.Index);
   let Inst{21-14} = op;
   let Inst{31-26} = 0x3b;
   let Inst{39-32} = !if(ps.has_vdst, vdst, ?);
@@ -2353,6 +2353,7 @@ class FLAT_Real_gfx11 <bits<7> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> 
   let Inst{14}    = !if(ps.has_glc, cpol{CPolBit.GLC}, ps.glcValue);
   let Inst{15}    = cpol{CPolBit.SLC};
   let Inst{17-16} = seg;
+  let Inst{54-48} = !if(ps.enabled_saddr, saddr, SGPR_NULL_gfx11plus.Index);
   let Inst{55}    = ps.sve;
 }
 
@@ -2363,15 +2364,11 @@ multiclass FLAT_Aliases_gfx11<string ps, string opName, int renamed> {
 
 multiclass FLAT_Real_Base_gfx11<bits<7> op, string ps, string opName, int renamed = false> :
   FLAT_Aliases_gfx11<ps, opName, renamed> {
-  def _gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps), opName> {
-    let Inst{54-48} = SGPR_NULL_gfx11plus.Index;
-  }
+  def _gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps), opName>;
 }
 
 multiclass FLAT_Real_RTN_gfx11<bits<7> op, string ps, string opName> {
-  def _RTN_gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps#"_RTN"), opName> {
-    let Inst{54-48} = SGPR_NULL_gfx11plus.Index;
-  }
+  def _RTN_gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps#"_RTN"), opName>;
 }
 
 multiclass FLAT_Real_SADDR_gfx11<bits<7> op, string ps, string opName> {
@@ -2384,7 +2381,6 @@ multiclass FLAT_Real_SADDR_RTN_gfx11<bits<7> op, string ps, string opName> {
 
 multiclass FLAT_Real_ST_gfx11<bits<7> op, string ps, string opName> {
   def _ST_gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps#"_ST"), opName> {
-    let Inst{54-48} = SGPR_NULL_gfx11plus.Index;
     let OtherPredicates = [HasFlatScratchSTMode];
   }
 }
@@ -2579,15 +2575,11 @@ multiclass VFLAT_Aliases_gfx12<string ps, string opName, int renamed, string ali
 multiclass VFLAT_Real_Base_gfx12<bits<8> op, string ps = NAME, string opName = !tolower(NAME),
                                  int renamed = false, string alias = ""> :
   VFLAT_Aliases_gfx12<ps, opName, renamed, alias> {
-  def _gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps), opName> {
-    let Inst{6-0} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
-  }
+  def _gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps), opName>;
 }
 
 multiclass VFLAT_Real_RTN_gfx12<bits<8> op, string ps, string opName> {
-  def _RTN_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_RTN"), opName> {
-    let Inst{6-0} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
-  }
+  def _RTN_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_RTN"), opName>;
 }
 
 multiclass VFLAT_Real_SADDR_gfx12<bits<8> op, string ps, string opName> {
@@ -2600,7 +2592,6 @@ multiclass VFLAT_Real_SADDR_RTN_gfx12<bits<8> op, string ps, string opName> {
 
 multiclass VFLAT_Real_ST_gfx12<bits<8> op, string ps, string opName> {
   def _ST_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_ST"), opName> {
-    let Inst{6-0} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
     let OtherPredicates = [HasFlatScratchSTMode];
   }
 }
