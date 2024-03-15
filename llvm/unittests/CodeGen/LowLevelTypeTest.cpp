@@ -25,19 +25,15 @@ TEST(LowLevelTypeTest, Token) {
   const LLT TTy = LLT::token();
 
   // Test kind.
-  ASSERT_TRUE(TTy.isValid());
-  ASSERT_TRUE(TTy.isScalar());
-  ASSERT_TRUE(TTy.isToken());
+  EXPECT_TRUE(TTy.isValid());
+  EXPECT_TRUE(TTy.isScalar());
+  EXPECT_TRUE(TTy.isToken());
 
-  ASSERT_FALSE(TTy.isPointer());
-  ASSERT_FALSE(TTy.isVector());
+  EXPECT_FALSE(TTy.isPointer());
+  EXPECT_FALSE(TTy.isVector());
 
   const LLT STy = LLT::scalar(0);
-  ASSERT_TRUE(STy == TTy);
-
-  // Test equality operators.
-  EXPECT_TRUE(TTy == TTy);
-  EXPECT_FALSE(TTy != TTy);
+  EXPECT_EQ(STy, TTy);
 }
 
 TEST(LowLevelTypeTest, Scalar) {

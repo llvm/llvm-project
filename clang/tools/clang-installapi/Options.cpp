@@ -85,6 +85,9 @@ bool Options::processLinkerOptions(InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_current__version))
     LinkerOpts.CurrentVersion.parse64(Arg->getValue());
 
+  if (auto *Arg = Args.getLastArg(OPT_compatibility__version))
+    LinkerOpts.CompatVersion.parse64(Arg->getValue());
+
   LinkerOpts.IsDylib = Args.hasArg(OPT_dynamiclib);
 
   LinkerOpts.AppExtensionSafe =
@@ -159,6 +162,7 @@ InstallAPIContext Options::createContext() {
 
   Ctx.BA.InstallName = LinkerOpts.InstallName;
   Ctx.BA.CurrentVersion = LinkerOpts.CurrentVersion;
+  Ctx.BA.CompatVersion = LinkerOpts.CompatVersion;
   Ctx.BA.AppExtensionSafe = LinkerOpts.AppExtensionSafe;
   Ctx.FT = DriverOpts.OutFT;
   Ctx.OutputLoc = DriverOpts.OutputPath;
