@@ -24,6 +24,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallSet.h"
@@ -1570,6 +1571,11 @@ public:
       return toTargetAddressSpace(AS);
     return getAddressSpaceMap()[(unsigned)AS];
   }
+
+  /// Determine whether the given pointer-authentication key is valid.
+  ///
+  /// The value has been coerced to type 'int'.
+  virtual bool validatePointerAuthKey(const llvm::APSInt &value) const;
 
   /// Map from the address space field in builtin description strings to the
   /// language address space.
