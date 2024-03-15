@@ -108,6 +108,12 @@ getBaseObject(const Object &object,
               Fortran::semantics::SemanticsContext &semaCtx);
 
 namespace clause {
+using DefinedOperator = tomp::clause::DefinedOperatorT<SymIdent, SymReference>;
+using ProcedureDesignator =
+    tomp::clause::ProcedureDesignatorT<SymIdent, SymReference>;
+using ReductionOperator =
+    tomp::clause::ReductionOperatorT<SymIdent, SymReference>;
+
 #ifdef EMPTY_CLASS
 #undef EMPTY_CLASS
 #endif
@@ -123,12 +129,6 @@ namespace clause {
 #include "llvm/Frontend/OpenMP/OMP.inc"
 #undef EMPTY_CLASS
 #undef WRAPPER_CLASS
-
-using DefinedOperator = tomp::clause::DefinedOperatorT<SymIdent, SymReference>;
-using ProcedureDesignator =
-    tomp::clause::ProcedureDesignatorT<SymIdent, SymReference>;
-using ReductionOperator =
-    tomp::clause::ReductionOperatorT<SymIdent, SymReference>;
 
 // "Requires" clauses are handled early on, and the aggregated information
 // is stored in the Symbol details of modules, programs, and subprograms.
