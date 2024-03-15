@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/atanf.h"
+#include "inv_trigf_utils.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/except_value_utils.h"
@@ -14,7 +15,6 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "inv_trigf_utils.h"
 
 namespace LIBC_NAMESPACE {
 
