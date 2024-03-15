@@ -5228,9 +5228,6 @@ extern const char *DefaultFormatStyle;
 /// Different builds can modify the value to the preferred styles.
 extern const char *DefaultFallbackStyle;
 
-/// Whether the language is C/C++/Objective-C/Objective-C++.
-extern bool IsCpp;
-
 /// Construct a FormatStyle based on ``StyleName``.
 ///
 /// ``StyleName`` can take several forms:
