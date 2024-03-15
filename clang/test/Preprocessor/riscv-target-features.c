@@ -29,6 +29,7 @@
 // CHECK-NOT: __riscv_smepmp {{.*$}}
 // CHECK-NOT: __riscv_ssaia {{.*$}}
 // CHECK-NOT: __riscv_ssccptr {{.*$}}
+// CHECK-NOT: __riscv_sscofpmf {{.*$}}
 // CHECK-NOT: __riscv_sscounterenw {{.*$}}
 // CHECK-NOT: __riscv_ssstateen {{.*$}}
 // CHECK-NOT: __riscv_ssstrict {{.*$}}
@@ -55,11 +56,14 @@
 // CHECK-NOT: __riscv_xcvmac {{.*$}}
 // CHECK-NOT: __riscv_xcvmem {{.*$}}
 // CHECK-NOT: __riscv_xcvsimd {{.*$}}
+// CHECK-NOT: __riscv_xsfcease {{.*$}}
 // CHECK-NOT: __riscv_xsfvcp {{.*$}}
 // CHECK-NOT: __riscv_xsfvfnrclipxfqf {{.*$}}
 // CHECK-NOT: __riscv_xsfvfwmaccqqq {{.*$}}
 // CHECK-NOT: __riscv_xsfqmaccdod {{.*$}}
 // CHECK-NOT: __riscv_xsfvqmaccqoq {{.*$}}
+// CHECK-NOT: __riscv_xsifivecdiscarddlone {{.*$}}
+// CHECK-NOT: __riscv_xsifivecflushdlone {{.*$}}
 // CHECK-NOT: __riscv_xtheadba {{.*$}}
 // CHECK-NOT: __riscv_xtheadbb {{.*$}}
 // CHECK-NOT: __riscv_xtheadbs {{.*$}}
@@ -352,6 +356,14 @@
 // CHECK-SSCCPTR-EXT: __riscv_ssccptr 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32isscofpmf -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSCOFPMF-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64isscofpmf -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSCOFPMF-EXT %s
+// CHECK-SSCOFPMF-EXT: __riscv_sscofpmf 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32isscounterenw -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSCOUNTERENW-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
@@ -509,6 +521,14 @@
 // CHECK-XCVSIMD-EXT: __riscv_xcvsimd 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ixsfcease -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFCEASE-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ixsfcease -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFCEASE-EXT %s
+// CHECK-XSFCEASE-EXT: __riscv_xsfcease 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ixsfvcp -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVCP-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
@@ -547,6 +567,22 @@
 // RUN:   -march=rv64ixsfvqmaccqoq -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVQMACCQOQ-EXT %s
 // CHECK-XSFVQMACCQOQ-EXT: __riscv_xsfvqmaccqoq 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ixsifivecdiscarddlone -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSIFIVECDISCARDDLONE-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ixsifivecdiscarddlone -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSIFIVECDISCARDDLONE-EXT %s
+// CHECK-XSIFIVECDISCARDDLONE-EXT: __riscv_xsifivecdiscarddlone 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ixsifivecflushdlone -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSIFIVECFLUSHDLONE-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ixsifivecflushdlone -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSIFIVECFLUSHDLONE-EXT %s
+// CHECK-XSIFIVECFLUSHDLONE-EXT: __riscv_xsifivecflushdlone 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ixtheadba -E -dM %s \
@@ -1630,9 +1666,9 @@
 // CHECK-MISALIGNED-AVOID: __riscv_misaligned_avoid 1
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu -march=rv32i -E -dM %s \
-// RUN:   -munaligned-access -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
+// RUN:   -mno-strict-align -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
 // RUN: %clang --target=riscv64-unknown-linux-gnu -march=rv64i -E -dM %s \
-// RUN:   -munaligned-access -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
+// RUN:   -mno-strict-align -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
 // RUN: %clang --target=riscv64-unknown-linux-gnu -mcpu=sifive-p450 -E -dM %s \
 // RUN:  -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
 // CHECK-MISALIGNED-FAST: __riscv_misaligned_fast 1

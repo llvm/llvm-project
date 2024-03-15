@@ -2849,12 +2849,14 @@ define i8 @select_replacement_sub(i8 %x, i8 %y, i8 %z) {
   ret i8 %sel
 }
 
+; FIXME: This is safe to fold.
 define i8 @select_replacement_shift_noundef(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @select_replacement_shift_noundef(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i8 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @use_i8(i8 noundef [[SHR]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SHR]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[X]], i8 [[Z:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[Y]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[SHL]], i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %shr = lshr exact i8 %x, 1
@@ -2902,6 +2904,40 @@ define i32 @select_replacement_loop2(i32 %arg, i32 %arg2) {
   %cmp = icmp eq i32 %mul, %arg
   %sel = select i1 %cmp, i32 %div, i32 undef
   ret i32 %sel
+}
+
+define i8 @select_replacement_loop3(i32 noundef %x) {
+; CHECK-LABEL: @select_replacement_loop3(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[REV:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[TRUNC]])
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[REV]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[EXT]], [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[TRUNC]], i8 0
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %trunc = trunc i32 %x to i8
+  %rev = call i8 @llvm.bitreverse.i8(i8 %trunc)
+  %ext = zext i8 %rev to i32
+  %cmp = icmp eq i32 %ext, %x
+  %sel = select i1 %cmp, i8 %trunc, i8 0
+  ret i8 %sel
+}
+
+define i16 @select_replacement_loop4(i16 noundef %p_12) {
+; CHECK-LABEL: @select_replacement_loop4(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i16 [[P_12:%.*]], 2
+; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[P_12]], 1
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[CMP1]], i16 [[AND1]], i16 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i16 [[AND2]], [[P_12]]
+; CHECK-NEXT:    [[AND3:%.*]] = select i1 [[CMP2]], i16 [[AND1]], i16 0
+; CHECK-NEXT:    ret i16 [[AND3]]
+;
+  %cmp1 = icmp ult i16 %p_12, 2
+  %and1 = and i16 %p_12, 1
+  %and2 = select i1 %cmp1, i16 %and1, i16 0
+  %cmp2 = icmp eq i16 %and2, %p_12
+  %and3 = select i1 %cmp2, i16 %and1, i16 0
+  ret i16 %and3
 }
 
 define ptr @select_replacement_gep_inbounds(ptr %base, i64 %offset) {
@@ -3423,7 +3459,7 @@ define <vscale x 2 x i32> @scalable_sign_bits(<vscale x 2 x i8> %x) {
 define <vscale x 2 x i1> @scalable_non_zero(<vscale x 2 x i32> %x) {
 ; CHECK-LABEL: @scalable_non_zero(
 ; CHECK-NEXT:    [[A:%.*]] = or <vscale x 2 x i32> [[X:%.*]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule <vscale x 2 x i32> [[A]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 56, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <vscale x 2 x i32> [[A]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 57, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[CMP]]
 ;
   %a = or <vscale x 2 x i32> %x, splat (i32 1)

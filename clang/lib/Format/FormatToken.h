@@ -676,6 +676,8 @@ public:
   /// Determine whether the token is a simple-type-specifier.
   [[nodiscard]] bool isSimpleTypeSpecifier() const;
 
+  [[nodiscard]] bool isTypeName() const;
+
   [[nodiscard]] bool isTypeOrIdentifier() const;
 
   bool isObjCAccessSpecifier() const {
@@ -821,7 +823,7 @@ public:
 
   /// Returns whether the token is the left square bracket of a C++
   /// structured binding declaration.
-  bool isCppStructuredBinding(bool IsCpp) const {
+  bool isCppStructuredBinding() const {
     if (!IsCpp || isNot(tok::l_square))
       return false;
     const FormatToken *T = this;

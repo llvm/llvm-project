@@ -208,6 +208,7 @@ private:
   std::function<const TargetLibraryInfo &(Function &F)> GetTLI;
 
   const bool DataReferencedByCode;
+
   struct PerFunctionProfileData {
     uint32_t NumValueSites[IPVK_Last + 1] = {};
     GlobalVariable *RegionCounters = nullptr;
@@ -1193,18 +1194,41 @@ static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
 }
 
 void InstrLowerer::maybeSetComdat(GlobalVariable *GV, Function *Fn,
-                                  StringRef VarName) {
+                                  StringRef CounterGroupName) {
+  // Place lowered global variables in a comdat group if the associated function
+  // is a COMDAT. This will make sure that only one copy of global variable
+  // (e.g. function counters) of the COMDAT function will be emitted after
+  // linking.
   bool NeedComdat = needsComdatForCounter(*Fn, M);
   bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
 
   if (!UseComdat)
     return;
 
-  StringRef GroupName =
-      TT.isOSBinFormatCOFF() && DataReferencedByCode ? GV->getName() : VarName;
+  // Keep in mind that this pass may run before the inliner, so we need to
+  // create a new comdat group (for counters, profiling data, etc). If we use
+  // the comdat of the parent function, that will result in relocations against
+  // discarded sections.
+  //
+  // If the data variable is referenced by code, non-counter variables (notably
+  // profiling data) and counters have to be in different comdats for COFF
+  // because the Visual C++ linker will report duplicate symbol errors if there
+  // are multiple external symbols with the same name marked
+  // IMAGE_COMDAT_SELECT_ASSOCIATIVE.
+  StringRef GroupName = TT.isOSBinFormatCOFF() && DataReferencedByCode
+                            ? GV->getName()
+                            : CounterGroupName;
   Comdat *C = M.getOrInsertComdat(GroupName);
-  if (!NeedComdat)
+
+  if (!NeedComdat) {
+    // Object file format must be ELF since `UseComdat && !NeedComdat` is true.
+    //
+    // For ELF, when not using COMDAT, put counters, data and values into a
+    // nodeduplicate COMDAT which is lowered to a zero-flag section group. This
+    // allows -z start-stop-gc to discard the entire group when the function is
+    // discarded.
     C->setSelectionKind(Comdat::NoDeduplicate);
+  }
   GV->setComdat(C);
   // COFF doesn't allow the comdat group leader to have private linkage, so
   // upgrade private linkage to internal linkage to produce a symbol table
@@ -1238,23 +1262,7 @@ GlobalVariable *InstrLowerer::setupProfileSection(InstrProfInstBase *Inc,
     Linkage = GlobalValue::PrivateLinkage;
     Visibility = GlobalValue::DefaultVisibility;
   }
-  // Move the name variable to the right section. Place them in a COMDAT group
-  // if the associated function is a COMDAT. This will make sure that only one
-  // copy of counters of the COMDAT function will be emitted after linking. Keep
-  // in mind that this pass may run before the inliner, so we need to create a
-  // new comdat group for the counters and profiling data. If we use the comdat
-  // of the parent function, that will result in relocations against discarded
-  // sections.
-  //
-  // If the data variable is referenced by code,  counters and data have to be
-  // in different comdats for COFF because the Visual C++ linker will report
-  // duplicate symbol errors if there are multiple external symbols with the
-  // same name marked IMAGE_COMDAT_SELECT_ASSOCIATIVE.
-  //
-  // For ELF, when not using COMDAT, put counters, data and values into a
-  // nodeduplicate COMDAT which is lowered to a zero-flag section group. This
-  // allows -z start-stop-gc to discard the entire group when the function is
-  // discarded.
+  // Move the name variable to the right section.
   bool Renamed;
   GlobalVariable *Ptr;
   StringRef VarPrefix;

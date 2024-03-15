@@ -400,10 +400,11 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
 
       // C++11 [class.ctor]p6:
       //   If that user-written default constructor would satisfy the
-      //   requirements of a constexpr constructor, the implicitly-defined
-      //   default constructor is constexpr.
+      //   requirements of a constexpr constructor/function(C++23), the
+      //   implicitly-defined default constructor is constexpr.
       if (!BaseClassDecl->hasConstexprDefaultConstructor())
-        data().DefaultedDefaultConstructorIsConstexpr = false;
+        data().DefaultedDefaultConstructorIsConstexpr =
+            C.getLangOpts().CPlusPlus23;
 
       // C++1z [class.copy]p8:
       //   The implicitly-declared copy constructor for a class X will have
@@ -548,7 +549,8 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
   //   -- for every subobject of class type or (possibly multi-dimensional)
   //      array thereof, that class type shall have a constexpr destructor
   if (!Subobj->hasConstexprDestructor())
-    data().DefaultedDestructorIsConstexpr = false;
+    data().DefaultedDestructorIsConstexpr =
+        getASTContext().getLangOpts().CPlusPlus23;
 
   // C++20 [temp.param]p7:
   //   A structural type is [...] a literal class type [for which] the types
@@ -1297,7 +1299,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
             !FieldRec->hasConstexprDefaultConstructor() && !isUnion())
           // The standard requires any in-class initializer to be a constant
           // expression. We consider this to be a defect.
-          data().DefaultedDefaultConstructorIsConstexpr = false;
+          data().DefaultedDefaultConstructorIsConstexpr =
+              Context.getLangOpts().CPlusPlus23;
 
         // C++11 [class.copy]p8:
         //   The implicitly-declared copy constructor for a class X will have

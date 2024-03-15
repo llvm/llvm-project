@@ -71,8 +71,22 @@ bool FormatToken::isSimpleTypeSpecifier() const {
   }
 }
 
+// Sorted common C++ non-keyword types.
+static SmallVector<StringRef> CppNonKeywordTypes = {
+    "clock_t",  "int16_t",   "int32_t", "int64_t",   "int8_t",
+    "intptr_t", "ptrdiff_t", "size_t",  "time_t",    "uint16_t",
+    "uint32_t", "uint64_t",  "uint8_t", "uintptr_t",
+};
+
+bool FormatToken::isTypeName() const {
+  return is(TT_TypeName) || isSimpleTypeSpecifier() ||
+         (IsCpp && is(tok::identifier) &&
+          std::binary_search(CppNonKeywordTypes.begin(),
+                             CppNonKeywordTypes.end(), TokenText));
+}
+
 bool FormatToken::isTypeOrIdentifier() const {
-  return isSimpleTypeSpecifier() || Tok.isOneOf(tok::kw_auto, tok::identifier);
+  return isTypeName() || isOneOf(tok::kw_auto, tok::identifier);
 }
 
 bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {

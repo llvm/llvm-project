@@ -1490,7 +1490,7 @@ void CombinerHelper::applyOptBrCondByInvertingCond(MachineInstr &MI,
   Observer.changedInstr(*BrCond);
 }
 
- 
+
 bool CombinerHelper::tryEmitMemcpyInline(MachineInstr &MI) {
   MachineIRBuilder HelperBuilder(MI);
   GISelObserverWrapper DummyObserver;
@@ -4936,24 +4936,6 @@ bool CombinerHelper::matchMulOBy0(MachineInstr &MI, BuildFnTy &MatchInfo) {
   return true;
 }
 
-bool CombinerHelper::matchAddOBy0(MachineInstr &MI, BuildFnTy &MatchInfo) {
-  // (G_*ADDO x, 0) -> x + no carry out
-  assert(MI.getOpcode() == TargetOpcode::G_UADDO ||
-         MI.getOpcode() == TargetOpcode::G_SADDO);
-  if (!mi_match(MI.getOperand(3).getReg(), MRI, m_SpecificICstOrSplat(0)))
-    return false;
-  Register Carry = MI.getOperand(1).getReg();
-  if (!isConstantLegalOrBeforeLegalizer(MRI.getType(Carry)))
-    return false;
-  Register Dst = MI.getOperand(0).getReg();
-  Register LHS = MI.getOperand(2).getReg();
-  MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildCopy(Dst, LHS);
-    B.buildConstant(Carry, 0);
-  };
-  return true;
-}
-
 bool CombinerHelper::matchAddEToAddO(MachineInstr &MI, BuildFnTy &MatchInfo) {
   // (G_*ADDE x, y, 0) -> (G_*ADDO x, y)
   // (G_*SUBE x, y, 0) -> (G_*SUBO x, y)
@@ -6354,6 +6336,26 @@ CombinerHelper::getConstantOrConstantSplatVector(Register Src) {
   return Value;
 }
 
+// FIXME G_SPLAT_VECTOR
+bool CombinerHelper::isConstantOrConstantVectorI(Register Src) const {
+  auto IConstant = getIConstantVRegValWithLookThrough(Src, MRI);
+  if (IConstant)
+    return true;
+
+  GBuildVector *BuildVector = getOpcodeDef<GBuildVector>(Src, MRI);
+  if (!BuildVector)
+    return false;
+
+  unsigned NumSources = BuildVector->getNumSources();
+  for (unsigned I = 0; I < NumSources; ++I) {
+    std::optional<ValueAndVReg> IConstant =
+        getIConstantVRegValWithLookThrough(BuildVector->getSourceReg(I), MRI);
+    if (!IConstant)
+      return false;
+  }
+  return true;
+}
+
 // TODO: use knownbits to determine zeros
 bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
                                               BuildFnTy &MatchInfo) {
@@ -6367,6 +6369,9 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
 
   // We only do this combine for scalar boolean conditions.
   if (CondTy != LLT::scalar(1))
+    return false;
+
+  if (TrueTy.isPointer())
     return false;
 
   // Both are scalars.
@@ -6713,6 +6718,9 @@ bool CombinerHelper::tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
   LLT CmpTy = MRI.getType(Cmp1->getReg(0));
   LLT CmpOperandTy = MRI.getType(R1);
 
+  if (CmpOperandTy.isPointer())
+    return false;
+
   // We build ands, adds, and constants of type CmpOperandTy.
   // They must be legal to build.
   if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, CmpOperandTy}) ||
@@ -6919,6 +6927,181 @@ bool CombinerHelper::matchOr(MachineInstr &MI, BuildFnTy &MatchInfo) {
 
   if (tryFoldLogicOfFCmps(Or, MatchInfo))
     return true;
+
+  return false;
+}
+
+bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
+  GAddCarryOut *Add = cast<GAddCarryOut>(&MI);
+
+  // Addo has no flags
+  Register Dst = Add->getReg(0);
+  Register Carry = Add->getReg(1);
+  Register LHS = Add->getLHSReg();
+  Register RHS = Add->getRHSReg();
+  bool IsSigned = Add->isSigned();
+  LLT DstTy = MRI.getType(Dst);
+  LLT CarryTy = MRI.getType(Carry);
+
+  // We want do fold the [u|s]addo.
+  if (!MRI.hasOneNonDBGUse(Dst))
+    return false;
+
+  // Fold addo, if the carry is dead -> add, undef.
+  if (MRI.use_nodbg_empty(Carry) &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {DstTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildAdd(Dst, LHS, RHS);
+      B.buildUndef(Carry);
+    };
+    return true;
+  }
+
+  // We want do fold the [u|s]addo.
+  if (!MRI.hasOneNonDBGUse(Carry))
+    return false;
+
+  // Canonicalize constant to RHS.
+  if (isConstantOrConstantVectorI(LHS) && !isConstantOrConstantVectorI(RHS)) {
+    if (IsSigned) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSAddo(Dst, Carry, RHS, LHS);
+      };
+      return true;
+    }
+    // !IsSigned
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildUAddo(Dst, Carry, RHS, LHS);
+    };
+    return true;
+  }
+
+  std::optional<APInt> MaybeLHS = getConstantOrConstantSplatVector(LHS);
+  std::optional<APInt> MaybeRHS = getConstantOrConstantSplatVector(RHS);
+
+  // Fold addo(c1, c2) -> c3, carry.
+  if (MaybeLHS && MaybeRHS && isConstantLegalOrBeforeLegalizer(DstTy) &&
+      isConstantLegalOrBeforeLegalizer(CarryTy)) {
+    bool Overflow;
+    APInt Result = IsSigned ? MaybeLHS->sadd_ov(*MaybeRHS, Overflow)
+                            : MaybeLHS->uadd_ov(*MaybeRHS, Overflow);
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildConstant(Dst, Result);
+      B.buildConstant(Carry, Overflow);
+    };
+    return true;
+  }
+
+  // Fold (addo x, 0) -> x, no borrow
+  if (MaybeRHS && *MaybeRHS == 0 && isConstantLegalOrBeforeLegalizer(CarryTy)) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildCopy(Dst, LHS);
+      B.buildConstant(Carry, 0);
+    };
+    return true;
+  }
+
+  // Given 2 constant operands whose sum does not overflow:
+  // uaddo (X +nuw C0), C1 -> uaddo X, C0 + C1
+  // saddo (X +nsw C0), C1 -> saddo X, C0 + C1
+  GAdd *AddLHS = getOpcodeDef<GAdd>(LHS, MRI);
+  if (MaybeRHS && AddLHS && MRI.hasOneNonDBGUse(Add->getReg(0)) &&
+      ((IsSigned && AddLHS->getFlag(MachineInstr::MIFlag::NoSWrap)) ||
+       (!IsSigned && AddLHS->getFlag(MachineInstr::MIFlag::NoUWrap)))) {
+    std::optional<APInt> MaybeAddRHS =
+        getConstantOrConstantSplatVector(AddLHS->getRHSReg());
+    if (MaybeAddRHS) {
+      bool Overflow;
+      APInt NewC = IsSigned ? MaybeAddRHS->sadd_ov(*MaybeRHS, Overflow)
+                            : MaybeAddRHS->uadd_ov(*MaybeRHS, Overflow);
+      if (!Overflow && isConstantLegalOrBeforeLegalizer(DstTy)) {
+        if (IsSigned) {
+          MatchInfo = [=](MachineIRBuilder &B) {
+            auto ConstRHS = B.buildConstant(DstTy, NewC);
+            B.buildSAddo(Dst, Carry, AddLHS->getLHSReg(), ConstRHS);
+          };
+          return true;
+        }
+        // !IsSigned
+        MatchInfo = [=](MachineIRBuilder &B) {
+          auto ConstRHS = B.buildConstant(DstTy, NewC);
+          B.buildUAddo(Dst, Carry, AddLHS->getLHSReg(), ConstRHS);
+        };
+        return true;
+      }
+    }
+  };
+
+  // We try to combine addo to non-overflowing add.
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {DstTy}}) ||
+      !isConstantLegalOrBeforeLegalizer(CarryTy))
+    return false;
+
+  // We try to combine uaddo to non-overflowing add.
+  if (!IsSigned) {
+    ConstantRange CRLHS =
+        ConstantRange::fromKnownBits(KB->getKnownBits(LHS), /*IsSigned=*/false);
+    ConstantRange CRRHS =
+        ConstantRange::fromKnownBits(KB->getKnownBits(RHS), /*IsSigned=*/false);
+
+    switch (CRLHS.unsignedAddMayOverflow(CRRHS)) {
+    case ConstantRange::OverflowResult::MayOverflow:
+      return false;
+    case ConstantRange::OverflowResult::NeverOverflows: {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildAdd(Dst, LHS, RHS, MachineInstr::MIFlag::NoUWrap);
+        B.buildConstant(Carry, 0);
+      };
+      return true;
+    }
+    case ConstantRange::OverflowResult::AlwaysOverflowsLow:
+    case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildAdd(Dst, LHS, RHS);
+        B.buildConstant(Carry, 1);
+      };
+      return true;
+    }
+    }
+    return false;
+  }
+
+  // We try to combine saddo to non-overflowing add.
+
+  // If LHS and RHS each have at least two sign bits, then there is no signed
+  // overflow.
+  if (KB->computeNumSignBits(RHS) > 1 && KB->computeNumSignBits(LHS) > 1) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildAdd(Dst, LHS, RHS, MachineInstr::MIFlag::NoSWrap);
+      B.buildConstant(Carry, 0);
+    };
+    return true;
+  }
+
+  ConstantRange CRLHS =
+      ConstantRange::fromKnownBits(KB->getKnownBits(LHS), /*IsSigned=*/true);
+  ConstantRange CRRHS =
+      ConstantRange::fromKnownBits(KB->getKnownBits(RHS), /*IsSigned=*/true);
+
+  switch (CRLHS.signedAddMayOverflow(CRRHS)) {
+  case ConstantRange::OverflowResult::MayOverflow:
+    return false;
+  case ConstantRange::OverflowResult::NeverOverflows: {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildAdd(Dst, LHS, RHS, MachineInstr::MIFlag::NoSWrap);
+      B.buildConstant(Carry, 0);
+    };
+    return true;
+  }
+  case ConstantRange::OverflowResult::AlwaysOverflowsLow:
+  case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildAdd(Dst, LHS, RHS);
+      B.buildConstant(Carry, 1);
+    };
+    return true;
+  }
+  }
 
   return false;
 }

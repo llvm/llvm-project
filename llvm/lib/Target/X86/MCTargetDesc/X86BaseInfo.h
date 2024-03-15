@@ -875,7 +875,10 @@ enum : uint64_t {
   ExplicitOpPrefixMask = 3ULL << ExplicitOpPrefixShift,
   /// EVEX_NF - Set if this instruction has EVEX.NF field set.
   EVEX_NFShift = ExplicitOpPrefixShift + 2,
-  EVEX_NF = 1ULL << EVEX_NFShift
+  EVEX_NF = 1ULL << EVEX_NFShift,
+  // TwoConditionalOps - Set if this instruction has two conditional operands
+  TwoConditionalOps_Shift = EVEX_NFShift + 1,
+  TwoConditionalOps = 1ULL << TwoConditionalOps_Shift
 };
 
 /// \returns true if the instruction with given opcode is a prefix.

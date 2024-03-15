@@ -924,7 +924,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (!RelTy::IsRela)
       addend += target.getImplicitAddend(bufLoc, type);
 
-    Symbol &sym = getFile<ELFT>()->getRelocTargetSym(rel);
+    Symbol &sym = this->file->getRelocTargetSym(rel);
     RelExpr expr = target.getRelExpr(type, sym, bufLoc);
     if (expr == R_NONE)
       continue;
@@ -939,7 +939,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
           val = *tombstone;
         } else {
           val = sym.getVA(addend) -
-                (getFile<ELFT>()->getRelocTargetSym(rels[i]).getVA(0) +
+                (this->file->getRelocTargetSym(rels[i]).getVA(0) +
                  getAddend<ELFT>(rels[i]));
         }
         if (overwriteULEB128(bufLoc, val) >= 0x80)

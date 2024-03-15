@@ -48,6 +48,24 @@ static llvm::DenseMap<const ValueDecl *, StorageLocation *> intersectDeclToLoc(
   return Result;
 }
 
+// Performs a join on either `ExprToLoc` or `ExprToVal`.
+// The maps must be consistent in the sense that any entries for the same
+// expression must map to the same location / value. This is the case if we are
+// performing a join for control flow within a full-expression (which is the
+// only case when this function should be used).
+template <typename MapT> MapT joinExprMaps(const MapT &Map1, const MapT &Map2) {
+  MapT Result = Map1;
+
+  for (const auto &Entry : Map2) {
+    [[maybe_unused]] auto [It, Inserted] = Result.insert(Entry);
+    // If there was an existing entry, its value should be the same as for the
+    // entry we were trying to insert.
+    assert(It->second == Entry.second);
+  }
+
+  return Result;
+}
+
 // Whether to consider equivalent two values with an unknown relation.
 //
 // FIXME: this function is a hack enabling unsoundness to support
@@ -414,8 +432,15 @@ void Environment::initialize() {
       }
     } else if (MethodDecl->isImplicitObjectMemberFunction()) {
       QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
-      setThisPointeeStorageLocation(
-          cast<RecordStorageLocation>(createObject(ThisPointeeType)));
+      auto &ThisLoc =
+          cast<RecordStorageLocation>(createStorageLocation(ThisPointeeType));
+      setThisPointeeStorageLocation(ThisLoc);
+      refreshRecordValue(ThisLoc, *this);
+      // Initialize fields of `*this` with values, but only if we're not
+      // analyzing a constructor; after all, it's the constructor's job to do
+      // this (and we want to be able to test that).
+      if (!isa<CXXConstructorDecl>(MethodDecl))
+        initializeFieldsWithValues(ThisLoc);
     }
   }
 }
@@ -627,7 +652,8 @@ LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
 }
 
 Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
-                              Environment::ValueModel &Model) {
+                              Environment::ValueModel &Model,
+                              ExprJoinBehavior ExprBehavior) {
   assert(EnvA.DACtx == EnvB.DACtx);
   assert(EnvA.ThisPointeeLoc == EnvB.ThisPointeeLoc);
   assert(EnvA.CallStack == EnvB.CallStack);
@@ -675,9 +701,10 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   JoinedEnv.LocToVal =
       joinLocToVal(EnvA.LocToVal, EnvB.LocToVal, EnvA, EnvB, JoinedEnv, Model);
 
-  // We intentionally leave `JoinedEnv.ExprToLoc` and `JoinedEnv.ExprToVal`
-  // empty, as we never need to access entries in these maps outside of the
-  // basic block that sets them.
+  if (ExprBehavior == KeepExprState) {
+    JoinedEnv.ExprToVal = joinExprMaps(EnvA.ExprToVal, EnvB.ExprToVal);
+    JoinedEnv.ExprToLoc = joinExprMaps(EnvA.ExprToLoc, EnvB.ExprToLoc);
+  }
 
   return JoinedEnv;
 }
@@ -797,6 +824,16 @@ Environment::getResultObjectLocation(const Expr &RecordPRValue) const {
 
 PointerValue &Environment::getOrCreateNullPointerValue(QualType PointeeType) {
   return DACtx->getOrCreateNullPointerValue(PointeeType);
+}
+
+void Environment::initializeFieldsWithValues(RecordStorageLocation &Loc) {
+  llvm::DenseSet<QualType> Visited;
+  int CreatedValuesCount = 0;
+  initializeFieldsWithValues(Loc, Visited, 0, CreatedValuesCount);
+  if (CreatedValuesCount > MaxCompositeValueSize) {
+    llvm::errs() << "Attempting to initialize a huge value of type: "
+                 << Loc.getType() << '\n';
+  }
 }
 
 void Environment::setValue(const StorageLocation &Loc, Value &Val) {

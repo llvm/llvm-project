@@ -212,8 +212,7 @@ private:
   /// Maximum number of threads to potentially grow this pool to.
   const unsigned MaxThreadCount;
 };
-
-#endif // LLVM_ENABLE_THREADS Disabled
+#endif // LLVM_ENABLE_THREADS
 
 /// A non-threaded implementation.
 class SingleThreadExecutor : public ThreadPoolInterface {
@@ -253,9 +252,9 @@ private:
 };
 
 #if LLVM_ENABLE_THREADS
-using ThreadPool = StdThreadPool;
+using DefaultThreadPool = StdThreadPool;
 #else
-using ThreadPool = SingleThreadExecutor;
+using DefaultThreadPool = SingleThreadExecutor;
 #endif
 
 /// A group of tasks to be run on a thread pool. Thread pool tasks in different

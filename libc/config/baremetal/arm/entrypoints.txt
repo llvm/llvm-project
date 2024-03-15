@@ -30,6 +30,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.bcmp
     libc.src.string.bcopy
     libc.src.string.bzero
+    libc.src.string.index
     libc.src.string.memccpy
     libc.src.string.memchr
     libc.src.string.memcmp
@@ -39,6 +40,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.mempcpy
     libc.src.string.memrchr
     libc.src.string.memset
+    libc.src.string.memset_explicit
+    libc.src.string.rindex
     libc.src.string.stpcpy
     libc.src.string.stpncpy
     libc.src.string.strcasecmp
@@ -47,8 +50,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strchr
     libc.src.string.strchrnul
     libc.src.string.strcmp
+    libc.src.string.strcoll
     libc.src.string.strcpy
     libc.src.string.strcspn
+    libc.src.string.strerror
+    libc.src.string.strerror_r
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
@@ -59,10 +65,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strnlen
     libc.src.string.strpbrk
     libc.src.string.strrchr
+    libc.src.string.strsep
     libc.src.string.strspn
     libc.src.string.strstr
     libc.src.string.strtok
     libc.src.string.strtok_r
+    libc.src.string.strxfrm
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -75,7 +83,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.snprintf
     libc.src.stdio.vsprintf
     libc.src.stdio.vsnprintf
-
 
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_leading_zeros_uc
@@ -118,6 +125,36 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_first_trailing_one_ui
     libc.src.stdbit.stdc_first_trailing_one_ul
     libc.src.stdbit.stdc_first_trailing_one_ull
+    libc.src.stdbit.stdc_count_zeros_uc
+    libc.src.stdbit.stdc_count_zeros_us
+    libc.src.stdbit.stdc_count_zeros_ui
+    libc.src.stdbit.stdc_count_zeros_ul
+    libc.src.stdbit.stdc_count_zeros_ull
+    libc.src.stdbit.stdc_count_ones_uc
+    libc.src.stdbit.stdc_count_ones_us
+    libc.src.stdbit.stdc_count_ones_ui
+    libc.src.stdbit.stdc_count_ones_ul
+    libc.src.stdbit.stdc_count_ones_ull
+    libc.src.stdbit.stdc_has_single_bit_uc
+    libc.src.stdbit.stdc_has_single_bit_us
+    libc.src.stdbit.stdc_has_single_bit_ui
+    libc.src.stdbit.stdc_has_single_bit_ul
+    libc.src.stdbit.stdc_has_single_bit_ull
+    libc.src.stdbit.stdc_bit_width_uc
+    libc.src.stdbit.stdc_bit_width_us
+    libc.src.stdbit.stdc_bit_width_ui
+    libc.src.stdbit.stdc_bit_width_ul
+    libc.src.stdbit.stdc_bit_width_ull
+    libc.src.stdbit.stdc_bit_floor_uc
+    libc.src.stdbit.stdc_bit_floor_us
+    libc.src.stdbit.stdc_bit_floor_ui
+    libc.src.stdbit.stdc_bit_floor_ul
+    libc.src.stdbit.stdc_bit_floor_ull
+    libc.src.stdbit.stdc_bit_ceil_uc
+    libc.src.stdbit.stdc_bit_ceil_us
+    libc.src.stdbit.stdc_bit_ceil_ui
+    libc.src.stdbit.stdc_bit_ceil_ul
+    libc.src.stdbit.stdc_bit_ceil_ull
 
     # stdlib.h entrypoints
     libc.src.stdlib.abort
@@ -133,6 +170,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.qsort
+    libc.src.stdlib.qsort_r
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
     libc.src.stdlib.strtol
@@ -202,6 +242,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminl
     libc.src.math.fmod
     libc.src.math.fmodf
+    libc.src.math.fmodl
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl
@@ -213,6 +254,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
+    libc.src.math.llogb
+    libc.src.math.llogbf
+    libc.src.math.llogbl
     libc.src.math.llrint
     libc.src.math.llrintf
     libc.src.math.llrintl
@@ -279,6 +323,40 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncf
     libc.src.math.truncl
 )
+
+if(LIBC_COMPILER_HAS_FIXED_POINT)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # stdfix.h _Fract and _Accum entrypoints
+    libc.src.stdfix.abshk
+    libc.src.stdfix.abshr
+    libc.src.stdfix.absk
+    libc.src.stdfix.absr
+    libc.src.stdfix.abslk
+    libc.src.stdfix.abslr
+    libc.src.stdfix.exphk
+    libc.src.stdfix.expk
+    libc.src.stdfix.roundhk
+    libc.src.stdfix.roundhr
+    libc.src.stdfix.roundk
+    libc.src.stdfix.roundr
+    libc.src.stdfix.roundlk
+    libc.src.stdfix.roundlr
+    libc.src.stdfix.rounduhk
+    libc.src.stdfix.rounduhr
+    libc.src.stdfix.rounduk
+    libc.src.stdfix.roundur
+    libc.src.stdfix.roundulk
+    libc.src.stdfix.roundulr
+    libc.src.stdfix.sqrtuhk
+    libc.src.stdfix.sqrtuhr
+    libc.src.stdfix.sqrtuk
+    libc.src.stdfix.sqrtur
+    # libc.src.stdfix.sqrtulk
+    libc.src.stdfix.sqrtulr
+    libc.src.stdfix.uhksqrtus
+    libc.src.stdfix.uksqrtui
+  )
+endif()
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}

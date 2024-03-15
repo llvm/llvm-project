@@ -1903,7 +1903,8 @@ bool AMDGPUDAGToDAGISel::checkFlatScratchSVSSwizzleBug(
   // voffset to (soffset + inst_offset).
   KnownBits VKnown = CurDAG->computeKnownBits(VAddr);
   KnownBits SKnown = KnownBits::computeForAddSub(
-      true, false, CurDAG->computeKnownBits(SAddr),
+      /*Add=*/true, /*NSW=*/false, /*NUW=*/false,
+      CurDAG->computeKnownBits(SAddr),
       KnownBits::makeConstant(APInt(32, ImmOffset)));
   uint64_t VMax = VKnown.getMaxValue().getZExtValue();
   uint64_t SMax = SKnown.getMaxValue().getZExtValue();
@@ -2687,7 +2688,18 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
 
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   unsigned IntrID = N->getConstantOperandVal(0);
-  unsigned Opcode;
+  unsigned Opcode = AMDGPU::INSTRUCTION_LIST_END;
+  SDNode *ConvGlueNode = N->getGluedNode();
+  if (ConvGlueNode) {
+    // FIXME: Possibly iterate over multiple glue nodes?
+    assert(ConvGlueNode->getOpcode() == ISD::CONVERGENCECTRL_GLUE);
+    ConvGlueNode = ConvGlueNode->getOperand(0).getNode();
+    ConvGlueNode =
+        CurDAG->getMachineNode(TargetOpcode::CONVERGENCECTRL_GLUE, {},
+                               MVT::Glue, SDValue(ConvGlueNode, 0));
+  } else {
+    ConvGlueNode = nullptr;
+  }
   switch (IntrID) {
   case Intrinsic::amdgcn_wqm:
     Opcode = AMDGPU::WQM;
@@ -2719,11 +2731,19 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
     break;
   default:
     SelectCode(N);
-    return;
+    break;
   }
 
-  SDValue Src = N->getOperand(1);
-  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), {Src});
+  if (Opcode != AMDGPU::INSTRUCTION_LIST_END) {
+    SDValue Src = N->getOperand(1);
+    CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), {Src});
+  }
+
+  if (ConvGlueNode) {
+    SmallVector<SDValue, 4> NewOps(N->op_begin(), N->op_end());
+    NewOps.push_back(SDValue(ConvGlueNode, 0));
+    CurDAG->MorphNodeTo(N, N->getOpcode(), N->getVTList(), NewOps);
+  }
 }
 
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
@@ -3307,35 +3327,41 @@ bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
 
   // 16 bit splat
   SDValue SplatSrc32 = stripBitcast(In);
-  if (auto *SplatSrc32BV = dyn_cast<BuildVectorSDNode>(SplatSrc32)) {
+  if (auto *SplatSrc32BV = dyn_cast<BuildVectorSDNode>(SplatSrc32))
     if (SDValue Splat32 = SplatSrc32BV->getSplatValue()) {
       SDValue SplatSrc16 = stripBitcast(Splat32);
-      if (auto *SplatSrc16BV = dyn_cast<BuildVectorSDNode>(SplatSrc16)) {
+      if (auto *SplatSrc16BV = dyn_cast<BuildVectorSDNode>(SplatSrc16))
         if (SDValue Splat = SplatSrc16BV->getSplatValue()) {
+          const SIInstrInfo *TII = Subtarget->getInstrInfo();
+          std::optional<APInt> RawValue;
+          if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Splat))
+            RawValue = C->getValueAPF().bitcastToAPInt();
+          else if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat))
+            RawValue = C->getAPIntValue();
 
-          // f16
-          if (isInlineImmediate(Splat.getNode())) {
-            const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Splat);
-            int64_t Imm = C->getValueAPF().bitcastToAPInt().getSExtValue();
-            Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i16);
-            return true;
-          }
-
-          // bf16
-          if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat)) {
-            const SIInstrInfo *TII = Subtarget->getInstrInfo();
-            APInt BF16Value = C->getAPIntValue();
-            APInt F32Value = BF16Value.zext(32).shl(16);
-            if (TII->isInlineConstant(F32Value)) {
-              int64_t Imm = F32Value.getSExtValue();
-              Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i32);
-              return true;
-            }
+          if (RawValue.has_value()) {
+            EVT VT = In.getValueType().getScalarType();
+            if (VT.getSimpleVT() == MVT::f16 || VT.getSimpleVT() == MVT::bf16) {
+              APFloat FloatVal(VT.getSimpleVT() == MVT::f16
+                                   ? APFloatBase::IEEEhalf()
+                                   : APFloatBase::BFloat(),
+                               RawValue.value());
+              if (TII->isInlineConstant(FloatVal)) {
+                Src = CurDAG->getTargetConstant(RawValue.value(), SDLoc(In),
+                                                MVT::i16);
+                return true;
+              }
+            } else if (VT.getSimpleVT() == MVT::i16) {
+              if (TII->isInlineConstant(RawValue.value())) {
+                Src = CurDAG->getTargetConstant(RawValue.value(), SDLoc(In),
+                                                MVT::i16);
+                return true;
+              }
+            } else
+              llvm_unreachable("unknown 16-bit type");
           }
         }
-      }
     }
-  }
 
   return false;
 }

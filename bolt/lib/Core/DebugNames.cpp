@@ -345,8 +345,13 @@ void DWARF5AcceleratorTable::finalize() {
 std::optional<DWARF5AccelTable::UnitIndexAndEncoding>
 DWARF5AcceleratorTable::getIndexForEntry(
     const BOLTDWARF5AccelTableData &Value) const {
+  // The foreign TU list immediately follows the local TU list and they both
+  // use the same index, so that if there are N local TU entries, the index for
+  // the first foreign TU is N.
   if (Value.isTU())
-    return {{Value.getUnitID(), {dwarf::DW_IDX_type_unit, TUIndexForm}}};
+    return {{(Value.getSecondUnitID() ? (unsigned)LocalTUList.size() : 0) +
+                 Value.getUnitID(),
+             {dwarf::DW_IDX_type_unit, TUIndexForm}}};
   if (CUList.size() > 1)
     return {{Value.getUnitID(), {dwarf::DW_IDX_compile_unit, CUIndexForm}}};
   return std::nullopt;

@@ -2079,6 +2079,7 @@ cc_library(
         "include/clang/Serialization/AttrPCHRead.inc",
         "include/clang/Serialization/AttrPCHWrite.inc",
     ] + glob([
+        "include/clang/Frontend/*.h",
         "lib/Serialization/*.cpp",
         "lib/Serialization/*.h",
     ]),
@@ -2090,11 +2091,14 @@ cc_library(
         "include/clang/Serialization/*.def",
     ]),
     deps = [
+        ":apinotes",
         ":ast",
         ":basic",
+        ":driver",
         ":lex",
         ":sema",
         ":serialization_attr_gen",
+        ":static_analyzer_core_options",
         ":type_nodes_gen",
         "//llvm:BitReader",
         "//llvm:BitWriter",

@@ -744,19 +744,19 @@ def S_NOR_B64 : SOP2_64 <"s_nor_b64",
 
 // There are also separate patterns for types other than i32
 def S_ANDN2_B32 : SOP2_32 <"s_andn2_b32",
-  [(set i32:$sdst, (UniformBinFrag<and> i32:$src0, (UniformUnaryFrag<not> i32:$src1)))]
+  [(set i32:$sdst, (UniformBinFrag<and> i32:$src0, (not i32:$src1)))]
 >;
 
 def S_ANDN2_B64 : SOP2_64 <"s_andn2_b64",
-  [(set i64:$sdst, (UniformBinFrag<and> i64:$src0, (UniformUnaryFrag<not> i64:$src1)))]
+  [(set i64:$sdst, (UniformBinFrag<and> i64:$src0, (not i64:$src1)))]
 >;
 
 def S_ORN2_B32 : SOP2_32 <"s_orn2_b32",
-  [(set i32:$sdst, (UniformBinFrag<or> i32:$src0, (UniformUnaryFrag<not> i32:$src1)))]
+  [(set i32:$sdst, (UniformBinFrag<or> i32:$src0, (not i32:$src1)))]
 >;
 
 def S_ORN2_B64 : SOP2_64 <"s_orn2_b64",
-  [(set i64:$sdst, (UniformBinFrag<or> i64:$src0, (UniformUnaryFrag<not> i64:$src1)))]
+  [(set i64:$sdst, (UniformBinFrag<or> i64:$src0, (not i64:$src1)))]
 >;
 } // End Defs = [SCC]
 
@@ -1598,8 +1598,10 @@ def S_WAITCNT_VSCNT_soft : SOPK_WAITCNT<"s_soft_waitcnt_vscnt">;
 let SubtargetPredicate = isGFX12Plus in {
   def S_WAIT_LOADCNT_soft : SOPP_Pseudo <"s_soft_wait_loadcnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_STORECNT_soft : SOPP_Pseudo <"s_soft_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
+let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_SAMPLECNT_soft : SOPP_Pseudo <"s_soft_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_BVHCNT_soft : SOPP_Pseudo <"s_soft_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
+} // End OtherPredicates = [HasImageInsts].
   def S_WAIT_DSCNT_soft : SOPP_Pseudo <"s_soft_wait_dscnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_KMCNT_soft : SOPP_Pseudo <"s_soft_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
 }
@@ -1703,6 +1705,7 @@ let SubtargetPredicate = isGFX10Plus in {
 } // End SubtargetPredicate = isGFX10Plus
 
 let SubtargetPredicate = isGFX11Plus in {
+let OtherPredicates = [HasExportInsts] in
   def S_WAIT_EVENT : SOPP_Pseudo<"s_wait_event", (ins s16imm:$simm16),
                                  "$simm16"> {
                                    let hasSideEffects = 1;
@@ -1727,12 +1730,15 @@ let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
                 [(int_amdgcn_s_wait_storecnt timm:$simm16)]>;
   def S_WAIT_STORECNT_DSCNT :
     SOPP_Pseudo<"s_wait_storecnt_dscnt", (ins s16imm:$simm16), "$simm16">;
+let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_SAMPLECNT :
     SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_samplecnt timm:$simm16)]>;
   def S_WAIT_BVHCNT :
     SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_bvhcnt timm:$simm16)]>;
+} // End OtherPredicates = [HasImageInsts].
+let OtherPredicates = [HasExportInsts] in
   def S_WAIT_EXPCNT :
     SOPP_Pseudo<"s_wait_expcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_expcnt timm:$simm16)]>;
@@ -1899,21 +1905,20 @@ def : GCNPat<
   (S_AND_B32 (S_MOV_B32 (i32 0xffff)), $src)
 >;
 
-// FIXME: ValueType should have isVector field
 class ScalarNot2Pat<Instruction inst, SDPatternOperator op, ValueType vt,
-                    bit isVector = 1> : GCNPat<
-  (UniformBinFrag<op> vt:$src0, (UniformUnaryFrag<!if(isVector, vnot, not)> vt:$src1)),
+                    SDPatternOperator notnode = !if(vt.isVector, vnot, not)> : GCNPat<
+  (UniformBinFrag<op> vt:$src0, (notnode vt:$src1)),
   (inst getSOPSrcForVT<vt>.ret:$src0, getSOPSrcForVT<vt>.ret:$src1)
 >;
 
 // Match these for some more types
 // TODO: i1
-def : ScalarNot2Pat<S_ANDN2_B32, and, i16, 0>;
+def : ScalarNot2Pat<S_ANDN2_B32, and, i16>;
 def : ScalarNot2Pat<S_ANDN2_B32, and, v2i16>;
 def : ScalarNot2Pat<S_ANDN2_B64, and, v4i16>;
 def : ScalarNot2Pat<S_ANDN2_B64, and, v2i32>;
 
-def : ScalarNot2Pat<S_ORN2_B32, or, i16, 0>;
+def : ScalarNot2Pat<S_ORN2_B32, or, i16>;
 def : ScalarNot2Pat<S_ORN2_B32, or, v2i16>;
 def : ScalarNot2Pat<S_ORN2_B64, or, v4i16>;
 def : ScalarNot2Pat<S_ORN2_B64, or, v2i32>;

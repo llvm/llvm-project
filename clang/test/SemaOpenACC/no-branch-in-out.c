@@ -37,6 +37,18 @@ void BreakContinue() {
       break; // expected-error{{invalid branch out of OpenACC Compute Construct}}
   }
 
+#pragma acc serial
+  for(int i = 0; i < 5; ++i) {
+    if (i > 1)
+      break; // expected-error{{invalid branch out of OpenACC Compute Construct}}
+  }
+
+#pragma acc kernels
+  for(int i = 0; i < 5; ++i) {
+    if (i > 1)
+      break; // expected-error{{invalid branch out of OpenACC Compute Construct}}
+  }
+
 #pragma acc parallel
   switch(j) {
     case 1:
@@ -95,6 +107,16 @@ void BreakContinue() {
 
 void Return() {
 #pragma acc parallel
+  {
+    return;// expected-error{{invalid return out of OpenACC Compute Construct}}
+  }
+
+#pragma acc serial
+  {
+    return;// expected-error{{invalid return out of OpenACC Compute Construct}}
+  }
+
+#pragma acc kernels
   {
     return;// expected-error{{invalid return out of OpenACC Compute Construct}}
   }
@@ -255,6 +277,34 @@ LABEL13:{}
   LABEL14:{}
   ({goto LABEL14;});
   }
+
+
+
+  ({goto LABEL15;});// expected-error{{cannot jump from this goto statement to its label}}
+#pragma acc serial// expected-note{{invalid branch into OpenACC Compute Construct}}
+  {
+LABEL15:{}
+  }
+
+LABEL16:{}
+#pragma acc serial// expected-note{{invalid branch out of OpenACC Compute Construct}}
+  {
+  ({goto LABEL16;});// expected-error{{cannot jump from this goto statement to its label}}
+  }
+
+
+  ({goto LABEL17;});// expected-error{{cannot jump from this goto statement to its label}}
+#pragma acc kernels// expected-note{{invalid branch into OpenACC Compute Construct}}
+  {
+LABEL17:{}
+  }
+
+LABEL18:{}
+#pragma acc kernels// expected-note{{invalid branch out of OpenACC Compute Construct}}
+  {
+  ({goto LABEL18;});// expected-error{{cannot jump from this goto statement to its label}}
+  }
+
 }
 
 void IndirectGoto1() {
@@ -330,7 +380,23 @@ void DuffsDevice() {
   }
 
   switch (j) {
+#pragma acc kernels
+  for(int i =0; i < 5; ++i) {
+    default: // expected-error{{invalid branch into OpenACC Compute Construct}}
+      {}
+  }
+  }
+
+  switch (j) {
 #pragma acc parallel
+  for(int i =0; i < 5; ++i) {
+    case 'a' ... 'z': // expected-error{{invalid branch into OpenACC Compute Construct}}
+      {}
+  }
+  }
+
+  switch (j) {
+#pragma acc serial
   for(int i =0; i < 5; ++i) {
     case 'a' ... 'z': // expected-error{{invalid branch into OpenACC Compute Construct}}
       {}

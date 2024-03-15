@@ -10,7 +10,7 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -204,54 +204,8 @@ module {
     return %0 : tensor<?x?xf64, #DCSR>
   }
 
-  // Dumps a sparse vector of type f64.
-  func.func @dump_vec_f64(%arg0: tensor<?xf64, #SparseVector>) {
-    // Dump the values array to verify only sparse contents are stored.
-    %c0 = arith.constant 0 : index
-    %d0 = arith.constant 0.0 : f64
-    %0 = sparse_tensor.values %arg0 : tensor<?xf64, #SparseVector> to memref<?xf64>
-    %1 = vector.transfer_read %0[%c0], %d0: memref<?xf64>, vector<32xf64>
-    vector.print %1 : vector<32xf64>
-    // Dump the dense vector to verify structure is correct.
-    %dv = sparse_tensor.convert %arg0 : tensor<?xf64, #SparseVector> to tensor<?xf64>
-    %3 = vector.transfer_read %dv[%c0], %d0: tensor<?xf64>, vector<32xf64>
-    vector.print %3 : vector<32xf64>
-    bufferization.dealloc_tensor %dv : tensor<?xf64>
-    return
-  }
-
-  // Dumps a sparse vector of type i32.
-  func.func @dump_vec_i32(%arg0: tensor<?xi32, #SparseVector>) {
-    // Dump the values array to verify only sparse contents are stored.
-    %c0 = arith.constant 0 : index
-    %d0 = arith.constant 0 : i32
-    %0 = sparse_tensor.values %arg0 : tensor<?xi32, #SparseVector> to memref<?xi32>
-    %1 = vector.transfer_read %0[%c0], %d0: memref<?xi32>, vector<24xi32>
-    vector.print %1 : vector<24xi32>
-    // Dump the dense vector to verify structure is correct.
-    %dv = sparse_tensor.convert %arg0 : tensor<?xi32, #SparseVector> to tensor<?xi32>
-    %3 = vector.transfer_read %dv[%c0], %d0: tensor<?xi32>, vector<32xi32>
-    vector.print %3 : vector<32xi32>
-    bufferization.dealloc_tensor %dv : tensor<?xi32>
-    return
-  }
-
-  // Dump a sparse matrix.
-  func.func @dump_mat(%arg0: tensor<?x?xf64, #DCSR>) {
-    %c0 = arith.constant 0 : index
-    %d0 = arith.constant 0.0 : f64
-    %0 = sparse_tensor.values %arg0 : tensor<?x?xf64, #DCSR> to memref<?xf64>
-    %1 = vector.transfer_read %0[%c0], %d0: memref<?xf64>, vector<16xf64>
-    vector.print %1 : vector<16xf64>
-    %dm = sparse_tensor.convert %arg0 : tensor<?x?xf64, #DCSR> to tensor<?x?xf64>
-    %3 = vector.transfer_read %dm[%c0, %c0], %d0: tensor<?x?xf64>, vector<4x8xf64>
-    vector.print %3 : vector<4x8xf64>
-    bufferization.dealloc_tensor %dm : tensor<?x?xf64>
-    return
-  }
-
   // Driver method to call and verify vector kernels.
-  func.func @entry() {
+  func.func @main() {
     %cmu = arith.constant -99 : i32
     %c0 = arith.constant 0 : index
 
@@ -289,26 +243,66 @@ module {
     //
     // Verify the results.
     //
-    // CHECK:      ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 4, 0, 0, 5, 6, 0, 0, 0, 0, 0, 0, 7, 8, 0, 9 )
-    // CHECK-NEXT: ( 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 )
-    // CHECK-NEXT: ( 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0 )
-    // CHECK-NEXT: ( -1, 1, 1, -2, 1, 1, 1, 1, 1, 1, 1, -3, 1, 1, 1, 1, 1, -4, 1, 1, -5, -6, 1, 1, 1, 1, 1, 1, -7, -8, 1, -9 )
-    // CHECK-NEXT: ( -1, 1, 1, -2, 1, 1, 1, 1, 1, 1, 1, -3, 1, 1, 1, 1, 1, -4, 1, 1, -5, -6, 1, 1, 1, 1, 1, 1, -7, -8, 1, -9 )
-    // CHECK-NEXT: ( 0, 6, 33, 68, 100, 126, 196, 232, 279, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 68, 0, 0, 100, 126, 0, 0, 0, 0, 0, 0, 196, 232, 0, 279 )
-    // CHECK-NEXT: ( 3, 3, 3, 4, 5, 6, 7, 7, 7, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( ( 3, 3, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 3 ), ( 0, 0, 4, 0, 5, 0, 0, 6 ), ( 7, 0, 7, 7, 0, 0, 0, 0 ) )
-    // CHECK-NEXT: ( 99, 99, 99, 99, 5, 6, 99, 99, 99, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( ( 99, 99, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 99 ), ( 0, 0, 99, 0, 5, 0, 0, 6 ), ( 99, 0, 99, 99, 0, 0, 0, 0 ) )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 9
+    // CHECK-NEXT: dim = ( 32 )
+    // CHECK-NEXT: lvl = ( 32 )
+    // CHECK-NEXT: pos[0] : ( 0, 9
+    // CHECK-NEXT: crd[0] : ( 0, 3, 11, 17, 20, 21, 28, 29, 31
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 23
+    // CHECK-NEXT: dim = ( 32 )
+    // CHECK-NEXT: lvl = ( 32 )
+    // CHECK-NEXT: pos[0] : ( 0, 23
+    // CHECK-NEXT: crd[0] : ( 1, 2, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 18, 19, 22, 23, 24, 25, 26, 27, 30
+    // CHECK-NEXT: values : ( 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 32
+    // CHECK-NEXT: dim = ( 32 )
+    // CHECK-NEXT: lvl = ( 32 )
+    // CHECK-NEXT: pos[0] : ( 0, 32
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+    // CHECK-NEXT: values : ( -1, 1, 1, -2, 1, 1, 1, 1, 1, 1, 1, -3, 1, 1, 1, 1, 1, -4, 1, 1, -5, -6, 1, 1, 1, 1, 1, 1, -7, -8, 1, -9
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 9
+    // CHECK-NEXT: dim = ( 32 )
+    // CHECK-NEXT: lvl = ( 32 )
+    // CHECK-NEXT: pos[0] : ( 0, 9
+    // CHECK-NEXT: crd[0] : ( 0, 3, 11, 17, 20, 21, 28, 29, 31
+    // CHECK-NEXT: values : ( 0, 6, 33, 68, 100, 126, 196, 232, 279
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 9
+    // CHECK-NEXT: dim = ( 4, 8 )
+    // CHECK-NEXT: lvl = ( 4, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 4
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9
+    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3
+    // CHECK-NEXT: values : ( 3, 3, 3, 4, 5, 6, 7, 7, 7
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 9
+    // CHECK-NEXT: dim = ( 4, 8 )
+    // CHECK-NEXT: lvl = ( 4, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 4
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9
+    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3
+    // CHECK-NEXT: values : ( 99, 99, 99, 99, 5, 6, 99, 99, 99
+    // CHECK-NEXT: ----
     // CHECK-NEXT: ( 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0 )
     //
-    call @dump_vec_f64(%sv1) : (tensor<?xf64, #SparseVector>) -> ()
-    call @dump_vec_i32(%0) : (tensor<?xi32, #SparseVector>) -> ()
-    call @dump_vec_f64(%1) : (tensor<?xf64, #SparseVector>) -> ()
-    call @dump_vec_f64(%2) : (tensor<?xf64, #SparseVector>) -> ()
-    call @dump_mat(%3) : (tensor<?x?xf64, #DCSR>) -> ()
-    call @dump_mat(%4) : (tensor<?x?xf64, #DCSR>) -> ()
+    sparse_tensor.print %sv1 : tensor<?xf64, #SparseVector>
+    sparse_tensor.print %0 : tensor<?xi32, #SparseVector>
+    sparse_tensor.print %1 : tensor<?xf64, #SparseVector>
+    sparse_tensor.print %2 : tensor<?xf64, #SparseVector>
+    sparse_tensor.print %3 : tensor<?x?xf64, #DCSR>
+    sparse_tensor.print %4 : tensor<?x?xf64, #DCSR>
     %v = vector.transfer_read %5[%c0], %cmu: tensor<?xi32>, vector<32xi32>
     vector.print %v : vector<32xi32>
 

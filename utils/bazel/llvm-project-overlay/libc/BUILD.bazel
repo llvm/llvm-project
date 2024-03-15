@@ -211,6 +211,7 @@ libc_support_library(
     deps = [
         "__support_cpp_type_traits",
         "__support_macros_attributes",
+        ":__support_macros_properties_types",
         ":llvm_libc_macros_limits_macros",
     ],
 )
@@ -439,17 +440,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_integer_utils",
-    hdrs = ["src/__support/integer_utils.h"],
-    deps = [
-        ":__support_common",
-        ":__support_cpp_type_traits",
-        ":__support_math_extras",
-        ":__support_number_pair",
-    ],
-)
-
-libc_support_library(
     name = "__support_uint",
     hdrs = ["src/__support/UInt.h"],
     deps = [
@@ -458,9 +448,9 @@ libc_support_library(
         ":__support_cpp_limits",
         ":__support_cpp_optional",
         ":__support_cpp_type_traits",
-        ":__support_integer_utils",
         ":__support_macros_attributes",
         ":__support_macros_optimization",
+        ":__support_macros_properties_types",
         ":__support_math_extras",
         ":__support_number_pair",
     ],
@@ -470,6 +460,7 @@ libc_support_library(
     name = "__support_uint128",
     hdrs = ["src/__support/UInt128.h"],
     deps = [
+        ":__support_macros_properties_types",
         ":__support_uint",
     ],
 )
@@ -507,6 +498,7 @@ libc_support_library(
         ":__support_cpp_span",
         ":__support_cpp_string_view",
         ":__support_cpp_type_traits",
+        ":__support_uint",
     ],
 )
 
@@ -603,6 +595,7 @@ libc_support_library(
     name = "__support_math_extras",
     hdrs = ["src/__support/math_extras.h"],
     deps = [
+        ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
@@ -995,6 +988,11 @@ libc_support_library(
 libc_support_library(
     name = "llvm_libc_macros_float_macros",
     hdrs = ["include/llvm-libc-macros/float-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_stdint_macros",
+    hdrs = ["include/llvm-libc-macros/stdint-macros.h"],
 )
 
 libc_support_library(

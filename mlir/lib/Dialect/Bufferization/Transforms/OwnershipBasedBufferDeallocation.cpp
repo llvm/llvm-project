@@ -956,13 +956,13 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
 
   SmallVector<Value> updatedOwnerships;
   auto result = deallocation_impl::insertDeallocOpForReturnLike(
-      state, op, OperandRange(operands), updatedOwnerships);
+      state, op, operands.getAsOperandRange(), updatedOwnerships);
   if (failed(result) || !*result)
     return result;
 
   // Add an additional operand for every MemRef for the ownership indicator.
   if (!funcWithoutDynamicOwnership) {
-    SmallVector<Value> newOperands{OperandRange(operands)};
+    SmallVector<Value> newOperands{operands.getAsOperandRange()};
     newOperands.append(updatedOwnerships.begin(), updatedOwnerships.end());
     operands.assign(newOperands);
   }

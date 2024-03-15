@@ -70,6 +70,8 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -126,6 +128,9 @@ Changes to the C API
 * Added ``LLVMGetBlockAddressFunction`` and ``LLVMGetBlockAddressBasicBlock``
   functions for accessing the values in a blockaddress constant.
 
+* Added ``LLVMConstStringInContext2`` function, which better matches the C++
+  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``. 
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -147,6 +152,9 @@ Changes to the LLVM tools
 * llvm-ar now utilizes LLVM_DEFAULT_TARGET_TRIPLE to determine the archive format
   if it's not specified with the ``--format`` argument and cannot be inferred from
   input files.
+
+* llvm-ar now allows specifying COFF archive format with ``--format`` argument
+  and uses it by default for COFF targets.
 
 * llvm-objcopy now supports ``--set-symbol-visibility`` and
   ``--set-symbols-visibility`` options for ELF input to change the

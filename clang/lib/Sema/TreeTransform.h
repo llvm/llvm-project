@@ -4785,6 +4785,14 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
     TemplateArgumentLoc In = *First;
 
     if (In.getArgument().getKind() == TemplateArgument::Pack) {
+      // When building the deduction guides, we rewrite the argument packs
+      // instead of unpacking.
+      if (getSema().CodeSynthesisContexts.back().Kind ==
+          Sema::CodeSynthesisContext::BuildingDeductionGuides) {
+        if (getDerived().TransformTemplateArgument(In, Out, Uneval))
+          return true;
+        continue;
+      }
       // Unpack argument packs, which we translate them into separate
       // arguments.
       // FIXME: We could do much better if we could guarantee that the
@@ -13649,10 +13657,29 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   // use evaluation contexts to distinguish the function parameter case.
   CXXRecordDecl::LambdaDependencyKind DependencyKind =
       CXXRecordDecl::LDK_Unknown;
+  DeclContext *DC = getSema().CurContext;
+  // A RequiresExprBodyDecl is not interesting for dependencies.
+  // For the following case,
+  //
+  // template <typename>
+  // concept C = requires { [] {}; };
+  //
+  // template <class F>
+  // struct Widget;
+  //
+  // template <C F>
+  // struct Widget<F> {};
+  //
+  // While we are substituting Widget<F>, the parent of DC would be
+  // the template specialization itself. Thus, the lambda expression
+  // will be deemed as dependent even if there are no dependent template
+  // arguments.
+  // (A ClassTemplateSpecializationDecl is always a dependent context.)
+  while (DC->getDeclKind() == Decl::Kind::RequiresExprBody)
+    DC = DC->getParent();
   if ((getSema().isUnevaluatedContext() ||
        getSema().isConstantEvaluatedContext()) &&
-      (getSema().CurContext->isFileContext() ||
-       !getSema().CurContext->getParent()->isDependentContext()))
+      (DC->isFileContext() || !DC->getParent()->isDependentContext()))
     DependencyKind = CXXRecordDecl::LDK_NeverDependent;
 
   CXXRecordDecl *OldClass = E->getLambdaClass();

@@ -11,8 +11,6 @@
 
 #include <stdint.h>
 
-#include "llvm-libc-types/rpc_opcodes_t.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -84,7 +82,7 @@ rpc_status_t rpc_handle_server(uint32_t device_id);
 /// Register a callback to handle an opcode from the RPC client. The associated
 /// data must remain accessible as long as the user intends to handle the server
 /// with this callback.
-rpc_status_t rpc_register_callback(uint32_t device_id, rpc_opcode_t opcode,
+rpc_status_t rpc_register_callback(uint32_t device_id, uint16_t opcode,
                                    rpc_opcode_callback_ty callback, void *data);
 
 /// Obtain a pointer to a local client buffer that can be copied directly to the
