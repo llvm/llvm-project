@@ -4329,7 +4329,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
                   "Expected only consecutive, strided or masked gather loads.");
             }
             SmallVector<int> ShuffleMask(VL.size());
-            for (int i = 0; i < VL.size(); i++)
+            for (int Idx : seq<int>(0, VL.size()))
               ShuffleMask[i] = i / VF == I ? VL.size() + i % VF : i;
             VecLdCost +=
                 TTI.getShuffleCost(TTI ::SK_InsertSubvector, VecTy,
