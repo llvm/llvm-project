@@ -375,7 +375,7 @@ static void expandIToFP(Instruction *IToFP) {
   Value *Sub2 = Builder.CreateSub(Builder.getIntN(BitWidthNew, BitWidth - 1),
                                   FloatWidth == 128 ? Call : Cast);
   Value *Cmp3 = Builder.CreateICmpSGT(
-      Sub2, Builder.getIntN(BitWidthNew, FPMantissaWidth + 1));
+      Sub1, Builder.getIntN(BitWidthNew, FPMantissaWidth + 1));
   Builder.CreateCondBr(Cmp3, IfThen4, IfElse);
 
   // if.then4:
