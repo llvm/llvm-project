@@ -25,6 +25,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringRef.h"
@@ -343,6 +344,7 @@ public:
     }
     return *this;
   }
+
   /// Get a device description
   const DeviceDesc &getDeviceDesc(DeviceDesc::DeviceID deviceID) {
     auto iter = deviceDescs.find(deviceID);
