@@ -376,6 +376,54 @@ Approved alternatives to the use of TTI in InstCombine are:
  * If there are no other possible solutions, a fold using target-dependent cost
    modelling may be accepted into AggressiveInstCombine.
 
+### PatternMatch
+
+Many transforms make use of the matching infrastructure defined in
+[PatternMatch.h](https://github.com/llvm/llvm-project/blame/main/llvm/include/llvm/IR/PatternMatch.h).
+
+Here is a typical usage example:
+
+```
+// Fold (A - B) + B and B + (A - B) to A.
+Value *A, *B;
+if (match(V, m_c_Add(m_Sub(m_Value(A), m_Value(B)), m_Deferred(B))))
+  return A;
+```
+
+And another:
+
+```
+// Fold A + C1 == C2 to A == C1+C2
+Value *A;
+if (match(V, m_ICmp(Pred, m_Add(m_Value(A), m_APInt(C1)), m_APInt(C2))) &&
+    ICmpInst::isEquality(Pred))
+  return Builder.CreateICmp(Pred, A,
+                            ConstantInt::get(A->getType(), *C1 + *C2));
+```
+
+Some common matchers are:
+
+ * `m_Value(A)`: Match any value and write it into `Value *A`.
+ * `m_Specific(A)`: Check that the operand equals A. Use this if A is
+   assigned **outside** the pattern.
+ * `m_Deferred(A)`: Check that the operand equals A. Use this if A is
+   assigned **inside** the pattern, for example via `m_Value(A)`.
+ * `m_APInt(C)`: Match a scalar integer constant or splat vector constant into
+   `const APInt *C`. Does not permit undef/poison values.
+ * `m_ImmConstant(C)`: Match any non-constant-expression constant into
+   `Constant *C`.
+ * `m_Constant(C)`: Match any constant into `Constant *C`. Don't use unless you
+   know what you're doing.
+ * `m_Add(M1, M2)`, `m_Sub(M1, M2)`, etc: Match an add/sub/etc where the first
+   operand matches M1 and the second M2.
+ * `m_c_Add(M1, M2)`, etc: Match an add commutatively. The operands must match
+   either M1 and M2 or M2 and M1.
+ * `m_OneUse(M)`: Check that the value only has one use, and also matches M.
+   For example `m_OneUse(m_Add(...))`. See the next section for more
+   information.
+
+See the header for the full list of available matchers.
+
 ### Multi-use handling
 
 Transforms should usually not increase the total number of instructions. This
