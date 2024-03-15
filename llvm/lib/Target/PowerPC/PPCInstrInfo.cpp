@@ -86,6 +86,15 @@ static cl::opt<bool> EnableFMARegPressureReduction(
     "ppc-fma-rp-reduction", cl::Hidden, cl::init(true),
     cl::desc("enable register pressure reduce in machine combiner pass."));
 
+// If -ppc-gen-isel=false is set, we will disable generating the ISEL
+// instruction on all PPC targets. Otherwise, if the user set option
+// -misel or the platform supports ISEL by default, still generate the
+// ISEL instruction, else expand it.
+cl::opt<bool> GenerateISEL("ppc-gen-isel",
+                           cl::desc("Enable generating the ISEL instruction."),
+                           cl::init(true), cl::Hidden);
+
+
 // Pin the vtable to this file.
 void PPCInstrInfo::anchor() {}
 
@@ -1522,7 +1531,7 @@ bool PPCInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                    Register DstReg, Register TrueReg,
                                    Register FalseReg, int &CondCycles,
                                    int &TrueCycles, int &FalseCycles) const {
-  if (!Subtarget.hasISEL())
+  if (!Subtarget.hasISEL() || !GenerateISEL)
     return false;
 
   if (Cond.size() != 2)

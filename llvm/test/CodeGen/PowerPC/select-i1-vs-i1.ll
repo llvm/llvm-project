@@ -302,10 +302,9 @@ define signext i32 @testi32ne(i32 signext %c1, i32 signext %c2, i32 signext %c3,
 ; CHECK-NO-ISEL-NEXT:    crxor 20, 6, 2
 ; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB9_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
-; CHECK-NO-ISEL-NEXT:    blr
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
 ; CHECK-NO-ISEL-NEXT:  .LBB9_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i32 %c3, %c4
@@ -609,10 +608,9 @@ define i64 @testi64ne(i64 %c1, i64 %c2, i64 %c3, i64 %c4, i64 %a1, i64 %a2) #0 {
 ; CHECK-NO-ISEL-NEXT:    crxor 20, 6, 2
 ; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB19_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
-; CHECK-NO-ISEL-NEXT:    blr
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
 ; CHECK-NO-ISEL-NEXT:  .LBB19_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i64 %c3, %c4

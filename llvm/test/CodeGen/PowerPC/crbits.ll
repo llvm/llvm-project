@@ -299,10 +299,9 @@ define signext i32 @test7(i1 zeroext %v2, i32 signext %i1, i32 signext %i2) #0 {
 ; CHECK-NO-ISEL-NEXT:    andi. 3, 3, 1
 ; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB6_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 5, 0
-; CHECK-NO-ISEL-NEXT:    blr
+; CHECK-NO-ISEL-NEXT:    mr 4, 5
 ; CHECK-NO-ISEL-NEXT:  .LBB6_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 4, 0
+; CHECK-NO-ISEL-NEXT:    mr 3, 4
 ; CHECK-NO-ISEL-NEXT:    blr
 ;
 ; CHECK-P10-LABEL: test7:
@@ -328,12 +327,10 @@ define signext i32 @exttest7(i32 signext %a) #0 {
 ; CHECK-NO-ISEL-LABEL: exttest7:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmplwi 3, 5
+; CHECK-NO-ISEL-NEXT:    li 3, 7
+; CHECK-NO-ISEL-NEXT:    beqlr 0
+; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    li 3, 8
-; CHECK-NO-ISEL-NEXT:    li 4, 7
-; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB7_1
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB7_1: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 4, 0
 ; CHECK-NO-ISEL-NEXT:    blr
 ;
 ; CHECK-P10-LABEL: exttest7:
@@ -364,15 +361,15 @@ define zeroext i32 @exttest8() #0 {
 ; CHECK-NO-ISEL-LABEL: exttest8:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    ld 3, 0(3)
+; CHECK-NO-ISEL-NEXT:    li 4, 0
 ; CHECK-NO-ISEL-NEXT:    subfic 3, 3, 80
 ; CHECK-NO-ISEL-NEXT:    rldicl 3, 3, 63, 1
 ; CHECK-NO-ISEL-NEXT:    cmplwi 3, 80
-; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB8_1
-; CHECK-NO-ISEL-NEXT:    b .LBB8_2
-; CHECK-NO-ISEL-NEXT:  .LBB8_1: # %entry
-; CHECK-NO-ISEL-NEXT:    li 3, 0
+; CHECK-NO-ISEL-NEXT:    bgt 0, .LBB8_2
+; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 4, 3
 ; CHECK-NO-ISEL-NEXT:  .LBB8_2: # %entry
-; CHECK-NO-ISEL-NEXT:    clrldi 3, 3, 32
+; CHECK-NO-ISEL-NEXT:    clrldi 3, 4, 32
 ; CHECK-NO-ISEL-NEXT:    blr
 ;
 ; CHECK-P10-LABEL: exttest8:
