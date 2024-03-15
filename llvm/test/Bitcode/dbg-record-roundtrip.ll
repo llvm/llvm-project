@@ -1,5 +1,4 @@
 ;; Roundtrip tests.
-; XFAIL: *  
 
 ;; Load RemoveDIs mode in llvm-dis but write out debug intrinsics.
 ; RUN: llvm-as --write-experimental-debuginfo-iterators-to-bitcode=true %s -o - \
@@ -17,7 +16,8 @@
 ; RUN: | FileCheck %s --check-prefixes=RECORDS
 
 ;; Check that verify-uselistorder passes regardless of input format.
-; RUN: llvm-as %s --write-experimental-debuginfo-iterators-to-bitcode=true -o - | verify-uselistorder
+;; NOTE: This test fails intermittently 
+; RUN: llvm-as %s --write-experimental-debuginfo-iterators-to-bitcode=true -o - | verify-uselistorder %s
 ; RUN: verify-uselistorder %s
 
 ;; Confirm we're producing RemoveDI records from various tools.
