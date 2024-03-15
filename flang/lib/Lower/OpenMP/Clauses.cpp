@@ -42,7 +42,7 @@ static llvm::omp::Clause getClauseId(const Fortran::parser::OmpClause &clause) {
                     clause.u);
 }
 
-namespace omp {
+namespace Fortran::lower::omp {
 using SymbolWithDesignator = std::tuple<semantics::Symbol *, MaybeExpr>;
 
 struct SymbolAndDesignatorExtractor {
@@ -725,10 +725,10 @@ Clause makeClause(const Fortran::parser::OmpClause &cls,
       cls.u);
 }
 
-omp::List<Clause> makeList(const parser::OmpClauseList &clauses,
-                           semantics::SemanticsContext &semaCtx) {
+List<Clause> makeList(const parser::OmpClauseList &clauses,
+                      semantics::SemanticsContext &semaCtx) {
   return makeList(clauses.v, [&](const parser::OmpClause &s) {
     return makeClause(s, semaCtx);
   });
 }
-} // namespace omp
+} // namespace Fortran::lower::omp

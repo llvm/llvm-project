@@ -61,8 +61,8 @@ cc_test(
     deps = [
         "//llvm:Support",
         "//llvm:TestingSupport",
-        "//mlir:BytecodeReader",
         "//mlir:ArithDialect",
+        "//mlir:BytecodeReader",
         "//mlir:ControlFlowInterfaces",
         "//mlir:DLTIDialect",
         "//mlir:DataLayoutInterfaces",
