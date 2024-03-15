@@ -753,8 +753,8 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   if (!DAL->hasArg(options::OPT_march_EQ) && OffloadKind != Action::OFK_None) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
                       CudaArchToString(CudaArch::CudaDefault));
-  } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "generic"
-             && OffloadKind == Action::OFK_None) {
+  } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "generic" &&
+             OffloadKind == Action::OFK_None) {
     DAL->eraseArg(options::OPT_march_EQ);
   } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "native") {
     auto GPUsOrErr = getSystemGPUArchs(Args);
