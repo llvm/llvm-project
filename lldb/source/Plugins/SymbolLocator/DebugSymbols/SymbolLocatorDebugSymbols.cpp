@@ -1077,7 +1077,7 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
     lookup_desc = file_spec_ptr->GetFilename().GetString();
 
   Log *log = GetLog(LLDBLog::Host);
-  LLDB_LOG(log, "Calling {0} with {1} to find dSYM: {2}", dsymForUUID_exe_path,
+  LLDB_LOG(log, "Calling {0} for {1} to find dSYM: {2}", dsymForUUID_exe_path,
            lookup_desc, command.GetString());
 
   Progress progress("Downloading symbol file for", lookup_desc);
