@@ -36,6 +36,11 @@ cl::opt<bool>
                                  "through iterators, eliminating intrinsics"),
                         cl::init(true));
 
+bool WriteNewDbgInfoFormatToBitcode /*set default value in cl::init() below*/;
+cl::opt<bool, true> WriteNewDbgInfoFormatToBitcode2(
+    "write-experimental-debuginfo-iterators-to-bitcode", cl::Hidden,
+    cl::location(WriteNewDbgInfoFormatToBitcode), cl::init(false));
+
 DPMarker *BasicBlock::createMarker(Instruction *I) {
   assert(IsNewDbgInfoFormat &&
          "Tried to create a marker in a non new debug-info block!");
