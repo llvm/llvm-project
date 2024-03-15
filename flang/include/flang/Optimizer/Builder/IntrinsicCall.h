@@ -208,6 +208,9 @@ struct IntrinsicLibrary {
   void genCFProcPointer(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCFunLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  template <mlir::arith::CmpIPredicate pred>
+  fir::ExtendedValue genCPtrCompare(mlir::Type,
+                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCosd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);

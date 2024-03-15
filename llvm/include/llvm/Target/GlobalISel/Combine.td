@@ -1090,12 +1090,6 @@ def mulo_by_0: GICombineRule<
          [{ return Helper.matchMulOBy0(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
-def addo_by_0: GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_UADDO, G_SADDO):$root,
-         [{ return Helper.matchAddOBy0(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
-
 // Transform (uadde x, y, 0) -> (uaddo x, y)
 //           (sadde x, y, 0) -> (saddo x, y)
 //           (usube x, y, 0) -> (usubo x, y)
@@ -1291,6 +1285,12 @@ def match_ors : GICombineRule<
         [{ return Helper.matchOr(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
+def match_addos : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SADDO, G_UADDO):$root,
+        [{ return Helper.matchAddOverflow(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 // Combines concat operations
 def concat_matchinfo : GIDefMatchData<"SmallVector<Register>">;
 def combine_concat_vector : GICombineRule<
@@ -1326,7 +1326,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
 
 def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,
-                                     addo_by_0, adde_to_addo,
+                                     adde_to_addo,
                                      combine_minmax_nan]>;
 
 def known_bits_simplifications : GICombineGroup<[
@@ -1374,7 +1374,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
-    combine_concat_vector, double_icmp_zero_and_or_combine]>;
+    combine_concat_vector, double_icmp_zero_and_or_combine, match_addos]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
