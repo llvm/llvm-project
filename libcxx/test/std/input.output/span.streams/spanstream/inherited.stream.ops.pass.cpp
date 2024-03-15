@@ -38,14 +38,22 @@ template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
   using SpStream = std::basic_spanstream<CharT, TraitsT>;
 
+  constexpr auto arrSize{30UZ};
+
   constexpr std::basic_string_view<CharT, TraitsT> sv{SV("zmt 94 hkt 82 pir 43vr")};
-  CharT arr[sv.size() + 1];
+  assert(sv.size() < arrSize);
+
+  CharT arr[arrSize]{};
   initialize_array(arr, sv);
+
   std::span<CharT> sp{arr};
 
   // Mode: default (`in` | `out`)
   {
     SpStream spSt(sp);
+    assert(spSt.span().size() == 0);
+
+    // Read from stream
     std::basic_string<CharT, TraitsT> str1;
     spSt >> str1;
     int i1;
@@ -66,7 +74,12 @@ void test() {
     assert(str3 == CS("pir"));
     assert(i3 == 43);
 
-    spSt << CS("year 2024");
+    // Write to stream
+    constexpr std::basic_string_view<CharT, TraitsT> sv1{SV("year 2024")};
+    spSt << sv1;
+    assert(spSt.span().size() == sv1.size());
+
+    // Read from stream
     spSt.seekg(0);
     std::basic_string<CharT, TraitsT> str4;
     spSt >> str4;
@@ -75,6 +88,18 @@ void test() {
 
     assert(str4 == CS("year"));
     assert(i4 == 2024);
+
+    // Write to stream
+    spSt << CS("94");
+    spSt << 84;
+    std::cout << spSt.span().size() << std::endl;
+    assert(spSt.span().size() == sv1.size() + 4);
+
+    // Write to stream with overflow
+    constexpr std::basic_string_view<CharT, TraitsT> sv2{
+        SV("This string should overflow! This string should overflow!")};
+    spSt << sv2;
+    assert(spSt.span().size() == arrSize);
   }
   // Mode: `in`
   {
