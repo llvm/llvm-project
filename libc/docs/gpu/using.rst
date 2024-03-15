@@ -159,17 +159,21 @@ GPUs.
   }
 
 We can then compile this for both NVPTX and AMDGPU into LLVM-IR using the
-following commands.
+following commands. This will yield valid LLVM-IR for the given target just like
+if we were using CUDA, OpenCL, or OpenMP.
 
 .. code-block:: sh
 
   $> clang id.c --target=amdgcn-amd-amdhsa -mcpu=native -nogpulib -flto -c
   $> clang id.c --target=nvptx64-nvidia-cuda -march=native -nogpulib -flto -c
 
-We use this support to treat the GPU as a hosted environment by providing a C
-library and startup object just like a standard C library running on the host
-machine. Then, in order to execute these programs, we provide a loader utility
-to launch the executable on the GPU similar to a cross-compiling emulator.
+We can also use this support to treat the GPU as a hosted environment by
+providing a C library and startup object just like a standard C library running
+on the host machine. Then, in order to execute these programs, we provide a
+loader utility to launch the executable on the GPU similar to a cross-compiling
+emulator. This is how we run :ref:`unit tests <libc_gpu_testing>` targeting the
+GPU. This is clearly not the most efficient way to use a GPU, but it provides a
+simple method to test execution on a GPU for debugging or development.
 
 Building for AMDGPU targets
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
