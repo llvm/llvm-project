@@ -30,5 +30,3 @@ translating the following operations:
     *   `func.call`
     *   `func.func`
     *   `func.return`
-*   'arith' Dialect
-    *   `arith.constant`

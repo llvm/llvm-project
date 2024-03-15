@@ -122,7 +122,7 @@ bool SystemZSubtarget::isPC32DBLSymbol(const GlobalValue *GV,
 
   // For the small model, all locally-binding symbols are in range.
   if (CM == CodeModel::Small)
-    return TLInfo.getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
+    return TLInfo.getTargetMachine().shouldAssumeDSOLocal(GV);
 
   // For Medium and above, assume that the symbol is not within the 4GB range.
   // Taking the address of locally-defined text would be OK, but that

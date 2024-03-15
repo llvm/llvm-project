@@ -271,7 +271,12 @@ OPTIONS
 
   When printing a PC-relative global symbol reference, print it as an offset from the leading symbol.
 
-  When a bb-address-map section is present (i.e., the object file is built with ``-fbasic-block-sections=labels``), labels are retrieved from that section instead.
+  When a bb-address-map section is present (i.e., the object file is built with
+  ``-fbasic-block-sections=labels``), labels are retrieved from that section
+  instead. If a pgo-analysis-map is present alongside the bb-address-map, any
+  available analyses are printed after the relevant block label. By default,
+  any analysis with a special representation (i.e. BlockFrequency,
+  BranchProbability, etc) are printed as raw hex values.
 
   Only works with PowerPC objects or X86 linked images.
 
@@ -290,6 +295,15 @@ OPTIONS
      <L0>:
        cmp eax, dword ptr <g>
        jge	<L0>
+
+.. option:: --pretty-pgo-analysis-map
+
+  When using :option:`--symbolize-operands` with bb-address-map and
+  pgo-analysis-map, print analyses using the same format as their analysis
+  passes would. An example of pretty format would be printing block frequencies
+  relative to the entry block, the same as BFI.
+
+  Only works when :option:`--symbolize-operands` is enabled.
 
 .. option:: --triple=<string>
 

@@ -26,17 +26,18 @@ using namespace X86Disassembler;
 
 std::string X86Disassembler::getMnemonic(const CodeGenInstruction *I,
                                          unsigned Variant) {
-  std::string AsmString = I->FlattenAsmStringVariants(I->AsmString, Variant);
-  StringRef Mnemonic(AsmString);
   // Extract a mnemonic assuming it's separated by \t
-  Mnemonic = Mnemonic.take_until([](char C) { return C == '\t'; });
+  std::string Mnemonic =
+      StringRef(I->FlattenAsmStringVariants(I->AsmString, Variant))
+          .take_until([](char C) { return C == '\t'; })
+          .str();
 
-  // Special case: CMOVCC, JCC, SETCC have "${cond}" in mnemonic.
+  // Special case: CMOVCC, JCC, SETCC, CMPCCXADD have "${cond}" in mnemonic.
   // Replace it with "CC" in-place.
-  size_t CondPos = Mnemonic.find("${cond}");
-  if (CondPos != StringRef::npos)
-    Mnemonic = AsmString.replace(CondPos, StringRef::npos, "CC");
-  return Mnemonic.upper();
+  auto CondPos = Mnemonic.find("${cond}");
+  if (CondPos != std::string::npos)
+    Mnemonic = Mnemonic.replace(CondPos, 7, "CC");
+  return StringRef(Mnemonic).upper();
 }
 
 bool X86Disassembler::isRegisterOperand(const Record *Rec) {
@@ -126,6 +127,7 @@ RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn) {
   HasEVEX_KZ = Rec->getValueAsBit("hasEVEX_Z");
   HasEVEX_B = Rec->getValueAsBit("hasEVEX_B");
   HasEVEX_NF = Rec->getValueAsBit("hasEVEX_NF");
+  HasTwoConditionalOps = Rec->getValueAsBit("hasTwoConditionalOps");
   IsCodeGenOnly = Rec->getValueAsBit("isCodeGenOnly");
   IsAsmParserOnly = Rec->getValueAsBit("isAsmParserOnly");
   ForceDisassemble = Rec->getValueAsBit("ForceDisassemble");
@@ -493,6 +495,8 @@ void RecognizableInstr::emitInstructionSpecifier() {
     ++additionalOperands;
   if (HasEVEX_K)
     ++additionalOperands;
+  if (HasTwoConditionalOps)
+    additionalOperands += 2;
 #endif
 
   bool IsND = OpMap == X86Local::T_MAP4 && HasEVEX_B && HasVEX_4V;
@@ -560,6 +564,7 @@ void RecognizableInstr::emitInstructionSpecifier() {
 
     HANDLE_OPERAND(roRegister)
     HANDLE_OPTIONAL(immediate)
+    HANDLE_OPTIONAL(immediate)
     break;
   case X86Local::MRMDestMem4VOp3CC:
     // Operand 1 is a register operand in the Reg/Opcode field.
@@ -597,6 +602,7 @@ void RecognizableInstr::emitInstructionSpecifier() {
       HANDLE_OPERAND(vvvvRegister)
 
     HANDLE_OPERAND(roRegister)
+    HANDLE_OPTIONAL(immediate)
     HANDLE_OPTIONAL(immediate)
     break;
   case X86Local::MRMSrcReg:
@@ -734,6 +740,7 @@ void RecognizableInstr::emitInstructionSpecifier() {
     HANDLE_OPTIONAL(rmRegister)
     HANDLE_OPTIONAL(relocation)
     HANDLE_OPTIONAL(immediate)
+    HANDLE_OPTIONAL(immediate)
     break;
   case X86Local::MRMXmCC:
     assert(numPhysicalOperands == 2 &&
@@ -762,6 +769,8 @@ void RecognizableInstr::emitInstructionSpecifier() {
       HANDLE_OPERAND(writemaskRegister)
     HANDLE_OPERAND(memory)
     HANDLE_OPTIONAL(relocation)
+    HANDLE_OPTIONAL(immediate)
+    HANDLE_OPTIONAL(immediate)
     break;
   case X86Local::RawFrmImm8:
     // operand 1 is a 16-bit immediate
@@ -1031,6 +1040,7 @@ OperandType RecognizableInstr::typeFromString(const std::string &s,
   TYPE("i16imm_brtarget", TYPE_REL)
   TYPE("i32imm_brtarget", TYPE_REL)
   TYPE("ccode", TYPE_IMM)
+  TYPE("cflags", TYPE_IMM)
   TYPE("AVX512RC", TYPE_IMM)
   TYPE("brtarget32", TYPE_REL)
   TYPE("brtarget16", TYPE_REL)
@@ -1126,6 +1136,8 @@ RecognizableInstr::immediateEncodingFromString(const std::string &s,
   ENCODING("i64i32imm", ENCODING_ID)
   ENCODING("i64i8imm", ENCODING_IB)
   ENCODING("i8imm", ENCODING_IB)
+  ENCODING("ccode", ENCODING_CC)
+  ENCODING("cflags", ENCODING_CF)
   ENCODING("u4imm", ENCODING_IB)
   ENCODING("u8imm", ENCODING_IB)
   ENCODING("i16u8imm", ENCODING_IB)

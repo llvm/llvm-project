@@ -62,6 +62,11 @@ public:
   /// Returns true if we don't know any bits.
   bool isUnknown() const { return Zero.isZero() && One.isZero(); }
 
+  /// Returns true if we don't know the sign bit.
+  bool isSignUnknown() const {
+    return !Zero.isSignBitSet() && !One.isSignBitSet();
+  }
+
   /// Resets the known state of all bits.
   void resetAll() {
     Zero.clearAllBits();
@@ -329,8 +334,8 @@ public:
       const KnownBits &LHS, const KnownBits &RHS, const KnownBits &Carry);
 
   /// Compute known bits resulting from adding LHS and RHS.
-  static KnownBits computeForAddSub(bool Add, bool NSW, const KnownBits &LHS,
-                                    KnownBits RHS);
+  static KnownBits computeForAddSub(bool Add, bool NSW, bool NUW,
+                                    const KnownBits &LHS, const KnownBits &RHS);
 
   /// Compute known bits results from subtracting RHS from LHS with 1-bit
   /// Borrow.
@@ -385,6 +390,12 @@ public:
   /// Compute known bits for smin(LHS, RHS).
   static KnownBits smin(const KnownBits &LHS, const KnownBits &RHS);
 
+  /// Compute known bits for abdu(LHS, RHS).
+  static KnownBits abdu(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute known bits for abds(LHS, RHS).
+  static KnownBits abds(const KnownBits &LHS, const KnownBits &RHS);
+
   /// Compute known bits for shl(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   static KnownBits shl(const KnownBits &LHS, const KnownBits &RHS,
@@ -394,12 +405,12 @@ public:
   /// Compute known bits for lshr(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   static KnownBits lshr(const KnownBits &LHS, const KnownBits &RHS,
-                        bool ShAmtNonZero = false);
+                        bool ShAmtNonZero = false, bool Exact = false);
 
   /// Compute known bits for ashr(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   static KnownBits ashr(const KnownBits &LHS, const KnownBits &RHS,
-                        bool ShAmtNonZero = false);
+                        bool ShAmtNonZero = false, bool Exact = false);
 
   /// Determine if these known bits always give the same ICMP_EQ result.
   static std::optional<bool> eq(const KnownBits &LHS, const KnownBits &RHS);

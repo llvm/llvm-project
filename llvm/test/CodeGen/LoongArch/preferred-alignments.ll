@@ -8,21 +8,21 @@ define signext i32 @sum(ptr noalias nocapture noundef readonly %0, i32 noundef s
 ; LA464-NEXT:    ori $a2, $zero, 1
 ; LA464-NEXT:    blt $a1, $a2, .LBB0_4
 ; LA464-NEXT:  # %bb.1:
-; LA464-NEXT:    bstrpick.d $a2, $a1, 31, 0
-; LA464-NEXT:    move $a1, $zero
+; LA464-NEXT:    move $a2, $zero
+; LA464-NEXT:    bstrpick.d $a1, $a1, 31, 0
 ; LA464-NEXT:    .p2align 4, , 16
 ; LA464-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
 ; LA464-NEXT:    ld.w $a3, $a0, 0
-; LA464-NEXT:    add.d $a1, $a3, $a1
+; LA464-NEXT:    add.d $a2, $a3, $a2
+; LA464-NEXT:    addi.d $a1, $a1, -1
 ; LA464-NEXT:    addi.d $a0, $a0, 4
-; LA464-NEXT:    addi.d $a2, $a2, -1
-; LA464-NEXT:    bnez $a2, .LBB0_2
+; LA464-NEXT:    bnez $a1, .LBB0_2
 ; LA464-NEXT:  # %bb.3:
-; LA464-NEXT:    addi.w $a0, $a1, 0
+; LA464-NEXT:    addi.w $a0, $a2, 0
 ; LA464-NEXT:    ret
 ; LA464-NEXT:  .LBB0_4:
-; LA464-NEXT:    move $a1, $zero
-; LA464-NEXT:    addi.w $a0, $a1, 0
+; LA464-NEXT:    move $a2, $zero
+; LA464-NEXT:    addi.w $a0, $a2, 0
 ; LA464-NEXT:    ret
   %3 = icmp sgt i32 %1, 0
   br i1 %3, label %4, label %6

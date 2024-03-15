@@ -95,6 +95,7 @@ static bool Addrsig;
 static bool All;
 static bool ArchSpecificInfo;
 static bool BBAddrMap;
+static bool PrettyPGOAnalysisMap;
 bool ExpandRelocs;
 static bool CGProfile;
 static bool Decompress;
@@ -212,6 +213,11 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::All = Args.hasArg(OPT_all);
   opts::ArchSpecificInfo = Args.hasArg(OPT_arch_specific);
   opts::BBAddrMap = Args.hasArg(OPT_bb_addr_map);
+  opts::PrettyPGOAnalysisMap = Args.hasArg(OPT_pretty_pgo_analysis_map);
+  if (opts::PrettyPGOAnalysisMap && !opts::BBAddrMap)
+    WithColor::warning(errs(), ToolName)
+        << "--bb-addr-map must be enabled for --pretty-pgo-analysis-map to "
+           "have an effect\n";
   opts::CGProfile = Args.hasArg(OPT_cg_profile);
   opts::Decompress = Args.hasArg(OPT_decompress);
   opts::Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, false);
@@ -466,7 +472,7 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
     if (opts::CGProfile)
       Dumper->printCGProfile();
     if (opts::BBAddrMap)
-      Dumper->printBBAddrMaps();
+      Dumper->printBBAddrMaps(opts::PrettyPGOAnalysisMap);
     if (opts::Addrsig)
       Dumper->printAddrsig();
     if (opts::Notes)

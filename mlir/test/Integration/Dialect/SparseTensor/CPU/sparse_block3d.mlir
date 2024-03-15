@@ -90,28 +90,38 @@ module {
     // ending at index (3,3,2)) with a “DCSR-flavored” along (j,k) with
     // dense “fibers” in the i-dim, we end up with 8 stored entries.
     //
-    // CHECK: 8
-    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 8
+    // CHECK-NEXT: dim = ( 4, 4, 4 )
+    // CHECK-NEXT: lvl = ( 4, 4, 4 )
+    // CHECK-NEXT: pos[0] : ( 0, 2
+    // CHECK-NEXT: crd[0] : ( 0, 3
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2
+    // CHECK-NEXT: crd[1] : ( 0, 2
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8
+    // CHECK-NEXT: ----
     //
-    %na = sparse_tensor.number_of_entries %a : tensor<4x4x4xi32, #Sparse1>
-    vector.print %na : index
-    %ma = sparse_tensor.values %a: tensor<4x4x4xi32, #Sparse1> to memref<?xi32>
-    %va = vector.transfer_read %ma[%c0], %i0: memref<?xi32>, vector<8xi32>
-    vector.print %va : vector<8xi32>
+    sparse_tensor.print %a : tensor<4x4x4xi32, #Sparse1>
 
     //
     // If we store full 2x2x2 3-D blocks in the original index order
     // in a compressed fashion, we end up with 4 blocks to incorporate
     // all the nonzeros, and thus 32 stored entries.
     //
-    // CHECK: 32
-    // CHECK-NEXT: ( 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 5, 0, 0, 0, 6, 0, 3, 0, 0, 0, 4, 0, 0, 0, 0, 0, 7, 0, 0, 0, 8, 0 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 32
+    // CHECK-NEXT: dim = ( 4, 4, 4 )
+    // CHECK-NEXT: lvl = ( 2, 2, 2, 2, 2, 2 )
+    // CHECK-NEXT: pos[0] : ( 0, 2
+    // CHECK-NEXT: crd[0] : ( 0, 1
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1
+    // CHECK-NEXT: pos[2] : ( 0, 1, 2, 3, 4
+    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1
+    // CHECK-NEXT: values : ( 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 5, 0, 0, 0, 6, 0, 3, 0, 0, 0, 4, 0, 0, 0, 0, 0, 7, 0, 0, 0, 8, 0
+    // CHECK-NEXT: ----
     //
-    %nb = sparse_tensor.number_of_entries %b : tensor<4x4x4xi32, #Sparse2>
-    vector.print %nb : index
-    %mb = sparse_tensor.values %b: tensor<4x4x4xi32, #Sparse2> to memref<?xi32>
-    %vb = vector.transfer_read %mb[%c0], %i0: memref<?xi32>, vector<32xi32>
-    vector.print %vb : vector<32xi32>
+    sparse_tensor.print %b : tensor<4x4x4xi32, #Sparse2>
 
     // Release the resources.
     bufferization.dealloc_tensor %a : tensor<4x4x4xi32, #Sparse1>

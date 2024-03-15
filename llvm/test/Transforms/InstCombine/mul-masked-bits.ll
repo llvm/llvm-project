@@ -86,7 +86,7 @@ define <vscale x 2 x i32> @combine_mul_self_demandedbits_vector2(<vscale x 2 x i
 ;
   %1 = freeze <vscale x 2 x i32> %x
   %2 = mul <vscale x 2 x i32> %1, %1
-  %3 = and <vscale x 2 x i32> %2, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 -3, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  %3 = and <vscale x 2 x i32> %2, splat (i32 -3)
   ret <vscale x 2 x i32> %3
 }
 

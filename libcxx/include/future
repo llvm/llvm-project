@@ -368,7 +368,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #  error "<future> is not supported since libc++ has been configured without support for threads."
 #endif
 
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__availability>
 #include <__chrono/duration.h>
 #include <__chrono/time_point.h>

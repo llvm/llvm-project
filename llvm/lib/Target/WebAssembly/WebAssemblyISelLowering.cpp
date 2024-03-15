@@ -1683,7 +1683,7 @@ WebAssemblyTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   if (model == GlobalValue::LocalExecTLSModel ||
       model == GlobalValue::LocalDynamicTLSModel ||
       (model == GlobalValue::GeneralDynamicTLSModel &&
-       getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV))) {
+       getTargetMachine().shouldAssumeDSOLocal(GV))) {
     // For DSO-local TLS variables we use offset from __tls_base
 
     MVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -1729,7 +1729,7 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
   // need special treatment for tables in PIC mode.
   if (isPositionIndependent() &&
       !WebAssembly::isWebAssemblyTableType(GV->getValueType())) {
-    if (getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV)) {
+    if (getTargetMachine().shouldAssumeDSOLocal(GV)) {
       MachineFunction &MF = DAG.getMachineFunction();
       MVT PtrVT = getPointerTy(MF.getDataLayout());
       const char *BaseName;

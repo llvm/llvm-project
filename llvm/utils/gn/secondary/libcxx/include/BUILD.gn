@@ -58,14 +58,6 @@ if (current_toolchain == default_toolchain) {
     }
   }
 
-  write_cmake_config("write_modulemap") {
-    input = "module.modulemap.in"
-    output = "$libcxx_generated_include_dir/module.modulemap"
-
-    #no = "requires LIBCXX_CONFIGURED_WITHOUT_SUPPORT_FOR_THIS_HEADER"
-    values = []
-  }
-
   # This uses write_cmake_config() instead of a normal copy() rule because
   # copy() uses `sources`, and if there's more than one `sources` in a file,
   # sync_source_lists_from_cmake.py can't auto-sync changes.
@@ -458,7 +450,6 @@ if (current_toolchain == default_toolchain) {
       "__format/format_context.h",
       "__format/format_error.h",
       "__format/format_functions.h",
-      "__format/format_fwd.h",
       "__format/format_parse_context.h",
       "__format/format_string.h",
       "__format/format_to_n_result.h",
@@ -508,8 +499,9 @@ if (current_toolchain == default_toolchain) {
       "__fwd/array.h",
       "__fwd/bit_reference.h",
       "__fwd/complex.h",
+      "__fwd/format.h",
       "__fwd/fstream.h",
-      "__fwd/hash.h",
+      "__fwd/functional.h",
       "__fwd/ios.h",
       "__fwd/istream.h",
       "__fwd/mdspan.h",
@@ -778,6 +770,7 @@ if (current_toolchain == default_toolchain) {
       "__thread/thread.h",
       "__thread/timed_backoff_policy.h",
       "__tree",
+      "__tuple/find_index.h",
       "__tuple/make_tuple_types.h",
       "__tuple/pair_like.h",
       "__tuple/sfinae_helpers.h",
@@ -1042,6 +1035,7 @@ if (current_toolchain == default_toolchain) {
       "mdspan",
       "memory",
       "memory_resource",
+      "module.modulemap",
       "mutex",
       "new",
       "numbers",
@@ -1097,7 +1091,6 @@ if (current_toolchain == default_toolchain) {
     deps = [
       ":write_assertion_handler",
       ":write_config_site",
-      ":write_modulemap",
     ]
     if (target_os != "mac" && target_os != "win") {
       # libcxx/cmake/Modules/HandleLibCXXABI.cmake sets
