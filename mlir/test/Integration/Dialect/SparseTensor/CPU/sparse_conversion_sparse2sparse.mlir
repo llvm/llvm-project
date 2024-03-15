@@ -114,12 +114,14 @@ module {
     call @dump(%d31) : (tensor<2x3x4xf64>) -> ()
 
     //
-    // Release sparse tensors.
+    // Release the resources.
     //
     bufferization.dealloc_tensor %t13 : tensor<2x3x4xf64, #Tensor3>
     bufferization.dealloc_tensor %t31 : tensor<2x3x4xf64, #Tensor1>
     bufferization.dealloc_tensor %s1 : tensor<2x3x4xf64, #Tensor1>
     bufferization.dealloc_tensor %s3 : tensor<2x3x4xf64, #Tensor3>
+    bufferization.dealloc_tensor %d13 : tensor<2x3x4xf64>
+    bufferization.dealloc_tensor %d31 : tensor<2x3x4xf64>
 
     return
   }
@@ -167,12 +169,14 @@ module {
     call @dump(%d31) : (tensor<2x3x4xf64>) -> ()
 
     //
-    // Release sparse tensors.
+    // Release the resources.
     //
     bufferization.dealloc_tensor %t13 : tensor<2x3x4xf64, #SingletonTensor3>
     bufferization.dealloc_tensor %t31 : tensor<2x3x4xf64, #SingletonTensor1>
     bufferization.dealloc_tensor %s1 : tensor<2x3x4xf64, #SingletonTensor1>
     bufferization.dealloc_tensor %s3 : tensor<2x3x4xf64, #SingletonTensor3>
+    bufferization.dealloc_tensor %d13 : tensor<2x3x4xf64>
+    bufferization.dealloc_tensor %d31 : tensor<2x3x4xf64>
 
     return
   }
