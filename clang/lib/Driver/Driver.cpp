@@ -6679,9 +6679,8 @@ llvm::Error driver::expandResponseFiles(SmallVectorImpl<const char *> &Args,
   return llvm::Error::success();
 }
 
-static const char *GetStableCStr(std::set<std::string> &SavedStrings,
-                                 StringRef S) {
-  return SavedStrings.insert(std::string(S)).first->c_str();
+static const char *GetStableCStr(llvm::StringSet<> &SavedStrings, StringRef S) {
+  return SavedStrings.insert(S).first->getKeyData();
 }
 
 /// Apply a list of edits to the input argument lists.
@@ -6714,7 +6713,7 @@ static const char *GetStableCStr(std::set<std::string> &SavedStrings,
 static void applyOneOverrideOption(raw_ostream &OS,
                                    SmallVectorImpl<const char *> &Args,
                                    StringRef Edit,
-                                   std::set<std::string> &SavedStrings) {
+                                   llvm::StringSet<> &SavedStrings) {
   // This does not need to be efficient.
 
   if (Edit[0] == '^') {
@@ -6781,7 +6780,7 @@ static void applyOneOverrideOption(raw_ostream &OS,
 
 void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                                   const char *OverrideStr,
-                                  std::set<std::string> &SavedStrings,
+                                  llvm::StringSet<> &SavedStrings,
                                   raw_ostream *OS) {
   if (!OS)
     OS = &llvm::nulls();

@@ -28,6 +28,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
@@ -72,9 +73,8 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
   return llvm::sys::fs::getMainExecutable(Argv0, P);
 }
 
-static const char *GetStableCStr(std::set<std::string> &SavedStrings,
-                                 StringRef S) {
-  return SavedStrings.insert(std::string(S)).first->c_str();
+static const char *GetStableCStr(llvm::StringSet<> &SavedStrings, StringRef S) {
+  return SavedStrings.insert(S).first->getKeyData();
 }
 
 extern int cc1_main(ArrayRef<const char *> Argv, const char *Argv0,
@@ -87,7 +87,7 @@ extern int cc1gen_reproducer_main(ArrayRef<const char *> Argv,
 
 static void insertTargetAndModeArgs(const ParsedClangName &NameParts,
                                     SmallVectorImpl<const char *> &ArgVector,
-                                    std::set<std::string> &SavedStrings) {
+                                    llvm::StringSet<> &SavedStrings) {
   // Put target and mode arguments at the start of argument list so that
   // arguments specified in command line could override them. Avoid putting
   // them at index 0, as an option like '-cc1' must remain the first.
@@ -291,7 +291,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     }
   }
 
-  std::set<std::string> SavedStrings;
+  llvm::StringSet<> SavedStrings;
   // Handle CCC_OVERRIDE_OPTIONS, used for editing a command line behind the
   // scenes.
   if (const char *OverrideStr = ::getenv("CCC_OVERRIDE_OPTIONS")) {
