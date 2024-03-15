@@ -11,7 +11,7 @@
 // methods were added).
 //
 // The implementation defines optional in Fortran::common namespace.
-// This standalone implementation may beused if the target
+// This standalone implementation may be used if the target
 // does not support std::optional implementation (e.g. CUDA device env),
 // otherwise, Fortran::common::optional is an alias for std::optional.
 //

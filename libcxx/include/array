@@ -123,6 +123,7 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__iterator/wrap_iter.h>
 #include <__tuple/sfinae_helpers.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/conjunction.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constructible.h>

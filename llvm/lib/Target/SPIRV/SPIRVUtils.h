@@ -126,5 +126,10 @@ inline unsigned getPointerAddressSpace(const Type *T) {
              : cast<TypedPointerType>(SubT)->getAddressSpace();
 }
 
+// Return true if the Argument is decorated with a pointee type
+inline bool HasPointeeTypeAttr(Argument *Arg) {
+  return Arg->hasByValAttr() || Arg->hasByRefAttr();
+}
+
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
