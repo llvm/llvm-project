@@ -48,11 +48,16 @@ jobs:
     - name: Checkout LLVM
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
+    - name: Install Dependencies
+      run: |
+        pip install -r ./llvm/utils/git/requirements.txt
+
     - name: Check Permissions
       env:
         GITHUB_TOKEN: ${{ github.token }}
+        USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
       run: |
-        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} check-permissions
+        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
 
     - name: Collect Variables
       id: vars

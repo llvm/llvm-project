@@ -1404,7 +1404,13 @@ LLVM_READNONE
 bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
-bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi);
+bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi);
+
+LLVM_READNONE
+bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
+
+LLVM_READNONE
+bool isInlinableLiteralI16(int32_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
 std::optional<unsigned> getInlineEncodingV2I16(uint32_t Literal);

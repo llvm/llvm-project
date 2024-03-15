@@ -128,6 +128,7 @@ def HasRDM           : Predicate<"Subtarget->hasRDM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRDM), "rdm">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFullFP16), "fullfp16">;
+def HasNoFullFP16    : Predicate<"!Subtarget->hasFullFP16()">;
 def HasFP16FML       : Predicate<"Subtarget->hasFP16FML()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFP16FML), "fp16fml">;
 def HasSPE           : Predicate<"Subtarget->hasSPE()">,
@@ -254,6 +255,7 @@ def HasTRBE          : Predicate<"Subtarget->hasTRBE()">,
                        AssemblerPredicateWithAll<(all_of FeatureTRBE), "trbe">;
 def HasBF16          : Predicate<"Subtarget->hasBF16()">,
                        AssemblerPredicateWithAll<(all_of FeatureBF16), "bf16">;
+def HasNoBF16        : Predicate<"!Subtarget->hasBF16()">;
 def HasMatMulInt8    : Predicate<"Subtarget->hasMatMulInt8()">,
                        AssemblerPredicateWithAll<(all_of FeatureMatMulInt8), "i8mm">;
 def HasMatMulFP32    : Predicate<"Subtarget->hasMatMulFP32()">,
@@ -757,9 +759,14 @@ def AArch64fcmlez: SDNode<"AArch64ISD::FCMLEz", SDT_AArch64fcmpz>;
 def AArch64fcmltz: SDNode<"AArch64ISD::FCMLTz", SDT_AArch64fcmpz>;
 
 def AArch64fcvtxn_n: SDNode<"AArch64ISD::FCVTXN", SDTFPRoundOp>;
-def AArch64fcvtxn: PatFrags<(ops node:$Rn),
-                            [(f32 (int_aarch64_sisd_fcvtxn (f64 node:$Rn))),
-                             (f32 (AArch64fcvtxn_n (f64 node:$Rn)))]>;
+def AArch64fcvtxnsdr: PatFrags<(ops node:$Rn),
+                               [(f32 (int_aarch64_sisd_fcvtxn (f64 node:$Rn))),
+                                (f32 (AArch64fcvtxn_n (f64 node:$Rn)))]>;
+def AArch64fcvtxnv: PatFrags<(ops node:$Rn),
+                                 [(int_aarch64_neon_fcvtxn node:$Rn),
+                                  (AArch64fcvtxn_n node:$Rn)]>;
+
+//def Aarch64softf32tobf16v8: SDNode<"AArch64ISD::", SDTFPRoundOp>;
 
 def AArch64bici: SDNode<"AArch64ISD::BICi", SDT_AArch64vecimm>;
 def AArch64orri: SDNode<"AArch64ISD::ORRi", SDT_AArch64vecimm>;
@@ -5042,7 +5049,7 @@ def : Pat<(concat_vectors V64:$Rd, (v4f16 (any_fpround (v4f32 V128:$Rn)))),
 defm FCVTPS : SIMDTwoVectorFPToInt<0,1,0b11010, "fcvtps",int_aarch64_neon_fcvtps>;
 defm FCVTPU : SIMDTwoVectorFPToInt<1,1,0b11010, "fcvtpu",int_aarch64_neon_fcvtpu>;
 defm FCVTXN : SIMDFPInexactCvtTwoVector<1, 0, 0b10110, "fcvtxn",
-                                        int_aarch64_neon_fcvtxn>;
+                                        AArch64fcvtxnv>;
 defm FCVTZS : SIMDTwoVectorFPToInt<0, 1, 0b11011, "fcvtzs", any_fp_to_sint>;
 defm FCVTZU : SIMDTwoVectorFPToInt<1, 1, 0b11011, "fcvtzu", any_fp_to_uint>;
 
@@ -9735,6 +9742,93 @@ let Predicates = [HasCPA] in {
   def MADDPT : MulAccumCPA<0, "maddpt">;
   def MSUBPT : MulAccumCPA<1, "msubpt">;
 }
+
+def round_v4fp32_to_v4bf16 :
+  OutPatFrag<(ops node:$Rn),
+             // NaN? Round : Quiet(NaN)
+             (BSPv16i8 (FCMEQv4f32 $Rn, $Rn),
+                       (ADDv4i32
+                         (ADDv4i32 $Rn,
+                           // Extract the LSB of the fp32 *truncated* to bf16.
+                           (ANDv16i8 (USHRv4i32_shift V128:$Rn, (i32 16)),
+                                     (MOVIv4i32 (i32 1), (i32 0)))),
+                         // Bias which will help us break ties correctly.
+                         (MOVIv4s_msl (i32 127), (i32 264))),
+                       // Set the quiet bit in the NaN.
+                       (ORRv4i32 $Rn, (i32 64), (i32 16)))>;
+
+multiclass PromoteUnaryv8f16Tov4f32<SDPatternOperator InOp, Instruction OutInst> {
+  let Predicates = [HasNoFullFP16] in
+  def : Pat<(InOp (v8f16 V128:$Rn)),
+            (v8f16 (FCVTNv8i16
+              (INSERT_SUBREG (IMPLICIT_DEF),
+                             (v4f16 (FCVTNv4i16
+                               (v4f32 (OutInst
+                                 (v4f32 (FCVTLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))))))),
+               dsub),
+              (v4f32 (OutInst (v4f32 (FCVTLv8i16 V128:$Rn))))))>;
+
+  let Predicates = [HasBF16] in
+  def : Pat<(InOp (v8bf16 V128:$Rn)),
+            (v8bf16 (BFCVTN2
+              (v8bf16 (BFCVTN
+                (v4f32 (OutInst
+                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))))))),
+              (v4f32 (OutInst (v4f32 (SHLLv8i16 V128:$Rn))))))>;
+
+  let Predicates = [HasNoBF16] in
+  def : Pat<(InOp (v8bf16 V128:$Rn)),
+            (UZP2v8i16
+              (round_v4fp32_to_v4bf16 (v4f32 (OutInst
+                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub))))))),
+              (round_v4fp32_to_v4bf16 (v4f32 (OutInst
+                  (v4f32 (SHLLv8i16 V128:$Rn))))))>;
+}
+defm : PromoteUnaryv8f16Tov4f32<any_fceil,  	FRINTPv4f32>;
+defm : PromoteUnaryv8f16Tov4f32<any_ffloor, 	FRINTMv4f32>;
+defm : PromoteUnaryv8f16Tov4f32<any_fnearbyint, FRINTIv4f32>;
+defm : PromoteUnaryv8f16Tov4f32<any_fround, 	FRINTAv4f32>;
+defm : PromoteUnaryv8f16Tov4f32<any_froundeven, FRINTNv4f32>;
+defm : PromoteUnaryv8f16Tov4f32<any_frint,  	FRINTXv4f32>;
+defm : PromoteUnaryv8f16Tov4f32<any_ftrunc, 	FRINTZv4f32>;
+
+multiclass PromoteBinaryv8f16Tov4f32<SDPatternOperator InOp, Instruction OutInst> {
+  let Predicates = [HasNoFullFP16] in
+  def : Pat<(InOp (v8f16 V128:$Rn), (v8f16 V128:$Rm)),
+            (v8f16 (FCVTNv8i16
+              (INSERT_SUBREG (IMPLICIT_DEF),
+                             (v4f16 (FCVTNv4i16
+                               (v4f32 (OutInst
+                                 (v4f32 (FCVTLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))),
+                                 (v4f32 (FCVTLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rm, dsub)))))))),
+               dsub),
+              (v4f32 (OutInst (v4f32 (FCVTLv8i16 V128:$Rn)),
+                              (v4f32 (FCVTLv8i16 V128:$Rm))))))>;
+
+  let Predicates = [HasBF16] in
+  def : Pat<(InOp (v8bf16 V128:$Rn), (v8bf16 V128:$Rm)),
+            (v8bf16 (BFCVTN2
+              (v8bf16 (BFCVTN
+                (v4f32 (OutInst
+                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))),
+                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rm, dsub)))))))),
+              (v4f32 (OutInst (v4f32 (SHLLv8i16 V128:$Rn)),
+                              (v4f32 (SHLLv8i16 V128:$Rm))))))>;
+
+  let Predicates = [HasNoBF16] in
+  def : Pat<(InOp (v8bf16 V128:$Rn), (v8bf16 V128:$Rm)),
+            (UZP2v8i16
+              (round_v4fp32_to_v4bf16 (v4f32 (OutInst
+                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))),
+                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rm, dsub))))))),
+              (round_v4fp32_to_v4bf16 (v4f32 (OutInst
+                  (v4f32 (SHLLv8i16 V128:$Rn)),
+                  (v4f32 (SHLLv8i16 V128:$Rm))))))>;
+}
+defm : PromoteBinaryv8f16Tov4f32<any_fadd, FADDv4f32>;
+defm : PromoteBinaryv8f16Tov4f32<any_fdiv, FDIVv4f32>;
+defm : PromoteBinaryv8f16Tov4f32<any_fmul, FMULv4f32>;
+defm : PromoteBinaryv8f16Tov4f32<any_fsub, FSUBv4f32>;
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

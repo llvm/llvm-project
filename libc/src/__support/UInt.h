@@ -14,10 +14,10 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/attributes.h"       // LIBC_INLINE
-#include "src/__support/macros/optimization.h"     // LIBC_UNLIKELY
-#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
-#include "src/__support/math_extras.h"             // SumCarry, DiffBorrow
+#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128, LIBC_TYPES_HAS_INT64
+#include "src/__support/math_extras.h" // SumCarry, DiffBorrow
 #include "src/__support/number_pair.h"
 
 #include <stddef.h> // For size_t
@@ -940,11 +940,11 @@ namespace internal {
 // availability.
 template <size_t Bits>
 struct WordTypeSelector : cpp::type_identity<
-#if defined(UINT64_MAX)
+#ifdef LIBC_TYPES_HAS_INT64
                               uint64_t
 #else
                               uint32_t
-#endif
+#endif // LIBC_TYPES_HAS_INT64
                               > {
 };
 // Except if we request 32 bits explicitly.

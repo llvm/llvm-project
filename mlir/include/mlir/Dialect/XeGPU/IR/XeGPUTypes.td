@@ -37,7 +37,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     TensorDesc is a type designed to describe regions of the interested data as well as some 
     features that are unique to Intel hardware. Different with the builtin tensor type in MLIR, 
     it essentially only contains the meta data, and doesn't hold the data by itself. It is designed 
-    to mainly support 2d block load/store and DPAS (matrix multiplication instruction) on Intel GPU. 
+    to mainly support 2D block load/store and DPAS (matrix multiplication instruction) on Intel GPU. 
     It encodes the following information:
 
     * shape:  the sizes/shape of the intereted data block, e.g., 8x16 means 8 rows

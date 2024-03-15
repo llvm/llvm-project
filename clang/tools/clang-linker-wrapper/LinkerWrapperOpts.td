@@ -60,6 +60,8 @@ def save_temps : Flag<["--"], "save-temps">,
   Flags<[WrapperOnlyOption]>, HelpText<"Save intermediate results">;
 def compress : Flag<["--"], "compress">,
   Flags<[WrapperOnlyOption]>, HelpText<"Compress bundled files">;
+def compression_level_eq : Joined<["--"], "compression-level=">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Specify the compression level (integer)">;
 
 def wrapper_time_trace_eq : Joined<["--"], "wrapper-time-trace=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<file>">,

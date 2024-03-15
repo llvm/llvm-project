@@ -918,7 +918,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   }
 
   // Prepare rewriter and listener.
-  TrackingListener::SkipHandleFn skipHandleFn = [&](Value handle) {
+  TrackingListenerConfig config;
+  config.skipHandleFn = [&](Value handle) {
     // Skip handle if it is dead.
     auto scopeIt =
         llvm::find_if(llvm::reverse(regionStack), [&](RegionScope *scope) {
@@ -935,7 +936,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     return true;
   };
   transform::ErrorCheckingTrackingListener trackingListener(*this, transform,
-                                                            skipHandleFn);
+                                                            config);
   transform::TransformRewriter rewriter(transform->getContext(),
                                         &trackingListener);
 
@@ -1184,9 +1185,8 @@ bool transform::TransformResults::isSet(unsigned resultNumber) const {
 
 transform::TrackingListener::TrackingListener(TransformState &state,
                                               TransformOpInterface op,
-                                              SkipHandleFn skipHandleFn)
-    : TransformState::Extension(state), transformOp(op),
-      skipHandleFn(skipHandleFn) {
+                                              TrackingListenerConfig config)
+    : TransformState::Extension(state), transformOp(op), config(config) {
   if (op) {
     for (OpOperand *opOperand : transformOp.getConsumedHandleOpOperands()) {
       consumedHandles.insert(opOperand->get());
@@ -1228,8 +1228,19 @@ DiagnosedSilenceableFailure transform::TrackingListener::findReplacementOp(
       return diag;
     }
 
-    // If the defining op has the same type, we take it as a replacement.
-    if (op->getName() == defOp->getName()) {
+    // Skip through ops that implement CastOpInterface.
+    if (config.skipCastOps && isa<CastOpInterface>(defOp)) {
+      values.clear();
+      values.assign(defOp->getOperands().begin(), defOp->getOperands().end());
+      diag.attachNote(defOp->getLoc())
+          << "using output of 'CastOpInterface' op";
+      continue;
+    }
+
+    // If the defining op has the same name or we do not care about the name of
+    // op replacements at all, we take it as a replacement.
+    if (!config.requireMatchingReplacementOpName ||
+        op->getName() == defOp->getName()) {
       result = defOp;
       return DiagnosedSilenceableFailure::success();
     }
@@ -1249,14 +1260,6 @@ DiagnosedSilenceableFailure transform::TrackingListener::findReplacementOp(
       values.assign(findReplacementOpInterface.getNextOperands());
       diag.attachNote(defOp->getLoc()) << "using operands provided by "
                                           "'FindPayloadReplacementOpInterface'";
-      continue;
-    }
-
-    // Skip through ops that implement CastOpInterface.
-    if (isa<CastOpInterface>(defOp)) {
-      values.assign(defOp->getOperands().begin(), defOp->getOperands().end());
-      diag.attachNote(defOp->getLoc())
-          << "using output of 'CastOpInterface' op";
       continue;
     }
   } while (!values.empty());
@@ -1318,9 +1321,9 @@ void transform::TrackingListener::notifyOperationReplaced(
 
   // Check if there are any handles that must be updated.
   Value aliveHandle;
-  if (skipHandleFn) {
-    auto it =
-        llvm::find_if(opHandles, [&](Value v) { return !skipHandleFn(v); });
+  if (config.skipHandleFn) {
+    auto it = llvm::find_if(opHandles,
+                            [&](Value v) { return !config.skipHandleFn(v); });
     if (it != opHandles.end())
       aliveHandle = *it;
   } else if (!opHandles.empty()) {

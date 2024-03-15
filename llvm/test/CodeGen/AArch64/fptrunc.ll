@@ -84,11 +84,8 @@ entry:
 define <2 x half> @fptrunc_v2f64_v2f16(<2 x double> %a) {
 ; CHECK-SD-LABEL: fptrunc_v2f64_v2f16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov d1, v0.d[1]
-; CHECK-SD-NEXT:    fcvt h0, d0
-; CHECK-SD-NEXT:    fcvt h1, d1
-; CHECK-SD-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    fcvtxn v0.2s, v0.2d
+; CHECK-SD-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fptrunc_v2f64_v2f16:
@@ -135,16 +132,9 @@ entry:
 define <4 x half> @fptrunc_v4f64_v4f16(<4 x double> %a) {
 ; CHECK-SD-LABEL: fptrunc_v4f64_v4f16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov d2, v0.d[1]
-; CHECK-SD-NEXT:    fcvt h0, d0
-; CHECK-SD-NEXT:    fcvt h2, d2
-; CHECK-SD-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-SD-NEXT:    fcvt h2, d1
-; CHECK-SD-NEXT:    mov d1, v1.d[1]
-; CHECK-SD-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-SD-NEXT:    fcvt h1, d1
-; CHECK-SD-NEXT:    mov v0.h[3], v1.h[0]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    fcvtxn v0.2s, v0.2d
+; CHECK-SD-NEXT:    fcvtxn2 v0.4s, v1.2d
+; CHECK-SD-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fptrunc_v4f64_v4f16:

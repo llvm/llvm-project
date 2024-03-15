@@ -2940,6 +2940,81 @@ _mm_movemask_ps(__m128 __a)
   return __builtin_ia32_movmskps((__v4sf)__a);
 }
 
+/* Compare */
+#define _CMP_EQ_OQ    0x00 /* Equal (ordered, non-signaling)  */
+#define _CMP_LT_OS    0x01 /* Less-than (ordered, signaling)  */
+#define _CMP_LE_OS    0x02 /* Less-than-or-equal (ordered, signaling)  */
+#define _CMP_UNORD_Q  0x03 /* Unordered (non-signaling)  */
+#define _CMP_NEQ_UQ   0x04 /* Not-equal (unordered, non-signaling)  */
+#define _CMP_NLT_US   0x05 /* Not-less-than (unordered, signaling)  */
+#define _CMP_NLE_US   0x06 /* Not-less-than-or-equal (unordered, signaling)  */
+#define _CMP_ORD_Q    0x07 /* Ordered (non-signaling)   */
+
+/// Compares each of the corresponding values of two 128-bit vectors of
+///    [4 x float], using the operation specified by the immediate integer
+///    operand.
+///
+///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// __m128 _mm_cmp_ps(__m128 a, __m128 b, const int c);
+/// \endcode
+///
+/// This intrinsic corresponds to the <c> (V)CMPPS </c> instruction.
+///
+/// \param a
+///    A 128-bit vector of [4 x float].
+/// \param b
+///    A 128-bit vector of [4 x float].
+/// \param c
+///    An immediate integer operand, with bits [4:0] specifying which comparison
+///    operation to use: \n
+///    0x00: Equal (ordered, non-signaling) \n
+///    0x01: Less-than (ordered, signaling) \n
+///    0x02: Less-than-or-equal (ordered, signaling) \n
+///    0x03: Unordered (non-signaling) \n
+///    0x04: Not-equal (unordered, non-signaling) \n
+///    0x05: Not-less-than (unordered, signaling) \n
+///    0x06: Not-less-than-or-equal (unordered, signaling) \n
+///    0x07: Ordered (non-signaling) \n
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
+#define _mm_cmp_ps(a, b, c)                                                    \
+  ((__m128)__builtin_ia32_cmpps((__v4sf)(__m128)(a), (__v4sf)(__m128)(b), (c)))
+
+/// Compares each of the corresponding scalar values of two 128-bit
+///    vectors of [4 x float], using the operation specified by the immediate
+///    integer operand.
+///
+///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// __m128 _mm_cmp_ss(__m128 a, __m128 b, const int c);
+/// \endcode
+///
+/// This intrinsic corresponds to the <c> (V)CMPSS </c> instruction.
+///
+/// \param a
+///    A 128-bit vector of [4 x float].
+/// \param b
+///    A 128-bit vector of [4 x float].
+/// \param c
+///    An immediate integer operand, with bits [4:0] specifying which comparison
+///    operation to use: \n
+///    0x00: Equal (ordered, non-signaling) \n
+///    0x01: Less-than (ordered, signaling) \n
+///    0x02: Less-than-or-equal (ordered, signaling) \n
+///    0x03: Unordered (non-signaling) \n
+///    0x04: Not-equal (unordered, non-signaling) \n
+///    0x05: Not-less-than (unordered, signaling) \n
+///    0x06: Not-less-than-or-equal (unordered, signaling) \n
+///    0x07: Ordered (non-signaling) \n
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
+#define _mm_cmp_ss(a, b, c)                                                    \
+  ((__m128)__builtin_ia32_cmpss((__v4sf)(__m128)(a), (__v4sf)(__m128)(b), (c)))
 
 #define _MM_ALIGN16 __attribute__((aligned(16)))
 

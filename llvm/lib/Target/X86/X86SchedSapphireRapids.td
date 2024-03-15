@@ -663,8 +663,8 @@ def : InstRW<[SPRWriteResGroup12], (instregex "^ADD_F(P?)rST0$",
                                               "^SUB(R?)_FST0r$",
                                               "^VALIGN(D|Q)Z256rri((k|kz)?)$",
                                               "^VCMPP(D|H|S)Z(128|256)rri(k?)$",
-                                              "^VCMPS(D|H|S)Zrr$",
-                                              "^VCMPS(D|H|S)Zrr(b?)_Int(k?)$",
+                                              "^VCMPS(D|H|S)Zrri$",
+                                              "^VCMPS(D|H|S)Zrr(b?)i_Int(k?)$",
                                               "^VFPCLASSP(D|H|S)Z(128|256)rr(k?)$",
                                               "^VFPCLASSS(D|H|S)Zrr(k?)$",
                                               "^VPACK(S|U)S(DW|WB)Yrr$",
@@ -2739,8 +2739,8 @@ def : InstRW<[SPRWriteResGroup263, ReadAfterVecYLd], (instregex "^VCMPP(D|H|S)Z(
                                                                 "^VPCMPUDZ((256)?)rmib(k?)$",
                                                                 "^VPTEST(N?)M(B|D|Q|W)Z((256)?)rm(k?)$",
                                                                 "^VPTEST(N?)M(D|Q)Z((256)?)rmb(k?)$")>;
-def : InstRW<[SPRWriteResGroup263, ReadAfterVecLd], (instregex "^VCMPS(D|H|S)Zrm$",
-                                                               "^VCMPS(D|H|S)Zrm_Int(k?)$",
+def : InstRW<[SPRWriteResGroup263, ReadAfterVecLd], (instregex "^VCMPS(D|H|S)Zrmi$",
+                                                               "^VCMPS(D|H|S)Zrmi_Int(k?)$",
                                                                "^VFPCLASSS(D|H|S)Zrmk$")>;
 
 def SPRWriteResGroup264 : SchedWriteRes<[SPRPort00, SPRPort02_03_11]> {

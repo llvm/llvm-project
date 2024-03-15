@@ -13,8 +13,8 @@
 #include <__concepts/same_as.h>
 #include <__concepts/semiregular.h>
 #include <__config>
-#include <__format/format_fwd.h>
 #include <__format/format_parse_context.h>
+#include <__fwd/format.h>
 #include <__type_traits/is_specialization.h>
 #include <__type_traits/remove_const.h>
 #include <__utility/pair.h>

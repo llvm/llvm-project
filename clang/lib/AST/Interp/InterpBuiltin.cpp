@@ -53,11 +53,7 @@ static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
     Offset = align(primSize(T));
 
   APSInt R;
-  INT_TYPE_SWITCH(T, {
-    T Val = Stk.peek<T>(Offset);
-    R = APSInt(APInt(Val.bitWidth(), static_cast<uint64_t>(Val), T::isSigned()),
-               !T::isSigned());
-  });
+  INT_TYPE_SWITCH(T, R = Stk.peek<T>(Offset).toAPSInt());
 
   return R;
 }
@@ -1052,6 +1048,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg:
   case Builtin::BI__popcnt16: // Microsoft variants of popcount
   case Builtin::BI__popcnt:
   case Builtin::BI__popcnt64:

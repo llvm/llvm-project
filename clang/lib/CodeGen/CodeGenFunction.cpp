@@ -31,6 +31,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -2613,6 +2614,24 @@ void CGBuilderInserter::InsertHelper(
 // called function.
 void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
                                           const FunctionDecl *TargetDecl) {
+  // SemaChecking cannot handle below x86 builtins because they have different
+  // parameter ranges with different TargetAttribute of caller.
+  if (CGM.getContext().getTargetInfo().getTriple().isX86()) {
+    unsigned BuiltinID = TargetDecl->getBuiltinID();
+    if (BuiltinID == X86::BI__builtin_ia32_cmpps ||
+        BuiltinID == X86::BI__builtin_ia32_cmpss ||
+        BuiltinID == X86::BI__builtin_ia32_cmppd ||
+        BuiltinID == X86::BI__builtin_ia32_cmpsd) {
+      const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+      llvm::StringMap<bool> TargetFetureMap;
+      CGM.getContext().getFunctionFeatureMap(TargetFetureMap, FD);
+      llvm::APSInt Result =
+          *(E->getArg(2)->getIntegerConstantExpr(CGM.getContext()));
+      if (Result.getSExtValue() > 7 && !TargetFetureMap.lookup("avx"))
+        CGM.getDiags().Report(E->getBeginLoc(), diag::err_builtin_needs_feature)
+            << TargetDecl->getDeclName() << "avx";
+    }
+  }
   return checkTargetFeatures(E->getBeginLoc(), TargetDecl);
 }
 

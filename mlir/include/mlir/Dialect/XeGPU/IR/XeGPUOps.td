@@ -23,13 +23,33 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 //   * The mnemonic for the operation, or the name without the dialect prefix.
 //   * A list of traits for the operation.
 class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
-          Op<XeGPU_Dialect, mnemonic, traits>;
+          Op<XeGPU_Dialect, mnemonic, traits> {
+
+  code extraBaseClassDeclaration = [{
+    void printProperties(::mlir::MLIRContext *ctx,
+            ::mlir::OpAsmPrinter &p, const Properties &prop) {
+      Attribute propAttr = getPropertiesAsAttr(ctx, prop);
+      if (propAttr)
+        p << "<" << propAttr << ">";
+    }
+
+    static ::mlir::ParseResult parseProperties(::mlir::OpAsmParser &parser,
+                                     ::mlir::OperationState &result) {
+      if (mlir::succeeded(parser.parseLess())) {
+        if (parser.parseAttribute(result.propertiesAttr) || parser.parseGreater())
+          return failure();
+      }
+      return success();
+    }
+
+  }];
+}
 
 
 def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface, 
                         AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface]> {
 
-  let summary = "create nd tensor descriptor operation";
+  let summary = "Create nd-tensor descriptor operation";
   let description = [{
     The "create_nd_tdesc" operation creates a TensorDescType which represents
     a sub-view of a 2D memory region (It can be extended to support n-D memory
@@ -103,7 +123,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
                    "ValueRange": $shape, "ValueRange": $stride)>
   ];
 
-  let extraClassDeclaration = [{
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
     /// Returns the type of the source memref operand.
     Type getSourceType() {
       return getSource().getType();
@@ -180,16 +200,28 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
 
 def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
   let summary = "prefetches a nD block to cache";
+  let description = [{
+    It issues an instruction to prefetch the data from memory to each 
+    level of the cache based on their cache policy.
+
+    Example:
+    ```
+      xegpu.prefetch_nd %tdesc {l1_hint = #xegpu.cache_hint<cached>, 
+                                l2_hint = #xegpu.cache_hint<cached>, 
+                                l3_hint = #xegpu.cache_hint<cached>}
+        : !xegpu.tensor_desc<8x16xf16>
+    ```
+
+  }];
+
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+                       
+  let extraClassDeclaration = extraBaseClassDeclaration;
 
-  // Format: xegpu.prefetch_nd %tdesc {l1_hint = #xegpu.cache_hint<cached>, 
-  //                                   l2_hint = #xegpu.cache_hint<cached>, 
-  //                                   l3_hint = #xegpu.cache_hint<cached>}
-  //         : !xegpu.tensor_desc<8x16xf16>
-  let assemblyFormat = "$TensorDesc attr-dict `:` qualified(type($TensorDesc))";
+  let assemblyFormat = "$TensorDesc prop-dict attr-dict `:` qualified(type($TensorDesc))";
 }
 
 
@@ -198,11 +230,27 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd"> {
                 "to registers (represented by vector)";
   let description = [{
     LoadNdOp essentially mimics the hardware block read instruction to read 
-    a block of data from memory to register. It takes a set of cache hints 
-    for each level of cache, L1, L2 and L3. If hardware does not have a 
+    a block of data from memory to register. It takes a set of optional cache 
+    hints for each level of cache, L1, L2 and L3. If hardware does not have a 
     correspoding cache, Corresponding cache hint attribute will be masked.
-    If both transpose and vnni_axis present at the same time. It assume to 
-    perform transpose first and then vnni transform.
+    vnni transform is an hardware feature for Intel GPU, which is used to 
+    do data packing during the load for B operand of matrix operation, if 
+    the bit width of the data type is less then 32 bits, e.g., fp16. And 
+    transpose is another Intel hardware feature, which will do transpose
+    operation when loading the data if the bit width of the data type is 
+    fp32 or fp64. It implies that vnni and transpose cannot exit at the 
+    same time.
+
+    Example:
+    ```
+      xegpu.load_nd %1 {transpose = [1, 0],
+                        l1_hint = #xegpu.cache_hint<cached>, 
+                        l2_hint = #xegpu.cache_hint<uncached>, 
+                        l3_hint = #xegpu.cache_hint<streaming>}
+              : !xegpu.tensor_desc<8x16xf32> -> vector<16x8xf32>
+    ```
+
+
   }];
 
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
@@ -214,7 +262,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd"> {
 
   let results = (outs XeGPU_ValueType: $value);
 
-  let extraClassDeclaration = [{
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
     VectorType getType() {
       return llvm::dyn_cast<VectorType>(getValue().getType());
     }
@@ -224,28 +272,41 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd"> {
     }
   }];
 
-  // Format: xegpu.load_nd %1 {transpose = [1, 0], 
-  //                l1_hint = #xegpu.cache_hint<cached>, 
-  //                l2_hint = #xegpu.cache_hint<uncached>, 
-  //                l3_hint = #xegpu.cache_hint<streaming>}
-  //         : !xegpu.tensor_desc<8x16xf32> -> vector<16x8xf32>
-  let assemblyFormat = "$TensorDesc attr-dict `:` qualified(type($TensorDesc)) `->` type($value)";
+  let assemblyFormat = "$TensorDesc prop-dict attr-dict `:` qualified(type($TensorDesc)) `->` type($value)";
   let hasVerifier = 1;
 }
 
 def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", []> {
   let summary = "stores a n-D block register region back to memory, currently only supports 2D";
+
+  let description = [{
+    StoreNdOp essentially mimics the hardware block write instruction io
+    write a block of data from register into the memory region as described 
+    by the TensorDesc. It takes a set of optional cache hints for each level 
+    of cache, L1, L2 and L3. If hardware does not have a correspoding cache, 
+    Corresponding cache hint attribute will be masked.
+
+    Example:
+    ```
+      xegpu.store_nd %3, %2 {l1_hint = #xegpu.cache_hint<uncached>,
+                             l2_hint = #xegpu.cache_hint<write_back>, 
+                             l3_hint = #xegpu.cache_hint<write_through>}
+                             : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
+    ```
+
+
+  }];
+
   let arguments = (ins XeGPU_ValueType: $value,
                        XeGPU_TensorDesc: $TensorDesc,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
 
-  // Format: xegpu.store_nd %3, %2 {l1_hint = #xegpu.cache_hint<uncached>,
-  //                                l2_hint = #xegpu.cache_hint<write_back>, 
-  //                                l3_hint = #xegpu.cache_hint<write_through>}
-  //                                : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
-  let assemblyFormat = "$value `,` $TensorDesc attr-dict `:` type($value) `,` qualified(type($TensorDesc))";
+  let extraClassDeclaration = extraBaseClassDeclaration;
+
+  let assemblyFormat = [{$value `,` $TensorDesc prop-dict attr-dict 
+                        `:` type($value) `,` qualified(type($TensorDesc))}];
   let hasVerifier = 1;
 }
 

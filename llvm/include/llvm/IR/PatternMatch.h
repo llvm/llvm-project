@@ -564,6 +564,19 @@ inline api_pred_ty<is_negated_power2> m_NegatedPower2(const APInt *&V) {
   return V;
 }
 
+struct is_negated_power2_or_zero {
+  bool isValue(const APInt &C) { return !C || C.isNegatedPowerOf2(); }
+};
+/// Match a integer or vector negated power-of-2.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_negated_power2_or_zero> m_NegatedPower2OrZero() {
+  return cst_pred_ty<is_negated_power2_or_zero>();
+}
+inline api_pred_ty<is_negated_power2_or_zero>
+m_NegatedPower2OrZero(const APInt *&V) {
+  return V;
+}
+
 struct is_power2_or_zero {
   bool isValue(const APInt &C) { return !C || C.isPowerOf2(); }
 };
@@ -594,6 +607,18 @@ inline cst_pred_ty<is_lowbit_mask> m_LowBitMask() {
   return cst_pred_ty<is_lowbit_mask>();
 }
 inline api_pred_ty<is_lowbit_mask> m_LowBitMask(const APInt *&V) { return V; }
+
+struct is_lowbit_mask_or_zero {
+  bool isValue(const APInt &C) { return !C || C.isMask(); }
+};
+/// Match an integer or vector with only the low bit(s) set.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_lowbit_mask_or_zero> m_LowBitMaskOrZero() {
+  return cst_pred_ty<is_lowbit_mask_or_zero>();
+}
+inline api_pred_ty<is_lowbit_mask_or_zero> m_LowBitMaskOrZero(const APInt *&V) {
+  return V;
+}
 
 struct icmp_pred_with_threshold {
   ICmpInst::Predicate Pred;

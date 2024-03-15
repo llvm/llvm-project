@@ -193,7 +193,7 @@ template <typename T>
 bit_ceil(T value) {
   if (value < 2)
     return 1;
-  return T(1) << cpp::bit_width<T>(value - 1u);
+  return static_cast<T>(T(1) << cpp::bit_width(value - 1U));
 }
 
 // Rotate algorithms make use of "Safe, Efficient, and Portable Rotate in C/C++"

@@ -380,6 +380,10 @@ private:
   Instruction *foldBitcastExtElt(ExtractElementInst &ExtElt);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);
   Instruction *foldFBinOpOfIntCasts(BinaryOperator &I);
+  // Should only be called by `foldFBinOpOfIntCasts`.
+  Instruction *foldFBinOpOfIntCastsFromSign(
+      BinaryOperator &BO, bool OpsFromSigned, std::array<Value *, 2> IntOps,
+      Constant *Op1FpC, SmallVectorImpl<WithCache<const Value *>> &OpsKnown);
   Instruction *foldBinopOfSextBoolToSelect(BinaryOperator &I);
   Instruction *narrowBinOp(TruncInst &Trunc);
   Instruction *narrowMaskedBinOp(BinaryOperator &And);
