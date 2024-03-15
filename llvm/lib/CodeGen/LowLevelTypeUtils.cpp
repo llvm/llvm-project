@@ -39,6 +39,9 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
     return LLT::scalar(SizeInBits);
   }
 
+  if (Ty.isTokenTy())
+    return LLT::token();
+
   return LLT();
 }
 
