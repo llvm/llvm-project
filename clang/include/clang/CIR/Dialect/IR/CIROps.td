@@ -1759,7 +1759,7 @@ def SetBitfieldOp : CIR_Op<"set_bitfield"> {
    }];
 
   let arguments = (ins
-    CIR_PointerType:$dst,
+    Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$addr,
     CIR_AnyType:$src,
     BitfieldInfoAttr:$bitfield_info,
     UnitAttr:$is_volatile
@@ -1767,12 +1767,12 @@ def SetBitfieldOp : CIR_Op<"set_bitfield"> {
 
   let results = (outs CIR_IntType:$result);
 
-  let assemblyFormat = [{ `(`$bitfield_info`,` $dst`:`qualified(type($dst))`,`
+  let assemblyFormat = [{ `(`$bitfield_info`,` $addr`:`qualified(type($addr))`,`
     $src`:`type($src) `)`  attr-dict `->` type($result) }];
 
   let builders = [
     OpBuilder<(ins "Type":$type,
-                   "Value":$dst,
+                   "Value":$addr,
                    "Type":$storage_type,
                    "Value":$src,
                    "StringRef":$name,
@@ -1786,7 +1786,7 @@ def SetBitfieldOp : CIR_Op<"set_bitfield"> {
         BitfieldInfoAttr::get($_builder.getContext(),
                               name, storage_type,
                               size, offset, is_signed);
-      build($_builder, $_state, type, dst, src, info, is_volatile);
+      build($_builder, $_state, type, addr, src, info, is_volatile);
     }]>
   ];
 }
@@ -1838,7 +1838,7 @@ def GetBitfieldOp : CIR_Op<"get_bitfield"> {
     }];
 
   let arguments = (ins
-    CIR_PointerType:$addr,
+    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
     BitfieldInfoAttr:$bitfield_info,
     UnitAttr:$is_volatile
     );
