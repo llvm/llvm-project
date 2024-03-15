@@ -30,3 +30,9 @@ A list of non-standard directives supported by Flang
     end
   end interface
 ```
+* `!dir$ assume_aligned desginator:alignment`, where designator is a variable,
+  maybe with array indices, and alignment is what the compiler should assume the
+  alignment to be. E.g A:64 or B(1,1,1):128. The alignment should be a power of 2,
+  and is limited to 256.
+  [This directive is currently recognised by the parser, but not
+  handled by the other parts of the compiler].

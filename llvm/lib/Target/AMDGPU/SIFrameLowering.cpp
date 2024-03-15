@@ -478,14 +478,13 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
         .addImm(0);
       Addc->getOperand(3).setIsDead(); // Mark SCC as dead.
 
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SETREG_B32)).
-        addReg(FlatScrInitLo).
-        addImm(int16_t(AMDGPU::Hwreg::ID_FLAT_SCR_LO |
-                       (31 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_)));
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SETREG_B32)).
-        addReg(FlatScrInitHi).
-        addImm(int16_t(AMDGPU::Hwreg::ID_FLAT_SCR_HI |
-                       (31 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_)));
+      using namespace AMDGPU::Hwreg;
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SETREG_B32))
+          .addReg(FlatScrInitLo)
+          .addImm(int16_t(HwregEncoding::encode(ID_FLAT_SCR_LO, 0, 32)));
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SETREG_B32))
+          .addReg(FlatScrInitHi)
+          .addImm(int16_t(HwregEncoding::encode(ID_FLAT_SCR_HI, 0, 32)));
       return;
     }
 

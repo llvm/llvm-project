@@ -844,7 +844,7 @@ define <vscale x 2 x i32> @test44scalablevec(<vscale x 2 x i32> %x) {
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw <vscale x 2 x i32> [[X:%.*]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 -32768, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[SUB]]
 ;
-  %sub = sub nsw <vscale x 2 x i32> %x, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> undef, i32 32768, i32 0), <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer)
+  %sub = sub nsw <vscale x 2 x i32> %x, splat (i32 32768)
   ret <vscale x 2 x i32> %sub
 }
 
@@ -864,7 +864,7 @@ define <vscale x 2 x i16> @test44scalablevecminval(<vscale x 2 x i16> %x) {
 ; CHECK-NEXT:    [[SUB:%.*]] = add <vscale x 2 x i16> [[X:%.*]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 -32768, i64 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i16> [[SUB]]
 ;
-  %sub = sub nsw <vscale x 2 x i16> %x, shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> undef, i16 -32768, i32 0), <vscale x 2 x i16> undef, <vscale x 2 x i32> zeroinitializer)
+  %sub = sub nsw <vscale x 2 x i16> %x, splat (i16 -32768)
   ret <vscale x 2 x i16> %sub
 }
 
@@ -2367,7 +2367,7 @@ define <2 x i8> @sub_to_and_vector3(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_to_and_vector3(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 71>, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 undef>
-; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> <i8 44, i8 44>, [[AND]]
+; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> <i8 44, i8 44>, [[AND]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %sub = sub nuw <2 x i8> <i8 71, i8 71>, %x

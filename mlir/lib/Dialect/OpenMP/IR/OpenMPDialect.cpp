@@ -915,9 +915,6 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
     if (mapTypeMod == "delete")
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
 
-    if (mapTypeMod == "ptr_and_obj")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
-
     return success();
   };
 
@@ -954,10 +951,6 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
   if (mapTypeToBitFlag(mapTypeBits,
                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT))
     mapTypeStrs.push_back("present");
-  if (mapTypeToBitFlag(
-          mapTypeBits,
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ))
-    mapTypeStrs.push_back("ptr_and_obj");
 
   // special handling of to/from/tofrom/delete and release/alloc, release +
   // alloc are the abscense of one of the other flags, whereas tofrom requires
@@ -989,6 +982,77 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
     if (i + 1 < mapTypeStrs.size()) {
       p << ", ";
     }
+  }
+}
+
+static ParseResult parseMembersIndex(OpAsmParser &parser,
+                                     DenseIntElementsAttr &membersIdx) {
+  SmallVector<APInt> values;
+  int64_t value;
+  int64_t shape[2] = {0, 0};
+  unsigned shapeTmp = 0;
+  auto parseIndices = [&]() -> ParseResult {
+    if (parser.parseInteger(value))
+      return failure();
+    shapeTmp++;
+    values.push_back(APInt(32, value));
+    return success();
+  };
+
+  do {
+    if (failed(parser.parseLSquare()))
+      return failure();
+
+    if (parser.parseCommaSeparatedList(parseIndices))
+      return failure();
+
+    if (failed(parser.parseRSquare()))
+      return failure();
+
+    // Only set once, if any indices are not the same size
+    // we error out in the next check as that's unsupported
+    if (shape[1] == 0)
+      shape[1] = shapeTmp;
+
+    // Verify that the recently parsed list is equal to the
+    // first one we parsed, they must be equal lengths to
+    // keep the rectangular shape DenseIntElementsAttr
+    // requires
+    if (shapeTmp != shape[1])
+      return failure();
+
+    shapeTmp = 0;
+    shape[0]++;
+  } while (succeeded(parser.parseOptionalComma()));
+
+  if (!values.empty()) {
+    ShapedType valueType =
+        VectorType::get(shape, IntegerType::get(parser.getContext(), 32));
+    membersIdx = DenseIntElementsAttr::get(valueType, values);
+  }
+
+  return success();
+}
+
+static void printMembersIndex(OpAsmPrinter &p, MapInfoOp op,
+                              DenseIntElementsAttr membersIdx) {
+  assert(membersIdx.getShapedType().getShape().size() <= 2);
+
+  if (!membersIdx)
+    return;
+
+  for (int i = 0; i < membersIdx.getShapedType().getShape()[0]; ++i) {
+    p << "[";
+    for (int j = 0; j < membersIdx.getShapedType().getShape()[1]; ++j) {
+      p << membersIdx.getValues<
+          int32_t>()[i * membersIdx.getShapedType().getShape()[1] + j];
+      if ((j + 1) < membersIdx.getShapedType().getShape()[1])
+        p << ",";
+    }
+    p << "]";
+
+    if ((i + 1) < membersIdx.getShapedType().getShape()[0])
+      p << ", ";
   }
 }
 
@@ -1216,7 +1280,7 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
       /*allocate_vars=*/ValueRange(), /*allocators_vars=*/ValueRange(),
       /*reduction_vars=*/ValueRange(), /*reductions=*/nullptr,
       /*proc_bind_val=*/nullptr, /*private_vars=*/ValueRange(),
-      /*privatizers=*/nullptr);
+      /*privatizers=*/nullptr, /*byref=*/false);
   state.addAttributes(attributes);
 }
 
@@ -1681,7 +1745,8 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &state,
         /*linear_step_vars=*/ValueRange(), /*reduction_vars=*/ValueRange(),
         /*reductions=*/nullptr, /*schedule_val=*/nullptr,
         /*schedule_chunk_var=*/nullptr, /*schedule_modifier=*/nullptr,
-        /*simd_modifier=*/false, /*nowait=*/false, /*ordered_val=*/nullptr,
+        /*simd_modifier=*/false, /*nowait=*/false, /*byref=*/false,
+        /*ordered_val=*/nullptr,
         /*order_val=*/nullptr, /*inclusive=*/false);
   state.addAttributes(attributes);
 }
@@ -1964,7 +2029,10 @@ LogicalResult PrivateClauseOp::verify() {
   Type symType = getType();
 
   auto verifyTerminator = [&](Operation *terminator) -> LogicalResult {
-    if (!terminator->hasSuccessors() && !llvm::isa<YieldOp>(terminator))
+    if (!terminator->getBlock()->getSuccessors().empty())
+      return success();
+
+    if (!llvm::isa<YieldOp>(terminator))
       return mlir::emitError(terminator->getLoc())
              << "expected exit block terminator to be an `omp.yield` op.";
 

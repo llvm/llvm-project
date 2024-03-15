@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_RANDUTILS_H
+#define LLVM_LIBC_TEST_SRC_MATH_RANDUTILS_H
+
 namespace LIBC_NAMESPACE {
 namespace testutils {
 
@@ -14,3 +17,5 @@ int rand();
 
 } // namespace testutils
 } // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_RANDUTILS_H

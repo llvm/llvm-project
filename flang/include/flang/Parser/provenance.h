@@ -151,6 +151,7 @@ public:
 
   void ClearSearchPath();
   void AppendSearchPathDirectory(std::string); // new last directory
+  const SourceFile *OpenPath(std::string path, llvm::raw_ostream &error);
   const SourceFile *Open(std::string path, llvm::raw_ostream &error,
       std::optional<std::string> &&prependPath = std::nullopt);
   const SourceFile *ReadStandardInput(llvm::raw_ostream &error);

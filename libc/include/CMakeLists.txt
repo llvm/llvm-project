@@ -85,6 +85,14 @@ add_gen_header(
 )
 
 add_gen_header(
+  stdint
+  DEF_FILE stdint.h.def
+  GEN_HDR stdint.h
+  DEPENDS
+    .llvm-libc-macros.stdint_macros
+)
+
+add_gen_header(
   limits
   DEF_FILE limits.h.def
   GEN_HDR limits.h
@@ -575,12 +583,22 @@ add_gen_header(
 )
 
 add_gen_header(
+  uchar
+  DEF_FILE uchar.h.def
+  GEN_HDR uchar.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.mbstate_t
+)
+
+add_gen_header(
   wchar
   DEF_FILE wchar.h.def
   GEN_HDR wchar.h
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.wchar_macros
+    .llvm-libc-types.mbstate_t
     .llvm-libc-types.size_t
     .llvm-libc-types.wint_t
     .llvm-libc-types.wchar_t

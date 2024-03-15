@@ -11,6 +11,7 @@
 
 #include "bolt/Core/DIEBuilder.h"
 #include "bolt/Core/DebugData.h"
+#include "bolt/Core/DebugNames.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DWP/DWP.h"
@@ -140,8 +141,10 @@ private:
                             const std::list<DWARFUnit *> &CUs);
 
   /// Finalize debug sections in the main binary.
-  void finalizeDebugSections(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
-                             raw_svector_ostream &ObjOS, CUOffsetMap &CUMap);
+  void finalizeDebugSections(DIEBuilder &DIEBlder,
+                             DWARF5AcceleratorTable &DebugNamesTable,
+                             DIEStreamer &Streamer, raw_svector_ostream &ObjOS,
+                             CUOffsetMap &CUMap);
 
   /// Patches the binary for DWARF address ranges (e.g. in functions and lexical
   /// blocks) to be updated.

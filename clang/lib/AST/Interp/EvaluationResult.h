@@ -72,7 +72,8 @@ private:
     Kind = LValue;
   }
   void setInvalid() {
-    assert(empty());
+    // We are NOT asserting empty() here, since setting it to invalid
+    // is allowed even if there is already a result.
     Kind = Invalid;
   }
   void setValid() {
