@@ -489,7 +489,7 @@ void DWARF5AcceleratorTable::writeEntry(BOLTDWARF5AccelTableData &Entry) {
           AttrEnc.Form == dwarf::DW_FORM_flag_present);
       if (std::optional<uint64_t> ParentOffset = Entry.getParentDieOffset()) {
         Entry.setPatchOffset(EntriesBuffer->size());
-        support::endian::write(*Entriestream, static_cast<uint32_t>(0xBADF00D),
+        support::endian::write(*Entriestream, static_cast<uint32_t>(UINT32_MAX),
                                llvm::endianness::little);
       }
       break;
