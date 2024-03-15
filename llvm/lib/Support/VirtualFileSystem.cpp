@@ -2461,27 +2461,26 @@ ErrorOr<Status> RedirectingFileSystem::status(const Twine &OriginalPath) {
 }
 
 bool RedirectingFileSystem::exists(const Twine &OriginalPath) {
-  SmallString<256> CanonicalPath;
-  OriginalPath.toVector(CanonicalPath);
+  SmallString<256> Path;
+  OriginalPath.toVector(Path);
 
-  if (makeCanonical(CanonicalPath))
+  if (makeAbsolute(Path))
     return false;
 
   if (Redirection == RedirectKind::Fallback) {
     // Attempt to find the original file first, only falling back to the
     // mapped file if that fails.
-    if (ExternalFS->exists(CanonicalPath))
+    if (ExternalFS->exists(Path))
       return true;
   }
 
-  ErrorOr<RedirectingFileSystem::LookupResult> Result =
-      lookupPath(CanonicalPath);
+  ErrorOr<RedirectingFileSystem::LookupResult> Result = lookupPath(Path);
   if (!Result) {
     // Was not able to map file, fallthrough to using the original path if
     // that was the specified redirection type.
     if (Redirection == RedirectKind::Fallthrough &&
         isFileNotFound(Result.getError()))
-      return ExternalFS->exists(CanonicalPath);
+      return ExternalFS->exists(Path);
     return false;
   }
 
@@ -2491,18 +2490,18 @@ bool RedirectingFileSystem::exists(const Twine &OriginalPath) {
     return true;
   }
 
-  SmallString<256> CanonicalRemappedPath((*ExtRedirect).str());
-  if (makeCanonical(CanonicalRemappedPath))
+  SmallString<256> RemappedPath((*ExtRedirect).str());
+  if (makeAbsolute(RemappedPath))
     return false;
 
-  if (ExternalFS->exists(CanonicalRemappedPath))
+  if (ExternalFS->exists(RemappedPath))
     return true;
 
   if (Redirection == RedirectKind::Fallthrough) {
     // Mapped the file but it wasn't found in the underlying filesystem,
     // fallthrough to using the original path if that was the specified
     // redirection type.
-    return ExternalFS->exists(CanonicalPath);
+    return ExternalFS->exists(Path);
   }
 
   return false;

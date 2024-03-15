@@ -3525,6 +3525,11 @@ TEST(RedirectingFileSystemTest, ExternalPaths) {
       SeenPaths.push_back(Dir.str());
       return ProxyFileSystem::dir_begin(Dir, EC);
     }
+
+    bool exists(const Twine &Path) override {
+      SeenPaths.push_back(Path.str());
+      return ProxyFileSystem::exists(Path);
+    }
   };
 
   std::error_code EC;
