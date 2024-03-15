@@ -46,7 +46,7 @@ void test() {
     assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
   }
-  // Mode: `ios_base::in`
+  // Mode: `in`
   {
     SpBuf spBuf{sp, std::ios_base::in};
     assert(spBuf.span().data() == arr);
@@ -58,7 +58,7 @@ void test() {
     assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
   }
-  // Mode `ios_base::out`
+  // Mode `out`
   {
     SpBuf spBuf{sp, std::ios_base::out};
     assert(spBuf.span().data() == arr);
@@ -86,7 +86,7 @@ void test() {
     assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
   }
-  // Mode: `ios_base::ate`
+  // Mode: `ate`
   {
     SpBuf spBuf{sp, std::ios_base::out | std::ios_base::ate};
     assert(spBuf.span().data() == arr);

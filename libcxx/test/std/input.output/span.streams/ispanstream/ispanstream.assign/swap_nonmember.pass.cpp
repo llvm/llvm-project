@@ -40,7 +40,7 @@ void test() {
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
-  // Mode: `ios_base::in`
+  // Mode: `in`
   {
     SpStream rhsSpSt{sp, std::ios_base::in};
     SpStream spSt(std::span<CharT>{});
@@ -49,7 +49,7 @@ void test() {
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
-  // Mode `ios_base::out`
+  // Mode `out`
   {
     SpStream rhsSpSt{sp, std::ios_base::out};
     SpStream spSt(std::span<CharT>{});
