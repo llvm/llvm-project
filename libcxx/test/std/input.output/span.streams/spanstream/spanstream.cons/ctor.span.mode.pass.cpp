@@ -28,7 +28,6 @@
 #include "test_convertible.h"
 #include "test_macros.h"
 
-#include "../../helper_macros.h"
 #include "../../helper_types.h"
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
@@ -124,6 +123,9 @@ int main(int, char**) {
 #endif
   test_sfinae<char>();
   test_sfinae<char, constexpr_char_traits<char>>();
+#ifndef TEST_HAS_NO_NASTY_STRING
+  test<nasty_char, nasty_char_traits>();
+#endif
   test<char>();
   test<char, constexpr_char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
