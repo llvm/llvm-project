@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE {
 static constexpr int DEFAULT_OFLAGS = O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK;
 
 LLVM_LIBC_FUNCTION(int, shm_open, (const char *name, int oflags, mode_t mode)) {
-  cpp::optional<SHMPath> buffer = get_shm_name(name);
+  cpp::optional<shm_common::SHMPath> buffer = shm_common::translate_name(name);
   if (!buffer.has_value())
     return -1;
   return open(buffer->data(), oflags | DEFAULT_OFLAGS, mode);

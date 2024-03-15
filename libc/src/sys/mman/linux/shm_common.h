@@ -17,10 +17,12 @@
 
 namespace LIBC_NAMESPACE {
 
+namespace shm_common {
+
 LIBC_INLINE_VAR constexpr cpp::string_view SHM_PREFIX = "/dev/shm/";
 using SHMPath = cpp::array<char, NAME_MAX + SHM_PREFIX.size() + 1>;
 
-LIBC_INLINE cpp::optional<SHMPath> get_shm_name(cpp::string_view name) {
+LIBC_INLINE cpp::optional<SHMPath> translate_name(cpp::string_view name) {
   // trim leading slashes
   size_t offset = name.find_first_not_of('/');
   if (offset == cpp::string_view::npos) {
@@ -46,5 +48,6 @@ LIBC_INLINE cpp::optional<SHMPath> get_shm_name(cpp::string_view name) {
   buffer[SHM_PREFIX.size() + name.size()] = '\0';
   return buffer;
 }
+} // namespace shm_common
 
 } // namespace LIBC_NAMESPACE
