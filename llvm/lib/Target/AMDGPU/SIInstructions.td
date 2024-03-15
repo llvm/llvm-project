@@ -2946,30 +2946,12 @@ def : GCNPat<
 
 // If fcanonicalize's operand is implicitly canonicalized, we only need a copy.
 let AddedComplexity = 1000 in {
-def : GCNPat<
-  (is_canonicalized_1<fcanonicalize> f16:$src),
-  (COPY f16:$src)
->;
-
-def : GCNPat<
-  (is_canonicalized_1<fcanonicalize> v2f16:$src),
-  (COPY v2f16:$src)
->;
-
-def : GCNPat<
-  (is_canonicalized_1<fcanonicalize> f32:$src),
-  (COPY f32:$src)
->;
-
-def : GCNPat<
-  (is_canonicalized_1<fcanonicalize> v2f32:$src),
-  (COPY v2f32:$src)
->;
-
-def : GCNPat<
-  (is_canonicalized_1<fcanonicalize> f64:$src),
-  (COPY f64:$src)
->;
+foreach vt = [f16, v2f16, f32, v2f32, f64] in {
+  def : GCNPat<
+    (fcanonicalize (vt is_canonicalized:$src)),
+    (COPY vt:$src)
+  >;
+}
 }
 
 // Prefer selecting to max when legal, but using mul is always valid.
