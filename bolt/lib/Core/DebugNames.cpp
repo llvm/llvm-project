@@ -234,8 +234,7 @@ DWARF5AcceleratorTable::addAccelTableEntry(
     addUnit(Unit, DWOID);
   }
 
-  auto addEntry =
-      [&](DIEValue ValName) -> std::optional<BOLTDWARF5AccelTableData *> {
+  auto getName = [&](DIEValue ValName) -> std::optional<std::string> {
     if ((!ValName || ValName.getForm() == dwarf::DW_FORM_string) &&
         NameToUse.empty())
       return std::nullopt;
@@ -268,7 +267,16 @@ DWARF5AcceleratorTable::addAccelTableEntry(
       // This the same hash function used in DWARF5AccelTableData.
       It.HashValue = caseFoldingDjbHash(Name);
     }
+    return Name;
+  };
 
+  auto addEntry =
+      [&](DIEValue ValName) -> std::optional<BOLTDWARF5AccelTableData *> {
+    std::optional<std::string> Name = getName(ValName);
+    if (!Name)
+      return std::nullopt;
+
+    auto &It = Entries[*Name];
     bool IsTU = false;
     uint32_t DieTag = 0;
     uint32_t UnitID = getUnitID(Unit, IsTU, DieTag);
@@ -278,7 +286,7 @@ DWARF5AcceleratorTable::addAccelTableEntry(
       if (Iter == CUOffsetsToPatch.end())
         BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "
                      "DWO ID in CU offsets for second Unit Index "
-                  << Name << ". For DIE at offset: "
+                  << *Name << ". For DIE at offset: "
                   << Twine::utohexstr(CurrentUnitOffset + Die.getOffset())
                   << ".\n";
       SecondIndex = Iter->second;
@@ -295,11 +303,33 @@ DWARF5AcceleratorTable::addAccelTableEntry(
     return It.Values.back();
   };
 
-  std::optional<BOLTDWARF5AccelTableData *> NameEntry =
-      addEntry(Die.findAttribute(dwarf::Attribute::DW_AT_name));
-  std::optional<BOLTDWARF5AccelTableData *> LinkageNameEntry =
-      addEntry(Die.findAttribute(dwarf::Attribute::DW_AT_linkage_name));
-  return NameEntry ? NameEntry : LinkageNameEntry;
+  // Minor optimization not to add entry twice for DW_TAG_namespace if it has no
+  // DW_AT_name.
+  if (!(Die.getTag() == dwarf::DW_TAG_namespace &&
+        !Die.findAttribute(dwarf::Attribute::DW_AT_name)))
+    addEntry(Die.findAttribute(dwarf::Attribute::DW_AT_linkage_name));
+  // For the purposes of determining whether a debugging information entry has a
+  // particular attribute (such as DW_AT_name), if debugging information entry A
+  // has a DW_AT_specification or DW_AT_abstract_origin attribute pointing to
+  // another debugging information entry B, any attributes of B are considered
+  // to be part of A.
+  if (DIEValue AbstrOrigin =
+          Die.findAttribute(dwarf::Attribute::DW_AT_abstract_origin)) {
+    const DIEEntry &DIEENtry = AbstrOrigin.getDIEEntry();
+    DIE &EntryDie = DIEENtry.getEntry();
+    addEntry(EntryDie.findAttribute(dwarf::Attribute::DW_AT_linkage_name));
+    return addEntry(EntryDie.findAttribute(dwarf::Attribute::DW_AT_name));
+  }
+  if (DIEValue AbstrOrigin =
+          Die.findAttribute(dwarf::Attribute::DW_AT_specification)) {
+    const DIEEntry &DIEENtry = AbstrOrigin.getDIEEntry();
+    DIE &EntryDie = DIEENtry.getEntry();
+    addEntry(EntryDie.findAttribute(dwarf::Attribute::DW_AT_linkage_name));
+    return addEntry(EntryDie.findAttribute(dwarf::Attribute::DW_AT_name));
+  }
+
+  return addEntry(Die.findAttribute(dwarf::Attribute::DW_AT_name));
+  ;
 }
 
 /// Algorithm from llvm implementation.
