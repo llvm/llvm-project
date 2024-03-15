@@ -1,6 +1,6 @@
 # CMakeLists.txt file for unit testing OpenMP offloading runtime library.
-if(NOT OPENMP_TEST_COMPILER_ID STREQUAL "Clang" OR
-   OPENMP_TEST_COMPILER_VERSION VERSION_LESS 6.0.0)
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
+   CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0.0)
   libomptarget_say("Can only test with Clang compiler in version 6.0.0 or later.")
   libomptarget_warning_say("The check-libomptarget target will not be available!")
   return()

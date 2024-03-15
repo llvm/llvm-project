@@ -112,7 +112,7 @@ else()
 endif()
 
 # Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
 set_target_properties(omptarget.rtl.amdgpu PROPERTIES
   INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
   CXX_VISIBILITY_PRESET protected)

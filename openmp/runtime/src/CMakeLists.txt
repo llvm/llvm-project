@@ -221,6 +221,7 @@ if(NOT LIBOMP_LIBRARY_DIR)
 else()
   set(LIBOMP_LIBRARY_DIR ${LIBOMP_LIBRARY_DIR} PARENT_SCOPE)
 endif()
+set(LIBOMP_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBOMP_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
 
 # Add symbolic links to libomp
@@ -233,7 +234,12 @@ if(NOT WIN32)
     WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
   )
 endif()
-set(LIBOMP_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
+
+# Definitions for testing, for reuse when testing libomptarget-nvptx.
+set(LIBOMPTARGET_OPENMP_HEADER_FOLDER "${LIBOMP_INCLUDE_DIR}" CACHE STRING
+  "Path to folder containing omp.h")
+set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
+  "Path to folder containing libomp.so, and libLLVMSupport.so with profiling enabled")
 
 # Create *.inc before compiling any sources
 # objects depend on : .inc files
