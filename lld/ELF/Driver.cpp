@@ -1348,6 +1348,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->printArchiveStats = args.getLastArgValue(OPT_print_archive_stats);
   config->printSymbolOrder =
       args.getLastArgValue(OPT_print_symbol_order);
+  config->rejectMismatch = !args.hasArg(OPT_no_warn_mismatch);
   config->relax = args.hasFlag(OPT_relax, OPT_no_relax, true);
   config->relaxGP = args.hasFlag(OPT_relax_gp, OPT_no_relax_gp, false);
   config->rpath = getRpath(args);
