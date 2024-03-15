@@ -5288,6 +5288,14 @@ gentbl_cc_library(
             "include/mlir/Dialect/LLVMIR/LLVMInterfaces.cpp.inc",
         ),
         (
+            ["-gen-attr-interface-decls"],
+            "include/mlir/Dialect/LLVMIR/LLVMAttrInterfaces.h.inc",
+        ),
+        (
+            ["-gen-attr-interface-defs"],
+            "include/mlir/Dialect/LLVMIR/LLVMAttrInterfaces.cpp.inc",
+        ),
+        (
             ["-gen-type-interface-decls"],
             "include/mlir/Dialect/LLVMIR/LLVMTypeInterfaces.h.inc",
         ),
