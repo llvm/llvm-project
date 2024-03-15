@@ -667,7 +667,8 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 
   // - whether there's a fallthrough
   llvm::BasicBlock *FallthroughSource = Builder.GetInsertBlock();
-  bool HasFallthrough = (FallthroughSource != nullptr && IsActive);
+  bool HasFallthrough =
+      FallthroughSource != nullptr && (IsActive || HasExistingBranches);
 
   // Branch-through fall-throughs leave the insertion point set to the
   // end of the last cleanup, which points to the current scope.  The
@@ -692,7 +693,9 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 
   // If we have a prebranched fallthrough into an inactive normal
   // cleanup, rewrite it so that it leads to the appropriate place.
-  if (Scope.isNormalCleanup() && HasPrebranchedFallthrough && !IsActive) {
+  if (Scope.isNormalCleanup() && HasPrebranchedFallthrough &&
+      !RequiresNormalCleanup) {
+    assert(!IsActive);
     llvm::BasicBlock *prebranchDest;
 
     // If the prebranch is semantically branching through the next

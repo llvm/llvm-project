@@ -15,6 +15,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "EHScopeStack.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -1392,15 +1393,15 @@ AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
     if (QualType::DestructionKind DtorKind =
             CurField->getType().isDestructedType()) {
       assert(LV.isSimple());
-      if (CGF.needsEHCleanup(DtorKind)) {
+      if (DtorKind) {
         if (!CleanupDominator)
           CleanupDominator = CGF.Builder.CreateAlignedLoad(
               CGF.Int8Ty,
               llvm::Constant::getNullValue(CGF.Int8PtrTy),
               CharUnits::One()); // placeholder
 
-        CGF.pushDestroy(EHCleanup, LV.getAddress(CGF), CurField->getType(),
-                        CGF.getDestroyer(DtorKind), false);
+        CGF.pushDestroy(NormalAndEHCleanup, LV.getAddress(CGF),
+                        CurField->getType(), CGF.getDestroyer(DtorKind), false);
         Cleanups.push_back(CGF.EHStack.stable_begin());
       }
     }
@@ -1809,9 +1810,9 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     if (QualType::DestructionKind dtorKind
           = field->getType().isDestructedType()) {
       assert(LV.isSimple());
-      if (CGF.needsEHCleanup(dtorKind)) {
-        CGF.pushDestroy(EHCleanup, LV.getAddress(CGF), field->getType(),
-                        CGF.getDestroyer(dtorKind), false);
+      if (dtorKind) {
+        CGF.pushDestroy(NormalAndEHCleanup, LV.getAddress(CGF),
+                        field->getType(), CGF.getDestroyer(dtorKind), false);
         addCleanup(CGF.EHStack.stable_begin());
         pushedCleanup = true;
       }
