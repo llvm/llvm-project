@@ -5767,11 +5767,16 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
     if (FMF.noNaNs() && FMF.noSignedZeros())
       return ConstantFP::getZero(Op0->getType());
 
-    // +normal number * (-)0.0 --> (-)0.0
     KnownFPClass Known =
         computeKnownFPClass(Op0, FMF, fcInf | fcNan, /*Depth=*/0, Q);
-    if (Known.SignBit == false && Known.isKnownNever(fcInf | fcNan))
-      return Op1;
+    if (Known.isKnownNever(fcInf | fcNan)) {
+      // +normal number * (-)0.0 --> (-)0.0
+      if (Known.SignBit == false)
+        return Op1;
+      // -normal number * (-)0.0 --> -(-)0.0
+      if (Known.SignBit == true)
+        return foldConstant(Instruction::FNeg, Op1, Q);
+    }
   }
 
   // sqrt(X) * sqrt(X) --> X, if we can:
