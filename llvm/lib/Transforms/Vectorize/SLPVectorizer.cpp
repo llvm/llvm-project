@@ -7732,7 +7732,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           // Add the cost for the subvectors insert.
           SmallVector<int> ShuffleMask(VL.size());
           for (int I = VF, E = VL.size(); I < E; I += VF) {
-            for (int i = 0; i < E; i++)
+            for (int Idx : seq<int>(0, E))
               ShuffleMask[i] = i / VF == I ? E + i % VF : i;
             GatherCost += TTI.getShuffleCost(TTI::SK_InsertSubvector, VecTy,
                                              ShuffleMask, CostKind, I, LoadTy);
