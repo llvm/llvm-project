@@ -45,6 +45,7 @@ void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   std::string CpuVerNumStr = CPU.substr(1);
   Builder.defineMacro("__BPF_CPU_VERSION__", CpuVerNumStr);
+  Builder.defineMacro("__BPF_FEATURE_MAY_GOTO");
 
   int CpuVerNum = std::stoi(CpuVerNumStr);
   if (CpuVerNum >= 2)
