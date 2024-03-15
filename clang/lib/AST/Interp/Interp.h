@@ -2227,6 +2227,9 @@ inline bool Invalid(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
+/// Do nothing and just abort execution.
+inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
+
 /// Same here, but only for casts.
 inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
