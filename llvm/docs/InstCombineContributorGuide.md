@@ -237,7 +237,7 @@ define i8 @tgt(i8 %x) {
 The correct way to write this proof is as follows
 ([online](https://alive2.llvm.org/ce/z/Sgfq37)):
 
-```
+```llvm
 define i8 @src(i8 %x, i8 %c1, i8 %c2) {
   %cond1 = icmp sgt i8 %c1, -1
   call void @llvm.assume(i1 %cond1)
@@ -315,7 +315,7 @@ Reducing the bitwidth usually helps. For floating point numbers, you can use
 the `half` type for bitwidth reduction purposes. For pointers, you can reduce
 the bitwidth by specifying a custom data layout:
 
-```
+```llvm
 ; For 16-bit pointers
 target datalayout = "p:16:16"
 ```
