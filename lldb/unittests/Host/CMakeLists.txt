@@ -5,6 +5,7 @@ if (NOT LLDB_ENABLE_SWIFT_SUPPORT)
 endif()
 
 set (FILES
+  AlarmTest.cpp
   ConnectionFileDescriptorTest.cpp
   FileActionTest.cpp
   FileSystemTest.cpp
