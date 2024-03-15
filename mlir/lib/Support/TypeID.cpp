@@ -81,8 +81,11 @@ struct ImplicitTypeIDRegistry {
 } // end namespace
 
 TypeID detail::FallbackTypeIDResolver::registerImplicitTypeID(StringRef name) {
-  static ImplicitTypeIDRegistry registry;
-  return registry.lookupOrInsert(name);
+  // To prevent race conditions when one thread is accessing this `static`
+  // variable while other thread destructing it; construct the `registry`
+  // on the heap.
+  static auto *registry = new ImplicitTypeIDRegistry();
+  return registry->lookupOrInsert(name);
 }
 
 //===----------------------------------------------------------------------===//
