@@ -14,7 +14,7 @@
 //   class basic_ospanstream
 //     : public basic_ostream<charT, traits> {
 
-//    // [spanstream.swap], swap
+//    // [ospanstream.swap], swap
 //    void swap(basic_ospanstream& rhs);
 
 #include <cassert>

@@ -11,10 +11,10 @@
 // <spanstream>
 
 //   template<class charT, class traits = char_traits<charT>>
-//   class basic_spanstream
-//     : public basic_iostream<charT, traits> {
+//   class basic_ispanstream
+//     : public basic_istream<charT, traits> {
 
-//     // [spanstream.members], members
+//     // [ispanstream.members], members
 
 //     void span(std::span<charT> s) noexcept;
 
@@ -28,7 +28,7 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpStream = std::basic_spanstream<CharT, TraitsT>;
+  using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
   CharT arr[4];
 
@@ -46,9 +46,8 @@ void test() {
 
     spSt.span(arr);
     assert(spSt.span().data() == arr);
-    // Mode `out` counts read characters
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
+    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
   }
   // Mode: `in`
   {
