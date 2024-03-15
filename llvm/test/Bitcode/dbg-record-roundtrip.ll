@@ -1,8 +1,7 @@
 ;; Roundtrip tests.
 ; RUN: llvm-as --write-experimental-debuginfo-iterators-to-bitcode=true %s -o - | llvm-dis | FileCheck %s
 ;; Check that verify-uselistorder passes regardless of input format.
-;; NOTE: This test fails intermittently 
-; RUN: llvm-as %s --write-experimental-debuginfo-iterators-to-bitcode=true -o - | verify-uselistorder %s
+; RUN: llvm-as %s --write-experimental-debuginfo-iterators-to-bitcode=true -o - | verify-uselistorder
 ; RUN: verify-uselistorder %s
 
 ;; Confirm we're producing RemoveDI records from various tools.
@@ -15,6 +14,9 @@
 
 ;; Check that llvm-link doesn't explode if we give it different formats to
 ;; link.
+;; NOTE: This test fails intermittently on linux if the llvm-as output is piped
+;; into llvm-link in the RUN lines below, unless the verify-uselistorder RUN
+;; lines above are removed. Write to a temporary file to avoid that weirdness.
 ; RUN: llvm-as %s --experimental-debuginfo-iterators=true --write-experimental-debuginfo-iterators-to-bitcode=true -o %t
 ; RUN: llvm-link %t %s --experimental-debuginfo-iterators=false -o /dev/null
 ; RUN: llvm-as %s --experimental-debuginfo-iterators=false -o %t
