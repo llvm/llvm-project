@@ -420,6 +420,8 @@ struct UnwrappedLineNode {
   SmallVector<UnwrappedLine, 0> Children;
 };
 
+std::ostream &operator<<(std::ostream &Stream, const UnwrappedLine &Line);
+
 } // end namespace format
 } // end namespace clang
 

@@ -301,21 +301,27 @@ compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
   // calling `evalBinOpNN`:
   if (isNegative(SVB, State, Value) && isUnsigned(SVB, Threshold)) {
     if (CheckEquality) {
-      // negative_value == unsigned_value is always false
+      // negative_value == unsigned_threshold is always false
       return {nullptr, State};
     }
-    // negative_value < unsigned_value is always false
+    // negative_value < unsigned_threshold is always true
     return {State, nullptr};
   }
   if (isUnsigned(SVB, Value) && isNegative(SVB, State, Threshold)) {
-    // unsigned_value == negative_value and unsigned_value < negative_value are
-    // both always false
+    // unsigned_value == negative_threshold and
+    // unsigned_value < negative_threshold are both always false
     return {nullptr, State};
   }
-  // FIXME: these special cases are sufficient for handling real-world
+  // FIXME: These special cases are sufficient for handling real-world
   // comparisons, but in theory there could be contrived situations where
   // automatic conversion of a symbolic value (which can be negative and can be
   // positive) leads to incorrect results.
+  // NOTE: We NEED to use the `evalBinOpNN` call in the "common" case, because
+  // we want to ensure that assumptions coming from this precondition and
+  // assumptions coming from regular C/C++ operator calls are represented by
+  // constraints on the same symbolic expression. A solution that would
+  // evaluate these "mathematical" compariosns through a separate pathway would
+  // be a step backwards in this sense.
 
   const BinaryOperatorKind OpKind = CheckEquality ? BO_EQ : BO_LT;
   auto BelowThreshold =

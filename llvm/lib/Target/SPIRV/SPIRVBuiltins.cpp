@@ -134,6 +134,7 @@ struct ConvertBuiltin {
   bool IsDestinationSigned;
   bool IsSaturated;
   bool IsRounded;
+  bool IsBfloat16;
   FPRoundingMode::FPRoundingMode RoundingMode;
 };
 
@@ -1775,7 +1776,7 @@ static const Type *getMachineInstrType(MachineInstr *MI) {
     return nullptr;
   Type *Ty = getMDOperandAsType(NextMI->getOperand(2).getMetadata(), 0);
   assert(Ty && "Type is expected");
-  return getTypedPtrEltType(Ty);
+  return Ty;
 }
 
 static const Type *getBlockStructType(Register ParamReg,
@@ -1787,7 +1788,7 @@ static const Type *getBlockStructType(Register ParamReg,
   // section 6.12.5 should guarantee that we can do this.
   MachineInstr *MI = getBlockStructInstr(ParamReg, MRI);
   if (MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE)
-    return getTypedPtrEltType(MI->getOperand(1).getGlobal()->getType());
+    return MI->getOperand(1).getGlobal()->getType();
   assert(isSpvIntrinsic(*MI, Intrinsic::spv_alloca) &&
          "Blocks in OpenCL C must be traceable to allocation site");
   return getMachineInstrType(MI);
@@ -1986,6 +1987,8 @@ static bool generateConvertInst(const StringRef DemangledCall,
                     SPIRV::Decoration::FPRoundingMode,
                     {(unsigned)Builtin->RoundingMode});
 
+  std::string NeedExtMsg;              // no errors if empty
+  bool IsRightComponentsNumber = true; // check if input/output accepts vectors
   unsigned Opcode = SPIRV::OpNop;
   if (GR->isScalarOrVectorOfType(Call->Arguments[0], SPIRV::OpTypeInt)) {
     // Int -> ...
@@ -2000,23 +2003,61 @@ static bool generateConvertInst(const StringRef DemangledCall,
     } else if (GR->isScalarOrVectorOfType(Call->ReturnRegister,
                                           SPIRV::OpTypeFloat)) {
       // Int -> Float
-      bool IsSourceSigned =
-          DemangledCall[DemangledCall.find_first_of('(') + 1] != 'u';
-      Opcode = IsSourceSigned ? SPIRV::OpConvertSToF : SPIRV::OpConvertUToF;
+      if (Builtin->IsBfloat16) {
+        const auto *ST = static_cast<const SPIRVSubtarget *>(
+            &MIRBuilder.getMF().getSubtarget());
+        if (!ST->canUseExtension(
+                SPIRV::Extension::SPV_INTEL_bfloat16_conversion))
+          NeedExtMsg = "SPV_INTEL_bfloat16_conversion";
+        IsRightComponentsNumber =
+            GR->getScalarOrVectorComponentCount(Call->Arguments[0]) ==
+            GR->getScalarOrVectorComponentCount(Call->ReturnRegister);
+        Opcode = SPIRV::OpConvertBF16ToFINTEL;
+      } else {
+        bool IsSourceSigned =
+            DemangledCall[DemangledCall.find_first_of('(') + 1] != 'u';
+        Opcode = IsSourceSigned ? SPIRV::OpConvertSToF : SPIRV::OpConvertUToF;
+      }
     }
   } else if (GR->isScalarOrVectorOfType(Call->Arguments[0],
                                         SPIRV::OpTypeFloat)) {
     // Float -> ...
-    if (GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeInt))
+    if (GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeInt)) {
       // Float -> Int
-      Opcode = Builtin->IsDestinationSigned ? SPIRV::OpConvertFToS
-                                            : SPIRV::OpConvertFToU;
-    else if (GR->isScalarOrVectorOfType(Call->ReturnRegister,
-                                        SPIRV::OpTypeFloat))
+      if (Builtin->IsBfloat16) {
+        const auto *ST = static_cast<const SPIRVSubtarget *>(
+            &MIRBuilder.getMF().getSubtarget());
+        if (!ST->canUseExtension(
+                SPIRV::Extension::SPV_INTEL_bfloat16_conversion))
+          NeedExtMsg = "SPV_INTEL_bfloat16_conversion";
+        IsRightComponentsNumber =
+            GR->getScalarOrVectorComponentCount(Call->Arguments[0]) ==
+            GR->getScalarOrVectorComponentCount(Call->ReturnRegister);
+        Opcode = SPIRV::OpConvertFToBF16INTEL;
+      } else {
+        Opcode = Builtin->IsDestinationSigned ? SPIRV::OpConvertFToS
+                                              : SPIRV::OpConvertFToU;
+      }
+    } else if (GR->isScalarOrVectorOfType(Call->ReturnRegister,
+                                          SPIRV::OpTypeFloat)) {
       // Float -> Float
       Opcode = SPIRV::OpFConvert;
+    }
   }
 
+  if (!NeedExtMsg.empty()) {
+    std::string DiagMsg = std::string(Builtin->Name) +
+                          ": the builtin requires the following SPIR-V "
+                          "extension: " +
+                          NeedExtMsg;
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
+  if (!IsRightComponentsNumber) {
+    std::string DiagMsg =
+        std::string(Builtin->Name) +
+        ": result and argument must have the same number of components";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
   assert(Opcode != SPIRV::OpNop &&
          "Conversion between the types not implemented!");
 
@@ -2043,7 +2084,8 @@ static bool generateVectorLoadStoreInst(const SPIRV::IncomingCall *Call,
           .addImm(Builtin->Number);
   for (auto Argument : Call->Arguments)
     MIB.addUse(Argument);
-  MIB.addImm(Builtin->ElementCount);
+  if (Builtin->Name.contains("load") && Builtin->ElementCount > 1)
+    MIB.addImm(Builtin->ElementCount);
 
   // Rounding mode should be passed as a last argument in the MI for builtins
   // like "vstorea_halfn_r".
@@ -2179,6 +2221,61 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
   return false;
 }
 
+Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
+                                       unsigned ArgIdx, LLVMContext &Ctx) {
+  SmallVector<StringRef, 10> BuiltinArgsTypeStrs;
+  StringRef BuiltinArgs =
+      DemangledCall.slice(DemangledCall.find('(') + 1, DemangledCall.find(')'));
+  BuiltinArgs.split(BuiltinArgsTypeStrs, ',', -1, false);
+  if (ArgIdx >= BuiltinArgsTypeStrs.size())
+    return nullptr;
+  StringRef TypeStr = BuiltinArgsTypeStrs[ArgIdx].trim();
+
+  // Parse strings representing OpenCL builtin types.
+  if (hasBuiltinTypePrefix(TypeStr)) {
+    // OpenCL builtin types in demangled call strings have the following format:
+    // e.g. ocl_image2d_ro
+    bool IsOCLBuiltinType = TypeStr.consume_front("ocl_");
+    assert(IsOCLBuiltinType && "Invalid OpenCL builtin prefix");
+
+    // Check if this is pointer to a builtin type and not just pointer
+    // representing a builtin type. In case it is a pointer to builtin type,
+    // this will require additional handling in the method calling
+    // parseBuiltinCallArgumentBaseType(...) as this function only retrieves the
+    // base types.
+    if (TypeStr.ends_with("*"))
+      TypeStr = TypeStr.slice(0, TypeStr.find_first_of(" "));
+
+    return parseBuiltinTypeNameToTargetExtType("opencl." + TypeStr.str() + "_t",
+                                               Ctx);
+  }
+
+  // Parse type name in either "typeN" or "type vector[N]" format, where
+  // N is the number of elements of the vector.
+  Type *BaseType;
+  unsigned VecElts = 0;
+
+  BaseType = parseBasicTypeName(TypeStr, Ctx);
+  if (!BaseType)
+    // Unable to recognize SPIRV type name.
+    return nullptr;
+
+  if (BaseType->isVoidTy())
+    BaseType = Type::getInt8Ty(Ctx);
+
+  // Handle "typeN*" or "type vector[N]*".
+  TypeStr.consume_back("*");
+
+  if (TypeStr.consume_front(" vector["))
+    TypeStr = TypeStr.substr(0, TypeStr.find(']'));
+
+  TypeStr.getAsInteger(10, VecElts);
+  if (VecElts > 0)
+    BaseType = VectorType::get(BaseType, VecElts, false);
+
+  return BaseType;
+}
+
 struct BuiltinType {
   StringRef Name;
   uint32_t Opcode;
@@ -2277,9 +2374,8 @@ static SPIRVType *getSampledImageType(const TargetExtType *OpaqueType,
 }
 
 namespace SPIRV {
-const TargetExtType *
-parseBuiltinTypeNameToTargetExtType(std::string TypeName,
-                                    MachineIRBuilder &MIRBuilder) {
+TargetExtType *parseBuiltinTypeNameToTargetExtType(std::string TypeName,
+                                                   LLVMContext &Context) {
   StringRef NameWithParameters = TypeName;
 
   // Pointers-to-opaque-structs representing OpenCL types are first translated
@@ -2303,7 +2399,7 @@ parseBuiltinTypeNameToTargetExtType(std::string TypeName,
   // Parameterized SPIR-V builtins names follow this format:
   // e.g. %spirv.Image._void_1_0_0_0_0_0_0, %spirv.Pipe._0
   if (!NameWithParameters.contains('_'))
-    return TargetExtType::get(MIRBuilder.getContext(), NameWithParameters);
+    return TargetExtType::get(Context, NameWithParameters);
 
   SmallVector<StringRef> Parameters;
   unsigned BaseNameLength = NameWithParameters.find('_') - 1;
@@ -2312,8 +2408,7 @@ parseBuiltinTypeNameToTargetExtType(std::string TypeName,
   SmallVector<Type *, 1> TypeParameters;
   bool HasTypeParameter = !isDigit(Parameters[0][0]);
   if (HasTypeParameter)
-    TypeParameters.push_back(parseTypeString(
-        Parameters[0], MIRBuilder.getMF().getFunction().getContext()));
+    TypeParameters.push_back(parseTypeString(Parameters[0], Context));
   SmallVector<unsigned> IntParameters;
   for (unsigned i = HasTypeParameter ? 1 : 0; i < Parameters.size(); i++) {
     unsigned IntParameter = 0;
@@ -2323,7 +2418,7 @@ parseBuiltinTypeNameToTargetExtType(std::string TypeName,
            "Invalid format of SPIR-V builtin parameter literal!");
     IntParameters.push_back(IntParameter);
   }
-  return TargetExtType::get(MIRBuilder.getContext(),
+  return TargetExtType::get(Context,
                             NameWithParameters.substr(0, BaseNameLength),
                             TypeParameters, IntParameters);
 }
@@ -2343,7 +2438,7 @@ SPIRVType *lowerBuiltinType(const Type *OpaqueType,
   const TargetExtType *BuiltinType = dyn_cast<TargetExtType>(OpaqueType);
   if (!BuiltinType)
     BuiltinType = parseBuiltinTypeNameToTargetExtType(
-        OpaqueType->getStructName().str(), MIRBuilder);
+        OpaqueType->getStructName().str(), MIRBuilder.getContext());
 
   unsigned NumStartingVRegs = MIRBuilder.getMRI()->getNumVirtRegs();
 

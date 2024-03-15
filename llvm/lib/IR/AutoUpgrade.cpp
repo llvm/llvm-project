@@ -5072,6 +5072,15 @@ bool llvm::UpgradeModuleFlags(Module &M) {
         Changed = true;
       }
     }
+
+    if (ID->getString() == "amdgpu_code_object_version") {
+      Metadata *Ops[3] = {
+          Op->getOperand(0),
+          MDString::get(M.getContext(), "amdhsa_code_object_version"),
+          Op->getOperand(2)};
+      ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
+      Changed = true;
+    }
   }
 
   // "Objective-C Class Properties" is recently added for Objective-C. We

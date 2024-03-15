@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___NUMERIC_SATURATION_ARITHMETIC_H
 #define _LIBCPP___NUMERIC_SATURATION_ARITHMETIC_H
 
+#include <__assert>
 #include <__concepts/arithmetic.h>
 #include <__config>
 #include <__utility/cmp.h>

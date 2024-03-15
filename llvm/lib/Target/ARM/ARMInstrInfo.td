@@ -6534,3 +6534,15 @@ let isPseudo = 1 in {
   let isTerminator = 1 in
   def SEH_EpilogEnd : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
 }
+
+
+//===----------------------------------------------------------------------===//
+// Pseudo Instructions for use when early-clobber is defined and Greedy Register
+// Allocation is used. This ensures the constraint is used properly.
+//===----------------------------------------------------------------------===//
+let isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
+  def PseudoARMInitUndefMQPR      :  PseudoInst<(outs MQPR:$vd), (ins), NoItinerary, []>;
+  def PseudoARMInitUndefSPR      :  PseudoInst<(outs SPR:$sd), (ins), NoItinerary, []>;
+  def PseudoARMInitUndefDPR_VFP2      :  PseudoInst<(outs DPR_VFP2:$dd), (ins), NoItinerary, []>;
+  def PseudoARMInitUndefGPR     :  PseudoInst<(outs GPR:$rd), (ins), NoItinerary, []>;
+}

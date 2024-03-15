@@ -13,9 +13,9 @@ define <vscale x 2 x i32> @vwadd_tu(<vscale x 2 x i8> %arg, <vscale x 2 x i32> %
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
 bb:
-  %tmp = call <vscale x 2 x i32> @llvm.vp.sext.nxv2i32.nxv2i8(<vscale x 2 x i8> %arg, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 %arg2)
-  %tmp3 = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %arg1, <vscale x 2 x i32> %tmp, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 %arg2)
-  %tmp4 = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i32> %tmp3, <vscale x 2 x i32> %arg1, i32 %arg2)
+  %tmp = call <vscale x 2 x i32> @llvm.vp.sext.nxv2i32.nxv2i8(<vscale x 2 x i8> %arg, <vscale x 2 x i1> splat (i1 true), i32 %arg2)
+  %tmp3 = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %arg1, <vscale x 2 x i32> %tmp, <vscale x 2 x i1> splat (i1 true), i32 %arg2)
+  %tmp4 = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i32> %tmp3, <vscale x 2 x i32> %arg1, i32 %arg2)
   ret <vscale x 2 x i32> %tmp4
 }
 
@@ -31,9 +31,9 @@ define <vscale x 2 x i32> @vwaddu_tu(<vscale x 2 x i8> %arg, <vscale x 2 x i32> 
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
 bb:
-  %tmp = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i8(<vscale x 2 x i8> %arg, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 %arg2)
-  %tmp3 = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %arg1, <vscale x 2 x i32> %tmp, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 %arg2)
-  %tmp4 = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i32> %tmp3, <vscale x 2 x i32> %arg1, i32 %arg2)
+  %tmp = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i8(<vscale x 2 x i8> %arg, <vscale x 2 x i1> splat (i1 true), i32 %arg2)
+  %tmp3 = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %arg1, <vscale x 2 x i32> %tmp, <vscale x 2 x i1> splat (i1 true), i32 %arg2)
+  %tmp4 = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i32> %tmp3, <vscale x 2 x i32> %arg1, i32 %arg2)
   ret <vscale x 2 x i32> %tmp4
 }
 

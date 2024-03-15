@@ -25,7 +25,7 @@ program main
     
 
   !$omp target map(tofrom:scalar_arr1%array_x(3:6), scalar_arr2%array_x(3:6))
-    do i = 1, 10
+    do i = 3, 6
       scalar_arr2%array_x(i) = i
       scalar_arr1%array_x(i) = i
     end do

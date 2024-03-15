@@ -430,6 +430,28 @@ template <typename A> std::optional<CoarrayRef> ExtractCoarrayRef(const A &x) {
   }
 }
 
+struct ExtractSubstringHelper {
+  template <typename T> static std::optional<Substring> visit(T &&) {
+    return std::nullopt;
+  }
+
+  static std::optional<Substring> visit(const Substring &e) { return e; }
+
+  template <typename T>
+  static std::optional<Substring> visit(const Designator<T> &e) {
+    return std::visit([](auto &&s) { return visit(s); }, e.u);
+  }
+
+  template <typename T>
+  static std::optional<Substring> visit(const Expr<T> &e) {
+    return std::visit([](auto &&s) { return visit(s); }, e.u);
+  }
+};
+
+template <typename A> std::optional<Substring> ExtractSubstring(const A &x) {
+  return ExtractSubstringHelper::visit(x);
+}
+
 // If an expression is simply a whole symbol data designator,
 // extract and return that symbol, else null.
 template <typename A> const Symbol *UnwrapWholeSymbolDataRef(const A &x) {
@@ -1094,7 +1116,7 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
     const std::optional<characteristics::Procedure> &lhsProcedure,
     const characteristics::Procedure *rhsProcedure,
     const SpecificIntrinsic *specificIntrinsic, std::string &whyNotCompatible,
-    std::optional<std::string> &warning);
+    std::optional<std::string> &warning, bool ignoreImplicitVsExplicit);
 
 // Scalar constant expansion
 class ScalarConstantExpander {

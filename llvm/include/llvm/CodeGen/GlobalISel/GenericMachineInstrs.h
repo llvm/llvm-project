@@ -359,6 +359,8 @@ public:
   Register getCarryOutReg() const { return getReg(1); }
   MachineOperand &getLHS() { return getOperand(2); }
   MachineOperand &getRHS() { return getOperand(3); }
+  Register getLHSReg() const { return getOperand(2).getReg(); }
+  Register getRHSReg() const { return getOperand(3).getReg(); }
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
@@ -422,6 +424,23 @@ public:
     case TargetOpcode::G_SADDE:
     case TargetOpcode::G_USUBE:
     case TargetOpcode::G_SSUBE:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents overflowing add operations.
+/// G_UADDO, G_SADDO
+class GAddCarryOut : public GBinOpCarryOut {
+public:
+  bool isSigned() const { return getOpcode() == TargetOpcode::G_SADDO; }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_UADDO:
+    case TargetOpcode::G_SADDO:
       return true;
     default:
       return false;

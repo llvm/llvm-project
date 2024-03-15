@@ -10,7 +10,7 @@
 #include "src/__support/char_vector.h"
 #include "test/UnitTest/Test.h"
 
-#include "llvm-libc-macros/sys-queue-macros.h"
+#include "include/llvm-libc-macros/sys-queue-macros.h"
 
 using LIBC_NAMESPACE::CharVector;
 using LIBC_NAMESPACE::cpp::string;

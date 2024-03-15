@@ -8,6 +8,7 @@ add_libc_test(
     bit_test.cpp
   DEPENDS
     libc.src.__support.CPP.bit
+    libc.src.__support.macros.properties.types
     libc.src.__support.uint
 )
 
@@ -49,6 +50,7 @@ add_libc_test(
     limits_test.cpp
   DEPENDS
     libc.src.__support.CPP.limits
+    libc.src.__support.macros.properties.types
     libc.src.__support.uint
 )
 

@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -75,6 +76,12 @@ private:
   bool allowBFloatArgsAndRet() const override {
     return getTarget().hasBFloat16Type();
   }
+
+  using ABIInfo::appendAttributeMangling;
+  void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                               raw_ostream &Out) const override;
+  void appendAttributeMangling(StringRef AttrStr,
+                               raw_ostream &Out) const override;
 };
 
 class AArch64SwiftABIInfo : public SwiftABIInfo {
@@ -125,8 +132,7 @@ public:
     assert(Error.empty());
 
     auto *Fn = cast<llvm::Function>(GV);
-    static const char *SignReturnAddrStr[] = {"none", "non-leaf", "all"};
-    Fn->addFnAttr("sign-return-address", SignReturnAddrStr[static_cast<int>(BPI.SignReturnAddr)]);
+    Fn->addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
 
     if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
       Fn->addFnAttr("sign-return-address-key",
@@ -855,6 +861,36 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(
     if (NewAttr->isNewZA())
       CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
           << Callee->getDeclName();
+}
+
+void AArch64ABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,
+                                             unsigned Index,
+                                             raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+}
+
+void AArch64ABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                             raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  Out << "._";
+  SmallVector<StringRef, 8> Features;
+  AttrStr.split(Features, "+");
+  for (auto &Feat : Features)
+    Feat = Feat.trim();
+
+  llvm::sort(Features, [](const StringRef LHS, const StringRef RHS) {
+    return LHS.compare(RHS) < 0;
+  });
+
+  llvm::SmallDenseSet<StringRef, 8> UniqueFeats;
+  for (auto &Feat : Features)
+    if (auto Ext = llvm::AArch64::parseArchExtension(Feat))
+      if (UniqueFeats.insert(Ext->Name).second)
+        Out << 'M' << Ext->Name;
 }
 
 std::unique_ptr<TargetCodeGenInfo>

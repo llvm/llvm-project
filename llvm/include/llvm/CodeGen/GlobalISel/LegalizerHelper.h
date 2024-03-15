@@ -281,6 +281,10 @@ private:
                                          MachineInstr &MI,
                                          LostDebugLocObserver &LocObserver);
 
+  MachineInstrBuilder
+  getNeutralElementForVecReduce(unsigned Opcode, MachineIRBuilder &MIRBuilder,
+                                LLT Ty);
+
 public:
   /// Return the alignment to use for a stack temporary object with the given
   /// type.

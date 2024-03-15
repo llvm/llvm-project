@@ -167,6 +167,17 @@ conventions used by the C and C++ front-ends.
 Debug information descriptors are `specialized metadata nodes
 <LangRef.html#specialized-metadata>`_, first-class subclasses of ``Metadata``.
 
+There are two models for defining the values of source variables at different
+states of the program and tracking these values through optimization and code
+generation: :ref:`intrinsic function calls <format_common_intrinsics>`, the
+current default, and :ref:`debug records <debug_records>`, which are a new
+non-instruction-based model
+(for an explanation of how this works and why it is desirable, see the
+`RemoveDIs <RemoveDIsDebugInfo.html>`_ document). Each module must use one or
+the other; they may never be mixed within an IR module. To enable writing debug
+records instead of intrinsic calls, use the flag
+``--write-experimental-debuginfo``.
+
 .. _format_common_intrinsics:
 
 Debugger intrinsic functions
@@ -267,6 +278,61 @@ The formal LLVM-IR signature is:
 
 
 See :doc:`AssignmentTracking` for more info.
+
+.. _debug_records:
+
+Debug Records
+----------------------------
+
+LLVM also has an alternative to intrinsic functions, debug records, which
+function similarly but are not instructions. The basic syntax for debug records
+is:
+
+.. code-block:: llvm
+
+    #dbg_<kind>([<arg>, ]* <DILocation>)
+  ; Using the intrinsic model, the above is equivalent to:
+  call void llvm.dbg.<kind>([metadata <arg>, ]*), !dbg <DILocation>
+
+A debug intrinsic function can be converted to a debug record with the
+following steps:
+
+1. Add an extra level of indentation.
+2. Replace everything prior to the intrinsic kind (declare/value/assign) with
+   ``#dbg_``.
+3. Remove the leading ``metadata`` from the intrinsic's arguments.
+4. Transfer the ``!dbg`` attachment to be an argument, dropping the leading
+   ``!dbg``.
+
+For each kind of intrinsic function, there is an equivalent debug record.
+
+``#dbg_declare``
+^^^^^^^^^^^^^^^^
+
+.. code-block:: llvm
+
+    #dbg_declare([Value|MDNode], DILocalVariable, DIExpression, DILocation)
+
+Equivalent to the ``llvm.dbg.declare`` intrinsic.
+
+``#dbg_value``
+^^^^^^^^^^^^^^
+
+.. code-block:: llvm
+
+    #dbg_value([Value|DIArgList|MDNode], DILocalVariable, DIExpression, DILocation)
+
+Equivalent to the ``llvm.dbg.value`` intrinsic.
+
+``#dbg_assign``
+^^^^^^^^^^^^^^^
+
+.. code-block:: llvm
+
+    #dbg_assign([Value|DIArgList|MDNode], DILocalVariable, DIExpression,
+                DIAssignID, [Value|MDNode], DIExpression, DILocation)
+
+Equivalent to the ``llvm.dbg.assign`` intrinsic.
 
 Object lifetimes and scoping
 ============================

@@ -572,6 +572,12 @@ public:
     return false;
   }
 
+  /// Returns true if MachineLoopInfo should analyze the given physreg
+  /// for loop invariance.
+  virtual bool shouldAnalyzePhysregInMachineLoopInfo(MCRegister R) const {
+    return false;
+  }
+
   /// Physical registers that may be modified within a function but are
   /// guaranteed to be restored before any uses. This is useful for targets that
   /// have call sequences where a GOT register may be updated by the caller
@@ -1170,6 +1176,28 @@ public:
   /// of the explicit callee saved register list, but should be handled as such
   /// in certain cases.
   virtual bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const {
+    return false;
+  }
+
+  /// Returns the Largest Super Class that is being initialized. There
+  /// should be a Pseudo Instruction implemented for the super class
+  /// that is being returned to ensure that Init Undef can apply the
+  /// initialization correctly.
+  virtual const TargetRegisterClass *
+  getLargestSuperClass(const TargetRegisterClass *RC) const {
+    llvm_unreachable("Unexpected target register class.");
+  }
+
+  /// Returns if the architecture being targeted has the required Pseudo
+  /// Instructions for initializing the register. By default this returns false,
+  /// but where it is overriden for an architecture, the behaviour will be
+  /// different. This can either be a check to ensure the Register Class is
+  /// present, or to return true as an indication the architecture supports the
+  /// pass. If using the method that does not check for the Register Class, it
+  /// is imperative to ensure all required Pseudo Instructions are implemented,
+  /// otherwise compilation may fail with an `Unexpected register class` error.
+  virtual bool
+  doesRegClassHavePseudoInitUndef(const TargetRegisterClass *RC) const {
     return false;
   }
 };
