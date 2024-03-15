@@ -44,7 +44,7 @@ void FuncDialect::initialize() {
       >();
   declarePromisedInterface<FuncDialect, DialectInlinerInterface>();
   declarePromisedInterface<FuncDialect, ConvertToLLVMPatternInterface>();
-  declarePromisedInterfaces<bufferization::BufferizableOpInterface, CallOp, 
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface, CallOp,
                             FuncOp, ReturnOp>();
 }
 
