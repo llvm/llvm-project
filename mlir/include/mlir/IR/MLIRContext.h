@@ -245,7 +245,7 @@ public:
   SystemDesc &getSystemDesc();
 
   /// Set context-specific system descriptor
-  void setSystemDesc(const SystemDesc& desc);
+  void setSystemDesc(const SystemDesc &desc);
 
   //===--------------------------------------------------------------------===//
   // Action API

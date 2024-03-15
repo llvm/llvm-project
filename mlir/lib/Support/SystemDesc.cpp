@@ -20,19 +20,22 @@
 using namespace llvm;
 using namespace mlir;
 
-std::optional<DeviceDesc> impl::SystemDescJSONConfigParser::buildDeviceDescFromConfigFile(
+std::optional<DeviceDesc>
+impl::SystemDescJSONConfigParser::buildDeviceDescFromConfigFile(
     MLIRContext *context, const DeviceDescJSONTy &device_desc_in_json) {
   // ID and Type are mandatory fields.
   auto iter = device_desc_in_json.find("ID");
   if (iter == device_desc_in_json.end()) {
-    llvm::errs() << "\"ID\" key missing in Device Description" << "\n";
+    llvm::errs() << "\"ID\" key missing in Device Description"
+                 << "\n";
     return std::nullopt;
   }
   DeviceDesc::DeviceID id = DeviceDesc::strToDeviceID(iter->second);
 
   iter = device_desc_in_json.find("Type");
   if (iter == device_desc_in_json.end()) {
-    llvm::errs() << "\"Type\" key missing in Device Description" << "\n";
+    llvm::errs() << "\"Type\" key missing in Device Description"
+                 << "\n";
     return std::nullopt;
   }
   DeviceDesc::DeviceType type = DeviceDesc::strToDeviceType(iter->second);
@@ -51,7 +54,8 @@ std::optional<DeviceDesc> impl::SystemDescJSONConfigParser::buildDeviceDescFromC
   return std::optional<DeviceDesc>(device_desc);
 }
 
-std::optional<SystemDesc> impl::SystemDescJSONConfigParser::buildSystemDescFromConfigFile(
+std::optional<SystemDesc>
+impl::SystemDescJSONConfigParser::buildSystemDescFromConfigFile(
     MLIRContext *context, llvm::StringRef filename) {
   std::string errorMessage;
   std::unique_ptr<llvm::MemoryBuffer> file =
@@ -73,14 +77,16 @@ std::optional<SystemDesc> impl::SystemDescJSONConfigParser::buildSystemDescFromC
   using SystemDescJSONTy = std::vector<DeviceDescJSONTy>;
   SystemDescJSONTy system_desc_in_json;
   if (!json::fromJSON(*parsed, system_desc_in_json, NullRoot)) {
-    llvm::errs() << "Invalid System Description in JSON" << "\n";
+    llvm::errs() << "Invalid System Description in JSON"
+                 << "\n";
     return std::nullopt;
   }
 
   SystemDesc system_desc;
   for (auto device_desc_in_json : system_desc_in_json) {
-    std::optional<DeviceDesc> device_desc = impl::SystemDescJSONConfigParser::buildDeviceDescFromConfigFile(
-      context, device_desc_in_json);
+    std::optional<DeviceDesc> device_desc =
+        impl::SystemDescJSONConfigParser::buildDeviceDescFromConfigFile(
+            context, device_desc_in_json);
     if (device_desc)
       system_desc.addDeviceDesc(*device_desc);
     else
