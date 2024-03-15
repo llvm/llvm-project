@@ -13,6 +13,7 @@ Clang Language Extensions
    BlockLanguageSpec
    Block-ABI-Apple
    AutomaticReferenceCounting
+   PointerAuthentication
    MatrixTypes
 
 Introduction
@@ -3444,7 +3445,7 @@ Query for this feature with ``__has_builtin(__builtin_debugtrap)``.
 Query for this feature with ``__has_builtin(__builtin_trap)``.
 
 ``__builtin_arm_trap``
-------------------
+----------------------
 
 ``__builtin_arm_trap`` is an AArch64 extension to ``__builtin_trap`` which also accepts a compile-time constant value, encoded directly into the trap instruction for later inspection.
 
@@ -4317,6 +4318,10 @@ Note that these intrinsics are implemented as motion barriers that block
 reordering of memory accesses and side effect instructions. Other instructions
 like simple arithmetic may be reordered around the intrinsic. If you expect to
 have no reordering at all, use inline assembly instead.
+
+Pointer Authentication
+^^^^^^^^^^^^^^^^^^^^^^
+See :doc:`PointerAuthentication`.
 
 X86/X86-64 Language Extensions
 ------------------------------
