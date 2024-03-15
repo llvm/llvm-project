@@ -1,7 +1,7 @@
 ;; Roundtrip tests.
 ; RUN: llvm-as --write-experimental-debuginfo-iterators-to-bitcode=true %s -o - | llvm-dis | FileCheck %s
 ;; Check that verify-uselistorder passes regardless of input format.
-; RUN: llvm-as %s --write-experimental-debuginfo-iterators-to-bitcode=true -o - | verify-uselistorder %s
+; RUN: llvm-as %s --write-experimental-debuginfo-iterators-to-bitcode=true -o - | verify-uselistorder
 ; RUN: verify-uselistorder %s
 
 ;; Confirm we're producing RemoveDI records from various tools.
