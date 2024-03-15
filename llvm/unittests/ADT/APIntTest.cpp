@@ -2919,7 +2919,7 @@ TEST(APIntTest, Average) {
   APInt A100(32, 100);
   APInt A101(32, 101);
   APInt A200(32, 200, false);
-  APInt ApUMax(32, UINT_MAX, false);
+  APInt ApUMax = APInt::getMaxValue(32);
 
   EXPECT_EQ(APInt(32, 150), APIntOps::avgFloorU(A100, A200));
   EXPECT_EQ(APIntOps::RoundingUDiv(A100 + A200, A2, APInt::Rounding::DOWN),
@@ -2946,8 +2946,8 @@ TEST(APIntTest, Average) {
   APInt Am100(32, -100);
   APInt Am101(32, -101);
   APInt Am200(32, -200);
-  APInt AmSMin(32, INT_MIN);
-  APInt ApSMax(32, INT_MAX);
+  APInt AmSMin = APInt::getSignedMinValue(32);
+  APInt ApSMax = APInt::getSignedMaxValue(32);
 
   EXPECT_EQ(APInt(32, +150), APIntOps::avgFloorS(Ap100, Ap200));
   EXPECT_EQ(APIntOps::RoundingSDiv(Ap100 + Ap200, A2, APInt::Rounding::DOWN),
