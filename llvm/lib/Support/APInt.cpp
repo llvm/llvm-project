@@ -3094,3 +3094,23 @@ void llvm::LoadIntFromMemory(APInt &IntVal, const uint8_t *Src,
     memcpy(Dst + sizeof(uint64_t) - LoadBytes, Src, LoadBytes);
   }
 }
+
+APInt APIntOps::avgFloorS(const APInt &C1, const APInt &C2) {
+  // Return floor((C1 + C2) / 2)
+  return (C1 & C2) + (C1 ^ C2).ashr(1);
+}
+
+APInt APIntOps::avgFloorU(const APInt &C1, const APInt &C2) {
+  // Return floor((C1 + C2) / 2)
+  return (C1 & C2) + (C1 ^ C2).lshr(1);
+}
+
+APInt APIntOps::avgCeilS(const APInt &C1, const APInt &C2) {
+  // Return ceil((C1 + C2) / 2)
+  return (C1 | C2) - (C1 ^ C2).ashr(1);
+}
+
+APInt APIntOps::avgCeilU(const APInt &C1, const APInt &C2) {
+  // Return ceil((C1 + C2) / 2)
+  return (C1 | C2) - (C1 ^ C2).lshr(1);
+}
