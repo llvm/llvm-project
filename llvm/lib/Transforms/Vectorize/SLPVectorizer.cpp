@@ -10526,9 +10526,9 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
       continue;
     }
 
-    if (!UniqueElements.count(V)) {
+    auto Res = UniqueElements.try_emplace(V, I);
+    if (Res.second) {
       EstimateInsertCost(I, V);
-      UniqueElements[V] = I;
       ShuffleMask[I] = I;
       continue;
     }
