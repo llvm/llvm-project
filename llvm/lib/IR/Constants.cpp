@@ -976,6 +976,7 @@ Constant *ConstantFP::get(Type *Ty, double V) {
   return C;
 }
 
+#ifdef __FLOAT128__
 Constant *ConstantFP::get128(Type *Ty, float128 V) {
   LLVMContext &Context = Ty->getContext();
 
@@ -991,6 +992,7 @@ Constant *ConstantFP::get128(Type *Ty, float128 V) {
 
   return C;
 }
+#endif
 
 Constant *ConstantFP::get(Type *Ty, const APFloat &V) {
   ConstantFP *C = get(Ty->getContext(), V);
