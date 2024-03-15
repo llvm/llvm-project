@@ -184,6 +184,9 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
 
   EXPECT_TRUE(sd_match(Neg, m_Neg(m_Value())));
   EXPECT_TRUE(sd_match(Not, m_Not(m_Value())));
+  EXPECT_FALSE(sd_match(Neg, m_Node(ISD::SUB, m_Value())));
+  EXPECT_FALSE(sd_match(Neg, m_Sub(m_Value(), m_Zero())));
+  EXPECT_FALSE(sd_match(Not, m_Xor(m_Value(), m_SpecificInt(54))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
