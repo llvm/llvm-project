@@ -868,12 +868,16 @@ fp16_fml_fallthrough:
     }
   }
 
-  // Kernel code has more strict alignment requirements.
-  if (KernelOrKext) {
-    Features.push_back("+strict-align");
-  } else if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
-                                      options::OPT_munaligned_access)) {
-    if (A->getOption().matches(options::OPT_munaligned_access)) {
+  if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
+                                      options::OPT_munaligned_access,
+                                      options::OPT_mstrict_align,
+                                      options::OPT_mno_strict_align)) {
+    // Kernel code has more strict alignment requirements.
+    if (KernelOrKext ||
+        A->getOption().matches(options::OPT_mno_unaligned_access) ||
+        A->getOption().matches(options::OPT_mstrict_align)) {
+      Features.push_back("+strict-align");
+    } else {
       // No v6M core supports unaligned memory access (v6M ARM ARM A3.2).
       if (Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
         D.Diag(diag::err_target_unsupported_unaligned) << "v6m";
@@ -881,8 +885,7 @@ fp16_fml_fallthrough:
       // access either.
       else if (Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v8m_baseline)
         D.Diag(diag::err_target_unsupported_unaligned) << "v8m.base";
-    } else
-      Features.push_back("+strict-align");
+    }
   } else {
     // Assume pre-ARMv6 doesn't support unaligned accesses.
     //

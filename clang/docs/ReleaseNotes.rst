@@ -191,6 +191,9 @@ Removed Compiler Flags
 -------------------------
 
 - The ``-freroll-loops`` flag has been removed. It had no effect since Clang 13.
+- ``-m[no-]unaligned-access`` is removed for RISC-V and LoongArch.
+  ``-m[no-]strict-align``, also supported by GCC, should be used instead.
+  (`#85350 <https://github.com/llvm/llvm-project/pull/85350>`_.)
 
 Attribute Changes in Clang
 --------------------------
