@@ -60,6 +60,7 @@ class ELFObjectFileBase : public ObjectFile {
 
   SubtargetFeatures getMIPSFeatures() const;
   SubtargetFeatures getARMFeatures() const;
+  SubtargetFeatures getHexagonFeatures() const;
   Expected<SubtargetFeatures> getRISCVFeatures() const;
   SubtargetFeatures getLoongArchFeatures() const;
 
