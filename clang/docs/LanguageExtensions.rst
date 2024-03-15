@@ -3444,7 +3444,7 @@ Query for this feature with ``__has_builtin(__builtin_debugtrap)``.
 Query for this feature with ``__has_builtin(__builtin_trap)``.
 
 ``__builtin_arm_trap``
-------------------
+----------------------
 
 ``__builtin_arm_trap`` is an AArch64 extension to ``__builtin_trap`` which also accepts a compile-time constant value, encoded directly into the trap instruction for later inspection.
 
