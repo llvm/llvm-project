@@ -418,7 +418,7 @@ public:
 
   // [spanstream.swap], swap
 
-  void swap(basic_spanstream& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI void swap(basic_spanstream& __rhs) {
     basic_iostream<_CharT, _Traits>::swap(__rhs);
     __sb_.swap(__rhs.__sb_);
   }
