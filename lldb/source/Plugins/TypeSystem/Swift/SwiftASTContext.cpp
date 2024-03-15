@@ -5648,7 +5648,6 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
 
     swift::ExistentialLayout layout = swift_can_type.getExistentialLayout();
     protocol_info.m_is_class_only = layout.requiresClass();
-    protocol_info.m_num_protocols = layout.getProtocols().size();
     protocol_info.m_is_objc = layout.isObjC();
     protocol_info.m_is_anyobject = layout.isAnyObject();
     protocol_info.m_is_errortype = layout.isErrorExistential();
@@ -5658,10 +5657,23 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
     }
 
     unsigned num_witness_tables = 0;
+    unsigned num_protocols = 0;
     for (auto protoDecl : layout.getProtocols()) {
+      // Ignore invertible protocols like Copyable entirely. They're marker
+      // protocols that are not mangled into generic signatures. Only their
+      // absence is mangled.
+      // FIXME: this should probably be filtering all marker protocols,
+      //  including Sendable, since marker protocols lack a witness table.
+      if (protoDecl->getInvertibleProtocolKind())
+        continue;
+
+      num_protocols++;
+
       if (!protoDecl->isObjC())
         num_witness_tables++;
     }
+
+    protocol_info.m_num_protocols = num_protocols;
 
     if (layout.isErrorExistential()) {
       // Error existential -- instance pointer only.
