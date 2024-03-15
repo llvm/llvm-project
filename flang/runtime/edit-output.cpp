@@ -9,6 +9,7 @@
 #include "edit-output.h"
 #include "emit-encoded.h"
 #include "utf.h"
+#include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
 #include <algorithm>
 
@@ -700,7 +701,9 @@ bool RealOutputEditing<KIND>::EditEXOutput(const DataEdit &edit) {
   if ((editWidth == 0 && !edit.digits) || editDigits == 0) {
     // EX0 or EXw.0
     flags |= decimal::Minimize;
-    significantDigits = 28; // enough for 128-bit F.P.
+    static constexpr int maxSigHexDigits{
+        (common::PrecisionOfRealKind(16) + 3) / 4};
+    significantDigits = maxSigHexDigits;
   }
   auto converted{
       ConvertToHexadecimal(significantDigits, edit.modes.round, flags)};
