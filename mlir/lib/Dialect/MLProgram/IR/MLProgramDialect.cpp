@@ -29,7 +29,8 @@ namespace {
 struct MLProgramInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
-  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const {
+  bool isLegalToInline(Operation *, Region *, bool,
+                       IRMapping &) const override {
     // We have no specific opinion on whether ops defined in this dialect should
     // be inlined.
     return true;
