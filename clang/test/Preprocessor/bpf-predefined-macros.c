@@ -61,7 +61,7 @@ int r;
 #ifdef __BPF_FEATURE_ST
 int s;
 #endif
-#ifdef __BPF_FEATURE_ARENA_CAST
+#ifdef __BPF_FEATURE_ADDR_SPACE_CAST
 int t;
 #endif
 
