@@ -910,10 +910,10 @@ InstructionCost SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
           (Opcode == Instruction::FPToSI || Opcode == Instruction::FPToUI))
         NeedsExtracts = false;
 
-      TotCost += getScalarizationOverhead(SrcVecTy, /*Insert*/ false,
-                                          NeedsExtracts, CostKind);
-      TotCost += getScalarizationOverhead(DstVecTy, NeedsInserts,
-                                          /*Extract*/ false, CostKind);
+      if (NeedsExtracts)
+        TotCost += getExplodeVectorCost(SrcVecTy, CostKind);
+      if (NeedsInserts)
+        TotCost += getBuildVectorCost(DstVecTy, CostKind);
 
       // FIXME: VF 2 for float<->i32 is currently just as expensive as for VF 4.
       if (VF == 2 && SrcScalarBits == 32 && DstScalarBits == 32)
@@ -925,8 +925,7 @@ InstructionCost SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     if (Opcode == Instruction::FPTrunc) {
       if (SrcScalarBits == 128)  // fp128 -> double/float + inserts of elements.
         return VF /*ldxbr/lexbr*/ +
-               getScalarizationOverhead(DstVecTy, /*Insert*/ true,
-                                        /*Extract*/ false, CostKind);
+               getBuildVectorCost(DstVecTy, CostKind);
       else // double -> float
         return VF / 2 /*vledb*/ + std::max(1U, VF / 4 /*vperm*/);
     }
@@ -939,8 +938,7 @@ InstructionCost SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         return VF * 2;
       }
       // -> fp128.  VF * lxdb/lxeb + extraction of elements.
-      return VF + getScalarizationOverhead(SrcVecTy, /*Insert*/ false,
-                                           /*Extract*/ true, CostKind);
+      return VF + getExplodeVectorCost(SrcVecTy, CostKind);
     }
   }
 
