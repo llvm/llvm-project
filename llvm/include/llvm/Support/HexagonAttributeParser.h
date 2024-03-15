@@ -28,7 +28,8 @@ public:
       : ELFAttributeParser(SP, HexagonAttrs::getHexagonAttributeTags(),
                            "hexagon") {}
   HexagonAttributeParser()
-      : ELFAttributeParser(HexagonAttrs::getHexagonAttributeTags(), "hexagon") {}
+      : ELFAttributeParser(HexagonAttrs::getHexagonAttributeTags(), "hexagon") {
+  }
 };
 
 } // namespace llvm
