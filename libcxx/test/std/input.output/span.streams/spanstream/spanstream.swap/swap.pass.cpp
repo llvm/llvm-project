@@ -17,7 +17,6 @@
 //    // [spanstream.swap], swap
 //    void swap(basic_spanstream& rhs);
 
-
 #include <cassert>
 #include <span>
 #include <spanstream>
