@@ -256,6 +256,7 @@ copy("Headers") {
     "ppc_wrappers/xmmintrin.h",
     "prfchiintrin.h",
     "prfchwintrin.h",
+    "ptrauth.h",
     "ptwriteintrin.h",
     "raointintrin.h",
     "rdpruintrin.h",
