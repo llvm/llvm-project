@@ -229,13 +229,13 @@ static Type *getTypeFromParameterKind(ParameterKind Kind, Type *OverloadTy) {
 ///               its specification in DXIL.td.
 /// \param OverloadTy Return type to be used to construct DXIL function type.
 static FunctionType *getDXILOpFunctionType(const OpCodeProperty *Prop,
-                                           Type *OverloadTy) {
+                                           Type *ReturnTy, Type *OverloadTy) {
   SmallVector<Type *> ArgTys;
 
   auto ParamKinds = getOpCodeParameterKind(*Prop);
 
-  // Add OverloadTy as return type of the function
-  ArgTys.emplace_back(OverloadTy);
+  // Add ReturnTy as return type of the function
+  ArgTys.emplace_back(ReturnTy);
 
   // Add DXIL Opcode value type viz., Int32 as first argument
   ArgTys.emplace_back(Type::getInt32Ty(OverloadTy->getContext()));
@@ -249,34 +249,39 @@ static FunctionType *getDXILOpFunctionType(const OpCodeProperty *Prop,
       ArgTys[0], ArrayRef<Type *>(&ArgTys[1], ArgTys.size() - 1), false);
 }
 
-static FunctionCallee getOrCreateDXILOpFunction(dxil::OpCode DXILOp,
-                                                Type *OverloadTy, Module &M) {
-  const OpCodeProperty *Prop = getOpCodeProperty(DXILOp);
+namespace llvm {
+namespace dxil {
+
+// Create an instruction that calls DXIL Op with return type, specified opcode,
+// and call arguments.
+// \param OpCode Opcode of the DXIL Op call constructed
+// \param ReturnTy Return type of the DXIL Op call constructed
+// \param OverloadTy Overload type of the DXIL Op call constructed
+// \ret DXIL Op call constructed
+CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
+                                          Type *OverloadTy,
+                                          llvm::iterator_range<Use *> Args) {
+  const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
 
   OverloadKind Kind = getOverloadKind(OverloadTy);
   if ((Prop->OverloadTys & (uint16_t)Kind) == 0) {
     report_fatal_error("Invalid Overload Type", /* gen_crash_diag=*/false);
   }
 
-  std::string FnName = constructOverloadName(Kind, OverloadTy, *Prop);
-  // Dependent on name to dedup.
-  if (auto *Fn = M.getFunction(FnName))
-    return FunctionCallee(Fn);
-
-  FunctionType *DXILOpFT = getDXILOpFunctionType(Prop, OverloadTy);
-  return M.getOrInsertFunction(FnName, DXILOpFT);
-}
-
-namespace llvm {
-namespace dxil {
-
-CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *OverloadTy,
-                                          llvm::iterator_range<Use *> Args) {
-  auto Fn = getOrCreateDXILOpFunction(OpCode, OverloadTy, M);
+  std::string DXILFnName = constructOverloadName(Kind, OverloadTy, *Prop);
+  FunctionCallee DXILFn;
+  // Get the function with name DXILFnName, if one exists
+  if (auto *Func = M.getFunction(DXILFnName)) {
+    DXILFn = FunctionCallee(Func);
+  } else {
+    // Construct and add a function with name DXILFnName
+    FunctionType *DXILOpFT = getDXILOpFunctionType(Prop, ReturnTy, OverloadTy);
+    DXILFn = M.getOrInsertFunction(DXILFnName, DXILOpFT);
+  }
   SmallVector<Value *> FullArgs;
   FullArgs.emplace_back(B.getInt32((int32_t)OpCode));
   FullArgs.append(Args.begin(), Args.end());
-  return B.CreateCall(Fn, FullArgs);
+  return B.CreateCall(DXILFn, FullArgs);
 }
 
 Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, FunctionType *FT) {

@@ -119,7 +119,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Populate OpTypes with return type and parameter types
 
   // Parameter indices of overloaded parameters.
-  // This vector contains overload parameters in the order order used to
+  // This vector contains overload parameters in the order used to
   // resolve an LLVMMatchType in accordance with  convention outlined in
   // the comment before the definition of class LLVMMatchType in
   // llvm/IR/Intrinsics.td
@@ -398,10 +398,13 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
 
   OS << "  static const OpCodeProperty OpCodeProps[] = {\n";
   for (auto &Op : Ops) {
+    // If no overload parameter exists, treat the return type as overload
+    // parameter to emit the appropriate overload kind enum.
+    auto OLParamIdx = (Op.OverloadParamIndex < 0) ? 0 : Op.OverloadParamIndex;
     OS << "  { dxil::OpCode::" << Op.OpName << ", " << OpStrings.get(Op.OpName)
        << ", OpCodeClass::" << Op.OpClass << ", "
        << OpClassStrings.get(Op.OpClass.data()) << ", "
-       << getOverloadKindStr(Op.OpTypes[0]) << ", "
+       << getOverloadKindStr(Op.OpTypes[OLParamIdx]) << ", "
        << emitDXILOperationAttr(Op.OpAttributes) << ", "
        << Op.OverloadParamIndex << ", " << Op.OpTypes.size() - 1 << ", "
        << Parameters.get(ParameterMap[Op.OpClass]) << " },\n";

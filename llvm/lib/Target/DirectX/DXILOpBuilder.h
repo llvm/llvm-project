@@ -29,7 +29,8 @@ namespace dxil {
 class DXILOpBuilder {
 public:
   DXILOpBuilder(Module &M, IRBuilderBase &B) : M(M), B(B) {}
-  CallInst *createDXILOpCall(dxil::OpCode OpCode, Type *OverloadTy,
+  CallInst *createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
+                             Type *OverloadTy,
                              llvm::iterator_range<Use *> Args);
   Type *getOverloadTy(dxil::OpCode OpCode, FunctionType *FT);
   static const char *getOpCodeName(dxil::OpCode DXILOp);
