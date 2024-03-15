@@ -76,13 +76,13 @@ void test() {
     assert(str4 == CS("year"));
     assert(i4 == 2024);
   }
-  // Mode: `ios_base::in`
+  // Mode: `in`
   {
     SpStream spSt{sp, std::ios_base::in};
     //TODO
     (void)spSt;
   }
-  // Mode `ios_base::out`
+  // Mode `out`
   {
     SpStream spSt{sp, std::ios_base::out};
     //TODO

@@ -22,7 +22,6 @@
 #include <spanstream>
 
 #include "constexpr_char_traits.h"
-#include "test_convertible.h"
 #include "test_macros.h"
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
@@ -58,7 +57,7 @@ void test() {
     assert(rhsSpBuf.span().empty());
     assert(rhsSpBuf.span().size() == 0);
   }
-  // Mode: `ios_base::in`
+  // Mode: `in`
   {
     SpBuf rhsSpBuf{sp, std::ios_base::in};
     assert(rhsSpBuf.span().data() == arr);
@@ -78,7 +77,7 @@ void test() {
     assert(rhsSpBuf.span().empty());
     assert(rhsSpBuf.span().size() == 0);
   }
-  // Mode `ios_base::out`
+  // Mode `out`
   {
     SpBuf rhsSpBuf{sp, std::ios_base::out};
     assert(rhsSpBuf.span().data() == arr);
@@ -122,7 +121,7 @@ void test() {
     assert(rhsSpBuf.span().empty());
     assert(rhsSpBuf.span().size() == 0);
   }
-  // Mode: `ios_base::ate`
+  // Mode: `ate`
   {
     SpBuf rhsSpBuf{sp, std::ios_base::out | std::ios_base::ate};
     assert(rhsSpBuf.span().data() == arr);
