@@ -231,8 +231,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(1, sXLen, sXLen)
       .clampScalar(0, sXLen, sXLen);
 
-  auto &SelectActions = getActionDefinitionsBuilder(G_SELECT).legalFor(
-      {{s32, sXLen}, {p0, sXLen}});
+  auto &SelectActions =
+      getActionDefinitionsBuilder(G_SELECT)
+          .legalFor({{s32, sXLen}, {p0, sXLen}})
+          .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                       typeIsLegalBoolVec(1, BoolVecTys, ST)));
   if (XLen == 64 || ST.hasStdExtD())
     SelectActions.legalFor({{s64, sXLen}});
   SelectActions.widenScalarToNextPow2(0)
