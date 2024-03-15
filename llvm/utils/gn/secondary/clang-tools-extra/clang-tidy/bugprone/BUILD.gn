@@ -27,6 +27,7 @@ static_library("bugprone") {
     "ChainedComparisonCheck.cpp",
     "ComparePointerToMemberVirtualFunctionCheck.cpp",
     "CopyConstructorInitCheck.cpp",
+    "CrtpConstructorAccessibilityCheck.cpp",
     "DanglingHandleCheck.cpp",
     "DynamicStaticInitializersCheck.cpp",
     "EasilySwappableParametersCheck.cpp",

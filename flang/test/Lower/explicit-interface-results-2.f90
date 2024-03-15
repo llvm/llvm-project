@@ -69,8 +69,8 @@ subroutine host4()
   integer :: n
   call internal_proc_a()
 contains
-! CHECK-LABEL: func @_QFhost4Pinternal_proc_a
-! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) attributes {fir.internal_proc} {
+! CHECK-LABEL: func private @_QFhost4Pinternal_proc_a
+! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
   subroutine internal_proc_a()
     call takes_array(return_array())
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
@@ -94,7 +94,7 @@ subroutine host5()
   implicit none
   call internal_proc_a()
 contains
-! CHECK-LABEL: func @_QFhost5Pinternal_proc_a() attributes {fir.internal_proc} {
+! CHECK-LABEL: func private @_QFhost5Pinternal_proc_a() attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
   subroutine internal_proc_a()
     call takes_array(return_array())
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QMsome_moduleEn_module) : !fir.ref<i32>
@@ -115,7 +115,7 @@ subroutine host6()
   implicit none
   call internal_proc_a()
 contains
-! CHECK-LABEL: func @_QFhost6Pinternal_proc_a
+! CHECK-LABEL: func private @_QFhost6Pinternal_proc_a
   subroutine internal_proc_a()
     call takes_array(return_array())
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QMsome_moduleEn_module) : !fir.ref<i32>
@@ -187,7 +187,7 @@ subroutine host9()
   common /mycom/ n_common
   call internal_proc_a()
 contains
-! CHECK-LABEL: func @_QFhost9Pinternal_proc_a
+! CHECK-LABEL: func private @_QFhost9Pinternal_proc_a
   subroutine internal_proc_a()
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_1:.*]] = fir.address_of(@mycom_) : !fir.ref<!fir.array<4xi8>>
@@ -213,7 +213,7 @@ subroutine host10()
   implicit none
   call internal_proc_a()
 contains
-! CHECK-LABEL: func @_QFhost10Pinternal_proc_a
+! CHECK-LABEL: func private @_QFhost10Pinternal_proc_a
   subroutine internal_proc_a()
     call takes_array(return_array())
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 0 : index

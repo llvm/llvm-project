@@ -416,9 +416,9 @@ namespace std
 }
 
 */
-#include <__assert> // all public C++ headers provide the assertion handler
+
 #include <__config>
-#include <__fwd/hash.h> // This is https://llvm.org/PR56938
+#include <__fwd/functional.h> // This is https://llvm.org/PR56938
 #include <__type_traits/add_const.h>
 #include <__type_traits/add_cv.h>
 #include <__type_traits/add_lvalue_reference.h>

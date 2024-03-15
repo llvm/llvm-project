@@ -49,6 +49,7 @@ add_header_library(
   DEPENDS
     .type_traits
     libc.include.llvm-libc-macros.limits_macros
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
@@ -153,10 +154,10 @@ add_header_library(
     type_traits/type_identity.h
     type_traits/void_t.h
   DEPENDS
+    libc.include.llvm-libc-macros.stdfix_macros
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
-    libc.src.__support.macros.properties.float
-    libc.include.llvm-libc-macros.stdfix_macros
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(

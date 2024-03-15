@@ -1361,11 +1361,11 @@ define <2 x i8> @ashr_demanded_bits_splat(<2 x i8> %x) {
 
 define <vscale x 8 x i8> @ashr_demanded_bits_splat2(<vscale x 8 x i8> %x) {
 ; CHECK-LABEL: @ashr_demanded_bits_splat2(
-; CHECK-NEXT:    [[SHR:%.*]] = ashr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    [[SHR:%.*]] = ashr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i64 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 8 x i8> [[SHR]]
 ;
-  %and = and <vscale x 8 x i8> %x, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 128, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
-  %shr = ashr <vscale x 8 x i8> %and, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+  %and = and <vscale x 8 x i8> %x, splat (i8 128)
+  %shr = ashr <vscale x 8 x i8> %and, splat (i8 7)
   ret <vscale x 8 x i8> %shr
 }
 
@@ -1381,11 +1381,11 @@ define <2 x i8> @lshr_demanded_bits_splat(<2 x i8> %x) {
 
 define <vscale x 8 x i8> @lshr_demanded_bits_splat2(<vscale x 8 x i8> %x) {
 ; CHECK-LABEL: @lshr_demanded_bits_splat2(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i64 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 8 x i8> [[SHR]]
 ;
-  %and = and <vscale x 8 x i8> %x, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 128, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
-  %shr = lshr <vscale x 8 x i8> %and, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+  %and = and <vscale x 8 x i8> %x, splat (i8 128)
+  %shr = lshr <vscale x 8 x i8> %and, splat (i8 7)
   ret <vscale x 8 x i8> %shr
 }
 
