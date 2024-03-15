@@ -164,14 +164,13 @@ define <4 x float> @demandedbits_sitofp_blendvps(<4 x float> %a0, <4 x float> %a
 ; SSE-LABEL: demandedbits_sitofp_blendvps:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm0, %xmm3
-; SSE-NEXT:    cvtdq2ps %xmm2, %xmm0
+; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    blendvps %xmm0, %xmm1, %xmm3
 ; SSE-NEXT:    movaps %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: demandedbits_sitofp_blendvps:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcvtdq2ps %xmm2, %xmm2
 ; AVX-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %cvt = sitofp <4 x i32> %a2 to <4 x float>
