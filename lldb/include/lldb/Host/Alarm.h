@@ -13,6 +13,9 @@
 #include "lldb/lldb-types.h"
 #include "llvm/Support/Chrono.h"
 
+#include <condition_variable>
+#include <mutex>
+
 namespace lldb_private {
 
 /// \class Alarm abstraction that enables scheduling a callback function after a
