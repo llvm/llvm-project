@@ -420,7 +420,8 @@ private:
       return false;
 
     // The switch must be in a loop.
-    if (!LI->getLoopFor(SI->getParent()))
+    const Loop *L = LI->getLoopFor(SI->getParent());
+    if (!L)
       return false;
 
     addToQueue(SICond, nullptr, Q, SeenValues);
@@ -458,8 +459,8 @@ private:
         // likely that it will also be on the enumerated paths, causing us to
         // exit after we have enumerated all the paths. This heuristic save
         // compile time because a search for all the paths can become expensive.
-        if (EarlyExitHeuristic && LI->getLoopFor(SI->getParent()) ==
-                                      LI->getLoopFor(CurrentIncomingBB)) {
+        if (EarlyExitHeuristic &&
+            L->contains(LI->getLoopFor(CurrentIncomingBB))) {
           LLVM_DEBUG(dbgs()
                      << "\tExiting early due to unpredictability heuristic.\n");
           return false;
