@@ -993,14 +993,64 @@ struct is_big_int<BigInt<Bits, Signed, T>> : cpp::true_type {};
 template <class T>
 LIBC_INLINE_VAR constexpr bool is_big_int_v = is_big_int<T>::value;
 
-// make_unsigned and make_signed type traits
-template <size_t Bits, bool Signed, typename T>
-struct cpp::make_unsigned<BigInt<Bits, Signed, T>>
-    : cpp::type_identity<BigInt<Bits, false, T>> {};
+// extensions of type traits to include BigInt
+
+// is_integral_or_big_int
+template <typename T>
+struct is_integral_or_big_int
+    : cpp::bool_constant<(cpp::is_integral_v<T> || is_big_int_v<T>)> {};
+
+template <typename T>
+LIBC_INLINE_VAR constexpr bool is_integral_or_big_int_v =
+    is_integral_or_big_int<T>::value;
+
+// make_big_int_unsigned
+template <typename T> struct make_big_int_unsigned;
 
 template <size_t Bits, bool Signed, typename T>
-struct cpp::make_signed<BigInt<Bits, Signed, T>>
+struct make_big_int_unsigned<BigInt<Bits, Signed, T>>
+    : cpp::type_identity<BigInt<Bits, false, T>> {};
+
+template <typename T>
+using make_big_int_unsigned_t = typename make_big_int_unsigned<T>::type;
+
+// make_big_int_signed
+template <typename T> struct make_big_int_signed;
+
+template <size_t Bits, bool Signed, typename T>
+struct make_big_int_signed<BigInt<Bits, Signed, T>>
     : cpp::type_identity<BigInt<Bits, true, T>> {};
+
+template <typename T>
+using make_big_int_signed_t = typename make_big_int_signed<T>::type;
+
+// make_integral_or_big_int_unsigned
+template <typename T> struct make_integral_or_big_int_unsigned;
+
+template <size_t Bits, bool Signed, typename T>
+struct make_integral_or_big_int_unsigned<BigInt<Bits, Signed, T>>
+    : make_big_int_unsigned<BigInt<Bits, Signed, T>> {};
+
+template <typename T>
+struct make_integral_or_big_int_unsigned : cpp::make_unsigned<T> {};
+
+template <typename T>
+using make_integral_or_big_int_unsigned_t =
+    typename make_integral_or_big_int_unsigned<T>::type;
+
+// make_integral_or_big_int_signed
+template <typename T> struct make_integral_or_big_int_signed;
+
+template <size_t Bits, bool Signed, typename T>
+struct make_integral_or_big_int_signed<BigInt<Bits, Signed, T>>
+    : make_big_int_signed<BigInt<Bits, Signed, T>> {};
+
+template <typename T>
+struct make_integral_or_big_int_signed : cpp::make_signed<T> {};
+
+template <typename T>
+using make_integral_or_big_int_signed_t =
+    typename make_integral_or_big_int_signed<T>::type;
 
 namespace cpp {
 

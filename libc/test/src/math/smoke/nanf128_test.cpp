@@ -36,8 +36,7 @@ TEST_F(LlvmLibcNanf128Test, NCharSeq) {
   run_test("0x200000000000000000000", QUIET_NAN | (ONE << 81));
   run_test("10384593717069655257060992658440191",
            QUIET_NAN | FPBits128::SIG_MASK);
-  run_test("0x1ffffffffffffffffffffffffffff",
-           QUIET_NAN | FPBits128::SIG_MASK);
+  run_test("0x1ffffffffffffffffffffffffffff", QUIET_NAN | FPBits128::SIG_MASK);
   run_test("10384593717069655257060992658440192", QUIET_NAN);
   run_test("0x20000000000000000000000000000", QUIET_NAN);
   run_test("1a", QUIET_NAN);
