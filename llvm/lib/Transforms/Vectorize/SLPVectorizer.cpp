@@ -10535,7 +10535,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
 
     DuplicateNonConst = true;
     ShuffledElements.setBit(I);
-    ShuffleMask[I] = UniqueElements[V];
+    ShuffleMask[I] = Res.first->second;
   }
   if (ForPoisonSrc)
     Cost =
