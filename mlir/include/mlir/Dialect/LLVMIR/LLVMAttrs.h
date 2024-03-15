@@ -84,6 +84,8 @@ using linkage::Linkage;
 } // namespace LLVM
 } // namespace mlir
 
+#include "mlir/Dialect/LLVMIR/LLVMAttrInterfaces.h.inc"
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.h.inc"
 
