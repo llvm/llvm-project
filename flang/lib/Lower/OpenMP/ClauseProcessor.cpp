@@ -94,7 +94,6 @@ genAllocateClause(Fortran::lower::AbstractConverter &converter,
   mlir::Location currentLocation = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
 
-  mlir::Value allocatorOperand;
   const omp::ObjectList &objectList = std::get<omp::ObjectList>(clause.t);
   const auto &modifier =
       std::get<std::optional<omp::clause::Allocate::Modifier>>(clause.t);
