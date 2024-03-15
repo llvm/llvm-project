@@ -6047,11 +6047,17 @@ ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(CodeGen::CodeGenModul
   //   const struct _prop_list_t * const properties;
   // }
 
-  // FIXME. Add 'reserved' field in 64bit abi mode!
-  ClassRonfABITy = llvm::StructType::create(
-      "struct._class_ro_t", IntTy, IntTy, IntTy, Int8PtrTy, Int8PtrTy,
-      MethodListnfABIPtrTy, ProtocolListnfABIPtrTy, IvarListnfABIPtrTy,
-      Int8PtrTy, PropertyListPtrTy);
+  if (CGM.getTarget().getTriple().isArch64Bit())
+    ClassRonfABITy = llvm::StructType::create(
+        // Extra reserved field in 64-bit ABI
+        "struct._class_ro_t", IntTy, IntTy, IntTy, IntTy, Int8PtrTy, Int8PtrTy,
+        MethodListnfABIPtrTy, ProtocolListnfABIPtrTy, IvarListnfABIPtrTy,
+        Int8PtrTy, PropertyListPtrTy);
+  else
+    ClassRonfABITy = llvm::StructType::create(
+        "struct._class_ro_t", IntTy, IntTy, IntTy, Int8PtrTy, Int8PtrTy,
+        MethodListnfABIPtrTy, ProtocolListnfABIPtrTy, IvarListnfABIPtrTy,
+        Int8PtrTy, PropertyListPtrTy);
 
   // ImpnfABITy - LLVM for id (*)(id, SEL, ...)
   llvm::Type *params[] = { ObjectPtrTy, SelectorPtrTy };
