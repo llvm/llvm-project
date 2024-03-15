@@ -2226,6 +2226,12 @@ bool ByteCodeExprGen<Emitter>::VisitPseudoObjectExpr(
   return true;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitPackIndexingExpr(
+    const PackIndexingExpr *E) {
+  return this->delegate(E->getSelectedExpr());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -2238,7 +2244,7 @@ template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::delegate(const Expr *E) {
   if (E->containsErrors())
-    return false;
+    return this->emitError(E);
 
   // We're basically doing:
   // OptionScope<Emitter> Scope(this, DicardResult, Initializing);
@@ -2248,7 +2254,7 @@ bool ByteCodeExprGen<Emitter>::delegate(const Expr *E) {
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::visit(const Expr *E) {
   if (E->containsErrors())
-    return false;
+    return this->emitError(E);
 
   if (E->getType()->isVoidType())
     return this->discard(E);
@@ -2277,7 +2283,7 @@ bool ByteCodeExprGen<Emitter>::visitInitializer(const Expr *E) {
   assert(!classify(E->getType()));
 
   if (E->containsErrors())
-    return false;
+    return this->emitError(E);
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/true);
