@@ -215,10 +215,6 @@ CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp, bool thro
   return resolver_sp;
 }
 
-static const char *g_stub_log_message =
-    "Swift language runtime isn't available because %s is not loaded in "
-    "the process. functionality.";
-
 /// Simple Swift programs may not actually depend on the Swift runtime
 /// library (libswiftCore.dylib), but if it is missing, what we can do
 /// is limited. This implementation represents that case.
@@ -231,7 +227,8 @@ public:
 #define STUB_LOG()                                                             \
   do {                                                                         \
     LLDB_LOGF(GetLog(LLDBLog::Expressions | LLDBLog::Types),                   \
-              g_stub_log_message,                                              \
+              "Swift language runtime isn't available because %s is not "      \
+              "loaded in the process.",                                        \
               GetStandardLibraryName(m_process).AsCString());                  \
     assert(false && "called into swift language runtime stub");                \
   } while (0)
