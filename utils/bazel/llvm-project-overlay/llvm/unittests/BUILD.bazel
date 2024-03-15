@@ -312,6 +312,7 @@ cc_test(
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:AsmParser",
+        "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
         "//llvm:IRReader",
