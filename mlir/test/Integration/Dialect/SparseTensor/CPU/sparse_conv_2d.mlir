@@ -273,11 +273,14 @@ module {
     bufferization.dealloc_tensor %sparse_input_CSC : tensor<8x8xi32, #CSC>
     bufferization.dealloc_tensor %sparse_input_CD : tensor<8x8xi32, #CDR>
 
+    bufferization.dealloc_tensor %0 : tensor<6x6xi32>
     bufferization.dealloc_tensor %1 : tensor<6x6xi32, #DCSR>
     bufferization.dealloc_tensor %2 : tensor<6x6xi32, #DCSR>
     bufferization.dealloc_tensor %3 : tensor<6x6xi32, #CSR>
     bufferization.dealloc_tensor %4 : tensor<6x6xi32, #CDR>
     bufferization.dealloc_tensor %5 : tensor<6x6xi32, #CSC>
+    bufferization.dealloc_tensor %6 : tensor<6x6xi32>
+
     return
   }
 }
