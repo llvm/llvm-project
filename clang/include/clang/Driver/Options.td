@@ -4704,10 +4704,8 @@ def munaligned_symbols : Flag<["-"], "munaligned-symbols">, Group<m_Group>,
 def mno_unaligned_symbols : Flag<["-"], "mno-unaligned-symbols">, Group<m_Group>,
   HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
 def mstrict_align : Flag<["-"], "mstrict-align">,
-  Visibility<[ClangOption, CC1Option]>,
   HelpText<"Force all memory accesses to be aligned (AArch64/LoongArch/RISC-V only)">;
 def mno_strict_align : Flag<["-"], "mno-strict-align">,
-  Visibility<[ClangOption, CC1Option]>,
   HelpText<"Allow memory accesses to be unaligned (AArch64/LoongArch/RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
