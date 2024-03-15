@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
 
 ds_max_f32 v1, v2
 // GFX12: ds_max_num_f32 v1, v2                   ; encoding: [0x00,0x00,0x4c,0xd8,0x01,0x02,0x00,0x00]
@@ -27,5 +27,11 @@ ds_min_rtn_f64 v[5:6], v1, v[2:3]
 ds_subrev_u32 v1, v2
 // GFX12: ds_rsub_u32 v1, v2                      ; encoding: [0x00,0x00,0x08,0xd8,0x01,0x02,0x00,0x00]
 
+ds_subrev_rtn_u32 v5, v1, v2
+// GFX12: ds_rsub_rtn_u32 v5, v1, v2              ; encoding: [0x00,0x00,0x88,0xd8,0x01,0x02,0x00,0x05]
+
 ds_subrev_u64 v1, v[2:3]
 // GFX12: ds_rsub_u64 v1, v[2:3]                  ; encoding: [0x00,0x00,0x08,0xd9,0x01,0x02,0x00,0x00]
+
+ds_subrev_rtn_u64 v[5:6], v1, v[2:3]
+// GFX12: ds_rsub_rtn_u64 v[5:6], v1, v[2:3]      ; encoding: [0x00,0x00,0x88,0xd9,0x01,0x02,0x00,0x05]

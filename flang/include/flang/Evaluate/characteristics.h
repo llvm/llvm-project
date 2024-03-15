@@ -381,8 +381,8 @@ struct Procedure {
   int FindPassIndex(std::optional<parser::CharBlock>) const;
   bool CanBeCalledViaImplicitInterface(std::string *whyNot = nullptr) const;
   bool CanOverride(const Procedure &, std::optional<int> passIndex) const;
-  bool IsCompatibleWith(const Procedure &, std::string *whyNot = nullptr,
-      const SpecificIntrinsic * = nullptr,
+  bool IsCompatibleWith(const Procedure &, bool ignoreImplicitVsExplicit,
+      std::string *whyNot = nullptr, const SpecificIntrinsic * = nullptr,
       std::optional<std::string> *warning = nullptr) const;
 
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;

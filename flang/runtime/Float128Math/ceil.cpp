@@ -14,7 +14,7 @@ extern "C" {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(CeilF128)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Ceil<RTNAME(CeilF128)>::invoke(x);
+  return Ceil<true>::invoke(x);
 }
 #endif
 

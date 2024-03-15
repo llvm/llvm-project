@@ -318,9 +318,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    AlignConsecutiveMacros: AcrossEmptyLines
+    AlignConsecutiveAssignments: AcrossEmptyLines
 
-    AlignConsecutiveMacros:
+    AlignConsecutiveAssignments:
       Enabled: true
       AcrossEmptyLines: true
       AcrossComments: false
@@ -460,9 +460,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    AlignConsecutiveMacros: AcrossEmptyLines
+    AlignConsecutiveBitFields: AcrossEmptyLines
 
-    AlignConsecutiveMacros:
+    AlignConsecutiveBitFields:
       Enabled: true
       AcrossEmptyLines: true
       AcrossComments: false
@@ -602,9 +602,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    AlignConsecutiveMacros: AcrossEmptyLines
+    AlignConsecutiveDeclarations: AcrossEmptyLines
 
-    AlignConsecutiveMacros:
+    AlignConsecutiveDeclarations:
       Enabled: true
       AcrossEmptyLines: true
       AcrossComments: false
@@ -983,9 +983,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    AlignConsecutiveMacros: AcrossEmptyLines
+    AlignConsecutiveTableGenCondOperatorColons: AcrossEmptyLines
 
-    AlignConsecutiveMacros:
+    AlignConsecutiveTableGenCondOperatorColons:
       Enabled: true
       AcrossEmptyLines: true
       AcrossComments: false
@@ -1123,9 +1123,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    AlignConsecutiveMacros: AcrossEmptyLines
+    AlignConsecutiveTableGenDefinitionColons: AcrossEmptyLines
 
-    AlignConsecutiveMacros:
+    AlignConsecutiveTableGenDefinitionColons:
       Enabled: true
       AcrossEmptyLines: true
       AcrossComments: false

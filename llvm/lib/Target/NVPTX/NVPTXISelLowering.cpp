@@ -465,7 +465,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     case ISD::SMIN:
     case ISD::UMIN:
     case ISD::UMAX:
-    case ISD::SUB:
       IsOpSupported = STI.getSmVersion() >= 90 && STI.getPTXVersion() >= 80;
       break;
     }
@@ -6101,6 +6100,9 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
   if (AI->isFloatingPointOperation()) {
     if (AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
+      if (Ty->isHalfTy() && STI.getSmVersion() >= 70 &&
+          STI.getPTXVersion() >= 63)
+        return AtomicExpansionKind::None;
       if (Ty->isFloatTy())
         return AtomicExpansionKind::None;
       if (Ty->isDoubleTy() && STI.hasAtomAddF64())

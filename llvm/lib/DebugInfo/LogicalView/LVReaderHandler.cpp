@@ -48,7 +48,7 @@ Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
         return std::make_unique<LVCodeViewReader>(Filename, FileFormatName,
                                                   *COFF, W, ExePath);
       }
-      if (Obj.isELF() || Obj.isMachO())
+      if (Obj.isELF() || Obj.isMachO() || Obj.isWasm())
         return std::make_unique<LVELFReader>(Filename, FileFormatName, Obj, W);
     }
     if (isa<PDBFile *>(Input)) {

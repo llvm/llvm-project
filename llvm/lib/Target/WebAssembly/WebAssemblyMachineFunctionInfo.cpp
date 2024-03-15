@@ -22,8 +22,6 @@
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
-extern cl::opt<bool> WasmEmitMultiValue;
-
 WebAssemblyFunctionInfo::~WebAssemblyFunctionInfo() = default; // anchor.
 
 MachineFunctionInfo *WebAssemblyFunctionInfo::clone(
@@ -73,8 +71,7 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
 
   MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
   if (Results.size() > 1 &&
-      (!TM.getSubtarget<WebAssemblySubtarget>(ContextFunc).hasMultivalue() ||
-       !WasmEmitMultiValue)) {
+      !TM.getSubtarget<WebAssemblySubtarget>(ContextFunc).hasMultivalue()) {
     // WebAssembly can't lower returns of multiple values without demoting to
     // sret unless multivalue is enabled (see
     // WebAssemblyTargetLowering::CanLowerReturn). So replace multiple return

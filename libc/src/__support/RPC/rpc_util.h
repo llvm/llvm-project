@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTILS_H
-#define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTIL_H
+#define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTIL_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
@@ -69,4 +69,4 @@ LIBC_INLINE void rpc_memcpy(void *dst, const void *src, size_t count) {
 } // namespace rpc
 } // namespace LIBC_NAMESPACE
 
-#endif
+#endif // LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTIL_H

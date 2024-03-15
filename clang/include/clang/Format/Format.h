@@ -154,9 +154,9 @@ struct FormatStyle {
   /// For example, to align across empty lines and not across comments, either
   /// of these work.
   /// \code
-  ///   AlignConsecutiveMacros: AcrossEmptyLines
+  ///   <option-name>: AcrossEmptyLines
   ///
-  ///   AlignConsecutiveMacros:
+  ///   <option-name>:
   ///     Enabled: true
   ///     AcrossEmptyLines: true
   ///     AcrossComments: false
@@ -5227,6 +5227,9 @@ extern const char *DefaultFormatStyle;
 /// The suggested predefined style to use as the fallback style in ``getStyle``.
 /// Different builds can modify the value to the preferred styles.
 extern const char *DefaultFallbackStyle;
+
+/// Whether the language is C/C++/Objective-C/Objective-C++.
+extern bool IsCpp;
 
 /// Construct a FormatStyle based on ``StyleName``.
 ///

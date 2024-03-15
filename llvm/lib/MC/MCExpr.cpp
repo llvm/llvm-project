@@ -338,6 +338,10 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
     return "ie";
   case VK_PPC_AIX_TLSLE:
     return "le";
+  case VK_PPC_AIX_TLSLD:
+    return "ld";
+  case VK_PPC_AIX_TLSML:
+    return "ml";
   case VK_PPC_GOT_TLSLD: return "got@tlsld";
   case VK_PPC_GOT_TLSLD_LO: return "got@tlsld@l";
   case VK_PPC_GOT_TLSLD_HI: return "got@tlsld@h";

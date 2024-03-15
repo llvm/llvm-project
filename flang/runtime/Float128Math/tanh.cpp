@@ -14,7 +14,7 @@ extern "C" {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(TanhF128)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Tanh<RTNAME(TanhF128)>::invoke(x);
+  return Tanh<true>::invoke(x);
 }
 #endif
 

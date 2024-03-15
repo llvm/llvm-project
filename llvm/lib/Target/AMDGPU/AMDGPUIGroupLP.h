@@ -20,9 +20,8 @@ namespace AMDGPU {
 enum class SchedulingPhase { Initial, PreRAReentry, PostRA };
 } // namespace AMDGPU
 
-std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(
-    AMDGPU::SchedulingPhase Phase,
-    std::vector<std::unique_ptr<ScheduleDAGMutation>> *SavedMutations);
+std::unique_ptr<ScheduleDAGMutation>
+createIGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase);
 
 } // namespace llvm
 

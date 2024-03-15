@@ -838,7 +838,6 @@ defm ADD : I3<"add.s", add>;
 defm SUB : I3<"sub.s", sub>;
 
 def ADD16x2 : I16x2<"add.s", add>;
-def SUB16x2 : I16x2<"sub.s", sub>;
 
 // in32 and int64 addition and subtraction with carry-out.
 defm ADDCC : ADD_SUB_INT_CARRY<"add.cc", addc>;

@@ -68,6 +68,7 @@ on how to get in touch with us and to learn more about the current status.
    OpenACC
    OpenACC-descriptor-management.md
    OpenMP-4.5-grammar.md
+   OpenMP-declare-target
    OpenMP-descriptor-management
    OpenMP-semantics
    OptionComparison
@@ -79,6 +80,7 @@ on how to get in touch with us and to learn more about the current status.
    Preprocessing
    ProcedurePointer
    RuntimeDescriptor
+   RuntimeEnvironment
    RuntimeTypeInfo
    Semantics
    f2018-grammar.md

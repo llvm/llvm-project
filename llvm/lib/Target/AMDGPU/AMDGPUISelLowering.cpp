@@ -3089,10 +3089,10 @@ SDValue AMDGPUTargetLowering::lowerCTLZResults(SDValue Op,
   assert(ResultVT == Arg.getValueType());
 
   auto const LeadingZeroes = 32u - ResultVT.getFixedSizeInBits();
+  auto SubVal = DAG.getConstant(LeadingZeroes, SL, MVT::i32);
   auto NewOp = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Arg);
-  auto ShiftVal = DAG.getConstant(LeadingZeroes, SL, MVT::i32);
-  NewOp = DAG.getNode(ISD::SHL, SL, MVT::i32, NewOp, ShiftVal);
   NewOp = DAG.getNode(Op.getOpcode(), SL, MVT::i32, NewOp);
+  NewOp = DAG.getNode(ISD::SUB, SL, MVT::i32, NewOp, SubVal);
   return DAG.getNode(ISD::TRUNCATE, SL, ResultVT, NewOp);
 }
 
