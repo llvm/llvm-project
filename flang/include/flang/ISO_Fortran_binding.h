@@ -127,7 +127,7 @@ namespace cfi_internal {
 // because a struct cannot be empty.
 extern "C++" template <typename T> struct FlexibleArray : T {
   RT_API_ATTRS T &operator[](int index) { return *(this + index); }
-  const RT_API_ATTRS T &operator[](int index) const { return *(this + index); }
+  RT_API_ATTRS const T &operator[](int index) const { return *(this + index); }
   RT_API_ATTRS operator T *() { return this; }
   RT_API_ATTRS operator const T *() const { return this; }
 };
