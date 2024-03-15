@@ -45,8 +45,7 @@ const RISCVAttributeParser::DisplayHandler
 
 Error RISCVAttributeParser::atomicAbi(unsigned Tag) {
   uint64_t Value = de.getULEB128(cursor);
-  std::string Description = "Atomic ABI is " + utostr(Value);
-  printAttribute(Tag, Value, Description);
+  printAttribute(Tag, Value, "Atomic ABI is " + utostr(Value));
   return Error::success();
 }
 
