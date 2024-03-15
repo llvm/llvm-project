@@ -878,6 +878,14 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE;
       if (Model == TLSModel::InitialExec)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
+      // On AIX, TLS model heuristic may have turned local-dynamic access into
+      // initial-exec access.
+      PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
+      if (Model == TLSModel::LocalDynamic && FuncInfo->isAIXFuncUseTLSIE()) {
+        LLVM_DEBUG(
+            dbgs() << "Current function use IE access for default LD vars.\n");
+        return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
+      }
       llvm_unreachable("Only expecting local-exec or initial-exec accesses!");
     }
     // For GD TLS access on AIX, we have two TOC entries for the symbol (one for
@@ -2950,7 +2958,11 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     // Setup the csect for the current TC entry. If the variant kind is
     // VK_PPC_AIX_TLSGDM the entry represents the region handle, we create a
     // new symbol to prefix the name with a dot.
-    if (I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM) {
+    // If TLS model heuristic is turned on, create a new symbol to prefix the
+    // name with a dot.
+    if (I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM ||
+        (Subtarget->hasAIXShLibTLSModelHeuristic() &&
+         I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD)) {
       SmallString<128> Name;
       StringRef Prefix = ".";
       Name += Prefix;

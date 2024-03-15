@@ -141,6 +141,11 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
                          "-data-sections.\n",
                          false);
   }
+
+  if (HasAIXShLibTLSModelHeuristic && (!TargetTriple.isOSAIX() || !IsPPC64))
+    report_fatal_error("The aix-shared-library-tls-model-heuristic attribute "
+                       "is only supported on AIX in 64-bit mode.\n",
+                       false);
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }
