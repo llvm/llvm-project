@@ -329,6 +329,12 @@ def FeatureAIXLocalExecTLS :
                    "Produce a TOC-free local-exec TLS sequence for this function "
                    "for 64-bit AIX">;
 
+def FeatureAIXSharedLibraryTLSModelHeuristic :
+  SubtargetFeature<"aix-shared-library-tls-model-heuristic",
+                   "HasAIXShLibTLSModelHeuristic", "true",
+                   "Tune TLS model at function level in shared library loaded "
+                   "with the main program (for 64-bit AIX only)">;
+
 def FeaturePredictableSelectIsExpensive :
   SubtargetFeature<"predictable-select-expensive",
                    "PredictableSelectIsExpensive",
