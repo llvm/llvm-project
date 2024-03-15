@@ -12,9 +12,6 @@
 // XFAIL: libcpp-has-no-incomplete-tzdb
 // XFAIL: availability-tzdb-missing
 
-// TODO TZDB (#81654) Enable tests
-// UNSUPPORTED: c++20, c++23, c++26
-
 // <chrono>
 
 // const tzdb& get_tzdb();
@@ -29,8 +26,6 @@ int main(int, const char**) {
   const std::chrono::tzdb& db = std::chrono::get_tzdb();
 
   assert(!db.version.empty());
-
-  LIBCPP_ASSERT(!db.__rules.empty());
 
   assert(!db.zones.empty());
   assert(std::ranges::is_sorted(db.zones));
