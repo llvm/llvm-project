@@ -254,10 +254,10 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
     if (VD->isConstexpr())
       return true;
 
-    if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
-      return false;
-
     QualType T = VD->getType();
+    if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
+      return T->isSignedIntegerOrEnumerationType() || T->isUnsignedIntegerOrEnumerationType();
+
     if (T.isConstQualified())
       return true;
 
