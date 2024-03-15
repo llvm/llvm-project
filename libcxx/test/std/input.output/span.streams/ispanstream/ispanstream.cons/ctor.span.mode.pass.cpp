@@ -12,9 +12,9 @@
 
 //   template<class charT, class traits = char_traits<charT>>
 //   class basic_ispanstream
-//     : public basic_streambuf<charT, traits> {
+//     : public basic_istream<charT, traits> {
 
-//     // [spanbuf.cons], constructors
+//     // [ispanstream.cons], constructors
 //
 //     explicit basic_ispanstream(std::span<charT> s,
 //                                ios_base::openmode which = ios_base::in);
@@ -30,7 +30,6 @@
 #include "test_convertible.h"
 #include "test_macros.h"
 
-#include "../../helper_macros.h"
 #include "../../helper_types.h"
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
@@ -51,59 +50,76 @@ void test() {
   using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
   CharT arr[4];
-  std::span<CharT> sp{arr};
 
-  // Mode: default
+  std::span<CharT> sp{arr};
+  assert(sp.data() == arr);
+  assert(!sp.empty());
+  assert(sp.size() == 4);
+
+  // Mode: default (`in` | `out`)
   {
-    SpStream spSt(sp);
+    SpStream spSt{sp};
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
   {
-    SpStream spSt(std::as_const(sp));
+    SpStream spSt{std::as_const(sp)};
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
   // Mode: `in`
   {
-    SpStream spSt(sp, std::ios_base::in);
+    SpStream spSt{sp, std::ios_base::in};
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
   {
-    SpStream spSt(std::as_const(sp), std::ios_base::in);
+    SpStream spSt{std::as_const(sp), std::ios_base::in};
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
   // Mode `out`
   {
-    SpStream spSt(sp, std::ios_base::out);
+    SpStream spSt{sp, std::ios_base::out};
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
   }
   {
-    SpStream spSt(std::as_const(sp), std::ios_base::out);
+    SpStream spSt{std::as_const(sp), std::ios_base::out};
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
   }
   // Mode: multiple
   {
-    SpStream spSt(sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+    SpStream spSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
   }
   {
-    SpStream spSt(std::as_const(sp), std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+    SpStream spSt{std::as_const(sp), std::ios_base::in | std::ios_base::out | std::ios_base::binary};
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
+  }
+  // Mode `ate`
+  {
+    SpStream spSt{sp, std::ios_base::out | std::ios_base::ate};
+    assert(spSt.span().data() == arr);
+    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
+  }
+  {
+    SpStream spSt{std::as_const(sp), std::ios_base::out | std::ios_base::ate};
+    assert(spSt.span().data() == arr);
+    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
   }
 }
 
@@ -113,6 +129,9 @@ int main(int, char**) {
 #endif
   test_sfinae<char>();
   test_sfinae<char, constexpr_char_traits<char>>();
+#ifndef TEST_HAS_NO_NASTY_STRING
+  test<nasty_char, nasty_char_traits>();
+#endif
   test<char>();
   test<char, constexpr_char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS

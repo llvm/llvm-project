@@ -12,7 +12,7 @@
 
 //   template<class charT, class traits = char_traits<charT>>
 //   class basic_ispanstream
-//     : public basic_streambuf<charT, traits> {
+//     : public basic_istream<charT, traits> {
 
 //     // [spanbuf.cons], constructors
 //
@@ -24,7 +24,7 @@
 #include <spanstream>
 
 #include "constexpr_char_traits.h"
-#include "test_convertible.h"
+#include "nasty_string.h"
 #include "test_macros.h"
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
@@ -32,43 +32,103 @@ void test() {
   using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
   CharT arr[4];
-  std::span<CharT> sp{arr};
 
-  // Mode: default
+  std::span<CharT> sp{arr};
+  assert(sp.data() == arr);
+  assert(!sp.empty());
+  assert(sp.size() == 4);
+
+  // Mode: default (`in` | `out`)
   {
     SpStream rhsSpSt{sp};
+    assert(rhsSpSt.span().data() == arr);
+    assert(!rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 4);
+
     SpStream spSt(std::move(rhsSpSt));
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
+
+    // After move
+    assert(rhsSpSt.span().data() == arr);
+    assert(!rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 4);
   }
   // Mode: `in`
   {
     SpStream rhsSpSt{sp, std::ios_base::in};
+    assert(rhsSpSt.span().data() == arr);
+    assert(!rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 4);
+
     SpStream spSt(std::move(rhsSpSt));
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
+
+    // After move
+    assert(rhsSpSt.span().data() == arr);
+    assert(!rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 4);
   }
   // Mode `out`
   {
     SpStream rhsSpSt{sp, std::ios_base::out};
-    SpStream spSt(std::move(rhsSpSt));
+    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
+
+    SpStream spSt{std::move(rhsSpSt)};
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
+
+    // After move
+    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
   }
   // Mode: multiple
   {
     SpStream rhsSpSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    SpStream spSt(std::move(rhsSpSt));
+    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
+
+    SpStream spSt{std::move(rhsSpSt)};
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
+
+    // After move
+    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
+  }
+  // Mode `ate`
+  {
+    SpStream rhsSpSt{sp, std::ios_base::out | std::ios_base::ate};
+    assert(rhsSpSt.span().data() == arr);
+    assert(!rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 4);
+
+    SpStream spSt{std::move(rhsSpSt)};
+    assert(spSt.span().data() == arr);
+    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
+
+    // After move
+    assert(rhsSpSt.span().data() == arr);
+    assert(!rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 4);
   }
 }
 
 int main(int, char**) {
+#ifndef TEST_HAS_NO_NASTY_STRING
+  test<nasty_char, nasty_char_traits>();
+#endif
   test<char>();
   test<char, constexpr_char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
