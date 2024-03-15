@@ -122,6 +122,8 @@ bool IRNormalizer::runOnFunction(Function &F) {
   if (!PreserveOrder)
     reorderInstructions(F);
 
+  // TODO: Reorder basic blocks via a topological sort.
+
   for (auto &I : Outputs)
     nameInstruction(I);
 
