@@ -10,4 +10,3 @@ bb:
   call void (...) @llvm.experimental.deoptimize.isVoid(i32 0) [ "deopt"() ]
   ret void
 }
-
