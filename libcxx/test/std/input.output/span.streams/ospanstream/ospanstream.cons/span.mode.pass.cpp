@@ -66,7 +66,7 @@ void test() {
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
   }
-  // Mode: `ios_base::in`
+  // Mode: `in`
   {
     SpStream spSt(sp, std::ios_base::in);
     assert(spSt.span().data() == arr);
@@ -79,7 +79,7 @@ void test() {
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
   }
-  // Mode `ios_base::out`
+  // Mode `out`
   {
     SpStream spSt(sp, std::ios_base::out);
     assert(spSt.span().data() == arr);
