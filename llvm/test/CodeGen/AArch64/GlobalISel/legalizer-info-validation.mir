@@ -755,7 +755,7 @@
 # DEBUG-NEXT: G_DEBUGTRAP (opcode {{[0-9]+}}): 0 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: G_UBSANTRAP (opcode {{[0-9]+}}): 0 type indices, 1 imm index
+# DEBUG-NEXT: G_UBSANTRAP (opcode {{[0-9]+}}): 0 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_VECREDUCE_SEQ_FADD (opcode {{[0-9]+}}): 3 type indices, 0 imm indices

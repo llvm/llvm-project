@@ -1584,7 +1584,7 @@ def G_DEBUGTRAP : GenericInstruction {
 
 def G_UBSANTRAP : GenericInstruction {
   let OutOperandList = (outs);
-  let InOperandList = (ins untyped_imm_0:$kind);
+  let InOperandList = (ins i8imm:$kind);
   let hasSideEffects = true;
 }
 
