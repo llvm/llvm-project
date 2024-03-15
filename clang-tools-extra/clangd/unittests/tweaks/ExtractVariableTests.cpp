@@ -83,10 +83,10 @@ TEST_F(ExtractVariableTest, Test) {
       int y;
     };
     void foo(struct B *b) {
-      struct A a = {.[[x]]=b->y};
+      struct A a = {.x=b[[->]]y};
     }
   )cpp";
-  EXPECT_UNAVAILABLE(NoCrashDesignator);
+  EXPECT_AVAILABLE(NoCrashDesignator);
 
   ExtraArgs = {"-xobjective-c"};
   const char *AvailableObjC = R"cpp(
