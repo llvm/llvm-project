@@ -10,13 +10,8 @@
 
 // <spanstream>
 
-//   template<class charT, class traits = char_traits<charT>>
-//   class basic_spanstream
-//     : public basic_streambuf<charT, traits> {
-
-//     // [spanbuf.cons], constructors
-//
-//     basic_spanstream(basic_spanstream&& rhs);
+//   template<class charT, class traits>
+//     void swap(basic_spanstream<charT, traits>& x, basic_spanstream<charT, traits>& y);
 
 #include <cassert>
 #include <concepts>
@@ -29,23 +24,27 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpStream = std::basic_spanstream<CharT, TraitsT>;
+  using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
   CharT arr[4];
   std::span<CharT> sp{arr};
 
+  // TODO:
+
   // Mode: default
   {
     SpStream rhsSpSt{sp};
-    SpStream spSt(std::move(rhsSpSt));
+    SpStream spSt(std::span<CharT>{});
+    std::swap(spSt, rhsSpSt);
     assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
+    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
   }
   // Mode: `ios_base::in`
   {
     SpStream rhsSpSt{sp, std::ios_base::in};
-    SpStream spSt(std::move(rhsSpSt));
+    SpStream spSt(std::span<CharT>{});
+    std::swap(spSt, rhsSpSt);
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
@@ -53,7 +52,8 @@ void test() {
   // Mode `ios_base::out`
   {
     SpStream rhsSpSt{sp, std::ios_base::out};
-    SpStream spSt(std::move(rhsSpSt));
+    SpStream spSt(std::span<CharT>{});
+    std::swap(spSt, rhsSpSt);
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
@@ -61,7 +61,8 @@ void test() {
   // Mode: multiple
   {
     SpStream rhsSpSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    SpStream spSt(std::move(rhsSpSt));
+    SpStream spSt(std::span<CharT>{});
+    std::swap(spSt, rhsSpSt);
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
