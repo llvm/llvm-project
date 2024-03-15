@@ -237,8 +237,7 @@ TEST(LlvmLibcStringViewTest, FindFirstNotOf) {
 TEST(LlvmLibcStringViewTest, Contains) {
   string_view Empty;
   for (char c = 'a'; c < 'z'; ++c)
-    for (size_t i = 0; i < 256; ++i)
-      EXPECT_FALSE(Empty.contains(c));
+    EXPECT_FALSE(Empty.contains(c));
 
   string_view Tmp("abada");
   EXPECT_TRUE(Tmp.contains('a'));
