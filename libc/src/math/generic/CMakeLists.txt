@@ -1781,6 +1781,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nanf128
+  SRCS
+    nanf128.cpp
+  HDRS
+    ../nanf128.h
+  DEPENDS
+    libc.src.__support.str_to_float
+    libc.src.errno.errno
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   nextafter
   SRCS
     nextafter.cpp
