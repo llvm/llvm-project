@@ -391,8 +391,8 @@ performActions(raw_ostream &os,
   bool setDefaultSystemDesc = true;
   if (!config.getSystemDescriptionFileName().empty()) {
     std::optional<SystemDesc> desc =
-      SystemDescConfigFileParser::buildSystemDescFromConfigFile(context,
-                                                                config.getSystemDescriptionFileName());
+        SystemDescConfigFileParser::buildSystemDescFromConfigFile(
+            context, config.getSystemDescriptionFileName());
     if (desc) {
       context->setSystemDesc(*desc);
       setDefaultSystemDesc = false;

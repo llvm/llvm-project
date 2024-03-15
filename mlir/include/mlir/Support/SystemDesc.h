@@ -88,7 +88,8 @@ public:
   }
 
   /// Set property
-  DeviceDesc &setProperty(MLIRContext *context, llvm::StringRef name, int64_t iv) {
+  DeviceDesc &setProperty(MLIRContext *context, llvm::StringRef name,
+                          int64_t iv) {
     std::optional<NamedAttribute> attr = deviceProperties.getNamed(name);
     if (!attr.has_value()) {
       IntegerType int64Ty = IntegerType::get(context, 64);
@@ -99,7 +100,8 @@ public:
     return *this;
   }
 
-  DeviceDesc &setProperty(MLIRContext *context, llvm::StringRef name, double dv) {
+  DeviceDesc &setProperty(MLIRContext *context, llvm::StringRef name,
+                          double dv) {
     std::optional<NamedAttribute> attr = deviceProperties.getNamed(name);
     if (!attr.has_value()) {
       FloatType floatType = FloatType::getF64(context);
@@ -115,8 +117,10 @@ public:
     std::optional<NamedAttribute> attr = deviceProperties.getNamed(name);
     if (!attr.has_value()) {
       IntegerType int64Ty = IntegerType::get(context, 64);
-      RankedTensorType shape = RankedTensorType::get({static_cast<long>(ivv.size()), 1}, int64Ty);
-      DenseElementsAttr value = DenseElementsAttr::get(shape, llvm::ArrayRef(ivv));
+      RankedTensorType shape =
+          RankedTensorType::get({static_cast<long>(ivv.size()), 1}, int64Ty);
+      DenseElementsAttr value =
+          DenseElementsAttr::get(shape, llvm::ArrayRef(ivv));
       deviceProperties.append(name, value);
     } else
       llvm::report_fatal_error("Duplicate device property name found:" + name);
@@ -128,8 +132,10 @@ public:
     std::optional<NamedAttribute> attr = deviceProperties.getNamed(name);
     if (!attr.has_value()) {
       FloatType float64Ty = FloatType::getF64(context);
-      RankedTensorType shape = RankedTensorType::get({static_cast<long>(idv.size()), 1}, float64Ty);
-      DenseElementsAttr value = DenseElementsAttr::get(shape, llvm::ArrayRef(idv));
+      RankedTensorType shape =
+          RankedTensorType::get({static_cast<long>(idv.size()), 1}, float64Ty);
+      DenseElementsAttr value =
+          DenseElementsAttr::get(shape, llvm::ArrayRef(idv));
       deviceProperties.append(name, value);
     } else
       llvm::report_fatal_error("Duplicate device property name found:" + name);
@@ -137,7 +143,8 @@ public:
   }
 
   // We provide convenience interface to handle int/float value as string
-  DeviceDesc &setProperty(MLIRContext *context, llvm::StringRef name, const std::string &json_value) {
+  DeviceDesc &setProperty(MLIRContext *context, llvm::StringRef name,
+                          const std::string &json_value) {
     if (json_value.length() > 0 && json_value[0] == '[') {
       // Parse as an array
       llvm::Expected<std::vector<int64_t>> ivv =
@@ -245,7 +252,8 @@ public:
   }
   void setL1CacheSizeInBytes(MLIRContext *context, int64_t value) {
     // Temporarily use int override until we support size_t
-    this->setProperty(context, DeviceDesc::getCPUL1CacheSizeInBytesKeyName(), value);
+    this->setProperty(context, DeviceDesc::getCPUL1CacheSizeInBytesKeyName(),
+                      value);
   }
   std::optional<int64_t> getConvAndMatMulBlockingFactor() const {
     if (std::optional<int64_t> v = this->getPropertyValueAsInt(
@@ -256,8 +264,8 @@ public:
   }
   void setConvAndMatMulBlockingFactor(MLIRContext *context, int64_t value) {
     // Temporarily use int override until we support size_t
-    this->setProperty(context, DeviceDesc::getConvAndMatMulBlockingFactorKeyName(),
-                      value);
+    this->setProperty(
+        context, DeviceDesc::getConvAndMatMulBlockingFactorKeyName(), value);
   }
   std::optional<int64_t> getMatMulTileSizeInBytes() const {
     if (std::optional<int64_t> v = this->getPropertyValueAsInt(
@@ -268,7 +276,8 @@ public:
   }
   void setMatMulTileSizeInBytes(MLIRContext *context, int64_t value) {
     // Temporarily use int override until we support size_t
-    this->setProperty(context, DeviceDesc::getMatMulTileSizeInBytesKeyName(), value);
+    this->setProperty(context, DeviceDesc::getMatMulTileSizeInBytesKeyName(),
+                      value);
   }
   std::optional<int64_t> getCanonicalizerMaxNumRewrites() const {
     if (std::optional<int64_t> v = this->getPropertyValueAsInt(
@@ -278,8 +287,8 @@ public:
     return std::nullopt;
   }
   void setCanonicalizerMaxNumRewrites(MLIRContext *context, int64_t value) {
-    this->setProperty(context, DeviceDesc::getCanonicalizerMaxNumRewritesKeyName(),
-                      value);
+    this->setProperty(
+        context, DeviceDesc::getCanonicalizerMaxNumRewritesKeyName(), value);
   }
   std::optional<int64_t> getCanonicalizerMaxIterations() const {
     if (std::optional<int64_t> v = this->getPropertyValueAsInt(
@@ -289,8 +298,8 @@ public:
     return std::nullopt;
   }
   void setCanonicalizerMaxIterations(MLIRContext *context, int64_t value) {
-    this->setProperty(context, DeviceDesc::getCanonicalizerMaxIterationsKeyName(),
-                      value);
+    this->setProperty(
+        context, DeviceDesc::getCanonicalizerMaxIterationsKeyName(), value);
   }
   std::optional<int64_t> getMaxVectorWidth() const {
     if (std::optional<int64_t> v = this->getPropertyValueAsInt(
@@ -321,12 +330,8 @@ private:
 class SystemDesc {
 public:
   SystemDesc() = default;
-  SystemDesc(const SystemDesc &desc) {
-    this->deviceDescs = desc.deviceDescs;
-  }
-  void operator=(const SystemDesc &rhs) {
-    this->deviceDescs = rhs.deviceDescs;
-  }
+  SystemDesc(const SystemDesc &desc) { this->deviceDescs = desc.deviceDescs; }
+  void operator=(const SystemDesc &rhs) { this->deviceDescs = rhs.deviceDescs; }
 
   /// Insert a new device description
   SystemDesc &addDeviceDesc(const DeviceDesc &desc) {
@@ -475,34 +480,37 @@ private:
 //                     Config file readers
 // ---------------------------------------------------------------------------
 namespace impl {
-  class SystemDescJSONConfigParser {
-  public:
-    /// Build SystemDesc by parsing input config file in JSON format.
-    /// Returns a valid SystemDesc if parsing is successful; otherwise
-    /// returns std::nullopt.
-    static std::optional<SystemDesc> buildSystemDescFromConfigFile(
-      MLIRContext *context, llvm::StringRef filename);
+class SystemDescJSONConfigParser {
+public:
+  /// Build SystemDesc by parsing input config file in JSON format.
+  /// Returns a valid SystemDesc if parsing is successful; otherwise
+  /// returns std::nullopt.
+  static std::optional<SystemDesc>
+  buildSystemDescFromConfigFile(MLIRContext *context, llvm::StringRef filename);
 
-  private:
-    /// We represent DeviceDesc in JSON as a key-value pairs of strings.
-    using DeviceDescJSONTy = std::map<std::string, std::string>;
+private:
+  /// We represent DeviceDesc in JSON as a key-value pairs of strings.
+  using DeviceDescJSONTy = std::map<std::string, std::string>;
 
-    /// A utility function to parse device description entry in JSON format
-    /// Returns valid DeviceDesc if parsing is successful; otherwise returns
-    /// std::nullopt.
-    static std::optional<DeviceDesc> buildDeviceDescFromConfigFile(MLIRContext *context,
-      const DeviceDescJSONTy &device_desc_in_json);
-  };
-}
+  /// A utility function to parse device description entry in JSON format
+  /// Returns valid DeviceDesc if parsing is successful; otherwise returns
+  /// std::nullopt.
+  static std::optional<DeviceDesc>
+  buildDeviceDescFromConfigFile(MLIRContext *context,
+                                const DeviceDescJSONTy &device_desc_in_json);
+};
+} // namespace impl
 
 class SystemDescConfigFileParser {
 public:
   /// Build SystemDesc by parsing input config file. Returns valid SystemDesc
   /// if parsing is successful; otherwise returns std::nullopt.
-  static std::optional<SystemDesc> buildSystemDescFromConfigFile(
-    MLIRContext *context, llvm::StringRef filename) {
-      // Once we support more formats, we can accept format as the input argument.
-      return impl::SystemDescJSONConfigParser::buildSystemDescFromConfigFile(context, filename);
+  static std::optional<SystemDesc>
+  buildSystemDescFromConfigFile(MLIRContext *context,
+                                llvm::StringRef filename) {
+    // Once we support more formats, we can accept format as the input argument.
+    return impl::SystemDescJSONConfigParser::buildSystemDescFromConfigFile(
+        context, filename);
   }
 };
 
