@@ -1419,7 +1419,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse Tensor Debugging Operations.
+// Sparse Tensor Debugging and Test-Only Operations.
 //===----------------------------------------------------------------------===//
 
 def SparseTensor_PrintOp : SparseTensor_Op<"print">,
@@ -1438,6 +1438,17 @@ def SparseTensor_PrintOp : SparseTensor_Op<"print">,
     ```
   }];
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
+}
+
+def SparseTensor_HasRuntimeLibraryOp
+    : SparseTensor_Op<"has_runtime_library", []>, Results<(outs I1:$result)> {
+  string summary = "Indicates whether running in runtime/codegen mode";
+  string description = [{
+    Returns a boolean value that indicates whether the sparse compiler runs in
+    runtime library mode or not. For testing only: This op is useful for writing
+    test cases that require different IR depending on runtime/codegen mode.
+  }];
+  let assemblyFormat = "attr-dict";
 }
 
 #endif // SPARSETENSOR_OPS
