@@ -10686,6 +10686,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, llvm::ConstantInt::get(Int32Ty, HintID));
   }
 
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_trap) {
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_break);
+    llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateCall(F, Builder.CreateZExt(Arg, CGM.Int32Ty));
+  }
+
   if (BuiltinID == clang::AArch64::BI__builtin_arm_get_sme_state) {
     // Create call to __arm_sme_state and store the results to the two pointers.
     CallInst *CI = EmitRuntimeCall(CGM.CreateRuntimeFunction(
@@ -18056,6 +18062,20 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/Op0->getType(), Intrinsic::dx_frac,
         ArrayRef<Value *>{Op0}, nullptr, "dx.frac");
   }
+  case Builtin::BI__builtin_hlsl_elementwise_isinf: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    llvm::Type *Xty = Op0->getType();
+    llvm::Type *retType = llvm::Type::getInt1Ty(this->getLLVMContext());
+    if (Xty->isVectorTy()) {
+      auto *XVecTy = E->getArg(0)->getType()->getAs<VectorType>();
+      retType = llvm::VectorType::get(
+          retType, ElementCount::getFixed(XVecTy->getNumElements()));
+    }
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("isinf operand must have a float representation");
+    return Builder.CreateIntrinsic(retType, Intrinsic::dx_isinf,
+                                   ArrayRef<Value *>{Op0}, nullptr, "dx.isinf");
+  }
   case Builtin::BI__builtin_hlsl_mad: {
     Value *M = EmitScalarExpr(E->getArg(0));
     Value *A = EmitScalarExpr(E->getArg(1));
@@ -18082,6 +18102,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         /*ReturnType=*/Op0->getType(), Intrinsic::dx_rcp,
         ArrayRef<Value *>{Op0}, nullptr, "dx.rcp");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_rsqrt: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("rsqrt operand must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Op0->getType(), Intrinsic::dx_rsqrt,
+        ArrayRef<Value *>{Op0}, nullptr, "dx.rsqrt");
   }
   }
   return nullptr;
