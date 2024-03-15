@@ -17,6 +17,7 @@
 #include "internal-unit.h"
 #include "io-error.h"
 #include "flang/Common/optional.h"
+#include "flang/Common/reference-wrapper.h"
 #include "flang/Common/visit.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
@@ -210,39 +211,47 @@ public:
   }
 
 private:
-  std::variant<std::reference_wrapper<OpenStatementState>,
-      std::reference_wrapper<CloseStatementState>,
-      std::reference_wrapper<NoopStatementState>,
-      std::reference_wrapper<
+  std::variant<Fortran::common::reference_wrapper<OpenStatementState>,
+      Fortran::common::reference_wrapper<CloseStatementState>,
+      Fortran::common::reference_wrapper<NoopStatementState>,
+      Fortran::common::reference_wrapper<
           InternalFormattedIoStatementState<Direction::Output>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
           InternalFormattedIoStatementState<Direction::Input>>,
-      std::reference_wrapper<InternalListIoStatementState<Direction::Output>>,
-      std::reference_wrapper<InternalListIoStatementState<Direction::Input>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
+          InternalListIoStatementState<Direction::Output>>,
+      Fortran::common::reference_wrapper<
+          InternalListIoStatementState<Direction::Input>>,
+      Fortran::common::reference_wrapper<
           ExternalFormattedIoStatementState<Direction::Output>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
           ExternalFormattedIoStatementState<Direction::Input>>,
-      std::reference_wrapper<ExternalListIoStatementState<Direction::Output>>,
-      std::reference_wrapper<ExternalListIoStatementState<Direction::Input>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
+          ExternalListIoStatementState<Direction::Output>>,
+      Fortran::common::reference_wrapper<
+          ExternalListIoStatementState<Direction::Input>>,
+      Fortran::common::reference_wrapper<
           ExternalUnformattedIoStatementState<Direction::Output>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
           ExternalUnformattedIoStatementState<Direction::Input>>,
-      std::reference_wrapper<ChildFormattedIoStatementState<Direction::Output>>,
-      std::reference_wrapper<ChildFormattedIoStatementState<Direction::Input>>,
-      std::reference_wrapper<ChildListIoStatementState<Direction::Output>>,
-      std::reference_wrapper<ChildListIoStatementState<Direction::Input>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
+          ChildFormattedIoStatementState<Direction::Output>>,
+      Fortran::common::reference_wrapper<
+          ChildFormattedIoStatementState<Direction::Input>>,
+      Fortran::common::reference_wrapper<
+          ChildListIoStatementState<Direction::Output>>,
+      Fortran::common::reference_wrapper<
+          ChildListIoStatementState<Direction::Input>>,
+      Fortran::common::reference_wrapper<
           ChildUnformattedIoStatementState<Direction::Output>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
           ChildUnformattedIoStatementState<Direction::Input>>,
-      std::reference_wrapper<InquireUnitState>,
-      std::reference_wrapper<InquireNoUnitState>,
-      std::reference_wrapper<InquireUnconnectedFileState>,
-      std::reference_wrapper<InquireIOLengthState>,
-      std::reference_wrapper<ExternalMiscIoStatementState>,
-      std::reference_wrapper<ErroneousIoStatementState>>
+      Fortran::common::reference_wrapper<InquireUnitState>,
+      Fortran::common::reference_wrapper<InquireNoUnitState>,
+      Fortran::common::reference_wrapper<InquireUnconnectedFileState>,
+      Fortran::common::reference_wrapper<InquireIOLengthState>,
+      Fortran::common::reference_wrapper<ExternalMiscIoStatementState>,
+      Fortran::common::reference_wrapper<ErroneousIoStatementState>>
       u_;
 };
 
