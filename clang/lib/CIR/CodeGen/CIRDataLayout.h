@@ -30,9 +30,18 @@ public:
 
   // `useABI` is `true` if not using prefered alignment.
   unsigned getAlignment(mlir::Type ty, bool useABI) const {
+    if (llvm::isa<mlir::cir::StructType>(ty)) {
+      auto sTy = ty.cast<mlir::cir::StructType>();
+      if (sTy.getPacked() && useABI)
+        return 1;
+    } else if (llvm::isa<mlir::cir::ArrayType>(ty)) {
+      return getAlignment(ty.cast<mlir::cir::ArrayType>().getEltType(), useABI);
+    }
+
     return useABI ? layout.getTypeABIAlignment(ty)
                   : layout.getTypePreferredAlignment(ty);
   }
+
   unsigned getABITypeAlign(mlir::Type ty) const {
     return getAlignment(ty, true);
   }
@@ -60,7 +69,7 @@ public:
   /// returns 12 or 16 for x86_fp80, depending on alignment.
   unsigned getTypeAllocSize(mlir::Type Ty) const {
     // Round up to the next alignment boundary.
-    return llvm::alignTo(getTypeStoreSize(Ty), layout.getTypeABIAlignment(Ty));
+    return llvm::alignTo(getTypeStoreSize(Ty), getABITypeAlign(Ty));
   }
 
   unsigned getPointerTypeSizeInBits(mlir::Type Ty) const {

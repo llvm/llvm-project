@@ -378,6 +378,9 @@ mlir::Attribute ConstantAggregateBuilder::buildFrom(
   ArrayRef<mlir::Attribute> UnpackedElems = Elems;
   llvm::SmallVector<mlir::Attribute, 32> UnpackedElemStorage;
   if (DesiredSize < AlignedSize || DesiredSize.alignTo(Align) != DesiredSize) {
+    NaturalLayout = false;
+    Packed = true;
+  } else if (DesiredSize > AlignedSize) {
     llvm_unreachable("NYI");
   }
 
