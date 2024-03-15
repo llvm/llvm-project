@@ -709,6 +709,8 @@ bool MLIRContext::isOperationRegistered(StringRef name) {
 
 SystemDesc &MLIRContext::getSystemDesc() { return impl->system_desc; }
 
+void MLIRContext::setSystemDesc(const SystemDesc& desc) { impl->system_desc = desc; }
+
 void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
   auto &impl = context->getImpl();
   assert(impl.multiThreadedExecutionContext == 0 &&
