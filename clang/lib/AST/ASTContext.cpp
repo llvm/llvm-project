@@ -3122,6 +3122,50 @@ QualType ASTContext::removePtrSizeAddrSpace(QualType T) const {
   return T;
 }
 
+QualType
+ASTContext::adjustType(QualType Orig,
+                       llvm::function_ref<QualType(QualType)> Adjust) const {
+  switch (Orig->getTypeClass()) {
+  case Type::Attributed: {
+    const auto *AT = dyn_cast<AttributedType>(Orig);
+    return getAttributedType(AT->getAttrKind(),
+                             adjustType(AT->getModifiedType(), Adjust),
+                             adjustType(AT->getEquivalentType(), Adjust));
+  }
+
+  case Type::BTFTagAttributed: {
+    const auto *BTFT = dyn_cast<BTFTagAttributedType>(Orig);
+    return getBTFTagAttributedType(BTFT->getAttr(),
+                                   adjustType(BTFT->getWrappedType(), Adjust));
+  }
+
+  case Type::Elaborated: {
+    const auto *ET = cast<ElaboratedType>(Orig);
+    return getElaboratedType(ET->getKeyword(), ET->getQualifier(),
+                             adjustType(ET->getNamedType(), Adjust));
+  }
+
+  case Type::Paren:
+    return getParenType(
+        adjustType(cast<ParenType>(Orig)->getInnerType(), Adjust));
+
+  case Type::Adjusted: {
+    const auto *AT = cast<AdjustedType>(Orig);
+    return getAdjustedType(AT->getOriginalType(),
+                           adjustType(AT->getAdjustedType(), Adjust));
+  }
+
+  case Type::MacroQualified: {
+    const auto *MQT = cast<MacroQualifiedType>(Orig);
+    return getMacroQualifiedType(adjustType(MQT->getUnderlyingType(), Adjust),
+                                 MQT->getMacroIdentifier());
+  }
+
+  default:
+    return Adjust(Orig);
+  }
+}
+
 const FunctionType *ASTContext::adjustFunctionType(const FunctionType *T,
                                                    FunctionType::ExtInfo Info) {
   if (T->getExtInfo() == Info)
@@ -3142,26 +3186,11 @@ const FunctionType *ASTContext::adjustFunctionType(const FunctionType *T,
 
 QualType ASTContext::adjustFunctionResultType(QualType FunctionType,
                                               QualType ResultType) {
-  // Might be wrapped in a macro qualified type.
-  if (const auto *MQT = dyn_cast<MacroQualifiedType>(FunctionType)) {
-    return getMacroQualifiedType(
-        adjustFunctionResultType(MQT->getUnderlyingType(), ResultType),
-        MQT->getMacroIdentifier());
-  }
-
-  // Might have a calling-convention attribute.
-  if (const auto *AT = dyn_cast<AttributedType>(FunctionType)) {
-    return getAttributedType(
-        AT->getAttrKind(),
-        adjustFunctionResultType(AT->getModifiedType(), ResultType),
-        adjustFunctionResultType(AT->getEquivalentType(), ResultType));
-  }
-
-  // Anything else must be a function type. Rebuild it with the new return
-  // value.
-  const auto *FPT = FunctionType->castAs<FunctionProtoType>();
-  return getFunctionType(ResultType, FPT->getParamTypes(),
-                         FPT->getExtProtoInfo());
+  return adjustType(FunctionType, [&](QualType Orig) {
+    const auto *FPT = Orig->castAs<FunctionProtoType>();
+    return getFunctionType(ResultType, FPT->getParamTypes(),
+                           FPT->getExtProtoInfo());
+  });
 }
 
 void ASTContext::adjustDeducedFunctionResultType(FunctionDecl *FD,
@@ -3184,30 +3213,11 @@ void ASTContext::adjustDeducedFunctionResultType(FunctionDecl *FD,
 /// and preserved. Other type sugar (for instance, typedefs) is not.
 QualType ASTContext::getFunctionTypeWithExceptionSpec(
     QualType Orig, const FunctionProtoType::ExceptionSpecInfo &ESI) const {
-  // Might have some parens.
-  if (const auto *PT = dyn_cast<ParenType>(Orig))
-    return getParenType(
-        getFunctionTypeWithExceptionSpec(PT->getInnerType(), ESI));
-
-  // Might be wrapped in a macro qualified type.
-  if (const auto *MQT = dyn_cast<MacroQualifiedType>(Orig))
-    return getMacroQualifiedType(
-        getFunctionTypeWithExceptionSpec(MQT->getUnderlyingType(), ESI),
-        MQT->getMacroIdentifier());
-
-  // Might have a calling-convention attribute.
-  if (const auto *AT = dyn_cast<AttributedType>(Orig))
-    return getAttributedType(
-        AT->getAttrKind(),
-        getFunctionTypeWithExceptionSpec(AT->getModifiedType(), ESI),
-        getFunctionTypeWithExceptionSpec(AT->getEquivalentType(), ESI));
-
-  // Anything else must be a function type. Rebuild it with the new exception
-  // specification.
-  const auto *Proto = Orig->castAs<FunctionProtoType>();
-  return getFunctionType(
-      Proto->getReturnType(), Proto->getParamTypes(),
-      Proto->getExtProtoInfo().withExceptionSpec(ESI));
+  return adjustType(Orig, [&](QualType Ty) {
+    const auto *Proto = Ty->castAs<FunctionProtoType>();
+    return getFunctionType(Proto->getReturnType(), Proto->getParamTypes(),
+                           Proto->getExtProtoInfo().withExceptionSpec(ESI));
+  });
 }
 
 bool ASTContext::hasSameFunctionTypeIgnoringExceptionSpec(QualType T,
@@ -4799,7 +4809,7 @@ QualType ASTContext::getAttributedType(attr::Kind attrKind,
 }
 
 QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
-                                             QualType Wrapped) {
+                                             QualType Wrapped) const {
   llvm::FoldingSetNodeID ID;
   BTFTagAttributedType::Profile(ID, Wrapped, BTFAttr);
 
