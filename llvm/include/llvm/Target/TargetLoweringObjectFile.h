@@ -14,7 +14,6 @@
 #ifndef LLVM_TARGET_TARGETLOWERINGOBJECTFILE_H
 #define LLVM_TARGET_TARGETLOWERINGOBJECTFILE_H
 
-#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegister.h"
 #include <cstdint>
@@ -257,9 +256,8 @@ public:
   /// On targets that support TOC entries, return a section for the entry given
   /// the symbol it refers to.
   /// TODO: Implement this interface for existing ELF targets.
-  virtual MCSection *
-  getSectionForTOCEntry(const MCSymbol *S, const TargetMachine &TM,
-                        const MCSymbolRefExpr::VariantKind VK) const {
+  virtual MCSection *getSectionForTOCEntry(const MCSymbol *S,
+                                           const TargetMachine &TM) const {
     return nullptr;
   }
 

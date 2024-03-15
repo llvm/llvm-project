@@ -358,52 +358,39 @@ entry:
 ; SMALL-NEXT:   .tc _Renamed..5f24__TLSML[TC],_Renamed..5f24__TLSML[TC]@ml
 ; SMALL-NEXT:   .rename _Renamed..5f24__TLSML[TC],"_$TLSML"
 ; SMALL:        [[TGInitL]]:
-; SMALL-NEXT:   .tc _Renamed..5f24__TLSLD.TGInit[TC],TGInit[TL]@ld
-; SMALL-NEXT:   .rename _Renamed..5f24__TLSLD.TGInit[TC],"TGInit"
+; SMALL-NEXT:   .tc TGInit[TC],TGInit[TL]@ld
 ; SMALL:        [[TGUninitL]]:
-; SMALL-NEXT:   .tc _Renamed..5f24__TLSLD.TGUninit[TC],TGUninit[TL]@ld
-; SMALL-NEXT:   .rename _Renamed..5f24__TLSLD.TGUninit[TC],"TGUninit"
+; SMALL-NEXT:   .tc TGUninit[TC],TGUninit[TL]@ld
 ; SMALL:        [[TIInitL]]:
-; SMALL-NEXT:   .tc _Renamed..5f24__TLSLD.TIInit[TC],TIInit[TL]@ld
-; SMALL-NEXT:   .rename _Renamed..5f24__TLSLD.TIInit[TC],"TIInit"
+; SMALL-NEXT:   .tc TIInit[TC],TIInit[TL]@ld
 ; SMALL:        [[TIUninitL]]:
-; SMALL-NEXT:   .tc _Renamed..5f24__TLSLD.TIUninit[TC],TIUninit[UL]@ld
-; SMALL-NEXT:   .rename _Renamed..5f24__TLSLD.TIUninit[TC],"TIUninit"
+; SMALL-NEXT:   .tc TIUninit[TC],TIUninit[UL]@ld
 ; SMALL:        [[TWInitL]]:
-; SMALL-NEXT:   .tc _Renamed..5f24__TLSLD.TWInit[TC],TWInit[TL]@ld
-; SMALL-NEXT:   .rename _Renamed..5f24__TLSLD.TWInit[TC],"TWInit"
+; SMALL-NEXT:   .tc TWInit[TC],TWInit[TL]@ld
 ; SMALL:        [[TWUninitL]]:
-; SMALL-NEXT:   .tc _Renamed..5f24__TLSLD.TWUninit[TC],TWUninit[TL]@ld
-; SMALL-NEXT:   .rename _Renamed..5f24__TLSLD.TWUninit[TC],"TWUninit"
+; SMALL-NEXT:   .tc TWUninit[TC],TWUninit[TL]@ld
 
 ; LARGE64:        [[ModuleHandleL]]:
 ; LARGE64-NEXT:   .tc _Renamed..5f24__TLSML[TC],_Renamed..5f24__TLSML[TC]@ml
 ; LARGE64-NEXT:   .rename _Renamed..5f24__TLSML[TC],"_$TLSML"
 ; LARGE64:        [[TGInitL]]:
-; LARGE64-NEXT:   .tc _Renamed..5f24__TLSLD.TGInit[TE],TGInit[TL]@ld
-; LARGE64-NEXT:   .rename _Renamed..5f24__TLSLD.TGInit[TE],"TGInit"
+; LARGE64-NEXT:   .tc TGInit[TE],TGInit[TL]@ld
 ;
 ; LARGE32:        [[TGInitL]]:
-; LARGE32-NEXT:   .tc _Renamed..5f24__TLSLD.TGInit[TE],TGInit[TL]@ld
-; LARGE32-NEXT:   .rename _Renamed..5f24__TLSLD.TGInit[TE],"TGInit"
+; LARGE32-NEXT:   .tc TGInit[TE],TGInit[TL]@ld
 ; LARGE32:        [[ModuleHandleL]]:
 ; LARGE32-NEXT:   .tc _Renamed..5f24__TLSML[TC],_Renamed..5f24__TLSML[TC]@ml
 ; LARGE32-NEXT:   .rename _Renamed..5f24__TLSML[TC],"_$TLSML"
 ;
 ; LARGE:        [[TGUninitL]]:
-; LARGE-NEXT:   .tc _Renamed..5f24__TLSLD.TGUninit[TE],TGUninit[TL]@ld
-; LARGE-NEXT:   .rename _Renamed..5f24__TLSLD.TGUninit[TE],"TGUninit"
+; LARGE-NEXT:   .tc TGUninit[TE],TGUninit[TL]@ld
 ; LARGE:        [[TIInitL]]:
-; LARGE-NEXT:   .tc _Renamed..5f24__TLSLD.TIInit[TE],TIInit[TL]@ld
-; LARGE-NEXT:   .rename _Renamed..5f24__TLSLD.TIInit[TE],"TIInit"
+; LARGE-NEXT:   .tc TIInit[TE],TIInit[TL]@ld
 ; LARGE:        [[TIUninitL]]:
-; LARGE-NEXT:   .tc _Renamed..5f24__TLSLD.TIUninit[TE],TIUninit[UL]@ld
-; LARGE-NEXT:   .rename _Renamed..5f24__TLSLD.TIUninit[TE],"TIUninit"
+; LARGE-NEXT:   .tc TIUninit[TE],TIUninit[UL]@ld
 ; LARGE:        [[TWInitL]]:
-; LARGE-NEXT:   .tc _Renamed..5f24__TLSLD.TWInit[TE],TWInit[TL]@ld
-; LARGE-NEXT:   .rename _Renamed..5f24__TLSLD.TWInit[TE],"TWInit"
+; LARGE-NEXT:   .tc TWInit[TE],TWInit[TL]@ld
 ; LARGE:        [[TWUninitL]]:
-; LARGE-NEXT:   .tc _Renamed..5f24__TLSLD.TWUninit[TE],TWUninit[TL]@ld
-; LARGE-NEXT:   .rename _Renamed..5f24__TLSLD.TWUninit[TE],"TWUninit"
+; LARGE-NEXT:   .tc TWUninit[TE],TWUninit[TL]@ld
 
 declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull)

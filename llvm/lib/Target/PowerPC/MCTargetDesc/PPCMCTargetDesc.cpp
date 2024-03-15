@@ -231,20 +231,6 @@ public:
       MCSymbolXCOFF *TCSym =
           cast<MCSectionXCOFF>(Streamer.getCurrentSectionOnly())
               ->getQualNameSymbol();
-
-      // On AIX, symbol accessed using TLS local-dynamic model has been renamed
-      // by adding prefix "_$TLSLD.". Do assert that it has been renamed, and
-      // then emit the .rename with the original symbol name.
-      if (Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD) {
-        assert(TCSym->hasRename());
-        OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
-           << MCSymbolRefExpr::getVariantKindName(Kind) << '\n';
-        StringRef Lhs, Rhs;
-        std::tie(Lhs, Rhs) = TCSym->getSymbolTableName().split("_$TLSLD.");
-        Streamer.emitXCOFFRenameDirective(TCSym, Rhs);
-        return;
-      }
-
       // On AIX, we have TLS variable offsets (symbol@({gd|ie|le|ld}) depending
       // on the TLS access method (or model). For the general-dynamic access
       // method, we also have region handle (symbol@m) for each variable. For
@@ -256,6 +242,7 @@ public:
           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM ||
           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE ||
           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE ||
+          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD ||
           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML)
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
            << MCSymbolRefExpr::getVariantKindName(Kind) << '\n';

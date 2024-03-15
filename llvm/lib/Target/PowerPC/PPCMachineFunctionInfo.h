@@ -150,11 +150,6 @@ private:
   /// to use SExt/ZExt flags in later optimization.
   std::vector<std::pair<Register, ISD::ArgFlagsTy>> LiveInAttrs;
 
-  /// FIXME: Flags for heuristic.
-  bool AIXFuncUseTLSLD = false;
-  bool AIXFuncUseTLSIE = false;
-  bool AIXFuncUseInitDone = false;
-
 public:
   explicit PPCFunctionInfo(const Function &F, const TargetSubtargetInfo *STI);
 
@@ -225,13 +220,6 @@ public:
 
   void setHasFastCall() { HasFastCall = true; }
   bool hasFastCall() const { return HasFastCall;}
-
-  void setAIXFuncUseInitDone() { AIXFuncUseInitDone = true; }
-  bool isAIXFuncUseInitDone() const { return AIXFuncUseInitDone; }
-  void setAIXFuncUseTLSLD() { AIXFuncUseTLSLD = true; }
-  bool isAIXFuncUseTLSLD() const { return AIXFuncUseTLSLD; }
-  void setAIXFuncUseTLSIE() { AIXFuncUseTLSIE = true; }
-  bool isAIXFuncUseTLSIE() const { return AIXFuncUseTLSIE; }
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }

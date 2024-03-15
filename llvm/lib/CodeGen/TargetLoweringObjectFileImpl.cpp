@@ -2679,17 +2679,13 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForFunctionDescriptor(
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
-    const MCSymbol *Sym, const TargetMachine &TM,
-    const MCSymbolRefExpr::VariantKind VK) const {
+    const MCSymbol *Sym, const TargetMachine &TM) const {
   // Use TE storage-mapping class when large code model is enabled so that
   // the chance of needing -bbigtoc is decreased. Also, the toc-entry for
   // EH info is never referenced directly using instructions so it can be
   // allocated with TE storage-mapping class.
   // The "_$TLSML" symbol for TLS local-dynamic mode requires XMC_TC, otherwise
   // the AIX assembler will complain.
-  // For AIX TLS local-dynamic symbol references, add fixed prefix "_$TLSLD." to
-  // force rename. Different TLS model (local-dynamic and initial-exec) in the
-  // same module can access to the same GV with the rename.
   return getContext().getXCOFFSection(
       cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(), SectionKind::getData(),
       XCOFF::CsectProperties(
@@ -2698,10 +2694,7 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
            cast<MCSymbolXCOFF>(Sym)->isEHInfo())
               ? XCOFF::XMC_TE
               : XCOFF::XMC_TC,
-          XCOFF::XTY_SD),
-      /*MultiSymbolsAllowed=*/false, /*BeginSymName=*/nullptr,
-      /*DwarfSubtypeFlags=*/std::nullopt,
-      (VK == MCSymbolRefExpr::VK_PPC_AIX_TLSLD ? "_$TLSLD." : StringRef()));
+          XCOFF::XTY_SD));
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(

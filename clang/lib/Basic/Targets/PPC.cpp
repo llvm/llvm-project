@@ -89,9 +89,6 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       IsISA3_1 = true;
     } else if (Feature == "+quadword-atomics") {
       HasQuadwordAtomics = true;
-    } else if (Feature == "+aix-use-tls-initial-exec-for-local-dynamic-in-"
-                          "shared-library") {
-      HasAIXUseTLSIEForLDInSharedLibrary = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -721,8 +718,6 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("isa-v30-instructions", IsISA3_0)
       .Case("isa-v31-instructions", IsISA3_1)
       .Case("quadword-atomics", HasQuadwordAtomics)
-      .Case("aix-use-tls-initial-exec-for-local-dynamic-in-shared-library",
-            HasAIXUseTLSIEForLDInSharedLibrary)
       .Default(false);
 }
 
