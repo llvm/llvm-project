@@ -6,17 +6,18 @@ define void @test(i8 %0) {
 ; CHECK-SAME: i8 [[TMP0:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> <i8 0, i8 poison>, i8 [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <2 x i8> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i8> [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = or i32 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i16> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i16> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i16> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i16 [[TMP5]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i16> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i16 [[TMP7]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = or i32 [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], 1
 ; CHECK-NEXT:    [[CONV9:%.*]] = trunc i32 [[SHR]] to i8
 ; CHECK-NEXT:    store i8 [[CONV9]], ptr null, align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret void
 ;
 entry:
