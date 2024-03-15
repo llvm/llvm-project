@@ -103,14 +103,6 @@ public:
     return true;
   }
 
-  InstructionCost getScalarizationOverhead(VectorType *Ty,
-                                           const APInt &DemandedElts,
-                                           bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind);
-  InstructionCost
-  getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                   ArrayRef<Type *> Tys,
-                                   TTI::TargetCostKind CostKind);
   InstructionCost getCallInstrCost(Function *F, Type *RetTy,
                                    ArrayRef<Type *> Tys,
                                    TTI::TargetCostKind CostKind);
