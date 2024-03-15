@@ -324,7 +324,6 @@ private:
   llvm::BitVector DeclarationScopeStack;
 
   const FormatStyle &Style;
-  bool IsCpp;
   const AdditionalKeywords &Keywords;
 
   llvm::Regex CommentPragmasRegex;
