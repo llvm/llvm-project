@@ -466,8 +466,8 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
               caller.getCallDescription().chevrons()[3], stmtCtx)));
 
     builder.create<fir::CUDAKernelLaunch>(
-        loc, funcType.getResults(), funcSymbolAttr, grid_x, grid_y, block_x,
-        block_y, block_z, bytes, stream, operands);
+        loc, funcType.getResults(), funcSymbolAttr, grid_x, grid_y, one,
+        block_x, block_y, block_z, bytes, stream, operands);
     callNumResults = 0;
   } else if (caller.requireDispatchCall()) {
     // Procedure call requiring a dynamic dispatch. Call is created with
