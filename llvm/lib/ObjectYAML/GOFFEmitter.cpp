@@ -252,9 +252,11 @@ void GOFFState::writeSymbol(GOFFYAML::Symbol Sym) {
     reportError("conversion error on " + Sym.Name);
   size_t SymNameLength = SymName.size();
   if (SymNameLength > GOFF::MaxDataLength)
-    reportError("symbol name is too long: " + Twine(SymNameLength));
+    reportError("symbol name is too long: " + Twine(SymNameLength) +
+                ". Max length is: " + Twine(GOFF::MaxDataLength));
 
-  GW.makeNewRecord(GOFF::RT_ESD, 69 + SymNameLength);
+  unsigned NameLengthOffset = 69;
+  GW.makeNewRecord(GOFF::RT_ESD, NameLengthOffset + SymNameLength);
   GW << binaryBe(Sym.Type)          // Symbol type
      << binaryBe(Sym.ID)            // ESDID
      << binaryBe(Sym.OwnerID)       // Owner ESDID
