@@ -3,6 +3,8 @@ def StructEpollEventPtr : PtrType<StructEpollEvent>;
 
 def StructEpollData : NamedType<"struct epoll_data">;
 
+def Pipe2fdArrayT : NamedType<"__pipe2fd_array_t">;
+
 def Linux : StandardSpec<"Linux"> {
   HeaderSpec Errno = HeaderSpec<
       "errno.h",
@@ -264,6 +266,20 @@ def Linux : StandardSpec<"Linux"> {
       ]
   >;
 
+  HeaderSpec UniStd = HeaderSpec<
+    "unistd.h",
+    [], // Macros
+    [Pipe2fdArrayT], // Types
+    [], // Enumerations
+    [
+        FunctionSpec<
+          "pipe2",
+          RetValSpec<IntType>,
+          [ArgSpec<Pipe2fdArrayT>, ArgSpec<IntType>]
+        >,
+    ]
+  >;
+
   let Headers = [
     Errno,
     SysEpoll,
@@ -272,5 +288,6 @@ def Linux : StandardSpec<"Linux"> {
     SysRandom,
     SysTime,
     Signal,
+    UniStd
   ];
 }
