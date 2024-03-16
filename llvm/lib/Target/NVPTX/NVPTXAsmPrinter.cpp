@@ -489,8 +489,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   OutStreamer->emitRawText(StringRef("{\n"));
   setAndEmitFunctionVirtualRegisters(*MF);
   // Emit initial .loc debug directive for correct relocation symbol data.
-  const DISubprogram *SP = MF->getFunction().getSubprogram();
-  if (SP) {
+  if (const DISubprogram *SP = MF->getFunction().getSubprogram()) {
     assert(SP->getUnit());
     if (!SP->getUnit()->isDebugDirectivesOnly() && MMI && MMI->hasDebugInfo())
       emitInitialRawDwarfLocDirective(*MF);
