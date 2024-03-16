@@ -76,6 +76,15 @@ def StringAPI : PublicAPI<"string.h"> {
   let Types = ["size_t"];
 }
 
+def TimeAPI : PublicAPI<"time.h"> {
+  let Types = [
+    "clock_t",
+    "time_t",
+    "struct tm",
+    "struct timespec",
+  ];
+}
+
 def UCharAPI : PublicAPI<"uchar.h"> {
   let Types = ["mbstate_t"];
 }
