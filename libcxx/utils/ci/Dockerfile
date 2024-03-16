@@ -21,7 +21,7 @@
 #  ghcr.io/libcxx/actions-builder
 #  ghcr.io/libcxx/android-buildkite-builder
 #
-# Members of the github.com/libcxx/ organizations can push new images to the CI
+# Members of the github.com/libcxx/ organizations can push new images to the CI.
 # This is done by GitHub actions in the https://github.com/libcxx/builders repo.
 #
 # ===----------------------------------------------------------------------===##
