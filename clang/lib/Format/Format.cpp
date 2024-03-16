@@ -13,44 +13,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Format/Format.h"
-#include "AffectedRangeManager.h"
-#include "BreakableToken.h"
-#include "ContinuationIndenter.h"
 #include "DefinitionBlockSeparator.h"
-#include "FormatInternal.h"
-#include "FormatToken.h"
-#include "FormatTokenLexer.h"
 #include "IntegerLiteralSeparatorFixer.h"
 #include "NamespaceEndCommentsFixer.h"
 #include "ObjCPropertyAttributeOrderFixer.h"
 #include "QualifierAlignmentFixer.h"
 #include "SortJavaScriptImports.h"
-#include "TokenAnalyzer.h"
-#include "TokenAnnotator.h"
 #include "UnwrappedLineFormatter.h"
-#include "UnwrappedLineParser.h"
 #include "UsingDeclarationsSorter.h"
-#include "WhitespaceManager.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Allocator.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/Regex.h"
-#include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Support/YAMLTraits.h"
-#include <algorithm>
-#include <memory>
-#include <mutex>
-#include <optional>
-#include <string>
-#include <unordered_map>
 
 #define DEBUG_TYPE "format-formatter"
 
