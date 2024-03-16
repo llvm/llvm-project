@@ -45,7 +45,7 @@ TEST(LlvmLibcPipe2Test, ReadAndWriteViaPipe2) {
 }
 
 TEST(LlvmLibcPipe2Test, Pipe2InvalidFlags) {
-  char invalidflags = '-1';
+  int invalidflags = O_CREAT | O_PATH | O_SYNC;
   int pipefd[2];
 
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
