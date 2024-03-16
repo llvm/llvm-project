@@ -884,14 +884,6 @@ void CXXRecordDecl::addedMember(Decl *D) {
               ? !Constructor->isImplicit()
               : (Constructor->isUserProvided() || Constructor->isExplicit()))
         data().Aggregate = false;
-
-      // A trivially relocatable class is a class:
-      // -- where no eligible copy constructor, move constructor, copy
-      // assignment operator, move assignment operator, or destructor is
-      // user-provided,
-      if (Constructor->isUserProvided() && (Constructor->isCopyConstructor() ||
-                                            Constructor->isMoveConstructor()))
-        data().IsNaturallyTriviallyRelocatable = false;
     }
   }
 
@@ -923,13 +915,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
         data().HasDeclaredCopyAssignmentWithConstParam = true;
     }
 
-    if (Method->isMoveAssignmentOperator()) {
+    if (Method->isMoveAssignmentOperator())
       SMKind |= SMF_MoveAssignment;
-    }
-
-    if (Method->isUserProvided() && (Method->isCopyAssignmentOperator() ||
-                                     Method->isMoveAssignmentOperator()))
-      data().IsNaturallyTriviallyRelocatable = false;
 
     // Keep the list of conversion functions up-to-date.
     if (auto *Conversion = dyn_cast<CXXConversionDecl>(D)) {
@@ -1526,7 +1513,6 @@ void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
   if (const auto *DD = dyn_cast<CXXDestructorDecl>(MD)) {
     if (DD->isUserProvided()) {
       data().HasIrrelevantDestructor = false;
-      data().IsNaturallyTriviallyRelocatable = false;
     }
     // If the destructor is explicitly defaulted and not trivial or not public
     // or if the destructor is deleted, we clear HasIrrelevantDestructor in
@@ -1541,6 +1527,17 @@ void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
 
     if (DD->isNoReturn())
       data().IsAnyDestructorNoReturn = true;
+  }
+
+  // A trivially relocatable class is a class:
+  // -- where no eligible copy constructor, move constructor, copy
+  // assignment operator, move assignment operator, or destructor is
+  // user-provided,
+  if (MD->isUserProvided() &&
+      (SMKind & (SMF_CopyConstructor | SMF_MoveConstructor |
+                 SMF_CopyAssignment | SMF_MoveAssignment | SMF_Destructor)) !=
+          0u) {
+    data().IsNaturallyTriviallyRelocatable = false;
   }
 
   if (!MD->isImplicit() && !MD->isUserProvided()) {
