@@ -19,6 +19,7 @@
 
 #include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -990,7 +991,7 @@ public:
     bool Changed = false;
     SmallVector<CallInst *, 16> MaybeFusableInsts;
     SmallVector<Instruction *, 16> MatrixInsts;
-    SmallSetVector<IntrinsicInst *, 16> LifetimeEnds;
+    SmallVector<IntrinsicInst *, 16> LifetimeEnds;
 
     // First, collect all instructions with shape information and candidates for
     // fusion (currently only matrix multiplies).
@@ -998,7 +999,7 @@ public:
     for (auto *BB : RPOT)
       for (Instruction &I : *BB) {
         if (match(&I, m_Intrinsic<Intrinsic::lifetime_end>()))
-          LifetimeEnds.insert(cast<IntrinsicInst>(&I));
+          LifetimeEnds.push_back(cast<IntrinsicInst>(&I));
         if (ShapeMap.find(&I) == ShapeMap.end())
           continue;
         if (match(&I, m_Intrinsic<Intrinsic::matrix_multiply>()))
@@ -1862,7 +1863,7 @@ public:
   void
   LowerMatrixMultiplyFused(CallInst *MatMul,
                            SmallPtrSetImpl<Instruction *> &FusedInsts,
-                           SmallSetVector<IntrinsicInst *, 16> &LifetimeEnds) {
+                           SmallVector<IntrinsicInst *, 16> &LifetimeEnds) {
     if (!FuseMatrix || !DT)
       return;
 
@@ -1960,24 +1961,44 @@ public:
       // conservatively correct.
       MemoryLocation Load0Loc = MemoryLocation::get(LoadOp0);
       MemoryLocation Load1Loc = MemoryLocation::get(LoadOp1);
-      for (IntrinsicInst *End : make_early_inc_range(LifetimeEnds)) {
+      BasicBlock *StoreParent = Store->getParent();
+      bool FusableOpsInSameBlock = LoadOp0->getParent() == StoreParent &&
+                                   LoadOp1->getParent() == StoreParent;
+      for (unsigned Idx = 0; Idx != LifetimeEnds.size();) {
+        IntrinsicInst *End = LifetimeEnds[Idx];
+        auto Inc = make_scope_exit([&Idx]() { Idx++; });
+        // If the lifetime.end is guaranteed to be before the loads or after the
+        // store, it won't interfere with fusion.
+        if (DT->dominates(End, LoadOp0) && DT->dominates(End, LoadOp1))
+          continue;
         if (DT->dominates(Store, End))
           continue;
+        // If all fusable ops are in the same block and the lifetime.end is in a
+        // different block, it won't interfere with fusion.
+        if (FusableOpsInSameBlock && End->getParent() != StoreParent)
+          continue;
+
+        // If the loads don't alias the lifetime.end, it won't interfere with
+        // fusion.
         MemoryLocation EndLoc = MemoryLocation::getForArgument(End, 1, nullptr);
+        if (!EndLoc.Ptr)
+          continue;
         if (AA->isNoAlias(Load0Loc, EndLoc) && AA->isNoAlias(Load1Loc, EndLoc))
           continue;
 
         // If both lifetime.end and the store are in the same block, extend the
         // lifetime until after the store, so the new lifetime covers the loads
         // we introduce later.
-        if (Store->getParent() == End->getParent()) {
+        if (End->getParent() == StoreParent) {
           End->moveAfter(Store);
           continue;
         }
 
         // Otherwise remove the conflicting lifetime.end marker.
         ToRemove.push_back(End);
-        LifetimeEnds.remove(End);
+        std::swap(LifetimeEnds[Idx], LifetimeEnds.back());
+        LifetimeEnds.pop_back();
+        Inc.release();
       }
 
       emitSIMDTiling(MatMul, LoadOp0, LoadOp1, Store, FusedInsts);
