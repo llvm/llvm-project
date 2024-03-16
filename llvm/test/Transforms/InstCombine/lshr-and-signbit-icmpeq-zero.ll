@@ -84,8 +84,7 @@ define <4 x i1> @vec_4xi32_lshr_and_signbit_eq(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i1> @vec_4xi32_lshr_and_signbit_eq_undef1(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_4xi32_lshr_and_signbit_eq_undef1(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[LSHR]], <i32 -2147483648, i32 undef, i32 -2147483648, i32 -2147483648>
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i32> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <4 x i32> [[LSHR]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %lshr = lshr <4 x i32> %x, %y
@@ -97,8 +96,7 @@ define <4 x i1> @vec_4xi32_lshr_and_signbit_eq_undef1(<4 x i32> %x, <4 x i32> %y
 define <4 x i1> @vec_4xi32_lshr_and_signbit_eq_undef2(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_4xi32_lshr_and_signbit_eq_undef2(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[LSHR]], <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i32> [[AND]], <i32 undef, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <4 x i32> [[LSHR]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %lshr = lshr <4 x i32> %x, %y
@@ -110,8 +108,7 @@ define <4 x i1> @vec_4xi32_lshr_and_signbit_eq_undef2(<4 x i32> %x, <4 x i32> %y
 define <4 x i1> @vec_4xi32_lshr_and_signbit_eq_undef3(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_4xi32_lshr_and_signbit_eq_undef3(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[LSHR]], <i32 -2147483648, i32 undef, i32 -2147483648, i32 -2147483648>
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i32> [[AND]], <i32 0, i32 0, i32 0, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <4 x i32> [[LSHR]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %lshr = lshr <4 x i32> %x, %y

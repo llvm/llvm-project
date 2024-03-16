@@ -1680,31 +1680,31 @@ define void @zext_v8i8_to_v8i64_with_add_in_sequence_in_loop(ptr %src, ptr %dst)
 ; CHECK-NEXT:    add x9, x0, #8
 ; CHECK-NEXT:  LBB17_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp d2, d4, [x9, #-8]
+; CHECK-NEXT:    ldp d2, d3, [x9, #-8]
 ; CHECK-NEXT:    add x10, x1, x8
 ; CHECK-NEXT:    ldp q6, q5, [x10, #32]
 ; CHECK-NEXT:    add x8, x8, #128
 ; CHECK-NEXT:    ldp q17, q16, [x10]
 ; CHECK-NEXT:    cmp x8, #1024
-; CHECK-NEXT:    tbl.16b v3, { v2 }, v1
+; CHECK-NEXT:    tbl.16b v4, { v2 }, v1
 ; CHECK-NEXT:    tbl.16b v2, { v2 }, v0
-; CHECK-NEXT:    tbl.16b v7, { v4 }, v1
-; CHECK-NEXT:    tbl.16b v4, { v4 }, v0
+; CHECK-NEXT:    tbl.16b v7, { v3 }, v1
+; CHECK-NEXT:    tbl.16b v3, { v3 }, v0
 ; CHECK-NEXT:    add x9, x9, #16
-; CHECK-NEXT:    uaddw2.2d v5, v5, v3
-; CHECK-NEXT:    uaddw.2d v3, v6, v3
+; CHECK-NEXT:    uaddw2.2d v5, v5, v4
+; CHECK-NEXT:    uaddw.2d v4, v6, v4
 ; CHECK-NEXT:    uaddw2.2d v6, v16, v2
 ; CHECK-NEXT:    ldp q18, q16, [x10, #96]
 ; CHECK-NEXT:    uaddw.2d v2, v17, v2
-; CHECK-NEXT:    stp q3, q5, [x10, #32]
+; CHECK-NEXT:    stp q4, q5, [x10, #32]
 ; CHECK-NEXT:    ldp q17, q5, [x10, #64]
 ; CHECK-NEXT:    uaddw2.2d v16, v16, v7
 ; CHECK-NEXT:    uaddw.2d v7, v18, v7
 ; CHECK-NEXT:    stp q2, q6, [x10]
-; CHECK-NEXT:    uaddw2.2d v3, v5, v4
-; CHECK-NEXT:    uaddw.2d v4, v17, v4
+; CHECK-NEXT:    uaddw2.2d v4, v5, v3
+; CHECK-NEXT:    uaddw.2d v3, v17, v3
 ; CHECK-NEXT:    stp q7, q16, [x10, #96]
-; CHECK-NEXT:    stp q4, q3, [x10, #64]
+; CHECK-NEXT:    stp q3, q4, [x10, #64]
 ; CHECK-NEXT:    b.ne LBB17_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret

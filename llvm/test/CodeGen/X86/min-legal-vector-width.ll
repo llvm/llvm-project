@@ -12,7 +12,7 @@
 
 ; This file primarily contains tests for specific places in X86ISelLowering.cpp that needed be made aware of the legalizer not allowing 512-bit vectors due to prefer-256-bit even though AVX512 is enabled.
 
-define dso_local void @add256(<16 x i32>* %a, <16 x i32>* %b, <16 x i32>* %c) "min-legal-vector-width"="256" {
+define dso_local void @add256(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: add256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -23,14 +23,14 @@ define dso_local void @add256(<16 x i32>* %a, <16 x i32>* %b, <16 x i32>* %c) "m
 ; CHECK-NEXT:    vmovdqa %ymm1, 32(%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %d = load <16 x i32>, <16 x i32>* %a
-  %e = load <16 x i32>, <16 x i32>* %b
+  %d = load <16 x i32>, ptr %a
+  %e = load <16 x i32>, ptr %b
   %f = add <16 x i32> %d, %e
-  store <16 x i32> %f, <16 x i32>* %c
+  store <16 x i32> %f, ptr %c
   ret void
 }
 
-define dso_local void @add512(<16 x i32>* %a, <16 x i32>* %b, <16 x i32>* %c) "min-legal-vector-width"="512" {
+define dso_local void @add512(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: add512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0
@@ -38,14 +38,14 @@ define dso_local void @add512(<16 x i32>* %a, <16 x i32>* %b, <16 x i32>* %c) "m
 ; CHECK-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %d = load <16 x i32>, <16 x i32>* %a
-  %e = load <16 x i32>, <16 x i32>* %b
+  %d = load <16 x i32>, ptr %a
+  %e = load <16 x i32>, ptr %b
   %f = add <16 x i32> %d, %e
-  store <16 x i32> %f, <16 x i32>* %c
+  store <16 x i32> %f, ptr %c
   ret void
 }
 
-define dso_local void @avg_v64i8_256(<64 x i8>* %a, <64 x i8>* %b) "min-legal-vector-width"="256" {
+define dso_local void @avg_v64i8_256(ptr %a, ptr %b) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: avg_v64i8_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm0
@@ -56,20 +56,20 @@ define dso_local void @avg_v64i8_256(<64 x i8>* %a, <64 x i8>* %b) "min-legal-ve
 ; CHECK-NEXT:    vmovdqu %ymm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %1 = load <64 x i8>, <64 x i8>* %a
-  %2 = load <64 x i8>, <64 x i8>* %b
+  %1 = load <64 x i8>, ptr %a
+  %2 = load <64 x i8>, ptr %b
   %3 = zext <64 x i8> %1 to <64 x i32>
   %4 = zext <64 x i8> %2 to <64 x i32>
   %5 = add nuw nsw <64 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <64 x i32> %5, %4
   %7 = lshr <64 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <64 x i32> %7 to <64 x i8>
-  store <64 x i8> %8, <64 x i8>* undef, align 4
+  store <64 x i8> %8, ptr undef, align 4
   ret void
 }
 
 
-define dso_local void @avg_v64i8_512(<64 x i8>* %a, <64 x i8>* %b) "min-legal-vector-width"="512" {
+define dso_local void @avg_v64i8_512(ptr %a, ptr %b) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: avg_v64i8_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0
@@ -77,19 +77,19 @@ define dso_local void @avg_v64i8_512(<64 x i8>* %a, <64 x i8>* %b) "min-legal-ve
 ; CHECK-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %1 = load <64 x i8>, <64 x i8>* %a
-  %2 = load <64 x i8>, <64 x i8>* %b
+  %1 = load <64 x i8>, ptr %a
+  %2 = load <64 x i8>, ptr %b
   %3 = zext <64 x i8> %1 to <64 x i32>
   %4 = zext <64 x i8> %2 to <64 x i32>
   %5 = add nuw nsw <64 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <64 x i32> %5, %4
   %7 = lshr <64 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <64 x i32> %7 to <64 x i8>
-  store <64 x i8> %8, <64 x i8>* undef, align 4
+  store <64 x i8> %8, ptr undef, align 4
   ret void
 }
 
-define dso_local void @pmaddwd_32_256(<32 x i16>* %APtr, <32 x i16>* %BPtr, <16 x i32>* %CPtr) "min-legal-vector-width"="256" {
+define dso_local void @pmaddwd_32_256(ptr %APtr, ptr %BPtr, ptr %CPtr) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: pmaddwd_32_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -100,19 +100,19 @@ define dso_local void @pmaddwd_32_256(<32 x i16>* %APtr, <32 x i16>* %BPtr, <16 
 ; CHECK-NEXT:    vmovdqa %ymm1, 32(%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-   %A = load <32 x i16>, <32 x i16>* %APtr
-   %B = load <32 x i16>, <32 x i16>* %BPtr
+   %A = load <32 x i16>, ptr %APtr
+   %B = load <32 x i16>, ptr %BPtr
    %a = sext <32 x i16> %A to <32 x i32>
    %b = sext <32 x i16> %B to <32 x i32>
    %m = mul nsw <32 x i32> %a, %b
    %odd = shufflevector <32 x i32> %m, <32 x i32> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
    %even = shufflevector <32 x i32> %m, <32 x i32> undef, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
    %ret = add <16 x i32> %odd, %even
-   store <16 x i32> %ret, <16 x i32>* %CPtr
+   store <16 x i32> %ret, ptr %CPtr
    ret void
 }
 
-define dso_local void @pmaddwd_32_512(<32 x i16>* %APtr, <32 x i16>* %BPtr, <16 x i32>* %CPtr) "min-legal-vector-width"="512" {
+define dso_local void @pmaddwd_32_512(ptr %APtr, ptr %BPtr, ptr %CPtr) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: pmaddwd_32_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0
@@ -120,19 +120,19 @@ define dso_local void @pmaddwd_32_512(<32 x i16>* %APtr, <32 x i16>* %BPtr, <16 
 ; CHECK-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-   %A = load <32 x i16>, <32 x i16>* %APtr
-   %B = load <32 x i16>, <32 x i16>* %BPtr
+   %A = load <32 x i16>, ptr %APtr
+   %B = load <32 x i16>, ptr %BPtr
    %a = sext <32 x i16> %A to <32 x i32>
    %b = sext <32 x i16> %B to <32 x i32>
    %m = mul nsw <32 x i32> %a, %b
    %odd = shufflevector <32 x i32> %m, <32 x i32> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
    %even = shufflevector <32 x i32> %m, <32 x i32> undef, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
    %ret = add <16 x i32> %odd, %even
-   store <16 x i32> %ret, <16 x i32>* %CPtr
+   store <16 x i32> %ret, ptr %CPtr
    ret void
 }
 
-define dso_local void @psubus_64i8_max_256(<64 x i8>* %xptr, <64 x i8>* %yptr, <64 x i8>* %zptr) "min-legal-vector-width"="256" {
+define dso_local void @psubus_64i8_max_256(ptr %xptr, ptr %yptr, ptr %zptr) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: psubus_64i8_max_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -143,16 +143,16 @@ define dso_local void @psubus_64i8_max_256(<64 x i8>* %xptr, <64 x i8>* %yptr, <
 ; CHECK-NEXT:    vmovdqa %ymm1, 32(%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %x = load <64 x i8>, <64 x i8>* %xptr
-  %y = load <64 x i8>, <64 x i8>* %yptr
+  %x = load <64 x i8>, ptr %xptr
+  %y = load <64 x i8>, ptr %yptr
   %cmp = icmp ult <64 x i8> %x, %y
   %max = select <64 x i1> %cmp, <64 x i8> %y, <64 x i8> %x
   %res = sub <64 x i8> %max, %y
-  store <64 x i8> %res, <64 x i8>* %zptr
+  store <64 x i8> %res, ptr %zptr
   ret void
 }
 
-define dso_local void @psubus_64i8_max_512(<64 x i8>* %xptr, <64 x i8>* %yptr, <64 x i8>* %zptr) "min-legal-vector-width"="512" {
+define dso_local void @psubus_64i8_max_512(ptr %xptr, ptr %yptr, ptr %zptr) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: psubus_64i8_max_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0
@@ -160,16 +160,16 @@ define dso_local void @psubus_64i8_max_512(<64 x i8>* %xptr, <64 x i8>* %yptr, <
 ; CHECK-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %x = load <64 x i8>, <64 x i8>* %xptr
-  %y = load <64 x i8>, <64 x i8>* %yptr
+  %x = load <64 x i8>, ptr %xptr
+  %y = load <64 x i8>, ptr %yptr
   %cmp = icmp ult <64 x i8> %x, %y
   %max = select <64 x i1> %cmp, <64 x i8> %y, <64 x i8> %x
   %res = sub <64 x i8> %max, %y
-  store <64 x i8> %res, <64 x i8>* %zptr
+  store <64 x i8> %res, ptr %zptr
   ret void
 }
 
-define dso_local i32 @_Z9test_charPcS_i_256(i8* nocapture readonly, i8* nocapture readonly, i32) "min-legal-vector-width"="256" {
+define dso_local i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocapture readonly, i32) "min-legal-vector-width"="256" {
 ; CHECK-SKX-LABEL: _Z9test_charPcS_i_256:
 ; CHECK-SKX:       # %bb.0: # %entry
 ; CHECK-SKX-NEXT:    movl %edx, %eax
@@ -281,13 +281,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <32 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i8, i8* %0, i64 %index
-  %5 = bitcast i8* %4 to <32 x i8>*
-  %wide.load = load <32 x i8>, <32 x i8>* %5, align 1
+  %4 = getelementptr inbounds i8, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <32 x i8>, ptr %5, align 1
   %6 = sext <32 x i8> %wide.load to <32 x i32>
-  %7 = getelementptr inbounds i8, i8* %1, i64 %index
-  %8 = bitcast i8* %7 to <32 x i8>*
-  %wide.load14 = load <32 x i8>, <32 x i8>* %8, align 1
+  %7 = getelementptr inbounds i8, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <32 x i8>, ptr %8, align 1
   %9 = sext <32 x i8> %wide.load14 to <32 x i32>
   %10 = mul nsw <32 x i32> %9, %6
   %11 = add nsw <32 x i32> %10, %vec.phi
@@ -310,7 +310,7 @@ middle.block:
   ret i32 %13
 }
 
-define dso_local i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly, i32) "min-legal-vector-width"="512" {
+define dso_local i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocapture readonly, i32) "min-legal-vector-width"="512" {
 ; CHECK-SKX-LABEL: _Z9test_charPcS_i_512:
 ; CHECK-SKX:       # %bb.0: # %entry
 ; CHECK-SKX-NEXT:    movl %edx, %eax
@@ -407,13 +407,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <32 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i8, i8* %0, i64 %index
-  %5 = bitcast i8* %4 to <32 x i8>*
-  %wide.load = load <32 x i8>, <32 x i8>* %5, align 1
+  %4 = getelementptr inbounds i8, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <32 x i8>, ptr %5, align 1
   %6 = sext <32 x i8> %wide.load to <32 x i32>
-  %7 = getelementptr inbounds i8, i8* %1, i64 %index
-  %8 = bitcast i8* %7 to <32 x i8>*
-  %wide.load14 = load <32 x i8>, <32 x i8>* %8, align 1
+  %7 = getelementptr inbounds i8, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <32 x i8>, ptr %8, align 1
   %9 = sext <32 x i8> %wide.load14 to <32 x i32>
   %10 = mul nsw <32 x i32> %9, %6
   %11 = add nsw <32 x i32> %10, %vec.phi
@@ -520,13 +520,13 @@ entry:
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.phi = phi <16 x i32> [ zeroinitializer, %entry ], [ %10, %vector.body ]
-  %0 = getelementptr inbounds [1024 x i8], [1024 x i8]* @a, i64 0, i64 %index
-  %1 = bitcast i8* %0 to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %1, align 4
+  %0 = getelementptr inbounds [1024 x i8], ptr @a, i64 0, i64 %index
+  %1 = bitcast ptr %0 to ptr
+  %wide.load = load <16 x i8>, ptr %1, align 4
   %2 = zext <16 x i8> %wide.load to <16 x i32>
-  %3 = getelementptr inbounds [1024 x i8], [1024 x i8]* @b, i64 0, i64 %index
-  %4 = bitcast i8* %3 to <16 x i8>*
-  %wide.load1 = load <16 x i8>, <16 x i8>* %4, align 4
+  %3 = getelementptr inbounds [1024 x i8], ptr @b, i64 0, i64 %index
+  %4 = bitcast ptr %3 to ptr
+  %wide.load1 = load <16 x i8>, ptr %4, align 4
   %5 = zext <16 x i8> %wide.load1 to <16 x i32>
   %6 = sub nsw <16 x i32> %2, %5
   %7 = icmp sgt <16 x i32> %6, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
@@ -631,13 +631,13 @@ entry:
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.phi = phi <16 x i32> [ zeroinitializer, %entry ], [ %10, %vector.body ]
-  %0 = getelementptr inbounds [1024 x i8], [1024 x i8]* @a, i64 0, i64 %index
-  %1 = bitcast i8* %0 to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %1, align 4
+  %0 = getelementptr inbounds [1024 x i8], ptr @a, i64 0, i64 %index
+  %1 = bitcast ptr %0 to ptr
+  %wide.load = load <16 x i8>, ptr %1, align 4
   %2 = zext <16 x i8> %wide.load to <16 x i32>
-  %3 = getelementptr inbounds [1024 x i8], [1024 x i8]* @b, i64 0, i64 %index
-  %4 = bitcast i8* %3 to <16 x i8>*
-  %wide.load1 = load <16 x i8>, <16 x i8>* %4, align 4
+  %3 = getelementptr inbounds [1024 x i8], ptr @b, i64 0, i64 %index
+  %4 = bitcast ptr %3 to ptr
+  %wide.load1 = load <16 x i8>, ptr %4, align 4
   %5 = zext <16 x i8> %wide.load1 to <16 x i32>
   %6 = sub nsw <16 x i32> %2, %5
   %7 = icmp sgt <16 x i32> %6, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
@@ -661,7 +661,7 @@ middle.block:
   ret i32 %12
 }
 
-define dso_local void @sbto16f32_256(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-width"="256" {
+define dso_local void @sbto16f32_256(<16 x i16> %a, ptr %res) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: sbto16f32_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -676,11 +676,11 @@ define dso_local void @sbto16f32_256(<16 x i16> %a, <16 x float>* %res) "min-leg
 ; CHECK-NEXT:    retq
   %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = sitofp <16 x i1> %mask to <16 x float>
-  store <16 x float> %1, <16 x float>* %res
+  store <16 x float> %1, ptr %res
   ret void
 }
 
-define dso_local void @sbto16f32_512(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-width"="512" {
+define dso_local void @sbto16f32_512(<16 x i16> %a, ptr %res) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: sbto16f32_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -691,11 +691,11 @@ define dso_local void @sbto16f32_512(<16 x i16> %a, <16 x float>* %res) "min-leg
 ; CHECK-NEXT:    retq
   %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = sitofp <16 x i1> %mask to <16 x float>
-  store <16 x float> %1, <16 x float>* %res
+  store <16 x float> %1, ptr %res
   ret void
 }
 
-define dso_local void @sbto16f64_256(<16 x i16> %a, <16 x double>* %res)  "min-legal-vector-width"="256" {
+define dso_local void @sbto16f64_256(<16 x i16> %a, ptr %res)  "min-legal-vector-width"="256" {
 ; CHECK-LABEL: sbto16f64_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -716,11 +716,11 @@ define dso_local void @sbto16f64_256(<16 x i16> %a, <16 x double>* %res)  "min-l
 ; CHECK-NEXT:    retq
   %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = sitofp <16 x i1> %mask to <16 x double>
-  store <16 x double> %1, <16 x double>* %res
+  store <16 x double> %1, ptr %res
   ret void
 }
 
-define dso_local void @sbto16f64_512(<16 x i16> %a, <16 x double>* %res)  "min-legal-vector-width"="512" {
+define dso_local void @sbto16f64_512(<16 x i16> %a, ptr %res)  "min-legal-vector-width"="512" {
 ; CHECK-LABEL: sbto16f64_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -734,11 +734,11 @@ define dso_local void @sbto16f64_512(<16 x i16> %a, <16 x double>* %res)  "min-l
 ; CHECK-NEXT:    retq
   %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = sitofp <16 x i1> %mask to <16 x double>
-  store <16 x double> %1, <16 x double>* %res
+  store <16 x double> %1, ptr %res
   ret void
 }
 
-define dso_local void @ubto16f32_256(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-width"="256" {
+define dso_local void @ubto16f32_256(<16 x i16> %a, ptr %res) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: ubto16f32_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -755,11 +755,11 @@ define dso_local void @ubto16f32_256(<16 x i16> %a, <16 x float>* %res) "min-leg
 ; CHECK-NEXT:    retq
   %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = uitofp <16 x i1> %mask to <16 x float>
-  store <16 x float> %1, <16 x float>* %res
+  store <16 x float> %1, ptr %res
   ret void
 }
 
-define dso_local void @ubto16f32_512(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-width"="512" {
+define dso_local void @ubto16f32_512(<16 x i16> %a, ptr %res) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: ubto16f32_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -771,11 +771,11 @@ define dso_local void @ubto16f32_512(<16 x i16> %a, <16 x float>* %res) "min-leg
 ; CHECK-NEXT:    retq
   %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = uitofp <16 x i1> %mask to <16 x float>
-  store <16 x float> %1, <16 x float>* %res
+  store <16 x float> %1, ptr %res
   ret void
 }
 
-define dso_local void @ubto16f64_256(<16 x i16> %a, <16 x double>* %res) "min-legal-vector-width"="256" {
+define dso_local void @ubto16f64_256(<16 x i16> %a, ptr %res) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: ubto16f64_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -798,11 +798,11 @@ define dso_local void @ubto16f64_256(<16 x i16> %a, <16 x double>* %res) "min-le
 ; CHECK-NEXT:    retq
   %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = uitofp <16 x i1> %mask to <16 x double>
-  store <16 x double> %1, <16 x double>* %res
+  store <16 x double> %1, ptr %res
   ret void
 }
 
-define dso_local void @ubto16f64_512(<16 x i16> %a, <16 x double>* %res) "min-legal-vector-width"="512" {
+define dso_local void @ubto16f64_512(<16 x i16> %a, ptr %res) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: ubto16f64_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -817,11 +817,11 @@ define dso_local void @ubto16f64_512(<16 x i16> %a, <16 x double>* %res) "min-le
 ; CHECK-NEXT:    retq
   %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = uitofp <16 x i1> %mask to <16 x double>
-  store <16 x double> %1, <16 x double>* %res
+  store <16 x double> %1, ptr %res
   ret void
 }
 
-define <16 x i16> @test_16f32toub_256(<16 x float>* %ptr, <16 x i16> %passthru) "min-legal-vector-width"="256" {
+define <16 x i16> @test_16f32toub_256(ptr %ptr, <16 x i16> %passthru) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: test_16f32toub_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq (%rdi), %ymm1
@@ -833,13 +833,13 @@ define <16 x i16> @test_16f32toub_256(<16 x float>* %ptr, <16 x i16> %passthru) 
 ; CHECK-NEXT:    kunpckbw %k0, %k1, %k1
 ; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %a = load <16 x float>, <16 x float>* %ptr
+  %a = load <16 x float>, ptr %ptr
   %mask = fptoui <16 x float> %a to <16 x i1>
   %select = select <16 x i1> %mask, <16 x i16> %passthru, <16 x i16> zeroinitializer
   ret <16 x i16> %select
 }
 
-define <16 x i16> @test_16f32toub_512(<16 x float>* %ptr, <16 x i16> %passthru) "min-legal-vector-width"="512" {
+define <16 x i16> @test_16f32toub_512(ptr %ptr, <16 x i16> %passthru) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: test_16f32toub_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq (%rdi), %zmm1
@@ -847,13 +847,13 @@ define <16 x i16> @test_16f32toub_512(<16 x float>* %ptr, <16 x i16> %passthru) 
 ; CHECK-NEXT:    vpmovd2m %zmm1, %k1
 ; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %a = load <16 x float>, <16 x float>* %ptr
+  %a = load <16 x float>, ptr %ptr
   %mask = fptoui <16 x float> %a to <16 x i1>
   %select = select <16 x i1> %mask, <16 x i16> %passthru, <16 x i16> zeroinitializer
   ret <16 x i16> %select
 }
 
-define <16 x i16> @test_16f32tosb_256(<16 x float>* %ptr, <16 x i16> %passthru) "min-legal-vector-width"="256" {
+define <16 x i16> @test_16f32tosb_256(ptr %ptr, <16 x i16> %passthru) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: test_16f32tosb_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq (%rdi), %ymm1
@@ -863,26 +863,26 @@ define <16 x i16> @test_16f32tosb_256(<16 x float>* %ptr, <16 x i16> %passthru) 
 ; CHECK-NEXT:    kunpckbw %k0, %k1, %k1
 ; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %a = load <16 x float>, <16 x float>* %ptr
+  %a = load <16 x float>, ptr %ptr
   %mask = fptosi <16 x float> %a to <16 x i1>
   %select = select <16 x i1> %mask, <16 x i16> %passthru, <16 x i16> zeroinitializer
   ret <16 x i16> %select
 }
 
-define <16 x i16> @test_16f32tosb_512(<16 x float>* %ptr, <16 x i16> %passthru) "min-legal-vector-width"="512" {
+define <16 x i16> @test_16f32tosb_512(ptr %ptr, <16 x i16> %passthru) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: test_16f32tosb_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq (%rdi), %zmm1
 ; CHECK-NEXT:    vpmovd2m %zmm1, %k1
 ; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %a = load <16 x float>, <16 x float>* %ptr
+  %a = load <16 x float>, ptr %ptr
   %mask = fptosi <16 x float> %a to <16 x i1>
   %select = select <16 x i1> %mask, <16 x i16> %passthru, <16 x i16> zeroinitializer
   ret <16 x i16> %select
 }
 
-define dso_local void @mul256(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vector-width"="256" {
+define dso_local void @mul256(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="256" {
 ; CHECK-SKX-VBMI-LABEL: mul256:
 ; CHECK-SKX-VBMI:       # %bb.0:
 ; CHECK-SKX-VBMI-NEXT:    vmovdqa (%rdi), %ymm0
@@ -964,14 +964,14 @@ define dso_local void @mul256(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-
 ; CHECK-VBMI-NEXT:    vmovdqa %ymm1, 32(%rdx)
 ; CHECK-VBMI-NEXT:    vzeroupper
 ; CHECK-VBMI-NEXT:    retq
-  %d = load <64 x i8>, <64 x i8>* %a
-  %e = load <64 x i8>, <64 x i8>* %b
+  %d = load <64 x i8>, ptr %a
+  %e = load <64 x i8>, ptr %b
   %f = mul <64 x i8> %d, %e
-  store <64 x i8> %f, <64 x i8>* %c
+  store <64 x i8> %f, ptr %c
   ret void
 }
 
-define dso_local void @mul512(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vector-width"="512" {
+define dso_local void @mul512(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="512" {
 ; CHECK-SKX-VBMI-LABEL: mul512:
 ; CHECK-SKX-VBMI:       # %bb.0:
 ; CHECK-SKX-VBMI-NEXT:    vmovdqa64 (%rdi), %zmm0
@@ -1021,27 +1021,27 @@ define dso_local void @mul512(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-
 ; CHECK-VBMI-NEXT:    vmovdqa64 %zmm1, (%rdx)
 ; CHECK-VBMI-NEXT:    vzeroupper
 ; CHECK-VBMI-NEXT:    retq
-  %d = load <64 x i8>, <64 x i8>* %a
-  %e = load <64 x i8>, <64 x i8>* %b
+  %d = load <64 x i8>, ptr %a
+  %e = load <64 x i8>, ptr %b
   %f = mul <64 x i8> %d, %e
-  store <64 x i8> %f, <64 x i8>* %c
+  store <64 x i8> %f, ptr %c
   ret void
 }
 
 ; This threw an assertion at one point.
-define <4 x i32> @mload_v4i32(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %dst) "min-legal-vector-width"="256" {
+define <4 x i32> @mload_v4i32(<4 x i32> %trigger, ptr %addr, <4 x i32> %dst) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: mload_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpblendmd (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  %res = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr, i32 4, <4 x i1> %mask, <4 x i32> %dst)
+  %res = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %addr, i32 4, <4 x i1> %mask, <4 x i32> %dst)
   ret <4 x i32> %res
 }
-declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
+declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32, <4 x i1>, <4 x i32>)
 
-define <16 x i32> @trunc_v16i64_v16i32(<16 x i64>* %x) nounwind "min-legal-vector-width"="256" {
+define <16 x i32> @trunc_v16i64_v16i32(ptr %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v16i64_v16i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -1055,12 +1055,12 @@ define <16 x i32> @trunc_v16i64_v16i32(<16 x i64>* %x) nounwind "min-legal-vecto
 ; CHECK-NEXT:    vpmovqd %ymm3, %xmm2
 ; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; CHECK-NEXT:    retq
-  %a = load <16 x i64>, <16 x i64>* %x
+  %a = load <16 x i64>, ptr %x
   %b = trunc <16 x i64> %a to <16 x i32>
   ret <16 x i32> %b
 }
 
-define <16 x i8> @trunc_v16i64_v16i8(<16 x i64>* %x) nounwind "min-legal-vector-width"="256" {
+define <16 x i8> @trunc_v16i64_v16i8(ptr %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v16i64_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -1076,12 +1076,12 @@ define <16 x i8> @trunc_v16i64_v16i8(<16 x i64>* %x) nounwind "min-legal-vector-
 ; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %a = load <16 x i64>, <16 x i64>* %x
+  %a = load <16 x i64>, ptr %x
   %b = trunc <16 x i64> %a to <16 x i8>
   ret <16 x i8> %b
 }
 
-define <16 x i8> @trunc_v16i32_v16i8(<16 x i32>* %x) nounwind "min-legal-vector-width"="256" {
+define <16 x i8> @trunc_v16i32_v16i8(ptr %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v16i32_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -1091,12 +1091,12 @@ define <16 x i8> @trunc_v16i32_v16i8(<16 x i32>* %x) nounwind "min-legal-vector-
 ; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %a = load <16 x i32>, <16 x i32>* %x
+  %a = load <16 x i32>, ptr %x
   %b = trunc <16 x i32> %a to <16 x i8>
   ret <16 x i8> %b
 }
 
-define <8 x i8> @trunc_v8i64_v8i8(<8 x i64>* %x) nounwind "min-legal-vector-width"="256" {
+define <8 x i8> @trunc_v8i64_v8i8(ptr %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v8i64_v8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -1106,12 +1106,12 @@ define <8 x i8> @trunc_v8i64_v8i8(<8 x i64>* %x) nounwind "min-legal-vector-widt
 ; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %a = load <8 x i64>, <8 x i64>* %x
+  %a = load <8 x i64>, ptr %x
   %b = trunc <8 x i64> %a to <8 x i8>
   ret <8 x i8> %b
 }
 
-define <8 x i16> @trunc_v8i64_v8i16(<8 x i64>* %x) nounwind "min-legal-vector-width"="256" {
+define <8 x i16> @trunc_v8i64_v8i16(ptr %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v8i64_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -1121,12 +1121,12 @@ define <8 x i16> @trunc_v8i64_v8i16(<8 x i64>* %x) nounwind "min-legal-vector-wi
 ; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %a = load <8 x i64>, <8 x i64>* %x
+  %a = load <8 x i64>, ptr %x
   %b = trunc <8 x i64> %a to <8 x i16>
   ret <8 x i16> %b
 }
 
-define <8 x i32> @trunc_v8i64_v8i32_zeroes(<8 x i64>* %x) nounwind "min-legal-vector-width"="256" {
+define <8 x i32> @trunc_v8i64_v8i32_zeroes(ptr %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v8i64_v8i32_zeroes:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsrlq $48, 32(%rdi), %ymm0
@@ -1134,26 +1134,26 @@ define <8 x i32> @trunc_v8i64_v8i32_zeroes(<8 x i64>* %x) nounwind "min-legal-ve
 ; CHECK-NEXT:    vpackusdw %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; CHECK-NEXT:    retq
-  %a = load <8 x i64>, <8 x i64>* %x
+  %a = load <8 x i64>, ptr %x
   %b = lshr <8 x i64> %a, <i64 48, i64 48, i64 48, i64 48, i64 48, i64 48, i64 48, i64 48>
   %c = trunc <8 x i64> %b to <8 x i32>
   ret <8 x i32> %c
 }
 
-define <16 x i16> @trunc_v16i32_v16i16_zeroes(<16 x i32>* %x) nounwind "min-legal-vector-width"="256" {
+define <16 x i16> @trunc_v16i32_v16i16_zeroes(ptr %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v16i32_v16i16_zeroes:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
+; CHECK-NEXT:    vpmovsxbw {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
 ; CHECK-NEXT:    vpermi2w 32(%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
-  %a = load <16 x i32>, <16 x i32>* %x
+  %a = load <16 x i32>, ptr %x
   %b = lshr <16 x i32> %a, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %c = trunc <16 x i32> %b to <16 x i16>
   ret <16 x i16> %c
 }
 
-define <32 x i8> @trunc_v32i16_v32i8_zeroes(<32 x i16>* %x) nounwind "min-legal-vector-width"="256" {
+define <32 x i8> @trunc_v32i16_v32i8_zeroes(ptr %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-SKX-VBMI-LABEL: trunc_v32i16_v32i8_zeroes:
 ; CHECK-SKX-VBMI:       # %bb.0:
 ; CHECK-SKX-VBMI-NEXT:    vmovdqa (%rdi), %ymm1
@@ -1175,13 +1175,13 @@ define <32 x i8> @trunc_v32i16_v32i8_zeroes(<32 x i16>* %x) nounwind "min-legal-
 ; CHECK-VBMI-NEXT:    vmovdqa {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63]
 ; CHECK-VBMI-NEXT:    vpermi2b 32(%rdi), %ymm1, %ymm0
 ; CHECK-VBMI-NEXT:    retq
-  %a = load <32 x i16>, <32 x i16>* %x
+  %a = load <32 x i16>, ptr %x
   %b = lshr <32 x i16> %a, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %c = trunc <32 x i16> %b to <32 x i8>
   ret <32 x i8> %c
 }
 
-define <8 x i32> @trunc_v8i64_v8i32_sign(<8 x i64>* %x) nounwind "min-legal-vector-width"="256" {
+define <8 x i32> @trunc_v8i64_v8i32_sign(ptr %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v8i64_v8i32_sign:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsraq $48, 32(%rdi), %ymm0
@@ -1189,26 +1189,26 @@ define <8 x i32> @trunc_v8i64_v8i32_sign(<8 x i64>* %x) nounwind "min-legal-vect
 ; CHECK-NEXT:    vpackssdw %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; CHECK-NEXT:    retq
-  %a = load <8 x i64>, <8 x i64>* %x
+  %a = load <8 x i64>, ptr %x
   %b = ashr <8 x i64> %a, <i64 48, i64 48, i64 48, i64 48, i64 48, i64 48, i64 48, i64 48>
   %c = trunc <8 x i64> %b to <8 x i32>
   ret <8 x i32> %c
 }
 
-define <16 x i16> @trunc_v16i32_v16i16_sign(<16 x i32>* %x) nounwind "min-legal-vector-width"="256" {
+define <16 x i16> @trunc_v16i32_v16i16_sign(ptr %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v16i32_v16i16_sign:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
+; CHECK-NEXT:    vpmovsxbw {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
 ; CHECK-NEXT:    vpermi2w 32(%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
-  %a = load <16 x i32>, <16 x i32>* %x
+  %a = load <16 x i32>, ptr %x
   %b = ashr <16 x i32> %a, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %c = trunc <16 x i32> %b to <16 x i16>
   ret <16 x i16> %c
 }
 
-define <32 x i8> @trunc_v32i16_v32i8_sign(<32 x i16>* %x) nounwind "min-legal-vector-width"="256" {
+define <32 x i8> @trunc_v32i16_v32i8_sign(ptr %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-SKX-VBMI-LABEL: trunc_v32i16_v32i8_sign:
 ; CHECK-SKX-VBMI:       # %bb.0:
 ; CHECK-SKX-VBMI-NEXT:    vmovdqa (%rdi), %ymm1
@@ -1230,13 +1230,13 @@ define <32 x i8> @trunc_v32i16_v32i8_sign(<32 x i16>* %x) nounwind "min-legal-ve
 ; CHECK-VBMI-NEXT:    vmovdqa {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63]
 ; CHECK-VBMI-NEXT:    vpermi2b 32(%rdi), %ymm1, %ymm0
 ; CHECK-VBMI-NEXT:    retq
-  %a = load <32 x i16>, <32 x i16>* %x
+  %a = load <32 x i16>, ptr %x
   %b = ashr <32 x i16> %a, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %c = trunc <32 x i16> %b to <32 x i8>
   ret <32 x i8> %c
 }
 
-define dso_local void @zext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind "min-legal-vector-width"="256" {
+define dso_local void @zext_v16i8_v16i64(<16 x i8> %x, ptr %y) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: zext_v16i8_v16i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
@@ -1254,11 +1254,11 @@ define dso_local void @zext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind 
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %a = zext <16 x i8> %x to <16 x i64>
-  store <16 x i64> %a, <16 x i64>* %y
+  store <16 x i64> %a, ptr %y
   ret void
 }
 
-define dso_local void @sext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind "min-legal-vector-width"="256" {
+define dso_local void @sext_v16i8_v16i64(<16 x i8> %x, ptr %y) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: sext_v16i8_v16i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovsxbw %xmm0, %ymm1
@@ -1276,11 +1276,11 @@ define dso_local void @sext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind 
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %a = sext <16 x i8> %x to <16 x i64>
-  store <16 x i64> %a, <16 x i64>* %y
+  store <16 x i64> %a, ptr %y
   ret void
 }
 
-define dso_local void @vselect_split_v8i16_setcc(<8 x i16> %s, <8 x i16> %t, <8 x i64>* %p, <8 x i64>* %q, <8 x i64>* %r) "min-legal-vector-width"="256" {
+define dso_local void @vselect_split_v8i16_setcc(<8 x i16> %s, <8 x i16> %t, ptr %p, ptr %q, ptr %r) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: vselect_split_v8i16_setcc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm2
@@ -1293,15 +1293,15 @@ define dso_local void @vselect_split_v8i16_setcc(<8 x i16> %s, <8 x i16> %t, <8 
 ; CHECK-NEXT:    vmovdqa %ymm3, 32(%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %x = load <8 x i64>, <8 x i64>* %p
-  %y = load <8 x i64>, <8 x i64>* %q
+  %x = load <8 x i64>, ptr %p
+  %y = load <8 x i64>, ptr %q
   %a = icmp eq <8 x i16> %s, %t
   %b = select <8 x i1> %a, <8 x i64> %x, <8 x i64> %y
-  store <8 x i64> %b, <8 x i64>* %r
+  store <8 x i64> %b, ptr %r
   ret void
 }
 
-define dso_local void @vselect_split_v8i32_setcc(<8 x i32> %s, <8 x i32> %t, <8 x i64>* %p, <8 x i64>* %q, <8 x i64>* %r) "min-legal-vector-width"="256" {
+define dso_local void @vselect_split_v8i32_setcc(<8 x i32> %s, <8 x i32> %t, ptr %p, ptr %q, ptr %r) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: vselect_split_v8i32_setcc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm2
@@ -1314,15 +1314,15 @@ define dso_local void @vselect_split_v8i32_setcc(<8 x i32> %s, <8 x i32> %t, <8 
 ; CHECK-NEXT:    vmovdqa %ymm3, 32(%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %x = load <8 x i64>, <8 x i64>* %p
-  %y = load <8 x i64>, <8 x i64>* %q
+  %x = load <8 x i64>, ptr %p
+  %y = load <8 x i64>, ptr %q
   %a = icmp eq <8 x i32> %s, %t
   %b = select <8 x i1> %a, <8 x i64> %x, <8 x i64> %y
-  store <8 x i64> %b, <8 x i64>* %r
+  store <8 x i64> %b, ptr %r
   ret void
 }
 
-define dso_local void @vselect_split_v16i8_setcc(<16 x i8> %s, <16 x i8> %t, <16 x i32>* %p, <16 x i32>* %q, <16 x i32>* %r) "min-legal-vector-width"="256" {
+define dso_local void @vselect_split_v16i8_setcc(<16 x i8> %s, <16 x i8> %t, ptr %p, ptr %q, ptr %r) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: vselect_split_v16i8_setcc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm2
@@ -1335,15 +1335,15 @@ define dso_local void @vselect_split_v16i8_setcc(<16 x i8> %s, <16 x i8> %t, <16
 ; CHECK-NEXT:    vmovdqa %ymm3, 32(%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %x = load <16 x i32>, <16 x i32>* %p
-  %y = load <16 x i32>, <16 x i32>* %q
+  %x = load <16 x i32>, ptr %p
+  %y = load <16 x i32>, ptr %q
   %a = icmp eq <16 x i8> %s, %t
   %b = select <16 x i1> %a, <16 x i32> %x, <16 x i32> %y
-  store <16 x i32> %b, <16 x i32>* %r
+  store <16 x i32> %b, ptr %r
   ret void
 }
 
-define dso_local void @vselect_split_v16i16_setcc(<16 x i16> %s, <16 x i16> %t, <16 x i32>* %p, <16 x i32>* %q, <16 x i32>* %r) "min-legal-vector-width"="256" {
+define dso_local void @vselect_split_v16i16_setcc(<16 x i16> %s, <16 x i16> %t, ptr %p, ptr %q, ptr %r) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: vselect_split_v16i16_setcc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm2
@@ -1356,15 +1356,15 @@ define dso_local void @vselect_split_v16i16_setcc(<16 x i16> %s, <16 x i16> %t, 
 ; CHECK-NEXT:    vmovdqa %ymm3, 32(%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %x = load <16 x i32>, <16 x i32>* %p
-  %y = load <16 x i32>, <16 x i32>* %q
+  %x = load <16 x i32>, ptr %p
+  %y = load <16 x i32>, ptr %q
   %a = icmp eq <16 x i16> %s, %t
   %b = select <16 x i1> %a, <16 x i32> %x, <16 x i32> %y
-  store <16 x i32> %b, <16 x i32>* %r
+  store <16 x i32> %b, ptr %r
   ret void
 }
 
-define <16 x i8> @trunc_packus_v16i32_v16i8(<16 x i32>* %p) "min-legal-vector-width"="256" {
+define <16 x i8> @trunc_packus_v16i32_v16i8(ptr %p) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_packus_v16i32_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -1373,7 +1373,7 @@ define <16 x i8> @trunc_packus_v16i32_v16i8(<16 x i32>* %p) "min-legal-vector-wi
 ; CHECK-NEXT:    vpmovuswb %ymm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %a = load <16 x i32>, <16 x i32>* %p
+  %a = load <16 x i32>, ptr %p
   %b = icmp slt <16 x i32> %a, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %c = select <16 x i1> %b, <16 x i32> %a, <16 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %d = icmp sgt <16 x i32> %c, zeroinitializer
@@ -1382,7 +1382,7 @@ define <16 x i8> @trunc_packus_v16i32_v16i8(<16 x i32>* %p) "min-legal-vector-wi
   ret <16 x i8> %f
 }
 
-define dso_local void @trunc_packus_v16i32_v16i8_store(<16 x i32>* %p, <16 x i8>* %q) "min-legal-vector-width"="256" {
+define dso_local void @trunc_packus_v16i32_v16i8_store(ptr %p, ptr %q) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_packus_v16i32_v16i8_store:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -1391,13 +1391,13 @@ define dso_local void @trunc_packus_v16i32_v16i8_store(<16 x i32>* %p, <16 x i8>
 ; CHECK-NEXT:    vpmovuswb %ymm0, (%rsi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %a = load <16 x i32>, <16 x i32>* %p
+  %a = load <16 x i32>, ptr %p
   %b = icmp slt <16 x i32> %a, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %c = select <16 x i1> %b, <16 x i32> %a, <16 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %d = icmp sgt <16 x i32> %c, zeroinitializer
   %e = select <16 x i1> %d, <16 x i32> %c, <16 x i32> zeroinitializer
   %f = trunc <16 x i32> %e to <16 x i8>
-  store <16 x i8> %f, <16 x i8>* %q
+  store <16 x i8> %f, ptr %q
   ret void
 }
 
@@ -1408,7 +1408,7 @@ define <64 x i1> @v64i1_argument_return(<64 x i1> %x) "min-legal-vector-width"="
   ret <64 x i1> %x
 }
 
-define dso_local void @v64i1_shuffle(<64 x i8>* %x, <64 x i8>* %y) "min-legal-vector-width"="256" {
+define dso_local void @v64i1_shuffle(ptr %x, ptr %y) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: v64i1_shuffle:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm1
@@ -1857,13 +1857,13 @@ define dso_local void @v64i1_shuffle(<64 x i8>* %x, <64 x i8>* %y) "min-legal-ve
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
-  %a = load <64 x i8>, <64 x i8>* %x
+  %a = load <64 x i8>, ptr %x
   %b = icmp eq <64 x i8> %a, zeroinitializer
   %shuf = shufflevector <64 x i1> %b, <64 x i1> undef, <64 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14, i32 17, i32 16, i32 19, i32 18, i32 21, i32 20, i32 23, i32 22, i32 25, i32 24, i32 27, i32 26, i32 29, i32 28, i32 31, i32 30, i32 33, i32 32, i32 35, i32 34, i32 37, i32 36, i32 39, i32 38, i32 41, i32 40, i32 43, i32 42, i32 45, i32 44, i32 47, i32 46, i32 49, i32 48, i32 51, i32 50, i32 53, i32 52, i32 55, i32 54, i32 57, i32 56, i32 59, i32 58, i32 61, i32 60, i32 63, i32 62>
-  call void @llvm.masked.store.v64i8.p0v64i8(<64 x i8> %a, <64 x i8>* %y, i32 1, <64 x i1> %shuf)
+  call void @llvm.masked.store.v64i8.p0(<64 x i8> %a, ptr %y, i32 1, <64 x i1> %shuf)
   ret void
 }
-declare void @llvm.masked.store.v64i8.p0v64i8(<64 x i8>, <64 x i8>*, i32, <64 x i1>)
+declare void @llvm.masked.store.v64i8.p0(<64 x i8>, ptr, i32, <64 x i1>)
 
 @mem64_dst = dso_local global i64 0, align 8
 @mem64_src = dso_local global i64 0, align 8
@@ -1877,14 +1877,14 @@ define dso_local i32 @v64i1_inline_asm() "min-legal-vector-width"="256" {
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    retq
   %1 = alloca i32, align 4
-  %2 = load i64, i64* @mem64_src, align 8
+  %2 = load i64, ptr @mem64_src, align 8
   %3 = call i64 asm "", "=k,k,~{dirflag},~{fpsr},~{flags}"(i64 %2)
-  store i64 %3, i64* @mem64_dst, align 8
-  %4 = load i32, i32* %1, align 4
+  store i64 %3, ptr @mem64_dst, align 8
+  %4 = load i32, ptr %1, align 4
   ret i32 %4
 }
 
-define dso_local void @cmp_v8i64_sext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i64>* %zptr) "min-legal-vector-width"="256" {
+define dso_local void @cmp_v8i64_sext(ptr %xptr, ptr %yptr, ptr %zptr) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: cmp_v8i64_sext:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm0
@@ -1895,15 +1895,15 @@ define dso_local void @cmp_v8i64_sext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i
 ; CHECK-NEXT:    vmovdqa %ymm1, 32(%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %x = load <8 x i64>, <8 x i64>* %xptr
-  %y = load <8 x i64>, <8 x i64>* %yptr
+  %x = load <8 x i64>, ptr %xptr
+  %y = load <8 x i64>, ptr %yptr
   %cmp = icmp slt <8 x i64> %x, %y
   %ext = sext <8 x i1> %cmp to <8 x i64>
-  store <8 x i64> %ext, <8 x i64>* %zptr
+  store <8 x i64> %ext, ptr %zptr
   ret void
 }
 
-define dso_local void @cmp_v8i64_zext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i64>* %zptr) "min-legal-vector-width"="256" {
+define dso_local void @cmp_v8i64_zext(ptr %xptr, ptr %yptr, ptr %zptr) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: cmp_v8i64_zext:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm0
@@ -1916,11 +1916,11 @@ define dso_local void @cmp_v8i64_zext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i
 ; CHECK-NEXT:    vmovdqa %ymm1, 32(%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %x = load <8 x i64>, <8 x i64>* %xptr
-  %y = load <8 x i64>, <8 x i64>* %yptr
+  %x = load <8 x i64>, ptr %xptr
+  %y = load <8 x i64>, ptr %yptr
   %cmp = icmp slt <8 x i64> %x, %y
   %ext = zext <8 x i1> %cmp to <8 x i64>
-  store <8 x i64> %ext, <8 x i64>* %zptr
+  store <8 x i64> %ext, ptr %zptr
   ret void
 }
 

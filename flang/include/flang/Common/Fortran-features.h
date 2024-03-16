@@ -45,7 +45,8 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     MiscSourceExtensions, AllocateToOtherLength, LongNames, IntrinsicAsSpecific,
     BenignNameClash, BenignRedundancy, NullMoldAllocatableComponentValue,
     NopassScalarBase, MiscUseExtensions, ImpliedDoIndexScope,
-    DistinctCommonSizes, OddIndexVariableRestrictions)
+    DistinctCommonSizes, OddIndexVariableRestrictions,
+    IndistinguishableSpecifics)
 
 // Portability and suspicious usage warnings for conforming code
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -53,7 +54,7 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     ShortCharacterActual, ExprPassedToVolatile, ImplicitInterfaceActual,
     PolymorphicTransferArg, PointerComponentTransferArg, TransferSizePresence,
     F202XAllocatableBreakingChange, DimMustBePresent, CommonBlockPadding,
-    LogicalVsCBool, BindCCharLength, ProcDummyArgShapes)
+    LogicalVsCBool, BindCCharLength, ProcDummyArgShapes, ExternalNameConflict)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

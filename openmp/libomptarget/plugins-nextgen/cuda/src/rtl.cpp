@@ -69,7 +69,7 @@ cuMemGetAllocationGranularity(size_t *granularity,
 #if (defined(CUDA_VERSION) && (CUDA_VERSION < 11020))
 // Forward declarations of asynchronous memory management functions. This is
 // necessary for older versions of CUDA.
-CUresult cuMemAllocAsync(CUdeviceptr *ptr, size_t, CUstream) { *ptr = nullptr; }
+CUresult cuMemAllocAsync(CUdeviceptr *ptr, size_t, CUstream) { *ptr = 0; }
 
 CUresult cuMemFreeAsync(CUdeviceptr dptr, CUstream hStream) {}
 #endif
@@ -1166,7 +1166,7 @@ private:
 
     // Search for all symbols that contain a constructor or destructor.
     SmallVector<std::pair<StringRef, uint16_t>> Funcs;
-    for (ELFSymbolRef Sym : ELFObjOrErr->symbols()) {
+    for (ELFSymbolRef Sym : (*ELFObjOrErr)->symbols()) {
       auto NameOrErr = Sym.getName();
       if (!NameOrErr)
         return NameOrErr.takeError();

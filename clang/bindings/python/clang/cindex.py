@@ -3506,6 +3506,65 @@ class Token(Structure):
         return cursor
 
 
+class Rewriter(ClangObject):
+    """
+    The Rewriter is a wrapper class around clang::Rewriter
+
+    It enables rewriting buffers.
+    """
+
+    @staticmethod
+    def create(tu):
+        """
+        Creates a new Rewriter
+        Parameters:
+        tu -- The translation unit for the target AST.
+        """
+        return Rewriter(conf.lib.clang_CXRewriter_create(tu))
+
+    def __init__(self, ptr):
+        ClangObject.__init__(self, ptr)
+
+    def __del__(self):
+        conf.lib.clang_CXRewriter_dispose(self)
+
+    def insert_text_before(self, loc, insert):
+        """
+        Insert the specified string at the specified location in
+        the original buffer.
+        """
+        conf.lib.clang_CXRewriter_insertTextBefore(self, loc, insert)
+
+    def replace_text(self, extent, replacement):
+        """
+        This method replaces a range of characters in the input buffer with
+        a new string.
+        """
+        conf.lib.clang_CXRewriter_replaceText(self, extent, replacement)
+
+    def remove_text(self, extent):
+        """
+        Remove the specified text region.
+        """
+        conf.lib.clang_CXRewriter_removeText(self, extent)
+
+    def overwrite_changed_files(self):
+        """
+        Save all changed files to disk.
+
+        Returns 1 if any files were not saved successfully,
+        returns 0 otherwise.
+        """
+        return conf.lib.clang_CXRewriter_overwriteChangedFiles(self)
+
+    def write_main_file_to_stdout(self):
+        """
+        Writes the main file to stdout.
+        """
+        sys.stdout.flush()
+        conf.lib.clang_CXRewriter_writeMainFileToStdOut(self)
+
+
 # Now comes the plumbing to hook up the C library.
 
 # Register callback types in common container.
@@ -3571,6 +3630,13 @@ functionList = [
     ("clang_codeCompleteGetNumDiagnostics", [CodeCompletionResults], c_int),
     ("clang_createIndex", [c_int, c_int], c_object_p),
     ("clang_createTranslationUnit", [Index, c_interop_string], c_object_p),
+    ("clang_CXRewriter_create", [TranslationUnit], c_object_p),
+    ("clang_CXRewriter_dispose", [Rewriter]),
+    ("clang_CXRewriter_insertTextBefore", [Rewriter, SourceLocation, c_interop_string]),
+    ("clang_CXRewriter_overwriteChangedFiles", [Rewriter], c_int),
+    ("clang_CXRewriter_removeText", [Rewriter, SourceRange]),
+    ("clang_CXRewriter_replaceText", [Rewriter, SourceRange, c_interop_string]),
+    ("clang_CXRewriter_writeMainFileToStdOut", [Rewriter]),
     ("clang_CXXConstructor_isConvertingConstructor", [Cursor], bool),
     ("clang_CXXConstructor_isCopyConstructor", [Cursor], bool),
     ("clang_CXXConstructor_isDefaultConstructor", [Cursor], bool),

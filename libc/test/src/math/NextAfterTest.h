@@ -27,7 +27,7 @@ class NextAfterTestTemplate : public LIBC_NAMESPACE::testing::Test {
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();
   const T zero = FPBits::zero(Sign::POS).get_val();
   const T neg_zero = FPBits::zero(Sign::NEG).get_val();
-  const T nan = FPBits::build_quiet_nan().get_val();
+  const T nan = FPBits::quiet_nan().get_val();
 
   const StorageType min_subnormal = FPBits::min_subnormal().uintval();
   const StorageType max_subnormal = FPBits::max_subnormal().uintval();

@@ -4552,16 +4552,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
     if (!ElemTy->isSized())
       return;
-    Value *SizeVal =
-      IRB.CreateTypeSize(MS.IntptrTy, DL.getTypeStoreSize(ElemTy));
+    auto Size = DL.getTypeStoreSize(ElemTy);
+    Value *SizeVal = IRB.CreateTypeSize(MS.IntptrTy, Size);
     if (MS.CompileKernel) {
       IRB.CreateCall(MS.MsanInstrumentAsmStoreFn, {Operand, SizeVal});
     } else {
       // ElemTy, derived from elementtype(), does not encode the alignment of
       // the pointer. Conservatively assume that the shadow memory is unaligned.
+      // When Size is large, avoid StoreInst as it would expand to many
+      // instructions.
       auto [ShadowPtr, _] =
           getShadowOriginPtrUserspace(Operand, IRB, IRB.getInt8Ty(), Align(1));
-      IRB.CreateAlignedStore(getCleanShadow(ElemTy), ShadowPtr, Align(1));
+      if (Size <= 32)
+        IRB.CreateAlignedStore(getCleanShadow(ElemTy), ShadowPtr, Align(1));
+      else
+        IRB.CreateMemSet(ShadowPtr, ConstantInt::getNullValue(IRB.getInt8Ty()),
+                         SizeVal, Align(1));
     }
   }
 

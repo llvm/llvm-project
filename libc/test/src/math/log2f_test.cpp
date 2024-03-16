@@ -52,13 +52,13 @@ TEST_F(LlvmLibcLog2fTest, InFloatRange) {
     float x = FPBits(v).get_val();
     if (isnan(x) || isinf(x))
       continue;
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
     float result = LIBC_NAMESPACE::log2f(x);
     // If the computation resulted in an error or did not produce valid result
     // in the single-precision floating point range, then ignore comparing with
     // MPFR result as MPFR can still produce valid results because of its
     // wider precision.
-    if (isnan(result) || isinf(result) || libc_errno != 0)
+    if (isnan(result) || isinf(result) || LIBC_NAMESPACE::libc_errno != 0)
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log2, x,
                                    LIBC_NAMESPACE::log2f(x), 0.5);

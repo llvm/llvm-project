@@ -624,6 +624,17 @@ enum FunctionCodes {
                                   //             operation, align, vol,
                                   //             ordering, synchscope]
   FUNC_CODE_BLOCKADDR_USERS = 60, // BLOCKADDR_USERS: [value...]
+
+  FUNC_CODE_DEBUG_RECORD_VALUE =
+      61, // [DILocation, DILocalVariable, DIExpression, ValueAsMetadata]
+  FUNC_CODE_DEBUG_RECORD_DECLARE =
+      62, // [DILocation, DILocalVariable, DIExpression, ValueAsMetadata]
+  FUNC_CODE_DEBUG_RECORD_ASSIGN =
+      63, // [DILocation, DILocalVariable, DIExpression, ValueAsMetadata,
+          //  DIAssignID, DIExpression (addr), ValueAsMetadata (addr)]
+  FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE =
+      64, // [DILocation, DILocalVariable, DIExpression, Value]
+  FUNC_CODE_DEBUG_RECORD_LABEL = 65, // [DILocation, DILabel]
 };
 
 enum UseListCodes {
@@ -724,6 +735,7 @@ enum AttributeKindCodes {
   ATTR_KIND_WRITABLE = 89,
   ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE = 90,
   ATTR_KIND_DEAD_ON_UNWIND = 91,
+  ATTR_KIND_RANGE = 92,
 };
 
 enum ComdatSelectionKindCodes {

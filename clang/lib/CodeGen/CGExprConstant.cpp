@@ -1225,6 +1225,7 @@ public:
     case CK_IntegralToFixedPoint:
     case CK_ZeroToOCLOpaqueType:
     case CK_MatrixCast:
+    case CK_HLSLVectorTruncation:
       return nullptr;
     }
     llvm_unreachable("Invalid CastKind");
@@ -2080,10 +2081,7 @@ ConstantLValue
 ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
                                             const MaterializeTemporaryExpr *E) {
   assert(E->getStorageDuration() == SD_Static);
-  SmallVector<const Expr *, 2> CommaLHSs;
-  SmallVector<SubobjectAdjustment, 2> Adjustments;
-  const Expr *Inner =
-      E->getSubExpr()->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+  const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
   return CGM.GetAddrOfGlobalTemporary(E, Inner);
 }
 

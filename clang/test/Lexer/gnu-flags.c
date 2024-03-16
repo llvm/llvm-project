@@ -1,15 +1,14 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DNONE
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DALL -Wgnu 
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DALL -Wgnu
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DALL \
 // RUN:   -Wgnu-zero-variadic-macro-arguments \
-// RUN:   -Wgnu-imaginary-constant -Wgnu-binary-literal -Wgnu-zero-line-directive
+// RUN:   -Wgnu-imaginary-constant -Wgnu-zero-line-directive
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DNONE -Wgnu \
 // RUN:   -Wno-gnu-zero-variadic-macro-arguments \
-// RUN:   -Wno-gnu-imaginary-constant -Wno-gnu-binary-literal -Wno-gnu-zero-line-directive
+// RUN:   -Wno-gnu-imaginary-constant -Wno-gnu-zero-line-directive
 // Additional disabled tests:
 // %clang_cc1 -fsyntax-only -verify %s -DZEROARGS -Wgnu-zero-variadic-macro-arguments
 // %clang_cc1 -fsyntax-only -verify %s -DIMAGINARYCONST -Wgnu-imaginary-constant
-// %clang_cc1 -fsyntax-only -verify %s -DBINARYLITERAL -Wgnu-binary-literal
 // %clang_cc1 -fsyntax-only -verify %s -DLINE0 -Wgnu-zero-line-directive
 
 #if NONE
@@ -36,13 +35,6 @@ void foo( const char* c )
 #endif
 
 float _Complex c = 1.if;
-
-
-#if ALL || BINARYLITERAL
-// expected-warning@+3 {{binary integer literals are a GNU extension}}
-#endif
-
-int b = 0b0101;
 
 
 // This case is handled differently because lit has a bug whereby #line 0 is reported to be on line 4294967295

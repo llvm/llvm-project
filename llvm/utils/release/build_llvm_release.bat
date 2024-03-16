@@ -287,7 +287,16 @@ ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit 
 ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
 ninja package || exit /b 1
+
+:: generate tarball with install toolchain only off
+set filename=clang+llvm-%version%-x86_64-pc-windows-msvc
+cmake -GNinja %cmake_flags% %cmake_profile_flags% -DLLVM_INSTALL_TOOLCHAIN_ONLY=OFF ^
+  -DCMAKE_INSTALL_PREFIX=%build_dir%/%filename% ..\llvm-project\llvm || exit /b 1
+ninja install || exit /b 1
+:: check llvm_config is present & returns something
+%build_dir%/%filename%/bin/llvm-config.exe --bindir || exit /b 1
 cd ..
+7z a -ttar -so %filename%.tar %filename% | 7z a -txz -si %filename%.tar.xz
 
 exit /b 0
 ::==============================================================================

@@ -398,6 +398,7 @@ module LLVM_Utils {
     textual header "llvm/TargetParser/CSKYTargetParser.def"
     textual header "llvm/TargetParser/X86TargetParser.def"
     textual header "llvm/TargetParser/LoongArchTargetParser.def"
+    textual header "llvm/TargetParser/PPCTargetParser.def"
   }
 
   // This part of the module is usable from both C and C++ code.

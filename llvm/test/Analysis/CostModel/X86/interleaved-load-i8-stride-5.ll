@@ -84,7 +84,7 @@ for.body:
   %reduce.add.3 = add i8 %reduce.add.2, %v4
 
   %out = getelementptr inbounds [1024 x i8], ptr @B, i64 0, i64 %iv.0
-  store i8 %reduce.add.3, i8* %out
+  store i8 %reduce.add.3, ptr %out
 
   %iv.next = add nuw nsw i64 %iv.0, 5
   %cmp = icmp ult i64 %iv.next, 1024

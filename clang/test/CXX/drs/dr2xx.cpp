@@ -26,7 +26,7 @@ namespace dr200 { // dr200: dup 214
   }
 }
 
-// dr201 FIXME: write codegen test
+// dr201 is in dr201.cpp
 
 namespace dr202 { // dr202: 3.1
   template<typename T> T f();
@@ -76,7 +76,7 @@ namespace dr209 { // dr209: 3.2
   };
 }
 
-// dr210 FIXME: write codegen test
+// dr210 is in dr210.cpp
 
 namespace dr211 { // dr211: yes
   struct A {
@@ -1188,7 +1188,7 @@ namespace dr289 { // dr289: yes
 
 // dr290: na
 // dr291: dup 391
-// dr292 FIXME: write a codegen test
+// dr292 is in dr292.cpp
 
 namespace dr294 { // dr294: no
   void f() throw(int);

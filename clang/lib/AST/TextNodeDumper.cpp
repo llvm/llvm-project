@@ -18,6 +18,7 @@
 #include "clang/AST/LocInfoType.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -238,6 +239,27 @@ void TextNodeDumper::Visit(QualType T) {
   OS << " ";
   dumpBareType(T, false);
   OS << " " << T.split().Quals.getAsString();
+}
+
+void TextNodeDumper::Visit(TypeLoc TL) {
+  if (!TL) {
+    ColorScope Color(OS, ShowColors, NullColor);
+    OS << "<<<NULL>>>";
+    return;
+  }
+
+  {
+    ColorScope Color(OS, ShowColors, TypeColor);
+    OS << (TL.getTypeLocClass() == TypeLoc::Qualified
+               ? "Qualified"
+               : TL.getType()->getTypeClassName())
+       << "TypeLoc";
+  }
+  dumpSourceRange(TL.getSourceRange());
+  OS << ' ';
+  dumpBareType(TL.getType(), /*Desugar=*/false);
+
+  TypeLocVisitor<TextNodeDumper>::Visit(TL);
 }
 
 void TextNodeDumper::Visit(const Decl *D) {
@@ -1397,6 +1419,26 @@ void TextNodeDumper::VisitExpressionTraitExpr(const ExpressionTraitExpr *Node) {
   OS << " " << getTraitSpelling(Node->getTrait());
 }
 
+void TextNodeDumper::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
+  if (Node->hasRewrittenInit()) {
+    OS << " has rewritten init";
+    AddChild([=] {
+      ColorScope Color(OS, ShowColors, StmtColor);
+      Visit(Node->getExpr());
+    });
+  }
+}
+
+void TextNodeDumper::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
+  if (Node->hasRewrittenInit()) {
+    OS << " has rewritten init";
+    AddChild([=] {
+      ColorScope Color(OS, ShowColors, StmtColor);
+      Visit(Node->getExpr());
+    });
+  }
+}
+
 void TextNodeDumper::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *Node) {
   if (const ValueDecl *VD = Node->getExtendingDecl()) {
@@ -1781,11 +1823,8 @@ void TextNodeDumper::VisitAutoType(const AutoType *T) {
     OS << " decltype(auto)";
   if (!T->isDeduced())
     OS << " undeduced";
-  if (T->isConstrained()) {
+  if (T->isConstrained())
     dumpDeclRef(T->getTypeConstraintConcept());
-    for (const auto &Arg : T->getTypeConstraintArguments())
-      VisitTemplateArgument(Arg);
-  }
 }
 
 void TextNodeDumper::VisitDeducedTemplateSpecializationType(
@@ -1817,6 +1856,13 @@ void TextNodeDumper::VisitPackExpansionType(const PackExpansionType *T) {
   if (auto N = T->getNumExpansions())
     OS << " expansions " << *N;
 }
+
+void TextNodeDumper::VisitTypeLoc(TypeLoc TL) {
+  // By default, add extra Type details with no extra loc info.
+  TypeVisitor<TextNodeDumper>::Visit(TL.getTypePtr());
+}
+// FIXME: override behavior for TypeLocs that have interesting location
+// information, such as the qualifier in ElaboratedTypeLoc.
 
 void TextNodeDumper::VisitLabelDecl(const LabelDecl *D) { dumpName(D); }
 
@@ -2621,4 +2667,9 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
   else
     OS << " tbuffer";
   dumpName(D);
+}
+
+void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {
+  OS << " " << S->getDirectiveKind();
+  // TODO OpenACC: Dump clauses as well.
 }

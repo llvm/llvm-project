@@ -459,7 +459,7 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   }
 
   // Bufferize all other ops.
-  for (Operation &op : moduleOp.getOps()) {
+  for (Operation &op : llvm::make_early_inc_range(moduleOp.getOps())) {
     // Functions were already bufferized.
     if (isa<func::FuncOp>(&op))
       continue;

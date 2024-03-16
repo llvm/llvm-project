@@ -2,6 +2,8 @@
 ; RUN: not llvm-as < %s %t/instr_smaller_id.ll 2>&1 | FileCheck %s --check-prefix=INSTR-SMALLER-ID
 ; RUN: not llvm-as < %s %t/arg_smaller_id.ll 2>&1 | FileCheck %s --check-prefix=ARG-SMALLER-ID
 ; RUN: not llvm-as < %s %t/block_smaller_id.ll 2>&1 | FileCheck %s --check-prefix=BLOCK-SMALLER-ID
+; RUN: not llvm-as < %s %t/global_smaller_id.ll 2>&1 | FileCheck %s --check-prefix=GLOBAL-SMALLER-ID
+; RUN: not llvm-as < %s %t/function_smaller_id.ll 2>&1 | FileCheck %s --check-prefix=FUNCTION-SMALLER-ID
 
 ;--- instr_smaller_id.ll
 
@@ -29,3 +31,19 @@ define i32 @test() {
 5:
   ret i32 0
 }
+
+;--- global_smaller_id.ll
+
+; GLOBAL-SMALLER-ID: error: global expected to be numbered '@11' or greater
+
+@10 = external global i8
+@5 = external global i8
+
+;--- function_smaller_id.ll
+
+; FUNCTION-SMALLER-ID: error: function expected to be numbered '@11' or greater
+
+define void @10() {
+  ret void
+}
+declare void @5()

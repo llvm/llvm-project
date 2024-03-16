@@ -29,7 +29,7 @@
     ret void
   }
 
-  declare i8* @attachedcall()
+  declare ptr @attachedcall()
 
   declare ptr @objc_retainAutoreleasedReturnValue()
 ...

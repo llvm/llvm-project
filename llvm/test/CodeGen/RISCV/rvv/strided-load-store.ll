@@ -16,7 +16,7 @@ define <vscale x 1 x i64> @gather(ptr %a, i32 %len) {
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACCUM:%.*]] = phi <vscale x 1 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]], i32 3
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.riscv.masked.strided.load.nxv1i64.p0.i64(<vscale x 1 x i64> undef, ptr [[TMP1]], i64 16, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.riscv.masked.strided.load.nxv1i64.p0.i64(<vscale x 1 x i64> undef, ptr [[TMP1]], i64 16, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
 ; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[GATHER]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], [[TMP0]]
@@ -38,7 +38,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %vec.ind = phi <vscale x 1 x i64> [ %1, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %accum = phi <vscale x 1 x i64> [ zeroinitializer, %vector.ph ], [ %accum.next, %vector.body ]
   %2 = getelementptr inbounds %struct.foo, ptr %a, <vscale x 1 x i64> %vec.ind, i32 3
-  %gather = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> %2, i32 8, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer), <vscale x 1 x i64> undef)
+  %gather = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> %2, i32 8, <vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> undef)
   %accum.next = add <vscale x 1 x i64> %accum, %gather
   %index.next = add nuw i64 %index, %0
   %vec.ind.next = add <vscale x 1 x i64> %vec.ind, %.splat
@@ -59,7 +59,7 @@ define <vscale x 1 x i64> @gather_disjoint_or(ptr %a, i64 %len) {
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 1, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACCUM:%.*]] = phi <vscale x 1 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]]
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.riscv.masked.strided.load.nxv1i64.p0.i64(<vscale x 1 x i64> poison, ptr [[TMP0]], i64 16, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.riscv.masked.strided.load.nxv1i64.p0.i64(<vscale x 1 x i64> poison, ptr [[TMP0]], i64 16, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
 ; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[GATHER]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[VSCALE]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], 2
@@ -71,7 +71,7 @@ define <vscale x 1 x i64> @gather_disjoint_or(ptr %a, i64 %len) {
 vector.ph:
   %vscale = call i64 @llvm.vscale.i64()
   %step = tail call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
-  %step.mul2 = shl <vscale x 1 x i64> %step, shufflevector(<vscale x 1 x i64> insertelement(<vscale x 1 x i64> poison, i64 1, i32 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
+  %step.mul2 = shl <vscale x 1 x i64> %step, splat (i64 1)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -80,19 +80,19 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
   %accum = phi <vscale x 1 x i64> [ zeroinitializer, %vector.ph ], [ %accum.next, %vector.body ]
 
-  %vec.ind.or = or disjoint <vscale x 1 x i64> %vec.ind, shufflevector(<vscale x 1 x i64> insertelement(<vscale x 1 x i64> poison, i64 1, i64 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
+  %vec.ind.or = or disjoint <vscale x 1 x i64> %vec.ind, splat (i64 1)
 
   %gep = getelementptr i64, ptr %a, <vscale x 1 x i64> %vec.ind.or
   %gather = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
   <vscale x 1 x ptr> %gep,
   i32 8,
-  <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer),
+  <vscale x 1 x i1> splat (i1 true),
   <vscale x 1 x i64> poison
   )
 
   %accum.next = add <vscale x 1 x i64> %accum, %gather
   %index.next = add nuw i64 %index, %vscale
-  %vec.ind.next = add <vscale x 1 x i64> %vec.ind, shufflevector(<vscale x 1 x i64> insertelement(<vscale x 1 x i64> poison, i64 2, i64 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
+  %vec.ind.next = add <vscale x 1 x i64> %vec.ind, splat (i64 2)
 
   %exit = icmp ne i64 %index.next, %len
   br i1 %exit, label %for.cond.cleanup, label %vector.body
@@ -111,7 +111,7 @@ define void @scatter(ptr %a, i32 %len) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]], i32 3
-; CHECK-NEXT:    call void @llvm.riscv.masked.strided.store.nxv1i64.p0.i64(<vscale x 1 x i64> zeroinitializer, ptr [[TMP1]], i64 16, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
+; CHECK-NEXT:    call void @llvm.riscv.masked.strided.store.nxv1i64.p0.i64(<vscale x 1 x i64> zeroinitializer, ptr [[TMP1]], i64 16, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[INDEX_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -131,7 +131,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %vec.ind = phi <vscale x 1 x i64> [ %1, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %2 = getelementptr inbounds %struct.foo, ptr %a, <vscale x 1 x i64> %vec.ind, i32 3
-  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %2, i32 8, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
+  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %2, i32 8, <vscale x 1 x i1> splat (i1 true))
   %index.next = add nuw i64 %index, %0
   %vec.ind.next = add <vscale x 1 x i64> %vec.ind, %.splat
   %3 = icmp ne i64 %index.next, %wide.trip.count
@@ -155,7 +155,7 @@ define <vscale x 1 x i64> @gather_loopless(ptr %p, i64 %stride) {
   %x = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
   <vscale x 1 x ptr> %ptrs,
   i32 8,
-  <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 1, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer),
+  <vscale x 1 x i1> splat (i1 1),
   <vscale x 1 x i64> poison
   )
   ret <vscale x 1 x i64> %x
@@ -175,7 +175,7 @@ define <vscale x 1 x i64> @straightline_offset_add(ptr %p, i64 %offset) {
   %x = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
   <vscale x 1 x ptr> %ptrs,
   i32 8,
-  <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 1, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer),
+  <vscale x 1 x i1> splat (i1 1),
   <vscale x 1 x i64> poison
   )
   ret <vscale x 1 x i64> %x
@@ -188,13 +188,13 @@ define <vscale x 1 x i64> @straightline_offset_disjoint_or(ptr %p, i64 %offset) 
 ; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
 ;
   %step = call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
-  %step.shl = shl <vscale x 1 x i64> %step, shufflevector (<vscale x 1 x i64> insertelement (<vscale x 1 x i64> poison, i64 1, i32 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
-  %offsetv = or disjoint <vscale x 1 x i64> %step.shl, shufflevector (<vscale x 1 x i64> insertelement (<vscale x 1 x i64> poison, i64 1, i32 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
+  %step.shl = shl <vscale x 1 x i64> %step, splat (i64 1)
+  %offsetv = or disjoint <vscale x 1 x i64> %step.shl, splat (i64 1)
   %ptrs = getelementptr i32, ptr %p, <vscale x 1 x i64> %offsetv
   %x = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
   <vscale x 1 x ptr> %ptrs,
   i32 8,
-  <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer),
+  <vscale x 1 x i1> splat (i1 true),
   <vscale x 1 x i64> poison
   )
   ret <vscale x 1 x i64> %x
@@ -213,7 +213,7 @@ define <vscale x 1 x i64> @straightline_offset_shl(ptr %p) {
   %x = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
   <vscale x 1 x ptr> %ptrs,
   i32 8,
-  <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 1, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer),
+  <vscale x 1 x i1> splat (i1 1),
   <vscale x 1 x i64> poison
   )
   ret <vscale x 1 x i64> %x
@@ -237,7 +237,7 @@ define <vscale x 1 x i64> @neg_shl_is_not_commutative(ptr %p) {
   %x = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
   <vscale x 1 x ptr> %ptrs,
   i32 8,
-  <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 1, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer),
+  <vscale x 1 x i1> splat (i1 1),
   <vscale x 1 x i64> poison
   )
   ret <vscale x 1 x i64> %x
@@ -258,7 +258,7 @@ define <vscale x 1 x i64> @straightline_offset_shl_nonc(ptr %p, i64 %shift) {
   %x = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
   <vscale x 1 x ptr> %ptrs,
   i32 8,
-  <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 1, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer),
+  <vscale x 1 x i1> splat (i1 1),
   <vscale x 1 x i64> poison
   )
   ret <vscale x 1 x i64> %x
@@ -279,7 +279,7 @@ define void @scatter_loopless(<vscale x 1 x i64> %x, ptr %p, i64 %stride) {
   <vscale x 1 x i64> %x,
   <vscale x 1 x ptr> %ptrs,
   i32 8,
-  <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 1, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer)
+  <vscale x 1 x i1> splat (i1 1)
   )
   ret void
 }
@@ -296,7 +296,7 @@ define void @constant_stride(<vscale x 1 x i64> %x, ptr %p, i64 %stride) {
   <vscale x 1 x i64> %x,
   <vscale x 1 x ptr> %ptrs,
   i32 8,
-  <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 1, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer)
+  <vscale x 1 x i1> splat (i1 1)
   )
   ret void
 }

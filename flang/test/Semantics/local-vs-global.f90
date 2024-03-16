@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 
 module module_before_1
 end
@@ -46,9 +46,9 @@ end
 
 program test
   external justfine ! OK to name a BLOCK DATA if not called
-  !ERROR: The global entity 'module_before_1' corresponding to the local procedure 'module_before_1' is not a callable subprogram
+  !WARNING: The global entity 'module_before_1' corresponding to the local procedure 'module_before_1' is not a callable subprogram
   external module_before_1
-  !ERROR: The global entity 'block_data_before_1' corresponding to the local procedure 'block_data_before_1' is not a callable subprogram
+  !WARNING: The global entity 'block_data_before_1' corresponding to the local procedure 'block_data_before_1' is not a callable subprogram
   external block_data_before_1
   !ERROR: The global subprogram 'explicit_before_1' may not be referenced via the implicit interface 'explicit_before_1'
   external explicit_before_1
@@ -56,9 +56,9 @@ program test
   !ERROR: The global subprogram 'explicit_func_before_1' may not be referenced via the implicit interface 'explicit_func_before_1'
   external explicit_func_before_1
   external implicit_func_before_1
-  !ERROR: The global entity 'module_after_1' corresponding to the local procedure 'module_after_1' is not a callable subprogram
+  !WARNING: The global entity 'module_after_1' corresponding to the local procedure 'module_after_1' is not a callable subprogram
   external module_after_1
-  !ERROR: The global entity 'block_data_after_1' corresponding to the local procedure 'block_data_after_1' is not a callable subprogram
+  !WARNING: The global entity 'block_data_after_1' corresponding to the local procedure 'block_data_after_1' is not a callable subprogram
   external block_data_after_1
   !ERROR: The global subprogram 'explicit_after_1' may not be referenced via the implicit interface 'explicit_after_1'
   external explicit_after_1

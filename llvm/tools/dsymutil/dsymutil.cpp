@@ -734,7 +734,7 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       S.ThreadsRequested = DebugMapPtrsOrErr->size();
       S.Limit = true;
     }
-    ThreadPool Threads(S);
+    DefaultThreadPool Threads(S);
 
     // If there is more than one link to execute, we need to generate
     // temporary files.

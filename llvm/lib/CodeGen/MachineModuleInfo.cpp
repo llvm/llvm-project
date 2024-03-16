@@ -237,11 +237,10 @@ bool MachineModuleInfoWrapperPass::doFinalization(Module &M) {
 
 AnalysisKey MachineModuleAnalysis::Key;
 
-MachineModuleInfo MachineModuleAnalysis::run(Module &M,
-                                             ModuleAnalysisManager &) {
-  MachineModuleInfo MMI(TM);
+MachineModuleAnalysis::Result
+MachineModuleAnalysis::run(Module &M, ModuleAnalysisManager &) {
   MMI.TheModule = &M;
-  MMI.DbgInfoAvailable = !DisableDebugInfoPrinting &&
-                         !M.debug_compile_units().empty();
-  return MMI;
+  MMI.DbgInfoAvailable =
+      !DisableDebugInfoPrinting && !M.debug_compile_units().empty();
+  return Result(MMI);
 }

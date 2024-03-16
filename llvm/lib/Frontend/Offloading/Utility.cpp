@@ -33,16 +33,20 @@ std::pair<Constant *, GlobalVariable *>
 offloading::getOffloadingEntryInitializer(Module &M, Constant *Addr,
                                           StringRef Name, uint64_t Size,
                                           int32_t Flags, int32_t Data) {
+  llvm::Triple Triple(M.getTargetTriple());
   Type *Int8PtrTy = PointerType::getUnqual(M.getContext());
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
   Type *SizeTy = M.getDataLayout().getIntPtrType(M.getContext());
 
   Constant *AddrName = ConstantDataArray::getString(M.getContext(), Name);
 
+  StringRef Prefix = Triple.isNVPTX() ? "$omp_offloading$entry_name"
+                                      : ".omp_offloading.entry_name";
+
   // Create the constant string used to look up the symbol in the device.
-  auto *Str = new GlobalVariable(M, AddrName->getType(), /*isConstant=*/true,
-                                 GlobalValue::InternalLinkage, AddrName,
-                                 ".omp_offloading.entry_name");
+  auto *Str =
+      new GlobalVariable(M, AddrName->getType(), /*isConstant=*/true,
+                         GlobalValue::InternalLinkage, AddrName, Prefix);
   Str->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
   // Construct the offloading entry.
@@ -65,10 +69,12 @@ void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
   auto [EntryInitializer, NameGV] =
       getOffloadingEntryInitializer(M, Addr, Name, Size, Flags, Data);
 
+  StringRef Prefix =
+      Triple.isNVPTX() ? "$omp_offloading$entry$" : ".omp_offloading.entry.";
   auto *Entry = new GlobalVariable(
       M, getEntryTy(M),
       /*isConstant=*/true, GlobalValue::WeakAnyLinkage, EntryInitializer,
-      ".omp_offloading.entry." + Name, nullptr, GlobalValue::NotThreadLocal,
+      Prefix + Name, nullptr, GlobalValue::NotThreadLocal,
       M.getDataLayout().getDefaultGlobalsAddressSpace());
 
   // The entry has to be created in the section the linker expects it to be.

@@ -401,14 +401,16 @@ static Value *promoteAllocaUserToVector(
     // We're loading the full vector.
     Type *AccessTy = Inst->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
-    if (AccessSize == VecStoreSize && cast<Constant>(Index)->isZeroValue()) {
-      if (AccessTy->isPtrOrPtrVectorTy())
-        CurVal = CreateTempPtrIntCast(CurVal, AccessTy);
-      else if (CurVal->getType()->isPtrOrPtrVectorTy())
-        CurVal = CreateTempPtrIntCast(CurVal, CurVal->getType());
-      Value *NewVal = Builder.CreateBitOrPointerCast(CurVal, AccessTy);
-      Inst->replaceAllUsesWith(NewVal);
-      return nullptr;
+    if (Constant *CI = dyn_cast<Constant>(Index)) {
+      if (CI->isZeroValue() && AccessSize == VecStoreSize) {
+        if (AccessTy->isPtrOrPtrVectorTy())
+          CurVal = CreateTempPtrIntCast(CurVal, AccessTy);
+        else if (CurVal->getType()->isPtrOrPtrVectorTy())
+          CurVal = CreateTempPtrIntCast(CurVal, CurVal->getType());
+        Value *NewVal = Builder.CreateBitOrPointerCast(CurVal, AccessTy);
+        Inst->replaceAllUsesWith(NewVal);
+        return nullptr;
+      }
     }
 
     // Loading a subvector.
@@ -456,12 +458,14 @@ static Value *promoteAllocaUserToVector(
     // We're storing the full vector, we can handle this without knowing CurVal.
     Type *AccessTy = Val->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
-    if (AccessSize == VecStoreSize && cast<Constant>(Index)->isZeroValue()) {
-      if (AccessTy->isPtrOrPtrVectorTy())
-        Val = CreateTempPtrIntCast(Val, AccessTy);
-      else if (VectorTy->isPtrOrPtrVectorTy())
-        Val = CreateTempPtrIntCast(Val, VectorTy);
-      return Builder.CreateBitOrPointerCast(Val, VectorTy);
+    if (Constant *CI = dyn_cast<Constant>(Index)) {
+      if (CI->isZeroValue() && AccessSize == VecStoreSize) {
+        if (AccessTy->isPtrOrPtrVectorTy())
+          Val = CreateTempPtrIntCast(Val, AccessTy);
+        else if (VectorTy->isPtrOrPtrVectorTy())
+          Val = CreateTempPtrIntCast(Val, VectorTy);
+        return Builder.CreateBitOrPointerCast(Val, VectorTy);
+      }
     }
 
     // Storing a subvector.
@@ -521,10 +525,18 @@ static Value *promoteAllocaUserToVector(
       // For memset, we don't need to know the previous value because we
       // currently only allow memsets that cover the whole alloca.
       Value *Elt = MSI->getOperand(1);
-      if (DL.getTypeStoreSize(VecEltTy) > 1) {
-        Value *EltBytes =
-            Builder.CreateVectorSplat(DL.getTypeStoreSize(VecEltTy), Elt);
-        Elt = Builder.CreateBitCast(EltBytes, VecEltTy);
+      const unsigned BytesPerElt = DL.getTypeStoreSize(VecEltTy);
+      if (BytesPerElt > 1) {
+        Value *EltBytes = Builder.CreateVectorSplat(BytesPerElt, Elt);
+
+        // If the element type of the vector is a pointer, we need to first cast
+        // to an integer, then use a PtrCast.
+        if (VecEltTy->isPointerTy()) {
+          Type *PtrInt = Builder.getIntNTy(BytesPerElt * 8);
+          Elt = Builder.CreateBitCast(EltBytes, PtrInt);
+          Elt = Builder.CreateIntToPtr(Elt, VecEltTy);
+        } else
+          Elt = Builder.CreateBitCast(EltBytes, VecEltTy);
       }
 
       return Builder.CreateVectorSplat(VectorTy->getElementCount(), Elt);

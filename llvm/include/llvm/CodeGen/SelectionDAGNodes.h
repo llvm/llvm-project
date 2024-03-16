@@ -698,6 +698,8 @@ public:
         return false;
       case ISD::STRICT_FP16_TO_FP:
       case ISD::STRICT_FP_TO_FP16:
+      case ISD::STRICT_BF16_TO_FP:
+      case ISD::STRICT_FP_TO_BF16:
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
       case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"

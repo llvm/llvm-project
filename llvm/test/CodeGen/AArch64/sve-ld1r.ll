@@ -1411,7 +1411,7 @@ define <vscale x 2 x double> @negtest_dup_ld1rd_double_passthru_nxv2f64(<vscale 
 
 
 ; Check that a load consumed by a scalable splat prefers a replicating load.
-define i8* @avoid_preindex_load(i8* %src, <vscale x 2 x i64>* %out) {
+define ptr @avoid_preindex_load(ptr %src, ptr %out) {
 ; CHECK-LABEL: avoid_preindex_load:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
@@ -1419,18 +1419,18 @@ define i8* @avoid_preindex_load(i8* %src, <vscale x 2 x i64>* %out) {
 ; CHECK-NEXT:    add x0, x0, #1
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i8, i8* %src, i64 1
-  %tmp = load i8, i8* %ptr, align 4
+  %ptr = getelementptr inbounds i8, ptr %src, i64 1
+  %tmp = load i8, ptr %ptr, align 4
   %ext = sext i8 %tmp to i64
   %ins = insertelement <vscale x 2 x i64> undef, i64 %ext, i32 0
   %dup = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
-  store <vscale x 2 x i64> %dup, <vscale x 2 x i64>* %out
-  ret i8* %ptr
+  store <vscale x 2 x i64> %dup, ptr %out
+  ret ptr %ptr
 }
 
 ; Check that a load consumed by a scalable splat prefers a replicating
 ; load over a pre-indexed load.
-define i8* @avoid_preindex_load_dup(i8* %src, <vscale x 2 x i1> %pg, <vscale x 2 x i64>* %out) {
+define ptr @avoid_preindex_load_dup(ptr %src, <vscale x 2 x i1> %pg, ptr %out) {
 ; CHECK-LABEL: avoid_preindex_load_dup:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
@@ -1438,16 +1438,16 @@ define i8* @avoid_preindex_load_dup(i8* %src, <vscale x 2 x i1> %pg, <vscale x 2
 ; CHECK-NEXT:    add x0, x0, #1
 ; CHECK-NEXT:    st1d { z0.d }, p1, [x1]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i8, i8* %src, i64 1
-  %tmp = load i8, i8* %ptr, align 4
+  %ptr = getelementptr inbounds i8, ptr %src, i64 1
+  %tmp = load i8, ptr %ptr, align 4
   %ext = sext i8 %tmp to i64
   %dup = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
-  store <vscale x 2 x i64> %dup, <vscale x 2 x i64>* %out
-  ret i8* %ptr
+  store <vscale x 2 x i64> %dup, ptr %out
+  ret ptr %ptr
 }
 
 ; Same as avoid_preindex_load_dup, but with zero passthru.
-define i8* @avoid_preindex_load_dup_passthru_zero(i8* %src, <vscale x 2 x i1> %pg, <vscale x 2 x i64>* %out) {
+define ptr @avoid_preindex_load_dup_passthru_zero(ptr %src, <vscale x 2 x i1> %pg, ptr %out) {
 ; CHECK-LABEL: avoid_preindex_load_dup_passthru_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
@@ -1455,16 +1455,16 @@ define i8* @avoid_preindex_load_dup_passthru_zero(i8* %src, <vscale x 2 x i1> %p
 ; CHECK-NEXT:    add x0, x0, #1
 ; CHECK-NEXT:    st1d { z0.d }, p1, [x1]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i8, i8* %src, i64 1
-  %tmp = load i8, i8* %ptr, align 4
+  %ptr = getelementptr inbounds i8, ptr %src, i64 1
+  %tmp = load i8, ptr %ptr, align 4
   %ext = sext i8 %tmp to i64
   %dup = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> %pg, i64 %ext)
-  store <vscale x 2 x i64> %dup, <vscale x 2 x i64>* %out
-  ret i8* %ptr
+  store <vscale x 2 x i64> %dup, ptr %out
+  ret ptr %ptr
 }
 
 ; If a dup has a non-undef passthru, stick with the pre-indexed load.
-define i8* @preindex_load_dup_passthru(<vscale x 2 x i64> %passthru, i8* %src, <vscale x 2 x i1> %pg, <vscale x 2 x i64>* %out) {
+define ptr @preindex_load_dup_passthru(<vscale x 2 x i64> %passthru, ptr %src, <vscale x 2 x i1> %pg, ptr %out) {
 ; CHECK-LABEL: preindex_load_dup_passthru:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
@@ -1472,17 +1472,17 @@ define i8* @preindex_load_dup_passthru(<vscale x 2 x i64> %passthru, i8* %src, <
 ; CHECK-NEXT:    mov z0.d, p0/m, x8
 ; CHECK-NEXT:    st1d { z0.d }, p1, [x1]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i8, i8* %src, i64 1
-  %tmp = load i8, i8* %ptr, align 4
+  %ptr = getelementptr inbounds i8, ptr %src, i64 1
+  %tmp = load i8, ptr %ptr, align 4
   %ext = sext i8 %tmp to i64
   %dup = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> %passthru, <vscale x 2 x i1> %pg, i64 %ext)
-  store <vscale x 2 x i64> %dup, <vscale x 2 x i64>* %out
-  ret i8* %ptr
+  store <vscale x 2 x i64> %dup, ptr %out
+  ret ptr %ptr
 }
 
 ; Show that a second user of the load prevents the replicating load
 ; check which would ordinarily inhibit indexed loads from firing.
-define i8* @preidx8sext64_instead_of_ld1r(i8* %src, <vscale x 2 x i64>* %out, i64* %dst) {
+define ptr @preidx8sext64_instead_of_ld1r(ptr %src, ptr %out, ptr %dst) {
 ; CHECK-LABEL: preidx8sext64_instead_of_ld1r:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
@@ -1491,14 +1491,14 @@ define i8* @preidx8sext64_instead_of_ld1r(i8* %src, <vscale x 2 x i64>* %out, i6
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    str x8, [x2]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i8, i8* %src, i64 1
-  %tmp = load i8, i8* %ptr, align 4
+  %ptr = getelementptr inbounds i8, ptr %src, i64 1
+  %tmp = load i8, ptr %ptr, align 4
   %ext = sext i8 %tmp to i64
   %ins = insertelement <vscale x 2 x i64> undef, i64 %ext, i32 0
   %dup = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
-  store <vscale x 2 x i64> %dup, <vscale x 2 x i64>* %out
-  store i64 %ext, i64* %dst
-  ret i8* %ptr
+  store <vscale x 2 x i64> %dup, ptr %out
+  store i64 %ext, ptr %dst
+  ret ptr %ptr
 }
 
 

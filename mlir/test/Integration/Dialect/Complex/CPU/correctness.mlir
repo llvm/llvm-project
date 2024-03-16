@@ -333,11 +333,21 @@ func.func @entry() {
     // CHECK-NEXT:  5
     (0.0, 6.0),
     // CHECK-NEXT:  6
-    (7.0, 8.0)
+    (7.0, 8.0),
     // CHECK-NEXT:  10.6301
-  ]> : tensor<6xcomplex<f64>>
+    (-1.0, -1.0),
+    // CHECK-NEXT: 1.414
+    (-1.0e300, -1.0e300),
+    // CHECK-NEXT:  1.41421e+300
+    (-1.0, 0.0),
+    // CHECK-NOT: -1
+    // CHECK-NEXT:  1
+    (0.0, -1.0)
+    // CHECK-NOT:  -1
+    // CHECK-NEXT:  1
+  ]> : tensor<10xcomplex<f64>>
   %abs_test_cast = tensor.cast %abs_test
-    :  tensor<6xcomplex<f64>> to tensor<?xcomplex<f64>>
+    :  tensor<10xcomplex<f64>> to tensor<?xcomplex<f64>>
 
   %abs_func = func.constant @abs : (complex<f64>) -> f64
 

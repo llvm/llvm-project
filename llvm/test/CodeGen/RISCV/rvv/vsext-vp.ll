@@ -22,7 +22,7 @@ define <vscale x 2 x i16> @vsext_nxv2i8_nxv2i16_unmasked(<vscale x 2 x i8> %a, i
 ; CHECK-NEXT:    vsext.vf2 v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i16> @llvm.vp.sext.nxv2i16.nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i16> @llvm.vp.sext.nxv2i16.nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i16> %v
 }
 
@@ -46,7 +46,7 @@ define <vscale x 2 x i32> @vsext_nxv2i8_nxv2i32_unmasked(<vscale x 2 x i8> %a, i
 ; CHECK-NEXT:    vsext.vf4 v9, v8
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i32> @llvm.vp.sext.nxv2i32.nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i32> @llvm.vp.sext.nxv2i32.nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i32> %v
 }
 
@@ -70,7 +70,7 @@ define <vscale x 2 x i64> @vsext_nxv2i8_nxv2i64_unmasked(<vscale x 2 x i8> %a, i
 ; CHECK-NEXT:    vsext.vf8 v10, v8
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i64.nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i64.nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i64> %v
 }
 
@@ -94,7 +94,7 @@ define <vscale x 2 x i32> @vsext_nxv2i16_nxv2i32_unmasked(<vscale x 2 x i16> %a,
 ; CHECK-NEXT:    vsext.vf2 v9, v8
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i32> @llvm.vp.sext.nxv2i32.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i32> @llvm.vp.sext.nxv2i32.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i32> %v
 }
 
@@ -118,7 +118,7 @@ define <vscale x 2 x i64> @vsext_nxv2i16_nxv2i64_unmasked(<vscale x 2 x i16> %a,
 ; CHECK-NEXT:    vsext.vf4 v10, v8
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i64.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i64.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i64> %v
 }
 
@@ -142,7 +142,7 @@ define <vscale x 2 x i64> @vsext_nxv2i32_nxv2i64_unmasked(<vscale x 2 x i32> %a,
 ; CHECK-NEXT:    vsext.vf2 v10, v8
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i64.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i64.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i64> %v
 }
 
@@ -195,6 +195,6 @@ define <vscale x 32 x i32> @vsext_nxv32i8_nxv32i32_unmasked(<vscale x 32 x i8> %
 ; CHECK-NEXT:    vsext.vf4 v24, v8
 ; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i32.nxv32i8(<vscale x 32 x i8> %a, <vscale x 32 x i1> shufflevector (<vscale x 32 x i1> insertelement (<vscale x 32 x i1> undef, i1 true, i32 0), <vscale x 32 x i1> undef, <vscale x 32 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i32.nxv32i8(<vscale x 32 x i8> %a, <vscale x 32 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 32 x i32> %v
 }

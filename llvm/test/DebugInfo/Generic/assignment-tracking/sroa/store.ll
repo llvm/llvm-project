@@ -66,7 +66,7 @@ entry:
   %agg.tmp = alloca %struct.LargeStruct, align 8
   %0 = bitcast ptr %S to ptr, !dbg !30
   %1 = bitcast ptr %S to ptr, !dbg !31
-  call void @llvm.memset.p0i8.i64(ptr align 4 %1, i8 0, i64 28, i1 false), !dbg !31, !DIAssignID !32
+  call void @llvm.memset.p0.i64(ptr align 4 %1, i8 0, i64 28, i1 false), !dbg !31, !DIAssignID !32
   call void @llvm.dbg.assign(metadata i8 0, metadata !18, metadata !DIExpression(), metadata !32, metadata ptr %1, metadata !DIExpression()), !dbg !31
   %2 = load i32, ptr @Glob, align 4, !dbg !33
   %Var = getelementptr inbounds %struct.LargeStruct, ptr %S, i32 0, i32 3, !dbg !38
@@ -74,7 +74,7 @@ entry:
   call void @llvm.dbg.assign(metadata i32 %2, metadata !18, metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata !42, metadata ptr %Var, metadata !DIExpression()), !dbg !39
   %3 = bitcast ptr %agg.tmp to ptr, !dbg !43
   %4 = bitcast ptr %S to ptr, !dbg !43
-  call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 4 %3, ptr align 4 %4, i64 28, i1 false), !dbg !43
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %3, ptr align 4 %4, i64 28, i1 false), !dbg !43
   %call = call i32 @_Z3use11LargeStruct(ptr byval(%struct.LargeStruct) align 8 %agg.tmp), !dbg !45
   %Var1 = getelementptr inbounds %struct.LargeStruct, ptr %S, i32 0, i32 3, !dbg !46
   %5 = load i32, ptr %Var1, align 4, !dbg !46
@@ -83,9 +83,9 @@ entry:
 }
 
 
-declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
 declare !dbg !49 dso_local i32 @_Z3use11LargeStruct(ptr byval(%struct.LargeStruct) align 8) #3
-declare void @llvm.memcpy.p0i8.p0i8.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #4
 
 !llvm.dbg.cu = !{!2}

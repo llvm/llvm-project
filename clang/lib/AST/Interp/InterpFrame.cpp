@@ -22,10 +22,10 @@ using namespace clang;
 using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
-                         InterpFrame *Caller, CodePtr RetPC)
+                         InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
-      RetPC(RetPC), ArgSize(Func ? Func->getArgSize() : 0),
-      Args(static_cast<char *>(S.Stk.top())), FrameOffset(S.Stk.size()) {
+      RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())),
+      FrameOffset(S.Stk.size()) {
   if (!Func)
     return;
 
@@ -38,20 +38,14 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
     for (auto &Local : Scope.locals()) {
       Block *B = new (localBlock(Local.Offset)) Block(Local.Desc);
       B->invokeCtor();
-      InlineDescriptor *ID = localInlineDesc(Local.Offset);
-      ID->Desc = Local.Desc;
-      ID->IsActive = true;
-      ID->Offset = sizeof(InlineDescriptor);
-      ID->IsBase = false;
-      ID->IsFieldMutable = false;
-      ID->IsConst = false;
-      ID->IsInitialized = false;
+      new (localInlineDesc(Local.Offset)) InlineDescriptor(Local.Desc);
     }
   }
 }
 
-InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC)
-    : InterpFrame(S, Func, S.Current, RetPC) {
+InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC,
+                         unsigned VarArgSize)
+    : InterpFrame(S, Func, S.Current, RetPC, Func->getArgSize() + VarArgSize) {
   // As per our calling convention, the this pointer is
   // part of the ArgSize.
   // If the function has RVO, the RVO pointer is first.
@@ -201,7 +195,7 @@ const FunctionDecl *InterpFrame::getCallee() const {
 
 Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
   assert(Offset < Func->getFrameSize() && "Invalid local offset.");
-  return Pointer(localBlock(Offset), sizeof(InlineDescriptor));
+  return Pointer(localBlock(Offset));
 }
 
 Pointer InterpFrame::getParamPointer(unsigned Off) {
@@ -235,10 +229,16 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
 }
 
 const Expr *InterpFrame::getExpr(CodePtr PC) const {
+  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+    return Caller->getExpr(RetPC);
+
   return S.getExpr(Func, PC);
 }
 
 SourceLocation InterpFrame::getLocation(CodePtr PC) const {
+  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+    return Caller->getLocation(RetPC);
+
   return S.getLocation(Func, PC);
 }
 

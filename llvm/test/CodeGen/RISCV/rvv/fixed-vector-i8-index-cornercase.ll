@@ -60,53 +60,32 @@ define <512 x i8> @single_source(<512 x i8> %a) {
 define <512 x i8> @range_restriction(<512 x i8> %a) {
 ; CHECK-LABEL: range_restriction:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -1536
-; CHECK-NEXT:    .cfi_def_cfa_offset 1536
-; CHECK-NEXT:    sd ra, 1528(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 1520(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset ra, -8
-; CHECK-NEXT:    .cfi_offset s0, -16
-; CHECK-NEXT:    addi s0, sp, 1536
-; CHECK-NEXT:    .cfi_def_cfa s0, 0
-; CHECK-NEXT:    andi sp, sp, -512
-; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    li a0, 512
-; CHECK-NEXT:    addi a1, sp, 512
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vse8.v v8, (a1)
-; CHECK-NEXT:    lbu a0, 766(sp)
-; CHECK-NEXT:    vmv.x.s a1, v16
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v17, v16, 5
-; CHECK-NEXT:    vmv.x.s a0, v17
-; CHECK-NEXT:    vmv.s.x v24, a0
-; CHECK-NEXT:    li a0, 432
-; CHECK-NEXT:    li a1, 431
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v8, v24, a1
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v17, v16, 4
-; CHECK-NEXT:    vmv.x.s a0, v17
-; CHECK-NEXT:    vmv.s.x v24, a0
-; CHECK-NEXT:    li a0, 466
-; CHECK-NEXT:    li a1, 465
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v8, v24, a1
-; CHECK-NEXT:    li a0, 44
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v16, a0
-; CHECK-NEXT:    vmv.x.s a0, v16
-; CHECK-NEXT:    vmv.s.x v16, a0
-; CHECK-NEXT:    li a0, 501
-; CHECK-NEXT:    li a1, 500
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v8, v16, a1
-; CHECK-NEXT:    addi sp, s0, -1536
-; CHECK-NEXT:    ld ra, 1528(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 1520(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 1536
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    li a1, 254
+; CHECK-NEXT:    vslide1down.vx v24, v16, a1
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v16, 5
+; CHECK-NEXT:    li a1, 432
+; CHECK-NEXT:    li a2, 431
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
+; CHECK-NEXT:    vslideup.vx v24, v16, a2
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v16, 4
+; CHECK-NEXT:    li a1, 466
+; CHECK-NEXT:    li a2, 465
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
+; CHECK-NEXT:    vslideup.vx v24, v16, a2
+; CHECK-NEXT:    li a1, 44
+; CHECK-NEXT:    vmv.s.x v16, a1
+; CHECK-NEXT:    li a1, 501
+; CHECK-NEXT:    li a2, 500
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
+; CHECK-NEXT:    vslideup.vx v24, v16, a2
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vrgather.vv v16, v8, v24
+; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
   %res = shufflevector <512 x i8> %a, <512 x i8> poison, <512 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 4, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 44, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 254>
   ret <512 x i8> %res
@@ -116,87 +95,76 @@ define <512 x i8> @range_restriction(<512 x i8> %a) {
 define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-LABEL: two_source:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -2032
-; CHECK-NEXT:    .cfi_def_cfa_offset 2032
-; CHECK-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 2016(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -1536
+; CHECK-NEXT:    .cfi_def_cfa_offset 1536
+; CHECK-NEXT:    sd ra, 1528(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 1520(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
-; CHECK-NEXT:    addi s0, sp, 2032
+; CHECK-NEXT:    addi s0, sp, 1536
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
-; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    andi sp, sp, -512
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    li a0, 512
-; CHECK-NEXT:    addi a1, sp, 1024
+; CHECK-NEXT:    addi a1, sp, 512
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a1)
-; CHECK-NEXT:    addi a1, sp, 512
-; CHECK-NEXT:    vse8.v v16, (a1)
 ; CHECK-NEXT:    vmv.x.s a1, v24
 ; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    li a1, 43
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v17, v16, a1
-; CHECK-NEXT:    vmv.x.s a1, v17
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    li a0, 36
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v17, v16, a0
-; CHECK-NEXT:    vmv.x.s a0, v17
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    li a0, 399
-; CHECK-NEXT:    li a1, 398
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v8, v0, a1
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v17, v24, 5
-; CHECK-NEXT:    vmv.x.s a0, v17
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    li a0, 432
-; CHECK-NEXT:    li a1, 431
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v8, v0, a1
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v17, v24, 4
-; CHECK-NEXT:    vmv.x.s a0, v17
-; CHECK-NEXT:    vmv.s.x v24, a0
-; CHECK-NEXT:    li a0, 466
-; CHECK-NEXT:    li a1, 465
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v8, v24, a1
-; CHECK-NEXT:    li a1, 62
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v16, a1
-; CHECK-NEXT:    vmv.x.s a1, v16
-; CHECK-NEXT:    vmv.s.x v16, a1
-; CHECK-NEXT:    li a1, 467
+; CHECK-NEXT:    vslidedown.vi v25, v24, 5
+; CHECK-NEXT:    vmv.x.s a1, v25
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    li a1, 432
+; CHECK-NEXT:    li a2, 431
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
-; CHECK-NEXT:    lbu a1, 1497(sp)
-; CHECK-NEXT:    vslideup.vx v8, v16, a0
-; CHECK-NEXT:    vmv.s.x v16, a1
-; CHECK-NEXT:    li a0, 478
-; CHECK-NEXT:    li a1, 477
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
-; CHECK-NEXT:    lbu a0, 674(sp)
-; CHECK-NEXT:    vslideup.vx v8, v16, a1
-; CHECK-NEXT:    vmv.s.x v16, a0
-; CHECK-NEXT:    li a0, 490
-; CHECK-NEXT:    li a1, 489
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
-; CHECK-NEXT:    lbu a0, 1524(sp)
-; CHECK-NEXT:    vslideup.vx v8, v16, a1
-; CHECK-NEXT:    vmv.s.x v16, a0
-; CHECK-NEXT:    li a0, 501
-; CHECK-NEXT:    li a1, 500
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v8, v16, a1
-; CHECK-NEXT:    addi sp, s0, -2048
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 2032
+; CHECK-NEXT:    vslideup.vx v8, v0, a2
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v24, v24, 4
+; CHECK-NEXT:    vmv.x.s a1, v24
+; CHECK-NEXT:    vmv.s.x v24, a1
+; CHECK-NEXT:    li a1, 466
+; CHECK-NEXT:    li a2, 465
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
+; CHECK-NEXT:    lbu a1, 985(sp)
+; CHECK-NEXT:    vslideup.vx v8, v24, a2
+; CHECK-NEXT:    vmv.s.x v24, a1
+; CHECK-NEXT:    li a1, 478
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
+; CHECK-NEXT:    lbu a1, 1012(sp)
+; CHECK-NEXT:    li a2, 477
+; CHECK-NEXT:    vslideup.vx v8, v24, a2
+; CHECK-NEXT:    vmv.s.x v24, a1
+; CHECK-NEXT:    li a1, 501
+; CHECK-NEXT:    li a2, 500
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
+; CHECK-NEXT:    vslideup.vx v8, v24, a2
+; CHECK-NEXT:    lui a1, 2761
+; CHECK-NEXT:    slli a1, a1, 25
+; CHECK-NEXT:    addi a1, a1, 501
+; CHECK-NEXT:    slli a1, a1, 13
+; CHECK-NEXT:    addi a1, a1, 512
+; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-NEXT:    vmv.v.x v24, a1
+; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v7, 0
+; CHECK-NEXT:    lui a1, 1047552
+; CHECK-NEXT:    addiw a1, a1, 1
+; CHECK-NEXT:    slli a1, a1, 23
+; CHECK-NEXT:    addi a1, a1, 1
+; CHECK-NEXT:    slli a1, a1, 18
+; CHECK-NEXT:    vslide1down.vx v0, v7, a1
+; CHECK-NEXT:    lui a1, 4
+; CHECK-NEXT:    vmv.s.x v7, a1
+; CHECK-NEXT:    vsetivli zero, 7, e64, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v0, v7, 6
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, mu
+; CHECK-NEXT:    vrgather.vv v8, v16, v24, v0.t
+; CHECK-NEXT:    addi sp, s0, -1536
+; CHECK-NEXT:    ld ra, 1528(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 1520(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 1536
 ; CHECK-NEXT:    ret
   %res = shufflevector <512 x i8> %a, <512 x i8> %b, <512 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 548, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 4, i32 574, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 473, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 674, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 500, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 555>
   ret <512 x i8> %res

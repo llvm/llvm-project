@@ -150,14 +150,27 @@ public:
 };
 
 // Issue a thread fence with the given memory ordering.
-LIBC_INLINE void atomic_thread_fence(MemoryOrder mem_ord) {
+LIBC_INLINE void atomic_thread_fence([[maybe_unused]] MemoryOrder mem_ord) {
 // The NVPTX backend currently does not support atomic thread fences so we use a
 // full system fence instead.
 #ifdef LIBC_TARGET_ARCH_IS_NVPTX
-  (void)mem_ord;
   __nvvm_membar_sys();
 #else
-  __atomic_thread_fence(int(mem_ord));
+  __atomic_thread_fence(static_cast<int>(mem_ord));
+#endif
+}
+
+// Establishes memory synchronization ordering of non-atomic and relaxed atomic
+// accesses, as instructed by order, between a thread and a signal handler
+// executed on the same thread. This is equivalent to atomic_thread_fence,
+// except no instructions for memory ordering are issued. Only reordering of
+// the instructions by the compiler is suppressed as order instructs.
+LIBC_INLINE void atomic_signal_fence([[maybe_unused]] MemoryOrder mem_ord) {
+#if LIBC_HAS_BUILTIN(__atomic_signal_fence)
+  __atomic_signal_fence(static_cast<int>(mem_ord));
+#else
+  // if the builtin is not ready, use asm as a full compiler barrier.
+  asm volatile("" ::: "memory");
 #endif
 }
 

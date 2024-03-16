@@ -81,17 +81,20 @@ static Value genSliceStride(OpBuilder &builder, Location loc, Value tensor,
 
 LoopEmitter::LoopEmitter(ValueRange tensors, StringAttr loopTag, bool hasOutput,
                          bool isSparseOut, unsigned numLoops,
-                         DependentLvlGetter dimGetter) {
+                         DependentLvlGetter dimGetter,
+                         SparseEmitStrategy emitStrategy) {
   initialize(tensors, loopTag, hasOutput, isSparseOut, numLoops, dimGetter);
 }
 
 void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
                              bool isSparseOut, unsigned numLoops,
-                             DependentLvlGetter dimGetter) {
+                             DependentLvlGetter dimGetter,
+                             SparseEmitStrategy emitStrategy) {
   // First initialize the top-level type of the fields.
   this->loopTag = loopTag;
   this->hasOutput = hasOutput;
   this->isSparseOut = isSparseOut;
+  this->emitStrategy = emitStrategy;
 
   const unsigned numManifestTensors = ts.size();
   const unsigned synTensorId = numManifestTensors;
@@ -163,13 +166,13 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
 std::unique_ptr<SparseIterator>
 LoopEmitter::makeLevelIterator(OpBuilder &builder, Location loc, TensorId t,
                                Level l) {
-  auto it = makeSimpleIterator(*lvls[t][l]);
+  auto it = makeSimpleIterator(*lvls[t][l], emitStrategy);
   auto stt = getSparseTensorType(tensors[t]);
   if (stt.hasEncoding() && stt.getEncoding().isSlice()) {
     Value offset = genSliceOffset(builder, loc, tensors[t], l);
     Value stride = genSliceStride(builder, loc, tensors[t], l);
-    auto slicedIt = makeSlicedLevelIterator(std::move(it), offset, stride,
-                                            lvls[t][l]->size());
+    auto slicedIt = makeSlicedLevelIterator(
+        std::move(it), offset, stride, lvls[t][l]->getSize(), emitStrategy);
     return slicedIt;
   }
   return it;
@@ -183,7 +186,7 @@ void LoopEmitter::initializeLoopEmit(
     TensorId synId = getSynTensorId();
     for (unsigned i = 0, e = loopHighs.size(); i < e; i++) {
       Value sz = loopHighs[i] = synSetter(builder, loc, i);
-      auto [stl, it] = makeSynLevelAndIterator(sz, synId, i);
+      auto [stl, it] = makeSynLevelAndIterator(sz, synId, i, emitStrategy);
       lvls[synId][i] = std::move(stl);
       iters[synId][i].emplace_back(std::move(it));
     }
@@ -256,7 +259,7 @@ void LoopEmitter::initializeLoopEmit(
       // Annotated sparse tensors.
       // We also need the value buffer for all-dense annotated "sparse"
       // tensors.
-      valBuffer[t] = genToValues(builder, loc, tensor);
+      valBuffer[t] = builder.create<ToValuesOp>(loc, tensor);
     }
     // NOTE: we can also prepare for 0 lvl here in advance, this will hoist
     // some loop preparation from tensor iteration, but will also (undesirably)
@@ -310,16 +313,17 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
         // Compute the subsection size.
         Value size = c0;
         for (auto [loop, stride] : remDepStack[t][lvl]) {
-          Value loopHi = loopHighs[loop];
-          size = ADDI(size, MULI(loopHi, C_IDX(stride)));
+          Value idxMax = SUBI(loopHighs[loop], C_IDX(1));
+          size = ADDI(size, ADDI(MULI(idxMax, C_IDX(stride)), C_IDX(1)));
         }
         it = makeNonEmptySubSectIterator(builder, loc, parent, loopHighs[loop],
-                                         std::move(lvlIt), size, curDep.second);
+                                         std::move(lvlIt), size, curDep.second,
+                                         emitStrategy);
       } else {
-        Value size = loopHighs[loop];
         const SparseIterator &subSectIter = *iters[t][lvl].back();
-        it = makeTraverseSubSectIterator(subSectIter, *parent, std::move(lvlIt),
-                                         size, curDep.second);
+        it = makeTraverseSubSectIterator(builder, loc, subSectIter, *parent,
+                                         std::move(lvlIt), loopHighs[loop],
+                                         curDep.second, emitStrategy);
       }
       lastIter[t] = it.get();
       iters[t][lvl].emplace_back(std::move(it));
@@ -465,7 +469,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
 
   // Construct the while-loop with a parameter for each coordinate.
   for (SparseIterator *it : spIters) {
-    ValueRange itVals = it->getItVals();
+    ValueRange itVals = it->getCursor();
     ivs.append(itVals.begin(), itVals.end());
   }
 
@@ -724,7 +728,7 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
       // Forward the sparse iterator.
       Value cmp = CMPI(eq, it.getCrd(), iv);
       it.forwardIf(builder, loc, cmp);
-      operands.append(it.getItVals().begin(), it.getItVals().end());
+      operands.append(it.getCursor().begin(), it.getCursor().end());
       // const Value newPos = whileOp->getResult(o++);
       // Following loops continue iteration from the break point of the
       // current while loop.

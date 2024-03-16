@@ -39,7 +39,7 @@ __attribute__((target("cpu=sifive-u54"))) void testAttrCpuOnly() {}
 // CHECK: attributes #0 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zifencei,-relax,-zbb,-zfa" }
 // CHECK: attributes #1 = { {{.*}}"target-cpu"="rocket-rv64" "target-features"="+64bit,+a,+d,+f,+m,+save-restore,+v,+zicsr,+zifencei,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b,-relax,-zbb,-zfa" "tune-cpu"="generic-rv64" }
 // CHECK: attributes #2 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zbb,+zifencei,-relax,-zfa" }
-// CHECK: attributes #3 = { {{.*}}"target-features"="+64bit,+a,+d,+experimental-zicond,+f,+m,+save-restore,+v,+zbb,+zicsr,+zifencei,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b,-relax,-zfa" }
+// CHECK: attributes #3 = { {{.*}}"target-features"="+64bit,+a,+d,+f,+m,+save-restore,+v,+zbb,+zicond,+zicsr,+zifencei,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b,-relax,-zfa" }
 // Make sure we append negative features if we override the arch
 // CHECK: attributes #4 = { {{.*}}"target-features"="+64bit,+a,+c,+d,+f,+m,+save-restore,+zbb,+zicsr,+zifencei,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }
 // CHECK: attributes #5 = { {{.*}}"target-features"="+64bit,+m,+save-restore,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }

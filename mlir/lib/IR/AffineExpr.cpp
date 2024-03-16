@@ -1251,10 +1251,10 @@ LogicalResult SimpleAffineExprFlattener::visitMulExpr(AffineBinaryOpExpr expr) {
   }
 
   // Get the RHS constant.
-  auto rhsConst = rhs[getConstantIndex()];
-  for (unsigned i = 0, e = lhs.size(); i < e; i++) {
-    lhs[i] *= rhsConst;
-  }
+  int64_t rhsConst = rhs[getConstantIndex()];
+  for (int64_t &lhsElt : lhs)
+    lhsElt *= rhsConst;
+
   return success();
 }
 
@@ -1323,12 +1323,12 @@ LogicalResult SimpleAffineExprFlattener::visitModExpr(AffineBinaryOpExpr expr) {
   // the GCD of expr and c.
   SmallVector<int64_t, 8> floorDividend(lhs);
   uint64_t gcd = rhsConst;
-  for (unsigned i = 0, e = lhs.size(); i < e; i++)
-    gcd = std::gcd(gcd, (uint64_t)std::abs(lhs[i]));
+  for (int64_t lhsElt : lhs)
+    gcd = std::gcd(gcd, (uint64_t)std::abs(lhsElt));
   // Simplify the numerator and the denominator.
   if (gcd != 1) {
-    for (unsigned i = 0, e = floorDividend.size(); i < e; i++)
-      floorDividend[i] = floorDividend[i] / static_cast<int64_t>(gcd);
+    for (int64_t &floorDividendElt : floorDividend)
+      floorDividendElt = floorDividendElt / static_cast<int64_t>(gcd);
   }
   int64_t floorDivisor = rhsConst / static_cast<int64_t>(gcd);
 
@@ -1442,12 +1442,12 @@ LogicalResult SimpleAffineExprFlattener::visitDivExpr(AffineBinaryOpExpr expr,
   // Simplify the floordiv, ceildiv if possible by canceling out the greatest
   // common divisors of the numerator and denominator.
   uint64_t gcd = std::abs(rhsConst);
-  for (unsigned i = 0, e = lhs.size(); i < e; i++)
-    gcd = std::gcd(gcd, (uint64_t)std::abs(lhs[i]));
+  for (int64_t lhsElt : lhs)
+    gcd = std::gcd(gcd, (uint64_t)std::abs(lhsElt));
   // Simplify the numerator and the denominator.
   if (gcd != 1) {
-    for (unsigned i = 0, e = lhs.size(); i < e; i++)
-      lhs[i] = lhs[i] / static_cast<int64_t>(gcd);
+    for (int64_t &lhsElt : lhs)
+      lhsElt = lhsElt / static_cast<int64_t>(gcd);
   }
   int64_t divisor = rhsConst / static_cast<int64_t>(gcd);
   // If the divisor becomes 1, the updated LHS is the result. (The

@@ -572,7 +572,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__algorithm/min.h>
 #include <__algorithm/remove.h>
 #include <__algorithm/remove_if.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__config>
 #include <__format/enable_insertable.h>
 #include <__functional/hash.h>
@@ -599,6 +599,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__ranges/size.h>
 #include <__string/char_traits.h>
 #include <__string/extern_template_lists.h>
+#include <__type_traits/conditional.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_convertible.h>
@@ -607,6 +608,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_standard_layout.h>
 #include <__type_traits/is_trivial.h>
+#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/void_t.h>
@@ -723,6 +725,20 @@ public:
   typedef const value_type& const_reference;
   typedef typename __alloc_traits::pointer pointer;
   typedef typename __alloc_traits::const_pointer const_pointer;
+
+  // A basic_string contains the following members which may be trivially relocatable:
+  // - pointer: is currently assumed to be trivially relocatable, but is still checked in case that changes
+  // - size_type: is always trivially relocatable, since it has to be an integral type
+  // - value_type: is always trivially relocatable, since it has to be trivial
+  // - unsigned char: is a fundamental type, so it's trivially relocatable
+  // - allocator_type: may or may not be trivially relocatable, so it's checked
+  //
+  // This string implementation doesn't contain any references into itself. It only contains a bit that says whether
+  // it is in small or large string mode, so the entire structure is trivially relocatable if its members are.
+  using __trivially_relocatable = __conditional_t<
+      __libcpp_is_trivially_relocatable<allocator_type>::value && __libcpp_is_trivially_relocatable<pointer>::value,
+      basic_string,
+      void>;
 
   static_assert((!is_array<value_type>::value), "Character type of basic_string must not be an array");
   static_assert((is_standard_layout<value_type>::value), "Character type of basic_string must be standard-layout");
@@ -922,7 +938,11 @@ public:
       // Turning off ASan instrumentation for variable initialization with _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS
       // does not work consistently during initialization of __r_, so we instead unpoison __str's memory manually first.
       // __str's memory needs to be unpoisoned only in the case where it's a short string.
-      : __r_([](basic_string &__s) -> decltype(__s.__r_)&& { if(!__s.__is_long()) __s.__annotate_delete(); return std::move(__s.__r_); }(__str)) {
+      : __r_([](basic_string& __s) -> decltype(__s.__r_)&& {
+          if (!__s.__is_long())
+            __s.__annotate_delete();
+          return std::move(__s.__r_);
+        }(__str)) {
     __str.__r_.first() = __rep();
     __str.__annotate_new(0);
     if (!__is_long())
@@ -1123,7 +1143,7 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(basic_string&& __str)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
     __move_assign(__str, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
     return *this;
   }
@@ -1138,7 +1158,7 @@ public:
 #if _LIBCPP_STD_VER >= 23
   basic_string& operator=(nullptr_t) = delete;
 #endif
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS basic_string& operator=(value_type __c);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(value_type __c);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator begin() _NOEXCEPT {
     return __make_iterator(__get_pointer());
@@ -1380,7 +1400,7 @@ public:
   }
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(basic_string&& __str)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
     *this = std::move(__str);
     return *this;
   }
@@ -1902,7 +1922,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
-    (void) __current_size;
+    (void)__current_size;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
@@ -1917,7 +1937,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_increase(size_type __n) const _NOEXCEPT {
-    (void) __n;
+    (void)__n;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + size() + 1, data() + size() + 1 + __n);
@@ -1925,7 +1945,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
-    (void) __old_size;
+    (void)__old_size;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
@@ -1936,9 +1956,7 @@ private:
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __align_it(size_type __s) _NOEXCEPT {
     return (__s + (__a - 1)) & ~(__a - 1);
   }
-  enum {
-    __alignment = 8
-  };
+  enum { __alignment = 8 };
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __recommend(size_type __s) _NOEXCEPT {
     if (__s < __min_cap) {
       return static_cast<size_type>(__min_cap) - 1;

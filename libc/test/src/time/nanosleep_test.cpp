@@ -18,7 +18,7 @@ namespace cpp = LIBC_NAMESPACE::cpp;
 TEST(LlvmLibcNanosleep, SmokeTest) {
   // TODO: When we have the code to read clocks, test that time has passed.
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   struct timespec tim = {1, 500};
   struct timespec tim2 = {0, 0};

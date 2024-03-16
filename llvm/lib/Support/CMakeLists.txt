@@ -176,6 +176,7 @@ add_llvm_component_library(LLVMSupport
   ELFAttributes.cpp
   Error.cpp
   ErrorHandling.cpp
+  ExponentialBackoff.cpp
   ExtensibleRTTI.cpp
   FileCollector.cpp
   FileUtilities.cpp
@@ -284,6 +285,9 @@ add_llvm_component_library(LLVMSupport
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ADT
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support
   ${Backtrace_INCLUDE_DIRS}
+
+  DEPENDS
+  llvm_vcsrevision_h
 
   LINK_LIBS
   ${system_libs} ${imported_libs} ${delayload_flags}

@@ -8,13 +8,13 @@
     ret void
   }
 
-  define dso_local i8* @ptr_mask(i8* %in) { ret i8* undef }
+  define dso_local ptr @ptr_mask(ptr %in) { ret ptr undef }
 
   @var_local = dso_local global i8 0
-  define dso_local i8* @global_local() { ret i8* undef }
+  define dso_local ptr @global_local() { ret ptr undef }
 
   @var_got = external dso_local global i8
-  define dso_local i8* @global_got() { ret i8* undef }
+  define dso_local ptr @global_got() { ret ptr undef }
 
   define dso_local void @icmp() { ret void }
   define dso_local void @fcmp() { ret void }

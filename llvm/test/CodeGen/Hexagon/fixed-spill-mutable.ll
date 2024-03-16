@@ -20,34 +20,34 @@
 
 target triple = "hexagon"
 
-%struct.0 = type { i8*, %struct.1*, %struct.2*, %struct.0*, %struct.0* }
-%struct.1 = type { [60 x i8], i32, %struct.1* }
+%struct.0 = type { ptr, ptr, ptr, ptr, ptr }
+%struct.1 = type { [60 x i8], i32, ptr }
 %struct.2 = type { i8, i8, i8, i8, %union.anon }
-%union.anon = type { %struct.3* }
-%struct.3 = type { %struct.3*, %struct.2* }
+%union.anon = type { ptr }
+%struct.3 = type { ptr, ptr }
 
-@var = external hidden unnamed_addr global %struct.0*, align 4
+@var = external hidden unnamed_addr global ptr, align 4
 
-declare void @bar(i8*, i32) local_unnamed_addr #0
+declare void @bar(ptr, i32) local_unnamed_addr #0
 
 define void @foo() local_unnamed_addr #1 {
 entry:
-  %.pr = load %struct.0*, %struct.0** @var, align 4, !tbaa !1
-  %cmp2 = icmp eq %struct.0* %.pr, null
+  %.pr = load ptr, ptr @var, align 4, !tbaa !1
+  %cmp2 = icmp eq ptr %.pr, null
   br i1 %cmp2, label %while.end, label %while.body.preheader
 
 while.body.preheader:                             ; preds = %entry
   br label %while.body
 
 while.body:                                       ; preds = %while.body.preheader, %while.body
-  %0 = phi %struct.0* [ %4, %while.body ], [ %.pr, %while.body.preheader ]
-  %right = getelementptr inbounds %struct.0, %struct.0* %0, i32 0, i32 4
-  %1 = bitcast %struct.0** %right to i32*
-  %2 = load i32, i32* %1, align 4, !tbaa !5
-  %3 = bitcast %struct.0* %0 to i8*
-  tail call void @bar(i8* %3, i32 20) #1
-  store i32 %2, i32* bitcast (%struct.0** @var to i32*), align 4, !tbaa !1
-  %4 = inttoptr i32 %2 to %struct.0*
+  %0 = phi ptr [ %4, %while.body ], [ %.pr, %while.body.preheader ]
+  %right = getelementptr inbounds %struct.0, ptr %0, i32 0, i32 4
+  %1 = bitcast ptr %right to ptr
+  %2 = load i32, ptr %1, align 4, !tbaa !5
+  %3 = bitcast ptr %0 to ptr
+  tail call void @bar(ptr %3, i32 20) #1
+  store i32 %2, ptr @var, align 4, !tbaa !1
+  %4 = inttoptr i32 %2 to ptr
   %cmp = icmp eq i32 %2, 0
   br i1 %cmp, label %while.end.loopexit, label %while.body
 

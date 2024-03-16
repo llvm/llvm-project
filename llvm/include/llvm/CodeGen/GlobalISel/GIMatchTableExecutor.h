@@ -379,6 +379,11 @@ enum {
   /// - Flags(2) - Register Flags
   GIR_AddRegister,
 
+  /// Adds an intrinsic ID to the specified instruction.
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - IID(2) - Intrinsic ID
+  GIR_AddIntrinsicID,
+
   /// Marks the implicit def of a register as dead.
   /// - InsnID(ULEB128) - Instruction ID to modify
   /// - OpIdx(ULEB128) - The implicit def operand index

@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 #include "mlir/Dialect/Linalg/TransformOps/Syntax.h"
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
@@ -187,6 +188,11 @@ DiagnosedSilenceableFailure transform::MatchStructuredBodyOp::matchOperation(
     }
     return DiagnosedSilenceableFailure::success();
   }
+  if (getElementwise()) {
+    if (!isElementwise(linalgOp))
+      return emitSilenceableError() << "not elementwise";
+    return DiagnosedSilenceableFailure::success();
+  }
   if (std::optional<ArrayAttr> contractionOps = getContraction()) {
     Block &body = linalgOp->getRegion(0).front();
     std::string message;
@@ -209,13 +215,14 @@ DiagnosedSilenceableFailure transform::MatchStructuredBodyOp::matchOperation(
 
 LogicalResult transform::MatchStructuredBodyOp::verify() {
   int64_t numOptions = getReductionPosition().has_value() + getPassthrough() +
-                       getContraction().has_value();
+                       getElementwise() + getContraction().has_value();
 
   if (numOptions > 1) {
     std::string attributeNames;
     llvm::raw_string_ostream os(attributeNames);
     llvm::interleaveComma(ArrayRef<StringAttr>{getReductionPositionAttrName(),
                                                getPassthroughAttrName(),
+                                               getElementwiseAttrName(),
                                                getContractionAttrName()},
                           os);
     return emitOpError() << "only one of {" << os.str() << "} is allowed";

@@ -34,6 +34,7 @@ FormatTokenLexer::FormatTokenLexer(
       Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
       FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
       MacroBlockEndRegex(Style.MacroBlockEnd) {
+  assert(IsCpp == Style.isCpp());
   Lex.reset(new Lexer(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts));
   Lex->SetKeepWhitespaceMode(true);
 
@@ -114,7 +115,7 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     return;
   if (tryMergeForEach())
     return;
-  if (Style.isCpp() && tryTransformTryUsageForC())
+  if (IsCpp && tryTransformTryUsageForC())
     return;
 
   if (Style.isJavaScript() || Style.isCSharp()) {
@@ -276,13 +277,44 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       return;
     }
   }
-  // TableGen's Multi line string starts with [{
-  if (Style.isTableGen() && tryMergeTokens({tok::l_square, tok::l_brace},
-                                           TT_TableGenMultiLineString)) {
-    // Set again with finalizing. This must never be annotated as other types.
-    Tokens.back()->setFinalizedType(TT_TableGenMultiLineString);
-    Tokens.back()->Tok.setKind(tok::string_literal);
-    return;
+  if (Style.isTableGen()) {
+    // TableGen's Multi line string starts with [{
+    if (tryMergeTokens({tok::l_square, tok::l_brace},
+                       TT_TableGenMultiLineString)) {
+      // Set again with finalizing. This must never be annotated as other types.
+      Tokens.back()->setFinalizedType(TT_TableGenMultiLineString);
+      Tokens.back()->Tok.setKind(tok::string_literal);
+      return;
+    }
+    // TableGen's bang operator is the form !<name>.
+    // !cond is a special case with specific syntax.
+    if (tryMergeTokens({tok::exclaim, tok::identifier},
+                       TT_TableGenBangOperator)) {
+      Tokens.back()->Tok.setKind(tok::identifier);
+      Tokens.back()->Tok.setIdentifierInfo(nullptr);
+      if (Tokens.back()->TokenText == "!cond")
+        Tokens.back()->setFinalizedType(TT_TableGenCondOperator);
+      else
+        Tokens.back()->setFinalizedType(TT_TableGenBangOperator);
+      return;
+    }
+    if (tryMergeTokens({tok::exclaim, tok::kw_if}, TT_TableGenBangOperator)) {
+      // Here, "! if" becomes "!if".  That is, ! captures if even when the space
+      // exists. That is only one possibility in TableGen's syntax.
+      Tokens.back()->Tok.setKind(tok::identifier);
+      Tokens.back()->Tok.setIdentifierInfo(nullptr);
+      Tokens.back()->setFinalizedType(TT_TableGenBangOperator);
+      return;
+    }
+    // +, - with numbers are literals. Not unary operators.
+    if (tryMergeTokens({tok::plus, tok::numeric_constant}, TT_Unknown)) {
+      Tokens.back()->Tok.setKind(tok::numeric_constant);
+      return;
+    }
+    if (tryMergeTokens({tok::minus, tok::numeric_constant}, TT_Unknown)) {
+      Tokens.back()->Tok.setKind(tok::numeric_constant);
+      return;
+    }
   }
 }
 
@@ -785,7 +817,7 @@ void FormatTokenLexer::handleTableGenMultilineString() {
   auto CloseOffset = Lex->getBuffer().find("}]", OpenOffset);
   if (CloseOffset == StringRef::npos)
     return;
-  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset + 2);
+  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset - OpenOffset + 2);
   MultiLineString->TokenText = Text;
   resetLexer(SourceMgr.getFileOffset(
       Lex->getSourceLocation(Lex->getBufferLocation() - 2 + Text.size())));
@@ -1310,7 +1342,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
     Column = FormatTok->LastLineColumnWidth;
   }
 
-  if (Style.isCpp()) {
+  if (IsCpp) {
     auto *Identifier = FormatTok->Tok.getIdentifierInfo();
     auto it = Macros.find(Identifier);
     if (!(Tokens.size() > 0 && Tokens.back()->Tok.getIdentifierInfo() &&
@@ -1389,7 +1421,7 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
   // For formatting, treat unterminated string literals like normal string
   // literals.
   if (Tok.is(tok::unknown)) {
-    if (!Tok.TokenText.empty() && Tok.TokenText[0] == '"') {
+    if (Tok.TokenText.starts_with("\"")) {
       Tok.Tok.setKind(tok::string_literal);
       Tok.IsUnterminatedLiteral = true;
     } else if (Style.isJavaScript() && Tok.TokenText == "''") {

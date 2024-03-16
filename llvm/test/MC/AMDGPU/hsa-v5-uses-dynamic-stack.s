@@ -3,6 +3,11 @@
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx904 --amdhsa-code-object-version=6 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx904 --amdhsa-code-object-version=6 -mattr=+xnack -filetype=obj < %s > %t
+// RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
+// RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
+
 // READOBJ: Section Headers
 // READOBJ: .text   PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256
 // READOBJ: .rodata PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}}        000100 {{[0-9]+}}  A {{[0-9]+}} {{[0-9]+}} 64

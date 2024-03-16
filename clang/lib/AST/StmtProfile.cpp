@@ -594,6 +594,8 @@ void OMPClauseProfiler::VisitOMPReleaseClause(const OMPReleaseClause *) {}
 
 void OMPClauseProfiler::VisitOMPRelaxedClause(const OMPRelaxedClause *) {}
 
+void OMPClauseProfiler::VisitOMPWeakClause(const OMPWeakClause *) {}
+
 void OMPClauseProfiler::VisitOMPThreadsClause(const OMPThreadsClause *) {}
 
 void OMPClauseProfiler::VisitOMPSIMDClause(const OMPSIMDClause *) {}
@@ -2437,6 +2439,13 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
       VisitTemplateArgument(P);
     break;
   }
+}
+
+void StmtProfiler::VisitOpenACCComputeConstruct(
+    const OpenACCComputeConstruct *S) {
+  // VisitStmt handles children, so the AssociatedStmt is handled.
+  VisitStmt(S);
+  // TODO OpenACC: Visit Clauses.
 }
 
 void Stmt::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,

@@ -39,6 +39,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -422,7 +423,7 @@ void Option::removeArgument() { GlobalParser->removeOption(this); }
 void Option::setArgStr(StringRef S) {
   if (FullyInitialized)
     GlobalParser->updateArgStr(this, S);
-  assert((S.empty() || S[0] != '-') && "Option can't start with '-");
+  assert(!S.starts_with("-") && "Option can't start with '-");
   ArgStr = S;
   if (ArgStr.size() == 1)
     setMiscFlag(Grouping);
@@ -2538,7 +2539,15 @@ public:
 #else
     OS << "LLVM (http://llvm.org/):\n  ";
 #endif
-    OS << PACKAGE_NAME << " version " << PACKAGE_VERSION << "\n  ";
+    OS << PACKAGE_NAME << " version " << PACKAGE_VERSION;
+#ifdef LLVM_REPOSITORY
+    OS << " (" << LLVM_REPOSITORY;
+#ifdef LLVM_REVISION
+    OS << ' ' << LLVM_REVISION;
+#endif
+    OS << ')';
+#endif
+    OS << "\n  ";
 #if LLVM_IS_DEBUG_BUILD
     OS << "DEBUG build";
 #else

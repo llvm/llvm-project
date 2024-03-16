@@ -23,7 +23,6 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #include <regex>
 
@@ -37,8 +36,7 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
                        "dwim-print [<variable-name> | <expression>]",
                        eCommandProcessMustBePaused | eCommandTryTargetAPILock) {
 
-  CommandArgumentData var_name_arg(eArgTypeVarName, eArgRepeatPlain);
-  m_arguments.push_back({var_name_arg});
+  AddSimpleArgumentList(eArgTypeVarName);
 
   m_option_group.Append(&m_format_options,
                         OptionGroupFormat::OPTION_GROUP_FORMAT |
@@ -51,12 +49,6 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
 }
 
 Options *CommandObjectDWIMPrint::GetOptions() { return &m_option_group; }
-
-void CommandObjectDWIMPrint::HandleArgumentCompletion(
-    CompletionRequest &request, OptionElementVector &opt_element_vector) {
-  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-      GetCommandInterpreter(), lldb::eVariablePathCompletion, request, nullptr);
-}
 
 void CommandObjectDWIMPrint::DoExecute(StringRef command,
                                        CommandReturnObject &result) {
@@ -168,7 +160,17 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     }
   }
 
-  // Second, also lastly, try `expr` as a source expression to evaluate.
+  // Second, try `expr` as a persistent variable.
+  if (expr.starts_with("$"))
+    if (auto *state = target.GetPersistentExpressionStateForLanguage(language))
+      if (auto var_sp = state->GetVariable(expr))
+        if (auto valobj_sp = var_sp->GetValueObject()) {
+          valobj_sp->Dump(result.GetOutputStream(), dump_options);
+          result.SetStatus(eReturnStatusSuccessFinishResult);
+          return;
+        }
+
+  // Third, and lastly, try `expr` as a source expression to evaluate.
   {
     auto *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
     ValueObjectSP valobj_sp;

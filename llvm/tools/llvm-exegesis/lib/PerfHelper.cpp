@@ -136,8 +136,8 @@ ConfiguredEvent::readOrError(StringRef /*unused*/) const {
   ssize_t ReadSize = ::read(FileDescriptor, &Count, sizeof(Count));
 
   if (ReadSize != sizeof(Count))
-    return llvm::make_error<llvm::StringError>("Failed to read event counter",
-                                               llvm::errc::io_error);
+    return make_error<StringError>("Failed to read event counter",
+                                   errc::io_error);
 
   SmallVector<int64_t, 1> Result;
   Result.push_back(Count);
@@ -187,7 +187,7 @@ void CounterGroup::stop() {
     ioctl(getFileDescriptor(), PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
 }
 
-llvm::Expected<llvm::SmallVector<int64_t, 4>>
+Expected<SmallVector<int64_t, 4>>
 CounterGroup::readOrError(StringRef FunctionBytes) const {
   if (!IsDummyEvent)
     return EventCounter.readOrError(FunctionBytes);
@@ -195,9 +195,9 @@ CounterGroup::readOrError(StringRef FunctionBytes) const {
     return SmallVector<int64_t, 1>(1, 42);
 }
 
-llvm::Expected<llvm::SmallVector<int64_t>>
+Expected<SmallVector<int64_t>>
 CounterGroup::readValidationCountersOrError() const {
-  llvm::SmallVector<int64_t, 4> Result;
+  SmallVector<int64_t, 4> Result;
   for (const auto &ValCounter : ValidationEventCounters) {
     Expected<SmallVector<int64_t>> ValueOrError =
         ValCounter.readOrError(StringRef());
@@ -223,18 +223,17 @@ void CounterGroup::start() {}
 
 void CounterGroup::stop() {}
 
-llvm::Expected<llvm::SmallVector<int64_t, 4>>
+Expected<SmallVector<int64_t, 4>>
 CounterGroup::readOrError(StringRef /*unused*/) const {
   if (IsDummyEvent) {
-    llvm::SmallVector<int64_t, 4> Result;
+    SmallVector<int64_t, 4> Result;
     Result.push_back(42);
     return Result;
   }
-  return llvm::make_error<llvm::StringError>("Not implemented",
-                                             llvm::errc::io_error);
+  return make_error<StringError>("Not implemented", errc::io_error);
 }
 
-llvm::Expected<llvm::SmallVector<int64_t>>
+Expected<SmallVector<int64_t>>
 CounterGroup::readValidationCountersOrError() const {
   return SmallVector<int64_t>(0);
 }

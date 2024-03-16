@@ -13,6 +13,7 @@
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
 #include "CGOps.h"
+#include "flang/Optimizer/CodeGen/CodeGenOpenMP.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -145,6 +146,9 @@ static int64_t getConstantIntValue(mlir::Value val) {
 static unsigned getTypeDescFieldId(mlir::Type ty) {
   auto isArray = fir::dyn_cast_ptrOrBoxEleTy(ty).isa<fir::SequenceType>();
   return isArray ? kOptTypePtrPosInBox : kDimsPosInBox;
+}
+static unsigned getLenParamFieldId(mlir::Type ty) {
+  return getTypeDescFieldId(ty) + 1;
 }
 
 namespace {
@@ -406,8 +410,15 @@ protected:
       mlir::ConversionPatternRewriter &rewriter) const {
     auto thisPt = rewriter.saveInsertionPoint();
     mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
-    mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp);
-    rewriter.setInsertionPointToStart(insertBlock);
+    if (mlir::isa<mlir::omp::ReductionDeclareOp>(parentOp)) {
+      // ReductionDeclareOp has multiple child regions. We want to get the first
+      // block of whichever of those regions we are currently in
+      mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
+      rewriter.setInsertionPointToStart(&parentRegion->front());
+    } else {
+      mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp);
+      rewriter.setInsertionPointToStart(insertBlock);
+    }
     auto size = genI32Constant(loc, rewriter, 1);
     unsigned allocaAs = getAllocaAddressSpace(rewriter);
     unsigned programAs = getProgramAddressSpace(rewriter);
@@ -1582,6 +1593,14 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
         descriptor =
             insertField(rewriter, loc, descriptor, {typeDescFieldId}, typeDesc,
                         /*bitCast=*/true);
+      // Always initialize the length parameter field to zero to avoid issues
+      // with uninitialized values in Fortran code trying to compare physical
+      // representation of derived types with pointer/allocatable components.
+      // This has been seen in hashing algorithms using TRANSFER.
+      mlir::Value zero =
+          genConstantIndex(loc, rewriter.getI64Type(), rewriter, 0);
+      descriptor = insertField(rewriter, loc, descriptor,
+                               {getLenParamFieldId(boxTy), 0}, zero);
     }
     return descriptor;
   }
@@ -3879,6 +3898,12 @@ public:
       fir::support::setMLIRDataLayout(mod, dl);
     }
 
+    if (!forcedTargetCPU.empty())
+      fir::setTargetCPU(mod, forcedTargetCPU);
+
+    if (!forcedTargetFeatures.empty())
+      fir::setTargetFeatures(mod, forcedTargetFeatures);
+
     // Run dynamic pass pipeline for converting Math dialect
     // operations into other dialects (llvm, func, etc.).
     // Some conversions of Math operations cannot be done
@@ -3919,30 +3944,7 @@ public:
                                          options.applyTBAA || applyTBAA,
                                          options.forceUnifiedTBAATree, *dl};
     mlir::RewritePatternSet pattern(context);
-    pattern.insert<
-        AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
-        AllocaOpConversion, AllocMemOpConversion, BoxAddrOpConversion,
-        BoxCharLenOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
-        BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
-        BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
-        BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
-        CmpcOpConversion, ConstcOpConversion, ConvertOpConversion,
-        CoordinateOpConversion, DTEntryOpConversion, DivcOpConversion,
-        EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
-        ExtractValueOpConversion, FieldIndexOpConversion, FirEndOpConversion,
-        FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
-        HasValueOpConversion, InsertOnRangeOpConversion,
-        InsertValueOpConversion, IsPresentOpConversion,
-        LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
-        NegcOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
-        SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
-        ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
-        SliceOpConversion, StoreOpConversion, StringLitOpConversion,
-        SubcOpConversion, TypeDescOpConversion, TypeInfoOpConversion,
-        UnboxCharOpConversion, UnboxProcOpConversion, UndefOpConversion,
-        UnreachableOpConversion, UnrealizedConversionCastOpConversion,
-        XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
-        ZeroOpConversion>(typeConverter, options);
+    fir::populateFIRToLLVMConversionPatterns(typeConverter, pattern, options);
     mlir::populateFuncToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, pattern);
@@ -3953,6 +3955,11 @@ public:
     mlir::populateMathToLibmConversionPatterns(pattern);
     mlir::populateComplexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateVectorToLLVMConversionPatterns(typeConverter, pattern);
+
+    // Flang specific overloads for OpenMP operations, to allow for special
+    // handling of things like Box types.
+    fir::populateOpenMPFIRToLLVMConversionPatterns(typeConverter, pattern);
+
     mlir::ConversionTarget target{*context};
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     // The OpenMP dialect is legal for Operations without regions, for those
@@ -4048,4 +4055,33 @@ std::unique_ptr<mlir::Pass>
 fir::createLLVMDialectToLLVMPass(llvm::raw_ostream &output,
                                  fir::LLVMIRLoweringPrinter printer) {
   return std::make_unique<LLVMIRLoweringPass>(output, printer);
+}
+
+void fir::populateFIRToLLVMConversionPatterns(
+    fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
+    fir::FIRToLLVMPassOptions &options) {
+  patterns.insert<
+      AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
+      AllocaOpConversion, AllocMemOpConversion, BoxAddrOpConversion,
+      BoxCharLenOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
+      BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
+      BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
+      BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
+      CmpcOpConversion, ConstcOpConversion, ConvertOpConversion,
+      CoordinateOpConversion, DTEntryOpConversion, DivcOpConversion,
+      EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
+      ExtractValueOpConversion, FieldIndexOpConversion, FirEndOpConversion,
+      FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
+      HasValueOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
+      IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
+      MulcOpConversion, NegcOpConversion, NoReassocOpConversion,
+      SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
+      SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
+      ShiftOpConversion, SliceOpConversion, StoreOpConversion,
+      StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
+      TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
+      UndefOpConversion, UnreachableOpConversion,
+      UnrealizedConversionCastOpConversion, XArrayCoorOpConversion,
+      XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(converter,
+                                                                options);
 }

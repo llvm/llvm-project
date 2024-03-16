@@ -16,7 +16,7 @@ Number,Name,Standard,Assignee,Status,First released version
 "`P2693R1 <https://wg21.link/P2693R1>`__","Formatting ``thread::id`` and ``stacktrace``","C++23","Mark de Wever","|In Progress|"
 "`P2510R3 <https://wg21.link/P2510R3>`__","Formatting pointers","C++26","Mark de Wever","|Complete|",17.0
 "`P2757R3 <https://wg21.link/P2757R3>`__","Type-checking format args","C++26","","",
-"`P2637R3 <https://wg21.link/P2637R3>`__","Member ``visit``","C++26","","",
+"`P2637R3 <https://wg21.link/P2637R3>`__","Member ``visit``","C++26","Hristo Hristov","|Complete|",19.0
 "`P2905R2 <https://wg21.link/P2905R2>`__","Runtime format strings","C++26 DR","Mark de Wever","|Complete|",18.0
 "`P2918R2 <https://wg21.link/P2918R2>`__","Runtime format strings II","C++26","Mark de Wever","|Complete|",18.0
 "`P2909R4 <https://wg21.link/P2909R4>`__","Fix formatting of code units as integers (Dude, where’s my ``char``?)","C++26 DR","Mark de Wever","|Complete|",18.0

@@ -1116,6 +1116,16 @@ bool GIMatchTableExecutor::executeMatchTable(
                           << "], " << RegNum << ", " << RegFlags << ")\n");
       break;
     }
+    case GIR_AddIntrinsicID: {
+      uint64_t InsnID = readULEB();
+      uint16_t Value = readU16();
+      assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
+      OutMIs[InsnID].addIntrinsicID((Intrinsic::ID)Value);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_AddIntrinsicID(OutMIs["
+                             << InsnID << "], " << Value << ")\n");
+      break;
+    }
     case GIR_SetImplicitDefDead: {
       uint64_t InsnID = readULEB();
       uint64_t OpIdx = readULEB();

@@ -849,3 +849,24 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// Scalable transposes should not be lowered to vector.shuffle.
+
+// CHECK-LABEL: func @transpose_nx8x2xf32
+func.func @transpose_nx8x2xf32(%arg0: vector<[8]x2xf32>) -> vector<2x[8]xf32> {
+  // CHECK-NOT: vector.shuffle
+  // CHECK: vector.transpose %{{.*}} : vector<[8]x2xf32> to vector<2x[8]xf32>
+  %0 = vector.transpose %arg0, [1, 0] : vector<[8]x2xf32> to vector<2x[8]xf32>
+  return %0 : vector<2x[8]xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_1d"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
+}

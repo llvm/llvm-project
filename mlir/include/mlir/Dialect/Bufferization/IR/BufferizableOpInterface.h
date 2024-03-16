@@ -257,6 +257,9 @@ struct BufferizationOptions {
   /// Parameters: Value, memory space, bufferization options
   using UnknownTypeConverterFn = std::function<BaseMemRefType(
       Value, Attribute memorySpace, const BufferizationOptions &)>;
+  // Produce a MemorySpace attribute from a tensor type
+  using DefaultMemorySpaceFn =
+      std::function<std::optional<Attribute>(TensorType t)>;
 
   BufferizationOptions();
 
@@ -295,11 +298,6 @@ struct BufferizationOptions {
   /// Specifies whether function boundaries (ops in the func dialect) should be
   /// bufferized or not.
   bool bufferizeFunctionBoundaries = false;
-
-  /// The default memory space that should be used when it cannot be inferred
-  /// from the context. If case of std::nullopt, bufferization fails when the
-  /// memory space cannot be inferred at any point.
-  std::optional<Attribute> defaultMemorySpace = Attribute();
 
   /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
   /// If this flag is set to `false`, those invariants are no longer enforced
@@ -350,6 +348,13 @@ struct BufferizationOptions {
   /// converter that returns a memref type with a fully dynamic layout map is
   /// used.
   UnknownTypeConverterFn unknownTypeConverterFn = nullptr;
+
+  // Use during type conversion to determine the memory space for memref based
+  // on the original tensor type if the memory space cannot be inferred.
+  // Returning std::nullopt will cause bufferization to fail (useful to indicate
+  // failure to determine memory space for a tensor type).
+  DefaultMemorySpaceFn defaultMemorySpaceFn =
+      [](TensorType t) -> std::optional<Attribute> { return Attribute(); };
 
   /// Seed for the analysis fuzzer. If set to `0`, the fuzzer is deactivated.
   /// Should be used only with `testAnalysisOnly = true`.

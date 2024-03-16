@@ -32,7 +32,7 @@ class DebuggerAPITestCase(TestBase):
         self.dbg.SetCurrentPlatformSDKRoot(None)
 
         fresh_dbg = lldb.SBDebugger()
-        self.assertEquals(len(fresh_dbg), 0)
+        self.assertEqual(len(fresh_dbg), 0)
 
     def test_debugger_delete_invalid_target(self):
         """SBDebugger.DeleteTarget() should not crash LLDB given and invalid target."""

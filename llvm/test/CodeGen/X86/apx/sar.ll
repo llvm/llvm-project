@@ -4,7 +4,7 @@
 define i8 @sar8m1(ptr %ptr) {
 ; CHECK-LABEL: sar8m1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sarb $1, (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0xc0,0x3f,0x01]
+; CHECK-NEXT:    sarb (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0x3f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i8, ptr %ptr
@@ -28,7 +28,7 @@ entry:
 define i32 @sar32m1(ptr %ptr) {
 ; CHECK-LABEL: sar32m1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sarl $1, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0xc1,0x3f,0x01]
+; CHECK-NEXT:    sarl (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0x3f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i32, ptr %ptr
@@ -39,7 +39,7 @@ entry:
 define i64 @sar64m1(ptr %ptr) {
 ; CHECK-LABEL: sar64m1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sarq $1, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0xc1,0x3f,0x01]
+; CHECK-NEXT:    sarq (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0x3f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i64, ptr %ptr
@@ -208,7 +208,7 @@ entry:
 define i8 @sar8r1(i8 noundef %a) {
 ; CHECK-LABEL: sar8r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sarb $1, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xc0,0xff,0x01]
+; CHECK-NEXT:    sarb %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0xff]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %sar = ashr i8 %a, 1
@@ -230,7 +230,7 @@ entry:
 define i32 @sar32r1(i32 noundef %a) {
 ; CHECK-LABEL: sar32r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sarl $1, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xc1,0xff,0x01]
+; CHECK-NEXT:    sarl %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0xff]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %sar = ashr i32 %a, 1
@@ -240,7 +240,7 @@ entry:
 define i64 @sar64r1(i64 noundef %a) {
 ; CHECK-LABEL: sar64r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sarq $1, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xc1,0xff,0x01]
+; CHECK-NEXT:    sarq %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0xff]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %sar = ashr i64 %a, 1

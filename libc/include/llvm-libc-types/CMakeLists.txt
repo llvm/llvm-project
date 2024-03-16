@@ -39,6 +39,7 @@ add_header(uid_t HDR uid_t.h)
 add_header(imaxdiv_t HDR imaxdiv_t.h)
 add_header(ino_t HDR ino_t.h)
 add_header(jmp_buf HDR jmp_buf.h)
+add_header(mbstate_t HDR mbstate_t.h)
 add_header(mode_t HDR mode_t.h)
 add_header(mtx_t HDR mtx_t.h DEPENDS .__futex_word .__mutex_type)
 add_header(nlink_t HDR nlink_t.h)
@@ -96,3 +97,12 @@ add_header(rpc_opcodes_t HDR rpc_opcodes_t.h)
 add_header(ACTION HDR ACTION.h)
 add_header(ENTRY HDR ENTRY.h)
 add_header(struct_hsearch_data HDR struct_hsearch_data.h)
+add_header(struct_epoll_event HDR struct_epoll_event.h)
+add_header(struct_epoll_data HDR struct_epoll_data.h)
+add_header(
+  float128
+  HDR
+    float128.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float_macros
+)

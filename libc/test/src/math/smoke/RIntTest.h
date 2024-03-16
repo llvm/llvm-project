@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
-#define LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
+#ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_RINTTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_SMOKE_RINTTEST_H
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -35,7 +35,7 @@ private:
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();
   const T zero = FPBits::zero(Sign::POS).get_val();
   const T neg_zero = FPBits::zero(Sign::NEG).get_val();
-  const T nan = FPBits::build_quiet_nan().get_val();
+  const T nan = FPBits::quiet_nan().get_val();
 
 public:
   void testSpecialNumbers(RIntFunc func) {
@@ -54,4 +54,4 @@ public:
   using LlvmLibcRIntTest = RIntTestTemplate<F>;                                \
   TEST_F(LlvmLibcRIntTest, specialNumbers) { testSpecialNumbers(&func); }
 
-#endif // LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
+#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_RINTTEST_H

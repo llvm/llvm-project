@@ -27,7 +27,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK: acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK: acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
 
@@ -36,7 +36,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK: acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK: acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
 
@@ -45,7 +45,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK: acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK: acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 
@@ -54,7 +54,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
@@ -63,7 +63,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.loop gang() private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop gang private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -73,7 +73,7 @@ program acc_loop
   END DO
 
 ! CHECK:      [[GANGNUM1:%.*]] = arith.constant 8 : i32
-! CHECK-NEXT: acc.loop gang({num=[[GANGNUM1]] : i32}) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK-NEXT: acc.loop gang({num=[[GANGNUM1]] : i32}) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -83,7 +83,7 @@ program acc_loop
   END DO
 
 ! CHECK:      [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK-NEXT: acc.loop gang({num=[[GANGNUM2]] : i32}) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK-NEXT: acc.loop gang({num=[[GANGNUM2]] : i32}) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -92,7 +92,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK: acc.loop gang({num=%{{.*}} : i32, static=%{{.*}} : i32}) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK: acc.loop gang({num=%{{.*}} : i32, static=%{{.*}} : i32}) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -101,7 +101,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.loop vector() private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop vector private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -111,7 +111,7 @@ program acc_loop
   END DO
 
 ! CHECK: [[CONSTANT128:%.*]] = arith.constant 128 : i32
-! CHECK:      acc.loop vector([[CONSTANT128]] : i32) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop vector([[CONSTANT128]] : i32) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -121,7 +121,7 @@ program acc_loop
   END DO
 
 ! CHECK:      [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:      acc.loop vector([[VECTORLENGTH]] : i32) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop vector([[VECTORLENGTH]] : i32) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -130,7 +130,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.loop worker() private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop worker private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -140,7 +140,7 @@ program acc_loop
   END DO
 
 ! CHECK: [[WORKER128:%.*]] = arith.constant 128 : i32
-! CHECK:      acc.loop worker([[WORKER128]] : i32) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop worker([[WORKER128]] : i32) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -149,7 +149,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -158,7 +158,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -167,7 +167,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -177,7 +177,7 @@ program acc_loop
   END DO
 
 ! CHECK:      [[TILESIZE:%.*]] = arith.constant 2 : i32
-! CHECK:      acc.loop {{.*}} tile({[[TILESIZE]] : i32}) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop {{.*}} tile({[[TILESIZE]] : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -186,7 +186,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 ! CHECK:      [[TILESIZEM1:%.*]] = arith.constant -1 : i32
-! CHECK:      acc.loop {{.*}} tile({[[TILESIZEM1]] : i32}) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop {{.*}} tile({[[TILESIZEM1]] : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -199,7 +199,7 @@ program acc_loop
 
 ! CHECK:      [[TILESIZE1:%.*]] = arith.constant 2 : i32
 ! CHECK:      [[TILESIZE2:%.*]] = arith.constant 2 : i32
-! CHECK:      acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -208,7 +208,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32}) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -219,7 +219,7 @@ program acc_loop
     END DO
   END DO
 
-! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -230,7 +230,7 @@ program acc_loop
     END DO
   END DO
 
-! CHECK:      acc.loop {{.*}} (%arg0 : i32, %arg1 : i32) = (%{{.*}} : i32, i32) to (%{{.*}} : i32, i32) step (%{{.*}} : i32, i32) {
+! CHECK:      acc.loop {{.*}} control(%arg0 : i32, %arg1 : i32) = (%{{.*}} : i32, i32) to (%{{.*}} : i32, i32) step (%{{.*}} : i32, i32) {
 ! CHECK:        fir.store %arg0 to %{{.*}} : !fir.ref<i32>
 ! CHECK:        fir.store %arg1 to %{{.*}} : !fir.ref<i32>
 ! CHECK:        acc.yield
@@ -244,8 +244,8 @@ program acc_loop
     END DO
   END DO
 
-! CHECK:      acc.loop {{.*}} (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
-! CHECK:          acc.loop {{.*}} (%arg1 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop {{.*}} control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:          acc.loop {{.*}} control(%arg1 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:            acc.yield
 ! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.yield
@@ -257,7 +257,7 @@ program acc_loop
     reduction_i = 1
   end do
 
-! CHECK:      acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) reduction(@reduction_add_ref_f32 -> %{{.*}} : !fir.ref<f32>, @reduction_mul_ref_i32 -> %{{.*}} : !fir.ref<i32>) (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) reduction(@reduction_add_ref_f32 -> %{{.*}} : !fir.ref<f32>, @reduction_mul_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -266,7 +266,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK: acc.loop gang({dim=%{{.*}}, static=%{{.*}} : i32}) {{.*}} (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK: acc.loop gang({dim=%{{.*}}, static=%{{.*}} : i32}) {{.*}} control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -275,7 +275,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.loop gang({dim={{.*}} : i32}) {{.*}} (%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop gang({dim={{.*}} : i32}) {{.*}} control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
 
@@ -324,5 +324,5 @@ end subroutine
 ! CHECK: %[[P_I:.*]] = acc.private varPtr(%[[DC_I]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = ""}
 ! CHECK: %[[P_J:.*]] = acc.private varPtr(%[[DC_J]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = ""}
 ! CHECK: %[[P_K:.*]] = acc.private varPtr(%[[DC_K]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = ""}
-! CHECK: acc.loop private(@privatization_ref_i32 -> %[[P_I]] : !fir.ref<i32>, @privatization_ref_i32 -> %[[P_J]] : !fir.ref<i32>, @privatization_ref_i32 -> %[[P_K]] : !fir.ref<i32>) (%{{.*}} : i32, %{{.*}} : i32, %{{.*}} : i32) = (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32) to (%c10{{.*}}, %c100{{.*}}, %c200{{.*}} : i32, i32, i32)  step (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32)
+! CHECK: acc.loop private(@privatization_ref_i32 -> %[[P_I]] : !fir.ref<i32>, @privatization_ref_i32 -> %[[P_J]] : !fir.ref<i32>, @privatization_ref_i32 -> %[[P_K]] : !fir.ref<i32>) control(%{{.*}} : i32, %{{.*}} : i32, %{{.*}} : i32) = (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32) to (%c10{{.*}}, %c100{{.*}}, %c200{{.*}} : i32, i32, i32)  step (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32)
 ! CHECK: } attributes {inclusiveUpperbound = array<i1: true, true, true>}

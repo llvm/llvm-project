@@ -46,8 +46,8 @@ libc_support_library(
         "//libc:__support_cpp_type_traits",
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_fpbits_str",
-        "//libc/test/UnitTest:fp_test_helpers",
         "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_impl",
     ],
 )

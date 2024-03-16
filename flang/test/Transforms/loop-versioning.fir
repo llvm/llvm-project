@@ -11,7 +11,7 @@
 //       sum = sum + a(i)
 //    end do
 //  end subroutine sum1d
-module {
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
   func.func @sum1d(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}) {
     %decl = fir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
     %rebox = fir.rebox %decl : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
@@ -1556,5 +1556,89 @@ func.func @minloc(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "x"}, %ar
 // CHECK: fir.if %{{.*}} {
 // CHECK:   {{.*}} = arith.cmpi eq, %[[V17]], %c2147483647_i32
 
+func.func @_QPtest_real10(%arg0: !fir.box<!fir.array<?x?xf80>> {fir.bindc_name = "a"}) -> f80 {
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f80
+  %0 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_real10Ea"} : (!fir.box<!fir.array<?x?xf80>>) -> !fir.box<!fir.array<?x?xf80>>
+  %1 = fir.rebox %0 : (!fir.box<!fir.array<?x?xf80>>) -> !fir.box<!fir.array<?x?xf80>>
+  %2 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_real10Ei"}
+  %3 = fir.declare %2 {uniq_name = "_QFtest_real10Ei"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %4 = fir.alloca f80 {bindc_name = "res", uniq_name = "_QFtest_real10Eres"}
+  %5 = fir.declare %4 {uniq_name = "_QFtest_real10Eres"} : (!fir.ref<f80>) -> !fir.ref<f80>
+  %6 = fir.address_of(@_QFtest_real10ECxdp) : !fir.ref<i32>
+  %7 = fir.declare %6 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_real10ECxdp"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  fir.store %cst to %5 : !fir.ref<f80>
+  %8 = fir.convert %c1 : (index) -> i32
+  %9:2 = fir.do_loop %arg1 = %c1 to %c10 step %c1 iter_args(%arg2 = %8) -> (index, i32) {
+    fir.store %arg2 to %3 : !fir.ref<i32>
+    %11 = fir.load %5 : !fir.ref<f80>
+    %12 = fir.load %3 : !fir.ref<i32>
+    %13 = fir.convert %12 : (i32) -> i64
+    %14 = fir.array_coor %1 %13, %13 : (!fir.box<!fir.array<?x?xf80>>, i64, i64) -> !fir.ref<f80>
+    %15 = fir.load %14 : !fir.ref<f80>
+    %16 = arith.addf %11, %15 fastmath<contract> : f80
+    fir.store %16 to %5 : !fir.ref<f80>
+    %17 = arith.addi %arg1, %c1 : index
+    %18 = fir.load %3 : !fir.ref<i32>
+    %19 = arith.addi %18, %8 : i32
+    fir.result %17, %19 : index, i32
+  }
+  fir.store %9#1 to %3 : !fir.ref<i32>
+  %10 = fir.load %5 : !fir.ref<f80>
+  return %10 : f80
+}
+// CHECK-LABEL:   func.func @_QPtest_real10(
+// CHECK:           fir.if
+// CHECK:             fir.do_loop
+// CHECK-DAG:           arith.shrsi %{{[^,]*}}, %[[SHIFT:.*]] : index
+// CHECK-DAG:           %[[SHIFT]] = arith.constant 4 : index
+// CHECK:             fir.result
+// CHECK:           } else {
+// CHECK:             fir.do_loop
+
+func.func @_QPtest_complex10(%arg0: !fir.box<!fir.array<?x?x!fir.complex<10>>> {fir.bindc_name = "a"}) -> !fir.complex<10> {
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f80
+  %0 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_complex10Ea"} : (!fir.box<!fir.array<?x?x!fir.complex<10>>>) -> !fir.box<!fir.array<?x?x!fir.complex<10>>>
+  %1 = fir.rebox %0 : (!fir.box<!fir.array<?x?x!fir.complex<10>>>) -> !fir.box<!fir.array<?x?x!fir.complex<10>>>
+  %2 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_complex10Ei"}
+  %3 = fir.declare %2 {uniq_name = "_QFtest_complex10Ei"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %4 = fir.alloca !fir.complex<10> {bindc_name = "res", uniq_name = "_QFtest_complex10Eres"}
+  %5 = fir.declare %4 {uniq_name = "_QFtest_complex10Eres"} : (!fir.ref<!fir.complex<10>>) -> !fir.ref<!fir.complex<10>>
+  %6 = fir.address_of(@_QFtest_complex10ECxdp) : !fir.ref<i32>
+  %7 = fir.declare %6 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_complex10ECxdp"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %8 = fir.undefined !fir.complex<10>
+  %9 = fir.insert_value %8, %cst, [0 : index] : (!fir.complex<10>, f80) -> !fir.complex<10>
+  %10 = fir.insert_value %9, %cst, [1 : index] : (!fir.complex<10>, f80) -> !fir.complex<10>
+  fir.store %10 to %5 : !fir.ref<!fir.complex<10>>
+  %11 = fir.convert %c1 : (index) -> i32
+  %12:2 = fir.do_loop %arg1 = %c1 to %c10 step %c1 iter_args(%arg2 = %11) -> (index, i32) {
+    fir.store %arg2 to %3 : !fir.ref<i32>
+    %14 = fir.load %5 : !fir.ref<!fir.complex<10>>
+    %15 = fir.load %3 : !fir.ref<i32>
+    %16 = fir.convert %15 : (i32) -> i64
+    %17 = fir.array_coor %1 %16, %16 : (!fir.box<!fir.array<?x?x!fir.complex<10>>>, i64, i64) -> !fir.ref<!fir.complex<10>>
+    %18 = fir.load %17 : !fir.ref<!fir.complex<10>>
+    %19 = fir.addc %14, %18 {fastmath = #arith.fastmath<contract>} : !fir.complex<10>
+    fir.store %19 to %5 : !fir.ref<!fir.complex<10>>
+    %20 = arith.addi %arg1, %c1 : index
+    %21 = fir.load %3 : !fir.ref<i32>
+    %22 = arith.addi %21, %11 : i32
+    fir.result %20, %22 : index, i32
+  }
+  fir.store %12#1 to %3 : !fir.ref<i32>
+  %13 = fir.load %5 : !fir.ref<!fir.complex<10>>
+  return %13 : !fir.complex<10>
+}
+// CHECK-LABEL:   func.func @_QPtest_complex10(
+// CHECK:           fir.if
+// CHECK:             fir.do_loop
+// CHECK-DAG:           arith.shrsi %{{[^,]*}}, %[[SHIFT:.*]] : index
+// CHECK-DAG:           %[[SHIFT]] = arith.constant 5 : index
+// CHECK:             fir.result
+// CHECK:           } else {
+// CHECK:             fir.do_loop
 
 } // End module

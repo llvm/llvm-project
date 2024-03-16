@@ -347,13 +347,11 @@ public:
 private:
   std::string CacheDir;
 
-  bool getCacheFilename(const std::string &ModID, std::string &CacheName) {
-    std::string Prefix("file:");
-    size_t PrefixLength = Prefix.length();
-    if (ModID.substr(0, PrefixLength) != Prefix)
+  bool getCacheFilename(StringRef ModID, std::string &CacheName) {
+    if (!ModID.consume_front("file:"))
       return false;
 
-    std::string CacheSubdir = ModID.substr(PrefixLength);
+    std::string CacheSubdir = std::string(ModID);
     // Transform "X:\foo" => "/X\foo" for convenience on Windows.
     if (is_style_windows(llvm::sys::path::Style::native) &&
         isalpha(CacheSubdir[0]) && CacheSubdir[1] == ':') {

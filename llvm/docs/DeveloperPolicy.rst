@@ -1,3 +1,5 @@
+.. _developer_policy:
+
 =====================
 LLVM Developer Policy
 =====================
@@ -89,8 +91,7 @@ to read it as possible.  As such, we recommend that you:
 
 #. Make your patch against git main, not a branch, and not an old version
    of LLVM.  This makes it easy to apply the patch.  For information on how to
-   clone from git, please see the :ref:`Getting Started Guide
-   <checkout>`.
+   clone from git, please see the :ref:`Getting Started Guide <sources>`.
 
 #. Similarly, patches should be submitted soon after they are generated.  Old
    patches may not apply correctly if the underlying code changes between the
@@ -128,8 +129,8 @@ awareness of. For such changes, the following should be done:
 
 .. warning::
 
-  Phabricator is deprecated and will be switched to read-only mode in October
-  2023, for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
+  Phabricator is deprecated is available in read-only mode,
+  for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
   This section contains old information that needs to be updated.
 
 * When performing the code review for the change, please add any applicable
@@ -468,6 +469,8 @@ What are the expectations around a revert?
   actively responding.
 * When re-applying a reverted patch, the commit message should be updated to
   indicate the problem that was addressed and how it was addressed.
+
+.. _obtaining_commit_access:
 
 Obtaining Commit Access
 -----------------------
