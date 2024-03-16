@@ -296,7 +296,8 @@ llvm.func @memcpy_double() -> i32 {
   // CHECK: %[[ALLOCA_LEN:.*]] = llvm.mlir.constant(1 : i32) : i32
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: = llvm.alloca %[[ALLOCA_LEN]] x i32
-  // TODO: This should also disappear.
+  // TODO: This should also disappear as a GEP with all zero indices should be
+  // ignored.
   // CHECK: = llvm.alloca %[[ALLOCA_LEN]] x !llvm.array<1 x i32>
   %1 = llvm.alloca %0 x !llvm.array<1 x i32> : (i32) -> !llvm.ptr
   %2 = llvm.alloca %0 x !llvm.array<1 x i32> : (i32) -> !llvm.ptr
