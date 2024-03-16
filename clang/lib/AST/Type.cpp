@@ -4922,7 +4922,7 @@ void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
           getTypeConstraintConcept(), getTypeConstraintArguments());
 }
 
-FunctionEffect::FunctionEffect(Type T) : Type_(T), Flags_(0), Unused(0) {
+FunctionEffect::FunctionEffect(Type T) : Type_(unsigned(T)), Flags_(0) {
   switch (T) {
   case Type::NoLockTrue:
     Flags_ = FE_RequiresVerification | FE_VerifyCalls | FE_InferrableOnCallees |
@@ -4942,7 +4942,7 @@ FunctionEffect::FunctionEffect(Type T) : Type_(T), Flags_(0), Unused(0) {
 }
 
 StringRef FunctionEffect::name() const {
-  switch (Type_) {
+  switch (type()) {
   default:
     return "";
   case Type::NoLockTrue:
@@ -4957,7 +4957,7 @@ bool FunctionEffect::diagnoseConversion(bool Adding, QualType OldType,
                                         QualType NewType,
                                         FunctionEffectSet NewFX) const {
 
-  switch (Type_) {
+  switch (type()) {
   case Type::NoAllocTrue:
     // noalloc can't be added (spoofed) during a conversion, unless we have
     // nolock
@@ -4982,7 +4982,7 @@ bool FunctionEffect::diagnoseRedeclaration(bool Adding,
                                            FunctionEffectSet OldFX,
                                            const FunctionDecl &NewFunction,
                                            FunctionEffectSet NewFX) const {
-  switch (Type_) {
+  switch (type()) {
   case Type::NoAllocTrue:
   case Type::NoLockTrue:
     // nolock/noalloc can't be removed in a redeclaration
@@ -4999,7 +4999,7 @@ bool FunctionEffect::diagnoseMethodOverride(bool Adding,
                                             FunctionEffectSet OldFX,
                                             const CXXMethodDecl &NewMethod,
                                             FunctionEffectSet NewFX) const {
-  switch (Type_) {
+  switch (type()) {
   case Type::NoAllocTrue:
   case Type::NoLockTrue:
     // nolock/noalloc can't be removed from an override
@@ -5011,21 +5011,12 @@ bool FunctionEffect::diagnoseMethodOverride(bool Adding,
   return false;
 }
 
-bool FunctionEffect::canInferOnDecl(const Decl *Caller,
-                                    FunctionEffectSet CallerFX) const {
-  switch (Type_) {
+bool FunctionEffect::canInferOnFunction(const TypeSourceInfo &FType) const {
+  switch (type()) {
   case Type::NoAllocTrue:
   case Type::NoLockTrue: {
-    // Does the Decl have nolock(false) / noalloc(false) ?
-    QualType QT;
-    if (isa<BlockDecl>(Caller)) {
-      const auto *TSI = cast<BlockDecl>(Caller)->getSignatureAsWritten();
-      QT = TSI->getType();
-    } else if (isa<ValueDecl>(Caller)) {
-      QT = cast<ValueDecl>(Caller)->getType();
-    } else {
-      return false;
-    }
+    // Does the sugar have nolock(false) / noalloc(false) ?
+    QualType QT = FType.getType();
     if (QT->hasAttr(type() == Type::NoLockTrue ? attr::Kind::NoLock
                                                : attr::Kind::NoAlloc)) {
       return false;
@@ -5040,13 +5031,9 @@ bool FunctionEffect::canInferOnDecl(const Decl *Caller,
   return false;
 }
 
-// TODO: Notice that we don't care about some of the parameters. Is the
-// interface overly general?
-bool FunctionEffect::diagnoseFunctionCall(bool Direct, const Decl *Caller,
-                                          FunctionEffectSet CallerFX,
-                                          CalleeDeclOrType Callee,
+bool FunctionEffect::diagnoseFunctionCall(bool Direct,
                                           FunctionEffectSet CalleeFX) const {
-  switch (Type_) {
+  switch (type()) {
   case Type::NoAllocTrue:
   case Type::NoLockTrue: {
     const Type CallerType = type();

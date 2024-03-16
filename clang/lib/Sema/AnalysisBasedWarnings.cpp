@@ -2596,21 +2596,28 @@ private:
   std::unique_ptr<SmallVector<DirectCall>> UnverifiedDirectCalls;
 
 public:
-  PendingFunctionAnalysis(ASTContext &Ctx, const CallableInfo &cinfo,
+  PendingFunctionAnalysis(ASTContext &Ctx, const CallableInfo &CInfo,
                           FunctionEffectSet AllInferrableEffectsToVerify) {
-    MutableFunctionEffectSet fx;
-    for (const auto &effect : cinfo.Effects) {
-      if (effect.flags() & FunctionEffect::FE_RequiresVerification) {
-        fx.insert(effect);
+    MutableFunctionEffectSet FX;
+    for (const auto &Effect : CInfo.Effects) {
+      if (Effect.flags() & FunctionEffect::FE_RequiresVerification) {
+        FX.insert(Effect);
       }
     }
-    DeclaredVerifiableEffects = FunctionEffectSet::create(Ctx, fx);
+    DeclaredVerifiableEffects = FunctionEffectSet::create(Ctx, FX);
 
     // Check for effects we are not allowed to infer
-    fx.clear();
+    FX.clear();
+    TypeSourceInfo *TSI = nullptr;
+    if (const auto *DD = dyn_cast<DeclaratorDecl>(CInfo.CDecl)) {
+      TSI = DD->getTypeSourceInfo();
+    } else if (const auto *BD = dyn_cast<BlockDecl>(CInfo.CDecl)) {
+      TSI = BD->getSignatureAsWritten();
+    }
+
     for (const auto &effect : AllInferrableEffectsToVerify) {
-      if (effect.canInferOnDecl(cinfo.CDecl, cinfo.Effects)) {
-        fx.insert(effect);
+      if (TSI && effect.canInferOnFunction(*TSI)) {
+        FX.insert(effect);
       } else {
         // Add a diagnostic for this effect if a caller were to
         // try to infer it.
@@ -2618,12 +2625,12 @@ public:
             InferrableEffectToFirstDiagnostic.getOrInsertDefault(effect);
         diag =
             Diagnostic(effect, DiagnosticID::DeclWithoutConstraintOrInference,
-                       cinfo.CDecl->getLocation());
+                       CInfo.CDecl->getLocation());
       }
     }
-    // fx is now the set of inferrable effects which are not prohibited
+    // FX is now the set of inferrable effects which are not prohibited
     FXToInfer = FunctionEffectSet::create(
-        Ctx, FunctionEffectSet::create(Ctx, fx) - DeclaredVerifiableEffects);
+        Ctx, FunctionEffectSet::create(Ctx, FX) - DeclaredVerifiableEffects);
   }
 
   // Hide the way that diagnostics for explicitly required effects vs. inferred
@@ -2968,9 +2975,8 @@ private:
     auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
       const auto Flags = Effect.flags();
       if (Flags & FunctionEffect::FE_VerifyCalls) {
-        const bool diagnose = Effect.diagnoseFunctionCall(
-            DirectCall, Caller.CDecl, Caller.Effects, Callee.CDecl,
-            CalleeEffects);
+        const bool diagnose =
+            Effect.diagnoseFunctionCall(DirectCall, CalleeEffects);
         if (diagnose) {
           // If inference is not allowed, or the target is indirect (virtual
           // method/function ptr?), generate a diagnostic now.
@@ -3269,8 +3275,7 @@ private:
         if (Effect.flags() & FunctionEffect::FE_VerifyCalls) {
           if (FPT == nullptr ||
               Effect.diagnoseFunctionCall(
-                  /*direct=*/false, CurrentCaller.CDecl, CurrentCaller.Effects,
-                  FPT, FPT->getFunctionEffects())) {
+                  /*direct=*/false, FPT->getFunctionEffects())) {
             addDiagnosticInner(Inferring, Effect,
                                DiagnosticID::CallsDisallowedExpr,
                                Call->getBeginLoc());

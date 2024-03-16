@@ -4192,11 +4192,12 @@ public:
 class Decl;
 class CXXMethodDecl;
 class FunctionEffectSet;
+class TypeSourceInfo;
 
 /// Represents an abstract function effect.
 class FunctionEffect {
 public:
-  enum class Type : unsigned char {
+  enum class Type {
     None = 0,
     NoLockTrue,
     NoAllocTrue,
@@ -4231,24 +4232,24 @@ public:
 private:
   // For uniqueness, currently only Type_ is significant.
 
-  Type Type_ : 2;   // Expands when there are more types
+  LLVM_PREFERRED_TYPE(Type)
+  unsigned Type_ : 2;
   Flags Flags_ : 8; // A constant function of Type but cached here.
 
-  // Expansion: for hypothetical TCB+types, there could be one type for TCB,
+  // Expansion: for hypothetical TCB+types, there could be one Type for TCB,
   // then ~16(?) bits "Subtype" to map to a specific named TCB. Subtype would
   // be considered for uniqueness.
-  unsigned Unused : 22;
 
 public:
   using CalleeDeclOrType =
       llvm::PointerUnion<const Decl *, const FunctionProtoType *>;
 
-  FunctionEffect() : Type_(Type::None), Flags_(0), Unused(0) {}
+  FunctionEffect() : Type_(unsigned(Type::None)), Flags_(0) {}
 
   explicit FunctionEffect(Type T);
 
   /// The type of the effect.
-  Type type() const { return Type_; }
+  Type type() const { return Type(Type_); }
 
   /// Flags describing behaviors of the effect.
   Flags flags() const { return Flags_; }
@@ -4257,7 +4258,7 @@ public:
   StringRef name() const;
 
   /// A serializable, hashable representation.
-  uint32_t opaqueRepr() const { return unsigned(Type_) | (Flags_ << 2u); }
+  uint32_t opaqueRepr() const { return Type_ | (Flags_ << 2u); }
 
   /// Return true if adding or removing the effect as part of a type conversion
   /// should generate a diagnostic.
@@ -4279,19 +4280,18 @@ public:
                               const CXXMethodDecl &NewMethod,
                               FunctionEffectSet NewFX) const;
 
-  /// Return true if the effect is allowed to be inferred on the specified Decl
-  /// (may be a FunctionDecl or BlockDecl). Only used if the effect has
-  /// FE_InferrableOnCallees flag set. Example: This allows nolock(false) to
-  /// prevent inference for the function.
-  bool canInferOnDecl(const Decl *Caller, FunctionEffectSet CallerFX) const;
+  /// Return true if the effect is allowed to be inferred on a Decl of the
+  /// specified type (generally a FunctionProtoType but TypeSourceInfo is
+  /// provided so any AttributedType sugar can be examined). Only used if the
+  /// effect has FE_InferrableOnCallees flag set. Example: This allows
+  /// nolock(false) to prevent inference for the function.
+  bool canInferOnFunction(const TypeSourceInfo &FType) const;
 
   // Called if FE_VerifyCalls flag is set; return false for success. When true
   // is returned for a direct call, then the FE_InferrableOnCallees flag may
   // trigger inference rather than an immediate diagnostic. Caller should be
   // assumed to have the effect (it may not have it explicitly when inferring).
-  bool diagnoseFunctionCall(bool Direct, const Decl *Caller,
-                            FunctionEffectSet CallerFX, CalleeDeclOrType Callee,
-                            FunctionEffectSet CalleeFX) const;
+  bool diagnoseFunctionCall(bool Direct, FunctionEffectSet CalleeFX) const;
 
   friend bool operator==(const FunctionEffect &LHS, const FunctionEffect &RHS) {
     return LHS.Type_ == RHS.Type_;
