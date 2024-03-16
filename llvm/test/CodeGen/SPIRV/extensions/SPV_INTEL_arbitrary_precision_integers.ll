@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-extensions=SPV_INTEL_arbitrary_precision_integers %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-extensions=+SPV_INTEL_arbitrary_precision_integers %s -o - | FileCheck %s
 
 define i6 @getConstantI6() {
   ret i6 2

@@ -37,7 +37,7 @@
 
 ; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-extensions=SPV_INTEL_subgroups %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-extensions=+SPV_INTEL_subgroups %s -o - | FileCheck %s
 
 ; CHECK-ERROR: LLVM ERROR: intel_sub_group_shuffle: the builtin requires the following SPIR-V extension: SPV_INTEL_subgroups
 

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=spirv32-unknown-unknown --spirv-extensions=SPV_KHR_expect_assume < %s | FileCheck --check-prefixes=CHECK,EXT %s
-; RUN: llc -mtriple=spirv64-unknown-unknown --spirv-extensions=SPV_KHR_expect_assume < %s | FileCheck --check-prefixes=CHECK,EXT %s
+; RUN: llc -mtriple=spirv32-unknown-unknown --spirv-extensions=+SPV_KHR_expect_assume < %s | FileCheck --check-prefixes=CHECK,EXT %s
+; RUN: llc -mtriple=spirv64-unknown-unknown --spirv-extensions=+SPV_KHR_expect_assume < %s | FileCheck --check-prefixes=CHECK,EXT %s
 ; RUN: llc -mtriple=spirv32-unknown-unknown < %s | FileCheck --check-prefixes=CHECK,NOEXT %s
 ; RUN: llc -mtriple=spirv64-unknown-unknown < %s | FileCheck --check-prefixes=CHECK,NOEXT %s
 
