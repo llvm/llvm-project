@@ -387,6 +387,8 @@ Bug Fixes to C++ Support
   Fixes (#GH80997)
 - Fix an issue where missing set friend declaration in template class instantiation.
   Fixes (#GH84368).
+- Fixed a crash while checking constraints of a trailing requires-expression of a lambda, that the
+  expression references to an entity declared outside of the lambda. (#GH64808)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
