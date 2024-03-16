@@ -106,6 +106,11 @@ Improvements to Clang's diagnostics
 - Clang now applies syntax highlighting to the code snippets it
   prints.
 
+- Clang now does not warn in cases where bitand operator is 
+  intentionally used with boolean operands, distinguishing it
+  from potential typographical errors or unintended bitwise operations.
+  Fixes (`#77601 <https://github.com/llvm/llvm-project/issues/77601>`)
+
 Improvements to Clang's time-trace
 ----------------------------------
 

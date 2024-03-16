@@ -19,6 +19,8 @@ boolean baz(void) __attribute__((const));
 void sink(boolean);
 
 #define FOO foo()
+#define MY_AND &
+#define My_BITAND bitand
 
 void test(boolean a, boolean b, int *p, volatile int *q, int i) {
   b = a & b;
@@ -44,8 +46,11 @@ void test(boolean a, boolean b, int *p, volatile int *q, int i) {
   b = b & foo();
   b = bar() & (i > 4);
   b = (i == 7) & foo();
+  b = b MY_AND foo();     // OK, no warning expected
+
 #ifdef __cplusplus
   b = foo() bitand bar(); // Ok, no warning expected
+  b = foo() My_BITAND bar(); // Ok, no warning expected
                           
 #endif
 
@@ -60,4 +65,5 @@ void test(boolean a, boolean b, int *p, volatile int *q, int i) {
 
   int n = i + 10;
   b = (n & (n - 1));
+
 }
