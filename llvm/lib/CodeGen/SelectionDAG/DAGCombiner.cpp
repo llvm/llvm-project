@@ -2538,10 +2538,10 @@ static SDValue combineFixedwidthToAVGCEILU(SDNode *N, SelectionDAG &DAG) {
   if (TLI.isOperationLegal(ISD::AVGFLOORU, VT)) {
     SDValue A, B;
     if (sd_match(
-            N, llvm::SDPatternMatch::m_Sub(
-                   llvm::PatternMatch::m_Or(m_Value(A), m_Value(B)),
-                   llvm::SDPatternMatch::m_Srl(
-                       llvm::PatternMatch::m_Xor(m_Deferred(A), m_Deferred(B)),
+            N, m_Sub(
+                   m_Or(m_Value(A), m_Value(B)),
+                   m_Srl(
+                       m_Xor(m_Deferred(A), m_Deferred(B)),
                        m_SpecificInt(1))))) {
       return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
     }
