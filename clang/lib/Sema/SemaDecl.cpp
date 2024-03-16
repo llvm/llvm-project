@@ -3951,10 +3951,13 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       FD->setType(ModQT);
     };
 
-    applyMergedFX(Old);
+    // TODO: We used to apply the merged set of effects to the old decl.
+    // Now we don't.
+
+    // applyMergedFX(Old);
     applyMergedFX(New);
 
-    OldQType = Old->getType();
+    // OldQType = Old->getType();
     NewQType = New->getType();
   }
 

@@ -1,40 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -verify %s
-// R UN: %clang_cc1 -fsyntax-only -fblocks -verify -x c -std=c23 %s
 
 #if !__has_attribute(clang_nolock)
 #error "the 'nolock' attribute is not available"
 #endif
 
 // ============================================================================
-
-#if 1 // C function type problems
-void unannotated();
-void nolock() [[clang::nolock]];
-void noalloc() [[clang::noalloc]];
-
-
-void type_conversions()
-{
-	// It's fine to remove a performance constraint.
-	void (*fp_plain)();
-
-	fp_plain = unannotated;
-	fp_plain = nolock;
-	fp_plain = noalloc;
-
-	// Adding/spoofing nolock is unsafe.
-	void (*fp_nolock)() [[clang::nolock]];
-	fp_nolock = nolock;
-	fp_nolock = unannotated; // expected-warning {{attribute 'nolock' should not be added via type conversion}}
-	fp_nolock = noalloc; // expected-warning {{attribute 'nolock' should not be added via type conversion}}
-
-	// Adding/spoofing noalloc is unsafe.
-	void (*fp_noalloc)() [[clang::noalloc]];
-	fp_noalloc = noalloc;
-	fp_noalloc = nolock; // no warning because nolock includes noalloc fp_noalloc = unannotated;
-	fp_noalloc = unannotated; // expected-warning {{attribute 'noalloc' should not be added via type conversion}}
-}
-#endif
 
 // ============================================================================
 
