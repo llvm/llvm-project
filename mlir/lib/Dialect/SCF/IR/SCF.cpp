@@ -9,6 +9,8 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
@@ -18,6 +20,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
@@ -71,6 +74,12 @@ void SCFDialect::initialize() {
 #include "mlir/Dialect/SCF/IR/SCFOps.cpp.inc"
       >();
   addInterfaces<SCFInlinerInterface>();
+  declarePromisedInterfaces<bufferization::BufferDeallocationOpInterface,
+                            InParallelOp, ReduceReturnOp>();
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConditionOp,
+                            ExecuteRegionOp, ForOp, IfOp, IndexSwitchOp,
+                            ForallOp, InParallelOp, WhileOp, YieldOp>();
+  declarePromisedInterface<ForOp, ValueBoundsOpInterface>();
 }
 
 /// Default callback for IfOp builders. Inserts a yield without arguments.

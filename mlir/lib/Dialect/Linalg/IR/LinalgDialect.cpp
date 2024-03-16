@@ -21,7 +21,10 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/SubsetOpInterface.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -122,6 +125,23 @@ void mlir::linalg::LinalgDialect::initialize() {
 
   declarePromisedInterface<GenericOp, mesh::ShardingInterface>();
   declarePromisedInterfaces<mesh::ShardingInterface,
+#define GET_OP_LIST
+#include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
+                            >();
+  declarePromisedInterface<CopyOp, SubsetOpInterface>();
+  declarePromisedInterface<CopyOp, SubsetInsertionOpInterface>();
+  declarePromisedInterface<IndexOp, ValueBoundsOpInterface>();
+  declarePromisedInterface<linalg::GenericOp, TilingInterface>();
+  declarePromisedInterface<linalg::GenericOp, PartialReductionOpInterface>();
+  declarePromisedInterfaces<TilingInterface,
+#define GET_OP_LIST
+#include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
+                            >();
+  declarePromisedInterfaces<PartialReductionOpInterface,
+#define GET_OP_LIST
+#include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
+                            >();
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface,
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
                             >();
