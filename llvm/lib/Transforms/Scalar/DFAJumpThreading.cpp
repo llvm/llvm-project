@@ -96,6 +96,11 @@ static cl::opt<bool>
                     cl::desc("View the CFG before DFA Jump Threading"),
                     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> EarlyExitHeuristic(
+    "dfa-early-exit-heuristic",
+    cl::desc("Exit early if an unpredictable value come from the same loop"),
+    cl::Hidden, cl::init(true));
+
 static cl::opt<unsigned> MaxPathLength(
     "dfa-max-path-length",
     cl::desc("Max number of blocks searched to find a threading path"),
@@ -405,7 +410,7 @@ private:
   ///
   /// Also, collect select instructions to unfold.
   bool isCandidate(const SwitchInst *SI) {
-    std::deque<Value *> Q;
+    std::deque<std::pair<Value *, BasicBlock *>> Q;
     SmallSet<Value *, 16> SeenValues;
     SelectInsts.clear();
 
@@ -415,25 +420,28 @@ private:
       return false;
 
     // The switch must be in a loop.
-    if (!LI->getLoopFor(SI->getParent()))
+    const Loop *L = LI->getLoopFor(SI->getParent());
+    if (!L)
       return false;
 
-    addToQueue(SICond, Q, SeenValues);
+    addToQueue(SICond, nullptr, Q, SeenValues);
 
     while (!Q.empty()) {
-      Value *Current = Q.front();
+      Value *Current = Q.front().first;
+      BasicBlock *CurrentIncomingBB = Q.front().second;
       Q.pop_front();
 
       if (auto *Phi = dyn_cast<PHINode>(Current)) {
-        for (Value *Incoming : Phi->incoming_values()) {
-          addToQueue(Incoming, Q, SeenValues);
+        for (BasicBlock *IncomingBB : Phi->blocks()) {
+          Value *Incoming = Phi->getIncomingValueForBlock(IncomingBB);
+          addToQueue(Incoming, IncomingBB, Q, SeenValues);
         }
         LLVM_DEBUG(dbgs() << "\tphi: " << *Phi << "\n");
       } else if (SelectInst *SelI = dyn_cast<SelectInst>(Current)) {
         if (!isValidSelectInst(SelI))
           return false;
-        addToQueue(SelI->getTrueValue(), Q, SeenValues);
-        addToQueue(SelI->getFalseValue(), Q, SeenValues);
+        addToQueue(SelI->getTrueValue(), CurrentIncomingBB, Q, SeenValues);
+        addToQueue(SelI->getFalseValue(), CurrentIncomingBB, Q, SeenValues);
         LLVM_DEBUG(dbgs() << "\tselect: " << *SelI << "\n");
         if (auto *SelIUse = dyn_cast<PHINode>(SelI->user_back()))
           SelectInsts.push_back(SelectInstToUnfold(SelI, SelIUse));
@@ -446,6 +454,18 @@ private:
         // initial switch values that can be ignored (they will hit the
         // unthreaded switch) but this assumption will get checked later after
         // paths have been enumerated (in function getStateDefMap).
+
+        // If the unpredictable value comes from the same inner loop it is
+        // likely that it will also be on the enumerated paths, causing us to
+        // exit after we have enumerated all the paths. This heuristic save
+        // compile time because a search for all the paths can become expensive.
+        if (EarlyExitHeuristic &&
+            L->contains(LI->getLoopFor(CurrentIncomingBB))) {
+          LLVM_DEBUG(dbgs()
+                     << "\tExiting early due to unpredictability heuristic.\n");
+          return false;
+        }
+
         continue;
       }
     }
@@ -453,11 +473,12 @@ private:
     return true;
   }
 
-  void addToQueue(Value *Val, std::deque<Value *> &Q,
+  void addToQueue(Value *Val, BasicBlock *BB,
+                  std::deque<std::pair<Value *, BasicBlock *>> &Q,
                   SmallSet<Value *, 16> &SeenValues) {
     if (SeenValues.contains(Val))
       return;
-    Q.push_back(Val);
+    Q.push_back({Val, BB});
     SeenValues.insert(Val);
   }
 
