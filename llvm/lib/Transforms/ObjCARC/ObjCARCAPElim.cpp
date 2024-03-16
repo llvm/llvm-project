@@ -46,13 +46,14 @@ bool MayAutorelease(const CallBase &CB, unsigned Depth = 0) {
   if (const Function *Callee = CB.getCalledFunction()) {
     if (!Callee->hasExactDefinition())
       return true;
+    // This recursion depth limit is big enough to cover the vast majority
+    // of cases this will ever require.
+    if (Depth > 64)
+      return true;
     for (const BasicBlock &BB : *Callee) {
       for (const Instruction &I : BB)
         if (const CallBase *JCB = dyn_cast<CallBase>(&I))
-          // This recursion depth limit is arbitrary. It's just great
-          // enough to cover known interesting testcases.
-          if (Depth < 3 && !JCB->onlyReadsMemory() &&
-              MayAutorelease(*JCB, Depth + 1))
+          if (!JCB->onlyReadsMemory() && MayAutorelease(*JCB, Depth + 1))
             return true;
     }
     return false;
