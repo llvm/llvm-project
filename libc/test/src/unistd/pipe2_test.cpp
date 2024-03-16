@@ -53,7 +53,7 @@ TEST(LlvmLibcPipe2Test, Pipe2BadFlags) {
   int pipefd[2];
 
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  ASSERT_THAT(LIBC_NAMESPACE::pipe2(pipefd, badflag), Fails(EBADF));
+  ASSERT_THAT(LIBC_NAMESPACE::pipe2(pipefd, badflags), Fails(EBADF));
 }
 
 TEST(LlvmLibcPipe2Test, Pipe2BadFD) {
