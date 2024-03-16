@@ -7951,6 +7951,24 @@ TEST_F(FormatTest, AllowAllArgumentsOnNextLineDontAlign) {
                Input, Style);
 }
 
+TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
+  FormatStyle Style = getLLVMStyleWithColumns(80);
+  StringRef Input = "void functionDecl(paramA, paramB, paramC);\n"
+                    "void emptyFunctionDefinition() {}\n"
+                    "void functionDefinition(int A, int B, int C) {}";
+  Style.BreakFunctionDefinitionParameters = false;
+  verifyFormat(StringRef("void functionDecl(paramA, paramB, paramC);\n"
+                         "void emptyFunctionDefinition() {}\n"
+                         "void functionDefinition(int A, int B, int C) {}"),
+               Input, Style);
+  Style.BreakFunctionDefinitionParameters = true;
+  verifyFormat(StringRef("void functionDecl(paramA, paramB, paramC);\n"
+                         "void emptyFunctionDefinition() {}\n"
+                         "void functionDefinition(\n"
+                         "    int A, int B, int C) {}"),
+               Input, Style);
+}
+
 TEST_F(FormatTest, BreakBeforeInlineASMColon) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeInlineASMColon = FormatStyle::BBIAS_Never;

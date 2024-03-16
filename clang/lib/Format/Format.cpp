@@ -933,6 +933,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakAfterJavaFieldAnnotations",
                    Style.BreakAfterJavaFieldAnnotations);
     IO.mapOptional("BreakAfterReturnType", Style.BreakAfterReturnType);
+    IO.mapOptional("BreakFunctionDefinitionParameters",
+                   Style.BreakFunctionDefinitionParameters);
     IO.mapOptional("BreakArrays", Style.BreakArrays);
     IO.mapOptional("BreakBeforeBinaryOperators",
                    Style.BreakBeforeBinaryOperators);
@@ -1443,6 +1445,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Leave;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
   LLVMStyle.BreakAfterReturnType = FormatStyle::RTBS_None;
+  LLVMStyle.BreakFunctionDefinitionParameters = false;
   LLVMStyle.BreakArrays = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;

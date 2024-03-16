@@ -1502,6 +1502,7 @@ private:
             (!Previous->isAttribute() &&
              !Previous->isOneOf(TT_RequiresClause, TT_LeadingJavaAnnotation))) {
           Line.MightBeFunctionDecl = true;
+          Tok->MightBeFunctionDeclParen = true;
         }
       }
       break;
@@ -5316,6 +5317,12 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   const FormatToken &Left = *Right.Previous;
   if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0)
     return true;
+
+  if (Style.BreakFunctionDefinitionParameters && Line.MightBeFunctionDecl &&
+      Line.mightBeFunctionDefinition() && Left.is(tok::l_paren) &&
+      Left.MightBeFunctionDeclParen && Left.ParameterCount > 0) {
+    return true;
+  }
 
   if (Style.isCSharp()) {
     if (Left.is(TT_FatArrow) && Right.is(tok::l_brace) &&

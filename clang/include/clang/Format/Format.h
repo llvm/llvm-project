@@ -2218,6 +2218,11 @@ struct FormatStyle {
   /// \version 3.8
   bool BreakAfterJavaFieldAnnotations;
 
+  /// If ``true``, clang-format will always break before function definition
+  /// parameters
+  /// \version 19
+  bool BreakFunctionDefinitionParameters;
+
   /// Allow breaking string literals when formatting.
   ///
   /// In C, C++, and Objective-C:
@@ -4867,6 +4872,8 @@ struct FormatStyle {
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
+           BreakFunctionDefinitionParameters ==
+               R.BreakFunctionDefinitionParameters &&
            BreakInheritanceList == R.BreakInheritanceList &&
            BreakStringLiterals == R.BreakStringLiterals &&
            BreakTemplateDeclarations == R.BreakTemplateDeclarations &&

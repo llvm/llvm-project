@@ -3150,6 +3150,12 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _BreakFunctionDefinitionParameters:
+
+**BreakFunctionDefinitionParameters** (``Boolean``) :versionbadge:`clang-format 19` :ref:`¶ <BreakFunctionDefinitionParameters>`
+  If ``true``, clang-format will always break before function definition
+  parameters
+
 .. _BreakInheritanceList:
 
 **BreakInheritanceList** (``BreakInheritanceListStyle``) :versionbadge:`clang-format 7` :ref:`¶ <BreakInheritanceList>`
