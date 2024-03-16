@@ -1483,9 +1483,18 @@ llvm::json::Value toJSON(const InlayHintKind &Kind) {
   llvm_unreachable("Unknown clang.clangd.InlayHintKind");
 }
 
+namespace {
+
+llvm::json::Array toJSON(const std::vector<InlayHintLabelPart> &Labels) {
+  return llvm::json::Array{
+      llvm::map_range(Labels, [](auto &Label) { return toJSON(Label); })};
+}
+
+} // namespace
+
 llvm::json::Value toJSON(const InlayHint &H) {
   llvm::json::Object Result{{"position", H.position},
-                            {"label", H.label},
+                            {"label", toJSON(H.label)},
                             {"paddingLeft", H.paddingLeft},
                             {"paddingRight", H.paddingRight}};
   auto K = toJSON(H.kind);
@@ -1500,6 +1509,10 @@ bool operator==(const InlayHint &A, const InlayHint &B) {
 bool operator<(const InlayHint &A, const InlayHint &B) {
   return std::tie(A.position, A.range, A.kind, A.label) <
          std::tie(B.position, B.range, B.kind, B.label);
+}
+std::string InlayHint::joinLabels() const {
+  return llvm::join(llvm::map_range(label, [](auto &L) { return L.value; }),
+                    "");
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, InlayHintKind Kind) {
@@ -1517,6 +1530,31 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, InlayHintKind Kind) {
     llvm_unreachable("Unknown clang.clangd.InlayHintKind");
   };
   return OS << ToString(Kind);
+}
+
+llvm::json::Value toJSON(const InlayHintLabelPart &L) {
+  llvm::json::Object Result{{"value", L.value}};
+  if (L.tooltip)
+    Result["tooltip"] = *L.tooltip;
+  if (L.location)
+    Result["location"] = *L.location;
+  return Result;
+}
+
+bool operator==(const InlayHintLabelPart &LHS, const InlayHintLabelPart &RHS) {
+  return std::tie(LHS.value, LHS.location) == std::tie(RHS.value, RHS.location);
+}
+
+bool operator<(const InlayHintLabelPart &LHS, const InlayHintLabelPart &RHS) {
+  return std::tie(LHS.value, LHS.location) < std::tie(RHS.value, RHS.location);
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const InlayHintLabelPart &L) {
+  OS << L.value;
+  if (L.location)
+    OS << " (" << L.location << ")";
+  return OS;
 }
 
 static const char *toString(OffsetEncoding OE) {
