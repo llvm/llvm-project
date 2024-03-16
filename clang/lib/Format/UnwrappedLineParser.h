@@ -15,17 +15,8 @@
 #ifndef LLVM_CLANG_LIB_FORMAT_UNWRAPPEDLINEPARSER_H
 #define LLVM_CLANG_LIB_FORMAT_UNWRAPPEDLINEPARSER_H
 
-#include "Encoding.h"
-#include "FormatToken.h"
 #include "Macros.h"
-#include "clang/Basic/IdentifierTable.h"
-#include "clang/Format/Format.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/Support/Regex.h"
-#include <list>
 #include <stack>
-#include <vector>
 
 namespace clang {
 namespace format {
