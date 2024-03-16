@@ -874,8 +874,8 @@ def Visibility : DiagGroup<"visibility">;
 def ZeroLengthArray : DiagGroup<"zero-length-array">;
 def GNUZeroLineDirective : DiagGroup<"gnu-zero-line-directive">;
 def GNUZeroVariadicMacroArguments : DiagGroup<"gnu-zero-variadic-macro-arguments">;
-def PtrAuthNullPointers : DiagGroup<"ptrauth-null-pointers">;
 def MisleadingIndentation : DiagGroup<"misleading-indentation">;
+def PtrAuthNullPointers : DiagGroup<"ptrauth-null-pointers">;
 
 // This covers both the deprecated case (in C++98)
 // and the extension case (in C++11 onwards).

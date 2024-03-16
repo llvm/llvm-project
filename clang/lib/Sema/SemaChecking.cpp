@@ -1972,10 +1972,15 @@ static bool SemaOpenCLBuiltinToAddr(Sema &S, unsigned BuiltinID,
 }
 
 namespace {
-  enum PointerAuthOpKind {
-    PAO_Strip, PAO_Sign, PAO_Auth, PAO_SignGeneric, PAO_Discriminator,
-    PAO_BlendPointer, PAO_BlendInteger
-  };
+enum PointerAuthOpKind {
+  PAO_Strip,
+  PAO_Sign,
+  PAO_Auth,
+  PAO_SignGeneric,
+  PAO_Discriminator,
+  PAO_BlendPointer,
+  PAO_BlendInteger
+};
 }
 
 static bool checkPointerAuthEnabled(Sema &S, Expr *E) {
@@ -2012,14 +2017,15 @@ bool Sema::checkConstantPointerAuthKey(Expr *Arg, unsigned &Result) {
   // Attempt to constant-evaluate the expression.
   std::optional<llvm::APSInt> KeyValue = Arg->getIntegerConstantExpr(Context);
   if (!KeyValue) {
-    Diag(Arg->getExprLoc(), diag::err_expr_not_ice) << 0
-      << Arg->getSourceRange();
+    Diag(Arg->getExprLoc(), diag::err_expr_not_ice)
+        << 0 << Arg->getSourceRange();
     return true;
   }
 
   // Ask the target to validate the key parameter.
   if (!Context.getTargetInfo().validatePointerAuthKey(*KeyValue)) {
-    llvm::SmallString<32> Value; {
+    llvm::SmallString<32> Value;
+    {
       llvm::raw_svector_ostream Str(Value);
       Str << *KeyValue;
     }
@@ -2055,39 +2061,38 @@ static bool checkPointerAuthValue(Sema &S, Expr *&Arg,
                                   bool RequireConstant = false) {
   if (Arg->hasPlaceholderType()) {
     ExprResult R = S.CheckPlaceholderExpr(Arg);
-    if (R.isInvalid()) return true;
+    if (R.isInvalid())
+      return true;
     Arg = R.get();
   }
 
-  auto allowsPointer = [](PointerAuthOpKind OpKind) {
+  auto AllowsPointer = [](PointerAuthOpKind OpKind) {
     return OpKind != PAO_BlendInteger;
   };
-  auto allowsInteger = [](PointerAuthOpKind OpKind) {
-    return OpKind == PAO_Discriminator ||
-           OpKind == PAO_BlendInteger ||
+  auto AllowsInteger = [](PointerAuthOpKind OpKind) {
+    return OpKind == PAO_Discriminator || OpKind == PAO_BlendInteger ||
            OpKind == PAO_SignGeneric;
   };
 
   // Require the value to have the right range of type.
   QualType ExpectedTy;
-  if (allowsPointer(OpKind) && Arg->getType()->isPointerType()) {
+  if (AllowsPointer(OpKind) && Arg->getType()->isPointerType()) {
     ExpectedTy = Arg->getType().getUnqualifiedType();
-  } else if (allowsPointer(OpKind) && Arg->getType()->isNullPtrType()) {
+  } else if (AllowsPointer(OpKind) && Arg->getType()->isNullPtrType()) {
     ExpectedTy = S.Context.VoidPtrTy;
-  } else if (allowsInteger(OpKind) &&
+  } else if (AllowsInteger(OpKind) &&
              Arg->getType()->isIntegralOrUnscopedEnumerationType()) {
     ExpectedTy = S.Context.getUIntPtrType();
 
-  // Diagnose the failures.
   } else {
+    // Diagnose the failures.
     S.Diag(Arg->getExprLoc(), diag::err_ptrauth_value_bad_type)
-      << unsigned(OpKind == PAO_Discriminator ? 1 :
-                  OpKind == PAO_BlendPointer ? 2 :
-                  OpKind == PAO_BlendInteger ? 3 : 0)
-      << unsigned(allowsInteger(OpKind) ?
-                    (allowsPointer(OpKind) ? 2 : 1) : 0)
-      << Arg->getType()
-      << Arg->getSourceRange();
+        << unsigned(OpKind == PAO_Discriminator  ? 1
+                    : OpKind == PAO_BlendPointer ? 2
+                    : OpKind == PAO_BlendInteger ? 3
+                                                 : 0)
+        << unsigned(AllowsInteger(OpKind) ? (AllowsPointer(OpKind) ? 2 : 1) : 0)
+        << Arg->getType() << Arg->getSourceRange();
     return true;
   }
 
@@ -2100,10 +2105,10 @@ static bool checkPointerAuthValue(Sema &S, Expr *&Arg,
     // Warn about null pointers for non-generic sign and auth operations.
     if ((OpKind == PAO_Sign || OpKind == PAO_Auth) &&
         Arg->isNullPointerConstant(S.Context, Expr::NPC_ValueDependentIsNull)) {
-      S.Diag(Arg->getExprLoc(),
-             OpKind == PAO_Sign ? diag::warn_ptrauth_sign_null_pointer
-                                : diag::warn_ptrauth_auth_null_pointer)
-        << Arg->getSourceRange();
+      S.Diag(Arg->getExprLoc(), OpKind == PAO_Sign
+                                    ? diag::warn_ptrauth_sign_null_pointer
+                                    : diag::warn_ptrauth_auth_null_pointer)
+          << Arg->getSourceRange();
     }
 
     return false;
@@ -2184,10 +2189,12 @@ static bool checkPointerAuthValue(Sema &S, Expr *&Arg,
 }
 
 static ExprResult SemaPointerAuthStrip(Sema &S, CallExpr *Call) {
-  if (checkArgCount(S, Call, 2)) return ExprError();
-  if (checkPointerAuthEnabled(S, Call)) return ExprError();
-  if ((int)checkPointerAuthValue(S, Call->getArgs()[0], PAO_Strip) |
-      (int)checkPointerAuthKey(S, Call->getArgs()[1]))
+  if (checkArgCount(S, Call, 2))
+    return ExprError();
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_Strip) ||
+      checkPointerAuthKey(S, Call->getArgs()[1]))
     return ExprError();
 
   Call->setType(Call->getArgs()[0]->getType());
@@ -2195,10 +2202,12 @@ static ExprResult SemaPointerAuthStrip(Sema &S, CallExpr *Call) {
 }
 
 static ExprResult SemaPointerAuthBlendDiscriminator(Sema &S, CallExpr *Call) {
-  if (checkArgCount(S, Call, 2)) return ExprError();
-  if (checkPointerAuthEnabled(S, Call)) return ExprError();
-  if ((int)checkPointerAuthValue(S, Call->getArgs()[0], PAO_BlendPointer) |
-      (int)checkPointerAuthValue(S, Call->getArgs()[1], PAO_BlendInteger))
+  if (checkArgCount(S, Call, 2))
+    return ExprError();
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_BlendPointer) ||
+      checkPointerAuthValue(S, Call->getArgs()[1], PAO_BlendInteger))
     return ExprError();
 
   Call->setType(S.Context.getUIntPtrType());
@@ -2206,10 +2215,12 @@ static ExprResult SemaPointerAuthBlendDiscriminator(Sema &S, CallExpr *Call) {
 }
 
 static ExprResult SemaPointerAuthSignGenericData(Sema &S, CallExpr *Call) {
-  if (checkArgCount(S, Call, 2)) return ExprError();
-  if (checkPointerAuthEnabled(S, Call)) return ExprError();
-  if ((int)checkPointerAuthValue(S, Call->getArgs()[0], PAO_SignGeneric) |
-      (int)checkPointerAuthValue(S, Call->getArgs()[1], PAO_Discriminator))
+  if (checkArgCount(S, Call, 2))
+    return ExprError();
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_SignGeneric) ||
+      checkPointerAuthValue(S, Call->getArgs()[1], PAO_Discriminator))
     return ExprError();
 
   Call->setType(S.Context.getUIntPtrType());
@@ -2219,12 +2230,15 @@ static ExprResult SemaPointerAuthSignGenericData(Sema &S, CallExpr *Call) {
 static ExprResult SemaPointerAuthSignOrAuth(Sema &S, CallExpr *Call,
                                             PointerAuthOpKind OpKind,
                                             bool RequireConstant) {
-  if (checkArgCount(S, Call, 3)) return ExprError();
-  if (checkPointerAuthEnabled(S, Call)) return ExprError();
-  if ((int)checkPointerAuthValue(S, Call->getArgs()[0], OpKind, RequireConstant) |
-      (int)checkPointerAuthKey(S, Call->getArgs()[1]) |
-      (int)checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator,
-                            RequireConstant))
+  if (checkArgCount(S, Call, 3))
+    return ExprError();
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+  if (checkPointerAuthValue(S, Call->getArgs()[0], OpKind,
+                            RequireConstant) ||
+      checkPointerAuthKey(S, Call->getArgs()[1]) ||
+      checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator,
+                                 RequireConstant))
     return ExprError();
 
   Call->setType(Call->getArgs()[0]->getType());
@@ -2232,13 +2246,15 @@ static ExprResult SemaPointerAuthSignOrAuth(Sema &S, CallExpr *Call,
 }
 
 static ExprResult SemaPointerAuthAuthAndResign(Sema &S, CallExpr *Call) {
-  if (checkArgCount(S, Call, 5)) return ExprError();
-  if (checkPointerAuthEnabled(S, Call)) return ExprError();
-  if ((int)checkPointerAuthValue(S, Call->getArgs()[0], PAO_Auth) |
-      (int)checkPointerAuthKey(S, Call->getArgs()[1]) |
-      (int)checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator) |
-      (int)checkPointerAuthKey(S, Call->getArgs()[3]) |
-      (int)checkPointerAuthValue(S, Call->getArgs()[4], PAO_Discriminator))
+  if (checkArgCount(S, Call, 5))
+    return ExprError();
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_Auth) ||
+      checkPointerAuthKey(S, Call->getArgs()[1]) ||
+      checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator) ||
+      checkPointerAuthKey(S, Call->getArgs()[3]) ||
+      checkPointerAuthValue(S, Call->getArgs()[4], PAO_Discriminator))
     return ExprError();
 
   Call->setType(Call->getArgs()[0]->getType());
@@ -2949,25 +2965,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
     TheCall->setType(Context.VoidPtrTy);
     break;
-  case Builtin::BI__builtin_ptrauth_strip:
-    return SemaPointerAuthStrip(*this, TheCall);
-  case Builtin::BI__builtin_ptrauth_blend_discriminator:
-    return SemaPointerAuthBlendDiscriminator(*this, TheCall);
-  case Builtin::BI__builtin_ptrauth_sign_constant:
-    return SemaPointerAuthSignOrAuth(*this, TheCall, PAO_Sign,
-                                     /*constant*/ true);
-  case Builtin::BI__builtin_ptrauth_sign_unauthenticated:
-    return SemaPointerAuthSignOrAuth(*this, TheCall, PAO_Sign,
-                                     /*constant*/ false);
-  case Builtin::BI__builtin_ptrauth_auth:
-    return SemaPointerAuthSignOrAuth(*this, TheCall, PAO_Auth,
-                                     /*constant*/ false);
-  case Builtin::BI__builtin_ptrauth_sign_generic_data:
-    return SemaPointerAuthSignGenericData(*this, TheCall);
-  case Builtin::BI__builtin_ptrauth_auth_and_resign:
-    return SemaPointerAuthAuthAndResign(*this, TheCall);
-  case Builtin::BI__builtin_ptrauth_string_discriminator:
-    return SemaPointerAuthStringDiscriminator(*this, TheCall);
   case Builtin::BIaddressof:
   case Builtin::BI__addressof:
   case Builtin::BIforward:
@@ -2995,6 +2992,28 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+  case Builtin::BI__builtin_ptrauth_strip:
+    return SemaPointerAuthStrip(*this, TheCall);
+  case Builtin::BI__builtin_ptrauth_blend_discriminator:
+    return SemaPointerAuthBlendDiscriminator(*this, TheCall);
+  case Builtin::BI__builtin_ptrauth_sign_unauthenticated:
+    return SemaPointerAuthSignOrAuth(*this, TheCall, PAO_Sign,
+                                     /*RequireConstant=*/false);
+  case Builtin::BI__builtin_ptrauth_auth:
+    return SemaPointerAuthSignOrAuth(*this, TheCall, PAO_Auth,
+                                     /*RequireConstant=*/false);
+  case Builtin::BI__builtin_ptrauth_sign_generic_data:
+    return SemaPointerAuthSignGenericData(*this, TheCall);
+  case Builtin::BI__builtin_ptrauth_auth_and_resign:
+    return SemaPointerAuthAuthAndResign(*this, TheCall);
+
+  case Builtin::BI__builtin_ptrauth_sign_constant:
+    return SemaPointerAuthSignOrAuth(*this, TheCall, PAO_Sign,
+                                     /*constant*/ true);
+
+  case Builtin::BI__builtin_ptrauth_string_discriminator:
+    return SemaPointerAuthStringDiscriminator(*this, TheCall);
+
   // OpenCL v2.0, s6.13.16 - Pipe functions
   case Builtin::BIread_pipe:
   case Builtin::BIwrite_pipe:
