@@ -47,6 +47,12 @@ C++ Specific Potentially Breaking Changes
 
 ABI Changes in This Version
 ---------------------------
+- Fixed Microsoft name mangling of implicitly defined variables used for thread
+  safe static initialization of static local variables. This change resolves
+  incompatibilities with code compiled by MSVC but might introduce
+  incompatibilities with code compiled by earlier versions of Clang when an
+  inline member function that contains a static local variable with a dynamic
+  initializer is declared with ``__declspec(dllimport)``. (#GH83616).
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -196,6 +202,9 @@ Removed Compiler Flags
 -------------------------
 
 - The ``-freroll-loops`` flag has been removed. It had no effect since Clang 13.
+- ``-m[no-]unaligned-access`` is removed for RISC-V and LoongArch.
+  ``-m[no-]strict-align``, also supported by GCC, should be used instead.
+  (`#85350 <https://github.com/llvm/llvm-project/pull/85350>`_.)
 
 Attribute Changes in Clang
 --------------------------
@@ -205,21 +214,6 @@ Attribute Changes in Clang
   ``x``, ``y``, and ``z`` specify the maximum number of workgroups for the respective dimensions,
   and each must be a positive integer when provided. The parameter ``x`` is required, while ``y`` and
   ``z`` are optional with default value of 1.
-
-- The ``_Nullable`` and ``_Nonnull`` family of type attributes can now apply
-  to certain C++ class types, such as smart pointers:
-  ``void useObject(std::unique_ptr<Object> _Nonnull obj);``.
-
-  This works for standard library types including ``unique_ptr``, ``shared_ptr``
-  and ``function``. See `the attribute reference
-documentation <https://llvm.org/docs/AttributeReference.html#nullability-attributes>`_
-for the full list.
-
-- The ``_Nullable`` attribute can be applied to C++ class declarations:
-  ``template <class T> class _Nullable MySmartPointer {};``.
-
-  This allows the ``_Nullable`` and ``_Nonnull` family of type attributes to
-  apply to this class.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -398,6 +392,8 @@ Bug Fixes to C++ Support
   Fixes (#GH80997)
 - Fix an issue where missing set friend declaration in template class instantiation.
   Fixes (#GH84368).
+- Fixed a crash while checking constraints of a trailing requires-expression of a lambda, that the
+  expression references to an entity declared outside of the lambda. (#GH64808)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

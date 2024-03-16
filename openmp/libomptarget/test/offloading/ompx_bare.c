@@ -1,13 +1,14 @@
 // XFAIL: amdgcn-amd-amdhsa
 // RUN: %libomptarget-compile-generic
-// RUN: env LIBOMPTARGET_INFO=63 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=CHECK-NOOPT
-// RUN: %libomptarget-compileopt-generic
-// RUN: env LIBOMPTARGET_INFO=63 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=CHECK-OPT
+// RUN: env LIBOMPTARGET_INFO=63 %libomptarget-run-generic 2>&1 | \
+// RUN:   %fcheck-generic
 //
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
 // UNSUPPORTED: aarch64-unknown-linux-gnu
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
+// UNSUPPORTED: s390x-ibm-linux-gnu
+// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
 
 #include <assert.h>
 #include <ompx.h>

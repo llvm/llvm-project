@@ -94,6 +94,7 @@ if (NOT LIBOMPTARGET_PLUGINS_TO_LOAD)
 	check_plugin_target(x86_64)
 	check_plugin_target(aarch64)
 	check_plugin_target(ppc64)
+	check_plugin_target(s390x)
 endif()
 
 list(TRANSFORM LIBOMPTARGET_PLUGINS_TO_LOAD PREPEND "\"libomptarget.rtl.")

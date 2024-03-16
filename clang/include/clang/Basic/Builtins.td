@@ -4354,6 +4354,43 @@ def CoroSuspend : CoroLangBuiltin {
   let Prototype = "char(_Constant bool)";
 }
 
+// Pointer authentication builtins.
+def PtrauthStrip : Builtin {
+  let Spellings = ["__builtin_ptrauth_strip"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "void*(void*,int)";
+}
+
+def PtrauthBlendDiscriminator : Builtin {
+  let Spellings = ["__builtin_ptrauth_blend_discriminator"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "size_t(void*,int)";
+}
+
+def PtrauthSignUnauthenticated : Builtin {
+  let Spellings = ["__builtin_ptrauth_sign_unauthenticated"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "void*(void*,int,void*)";
+}
+
+def PtrauthSignGenericData : Builtin {
+  let Spellings = ["__builtin_ptrauth_sign_generic_data"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "size_t(void*,void*)";
+}
+
+def PtrauthAuthAndResign : Builtin {
+  let Spellings = ["__builtin_ptrauth_auth_and_resign"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*,int,void*,int,void*)";
+}
+
+def PtrauthAuth : Builtin {
+  let Spellings = ["__builtin_ptrauth_auth"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*,int,void*)";
+}
+
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
 // We need the generic prototype, since the packet type could be anything.
 def ReadPipe : OCLPipeLangBuiltin {
@@ -4552,6 +4589,12 @@ def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
   let Prototype = "unsigned int(bool)";
+}
+
+def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_clamp"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
 }
 
 def HLSLCreateHandle : LangBuiltin<"HLSL_LANG"> {
