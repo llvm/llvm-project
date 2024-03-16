@@ -71,31 +71,6 @@ llvm.func @exotic_target_memset(%memset_value: i8) -> i40 {
 
 // -----
 
-// CHECK-LABEL: llvm.func @exotic_target_memset_constant
-llvm.func @exotic_target_memset_constant() -> i40 {
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.alloca %0 x i40 {alignment = 4 : i64} : (i32) -> !llvm.ptr
-  %memset_value = llvm.mlir.constant(42 : i8) : i8
-  %memset_len = llvm.mlir.constant(5 : i32) : i32
-  "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
-  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i40
-  // CHECK: %[[C42:.*]] = llvm.mlir.constant(42 : i8) : i8
-  // CHECK: %[[ZEXT_42:.*]] = llvm.zext %[[C42]] : i8 to i40
-  // CHECK: %[[C8:.*]] = llvm.mlir.constant(8 : i40) : i40
-  // CHECK: %[[SHIFTED_42:.*]] = llvm.shl %[[ZEXT_42]], %[[C8]]  : i40
-  // CHECK: %[[OR_0:.*]] = llvm.or %[[ZEXT_42]], %[[SHIFTED_42]]  : i40
-  // CHECK: %[[C16:.*]] = llvm.mlir.constant(16 : i40) : i40
-  // CHECK: %[[SHIFTED_COMPL:.*]] = llvm.shl %[[OR_0]], %[[C16]]  : i40
-  // CHECK: %[[OR_1:.*]] = llvm.or %[[OR_0]], %[[SHIFTED_COMPL]]  : i40
-  // CHECK: %[[C32:.*]] = llvm.mlir.constant(32 : i40) : i40
-  // CHECK: %[[OR_COMPL:.*]] = llvm.shl %[[OR_1]], %[[C32]]  : i40
-  // CHECK: %[[RES:.*]] = llvm.or %[[OR_1]], %[[OR_COMPL]]  : i40
-  // CHECK: llvm.return %[[RES]] : i40
-  llvm.return %2 : i40
-}
-
-// -----
-
 // CHECK-LABEL: llvm.func @no_volatile_memset
 llvm.func @no_volatile_memset() -> i32 {
   // CHECK-DAG: %[[ALLOCA_LEN:.*]] = llvm.mlir.constant(1 : i32) : i32

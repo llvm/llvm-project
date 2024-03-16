@@ -657,10 +657,9 @@ struct Mem2Reg : impl::Mem2RegBase<Mem2Reg> {
       while (true) {
         SmallVector<PromotableAllocationOpInterface> allocators;
         // Build a list of allocators to attempt to promote the slots of.
-        for (Block &block : region)
-          for (Operation &op : block.getOperations())
-            if (auto allocator = dyn_cast<PromotableAllocationOpInterface>(op))
-              allocators.emplace_back(allocator);
+        region.walk([&](PromotableAllocationOpInterface allocator) {
+          allocators.emplace_back(allocator);
+        });
 
         // Attempt promoting until no promotion succeeds.
         if (failed(tryToPromoteMemorySlots(allocators, rewriter, statistics)))
