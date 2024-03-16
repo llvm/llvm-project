@@ -1,4 +1,5 @@
-//===-- Linux implementation of pipe2 ---------------------------------------===//
+//===-- Linux implementation of pipe2
+//---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,12 +18,12 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pipe2, (int pipefd[2], int flags)) {
-    int ret;
+  int ret;
 #ifdef SYS_pipe2
   ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_pipe2, pipefd, flags);
-#elif defined (SYS_pipe)
+#elif defined(SYS_pipe)
   ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_pipe, pipefd);
-#else 
+#else
 #error "pipe and pipe2 not available."
 #endif
   if (ret == -1) {
