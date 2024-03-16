@@ -528,6 +528,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_ctype_utils",
         ":__support_str_to_num_result",
+        ":__support_uint128",
         ":errno",
     ],
 )
