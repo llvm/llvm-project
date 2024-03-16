@@ -21,6 +21,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceManager.h"
@@ -370,6 +371,197 @@ maybeDropCxxExplicitObjectParameters(ArrayRef<const ParmVarDecl *> Params) {
   if (!Params.empty() && Params.front()->isExplicitObjectParameter())
     Params = Params.drop_front(1);
   return Params;
+}
+
+std::optional<Location> toLocation(SourceManager &SM, SourceRange Range) {
+  if (Range.isInvalid())
+    return std::nullopt;
+  if (auto URI =
+          toURI(SM.getFileEntryRefForID(SM.getFileID(Range.getBegin())))) {
+    Location L;
+    L.range.start = sourceLocToPosition(SM, Range.getBegin());
+    L.range.end = sourceLocToPosition(SM, Range.getEnd());
+    if (auto File = URIForFile::fromURI(*URI, ""))
+      L.uri = File.get();
+    return L;
+  }
+  return std::nullopt;
+}
+
+class TypeInlayHintLabelPartBuilder
+    : public TypeVisitor<TypeInlayHintLabelPartBuilder> {
+  QualType Current;
+  ASTContext &Context;
+  const PrintingPolicy &PP;
+  std::vector<InlayHintLabelPart> &LabelChunks;
+
+  bool ShouldAddLinksToTagTypes = false;
+
+  struct CurrentTypeRAII {
+    TypeInlayHintLabelPartBuilder &Builder;
+    QualType PreviousType;
+    bool PreviousShouldAddLinksToTagTypes;
+    CurrentTypeRAII(TypeInlayHintLabelPartBuilder &Builder, QualType New,
+                    bool ShouldAddLinksToTagTypes)
+        : Builder(Builder), PreviousType(Builder.Current) {
+      Builder.Current = New;
+      Builder.ShouldAddLinksToTagTypes = ShouldAddLinksToTagTypes;
+    }
+    ~CurrentTypeRAII() {
+      Builder.Current = PreviousType;
+      Builder.ShouldAddLinksToTagTypes = PreviousShouldAddLinksToTagTypes;
+    }
+  };
+
+  void addLabel(llvm::function_ref<void(llvm::raw_ostream &)> NamePrinter,
+                llvm::function_ref<SourceRange()> SourceRangeGetter) {
+    auto &Name = LabelChunks.emplace_back();
+    llvm::raw_string_ostream OS(Name.value);
+    NamePrinter(OS);
+    Name.location = toLocation(Context.getSourceManager(), SourceRangeGetter());
+  }
+
+  void printTemplateArgumentList(llvm::ArrayRef<TemplateArgument> Args) {
+    unsigned Size = Args.size();
+    for (unsigned I = 0; I < Size; ++I) {
+      auto &TA = Args[I];
+      if (PP.SuppressDefaultTemplateArgs && TA.getIsDefaulted())
+        continue;
+      if (I)
+        LabelChunks.emplace_back(", ");
+      printTemplateArgument(TA);
+    }
+  }
+
+  void printTemplateArgument(const TemplateArgument &TA) {
+    if (TA.getKind() == TemplateArgument::Pack)
+      return printTemplateArgumentList(TA.pack_elements());
+    if (TA.getKind() == TemplateArgument::Type) {
+      CurrentTypeRAII Guard(*this, TA.getAsType(),
+                            /*ShouldAddLinksToTagTypes=*/true);
+      return Visit(TA.getAsType().getTypePtr());
+    }
+    llvm::raw_string_ostream OS(LabelChunks.emplace_back().value);
+    TA.print(PP, OS, /*IncludeType=*/true);
+  }
+
+  void
+  processTemplateSpecialization(TemplateName TN,
+                                llvm::ArrayRef<TemplateArgument> Args,
+                                SourceRange TemplateNameRange = SourceRange()) {
+    SourceRange Range;
+    TemplateDecl *TD = nullptr;
+    switch (TN.getKind()) {
+    case TemplateName::Template:
+      TD = TN.getAsTemplateDecl();
+      Range = TD->getSourceRange();
+      LLVM_FALLTHROUGH;
+    default:
+      break;
+    }
+
+    addLabel([&](llvm::raw_ostream &OS) { TN.print(OS, PP); },
+             [&] {
+               if (TemplateNameRange.isValid())
+                 return TemplateNameRange;
+               return Range;
+             });
+
+    LabelChunks.emplace_back("<");
+    printTemplateArgumentList(Args);
+    LabelChunks.emplace_back(">");
+  }
+
+public:
+
+#ifndef NDEBUG
+  ~TypeInlayHintLabelPartBuilder() {
+    llvm::errs() << "TypeInlayHintLabelPartBuilder:\n";
+    Current->dump();
+    for (auto &L : LabelChunks)
+      llvm::errs() << L << ", ";
+    llvm::errs() << "\n";
+  }
+#endif
+
+  TypeInlayHintLabelPartBuilder(QualType Current, ASTContext &Context,
+                                const PrintingPolicy &PP,
+                                bool ShouldAddLinksToTagTypes,
+                                std::vector<InlayHintLabelPart> &LabelChunks)
+      : Current(Current), Context(Context), PP(PP), LabelChunks(LabelChunks) {}
+
+  void VisitType(const Type *) {
+    LabelChunks.emplace_back(Current.getAsString(PP));
+  }
+
+  void VisitTagType(const TagType *TT) {
+    if (!ShouldAddLinksToTagTypes)
+      return VisitType(TT);
+    auto *D = TT->getDecl();
+    if (auto *Specialization = dyn_cast<ClassTemplateSpecializationDecl>(D))
+      return processTemplateSpecialization(
+          TemplateName(Specialization->getSpecializedTemplate()),
+          Specialization->getTemplateArgs().asArray());
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D);
+        RD && !RD->getTemplateInstantiationPattern())
+      return addLabel(
+          [&](llvm::raw_ostream &OS) { return RD->printName(OS, PP); },
+          [&] { return RD->getSourceRange(); });
+    return VisitType(TT);
+  }
+
+  void VisitAutoType(const AutoType *AT) {
+    if (!AT->isDeduced() || AT->getDeducedType()->isDecltypeType())
+      return;
+    CurrentTypeRAII Guard(*this, AT->getDeducedType(),
+                          ShouldAddLinksToTagTypes);
+    return Visit(AT->getDeducedType().getTypePtr());
+  }
+
+  void VisitElaboratedType(const ElaboratedType *ET) {
+    if (auto *NNS = ET->getQualifier()) {
+      switch (NNS->getKind()) {
+      case NestedNameSpecifier::Identifier:
+      case NestedNameSpecifier::Namespace:
+      case NestedNameSpecifier::NamespaceAlias:
+      case NestedNameSpecifier::Global:
+      case NestedNameSpecifier::Super: {
+        auto &Name = LabelChunks.emplace_back();
+        llvm::raw_string_ostream OS(Name.value);
+        NNS->print(OS, PP);
+      } break;
+      case NestedNameSpecifier::TypeSpec:
+      case NestedNameSpecifier::TypeSpecWithTemplate:
+        Visit(NNS->getAsType());
+        break;
+      }
+    }
+    CurrentTypeRAII Guard(*this, ET->getNamedType(), ShouldAddLinksToTagTypes);
+    return Visit(ET->getNamedType().getTypePtr());
+  }
+
+  void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
+    SourceRange Range;
+    if (auto *Specialization =
+            dyn_cast_if_present<ClassTemplateSpecializationDecl>(
+                TST->desugar().getCanonicalType()->getAsCXXRecordDecl()))
+      Range = Specialization->getSourceRange();
+    return processTemplateSpecialization(TST->getTemplateName(),
+                                         TST->template_arguments(), Range);
+  }
+
+  void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *ST) {
+    CurrentTypeRAII Guard(*this, ST->getReplacementType(),
+                          /*ShouldAddLinksToTagTypes=*/true);
+    return Visit(ST->getReplacementType().getTypePtr());
+  }
+};
+
+unsigned lengthOfInlayHintLabelPart(llvm::ArrayRef<InlayHintLabelPart> Labels) {
+  unsigned Size = 0;
+  for (auto &P : Labels)
+    Size += P.value.size();
+  return Size;
 }
 
 struct Callee {
@@ -949,8 +1141,28 @@ private:
     addInlayHint(*LSPRange, Side, Kind, Prefix, Label, Suffix);
   }
 
+  void addInlayHint(SourceRange R, HintSide Side, InlayHintKind Kind,
+                    llvm::StringRef Prefix,
+                    llvm::ArrayRef<InlayHintLabelPart> Labels,
+                    llvm::StringRef Suffix) {
+    auto LSPRange = getHintRange(R);
+    if (!LSPRange)
+      return;
+
+    addInlayHint(*LSPRange, Side, Kind, Prefix, Labels, Suffix);
+  }
+
   void addInlayHint(Range LSPRange, HintSide Side, InlayHintKind Kind,
                     llvm::StringRef Prefix, llvm::StringRef Label,
+                    llvm::StringRef Suffix) {
+    return addInlayHint(LSPRange, Side, Kind, Prefix,
+                        /*Labels=*/std::vector<InlayHintLabelPart>{Label.str()},
+                        Suffix);
+  }
+
+  void addInlayHint(Range LSPRange, HintSide Side, InlayHintKind Kind,
+                    llvm::StringRef Prefix,
+                    llvm::ArrayRef<InlayHintLabelPart> Labels,
                     llvm::StringRef Suffix) {
     // We shouldn't get as far as adding a hint if the category is disabled.
     // We'd like to disable as much of the analysis as possible above instead.
@@ -977,8 +1189,21 @@ private:
       return;
     bool PadLeft = Prefix.consume_front(" ");
     bool PadRight = Suffix.consume_back(" ");
+    if (Prefix.empty() && Suffix.empty()) {
+      Results.push_back(InlayHint{LSPPos,
+                                  /*label=*/Labels, Kind, PadLeft, PadRight,
+                                  LSPRange});
+      return;
+    }
+    std::vector<InlayHintLabelPart> JoinedLabels;
+    JoinedLabels.reserve(Labels.size() + !Prefix.empty() + !Suffix.empty());
+    if (!Prefix.empty())
+      JoinedLabels.push_back(InlayHintLabelPart(Prefix.str()));
+    llvm::copy(Labels, std::back_inserter(JoinedLabels));
+    if (!Suffix.empty())
+      JoinedLabels.push_back(InlayHintLabelPart(Suffix.str()));
     Results.push_back(InlayHint{LSPPos,
-                                /*label=*/{(Prefix + Label + Suffix).str()},
+                                /*label=*/std::move(JoinedLabels),
                                 Kind, PadLeft, PadRight, LSPRange});
   }
 
@@ -1005,14 +1230,22 @@ private:
     // The sugared type is more useful in some cases, and the canonical
     // type in other cases.
     auto Desugared = maybeDesugar(AST, T);
-    std::string TypeName = Desugared.getAsString(TypeHintPolicy);
-    if (T != Desugared && !shouldPrintTypeHint(TypeName)) {
+    std::vector<InlayHintLabelPart> Chunks;
+    TypeInlayHintLabelPartBuilder Builder(
+        Desugared, AST, TypeHintPolicy,
+        /*ShouldAddLinksToTagTypes=*/T != Desugared, Chunks);
+    Builder.Visit(Desugared.getTypePtr());
+    if (T != Desugared && shouldPrintTypeHint(Chunks)) {
       // If the desugared type is too long to display, fallback to the sugared
       // type.
-      TypeName = T.getAsString(TypeHintPolicy);
+      Chunks.clear();
+      TypeInlayHintLabelPartBuilder Builder(T, AST, TypeHintPolicy,
+                                            /*ShouldAddLinksToTagTypes=*/false,
+                                            Chunks);
+      Builder.Visit(T.getTypePtr());
     }
-    if (shouldPrintTypeHint(TypeName))
-      addInlayHint(R, HintSide::Right, InlayHintKind::Type, Prefix, TypeName,
+    if (shouldPrintTypeHint(Chunks))
+      addInlayHint(R, HintSide::Right, InlayHintKind::Type, Prefix, Chunks,
                    /*Suffix=*/"");
   }
 
@@ -1021,9 +1254,11 @@ private:
                  /*Prefix=*/"", Text, /*Suffix=*/"=");
   }
 
-  bool shouldPrintTypeHint(llvm::StringRef TypeName) const noexcept {
+  bool shouldPrintTypeHint(
+      llvm::ArrayRef<InlayHintLabelPart> TypeLabels) const noexcept {
     return Cfg.InlayHints.TypeNameLimit == 0 ||
-           TypeName.size() < Cfg.InlayHints.TypeNameLimit;
+           lengthOfInlayHintLabelPart(TypeLabels) <
+               Cfg.InlayHints.TypeNameLimit;
   }
 
   void addBlockEndHint(SourceRange BraceRange, StringRef DeclPrefix,

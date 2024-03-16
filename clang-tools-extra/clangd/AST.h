@@ -250,6 +250,8 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth = 10);
 /// reference to one (e.g. `Args&...` or `Args&&...`).
 bool isExpandedFromParameterPack(const ParmVarDecl *D);
 
+std::optional<URI> toURI(OptionalFileEntryRef File);
+
 } // namespace clangd
 } // namespace clang
 
