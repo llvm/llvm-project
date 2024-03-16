@@ -1701,21 +1701,21 @@ struct InlayHintLabelPart {
   std::string value;
 
   /// The tooltip text when you hover over this label part. Depending on
-	/// the client capability `inlayHint.resolveSupport`, clients might resolve
-	/// this property late using the resolve request.
+  /// the client capability `inlayHint.resolveSupport`, clients might resolve
+  /// this property late using the resolve request.
   std::optional<MarkupContent> tooltip;
 
-	/// An optional source code location that represents this
-	/// label part.
-	///
-	/// The editor will use this location for the hover and for code navigation
-	/// features: This part will become a clickable link that resolves to the
-	/// definition of the symbol at the given location (not necessarily the
-	/// location itself), it shows the hover that shows at the given location,
-	/// and it shows a context menu with further code navigation commands.
-	///
-	/// Depending on the client capability `inlayHint.resolveSupport` clients
-	/// might resolve this property late using the resolve request.
+  /// An optional source code location that represents this
+  /// label part.
+  ///
+  /// The editor will use this location for the hover and for code navigation
+  /// features: This part will become a clickable link that resolves to the
+  /// definition of the symbol at the given location (not necessarily the
+  /// location itself), it shows the hover that shows at the given location,
+  /// and it shows a context menu with further code navigation commands.
+  ///
+  /// Depending on the client capability `inlayHint.resolveSupport` clients
+  /// might resolve this property late using the resolve request.
   std::optional<Location> location;
 
   /// The command field is not used for now, hence omitted.

@@ -979,10 +979,7 @@ private:
     bool PadRight = Suffix.consume_back(" ");
     Results.push_back(InlayHint{LSPPos,
                                 /*label=*/{(Prefix + Label + Suffix).str()},
-                                Kind,
-                                PadLeft,
-                                PadRight,
-                                LSPRange});
+                                Kind, PadLeft, PadRight, LSPRange});
   }
 
   // Get the range of the main file that *exactly* corresponds to R.
