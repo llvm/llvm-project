@@ -45,8 +45,7 @@ concept __member_begin = __can_borrow<_Tp> && __workaround_52970<_Tp> && require
   { _LIBCPP_AUTO_CAST(__t.begin()) } -> input_or_output_iterator;
 };
 
-void begin(auto&)       = delete;
-void begin(const auto&) = delete;
+void begin() = delete;
 
 template <class _Tp>
 concept __unqualified_begin =
@@ -109,8 +108,7 @@ concept __member_end = __can_borrow<_Tp> && __workaround_52970<_Tp> && requires(
   { _LIBCPP_AUTO_CAST(__t.end()) } -> sentinel_for<iterator_t<_Tp>>;
 };
 
-void end(auto&)       = delete;
-void end(const auto&) = delete;
+void end() = delete;
 
 template <class _Tp>
 concept __unqualified_end =
