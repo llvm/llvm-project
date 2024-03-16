@@ -201,3 +201,11 @@ void localCompoundLiteral(void) {
        // pedantic-ref-warning {{use of an empty initializer}}
   };
 }
+
+/// struct copy
+struct StrA {int a; };
+const struct StrA sa = { 12 };
+const struct StrA * const sb = &sa;
+const struct StrA sc = *sb;
+_Static_assert(sc.a == 12, ""); // pedantic-ref-warning {{GNU extension}} \
+                                // pedantic-expected-warning {{GNU extension}}

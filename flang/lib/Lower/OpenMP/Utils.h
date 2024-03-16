@@ -9,6 +9,7 @@
 #ifndef FORTRAN_LOWER_OPENMPUTILS_H
 #define FORTRAN_LOWER_OPENMPUTILS_H
 
+#include "Clauses.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
@@ -51,16 +52,19 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 bool isVal = false);
 
 void gatherFuncAndVarSyms(
-    const Fortran::parser::OmpObjectList &objList,
-    mlir::omp::DeclareTargetCaptureClause clause,
+    const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause);
 
 Fortran::semantics::Symbol *
 getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject);
 
-void genObjectList(const Fortran::parser::OmpObjectList &objectList,
+void genObjectList(const ObjectList &objects,
                    Fortran::lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands);
+
+void genObjectList2(const Fortran::parser::OmpObjectList &objectList,
+                    Fortran::lower::AbstractConverter &converter,
+                    llvm::SmallVectorImpl<mlir::Value> &operands);
 
 } // namespace omp
 } // namespace lower

@@ -28,8 +28,8 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/StringSaver.h"
 
-#include <list>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -838,6 +838,13 @@ bool IsClangCL(StringRef DriverMode);
 llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
                                 bool ClangCLMode, llvm::BumpPtrAllocator &Alloc,
                                 llvm::vfs::FileSystem *FS = nullptr);
+
+/// Apply a space separated list of edits to the input argument lists.
+/// See applyOneOverrideOption.
+void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
+                          const char *OverrideOpts,
+                          llvm::StringSet<> &SavedStrings,
+                          raw_ostream *OS = nullptr);
 
 } // end namespace driver
 } // end namespace clang

@@ -64,6 +64,7 @@ libc_test(
     name = "integer_to_string_test",
     srcs = ["integer_to_string_test.cpp"],
     deps = [
+        "//libc:__support_cpp_limits",
         "//libc:__support_cpp_span",
         "//libc:__support_cpp_string_view",
         "//libc:__support_integer_literals",

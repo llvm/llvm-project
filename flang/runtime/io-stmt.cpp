@@ -39,9 +39,9 @@ bool IoStatementBase::Receive(char *, std::size_t, std::size_t) {
   return false;
 }
 
-std::optional<DataEdit> IoStatementBase::GetNextDataEdit(
+Fortran::common::optional<DataEdit> IoStatementBase::GetNextDataEdit(
     IoStatementState &, int) {
-  return std::nullopt;
+  return Fortran::common::nullopt;
 }
 
 ExternalFileUnit *IoStatementBase::GetExternalFileUnit() const {
@@ -119,9 +119,6 @@ template <Direction DIR> void InternalIoStatementState<DIR>::BackspaceRecord() {
 }
 
 template <Direction DIR> int InternalIoStatementState<DIR>::EndIoStatement() {
-  if constexpr (DIR == Direction::Output) {
-    unit_.EndIoStatement(); // fill
-  }
   auto result{IoStatementBase::EndIoStatement()};
   if (free_) {
     FreeMemory(this);
@@ -165,7 +162,8 @@ template <Direction DIR, typename CHAR>
 void InternalFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
   if (!this->completedOperation()) {
     if constexpr (DIR == Direction::Output) {
-      format_.Finish(*this); // ignore any remaining input positioning actions
+      format_.Finish(*this);
+      unit_.AdvanceRecord(*this);
     }
     IoStatementBase::CompleteOperation();
   }
@@ -190,7 +188,20 @@ InternalListIoStatementState<DIR>::InternalListIoStatementState(
       ioStatementState_{*this} {}
 
 template <Direction DIR>
+void InternalListIoStatementState<DIR>::CompleteOperation() {
+  if (!this->completedOperation()) {
+    if constexpr (DIR == Direction::Output) {
+      if (unit_.furthestPositionInRecord > 0) {
+        unit_.AdvanceRecord(*this);
+      }
+    }
+    IoStatementBase::CompleteOperation();
+  }
+}
+
+template <Direction DIR>
 int InternalListIoStatementState<DIR>::EndIoStatement() {
+  CompleteOperation();
   if constexpr (DIR == Direction::Input) {
     if (int status{ListDirectedStatementState<DIR>::EndIoStatement()};
         status != IostatOk) {
@@ -455,7 +466,7 @@ int ExternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
   return ExternalIoStatementState<DIR>::EndIoStatement();
 }
 
-std::optional<DataEdit> IoStatementState::GetNextDataEdit(int n) {
+Fortran::common::optional<DataEdit> IoStatementState::GetNextDataEdit(int n) {
   return common::visit(
       [&](auto &x) { return x.get().GetNextDataEdit(*this, n); }, u_);
 }
@@ -530,13 +541,13 @@ ExternalFileUnit *IoStatementState::GetExternalFileUnit() const {
       [](auto &x) { return x.get().GetExternalFileUnit(); }, u_);
 }
 
-std::optional<char32_t> IoStatementState::GetCurrentChar(
+Fortran::common::optional<char32_t> IoStatementState::GetCurrentChar(
     std::size_t &byteCount) {
   const char *p{nullptr};
   std::size_t bytes{GetNextInputBytes(p)};
   if (bytes == 0) {
     byteCount = 0;
-    return std::nullopt;
+    return Fortran::common::nullopt;
   } else {
     const ConnectionState &connection{GetConnectionState()};
     if (connection.isUTF8) {
@@ -562,8 +573,8 @@ std::optional<char32_t> IoStatementState::GetCurrentChar(
   }
 }
 
-std::optional<char32_t> IoStatementState::NextInField(
-    std::optional<int> &remaining, const DataEdit &edit) {
+Fortran::common::optional<char32_t> IoStatementState::NextInField(
+    Fortran::common::optional<int> &remaining, const DataEdit &edit) {
   std::size_t byteCount{0};
   if (!remaining) { // Stream, list-directed, or NAMELIST
     if (auto next{GetCurrentChar(byteCount)}) {
@@ -579,21 +590,21 @@ std::optional<char32_t> IoStatementState::NextInField(
         case '"':
         case '*':
         case '\n': // for stream access
-          return std::nullopt;
+          return Fortran::common::nullopt;
         case '&':
         case '$':
           if (edit.IsNamelist()) {
-            return std::nullopt;
+            return Fortran::common::nullopt;
           }
           break;
         case ',':
           if (!(edit.modes.editingFlags & decimalComma)) {
-            return std::nullopt;
+            return Fortran::common::nullopt;
           }
           break;
         case ';':
           if (edit.modes.editingFlags & decimalComma) {
-            return std::nullopt;
+            return Fortran::common::nullopt;
           }
           break;
         default:
@@ -607,7 +618,7 @@ std::optional<char32_t> IoStatementState::NextInField(
   } else if (*remaining > 0) {
     if (auto next{GetCurrentChar(byteCount)}) {
       if (byteCount > static_cast<std::size_t>(*remaining)) {
-        return std::nullopt;
+        return Fortran::common::nullopt;
       }
       *remaining -= byteCount;
       HandleRelativePosition(byteCount);
@@ -616,10 +627,10 @@ std::optional<char32_t> IoStatementState::NextInField(
     }
     if (CheckForEndOfRecord(0)) { // do padding
       --*remaining;
-      return std::optional<char32_t>{' '};
+      return Fortran::common::optional<char32_t>{' '};
     }
   }
-  return std::nullopt;
+  return Fortran::common::nullopt;
 }
 
 bool IoStatementState::CheckForEndOfRecord(std::size_t afterReading) {
@@ -711,7 +722,7 @@ bool ListDirectedStatementState<Direction::Output>::EmitLeadingSpaceOrAdvance(
   return true;
 }
 
-std::optional<DataEdit>
+Fortran::common::optional<DataEdit>
 ListDirectedStatementState<Direction::Output>::GetNextDataEdit(
     IoStatementState &io, int maxRepeat) {
   DataEdit edit;
@@ -728,7 +739,7 @@ int ListDirectedStatementState<Direction::Input>::EndIoStatement() {
   return IostatOk;
 }
 
-std::optional<DataEdit>
+Fortran::common::optional<DataEdit>
 ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     IoStatementState &io, int maxRepeat) {
   // N.B. list-directed transfers cannot be nonadvancing (C1221)
@@ -784,7 +795,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   }
   eatComma_ = true;
   if (!ch) {
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
   if (*ch == '/') {
     hitSlash_ = true;
