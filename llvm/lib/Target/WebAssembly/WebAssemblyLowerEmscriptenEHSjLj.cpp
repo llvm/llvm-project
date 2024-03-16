@@ -142,6 +142,8 @@
 ///    into
 ///      __wasm_setjmp(env, label, functionInvocationId)
 ///
+///    __wasm_setjmp records the necessary info (the label and
+///    functionInvocationId) to the "env".
 ///    A BB with setjmp is split into two after setjmp call in order to
 ///    make the post-setjmp BB the possible destination of longjmp BB.
 ///
@@ -152,8 +154,7 @@
 ///      __THREW__ = 0;
 ///      %__threwValue.val = __threwValue;
 ///      if (%__THREW__.val != 0 & %__threwValue.val != 0) {
-///        %label = testSetjmp(mem[%__THREW__.val], setjmpTable,
-///                            setjmpTableSize);
+///        %label = __wasm_setjmp_test(%__THREW__.val, functionInvocationId);
 ///        if (%label == 0)
 ///          emscripten_longjmp(%__THREW__.val, %__threwValue.val);
 ///        setTempRet0(%__threwValue.val);
@@ -167,16 +168,16 @@
 ///        ...
 ///        default: goto splitted next BB
 ///      }
-///    testSetjmp examines setjmpTable to see if there is a matching setjmp
-///    call. After calling an invoke wrapper, if a longjmp occurred, __THREW__
-///    will be the address of matching jmp_buf buffer and __threwValue be the
-///    second argument to longjmp. mem[%__THREW__.val] is a setjmp ID that is
-///    stored in saveSetjmp. testSetjmp returns a setjmp label, a unique ID to
-///    each setjmp callsite. Label 0 means this longjmp buffer does not
-///    correspond to one of the setjmp callsites in this function, so in this
-///    case we just chain the longjmp to the caller. Label -1 means no longjmp
-///    occurred. Otherwise we jump to the right post-setjmp BB based on the
-///    label.
+///
+///    __wasm_setjmp_test examines the jmp buf to see if it was for a matching
+///    setjmp call. After calling an invoke wrapper, if a longjmp occurred,
+///    __THREW__ will be the address of matching jmp_buf buffer and
+///    __threwValue be the second argument to longjmp.
+///    __wasm_setjmp_test returns a setjmp label, a unique ID to each setjmp
+///    callsite. Label 0 means this longjmp buffer does not correspond to one
+///    of the setjmp callsites in this function, so in this case we just chain
+///    the longjmp to the caller. Label -1 means no longjmp occurred.
+///    Otherwise we jump to the right post-setjmp BB based on the label.
 ///
 /// * Wasm setjmp / longjmp handling
 /// This mode still uses some Emscripten library functions but not JavaScript's
@@ -193,40 +194,39 @@
 /// If there are calls to setjmp()
 ///
 /// 2) and 3): The same as 2) and 3) in Emscripten SjLj.
-/// (setjmpTable/setjmpTableSize initialization + setjmp callsite
-/// transformation)
+/// (functionInvocationId initialization + setjmp callsite transformation)
 ///
 /// 4) Create a catchpad with a wasm.catch() intrinsic, which returns the value
-/// thrown by __wasm_longjmp function. In Emscripten library, we have this
-/// struct:
+/// thrown by __wasm_longjmp function. In the runtime library, we have an
+/// equivalent of the following struct:
 ///
 /// struct __WasmLongjmpArgs {
 ///   void *env;
 ///   int val;
 /// };
-/// struct __WasmLongjmpArgs __wasm_longjmp_args;
 ///
-/// The thrown value here is a pointer to __wasm_longjmp_args struct object. We
-/// use this struct to transfer two values by throwing a single value. Wasm
-/// throw and catch instructions are capable of throwing and catching multiple
-/// values, but it also requires multivalue support that is currently not very
-/// reliable.
+/// The thrown value here is a pointer to the struct. We use this struct to
+/// transfer two values by throwing a single value. Wasm throw and catch
+/// instructions are capable of throwing and catching multiple values, but
+/// it also requires multivalue support that is currently not very reliable.
 /// TODO Switch to throwing and catching two values without using the struct
 ///
 /// All longjmpable function calls will be converted to an invoke that will
 /// unwind to this catchpad in case a longjmp occurs. Within the catchpad, we
-/// test the thrown values using testSetjmp function as we do for Emscripten
-/// SjLj. The main difference is, in Emscripten SjLj, we need to transform every
-/// longjmpable callsite into a sequence of code including testSetjmp() call; in
-/// Wasm SjLj we do the testing in only one place, in this catchpad.
+/// test the thrown values using __wasm_setjmp_test function as we do for
+/// Emscripten SjLj. The main difference is, in Emscripten SjLj, we need to
+/// transform every longjmpable callsite into a sequence of code including
+/// __wasm_setjmp_test() call; in Wasm SjLj we do the testing in only one
+/// place, in this catchpad.
 ///
-/// After testing calling testSetjmp(), if the longjmp does not correspond to
-/// one of the setjmps within the current function, it rethrows the longjmp
-/// by calling __wasm_longjmp(). If it corresponds to one of setjmps in the
-/// function, we jump to the beginning of the function, which contains a switch
-/// to each post-setjmp BB. Again, in Emscripten SjLj, this switch is added for
-/// every longjmpable callsite; in Wasm SjLj we do this only once at the top of
-/// the function. (after functionInvocationId initialization)
+/// After testing calling __wasm_setjmp_test(), if the longjmp does not
+/// correspond to one of the setjmps within the current function, it rethrows
+/// the longjmp by calling __wasm_longjmp(). If it corresponds to one of
+/// setjmps in the function, we jump to the beginning of the function, which
+/// contains a switch to each post-setjmp BB. Again, in Emscripten SjLj, this
+/// switch is added for every longjmpable callsite; in Wasm SjLj we do this
+/// only once at the top of the function. (after functionInvocationId
+/// initialization)
 ///
 /// The below is the pseudocode for what we have described
 ///
@@ -680,8 +680,9 @@ static bool isEmAsmCall(const Value *Callee) {
          CalleeName == "emscripten_asm_const_async_on_main_thread";
 }
 
-// Generate testSetjmp function call seqence with preamble and postamble.
-// The code this generates is equivalent to the following JavaScript code:
+// Generate __wasm_setjmp_test function call seqence with preamble and
+// postamble. The code this generates is equivalent to the following
+// JavaScript code:
 // %__threwValue.val = __threwValue;
 // if (%__THREW__.val != 0 & %__threwValue.val != 0) {
 //   %label = __wasm_setjmp_test(%__THREW__.val, functionInvocationId);
@@ -1269,8 +1270,8 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   Instruction *FunctionInvocationId;
   IRB.SetInsertPoint(Entry->getTerminator()->getIterator());
   // This alloca'ed pointer is used by the runtime to identify function
-  // inovactions. It's just for pointer comparisons. It will never
-  // be dereferenced.
+  // invocations. It's just for pointer comparisons. It will never be
+  // dereferenced.
   FunctionInvocationId =
       IRB.CreateAlloca(IRB.getInt32Ty(), nullptr, "functionInvocationId");
   FunctionInvocationId->setDebugLoc(FirstDL);
@@ -1493,7 +1494,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForEmscriptenSjLj(
 
           IRB.SetInsertPoint(NormalBB);
           IRB.CreateBr(Tail);
-          BB = NormalBB; // New insertion point to insert testSetjmp()
+          BB = NormalBB; // New insertion point to insert __wasm_setjmp_test()
         }
       }
 
@@ -1502,9 +1503,9 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForEmscriptenSjLj(
       // right setjmp-tail if so
       ToErase.push_back(BB->getTerminator());
 
-      // Generate a function call to testSetjmp function and preamble/postamble
-      // code to figure out (1) whether longjmp occurred (2) if longjmp
-      // occurred, which setjmp it corresponds to
+      // Generate a function call to __wasm_setjmp_test function and
+      // preamble/postamble code to figure out (1) whether longjmp
+      // occurred (2) if longjmp occurred, which setjmp it corresponds to
       Value *Label = nullptr;
       Value *LongjmpResult = nullptr;
       BasicBlock *EndBB = nullptr;
