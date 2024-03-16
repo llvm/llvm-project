@@ -1,5 +1,18 @@
 // RUN: %clang_cc1 -fms-extensions -fblocks -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
 
+namespace NS {
+// The name "RT1" for the name of the class below has been specifically
+// chosen to ensure that back reference lookup does not match against the
+// implicitly generated "$RT1" name of the reference temporary symbol.
+struct RT1 {
+  static const RT1& singleton;
+  int i;
+};
+const RT1& RT1::singleton = RT1{1};
+}
+// CHECK: "?$RT1@singleton@RT1@NS@@2ABU23@B"
+// CHECK: "?singleton@RT1@NS@@2ABU12@B"
+
 void f1(const char* a, const char* b) {}
 // CHECK: "?f1@@YAXPBD0@Z"
 
