@@ -67,6 +67,7 @@ void test() {
     int i3;
     spSt >> i3;
 
+    assert(spSt.good());
     assert(str1 == CS("zmt"));
     assert(i1 == 94);
     assert(str2 == CS("hkt"));
@@ -77,7 +78,9 @@ void test() {
     // Write to stream
     constexpr std::basic_string_view<CharT, TraitsT> sv1{SV("year 2024")};
     spSt << sv1;
+
     assert(spSt.span().size() == sv1.size());
+    assert(spSt.good());
 
     // Read from stream
     spSt.seekg(0);
@@ -89,17 +92,28 @@ void test() {
     assert(str4 == CS("year"));
     assert(i4 == 2024);
 
+    spSt >> i4;
+    assert(spSt.fail());
+    spSt.clear();
+    assert(spSt.good());
+
     // Write to stream
     spSt << CS("94");
     spSt << 84;
-    std::cout << spSt.span().size() << std::endl;
+
+    assert(spSt.good());
     assert(spSt.span().size() == sv1.size() + 4);
+    std::basic_string<CharT, TraitsT> expectedStr1{spSt.span().data(), std::size_t{spSt.span().size()}};
+    assert(expectedStr1 == CS("year 20249484"));
 
     // Write to stream with overflow
     constexpr std::basic_string_view<CharT, TraitsT> sv2{
         SV("This string should overflow! This string should overflow!")};
     spSt << sv2;
     assert(spSt.span().size() == arrSize);
+    std::basic_string<CharT, TraitsT> expectedStr2{spSt.span().data(), std::size_t{spSt.span().size()}};
+    assert(expectedStr2 == CS("year 20249484This string shoul"));
+    assert(spSt.fail());
   }
   // Mode: `in`
   {
