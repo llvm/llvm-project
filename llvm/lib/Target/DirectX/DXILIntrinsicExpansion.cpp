@@ -134,44 +134,43 @@ static bool expandRcpIntrinsic(CallInst *Orig) {
   return true;
 }
 
-static Intrinsic::ID getCorrectMaxIntrinsic(Type *elemTy,
-                                            Intrinsic::ID clampIntrinsic) {
-  if (clampIntrinsic == Intrinsic::dx_uclamp)
+static Intrinsic::ID getMaxForClamp(Type *ElemTy,
+                                    Intrinsic::ID ClampIntrinsic) {
+  if (ClampIntrinsic == Intrinsic::dx_uclamp)
     return Intrinsic::umax;
-  assert(clampIntrinsic == Intrinsic::dx_clamp);
-  if (elemTy->isVectorTy())
-    elemTy = elemTy->getScalarType();
-  if (elemTy->isIntegerTy())
+  assert(ClampIntrinsic == Intrinsic::dx_clamp);
+  if (ElemTy->isVectorTy())
+    ElemTy = ElemTy->getScalarType();
+  if (ElemTy->isIntegerTy())
     return Intrinsic::smax;
-  assert(elemTy->isFloatingPointTy());
+  assert(ElemTy->isFloatingPointTy());
   return Intrinsic::maxnum;
 }
 
-static Intrinsic::ID getCorrectMinIntrinsic(Type *elemTy,
-                                            Intrinsic::ID clampIntrinsic) {
-  if (clampIntrinsic == Intrinsic::dx_uclamp)
+static Intrinsic::ID getMinForClamp(Type *ElemTy,
+                                    Intrinsic::ID ClampIntrinsic) {
+  if (ClampIntrinsic == Intrinsic::dx_uclamp)
     return Intrinsic::umin;
-  assert(clampIntrinsic == Intrinsic::dx_clamp);
-  if (elemTy->isVectorTy())
-    elemTy = elemTy->getScalarType();
-  if (elemTy->isIntegerTy())
+  assert(ClampIntrinsic == Intrinsic::dx_clamp);
+  if (ElemTy->isVectorTy())
+    ElemTy = ElemTy->getScalarType();
+  if (ElemTy->isIntegerTy())
     return Intrinsic::smin;
-  assert(elemTy->isFloatingPointTy());
+  assert(ElemTy->isFloatingPointTy());
   return Intrinsic::minnum;
 }
 
-static bool expandClampIntrinsic(CallInst *Orig, Intrinsic::ID clampIntrinsic) {
+static bool expandClampIntrinsic(CallInst *Orig, Intrinsic::ID ClampIntrinsic) {
   Value *X = Orig->getOperand(0);
   Value *Min = Orig->getOperand(1);
   Value *Max = Orig->getOperand(2);
   Type *Ty = X->getType();
   IRBuilder<> Builder(Orig->getParent());
   Builder.SetInsertPoint(Orig);
-  auto *MaxCall =
-      Builder.CreateIntrinsic(Ty, getCorrectMaxIntrinsic(Ty, clampIntrinsic),
-                              {X, Min}, nullptr, "dx.max");
+  auto *MaxCall = Builder.CreateIntrinsic(
+      Ty, getMaxForClamp(Ty, ClampIntrinsic), {X, Min}, nullptr, "dx.max");
   auto *MinCall =
-      Builder.CreateIntrinsic(Ty, getCorrectMinIntrinsic(Ty, clampIntrinsic),
+      Builder.CreateIntrinsic(Ty, getMinForClamp(Ty, ClampIntrinsic),
                               {MaxCall, Max}, nullptr, "dx.min");
 
   Orig->replaceAllUsesWith(MinCall);
