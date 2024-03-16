@@ -1693,6 +1693,8 @@ llvm::json::Value toJSON(const InlayHintKind &);
 /// of inlay hints.
 struct InlayHintLabelPart {
 
+  InlayHintLabelPart() = default;
+
   InlayHintLabelPart(std::string value,
                      std::optional<Location> location = std::nullopt)
       : value(std::move(value)), location(std::move(location)) {}
@@ -1718,7 +1720,11 @@ struct InlayHintLabelPart {
   /// might resolve this property late using the resolve request.
   std::optional<Location> location;
 
-  /// The command field is not used for now, hence omitted.
+	/// An optional command for this label part.
+  ///
+	/// Depending on the client capability `inlayHint.resolveSupport` clients
+	/// might resolve this property late using the resolve request.
+  std::optional<Command> command;
 };
 llvm::json::Value toJSON(const InlayHintLabelPart &);
 bool operator==(const InlayHintLabelPart &, const InlayHintLabelPart &);

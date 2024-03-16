@@ -1538,6 +1538,8 @@ llvm::json::Value toJSON(const InlayHintLabelPart &L) {
     Result["tooltip"] = *L.tooltip;
   if (L.location)
     Result["location"] = *L.location;
+  if (L.command)
+    Result["command"] = *L.command;
   return Result;
 }
 
