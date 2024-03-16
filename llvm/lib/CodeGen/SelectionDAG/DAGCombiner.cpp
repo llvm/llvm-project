@@ -2531,34 +2531,18 @@ static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
 
 // Attempt to form avgceilu(A, B) from sub(or(A, B), lshr(xor(A, B), 1))
 static SDValue combineFixedwidthToAVGCEILU(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::SUB && "SUB node is required here");
-  SDValue Or = N->getOperand(0);
-  SDValue Lshr = N->getOperand(1);
-  if (Or.getOpcode() != ISD::OR || Lshr.getOpcode() != ISD::SRL)
-    return SDValue();
-  SDValue Xor = Lshr.getOperand(0);
-  if (Xor.getOpcode() != ISD::XOR)
-    return SDValue();
-  SDValue Or1 = Or.getOperand(0);
-  SDValue Or2 = Or.getOperand(1);
-  SDValue Xor1 = Xor.getOperand(0);
-  SDValue Xor2 = Xor.getOperand(1);
-  if (Or1 == Xor2 && Or2 == Xor1) {
-    SDValue temp = Or1;
-    Or1 = Or2;
-    Or2 = temp;
-  } else if (Or1 != Xor1 || Or2 != Xor2)
-    return SDValue();
-  // Is the right shift using an immediate value of 1?
-  ConstantSDNode *N1C = isConstOrConstSplat(Lshr.getOperand(1));
-  if (!N1C or N1C->getAPIntValue() != 1)
-    return SDValue();
-  EVT VT = Or1.getValueType();
-  SDLoc DL(N);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isOperationLegalOrCustom(ISD::AVGCEILU, VT))
-    return SDValue();
-  return DAG.getNode(ISD::AVGCEILU, DL, VT, Or1, Or2);
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N0.getValueType();
+  SDLoc DL(N);
+  if (TLI.isOperationLegal(ISD::AVGFLOORU, VT)) {
+    SDValue A, B;
+    if (sd_match(N, llvm::SDPatternMatch::m_Sub(llvm::PatternMatch::m_Or(m_Value(A), m_Value(B)),
+                          llvm::SDPatternMatch::m_Srl(llvm::PatternMatch::m_Xor(m_Deferred(A), m_Deferred(B)),
+                                m_SpecificInt(1))))) {
+      return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
+    }
+  }
 }
 
 /// Try to fold a 'not' shifted sign-bit with add/sub with constant operand into
