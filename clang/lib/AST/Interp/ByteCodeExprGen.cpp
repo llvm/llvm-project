@@ -1096,9 +1096,9 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     const UnaryExprOrTypeTraitExpr *E) {
   UnaryExprOrTypeTrait Kind = E->getKind();
-  ASTContext &ASTCtx = Ctx.getASTContext();
+  const ASTContext &ASTCtx = Ctx.getASTContext();
 
-  if (Kind == UETT_SizeOf) {
+  if (Kind == UETT_SizeOf || Kind == UETT_DataSizeOf) {
     QualType ArgType = E->getTypeOfArgument();
 
     // C++ [expr.sizeof]p2: "When applied to a reference or a reference type,
@@ -1113,7 +1113,10 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       if (ArgType->isDependentType() || !ArgType->isConstantSizeType())
         return false;
 
-      Size = ASTCtx.getTypeSizeInChars(ArgType);
+      if (Kind == UETT_SizeOf)
+        Size = ASTCtx.getTypeSizeInChars(ArgType);
+      else
+        Size = ASTCtx.getTypeInfoDataSizeInChars(ArgType).Width;
     }
 
     if (DiscardResult)
