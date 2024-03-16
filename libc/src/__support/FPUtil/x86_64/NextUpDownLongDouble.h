@@ -29,23 +29,27 @@ LIBC_INLINE constexpr long double nextupdown(long double x) {
       xbits == FPBits_t::inf(sign))
     return x;
 
+  if (x == 0.0l)
+    return FPBits_t::min_subnormal(sign).get_val();
+
   using StorageType = typename FPBits_t::StorageType;
-  if (x == 0.0l) {
-    xbits = FPBits_t::min_subnormal(sign);
-  } else if (xbits.sign() == sign) {
+
+  if (xbits.sign() == sign) {
     if (xbits.get_mantissa() == FPBits_t::FRACTION_MASK) {
       xbits.set_mantissa(0);
       xbits.set_biased_exponent(xbits.get_biased_exponent() + 1);
     } else {
       xbits = FPBits_t(StorageType(xbits.uintval() + 1));
     }
+
+    return xbits.get_val();
+  }
+
+  if (xbits.get_mantissa() == 0) {
+    xbits.set_mantissa(FPBits_t::FRACTION_MASK);
+    xbits.set_biased_exponent(xbits.get_biased_exponent() - 1);
   } else {
-    if (xbits.get_mantissa() == 0) {
-      xbits.set_mantissa(FPBits_t::FRACTION_MASK);
-      xbits.set_biased_exponent(xbits.get_biased_exponent() - 1);
-    } else {
-      xbits = FPBits_t(StorageType(xbits.uintval() - 1));
-    }
+    xbits = FPBits_t(StorageType(xbits.uintval() - 1));
   }
 
   return xbits.get_val();
