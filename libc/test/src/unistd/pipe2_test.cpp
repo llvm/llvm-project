@@ -8,16 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/errno/libc_errno.h"
-#include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/pipe2.h"
 #include "src/unistd/read.h"
-#include "src/unistd/unlink.h"
 #include "src/unistd/write.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/stat.h>
 
 TEST(LlvmLibcPipe2Test, ReadAndWriteViaPipe2) {
   int pipefd[2];
@@ -49,7 +45,7 @@ TEST(LlvmLibcPipe2Test, ReadAndWriteViaPipe2) {
 }
 
 TEST(LlvmLibcPipe2Test, Pipe2InvalidFlags) {
-  int invalidflags = -1;
+  char invalidflags = '-1';
   int pipefd[2];
 
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;

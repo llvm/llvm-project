@@ -455,11 +455,9 @@ add_libc_unittest(
     libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
-    libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.pipe2
     libc.src.unistd.read
-    libc.src.unistd.unlink
     libc.src.unistd.write
     libc.test.UnitTest.ErrnoSetterMatcher
 )
