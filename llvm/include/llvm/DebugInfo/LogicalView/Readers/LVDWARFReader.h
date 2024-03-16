@@ -129,7 +129,7 @@ protected:
 public:
   LVDWARFReader() = delete;
   LVDWARFReader(StringRef Filename, StringRef FileFormatName,
-              object::ObjectFile &Obj, ScopedPrinter &W)
+                object::ObjectFile &Obj, ScopedPrinter &W)
       : LVBinaryReader(Filename, FileFormatName, W, LVBinaryType::ELF),
         Obj(Obj) {}
   LVDWARFReader(const LVDWARFReader &) = delete;
