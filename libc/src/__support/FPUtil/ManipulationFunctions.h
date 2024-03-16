@@ -259,6 +259,7 @@ LIBC_INLINE constexpr T nextupdown(T x) {
 
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #include "x86_64/NextAfterLongDouble.h"
+#include "x86_64/NextUpDownLongDouble.h"
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H

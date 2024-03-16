@@ -1659,6 +1659,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  nextdownl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextdownl_test.cpp
+  HDRS
+    NextDownTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextdownl
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
   nextdownf128_test
   SUITE
     libc-math-smoke-tests
@@ -1697,6 +1711,20 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.nextupf
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextupl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextupl_test.cpp
+  HDRS
+    NextUpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextupl
     libc.src.__support.FPUtil.manipulation_functions
 )
 
