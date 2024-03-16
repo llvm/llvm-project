@@ -4591,6 +4591,12 @@ def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "unsigned int(bool)";
 }
 
+def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_clamp"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLCreateHandle : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_create_handle"];
   let Attributes = [NoThrow, Const];
