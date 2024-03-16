@@ -51,7 +51,8 @@ class Record {
 public:
   Record() = default;
   Record(StringRef Name, RecordLinkage Linkage, SymbolFlags Flags)
-      : Name(Name), Linkage(Linkage), Flags(mergeFlags(Flags, Linkage)) {}
+      : Name(Name), Linkage(Linkage), Flags(mergeFlags(Flags, Linkage)),
+        Verified(false) {}
 
   bool isWeakDefined() const {
     return (Flags & SymbolFlags::WeakDefined) == SymbolFlags::WeakDefined;
@@ -79,6 +80,9 @@ public:
   bool isExported() const { return Linkage >= RecordLinkage::Rexported; }
   bool isRexported() const { return Linkage == RecordLinkage::Rexported; }
 
+  bool isVerified() const { return Verified; }
+  void setVerify(bool V = true) { Verified = V; }
+
   StringRef getName() const { return Name; }
   SymbolFlags getFlags() const { return Flags; }
 
@@ -89,6 +93,7 @@ protected:
   StringRef Name;
   RecordLinkage Linkage;
   SymbolFlags Flags;
+  bool Verified;
 
   friend class RecordsSlice;
 };

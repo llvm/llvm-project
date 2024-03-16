@@ -75,6 +75,9 @@ struct AvailabilityInfo {
   /// Determine if this AvailabilityInfo represents the default availability.
   bool isDefault() const { return *this == AvailabilityInfo(); }
 
+  /// Check if the symbol has been obsoleted.
+  bool isObsoleted() const { return !Obsoleted.empty(); }
+
   /// Check if the symbol is unconditionally deprecated.
   ///
   /// i.e. \code __attribute__((deprecated)) \endcode
