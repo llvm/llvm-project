@@ -950,9 +950,9 @@ def err_main_surplus_args : Error<"too many parameters (%0) for 'main': "
     "must be 0, 2, or 3">;
 def warn_main_one_arg : Warning<"only one parameter on 'main' declaration">,
     InGroup<Main>;
-def err_main_arg_wrong : Error<"%select{first|second|third|fourth}0 "
+def warn_main_arg_wrong : Warning<"%select{first|second|third|fourth}0 "
     "parameter of 'main' (%select{argument count|argument array|environment|"
-    "platform-specific data}0) must be of type %1">;
+    "platform-specific data}0) must be of type %1">, DefaultError, InGroup<Main>;
 def warn_main_returns_bool_literal : Warning<"bool literal returned from "
     "'main'">, InGroup<Main>;
 def err_main_global_variable :

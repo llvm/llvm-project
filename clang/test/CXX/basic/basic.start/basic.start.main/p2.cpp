@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST4
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST5
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST6
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST6A -Wno-main
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST7
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST8
 
@@ -58,6 +59,16 @@ inline int main() { // expected-error {{'main' is not allowed to be declared inl
 
 void  // expected-error {{'main' must return 'int'}}
 main( // expected-error {{first parameter of 'main' (argument count) must be of type 'int'}}
+     float a
+) {
+}
+
+const int main(); // expected-error {{'main' must return 'int'}}
+
+#elif TEST6A
+
+void  // expected-error {{'main' must return 'int'}}
+main(
      float a
 ) {
 }

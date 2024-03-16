@@ -12488,7 +12488,7 @@ void Sema::CheckMain(FunctionDecl* FD, const DeclSpec& DS) {
     }
 
     if (mismatch) {
-      Diag(FD->getLocation(), diag::err_main_arg_wrong) << i << Expected[i];
+      Diag(FD->getLocation(), diag::warn_main_arg_wrong) << i << Expected[i];
       // TODO: suggest replacing given type with expected type
       FD->setInvalidDecl(true);
     }
