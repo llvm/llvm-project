@@ -858,6 +858,8 @@ define void @lifetimes_for_args_in_different_blocks(ptr noalias %B, ptr noalias 
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -885,13 +887,15 @@ define void @lifetimes_for_args_in_different_blocks2(ptr noalias %B, ptr noalias
 ; CHECK-NEXT:    call void @init(ptr [[A]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B:%.*]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
