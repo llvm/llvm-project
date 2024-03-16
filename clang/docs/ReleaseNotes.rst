@@ -294,6 +294,9 @@ Bug Fixes in This Version
   by the C standard. This significantly improves codegen of `*` and `/` especially.
   Fixes (`#31205 <https://github.com/llvm/llvm-project/issues/31205>`_).
 
+- Fixes an assertion failure on invalid code when trying to define member
+  functions in lambdas.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
