@@ -8028,23 +8028,20 @@ static bool handleNoLockNoAllocTypeAttr(TypeProcessingState &state,
 
   // nolock(true) and noalloc(true) are represented as FunctionEffects, in a
   // FunctionEffectSet attached to a FunctionProtoType.
-  const FunctionEffect *Effect = nullptr;
-  if (isNoLock) {
-    Effect = &NoLockNoAllocEffect::nolock_instance();
-  } else {
-    Effect = &NoLockNoAllocEffect::noalloc_instance();
-  }
+  const FunctionEffect NewEffect(isNoLock ? FunctionEffect::Type::NoLockTrue
+                                          : FunctionEffect::Type::NoAllocTrue);
 
-  MutableFunctionEffectSet newEffectSet{Effect};
+  MutableFunctionEffectSet NewFX(NewEffect);
   if (EPI.FunctionEffects) {
     // Preserve any previous effects - except noalloc, when we are adding nolock
-    for (const auto *effect : EPI.FunctionEffects) {
-      if (!(isNoLock && effect->type() == FunctionEffect::Type::NoAllocTrue))
-        newEffectSet.insert(effect);
+    for (const auto &Effect : EPI.FunctionEffects) {
+      if (!(isNoLock && Effect.type() == FunctionEffect::Type::NoAllocTrue))
+        NewFX.insert(Effect);
     }
   }
 
-  EPI.FunctionEffects = FunctionEffectSet::create(newEffectSet);
+  EPI.FunctionEffects =
+      FunctionEffectSet::create(state.getSema().getASTContext(), NewFX);
   QualType newtype = S.Context.getFunctionType(FPT->getReturnType(),
                                                FPT->getParamTypes(), EPI);
   type = unwrapped.wrap(S, newtype->getAs<FunctionType>());

@@ -4922,12 +4922,58 @@ void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
           getTypeConstraintConcept(), getTypeConstraintArguments());
 }
 
-FunctionEffect::~FunctionEffect() = default;
+FunctionEffect::FunctionEffect(Type T) : Type_(T), Flags_(0), Unused(0) {
+  switch (T) {
+  case Type::NoLockTrue:
+    Flags_ = FE_RequiresVerification | FE_VerifyCalls | FE_InferrableOnCallees |
+             FE_ExcludeThrow | FE_ExcludeCatch | FE_ExcludeObjCMessageSend |
+             FE_ExcludeStaticLocalVars | FE_ExcludeThreadLocalVars;
+    break;
+
+  case Type::NoAllocTrue:
+    // Same as NoLockTrue, except without FE_ExcludeStaticLocalVars
+    Flags_ = FE_RequiresVerification | FE_VerifyCalls | FE_InferrableOnCallees |
+             FE_ExcludeThrow | FE_ExcludeCatch | FE_ExcludeObjCMessageSend |
+             FE_ExcludeThreadLocalVars;
+    break;
+  default:
+    break;
+  }
+}
+
+StringRef FunctionEffect::name() const {
+  switch (Type_) {
+  default:
+    return "";
+  case Type::NoLockTrue:
+    return "nolock";
+  case Type::NoAllocTrue:
+    return "noalloc";
+  }
+}
 
 bool FunctionEffect::diagnoseConversion(bool Adding, QualType OldType,
                                         FunctionEffectSet OldFX,
                                         QualType NewType,
                                         FunctionEffectSet NewFX) const {
+
+  switch (Type_) {
+  case Type::NoAllocTrue:
+    // noalloc can't be added (spoofed) during a conversion, unless we have
+    // nolock
+    if (Adding) {
+      for (const auto &Effect : OldFX) {
+        if (Effect.type() == Type::NoLockTrue)
+          return false;
+      }
+    }
+    [[fallthrough]];
+  case Type::NoLockTrue:
+    // nolock can't be added (spoofed) during a conversion
+    return Adding;
+  default:
+    break;
+  }
   return false;
 }
 
@@ -4936,6 +4982,15 @@ bool FunctionEffect::diagnoseRedeclaration(bool Adding,
                                            FunctionEffectSet OldFX,
                                            const FunctionDecl &NewFunction,
                                            FunctionEffectSet NewFX) const {
+  switch (Type_) {
+  case Type::NoAllocTrue:
+  case Type::NoLockTrue:
+    // nolock/noalloc can't be removed in a redeclaration
+    // adding -> false, removing -> true (diagnose)
+    return !Adding;
+  default:
+    break;
+  }
   return false;
 }
 
@@ -4944,120 +4999,82 @@ bool FunctionEffect::diagnoseMethodOverride(bool Adding,
                                             FunctionEffectSet OldFX,
                                             const CXXMethodDecl &NewMethod,
                                             FunctionEffectSet NewFX) const {
+  switch (Type_) {
+  case Type::NoAllocTrue:
+  case Type::NoLockTrue:
+    // nolock/noalloc can't be removed from an override
+    // adding -> false, removing -> true (diagnose)
+    return !Adding;
+  default:
+    break;
+  }
   return false;
 }
 
 bool FunctionEffect::canInferOnDecl(const Decl *Caller,
                                     FunctionEffectSet CallerFX) const {
-  return false;
-}
-
-bool FunctionEffect::diagnoseFunctionCall(bool Direct, const Decl *Caller,
-                                          FunctionEffectSet CallerFX,
-                                          CalleeDeclOrType Callee,
-                                          FunctionEffectSet CalleeFX) const {
-  return false;
-}
-
-const NoLockNoAllocEffect &NoLockNoAllocEffect::nolock_instance() {
-  static NoLockNoAllocEffect global(Type::NoLockTrue, "nolock");
-  return global;
-}
-
-const NoLockNoAllocEffect &NoLockNoAllocEffect::noalloc_instance() {
-  static NoLockNoAllocEffect global(Type::NoAllocTrue, "noalloc");
-  return global;
-}
-
-// TODO: Separate flags for noalloc
-NoLockNoAllocEffect::NoLockNoAllocEffect(Type Ty, const char *Name)
-    : FunctionEffect(Ty,
-                     FE_RequiresVerification | FE_VerifyCalls |
-                         FE_InferrableOnCallees | FE_ExcludeThrow |
-                         FE_ExcludeCatch | FE_ExcludeObjCMessageSend |
-                         FE_ExcludeStaticLocalVars | FE_ExcludeThreadLocalVars,
-                     Name) {}
-
-NoLockNoAllocEffect::~NoLockNoAllocEffect() = default;
-
-std::string NoLockNoAllocEffect::attribute() const {
-  return std::string{"__attribute__((clang_"} + name().str() + "))";
-}
-
-bool NoLockNoAllocEffect::diagnoseConversion(bool Adding, QualType OldType,
-                                             FunctionEffectSet OldFX,
-                                             QualType NewType,
-                                             FunctionEffectSet NewFX) const {
-  // noalloc can't be added (spoofed) during a conversion, unless we have nolock
-  if (Adding) {
-    if (!isNoLock()) {
-      for (const auto *Effect : OldFX) {
-        if (Effect->type() == Type::NoLockTrue)
-          return false;
-      }
+  switch (Type_) {
+  case Type::NoAllocTrue:
+  case Type::NoLockTrue: {
+    // Does the Decl have nolock(false) / noalloc(false) ?
+    QualType QT;
+    if (isa<BlockDecl>(Caller)) {
+      const auto *TSI = cast<BlockDecl>(Caller)->getSignatureAsWritten();
+      QT = TSI->getType();
+    } else if (isa<ValueDecl>(Caller)) {
+      QT = cast<ValueDecl>(Caller)->getType();
+    } else {
+      return false;
     }
-    // nolock can't be added (spoofed) during a conversion.
+    if (QT->hasAttr(type() == Type::NoLockTrue ? attr::Kind::NoLock
+                                               : attr::Kind::NoAlloc)) {
+      return false;
+    }
+
     return true;
   }
+
+  default:
+    break;
+  }
   return false;
-}
-
-bool NoLockNoAllocEffect::diagnoseRedeclaration(bool Adding,
-                                                const FunctionDecl &OldFunction,
-                                                FunctionEffectSet OldFX,
-                                                const FunctionDecl &NewFunction,
-                                                FunctionEffectSet NewFX) const {
-  // nolock/noalloc can't be removed in a redeclaration
-  // adding -> false, removing -> true (diagnose)
-  return !Adding;
-}
-
-bool NoLockNoAllocEffect::diagnoseMethodOverride(
-    bool Adding, const CXXMethodDecl &OldMethod, FunctionEffectSet OldFX,
-    const CXXMethodDecl &NewMethod, FunctionEffectSet NewFX) const {
-  // nolock/noalloc can't be removed from an override
-  return !Adding;
-}
-
-bool NoLockNoAllocEffect::canInferOnDecl(const Decl *Caller,
-                                         FunctionEffectSet CallerFX) const {
-  // Does the Decl have nolock(false) / noalloc(false) ?
-  QualType QT;
-  if (isa<BlockDecl>(Caller)) {
-    const auto *TSI = cast<BlockDecl>(Caller)->getSignatureAsWritten();
-    QT = TSI->getType();
-  } else if (isa<ValueDecl>(Caller)) {
-    QT = cast<ValueDecl>(Caller)->getType();
-  } else {
-    return false;
-  }
-  if (QT->hasAttr(isNoLock() ? attr::Kind::NoLock : attr::Kind::NoAlloc)) {
-    return false;
-  }
-
-  return true;
 }
 
 // TODO: Notice that we don't care about some of the parameters. Is the
 // interface overly general?
-bool NoLockNoAllocEffect::diagnoseFunctionCall(
-    bool Direct, const Decl *Caller, FunctionEffectSet CallerFX,
-    CalleeDeclOrType Callee, FunctionEffectSet CalleeFX) const {
-  const Type CallerType = type();
-  for (const auto *Effect : CalleeFX) {
-    const Type ET = Effect->type();
-    if (ET == CallerType ||
-        (CallerType == Type::NoAllocTrue && ET == Type::NoLockTrue)) {
-      return false;
+bool FunctionEffect::diagnoseFunctionCall(bool Direct, const Decl *Caller,
+                                          FunctionEffectSet CallerFX,
+                                          CalleeDeclOrType Callee,
+                                          FunctionEffectSet CalleeFX) const {
+  switch (Type_) {
+  case Type::NoAllocTrue:
+  case Type::NoLockTrue: {
+    const Type CallerType = type();
+    for (const auto &Effect : CalleeFX) {
+      const Type ET = Effect.type();
+      // Does callee have same or stronger constraint?
+      if (ET == CallerType ||
+          (CallerType == Type::NoAllocTrue && ET == Type::NoLockTrue)) {
+        return false; // no diagnostic
+      }
     }
+    return true; // warning
   }
-  return true;
+  default:
+    break;
+  }
+  return false;
 }
 
 // =====
 
-void MutableFunctionEffectSet::insert(const FunctionEffect *Effect) {
-  auto Iter = std::lower_bound(begin(), end(), Effect);
+MutableFunctionEffectSet::MutableFunctionEffectSet(
+    const FunctionEffect &effect) {
+  push_back(effect);
+}
+
+void MutableFunctionEffectSet::insert(const FunctionEffect &Effect) {
+  const auto &Iter = std::lower_bound(begin(), end(), Effect);
   if (*Iter != Effect) {
     insert(Iter, Effect);
   }
@@ -5066,55 +5083,81 @@ void MutableFunctionEffectSet::insert(const FunctionEffect *Effect) {
 MutableFunctionEffectSet &
 MutableFunctionEffectSet::operator|=(FunctionEffectSet RHS) {
   // TODO: For large RHS sets, use set_union or a custom insert-in-place
-  for (const auto *Effect : RHS) {
+  for (const auto &Effect : RHS) {
     insert(Effect);
   }
   return *this;
 }
 
-// This could be simpler if there were a simple set container that could be
-// queried by ArrayRef but which stored something else. Possibly a DenseMap with
-// void values?
+using FunctionEffectSpan = llvm::ArrayRef<const FunctionEffect>;
+
+llvm::hash_code hash_value(const FunctionEffect &Effect) {
+  return Effect.opaqueRepr();
+}
+
+namespace llvm {
+template <> struct DenseMapInfo<FunctionEffectSpan> {
+  static FunctionEffectSpan getEmptyKey() {
+    return {static_cast<const FunctionEffect *>(nullptr), size_t(0)};
+  }
+  static FunctionEffectSpan getTombstoneKey() {
+    return {reinterpret_cast<const FunctionEffect *>(intptr_t(-1)), size_t(0)};
+  }
+  static unsigned getHashValue(const FunctionEffectSpan &Val) {
+    hash_code hash1 = hash_value(Val.size());
+    // Treat the FunctionEffects as a span of integers
+    const FunctionEffect *Begin = Val.begin();
+    const FunctionEffect *End = Val.end();
+    hash_code hash2 =
+        hash_combine_range(reinterpret_cast<const uint32_t *>(Begin),
+                           reinterpret_cast<const uint32_t *>(End));
+    return hash_combine(hash1, hash2);
+  }
+  static bool isEqual(const FunctionEffectSpan &LHS,
+                      const FunctionEffectSpan &RHS) {
+    if (LHS.size() != RHS.size()) {
+      return false;
+    }
+    // distinguish empty from tombstone
+    if (LHS.size() == 0) {
+      return LHS.data() == RHS.data();
+    }
+    return std::equal(LHS.begin(), LHS.end(), RHS.begin());
+  }
+};
+} // namespace llvm
+
+// The ASTContext
 FunctionEffectSet
-FunctionEffectSet::create(llvm::ArrayRef<const FunctionEffect *> Items) {
-  if (Items.empty()) {
-    return FunctionEffectSet{};
-  }
-  if (Items.size() == 1) {
-    return FunctionEffectSet{Items[0]};
+FunctionEffectSet::create(ASTContext &C, const MutableFunctionEffectSet &FX) {
+  if (FX.empty()) {
+    return {};
   }
 
-  UniquedAndSortedFX NewSet(Items); // just copies the ArrayRef
-
-  // SmallSet only has contains(), so it provides no way to obtain the uniqued
-  // value.
   // TODO: Put this in the ASTContext
-  // TODO: Try making this a DenseSet? Requires more methods on the members.
-  // static llvm::DenseSet<UniquedAndSortedFX> UniquedFXSets;
-  // Punt on this until we revisit FunctionFX.
+  // TODO: And destroy the memory
+  static llvm::DenseSet<FunctionEffectSpan> UniquedFXSets;
 
-  static std::set<UniquedAndSortedFX> UniquedFXSets;
-
-  // See if we already have this set.
-  const auto Iter = UniquedFXSets.find(NewSet);
+  // Do we already have the incoming set?
+  const auto Iter = UniquedFXSets.find_as(FX);
   if (Iter != UniquedFXSets.end()) {
-    return FunctionEffectSet{&*Iter};
+    return FunctionEffectSet(*Iter);
   }
 
   // Copy the incoming array to permanent storage.
-  auto *Storage = new const FunctionEffect *[Items.size()];
-  std::copy(Items.begin(), Items.end(), Storage);
+  FunctionEffect *Storage = new FunctionEffect[FX.size()];
+  std::copy(FX.begin(), FX.end(), Storage);
 
   // Make a new wrapper and insert it into the set.
-  NewSet = UniquedAndSortedFX(Storage, Items.size());
-  auto [InsIter, _] = UniquedFXSets.insert(NewSet);
-  return FunctionEffectSet(&*InsIter);
+  auto [InsIter, _] =
+      UniquedFXSets.insert(FunctionEffectSpan(Storage, FX.size()));
+  return FunctionEffectSet(*InsIter);
 }
 
-FunctionEffectSet
-FunctionEffectSet::operator|(const FunctionEffectSet &RHS) const {
+FunctionEffectSet FunctionEffectSet::getUnion(ASTContext &C,
+                                              const FunctionEffectSet &LHS,
+                                              const FunctionEffectSet &RHS) {
   // Optimize for one of the two sets being empty
-  const FunctionEffectSet &LHS = *this;
   if (LHS.empty())
     return RHS;
   if (RHS.empty())
@@ -5129,7 +5172,7 @@ FunctionEffectSet::operator|(const FunctionEffectSet &RHS) const {
   std::set_union(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
                  std::back_inserter(Vec));
   // The result of a set operation is an ordered/unique set.
-  return FunctionEffectSet::create(Vec);
+  return FunctionEffectSet::create(C, Vec);
 }
 
 MutableFunctionEffectSet
@@ -5161,10 +5204,10 @@ FunctionEffectSet::differences(const FunctionEffectSet &Old,
                                const FunctionEffectSet &New) {
   // TODO: Could be a one-pass algorithm.
   Differences Result;
-  for (const auto *Effect : (New - Old)) {
+  for (const auto &Effect : (New - Old)) {
     Result.emplace_back(Effect, true);
   }
-  for (const auto *Effect : (Old - New)) {
+  for (const auto &Effect : (Old - New)) {
     Result.emplace_back(Effect, false);
   }
   return Result;
@@ -5186,20 +5229,15 @@ bool FunctionEffectSet::operator<(const FunctionEffectSet &RHS) const {
                                       RHS.end());
 }
 
-bool FunctionEffectSet::UniquedAndSortedFX::operator<(
-    const UniquedAndSortedFX &RHS) const {
-  return this < &RHS;
-}
-
 void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
-  OS << "FX{";
+  OS << "Effects{";
   bool First = true;
-  for (const auto *Effect : *this) {
+  for (const auto &Effect : *this) {
     if (!First)
       OS << ", ";
     else
       First = false;
-    OS << Effect->name();
+    OS << Effect.name();
   }
   OS << "}";
 }

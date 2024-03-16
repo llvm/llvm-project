@@ -987,8 +987,8 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
   T->printExceptionSpecification(OS, Policy);
 
   if (const FunctionEffectSet FX = T->getFunctionEffects()) {
-    for (const auto *Effect : FX) {
-      OS << " " << Effect->attribute();
+    for (const auto &Effect : FX) {
+      OS << " __attribute__((clang_" << Effect.name() << "))";
     }
   }
 

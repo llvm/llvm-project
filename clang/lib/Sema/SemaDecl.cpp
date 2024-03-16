@@ -3927,17 +3927,17 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   if (OldFX != NewFX) {
     const auto Diffs = FunctionEffectSet::differences(OldFX, NewFX);
     for (const auto &Item : Diffs) {
-      const FunctionEffect *Effect = Item.first;
+      const FunctionEffect &Effect = Item.first;
       const bool Adding = Item.second;
-      if (Effect->diagnoseRedeclaration(Adding, *Old, OldFX, *New, NewFX)) {
+      if (Effect.diagnoseRedeclaration(Adding, *Old, OldFX, *New, NewFX)) {
         Diag(New->getLocation(),
              diag::warn_mismatched_func_effect_redeclaration)
-            << Effect->name();
+            << Effect.name();
         Diag(Old->getLocation(), diag::note_previous_declaration);
       }
     }
 
-    const auto MergedFX = OldFX | NewFX;
+    const auto MergedFX = FunctionEffectSet::getUnion(Context, OldFX, NewFX);
 
     // Having diagnosed any problems, prevent further errors by applying the
     // merged set of effects to both declarations.
@@ -11165,8 +11165,8 @@ void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX) {
   // Filter out declarations that the FunctionEffect analysis should skip
   // and not verify.
   bool FXNeedVerification = false;
-  for (const auto *Effect : FX) {
-    if (Effect->flags() & FunctionEffect::FE_RequiresVerification) {
+  for (const auto &Effect : FX) {
+    if (Effect.flags() & FunctionEffect::FE_RequiresVerification) {
       AllEffectsToVerify.insert(Effect);
       FXNeedVerification = true;
     }

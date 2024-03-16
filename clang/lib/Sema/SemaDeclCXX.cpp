@@ -18330,11 +18330,11 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
     bool AnyDiags = false;
 
     for (const auto &Item : Diffs) {
-      const FunctionEffect *Effect = Item.first;
+      const FunctionEffect &Effect = Item.first;
       const bool Adding = Item.second;
-      if (Effect->diagnoseMethodOverride(Adding, *Old, OldFX, *New, NewFX)) {
+      if (Effect.diagnoseMethodOverride(Adding, *Old, OldFX, *New, NewFX)) {
         Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
-            << Effect->name();
+            << Effect.name();
         Diag(Old->getLocation(), diag::note_overridden_virtual_function);
         AnyDiags = true;
       }

@@ -4185,117 +4185,198 @@ public:
   }
 };
 
-class FunctionEffect;
+// ------------------------------------------------------------------------------
+
+// TODO: Should FunctionEffect be located elsewhere, where Decl is not
+// forward-declared?
+class Decl;
+class CXXMethodDecl;
 class FunctionEffectSet;
+
+/// Represents an abstract function effect.
+class FunctionEffect {
+public:
+  enum class Type : unsigned char {
+    None = 0,
+    NoLockTrue,
+    NoAllocTrue,
+  };
+
+  /// Flags describing behaviors of the effect.
+  // (Why not a struct with bitfields? There's one function that would like to
+  // test a caller-specified bit. There are some potential optimizations that
+  // would OR together the bits of multiple effects.)
+  using Flags = unsigned;
+  enum FlagBit : unsigned {
+    // Some effects require verification, e.g. nolock(true); others might not?
+    // (no example yet; TODO: maybe always true, vestigial from nolock(false)).
+    FE_RequiresVerification = 0x1,
+
+    // Does this effect want to verify all function calls originating in
+    // functions having this effect? TODO: maybe always true, vestigial.
+    FE_VerifyCalls = 0x2,
+
+    // Can verification inspect callees' implementations? (e.g. nolock: yes,
+    // tcb+types: no)
+    FE_InferrableOnCallees = 0x4,
+
+    // Language constructs which effects can diagnose as disallowed.
+    FE_ExcludeThrow = 0x8,
+    FE_ExcludeCatch = 0x10,
+    FE_ExcludeObjCMessageSend = 0x20,
+    FE_ExcludeStaticLocalVars = 0x40,
+    FE_ExcludeThreadLocalVars = 0x80
+  };
+
+private:
+  // For uniqueness, currently only Type_ is significant.
+
+  Type Type_ : 2;   // Expands when there are more types
+  Flags Flags_ : 8; // A constant function of Type but cached here.
+
+  // Expansion: for hypothetical TCB+types, there could be one type for TCB,
+  // then ~16(?) bits "Subtype" to map to a specific named TCB. Subtype would
+  // be considered for uniqueness.
+  unsigned Unused : 22;
+
+public:
+  using CalleeDeclOrType =
+      llvm::PointerUnion<const Decl *, const FunctionProtoType *>;
+
+  FunctionEffect() : Type_(Type::None), Flags_(0), Unused(0) {}
+
+  explicit FunctionEffect(Type T);
+
+  /// The type of the effect.
+  Type type() const { return Type_; }
+
+  /// Flags describing behaviors of the effect.
+  Flags flags() const { return Flags_; }
+
+  /// The description printed in diagnostics, e.g. 'nolock'.
+  StringRef name() const;
+
+  /// A serializable, hashable representation.
+  uint32_t opaqueRepr() const { return unsigned(Type_) | (Flags_ << 2u); }
+
+  /// Return true if adding or removing the effect as part of a type conversion
+  /// should generate a diagnostic.
+  bool diagnoseConversion(bool Adding, QualType OldType,
+                          FunctionEffectSet OldFX, QualType NewType,
+                          FunctionEffectSet NewFX) const;
+
+  /// Return true if adding or removing the effect in a redeclaration should
+  /// generate a diagnostic.
+  bool diagnoseRedeclaration(bool Adding, const FunctionDecl &OldFunction,
+                             FunctionEffectSet OldFX,
+                             const FunctionDecl &NewFunction,
+                             FunctionEffectSet NewFX) const;
+
+  /// Return true if adding or removing the effect in a C++ virtual method
+  /// override should generate a diagnostic.
+  bool diagnoseMethodOverride(bool Adding, const CXXMethodDecl &OldMethod,
+                              FunctionEffectSet OldFX,
+                              const CXXMethodDecl &NewMethod,
+                              FunctionEffectSet NewFX) const;
+
+  /// Return true if the effect is allowed to be inferred on the specified Decl
+  /// (may be a FunctionDecl or BlockDecl). Only used if the effect has
+  /// FE_InferrableOnCallees flag set. Example: This allows nolock(false) to
+  /// prevent inference for the function.
+  bool canInferOnDecl(const Decl *Caller, FunctionEffectSet CallerFX) const;
+
+  // Called if FE_VerifyCalls flag is set; return false for success. When true
+  // is returned for a direct call, then the FE_InferrableOnCallees flag may
+  // trigger inference rather than an immediate diagnostic. Caller should be
+  // assumed to have the effect (it may not have it explicitly when inferring).
+  bool diagnoseFunctionCall(bool Direct, const Decl *Caller,
+                            FunctionEffectSet CallerFX, CalleeDeclOrType Callee,
+                            FunctionEffectSet CalleeFX) const;
+
+  friend bool operator==(const FunctionEffect &LHS, const FunctionEffect &RHS) {
+    return LHS.Type_ == RHS.Type_;
+  }
+  friend bool operator!=(const FunctionEffect &LHS, const FunctionEffect &RHS) {
+    return LHS.Type_ != RHS.Type_;
+  }
+  friend bool operator<(const FunctionEffect &LHS, const FunctionEffect &RHS) {
+    return LHS.Type_ < RHS.Type_;
+  }
+};
 
 // It is the user's responsibility to keep this in set form: elements are
 // ordered and unique.
 // We could hide the mutating methods which are capable of breaking the
 // invariant, but they're needed and safe when used with STL set algorithms.
-class MutableFunctionEffectSet : public SmallVector<const FunctionEffect *, 4> {
+class MutableFunctionEffectSet : public SmallVector<FunctionEffect, 4> {
 public:
   using SmallVector::insert;
   using SmallVector::SmallVector;
 
-  /// Maintains order/uniquenesss.
-  void insert(const FunctionEffect *effect);
+  MutableFunctionEffectSet(const FunctionEffect &Effect);
+  using Base = SmallVector<FunctionEffect, 4>;
 
-  MutableFunctionEffectSet &operator|=(FunctionEffectSet rhs);
+  /// Maintains order/uniquenesss.
+  void insert(const FunctionEffect &Effect);
+
+  MutableFunctionEffectSet &operator|=(FunctionEffectSet RHS);
+
+  operator llvm::ArrayRef<const FunctionEffect>() const {
+    return {data(), size()};
+  }
 };
 
+/// A constant, uniqued set of FunctionEffect instances.
+// These sets will tend to be very small (0-1 elements), so represent them as
+// sorted spans, which are compatible with the STL set algorithms.
 class FunctionEffectSet {
-public:
-  // These sets will tend to be very small (1 element), so represent them as
-  // sorted vectors, which are compatible with the STL set algorithms. Using an
-  // array or vector also means the elements are contiguous, keeping iterators
-  // simple.
-
 private:
-  // 'Uniqued' refers to the set itself being uniqued. Storage is allocated
-  // separately. Use ArrayRef for its iterators. Subclass so as to be able to
-  // compare (it seems ArrayRef would silently convert itself to a vector for
-  // comparison?!).
-  class UniquedAndSortedFX : public llvm::ArrayRef<const FunctionEffect *> {
-  public:
-    using Base = llvm::ArrayRef<const FunctionEffect *>;
+  explicit FunctionEffectSet(llvm::ArrayRef<const FunctionEffect> Array)
+      : Impl(Array) {}
 
-    UniquedAndSortedFX(Base Array) : Base(Array) {}
-    UniquedAndSortedFX(const FunctionEffect **Ptr, size_t Len)
-        : Base(Ptr, Len) {}
-
-    bool operator<(const UniquedAndSortedFX &rhs) const;
-  };
-
-  // Could have used a TinyPtrVector if it were unique-able.
-  // Empty set has a null Impl.
-  llvm::PointerUnion<const FunctionEffect *, const UniquedAndSortedFX *> Impl;
-
-  explicit FunctionEffectSet(const FunctionEffect *Single) : Impl(Single) {}
-  explicit FunctionEffectSet(const UniquedAndSortedFX *Multi) : Impl(Multi) {}
+  // Points to a separately allocated array, uniqued.
+  llvm::ArrayRef<const FunctionEffect> Impl;
 
 public:
-  using Differences =
-      SmallVector<std::pair<const FunctionEffect *, /*added=*/bool>>;
+  using Differences = SmallVector<std::pair<FunctionEffect, /*added=*/bool>>;
 
-  FunctionEffectSet() : Impl(nullptr) {}
+  FunctionEffectSet() = default;
 
-  void *getOpaqueValue() const { return Impl.getOpaqueValue(); }
+  const void *getOpaqueValue() const { return Impl.data(); }
 
   explicit operator bool() const { return !empty(); }
-  bool empty() const {
-    if (Impl.isNull())
-      return true;
-    if (const UniquedAndSortedFX *Vec =
-            dyn_cast_if_present<const UniquedAndSortedFX *>(Impl))
-      return Vec->empty();
-    return false;
-  }
-  size_t size() const {
-    if (empty())
-      return 0;
-    if (isa<const FunctionEffect *>(Impl))
-      return 1;
-    return cast<const UniquedAndSortedFX *>(Impl)->size();
-  }
+  bool empty() const { return Impl.empty(); }
+  size_t size() const { return Impl.size(); }
 
-  using iterator = const FunctionEffect *const *;
+  using iterator = const FunctionEffect *;
 
-  iterator begin() const {
-    if (isa<const FunctionEffect *>(Impl))
-      return Impl.getAddrOfPtr1();
-    return cast<const UniquedAndSortedFX *>(Impl)->begin();
-  }
+  iterator begin() const { return Impl.begin(); }
 
-  iterator end() const {
-    if (isa<const FunctionEffect *>(Impl))
-      return begin() + (Impl.isNull() ? 0 : 1);
-    return cast<const UniquedAndSortedFX *>(Impl)->end();
-  }
+  iterator end() const { return Impl.end(); }
 
-  ArrayRef<const FunctionEffect *> items() const { return {begin(), end()}; }
+  ArrayRef<const FunctionEffect> items() const { return Impl; }
 
-  bool operator==(const FunctionEffectSet &other) const {
-    return Impl == other.Impl;
+  bool operator==(const FunctionEffectSet &RHS) const {
+    return Impl.data() == RHS.Impl.data();
   }
-  bool operator!=(const FunctionEffectSet &other) const {
-    return Impl != other.Impl;
+  bool operator!=(const FunctionEffectSet &RHS) const {
+    return Impl.data() != RHS.Impl.data();
   }
-  bool operator<(const FunctionEffectSet &other) const;
+  bool operator<(const FunctionEffectSet &RHS) const;
 
   void dump(llvm::raw_ostream &OS) const;
 
-  /// Factory functions: return instances with uniqued implementations.
-  static FunctionEffectSet create(const FunctionEffect &single) {
-    return FunctionEffectSet{&single};
-  }
-  static FunctionEffectSet create(llvm::ArrayRef<const FunctionEffect *> items);
+  /// Factory function: returns instances with uniqued implementations.
+  static FunctionEffectSet create(ASTContext &C,
+                                  const MutableFunctionEffectSet &FX);
 
-  /// Union. Caller should check for incompatible effects.
-  FunctionEffectSet operator|(const FunctionEffectSet &rhs) const;
   /// Intersection.
-  MutableFunctionEffectSet operator&(const FunctionEffectSet &rhs) const;
+  MutableFunctionEffectSet operator&(const FunctionEffectSet &RHS) const;
   /// Difference.
-  MutableFunctionEffectSet operator-(const FunctionEffectSet &rhs) const;
+  MutableFunctionEffectSet operator-(const FunctionEffectSet &RHS) const;
+
+  static FunctionEffectSet getUnion(ASTContext &C, const FunctionEffectSet &LHS,
+                                    const FunctionEffectSet &RHS);
 
   /// Caller should short-circuit by checking for equality first.
   static Differences differences(const FunctionEffectSet &Old,
@@ -7900,147 +7981,6 @@ QualType DecayedType::getPointeeType() const {
 // APFixedPoint instead of APSInt and scale.
 void FixedPointValueToString(SmallVectorImpl<char> &Str, llvm::APSInt Val,
                              unsigned Scale);
-
-// ------------------------------------------------------------------------------
-
-// TODO: Should FunctionEffect be located elsewhere, where Decl is not
-// forward-declared?
-class Decl;
-class CXXMethodDecl;
-
-/// Represents an abstract function effect.
-class FunctionEffect {
-public:
-  enum class Type : unsigned char {
-    NoLockTrue,
-    NoAllocTrue,
-  };
-
-  /// Flags describing behaviors of the effect.
-  // (Why not a struct with bitfields? There's one function that would like to
-  // test a caller-specified bit. There are some potential optimizations that
-  // would OR together the bits of multiple effects.)
-  using Flags = unsigned;
-  enum FlagBit : unsigned {
-    // Some effects require verification, e.g. nolock(true); others might not?
-    // (no example yet; TODO: maybe always true, vestigial from nolock(false)).
-    FE_RequiresVerification = 0x1,
-
-    // Does this effect want to verify all function calls originating in
-    // functions having this effect? TODO: maybe always true, vestigial.
-    FE_VerifyCalls = 0x2,
-
-    // Can verification inspect callees' implementations? (e.g. nolock: yes,
-    // tcb+types: no)
-    FE_InferrableOnCallees = 0x4,
-
-    // Language constructs which effects can diagnose as disallowed.
-    FE_ExcludeThrow = 0x8,
-    FE_ExcludeCatch = 0x10,
-    FE_ExcludeObjCMessageSend = 0x20,
-    FE_ExcludeStaticLocalVars = 0x40,
-    FE_ExcludeThreadLocalVars = 0x80
-  };
-
-private:
-  const Type Type_;
-  const Flags Flags_;
-  const char *Name;
-
-public:
-  using CalleeDeclOrType =
-      llvm::PointerUnion<const Decl *, const FunctionProtoType *>;
-
-  FunctionEffect(Type T, Flags F, const char *Name)
-      : Type_(T), Flags_(F), Name(Name) {}
-  virtual ~FunctionEffect();
-
-  /// The type of the effect.
-  Type type() const { return Type_; }
-
-  /// Flags describing behaviors of the effect.
-  Flags flags() const { return Flags_; }
-
-  /// The description printed in diagnostics, e.g. 'nolock'.
-  StringRef name() const { return Name; }
-
-  /// The description used by TypePrinter, e.g. __attribute__((clang_nolock))
-  virtual std::string attribute() const = 0;
-
-  /// Return true if adding or removing the effect as part of a type conversion
-  /// should generate a diagnostic.
-  virtual bool diagnoseConversion(bool Adding, QualType OldType,
-                                  FunctionEffectSet OldFX, QualType NewType,
-                                  FunctionEffectSet NewFX) const;
-
-  /// Return true if adding or removing the effect in a redeclaration should
-  /// generate a diagnostic.
-  virtual bool diagnoseRedeclaration(bool Adding,
-                                     const FunctionDecl &OldFunction,
-                                     FunctionEffectSet OldFX,
-                                     const FunctionDecl &NewFunction,
-                                     FunctionEffectSet NewFX) const;
-
-  /// Return true if adding or removing the effect in a C++ virtual method
-  /// override should generate a diagnostic.
-  virtual bool diagnoseMethodOverride(bool Adding,
-                                      const CXXMethodDecl &OldMethod,
-                                      FunctionEffectSet OldFX,
-                                      const CXXMethodDecl &NewMethod,
-                                      FunctionEffectSet NewFX) const;
-
-  /// Return true if the effect is allowed to be inferred on the specified Decl
-  /// (may be a FunctionDecl or BlockDecl). Only used if the effect has
-  /// kInferrableOnCallees flag set. Example: This allows nolock(false) to
-  /// prevent inference for the function.
-  virtual bool canInferOnDecl(const Decl *Caller,
-                              FunctionEffectSet CallerFX) const;
-
-  // Called if kVerifyCalls flag is set; return false for success. When true is
-  // returned for a direct call, then the kInferrableOnCallees flag may trigger
-  // inference rather than an immediate diagnostic. Caller should be assumed to
-  // have the effect (it may not have it explicitly when inferring).
-  virtual bool diagnoseFunctionCall(bool Direct, const Decl *Caller,
-                                    FunctionEffectSet CallerFX,
-                                    CalleeDeclOrType Callee,
-                                    FunctionEffectSet CalleeFX) const;
-};
-
-/// FunctionEffect subclass for nolock and noalloc (whose behaviors are close
-/// to identical).
-class NoLockNoAllocEffect : public FunctionEffect {
-  bool isNoLock() const { return type() == Type::NoLockTrue; }
-
-public:
-  static const NoLockNoAllocEffect &nolock_instance();
-  static const NoLockNoAllocEffect &noalloc_instance();
-
-  NoLockNoAllocEffect(Type Type, const char *Name);
-  ~NoLockNoAllocEffect() override;
-
-  std::string attribute() const override;
-
-  bool diagnoseConversion(bool Adding, QualType OldType,
-                          FunctionEffectSet OldFX, QualType NewType,
-                          FunctionEffectSet NewFX) const override;
-
-  bool diagnoseRedeclaration(bool Adding, const FunctionDecl &OldFunction,
-                             FunctionEffectSet OldFX,
-                             const FunctionDecl &NewFunction,
-                             FunctionEffectSet NewFX) const override;
-
-  bool diagnoseMethodOverride(bool Adding, const CXXMethodDecl &OldMethod,
-                              FunctionEffectSet OldFX,
-                              const CXXMethodDecl &NewMethod,
-                              FunctionEffectSet NewFX) const override;
-
-  bool canInferOnDecl(const Decl *Caller,
-                      FunctionEffectSet CallerFX) const override;
-
-  bool diagnoseFunctionCall(bool Direct, const Decl *Caller,
-                            FunctionEffectSet CallerFX, CalleeDeclOrType Callee,
-                            FunctionEffectSet CalleeFX) const override;
-};
 
 } // namespace clang
 

@@ -2406,14 +2406,14 @@ enum class DiagnosticID : uint8_t {
 };
 
 struct Diagnostic {
-  const FunctionEffect *Effect = nullptr;
+  FunctionEffect Effect;
   const Decl *Callee = nullptr; // only valid for Calls*
   SourceLocation Loc;
   DiagnosticID ID = DiagnosticID::None;
 
   Diagnostic() = default;
 
-  Diagnostic(const FunctionEffect *Effect, DiagnosticID ID, SourceLocation Loc,
+  Diagnostic(const FunctionEffect &Effect, DiagnosticID ID, SourceLocation Loc,
              const Decl *Callee = nullptr)
       : Effect(Effect), Callee(Callee), Loc(Loc), ID(ID) {}
 };
@@ -2521,12 +2521,12 @@ class EffectToDiagnosticMap {
   // Since we currently only have a tiny number of effects (typically no more
   // than 1), use a sorted SmallVector with an inline capacity of 1. Since it
   // is often empty, use a unique_ptr to the SmallVector.
-  using Element = std::pair<const FunctionEffect *, Diagnostic>;
+  using Element = std::pair<FunctionEffect, Diagnostic>;
   using ImplVec = llvm::SmallVector<Element, 1>;
   std::unique_ptr<ImplVec> Impl;
 
 public:
-  Diagnostic &getOrInsertDefault(const FunctionEffect *Key) {
+  Diagnostic &getOrInsertDefault(FunctionEffect Key) {
     if (Impl == nullptr) {
       Impl = std::make_unique<llvm::SmallVector<Element>>();
       auto &Item = Impl->emplace_back();
@@ -2542,7 +2542,7 @@ public:
     return Iter->second;
   }
 
-  const Diagnostic *lookup(const FunctionEffect *key) {
+  const Diagnostic *lookup(FunctionEffect key) {
     if (Impl == nullptr) {
       return nullptr;
     }
@@ -2596,20 +2596,20 @@ private:
   std::unique_ptr<SmallVector<DirectCall>> UnverifiedDirectCalls;
 
 public:
-  PendingFunctionAnalysis(const CallableInfo &cinfo,
+  PendingFunctionAnalysis(ASTContext &Ctx, const CallableInfo &cinfo,
                           FunctionEffectSet AllInferrableEffectsToVerify) {
     MutableFunctionEffectSet fx;
-    for (const auto *effect : cinfo.Effects) {
-      if (effect->flags() & FunctionEffect::FE_RequiresVerification) {
+    for (const auto &effect : cinfo.Effects) {
+      if (effect.flags() & FunctionEffect::FE_RequiresVerification) {
         fx.insert(effect);
       }
     }
-    DeclaredVerifiableEffects = FunctionEffectSet::create(fx);
+    DeclaredVerifiableEffects = FunctionEffectSet::create(Ctx, fx);
 
     // Check for effects we are not allowed to infer
     fx.clear();
-    for (const auto *effect : AllInferrableEffectsToVerify) {
-      if (effect->canInferOnDecl(cinfo.CDecl, cinfo.Effects)) {
+    for (const auto &effect : AllInferrableEffectsToVerify) {
+      if (effect.canInferOnDecl(cinfo.CDecl, cinfo.Effects)) {
         fx.insert(effect);
       } else {
         // Add a diagnostic for this effect if a caller were to
@@ -2622,8 +2622,8 @@ public:
       }
     }
     // fx is now the set of inferrable effects which are not prohibited
-    FXToInfer = FunctionEffectSet::create(FunctionEffectSet::create(fx) -
-                                          DeclaredVerifiableEffects);
+    FXToInfer = FunctionEffectSet::create(
+        Ctx, FunctionEffectSet::create(Ctx, fx) - DeclaredVerifiableEffects);
   }
 
   // Hide the way that diagnostics for explicitly required effects vs. inferred
@@ -2655,8 +2655,7 @@ public:
     return UnverifiedDirectCalls == nullptr || UnverifiedDirectCalls->empty();
   }
 
-  const Diagnostic *
-  diagnosticForInferrableEffect(const FunctionEffect *effect) {
+  const Diagnostic *diagnosticForInferrableEffect(FunctionEffect effect) {
     return InferrableEffectToFirstDiagnostic.lookup(effect);
   }
 
@@ -2696,23 +2695,23 @@ private:
   EffectToDiagnosticMap InferrableEffectToFirstDiagnostic;
 
 public:
-  CompleteFunctionAnalysis(PendingFunctionAnalysis &pending,
+  CompleteFunctionAnalysis(ASTContext &Ctx, PendingFunctionAnalysis &pending,
                            FunctionEffectSet funcFX,
                            FunctionEffectSet AllInferrableEffectsToVerify) {
     MutableFunctionEffectSet verified;
     verified |= funcFX;
-    for (const auto *effect : AllInferrableEffectsToVerify) {
+    for (const auto &effect : AllInferrableEffectsToVerify) {
       if (pending.diagnosticForInferrableEffect(effect) == nullptr) {
         verified.insert(effect);
       }
     }
-    VerifiedEffects = FunctionEffectSet::create(verified);
+    VerifiedEffects = FunctionEffectSet::create(Ctx, verified);
 
     InferrableEffectToFirstDiagnostic =
         std::move(pending.InferrableEffectToFirstDiagnostic);
   }
 
-  const Diagnostic *firstDiagnosticForEffect(const FunctionEffect *effect) {
+  const Diagnostic *firstDiagnosticForEffect(const FunctionEffect &effect) {
     // TODO: is this correct?
     return InferrableEffectToFirstDiagnostic.lookup(effect);
   }
@@ -2806,14 +2805,14 @@ public:
     // be checked, and to see which ones are inferrable.
     {
       MutableFunctionEffectSet inferrableEffects;
-      for (const FunctionEffect *effect : Sem.AllEffectsToVerify) {
-        const auto Flags = effect->flags();
+      for (const FunctionEffect &effect : Sem.AllEffectsToVerify) {
+        const auto Flags = effect.flags();
         if (Flags & FunctionEffect::FE_InferrableOnCallees) {
           inferrableEffects.insert(effect);
         }
       }
       AllInferrableEffectsToVerify =
-          FunctionEffectSet::create(inferrableEffects);
+          FunctionEffectSet::create(Sem.getASTContext(), inferrableEffects);
       llvm::outs() << "AllInferrableEffectsToVerify: ";
       AllInferrableEffectsToVerify.dump(llvm::outs());
       llvm::outs() << "\n";
@@ -2887,7 +2886,8 @@ private:
     // Build a PendingFunctionAnalysis on the stack. If it turns out to be
     // complete, we'll have avoided a heap allocation; if it's incomplete, it's
     // a fairly trivial move to a heap-allocated object.
-    PendingFunctionAnalysis FAnalysis(CInfo, AllInferrableEffectsToVerify);
+    PendingFunctionAnalysis FAnalysis(Sem.getASTContext(), CInfo,
+                                      AllInferrableEffectsToVerify);
 
     llvm::outs() << "\nVerifying " << CInfo.name(Sem) << " ";
     FAnalysis.dump(llvm::outs());
@@ -2915,7 +2915,8 @@ private:
       emitDiagnostics(*Diags, CInfo, Sem);
     }
     auto *CompletePtr = new CompleteFunctionAnalysis(
-        Pending, CInfo.Effects, AllInferrableEffectsToVerify);
+        Sem.getASTContext(), Pending, CInfo.Effects,
+        AllInferrableEffectsToVerify);
     DeclAnalysis[CInfo.CDecl] = CompletePtr;
     llvm::outs() << "inserted complete " << CompletePtr << "\n";
     DeclAnalysis.dump(Sem, llvm::outs());
@@ -2964,10 +2965,10 @@ private:
     llvm::outs() << "\n";
     puts("");
 
-    auto check1Effect = [&](const FunctionEffect *Effect, bool Inferring) {
-      const auto Flags = Effect->flags();
+    auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
+      const auto Flags = Effect.flags();
       if (Flags & FunctionEffect::FE_VerifyCalls) {
-        const bool diagnose = Effect->diagnoseFunctionCall(
+        const bool diagnose = Effect.diagnoseFunctionCall(
             DirectCall, Caller.CDecl, Caller.Effects, Callee.CDecl,
             CalleeEffects);
         if (diagnose) {
@@ -2991,11 +2992,11 @@ private:
       }
     };
 
-    for (auto *Effect : PFA.DeclaredVerifiableEffects) {
+    for (const auto &Effect : PFA.DeclaredVerifiableEffects) {
       check1Effect(Effect, false);
     }
 
-    for (auto *Effect : PFA.FXToInfer) {
+    for (const auto &Effect : PFA.FXToInfer) {
       check1Effect(Effect, true);
     }
   }
@@ -3026,7 +3027,7 @@ private:
 
     // Top-level diagnostics are warnings.
     for (const auto &Diag : Diags) {
-      StringRef effectName = Diag.Effect->name();
+      StringRef effectName = Diag.Effect.name();
       switch (Diag.ID) {
       case DiagnosticID::None:
       case DiagnosticID::DeclWithoutConstraintOrInference: // shouldn't happen
@@ -3230,22 +3231,22 @@ private:
                                    const Decl *Callee = nullptr) {
       // If there are ANY declared verifiable effects holding the flag, store
       // just one diagnostic.
-      for (auto *Effect : CurrentFunction.DeclaredVerifiableEffects) {
-        if (Effect->flags() & Flag) {
+      for (const auto &Effect : CurrentFunction.DeclaredVerifiableEffects) {
+        if (Effect.flags() & Flag) {
           addDiagnosticInner(/*inferring=*/false, Effect, D, Loc, Callee);
           break;
         }
       }
       // For each inferred-but-not-verifiable effect holding the flag, store a
       // diagnostic, if we don't already have a diagnostic for that effect.
-      for (auto *Effect : CurrentFunction.FXToInfer) {
-        if (Effect->flags() & Flag) {
+      for (const auto &Effect : CurrentFunction.FXToInfer) {
+        if (Effect.flags() & Flag) {
           addDiagnosticInner(/*inferring=*/true, Effect, D, Loc, Callee);
         }
       }
     }
 
-    void addDiagnosticInner(bool Inferring, const FunctionEffect *Effect,
+    void addDiagnosticInner(bool Inferring, const FunctionEffect &Effect,
                             DiagnosticID D, SourceLocation Loc,
                             const Decl *Callee = nullptr) {
       CurrentFunction.checkAddDiagnostic(Inferring,
@@ -3264,25 +3265,25 @@ private:
       auto *FPT =
           CalleeType->getAs<FunctionProtoType>(); // null if FunctionType
 
-      auto check1Effect = [&](const FunctionEffect *effect, bool inferring) {
-        if (effect->flags() & FunctionEffect::FE_VerifyCalls) {
+      auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
+        if (Effect.flags() & FunctionEffect::FE_VerifyCalls) {
           if (FPT == nullptr ||
-              effect->diagnoseFunctionCall(
+              Effect.diagnoseFunctionCall(
                   /*direct=*/false, CurrentCaller.CDecl, CurrentCaller.Effects,
                   FPT, FPT->getFunctionEffects())) {
-            addDiagnosticInner(inferring, effect,
+            addDiagnosticInner(Inferring, Effect,
                                DiagnosticID::CallsDisallowedExpr,
                                Call->getBeginLoc());
           }
         }
       };
 
-      for (auto *effect : CurrentFunction.DeclaredVerifiableEffects) {
-        check1Effect(effect, false);
+      for (const auto &Effect : CurrentFunction.DeclaredVerifiableEffects) {
+        check1Effect(Effect, false);
       }
 
-      for (auto *effect : CurrentFunction.FXToInfer) {
-        check1Effect(effect, true);
+      for (const auto &Effect : CurrentFunction.FXToInfer) {
+        check1Effect(Effect, true);
       }
     }
 
