@@ -2645,6 +2645,11 @@ TEST_F(TokenAnnotatorTest, StartOfName) {
   EXPECT_TOKEN(Tokens[2], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("@interface NSCoder (TestCoder)");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::at, TT_ObjCDecl);
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_StartOfName);
 }
 
 TEST_F(TokenAnnotatorTest, BraceKind) {
