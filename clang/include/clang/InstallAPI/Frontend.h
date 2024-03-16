@@ -14,7 +14,6 @@
 #define LLVM_CLANG_INSTALLAPI_FRONTEND_H
 
 #include "clang/AST/ASTConsumer.h"
-#include "clang/AST/Availability.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/InstallAPI/Context.h"
