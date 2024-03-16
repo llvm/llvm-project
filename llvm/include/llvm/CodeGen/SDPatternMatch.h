@@ -706,7 +706,7 @@ inline auto m_False() {
       m_Value()};
 }
 
-/// Match a negtive as a sub(0, v)
+/// Match a negate as a sub(0, v)
 template <typename ValTy>
 inline BinaryOpc_match<SpecificInt_match, ValTy> m_Neg(const ValTy &V) {
   return m_Sub(m_Zero(), V);
