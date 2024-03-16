@@ -868,16 +868,6 @@ func.func @sparse_sort_coo_no_perm(%arg0: index, %arg1: memref<?xindex>) -> (mem
 
 // -----
 
-#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
-
-func.func @sparse_alloc_escapes(%arg0: index) -> tensor<10x?xf64, #CSR> {
-  // expected-error@+1 {{sparse tensor allocation should not escape function}}
-  %0 = bufferization.alloc_tensor(%arg0) : tensor<10x?xf64, #CSR>
-  return %0: tensor<10x?xf64, #CSR>
-}
-
-// -----
-
 #UnorderedCOO = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique, nonordered), d1 : singleton(nonordered))}>
 #OrderedCOOPerm = #sparse_tensor.encoding<{map = (d0, d1) -> (d1 : compressed(nonunique), d0 : singleton)}>
 

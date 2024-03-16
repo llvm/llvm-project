@@ -17,11 +17,6 @@
 
 #include "TokenAnnotator.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Format/Format.h"
-#include "llvm/ADT/SmallVector.h"
-#include <algorithm>
-#include <string>
-#include <tuple>
 
 namespace clang {
 namespace format {
