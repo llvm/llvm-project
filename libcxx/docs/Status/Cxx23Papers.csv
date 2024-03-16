@@ -100,7 +100,7 @@
 "`P2396R1 <https://wg21.link/P2396R1>`__","LWG", "Concurrency TS 2 fixes ", "November 2022","","","|concurrency TS|"
 "`P2505R5 <https://wg21.link/P2505R5>`__","LWG", "Monadic Functions for ``std::expected``", "November 2022","|Complete|","17.0",""
 "`P2539R4 <https://wg21.link/P2539R4>`__","LWG", "Should the output of ``std::print`` to a terminal be synchronized with the underlying stream?", "November 2022","|Complete|","18.0","|format|"
-"`P2602R2 <https://wg21.link/P2602R2>`__","LWG", "Poison Pills are Too Toxic", "November 2022","","","|ranges|"
+"`P2602R2 <https://wg21.link/P2602R2>`__","LWG", "Poison Pills are Too Toxic", "November 2022","|Complete|","19.0","|ranges|"
 "`P2708R1 <https://wg21.link/P2708R1>`__","LWG", "No Further Fundamentals TSes", "November 2022","|Nothing to do|","",""
 "","","","","","",""
 "`P0290R4 <https://wg21.link/P0290R4>`__","LWG", "``apply()`` for ``synchronized_value<T>``","February 2023","","","|concurrency TS|"
