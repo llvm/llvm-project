@@ -17,13 +17,12 @@ define void @test1(<4 x i16> %a, <4 x i16> %b, ptr %p) {
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[S0]]
 ; CHECK-NEXT:    [[LOAD0:%.*]] = load i64, ptr [[GEP0]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[SUB0]], <4 x i32> poison, <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i32> [[TMP0]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i64, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SUB0]], i32 3
 ; CHECK-NEXT:    [[S3:%.*]] = sext i32 [[E3]] to i64
