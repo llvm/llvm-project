@@ -11,6 +11,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/InstallAPI/DylibVerifier.h"
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/InstallAPI/MachO.h"
 #include "llvm/ADT/DenseMap.h"
@@ -18,7 +19,6 @@
 namespace clang {
 namespace installapi {
 class FrontendRecordsSlice;
-class DylibVerifier;
 
 /// Struct used for generating validating InstallAPI.
 /// The attributes captured represent all necessary information

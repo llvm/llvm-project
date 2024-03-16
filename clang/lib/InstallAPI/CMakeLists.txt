@@ -1,7 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Support
   TextAPI
-  Demangle 
+  Demangle
   Core
   )
 
