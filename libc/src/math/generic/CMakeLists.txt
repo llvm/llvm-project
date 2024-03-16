@@ -2203,6 +2203,7 @@ add_entrypoint_object(
   HDRS
     ../atanf.h
   DEPENDS
+    .inv_trigf_utils
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
@@ -2212,22 +2213,6 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
-)
-
-add_entrypoint_object(
-  atan2f
-  SRCS
-    atan2f.cpp
-  HDRS
-    ../atan2f.h
-  COMPILE_OPTIONS
-    -O3
-  DEPENDS
-    .inv_trigf_utils
-    .math_utils
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.macros.optimization
 )
 
 add_entrypoint_object(
