@@ -19,6 +19,49 @@ candidates. It serves for both optimizing candidates including estimating their
 cost reliably, and for performing their final translation into IR. This
 facilitates dealing with multiple vectorization candidates.
 
+Current Status
+==============
+VPlan is currently used to drive code-generation in LoopVectorize. VPlans are
+constructed after all cost-based and most legality-related decisions have been
+taken. As def-use chains between recipes are now fully modeled in VPlan,
+VPlan-based analyses and transformations are used to simplify and modularize
+the vectorization process [10]_. Those include transformations to
+
+1. Legalize the initial VPlan, e.g. by introducing specializedrecipes for
+   reductions and interleave groups.
+
+2. Optimize the legalized VPlan, e.g. by removing redundant recipes or
+   introducing active-lane-masks.
+   .
+3. Apply unroll- and vectorization-factor specific optimizations, e.g. removing
+   the branch to exit the vector loop based on VF & UF.
+
+Refer to :numref:`fig-vplan-transform-pipeline` for a overview of the current
+transformation pipeline.
+
+Note that some legality checks are already done in VPlan, including checking if
+all users of a fixed-order recurrence can be re-ordered. This is implemented as
+a VPlan-to-VPlan transformation that either applies a valid re-ordering or
+bails out marking the VPlan as invalid.
+
+.. _fig-vplan-transform-pipeline:
+.. figure:: ./vplan-transform-pipeline.png
+   :width: 800 px
+
+   VPlan Transformation Pipeline in 2024
+
+
+VPlan currently models the complete vector loop, as well as other parts of the
+vectorization skeleton. Refer to :numref:`fig-vplan-scope` for an overview of
+the scope covered by VPlan.
+
+.. _fig-vplan-scope:
+.. figure:: ./vplan-scope.png
+   :width: 800 px
+
+   Scope modeled in VPlan in 2024
+
+
 High-level Design
 =================
 
@@ -248,3 +291,6 @@ References
 
 .. [9] "Extending LoopVectorizer: OpenMP4.5 SIMD and Outer Loop
     Auto-Vectorization", Intel Vectorizer Team, LLVM Developers' Meeting 2016.
+
+.. [10] "VPlan: Status Update and Future Roadmap", Florian Hahn, LLVM
+         Developers' Meeting 2023, https://www.youtube.com/watch?v=SzGP4PgMuLE
