@@ -4374,6 +4374,7 @@ cc_library(
     hdrs = ["include/mlir/Transforms/InliningUtils.h"],
     includes = ["include"],
     deps = [
+        ":CallOpInterfaces",
         ":IR",
         "//llvm:Support",
     ],
