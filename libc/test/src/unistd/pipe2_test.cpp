@@ -15,6 +15,8 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include <fcntl.h>
+
 TEST(LlvmLibcPipe2Test, ReadAndWriteViaPipe2) {
   int pipefd[2];
   int flags;
