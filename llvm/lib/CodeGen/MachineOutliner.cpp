@@ -1032,7 +1032,7 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
       // contain something worth outlining.
       // FIXME: This should be based off of the maximum size in B of an outlined
       // call versus the size in B of the MBB.
-      if (MBB.size() < MinMBBSize) {
+      if (!MBB.sizeWithoutDebugLargerThan(MinMBBSize - 1)) {
         LLVM_DEBUG(dbgs() << "    SKIP: MBB size less than minimum size of "
                           << MinMBBSize << "\n");
         continue;
