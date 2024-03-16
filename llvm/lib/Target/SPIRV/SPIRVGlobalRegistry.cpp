@@ -750,7 +750,7 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
 SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
-  if (TypesInProcessing.count(Ty) && !Ty->isPointerTy())
+  if (TypesInProcessing.count(Ty) && !isPointerTy(Ty))
     return nullptr;
   TypesInProcessing.insert(Ty);
   SPIRVType *SpirvType = createSPIRVType(Ty, MIRBuilder, AccessQual, EmitIR);
@@ -762,11 +762,15 @@ SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
   // will be added later. For special types it is already added to DT.
   if (SpirvType->getOpcode() != SPIRV::OpTypeForwardPointer && !Reg.isValid() &&
       !isSpecialOpaqueType(Ty)) {
-    if (!Ty->isPointerTy())
+    if (!isPointerTy(Ty))
       DT.add(Ty, &MIRBuilder.getMF(), getSPIRVTypeID(SpirvType));
+    else if (isTypedPointerTy(Ty))
+      DT.add(cast<TypedPointerType>(Ty)->getElementType(),
+             getPointerAddressSpace(Ty), &MIRBuilder.getMF(),
+             getSPIRVTypeID(SpirvType));
     else
       DT.add(Type::getInt8Ty(MIRBuilder.getMF().getFunction().getContext()),
-             Ty->getPointerAddressSpace(), &MIRBuilder.getMF(),
+             getPointerAddressSpace(Ty), &MIRBuilder.getMF(),
              getSPIRVTypeID(SpirvType));
   }
 
@@ -787,12 +791,15 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
   Register Reg;
-  if (!Ty->isPointerTy())
+  if (!isPointerTy(Ty))
     Reg = DT.find(Ty, &MIRBuilder.getMF());
+  else if (isTypedPointerTy(Ty))
+    Reg = DT.find(cast<TypedPointerType>(Ty)->getElementType(),
+                  getPointerAddressSpace(Ty), &MIRBuilder.getMF());
   else
     Reg =
         DT.find(Type::getInt8Ty(MIRBuilder.getMF().getFunction().getContext()),
-                Ty->getPointerAddressSpace(), &MIRBuilder.getMF());
+                getPointerAddressSpace(Ty), &MIRBuilder.getMF());
 
   if (Reg.isValid() && !isSpecialOpaqueType(Ty))
     return getSPIRVTypeForVReg(Reg);
@@ -836,11 +843,16 @@ bool SPIRVGlobalRegistry::isScalarOrVectorOfType(Register VReg,
 
 unsigned
 SPIRVGlobalRegistry::getScalarOrVectorComponentCount(Register VReg) const {
-  if (SPIRVType *Type = getSPIRVTypeForVReg(VReg))
-    return Type->getOpcode() == SPIRV::OpTypeVector
-               ? static_cast<unsigned>(Type->getOperand(2).getImm())
-               : 1;
-  return 0;
+  return getScalarOrVectorComponentCount(getSPIRVTypeForVReg(VReg));
+}
+
+unsigned
+SPIRVGlobalRegistry::getScalarOrVectorComponentCount(SPIRVType *Type) const {
+  if (!Type)
+    return 0;
+  return Type->getOpcode() == SPIRV::OpTypeVector
+             ? static_cast<unsigned>(Type->getOperand(2).getImm())
+             : 1;
 }
 
 unsigned

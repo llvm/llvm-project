@@ -934,7 +934,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       unsigned Shift = 0;
       do {
         OS << ", " << (unsigned)*I;
-        Value += (*I & 0x7f) << Shift;
+        Value += ((uint64_t)(*I & 0x7f)) << Shift;
         Shift += 7;
       } while (*I++ >= 128);
       if (Value > 127) {
@@ -947,7 +947,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       Shift = 0;
       do {
         OS << ", " << (unsigned)*I;
-        Value += (*I & 0x7f) << Shift;
+        Value += ((uint64_t)(*I & 0x7f)) << Shift;
         Shift += 7;
       } while (*I++ >= 128);
       if (Value > 127) {

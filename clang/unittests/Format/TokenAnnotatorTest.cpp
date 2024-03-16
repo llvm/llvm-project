@@ -1776,9 +1776,22 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("MyType");
   Tokens = annotate("int iso_time(MyType);", Style);
+  ASSERT_TRUE(IsCpp);
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_TypeName);
+
+  Style.Language = FormatStyle::LK_CSharp;
+  Tokens = annotate("int iso_time(time_t);", Style);
+  ASSERT_FALSE(IsCpp);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+
+  Style.Language = FormatStyle::LK_ObjC;
+  Tokens = annotate("int iso_time(time_t);", Style);
+  ASSERT_TRUE(IsCpp);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsCtorAndDtorDeclNames) {
@@ -2632,6 +2645,11 @@ TEST_F(TokenAnnotatorTest, StartOfName) {
   EXPECT_TOKEN(Tokens[2], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("@interface NSCoder (TestCoder)");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::at, TT_ObjCDecl);
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_StartOfName);
 }
 
 TEST_F(TokenAnnotatorTest, BraceKind) {

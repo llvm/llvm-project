@@ -205,7 +205,7 @@ private:
   bool translate(const Constant &C, Register Reg);
 
   /// Examine any debug-info attached to the instruction (in the form of
-  /// DPValues) and translate it.
+  /// DbgRecords) and translate it.
   void translateDbgInfo(const Instruction &Inst,
                           MachineIRBuilder &MIRBuilder);
 
@@ -242,6 +242,14 @@ private:
   /// Translate an LLVM string intrinsic (memcpy, memset, ...).
   bool translateMemFunc(const CallInst &CI, MachineIRBuilder &MIRBuilder,
                         unsigned Opcode);
+
+  // Translate @llvm.experimental.vector.interleave2 and
+  // @llvm.experimental.vector.deinterleave2 intrinsics for fixed-width vector
+  // types into vector shuffles.
+  bool translateVectorInterleave2Intrinsic(const CallInst &CI,
+                                           MachineIRBuilder &MIRBuilder);
+  bool translateVectorDeinterleave2Intrinsic(const CallInst &CI,
+                                             MachineIRBuilder &MIRBuilder);
 
   void getStackGuard(Register DstReg, MachineIRBuilder &MIRBuilder);
 
