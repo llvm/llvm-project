@@ -479,8 +479,9 @@ class ExplodedGraph:
 # A visitor that dumps the ExplodedGraph into a DOT file with fancy HTML-based
 # syntax highlighing.
 class DotDumpVisitor:
-    def __init__(self, do_diffs, dark_mode, gray_mode, topo_mode, dump_dot_only,
-            dump_html_only):
+    def __init__(
+        self, do_diffs, dark_mode, gray_mode, topo_mode, dump_dot_only, dump_html_only
+    ):
         self._do_diffs = do_diffs
         self._dark_mode = dark_mode
         self._gray_mode = gray_mode
@@ -1219,8 +1220,12 @@ def main():
     explorer = BasicExplorer()
 
     visitor = DotDumpVisitor(
-        args.diff, args.dark, args.gray, args.topology, args.dump_dot_only,
-        args.dump_html_only
+        args.diff,
+        args.dark,
+        args.gray,
+        args.topology,
+        args.dump_dot_only,
+        args.dump_html_only,
     )
 
     for trimmer in trimmers:
