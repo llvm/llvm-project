@@ -2508,19 +2508,32 @@ private:
     if (nestedLoops > 1)
       n = builder->getIntegerAttr(builder->getI64Type(), nestedLoops);
 
-    const std::list<Fortran::parser::ScalarIntExpr> &grid = std::get<1>(dir.t);
-    const std::list<Fortran::parser::ScalarIntExpr> &block = std::get<2>(dir.t);
+    const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr> &grid =
+        std::get<1>(dir.t);
+    const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr> &block =
+        std::get<2>(dir.t);
     const std::optional<Fortran::parser::ScalarIntExpr> &stream =
         std::get<3>(dir.t);
 
     llvm::SmallVector<mlir::Value> gridValues;
-    for (const Fortran::parser::ScalarIntExpr &expr : grid)
-      gridValues.push_back(fir::getBase(
-          genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx)));
+    for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr : grid) {
+      if (expr.v) {
+        gridValues.push_back(fir::getBase(
+            genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
+      } else {
+        // TODO: '*'
+      }
+    }
     llvm::SmallVector<mlir::Value> blockValues;
-    for (const Fortran::parser::ScalarIntExpr &expr : block)
-      blockValues.push_back(fir::getBase(
-          genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx)));
+    for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr :
+         block) {
+      if (expr.v) {
+        blockValues.push_back(fir::getBase(
+            genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
+      } else {
+        // TODO: '*'
+      }
+    }
     mlir::Value streamValue;
     if (stream)
       streamValue = fir::getBase(

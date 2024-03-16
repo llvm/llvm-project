@@ -47,6 +47,12 @@ C++ Specific Potentially Breaking Changes
 
 ABI Changes in This Version
 ---------------------------
+- Fixed Microsoft name mangling of implicitly defined variables used for thread
+  safe static initialization of static local variables. This change resolves
+  incompatibilities with code compiled by MSVC but might introduce
+  incompatibilities with code compiled by earlier versions of Clang when an
+  inline member function that contains a static local variable with a dynamic
+  initializer is declared with ``__declspec(dllimport)``. (#GH83616).
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -203,21 +209,6 @@ Attribute Changes in Clang
   ``x``, ``y``, and ``z`` specify the maximum number of workgroups for the respective dimensions,
   and each must be a positive integer when provided. The parameter ``x`` is required, while ``y`` and
   ``z`` are optional with default value of 1.
-
-- The ``_Nullable`` and ``_Nonnull`` family of type attributes can now apply
-  to certain C++ class types, such as smart pointers:
-  ``void useObject(std::unique_ptr<Object> _Nonnull obj);``.
-
-  This works for standard library types including ``unique_ptr``, ``shared_ptr``,
-  and ``function``. See
-  `the attribute reference documentation <https://llvm.org/docs/AttributeReference.html#nullability-attributes>`_
-  for the full list.
-
-- The ``_Nullable`` attribute can be applied to C++ class declarations:
-  ``template <class T> class _Nullable MySmartPointer {};``.
-
-  This allows the ``_Nullable`` and ``_Nonnull`` family of type attributes to
-  apply to this class.
 
 Improvements to Clang's diagnostics
 -----------------------------------
