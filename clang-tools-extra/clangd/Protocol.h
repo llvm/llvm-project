@@ -1720,10 +1720,10 @@ struct InlayHintLabelPart {
   /// might resolve this property late using the resolve request.
   std::optional<Location> location;
 
-	/// An optional command for this label part.
+  /// An optional command for this label part.
   ///
-	/// Depending on the client capability `inlayHint.resolveSupport` clients
-	/// might resolve this property late using the resolve request.
+  /// Depending on the client capability `inlayHint.resolveSupport` clients
+  /// might resolve this property late using the resolve request.
   std::optional<Command> command;
 };
 llvm::json::Value toJSON(const InlayHintLabelPart &);
