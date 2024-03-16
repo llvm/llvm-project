@@ -14,12 +14,12 @@
 #include "Options.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/InstallAPI/Frontend.h"
 #include "clang/InstallAPI/FrontendRecords.h"
+#include "clang/InstallAPI/InstallAPIDiagnostic.h"
 #include "clang/InstallAPI/MachO.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -92,22 +92,8 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   IntrusiveRefCntPtr<clang::FileManager> FM(
       new FileManager(clang::FileSystemOptions(), OverlayFileSystem));
 
-  // Set up driver to parse input arguments.
-  auto DriverArgs = llvm::ArrayRef(Args).slice(1);
-  clang::driver::Driver Driver(ProgName, llvm::sys::getDefaultTargetTriple(),
-                               *Diag, "clang installapi tool");
-  auto TargetAndMode =
-      clang::driver::ToolChain::getTargetAndModeFromProgramName(ProgName);
-  Driver.setTargetAndMode(TargetAndMode);
-  bool HasError = false;
-  llvm::opt::InputArgList ArgList =
-      Driver.ParseArgStrings(DriverArgs, /*UseDriverMode=*/true, HasError);
-  if (HasError)
-    return EXIT_FAILURE;
-  Driver.setCheckInputsExist(false);
-
-  // Capture InstallAPI specific options and diagnose any option errors.
-  Options Opts(*Diag, FM.get(), ArgList);
+  // Capture all options and diagnose any errors.
+  Options Opts(*Diag, FM.get(), Args, ProgName);
   if (Diag->hasErrorOccurred())
     return EXIT_FAILURE;
 
@@ -161,7 +147,8 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
 
   // Write output file and perform CI cleanup.
   if (auto Err = TextAPIWriter::writeToStream(*Out, IF, Ctx.FT)) {
-    Diag->Report(diag::err_cannot_open_file) << Ctx.OutputLoc;
+    Diag->Report(diag::err_cannot_write_file)
+        << Ctx.OutputLoc << std::move(Err);
     CI->clearOutputFiles(/*EraseFiles=*/true);
     return EXIT_FAILURE;
   }
