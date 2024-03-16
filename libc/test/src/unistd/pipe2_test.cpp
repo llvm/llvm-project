@@ -48,18 +48,18 @@ TEST(LlvmLibcPipe2Test, ReadAndWriteViaPipe2) {
   ASSERT_ERRNO_SUCCESS();
 }
 
-TEST(LlvmLibcPipe2Test, Pipe2BadFlags) {
-  int badflags = -1;
+TEST(LlvmLibcPipe2Test, Pipe2InvalidFlags) {
+  int invalidflags = -1;
   int pipefd[2];
 
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  ASSERT_THAT(LIBC_NAMESPACE::pipe2(pipefd, badflags), Fails(EBADF));
+  ASSERT_THAT(LIBC_NAMESPACE::pipe2(pipefd, invalidflags), Fails(EINVAL));
 }
 
-TEST(LlvmLibcPipe2Test, Pipe2BadFD) {
+TEST(LlvmLibcPipe2Test, Pipe2InvalidPipeFD) {
   int flags = 0;
-  int badpipefd[1];
+  int invalidpipefd[1];
 
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  ASSERT_THAT(LIBC_NAMESPACE::pipe2(badpipefd, flags), Fails(EBADF));
+  ASSERT_THAT(LIBC_NAMESPACE::pipe2(invalidpipefd, flags), Fails(EFAULT));
 }
