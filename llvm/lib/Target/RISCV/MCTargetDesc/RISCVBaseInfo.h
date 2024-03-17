@@ -466,6 +466,8 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits);
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits);
 
+void filterOffIncompatibleFeatureBits(MCSubtargetInfo *STI);
+
 } // namespace RISCVFeatures
 
 namespace RISCVRVC {
