@@ -16,8 +16,7 @@ define i32 @shl_amount_is_known_bogus(i32 %a, i32 %b) {
 
 define i32 @shl_amount_is_known_bogus_range_attr(i32 %a, i32 range(i32 32, 64) %b) {
 ; CHECK-LABEL: @shl_amount_is_known_bogus_range_attr(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[SHL]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %shl = shl i32 %a, %b
   ret i32 %shl
@@ -38,8 +37,7 @@ declare range(i32 0, 32) i32 @returns_in_range_helper()
 define i32 @shl_amount_is_known_bogus_range_return(i32 %a) {
 ; CHECK-LABEL: @shl_amount_is_known_bogus_range_return(
 ; CHECK-NEXT:    [[B:%.*]] = call i32 @returns_out_of_range_helper()
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[B]]
-; CHECK-NEXT:    ret i32 [[SHL]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %b = call i32 @returns_out_of_range_helper()
   %shl = shl i32 %a, %b
@@ -62,8 +60,7 @@ declare i32 @returns_i32_helper()
 define i32 @shl_amount_is_known_bogus_range_call(i32 %a) {
 ; CHECK-LABEL: @shl_amount_is_known_bogus_range_call(
 ; CHECK-NEXT:    [[B:%.*]] = call range(i32 32, 64) i32 @returns_i32_helper()
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[B]]
-; CHECK-NEXT:    ret i32 [[SHL]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %b = call range(i32 32, 64) i32 @returns_i32_helper()
   %shl = shl i32 %a, %b
@@ -83,8 +80,7 @@ define i32 @neg_shl_amount_is_known_bogus_range_call(i32 %a) {
 
 define <2 x i32> @shl_amount_is_known_bogus_range_attr_vec(<2 x i32> %a, <2 x i32> range(i32 32, 64) %b) {
 ; CHECK-LABEL: @shl_amount_is_known_bogus_range_attr_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[SHL]]
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   %shl = shl <2 x i32> %a, %b
   ret <2 x i32> %shl
@@ -105,8 +101,7 @@ declare range(i32 0, 32) <2 x i32> @returns_in_range_helper_vec()
 define <2 x i32> @shl_amount_is_known_bogus_range_return_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @shl_amount_is_known_bogus_range_return_vec(
 ; CHECK-NEXT:    [[B:%.*]] = call <2 x i32> @returns_out_of_range_helper_vec()
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], [[B]]
-; CHECK-NEXT:    ret <2 x i32> [[SHL]]
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   %b = call <2 x i32> @returns_out_of_range_helper_vec()
   %shl = shl <2 x i32> %a, %b
@@ -129,8 +124,7 @@ declare <2 x i32> @returns_i32_helper_vec()
 define <2 x i32> @shl_amount_is_known_bogus_range_call_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @shl_amount_is_known_bogus_range_call_vec(
 ; CHECK-NEXT:    [[B:%.*]] = call range(i32 32, 64) <2 x i32> @returns_i32_helper_vec()
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], [[B]]
-; CHECK-NEXT:    ret <2 x i32> [[SHL]]
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   %b = call range(i32 32, 64) <2 x i32> @returns_i32_helper_vec()
   %shl = shl <2 x i32> %a, %b
@@ -151,7 +145,8 @@ define <2 x i32> @neg_shl_amount_is_known_bogus_range_call_vec(<2 x i32> %a) {
 define i32 @shl_amount_is_not_known_bogus_range_call_and_range_metadata(i32 %a) {
 ; CHECK-LABEL: @shl_amount_is_not_known_bogus_range_call_and_range_metadata(
 ; CHECK-NEXT:    [[B:%.*]] = call range(i32 0, 32) i32 @returns_i32_helper(), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    ret i32 poison
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[B]]
+; CHECK-NEXT:    ret i32 [[SHL]]
 ;
   %b = call range(i32 0, 32) i32 @returns_i32_helper(), !range !{ i32 32, i32 64 }
   %shl = shl i32 %a, %b
