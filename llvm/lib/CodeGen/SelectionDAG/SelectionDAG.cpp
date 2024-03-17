@@ -4007,13 +4007,21 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
     // For SMAX, if CstLow is non-negative we know the result will be
     // non-negative and thus all sign bits are 0.
-    // TODO: There's an equivalent of this for smin with negative constant for
-    // known ones.
     if (IsMax && CstLow) {
       const APInt &ValueLow = CstLow->getAPIntValue();
       if (ValueLow.isNonNegative()) {
         unsigned SignBits = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
         Known.Zero.setHighBits(std::min(SignBits, ValueLow.getNumSignBits()));
+      }
+    }
+
+    // For SMIN, if CstHigh is negative we know the result will be
+    // negative and thus all sign bits are 1.
+    if (!IsMax && CstHigh) {
+      const APInt &ValueHigh = CstHigh->getAPIntValue();
+      if (ValueHigh.isNegative()) {
+        unsigned SignBits = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+        Known.One.setHighBits(std::min(SignBits, ValueHigh.getNumSignBits()));
       }
     }
 
