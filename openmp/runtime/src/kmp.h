@@ -825,7 +825,7 @@ class kmp_affinity_raii_t {
 
 public:
   kmp_affinity_raii_t(const kmp_affin_mask_t *new_mask = nullptr)
-      : restored(false) {
+      : mask(nullptr), restored(false) {
     if (KMP_AFFINITY_CAPABLE()) {
       KMP_CPU_ALLOC(mask);
       KMP_ASSERT(mask != NULL);
@@ -835,7 +835,7 @@ public:
     }
   }
   void restore() {
-    if (!restored && KMP_AFFINITY_CAPABLE()) {
+    if (mask && KMP_AFFINITY_CAPABLE() && !restored) {
       __kmp_set_system_affinity(mask, /*abort_on_error=*/true);
       KMP_CPU_FREE(mask);
     }
@@ -1392,8 +1392,6 @@ typedef struct kmp_cpuinfo {
   int stepping; // CPUID(1).EAX[3:0] ( Stepping )
   kmp_cpuinfo_flags_t flags;
   int apic_id;
-  int physical_id;
-  int logical_id;
   kmp_uint64 frequency; // Nominal CPU frequency in Hz.
   char name[3 * sizeof(kmp_cpuid_t)]; // CPUID(0x80000002,0x80000003,0x80000004)
 } kmp_cpuinfo_t;
@@ -3912,7 +3910,7 @@ extern void __kmp_balanced_affinity(kmp_info_t *th, int team_size);
 #if KMP_WEIGHTED_ITERATIONS_SUPPORTED
 extern int __kmp_get_first_osid_with_ecore(void);
 #endif
-#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
 extern int kmp_set_thread_affinity_mask_initial(void);
 #endif
 static inline void __kmp_assign_root_init_mask() {
