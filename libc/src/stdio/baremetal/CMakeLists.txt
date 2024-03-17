@@ -4,4 +4,6 @@ add_entrypoint_object(
     remove.cpp
   HDRS
     ../remove.h
+  DEPENDS
+    libc.include.stdio
 )
