@@ -2848,7 +2848,7 @@ bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
     return false;
   } else if (!BaseElementType->isObjectType()) {
     return false;
-  } else if (CXXRecordDecl *RD = BaseElementType->getAsCXXRecordDecl()) {
+  } else if (const auto *RD = BaseElementType->getAsCXXRecordDecl()) {
     return RD->isTriviallyRelocatable();
   } else if (BaseElementType.isTriviallyCopyableType(Context)) {
     return true;
