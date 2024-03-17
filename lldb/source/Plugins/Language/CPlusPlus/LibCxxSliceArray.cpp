@@ -47,7 +47,7 @@ bool LibcxxStdSliceArraySummaryProvider(ValueObject &valobj, Stream &stream,
 /// and std::slice is created by:
 ///   slice(std::size_t start, std::size_t size, std::size_t stride);
 /// The std::slice_array has the following members:
-/// - __vp_ pointes to std::valarray::__begin_ + @a start
+/// - __vp_ points to std::valarray::__begin_ + @a start
 /// - __size_ is @a size
 /// - __stride_is @a stride
 class LibcxxStdSliceArraySyntheticFrontEnd : public SyntheticChildrenFrontEnd {
