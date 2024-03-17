@@ -97,7 +97,7 @@ TODO
 
 ABI Affecting Changes
 ---------------------
- - LWG3430: Disallow implicit conversion of the source arguments to ``std::filesystem::path`` when constructing ``std::basic_*fstream``
+ - LWG3430: Disallow implicit conversion of the source arguments to ``std::filesystem::path`` when constructing ``std::basic_*fstream``.
 
 
 Build System Changes
