@@ -392,6 +392,8 @@ Bug Fixes to C++ Support
   Fixes (#GH84368).
 - Fixed a crash while checking constraints of a trailing requires-expression of a lambda, that the
   expression references to an entity declared outside of the lambda. (#GH64808)
+- Clang's __builtin_bit_cast will now produce a constant value for records with empty bases. See:
+  (#GH82383)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
