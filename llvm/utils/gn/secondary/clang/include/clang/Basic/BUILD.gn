@@ -25,6 +25,7 @@ diag_groups = [
   "CrossTU",
   "Driver",
   "Frontend",
+  "InstallAPI",
   "Lex",
   "Parse",
   "Refactoring",
