@@ -1544,6 +1544,11 @@ TemplateArgumentKind.TYPE = TemplateArgumentKind(1)
 TemplateArgumentKind.DECLARATION = TemplateArgumentKind(2)
 TemplateArgumentKind.NULLPTR = TemplateArgumentKind(3)
 TemplateArgumentKind.INTEGRAL = TemplateArgumentKind(4)
+TemplateArgumentKind.TEMPLATE = TemplateArgumentKind(5)
+TemplateArgumentKind.TEMPLATE_EXPANSION = TemplateArgumentKind(6)
+TemplateArgumentKind.EXPRESSION = TemplateArgumentKind(7)
+TemplateArgumentKind.PACK = TemplateArgumentKind(8)
+TemplateArgumentKind.INVALID = TemplateArgumentKind(9)
 
 ### Exception Specification Kinds ###
 class ExceptionSpecificationKind(BaseEnumeration):
@@ -2389,9 +2394,26 @@ TypeKind.OCLEVENT = TypeKind(158)
 TypeKind.OCLQUEUE = TypeKind(159)
 TypeKind.OCLRESERVEID = TypeKind(160)
 
+TypeKind.OBJCOBJECT = TypeKind(161)
+TypeKind.OBJCCLASS = TypeKind(162)
+TypeKind.ATTRIBUTED = TypeKind(163)
+
+TypeKind.OCLINTELSUBGROUPAVCMCEPAYLOAD = TypeKind(164)
+TypeKind.OCLINTELSUBGROUPAVCIMEPAYLOAD = TypeKind(165)
+TypeKind.OCLINTELSUBGROUPAVCREFPAYLOAD = TypeKind(166)
+TypeKind.OCLINTELSUBGROUPAVCSICPAYLOAD = TypeKind(167)
+TypeKind.OCLINTELSUBGROUPAVCMCERESULT = TypeKind(168)
+TypeKind.OCLINTELSUBGROUPAVCIMERESULT = TypeKind(169)
+TypeKind.OCLINTELSUBGROUPAVCREFRESULT = TypeKind(170)
+TypeKind.OCLINTELSUBGROUPAVCSICRESULT = TypeKind(171)
+TypeKind.OCLINTELSUBGROUPAVCIMERESULTSINGLEREFERENCESTREAMOUT = TypeKind(172)
+TypeKind.OCLINTELSUBGROUPAVCIMERESULTSDUALREFERENCESTREAMOUT = TypeKind(173)
+TypeKind.OCLINTELSUBGROUPAVCIMERESULTSSINGLEREFERENCESTREAMIN = TypeKind(174)
+TypeKind.OCLINTELSUBGROUPAVCIMEDUALREFERENCESTREAMIN = TypeKind(175)
+
 TypeKind.EXTVECTOR = TypeKind(176)
 TypeKind.ATOMIC = TypeKind(177)
-
+TypeKind.BTFTAGATTRIBUTED = TypeKind(178)
 
 class RefQualifierKind(BaseEnumeration):
     """Describes a specific ref-qualifier of a type."""
