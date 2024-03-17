@@ -1317,7 +1317,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     if (DstTy.isVector())
       return UnableToLegalize;
 
-    if (8 * LoadMI.getMemSize() != DstTy.getSizeInBits()) {
+    if (8 * LoadMI.getMemSize().getValue() != DstTy.getSizeInBits()) {
       Register TmpReg = MRI.createGenericVirtualRegister(NarrowTy);
       MIRBuilder.buildLoad(TmpReg, LoadMI.getPointerReg(), LoadMI.getMMO());
       MIRBuilder.buildAnyExt(DstReg, TmpReg);
@@ -1335,7 +1335,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
     Register TmpReg = MRI.createGenericVirtualRegister(NarrowTy);
     auto &MMO = LoadMI.getMMO();
-    unsigned MemSize = MMO.getSizeInBits();
+    unsigned MemSize = MMO.getSizeInBits().getValue();
 
     if (MemSize == NarrowSize) {
       MIRBuilder.buildLoad(TmpReg, PtrReg, MMO);
@@ -1368,7 +1368,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     if (SrcTy.isVector() && LeftoverBits != 0)
       return UnableToLegalize;
 
-    if (8 * StoreMI.getMemSize() != SrcTy.getSizeInBits()) {
+    if (8 * StoreMI.getMemSize().getValue() != SrcTy.getSizeInBits()) {
       Register TmpReg = MRI.createGenericVirtualRegister(NarrowTy);
       MIRBuilder.buildTrunc(TmpReg, SrcReg);
       MIRBuilder.buildStore(TmpReg, StoreMI.getPointerReg(), StoreMI.getMMO());
@@ -4456,7 +4456,7 @@ LegalizerHelper::reduceLoadStoreWidth(GLoadStore &LdStMI, unsigned TypeIdx,
   LLT ValTy = MRI.getType(ValReg);
 
   // FIXME: Do we need a distinct NarrowMemory legalize action?
-  if (ValTy.getSizeInBits() != 8 * LdStMI.getMemSize()) {
+  if (ValTy.getSizeInBits() != 8 * LdStMI.getMemSize().getValue()) {
     LLVM_DEBUG(dbgs() << "Can't narrow extload/truncstore\n");
     return UnableToLegalize;
   }
