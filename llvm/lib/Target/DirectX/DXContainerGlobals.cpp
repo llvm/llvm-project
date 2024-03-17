@@ -62,9 +62,9 @@ bool DXContainerGlobals::runOnModule(Module &M) {
 
 GlobalVariable *DXContainerGlobals::getFeatureFlags(Module &M) {
   const uint64_t FeatureFlags =
-      (uint64_t)(getAnalysis<ShaderFlagsAnalysisWrapper>()
-                     .getShaderFlags()
-                     .getFeatureFlags());
+      static_cast<uint64_t>(getAnalysis<ShaderFlagsAnalysisWrapper>()
+                                .getShaderFlags()
+                                .getFeatureFlags());
 
   Constant *FeatureFlagsConstant =
       ConstantInt::get(M.getContext(), APInt(64, FeatureFlags));
