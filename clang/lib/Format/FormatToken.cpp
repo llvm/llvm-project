@@ -20,6 +20,8 @@ namespace format {
 
 bool IsCpp = false;
 
+LangOptions LangOpts;
+
 const char *getTokenTypeName(TokenType Type) {
   static const char *const TokNames[] = {
 #define TYPE(X) #X,
@@ -33,43 +35,6 @@ const char *getTokenTypeName(TokenType Type) {
   return nullptr;
 }
 
-// FIXME: This is copy&pasted from Sema. Put it in a common place and remove
-// duplication.
-bool FormatToken::isSimpleTypeSpecifier() const {
-  switch (Tok.getKind()) {
-  case tok::kw_short:
-  case tok::kw_long:
-  case tok::kw___int64:
-  case tok::kw___int128:
-  case tok::kw_signed:
-  case tok::kw_unsigned:
-  case tok::kw_void:
-  case tok::kw_char:
-  case tok::kw_int:
-  case tok::kw_half:
-  case tok::kw_float:
-  case tok::kw_double:
-  case tok::kw___bf16:
-  case tok::kw__Float16:
-  case tok::kw___float128:
-  case tok::kw___ibm128:
-  case tok::kw_wchar_t:
-  case tok::kw_bool:
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
-  case tok::annot_typename:
-  case tok::kw_char8_t:
-  case tok::kw_char16_t:
-  case tok::kw_char32_t:
-  case tok::kw_typeof:
-  case tok::kw_decltype:
-  case tok::kw__Atomic:
-    return true;
-  default:
-    return false;
-  }
-}
-
 // Sorted common C++ non-keyword types.
 static SmallVector<StringRef> CppNonKeywordTypes = {
     "clock_t",  "int16_t",   "int32_t", "int64_t",   "int8_t",
@@ -78,7 +43,7 @@ static SmallVector<StringRef> CppNonKeywordTypes = {
 };
 
 bool FormatToken::isTypeName() const {
-  return is(TT_TypeName) || isSimpleTypeSpecifier() ||
+  return is(TT_TypeName) || Tok.isSimpleTypeSpecifier(LangOpts) ||
          (IsCpp && is(tok::identifier) &&
           std::binary_search(CppNonKeywordTypes.begin(),
                              CppNonKeywordTypes.end(), TokenText));

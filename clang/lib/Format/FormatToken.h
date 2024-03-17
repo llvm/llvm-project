@@ -27,6 +27,8 @@ namespace format {
 /// Whether the language is C/C++/Objective-C/Objective-C++.
 extern bool IsCpp;
 
+extern LangOptions LangOpts;
+
 #define LIST_TOKEN_TYPES                                                       \
   TYPE(ArrayInitializerLSquare)                                                \
   TYPE(ArraySubscriptLSquare)                                                  \
@@ -673,9 +675,6 @@ public:
                    tok::kw___funcref) ||
            isAttribute();
   }
-
-  /// Determine whether the token is a simple-type-specifier.
-  [[nodiscard]] bool isSimpleTypeSpecifier() const;
 
   [[nodiscard]] bool isTypeName() const;
 
