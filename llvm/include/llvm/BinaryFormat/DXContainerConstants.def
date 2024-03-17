@@ -9,7 +9,7 @@ CONTAINER_PART(OSG1)
 CONTAINER_PART(PSG1)
 
 #undef CONTAINER_PART
-#endif
+#endif // CONTAINER_PART
 
 #ifdef SHADER_FEATURE_FLAG
 
@@ -50,7 +50,7 @@ SHADER_FEATURE_FLAG(30, 35, WriteableMSAATextures, "Writeable MSAA Textures")
 SHADER_FEATURE_FLAG(31, 36, NextUnusedBit, "Next reserved shader flag bit (not a flag)")
 
 #undef SHADER_FEATURE_FLAG
-#endif
+#endif // SHADER_FEATURE_FLAG
 
 #ifdef DXIL_MODULE_FLAG
 
@@ -65,7 +65,7 @@ DXIL_MODULE_FLAG(23,  UseNativeLowPrecision, "Native 16bit types enabled")
 DXIL_MODULE_FLAG(33,  ResMayNotAlias, "Any UAV may not alias any other UAV")
 
 #undef DXIL_MODULE_FLAG
-#endif
+#endif // DXIL_MODULE_FLAG
 
 #ifdef SEMANTIC_KIND
 
@@ -103,7 +103,7 @@ SEMANTIC_KIND(30, CullPrimitive)
 SEMANTIC_KIND(30, Invalid)
 
 #undef SEMANTIC_KIND
-#endif
+#endif // SEMANTIC_KIND
 
 #ifdef COMPONENT_TYPE
 
@@ -119,7 +119,7 @@ COMPONENT_TYPE(8, SInt64)
 COMPONENT_TYPE(9, Float64)
 
 #undef COMPONENT_TYPE
-#endif
+#endif // COMPONENT_TYPE
 
 #ifdef COMPONENT_PRECISION
 
@@ -133,7 +133,7 @@ COMPONENT_PRECISION(0xf0, Any16)
 COMPONENT_PRECISION(0xf1, Any10)
 
 #undef COMPONENT_PRECISION
-#endif
+#endif // COMPONENT_PRECISION
 
 #ifdef INTERPOLATION_MODE
 
@@ -148,7 +148,7 @@ INTERPOLATION_MODE(7, LinearNoperspectiveSample)
 INTERPOLATION_MODE(8, Invalid)
 
 #undef INTERPOLATION_MODE
-#endif
+#endif // INTERPOLATION_MODE
 
 #ifdef D3D_SYSTEM_VALUE
 
@@ -182,4 +182,4 @@ D3D_SYSTEM_VALUE(70, InnerCoverage)
 
 #undef D3D_SYSTEM_VALUE
 
-#endif
+#endif // D3D_SYSTEM_VALUE
