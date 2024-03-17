@@ -47,7 +47,7 @@ if (NOT CMAKE_CROSSCOMPILING)
       endif()
     endif()
 
-    # The module contains PPC vector types that needs th1e PPC target.
+    # The module contains PPC vector types that needs the PPC target.
     set(opts "")
       if(${filename} STREQUAL "__ppc_intrinsics" OR
          ${filename} STREQUAL "mma")
