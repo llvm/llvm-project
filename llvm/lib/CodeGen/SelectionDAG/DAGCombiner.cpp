@@ -5060,6 +5060,20 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
     return DAG.getNode(Opcode, DL, N->getVTList(), N1, N0);
 
+  // fold (avgfloors x, y) -> (avgfloorsu x, y) iff both args are known positive
+  // and their results do not overflow
+  if (Opcode == ISD::AVGFLOORS && hasOperation(ISD::AVGFLOORU, VT) &&
+      DAG.SignBitIsZero(N0) && DAG.SignBitIsZero(N1) &&
+      DAG.willNotOverflowAdd(true, N0, N1))
+    return DAG.getNode(ISD::AVGFLOORU, DL, VT, N0, N1);
+
+  // fold (avgfloors x, y) -> (avgfloorsu x, y) iff both args are known positive
+  // and their results do not overflow
+  if (Opcode == ISD::AVGCEILS && hasOperation(ISD::AVGCEILU, VT) &&
+      DAG.SignBitIsZero(N0) && DAG.SignBitIsZero(N1) &&
+      DAG.willNotOverflowAdd(true, N0, N1))
+    return DAG.getNode(ISD::AVGFLOORU, DL, VT, N0, N1);
+
   if (VT.isVector()) {
     if (SDValue FoldedVOp = SimplifyVBinOp(N, DL))
       return FoldedVOp;
