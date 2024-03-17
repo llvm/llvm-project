@@ -2069,6 +2069,7 @@ cc_library(
         ":frontend",
         ":support",
         "//llvm:Core",
+        "//llvm:Demangle",
         "//llvm:Support",
         "//llvm:TextAPI",
     ],
