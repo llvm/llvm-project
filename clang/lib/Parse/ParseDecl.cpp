@@ -3437,6 +3437,7 @@ void Parser::ParseDeclarationSpecifiers(
   while (true) {
     bool isInvalid = false;
     bool isStorageClass = false;
+    bool isFunctionSpecifier = false;
     const char *PrevSpec = nullptr;
     unsigned DiagID = 0;
 
@@ -4195,6 +4196,7 @@ void Parser::ParseDeclarationSpecifiers(
     // function-specifier
     case tok::kw_inline:
       isInvalid = DS.setFunctionSpecInline(Loc, PrevSpec, DiagID);
+      isFunctionSpecifier = true;
       break;
     case tok::kw_virtual:
       // C++ for OpenCL does not allow virtual function qualifier, to avoid
@@ -4207,6 +4209,7 @@ void Parser::ParseDeclarationSpecifiers(
         isInvalid = true;
       } else {
         isInvalid = DS.setFunctionSpecVirtual(Loc, PrevSpec, DiagID);
+        isFunctionSpecifier = true;
       }
       break;
     case tok::kw_explicit: {
@@ -4243,11 +4246,13 @@ void Parser::ParseDeclarationSpecifiers(
       }
       isInvalid = DS.setFunctionSpecExplicit(ExplicitLoc, PrevSpec, DiagID,
                                              ExplicitSpec, CloseParenLoc);
+      isFunctionSpecifier = true;
       break;
     }
     case tok::kw__Noreturn:
       diagnoseUseOfC11Keyword(Tok);
       isInvalid = DS.setFunctionSpecNoreturn(Loc, PrevSpec, DiagID);
+      isFunctionSpecifier = true;
       break;
 
     // friend
@@ -4649,6 +4654,12 @@ void Parser::ParseDeclarationSpecifiers(
       // Need to support trailing type qualifiers (e.g. "id<p> const").
       // If a type specifier follows, it will be diagnosed elsewhere.
       continue;
+    }
+
+    unsigned Specs = DS.getParsedSpecifiers();
+    if (!getLangOpts().CPlusPlus && (isFunctionSpecifier || isStorageClass)) {
+      if (Specs & DeclSpec::PQ_TypeQualifier || DS.hasTypeSpecifier())
+        Diag(Tok, diag::warn_old_style_declaration) << Tok.getName();
     }
 
     DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : Tok.getLocation());
