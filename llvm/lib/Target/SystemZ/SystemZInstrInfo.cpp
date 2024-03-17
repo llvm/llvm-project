@@ -2020,11 +2020,12 @@ areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   }
   if (SameVal) {
     int OffsetA = MMOa->getOffset(), OffsetB = MMOb->getOffset();
-    int WidthA = MMOa->getSize(), WidthB = MMOb->getSize();
+    LocationSize WidthA = MMOa->getSize(), WidthB = MMOb->getSize();
     int LowOffset = OffsetA < OffsetB ? OffsetA : OffsetB;
     int HighOffset = OffsetA < OffsetB ? OffsetB : OffsetA;
-    int LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
-    if (LowOffset + LowWidth <= HighOffset)
+    LocationSize LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
+    if (LowWidth.hasValue() &&
+        LowOffset + (int)LowWidth.getValue() <= HighOffset)
       return true;
   }
 

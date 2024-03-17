@@ -770,12 +770,12 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
   LLT RegTy = MRI.getType(LoadReg);
   Register PtrReg = LoadMI->getPointerReg();
   unsigned RegSize = RegTy.getSizeInBits();
-  uint64_t LoadSizeBits = LoadMI->getMemSizeInBits();
+  LocationSize LoadSizeBits = LoadMI->getMemSizeInBits();
   unsigned MaskSizeBits = MaskVal.countr_one();
 
   // The mask may not be larger than the in-memory type, as it might cover sign
   // extended bits
-  if (MaskSizeBits > LoadSizeBits)
+  if (MaskSizeBits > LoadSizeBits.getValue())
     return false;
 
   // If the mask covers the whole destination register, there's nothing to
@@ -795,7 +795,8 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
   // still adjust the opcode to indicate the high bit behavior.
   if (LoadMI->isSimple())
     MemDesc.MemoryTy = LLT::scalar(MaskSizeBits);
-  else if (LoadSizeBits > MaskSizeBits || LoadSizeBits == RegSize)
+  else if (LoadSizeBits.getValue() > MaskSizeBits ||
+           LoadSizeBits.getValue() == RegSize)
     return false;
 
   // TODO: Could check if it's legal with the reduced or original memory size.
@@ -860,7 +861,8 @@ bool CombinerHelper::matchSextTruncSextLoad(MachineInstr &MI) {
   if (auto *LoadMI = getOpcodeDef<GSExtLoad>(LoadUser, MRI)) {
     // If truncating more than the original extended value, abort.
     auto LoadSizeBits = LoadMI->getMemSizeInBits();
-    if (TruncSrc && MRI.getType(TruncSrc).getSizeInBits() < LoadSizeBits)
+    if (TruncSrc &&
+        MRI.getType(TruncSrc).getSizeInBits() < LoadSizeBits.getValue())
       return false;
     if (LoadSizeBits == SizeInBits)
       return true;
@@ -891,7 +893,7 @@ bool CombinerHelper::matchSextInRegOfLoad(
   if (!LoadDef || !MRI.hasOneNonDBGUse(DstReg))
     return false;
 
-  uint64_t MemBits = LoadDef->getMemSizeInBits();
+  uint64_t MemBits = LoadDef->getMemSizeInBits().getValue();
 
   // If the sign extend extends from a narrower width than the load's width,
   // then we can narrow the load width when we combine to a G_SEXTLOAD.
