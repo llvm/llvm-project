@@ -2451,6 +2451,7 @@ struct CallableInfo {
   SpecialFuncType FuncType = SpecialFuncType::None;
   FunctionEffectSet Effects;
   CallType CType = CallType::Unknown;
+  QualType QT;
 
   CallableInfo(const Decl &CD, SpecialFuncType FT = SpecialFuncType::None)
       : CDecl(&CD), FuncType(FT) {
@@ -2468,13 +2469,16 @@ struct CallableInfo {
           CType = CallType::Virtual;
         }
       }
+      QT = FD->getType();
       Effects = FD->getFunctionEffects();
     } else if (auto *BD = dyn_cast<BlockDecl>(CDecl)) {
       CType = CallType::Block;
+      QT = BD->getSignatureAsWritten()->getType();
       Effects = BD->getFunctionEffects();
     } else if (auto *VD = dyn_cast<ValueDecl>(CDecl)) {
       // ValueDecl is function, enum, or variable, so just look at the type.
-      Effects = FunctionEffectSet::get(*VD->getType());
+      QT = VD->getType();
+      Effects = FunctionEffectSet::get(*QT);
     }
   }
 
@@ -2596,8 +2600,9 @@ private:
   std::unique_ptr<SmallVector<DirectCall>> UnverifiedDirectCalls;
 
 public:
-  PendingFunctionAnalysis(ASTContext &Ctx, const CallableInfo &CInfo,
+  PendingFunctionAnalysis(Sema &Sem, const CallableInfo &CInfo,
                           FunctionEffectSet AllInferrableEffectsToVerify) {
+    ASTContext &Ctx = Sem.getASTContext();
     MutableFunctionEffectSet FX;
     for (const auto &Effect : CInfo.Effects) {
       if (Effect.flags() & FunctionEffect::FE_RequiresVerification) {
@@ -2614,9 +2619,11 @@ public:
     } else if (const auto *BD = dyn_cast<BlockDecl>(CInfo.CDecl)) {
       TSI = BD->getSignatureAsWritten();
     }
+    // N.B. TSI can be null for things like an implicit constructor (despite
+    // having a valid QualifiedType).
 
     for (const auto &effect : AllInferrableEffectsToVerify) {
-      if (TSI && effect.canInferOnFunction(*TSI)) {
+      if (effect.canInferOnFunction(CInfo.QT, TSI)) {
         FX.insert(effect);
       } else {
         // Add a diagnostic for this effect if a caller were to
@@ -2745,7 +2752,7 @@ public:
 
 // ==========
 class Analyzer {
-  constexpr static int kDebugLogLevel = 3;
+  constexpr static int DebugLogLevel = 0;
 
   // --
   Sema &Sem;
@@ -2820,9 +2827,11 @@ public:
       }
       AllInferrableEffectsToVerify =
           FunctionEffectSet::create(Sem.getASTContext(), inferrableEffects);
-      llvm::outs() << "AllInferrableEffectsToVerify: ";
-      AllInferrableEffectsToVerify.dump(llvm::outs());
-      llvm::outs() << "\n";
+      if constexpr (DebugLogLevel > 0) {
+        llvm::outs() << "AllInferrableEffectsToVerify: ";
+        AllInferrableEffectsToVerify.dump(llvm::outs());
+        llvm::outs() << "\n";
+      }
     }
 
     SmallVector<const Decl *> &verifyQueue = Sem.DeclsWithUnverifiedEffects;
@@ -2893,11 +2902,13 @@ private:
     // Build a PendingFunctionAnalysis on the stack. If it turns out to be
     // complete, we'll have avoided a heap allocation; if it's incomplete, it's
     // a fairly trivial move to a heap-allocated object.
-    PendingFunctionAnalysis FAnalysis(Sem.getASTContext(), CInfo,
+    PendingFunctionAnalysis FAnalysis(Sem, CInfo,
                                       AllInferrableEffectsToVerify);
 
-    llvm::outs() << "\nVerifying " << CInfo.name(Sem) << " ";
-    FAnalysis.dump(llvm::outs());
+    if constexpr (DebugLogLevel > 0) {
+      llvm::outs() << "\nVerifying " << CInfo.name(Sem) << " ";
+      FAnalysis.dump(llvm::outs());
+    }
 
     FunctionBodyASTVisitor Visitor(*this, FAnalysis, CInfo);
 
@@ -2909,8 +2920,10 @@ private:
     // Copy the pending analysis to the heap and save it in the map.
     auto *PendingPtr = new PendingFunctionAnalysis(std::move(FAnalysis));
     DeclAnalysis[D] = PendingPtr;
-    llvm::outs() << "inserted pending " << PendingPtr << "\n";
-    DeclAnalysis.dump(Sem, llvm::outs());
+    if constexpr (DebugLogLevel > 0) {
+      llvm::outs() << "inserted pending " << PendingPtr << "\n";
+      DeclAnalysis.dump(Sem, llvm::outs());
+    }
     return PendingPtr;
   }
 
@@ -2925,8 +2938,10 @@ private:
         Sem.getASTContext(), Pending, CInfo.Effects,
         AllInferrableEffectsToVerify);
     DeclAnalysis[CInfo.CDecl] = CompletePtr;
-    llvm::outs() << "inserted complete " << CompletePtr << "\n";
-    DeclAnalysis.dump(Sem, llvm::outs());
+    if constexpr (DebugLogLevel > 0) {
+      llvm::outs() << "inserted complete " << CompletePtr << "\n";
+      DeclAnalysis.dump(Sem, llvm::outs());
+    }
   }
 
   // Called after all direct calls requiring inference have been found -- or
@@ -2941,7 +2956,6 @@ private:
     }
     completeAnalysis(Caller, *Pending);
     delete Pending;
-    llvm::outs() << "destroyed pending " << Pending << "\n";
   }
 
   // Here we have a call to a Decl, either explicitly via a CallExpr or some
@@ -2965,12 +2979,13 @@ private:
     if (!Callee.isVerifiable()) {
       IsInferencePossible = false;
     }
-    llvm::outs() << "followCall from " << Caller.name(Sem) << " to "
-                 << Callee.name(Sem)
-                 << "; verifiable: " << Callee.isVerifiable() << "; callee ";
-    CalleeEffects.dump(llvm::outs());
-    llvm::outs() << "\n";
-    puts("");
+    if constexpr (DebugLogLevel > 0) {
+      llvm::outs() << "followCall from " << Caller.name(Sem) << " to "
+                  << Callee.name(Sem)
+                  << "; verifiable: " << Callee.isVerifiable() << "; callee ";
+      CalleeEffects.dump(llvm::outs());
+      llvm::outs() << "\n";
+    }
 
     auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
       const auto Flags = Effect.flags();
@@ -3359,7 +3374,7 @@ private:
     }
 
     bool VisitCallExpr(CallExpr *Call) {
-      if constexpr (kDebugLogLevel > 2) {
+      if constexpr (DebugLogLevel > 2) {
         llvm::errs() << "VisitCallExpr : "
                      << Call->getBeginLoc().printToString(Outer.Sem.SourceMgr)
                      << "\n";
@@ -3393,7 +3408,7 @@ private:
     }
 
     bool VisitVarDecl(VarDecl *Var) {
-      if constexpr (kDebugLogLevel > 2) {
+      if constexpr (DebugLogLevel > 2) {
         llvm::errs() << "VisitVarDecl : "
                      << Var->getBeginLoc().printToString(Outer.Sem.SourceMgr)
                      << "\n";
@@ -3452,7 +3467,7 @@ private:
     }
 
     bool VisitCXXConstructExpr(CXXConstructExpr *Construct) {
-      if constexpr (kDebugLogLevel > 2) {
+      if constexpr (DebugLogLevel > 2) {
         llvm::errs() << "VisitCXXConstructExpr : "
                      << Construct->getBeginLoc().printToString(
                             Outer.Sem.SourceMgr)
@@ -3591,8 +3606,8 @@ private:
 
     CallableFinderCallback::get(Sem, TU);
 
-    /*if (decls.size() != Sem.DeclsWithUnverifiedEffects.size())*/ {
-      llvm::errs() << "\nFXAnalysis: Sem gathered " << decls.size()
+    if constexpr (DebugLogLevel > 0) {
+      llvm::errs() << "\nFXAnalysis: Sema gathered " << decls.size()
                    << " Decls; second AST pass found "
                    << Sem.DeclsWithUnverifiedEffects.size() << "\n";
     }

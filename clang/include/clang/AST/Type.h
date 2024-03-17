@@ -4282,10 +4282,12 @@ public:
 
   /// Return true if the effect is allowed to be inferred on a Decl of the
   /// specified type (generally a FunctionProtoType but TypeSourceInfo is
-  /// provided so any AttributedType sugar can be examined). Only used if the
-  /// effect has FE_InferrableOnCallees flag set. Example: This allows
-  /// nolock(false) to prevent inference for the function.
-  bool canInferOnFunction(const TypeSourceInfo &FType) const;
+  /// provided so any AttributedType sugar can be examined). TSI can be null
+  /// on an implicit function like a default constructor.
+  ///
+  /// This is only used if the effect has FE_InferrableOnCallees flag set. 
+  /// Example: This allows nolock(false) to prevent inference for the function.
+  bool canInferOnFunction(QualType QT, const TypeSourceInfo *FType) const;
 
   // Called if FE_VerifyCalls flag is set; return false for success. When true
   // is returned for a direct call, then the FE_InferrableOnCallees flag may

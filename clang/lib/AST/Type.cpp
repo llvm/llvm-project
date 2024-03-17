@@ -5011,12 +5011,11 @@ bool FunctionEffect::diagnoseMethodOverride(bool Adding,
   return false;
 }
 
-bool FunctionEffect::canInferOnFunction(const TypeSourceInfo &FType) const {
+bool FunctionEffect::canInferOnFunction(QualType QT, const TypeSourceInfo *FType) const {
   switch (type()) {
   case Type::NoAllocTrue:
   case Type::NoLockTrue: {
     // Does the sugar have nolock(false) / noalloc(false) ?
-    QualType QT = FType.getType();
     if (QT->hasAttr(type() == Type::NoLockTrue ? attr::Kind::NoLock
                                                : attr::Kind::NoAlloc)) {
       return false;
