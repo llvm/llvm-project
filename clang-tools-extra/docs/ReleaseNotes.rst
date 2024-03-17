@@ -117,6 +117,12 @@ New checks
   to reading out-of-bounds data due to inadequate or incorrect string null
   termination.
 
+- New :doc:`modernize-min-max-use-initializer-list
+  <clang-tidy/checks/modernize/min-max-use-initializer-list>` check.
+
+  Replaces chained ``std::min`` and ``std::max`` calls that can be written as
+  initializer lists.
+
 - New :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check.
 
