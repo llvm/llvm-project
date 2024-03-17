@@ -24,6 +24,9 @@
 namespace clang {
 namespace format {
 
+/// Whether the language is C/C++/Objective-C/Objective-C++.
+extern bool IsCpp;
+
 #define LIST_TOKEN_TYPES                                                       \
   TYPE(ArrayInitializerLSquare)                                                \
   TYPE(ArraySubscriptLSquare)                                                  \
