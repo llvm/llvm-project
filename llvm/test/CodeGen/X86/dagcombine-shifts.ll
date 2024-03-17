@@ -326,18 +326,15 @@ define i32 @shift_zext_shl(i8 zeroext %x) {
 ; X86-LABEL: shift_zext_shl:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andb $64, %al
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    andl $64, %eax
 ; X86-NEXT:    shll $9, %eax
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shift_zext_shl:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $64, %dil
-; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl $64, %eax
 ; X64-NEXT:    shll $9, %eax
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
   %a = and i8 %x, 64
   %b = zext i8 %a to i16
@@ -369,31 +366,27 @@ define i32 @shift_zext_shl2(i8 zeroext %x) {
 define <4 x i32> @shift_zext_shl_vec(<4 x i8> %x) nounwind {
 ; X86-LABEL: shift_zext_shl_vec:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    andb $64, %bl
-; X86-NEXT:    movzbl %bl, %edi
-; X86-NEXT:    shll $9, %edi
-; X86-NEXT:    movzwl %di, %edi
-; X86-NEXT:    andl $63, %ecx
-; X86-NEXT:    shll $8, %ecx
-; X86-NEXT:    andl $31, %edx
-; X86-NEXT:    shll $7, %edx
-; X86-NEXT:    andl $23, %esi
-; X86-NEXT:    shll $6, %esi
-; X86-NEXT:    movl %esi, 12(%eax)
-; X86-NEXT:    movl %edx, 8(%eax)
-; X86-NEXT:    movl %ecx, 4(%eax)
-; X86-NEXT:    movl %edi, (%eax)
+; X86-NEXT:    andl $64, %ecx
+; X86-NEXT:    shll $9, %ecx
+; X86-NEXT:    andl $63, %edx
+; X86-NEXT:    shll $8, %edx
+; X86-NEXT:    andl $31, %esi
+; X86-NEXT:    shll $7, %esi
+; X86-NEXT:    andl $23, %edi
+; X86-NEXT:    shll $6, %edi
+; X86-NEXT:    movl %edi, 12(%eax)
+; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: shift_zext_shl_vec:
