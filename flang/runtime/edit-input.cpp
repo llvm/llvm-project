@@ -614,11 +614,23 @@ decimal::ConversionToBinaryResult<binaryPrecision> ConvertHexadecimal(
     } else {
       break;
     }
-    while (fraction >> binaryPrecision) {
-      guardBit |= roundingBit;
-      roundingBit = (int)fraction & 1;
-      fraction >>= 1;
-      ++expo;
+    if (fraction >> binaryPrecision) {
+      while (fraction >> binaryPrecision) {
+        guardBit |= roundingBit;
+        roundingBit = (int)fraction & 1;
+        fraction >>= 1;
+        ++expo;
+      }
+      // Consume excess digits
+      while (*++p) {
+        if (*p == '0') {
+        } else if ((*p >= '1' && *p <= '9') || (*p >= 'A' && *p <= 'F')) {
+          guardBit = 1;
+        } else {
+          break;
+        }
+      }
+      break;
     }
   }
   if (fraction) {
@@ -633,31 +645,32 @@ decimal::ConversionToBinaryResult<binaryPrecision> ConvertHexadecimal(
     while (expo > 1 && !(fraction >> (binaryPrecision - 1))) {
       fraction <<= 1;
       --expo;
+      guardBit = roundingBit = 0;
     }
-    // Rounding
-    bool increase{false};
-    switch (rounding) {
-    case decimal::RoundNearest: // RN & RP
-      increase = roundingBit && (guardBit | ((int)fraction & 1));
-      break;
-    case decimal::RoundUp: // RU
-      increase = !isNegative && (roundingBit | guardBit);
-      break;
-    case decimal::RoundDown: // RD
-      increase = isNegative && (roundingBit | guardBit);
-      break;
-    case decimal::RoundToZero: // RZ
-      break;
-    case decimal::RoundCompatible: // RC
-      increase = roundingBit != 0;
-      break;
-    }
-    if (increase) {
-      ++fraction;
-      if (fraction >> binaryPrecision) {
-        fraction >>= 1;
-        ++expo;
-      }
+  }
+  // Rounding
+  bool increase{false};
+  switch (rounding) {
+  case decimal::RoundNearest: // RN & RP
+    increase = roundingBit && (guardBit | ((int)fraction & 1));
+    break;
+  case decimal::RoundUp: // RU
+    increase = !isNegative && (roundingBit | guardBit);
+    break;
+  case decimal::RoundDown: // RD
+    increase = isNegative && (roundingBit | guardBit);
+    break;
+  case decimal::RoundToZero: // RZ
+    break;
+  case decimal::RoundCompatible: // RC
+    increase = roundingBit != 0;
+    break;
+  }
+  if (increase) {
+    ++fraction;
+    if (fraction >> binaryPrecision) {
+      fraction >>= 1;
+      ++expo;
     }
   }
   // Package & return result
