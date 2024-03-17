@@ -2399,8 +2399,7 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   Tokens = AnnotateValue("(other type1:$src1, type2:$src2)");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpener);
-  EXPECT_TOKEN(Tokens[1], tok::identifier,
-               TT_Unknown); // other
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_Unknown); // other
   EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListComma);
   EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
 }

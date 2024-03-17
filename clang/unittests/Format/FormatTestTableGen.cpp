@@ -336,6 +336,7 @@ TEST_F(FormatTestTableGen, DAGArgBreakElements) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_TableGen);
   Style.ColumnLimit = 60;
   // By default, the DAGArg does not have a break inside.
+  ASSERT_EQ(Style.TableGenBreakInsideDAGArg, FormatStyle::DAS_DontBreak);
   verifyFormat("def Def : Parent {\n"
                "  let dagarg = (ins a:$src1, aa:$src2, aaa:$src3)\n"
                "}\n",

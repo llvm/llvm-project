@@ -1846,17 +1846,15 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
         Style.ContinuationIndentWidth +
         std::max(CurrentState.LastSpace, CurrentState.StartOfFunctionCall);
 
-    if (Style.isTableGen()) {
-      if (Current.is(TT_TableGenDAGArgOpenerToBreak) &&
-          Style.TableGenBreakInsideDAGArg == FormatStyle::DAS_BreakElements) {
-        // For the case the next token is a TableGen DAGArg operator identifier
-        // that is not marked to have a line break after it.
-        // In this case the option DAS_BreakElements requires to align the
-        // DAGArg elements to the operator.
-        const FormatToken *Next = Current.Next;
-        if (Next && Next->is(TT_TableGenDAGArgOperatorID))
-          NewIndent = State.Column + Next->TokenText.size() + 2;
-      }
+    if (Style.isTableGen() && Current.is(TT_TableGenDAGArgOpenerToBreak) &&
+        Style.TableGenBreakInsideDAGArg == FormatStyle::DAS_BreakElements) {
+      // For the case the next token is a TableGen DAGArg operator identifier
+      // that is not marked to have a line break after it.
+      // In this case the option DAS_BreakElements requires to align the
+      // DAGArg elements to the operator.
+      const FormatToken *Next = Current.Next;
+      if (Next && Next->is(TT_TableGenDAGArgOperatorID))
+        NewIndent = State.Column + Next->TokenText.size() + 2;
     }
 
     // Ensure that different different brackets force relative alignment, e.g.:
