@@ -13,7 +13,6 @@
 
 #include "AffectedRangeManager.h"
 
-#include "FormatToken.h"
 #include "TokenAnnotator.h"
 
 namespace clang {

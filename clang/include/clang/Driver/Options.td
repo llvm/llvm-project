@@ -4106,6 +4106,14 @@ defm strict_return : BoolFOption<"strict-return",
             " of a non-void function as unreachable">,
   PosFlag<SetTrue>>;
 
+let Group = f_Group in {
+  let Visibility = [ClangOption,CC1Option] in {
+    def fptrauth_intrinsics : Flag<["-"], "fptrauth-intrinsics">,
+      HelpText<"Enable pointer authentication intrinsics">;
+  }
+  def fno_ptrauth_intrinsics : Flag<["-"], "fno-ptrauth-intrinsics">;
+}
+
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
     HelpText<"Enable matrix data type and related builtin functions">,
@@ -5390,6 +5398,9 @@ def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
   Visibility<[ClangOption, CLOption]>;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">,
+  Visibility<[ClangOption, CLOption]>;
+def print_std_module_manifest_path : Flag<["-", "--"], "print-library-module-manifest-path">,
+  HelpText<"Print the path for the C++ Standard library module manifest">,
   Visibility<[ClangOption, CLOption]>;
 def print_targets : Flag<["-", "--"], "print-targets">,
   HelpText<"Print the registered targets">,
