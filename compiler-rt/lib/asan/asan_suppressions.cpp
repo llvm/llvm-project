@@ -30,10 +30,6 @@ static const char *kSuppressionTypes[] = {
     kInterceptorName, kInterceptorViaFunction, kInterceptorViaLibrary,
     kODRViolation};
 
-SANITIZER_INTERFACE_WEAK_DEF(const char *, __asan_default_suppressions, void) {
-  return "";
-}
-
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
   suppression_ctx = new (suppression_placeholder)
@@ -101,3 +97,7 @@ bool IsStackTraceSuppressed(const StackTrace *stack) {
 }
 
 } // namespace __asan
+
+SANITIZER_INTERFACE_WEAK_DEF(const char *, __asan_default_suppressions, void) {
+  return "";
+}
