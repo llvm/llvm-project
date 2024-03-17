@@ -2925,10 +2925,8 @@ define i8 @select_replacement_loop3(i32 noundef %x) {
 
 define i16 @select_replacement_loop4(i16 noundef %p_12) {
 ; CHECK-LABEL: @select_replacement_loop4(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i16 [[P_12:%.*]], 2
-; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[P_12]], 1
-; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[CMP1]], i16 [[AND1]], i16 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i16 [[AND2]], [[P_12]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[P_12:%.*]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i16 [[P_12]], 2
 ; CHECK-NEXT:    [[AND3:%.*]] = select i1 [[CMP2]], i16 [[AND1]], i16 0
 ; CHECK-NEXT:    ret i16 [[AND3]]
 ;
