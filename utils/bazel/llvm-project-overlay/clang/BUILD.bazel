@@ -62,6 +62,7 @@ gentbl(
         "CrossTU",
         "Driver",
         "Frontend",
+        "InstallAPI",
         "Lex",
         "Parse",
         "Refactoring",
