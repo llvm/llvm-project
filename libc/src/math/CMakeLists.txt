@@ -207,10 +207,12 @@ add_math_entrypoint_object(nexttowardl)
 
 add_math_entrypoint_object(nextdown)
 add_math_entrypoint_object(nextdownf)
+add_math_entrypoint_object(nextdownl)
 add_math_entrypoint_object(nextdownf128)
 
 add_math_entrypoint_object(nextup)
 add_math_entrypoint_object(nextupf)
+add_math_entrypoint_object(nextupl)
 add_math_entrypoint_object(nextupf128)
 
 add_math_entrypoint_object(pow)
