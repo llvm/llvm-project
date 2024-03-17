@@ -143,7 +143,7 @@ It also shows a convention that we follow in this document. When
 demonstrating instructions, we will follow an instruction with a comment
 that defines the type and name of value produced.
 
-.. _strings:
+.. _string_constants:
 
 String constants
 ----------------
@@ -27553,12 +27553,12 @@ in example below:
 .. code-block:: text
 
     %cond = call i1 @llvm.experimental.widenable.condition()
-    br i1 %cond, label %solution_1, label %solution_2
+    br i1 %cond, label %fast_path, label %slow_path
 
-  label %fast_path:
+  fast_path:
     ; Apply memory-consuming but fast solution for a task.
 
-  label %slow_path:
+  slow_path:
     ; Cheap in memory but slow solution.
 
 Whether the result of intrinsic's call is `true` or `false`,

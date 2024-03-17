@@ -46,7 +46,7 @@ class X86CompressEVEXTablesEmitter {
 
   typedef std::pair<const CodeGenInstruction *, const CodeGenInstruction *>
       Entry;
-  typedef std::map<const Record *, std::vector<const CodeGenInstruction *>>
+  typedef std::map<StringRef, std::vector<const CodeGenInstruction *>>
       PredicateInstMap;
 
   std::vector<Entry> Table;
@@ -90,7 +90,7 @@ void X86CompressEVEXTablesEmitter::printCheckPredicate(
   for (const auto &[Key, Val] : PredicateInsts) {
     for (const auto &Inst : Val)
       OS << "  case X86::" << Inst->TheDef->getName() << ":\n";
-    OS << "    return " << Key->getValueAsString("CondString") << ";\n";
+    OS << "    return " << Key << ";\n";
   }
 
   OS << "  }\n";
@@ -226,7 +226,7 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
              Name == "HasAVXIFMA";
     });
     if (It != Predicates.end())
-      PredicateInsts[*It].push_back(NewInst);
+      PredicateInsts[(*It)->getValueAsString("CondString")].push_back(NewInst);
   }
 
   printTable(Table, OS);

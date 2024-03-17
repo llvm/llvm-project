@@ -365,8 +365,7 @@ CieRecord *EhFrameSection::addCie(EhSectionPiece &cie, ArrayRef<RelTy> rels) {
   Symbol *personality = nullptr;
   unsigned firstRelI = cie.firstRelocation;
   if (firstRelI != (unsigned)-1)
-    personality =
-        &cie.sec->template getFile<ELFT>()->getRelocTargetSym(rels[firstRelI]);
+    personality = &cie.sec->file->getRelocTargetSym(rels[firstRelI]);
 
   // Search for an existing CIE by CIE contents/relocation target pair.
   CieRecord *&rec = cieMap[{cie.data(), personality}];
@@ -396,7 +395,7 @@ Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
     return nullptr;
 
   const RelTy &rel = rels[firstRelI];
-  Symbol &b = sec->template getFile<ELFT>()->getRelocTargetSym(rel);
+  Symbol &b = sec->file->getRelocTargetSym(rel);
 
   // FDEs for garbage-collected or merged-by-ICF sections, or sections in
   // another partition, are dead.

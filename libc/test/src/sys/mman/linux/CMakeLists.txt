@@ -107,3 +107,23 @@ add_libc_unittest(
     libc.src.unistd.sysconf
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_unittest(
+  msync_test
+  SUITE
+    libc_sys_mman_unittests
+  SRCS
+    msync_test.cpp
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.unistd
+    libc.src.errno.errno
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.msync
+    libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.munlock
+    libc.src.unistd.sysconf
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

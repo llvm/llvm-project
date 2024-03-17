@@ -2491,12 +2491,12 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI->removeOperand(3);
     break;
   }
-  case X86::PCLMULQDQrr:
-  case X86::VPCLMULQDQrr:
-  case X86::VPCLMULQDQYrr:
-  case X86::VPCLMULQDQZrr:
-  case X86::VPCLMULQDQZ128rr:
-  case X86::VPCLMULQDQZ256rr: {
+  case X86::PCLMULQDQrri:
+  case X86::VPCLMULQDQrri:
+  case X86::VPCLMULQDQYrri:
+  case X86::VPCLMULQDQZrri:
+  case X86::VPCLMULQDQZ128rri:
+  case X86::VPCLMULQDQZ256rri: {
     // SRC1 64bits = Imm[0] ? SRC1[127:64] : SRC1[63:0]
     // SRC2 64bits = Imm[4] ? SRC2[127:64] : SRC2[63:0]
     unsigned Imm = MI.getOperand(3).getImm();
@@ -10565,15 +10565,15 @@ bool X86InstrInfo::getMachineCombinerPatterns(
     bool DoRegPressureReduce) const {
   unsigned Opc = Root.getOpcode();
   switch (Opc) {
-  default:
-    return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
-                                                       DoRegPressureReduce);
   case X86::VPDPWSSDrr:
   case X86::VPDPWSSDrm:
   case X86::VPDPWSSDYrr:
   case X86::VPDPWSSDYrm: {
-    Patterns.push_back(MachineCombinerPattern::DPWSSD);
-    return true;
+    if (!Subtarget.hasFastDPWSSD()) {
+      Patterns.push_back(MachineCombinerPattern::DPWSSD);
+      return true;
+    }
+    break;
   }
   case X86::VPDPWSSDZ128r:
   case X86::VPDPWSSDZ128m:
@@ -10581,11 +10581,15 @@ bool X86InstrInfo::getMachineCombinerPatterns(
   case X86::VPDPWSSDZ256m:
   case X86::VPDPWSSDZr:
   case X86::VPDPWSSDZm: {
-    if (Subtarget.hasBWI())
+   if (Subtarget.hasBWI() && !Subtarget.hasFastDPWSSD()) {
       Patterns.push_back(MachineCombinerPattern::DPWSSD);
-    return true;
+      return true;
+    }
+    break;
   }
   }
+  return TargetInstrInfo::getMachineCombinerPatterns(Root,
+                                                     Patterns, DoRegPressureReduce);
 }
 
 static void

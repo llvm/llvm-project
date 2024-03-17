@@ -125,6 +125,8 @@ private:
 
   bool selectConstVector(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
+  bool selectSplatVector(Register ResVReg, const SPIRVType *ResType,
+                         MachineInstr &I) const;
 
   bool selectCmp(Register ResVReg, const SPIRVType *ResType,
                  unsigned comparisonOpcode, MachineInstr &I) const;
@@ -313,6 +315,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
 
   case TargetOpcode::G_BUILD_VECTOR:
     return selectConstVector(ResVReg, ResType, I);
+  case TargetOpcode::G_SPLAT_VECTOR:
+    return selectSplatVector(ResVReg, ResType, I);
 
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     MachineBasicBlock &BB = *I.getParent();
@@ -1182,6 +1186,43 @@ bool SPIRVInstructionSelector::selectConstVector(Register ResVReg,
                  .addUse(GR.getSPIRVTypeID(ResType));
   for (unsigned i = I.getNumExplicitDefs(); i < I.getNumExplicitOperands(); ++i)
     MIB.addUse(I.getOperand(i).getReg());
+  return MIB.constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
+                                                 const SPIRVType *ResType,
+                                                 MachineInstr &I) const {
+  if (ResType->getOpcode() != SPIRV::OpTypeVector)
+    report_fatal_error("Cannot select G_SPLAT_VECTOR with a non-vector result");
+  unsigned N = GR.getScalarOrVectorComponentCount(ResType);
+  unsigned OpIdx = I.getNumExplicitDefs();
+  if (!I.getOperand(OpIdx).isReg())
+    report_fatal_error("Unexpected argument in G_SPLAT_VECTOR");
+
+  // check if we may construct a constant vector
+  Register OpReg = I.getOperand(OpIdx).getReg();
+  bool IsConst = false;
+  if (SPIRVType *OpDef = MRI->getVRegDef(OpReg)) {
+    if (OpDef->getOpcode() == SPIRV::ASSIGN_TYPE &&
+        OpDef->getOperand(1).isReg()) {
+      if (SPIRVType *RefDef = MRI->getVRegDef(OpDef->getOperand(1).getReg()))
+        OpDef = RefDef;
+    }
+    IsConst = OpDef->getOpcode() == TargetOpcode::G_CONSTANT ||
+              OpDef->getOpcode() == TargetOpcode::G_FCONSTANT;
+  }
+
+  if (!IsConst && N < 2)
+    report_fatal_error(
+        "There must be at least two constituent operands in a vector");
+
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(IsConst ? SPIRV::OpConstantComposite
+                                     : SPIRV::OpCompositeConstruct))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType));
+  for (unsigned i = 0; i < N; ++i)
+    MIB.addUse(OpReg);
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
 

@@ -87,6 +87,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -4638,7 +4639,12 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     }
   }
 
-  if (offloadDeviceOnly())
+  // All kinds exit now in device-only mode except for non-RDC mode HIP.
+  if (offloadDeviceOnly() &&
+      (!C.isOffloadingHostKind(Action::OFK_HIP) ||
+       !Args.hasFlag(options::OPT_gpu_bundle_output,
+                     options::OPT_no_gpu_bundle_output, true) ||
+       Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false)))
     return C.MakeAction<OffloadAction>(DDeps, types::TY_Nothing);
 
   if (OffloadActions.empty())
@@ -4670,6 +4676,10 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     DDep.add(*PackagerAction, *C.getSingleOffloadToolChain<Action::OFK_Host>(),
              nullptr, C.getActiveOffloadKinds());
   }
+
+  // HIP wants '--offload-device-only' to create a fatbinary by default.
+  if (offloadDeviceOnly())
+    return C.MakeAction<OffloadAction>(DDep, types::TY_Nothing);
 
   // If we are unable to embed a single device output into the host, we need to
   // add each device output as a host dependency to ensure they are still built.
@@ -6667,4 +6677,132 @@ llvm::Error driver::expandResponseFiles(SmallVectorImpl<const char *> &Args,
   }
 
   return llvm::Error::success();
+}
+
+static const char *GetStableCStr(llvm::StringSet<> &SavedStrings, StringRef S) {
+  return SavedStrings.insert(S).first->getKeyData();
+}
+
+/// Apply a list of edits to the input argument lists.
+///
+/// The input string is a space separated list of edits to perform,
+/// they are applied in order to the input argument lists. Edits
+/// should be one of the following forms:
+///
+///  '#': Silence information about the changes to the command line arguments.
+///
+///  '^': Add FOO as a new argument at the beginning of the command line.
+///
+///  '+': Add FOO as a new argument at the end of the command line.
+///
+///  's/XXX/YYY/': Substitute the regular expression XXX with YYY in the command
+///  line.
+///
+///  'xOPTION': Removes all instances of the literal argument OPTION.
+///
+///  'XOPTION': Removes all instances of the literal argument OPTION,
+///  and the following argument.
+///
+///  'Ox': Removes all flags matching 'O' or 'O[sz0-9]' and adds 'Ox'
+///  at the end of the command line.
+///
+/// \param OS - The stream to write edit information to.
+/// \param Args - The vector of command line arguments.
+/// \param Edit - The override command to perform.
+/// \param SavedStrings - Set to use for storing string representations.
+static void applyOneOverrideOption(raw_ostream &OS,
+                                   SmallVectorImpl<const char *> &Args,
+                                   StringRef Edit,
+                                   llvm::StringSet<> &SavedStrings) {
+  // This does not need to be efficient.
+
+  if (Edit[0] == '^') {
+    const char *Str = GetStableCStr(SavedStrings, Edit.substr(1));
+    OS << "### Adding argument " << Str << " at beginning\n";
+    Args.insert(Args.begin() + 1, Str);
+  } else if (Edit[0] == '+') {
+    const char *Str = GetStableCStr(SavedStrings, Edit.substr(1));
+    OS << "### Adding argument " << Str << " at end\n";
+    Args.push_back(Str);
+  } else if (Edit[0] == 's' && Edit[1] == '/' && Edit.ends_with("/") &&
+             Edit.slice(2, Edit.size() - 1).contains('/')) {
+    StringRef MatchPattern = Edit.substr(2).split('/').first;
+    StringRef ReplPattern = Edit.substr(2).split('/').second;
+    ReplPattern = ReplPattern.slice(0, ReplPattern.size() - 1);
+
+    for (unsigned i = 1, e = Args.size(); i != e; ++i) {
+      // Ignore end-of-line response file markers
+      if (Args[i] == nullptr)
+        continue;
+      std::string Repl = llvm::Regex(MatchPattern).sub(ReplPattern, Args[i]);
+
+      if (Repl != Args[i]) {
+        OS << "### Replacing '" << Args[i] << "' with '" << Repl << "'\n";
+        Args[i] = GetStableCStr(SavedStrings, Repl);
+      }
+    }
+  } else if (Edit[0] == 'x' || Edit[0] == 'X') {
+    auto Option = Edit.substr(1);
+    for (unsigned i = 1; i < Args.size();) {
+      if (Option == Args[i]) {
+        OS << "### Deleting argument " << Args[i] << '\n';
+        Args.erase(Args.begin() + i);
+        if (Edit[0] == 'X') {
+          if (i < Args.size()) {
+            OS << "### Deleting argument " << Args[i] << '\n';
+            Args.erase(Args.begin() + i);
+          } else
+            OS << "### Invalid X edit, end of command line!\n";
+        }
+      } else
+        ++i;
+    }
+  } else if (Edit[0] == 'O') {
+    for (unsigned i = 1; i < Args.size();) {
+      const char *A = Args[i];
+      // Ignore end-of-line response file markers
+      if (A == nullptr)
+        continue;
+      if (A[0] == '-' && A[1] == 'O' &&
+          (A[2] == '\0' || (A[3] == '\0' && (A[2] == 's' || A[2] == 'z' ||
+                                             ('0' <= A[2] && A[2] <= '9'))))) {
+        OS << "### Deleting argument " << Args[i] << '\n';
+        Args.erase(Args.begin() + i);
+      } else
+        ++i;
+    }
+    OS << "### Adding argument " << Edit << " at end\n";
+    Args.push_back(GetStableCStr(SavedStrings, '-' + Edit.str()));
+  } else {
+    OS << "### Unrecognized edit: " << Edit << "\n";
+  }
+}
+
+void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
+                                  const char *OverrideStr,
+                                  llvm::StringSet<> &SavedStrings,
+                                  raw_ostream *OS) {
+  if (!OS)
+    OS = &llvm::nulls();
+
+  if (OverrideStr[0] == '#') {
+    ++OverrideStr;
+    OS = &llvm::nulls();
+  }
+
+  *OS << "### CCC_OVERRIDE_OPTIONS: " << OverrideStr << "\n";
+
+  // This does not need to be efficient.
+
+  const char *S = OverrideStr;
+  while (*S) {
+    const char *End = ::strchr(S, ' ');
+    if (!End)
+      End = S + strlen(S);
+    if (End != S)
+      applyOneOverrideOption(*OS, Args, std::string(S, End), SavedStrings);
+    S = End;
+    if (*S != '\0')
+      ++S;
+  }
 }

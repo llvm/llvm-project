@@ -1781,6 +1781,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nanf128
+  SRCS
+    nanf128.cpp
+  HDRS
+    ../nanf128.h
+  DEPENDS
+    libc.src.__support.str_to_float
+    libc.src.errno.errno
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   nextafter
   SRCS
     nextafter.cpp
@@ -1789,7 +1802,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -1801,7 +1814,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -1813,7 +1826,20 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
-    -O2
+    -O3
+)
+
+add_entrypoint_object(
+  nextafterf128
+  SRCS
+    nextafterf128.cpp
+  HDRS
+    ../nextafterf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_entrypoint_object(
@@ -1853,13 +1879,110 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nextdown
+  SRCS
+    nextdown.cpp
+  HDRS
+    ../nextdown.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nextdownl
+  SRCS
+    nextdownl.cpp
+  HDRS
+    ../nextdownl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nextdownf
+  SRCS
+    nextdownf.cpp
+  HDRS
+    ../nextdownf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nextdownf128
+  SRCS
+    nextdownf128.cpp
+  HDRS
+    ../nextdownf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nextup
+  SRCS
+    nextup.cpp
+  HDRS
+    ../nextup.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nextupl
+  SRCS
+    nextupl.cpp
+  HDRS
+    ../nextupl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nextupf
+  SRCS
+    nextupf.cpp
+  HDRS
+    ../nextupf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nextupf128
+  SRCS
+    nextupf128.cpp
+  HDRS
+    ../nextupf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fmod
   SRCS
     fmod.cpp
   HDRS
     ../fmod.h
   DEPENDS
-    libc.include.math
     libc.src.__support.FPUtil.generic.fmod
   COMPILE_OPTIONS
     -O3
@@ -1872,7 +1995,31 @@ add_entrypoint_object(
   HDRS
     ../fmodf.h
   DEPENDS
-    libc.include.math
+    libc.src.__support.FPUtil.generic.fmod
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fmodl
+  SRCS
+    fmodl.cpp
+  HDRS
+    ../fmodl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.fmod
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fmodf128
+  SRCS
+    fmodf128.cpp
+  HDRS
+    ../fmodf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.fmod
   COMPILE_OPTIONS
     -O3

@@ -21,6 +21,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
@@ -1770,6 +1771,41 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   return true;
 }
 
+bool IRTranslator::translateVectorInterleave2Intrinsic(
+    const CallInst &CI, MachineIRBuilder &MIRBuilder) {
+  assert(CI.getIntrinsicID() == Intrinsic::experimental_vector_interleave2 &&
+         "This function can only be called on the interleave2 intrinsic!");
+  // Canonicalize interleave2 to G_SHUFFLE_VECTOR (similar to SelectionDAG).
+  Register Op0 = getOrCreateVReg(*CI.getOperand(0));
+  Register Op1 = getOrCreateVReg(*CI.getOperand(1));
+  Register Res = getOrCreateVReg(CI);
+
+  LLT OpTy = MRI->getType(Op0);
+  MIRBuilder.buildShuffleVector(Res, Op0, Op1,
+                                createInterleaveMask(OpTy.getNumElements(), 2));
+
+  return true;
+}
+
+bool IRTranslator::translateVectorDeinterleave2Intrinsic(
+    const CallInst &CI, MachineIRBuilder &MIRBuilder) {
+  assert(CI.getIntrinsicID() == Intrinsic::experimental_vector_deinterleave2 &&
+         "This function can only be called on the deinterleave2 intrinsic!");
+  // Canonicalize deinterleave2 to shuffles that extract sub-vectors (similar to
+  // SelectionDAG).
+  Register Op = getOrCreateVReg(*CI.getOperand(0));
+  auto Undef = MIRBuilder.buildUndef(MRI->getType(Op));
+  ArrayRef<Register> Res = getOrCreateVRegs(CI);
+
+  LLT ResTy = MRI->getType(Res[0]);
+  MIRBuilder.buildShuffleVector(Res[0], Op, Undef,
+                                createStrideMask(0, 2, ResTy.getNumElements()));
+  MIRBuilder.buildShuffleVector(Res[1], Op, Undef,
+                                createStrideMask(1, 2, ResTy.getNumElements()));
+
+  return true;
+}
+
 void IRTranslator::getStackGuard(Register DstReg,
                                  MachineIRBuilder &MIRBuilder) {
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
@@ -2474,6 +2510,21 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
     return true;
   }
+
+  case Intrinsic::experimental_vector_interleave2:
+  case Intrinsic::experimental_vector_deinterleave2: {
+    // Both intrinsics have at least one operand.
+    Value *Op0 = CI.getOperand(0);
+    LLT ResTy = getLLTForType(*Op0->getType(), MIRBuilder.getDataLayout());
+    if (!ResTy.isFixedVector())
+      return false;
+
+    if (CI.getIntrinsicID() == Intrinsic::experimental_vector_interleave2)
+      return translateVectorInterleave2Intrinsic(CI, MIRBuilder);
+
+    return translateVectorDeinterleave2Intrinsic(CI, MIRBuilder);
+  }
+
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)  \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
@@ -3277,7 +3328,7 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
 
 void IRTranslator::translateDbgInfo(const Instruction &Inst,
                                       MachineIRBuilder &MIRBuilder) {
-  for (DbgRecord &DR : Inst.getDbgValueRange()) {
+  for (DbgRecord &DR : Inst.getDbgRecordRange()) {
     if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
       MIRBuilder.setDebugLoc(DPL->getDebugLoc());
       assert(DPL->getLabel() && "Missing label");

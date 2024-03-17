@@ -485,6 +485,16 @@ public:
   virtual AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const = 0;
 
   virtual ~WaitcntGenerator() = default;
+
+  // Create a mask value from the initializer list of wait event types.
+  static constexpr unsigned
+  eventMask(std::initializer_list<WaitEventType> Events) {
+    unsigned Mask = 0;
+    for (auto &E : Events)
+      Mask |= 1 << E;
+
+    return Mask;
+  }
 };
 
 class WaitcntGeneratorPreGFX12 : public WaitcntGenerator {
@@ -506,14 +516,12 @@ public:
     assert(ST);
 
     static const unsigned WaitEventMaskForInstPreGFX12[NUM_INST_CNTS] = {
-        (1 << VMEM_ACCESS) | (1 << VMEM_READ_ACCESS) |
-            (1 << VMEM_SAMPLER_READ_ACCESS) | (1 << VMEM_BVH_READ_ACCESS),
-        (1 << SMEM_ACCESS) | (1 << LDS_ACCESS) | (1 << GDS_ACCESS) |
-            (1 << SQ_MESSAGE),
-        (1 << EXP_GPR_LOCK) | (1 << GDS_GPR_LOCK) | (1 << VMW_GPR_LOCK) |
-            (1 << EXP_PARAM_ACCESS) | (1 << EXP_POS_ACCESS) |
-            (1 << EXP_LDS_ACCESS),
-        (1 << VMEM_WRITE_ACCESS) | (1 << SCRATCH_WRITE_ACCESS),
+        eventMask({VMEM_ACCESS, VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS,
+                   VMEM_BVH_READ_ACCESS}),
+        eventMask({SMEM_ACCESS, LDS_ACCESS, GDS_ACCESS, SQ_MESSAGE}),
+        eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
+                   EXP_POS_ACCESS, EXP_LDS_ACCESS}),
+        eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
         0,
         0,
         0};
@@ -543,15 +551,14 @@ public:
     assert(ST);
 
     static const unsigned WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] = {
-        (1 << VMEM_ACCESS) | (1 << VMEM_READ_ACCESS),
-        (1 << LDS_ACCESS) | (1 << GDS_ACCESS),
-        (1 << EXP_GPR_LOCK) | (1 << GDS_GPR_LOCK) | (1 << VMW_GPR_LOCK) |
-            (1 << EXP_PARAM_ACCESS) | (1 << EXP_POS_ACCESS) |
-            (1 << EXP_LDS_ACCESS),
-        (1 << VMEM_WRITE_ACCESS) | (1 << SCRATCH_WRITE_ACCESS),
-        (1 << VMEM_SAMPLER_READ_ACCESS),
-        (1 << VMEM_BVH_READ_ACCESS),
-        (1 << SMEM_ACCESS) | (1 << SQ_MESSAGE)};
+        eventMask({VMEM_ACCESS, VMEM_READ_ACCESS}),
+        eventMask({LDS_ACCESS, GDS_ACCESS}),
+        eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
+                   EXP_POS_ACCESS, EXP_LDS_ACCESS}),
+        eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
+        eventMask({VMEM_SAMPLER_READ_ACCESS}),
+        eventMask({VMEM_BVH_READ_ACCESS}),
+        eventMask({SMEM_ACCESS, SQ_MESSAGE})};
 
     return WaitEventMaskForInstGFX12Plus;
   }
