@@ -2535,7 +2535,7 @@ static SDValue combineFixedwidthToAVGCEILU(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
   SDLoc DL(N);
-  if (TLI.isOperationLegal(ISD::AVGFLOORU, VT)) {
+  if (TLI.isOperationLegal(ISD::AVGCEILU, VT)) {
     SDValue A, B;
     if (sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
                           m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
