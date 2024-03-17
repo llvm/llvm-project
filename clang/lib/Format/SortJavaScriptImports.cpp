@@ -13,19 +13,6 @@
 
 #include "SortJavaScriptImports.h"
 #include "TokenAnalyzer.h"
-#include "TokenAnnotator.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/LLVM.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TokenKinds.h"
-#include "clang/Format/Format.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Debug.h"
-#include <algorithm>
-#include <string>
 
 #define DEBUG_TYPE "format-formatter"
 
