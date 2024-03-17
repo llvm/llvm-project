@@ -1143,8 +1143,7 @@ define <2 x i1> @heterogeneous_constvector(<2 x i8> %x) {
 
 define i1 @icmp_eq_constant_range_attr(i8 range(i8 0, 10) %i) {
 ; CHECK-LABEL: @icmp_eq_constant_range_attr(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I:%.*]], 10
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp eq i8 %i, 10
   ret i1 %cmp
@@ -1176,8 +1175,7 @@ define i1 @icmp_eq_constant_range_return() {
 define i1 @neg_icmp_eq_constant_range_return() {
 ; CHECK-LABEL: @neg_icmp_eq_constant_range_return(
 ; CHECK-NEXT:    [[I:%.*]] = call i8 @returns_contain_ten_range_helper()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I]], 10
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %i = call i8 @returns_contain_ten_range_helper()
   %cmp = icmp eq i8 %i, 10
@@ -1189,8 +1187,7 @@ declare i8 @returns_i8_helper()
 define i1 @icmp_eq_constant_range_call() {
 ; CHECK-LABEL: @icmp_eq_constant_range_call(
 ; CHECK-NEXT:    [[I:%.*]] = call range(i8 0, 10) i8 @returns_i8_helper()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I]], 10
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %i = call range(i8 0, 10) i8 @returns_i8_helper()
   %cmp = icmp eq i8 %i, 10
@@ -1210,8 +1207,7 @@ define i1 @neg_icmp_eq_constant_range_call() {
 
 define <2 x i1> @icmp_eq_constant_range_attr_vec(<2 x i8> range(i8 0, 10) %i) {
 ; CHECK-LABEL: @icmp_eq_constant_range_attr_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[I:%.*]], <i8 10, i8 10>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %cmp = icmp eq <2 x i8> %i, <i8 10, i8 10>
   ret <2 x i1> %cmp
@@ -1232,8 +1228,7 @@ declare range(i8 0, 11) <2 x i8> @returns_contain_ten_range_helper_vec()
 define <2 x i1> @icmp_eq_constant_range_return_vec() {
 ; CHECK-LABEL: @icmp_eq_constant_range_return_vec(
 ; CHECK-NEXT:    [[I:%.*]] = call <2 x i8> @returns_non_ten_range_helper_vec()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[I]], <i8 10, i8 10>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %i = call <2 x i8> @returns_non_ten_range_helper_vec()
   %cmp = icmp eq <2 x i8> %i, <i8 10, i8 10>
@@ -1256,8 +1251,7 @@ declare <2 x i8> @returns_i8_helper_vec()
 define <2 x i1> @icmp_eq_constant_range_call_vec() {
 ; CHECK-LABEL: @icmp_eq_constant_range_call_vec(
 ; CHECK-NEXT:    [[I:%.*]] = call range(i8 0, 10) <2 x i8> @returns_i8_helper_vec()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[I]], <i8 10, i8 10>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %i = call range(i8 0, 10) <2 x i8> @returns_i8_helper_vec()
   %cmp = icmp eq <2 x i8> %i, <i8 10, i8 10>
