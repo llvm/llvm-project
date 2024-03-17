@@ -1520,7 +1520,7 @@ multiclass F_ATOMIC_2_imp<ValueType ptrT, NVPTXRegClass ptrclass,
   def imm : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, IMMType:$b),
     !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b;", ""),
     [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), IMM:$b))]>,
-  Requires<Pred>;
+  Requires<!if(!eq(TypeStr, ".f16"), [Predicate<"false">], Pred)>;
 }
 multiclass F_ATOMIC_2<ValueType regT, NVPTXRegClass regclass, string SpaceStr, string TypeStr,
   string OpcStr, PatFrag IntOp, Operand IMMType, SDNode IMM,

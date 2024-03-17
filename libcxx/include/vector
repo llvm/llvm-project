@@ -2990,6 +2990,7 @@ _LIBCPP_POP_MACROS
 #  include <concepts>
 #  include <cstdlib>
 #  include <locale>
+#  include <tuple>
 #  include <type_traits>
 #  include <typeinfo>
 #  include <utility>

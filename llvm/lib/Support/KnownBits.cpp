@@ -231,12 +231,31 @@ KnownBits KnownBits::smin(const KnownBits &LHS, const KnownBits &RHS) {
   return Flip(umax(Flip(LHS), Flip(RHS)));
 }
 
-KnownBits KnownBits::absdiff(const KnownBits &LHS, const KnownBits &RHS) {
-  // absdiff(LHS,RHS) = sub(umax(LHS,RHS), umin(LHS,RHS)).
+KnownBits KnownBits::abdu(const KnownBits &LHS, const KnownBits &RHS) {
+  // abdu(LHS,RHS) = sub(umax(LHS,RHS), umin(LHS,RHS)).
   KnownBits UMaxValue = umax(LHS, RHS);
   KnownBits UMinValue = umin(LHS, RHS);
   KnownBits MinMaxDiff = computeForAddSub(/*Add=*/false, /*NSW=*/false,
                                           /*NUW=*/true, UMaxValue, UMinValue);
+
+  // find the common bits between sub(LHS,RHS) and sub(RHS,LHS).
+  KnownBits Diff0 =
+      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, LHS, RHS);
+  KnownBits Diff1 =
+      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, RHS, LHS);
+  KnownBits SubDiff = Diff0.intersectWith(Diff1);
+
+  KnownBits KnownAbsDiff = MinMaxDiff.unionWith(SubDiff);
+  assert(!KnownAbsDiff.hasConflict() && "Bad Output");
+  return KnownAbsDiff;
+}
+
+KnownBits KnownBits::abds(const KnownBits &LHS, const KnownBits &RHS) {
+  // abds(LHS,RHS) = sub(smax(LHS,RHS), smin(LHS,RHS)).
+  KnownBits SMaxValue = smax(LHS, RHS);
+  KnownBits SMinValue = smin(LHS, RHS);
+  KnownBits MinMaxDiff = computeForAddSub(/*Add=*/false, /*NSW=*/false,
+                                          /*NUW=*/false, SMaxValue, SMinValue);
 
   // find the common bits between sub(LHS,RHS) and sub(RHS,LHS).
   KnownBits Diff0 =

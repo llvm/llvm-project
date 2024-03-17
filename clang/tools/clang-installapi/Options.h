@@ -11,25 +11,21 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/InstallAPI/Context.h"
+#include "clang/InstallAPI/DylibVerifier.h"
+#include "clang/InstallAPI/MachO.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Program.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/TextAPI/Architecture.h"
-#include "llvm/TextAPI/InterfaceFile.h"
-#include "llvm/TextAPI/PackedVersion.h"
-#include "llvm/TextAPI/Platform.h"
-#include "llvm/TextAPI/Target.h"
-#include "llvm/TextAPI/Utils.h"
 #include <set>
 #include <string>
 #include <vector>
 
 namespace clang {
 namespace installapi {
-using Macro = std::pair<std::string, bool /*isUndef*/>;
 
 struct DriverOptions {
   /// \brief Path to input file lists (JSON).
@@ -38,11 +34,20 @@ struct DriverOptions {
   /// \brief Mappings of target triples & tapi targets to build for.
   std::map<llvm::MachO::Target, llvm::Triple> Targets;
 
+  /// \brief Path to binary dylib for comparing.
+  std::string DylibToVerify;
+
   /// \brief Output path.
   std::string OutputPath;
 
   /// \brief File encoding to print.
-  llvm::MachO::FileType OutFT = llvm::MachO::FileType::TBD_V5;
+  FileType OutFT = FileType::TBD_V5;
+
+  /// \brief Verification mode for comparing symbols.
+  VerificationMode VerifyMode = VerificationMode::Pedantic;
+
+  /// \brief Print demangled symbols when reporting errors.
+  bool Demangle = false;
 
   /// \brief Print verbose output.
   bool Verbose = false;
@@ -53,7 +58,10 @@ struct LinkerOptions {
   std::string InstallName;
 
   /// \brief The current version to use for the dynamic library.
-  llvm::MachO::PackedVersion CurrentVersion;
+  PackedVersion CurrentVersion;
+
+  /// \brief The compatibility version to use for the dynamic library.
+  PackedVersion CompatVersion;
 
   /// \brief Is application extension safe.
   bool AppExtensionSafe = false;
@@ -72,6 +80,8 @@ private:
   bool processDriverOptions(llvm::opt::InputArgList &Args);
   bool processLinkerOptions(llvm::opt::InputArgList &Args);
   bool processFrontendOptions(llvm::opt::InputArgList &Args);
+  std::vector<const char *>
+  processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args);
 
 public:
   /// The various options grouped together.
@@ -86,7 +96,7 @@ public:
 
   /// \brief Constructor for options.
   Options(clang::DiagnosticsEngine &Diag, FileManager *FM,
-          llvm::opt::InputArgList &Args);
+          ArrayRef<const char *> Args, const StringRef ProgName);
 
   /// \brief Get CC1 arguments after extracting out the irrelevant
   /// ones.
@@ -96,6 +106,16 @@ private:
   DiagnosticsEngine *Diags;
   FileManager *FM;
   std::vector<std::string> FrontendArgs;
+};
+
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
+               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
+  OPT_##ID,
+#include "InstallAPIOpts.inc"
+  LastOption
+#undef OPTION
 };
 
 } // namespace installapi

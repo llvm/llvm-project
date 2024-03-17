@@ -908,6 +908,36 @@ def EmitC_SubOp : EmitC_BinaryOp<"sub", [CExpression]> {
   let hasVerifier = 1;
 }
 
+def EmitC_ConditionalOp : EmitC_Op<"conditional",
+    [AllTypesMatch<["true_value", "false_value", "result"]>, CExpression]> {
+  let summary = "Conditional (ternary) operation";
+  let description = [{
+    With the `conditional` operation the ternary conditional operator can
+    be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.cmp gt, %arg0, %arg1 : (i32, i32) -> i1
+
+    %c0 = "emitc.constant"() {value = 10 : i32} : () -> i32
+    %c1 = "emitc.constant"() {value = 11 : i32} : () -> i32
+
+    %1 = emitc.conditional %0, %c0, %c1 : i32
+    ```
+    ```c++
+    // Code emitted for the operations above.
+    bool v3 = v1 > v2;
+    int32_t v4 = 10;
+    int32_t v5 = 11;
+    int32_t v6 = v3 ? v4 : v5;
+    ```
+  }];
+  let arguments = (ins I1:$condition, AnyType:$true_value, AnyType:$false_value);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "operands attr-dict `:` type($result)";
+}
+
 def EmitC_UnaryMinusOp : EmitC_UnaryOp<"unary_minus", [CExpression]> {
   let summary = "Unary minus operation";
   let description = [{
@@ -1124,5 +1154,37 @@ def EmitC_IfOp : EmitC_Op<"if",
   }];
   let hasCustomAssemblyFormat = 1;
 }
+
+def EmitC_SubscriptOp : EmitC_Op<"subscript",
+  [TypesMatchWith<"result type matches element type of 'array'",
+                  "array", "result",
+                  "::llvm::cast<ArrayType>($_self).getElementType()">]> {
+  let summary = "Array subscript operation";
+  let description = [{
+    With the `subscript` operation the subscript operator `[]` can be applied
+    to variables or arguments of array type.
+
+    Example:
+
+    ```mlir
+    %i = index.constant 1
+    %j = index.constant 7
+    %0 = emitc.subscript %arg0[%i, %j] : <4x8xf32>, index, index
+    ```
+  }];
+  let arguments = (ins Arg<EmitC_ArrayType, "the reference to load from">:$array,
+                       Variadic<IntegerIndexOrOpaqueType>:$indices);
+  let results = (outs AnyType:$result);
+
+  let builders = [
+    OpBuilder<(ins "Value":$array, "ValueRange":$indices), [{
+      build($_builder, $_state, cast<ArrayType>(array.getType()).getElementType(), array, indices);
+    }]>
+  ];
+
+  let hasVerifier = 1;
+  let assemblyFormat = "$array `[` $indices `]` attr-dict `:` type($array) `,` type($indices)";
+}
+
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

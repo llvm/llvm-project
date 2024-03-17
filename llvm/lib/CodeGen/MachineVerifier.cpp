@@ -1613,6 +1613,17 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("G_BSWAP size must be a multiple of 16 bits", MI);
     break;
   }
+  case TargetOpcode::G_VSCALE: {
+    if (!MI->getOperand(1).isCImm()) {
+      report("G_VSCALE operand must be cimm", MI);
+      break;
+    }
+    if (MI->getOperand(1).getCImm()->isZero()) {
+      report("G_VSCALE immediate cannot be zero", MI);
+      break;
+    }
+    break;
+  }
   case TargetOpcode::G_INSERT_SUBVECTOR: {
     const MachineOperand &Src0Op = MI->getOperand(1);
     if (!Src0Op.isReg()) {

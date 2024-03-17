@@ -4295,9 +4295,12 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
               llvm_unreachable(
                   "Expected only consecutive, strided or masked gather loads.");
             }
+            SmallVector<int> ShuffleMask(VL.size());
+            for (int Idx : seq<int>(0, VL.size()))
+              ShuffleMask[Idx] = Idx / VF == I ? VL.size() + Idx % VF : Idx;
             VecLdCost +=
                 TTI.getShuffleCost(TTI ::SK_InsertSubvector, VecTy,
-                                   std::nullopt, CostKind, I * VF, SubVecTy);
+                                   ShuffleMask, CostKind, I * VF, SubVecTy);
           }
           // If masked gather cost is higher - better to vectorize, so
           // consider it as a gather node. It will be better estimated
@@ -4313,9 +4316,10 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     // increases the cost.
     Loop *L = LI->getLoopFor(cast<LoadInst>(VL0)->getParent());
     bool ProfitableGatherPointers =
-        L && Sz > 2 && count_if(PointerOps, [L](Value *V) {
-                         return L->isLoopInvariant(V);
-                       }) <= Sz / 2;
+        L && Sz > 2 &&
+        static_cast<unsigned>(count_if(PointerOps, [L](Value *V) {
+          return L->isLoopInvariant(V);
+        })) <= Sz / 2;
     if (ProfitableGatherPointers || all_of(PointerOps, [IsSorted](Value *P) {
           auto *GEP = dyn_cast<GetElementPtrInst>(P);
           return (IsSorted && !GEP && doesNotNeedToBeScheduled(P)) ||
@@ -7400,7 +7404,7 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
         Index + NumSrcElts <= static_cast<int>(Mask.size()))
       return TTI.getShuffleCost(
           TTI::SK_InsertSubvector,
-          FixedVectorType::get(Tp->getElementType(), Mask.size()), std::nullopt,
+          FixedVectorType::get(Tp->getElementType(), Mask.size()), Mask,
           TTI::TCK_RecipThroughput, Index, Tp);
   }
   return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
@@ -7673,9 +7677,13 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         }
         if (NeedInsertSubvectorAnalysis) {
           // Add the cost for the subvectors insert.
-          for (int I = VF, E = VL.size(); I < E; I += VF)
+          SmallVector<int> ShuffleMask(VL.size());
+          for (unsigned I = VF, E = VL.size(); I < E; I += VF) {
+            for (unsigned Idx : seq<unsigned>(0, E))
+              ShuffleMask[Idx] = Idx / VF == I ? E + Idx % VF : Idx;
             GatherCost += TTI.getShuffleCost(TTI::SK_InsertSubvector, VecTy,
-                                             std::nullopt, CostKind, I, LoadTy);
+                                             ShuffleMask, CostKind, I, LoadTy);
+          }
         }
         GatherCost -= ScalarsCost;
       }
@@ -7690,16 +7698,22 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       bool NeedShuffle =
           count(VL, *It) > 1 &&
           (VL.front() != *It || !all_of(VL.drop_front(), UndefValue::classof));
+      if (!NeedShuffle)
+        return TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
+                                      CostKind, std::distance(VL.begin(), It),
+                                      PoisonValue::get(VecTy), *It);
+
+      SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
+      transform(VL, ShuffleMask.begin(), [](Value *V) {
+        return isa<PoisonValue>(V) ? PoisonMaskElem : 0;   
+      });
       InstructionCost InsertCost = TTI.getVectorInstrCost(
-          Instruction::InsertElement, VecTy, CostKind,
-          NeedShuffle ? 0 : std::distance(VL.begin(), It),
+          Instruction::InsertElement, VecTy, CostKind, 0,
           PoisonValue::get(VecTy), *It);
       return InsertCost +
-             (NeedShuffle ? TTI.getShuffleCost(
-                                TargetTransformInfo::SK_Broadcast, VecTy,
-                                /*Mask=*/std::nullopt, CostKind, /*Index=*/0,
-                                /*SubTp=*/nullptr, /*Args=*/*It)
-                          : TTI::TCC_Free);
+             TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
+                                ShuffleMask, CostKind, /*Index=*/0,
+                                /*SubTp=*/nullptr, /*Args=*/*It);
     }
     return GatherCost +
            (all_of(Gathers, UndefValue::classof)
@@ -8852,7 +8866,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       TTI::OperandValueInfo Op1Info = getOperandInfo(E->getOperand(0));
       TTI::OperandValueInfo Op2Info = getOperandInfo(E->getOperand(OpIdx));
       return TTI->getArithmeticInstrCost(ShuffleOrOp, VecTy, CostKind, Op1Info,
-                                         Op2Info) +
+                                         Op2Info, std::nullopt, nullptr, TLI) +
              CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
@@ -10374,7 +10388,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
   // Check if the same elements are inserted several times and count them as
   // shuffle candidates.
   APInt ShuffledElements = APInt::getZero(VL.size());
-  DenseSet<Value *> UniqueElements;
+  DenseMap<Value *, unsigned> UniqueElements;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost;
   auto EstimateInsertCost = [&](unsigned I, Value *V) {
@@ -10383,27 +10397,34 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
           TTI->getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
                                   I, Constant::getNullValue(VecTy), V);
   };
+  SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
   for (unsigned I = 0, E = VL.size(); I < E; ++I) {
     Value *V = VL[I];
     // No need to shuffle duplicates for constants.
     if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V)) {
       ShuffledElements.setBit(I);
+      ShuffleMask[I] = isa<PoisonValue>(V) ? PoisonMaskElem : I;
       continue;
     }
-    if (!UniqueElements.insert(V).second) {
-      DuplicateNonConst = true;
-      ShuffledElements.setBit(I);
+
+    auto Res = UniqueElements.try_emplace(V, I);
+    if (Res.second) {
+      EstimateInsertCost(I, V);
+      ShuffleMask[I] = I;
       continue;
     }
-    EstimateInsertCost(I, V);
+
+    DuplicateNonConst = true;
+    ShuffledElements.setBit(I);
+    ShuffleMask[I] = Res.first->second;
   }
   if (ForPoisonSrc)
     Cost =
         TTI->getScalarizationOverhead(VecTy, ~ShuffledElements, /*Insert*/ true,
                                       /*Extract*/ false, CostKind);
   if (DuplicateNonConst)
-    Cost +=
-        TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
+    Cost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                VecTy, ShuffleMask);
   return Cost;
 }
 
@@ -12539,7 +12560,9 @@ Value *BoUpSLP::vectorizeTree(
   DenseMap<Value *, InsertElementInst *> VectorToInsertElement;
   // Maps extract Scalar to the corresponding extractelement instruction in the
   // basic block. Only one extractelement per block should be emitted.
-  DenseMap<Value *, DenseMap<BasicBlock *, Instruction *>> ScalarToEEs;
+  DenseMap<Value *,
+           DenseMap<BasicBlock *, std::pair<Instruction *, Instruction *>>>
+      ScalarToEEs;
   SmallDenseSet<Value *, 4> UsedInserts;
   DenseMap<std::pair<Value *, Type *>, Value *> VectorCasts;
   SmallDenseSet<Value *, 4> ScalarsWithNullptrUser;
@@ -12568,18 +12591,23 @@ Value *BoUpSLP::vectorizeTree(
     auto ExtractAndExtendIfNeeded = [&](Value *Vec) {
       if (Scalar->getType() != Vec->getType()) {
         Value *Ex = nullptr;
+        Value *ExV = nullptr;
         auto It = ScalarToEEs.find(Scalar);
         if (It != ScalarToEEs.end()) {
           // No need to emit many extracts, just move the only one in the
           // current block.
           auto EEIt = It->second.find(Builder.GetInsertBlock());
           if (EEIt != It->second.end()) {
-            Instruction *I = EEIt->second;
+            Instruction *I = EEIt->second.first;
             if (Builder.GetInsertPoint() != Builder.GetInsertBlock()->end() &&
-                Builder.GetInsertPoint()->comesBefore(I))
+                Builder.GetInsertPoint()->comesBefore(I)) {
               I->moveBefore(*Builder.GetInsertPoint()->getParent(),
                             Builder.GetInsertPoint());
+              if (auto *CI = EEIt->second.second)
+                CI->moveAfter(I);
+            }
             Ex = I;
+            ExV = EEIt->second.second ? EEIt->second.second : Ex;
           }
         }
         if (!Ex) {
@@ -12592,8 +12620,16 @@ Value *BoUpSLP::vectorizeTree(
           } else {
             Ex = Builder.CreateExtractElement(Vec, Lane);
           }
+          // If necessary, sign-extend or zero-extend ScalarRoot
+          // to the larger type.
+          ExV = Ex;
+          if (Scalar->getType() != Ex->getType())
+            ExV = Builder.CreateIntCast(Ex, Scalar->getType(),
+                                        MinBWs.find(E)->second.second);
           if (auto *I = dyn_cast<Instruction>(Ex))
-            ScalarToEEs[Scalar].try_emplace(Builder.GetInsertBlock(), I);
+            ScalarToEEs[Scalar].try_emplace(
+                Builder.GetInsertBlock(),
+                std::make_pair(I, cast<Instruction>(ExV)));
         }
         // The then branch of the previous if may produce constants, since 0
         // operand might be a constant.
@@ -12601,12 +12637,7 @@ Value *BoUpSLP::vectorizeTree(
           GatherShuffleExtractSeq.insert(ExI);
           CSEBlocks.insert(ExI->getParent());
         }
-        // If necessary, sign-extend or zero-extend ScalarRoot
-        // to the larger type.
-        if (Scalar->getType() != Ex->getType())
-          return Builder.CreateIntCast(Ex, Scalar->getType(),
-                                       MinBWs.find(E)->second.second);
-        return Ex;
+        return ExV;
       }
       assert(isa<FixedVectorType>(Scalar->getType()) &&
              isa<InsertElementInst>(Scalar) &&
@@ -14698,13 +14729,13 @@ class HorizontalReduction {
       if (IsConstant)
         return ConstantFP::get(LHS->getType(),
                                maximum(cast<ConstantFP>(LHS)->getValueAPF(),
-                                      cast<ConstantFP>(RHS)->getValueAPF()));
+                                       cast<ConstantFP>(RHS)->getValueAPF()));
       return Builder.CreateBinaryIntrinsic(Intrinsic::maximum, LHS, RHS);
     case RecurKind::FMinimum:
       if (IsConstant)
         return ConstantFP::get(LHS->getType(),
                                minimum(cast<ConstantFP>(LHS)->getValueAPF(),
-                                      cast<ConstantFP>(RHS)->getValueAPF()));
+                                       cast<ConstantFP>(RHS)->getValueAPF()));
       return Builder.CreateBinaryIntrinsic(Intrinsic::minimum, LHS, RHS);
     case RecurKind::SMax:
       if (IsConstant || UseSelect) {
@@ -16614,36 +16645,11 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     if (Opcodes1.size() > Opcodes2.size())
       return false;
     for (int I = 0, E = Opcodes1.size(); I < E; ++I) {
-      // Undefs are compatible with any other value.
-      if (isa<UndefValue>(Opcodes1[I]) || isa<UndefValue>(Opcodes2[I])) {
-        if (isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]))
-          continue;
-        if (isa<Instruction>(Opcodes1[I])) {
-          assert(isa<UndefValue>(Opcodes2[I]) && "Expected 2nd undef value");
-          return true;
-        }
-        if (isa<Instruction>(Opcodes2[I])) {
-          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
-          return false;
-        }
-        if (isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I])) {
-          assert(isa<UndefValue>(Opcodes2[I]) && "Expected 2nd undef value");
-          return true;
-        }
-        if (isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I])) {
-          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
-          return false;
-        }
-        if (!isa<UndefValue>(Opcodes2[I])) {
-          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
-          return false;
-        }
-        assert(!isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]) &&
-               "Expected 1st non-undef and 2nd undef value");
-        return true;
-      }
-      if (auto *I1 = dyn_cast<Instruction>(Opcodes1[I]))
-        if (auto *I2 = dyn_cast<Instruction>(Opcodes2[I])) {
+      {
+        // Instructions come first.
+        auto *I1 = dyn_cast<Instruction>(Opcodes1[I]);
+        auto *I2 = dyn_cast<Instruction>(Opcodes2[I]);
+        if (I1 && I2) {
           DomTreeNodeBase<BasicBlock> *NodeI1 = DT->getNode(I1->getParent());
           DomTreeNodeBase<BasicBlock> *NodeI2 = DT->getNode(I2->getParent());
           if (!NodeI1)
@@ -16660,20 +16666,44 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
             continue;
           return I1->getOpcode() < I2->getOpcode();
         }
-      if (isa<Constant>(Opcodes1[I]) && isa<Constant>(Opcodes2[I]))
-        continue;
-      if (isa<Instruction>(Opcodes1[I]) && !isa<Instruction>(Opcodes2[I]))
-        return true;
-      if (!isa<Instruction>(Opcodes1[I]) && isa<Instruction>(Opcodes2[I]))
-        return false;
-      if (isa<Constant>(Opcodes1[I]) && !isa<Constant>(Opcodes2[I]))
-        return true;
-      if (!isa<Constant>(Opcodes1[I]) && isa<Constant>(Opcodes2[I]))
-        return false;
-      if (Opcodes1[I]->getValueID() < Opcodes2[I]->getValueID())
-        return true;
-      if (Opcodes1[I]->getValueID() > Opcodes2[I]->getValueID())
-        return false;
+        if (I1)
+          return true;
+        if (I2)
+          return false;
+      }
+      {
+        // Non-undef constants come next.
+        bool C1 = isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I]);
+        bool C2 = isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I]);
+        if (C1 && C2)
+          continue;
+        if (C1)
+          return true;
+        if (C2)
+          return false;
+      }
+      bool U1 = isa<UndefValue>(Opcodes1[I]);
+      bool U2 = isa<UndefValue>(Opcodes2[I]);
+      {
+        // Non-constant non-instructions come next.
+        if (!U1 && !U2) {
+          auto ValID1 = Opcodes1[I]->getValueID();
+          auto ValID2 = Opcodes2[I]->getValueID();
+          if (ValID1 == ValID2)
+            continue;
+          if (ValID1 < ValID2)
+            return true;
+          if (ValID1 > ValID2)
+            return false;
+        }
+        if (!U1)
+          return true;
+        if (!U2)
+          return false;
+      }
+      // Undefs come last.
+      assert(U1 && U2 && "The only thing left should be undef & undef.");
+      continue;
     }
     return false;
   };

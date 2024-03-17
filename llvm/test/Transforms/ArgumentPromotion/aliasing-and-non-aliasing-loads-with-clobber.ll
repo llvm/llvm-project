@@ -7,17 +7,14 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 
 ; Test case for https://github.com/llvm/llvm-project/issues/84807.
 
-; FIXME: Currently the loads from @callee are moved to @caller, even though
-;        the store in %then may aliases to load from %q.
+; Make sure the loads from @callee are not moved to @caller, as the store
+; in %then may aliases to load from %q.
 
 define i32 @caller1(i1 %c) {
 ; CHECK-LABEL: define i32 @caller1(
 ; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F_VAL:%.*]] = load i16, ptr @f, align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr @f, i64 8
-; CHECK-NEXT:    [[F_VAL1:%.*]] = load i64, ptr [[TMP0]], align 8
-; CHECK-NEXT:    call void @callee1(i16 [[F_VAL]], i64 [[F_VAL1]], i1 [[C]])
+; CHECK-NEXT:    call void @callee1(ptr noundef nonnull @f, i1 [[C]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -27,13 +24,16 @@ entry:
 
 define internal void @callee1(ptr nocapture noundef readonly %q, i1 %c) {
 ; CHECK-LABEL: define internal void @callee1(
-; CHECK-SAME: i16 [[Q_0_VAL:%.*]], i64 [[Q_8_VAL:%.*]], i1 [[C:%.*]]) {
+; CHECK-SAME: ptr nocapture noundef readonly [[Q:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    store i16 123, ptr @f, align 8
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[Q_0_VAL:%.*]] = load i16, ptr [[Q]], align 8
+; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 8
+; CHECK-NEXT:    [[Q_8_VAL:%.*]] = load i64, ptr [[GEP_8]], align 8
 ; CHECK-NEXT:    call void @use(i16 [[Q_0_VAL]], i64 [[Q_8_VAL]])
 ; CHECK-NEXT:    ret void
 ;

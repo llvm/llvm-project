@@ -740,7 +740,8 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
     SupportedArgument = V == "desc" || V == "trad";
     EnableTLSDESC = V == "desc";
   } else if (Triple.isX86()) {
-    SupportedArgument = V == "gnu";
+    SupportedArgument = V == "gnu" || V == "gnu2";
+    EnableTLSDESC = V == "gnu2";
   } else {
     Unsupported = true;
   }

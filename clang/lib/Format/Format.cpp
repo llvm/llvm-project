@@ -13,44 +13,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Format/Format.h"
-#include "AffectedRangeManager.h"
-#include "BreakableToken.h"
-#include "ContinuationIndenter.h"
 #include "DefinitionBlockSeparator.h"
-#include "FormatInternal.h"
-#include "FormatToken.h"
-#include "FormatTokenLexer.h"
 #include "IntegerLiteralSeparatorFixer.h"
 #include "NamespaceEndCommentsFixer.h"
 #include "ObjCPropertyAttributeOrderFixer.h"
 #include "QualifierAlignmentFixer.h"
 #include "SortJavaScriptImports.h"
-#include "TokenAnalyzer.h"
-#include "TokenAnnotator.h"
 #include "UnwrappedLineFormatter.h"
-#include "UnwrappedLineParser.h"
 #include "UsingDeclarationsSorter.h"
-#include "WhitespaceManager.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Allocator.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/Regex.h"
-#include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Support/YAMLTraits.h"
-#include <algorithm>
-#include <memory>
-#include <mutex>
-#include <optional>
-#include <string>
-#include <unordered_map>
 
 #define DEBUG_TYPE "format-formatter"
 
@@ -3841,13 +3813,15 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
 }
 
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {
-  LangOptions LangOpts;
+  IsCpp = Style.isCpp();
 
   FormatStyle::LanguageStandard LexingStd = Style.Standard;
   if (LexingStd == FormatStyle::LS_Auto)
     LexingStd = FormatStyle::LS_Latest;
   if (LexingStd == FormatStyle::LS_Latest)
     LexingStd = FormatStyle::LS_Cpp20;
+
+  LangOptions LangOpts;
   LangOpts.CPlusPlus = 1;
   LangOpts.CPlusPlus11 = LexingStd >= FormatStyle::LS_Cpp11;
   LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
@@ -3858,10 +3832,8 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   // the sequence "<::" will be unconditionally treated as "[:".
   // Cf. Lexer::LexTokenInternal.
   LangOpts.Digraphs = LexingStd >= FormatStyle::LS_Cpp11;
-
   LangOpts.LineComment = 1;
-  bool AlternativeOperators = Style.isCpp();
-  LangOpts.CXXOperatorNames = AlternativeOperators ? 1 : 0;
+  LangOpts.CXXOperatorNames = IsCpp;
   LangOpts.Bool = 1;
   LangOpts.ObjC = 1;
   LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.
@@ -3942,6 +3914,8 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
 const char *DefaultFormatStyle = "file";
 
 const char *DefaultFallbackStyle = "LLVM";
+
+bool IsCpp = false;
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,

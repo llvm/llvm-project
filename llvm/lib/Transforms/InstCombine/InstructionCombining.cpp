@@ -1481,6 +1481,11 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCastsFromSign(
 
   // If we have a constant rhs, see if we can losslessly convert it to an int.
   if (Op1FpC != nullptr) {
+    // Signed + Mul req non-zero
+    if (OpsFromSigned && BO.getOpcode() == Instruction::FMul &&
+        !match(Op1FpC, m_NonZeroFP()))
+      return nullptr;
+
     Constant *Op1IntC = ConstantFoldCastOperand(
         OpsFromSigned ? Instruction::FPToSI : Instruction::FPToUI, Op1FpC,
         IntTy, DL);
@@ -2596,6 +2601,45 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
     return nullptr;
   }
 
+  // De Morgan's Laws:
+  // (~(A | B)) -> (~A & ~B)
+  // (~(A & B)) -> (~A | ~B)
+  auto TryInvertAndOrUsingDeMorgan = [&](Instruction::BinaryOps Opcode,
+                                         bool IsLogical, Value *A,
+                                         Value *B) -> Value * {
+    bool LocalDoesConsume = DoesConsume;
+    if (!getFreelyInvertedImpl(B, B->hasOneUse(), /*Builder=*/nullptr,
+                               LocalDoesConsume, Depth))
+      return nullptr;
+    if (auto *NotA = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                           LocalDoesConsume, Depth)) {
+      auto *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
+                                         LocalDoesConsume, Depth);
+      DoesConsume = LocalDoesConsume;
+      if (IsLogical)
+        return Builder ? Builder->CreateLogicalOp(Opcode, NotA, NotB) : NonNull;
+      return Builder ? Builder->CreateBinOp(Opcode, NotA, NotB) : NonNull;
+    }
+
+    return nullptr;
+  };
+
+  if (match(V, m_Or(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::And, /*IsLogical=*/false, A,
+                                       B);
+
+  if (match(V, m_And(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::Or, /*IsLogical=*/false, A,
+                                       B);
+
+  if (match(V, m_LogicalOr(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::And, /*IsLogical=*/true, A,
+                                       B);
+
+  if (match(V, m_LogicalAnd(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::Or, /*IsLogical=*/true, A,
+                                       B);
+
   return nullptr;
 }
 
@@ -3426,7 +3470,7 @@ void InstCombinerImpl::handleUnreachableFrom(
     if (Inst.isEHPad() || Inst.getType()->isTokenTy())
       continue;
     // RemoveDIs: erase debug-info on this instruction manually.
-    Inst.dropDbgValues();
+    Inst.dropDbgRecords();
     eraseInstFromFunction(Inst);
     MadeIRChange = true;
   }
@@ -3833,6 +3877,12 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   if (auto *PN = dyn_cast<PHINode>(Agg))
     if (Instruction *Res = foldOpIntoPhi(EV, PN))
       return Res;
+
+  // Canonicalize extract (select Cond, TV, FV)
+  // -> select cond, (extract TV), (extract FV)
+  if (auto *SI = dyn_cast<SelectInst>(Agg))
+    if (Instruction *R = FoldOpIntoSelect(EV, SI, /*FoldWithMultiUse=*/true))
+      return R;
 
   // We could simplify extracts from other values. Note that nested extracts may
   // already be simplified implicitly by the above: extract (extract (insert) )
@@ -4697,7 +4747,7 @@ void InstCombinerImpl::tryToSinkInstructionDPValues(
     // latest assignment.
     for (const Instruction *Inst : DupSet) {
       for (DPValue &DPV :
-           llvm::reverse(DPValue::filter(Inst->getDbgValueRange()))) {
+           llvm::reverse(filterDbgVars(Inst->getDbgRecordRange()))) {
         DebugVariable DbgUserVariable =
             DebugVariable(DPV.getVariable(), DPV.getExpression(),
                           DPV.getDebugLoc()->getInlinedAt());
@@ -4762,7 +4812,7 @@ void InstCombinerImpl::tryToSinkInstructionDPValues(
   //   InsertPtInst
   assert(InsertPos.getHeadBit());
   for (DPValue *DPVClone : DPVClones) {
-    InsertPos->getParent()->insertDPValueBefore(DPVClone, InsertPos);
+    InsertPos->getParent()->insertDbgRecordBefore(DPVClone, InsertPos);
     LLVM_DEBUG(dbgs() << "SINK: " << *DPVClone << '\n');
   }
 }
@@ -5202,7 +5252,8 @@ static bool combineInstructionsOverFunction(
     if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
           "Instruction Combining did not reach a fixpoint after " +
-          Twine(Opts.MaxIterations) + " iterations");
+              Twine(Opts.MaxIterations) + " iterations",
+          /*GenCrashDiag=*/false);
     }
   }
 

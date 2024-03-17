@@ -9,6 +9,11 @@
 #ifndef __LLVM_LIBC_MACROS_STDBIT_MACROS_H
 #define __LLVM_LIBC_MACROS_STDBIT_MACROS_H
 
+#define __STDC_VERSION_STDBIT_H__ 202311L
+#define __STDC_ENDIAN_LITTLE__ __ORDER_LITTLE_ENDIAN__
+#define __STDC_ENDIAN_BIG__ __ORDER_BIG_ENDIAN__
+#define __STDC_ENDIAN_NATIVE__ __BYTE_ORDER__
+
 // TODO(https://github.com/llvm/llvm-project/issues/80509): support _BitInt().
 #ifdef __cplusplus
 inline unsigned stdc_leading_zeros(unsigned char x) {

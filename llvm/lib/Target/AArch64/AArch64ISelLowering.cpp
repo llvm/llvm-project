@@ -5270,13 +5270,13 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         AArch64ISD::SMSTART, DL, MVT::Other,
         Op->getOperand(0), // Chain
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+        DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
   case Intrinsic::aarch64_sme_za_disable:
     return DAG.getNode(
         AArch64ISD::SMSTOP, DL, MVT::Other,
         Op->getOperand(0), // Chain
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+        DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
   }
 }
 
@@ -7197,11 +7197,11 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
           getRegClassFor(PStateSM.getValueType().getSimpleVT()));
       FuncInfo->setPStateSMReg(Reg);
       Chain = DAG.getCopyToReg(Chain, DL, Reg, PStateSM);
-    } else {
-      PStateSM = DAG.getConstant(0, DL, MVT::i64);
-    }
-    Chain = changeStreamingMode(DAG, DL, /*Enable*/ true, Chain, Glue, PStateSM,
-                                /*Entry*/ true);
+      Chain = changeStreamingMode(DAG, DL, /*Enable*/ true, Chain, Glue,
+                                  AArch64SME::IfCallerIsNonStreaming, PStateSM);
+    } else
+      Chain = changeStreamingMode(DAG, DL, /*Enable*/ true, Chain, Glue,
+                                  AArch64SME::Always);
 
     // Ensure that the SMSTART happens after the CopyWithChain such that its
     // chain result is used.
@@ -7751,13 +7751,23 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   // register allocator to pass call args in callee saved regs, without extra
   // copies to avoid these fake clobbers of actually-preserved GPRs.
   if (MI.getOpcode() == AArch64::MSRpstatesvcrImm1 ||
-      MI.getOpcode() == AArch64::MSRpstatePseudo)
+      MI.getOpcode() == AArch64::MSRpstatePseudo) {
     for (unsigned I = MI.getNumOperands() - 1; I > 0; --I)
       if (MachineOperand &MO = MI.getOperand(I);
           MO.isReg() && MO.isImplicit() && MO.isDef() &&
           (AArch64::GPR32RegClass.contains(MO.getReg()) ||
            AArch64::GPR64RegClass.contains(MO.getReg())))
         MI.removeOperand(I);
+
+    // The SVE vector length can change when entering/leaving streaming mode.
+    if (MI.getOperand(0).getImm() == AArch64SVCR::SVCRSM ||
+        MI.getOperand(0).getImm() == AArch64SVCR::SVCRSMZA) {
+      MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/false,
+                                              /*IsImplicit=*/true));
+      MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/true,
+                                              /*IsImplicit=*/true));
+    }
+  }
 
   // Add an implicit use of 'VG' for ADDXri/SUBXri, which are instructions that
   // have nothing to do with VG, were it not that they are used to materialise a
@@ -7776,9 +7786,11 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   }
 }
 
-SDValue AArch64TargetLowering::changeStreamingMode(
-    SelectionDAG &DAG, SDLoc DL, bool Enable,
-    SDValue Chain, SDValue InGlue, SDValue PStateSM, bool Entry) const {
+SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
+                                                   bool Enable, SDValue Chain,
+                                                   SDValue InGlue,
+                                                   unsigned Condition,
+                                                   SDValue PStateSM) const {
   MachineFunction &MF = DAG.getMachineFunction();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   FuncInfo->setHasStreamingModeChanges(true);
@@ -7787,16 +7799,32 @@ SDValue AArch64TargetLowering::changeStreamingMode(
   SDValue RegMask = DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask());
   SDValue MSROp =
       DAG.getTargetConstant((int32_t)AArch64SVCR::SVCRSM, DL, MVT::i32);
-
-  SDValue ExpectedSMVal =
-      DAG.getTargetConstant(Entry ? Enable : !Enable, DL, MVT::i64);
-  SmallVector<SDValue> Ops = {Chain, MSROp, PStateSM, ExpectedSMVal, RegMask};
+  SDValue ConditionOp = DAG.getTargetConstant(Condition, DL, MVT::i64);
+  SmallVector<SDValue> Ops = {Chain, MSROp, ConditionOp};
+  if (Condition != AArch64SME::Always) {
+    assert(PStateSM && "PStateSM should be defined");
+    Ops.push_back(PStateSM);
+  }
+  Ops.push_back(RegMask);
 
   if (InGlue)
     Ops.push_back(InGlue);
 
   unsigned Opcode = Enable ? AArch64ISD::SMSTART : AArch64ISD::SMSTOP;
   return DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
+}
+
+static unsigned getSMCondition(const SMEAttrs &CallerAttrs,
+                               const SMEAttrs &CalleeAttrs) {
+  if (!CallerAttrs.hasStreamingCompatibleInterface() ||
+      CallerAttrs.hasStreamingBody())
+    return AArch64SME::Always;
+  if (CalleeAttrs.hasNonStreamingInterface())
+    return AArch64SME::IfCallerIsStreaming;
+  if (CalleeAttrs.hasStreamingInterface())
+    return AArch64SME::IfCallerIsNonStreaming;
+
+  llvm_unreachable("Unsupported attributes");
 }
 
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,
@@ -8018,7 +8046,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = DAG.getNode(
         AArch64ISD::SMSTOP, DL, MVT::Other, Chain,
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+        DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
@@ -8289,9 +8317,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue InGlue;
   if (RequiresSMChange) {
-    SDValue NewChain =
-        changeStreamingMode(DAG, DL, CalleeAttrs.hasStreamingInterface(), Chain,
-                            InGlue, PStateSM, true);
+    SDValue NewChain = changeStreamingMode(
+        DAG, DL, CalleeAttrs.hasStreamingInterface(), Chain, InGlue,
+        getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
     Chain = NewChain.getValue(0);
     InGlue = NewChain.getValue(1);
   }
@@ -8445,8 +8473,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (RequiresSMChange) {
     assert(PStateSM && "Expected a PStateSM to be set");
-    Result = changeStreamingMode(DAG, DL, !CalleeAttrs.hasStreamingInterface(),
-                                 Result, InGlue, PStateSM, false);
+    Result = changeStreamingMode(
+        DAG, DL, !CalleeAttrs.hasStreamingInterface(), Result, InGlue,
+        getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
   }
 
   if (CallerAttrs.requiresEnablingZAAfterCall(CalleeAttrs))
@@ -8454,7 +8483,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Result = DAG.getNode(
         AArch64ISD::SMSTART, DL, MVT::Other, Result,
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+        DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
 
   if (ShouldPreserveZT0)
     Result =
@@ -8589,13 +8618,12 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       Register Reg = FuncInfo->getPStateSMReg();
       assert(Reg.isValid() && "PStateSM Register is invalid");
       SDValue PStateSM = DAG.getCopyFromReg(Chain, DL, Reg, MVT::i64);
-      Chain =
-          changeStreamingMode(DAG, DL, /*Enable*/ false, Chain,
-                              /*Glue*/ SDValue(), PStateSM, /*Entry*/ false);
+      Chain = changeStreamingMode(DAG, DL, /*Enable*/ false, Chain,
+                                  /*Glue*/ SDValue(),
+                                  AArch64SME::IfCallerIsNonStreaming, PStateSM);
     } else
-      Chain = changeStreamingMode(
-          DAG, DL, /*Enable*/ false, Chain,
-          /*Glue*/ SDValue(), DAG.getConstant(1, DL, MVT::i64), /*Entry*/ true);
+      Chain = changeStreamingMode(DAG, DL, /*Enable*/ false, Chain,
+                                  /*Glue*/ SDValue(), AArch64SME::Always);
     Glue = Chain.getValue(1);
   }
 
@@ -21413,12 +21441,8 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // uzp1(xtn x, xtn y) -> xtn(uzp1 (x, y))
-  // Only implemented on little-endian subtargets.
-  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
-
-  // This optimization only works on little endian.
-  if (!IsLittleEndian)
+  // These optimizations only work on little endian.
+  if (!DAG.getDataLayout().isLittleEndian())
     return SDValue();
 
   // uzp1(bitcast(x), bitcast(y)) -> uzp1(x, y)
@@ -21437,21 +21461,28 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   if (ResVT != MVT::v2i32 && ResVT != MVT::v4i16 && ResVT != MVT::v8i8)
     return SDValue();
 
-  auto getSourceOp = [](SDValue Operand) -> SDValue {
-    const unsigned Opcode = Operand.getOpcode();
-    if (Opcode == ISD::TRUNCATE)
-      return Operand->getOperand(0);
-    if (Opcode == ISD::BITCAST &&
-        Operand->getOperand(0).getOpcode() == ISD::TRUNCATE)
-      return Operand->getOperand(0)->getOperand(0);
-    return SDValue();
-  };
+  SDValue SourceOp0 = peekThroughBitcasts(Op0);
+  SDValue SourceOp1 = peekThroughBitcasts(Op1);
 
-  SDValue SourceOp0 = getSourceOp(Op0);
-  SDValue SourceOp1 = getSourceOp(Op1);
+  // truncating uzp1(x, y) -> xtn(concat (x, y))
+  if (SourceOp0.getValueType() == SourceOp1.getValueType()) {
+    EVT Op0Ty = SourceOp0.getValueType();
+    if ((ResVT == MVT::v4i16 && Op0Ty == MVT::v2i32) ||
+        (ResVT == MVT::v8i8 && Op0Ty == MVT::v4i16)) {
+      SDValue Concat =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL,
+                      Op0Ty.getDoubleNumVectorElementsVT(*DAG.getContext()),
+                      SourceOp0, SourceOp1);
+      return DAG.getNode(ISD::TRUNCATE, DL, ResVT, Concat);
+    }
+  }
 
-  if (!SourceOp0 || !SourceOp1)
+  // uzp1(xtn x, xtn y) -> xtn(uzp1 (x, y))
+  if (SourceOp0.getOpcode() != ISD::TRUNCATE ||
+      SourceOp1.getOpcode() != ISD::TRUNCATE)
     return SDValue();
+  SourceOp0 = SourceOp0.getOperand(0);
+  SourceOp1 = SourceOp1.getOperand(0);
 
   if (SourceOp0.getValueType() != SourceOp1.getValueType() ||
       !SourceOp0.getValueType().isSimple())
