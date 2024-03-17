@@ -306,6 +306,8 @@ else()
   set(LIBCXX_PSTL_CPU_BACKEND "serial" CACHE STRING "Which PSTL CPU backend to use")
 endif()
 
+option(LIBCXX_ENABLE_SHARED_RECURSIVE_MUTEX "Build libc++ with shared_recursive_mutex API" OFF)
+
 # Misc options ----------------------------------------------------------------
 # FIXME: Turn -pedantic back ON. It is currently off because it warns
 # about #include_next which is used everywhere.

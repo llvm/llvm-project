@@ -1,0 +1,71 @@
+#ifndef _SHARED_RECURSIVE_MUTEX_
+#define _SHARED_RECURSIVE_MUTEX_
+
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+#include <cstdint>
+
+#ifdef _LIBCPP_HAS_NO_THREADS
+#  error "<shared_recursive_mutex> is not supported since libc++ has been configured without support for threads."
+#endif
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+/* Provides recurseve shared_mutex.
+ *
+ * 1. Function
+ *   |         type           |   policy       | Read Nesting | Read-write Nesting | Write-read Nesting | Write Nesting |
+ *   |  pthread_rwlock(glibc) |  Reader favor  |       Y      |      deadlock      |    return false    | return false  |
+ *   |  shared_mutex(gcc)     |  Reader favor  |       Y      |      deadlock      |       assert       |    assert     |
+ *   |  shared_mutex(llvm)    |  Write favor   |maybe deadlock|      deadlock      |      deadlock      |    deadlock   |
+ *   | shared_recursive_mutex |  Reader favor  |       Y      |      deadlock      |          Y         |       Y       |
+ *   Reasons for not supporting read/write nesting:
+ *     - The information about the read lock holder needs to be maintained, which affects the memory and performance.
+ *     - does not meet the contract of the read lock (no modification should be made during the hold period)
+ *
+ * 2. shared_mutex vs shared_recursive_mutex(SR) performance comparison
+ *   |       testcase       |  GCC RL  | GCC WL   | LLVM RL  |  LLVM WL |   SR RL  |   SR WL  |
+ *   |     1read 0write     | 7445029  |       0  | 3452907  |       0  | 3547000  |       0  |
+ *   |     0read 1write     |       0  | 5102869  |       0  | 7445029  |       0  | 3472935  |
+ *   |     1read 1write     |   47861  |   50153  |   31417  |  524955  |  224395  |  244908  |
+ *   |     2read 1write     |  444764  |   26655  |  120715  |  387924  |  397377  |  155332  |
+ *   |     4read 1write     | 1767244  |    9418  |  110139  |  214612  |  383453  |   21677  |
+ *   |     2read 2write     |  433766  |   25975  |   48125  |  312586  |  212341  |  117929  |
+ *   - base on ARMv7 8*A15
+ *   - The value is the number of lock operations performed by all threads in 10s. Larger is better.
+ *
+ * 3. shared_recursive_mutex support shared_lock and unique_lock.(shared_lock should include shared_mutex header)
+ */
+
+namespace __shared_recursive_mutex {
+
+class shared_recursive_mutex {
+public:
+  shared_recursive_mutex()  = default;
+  ~shared_recursive_mutex() = default;
+
+  shared_recursive_mutex(const shared_recursive_mutex&)            = delete;
+  shared_recursive_mutex& operator=(const shared_recursive_mutex&) = delete;
+
+  void lock();
+  bool try_lock();
+  void unlock();
+
+  void lock_shared();
+  bool try_lock_shared();
+  void unlock_shared();
+
+private:
+  std::mutex __mutex_;
+  std::condition_variable __cond_;
+  std::__thread_id __owner_ = std::__thread_id(); // write owner.
+  uint32_t __recursions_    = 0;                  // read lock recursions
+  uint32_t __readers_       = 0;
+};
+
+} // namespace __shared_recursive_mutex
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif
