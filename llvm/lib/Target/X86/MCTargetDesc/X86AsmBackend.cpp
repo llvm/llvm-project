@@ -1419,7 +1419,8 @@ public:
         unsigned Reg = *MRI.getLLVMRegNum(Inst.getRegister(), true);
         SavedRegs[SavedRegIdx++] = Reg;
         StackAdjust += OffsetSize;
-        MinAbsOffset = std::min<int64_t>(MinAbsOffset, llabs(Inst.getOffset()));
+        MinAbsOffset =
+            std::min<int64_t>(MinAbsOffset, std::abs(Inst.getOffset()));
         InstrOffset += PushInstrSize(Reg);
         break;
       }
