@@ -67,7 +67,7 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
-* Added support for Cortex-A520AE and Cortex-A720AE CPUs.
+* Added support for Cortex-A78AE, Cortex-A520AE and Cortex-A720AE CPUs.
 
 Changes to the AMDGPU Backend
 -----------------------------

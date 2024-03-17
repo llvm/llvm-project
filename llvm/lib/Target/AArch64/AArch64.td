@@ -873,7 +873,7 @@ def TuneA520    : SubtargetFeature<"a520", "ARMProcFamily", "CortexA520",
                                    FeatureFuseAdrpAdd,
                                    FeaturePostRAScheduler]>;
 
-def TuneA520AE  : SubtargetFeature<"a520ae", "ARMProcFamily", "CortexA520AE",
+def TuneA520AE  : SubtargetFeature<"a520ae", "ARMProcFamily", "CortexA520",
                                    "Cortex-A520AE ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
@@ -1007,7 +1007,7 @@ def TuneA720 : SubtargetFeature<"a720", "ARMProcFamily", "CortexA720",
                                  FeatureEnableSelectOptimize,
                                  FeaturePredictableSelectIsExpensive]>;
 
-def TuneA720AE : SubtargetFeature<"a720ae", "ARMProcFamily", "CortexA720AE",
+def TuneA720AE : SubtargetFeature<"a720ae", "ARMProcFamily", "CortexA720",
                                 "Cortex-A720AE ARM processors", [
                                  FeatureFuseAES,
                                  FeaturePostRAScheduler,
