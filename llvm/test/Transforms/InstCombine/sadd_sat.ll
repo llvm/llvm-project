@@ -624,7 +624,7 @@ define i32 @sadd_sat32_zext(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[B:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 2147483647)
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = call i64 @llvm.smin.i64(i64 [[ADD]], i64 2147483647)
 ; CHECK-NEXT:    [[CONV7:%.*]] = trunc i64 [[SPEC_STORE_SELECT]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV7]]
 ;
@@ -679,10 +679,10 @@ entry:
 define i32 @ashrA(i64 %a, i32 %b) {
 ; CHECK-LABEL: @ashrA(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[A:%.*]], 32
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[TMP1]], i32 [[B:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[CONV:%.*]] = lshr i64 [[A:%.*]], 32
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[CONV]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[TMP0]], i32 [[B:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
   %conv = ashr i64 %a, 32
@@ -697,10 +697,10 @@ entry:
 define i32 @ashrB(i32 %a, i64 %b) {
 ; CHECK-LABEL: @ashrB(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[B:%.*]], 32
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[TMP1]], i32 [[A:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[CONV1:%.*]] = lshr i64 [[B:%.*]], 32
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[CONV1]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[TMP0]], i32 [[A:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
   %conv = sext i32 %a to i64
@@ -717,12 +717,12 @@ entry:
 define i32 @ashrAB(i64 %a, i64 %b) {
 ; CHECK-LABEL: @ashrAB(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[A:%.*]], 32
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[B:%.*]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[TMP2]], i32 [[TMP3]])
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    [[CONV:%.*]] = lshr i64 [[A:%.*]], 32
+; CHECK-NEXT:    [[CONV1:%.*]] = lshr i64 [[B:%.*]], 32
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[CONV1]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[CONV]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
   %conv = ashr i64 %a, 32
@@ -805,10 +805,10 @@ entry:
 define <2 x i8> @ashrv2i8_s(<2 x i16> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @ashrv2i8_s(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 8, i16 8>
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> [[TMP0]] to <2 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[TMP1]], <2 x i8> [[B:%.*]])
-; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
+; CHECK-NEXT:    [[CONV:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 8, i16 8>
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc <2 x i16> [[CONV]] to <2 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[TMP0]], <2 x i8> [[B:%.*]])
+; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
 ;
 entry:
   %conv = ashr <2 x i16> %a, <i16 8, i16 8>

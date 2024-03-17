@@ -7161,9 +7161,6 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpUsingBoolRange(I))
     return Res;
 
-  if (Instruction *Res = foldICmpUsingKnownBits(I))
-    return Res;
-
   if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
     return Res;
 
@@ -7183,6 +7180,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       if (SPR.Flavor != SPF_UNKNOWN)
         return nullptr;
     }
+
+  if (Instruction *Res = foldICmpUsingKnownBits(I))
+    return Res;
 
   // Do this after checking for min/max to prevent infinite looping.
   if (Instruction *Res = foldICmpWithZero(I))
