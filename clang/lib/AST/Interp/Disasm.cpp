@@ -183,7 +183,7 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BLUE, true});
     if (const auto *ND = dyn_cast_if_present<NamedDecl>(asDecl()))
-      OS << ND->getName();
+      ND->printQualifiedName(OS);
     else if (asExpr())
       OS << "expr (TODO)";
   }
