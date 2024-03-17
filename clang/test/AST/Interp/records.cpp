@@ -1244,3 +1244,23 @@ struct HasNonConstExprMemInit {
   int x = f(); // both-note {{non-constexpr function}}
   constexpr HasNonConstExprMemInit() {} // both-error {{never produces a constant expression}}
 };
+
+namespace {
+  template <class Tp, Tp v>
+  struct integral_constant {
+    static const Tp value = v;
+  };
+
+  template <class Tp, Tp v>
+  const Tp integral_constant<Tp, v>::value;
+
+  typedef integral_constant<bool, true> true_type;
+  typedef integral_constant<bool, false> false_type;
+
+  /// This might look innocent, but we get an evaluateAsInitializer call for the
+  /// static bool member before evaluating the first static_assert, but we do NOT
+  /// get such a call for the second one. So the second one needs to lazily visit
+  /// the data member itself.
+  static_assert(true_type::value, "");
+  static_assert(true_type::value, "");
+}

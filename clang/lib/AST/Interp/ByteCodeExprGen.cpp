@@ -3306,7 +3306,8 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   if (Ctx.getLangOpts().CPlusPlus) {
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
       // Visit local const variables like normal.
-      if (VD->isLocalVarDecl() && VD->getType().isConstQualified()) {
+      if ((VD->isLocalVarDecl() || VD->isStaticDataMember()) &&
+          VD->getType().isConstQualified()) {
         if (!this->visitVarDecl(VD))
           return false;
         // Retry.
