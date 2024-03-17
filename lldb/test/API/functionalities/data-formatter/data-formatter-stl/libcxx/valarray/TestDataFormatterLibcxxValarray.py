@@ -18,6 +18,10 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
             self, "break here", lldb.SBFileSpec("main.cpp", False)
         )
 
+        #
+        # std::valarray
+        #
+
         self.expect(
             "frame variable va_int",
             substrs=[
@@ -75,4 +79,31 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
             "frame variable va_double[4]",
             error=True,
             substrs=['array index 4 is not valid for "(valarray<double>) va_double"'],
+        )
+
+        #
+        # std::slice_array
+        #
+
+        self.expect(
+            "frame variable sa",
+            substrs=[
+                "sa = stride=2 size=4",
+                "[0] = 1",
+                "[1] = 3",
+                "[2] = 5",
+                "[3] = 7",
+                "}",
+            ],
+        )
+
+        # check access-by-index
+        self.expect("frame variable sa[0]", substrs=["1"])
+        self.expect("frame variable sa[1]", substrs=["3"])
+        self.expect("frame variable sa[2]", substrs=["5"])
+        self.expect("frame variable sa[3]", substrs=["7"])
+        self.expect(
+            "frame variable sa[4]",
+            error=True,
+            substrs=['array index 4 is not valid for "(slice_array<int>) sa"'],
         )
