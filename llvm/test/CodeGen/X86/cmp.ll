@@ -416,9 +416,8 @@ define i32 @test13(i32 %mask, i32 %base, i32 %intra) {
 ;
 ; NDD-LABEL: test13:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; NDD-NEXT:    testb $8, %dil # encoding: [0x40,0xf6,0xc7,0x08]
-; NDD-NEXT:    cmovnel %edx, %eax # encoding: [0x0f,0x45,0xc2]
+; NDD-NEXT:    cmovnel %edx, %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x45,0xf2]
 ; NDD-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %mask, 8
   %tobool = icmp ne i32 %and, 0
@@ -436,9 +435,8 @@ define i32 @test14(i32 %mask, i32 %base, i32 %intra) {
 ;
 ; NDD-LABEL: test14:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; NDD-NEXT:    shrl $7, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0xc1,0xef,0x07]
-; NDD-NEXT:    cmovnsl %edx, %eax # encoding: [0x0f,0x49,0xc2]
+; NDD-NEXT:    shrl $7, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xc1,0xef,0x07]
+; NDD-NEXT:    cmovnsl %edx, %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x49,0xf2]
 ; NDD-NEXT:    retq # encoding: [0xc3]
   %s = lshr i32 %mask, 7
   %tobool = icmp sgt i32 %s, -1
@@ -1100,9 +1098,8 @@ define { i64, i64 } @pr39968(i64, i64, i32) {
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    testb $64, %dl # encoding: [0xf6,0xc2,0x40]
-; NDD-NEXT:    cmovneq %rdi, %rsi # encoding: [0x48,0x0f,0x45,0xf7]
-; NDD-NEXT:    cmovneq %rdi, %rax # encoding: [0x48,0x0f,0x45,0xc7]
-; NDD-NEXT:    movq %rsi, %rdx # encoding: [0x48,0x89,0xf2]
+; NDD-NEXT:    cmovneq %rdi, %rsi, %rdx # encoding: [0x62,0xf4,0xec,0x18,0x45,0xf7]
+; NDD-NEXT:    cmovneq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x45,0xc7]
 ; NDD-NEXT:    retq # encoding: [0xc3]
   %4 = and i32 %2, 64
   %5 = icmp ne i32 %4, 0
