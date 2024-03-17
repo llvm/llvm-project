@@ -1650,6 +1650,7 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
                                              Value *NewOp, InstCombiner &IC) {
   Instruction *Clone = I.clone();
   Clone->replaceUsesOfWith(SI, NewOp);
+  Clone->dropUBImplyingAttrsAndMetadata();
   IC.InsertNewInstBefore(Clone, SI->getIterator());
   return Clone;
 }
