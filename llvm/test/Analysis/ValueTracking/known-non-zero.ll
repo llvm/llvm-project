@@ -1305,9 +1305,7 @@ define <2 x i1> @range_metadata_vec(ptr %p, <2 x i32> %x) {
 
 define i1 @range_attr(i8 range(i8 1, 0) %x, i8 %y) {
 ; CHECK-LABEL: @range_attr(
-; CHECK-NEXT:    [[I:%.*]] = or i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %or = or i8 %y, %x
   %cmp = icmp eq i8 %or, 0
@@ -1331,9 +1329,7 @@ declare range(i8 -1, 1) i8 @returns_contain_zero_range_helper()
 define i1 @range_return(i8 %y) {
 ; CHECK-LABEL: @range_return(
 ; CHECK-NEXT:    [[I:%.*]] = call i8 @returns_non_zero_range_helper()
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], [[I]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x = call i8 @returns_non_zero_range_helper()
   %or = or i8 %y, %x
@@ -1359,9 +1355,7 @@ declare i8 @returns_i8_helper()
 define i1 @range_call(i8 %y) {
 ; CHECK-LABEL: @range_call(
 ; CHECK-NEXT:    [[I:%.*]] = call range(i8 1, 0) i8 @returns_i8_helper()
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], [[I]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x = call range(i8 1, 0) i8 @returns_i8_helper()
   %or = or i8 %y, %x
@@ -1384,9 +1378,7 @@ define i1 @neg_range_call(i8 %y) {
 
 define <2 x i1> @range_attr_vec(<2 x i8> range(i8 1, 0) %x, <2 x i8> %y) {
 ; CHECK-LABEL: @range_attr_vec(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[OR]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %or = or <2 x i8> %y, %x
   %cmp = icmp ne <2 x i8> %or, zeroinitializer
@@ -1410,9 +1402,7 @@ declare range(i8 -1, 1) <2 x i8> @returns_contain_zero_range_helper_vec()
 define <2 x i1> @range_return_vec(<2 x i8> %y) {
 ; CHECK-LABEL: @range_return_vec(
 ; CHECK-NEXT:    [[I:%.*]] = call <2 x i8> @returns_non_zero_range_helper_vec()
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[Y:%.*]], [[I]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[OR]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %x = call <2 x i8> @returns_non_zero_range_helper_vec()
   %or = or <2 x i8> %y, %x
@@ -1438,9 +1428,7 @@ declare <2 x i8> @returns_i8_helper_vec()
 define <2 x i1> @range_call_vec(<2 x i8> %y) {
 ; CHECK-LABEL: @range_call_vec(
 ; CHECK-NEXT:    [[I:%.*]] = call range(i8 1, 0) <2 x i8> @returns_i8_helper_vec()
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[Y:%.*]], [[I]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[OR]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %x = call range(i8 1, 0) <2 x i8> @returns_i8_helper_vec()
   %or = or <2 x i8> %y, %x
