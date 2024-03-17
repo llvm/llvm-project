@@ -14,15 +14,6 @@
 #include "ContinuationIndenter.h"
 #include "BreakableToken.h"
 #include "FormatInternal.h"
-#include "FormatToken.h"
-#include "WhitespaceManager.h"
-#include "clang/Basic/OperatorPrecedence.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TokenKinds.h"
-#include "clang/Format/Format.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/Support/Debug.h"
-#include <optional>
 
 #define DEBUG_TYPE "format-indenter"
 
