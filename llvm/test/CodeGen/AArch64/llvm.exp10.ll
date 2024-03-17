@@ -532,11 +532,18 @@ define double @exp10_f64(double %x) {
   ret double %r
 }
 
-; FIXME: Broken
-; define <1 x double> @exp10_v1f64(<1 x double> %x) {
-;   %r = call <1 x double> @llvm.exp10.v1f64(<1 x double> %x)
-;   ret <1 x double> %r
-; }
+define <1 x double> @exp10_v1f64(<1 x double> %x) {
+; CHECK-LABEL: exp10_v1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    bl exp10
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %r = call <1 x double> @llvm.exp10.v1f64(<1 x double> %x)
+  ret <1 x double> %r
+}
 
 define <2 x double> @exp10_v2f64(<2 x double> %x) {
 ; SDAG-LABEL: exp10_v2f64:
