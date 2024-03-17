@@ -15,8 +15,9 @@
 // plate <class charT, class traits = char_traits<charT> >
 // class basic_fstream
 
-// explicit basic_fstream(const filesystem::path& s,
-//     ios_base::openmode mode = ios_base::in|ios_base::out);
+// template<class T>
+// explicit basic_fstream(const T& s, ios_base::openmode mode = ios_base::in); // Since C++17
+// Constraints: is_same_v<T, filesystem::path> is true
 
 #include <fstream>
 #include <filesystem>
@@ -51,9 +52,9 @@ static_assert(test_non_convert_to_path<char>());
 static_assert(test_non_convert_to_path<wchar_t>());
 #endif // !TEST_HAS_NO_WIDE_CHARACTERS && !_LIBCPP_HAS_OPEN_WITH_WCHAR
 
-#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+#ifndef TEST_HAS_NO_CHAR8_T
 static_assert(test_non_convert_to_path<char8_t>());
-#endif //  TEST_STD_VER > 17 && defined(__cpp_char8_t)
+#endif // TEST_HAS_NO_CHAR8_T
 
 static_assert(test_non_convert_to_path<char16_t>());
 static_assert(test_non_convert_to_path<char32_t>());

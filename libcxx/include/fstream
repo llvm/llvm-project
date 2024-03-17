@@ -78,7 +78,8 @@ public:
     basic_ifstream();
     explicit basic_ifstream(const char* s, ios_base::openmode mode = ios_base::in);
     explicit basic_ifstream(const string& s, ios_base::openmode mode = ios_base::in);
-    template<class T> explicit basic_ifstream(const T& s, ios_base::openmode mode = ios_base::in); // Since C++17
+    template<class T>
+    explicit basic_ifstream(const T& s, ios_base::openmode mode = ios_base::in); // Since C++17
     basic_ifstream(basic_ifstream&& rhs);
 
     basic_ifstream& operator=(basic_ifstream&& rhs);
@@ -116,7 +117,8 @@ public:
     basic_ofstream();
     explicit basic_ofstream(const char* s, ios_base::openmode mode = ios_base::out);
     explicit basic_ofstream(const string& s, ios_base::openmode mode = ios_base::out);
-    template<class T> explicit basic_ofstream(const T& s, ios_base::openmode mode = ios_base::out); // Since C++17
+    template<class T>
+    explicit basic_ofstream(const T& s, ios_base::openmode mode = ios_base::out); // Since C++17
     basic_ofstream(basic_ofstream&& rhs);
 
     basic_ofstream& operator=(basic_ofstream&& rhs);
@@ -190,6 +192,8 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <__config>
 #include <__fwd/fstream.h>
 #include <__locale>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_same.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <__utility/unreachable.h>
