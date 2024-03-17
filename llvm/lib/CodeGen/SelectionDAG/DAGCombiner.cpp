@@ -2820,7 +2820,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   return SDValue();
 }
 
-// Attempt to form avgflooru(A, B) from add(and(A, B), lshr(xor(A, B), 1))
+// Attempt to form avgflooru(A, B) from (A & B) + ((A ^ B) >> 1)
 static SDValue combineFixedwidthToAVGFLOORU(SDNode *N, SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue N0 = N->getOperand(0);
@@ -2834,6 +2834,7 @@ static SDValue combineFixedwidthToAVGFLOORU(SDNode *N, SelectionDAG &DAG) {
       return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
     }
   }
+  return SDValue();
 }
 
 SDValue DAGCombiner::visitADD(SDNode *N) {
