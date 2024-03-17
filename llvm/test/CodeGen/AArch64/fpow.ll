@@ -37,6 +37,21 @@ entry:
   ret half %c
 }
 
+define <1 x double> @pow_v1f64(<1 x double> %x) {
+; CHECK-LABEL: pow_v1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    adrp x8, .LCPI3_0
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI3_0]
+; CHECK-NEXT:    bl pow
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = call <1 x double> @llvm.pow.v1f64(<1 x double> %x, <1 x double> <double 3.140000e+00>)
+  ret <1 x double> %c
+}
+
 define <2 x double> @pow_v2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-SD-LABEL: pow_v2f64:
 ; CHECK-SD:       // %bb.0: // %entry

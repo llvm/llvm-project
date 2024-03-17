@@ -1477,6 +1477,61 @@ define fp128 @fpext_f128_f64(double %x) #0 {
   ret fp128 %val
 }
 
+; CHECK-LABEL: sin_v1f64:
+; CHECK: bl sin
+define <1 x double> @sin_v1f64(<1 x double> %x, <1 x double> %y) {
+  %val = call <1 x double> @llvm.experimental.constrained.sin.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: cos_v1f64:
+; CHECK: bl cos
+define <1 x double> @cos_v1f64(<1 x double> %x, <1 x double> %y) {
+  %val = call <1 x double> @llvm.experimental.constrained.cos.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: pow_v1f64:
+; CHECK: bl pow
+define <1 x double> @pow_v1f64(<1 x double> %x, <1 x double> %y) {
+  %val = call <1 x double> @llvm.experimental.constrained.pow.v1f64(<1 x double> %x, <1 x double> %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: log_v1f64:
+; CHECK: bl log
+define <1 x double> @log_v1f64(<1 x double> %x, <1 x double> %y) {
+  %val = call <1 x double> @llvm.experimental.constrained.log.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: log2_v1f64:
+; CHECK: bl log2
+define <1 x double> @log2_v1f64(<1 x double> %x, <1 x double> %y) {
+  %val = call <1 x double> @llvm.experimental.constrained.log2.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: log10_v1f64:
+; CHECK: bl log10
+define <1 x double> @log10_v1f64(<1 x double> %x, <1 x double> %y) {
+  %val = call <1 x double> @llvm.experimental.constrained.log10.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: exp_v1f64:
+; CHECK: bl exp
+define <1 x double> @exp_v1f64(<1 x double> %x, <1 x double> %y) {
+  %val = call <1 x double> @llvm.experimental.constrained.exp.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: exp2_v1f64:
+; CHECK: bl exp2
+define <1 x double> @exp2_v1f64(<1 x double> %x, <1 x double> %y) {
+  %val = call <1 x double> @llvm.experimental.constrained.exp2.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
 
 attributes #0 = { strictfp }
 
