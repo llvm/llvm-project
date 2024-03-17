@@ -56,7 +56,7 @@ struct DXILProgram {
   std::optional<std::vector<llvm::yaml::Hex8>> DXIL;
 };
 
-#define SHADER_FEATURE_FLAG(Num, Val, Str) bool Val = false;
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str) bool Val = false;
 struct ShaderFeatureFlags {
   ShaderFeatureFlags() = default;
   ShaderFeatureFlags(uint64_t FlagData);
