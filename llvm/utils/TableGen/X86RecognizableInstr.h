@@ -106,6 +106,8 @@ enum {
   RawFrmImm16 = 8,
   AddCCFrm = 9,
   PrefixByte = 10,
+  MRMDestRegCC = 18,
+  MRMDestMemCC = 19,
   MRMDestMem4VOp3CC = 20,
   MRMr0 = 21,
   MRMSrcMemFSIB = 22,
