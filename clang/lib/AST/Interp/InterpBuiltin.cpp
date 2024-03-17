@@ -917,7 +917,7 @@ static bool interp__builtin_complex(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
-  InterpFrame *Frame = S.Current;
+  const InterpFrame *Frame = S.Current;
   APValue Dummy;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);
