@@ -2529,7 +2529,7 @@ static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(IsAdd ? ISD::SUB : ISD::ADD, DL, VT, C1, LowBit);
 }
 
-// Attempt to form avgceilu(A, B) from sub(or(A, B), lshr(xor(A, B), 1))
+// Attempt to form avgceilu(A, B) from (A | B) - ((A ^ B) >> 1)
 static SDValue combineFixedwidthToAVGCEILU(SDNode *N, SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue N0 = N->getOperand(0);
@@ -2543,6 +2543,7 @@ static SDValue combineFixedwidthToAVGCEILU(SDNode *N, SelectionDAG &DAG) {
       return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
     }
   }
+  return SDValue();
 }
 
 /// Try to fold a 'not' shifted sign-bit with add/sub with constant operand into
