@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -186,7 +187,7 @@ public:
   /// and atomic ordering requirements must also be specified. For cmpxchg
   /// atomic operations the atomic ordering requirements when store does not
   /// occur must also be specified.
-  MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, uint64_t s,
+  MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LocationSize TS,
                     Align a, const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
                     SyncScope::ID SSID = SyncScope::System,
@@ -235,13 +236,17 @@ public:
   LLT getMemoryType() const { return MemoryType; }
 
   /// Return the size in bytes of the memory reference.
-  uint64_t getSize() const {
-    return MemoryType.isValid() ? MemoryType.getSizeInBytes() : ~UINT64_C(0);
+  LocationSize getSize() const {
+    return MemoryType.isValid()
+               ? LocationSize::precise(MemoryType.getSizeInBytes())
+               : LocationSize::beforeOrAfterPointer();
   }
 
   /// Return the size in bits of the memory reference.
-  uint64_t getSizeInBits() const {
-    return MemoryType.isValid() ? MemoryType.getSizeInBits() : ~UINT64_C(0);
+  LocationSize getSizeInBits() const {
+    return MemoryType.isValid()
+               ? LocationSize::precise(MemoryType.getSizeInBits())
+               : LocationSize::beforeOrAfterPointer();
   }
 
   LLT getType() const {

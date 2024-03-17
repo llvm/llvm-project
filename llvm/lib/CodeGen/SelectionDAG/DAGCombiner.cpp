@@ -24160,7 +24160,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   // TODO: Use "BaseIndexOffset" to make this more effective.
   SDValue NewAddr = DAG.getMemBasePlusOffset(Ld->getBasePtr(), Offset, DL);
 
-  uint64_t StoreSize = MemoryLocation::getSizeOrUnknown(VT.getStoreSize());
+  LocationSize StoreSize = MemoryLocation::getSizeOrUnknown(VT.getStoreSize());
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO;
   if (Offset.isScalable()) {
@@ -27805,14 +27805,13 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
                  : (LSN->getAddressingMode() == ISD::PRE_DEC)
                      ? -1 * C->getSExtValue()
                      : 0;
-      uint64_t Size =
+      LocationSize Size =
           MemoryLocation::getSizeOrUnknown(LSN->getMemoryVT().getStoreSize());
       return {LSN->isVolatile(),
               LSN->isAtomic(),
               LSN->getBasePtr(),
               Offset /*base offset*/,
-              Size != ~UINT64_C(0) ? LocationSize::precise(Size)
-                                   : LocationSize::beforeOrAfterPointer(),
+              Size,
               LSN->getMemOperand()};
     }
     if (const auto *LN = cast<LifetimeSDNode>(N))

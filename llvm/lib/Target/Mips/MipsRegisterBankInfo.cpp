@@ -155,7 +155,8 @@ static bool isGprbTwoInstrUnalignedLoadOrStore(const MachineInstr *MI) {
     auto MMO = *MI->memoperands_begin();
     const MipsSubtarget &STI = MI->getMF()->getSubtarget<MipsSubtarget>();
     if (MMO->getSize() == 4 && (!STI.systemSupportsUnalignedAccess() &&
-                                MMO->getAlign() < MMO->getSize()))
+                                (!MMO->getSize().hasValue() ||
+                                 MMO->getAlign() < MMO->getSize().getValue())))
       return true;
   }
   return false;

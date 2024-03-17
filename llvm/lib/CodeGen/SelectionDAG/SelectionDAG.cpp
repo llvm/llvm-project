@@ -8392,11 +8392,12 @@ SDValue SelectionDAG::getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl) {
 SDValue SelectionDAG::getMemIntrinsicNode(
     unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
     EVT MemVT, MachinePointerInfo PtrInfo, Align Alignment,
-    MachineMemOperand::Flags Flags, uint64_t Size, const AAMDNodes &AAInfo) {
-  if (!Size && MemVT.isScalableVector())
+    MachineMemOperand::Flags Flags, LocationSize Size,
+    const AAMDNodes &AAInfo) {
+  if (Size.hasValue() && MemVT.isScalableVector())
     Size = MemoryLocation::UnknownSize;
-  else if (!Size)
-    Size = MemVT.getStoreSize();
+  else if (Size.hasValue() && !Size.getValue())
+    Size = LocationSize::precise(MemVT.getStoreSize());
 
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO =
@@ -8558,7 +8559,7 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   if (PtrInfo.V.isNull())
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr, Offset);
 
-  uint64_t Size = MemoryLocation::getSizeOrUnknown(MemVT.getStoreSize());
+  LocationSize Size = MemoryLocation::getSizeOrUnknown(MemVT.getStoreSize());
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(PtrInfo, MMOFlags, Size,
                                                    Alignment, AAInfo, Ranges);
@@ -8679,7 +8680,7 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr);
 
   MachineFunction &MF = getMachineFunction();
-  uint64_t Size =
+  LocationSize Size =
       MemoryLocation::getSizeOrUnknown(Val.getValueType().getStoreSize());
   MachineMemOperand *MMO =
       MF.getMachineMemOperand(PtrInfo, MMOFlags, Size, Alignment, AAInfo);
@@ -8828,7 +8829,7 @@ SDValue SelectionDAG::getLoadVP(
   if (PtrInfo.V.isNull())
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr, Offset);
 
-  uint64_t Size = MemoryLocation::getSizeOrUnknown(MemVT.getStoreSize());
+  LocationSize Size = MemoryLocation::getSizeOrUnknown(MemVT.getStoreSize());
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(PtrInfo, MMOFlags, Size,
                                                    Alignment, AAInfo, Ranges);
@@ -11718,8 +11719,10 @@ MemSDNode::MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
   // the MMO. This is because the MMO might indicate only a possible address
   // range instead of specifying the affected memory addresses precisely.
   // TODO: Make MachineMemOperands aware of scalable vectors.
-  assert(memvt.getStoreSize().getKnownMinValue() <= MMO->getSize() &&
-         "Size mismatch!");
+  assert(
+      (!MMO->getType().isValid() ||
+       memvt.getStoreSize().getKnownMinValue() <= MMO->getSize().getValue()) &&
+      "Size mismatch!");
 }
 
 /// Profile - Gather unique data for the node.

@@ -8519,7 +8519,8 @@ bool PPCTargetLowering::directMoveIsProfitable(const SDValue &Op) const {
   // If there is no LXSIBZX/LXSIHZX, like Power8,
   // prefer direct move if the memory size is 1 or 2 bytes.
   MachineMemOperand *MMO = cast<LoadSDNode>(Origin)->getMemOperand();
-  if (!Subtarget.hasP9Vector() && MMO->getSize() <= 2)
+  if (!Subtarget.hasP9Vector() &&
+      (!MMO->getSize().hasValue() || MMO->getSize().getValue() <= 2))
     return true;
 
   for (SDNode::use_iterator UI = Origin->use_begin(),
@@ -15114,7 +15115,7 @@ SDValue PPCTargetLowering::expandVSXLoadForLE(SDNode *N,
     // If the MMO suggests this isn't a load of a full vector, leave
     // things alone.  For a built-in, we have to make the change for
     // correctness, so if there is a size problem that will be a bug.
-    if (MMO->getSize() < 16)
+    if (!MMO->getSize().hasValue() || MMO->getSize().getValue() < 16)
       return SDValue();
     break;
   }
@@ -15182,7 +15183,7 @@ SDValue PPCTargetLowering::expandVSXStoreForLE(SDNode *N,
     // If the MMO suggests this isn't a store of a full vector, leave
     // things alone.  For a built-in, we have to make the change for
     // correctness, so if there is a size problem that will be a bug.
-    if (MMO->getSize() < 16)
+    if (!MMO->getSize().hasValue() || MMO->getSize().getValue() < 16)
       return SDValue();
     break;
   }

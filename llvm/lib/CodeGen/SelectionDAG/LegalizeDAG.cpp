@@ -267,7 +267,9 @@ static MachineMemOperand *getStackAlignedMMO(SDValue StackPtr,
   auto &MFI = MF.getFrameInfo();
   int FI = cast<FrameIndexSDNode>(StackPtr)->getIndex();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
-  uint64_t ObjectSize = isObjectScalable ? ~UINT64_C(0) : MFI.getObjectSize(FI);
+  LocationSize ObjectSize = isObjectScalable
+                                ? LocationSize::beforeOrAfterPointer()
+                                : LocationSize::precise(MFI.getObjectSize(FI));
   return MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
                                  ObjectSize, MFI.getObjectAlign(FI));
 }

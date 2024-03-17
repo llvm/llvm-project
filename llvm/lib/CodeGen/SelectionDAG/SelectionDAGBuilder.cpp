@@ -3037,7 +3037,8 @@ static SDValue getLoadStackGuard(SelectionDAG &DAG, const SDLoc &DL,
     auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
                  MachineMemOperand::MODereferenceable;
     MachineMemOperand *MemRef = MF.getMachineMemOperand(
-        MPInfo, Flags, PtrTy.getSizeInBits() / 8, DAG.getEVTAlign(PtrTy));
+        MPInfo, Flags, LocationSize::precise(PtrTy.getSizeInBits() / 8),
+        DAG.getEVTAlign(PtrTy));
     DAG.setNodeMemRefs(Node, {MemRef});
   }
   if (PtrTy != PtrMemTy)
@@ -4753,7 +4754,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
-      MemoryLocation::UnknownSize, Alignment, I.getAAMetadata());
+      LocationSize::beforeOrAfterPointer(), Alignment, I.getAAMetadata());
   SDValue StoreNode =
       DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask, VT, MMO,
                          ISD::UNINDEXED, false /* Truncating */, IsCompressing);
@@ -4925,7 +4926,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
-      MemoryLocation::UnknownSize, Alignment, AAInfo, Ranges);
+      LocationSize::beforeOrAfterPointer(), Alignment, AAInfo, Ranges);
 
   SDValue Load =
       DAG.getMaskedLoad(VT, sdl, InChain, Ptr, Offset, Mask, Src0, VT, MMO,
@@ -5003,9 +5004,9 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, SuccessOrdering,
-      FailureOrdering);
+      MachinePointerInfo(I.getPointerOperand()), Flags,
+      LocationSize::precise(MemVT.getStoreSize()), DAG.getEVTAlign(MemVT),
+      AAMDNodes(), nullptr, SSID, SuccessOrdering, FailureOrdering);
 
   SDValue L = DAG.getAtomicCmpSwap(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS,
                                    dl, MemVT, VTs, InChain,
@@ -5057,8 +5058,9 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, Ordering);
+      MachinePointerInfo(I.getPointerOperand()), Flags,
+      LocationSize::precise(MemVT.getStoreSize()), DAG.getEVTAlign(MemVT),
+      AAMDNodes(), nullptr, SSID, Ordering);
 
   SDValue L =
     DAG.getAtomic(NT, dl, MemVT, InChain,
@@ -5103,8 +5105,9 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   auto Flags = TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), AAMDNodes(), nullptr, SSID, Order);
+      MachinePointerInfo(I.getPointerOperand()), Flags,
+      LocationSize::precise(MemVT.getStoreSize()), I.getAlign(), AAMDNodes(),
+      nullptr, SSID, Order);
 
   InChain = TLI.prepareVolatileOrAtomicLoad(InChain, dl, DAG);
 
@@ -5140,8 +5143,9 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), AAMDNodes(), nullptr, SSID, Ordering);
+      MachinePointerInfo(I.getPointerOperand()), Flags,
+      LocationSize::precise(MemVT.getStoreSize()), I.getAlign(), AAMDNodes(),
+      nullptr, SSID, Ordering);
 
   SDValue Val = getValue(I.getValueOperand());
   if (Val.getValueType() != MemVT)
@@ -6904,7 +6908,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       auto MPI =
           MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
       MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-          MPI, MachineMemOperand::MOStore, MemoryLocation::UnknownSize,
+          MPI, MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer(),
           TempAlign);
       Chain = DAG.getGetFPEnv(Chain, sdl, Temp, EnvVT, MMO);
       Res = DAG.getLoad(EnvVT, sdl, Chain, Temp, MPI);
@@ -6933,7 +6937,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       Chain = DAG.getStore(Chain, sdl, Env, Temp, MPI, TempAlign,
                            MachineMemOperand::MOStore);
       MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-          MPI, MachineMemOperand::MOLoad, MemoryLocation::UnknownSize,
+          MPI, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
           TempAlign);
       Chain = DAG.getSetFPEnv(Chain, sdl, Temp, EnvVT, MMO);
     }
@@ -8087,7 +8091,7 @@ void SelectionDAGBuilder::visitVPLoad(
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
-      MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
   LD = DAG.getLoadVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
                      MMO, false /*IsExpanding */);
   if (AddToChain)
@@ -8110,8 +8114,8 @@ void SelectionDAGBuilder::visitVPGather(
   unsigned AS =
     PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-     MachinePointerInfo(AS), MachineMemOperand::MOLoad,
-     MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
+      MachinePointerInfo(AS), MachineMemOperand::MOLoad,
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
   SDValue Base, Index, Scale;
   ISD::MemIndexType IndexType;
   bool UniformBase = getUniformBase(PtrOperand, Base, Index, IndexType, Scale,
@@ -8151,7 +8155,7 @@ void SelectionDAGBuilder::visitVPStore(
   SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
-      MemoryLocation::UnknownSize, *Alignment, AAInfo);
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
   ST = DAG.getStoreVP(getMemoryRoot(), DL, OpValues[0], Ptr, Offset,
                       OpValues[2], OpValues[3], VT, MMO, ISD::UNINDEXED,
                       /* IsTruncating */ false, /*IsCompressing*/ false);
@@ -8174,7 +8178,7 @@ void SelectionDAGBuilder::visitVPScatter(
       PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MachineMemOperand::MOStore,
-      MemoryLocation::UnknownSize, *Alignment, AAInfo);
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
   SDValue Base, Index, Scale;
   ISD::MemIndexType IndexType;
   bool UniformBase = getUniformBase(PtrOperand, Base, Index, IndexType, Scale,
@@ -8217,7 +8221,7 @@ void SelectionDAGBuilder::visitVPStridedLoad(
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MachineMemOperand::MOLoad,
-      MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
 
   SDValue LD = DAG.getStridedLoadVP(VT, DL, InChain, OpValues[0], OpValues[1],
                                     OpValues[2], OpValues[3], MMO,
@@ -8240,7 +8244,7 @@ void SelectionDAGBuilder::visitVPStridedStore(
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MachineMemOperand::MOStore,
-      MemoryLocation::UnknownSize, *Alignment, AAInfo);
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
 
   SDValue ST = DAG.getStridedStoreVP(
       getMemoryRoot(), DL, OpValues[0], OpValues[1],
