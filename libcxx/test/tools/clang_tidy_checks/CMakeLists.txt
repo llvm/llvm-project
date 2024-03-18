@@ -9,6 +9,17 @@ set(Clang_DIR_SAVE ${Clang_DIR})
 # versions must match. Otherwise there likely will be ODR-violations. This had
 # led to crashes and incorrect output of the clang-tidy based checks.
 find_package(Clang ${CMAKE_CXX_COMPILER_VERSION})
+if(NOT Clang_FOUND)
+  message(STATUS "Clang-tidy tests are disabled since the "
+                 "Clang development package is unavailable.")
+  return()
+endif()
+if(NOT TARGET clangTidy)
+  message(STATUS "Clang-tidy tests are disabled since the "
+                 "Clang development package has no clangTidy target.")
+  return()
+endif()
+message(STATUS "Clang-tidy tests are enabled.")
 
 set(SOURCES
     abi_tag_on_virtual.cpp
@@ -22,11 +33,7 @@ set(SOURCES
     libcpp_module.cpp
    )
 
-if(NOT Clang_FOUND)
-  message(STATUS "Could not find a suitable version of the Clang development package;
-                  custom libc++ clang-tidy checks will not be available.")
-  return()
-endif()
+list(APPEND LIBCXX_TEST_DEPS cxx-tidy)
 
 set(LLVM_DIR "${LLVM_DIR_SAVE}" CACHE PATH "The directory containing a CMake configuration file for LLVM." FORCE)
 set(Clang_DIR "${Clang_DIR_SAVE}" CACHE PATH "The directory containing a CMake configuration file for Clang." FORCE)
