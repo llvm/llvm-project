@@ -93,8 +93,8 @@ entry:
   ret i64 %dx.dot
 }
 
-declare i16 @llvm.dx.sdot.v2i16(<2 x i16>, <2 x i32>)
+declare i16 @llvm.dx.sdot.v2i16(<2 x i16>, <2 x i16>)
 declare i32 @llvm.dx.sdot.v4i32(<4 x i32>, <4 x i32>)
-declare i16 @llvm.dx.udot.v3i32(<3 x i16>, <3 x i32>)
+declare i16 @llvm.dx.udot.v3i32(<3 x i16>, <3 x i16>)
 declare i32 @llvm.dx.udot.v4i32(<4 x i32>, <4 x i32>)
 declare i64 @llvm.dx.udot.v2i64(<2 x i64>, <2 x i64>)
