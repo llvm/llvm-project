@@ -80,8 +80,7 @@ static cl::opt<bool> ErrorNoncontigiousRegister(
     "merror-noncontigious-register",
     cl::desc("Error for register names that aren't contigious"),
     cl::init(false));
-static cl::opt<bool> AddBuildAttributes("hexagon-add-build-attributes",
-                                        cl::init(false));
+static cl::opt<bool> AddBuildAttributes("hexagon-add-build-attributes");
 namespace {
 
 struct HexagonOperand;
@@ -708,7 +707,6 @@ bool HexagonAsmParser::parseDirectiveAttribute(SMLoc L) {
     return true;
 
   getTargetStreamer().emitAttribute(Tag, IntegerValue);
-
   return false;
 }
 

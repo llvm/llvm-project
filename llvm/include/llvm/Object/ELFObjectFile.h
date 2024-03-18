@@ -398,6 +398,9 @@ protected:
     case ELF::EM_RISCV:
       Type = ELF::SHT_RISCV_ATTRIBUTES;
       break;
+    case ELF::EM_HEXAGON:
+      Type = ELF::SHT_HEXAGON_ATTRIBUTES;
+      break;
     default:
       return Error::success();
     }
