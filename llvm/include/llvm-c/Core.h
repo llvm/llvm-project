@@ -745,6 +745,24 @@ LLVMModuleRef LLVMCloneModule(LLVMModuleRef M);
 void LLVMDisposeModule(LLVMModuleRef M);
 
 /**
+ * Soon to be deprecated.
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
+ *
+ * Returns true if the module is in the new debug info mode which uses
+ * non-instruction debug records instead of debug intrinsics for variable
+ * location tracking.
+ */
+LLVMBool LLVMIsNewDbgInfoFormat(LLVMModuleRef M);
+
+/**
+ * Soon to be deprecated.
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
+ *
+ * Convert module into desired debug info format.
+ */
+void LLVMSetIsNewDbgInfoFormat(LLVMModuleRef M, LLVMBool UseNewFormat);
+
+/**
  * Obtain the identifier of a module.
  *
  * @param M Module to obtain identifier of
