@@ -2741,13 +2741,16 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
   IRBuilder<> Builder(Preheader->getTerminator());
   for (auto *U : Changes) {
     assert(L.isLoopInvariant(U->get()));
-    Instruction *Ins = cast<Instruction>(U->getUser());
+    BinaryOperator *Ins = cast<BinaryOperator>(U->getUser());
     Value *Mul;
     if (I.getType()->isIntOrIntVectorTy())
       Mul = Builder.CreateMul(U->get(), Factor, "factor.op.mul");
     else
       Mul = Builder.CreateFMulFMF(U->get(), Factor, Ins, "factor.op.fmul");
     U->set(Mul);
+    // We cannot guarantee the validity of NSW/NUW flags after reassociation.
+    Ins->setHasNoSignedWrap(false);
+    Ins->setHasNoUnsignedWrap(false);
   }
   I.replaceAllUsesWith(VariantOp);
   eraseInstruction(I, SafetyInfo, MSSAU);
