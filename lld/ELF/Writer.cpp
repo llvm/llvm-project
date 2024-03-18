@@ -1935,17 +1935,13 @@ static void removeUnusedSyntheticSections() {
         auto *sec = cast<SyntheticSection>(s);
         if (sec->getParent() && sec->isNeeded())
           return false;
-        // Packed AArch64 AUTH relocs might be moved from .relr.auth.dyn to
-        // .rela.dyn further in finalizeAddressDependentContent(). It is called
-        // later since removing unused synthetic sections changes the final
-        // layout. So, .rela.dyn should be kept now in such a case even if it's
-        // currently empty. A possible side effect is having empty
-        // .relr.auth.dyn (if all the packed AUTH relocs were moved to
-        // .rela.dyn) or empty .rela.dyn (if no rela relocs were there and no
-        // packed AUTH relocs were moved to it) in the output binary.
+        // .relr.auth.dyn relocations may be moved to .rela.dyn in
+        // finalizeAddressDependentContent, making .rela.dyn no longer empty.
+        // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
+        // we would fail to remove it here.
         if (config->emachine == EM_AARCH64 && config->relrPackDynRelocs)
           if (auto *relSec = dyn_cast<RelocationBaseSection>(sec))
-            if (relSec->name == ".rela.dyn")
+            if (relSec == mainPart->relaDyn.get())
               return false;
         unused.insert(sec);
         return true;

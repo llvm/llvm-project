@@ -2,11 +2,11 @@
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
-# RUN: llvm-mc -filetype=obj -triple=aarch64 %p/Inputs/shared2.s -o main.so.o
-# RUN: ld.lld -shared main.so.o -soname=so -o main.so
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %p/Inputs/shared2.s -o a.o
+# RUN: ld.lld -shared a.o -soname=so -o a.so
 # RUN: llvm-mc -filetype=obj -triple=aarch64 main.s -o main.o
 
-# RUN: ld.lld -pie main.o main.so -o main
+# RUN: ld.lld -pie main.o a.so -o main
 # RUN: llvm-readobj -r main | FileCheck --check-prefix=UNPACKED %s
 
 # UNPACKED:          Section ({{.+}}) .rela.dyn {
@@ -23,7 +23,7 @@
 # UNPACKED-NEXT:       0x304B0 R_AARCH64_AUTH_ABS64 bar2 0x0
 # UNPACKED-NEXT:     }
 
-# RUN: ld.lld main.o main.so -o main.nopie
+# RUN: ld.lld main.o a.so -o main.nopie
 # RUN: llvm-readobj -r main.nopie | FileCheck --check-prefix=NOPIE %s
 
 # NOPIE:      Section ({{.+}}) .rela.dyn {
@@ -40,7 +40,7 @@
 # NOPIE-NEXT:   0x2304A0 R_AARCH64_AUTH_ABS64 bar2 0x0
 # NOPIE-NEXT: }
 
-# RUN: ld.lld -pie -z pack-relative-relocs main.o main.so -o main.pie
+# RUN: ld.lld -pie -z pack-relative-relocs main.o a.so -o main.pie
 # RUN: llvm-readelf -S -d -r -x .test main.pie | FileCheck --check-prefixes=RELR,HEX %s
 
 # RELR:      Section Headers:
@@ -84,7 +84,7 @@
 # RAW-RELR-NEXT:     0x30440
 # RAW-RELR-NEXT:     0xF
 ## 0xF = 0b111100..00
-##        lsb    hsb
+##         lsb    hsb
 ## Bits 1..3 are set, we have relocs at 0x30440 and the next 3 places: 0x30448, 0x3450, 0x30458
 # RAW-RELR-NEXT:     0x30492
 ## A single reloc at ^^^^^^^
@@ -155,13 +155,9 @@
 
 #--- empty-relr.s
 
-## During relocation scanning, we might put some AUTH relocs into the packed
-## relocation section when not knowing the final implicit value to be stored in
-## the place to be relocated. If the value turns out to be wider than 32 bits
-## after computing the final layout, we convert the relocation from relr to
-## rela. A side effect is having an empty .relr.auth.dyn section if all the
-## packed relocations were converted to rela.
-## TODO: avoid empty .relr.auth.dyn in the output binary
+## .relr.auth.dyn relocations that do not fit 32 bits are moved to .rela.dyn.
+## In this case .relr.auth.dyn will be made empty, but
+## removeUnusedSyntheticSections fails to remove the section.
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 empty-relr.s -o empty-relr.o
 # RUN: ld.lld -pie -z pack-relative-relocs empty-relr.o -o empty-relr
@@ -193,11 +189,9 @@
 
 #--- empty-rela.s
 
-## (See comment in empty-relr.s for context)
-## If all the packed relocation remain in .relr.auth.dyn and none of them is
-## converted to rela while there were no other rela relocs in .rela.dyn, the
-## latter would be empty in the output binary.
-## TODO: avoid empty .rela.dyn in the output binary
+## .relr.auth.dyn relocations that do not fit 32 bits are moved to .rela.dyn.
+## If this scenario does not happen, .rela.dyn will remain empty,
+## but removeUnusedSyntheticSections fails to remove the section.
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 empty-rela.s -o empty-rela.o
 # RUN: ld.lld -pie -z pack-relative-relocs empty-rela.o -o empty-rela

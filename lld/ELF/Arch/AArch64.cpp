@@ -401,20 +401,15 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     write64(loc, val);
     break;
   case R_AARCH64_AUTH_ABS64:
-    // - If val is wider than 32 bits, we must have converted the auth relr
-    //   reloc to rela in Writer<ELFT>::finalizeAddressDependentContent(). If
-    //   so, no need to write anything, the rela entry holds all the info.
+    // If val is wider than 32 bits, the relocation must have been moved from
+    // .relr.auth.dyn to .rela.dyn, and the addend write is not needed.
     //
-    // - If val fits 32 bits:
-    //
-    //   - The relocation might still be rela instead of relr, for example, if
-    //     the relr -> rela conversion was performed during an iteration in
-    //     finalizeAddressDependentContent, but further iterations made the val
-    //     fitting 32 bits. In such case, there is no trouble with writing the
-    //     val since it will be treated as garbage and have no effect during
-    //     dynamic linking.
-    //
-    //   - If the relocation is actually relr, write the 32-bit val as expected.
+    // If val fits in 32 bits, we have two potential scenarios:
+    // * True RELR: Write the 32-bit `val`
+    // * RELA: Even if the value now fits in 32 bits, it might have been
+    //   converted from RELR during an iteration in
+    //   finalizeAddressDependentContent(). Writing the value is harmless
+    //   because dynamic linking ignores it.
     if (isInt<32>(val))
       write32(loc, val);
     break;
