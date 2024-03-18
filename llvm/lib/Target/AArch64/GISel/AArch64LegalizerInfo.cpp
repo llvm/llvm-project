@@ -628,7 +628,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return DstTy.isVector() && SrcTy.getSizeInBits() > 128 &&
                DstTy.getScalarSizeInBits() * 2 <= SrcTy.getScalarSizeInBits();
       })
-
+      .clampMinNumElements(0, s8, 8)
+      .clampMinNumElements(0, s16, 4)
+      .clampMinNumElements(0, s32, 2)
       .alwaysLegal();
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
