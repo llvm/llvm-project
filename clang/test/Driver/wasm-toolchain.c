@@ -205,3 +205,19 @@
 // RUN:   | FileCheck -check-prefix=LINK_WASIP2 %s
 // LINK_WASIP2: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_WASIP2: wasm-component-ld{{.*}}" "-L/foo/lib/wasm32-wasip2" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
+
+// Test that on `wasm32-wasip2` the `wasm-component-ld` programs is told where
+// to find `wasm-ld` by default.
+
+// RUN: %clang -### -O2 --target=wasm32-wasip2 %s --sysroot /foo 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_WASIP2_FIND_WASMLD %s
+// LINK_WASIP2_FIND_WASMLD: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
+// LINK_WASIP2_FIND_WASMLD: wasm-component-ld{{.*}}" {{.*}} "--wasm-ld-path" "{{.*}}wasm-ld{{.*}}" {{.*}} "[[temp]]" {{.*}}
+
+// If `wasm32-wasip2` is configured with `wasm-ld` as a linker then don't pass
+// the `--wasm-ld-path` flag.
+
+// RUN: %clang -### -O2 --target=wasm32-wasip2 -fuse-ld=lld %s --sysroot /foo 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_WASIP2_USE_WASMLD %s
+// LINK_WASIP2_USE_WASMLD: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
+// LINK_WASIP2_USE_WASMLD: wasm-ld{{.*}}" "-m" "wasm32" {{.*}} "[[temp]]" {{.*}}
