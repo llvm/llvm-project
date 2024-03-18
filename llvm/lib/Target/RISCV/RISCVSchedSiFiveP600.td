@@ -161,6 +161,7 @@ def : WriteRes<WriteCTZ, [SiFiveP600IntArith]>;
 def : WriteRes<WriteCTZ32, [SiFiveP600IntArith]>;
 
 def : WriteRes<WriteORCB, [SiFiveP600IntArith]>;
+def : WriteRes<WriteIMinMax, [SiFiveP600IntArith]>;
 
 def : WriteRes<WriteREV8, [SiFiveP600IntArith]>;
 
@@ -832,6 +833,7 @@ def : ReadAdvance<ReadCTZ32, 0>;
 def : ReadAdvance<ReadCPOP, 0>;
 def : ReadAdvance<ReadCPOP32, 0>;
 def : ReadAdvance<ReadORCB, 0>;
+def : ReadAdvance<ReadIMinMax, 0>;
 def : ReadAdvance<ReadREV8, 0>;
 def : ReadAdvance<ReadSHXADD, 0>;
 def : ReadAdvance<ReadSHXADD32, 0>;
