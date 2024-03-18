@@ -14942,6 +14942,7 @@ SDValue PPCTargetLowering::combineFPToIntToFP(SDNode *N,
     SDValue Ld = DAG.getMemIntrinsicNode(PPCISD::LXSIZX, dl,
                                          DAG.getVTList(MVT::f64, MVT::Other),
                                          Ops, MVT::i8, LDN->getMemOperand());
+    DAG.makeEquivalentMemoryOrdering(LDN, Ld);
 
     // For signed conversion, we need to sign-extend the value in the VSR
     if (Signed) {
