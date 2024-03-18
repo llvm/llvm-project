@@ -6158,6 +6158,70 @@ the configuration (without a prefix: ``Auto``).
 **TabWidth** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <TabWidth>`
   The number of columns used for tab stops.
 
+.. _TableGenBreakInsideDAGArg:
+
+**TableGenBreakInsideDAGArg** (``DAGArgStyle``) :versionbadge:`clang-format 19` :ref:`¶ <TableGenBreakInsideDAGArg>`
+  The styles of the line break inside the DAGArg in TableGen.
+
+  Possible values:
+
+  * ``DAS_DontBreak`` (in configuration: ``DontBreak``)
+    Never break inside DAGArg.
+
+    .. code-block:: c++
+
+      let DAGArgIns = (ins i32:$src1, i32:$src2);
+
+  * ``DAS_BreakElements`` (in configuration: ``BreakElements``)
+    Break inside DAGArg after each list element but for the last.
+    This aligns to the first element.
+
+    .. code-block:: c++
+
+      let DAGArgIns = (ins i32:$src1,
+                           i32:$src2);
+
+  * ``DAS_BreakAll`` (in configuration: ``BreakAll``)
+    Break inside DAGArg after the operator and the all elements.
+
+    .. code-block:: c++
+
+      let DAGArgIns = (ins
+          i32:$src1,
+          i32:$src2
+      );
+
+
+
+.. _TableGenBreakingDAGArgOperators:
+
+**TableGenBreakingDAGArgOperators** (``List of Strings``) :versionbadge:`clang-format 19` :ref:`¶ <TableGenBreakingDAGArgOperators>`
+  Works only when TableGenBreakInsideDAGArg is not DontBreak.
+  The string list needs to consist of identifiers in TableGen.
+  If any identifier is specified, this limits the line breaks by
+  TableGenBreakInsideDAGArg option only on DAGArg values beginning with
+  the specified identifiers.
+
+  For example the configuration,
+
+  .. code-block:: c++
+
+    TableGenBreakInsideDAGArg: BreakAll
+    TableGenBreakingDAGArgOperators: ['ins', 'outs']
+
+  makes the line break only occurs inside DAGArgs beginning with the
+  specified identifiers 'ins' and 'outs'.
+
+
+  .. code-block:: c++
+
+    let DAGArgIns = (ins
+        i32:$src1,
+        i32:$src2
+    );
+    let DAGArgOtherID = (other i32:$other1, i32:$other2);
+    let DAGArgBang = (!cast<SomeType>("Some") i32:$src1, i32:$src2)
+
 .. _TypeNames:
 
 **TypeNames** (``List of Strings``) :versionbadge:`clang-format 17` :ref:`¶ <TypeNames>`

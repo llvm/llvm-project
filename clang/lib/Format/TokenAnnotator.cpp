@@ -986,16 +986,59 @@ private:
     return false;
   }
 
+  // Judge if the token is a operator ID to insert line break in DAGArg.
+  // That is, TableGenBreakingDAGArgOperators is empty (by the definition of the
+  // option) or the token is in the list.
+  bool isTableGenDAGArgBreakingOperator(const FormatToken &Tok) {
+    auto &Opes = Style.TableGenBreakingDAGArgOperators;
+    // If the list is empty, all operators are breaking operators.
+    if (Opes.empty())
+      return true;
+    // Otherwise, the operator is limited to normal identifiers.
+    if (Tok.isNot(tok::identifier) ||
+        Tok.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator)) {
+      return false;
+    }
+    // The case next is colon, it is not a operator of identifier.
+    if (!Tok.Next || Tok.Next->is(tok::colon))
+      return false;
+    return std::find(Opes.begin(), Opes.end(), Tok.TokenText.str()) !=
+           Opes.end();
+  }
+
   // SimpleValue6 ::=  "(" DagArg [DagArgList] ")"
   // This parses SimpleValue 6's inside part of "(" ")"
   bool parseTableGenDAGArgAndList(FormatToken *Opener) {
+    FormatToken *FirstTok = CurrentToken;
     if (!parseTableGenDAGArg())
       return false;
+    bool BreakInside = false;
+    if (Style.TableGenBreakInsideDAGArg != FormatStyle::DAS_DontBreak) {
+      // Specialized detection for DAGArgOperator, that determines the way of
+      // line break for this DAGArg elements.
+      if (isTableGenDAGArgBreakingOperator(*FirstTok)) {
+        // Special case for identifier DAGArg operator.
+        BreakInside = true;
+        Opener->setType(TT_TableGenDAGArgOpenerToBreak);
+        if (FirstTok->isOneOf(TT_TableGenBangOperator,
+                              TT_TableGenCondOperator)) {
+          // Special case for bang/cond operators. Set the whole operator as
+          // the DAGArg operator. Always break after it.
+          CurrentToken->Previous->setType(TT_TableGenDAGArgOperatorToBreak);
+        } else if (FirstTok->is(tok::identifier)) {
+          if (Style.TableGenBreakInsideDAGArg == FormatStyle::DAS_BreakAll)
+            FirstTok->setType(TT_TableGenDAGArgOperatorToBreak);
+          else
+            FirstTok->setType(TT_TableGenDAGArgOperatorID);
+        }
+      }
+    }
     // Parse the [DagArgList] part
     bool FirstDAGArgListElm = true;
     while (CurrentToken) {
       if (!FirstDAGArgListElm && CurrentToken->is(tok::comma)) {
-        CurrentToken->setType(TT_TableGenDAGArgListComma);
+        CurrentToken->setType(BreakInside ? TT_TableGenDAGArgListCommaToBreak
+                                          : TT_TableGenDAGArgListComma);
         skipToNextNonComment();
       }
       if (CurrentToken && CurrentToken->is(tok::r_paren)) {
@@ -5086,6 +5129,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     }
     if (Right.is(TT_TableGenCondOperatorColon))
       return false;
+    if (Left.isOneOf(TT_TableGenDAGArgOperatorID,
+                     TT_TableGenDAGArgOperatorToBreak) &&
+        Right.isNot(TT_TableGenDAGArgCloser)) {
+      return true;
+    }
     // Do not insert bang operators and consequent openers.
     if (Right.isOneOf(tok::l_paren, tok::less) &&
         Left.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator)) {
@@ -5462,6 +5510,18 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     //       case2:0);
     if (Left.is(TT_TableGenCondOperatorComma))
       return true;
+    if (Left.is(TT_TableGenDAGArgOperatorToBreak) &&
+        Right.isNot(TT_TableGenDAGArgCloser)) {
+      return true;
+    }
+    if (Left.is(TT_TableGenDAGArgListCommaToBreak))
+      return true;
+    if (Right.is(TT_TableGenDAGArgCloser) && Right.MatchingParen &&
+        Right.MatchingParen->is(TT_TableGenDAGArgOpenerToBreak) &&
+        &Left != Right.MatchingParen->Next) {
+      // Check to avoid empty DAGArg such as (ins).
+      return Style.TableGenBreakInsideDAGArg == FormatStyle::DAS_BreakAll;
+    }
   }
 
   if (Line.startsWith(tok::kw_asm) && Right.is(TT_InlineASMColon) &&
@@ -5875,6 +5935,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     // Avoid to break around paste operator.
     if (Left.is(tok::hash) || Right.is(tok::hash))
+      return false;
+    if (Left.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator))
       return false;
   }
 
