@@ -751,6 +751,21 @@ public:
       serialiseGlobal(G);
     }
 
+    // Now that we've finished serialising globals, add a global (immutable, for
+    // now) array to the LLVM module containing pointers to all the global
+    // variables. We will use this to find the addresses of globals at runtime.
+    // The indices of the array correspond with `GlobalDeclIdx`s in the AOT IR.
+    vector<llvm::Constant *> GlobalsAsConsts;
+    for (llvm::GlobalVariable *G : Globals) {
+      GlobalsAsConsts.push_back(cast<llvm::Constant>(G));
+    }
+    ArrayType *GlobalsArrayTy =
+        ArrayType::get(PointerType::get(M.getContext(), 0), Globals.size());
+    GlobalVariable *GlobalsArray = new GlobalVariable(
+        M, GlobalsArrayTy, true, GlobalValue::LinkageTypes::ExternalLinkage,
+        ConstantArray::get(GlobalsArrayTy, GlobalsAsConsts));
+    GlobalsArray->setName("__yk_globalvar_ptrs");
+
     // num_types:
     OutStreamer.emitSizeT(Types.size());
     // types:
