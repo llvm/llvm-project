@@ -3672,6 +3672,8 @@ td_library(
     deps = [
         ":BuiltinDialectTdFiles",
         ":OpBaseTdFiles",
+        ":ShapedOpInterfacesTdFiles",
+        ":ViewLikeInterfaceTdFiles",
     ],
 )
 
@@ -3755,7 +3757,10 @@ cc_library(
     hdrs = ["include/mlir/Dialect/XeGPU/IR/XeGPU.h"],
     includes = ["include"],
     deps = [
+        ":DialectUtils",
         ":IR",
+        ":ShapedOpInterfaces",
+        ":ViewLikeInterface",
         ":XeGPUIncGen",
         "//llvm:Core",
         "//llvm:Support",
