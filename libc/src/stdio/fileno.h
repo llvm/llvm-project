@@ -10,7 +10,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_FILENO_H
 #define LLVM_LIBC_SRC_STDIO_FILENO_H
 
-#include <stdio.h>
+#include <include/llvm-libc-types/FILE.h>
 
 namespace LIBC_NAMESPACE {
 

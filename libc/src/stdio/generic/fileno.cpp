@@ -10,13 +10,12 @@
 #include "src/stdio/fileno.h"
 #include "src/__support/File/file.h"
 
-#include <stdio.h>
+#include <include/llvm-libc-types/FILE.h>
 
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fileno, (::FILE * stream)) {
-  int result = get_fileno(reinterpret_cast<LIBC_NAMESPACE::File *>(stream));
-  return result;
+  return get_fileno(reinterpret_cast<LIBC_NAMESPACE::File *>(stream));
 }
 
 } // namespace LIBC_NAMESPACE
