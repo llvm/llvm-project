@@ -10,7 +10,7 @@
 #include "src/stdio/fileno.h"
 #include "src/__support/File/file.h"
 
-#include <include/llvm-libc-types/FILE.h>
+#include "include/llvm-libc-types/FILE.h"
 
 namespace LIBC_NAMESPACE {
 
