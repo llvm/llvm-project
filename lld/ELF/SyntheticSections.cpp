@@ -314,44 +314,42 @@ GnuPropertySection::GnuPropertySection()
                        config->wordsize, ".note.gnu.property") {}
 
 void GnuPropertySection::writeTo(uint8_t *buf) {
+  write32(buf, 4);                          // Name size
+  write32(buf + 4, getSize() - 16);         // Content size
+  write32(buf + 8, NT_GNU_PROPERTY_TYPE_0); // Type
+  memcpy(buf + 12, "GNU", 4);               // Name string
+
   uint32_t featureAndType = config->emachine == EM_AARCH64
                                 ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
                                 : GNU_PROPERTY_X86_FEATURE_1_AND;
 
-  write32(buf, 4);                                   // Name size
-  write32(buf + 4, config->is64 ? 16 : 12);          // Content size
-  write32(buf + 8, NT_GNU_PROPERTY_TYPE_0);          // Type
-  memcpy(buf + 12, "GNU", 4);                        // Name string
-  write32(buf + 16, featureAndType);                 // Feature type
-  write32(buf + 20, 4);                              // Feature size
-  write32(buf + 24, config->andFeatures);            // Feature flags
-  if (config->is64)
-    write32(buf + 28, 0); // Padding
+  unsigned offset = 16;
+
+  if (config->andFeatures != 0) {
+    write32(buf + offset + 0, featureAndType);      // Feature type
+    write32(buf + offset + 4, 4);                   // Feature size
+    write32(buf + offset + 8, config->andFeatures); // Feature flags
+    if (config->is64)
+      write32(buf + offset + 12, 0); // Padding
+    offset += 16;
+  }
+
+  if (!ctx.aarch64PauthAbiTag.empty()) {
+    write32(buf + offset + 0, GNU_PROPERTY_AARCH64_FEATURE_PAUTH);
+    write32(buf + offset + 4, ctx.aarch64PauthAbiTag.size());
+    memcpy(buf + offset + 8, ctx.aarch64PauthAbiTag.data(),
+           ctx.aarch64PauthAbiTag.size());
+  }
 }
 
-size_t GnuPropertySection::getSize() const { return config->is64 ? 32 : 28; }
-
-AArch64PauthAbiTag::AArch64PauthAbiTag()
-    : SyntheticSection(llvm::ELF::SHF_ALLOC, llvm::ELF::SHT_NOTE,
-                       config->wordsize, ".note.AARCH64-PAUTH-ABI-tag") {}
-
-bool AArch64PauthAbiTag::isNeeded() const {
-  return !ctx.aarch64PauthAbiTag.empty();
-}
-
-void AArch64PauthAbiTag::writeTo(uint8_t *buf) {
-  ArrayRef<uint8_t> data = ctx.aarch64PauthAbiTag;
-  write32(buf, 4);                             // Name size
-  write32(buf + 4, data.size());               // Content size
-  write32(buf + 8, NT_ARM_TYPE_PAUTH_ABI_TAG); // Type
-  memcpy(buf + 12, "ARM", 4);                  // Name string
-  memcpy(buf + 16, data.data(), data.size());
-  memset(buf + 16 + data.size(), 0, getSize() - 16 - data.size()); // Padding
-}
-
-size_t AArch64PauthAbiTag::getSize() const {
-  return alignToPowerOf2(16 + ctx.aarch64PauthAbiTag.size(),
-                         config->is64 ? 8 : 4);
+size_t GnuPropertySection::getSize() const {
+  uint32_t contentSize = 0;
+  if (config->andFeatures != 0)
+    contentSize += config->is64 ? 16 : 12;
+  if (!ctx.aarch64PauthAbiTag.empty())
+    contentSize += 4 + 4 + ctx.aarch64PauthAbiTag.size();
+  assert(contentSize != 0);
+  return contentSize + 16;
 }
 
 BuildIdSection::BuildIdSection()

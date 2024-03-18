@@ -144,16 +144,6 @@ public:
   size_t getSize() const override;
 };
 
-// .note.AARCH64-PAUTH-ABI-tag section. See
-// https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#elf-marking
-class AArch64PauthAbiTag final : public SyntheticSection {
-public:
-  AArch64PauthAbiTag();
-  void writeTo(uint8_t *buf) override;
-  size_t getSize() const override;
-  bool isNeeded() const override;
-};
-
 // .note.gnu.build-id section.
 class BuildIdSection : public SyntheticSection {
   // First 16 bytes are a header.
@@ -1378,7 +1368,6 @@ struct InStruct {
   std::unique_ptr<StringTableSection> strTab;
   std::unique_ptr<SymbolTableBaseSection> symTab;
   std::unique_ptr<SymtabShndxSection> symTabShndx;
-  std::unique_ptr<AArch64PauthAbiTag> aarch64PauthAbiTag;
 
   void reset();
 };

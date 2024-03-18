@@ -579,13 +579,8 @@ template <class ELFT> void elf::createSyntheticSections() {
   in.iplt = std::make_unique<IpltSection>();
   add(*in.iplt);
 
-  if (config->andFeatures)
+  if (config->andFeatures || !ctx.aarch64PauthAbiTag.empty())
     add(*make<GnuPropertySection>());
-
-  if (!ctx.aarch64PauthAbiTag.empty()) {
-    in.aarch64PauthAbiTag = std::make_unique<AArch64PauthAbiTag>();
-    add(*in.aarch64PauthAbiTag);
-  }
 
   // .note.GNU-stack is always added when we are creating a re-linkable
   // object file. Other linkers are using the presence of this marker
