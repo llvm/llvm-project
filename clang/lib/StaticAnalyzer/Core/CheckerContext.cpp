@@ -110,11 +110,22 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
   if (FName.starts_with("__inline") && FName.contains(Name))
     return true;
 
-  if (FName.starts_with("__") && FName.ends_with("_chk") &&
-      FName.contains(Name))
-    return true;
-
   return false;
+}
+
+bool CheckerContext::isHardenedVariantOf(const FunctionDecl *FD,
+                                         StringRef Name) {
+  const IdentifierInfo *II = FD->getIdentifier();
+  if (!II)
+    return false;
+
+  StringRef FName = II->getName();
+  std::string ChkName = "__" + std::string(Name) + "_chk";
+
+  // This is using `equals()` instead of more lenient prefix/suffix/substring
+  // checks because we don't want to say that e.g. `__builtin___vsprintf_chk()`
+  // is a hardened variant of `sprintf()`.
+  return FName.equals(ChkName) || FName.equals("__builtin_" + ChkName);
 }
 
 StringRef CheckerContext::getMacroNameOrSpelling(SourceLocation &Loc) {
