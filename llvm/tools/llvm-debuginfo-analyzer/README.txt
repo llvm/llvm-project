@@ -31,11 +31,11 @@ use LIT tests to validate the logical readers.
 
 Convert the unitests:
   llvm-project/llvm/unittests/DebugInfo/LogicalView/CodeViewReaderTest.cpp
-  llvm-project/llvm/unittests/DebugInfo/LogicalView/ELFReaderTest.cpp
+  llvm-project/llvm/unittests/DebugInfo/LogicalView/DWARFReaderTest.cpp
 
 into LIT tests:
   llvm-project/llvm/test/DebugInfo/LogicalView/CodeViewReader.test
-  llvm-project/llvm/test/DebugInfo/LogicalView/ELFReader.test
+  llvm-project/llvm/test/DebugInfo/LogicalView/DWARFReader.test
 
 //===----------------------------------------------------------------------===//
 // Eliminate calls to 'getInputFileDirectory()' in the unit tests.
