@@ -13,19 +13,19 @@
 ; pass to be used by the 'loop-deletion' pass.
 
 ; CHECK: for.cond:
-; CHECK:   call void @llvm.dbg.value(metadata i32 %Index.0, metadata ![[DBG:[0-9]+]], {{.*}}
+; CHECK:   call void @llvm.dbg.value(metadata i32 %[[SSA_INDEX_0:.+]], metadata ![[DBG:[0-9]+]], {{.*}}
 
 ; CHECK: for.extra:
-; CHECK:   %call.0 = call noundef i32 @"?nop@@YAHH@Z"(i32 noundef %Index.0), {{.*}}
-; CHECK:   br i1 %cmp.0, label %for.cond, label %if.else, {{.*}}
+; CHECK:   %[[SSA_CALL_0:.+]] = call noundef i32 @"?nop@@YAHH@Z"(i32 noundef %[[SSA_INDEX_0]]), {{.*}}
+; CHECK:   br i1 %[[SSA_CMP_0:.+]], label %for.cond, label %if.else, {{.*}}
 
 ; CHECK: if.then:
 ; CHECK:   call void @llvm.dbg.value(metadata i32 777, metadata ![[DBG]], {{.*}}
-; CHECK:   call void @llvm.dbg.value(metadata i32 %Var.1, metadata ![[VAR:[0-9]+]], {{.*}}
+; CHECK:   call void @llvm.dbg.value(metadata i32 %[[SSA_VAR_1:.+]], metadata ![[VAR:[0-9]+]], {{.*}}
 ; CHECK:   br label %for.end, {{.*}}
 
 ; CHECK: if.else:
-; CHECK:   call void @llvm.dbg.value(metadata i32 %Var.2, metadata ![[VAR:[0-9]+]], {{.*}}
+; CHECK:   call void @llvm.dbg.value(metadata i32 %[[SSA_VAR_2:.+]], metadata ![[VAR:[0-9]+]], {{.*}}
 ; CHECK:   br label %for.end, {{.*}}
 
 ; CHECK: for.end:

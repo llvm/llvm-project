@@ -36,18 +36,17 @@
 
 ; Only the 'indvars' pass is executed.
 ; PRE-CHECK: for.cond:
-; PRE-CHECK:   call void @llvm.dbg.value(metadata i32 %Var.0, metadata ![[DBG]], {{.*}}
+; PRE-CHECK:   call void @llvm.dbg.value(metadata i32 %[[SSA_VAR_0:.+]], metadata ![[DBG]], {{.*}}
 ; PRE-CHECK:   call void @llvm.dbg.value(metadata !DIArgList{{.*}}
 
 ; PRE-CHECK: for.body:
-; PRE-CHECK:   %cmp1 = icmp eq i32 %Index.0, 666
-; PRE-CHECK:   %inc = add nsw i32 %Var.0, 1
-; PRE-CHECK:   %spec.select = select i1 %cmp1, i32 %inc, i32 %Var.0
+; PRE-CHECK:   %cmp1 = icmp eq i32 %[[SSA_INDEX_0:.+]], 666
+; PRE-CHECK:   %inc = add nsw i32 %[[SSA_VAR_0]], 1
+; PRE-CHECK:   %spec.select = select i1 %cmp1, i32 %inc, i32 %[[SSA_VAR_0]]
 ; PRE-CHECK:   call void @llvm.dbg.value(metadata i32 %spec.select, metadata ![[DBG]], {{.*}}
 ; PRE-CHECK:   br label %for.cond
 
 ; PRE-CHECK: for.end:
-; PRE-CHECK-NOT: call void @llvm.dbg.value
 ; PRE-CHECK:   ret void
 ; PRE-CHECK-DAG: ![[DBG]] = !DILocalVariable(name: "Var"{{.*}})
 

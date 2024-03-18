@@ -39,13 +39,12 @@
 ; PRE-CHECK:   call void @llvm.dbg.value(metadata i32 555, metadata ![[DBG]], {{.*}}
 
 ; PRE-CHECK: for.inc:
-; PRE-CHECK:   %Var.0 = phi i32 [ 1, %for.body ], [ 555, %if.then ]
-; PRE-CHECK:   call void @llvm.dbg.value(metadata i32 %Var.0, metadata ![[DBG]], {{.*}}
-; PRE-CHECK:   %inc = add nuw nsw i32 %Index.0, 1
+; PRE-CHECK:   %[[SSA_VAR_0:.+]] = phi i32 [ 1, %for.body ], [ 555, %if.then ]
+; PRE-CHECK:   call void @llvm.dbg.value(metadata i32 %[[SSA_VAR_0]], metadata ![[DBG]], {{.*}}
+; PRE-CHECK:   %inc = add nuw nsw i32 %[[SSA_INDEX_0:.+]], 1
 ; PRE-CHECK:   br label %for.cond
 
 ; PRE-CHECK: for.end:
-; PRE-CHECK-NOT: call void @llvm.dbg.value
 ; PRE-CHECK:   ret void
 ; PRE-CHECK-DAG: ![[DBG]] = !DILocalVariable(name: "Var"{{.*}})
 

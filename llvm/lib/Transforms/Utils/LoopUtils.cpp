@@ -615,7 +615,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
       SmallVector<WeakVH> &DbgUsers = L->getDebugInductionVariableDebugUsers();
       for (WeakVH &DebugUser : DbgUsers)
         if (DebugUser)
-          dyn_cast<DbgVariableIntrinsic>(DebugUser)->replaceVariableLocationOp(
+          cast<DbgVariableIntrinsic>(DebugUser)->replaceVariableLocationOp(
               0u, FinalValue);
     }
 
@@ -1435,7 +1435,7 @@ void llvm::addDebugValuesToIncomingValue(BasicBlock *Successor, Value *IndVar,
       continue;
     auto *Cloned = cast<DbgVariableIntrinsic>(DebugUser->clone());
     Cloned->replaceVariableLocationOp(0u, PN);
-    Cloned->insertBefore(Successor->getFirstNonPHI());
+    Cloned->insertBefore(*Successor, Successor->getFirstNonPHIIt());
   }
 }
 
@@ -1450,7 +1450,7 @@ void llvm::addDebugValuesToLoopVariable(BasicBlock *Successor, Value *ExitValue,
       continue;
     auto *Cloned = cast<DbgVariableIntrinsic>(DebugUser->clone());
     Cloned->replaceVariableLocationOp(0u, ExitValue);
-    Cloned->insertBefore(Successor->getFirstNonPHI());
+    Cloned->insertBefore(*Successor, Successor->getFirstNonPHIIt());
   }
 }
 
