@@ -12614,7 +12614,6 @@ cc_library(
         ":InferTypeOpInterface",
         ":Support",
         ":UBDialect",
-        ":ValueBoundsOpInterfaceIncGen",  # DO_NOT_SUBMIT
         ":VectorInterfaces",
         "//llvm:Support",
     ],
