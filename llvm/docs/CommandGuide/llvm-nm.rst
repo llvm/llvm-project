@@ -168,8 +168,10 @@ OPTIONS
 
 .. option:: --export-symbols
 
- Print sorted symbols with their visibility (if applicable), with duplicates
- removed.
+ Print sorted exportable symbols, with duplicates removed. For AIX the
+ symbol visibility is included. Consult your linker documentation o
+ determine which of the exportable symbols will actually be exported.
+ This option is currently only implemented for ELF and XCOFF.
 
 .. option:: --extern-only, -g
 
