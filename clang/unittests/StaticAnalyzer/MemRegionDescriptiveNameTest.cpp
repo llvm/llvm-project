@@ -125,4 +125,21 @@ void top() {
   EXPECT_EQ(Output, "DescriptiveNameChecker: \n");
 }
 
+TEST(MemRegionDescriptiveNameTest, SymbolicElementRegionIndexIncorrectSymbolName) {
+  StringRef Code = R"cpp(
+void reportDescriptiveName(int *p);
+extern int x, y;
+extern int array[3];
+void top() {
+  y = x;
+  reportDescriptiveName(&array[y]);
+})cpp";
+
+  std::string Output;
+  ASSERT_TRUE(runChecker(Code, Output));
+  //FIXME: Should return array[y], but returns array[x] (OriginRegion). 
+  EXPECT_EQ(Output, "DescriptiveNameChecker: array[x]\n");
+
+}
+
 } // namespace
