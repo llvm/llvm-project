@@ -7900,7 +7900,7 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
 
 iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
 VPRecipeBuilder::mapToVPValues(User::op_range Operands) {
-  std::function<VPValue *(Value *)> Fn = [this, &Plan](Value *Op) {
+  std::function<VPValue *(Value *)> Fn = [this](Value *Op) {
     if (auto *I = dyn_cast<Instruction>(Op)) {
       if (auto *R = Ingredient2Recipe.lookup(I))
         return R->getVPSingleValue();
@@ -8395,7 +8395,7 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(Instruction *I,
     BlockInMask = getBlockInMask(I->getParent());
   }
 
-  auto *Recipe = new VPReplicateRecipe(I, mapToVPValues(I->operands(), Plan),
+  auto *Recipe = new VPReplicateRecipe(I, mapToVPValues(I->operands()),
                                        IsUniform, BlockInMask);
   return Recipe;
 }
@@ -8603,9 +8603,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     if (!getDecisionAndClampRange(applyIG, Range))
       continue;
     InterleaveGroups.insert(IG);
-    for (unsigned i = 0; i < IG->getFactor(); i++)
-      if (Instruction *Member = IG->getMember(i))
-        RecipeBuilder.recordRecipeOf(Member);
   };
 
   // ---------------------------------------------------------------------------
@@ -8647,7 +8644,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         Operands.push_back(Plan->getVPValueOrAddLiveIn(
             Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader())));
       } else {
-        auto OpRange = RecipeBuilder.mapToVPValues(Instr->operands(), *Plan);
+        auto OpRange = RecipeBuilder.mapToVPValues(Instr->operands());
         Operands = {OpRange.begin(), OpRange.end()};
       }
 
