@@ -632,6 +632,11 @@ void CheckHelper::CheckObjectEntity(
     const Symbol &symbol, const ObjectEntityDetails &details) {
   CheckSymbolType(symbol);
   CheckArraySpec(symbol, details.shape());
+  CheckConflicting(symbol, Attr::ALLOCATABLE, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::ASYNCHRONOUS, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::SAVE, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::TARGET, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::VOLATILE, Attr::PARAMETER);
   Check(details.shape());
   Check(details.coshape());
   if (details.shape().Rank() > common::maxRank) {
