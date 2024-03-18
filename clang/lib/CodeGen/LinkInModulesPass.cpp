@@ -29,7 +29,7 @@ PreservedAnalyses LinkInModulesPass::run(Module &M, ModuleAnalysisManager &AM) {
     return PreservedAnalyses::all();
 
   if (BC->LinkInModules(&M, ShouldLinkFiles))
-    report_fatal_error("Bitcode module re-linking failed, aborted!");
+    report_fatal_error("Bitcode module postopt linking failed, aborted!");
 
-  return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
 }
