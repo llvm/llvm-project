@@ -214,8 +214,9 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
   auto *VRegs = VMap.getVRegs(Val);
   auto *Offsets = VMap.getOffsets(Val);
 
-  assert(Val.getType()->isSized() &&
-         "Don't know how to create an empty vreg");
+  if (!Val.getType()->isTokenTy())
+    assert(Val.getType()->isSized() &&
+           "Don't know how to create an empty vreg");
 
   SmallVector<LLT, 4> SplitTys;
   computeValueLLTs(*DL, *Val.getType(), SplitTys,
@@ -2074,6 +2075,36 @@ bool IRTranslator::translateIfEntryValueArgument(bool isDeclare, Value *Val,
   return true;
 }
 
+static unsigned getConvOpcode(Intrinsic::ID ID) {
+  switch (ID) {
+  default:
+    llvm_unreachable("Unexpected intrinsic");
+  case Intrinsic::experimental_convergence_anchor:
+    return TargetOpcode::CONVERGENCECTRL_ANCHOR;
+  case Intrinsic::experimental_convergence_entry:
+    return TargetOpcode::CONVERGENCECTRL_ENTRY;
+  case Intrinsic::experimental_convergence_loop:
+    return TargetOpcode::CONVERGENCECTRL_LOOP;
+  }
+}
+
+bool IRTranslator::translateConvergenceControlIntrinsic(
+    const CallInst &CI, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder) {
+  MachineInstrBuilder MIB = MIRBuilder.buildInstr(getConvOpcode(ID));
+  Register OutputReg = getOrCreateConvergenceTokenVReg(CI);
+  MIB.addDef(OutputReg);
+
+  if (ID == Intrinsic::experimental_convergence_loop) {
+    auto Bundle = CI.getOperandBundle(LLVMContext::OB_convergencectrl);
+    assert(Bundle && "Expected a convergence control token.");
+    Register InputReg =
+        getOrCreateConvergenceTokenVReg(*Bundle->Inputs[0].get());
+    MIB.addUse(InputReg);
+  }
+
+  return true;
+}
+
 bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                            MachineIRBuilder &MIRBuilder) {
   if (auto *MI = dyn_cast<AnyMemIntrinsic>(&CI)) {
@@ -2530,7 +2561,10 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 #include "llvm/IR/ConstrainedOps.def"
     return translateConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(CI),
                                            MIRBuilder);
-
+  case Intrinsic::experimental_convergence_anchor:
+  case Intrinsic::experimental_convergence_entry:
+  case Intrinsic::experimental_convergence_loop:
+    return translateConvergenceControlIntrinsic(CI, ID, MIRBuilder);
   }
   return false;
 }
@@ -2581,12 +2615,18 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
     }
   }
 
+  Register ConvergenceCtrlToken = 0;
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+    const auto &Token = *Bundle->Inputs[0].get();
+    ConvergenceCtrlToken = getOrCreateConvergenceTokenVReg(Token);
+  }
+
   // We don't set HasCalls on MFI here yet because call lowering may decide to
   // optimize into tail calls. Instead, we defer that to selection where a final
   // scan is done to check if any instructions are calls.
-  bool Success =
-      CLI->lowerCall(MIRBuilder, CB, Res, Args, SwiftErrorVReg,
-                     [&]() { return getOrCreateVReg(*CB.getCalledOperand()); });
+  bool Success = CLI->lowerCall(
+      MIRBuilder, CB, Res, Args, SwiftErrorVReg, ConvergenceCtrlToken,
+      [&]() { return getOrCreateVReg(*CB.getCalledOperand()); });
 
   // Check if we just inserted a tail call.
   if (Success) {
@@ -2698,6 +2738,14 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
       MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
     MIB.addMemOperand(
         MF->getMachineMemOperand(MPI, Info.flags, MemTy, Alignment, CI.getAAMetadata()));
+  }
+
+  if (CI.isConvergent()) {
+    if (auto Bundle = CI.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+      auto *Token = Bundle->Inputs[0].get();
+      Register TokenReg = getOrCreateVReg(*Token);
+      MIB.addUse(TokenReg, RegState::Implicit);
+    }
   }
 
   return true;

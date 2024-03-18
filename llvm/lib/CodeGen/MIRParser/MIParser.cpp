@@ -1919,10 +1919,13 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 
   if (Token.range().front() == 's') {
     auto ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
-    if (!verifyScalarSize(ScalarSize))
-      return error("invalid size for scalar type");
-
-    Ty = LLT::scalar(ScalarSize);
+    if (ScalarSize) {
+      if (!verifyScalarSize(ScalarSize))
+        return error("invalid size for scalar type");
+      Ty = LLT::scalar(ScalarSize);
+    } else {
+      Ty = LLT::token();
+    }
     lex();
     return false;
   } else if (Token.range().front() == 'p') {
@@ -1980,7 +1983,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   if (Token.range().front() == 's') {
     auto ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
     if (!verifyScalarSize(ScalarSize))
-      return error("invalid size for scalar type");
+      return error("invalid size for scalar element in vector");
     Ty = LLT::scalar(ScalarSize);
   } else if (Token.range().front() == 'p') {
     const DataLayout &DL = MF.getDataLayout();
