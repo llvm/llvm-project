@@ -116,6 +116,7 @@ registers:
   - { id: 27, class: grx32bit }
   - { id: 28, class: addr64bit }
 frameInfo:
+  adjustsStack:    true
   hasCalls:        true
 body:             |
   bb.0.bb5:

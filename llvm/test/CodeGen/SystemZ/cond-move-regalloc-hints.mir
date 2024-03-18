@@ -192,6 +192,7 @@ liveins:
   - { reg: '$r2d', virtual-reg: '%31' }
   - { reg: '$r3d', virtual-reg: '%32' }
 frameInfo:       
+  adjustsStack:    true
   hasCalls:        true
 body:             |
   bb.0.bb:
