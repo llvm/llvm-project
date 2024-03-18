@@ -26,7 +26,7 @@ TEST(LlvmLibcShmTest, Basic) {
   const char *name = "/test_shm_open";
   int fd;
   ASSERT_THAT(fd = LIBC_NAMESPACE::shm_open(name, O_CREAT | O_RDWR, 0666),
-              returns(GT(0)).with_errno(EQ(0)));
+              returns(GE(0)).with_errno(EQ(0)));
 
   // check that FD_CLOEXEC is set by default.
   // TODO: use fcntl when implemented.
@@ -62,7 +62,7 @@ TEST(LlvmLibcShmTest, NameConversion) {
   const char *name = "////test_shm_open";
   int fd;
   ASSERT_THAT(fd = LIBC_NAMESPACE::shm_open(name, O_CREAT | O_RDWR, 0666),
-              returns(GT(0)).with_errno(EQ(0)));
+              returns(GE(0)).with_errno(EQ(0)));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::shm_unlink(name), Succeeds());
 

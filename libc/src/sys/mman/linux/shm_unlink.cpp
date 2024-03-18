@@ -13,8 +13,8 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, shm_unlink, (const char *name)) {
-  if (cpp::optional<shm_common::SHMPath> buffer =
-          shm_common::translate_name(name))
+  using namespace shm_common;
+  if (cpp::optional<SHMPath> buffer = translate_name(name))
     return unlink(buffer->data());
   return -1;
 }
