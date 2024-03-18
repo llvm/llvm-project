@@ -1,4 +1,4 @@
-//===-- LVELFReader.h -------------------------------------------*- C++ -*-===//
+//===-- LVDWARFReader.h -----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the LVELFReader class, which is used to describe a
+// This file defines the LVDWARFReader class, which is used to describe a
 // debug information (DWARF) reader.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVELFREADER_H
-#define LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVELFREADER_H
+#ifndef LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
+#define LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
 
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -30,7 +30,7 @@ class LVType;
 
 using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
 
-class LVELFReader final : public LVBinaryReader {
+class LVDWARFReader final : public LVBinaryReader {
   object::ObjectFile &Obj;
 
   // Indicates if ranges data are available; in the case of split DWARF any
@@ -127,14 +127,14 @@ protected:
   void sortScopes() override;
 
 public:
-  LVELFReader() = delete;
-  LVELFReader(StringRef Filename, StringRef FileFormatName,
-              object::ObjectFile &Obj, ScopedPrinter &W)
+  LVDWARFReader() = delete;
+  LVDWARFReader(StringRef Filename, StringRef FileFormatName,
+                object::ObjectFile &Obj, ScopedPrinter &W)
       : LVBinaryReader(Filename, FileFormatName, W, LVBinaryType::ELF),
         Obj(Obj) {}
-  LVELFReader(const LVELFReader &) = delete;
-  LVELFReader &operator=(const LVELFReader &) = delete;
-  ~LVELFReader() = default;
+  LVDWARFReader(const LVDWARFReader &) = delete;
+  LVDWARFReader &operator=(const LVDWARFReader &) = delete;
+  ~LVDWARFReader() = default;
 
   LVAddress getCUBaseAddress() const { return CUBaseAddress; }
   void setCUBaseAddress(LVAddress Address) { CUBaseAddress = Address; }
@@ -158,4 +158,4 @@ public:
 } // end namespace logicalview
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVELFREADER_H
+#endif // LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
