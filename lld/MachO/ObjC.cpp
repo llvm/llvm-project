@@ -489,7 +489,7 @@ private:
   InfoCategoryWriter infoCategoryWriter;
   std::vector<ConcatInputSection *> &allInputSections;
   // Map of base class Symbol to list of InfoInputCategory's for it
-  std::map<const Symbol *, std::vector<InfoInputCategory>> categoryMap;
+  DenseMap<const Symbol *, std::vector<InfoInputCategory>> categoryMap;
 
   // Normally, the binary data comes from the input files, but since we're
   // generating binary data ourselves, we use the below array to store it in.
@@ -1064,6 +1064,7 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
              "Failed to get a valid cateogry at __objc_catlit offset");
 
       // We only support ObjC categories (no swift + @objc)
+      // TODO: Support swift + @objc categories also
       if (!categorySym->getName().starts_with(objc::symbol_names::category))
         continue;
 
@@ -1096,14 +1097,14 @@ void ObjcCategoryMerger::generateCatListForNonErasedCategories(
         catListToErasedOffsets) {
 
   // Go through all offsets of all __objc_catlist's that we process and if there
-  // are categories that we didn't process - generate a new __objv_catlist for
+  // are categories that we didn't process - generate a new __objc_catlist for
   // each.
   for (auto &mapEntry : catListToErasedOffsets) {
     ConcatInputSection *catListIsec = mapEntry.first;
     for (uint32_t catListIsecOffset = 0;
          catListIsecOffset < catListIsec->data.size();
          catListIsecOffset += target->wordSize) {
-      // This slot was erased, we can jsut skip it
+      // This slot was erased, we can just skip it
       if (mapEntry.second.count(catListIsecOffset))
         continue;
 

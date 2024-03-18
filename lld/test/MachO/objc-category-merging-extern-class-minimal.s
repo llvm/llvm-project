@@ -2,13 +2,13 @@
 # RUN: rm -rf %t; split-file %s %t && cd %t
 
 ## Create a dylib with a fake base class to link against
-# RUN: llvm-mc -filetype=obj -triple=arm64-ios-simulator -o a64_fakedylib.o a64_fakedylib.s
-# RUN: ld64.lld a64_fakedylib.o -o a64_fakedylib.dylib -dylib -arch arm64 -platform_version ios-simulator 14.0 15.0
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o a64_fakedylib.o a64_fakedylib.s
+# RUN: %lld -arch arm64 a64_fakedylib.o -o a64_fakedylib.dylib -dylib
 
 ## Create our main testing dylib - linking against the fake dylib above
-# RUN: llvm-mc -filetype=obj -triple=arm64-ios-simulator -o merge_cat_minimal.o merge_cat_minimal.s
-# RUN: ld64.lld -dylib -o merge_cat_minimal_no_merge.dylib a64_fakedylib.dylib merge_cat_minimal.o -arch arm64 -platform_version ios-simulator 14.0 15.0
-# RUN: ld64.lld -dylib -o merge_cat_minimal_merge.dylib -objc_category_merging a64_fakedylib.dylib merge_cat_minimal.o -arch arm64 -platform_version ios-simulator 14.0 15.0
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_cat_minimal.o merge_cat_minimal.s
+# RUN: %lld -arch arm64 -dylib -o merge_cat_minimal_no_merge.dylib a64_fakedylib.dylib merge_cat_minimal.o
+# RUN: %lld -arch arm64 -dylib -o merge_cat_minimal_merge.dylib -objc_category_merging a64_fakedylib.dylib merge_cat_minimal.o
 
 ## Now verify that the flag caused category merging to happen appropriatelly
 # RUN: llvm-objdump --objc-meta-data --macho merge_cat_minimal_no_merge.dylib | FileCheck %s --check-prefixes=NO_MERGE_CATS
@@ -78,7 +78,6 @@ _OBJC_CLASS_$_MyBaseClass:
 ;  ================== Generated from ObjC: ==================
 
 	.section	__TEXT,__text,regular,pure_instructions
-	.ios_version_min 7, 0
 	.p2align	2                               ; -- Begin function -[MyBaseClass(Category01) cat01_InstanceMethod]
 "-[MyBaseClass(Category01) cat01_InstanceMethod]": ; @"\01-[MyBaseClass(Category01) cat01_InstanceMethod]"
 	.cfi_startproc

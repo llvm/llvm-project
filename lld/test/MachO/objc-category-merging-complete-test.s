@@ -2,12 +2,12 @@
 # RUN: rm -rf %t; split-file %s %t && cd %t
 
 ## Create a dylib to link against(a64_file1.dylib) and merge categories in the main binary (file2_merge_a64.exe)
-# RUN: llvm-mc -filetype=obj -triple=arm64-ios-simulator -o a64_file1.o a64_file1.s
-# RUN: ld64.lld a64_file1.o -o a64_file1.dylib -dylib -arch arm64 -platform_version ios-simulator 14.0 15.0
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o a64_file1.o a64_file1.s
+# RUN: %lld -arch arm64 a64_file1.o -o a64_file1.dylib -dylib
 
-# RUN: llvm-mc -filetype=obj -triple=arm64-ios-simulator -o a64_file2.o a64_file2.s
-# RUN: ld64.lld -o a64_file2_no_merge.exe a64_file1.dylib a64_file2.o -arch arm64 -platform_version ios-simulator 14.0 15.0
-# RUN: ld64.lld -o a64_file2_merge.exe -objc_category_merging a64_file1.dylib a64_file2.o -arch arm64 -platform_version ios-simulator 14.0 15.0
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o a64_file2.o a64_file2.s
+# RUN: %lld -arch arm64 -o a64_file2_no_merge.exe a64_file1.dylib a64_file2.o
+# RUN: %lld -arch arm64 -o a64_file2_merge.exe -objc_category_merging a64_file1.dylib a64_file2.o
 
 # RUN: llvm-objdump --objc-meta-data --macho a64_file2_no_merge.exe | FileCheck %s --check-prefixes=NO_MERGE_CATS
 # RUN: llvm-objdump --objc-meta-data --macho a64_file2_merge.exe | FileCheck %s --check-prefixes=MERGE_CATS
@@ -124,7 +124,6 @@ NO_MERGE_CATS-NEXT: 2
 ## void *_objc_empty_cache;
 
 	.section	__TEXT,__text,regular,pure_instructions
-	.ios_version_min 7, 0
 	.p2align	2                               ; -- Begin function -[MyBaseClass baseInstanceMethod]
 "-[MyBaseClass baseInstanceMethod]":    ; @"\01-[MyBaseClass baseInstanceMethod]"
 	.cfi_startproc
@@ -438,7 +437,6 @@ L_OBJC_IMAGE_INFO:
 
 
 	.section	__TEXT,__text,regular,pure_instructions
-	.ios_version_min 7, 0
 	.p2align	2                               ; -- Begin function -[MyBaseClass(Category02) class02InstanceMethod]
 "-[MyBaseClass(Category02) class02InstanceMethod]": ; @"\01-[MyBaseClass(Category02) class02InstanceMethod]"
 	.cfi_startproc
