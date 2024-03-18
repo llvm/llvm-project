@@ -1169,6 +1169,11 @@ def POSIX : StandardSpec<"POSIX"> {
               RetValSpec<IntType>,
               [ArgSpec<VoidType>]
           >,
+          FunctionSpec<
+            "fileno",
+            RetValSpec<IntType>,
+            [ArgSpec<FILEPtr>]
+          >,
       ]
   >;
 
