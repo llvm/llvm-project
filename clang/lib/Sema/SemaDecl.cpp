@@ -15334,7 +15334,7 @@ void Sema::DiagnoseSizeOfParametersAndReturnValue(
   }
 }
 
-QualType Sema::adjustParameterTypeForObjCAutoRefCount(QualType T,
+QualType Sema::AdjustParameterTypeForObjCAutoRefCount(QualType T,
                                                       SourceLocation NameLoc,
                                                       TypeSourceInfo *TSInfo) {
   // In ARC, infer a lifetime qualifier for appropriate parameter types.
@@ -15372,7 +15372,7 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
                                   QualType T, TypeSourceInfo *TSInfo,
                                   StorageClass SC) {
   // Perform Objective-C ARC adjustments.
-  T = adjustParameterTypeForObjCAutoRefCount(T, NameLoc, TSInfo);
+  T = AdjustParameterTypeForObjCAutoRefCount(T, NameLoc, TSInfo);
 
   ParmVarDecl *New = ParmVarDecl::Create(Context, DC, StartLoc, NameLoc, Name,
                                          Context.getAdjustedParameterType(T),
@@ -16498,7 +16498,6 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
   // Always attach attributes to the underlying decl.
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
     D = TD->getTemplatedDecl();
-
   ProcessDeclAttributeList(S, D, Attrs);
   ProcessAPINotes(D);
 
@@ -20077,7 +20076,6 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   // Process attributes.
   ProcessDeclAttributeList(S, New, Attrs);
   AddPragmaAttributes(S, New);
-
   ProcessAPINotes(New);
 
   // Register this decl in the current scope stack.

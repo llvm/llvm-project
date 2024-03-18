@@ -9567,7 +9567,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForVariantObjCPtrMember(
     S.Diag(FD->getLocation(),
            diag::note_deleted_special_member_class_subobject)
         << getEffectiveCSM() << ParentClass << /*IsField*/true
-        << FD << 4 << /*IsDtorCallInCtor*/false << 1;
+        << FD << 4 << /*IsDtorCallInCtor*/false << /*IsObjCPtr*/true;
   }
 
   return true;

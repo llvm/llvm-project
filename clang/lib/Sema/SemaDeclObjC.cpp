@@ -2806,7 +2806,7 @@ static void CheckProtocolMethodDefs(
               HasMissingRequirements = shouldWarnUndefinedMethod(method);
           } else {
             WarnUndefinedMethod(S, Impl, method, IncompleteImpl, DIAG, PDecl);
-		  }
+          }
         }
       }
     }

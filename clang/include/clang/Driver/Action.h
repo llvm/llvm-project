@@ -77,6 +77,7 @@ public:
     LinkerWrapperJobClass,
     StaticLibJobClass,
     BinaryAnalyzeJobClass,
+
     JobClassFirst = DepscanJobClass,
     JobClassLast = BinaryAnalyzeJobClass
   };

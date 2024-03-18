@@ -22,10 +22,6 @@
 
 #include <memory>
 
-namespace llvm {
-  class raw_ostream;
-}
-
 namespace clang {
 class FileEntry;
 

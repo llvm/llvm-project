@@ -3128,7 +3128,7 @@ public:
                              SourceLocation ExplicitThisLoc = {});
   ParmVarDecl *BuildParmVarDeclForTypedef(DeclContext *DC, SourceLocation Loc,
                                           QualType T);
-  QualType adjustParameterTypeForObjCAutoRefCount(QualType T,
+  QualType AdjustParameterTypeForObjCAutoRefCount(QualType T,
                                                   SourceLocation NameLoc,
                                                   TypeSourceInfo *TSInfo);
   ParmVarDecl *CheckParameter(DeclContext *DC, SourceLocation StartLoc,
@@ -11865,7 +11865,7 @@ public:
   /// nullability specifier rather than complaining about the conflict.
   ///
   /// \returns true if nullability cannot be applied, false otherwise.
-  bool checkImplicitNullabilityTypeSpecifier(QualType &Type,
+  bool CheckImplicitNullabilityTypeSpecifier(QualType &Type,
                                              NullabilityKind Nullability,
                                              SourceLocation DiagLoc,
                                              bool AllowArrayTypes,

@@ -74,7 +74,7 @@ static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability,
 
   // Check the nullability specifier on this type.
   QualType origType = type;
-  S.checkImplicitNullabilityTypeSpecifier(type, nullability,
+  S.CheckImplicitNullabilityTypeSpecifier(type, nullability,
                                           decl->getLocation(),
                                           isa<ParmVarDecl>(decl),
                                           /*overrideExisting=*/true);
@@ -394,7 +394,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
       if (auto var = dyn_cast<VarDecl>(D)) {
         // Make adjustments to parameter types.
         if (isa<ParmVarDecl>(var)) {
-          type = S.adjustParameterTypeForObjCAutoRefCount(type,
+          type = S.AdjustParameterTypeForObjCAutoRefCount(type,
                                                           D->getLocation(),
                                                           typeInfo);
           type = S.Context.getAdjustedParameterType(type);

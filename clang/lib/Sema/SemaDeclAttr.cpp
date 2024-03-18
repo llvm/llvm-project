@@ -6281,35 +6281,33 @@ static void handleObjCRequiresSuperAttr(Sema &S, Decl *D,
 
 static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &Attr) {
   if (!isa<TagDecl>(D)) {
-    S.Diag(D->getBeginLoc(), diag::err_nserrordomain_invalid_decl)
-        << 0;
+    S.Diag(D->getBeginLoc(), diag::err_nserrordomain_invalid_decl) << 0;
     return;
   }
-  IdentifierLoc *identLoc =
+
+  IdentifierLoc *IdentLoc =
       Attr.isArgIdent(0) ? Attr.getArgAsIdent(0) : nullptr;
-  if (!identLoc || !identLoc->Ident) {
-    // Try to locate the argument directly
-    SourceLocation loc = Attr.getLoc();
+  if (!IdentLoc || !IdentLoc->Ident) {
+    // Try to locate the argument directly.
+    SourceLocation Loc = Attr.getLoc();
     if (Attr.isArgExpr(0) && Attr.getArgAsExpr(0))
-      loc = Attr.getArgAsExpr(0)->getBeginLoc();
+      Loc = Attr.getArgAsExpr(0)->getBeginLoc();
 
-    S.Diag(loc, diag::err_nserrordomain_invalid_decl) << 0;
+    S.Diag(Loc, diag::err_nserrordomain_invalid_decl) << 0;
     return;
   }
 
-  // Verify that the identifier is a valid decl in the C decl namespace
-  LookupResult lookupResult(S, DeclarationName(identLoc->Ident),
-                            SourceLocation(),
-                            Sema::LookupNameKind::LookupOrdinaryName);
-  if (!S.LookupName(lookupResult, S.TUScope) ||
-      !lookupResult.getAsSingle<VarDecl>()) {
-    S.Diag(identLoc->Loc, diag::err_nserrordomain_invalid_decl)
-        << 1 << identLoc->Ident;
+  // Verify that the identifier is a valid decl in the C decl namespace.
+  LookupResult Result(S, DeclarationName(IdentLoc->Ident), SourceLocation(),
+                      Sema::LookupNameKind::LookupOrdinaryName);
+  if (!S.LookupName(Result, S.TUScope) || !Result.getAsSingle<VarDecl>()) {
+    S.Diag(IdentLoc->Loc, diag::err_nserrordomain_invalid_decl)
+        << 1 << IdentLoc->Ident;
     return;
   }
 
   D->addAttr(::new (S.Context)
-                 NSErrorDomainAttr(S.Context, Attr, identLoc->Ident));
+                 NSErrorDomainAttr(S.Context, Attr, IdentLoc->Ident));
 }
 
 static void handleObjCBridgeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {

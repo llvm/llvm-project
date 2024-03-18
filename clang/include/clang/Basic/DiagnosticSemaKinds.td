@@ -4614,8 +4614,8 @@ def warn_attr_swift_name_decl_missing_params
     InGroup<SwiftNameAttribute>;
 
 def err_attr_swift_error_no_error_parameter : Error<
-  "%0 attribute can only be applied to a %select{function|method}1 "
-  "with an error parameter">;
+  "%0 attribute can only be applied to a %select{function|method}1 with an "
+  "error parameter">;
 def err_attr_swift_error_return_type : Error<
   "%0 attribute with '%1' convention can only be applied to a "
   "%select{function|method}2 returning %select{an integral type|a pointer}3">;
@@ -10876,7 +10876,7 @@ let CategoryName = "API Notes Issue" in {
 def err_incompatible_replacement_type : Error<
   "API notes replacement type %0 has a different size from original type %1">;
 
-}
+} // end of API Notes category
 
 let CategoryName = "OpenMP Issue" in {
 // OpenMP support.

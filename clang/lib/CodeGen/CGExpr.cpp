@@ -5672,6 +5672,7 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
     calleePtr = EmitLValue(E, KnownNonNull).getPointer(*this);
   }
   assert(functionType->isFunctionType());
+
   GlobalDecl GD;
   if (const auto *VD =
           dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee()))

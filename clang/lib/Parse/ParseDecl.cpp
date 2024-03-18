@@ -1204,7 +1204,7 @@ VersionTuple Parser::ParseVersionTuple(SourceRange &Range) {
 ///
 /// version-arg:
 ///   'introduced' '=' version
-///   'deprecated' ['=' version]
+///   'deprecated' '=' version
 ///   'obsoleted' = version
 ///   'unavailable'
 /// opt-replacement:
@@ -8223,43 +8223,43 @@ bool Parser::TryAltiVecTokenOutOfLine(DeclSpec &DS, SourceLocation Loc,
   return false;
 }
 
-TypeResult Parser::parseTypeFromString(StringRef typeStr, StringRef context,
-                                       SourceLocation includeLoc) {
+TypeResult Parser::ParseTypeFromString(StringRef TypeStr, StringRef Context,
+                                       SourceLocation IncludeLoc) {
   // Consume (unexpanded) tokens up to the end-of-directive.
-  SmallVector<Token, 4> tokens;
+  SmallVector<Token, 4> Tokens;
   {
     // Create a new buffer from which we will parse the type.
-    auto &sourceMgr = PP.getSourceManager();
-    FileID fileID = sourceMgr.createFileID(
-                      llvm::MemoryBuffer::getMemBufferCopy(typeStr, context),
-                      SrcMgr::C_User, 0, 0, includeLoc);
+    auto &SourceMgr = PP.getSourceManager();
+    FileID FID = SourceMgr.createFileID(
+        llvm::MemoryBuffer::getMemBufferCopy(TypeStr, Context), SrcMgr::C_User,
+        0, 0, IncludeLoc);
 
     // Form a new lexer that references the buffer.
-    Lexer lexer(fileID, sourceMgr.getBufferOrFake(fileID), PP);
-    lexer.setParsingPreprocessorDirective(true);
-    lexer.setIsPragmaLexer(true);
+    Lexer L(FID, SourceMgr.getBufferOrFake(FID), PP);
+    L.setParsingPreprocessorDirective(true);
+    L.setIsPragmaLexer(true);
 
     // Lex the tokens from that buffer.
-    Token tok;
+    Token Tok;
     do {
-      lexer.Lex(tok);
-      tokens.push_back(tok);
-    } while (tok.isNot(tok::eod));
+      L.Lex(Tok);
+      Tokens.push_back(Tok);
+    } while (Tok.isNot(tok::eod));
   }
 
   // Replace the "eod" token with an "eof" token identifying the end of
   // the provided string.
-  Token &endToken = tokens.back();
-  endToken.startToken();
-  endToken.setKind(tok::eof);
-  endToken.setLocation(Tok.getLocation());
-  endToken.setEofData(typeStr.data());
+  Token &EndToken = Tokens.back();
+  EndToken.startToken();
+  EndToken.setKind(tok::eof);
+  EndToken.setLocation(Tok.getLocation());
+  EndToken.setEofData(TypeStr.data());
 
   // Add the current token back.
-  tokens.push_back(Tok);
+  Tokens.push_back(Tok);
 
   // Enter the tokens into the token stream.
-  PP.EnterTokenStream(tokens, /*DisableMacroExpansion=*/false,
+  PP.EnterTokenStream(Tokens, /*DisableMacroExpansion=*/false,
                       /*IsReinject=*/false);
 
   // Consume the current token so that we'll start parsing the tokens we
@@ -8267,14 +8267,14 @@ TypeResult Parser::parseTypeFromString(StringRef typeStr, StringRef context,
   ConsumeAnyToken();
 
   // Enter a new scope.
-  ParseScope localScope(this, 0);
+  ParseScope LocalScope(this, 0);
 
   // Parse the type.
-  TypeResult result = ParseTypeName(nullptr);
+  TypeResult Result = ParseTypeName(nullptr);
 
   // Check if we parsed the whole thing.
-  if (result.isUsable() &&
-      (Tok.isNot(tok::eof) || Tok.getEofData() != typeStr.data())) {
+  if (Result.isUsable() &&
+      (Tok.isNot(tok::eof) || Tok.getEofData() != TypeStr.data())) {
     Diag(Tok.getLocation(), diag::err_type_unparsed);
   }
 
@@ -8284,9 +8284,9 @@ TypeResult Parser::parseTypeFromString(StringRef typeStr, StringRef context,
     ConsumeAnyToken();
 
   // Consume the end token.
-  if (Tok.is(tok::eof) && Tok.getEofData() == typeStr.data())
+  if (Tok.is(tok::eof) && Tok.getEofData() == TypeStr.data())
     ConsumeAnyToken();
-  return result;
+  return Result;
 }
 
 void Parser::DiagnoseBitIntUse(const Token &Tok) {
