@@ -863,6 +863,20 @@ def MFMALdScaleXForm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(New, SDLoc(N), MVT::i32);
 }]>;
 
+def is_canonicalized : PatLeaf<(fAny srcvalue:$src), [{
+  const SITargetLowering &Lowering =
+      *static_cast<const SITargetLowering *>(getTargetLowering());
+  return Lowering.isCanonicalized(*CurDAG, SDValue(N, 0));
+}]> {
+  let GISelPredicateCode = [{
+    const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
+        MF.getSubtarget().getTargetLowering());
+    const MachineOperand &Dst = MI.getOperand(0);
+    assert(Dst.isDef());
+    return TLI->isCanonicalized(Dst.getReg(), MF);
+   }];
+}
+
 //===----------------------------------------------------------------------===//
 // MUBUF/SMEM Patterns
 //===----------------------------------------------------------------------===//
