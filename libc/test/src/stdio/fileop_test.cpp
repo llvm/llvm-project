@@ -11,6 +11,7 @@
 #include "src/stdio/feof.h"
 #include "src/stdio/ferror.h"
 #include "src/stdio/fflush.h"
+#include "src/stdio/fileno.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fputs.h"
 #include "src/stdio/fread.h"
