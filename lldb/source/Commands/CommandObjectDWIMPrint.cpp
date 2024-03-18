@@ -170,7 +170,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     if (auto *state = target.GetPersistentExpressionStateForLanguage(language))
       if (auto var_sp = state->GetVariable(expr))
         if (auto valobj_sp = var_sp->GetValueObject()) {
-          valobj_sp->Dump(result.GetOutputStream(), dump_options);
+          dump_val_object(*valobj_sp);
           result.SetStatus(eReturnStatusSuccessFinishResult);
           return;
         }
