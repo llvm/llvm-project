@@ -552,8 +552,8 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
     return KernelLaunchEnvOrErr.takeError();
 
   void *KernelArgsPtr =
-      prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.Version,
-                  KernelArgs.NumArgs, Args, Ptrs, *KernelLaunchEnvOrErr);
+      prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs, Args,
+                  Ptrs, *KernelLaunchEnvOrErr);
 
   uint32_t NumThreads = getNumThreads(GenericDevice, KernelArgs.ThreadLimit);
   uint64_t NumBlocks =
@@ -579,7 +579,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
 void *GenericKernelTy::prepareArgs(
     GenericDeviceTy &GenericDevice, void **ArgPtrs, ptrdiff_t *ArgOffsets,
-    uint32_t Version, uint32_t &NumArgs, llvm::SmallVectorImpl<void *> &Args,
+    uint32_t &NumArgs, llvm::SmallVectorImpl<void *> &Args,
     llvm::SmallVectorImpl<void *> &Ptrs,
     KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const {
   if (isCtorOrDtor())
