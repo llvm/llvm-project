@@ -106,7 +106,7 @@ config.substitutions.append(("%fPIE", "-fPIE"))
 config.substitutions.append(("%pie", "-pie"))
 
 # Only run the tests on supported OSs.
-if config.host_os not in ["Linux"]:
+if config.host_os not in ["Linux", "Darwin"]:
     config.unsupported = True
 
 if not config.parallelism_group:

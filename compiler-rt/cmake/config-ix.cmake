@@ -446,6 +446,7 @@ if(APPLE)
   endif()
 
   set(SANITIZER_COMMON_SUPPORTED_OS osx)
+  set(MEMPROF_SUPPORTED_OS osx)
   set(PROFILE_SUPPORTED_OS osx)
   set(TSAN_SUPPORTED_OS osx)
   set(XRAY_SUPPORTED_OS osx)
@@ -572,6 +573,7 @@ if(APPLE)
         message(STATUS "${platform} supported arches: ${DARWIN_${platform}_ARCHS}")
         if(DARWIN_${platform}_ARCHS)
           list(APPEND SANITIZER_COMMON_SUPPORTED_OS ${platform})
+          list(APPEND MEMPROF_SUPPORTED_OS ${platform})
           list(APPEND PROFILE_SUPPORTED_OS ${platform})
 
           list_intersect(DARWIN_${platform}_TSAN_ARCHS DARWIN_${platform}_ARCHS ALL_TSAN_SUPPORTED_ARCH)
@@ -753,8 +755,10 @@ endif()
 
 if (OS_NAME MATCHES "Linux|FreeBSD|Windows|NetBSD|SunOS")
   set(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME TRUE)
+  set(COMPILER_RT_MEMPROF_HAS_STATIC_RUNTIME TRUE)
 else()
   set(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME FALSE)
+  set(COMPILER_RT_MEMPROF_HAS_STATIC_RUNTIME TRUE)
 endif()
 
 # TODO: Add builtins support.
@@ -788,7 +792,7 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND MEMPROF_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Linux")
+    OS_NAME MATCHES "Darwin|Linux")
   set(COMPILER_RT_HAS_MEMPROF TRUE)
 else()
   set(COMPILER_RT_HAS_MEMPROF FALSE)

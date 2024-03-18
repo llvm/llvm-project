@@ -7,7 +7,9 @@ set(MEMPROF_SOURCES
   memprof_interceptors.cpp
   memprof_interceptors_memintrinsics.cpp
   memprof_linux.cpp
+  memprof_mac.cpp
   memprof_malloc_linux.cpp
+  memprof_malloc_mac.cpp
   memprof_mibmap.cpp
   memprof_posix.cpp
   memprof_rawprofile.cpp
@@ -79,7 +81,7 @@ append_list_if(COMPILER_RT_HAS_LIBLOG log MEMPROF_DYNAMIC_LIBS)
 # Compile MemProf sources into an object library.
 
 add_compiler_rt_object_libraries(RTMemprof_dynamic
-  OS ${SANITIZER_COMMON_SUPPORTED_OS}
+  OS ${MEMPROF_SUPPORTED_OS}
   ARCHS ${MEMPROF_SUPPORTED_ARCH}
   SOURCES ${MEMPROF_SOURCES} ${MEMPROF_CXX_SOURCES}
   ADDITIONAL_HEADERS ${MEMPROF_HEADERS}
@@ -87,6 +89,7 @@ add_compiler_rt_object_libraries(RTMemprof_dynamic
   DEFS ${MEMPROF_DYNAMIC_DEFINITIONS}
   DEPS ${MEMPROF_DEPS})
 
+if(NOT APPLE)
 add_compiler_rt_object_libraries(RTMemprof
   ARCHS ${MEMPROF_SUPPORTED_ARCH}
   SOURCES ${MEMPROF_SOURCES}
@@ -116,10 +119,31 @@ add_compiler_rt_object_libraries(RTMemprof_dynamic_version_script_dummy
   CFLAGS ${MEMPROF_DYNAMIC_CFLAGS}
   DEFS ${MEMPROF_DYNAMIC_DEFINITIONS}
   DEPS ${MEMPROF_DEPS})
+endif()
 
 # Build MemProf runtimes shipped with Clang.
 add_compiler_rt_component(memprof)
-
+if(APPLE)
+  add_weak_symbols("asan" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("lsan" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("ubsan" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("xray" WEAK_SYMBOL_LINK_FLAGS)
+  add_compiler_rt_runtime(clang_rt.memprof
+    SHARED
+    OS ${MEMPROF_SUPPORTED_OS}
+    ARCHS ${MEMPROF_SUPPORTED_ARCH}
+    OBJECT_LIBS RTMemprof_dynamic
+                RTInterception
+                RTSanitizerCommon
+                RTSanitizerCommonLibc
+                RTSanitizerCommonCoverage
+                RTSanitizerCommonSymbolizer
+    CFLAGS ${MEMPROF_DYNAMIC_CFLAGS}
+    LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS} # copied from asan, non-APPLE uses MEMPROF_DYNAMIC_LINK_FLAGS
+    DEFS ${MEMPROF_DYNAMIC_DEFINITIONS}
+    PARENT_TARGET memprof)
+else()
 # Build separate libraries for each target.
 
 set(MEMPROF_COMMON_RUNTIME_OBJECT_LIBS
@@ -204,7 +228,7 @@ foreach(arch ${MEMPROF_SUPPORTED_ARCH})
     add_dependencies(memprof clang_rt.memprof-${arch}-symbols)
   endif()
 endforeach()
-
+endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)

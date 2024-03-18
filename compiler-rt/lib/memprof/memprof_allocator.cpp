@@ -78,7 +78,11 @@ static int GetCpuId(void) {
   // will seg fault as the address of __vdso_getcpu will be null.
   if (!memprof_inited)
     return -1;
+#if SANITIZER_APPLE
+  return 0;
+#else
   return sched_getcpu();
+#endif
 }
 
 // Compute the timestamp in ms.
@@ -261,9 +265,12 @@ struct Allocator {
   atomic_uint8_t destructing;
   atomic_uint8_t constructed;
   bool print_text;
+  bool print_binary_refs;
 
   // ------------------- Initialization ------------------------
-  explicit Allocator(LinkerInitialized) : print_text(flags()->print_text) {
+  explicit Allocator(LinkerInitialized)
+      : print_text(flags()->print_text),
+        print_binary_refs(flags()->print_binary_refs) {
     atomic_store_relaxed(&destructing, 0);
     atomic_store_relaxed(&constructed, 1);
   }
@@ -279,6 +286,7 @@ struct Allocator {
     Print(Value->mib, Key, bool(Arg));
   }
 
+  using SegmentEntry = ::llvm::memprof::SegmentEntry;
   void FinishAndWrite() {
     if (print_text && common_flags()->print_module_map)
       DumpProcessMap();
@@ -286,6 +294,46 @@ struct Allocator {
     allocator.ForceLock();
 
     InsertLiveBlocks();
+#if SANITIZER_APPLE
+    if (print_binary_refs) {
+      __sanitizer::ListOfModules List;
+      List.init();
+      ArrayRef<LoadedModule> Modules(List.begin(), List.end());
+      for (const auto &Module : Modules) {
+        for (const auto &Segment : Module.ranges()) {
+          if (true) { // Segment.executable) {
+            SegmentEntry Entry(Segment.beg, Segment.end, Module.base_address());
+            // CHECK(Module.uuid_size() <= MEMPROF_BUILDID_MAX_SIZE);
+            // Entry.BuildIdSize = Module.uuid_size();
+            memcpy(Entry.BuildId, Module.uuid(), Module.uuid_size());
+            // Print out the segment information.
+            Printf("  -\n");
+            Printf("[MemProf] BuildId: ");
+            for (size_t I = 0; I < Module.uuid_size() /*Entry.BuildIdSize*/;
+                 I++) {
+              Printf("%02x", Entry.BuildId[I]);
+            }
+            Printf("\n");
+            Printf("[MemProf] BuildIdName: %s\n", Module.full_name());
+            // If it is the main binary, check shadow.
+            Printf("[MemProf] Start: 0x%zx\n", Entry.Start);
+            if (AddrIsInLowMem(Entry.Start)) {
+              for (auto t = Entry.Start & SHADOW_MASK; t < Entry.End;
+                   t += MEM_GRANULARITY) {
+                // should not be 64, as it will include the next shadow memory
+                u64 c = GetShadowCount(t, 60);
+                if (c > 0)
+                  Printf("[MemProf] Shadow: %p %d\n", (void *)t, c);
+              }
+            }
+            Printf("[MemProf] End: 0x%zx\n", Entry.End);
+            Printf("[MemProf] Offset: 0x%zx\n", Entry.Offset);
+          } else {
+          }
+        }
+      }
+    }
+#endif
     if (print_text) {
       if (!flags()->print_terse)
         Printf("Recorded MIBs (incl. live on exit):\n");
@@ -702,6 +750,18 @@ uptr memprof_malloc_usable_size(const void *ptr) {
     return 0;
   uptr usable_size = instance.AllocationSize(reinterpret_cast<uptr>(ptr));
   return usable_size;
+}
+
+uptr memprof_mz_size(const void *ptr) {
+  return instance.AllocationSize(reinterpret_cast<uptr>(ptr));
+}
+
+void memprof_mz_force_lock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+  instance.ForceLock();
+}
+
+void memprof_mz_force_unlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+  instance.ForceUnlock();
 }
 
 } // namespace __memprof
