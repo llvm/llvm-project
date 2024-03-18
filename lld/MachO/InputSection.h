@@ -369,6 +369,7 @@ constexpr const char addrSig[] = "__llvm_addrsig";
 
 } // namespace section_names
 
+void addInputSection(InputSection *inputSection);
 } // namespace macho
 
 std::string toString(const macho::InputSection *);

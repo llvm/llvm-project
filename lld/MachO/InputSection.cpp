@@ -38,6 +38,43 @@ static_assert(sizeof(void *) != 8 ||
 
 std::vector<ConcatInputSection *> macho::inputSections;
 
+void lld::macho::addInputSection(InputSection *inputSection) {
+  // Used across function calls to impose section ordering
+  static uint64_t inputOrder = 0;
+
+  if (auto *isec = dyn_cast<ConcatInputSection>(inputSection)) {
+    if (isec->isCoalescedWeak())
+      return;
+    if (config->emitInitOffsets &&
+        sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS) {
+      in.initOffsets->addInput(isec);
+      return;
+    }
+    isec->outSecOff = inputOrder++;
+    auto *osec = ConcatOutputSection::getOrCreateForInput(isec);
+    isec->parent = osec;
+    inputSections.push_back(isec);
+  } else if (auto *isec = dyn_cast<CStringInputSection>(inputSection)) {
+    if (isec->getName() == section_names::objcMethname) {
+      if (in.objcMethnameSection->inputOrder == UnspecifiedInputOrder)
+        in.objcMethnameSection->inputOrder = inputOrder++;
+      in.objcMethnameSection->addInput(isec);
+    } else {
+      if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
+        in.cStringSection->inputOrder = inputOrder++;
+      in.cStringSection->addInput(isec);
+    }
+  } else if (auto *isec = dyn_cast<WordLiteralInputSection>(inputSection)) {
+    if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
+      in.wordLiteralSection->inputOrder = inputOrder++;
+    in.wordLiteralSection->addInput(isec);
+  } else {
+    llvm_unreachable("unexpected input section kind");
+  }
+
+  assert(inputOrder <= UnspecifiedInputOrder);
+}
+
 uint64_t InputSection::getFileSize() const {
   return isZeroFill(getFlags()) ? 0 : getSize();
 }

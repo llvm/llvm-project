@@ -612,7 +612,7 @@ static void replaceCommonSymbols() {
     if (!osec)
       osec = ConcatOutputSection::getOrCreateForInput(isec);
     isec->parent = osec;
-    inputSections.push_back(isec);
+    addInputSection(isec);
 
     // FIXME: CommonSymbol should store isReferencedDynamically, noDeadStrip
     // and pass them on here.
@@ -1220,53 +1220,18 @@ static void createFiles(const InputArgList &args) {
 
 static void gatherInputSections() {
   TimeTraceScope timeScope("Gathering input sections");
-  int inputOrder = 0;
   for (const InputFile *file : inputFiles) {
     for (const Section *section : file->sections) {
       // Compact unwind entries require special handling elsewhere. (In
       // contrast, EH frames are handled like regular ConcatInputSections.)
       if (section->name == section_names::compactUnwind)
         continue;
-      ConcatOutputSection *osec = nullptr;
-      for (const Subsection &subsection : section->subsections) {
-        if (auto *isec = dyn_cast<ConcatInputSection>(subsection.isec)) {
-          if (isec->isCoalescedWeak())
-            continue;
-          if (config->emitInitOffsets &&
-              sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS) {
-            in.initOffsets->addInput(isec);
-            continue;
-          }
-          isec->outSecOff = inputOrder++;
-          if (!osec)
-            osec = ConcatOutputSection::getOrCreateForInput(isec);
-          isec->parent = osec;
-          inputSections.push_back(isec);
-        } else if (auto *isec =
-                       dyn_cast<CStringInputSection>(subsection.isec)) {
-          if (isec->getName() == section_names::objcMethname) {
-            if (in.objcMethnameSection->inputOrder == UnspecifiedInputOrder)
-              in.objcMethnameSection->inputOrder = inputOrder++;
-            in.objcMethnameSection->addInput(isec);
-          } else {
-            if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
-              in.cStringSection->inputOrder = inputOrder++;
-            in.cStringSection->addInput(isec);
-          }
-        } else if (auto *isec =
-                       dyn_cast<WordLiteralInputSection>(subsection.isec)) {
-          if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
-            in.wordLiteralSection->inputOrder = inputOrder++;
-          in.wordLiteralSection->addInput(isec);
-        } else {
-          llvm_unreachable("unexpected input section kind");
-        }
-      }
+      for (const Subsection &subsection : section->subsections)
+        addInputSection(subsection.isec);
     }
     if (!file->objCImageInfo.empty())
       in.objCImageInfo->addFile(file);
   }
-  assert(inputOrder <= UnspecifiedInputOrder);
 }
 
 static void foldIdenticalLiterals() {
