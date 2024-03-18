@@ -1390,11 +1390,8 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicBefore(
 LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
     LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr);
+
 /**
- * Soon to be deprecated.
- * Only use in "old debug mode" (Module::IsNewDbgInfoFormat is false).
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
- *
  * Insert a new llvm.dbg.value intrinsic call at the end of the given basic
  * block. If the basic block has a terminator instruction, the intrinsic is
  * inserted before that terminator instruction.
