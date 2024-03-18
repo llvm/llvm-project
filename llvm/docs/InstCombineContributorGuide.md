@@ -365,23 +365,41 @@ Sometimes, folds that logically belong in InstSimplify are placed in InstCombine
 
 For example, if a fold produces new instructions in some cases but returns an existing value in others, it may be preferable to keep all cases in InstCombine, rather than trying to split them among InstCombine and InstSimplify.
 
-### Target-dependence
+### Canonicalization and target-independence
 
-InstCombine is a target-independent canonicalization pass. Transforms that
-depend on target-specific cost-modelling **will be rejected**. The only
-permitted target-dependence is on DataLayout and TargetLibraryInfo.
+InstCombine is a target-independent canonicalization pass. This means that it
+tries to bring IR into a "canonical form" that other optimizations (both inside
+and outside of InstCombine) can rely on. For this reason, the chosen canonical
+form needs to be the same for all targets, and not depend on target-specific
+cost modelling.
+
+In many cases, "canonicalization" and "optimization" coincide. For example, if
+we convert `x * 2` into `x << 1`, this both makes the IR more canonical
+(because there is now only one way to express the same operation, rather than
+two) and faster (because shifts will usually have lower latency than
+multiplies).
+
+However, there are also canonicalizations that don't serve any direct
+optimization purpose. For example, InstCombine will canonicalize non-strict
+predicates like `ule` to strict predicates like `ult`. `icmp ule i8 %x, 7`
+becomes `icmp ult i8 %x, 8`. This is not an optimization in any meaningful
+sense, but it does reduce the number of cases that other transforms need to
+handle.
+
+If some canonicalization is not profitable for a specific target, then a reverse
+transform needs to be added in the backend. Patches to disable specific
+InstCombine transforms on certain targets, or to drive them using
+target-specific cost-modelling, **will not be accepted**. The only permitted
+target-dependence is on DataLayout and TargetLibraryInfo.
 
 The use of TargetTransformInfo is only allowed for hooks for target-specific
 intrinsics, such as `TargetTransformInfo::instCombineIntrinsic()`. These are
 already inherently target-dependent anyway.
 
-Approved alternatives to the use of TTI in InstCombine are:
-
- * For vector-specific transforms in particular, use VectorCombine instead.
- * Perform a target-independent canonicalization in InstCombine, and then undo
-   it in the backend for targets where it is not profitable.
- * If there are no other possible solutions, a fold using target-dependent cost
-   modelling may be accepted into AggressiveInstCombine.
+For vector-specific transforms that require cost-modelling, the VectorCombine
+pass can be used instead. In very rare circumstances, if there are no other
+alternatives, target-dependent transforms may be accepted into
+AggressiveInstCombine.
 
 ### PatternMatch
 
