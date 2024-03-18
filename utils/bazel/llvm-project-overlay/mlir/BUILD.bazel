@@ -2852,6 +2852,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":BufferizationDialect",
+        ":BufferizationInterfaces",
         ":BufferizationTransforms",
         ":DestinationStyleOpInterface",
         ":DialectUtils",
@@ -3125,6 +3126,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":BufferizationInterfaces",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
@@ -3197,6 +3199,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":BufferizationDialect",
+        ":BufferizationInterfaces",
         ":BufferizationTransforms",
         ":ComplexDialect",
         ":DialectUtils",
@@ -3886,6 +3889,7 @@ cc_library(
         ":AffineMemoryOpInterfacesIncGen",
         ":AffineOpsIncGen",
         ":ArithDialect",
+        ":BufferizationInterfaces",
         ":ControlFlowInterfaces",
         ":DialectUtils",
         ":IR",
@@ -4289,6 +4293,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithUtils",
+        ":BufferizationInterfaces",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
         ":DestinationStyleOpInterface",
@@ -4536,6 +4541,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":BufferizationInterfaces",
         ":CastInterfaces",
         ":ControlFlowInterfaces",
         ":Dialect",
@@ -4621,6 +4627,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":BufferizationDialect",
+        ":BufferizationInterfaces",
         ":BufferizationTransforms",
         ":FuncDialect",
         ":IR",
@@ -4701,6 +4708,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":BufferizationInterfaces",
         ":CommonFolders",
         ":ControlFlowInterfaces",
         ":ControlFlowOpsIncGen",
@@ -4723,6 +4731,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BufferizationDialect",
+        ":BufferizationInterfaces",
         ":BufferizationTransforms",
         ":ControlFlowDialect",
         ":IR",
@@ -4746,6 +4755,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":BufferizationInterfaces",
         ":CallOpInterfaces",
         ":CastInterfaces",
         ":CommonFolders",
@@ -4922,6 +4932,7 @@ cc_library(
         ":AffineDialect",
         ":ArithDialect",
         ":ArithUtils",
+        ":BufferizationInterfaces",
         ":ControlFlowInterfaces",
         ":DataLayoutInterfaces",
         ":DestinationStyleOpInterface",
@@ -4932,6 +4943,7 @@ cc_library(
         ":MaskingOpInterface",
         ":MemRefDialect",
         ":SideEffectInterfaces",
+        ":SubsetOpInterface",
         ":Support",
         ":TensorDialect",
         ":ValueBoundsOpInterface",
@@ -5034,6 +5046,7 @@ cc_library(
         ":ArithTransforms",
         ":ArithUtils",
         ":BufferizationDialect",
+        ":BufferizationInterfaces",
         ":BufferizationTransforms",
         ":DialectUtils",
         ":FuncDialect",
@@ -5286,6 +5299,14 @@ gentbl_cc_library(
         (
             ["-gen-op-interface-defs"],
             "include/mlir/Dialect/LLVMIR/LLVMInterfaces.cpp.inc",
+        ),
+        (
+            ["-gen-attr-interface-decls"],
+            "include/mlir/Dialect/LLVMIR/LLVMAttrInterfaces.h.inc",
+        ),
+        (
+            ["-gen-attr-interface-defs"],
+            "include/mlir/Dialect/LLVMIR/LLVMAttrInterfaces.cpp.inc",
         ),
         (
             ["-gen-type-interface-decls"],
@@ -5544,6 +5565,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":BufferizationInterfaces",
         ":ControlFlowInterfaces",
         ":DLTIDialect",
         ":FunctionInterfaces",
@@ -5641,6 +5663,7 @@ cc_library(
         ":AsmParser",
         ":AsyncDialect",
         ":BufferizationDialect",
+        ":BufferizationInterfaces",
         ":ControlFlowDialect",
         ":DLTIDialect",
         ":DialectUtils",
@@ -7317,6 +7340,7 @@ cc_library(
         ":AffineDialect",
         ":ArithDialect",
         ":ArithUtils",
+        ":BufferizationInterfaces",
         ":CastInterfaces",
         ":ComplexDialect",
         ":ControlFlowInterfaces",
@@ -7328,9 +7352,11 @@ cc_library(
         ":ParallelCombiningOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":SubsetOpInterface",
         ":Support",
         ":TensorOpsIncGen",
         ":TilingInterface",
+        ":TransformDialect",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -7424,6 +7450,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":BufferizationDialect",
+        ":BufferizationInterfaces",
         ":BufferizationTransforms",
         ":DialectUtils",
         ":FuncDialect",
@@ -10946,6 +10973,7 @@ cc_library(
         ":ArithUtils",
         ":AsmParser",
         ":BufferizationDialect",
+        ":BufferizationInterfaces",
         ":ComplexDialect",
         ":ControlFlowInterfaces",
         ":CopyOpInterface",
@@ -10967,6 +10995,7 @@ cc_library(
         ":SCFDialect",
         ":SideEffectInterfaces",
         ":SparseTensorDialect",
+        ":SubsetOpInterface",
         ":Support",
         ":TensorDialect",
         ":TilingInterface",
@@ -11100,6 +11129,7 @@ cc_library(
         ":ArithTransforms",
         ":ArithUtils",
         ":BufferizationDialect",
+        ":BufferizationInterfaces",
         ":BufferizationTransforms",
         ":ComplexDialect",
         ":ControlFlowDialect",
@@ -12574,6 +12604,7 @@ cc_library(
         ":ArithCanonicalizationIncGen",
         ":ArithOpsIncGen",
         ":ArithOpsInterfacesIncGen",
+        ":BufferizationInterfaces",
         ":CastInterfaces",
         ":CommonFolders",
         ":ConvertToLLVMInterface",
@@ -12583,6 +12614,7 @@ cc_library(
         ":InferTypeOpInterface",
         ":Support",
         ":UBDialect",
+        ":ValueBoundsOpInterfaceIncGen",  # DO_NOT_SUBMIT
         ":VectorInterfaces",
         "//llvm:Support",
     ],
@@ -12620,6 +12652,7 @@ cc_library(
         ":ArithPassIncGen",
         ":ArithUtils",
         ":BufferizationDialect",
+        ":BufferizationInterfaces",
         ":BufferizationTransforms",
         ":FuncDialect",
         ":FuncTransforms",
@@ -12880,8 +12913,10 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":AllocationOpInterface",
         ":ArithDialect",
         ":ArithUtils",
+        ":BufferizationInterfaces",
         ":CastInterfaces",
         ":ComplexDialect",
         ":ControlFlowInterfaces",
@@ -12893,6 +12928,7 @@ cc_library(
         ":MemRefBaseIncGen",
         ":MemRefOpsIncGen",
         ":MemorySlotInterfaces",
+        ":RuntimeVerifiableOpInterface",
         ":ShapedOpInterfaces",
         ":Support",
         ":ValueBoundsOpInterface",
@@ -13163,6 +13199,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BufferizationDialect",
+        ":BufferizationInterfaces",
         ":FuncDialect",
         ":IR",
         ":MLProgramDialect",
@@ -13446,6 +13483,7 @@ cc_library(
     deps = [
         ":BufferizationDialect",
         ":BufferizationEnumsIncGen",
+        ":BufferizationInterfaces",
         ":BufferizationTransformOpsIncGen",
         ":BufferizationTransforms",
         ":FunctionInterfaces",
@@ -13480,6 +13518,26 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "BufferizationInterfaces",
+    srcs = [
+        "include/mlir/Analysis/Liveness.h",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h",
+        "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":BufferDeallocationOpInterfaceIncGen",
+        ":BufferizableOpInterfaceIncGen",
+        ":BufferizationEnumsIncGen",
+        ":IR",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "BufferizationDialect",
     srcs = [
         "lib/Dialect/Bufferization/IR/BufferDeallocationOpInterface.cpp",
@@ -13489,8 +13547,6 @@ cc_library(
         "lib/Dialect/Bufferization/IR/UnstructuredControlFlow.cpp",
     ],
     hdrs = [
-        "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h",
-        "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/Bufferization.h",
         "include/mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/Bufferization/IR/UnstructuredControlFlow.h",
@@ -13504,7 +13560,7 @@ cc_library(
         ":BufferDeallocationOpInterfaceIncGen",
         ":BufferizableOpInterfaceIncGen",
         ":BufferizationBaseIncGen",
-        ":BufferizationEnumsIncGen",
+        ":BufferizationInterfaces",
         ":BufferizationOpsIncGen",
         ":ControlFlowInterfaces",
         ":CopyOpInterface",
@@ -13553,7 +13609,7 @@ cc_library(
         ":Analysis",
         ":ArithDialect",
         ":BufferizationDialect",
-        ":BufferizationEnumsIncGen",
+        ":BufferizationInterfaces",
         ":BufferizationPassIncGen",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
@@ -13605,6 +13661,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BufferizationDialect",
+        ":BufferizationInterfaces",
         ":BufferizationToMemRef",
         ":BufferizationTransforms",
         ":FuncDialect",
