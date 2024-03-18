@@ -95,9 +95,7 @@ public:
                             StringRef parentName,
                             ArchiveFile *parent = nullptr);
 
-  void enqueuePDB(StringRef Path) {
-    enqueuePath(Path, false, false, /*parent=*/std::nullopt);
-  }
+  void enqueuePDB(StringRef Path) { enqueuePath(Path, false, false); }
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
@@ -197,9 +195,17 @@ private:
                         ArchiveFile *parent = nullptr);
 
   void enqueueTask(std::function<void()> task);
+  void enqueueSecondaryTask(std::function<void()> task);
   bool run();
 
-  std::list<std::function<void()>> taskQueue;
+  // The first queue contains all direct command-line inputs, all /defaultlib
+  // LIBs, provided on the command-line or in a directives section. The second
+  // queue is meant for lower-priority dependent OBJs pulled by a symbol from an
+  // archive. If there are items in both queues, the first one must be fully
+  // executed first before the second queue. This is important to ensure we pull
+  // on archives symbols in the order specified by the MSVC spec.
+  std::list<std::function<void()>> firstTaskQueue;
+  std::list<std::function<void()>> secondaryTaskQueue;
   std::vector<StringRef> filePaths;
   std::vector<MemoryBufferRef> resources;
 

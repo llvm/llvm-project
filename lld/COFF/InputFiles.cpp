@@ -28,6 +28,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -91,6 +92,33 @@ static void checkAndSetWeakAlias(COFFLinkerContext &ctx, InputFile *f,
 
 static bool ignoredSymbolName(StringRef name) {
   return name == "@feat.00" || name == "@comp.id";
+}
+
+static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
+  if (mt == IMAGE_FILE_MACHINE_UNKNOWN)
+    return true;
+  switch (ctx.config.machine) {
+  case ARM64:
+    return mt == ARM64 || mt == ARM64X;
+  case ARM64EC:
+    return COFF::isArm64EC(mt) || mt == AMD64;
+  case ARM64X:
+    return COFF::isAnyArm64(mt) || mt == AMD64;
+  default:
+    return ctx.config.machine == mt;
+  }
+}
+
+static void setMachine(InputFile *file, COFFLinkerContext &ctx) {
+  MachineTypes mt = file->getMachineType();
+  if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN) {
+    ctx.config.machine = mt;
+    ctx.driver.addWinSysRootLibSearchPaths();
+  } else if (!compatibleMachineType(ctx, mt)) {
+    error(toString(file) + ": machine type " + machineToStr(mt) +
+          " conflicts with " + machineToStr(ctx.config.machine));
+    return;
+  }
 }
 
 ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
@@ -165,6 +193,7 @@ void ObjFile::parse() {
   } else {
     fatal(toString(this) + " is not a COFF file");
   }
+  setMachine(this, ctx);
 
   // Read section and symbol tables.
   initializeChunks();
@@ -216,6 +245,7 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     ArrayRef<uint8_t> data;
     cantFail(coffObj->getSectionContents(sec, data));
     directives = StringRef((const char *)data.data(), data.size());
+    ctx.driver.parseDirectives(this);
     return nullptr;
   }
 
@@ -1025,12 +1055,16 @@ BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
                                                utostr(offsetInArchive)));
 
   obj = check(lto::InputFile::create(mbref));
+  setMachine(this, ctx);
 }
 
 BitcodeFile::~BitcodeFile() = default;
 
 void BitcodeFile::parse() {
   llvm::StringSaver &saver = lld::saver();
+
+  directives = saver.save(obj->getCOFFLinkerOpts());
+  ctx.driver.parseDirectives(this);
 
   std::vector<std::pair<Symbol *, bool>> comdat(obj->getComdatTable().size());
   for (size_t i = 0; i != obj->getComdatTable().size(); ++i)
@@ -1089,7 +1123,6 @@ void BitcodeFile::parse() {
     if (objSym.isUsed())
       ctx.config.gcroot.push_back(sym);
   }
-  directives = saver.save(obj->getCOFFLinkerOpts());
 }
 
 void BitcodeFile::parseLazy() {
@@ -1143,6 +1176,7 @@ void DLLFile::parse() {
     error(toString(this) + " is not a COFF file");
     return;
   }
+  setMachine(this, ctx);
 
   if (!coffObj->getPE32Header() && !coffObj->getPE32PlusHeader()) {
     error(toString(this) + " is not a PE-COFF executable");

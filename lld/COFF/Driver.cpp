@@ -43,6 +43,7 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -338,7 +339,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
     if (!mbOrErr)
       reportBufferError(mbOrErr.takeError(), check(c.getFullName()));
     MemoryBufferRef mb = mbOrErr.get();
-    enqueueTask([=]() {
+    enqueueSecondaryTask([=]() {
       llvm::TimeTraceScope timeScope("Archive: ", mb.getBufferIdentifier());
       ctx.driver.addArchiveBuffer(mb, toCOFFString(ctx, sym), parentName,
                                   offsetInArchive, parent);
@@ -352,7 +353,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                 toCOFFString(ctx, sym));
   auto future =
       std::make_shared<std::future<MBErrPair>>(createFutureForFile(childName));
-  enqueueTask([=]() {
+  enqueueSecondaryTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second)
       reportBufferError(errorCodeToError(mbOrErr.second), childName);
@@ -367,7 +368,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
 }
 
 void LinkerDriver::enqueueLazyFile(InputFile *file) {
-  enqueueTask([=]() {
+  enqueueSecondaryTask([=]() {
     // Once it has been enqued, it cannot be lazy anymore.
     file->lazy = false;
     ctx.symtab.addFile(file);
@@ -377,6 +378,24 @@ void LinkerDriver::enqueueLazyFile(InputFile *file) {
 bool LinkerDriver::isDecorated(StringRef sym) {
   return sym.starts_with("@") || sym.contains("@@") || sym.starts_with("?") ||
          (!ctx.config.mingw && sym.contains('@'));
+}
+
+static LLVM_THREAD_LOCAL bool executingFirstQueue;
+
+static bool executeQueue(std::list<std::function<void()>> &queue) {
+  bool didWork = !queue.empty();
+  while (!queue.empty()) {
+    queue.front()();
+    queue.pop_front();
+  }
+  return didWork;
+}
+
+static bool executeFirstQueue(std::list<std::function<void()>> &queue) {
+  if (executingFirstQueue)
+    return false;
+  SaveAndRestore s(executingFirstQueue, true);
+  return executeQueue(queue);
 }
 
 // Parses .drectve section contents and returns a list of files
@@ -489,6 +508,11 @@ void LinkerDriver::parseDirectives(InputFile *file) {
             toString(file) + ")");
     }
   }
+
+  // If we are running off the low-priority task list, execute and drain the
+  // high priority task list before going any further. This is to ensure symbols
+  // provided by /DEFAULTLIB archives are linked property in the symbol table.
+  executeFirstQueue(firstTaskQueue);
 }
 
 // Find file from search paths. You can omit ".obj", this function takes
@@ -1071,18 +1095,19 @@ void LinkerDriver::parseModuleDefs(StringRef path) {
 }
 
 void LinkerDriver::enqueueTask(std::function<void()> task) {
-  taskQueue.push_back(std::move(task));
+  firstTaskQueue.push_back(std::move(task));
+}
+
+void LinkerDriver::enqueueSecondaryTask(std::function<void()> task) {
+  secondaryTaskQueue.push_back(std::move(task));
 }
 
 bool LinkerDriver::run() {
   llvm::TimeTraceScope timeScope("Read input files");
   ScopedTimer t(ctx.inputFileTimer);
 
-  bool didWork = !taskQueue.empty();
-  while (!taskQueue.empty()) {
-    taskQueue.front()();
-    taskQueue.pop_front();
-  }
+  bool didWork = executeFirstQueue(firstTaskQueue);
+  didWork |= executeQueue(secondaryTaskQueue);
   return didWork;
 }
 
@@ -2165,8 +2190,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     }
   }
 
-  // Read all input files given via the command line.
-  run();
+  // Read all input files given via the command line. Do not process the
+  // dependent OBJs pulled from archives just yet, since we need to push the
+  // default libs first.
+  executeFirstQueue(firstTaskQueue);
   if (errorCount())
     return;
 
@@ -2470,9 +2497,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
       if (args.hasArg(OPT_include_optional)) {
         // Handle /includeoptional
-        for (auto *arg : args.filtered(OPT_include_optional))
-          if (isa_and_nonnull<LazyArchive>(ctx.symtab.find(arg->getValue())))
+        for (auto *arg : args.filtered(OPT_include_optional)) {
+          Symbol *sym = ctx.symtab.find(arg->getValue());
+          if (sym && (isa<LazyArchive>(sym) || isa<LazyObject>(sym)))
             addUndefined(arg->getValue());
+        }
       }
     } while (run());
   }

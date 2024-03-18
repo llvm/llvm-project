@@ -19,7 +19,6 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -32,21 +31,6 @@ StringRef ltrim1(StringRef s, const char *chars) {
   if (!s.empty() && strchr(chars, s[0]))
     return s.substr(1);
   return s;
-}
-
-static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
-  if (mt == IMAGE_FILE_MACHINE_UNKNOWN)
-    return true;
-  switch (ctx.config.machine) {
-  case ARM64:
-    return mt == ARM64 || mt == ARM64X;
-  case ARM64EC:
-    return COFF::isArm64EC(mt) || mt == AMD64;
-  case ARM64X:
-    return COFF::isAnyArm64(mt) || mt == AMD64;
-  default:
-    return ctx.config.machine == mt;
-  }
 }
 
 void SymbolTable::addFile(InputFile *file) {
@@ -72,18 +56,6 @@ void SymbolTable::addFile(InputFile *file) {
       ctx.importFileInstances.push_back(f);
     }
   }
-
-  MachineTypes mt = file->getMachineType();
-  if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN) {
-    ctx.config.machine = mt;
-    ctx.driver.addWinSysRootLibSearchPaths();
-  } else if (!compatibleMachineType(ctx, mt)) {
-    error(toString(file) + ": machine type " + machineToStr(mt) +
-          " conflicts with " + machineToStr(ctx.config.machine));
-    return;
-  }
-
-  ctx.driver.parseDirectives(file);
 }
 
 static void errorOrWarn(const Twine &s, bool forceUnresolved) {
@@ -636,6 +608,8 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
       if (s != selected)
         memcpy(s, selected, sizeof(SymbolUnion));
       *lazyNode(s) = LazyIntrusiveNode();
+      if (!isa<BitcodeFile>(f))
+        s->isUsedInRegularObj = true;
       return s;
     }
     // We're placing a undefined symbol from a command-line OBJ.
