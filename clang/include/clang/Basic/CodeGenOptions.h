@@ -410,9 +410,6 @@ public:
   /// List of global variables that over-ride the toc-data default.
   std::vector<std::string> NoTocDataVars;
 
-  /// Flag for all global variables to be treated as toc-data.
-  bool AllTocData;
-
   /// Path to allowlist file specifying which objects
   /// (files, functions) should exclusively be instrumented
   /// by sanitizer coverage pass.
