@@ -66,48 +66,15 @@ bool isLegalShaderModel(Triple &T) {
   return false;
 }
 
-struct ShaderModel {
-  StringRef TargetKind;
-  unsigned Major;
-  unsigned Minor;
-  bool OfflineLibMinor = false;
-};
-
-std::optional<ShaderModel> GetShaderModelFromString(StringRef Profile) {
+std::optional<std::string> tryParseProfile(StringRef Profile) {
+  // [ps|vs|gs|hs|ds|cs|ms|as]_[major]_[minor]
   SmallVector<StringRef, 3> Parts;
   Profile.split(Parts, "_");
   if (Parts.size() != 3)
     return std::nullopt;
 
-  unsigned long long Major = 0;
-  if (llvm::getAsUnsignedInteger(Parts[1], 0, Major))
-    return std::nullopt;
-
-  unsigned long long Minor = 0;
-  bool isOfflineLibMinor = false;
-  if (Parts[0] == "lib" && Parts[2] == "x")
-    isOfflineLibMinor = true;
-  else if (llvm::getAsUnsignedInteger(Parts[2], 0, Minor))
-    return std::nullopt;
-
-  ShaderModel ret;
-  ret.TargetKind = Parts[0];
-  ret.Major = Major;
-  ret.Minor = Minor;
-  ret.OfflineLibMinor = isOfflineLibMinor;
-
-  return ret;
-}
-
-std::optional<std::string> tryParseProfile(StringRef Profile) {
-  std::optional<ShaderModel> SM = GetShaderModelFromString(Profile);
-  if (!SM.has_value()) {
-    return std::nullopt;
-  }
-  // [ps|vs|gs|hs|ds|cs|ms|as]_[major]_[minor]
-
   Triple::EnvironmentType Kind =
-      StringSwitch<Triple::EnvironmentType>(SM.value().TargetKind)
+      StringSwitch<Triple::EnvironmentType>(Parts[0])
           .Case("ps", Triple::EnvironmentType::Pixel)
           .Case("vs", Triple::EnvironmentType::Vertex)
           .Case("gs", Triple::EnvironmentType::Geometry)
@@ -121,11 +88,21 @@ std::optional<std::string> tryParseProfile(StringRef Profile) {
   if (Kind == Triple::EnvironmentType::UnknownEnvironment)
     return std::nullopt;
 
+  unsigned long long Major = 0;
+  if (llvm::getAsUnsignedInteger(Parts[1], 0, Major))
+    return std::nullopt;
+
+  unsigned long long Minor = 0;
+  if (Parts[2] == "x" && Kind == Triple::EnvironmentType::Library)
+    Minor = OfflineLibMinor;
+  else if (llvm::getAsUnsignedInteger(Parts[2], 0, Minor))
+    return std::nullopt;
+
   // dxil-unknown-shadermodel-hull
   llvm::Triple T;
   T.setArch(Triple::ArchType::dxil);
   T.setOSName(Triple::getOSTypeName(Triple::OSType::ShaderModel).str() +
-              VersionTuple(SM.value().Major, SM.value().Minor).getAsString());
+              VersionTuple(Major, Minor).getAsString());
   T.setEnvironment(Kind);
   if (isLegalShaderModel(T))
     return T.getTriple();
@@ -279,43 +256,6 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_O), "3");
   }
 
-  if (DAL->hasArg(options::OPT_fnative_half_type)) {
-
-    bool HVArgIsValid = true;
-    bool TPArgIsValid = true;
-
-    const StringRef HVArg =
-        DAL->getLastArgValue(options::OPT_std_EQ, "hlsl2021");
-
-    const StringRef TPArg =
-        DAL->getLastArgValue(options::OPT_target_profile, "");
-    std::optional<ShaderModel> parsedTargetProfile =
-        GetShaderModelFromString(TPArg);
-
-    unsigned long long HV_year;
-    StringRef HV_year_str = HVArg.drop_front(4);
-    if (HV_year_str != "202x") {
-      llvm::getAsUnsignedInteger(HV_year_str, 0, HV_year);
-      if (HV_year < 2021)
-        HVArgIsValid = false;
-    }
-
-    if (!parsedTargetProfile.has_value())
-      // This should be unreachable, target profile validation happens
-      // before this point.
-      return DAL;
-    else {
-      if (parsedTargetProfile.value().Major < 6 ||
-          (parsedTargetProfile.value().Major == 6 &&
-           parsedTargetProfile.value().Minor < 2))
-        TPArgIsValid = false;
-    }
-
-    // if the HLSL Version is not at least 2021, or the shader model is not at
-    // least 6.2, then enable-16bit-types is an invalid flag.
-    if (!(HVArgIsValid && TPArgIsValid))
-      getDriver().Diag(diag::err_drv_hlsl_enable_16bit_types_option_invalid);
-  }
   return DAL;
 }
 
