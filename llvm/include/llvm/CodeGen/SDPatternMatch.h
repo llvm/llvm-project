@@ -463,9 +463,17 @@ inline BinaryOpc_match<LHS, RHS, false> m_BinOp(unsigned Opc, const LHS &L,
   return BinaryOpc_match<LHS, RHS, false>(Opc, L, R);
 }
 template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS,RHS,false> m_BinOp(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, false>(TLI.isBinOp(), L, R);
+}
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_c_BinOp(unsigned Opc, const LHS &L,
                                                  const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(Opc, L, R);
+}
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS,RHS,true> m_c_BinOp(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, false>(TLI.isCommutativeBinOp(), L, R);
 }
 
 template <typename LHS, typename RHS>
