@@ -1224,9 +1224,10 @@ static void readConfigs(opt::InputArgList &args) {
   config->checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   config->chroot = args.getLastArgValue(OPT_chroot);
-  config->compressDebugSections = getCompressionType(
-      args.getLastArgValue(OPT_compress_debug_sections, "none"),
-      "--compress-debug-sections");
+  if (auto *arg = args.getLastArg(OPT_compress_debug_sections)) {
+    config->compressDebugSections =
+        getCompressionType(arg->getValue(), "--compress-debug-sections");
+  }
   config->cref = args.hasArg(OPT_cref);
   config->optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
@@ -1347,6 +1348,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->printArchiveStats = args.getLastArgValue(OPT_print_archive_stats);
   config->printSymbolOrder =
       args.getLastArgValue(OPT_print_symbol_order);
+  config->rejectMismatch = !args.hasArg(OPT_no_warn_mismatch);
   config->relax = args.hasFlag(OPT_relax, OPT_no_relax, true);
   config->relaxGP = args.hasFlag(OPT_relax_gp, OPT_no_relax_gp, false);
   config->rpath = getRpath(args);
@@ -1513,6 +1515,23 @@ static void readConfigs(opt::InputArgList &args) {
         continue;
       }
       *reportArg.second = option.second;
+    }
+  }
+
+  for (opt::Arg *arg : args.filtered(OPT_compress_sections)) {
+    SmallVector<StringRef, 0> fields;
+    StringRef(arg->getValue()).split(fields, '=');
+    if (fields.size() != 2 || fields[1].empty()) {
+      error(arg->getSpelling() +
+            ": parse error, not 'section-glob=[none|zlib|zstd]'");
+      continue;
+    }
+    auto type = getCompressionType(fields[1], arg->getSpelling());
+    if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
+      config->compressSections.emplace_back(std::move(*pat), type);
+    } else {
+      error(arg->getSpelling() + ": " + toString(pat.takeError()));
+      continue;
     }
   }
 

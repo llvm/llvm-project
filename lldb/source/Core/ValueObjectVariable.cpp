@@ -99,7 +99,8 @@ ValueObjectVariable::CalculateNumChildren(uint32_t max) {
   CompilerType type(GetCompilerType());
 
   if (!type.IsValid())
-    return 0;
+    return llvm::make_error<llvm::StringError>("invalid type",
+                                               llvm::inconvertibleErrorCode());
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
   const bool omit_empty_base_classes = true;

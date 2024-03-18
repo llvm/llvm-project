@@ -199,7 +199,7 @@ multiclass VOP2Inst_t16<string opName,
                         SDPatternOperator node = null_frag,
                         string revOp = opName,
                         bit GFX9Renamed = 0> {
-  let SubtargetPredicate = NotHasTrue16BitInsts, OtherPredicates = [Has16BitInsts]  in {
+  let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
     defm NAME : VOP2Inst<opName, P, node, revOp, GFX9Renamed>;
   }
   let SubtargetPredicate = UseRealTrue16Insts in {
@@ -219,7 +219,7 @@ multiclass VOP2Inst_e64_t16<string opName,
                         SDPatternOperator node = null_frag,
                         string revOp = opName,
                         bit GFX9Renamed = 0> {
-  let SubtargetPredicate = NotHasTrue16BitInsts, OtherPredicates = [Has16BitInsts]  in {
+  let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
     defm NAME : VOP2Inst<opName, P, node, revOp, GFX9Renamed>;
   }
   let SubtargetPredicate = HasTrue16BitInsts in {
@@ -900,7 +900,7 @@ def LDEXP_F16_VOPProfile_True16 : VOPProfile_Fake16<VOP_F16_F16_F16> {
 
 let isReMaterializable = 1 in {
 let FPDPRounding = 1 in {
-  let SubtargetPredicate = NotHasTrue16BitInsts, OtherPredicates = [Has16BitInsts]  in
+  let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in
     defm V_LDEXP_F16 : VOP2Inst <"v_ldexp_f16", LDEXP_F16_VOPProfile>;
   let SubtargetPredicate = HasTrue16BitInsts in
     defm V_LDEXP_F16_t16 : VOP2Inst <"v_ldexp_f16_t16", LDEXP_F16_VOPProfile_True16>;
@@ -950,7 +950,7 @@ let SubtargetPredicate = isGFX11Plus in {
 } // End SubtargetPredicate = isGFX11Plus
 
 let FPDPRounding = 1, isReMaterializable = 1, FixedSize = 1 in {
-let SubtargetPredicate = isGFX10Plus, OtherPredicates = [NotHasTrue16BitInsts] in {
+let SubtargetPredicate = isGFX10Plus, True16Predicate = NotHasTrue16BitInsts in {
 def V_FMAMK_F16 : VOP2_Pseudo <"v_fmamk_f16", VOP_MADMK_F16, [], "">;
 }
 let SubtargetPredicate = HasTrue16BitInsts in {
@@ -958,7 +958,7 @@ def V_FMAMK_F16_t16 : VOP2_Pseudo <"v_fmamk_f16_t16", VOP_MADMK_F16_t16, [], "">
 }
 
 let isCommutable = 1 in {
-let SubtargetPredicate = isGFX10Plus, OtherPredicates = [NotHasTrue16BitInsts] in {
+let SubtargetPredicate = isGFX10Plus, True16Predicate = NotHasTrue16BitInsts in {
 def V_FMAAK_F16 : VOP2_Pseudo <"v_fmaak_f16", VOP_MADAK_F16, [], "">;
 }
 let SubtargetPredicate = HasTrue16BitInsts in {
@@ -971,7 +971,7 @@ let Constraints = "$vdst = $src2",
     DisableEncoding="$src2",
     isConvertibleToThreeAddress = 1,
     isCommutable = 1 in {
-let SubtargetPredicate = isGFX10Plus, OtherPredicates = [NotHasTrue16BitInsts] in {
+let SubtargetPredicate = isGFX10Plus, True16Predicate = NotHasTrue16BitInsts in {
 defm V_FMAC_F16 : VOP2Inst <"v_fmac_f16", VOP_MAC_F16>;
 }
 let SubtargetPredicate = HasTrue16BitInsts in {

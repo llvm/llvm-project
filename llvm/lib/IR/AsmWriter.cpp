@@ -1131,7 +1131,7 @@ void SlotTracker::processFunctionMetadata(const Function &F) {
   processGlobalObjectMetadata(F);
   for (auto &BB : F) {
     for (auto &I : BB) {
-      for (const DbgRecord &DR : I.getDbgValueRange())
+      for (const DbgRecord &DR : I.getDbgRecordRange())
         processDbgRecordMetadata(DR);
       processInstructionMetadata(I);
     }
@@ -1143,9 +1143,15 @@ void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
     // Process metadata used by DbgRecords; we only specifically care about the
     // DILocalVariable, DILocation, and DIAssignID fields, as the Value and
     // Expression fields should only be printed inline and so do not use a slot.
+    // Note: The above doesn't apply for empty-metadata operands.
+    if (auto *Empty = dyn_cast<MDNode>(DPV->getRawLocation()))
+      CreateMetadataSlot(Empty);
     CreateMetadataSlot(DPV->getRawVariable());
-    if (DPV->isDbgAssign())
+    if (DPV->isDbgAssign()) {
       CreateMetadataSlot(cast<MDNode>(DPV->getRawAssignID()));
+      if (auto *Empty = dyn_cast<MDNode>(DPV->getRawAddress()))
+        CreateMetadataSlot(Empty);
+    }
   } else if (const DPLabel *DPL = dyn_cast<const DPLabel>(&DR)) {
     CreateMetadataSlot(DPL->getRawLabel());
   } else {
@@ -4097,7 +4103,7 @@ void AssemblyWriter::printBasicBlock(const BasicBlock *BB) {
 
   // Output all of the instructions in the basic block...
   for (const Instruction &I : *BB) {
-    for (const DbgRecord &DR : I.getDbgValueRange())
+    for (const DbgRecord &DR : I.getDbgRecordRange())
       printDbgRecordLine(DR);
     printInstructionLine(I);
   }
@@ -4592,7 +4598,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
   // There's no formal representation of a DPMarker -- print purely as a
   // debugging aid.
-  for (const DbgRecord &DPR : Marker.StoredDPValues) {
+  for (const DbgRecord &DPR : Marker.StoredDbgRecords) {
     printDbgRecord(DPR);
     Out << "\n";
   }
