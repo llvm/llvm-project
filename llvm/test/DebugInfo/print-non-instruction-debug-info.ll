@@ -26,8 +26,8 @@
 ; CHECK-NEXT: {{^}}  store i32 %[[VAL_ADD]]{{.+}}, !DIAssignID ![[ASSIGNID:[0-9]+]]
 ; OLDDBG-NEXT: call void @llvm.dbg.assign(metadata i32 %[[VAL_ADD]], metadata ![[VAR_B]], metadata !DIExpression(), metadata ![[ASSIGNID]], metadata ptr %[[VAL_B]], metadata !DIExpression()), !dbg ![[LOC_4:[0-9]+]]
 ; NEWDBG-NEXT: {{^}}    #dbg_assign(i32 %[[VAL_ADD]], ![[VAR_B]], !DIExpression(), ![[ASSIGNID]], ptr %[[VAL_B]], !DIExpression(), ![[LOC_4:[0-9]+]])
-; OLDDBG-NEXT: call void @llvm.dbg.assign(metadata ![[EMPTY:[0-9]+]], metadata ![[VAR_B]], metadata !DIExpression(), metadata ![[ASSIGNID]], metadata ![[EMPTY]], metadata !DIExpression()), !dbg ![[LOC_4:[0-9]+]]
-; NEWDBG-NEXT: {{^}}    #dbg_assign(![[EMPTY:[0-9]+]], ![[VAR_B]], !DIExpression(), ![[ASSIGNID]], ![[EMPTY]], !DIExpression(), ![[LOC_4:[0-9]+]])
+; OLDDBG-NEXT: call void @llvm.dbg.assign(metadata ![[EMPTY:[0-9]+]], metadata ![[VAR_B]], metadata !DIExpression(), metadata ![[ASSIGNID]], metadata ![[EMPTY]], metadata !DIExpression()), !dbg ![[LOC_4]]
+; NEWDBG-NEXT: {{^}}    #dbg_assign(![[EMPTY:[0-9]+]], ![[VAR_B]], !DIExpression(), ![[ASSIGNID]], ![[EMPTY]], !DIExpression(), ![[LOC_4]])
 ; CHECK-NEXT: {{^}}  ret i32
 
 ; OLDDBG-DAG: declare void @llvm.dbg.value
