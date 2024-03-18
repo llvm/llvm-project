@@ -2222,7 +2222,7 @@ static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
 }
 
 llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
-  llvm::Type *PtrTy = llvm::PointerType::getUnqual(getLLVMContext());
+  llvm::Type *PtrTy = Int8PtrTy;
   LangAS GlobAS = CGM.GetGlobalVarAddressSpace(nullptr);
 
   auto MaybeASCast = [=](auto &&TypeInfo) {

@@ -364,7 +364,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   IntTy = llvm::IntegerType::get(LLVMContext, C.getTargetInfo().getIntWidth());
   IntPtrTy = llvm::IntegerType::get(LLVMContext,
     C.getTargetInfo().getMaxPointerWidth());
-  Int8PtrTy = llvm::PointerType::get(LLVMContext, 0);
+  Int8PtrTy = llvm::PointerType::get(
+      LLVMContext, C.getTargetInfo().getTargetAddressSpace(LangAS::Default));
   const llvm::DataLayout &DL = M.getDataLayout();
   AllocaInt8PtrTy =
       llvm::PointerType::get(LLVMContext, DL.getAllocaAddrSpace());
@@ -4512,9 +4513,10 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
     IsIncompleteFunction = true;
   }
 
-  llvm::Function *F =
-      llvm::Function::Create(FTy, llvm::Function::ExternalLinkage,
-                             Entry ? StringRef() : MangledName, &getModule());
+  llvm::Function *F = llvm::Function::Create(
+      FTy, llvm::Function::ExternalLinkage,
+      getDataLayout().getProgramAddressSpace(),
+      Entry ? StringRef() : MangledName, &getModule());
 
   // Store the declaration associated with this function so it is potentially
   // updated by further declarations or definitions and emitted at the end.
