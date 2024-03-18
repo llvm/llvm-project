@@ -439,23 +439,11 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     // Create the private copy from the initial fir.box:
     hlfir::Entity source = hlfir::Entity{builder.getBlock()->getArgument(0)};
 
-    // from hlfir::createTempFromMold() but with the allocation changed to
-    // use alloca so that we don't have to free it
     // TODO: if the whole reduction is nested inside of a loop, this alloca
     // could lead to a stack overflow (the memory is only freed at the end of
     // the stack frame). The reduction declare operation needs a deallocation
     // region to undo the init region.
-    assert(source.isArray());
-    mlir::Type sequenceType =
-        hlfir::getFortranElementOrSequenceType(source.getType());
-    const char *tmpName = "omp.reduction.array.init";
-    mlir::Value shape = hlfir::genShape(loc, builder, source);
-    auto extents = hlfir::getIndexExtents(loc, builder, shape);
-    mlir::Value alloc = builder.createTemporary(loc, sequenceType, tmpName,
-                                                extents, /*lenParams=*/{});
-    auto declareOp =
-        builder.create<hlfir::DeclareOp>(loc, alloc, tmpName, shape);
-    hlfir::Entity temp = hlfir::Entity{declareOp.getBase()};
+    hlfir::Entity temp = createStackTempFromMold(loc, builder, source);
 
     // Put the temporary inside of a box:
     hlfir::Entity box = hlfir::genVariableBox(loc, builder, temp);
