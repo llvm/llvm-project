@@ -243,7 +243,6 @@ add_stdio_entrypoint_object(
   HDRS
     fileno.h
   DEPENDS
-    libc.src.__support.arg_list
     libc.src.stdio.fileno
 )
 
