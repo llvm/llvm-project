@@ -993,6 +993,12 @@ DEF_TRAVERSE_TYPE(ConstantArrayType, {
     TRY_TO(TraverseStmt(const_cast<Expr*>(T->getSizeExpr())));
 })
 
+DEF_TRAVERSE_TYPE(ArrayParameterType, {
+  TRY_TO(TraverseType(T->getElementType()));
+  if (T->getSizeExpr())
+    TRY_TO(TraverseStmt(const_cast<Expr *>(T->getSizeExpr())));
+})
+
 DEF_TRAVERSE_TYPE(IncompleteArrayType,
                   { TRY_TO(TraverseType(T->getElementType())); })
 
@@ -1250,6 +1256,11 @@ bool RecursiveASTVisitor<Derived>::TraverseArrayTypeLocHelper(ArrayTypeLoc TL) {
 }
 
 DEF_TRAVERSE_TYPELOC(ConstantArrayType, {
+  TRY_TO(TraverseTypeLoc(TL.getElementLoc()));
+  TRY_TO(TraverseArrayTypeLocHelper(TL));
+})
+
+DEF_TRAVERSE_TYPELOC(ArrayParameterType, {
   TRY_TO(TraverseTypeLoc(TL.getElementLoc()));
   TRY_TO(TraverseArrayTypeLocHelper(TL));
 })

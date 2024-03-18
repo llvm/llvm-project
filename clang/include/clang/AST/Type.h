@@ -2278,6 +2278,7 @@ public:
   bool isConstantArrayType() const;
   bool isIncompleteArrayType() const;
   bool isVariableArrayType() const;
+  bool isArrayParameterType() const;
   bool isDependentSizedArrayType() const;
   bool isRecordType() const;
   bool isClassType() const;
@@ -3174,20 +3175,19 @@ public:
     return T->getTypeClass() == ConstantArray ||
            T->getTypeClass() == VariableArray ||
            T->getTypeClass() == IncompleteArray ||
-           T->getTypeClass() == DependentSizedArray;
+           T->getTypeClass() == DependentSizedArray ||
+           T->getTypeClass() == ArrayParameter;
   }
 };
 
 /// Represents the canonical version of C arrays with a specified constant size.
 /// For example, the canonical type for 'int A[4 + 4*100]' is a
 /// ConstantArrayType where the element type is 'int' and the size is 404.
-class ConstantArrayType final
-    : public ArrayType,
-      private llvm::TrailingObjects<ConstantArrayType, const Expr *> {
+class ConstantArrayType : public ArrayType {
   friend class ASTContext; // ASTContext creates these.
-  friend TrailingObjects;
 
   llvm::APInt Size; // Allows us to unique the type.
+  const Expr *SizeExpr;
 
   ConstantArrayType(QualType et, QualType can, const llvm::APInt &size,
                     const Expr *sz, ArraySizeModifier sm, unsigned tq)
@@ -3195,20 +3195,26 @@ class ConstantArrayType final
     ConstantArrayTypeBits.HasStoredSizeExpr = sz != nullptr;
     if (ConstantArrayTypeBits.HasStoredSizeExpr) {
       assert(!can.isNull() && "canonical constant array should not have size");
-      *getTrailingObjects<const Expr*>() = sz;
+      SizeExpr = sz;
     }
   }
 
-  unsigned numTrailingObjects(OverloadToken<const Expr*>) const {
-    return ConstantArrayTypeBits.HasStoredSizeExpr;
+protected:
+  ConstantArrayType(TypeClass tc, QualType et, QualType can,
+                    const llvm::APInt &size, const Expr *sz,
+                    ArraySizeModifier sm, unsigned tq)
+      : ArrayType(tc, et, can, sm, tq, sz), Size(size) {
+    ConstantArrayTypeBits.HasStoredSizeExpr = sz != nullptr;
+    if (ConstantArrayTypeBits.HasStoredSizeExpr) {
+      assert(!can.isNull() && "canonical constant array should not have size");
+      SizeExpr = sz;
+    }
   }
 
 public:
   const llvm::APInt &getSize() const { return Size; }
   const Expr *getSizeExpr() const {
-    return ConstantArrayTypeBits.HasStoredSizeExpr
-               ? *getTrailingObjects<const Expr *>()
-               : nullptr;
+    return ConstantArrayTypeBits.HasStoredSizeExpr ? SizeExpr : nullptr;
   }
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
@@ -3236,7 +3242,25 @@ public:
                       unsigned TypeQuals);
 
   static bool classof(const Type *T) {
-    return T->getTypeClass() == ConstantArray;
+    return T->getTypeClass() == ConstantArray ||
+           T->getTypeClass() == ArrayParameter;
+  }
+};
+
+/// Represents a constant array type that does not decay to a pointer when used
+/// as a function parameter.
+class ArrayParameterType : public ConstantArrayType {
+  friend class ASTContext; // ASTContext creates these.
+
+  ArrayParameterType(const ConstantArrayType *ATy, QualType CanTy)
+      : ConstantArrayType(ArrayParameter, ATy->getElementType(), CanTy,
+                          ATy->getSize(), ATy->getSizeExpr(),
+                          ATy->getSizeModifier(),
+                          ATy->getIndexTypeQualifiers().getAsOpaqueValue()) {}
+
+public:
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == ArrayParameter;
   }
 };
 
@@ -6968,7 +6992,8 @@ inline bool QualType::isCanonicalAsParam() const {
   if (T->isVariablyModifiedType() && T->hasSizedVLAType())
     return false;
 
-  return !isa<FunctionType>(T) && !isa<ArrayType>(T);
+  return !isa<FunctionType>(T) &&
+         (!isa<ArrayType>(T) || isa<ArrayParameterType>(T));
 }
 
 inline bool QualType::isConstQualified() const {
@@ -7231,6 +7256,10 @@ inline bool Type::isIncompleteArrayType() const {
 
 inline bool Type::isVariableArrayType() const {
   return isa<VariableArrayType>(CanonicalType);
+}
+
+inline bool Type::isArrayParameterType() const {
+  return isa<ArrayParameterType>(CanonicalType);
 }
 
 inline bool Type::isDependentSizedArrayType() const {
@@ -7592,7 +7621,7 @@ inline bool Type::isTypedefNameType() const {
 
 /// Determines whether this type can decay to a pointer type.
 inline bool Type::canDecayToPointerType() const {
-  return isFunctionType() || isArrayType();
+  return isFunctionType() || (isArrayType() && !isArrayParameterType());
 }
 
 inline bool Type::hasPointerRepresentation() const {

@@ -880,6 +880,9 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
 
     [[fallthrough]];
 
+  case CK_HLSLArrayRValue:
+    Visit(E->getSubExpr());
+    break;
 
   case CK_NoOp:
   case CK_UserDefinedConversion:
@@ -1442,6 +1445,7 @@ static bool castPreservesZero(const CastExpr *CE) {
   case CK_BitCast:
   case CK_ToUnion:
   case CK_ToVoid:
+  case CK_HLSLArrayRValue:
     // Conversions between (possibly-complex) integral, (possibly-complex)
     // floating-point, and bool.
   case CK_BooleanToSignedIntegral:

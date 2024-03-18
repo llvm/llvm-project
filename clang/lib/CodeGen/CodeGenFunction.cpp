@@ -267,6 +267,7 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::Record:
     case Type::ObjCObject:
     case Type::ObjCInterface:
+    case Type::ArrayParameter:
       return TEK_Aggregate;
 
     // We operate on atomic values according to their underlying type.
@@ -2328,6 +2329,11 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
 
     case Type::Decayed:
       type = cast<DecayedType>(ty)->getPointeeType();
+      break;
+
+    case Type::ArrayParameter:
+      // Losing element qualification here is fine.
+      type = cast<ArrayParameterType>(ty)->getElementType();
       break;
 
     case Type::Pointer:

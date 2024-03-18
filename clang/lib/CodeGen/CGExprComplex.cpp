@@ -500,6 +500,7 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_NoOp:
   case CK_LValueToRValue:
   case CK_UserDefinedConversion:
+  case CK_HLSLArrayRValue:
     return Visit(Op);
 
   case CK_LValueBitCast: {

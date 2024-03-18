@@ -944,6 +944,10 @@ public:
     VisitArrayType(T);
   }
 
+  void VisitArrayParameterType(const ArrayParameterType *T) {
+    VisitConstantArrayType(T);
+  }
+
   void VisitDependentSizedArrayType(const DependentSizedArrayType *T) {
     AddStmt(T->getSizeExpr());
     VisitArrayType(T);

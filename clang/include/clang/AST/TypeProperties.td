@@ -117,6 +117,13 @@ let Class = ConstantArrayType in {
   }]>;
 }
 
+let Class = ArrayParameterType in {
+  def : Creator<[{ return ctx.getAdjustedParameterType(
+                              ctx.getConstantArrayType(elementType,sizeValue,
+                                    size,sizeModifier,
+                                    indexQualifiers.getCVRQualifiers())); }]>;
+}
+
 let Class = IncompleteArrayType in {
   def : Creator<[{
     return ctx.getIncompleteArrayType(elementType, sizeModifier,

@@ -160,6 +160,7 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
       ICR_C_Conversion_Extension,
       ICR_Conversion,
       ICR_Conversion,
+      ICR_Conversion,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
@@ -201,6 +202,7 @@ static const char *GetImplicitConversionName(ImplicitConversionKind Kind) {
       "Incompatible pointer conversion",
       "Fixed point conversion",
       "HLSL vector truncation",
+      "Non-decaying array conversion",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -2147,6 +2149,19 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // is T (C++ 4.1p1). C++ can't get here with class types; in C, we
     // just strip the qualifiers because they don't matter.
     FromType = FromType.getUnqualifiedType();
+  } else if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
+             ToType->isArrayParameterType()) {
+    // HLSL constant array parameters do not decay, so if the argument is a
+    // constant array and the parameter is an ArrayParameterType we have special
+    // handling here.
+    FromType = S.Context.getArrayParameterType(FromType);
+    if (S.Context.getCanonicalType(FromType) !=
+        S.Context.getCanonicalType(ToType))
+      return false;
+
+    SCS.First = ICK_HLSL_Array_RValue;
+    SCS.setAllToTypes(ToType);
+    return true;
   } else if (FromType->isArrayType()) {
     // Array-to-pointer conversion (C++ 4.2)
     SCS.First = ICK_Array_To_Pointer;
@@ -6100,6 +6115,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Lvalue_To_Rvalue:
   case ICK_Array_To_Pointer:
   case ICK_Function_To_Pointer:
+  case ICK_HLSL_Array_RValue:
     llvm_unreachable("found a first conversion kind in Second");
 
   case ICK_Function_Conversion:

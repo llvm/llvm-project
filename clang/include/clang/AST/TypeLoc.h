@@ -1585,6 +1585,11 @@ class ConstantArrayTypeLoc :
                                      ConstantArrayType> {
 };
 
+/// Wrapper for source info for array parameter types.
+class ArrayParameterTypeLoc
+    : public InheritingConcreteTypeLoc<
+          ConstantArrayTypeLoc, ArrayParameterTypeLoc, ArrayParameterType> {};
+
 class IncompleteArrayTypeLoc :
     public InheritingConcreteTypeLoc<ArrayTypeLoc,
                                      IncompleteArrayTypeLoc,
