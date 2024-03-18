@@ -313,20 +313,24 @@ DWARF5AcceleratorTable::addAccelTableEntry(
   // has a DW_AT_specification or DW_AT_abstract_origin attribute pointing to
   // another debugging information entry B, any attributes of B are considered
   // to be part of A.
-  if (DIEValue AbstrOrigin =
-          Die.findAttribute(dwarf::Attribute::DW_AT_abstract_origin)) {
-    const DIEEntry &DIEENtry = AbstrOrigin.getDIEEntry();
+  auto processReferencedDie = [&](const dwarf::Attribute &Attr)
+      -> std::optional<BOLTDWARF5AccelTableData *> {
+    const DIEValue Value = Die.findAttribute(Attr);
+    if (!Value)
+      return std::nullopt;
+    ;
+    const DIEEntry &DIEENtry = Value.getDIEEntry();
     DIE &EntryDie = DIEENtry.getEntry();
     addEntry(EntryDie.findAttribute(dwarf::Attribute::DW_AT_linkage_name));
     return addEntry(EntryDie.findAttribute(dwarf::Attribute::DW_AT_name));
-  }
-  if (DIEValue AbstrOrigin =
-          Die.findAttribute(dwarf::Attribute::DW_AT_specification)) {
-    const DIEEntry &DIEENtry = AbstrOrigin.getDIEEntry();
-    DIE &EntryDie = DIEENtry.getEntry();
-    addEntry(EntryDie.findAttribute(dwarf::Attribute::DW_AT_linkage_name));
-    return addEntry(EntryDie.findAttribute(dwarf::Attribute::DW_AT_name));
-  }
+  };
+
+  if (std::optional<BOLTDWARF5AccelTableData *> Entry =
+          processReferencedDie(dwarf::Attribute::DW_AT_abstract_origin))
+    return *Entry;
+  if (std::optional<BOLTDWARF5AccelTableData *> Entry =
+          processReferencedDie(dwarf::Attribute::DW_AT_specification))
+    return *Entry;
 
   return addEntry(Die.findAttribute(dwarf::Attribute::DW_AT_name));
   ;
