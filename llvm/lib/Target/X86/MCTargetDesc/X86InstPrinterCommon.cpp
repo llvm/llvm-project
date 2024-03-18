@@ -394,7 +394,7 @@ void X86InstPrinterCommon::printInstFlags(const MCInst *MI, raw_ostream &O,
   else if (Flags & X86::IP_HAS_REPEAT)
     O << "\trep\t";
 
-  if (TSFlags & X86II::EVEX_NF)
+  if (TSFlags & X86II::EVEX_NF && !X86::isCFCMOVCC(MI->getOpcode()))
     O << "\t{nf}";
 
   // These all require a pseudo prefix

@@ -1299,7 +1299,7 @@ public:
       EVT MemVT, MachinePointerInfo PtrInfo, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
                                        MachineMemOperand::MOStore,
-      uint64_t Size = 0, const AAMDNodes &AAInfo = AAMDNodes());
+      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes());
 
   inline SDValue getMemIntrinsicNode(
       unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
@@ -1307,7 +1307,7 @@ public:
       MaybeAlign Alignment = std::nullopt,
       MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
                                        MachineMemOperand::MOStore,
-      uint64_t Size = 0, const AAMDNodes &AAInfo = AAMDNodes()) {
+      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes()) {
     // Ensure that codegen never sees alignment 0
     return getMemIntrinsicNode(Opcode, dl, VTList, Ops, MemVT, PtrInfo,
                                Alignment.value_or(getEVTAlign(MemVT)), Flags,

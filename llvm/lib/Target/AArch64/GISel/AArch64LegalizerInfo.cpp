@@ -373,6 +373,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalForTypesWithMemDesc(
           {{s32, p0, s8, 8}, {s32, p0, s16, 8}, {s64, p0, s32, 8}})
       .widenScalarToNextPow2(0, /* MinSize = */ 8)
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
+      .clampMaxNumElements(0, s32, 4)
+      .clampMaxNumElements(0, s64, 2)
+      .clampMaxNumElements(0, p0, 2)
       .lowerIfMemSizeNotByteSizePow2()
       .clampScalar(0, s8, s64)
       .narrowScalarIf(
@@ -383,11 +388,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    Query.Types[0].getSizeInBits() > 32;
           },
           changeTo(0, s32))
-      .clampMaxNumElements(0, s8, 16)
-      .clampMaxNumElements(0, s16, 8)
-      .clampMaxNumElements(0, s32, 4)
-      .clampMaxNumElements(0, s64, 2)
-      .clampMaxNumElements(0, p0, 2)
       // TODO: Use BITCAST for v2i8, v2i16 after G_TRUNC gets sorted out
       .bitcastIf(typeInSet(0, {v4s8}),
                  [=](const LegalityQuery &Query) {
@@ -600,7 +600,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalIf(ExtLegalFunc)
       .legalFor({{v2s64, v2s32}, {v4s32, v4s16}, {v8s16, v8s8}})
       .clampScalar(0, s64, s64) // Just for s128, others are handled above.
-      .moreElementsToNextPow2(1)
+      .moreElementsToNextPow2(0)
       .clampMaxNumElements(1, s8, 8)
       .clampMaxNumElements(1, s16, 4)
       .clampMaxNumElements(1, s32, 2)

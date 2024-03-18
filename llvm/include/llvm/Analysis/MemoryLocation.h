@@ -191,7 +191,13 @@ public:
     return Value == Other.Value;
   }
 
+  bool operator==(const TypeSize &Other) const {
+    return hasValue() && getValue() == Other;
+  }
+
   bool operator!=(const LocationSize &Other) const { return !(*this == Other); }
+
+  bool operator!=(const TypeSize &Other) const { return !(*this == Other); }
 
   // Ordering operators are not provided, since it's unclear if there's only one
   // reasonable way to compare:
@@ -293,8 +299,9 @@ public:
 
   // Return the exact size if the exact size is known at compiletime,
   // otherwise return MemoryLocation::UnknownSize.
-  static uint64_t getSizeOrUnknown(const TypeSize &T) {
-    return T.isScalable() ? UnknownSize : T.getFixedValue();
+  static LocationSize getSizeOrUnknown(const TypeSize &T) {
+    return T.isScalable() ? LocationSize::beforeOrAfterPointer()
+                          : LocationSize::precise(T.getFixedValue());
   }
 
   MemoryLocation() : Ptr(nullptr), Size(LocationSize::beforeOrAfterPointer()) {}
