@@ -119,20 +119,28 @@ QualType getPublicType(const Expr *E) {
     return Ty;
   }
 
-  QualType Ty = getPublicType(Cast->getSubExpr());
+  // Is the derived type that we're casting from the type of `*this`? In this
+  // special case, we can upcast to the base class even if the base is
+  // non-public.
+  bool CastingFromThis = isa<CXXThisExpr>(Cast->getSubExpr());
 
-  // Is `Ty` the type of `*this`? In this special case, we can upcast to the
-  // base class even if the base is non-public.
-  bool TyIsThisType = isa<CXXThisExpr>(Cast->getSubExpr());
-
+  // Find the least-derived type in the path (i.e. the last entry in the list)
+  // that we can access.
+  QualType Ty;
   for (const CXXBaseSpecifier *Base : Cast->path()) {
-    if (Base->getAccessSpecifier() != AS_public && !TyIsThisType)
+    if (Base->getAccessSpecifier() != AS_public && !CastingFromThis)
       break;
     Ty = Base->getType();
-    TyIsThisType = false;
+    CastingFromThis = false;
   }
 
-  return Ty;
+  if (!Ty.isNull())
+    return Ty;
+
+  // We didn't find any public type that we could cast to. There may be more
+  // casts in `getSubExpr()`, so recurse. (If there aren't any more casts, this
+  // will return the type of `getSubExpr()`.)
+  return getPublicType(Cast->getSubExpr());
 }
 
 // Returns the least-derived type for the receiver of `MCE` that
