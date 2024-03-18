@@ -9,6 +9,9 @@ static_assert(&__imag z1 == &__real z1 + 1, "");
 static_assert((*(&__imag z1)) == __imag z1, "");
 static_assert((*(&__real z1)) == __real z1, "");
 
+constexpr _Complex int Comma1 = {1, 2};
+constexpr _Complex int Comma2 = (0, Comma1);
+static_assert(Comma1 == Comma1, "");
 
 constexpr double setter() {
   _Complex float d = {1.0, 2.0};
