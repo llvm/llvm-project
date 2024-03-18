@@ -118,8 +118,6 @@ entry:
 define i32 @test10(i32 %a, i32 %b) {
 ; CHECK-LABEL: test10:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rlwimi 4, 3, 0, 0, 31
-; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %r = call i32 @llvm.ppc.rlwimi(i32 %a, i32 %b, i32 0, i32 -1)
@@ -129,8 +127,7 @@ entry:
 define i32 @test11(i32 %a, i32 %b) {
 ; CHECK-LABEL: test11:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rlwimi 4, 3, 8, 0, 31
-; CHECK-NEXT:    mr 3, 4
+; CHECK-NEXT:    rotlwi 3, 3, 8
 ; CHECK-NEXT:    blr
 entry:
   %r = call i32 @llvm.ppc.rlwimi(i32 %a, i32 %b, i32 8, i32 -1)

@@ -10765,19 +10765,16 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   case Intrinsic::ppc_rldimi: {
     assert(Subtarget.isPPC64() && "rldimi is only available in 64-bit!");
-    if (Op.getConstantOperandVal(4) == 0)
+    SDValue Src = Op.getOperand(1);
+    APInt Mask = Op.getConstantOperandAPInt(4);
+    if (Mask.isZero())
       return Op.getOperand(2);
+    if (Mask.isAllOnes())
+      return DAG.getNode(ISD::ROTL, dl, MVT::i64, Src, Op.getOperand(3));
     uint64_t SH = Op.getConstantOperandVal(3);
     unsigned MB = 0, ME = 0;
-    if (!isRunOfOnes64(Op.getConstantOperandVal(4), MB, ME))
+    if (!isRunOfOnes64(Mask.getZExtValue(), MB, ME))
       report_fatal_error("invalid rldimi mask!");
-
-    // For all-one mask, MB will be set to 0, adjust it next to 63-SH.
-    if (MB == 0 && ME == 63 && SH != 0) {
-      ME = 63 - SH;
-      MB = ME + 1;
-    }
-    SDValue Src = Op.getOperand(1);
     // rldimi requires ME=63-SH, otherwise rotation is needed before rldimi.
     if (ME < 63 - SH) {
       Src = DAG.getNode(ISD::ROTL, dl, MVT::i64, Src,
@@ -10795,10 +10792,14 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
 
   case Intrinsic::ppc_rlwimi: {
-    if (Op.getConstantOperandVal(4) == 0)
+    APInt Mask = Op.getConstantOperandAPInt(4);
+    if (Mask.isZero())
       return Op.getOperand(2);
+    if (Mask.isAllOnes())
+      return DAG.getNode(ISD::ROTL, dl, MVT::i32, Op.getOperand(1),
+                         Op.getOperand(3));
     unsigned MB = 0, ME = 0;
-    if (!isRunOfOnes(Op.getConstantOperandVal(4), MB, ME))
+    if (!isRunOfOnes(Mask.getZExtValue(), MB, ME))
       report_fatal_error("invalid rlwimi mask!");
     return SDValue(DAG.getMachineNode(
                        PPC::RLWIMI, dl, MVT::i32,
