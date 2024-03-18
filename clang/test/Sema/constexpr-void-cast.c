@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -x c -fsyntax-only %s -verify=c
-// RUN: %clang_cc1 -x c -fsyntax-only %s -pedantic -verify=c-pedantic
+// RUN: %clang_cc1 -x c -fsyntax-only %s -verify=c -std=c11
+// RUN: %clang_cc1 -x c -fsyntax-only %s -pedantic -verify=c-pedantic -std=c11
 //
 // RUN: %clang_cc1 -x c++ -fsyntax-only %s -verify=cxx
 // RUN: %clang_cc1 -x c++ -fsyntax-only %s -pedantic -verify=cxx-pedantic
