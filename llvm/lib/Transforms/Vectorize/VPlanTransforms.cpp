@@ -156,8 +156,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
     if (NeedsDuplicating) {
       if (ScalarVFOnly)
         continue;
-      Instruction *I = cast<Instruction>(
-          cast<VPReplicateRecipe>(SinkCandidate)->getUnderlyingValue());
+      Instruction *I = SinkCandidate->getUnderlyingInstr();
       auto *Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
