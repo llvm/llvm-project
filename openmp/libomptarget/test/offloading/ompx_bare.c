@@ -1,4 +1,3 @@
-// XFAIL: amdgcn-amd-amdhsa
 // RUN: %libomptarget-compile-generic
 // RUN: env LIBOMPTARGET_INFO=63 %libomptarget-run-generic 2>&1 | \
 // RUN:   %fcheck-generic
