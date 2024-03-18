@@ -404,7 +404,7 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     // TODO: Restructure this code with an explicit remainder loop, vsetvli can
     // be outside of the main loop.
     assert(Part == 0 && "No unrolling expected for predicated vectorization.");
-    // Compute VTC - IV as the EVL(requested vector length).
+    // Compute VTC - IV as the AVL (requested vector length).
     Value *Index = State.get(getOperand(0), VPIteration(0, 0));
     Value *TripCount = State.get(getOperand(1), VPIteration(0, 0));
     Value *AVL = State.Builder.CreateSub(TripCount, Index);

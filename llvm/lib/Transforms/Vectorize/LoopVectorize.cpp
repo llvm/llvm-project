@@ -4699,9 +4699,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   setTailFoldingStyles(MaxFactors.ScalableVF.isScalable(), UserIC);
   if (foldTailByMasking()) {
     if (getTailFoldingStyle() == TailFoldingStyle::DataWithEVL) {
-      LLVM_DEBUG(dbgs() << "LV: Preference for VP intrinsics indicated. Will "
-                           "try to generate VP Intrinsics with scalable vector "
-                           "factors only.\n");
+      LLVM_DEBUG(
+          dbgs()
+          << "LV: tail is folded with EVL, forcing unroll factor to be 1. Will "
+             "try to generate VP Intrinsics with scalable vector "
+             "factors only.\n");
       // Tail folded loop using VP intrinsics restricts the VF to be scalable
       // for now.
       // TODO: extend it for fixed vectors, if required.
@@ -8556,6 +8558,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
         VPlanTransforms::truncateToMinimalBitwidths(
             *Plan, CM.getMinimalBitwidths(), PSE.getSE()->getContext());
       VPlanTransforms::optimize(*Plan, *PSE.getSE());
+      // TODO: try to put it close to addActiveLaneMask().
       if (CM.foldTailWithEVL())
         VPlanTransforms::addExplicitVectorLength(*Plan);
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");

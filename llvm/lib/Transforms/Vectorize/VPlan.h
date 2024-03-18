@@ -2499,12 +2499,13 @@ public:
 };
 
 /// A recipe for generating the phi node for the current index of elements,
-/// adjusted in accordance with EVL value. It starts at StartIV value and gets
-/// incremented by EVL in each iteration of the vector loop.
+/// adjusted in accordance with EVL value. It starts at the start value of the
+/// canonical induction and gets incremented by EVL in each iteration of the
+/// vector loop.
 class VPEVLBasedIVPHIRecipe : public VPHeaderPHIRecipe {
 public:
-  VPEVLBasedIVPHIRecipe(VPValue *StartMask, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPDef::VPEVLBasedIVPHISC, nullptr, StartMask, DL) {}
+  VPEVLBasedIVPHIRecipe(VPValue *StartIV, DebugLoc DL)
+      : VPHeaderPHIRecipe(VPDef::VPEVLBasedIVPHISC, nullptr, StartIV, DL) {}
 
   ~VPEVLBasedIVPHIRecipe() override = default;
 

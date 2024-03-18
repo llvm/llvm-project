@@ -1210,7 +1210,7 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
 }
 
 /// Replaces (ICMP_ULE, WideCanonicalIV, backedge-taken-count) pattern using
-/// the given idiom \p Idiom.
+/// the given \p Idiom.
 static void replaceHeaderPredicateWithIdiom(
     VPlan &Plan, VPValue &Idiom,
     function_ref<bool(VPUser &, unsigned)> Cond = {}) {
@@ -1295,10 +1295,11 @@ void VPlanTransforms::addActiveLaneMask(
 ///
 /// vector.body:
 /// ...
-/// %P = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ], [
-/// %NextEVL, %vector.body ] %EVL = EXPLICIT-VECTOR-LENGTH %P, original TC
+/// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
+///                                               [ %NextEVLIV, %vector.body ]
+/// %VPEVL = EXPLICIT-VECTOR-LENGTH %EVLPhi, original TC
 /// ...
-/// %NextEVL = EXPLICIT-VECTOR-LENGTH + %P, %EVL
+/// %NextEVLIV = add i32 (cast to i32 %VPEVVL), %EVLPhi
 /// ...
 ///
 void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
