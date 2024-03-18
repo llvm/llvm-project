@@ -210,9 +210,6 @@ The following DWARF debug location operands are not supported:
 //===----------------------------------------------------------------------===//
 // Add support for additional binary formats.
 //===----------------------------------------------------------------------===//
-- WebAssembly (Wasm).
-  https://github.com/llvm/llvm-project/issues/57040#issuecomment-1211336680
-
 - Extended COFF (XCOFF)
 
 //===----------------------------------------------------------------------===//
