@@ -226,7 +226,7 @@ TEST(TransferTest, CopyRecordBetweenDerivedAndBase) {
     QualType IntTy = getFieldNamed(ADecl, "i")->getType();
     return {{"synth_int", IntTy}};
   };
-  // Copy derived to base class.
+  // Test copying derived to base class.
   runDataflow(
       Code, SyntheticFieldCallback,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
@@ -249,7 +249,7 @@ TEST(TransferTest, CopyRecordBetweenDerivedAndBase) {
         EXPECT_EQ(Env.getValue(A.getSyntheticField("synth_int")),
                   Env.getValue(B.getSyntheticField("synth_int")));
       });
-  // Copy base to derived class.
+  // Test copying base to derived class.
   runDataflow(
       Code, SyntheticFieldCallback,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
