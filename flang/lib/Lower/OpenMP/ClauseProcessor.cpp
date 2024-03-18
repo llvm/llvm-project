@@ -975,6 +975,35 @@ bool ClauseProcessor::processUseDevicePtr(
                            useDeviceLocs, useDeviceSymbols);
       });
 }
+
+bool ClauseProcessor::processIsDevicePtr(
+    llvm::SmallVectorImpl<mlir::Value> &operands,
+    llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
+    llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &isDeviceSymbols)
+    const {
+  return findRepeatableClause<ClauseTy::IsDevicePtr>(
+      [&](const ClauseTy::IsDevicePtr *devPtrClause,
+          const Fortran::parser::CharBlock &) {
+        addUseDeviceClause(converter, devPtrClause->v, operands, isDeviceTypes,
+                           isDeviceLocs, isDeviceSymbols);
+      });
+}
+
+bool ClauseProcessor::processHasDeviceAddr(
+    llvm::SmallVectorImpl<mlir::Value> &operands,
+    llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
+    llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &isDeviceSymbols)
+    const {
+  return findRepeatableClause<ClauseTy::HasDeviceAddr>(
+      [&](const ClauseTy::HasDeviceAddr *devAddrClause,
+          const Fortran::parser::CharBlock &) {
+        addUseDeviceClause(converter, devAddrClause->v, operands, isDeviceTypes,
+                           isDeviceLocs, isDeviceSymbols);
+      });
+}
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

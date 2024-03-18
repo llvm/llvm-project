@@ -1118,6 +1118,11 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Type> mapSymTypes;
   llvm::SmallVector<mlir::Location> mapSymLocs;
   llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
+  llvm::SmallVector<mlir::Value> devicePtrOperands, deviceAddrOperands;
+  llvm::SmallVector<mlir::Type> devicePtrTypes, deviceAddrTypes;
+  llvm::SmallVector<mlir::Location> devicePtrLocs, deviceAddrLocs;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> devicePtrSymbols,
+      deviceAddrSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processIf(clause::If::DirectiveNameModifier::Target, ifClauseOperand);
@@ -1127,11 +1132,13 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   cp.processNowait(nowaitAttr);
   cp.processMap(currentLocation, directive, stmtCtx, mapOperands, &mapSymTypes,
                 &mapSymLocs, &mapSymbols);
+  cp.processIsDevicePtr(devicePtrOperands, devicePtrTypes, devicePtrLocs,
+                        devicePtrSymbols);
+  cp.processHasDeviceAddr(deviceAddrOperands, deviceAddrTypes, deviceAddrLocs,
+                          deviceAddrSymbols);
 
   cp.processTODO<Fortran::parser::OmpClause::Private,
                  Fortran::parser::OmpClause::Firstprivate,
-                 Fortran::parser::OmpClause::IsDevicePtr,
-                 Fortran::parser::OmpClause::HasDeviceAddr,
                  Fortran::parser::OmpClause::Reduction,
                  Fortran::parser::OmpClause::InReduction,
                  Fortran::parser::OmpClause::Allocate,
@@ -1229,7 +1236,8 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
           ? nullptr
           : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
                                  dependTypeOperands),
-      dependOperands, nowaitAttr, mapOperands);
+      dependOperands, nowaitAttr, devicePtrOperands, deviceAddrOperands,
+      mapOperands);
 
   genBodyOfTargetOp(converter, semaCtx, eval, genNested, targetOp, mapSymTypes,
                     mapSymLocs, mapSymbols, currentLocation);
@@ -1863,6 +1871,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         !std::get_if<Fortran::parser::OmpClause::Map>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::UseDevicePtr>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::UseDeviceAddr>(&clause.u) &&
+        !std::get_if<Fortran::parser::OmpClause::IsDevicePtr>(&clause.u) &&
+        !std::get_if<Fortran::parser::OmpClause::HasDeviceAddr>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::ThreadLimit>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::NumTeams>(&clause.u)) {
       TODO(clauseLocation, "OpenMP Block construct clause");
