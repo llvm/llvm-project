@@ -635,7 +635,7 @@ void ReductionProcessor::addReductionDecl(
           symVal = declOp.getBase();
         auto redType = symVal.getType().cast<fir::ReferenceType>();
         if (!redType.getEleTy().isIntOrIndexOrFloat())
-          TODO(currentLocation, "User Defined Reduction on arrays");
+          TODO(currentLocation, "User Defined Reduction on non-trivial type");
         decl = createReductionDecl(
             firOpBuilder,
             getReductionName(getRealName(*reductionIntrinsic).ToString(),
