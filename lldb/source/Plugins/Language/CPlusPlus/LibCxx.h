@@ -59,6 +59,10 @@ bool LibcxxWStringViewSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::wstring_view
 
+bool LibcxxStdSliceArraySummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::slice_array
+
 bool LibcxxSmartPointerSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions
@@ -222,6 +226,10 @@ LibcxxStdVectorSyntheticFrontEndCreator(CXXSyntheticChildren *,
 SyntheticChildrenFrontEnd *
 LibcxxStdValarraySyntheticFrontEndCreator(CXXSyntheticChildren *,
                                           lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxStdSliceArraySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                            lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
 LibcxxStdListSyntheticFrontEndCreator(CXXSyntheticChildren *,

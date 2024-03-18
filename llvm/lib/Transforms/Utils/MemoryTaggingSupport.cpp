@@ -236,5 +236,10 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   Info.AI = NewAI;
 }
 
+bool isLifetimeIntrinsic(Value *V) {
+  auto *II = dyn_cast<IntrinsicInst>(V);
+  return II && II->isLifetimeStartOrEnd();
+}
+
 } // namespace memtag
 } // namespace llvm

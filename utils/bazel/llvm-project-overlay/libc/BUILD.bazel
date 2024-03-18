@@ -528,6 +528,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_ctype_utils",
         ":__support_str_to_num_result",
+        ":__support_uint128",
         ":errno",
     ],
 )
@@ -727,7 +728,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_fputil_manipulation_functions",
     hdrs = ["src/__support/FPUtil/ManipulationFunctions.h"],
-    textual_hdrs = ["src/__support/FPUtil/x86_64/NextAfterLongDouble.h"],
+    textual_hdrs = [
+        "src/__support/FPUtil/x86_64/NextAfterLongDouble.h",
+        "src/__support/FPUtil/x86_64/NextUpDownLongDouble.h",
+    ],
     deps = [
         ":__support_common",
         ":__support_cpp_bit",

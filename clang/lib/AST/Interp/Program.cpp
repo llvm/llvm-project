@@ -149,7 +149,16 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
     return It->second;
 
   // Create dummy descriptor.
-  Descriptor *Desc = allocateDescriptor(VD, std::nullopt);
+  // We create desriptors of 'array of unknown size' if the type is an array
+  // type _and_ the size isn't known (it's not a ConstantArrayType). If the size
+  // is known however, we create a regular dummy pointer.
+  Descriptor *Desc;
+  if (const auto *AT = VD->getType()->getAsArrayTypeUnsafe();
+      AT && !isa<ConstantArrayType>(AT))
+    Desc = allocateDescriptor(VD, Descriptor::UnknownSize{});
+  else
+    Desc = allocateDescriptor(VD);
+
   // Allocate a block for storage.
   unsigned I = Globals.size();
 

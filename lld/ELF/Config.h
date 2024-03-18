@@ -273,6 +273,7 @@ struct Config {
   bool printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
+  bool rejectMismatch;
   bool relax;
   bool relaxGP;
   bool relocatable;

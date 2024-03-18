@@ -442,8 +442,6 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     // Reduce all of the unrolled parts into a single vector.
     Value *ReducedPartRdx = RdxParts[0];
     unsigned Op = RecurrenceDescriptor::getOpcode(RK);
-    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
-      Op = Instruction::Or;
 
     if (PhiR->isOrdered()) {
       ReducedPartRdx = RdxParts[State.UF - 1];
@@ -456,16 +454,19 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
         if (Op != Instruction::ICmp && Op != Instruction::FCmp)
           ReducedPartRdx = Builder.CreateBinOp(
               (Instruction::BinaryOps)Op, RdxPart, ReducedPartRdx, "bin.rdx");
-        else
+        else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
+          TrackingVH<Value> ReductionStartValue =
+              RdxDesc.getRecurrenceStartValue();
+          ReducedPartRdx = createAnyOfOp(Builder, ReductionStartValue, RK,
+                                         ReducedPartRdx, RdxPart);
+        } else
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
       }
     }
 
     // Create the reduction after the loop. Note that inloop reductions create
     // the target reduction in the loop using a Reduction recipe.
-    if ((State.VF.isVector() ||
-         RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) &&
-        !PhiR->isInLoop()) {
+    if (State.VF.isVector() && !PhiR->isInLoop()) {
       ReducedPartRdx =
           createTargetReduction(Builder, RdxDesc, ReducedPartRdx, OrigPhi);
       // If the reduction can be performed in a smaller type, we need to extend

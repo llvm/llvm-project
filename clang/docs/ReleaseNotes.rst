@@ -47,6 +47,12 @@ C++ Specific Potentially Breaking Changes
 
 ABI Changes in This Version
 ---------------------------
+- Fixed Microsoft name mangling of implicitly defined variables used for thread
+  safe static initialization of static local variables. This change resolves
+  incompatibilities with code compiled by MSVC but might introduce
+  incompatibilities with code compiled by earlier versions of Clang when an
+  inline member function that contains a static local variable with a dynamic
+  initializer is declared with ``__declspec(dllimport)``. (#GH83616).
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -191,6 +197,9 @@ Removed Compiler Flags
 -------------------------
 
 - The ``-freroll-loops`` flag has been removed. It had no effect since Clang 13.
+- ``-m[no-]unaligned-access`` is removed for RISC-V and LoongArch.
+  ``-m[no-]strict-align``, also supported by GCC, should be used instead.
+  (`#85350 <https://github.com/llvm/llvm-project/pull/85350>`_.)
 
 Attribute Changes in Clang
 --------------------------
@@ -241,6 +250,10 @@ Improvements to Clang's diagnostics
   such as attempting to call ``free`` on an unallocated object. Fixes
   `#79443 <https://github.com/llvm/llvm-project/issues/79443>`_.
 
+- Clang no longer warns when the ``bitand`` operator is used with boolean
+  operands, distinguishing it from potential typographical errors or unintended
+  bitwise operations. Fixes #GH77601.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -284,6 +297,9 @@ Bug Fixes in This Version
   as ``_Complex float / float`` rather than ``_Complex float / _Complex float``), as mandated
   by the C standard. This significantly improves codegen of `*` and `/` especially.
   Fixes (`#31205 <https://github.com/llvm/llvm-project/issues/31205>`_).
+
+- Fixes an assertion failure on invalid code when trying to define member
+  functions in lambdas.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -378,6 +394,10 @@ Bug Fixes to C++ Support
   Fixes (#GH80997)
 - Fix an issue where missing set friend declaration in template class instantiation.
   Fixes (#GH84368).
+- Fixed a crash while checking constraints of a trailing requires-expression of a lambda, that the
+  expression references to an entity declared outside of the lambda. (#GH64808)
+- Clang's __builtin_bit_cast will now produce a constant value for records with empty bases. See:
+  (#GH82383)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -530,6 +550,8 @@ Python Binding Changes
 ----------------------
 
 - Exposed `CXRewriter` API as `class Rewriter`.
+- Add some missing kinds from Index.h (CursorKind: 149-156, 272-320, 420-437.
+  TemplateArgumentKind: 5-9. TypeKind: 161-175 and 178).
 
 OpenMP Support
 --------------
