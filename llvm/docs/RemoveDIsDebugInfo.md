@@ -30,6 +30,27 @@ There are two significant changes to be aware of. Firstly, we're adding a single
 
 The second matter is that if you transfer sequences of instructions from one place to another manually, i.e. repeatedly using `moveBefore` where you might have used `splice`, then you should instead use the method `moveBeforePreserving`. `moveBeforePreserving` will transfer debug info records with the instruction they're attached to. This is something that happens automatically today -- if you use `moveBefore` on every element of an instruction sequence, then debug intrinsics will be moved in the normal course of your code, but we lose this behaviour with non-instruction debug info.
 
+# C-API changes
+
+All the functions that have been added are temporary and will be deprecated in the future. The intention is that they'll help downstream projects adapt during the transition period.
+
+```
+New functions (all to be deprecated)
+------------------------------------
+LLVMIsNewDbgInfoFormat                      # Returns true if the module is in the new non-instruction mode.
+LLVMSetIsNewDbgInfoFormat                   # Convert to the requested debug info format.
+
+LLVMDIBuilderInsertDeclareIntrinsicBefore   # Insert a debug intrinsic (old debug info format). 
+LLVMDIBuilderInsertDeclareIntrinsicAtEnd    # Same as above.
+LLVMDIBuilderInsertDbgValueIntrinsicBefore  # Same as above.
+LLVMDIBuilderInsertDbgValueIntrinsicAtEnd   # Same as above.
+
+LLVMDIBuilderInsertDeclareRecordBefore      # Insert a debug record (new debug info format). 
+LLVMDIBuilderInsertDeclareRecordAtEnd       # Same as above.
+LLVMDIBuilderInsertDbgValueRecordBefore     # Same as above.
+LLVMDIBuilderInsertDbgValueRecordAtEnd      # Same as above.
+```
+
 # Anything else?
 
 Not really, but here's an "old vs new" comparison of how to do certain things and quickstart for how this "new" debug info is structured.
