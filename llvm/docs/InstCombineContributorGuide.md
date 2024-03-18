@@ -448,7 +448,7 @@ Some common matchers are:
  * `m_c_Add(M1, M2)`, etc: Match an add commutatively. The operands must match
    either M1 and M2 or M2 and M1. Most instruction matchers have a commutative
    variant.
- * `m_ICmp(Pred, M1, M2)` and `m_c_ICmp(Pred, M1, M2): Match an icmp, writing
+ * `m_ICmp(Pred, M1, M2)` and `m_c_ICmp(Pred, M1, M2)`: Match an icmp, writing
    the predicate into `IcmpInst::Predicate Pred`. If the commutative version
    is used, and the operands match in order M2, M1, then `Pred` will be the
    swapped predicate.
