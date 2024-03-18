@@ -96,8 +96,6 @@ def SiFiveP600FloatDiv    : ProcResource<1>;
 def SiFiveP600VEXQ0        : ProcResource<1>;
 def SiFiveP600VEXQ1        : ProcResource<1>;
 def SiFiveP600VectorArith  : ProcResGroup<[SiFiveP600VEXQ0, SiFiveP600VEXQ1]>;
-
-// In Baler has 2 pipeline for Load and Store.
 def SiFiveP600VLD          : ProcResource<1>;
 def SiFiveP600VST          : ProcResource<1>;
 def SiFiveP600VDiv         : ProcResource<1>;
