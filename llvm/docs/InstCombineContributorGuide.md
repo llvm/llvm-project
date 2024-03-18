@@ -152,7 +152,7 @@ Non-splat vectors will often not fold by default. You should **not** try to
 make them fold, unless doing so does not add **any** additional complexity.
 You should still add the test though, even if it does not fold.
 
-### Poison flag tests
+### Flag tests
 
 If your transform involves instructions that can have poison-generating flags,
 such as `nuw` and `nsw` on `add`, you should test how these interact with the
@@ -165,6 +165,10 @@ If your transform doesn't require flags for correctness, you should have tests
 for preservation behavior. If the input instructions have certain flags, are
 they preserved in the output instructions, if it is valid to preserve them?
 (This depends on the transform. Check with alive2.)
+
+The same also applies to fast-math-flags (FMF). In that case, please always
+test specific flags like `nnan`, `nsz` or `reassoc`, rather than the umbrella
+`fast` flag.
 
 ### Other tests
 
