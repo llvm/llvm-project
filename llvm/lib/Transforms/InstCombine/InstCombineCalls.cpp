@@ -504,6 +504,11 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     return IC.replaceInstUsesWith(II, ConstantInt::getNullValue(II.getType()));
   }
 
+  // If ctlz/cttz is only used as a shift amount, set is_zero_poison to true.
+  if (II.hasOneUse() && match(Op1, m_Zero()) &&
+      match(II.user_back(), m_Shift(m_Value(), m_Specific(&II))))
+    return IC.replaceOperand(II, 1, IC.Builder.getTrue());
+
   Constant *C;
 
   if (IsTZ) {
@@ -2284,13 +2289,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         default:
           llvm_unreachable("unexpected intrinsic ID");
         }
-        Instruction *NewCall = Builder.CreateBinaryIntrinsic(
+        Value *V = Builder.CreateBinaryIntrinsic(
             IID, X, ConstantFP::get(Arg0->getType(), Res), II);
         // TODO: Conservatively intersecting FMF. If Res == C2, the transform
         //       was a simplification (so Arg0 and its original flags could
         //       propagate?)
-        NewCall->andIRFlags(M);
-        return replaceInstUsesWith(*II, NewCall);
+        if (auto *CI = dyn_cast<CallInst>(V))
+          CI->andIRFlags(M);
+        return replaceInstUsesWith(*II, V);
       }
     }
 

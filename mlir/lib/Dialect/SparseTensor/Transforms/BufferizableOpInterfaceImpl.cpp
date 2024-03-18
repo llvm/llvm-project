@@ -187,6 +187,35 @@ struct DisassembleOpInterface
   }
 };
 
+struct ForeachOpInterface : public SparseBufferizableOpInterfaceExternalModel<
+                                ForeachOpInterface, sparse_tensor::ForeachOp> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    return true;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const AnalysisState &state) const {
+    return false;
+  }
+
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
+    return {};
+  }
+
+  LogicalResult verifyAnalysis(Operation *op,
+                               const AnalysisState &state) const {
+    // A more complex analysis (similar to scf.for) is needed if the op returns
+    // a tensor. That tensor would have to be bufferized (not implemented yet).
+    for (OpResult result : op->getResults()) {
+      if (isa<TensorType>(result.getType()))
+        return op->emitOpError("tensor results are not supported yet");
+    }
+    return success();
+  }
+};
+
 struct NumberOfEntriesOpInterface
     : public SparseBufferizableOpInterfaceExternalModel<
           NumberOfEntriesOpInterface, sparse_tensor::NumberOfEntriesOp> {
@@ -307,6 +336,7 @@ void mlir::sparse_tensor::registerBufferizableOpInterfaceExternalModels(
         NumberOfEntriesOpInterface>(*ctx);
     sparse_tensor::AssembleOp::attachInterface<AssembleOpInterface>(*ctx);
     sparse_tensor::DisassembleOp::attachInterface<DisassembleOpInterface>(*ctx);
+    sparse_tensor::ForeachOp::attachInterface<ForeachOpInterface>(*ctx);
     sparse_tensor::ToCoordinatesBufferOp::attachInterface<
         ToCoordinatesBufferOpInterface>(*ctx);
     sparse_tensor::ToCoordinatesOp::attachInterface<ToCoordinatesOpInterface>(

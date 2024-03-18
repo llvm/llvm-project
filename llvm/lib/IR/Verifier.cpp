@@ -5265,6 +5265,29 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
     break;
   }
+  case Intrinsic::ucmp:
+  case Intrinsic::scmp: {
+    Type *SrcTy = Call.getOperand(0)->getType();
+    Type *DestTy = Call.getType();
+
+    Check(DestTy->getScalarSizeInBits() >= 2,
+          "result type must be at least 2 bits wide", Call);
+
+    bool IsDestTypeVector = DestTy->isVectorTy();
+    Check(SrcTy->isVectorTy() == IsDestTypeVector,
+          "ucmp/scmp argument and result types must both be either vector or "
+          "scalar types",
+          Call);
+    if (IsDestTypeVector) {
+      auto SrcVecLen = cast<VectorType>(SrcTy)->getElementCount();
+      auto DestVecLen = cast<VectorType>(DestTy)->getElementCount();
+      Check(SrcVecLen == DestVecLen,
+            "return type and arguments must have the same number of "
+            "elements",
+            Call);
+    }
+    break;
+  }
   case Intrinsic::coro_id: {
     auto *InfoArg = Call.getArgOperand(3)->stripPointerCasts();
     if (isa<ConstantPointerNull>(InfoArg))

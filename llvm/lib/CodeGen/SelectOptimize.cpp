@@ -645,12 +645,13 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       DI->moveBeforePreserving(&*EndBlock->getFirstInsertionPt());
     }
 
-    // Duplicate implementation for DPValues, the non-instruction debug-info
-    // record. Helper lambda for moving DPValues to the end block.
-    auto TransferDPValues = [&](Instruction &I) {
-      for (auto &DPValue : llvm::make_early_inc_range(I.getDbgRecordRange())) {
-        DPValue.removeFromParent();
-        EndBlock->insertDbgRecordBefore(&DPValue,
+    // Duplicate implementation for DbgRecords, the non-instruction debug-info
+    // format. Helper lambda for moving DbgRecords to the end block.
+    auto TransferDbgRecords = [&](Instruction &I) {
+      for (auto &DbgRecord :
+           llvm::make_early_inc_range(I.getDbgRecordRange())) {
+        DbgRecord.removeFromParent();
+        EndBlock->insertDbgRecordBefore(&DbgRecord,
                                         EndBlock->getFirstInsertionPt());
       }
     };
@@ -660,7 +661,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // middle" of the select group.
     auto R = make_range(std::next(SI.getI()->getIterator()),
                         std::next(LastSI.getI()->getIterator()));
-    llvm::for_each(R, TransferDPValues);
+    llvm::for_each(R, TransferDbgRecords);
 
     // These are the new basic blocks for the conditional branch.
     // At least one will become an actual new basic block.

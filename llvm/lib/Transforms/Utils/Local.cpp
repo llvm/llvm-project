@@ -1911,7 +1911,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
     for (Instruction &BI : FI) {
       if (auto *DDI = dyn_cast<DbgDeclareInst>(&BI))
         Dbgs.push_back(DDI);
-      for (DPValue &DPV : DPValue::filter(BI.getDbgRecordRange())) {
+      for (DPValue &DPV : filterDbgVars(BI.getDbgRecordRange())) {
         if (DPV.getType() == DPValue::LocationType::Declare)
           DPVs.push_back(&DPV);
       }
@@ -1996,7 +1996,7 @@ static void insertDPValuesForPHIs(BasicBlock *BB,
   // Map existing PHI nodes to their DPValues.
   DenseMap<Value *, DPValue *> DbgValueMap;
   for (auto &I : *BB) {
-    for (DPValue &DPV : DPValue::filter(I.getDbgRecordRange())) {
+    for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
       for (Value *V : DPV.location_ops())
         if (auto *Loc = dyn_cast_or_null<PHINode>(V))
           DbgValueMap.insert({Loc, &DPV});
@@ -2848,7 +2848,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool PreserveLCSSA,
       Updates.push_back({DominatorTree::Delete, BB, UniqueSuccessor});
     DTU->applyUpdates(Updates);
   }
-  BB->flushTerminatorDbgValues();
+  BB->flushTerminatorDbgRecords();
   return NumInstrsRemoved;
 }
 

@@ -54,7 +54,7 @@ public:
   // section.
   static Expected<int> setupAuxiliaryMemoryInSubprocess(
       std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-      pid_t ParentPID, uint64_t ParentTID, int CounterFileDescriptor);
+      pid_t ParentPID, int CounterFileDescriptor);
 
   ~SubprocessMemory();
 
