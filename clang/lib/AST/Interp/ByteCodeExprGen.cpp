@@ -1096,9 +1096,9 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     const UnaryExprOrTypeTraitExpr *E) {
   UnaryExprOrTypeTrait Kind = E->getKind();
-  ASTContext &ASTCtx = Ctx.getASTContext();
+  const ASTContext &ASTCtx = Ctx.getASTContext();
 
-  if (Kind == UETT_SizeOf) {
+  if (Kind == UETT_SizeOf || Kind == UETT_DataSizeOf) {
     QualType ArgType = E->getTypeOfArgument();
 
     // C++ [expr.sizeof]p2: "When applied to a reference or a reference type,
@@ -1113,7 +1113,10 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       if (ArgType->isDependentType() || !ArgType->isConstantSizeType())
         return false;
 
-      Size = ASTCtx.getTypeSizeInChars(ArgType);
+      if (Kind == UETT_SizeOf)
+        Size = ASTCtx.getTypeSizeInChars(ArgType);
+      else
+        Size = ASTCtx.getTypeInfoDataSizeInChars(ArgType).Width;
     }
 
     if (DiscardResult)
@@ -1756,6 +1759,14 @@ bool ByteCodeExprGen<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitArrayTypeTraitExpr(
+    const ArrayTypeTraitExpr *E) {
+  if (DiscardResult)
+    return true;
+  return this->emitConst(E->getValue(), E);
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
   if (DiscardResult)
     return true;
@@ -2226,6 +2237,12 @@ bool ByteCodeExprGen<Emitter>::VisitPseudoObjectExpr(
   return true;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitPackIndexingExpr(
+    const PackIndexingExpr *E) {
+  return this->delegate(E->getSelectedExpr());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -2238,7 +2255,7 @@ template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::delegate(const Expr *E) {
   if (E->containsErrors())
-    return false;
+    return this->emitError(E);
 
   // We're basically doing:
   // OptionScope<Emitter> Scope(this, DicardResult, Initializing);
@@ -2248,7 +2265,7 @@ bool ByteCodeExprGen<Emitter>::delegate(const Expr *E) {
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::visit(const Expr *E) {
   if (E->containsErrors())
-    return false;
+    return this->emitError(E);
 
   if (E->getType()->isVoidType())
     return this->discard(E);
@@ -2277,7 +2294,7 @@ bool ByteCodeExprGen<Emitter>::visitInitializer(const Expr *E) {
   assert(!classify(E->getType()));
 
   if (E->containsErrors())
-    return false;
+    return this->emitError(E);
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/true);
@@ -3289,7 +3306,8 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   if (Ctx.getLangOpts().CPlusPlus) {
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
       // Visit local const variables like normal.
-      if (VD->isLocalVarDecl() && VD->getType().isConstQualified()) {
+      if ((VD->isLocalVarDecl() || VD->isStaticDataMember()) &&
+          VD->getType().isConstQualified()) {
         if (!this->visitVarDecl(VD))
           return false;
         // Retry.

@@ -49,6 +49,8 @@ Improvements and New Features
 -----------------------------
 
 - The performance of growing ``std::vector`` has been improved for trivially relocatable types.
+- The performance of ``ranges::fill`` and ``ranges::fill_n`` has been improved for ``vector<bool>::iterator``\s,
+  resulting in a performance increase of up to 1400x.
 
 Deprecations and Removals
 -------------------------

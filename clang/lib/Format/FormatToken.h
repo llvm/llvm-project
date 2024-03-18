@@ -19,12 +19,13 @@
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
-#include <memory>
-#include <optional>
 #include <unordered_set>
 
 namespace clang {
 namespace format {
+
+/// Whether the language is C/C++/Objective-C/Objective-C++.
+extern bool IsCpp;
 
 #define LIST_TOKEN_TYPES                                                       \
   TYPE(ArrayInitializerLSquare)                                                \

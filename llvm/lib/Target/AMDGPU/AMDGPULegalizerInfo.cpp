@@ -5661,7 +5661,7 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
   Register RSrc = MI.getOperand(2).getReg();
 
   MachineMemOperand *MMO = *MI.memoperands_begin();
-  const int MemSize = MMO->getSize();
+  const int MemSize = MMO->getSize().getValue();
 
   unsigned ImmOffset;
 

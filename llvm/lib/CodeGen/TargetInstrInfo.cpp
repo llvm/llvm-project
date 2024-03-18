@@ -1554,7 +1554,8 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     SmallVector<uint64_t, 8> Ops;
     DIExpression::appendOffset(Ops, Offset);
     Ops.push_back(dwarf::DW_OP_deref_size);
-    Ops.push_back(MMO->getSize());
+    Ops.push_back(MMO->getSize().hasValue() ? MMO->getSize().getValue()
+                                            : ~UINT64_C(0));
     Expr = DIExpression::prependOpcodes(Expr, Ops);
     return ParamLoadedValue(*BaseOp, Expr);
   }

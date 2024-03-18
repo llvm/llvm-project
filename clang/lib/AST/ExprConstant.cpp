@@ -5594,6 +5594,9 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         if (Assumption->isValueDependent())
           return ESR_Failed;
 
+        if (Assumption->HasSideEffects(Info.getCtx()))
+          continue;
+
         bool Value;
         if (!EvaluateAsBooleanCondition(Assumption, Value, Info))
           return ESR_Failed;
@@ -7344,9 +7347,6 @@ class BufferToAPValueConverter {
       for (size_t I = 0, E = CXXRD->getNumBases(); I != E; ++I) {
         const CXXBaseSpecifier &BS = CXXRD->bases_begin()[I];
         CXXRecordDecl *BaseDecl = BS.getType()->getAsCXXRecordDecl();
-        if (BaseDecl->isEmpty() ||
-            Info.Ctx.getASTRecordLayout(BaseDecl).getNonVirtualSize().isZero())
-          continue;
 
         std::optional<APValue> SubObj = visitType(
             BS.getType(), Layout.getBaseClassOffset(BaseDecl) + Offset);
@@ -11858,8 +11858,8 @@ static QualType getObjectType(APValue::LValueBase B) {
 static const Expr *ignorePointerCastsAndParens(const Expr *E) {
   assert(E->isPRValue() && E->getType()->hasPointerRepresentation());
 
-  auto *NoParens = E->IgnoreParens();
-  auto *Cast = dyn_cast<CastExpr>(NoParens);
+  const Expr *NoParens = E->IgnoreParens();
+  const auto *Cast = dyn_cast<CastExpr>(NoParens);
   if (Cast == nullptr)
     return NoParens;
 
@@ -11870,7 +11870,7 @@ static const Expr *ignorePointerCastsAndParens(const Expr *E) {
       CastKind != CK_AddressSpaceConversion)
     return NoParens;
 
-  auto *SubExpr = Cast->getSubExpr();
+  const auto *SubExpr = Cast->getSubExpr();
   if (!SubExpr->getType()->hasPointerRepresentation() || !SubExpr->isPRValue())
     return NoParens;
   return ignorePointerCastsAndParens(SubExpr);
