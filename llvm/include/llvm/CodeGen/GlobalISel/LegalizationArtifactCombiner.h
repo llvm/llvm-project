@@ -359,14 +359,56 @@ public:
     return false;
   }
 
+  /// Checks if a register has been defined by G_IMPLICIT_DEF previously
+  /// =========================================
+  /// Returns true if register has been defined with G_IMPLICIT_DEF
+  /// If source register came from Merge-Like instruction, returns true only if
+  /// all sources have been defined by G_IMPLICIT_DEF
+  bool isImpDefVRegValWithLookThrough(Register VReg,
+                                      const MachineRegisterInfo &MRI) {
+
+    MachineInstr *MI;
+    while ((MI = MRI.getVRegDef(VReg))) {
+      switch (MI->getOpcode()) {
+      case TargetOpcode::G_ANYEXT:
+      case TargetOpcode::G_TRUNC:
+      case TargetOpcode::G_BITCAST:
+      case TargetOpcode::G_INTTOPTR:
+        VReg = MI->getOperand(1).getReg();
+        break;
+      case TargetOpcode::COPY:
+        VReg = MI->getOperand(1).getReg();
+        if (VReg.isPhysical())
+          return false;
+        break;
+      case TargetOpcode::G_CONCAT_VECTORS:
+      case TargetOpcode::G_MERGE_VALUES:
+      case TargetOpcode::G_BUILD_VECTOR: {
+        // Check that all sources are G_IMPLICIT_DEF
+        auto MergeMI = cast<GMergeLikeInstr>(MI);
+        for (unsigned i = 0; i < MergeMI->getNumSources(); i++) {
+          if (!isImpDefVRegValWithLookThrough(MergeMI->getSourceReg(i), MRI))
+            return false;
+        }
+        return true;
+      }
+      case TargetOpcode::G_IMPLICIT_DEF:
+        return true;
+      default:
+        return false;
+      }
+    }
+    return false;
+  }
+
   // Try to combine illegal G_CONCAT_VECTORS instructions
   // Combine if the G_CONCAT_VECTORS instruction is illegal and
   // Source Registers are:
   //  - Previously defined by a G_BITCAST instruction
   //  - Defined by G_IMPLICIT_DEF with look through
+  //
   // ===============
   //
-  // %0(s32) = G_LOAD %ptr
   // %1(<4 x s8>) = G_BITCAST %0(s32)
   // %2(s8) = G_IMPLICIT_DEF
   // %3(<4 x s8>) = G_BUILD_VECTOR %2(s8), %2(s8), %2(s8), %2(s8)
@@ -375,7 +417,6 @@ public:
   //
   // ====>
   //
-  // %0(s32) = G_LOAD %ptr
   // %1(s32) = G_IMPLICIT_DEF
   // %2(<4 x s32>) = G_BUILD_VECTOR %0(s32), %1(s32), %1(s32), %1(s32)
   // %3(<16 x s8>) = G_BITCAST %2(<4 x s32>)
@@ -394,7 +435,7 @@ public:
     if (isInstLegal({TargetOpcode::G_CONCAT_VECTORS, {DstTy, SrcTy}}))
       return false;
 
-    // CHECK if this instruction should be combined before building instructions
+    // Check if this instruction should be combined before building instructions
     SmallVector<Register> SrcRegs;
     unsigned NumUndef = 0;
     for (unsigned i = 0; i < NumSrc; i++) {
@@ -409,10 +450,8 @@ public:
       if (isImpDefVRegValWithLookThrough(CurrReg, MRI)) {
         NumUndef++;
         SrcRegs.push_back(CurrReg);
-      }
-
-      else if (MachineInstr *DefMI = getDefIgnoringCopies(CurrReg, MRI);
-               DefMI->getOpcode() == TargetOpcode::G_BITCAST) {
+      } else if (MachineInstr *DefMI = getDefIgnoringCopies(CurrReg, MRI);
+                 DefMI->getOpcode() == TargetOpcode::G_BITCAST) {
         Register DefSrcReg = DefMI->getOperand(1).getReg();
         LLT DefSrcTy = MRI.getType(DefSrcReg);
 
@@ -440,9 +479,8 @@ public:
       if (CurrTy == LLT::scalar(SrcTy.getSizeInBits())) {
         BuildRegs.push_back(CurrReg);
       } else if (isImpDefVRegValWithLookThrough(CurrReg, MRI)) {
-        UndefMI = !UndefMI
-                      ? Builder.buildUndef(LLT::scalar(SrcTy.getSizeInBits()))
-                      : UndefMI;
+        if (!UndefMI)
+          UndefMI = Builder.buildUndef(LLT::scalar(SrcTy.getSizeInBits()));
         BuildRegs.push_back(UndefMI->getOperand(0).getReg());
       } else {
         return false;

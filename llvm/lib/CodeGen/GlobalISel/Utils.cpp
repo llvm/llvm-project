@@ -410,44 +410,6 @@ std::optional<APInt> getCImmOrFPImmAsAPInt(const MachineInstr *MI) {
 
 } // end anonymous namespace
 
-// Checks if a register has been defined by G_IMPLICIT_DEF previously
-bool llvm::isImpDefVRegValWithLookThrough(Register VReg,
-                                          const MachineRegisterInfo &MRI) {
-
-  MachineInstr *MI;
-  while ((MI = MRI.getVRegDef(VReg))) {
-    switch (MI->getOpcode()) {
-    case TargetOpcode::G_ANYEXT:
-    case TargetOpcode::G_TRUNC:
-    case TargetOpcode::G_BITCAST:
-    case TargetOpcode::G_INTTOPTR:
-      VReg = MI->getOperand(1).getReg();
-      break;
-    case TargetOpcode::COPY:
-      VReg = MI->getOperand(1).getReg();
-      if (VReg.isPhysical())
-        return false;
-      break;
-    case TargetOpcode::G_CONCAT_VECTORS:
-    case TargetOpcode::G_MERGE_VALUES:
-    case TargetOpcode::G_BUILD_VECTOR: {
-      // Check that all sources are G_IMPLICIT_DEF
-      auto MergeMI = cast<GMergeLikeInstr>(MI);
-      for (unsigned i = 0; i < MergeMI->getNumSources(); i++) {
-        if (!isImpDefVRegValWithLookThrough(MergeMI->getSourceReg(i), MRI))
-          return false;
-      }
-      return true;
-    }
-    case TargetOpcode::G_IMPLICIT_DEF:
-      return true;
-    default:
-      return false;
-    }
-  }
-  return false;
-}
-
 std::optional<ValueAndVReg> llvm::getIConstantVRegValWithLookThrough(
     Register VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs) {
   return getConstantVRegValWithLookThrough(VReg, MRI, isIConstant,
