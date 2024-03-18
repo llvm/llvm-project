@@ -150,8 +150,8 @@ end subroutine
 !FIRDialect-DAG:    %[[X4_PVT:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "x4", pinned, uniq_name = "{{.*}}Ex4"}
 !FIRDialect-DAG:    %[[X4_PVT_DECL:.*]]:2 = hlfir.declare %[[X4_PVT]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Ex4"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 
-!FIRDialect-DAG:    %[[TMP58:.*]] = fir.load %[[X4_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!FIRDialect-DAG:    %[[TMP97:.*]] = fir.load %[[X4_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!FIRDialect-DAG:    %[[TMP58:.*]] = fir.load %[[X4_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!FIRDialect-DAG:    %[[TMP97:.*]] = fir.load %[[X4_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !FIRDialect-DAG:    %[[TMP98:.*]]:3 = fir.box_dims %[[TMP97]], {{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 
 !FIRDialect-DAG:    %[[TMP101:.*]] = fir.allocmem !fir.array<?xi32>, {{.*}} {fir.must_be_heap = true, uniq_name = "{{.*}}Ex4.alloc"}
@@ -192,12 +192,12 @@ end subroutine
 !FIRDialect-DAG: }
 !FIRDialect-DAG: %[[X5_PVT_DECL:.*]]:2 = hlfir.declare %[[X5_PVT]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFprivate_clause_real_call_allocatableEx5"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
 !FIRDialect-DAG: fir.call @_QFprivate_clause_real_call_allocatablePhelper_private_clause_real_call_allocatable(%[[X5_PVT_DECL]]#0) fastmath<contract> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> ()
-!FIRDialect-DAG: %{{.*}} = fir.load %[[X5_PVT_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+!FIRDialect-DAG: %{{.*}} = fir.load %[[X5_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
 
 !FIRDialect-DAG: fir.if %{{.*}} {
-!FIRDialect-DAG:   %{{.*}} = fir.load %[[X5_PVT_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+!FIRDialect-DAG:   %{{.*}} = fir.load %[[X5_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
 
-!FIRDialect-DAG:     fir.store %{{.*}} to %[[X5_PVT_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+!FIRDialect-DAG:     fir.store %{{.*}} to %[[X5_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
 !FIRDialect-DAG:   }
 !FIRDialect-DAG:   omp.terminator
 !FIRDialect-DAG:   }
@@ -313,12 +313,12 @@ subroutine simple_loop_1
     print*, i
   end do
   ! FIRDialect:     omp.yield
-  ! FIRDialect:     {{%.*}} = fir.load %[[R_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     {{%.*}} = fir.load %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     fir.if {{%.*}} {
-  ! FIRDialect:     [[LD:%.*]] = fir.load %[[R_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     [[LD:%.*]] = fir.load %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     [[AD:%.*]] = fir.box_addr [[LD]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   ! FIRDialect:     fir.freemem [[AD]] : !fir.heap<f32>
-  ! FIRDialect:     fir.store {{%.*}} to %[[R_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     fir.store {{%.*}} to %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   !$OMP END DO
   ! FIRDialect:  omp.terminator
   !$OMP END PARALLEL
@@ -351,12 +351,12 @@ subroutine simple_loop_2
     print*, i
   end do
   ! FIRDialect:     omp.yield
-  ! FIRDialect:     {{%.*}} = fir.load %[[R_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     {{%.*}} = fir.load %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     fir.if {{%.*}} {
-  ! FIRDialect:     [[LD:%.*]] = fir.load %[[R_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     [[LD:%.*]] = fir.load %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     [[AD:%.*]] = fir.box_addr [[LD]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   ! FIRDialect:     fir.freemem [[AD]] : !fir.heap<f32>
-  ! FIRDialect:     fir.store {{%.*}} to %[[R_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     fir.store {{%.*}} to %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   !$OMP END DO
   ! FIRDialect:  omp.terminator
   !$OMP END PARALLEL
@@ -388,12 +388,12 @@ subroutine simple_loop_3
     print*, i
   end do
   ! FIRDialect:     omp.yield
-  ! FIRDialect:     {{%.*}} = fir.load [[R_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     {{%.*}} = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     fir.if {{%.*}} {
-  ! FIRDialect:     [[LD:%.*]] = fir.load [[R_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     [[LD:%.*]] = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     [[AD:%.*]] = fir.box_addr [[LD]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   ! FIRDialect:     fir.freemem [[AD]] : !fir.heap<f32>
-  ! FIRDialect:     fir.store {{%.*}} to [[R_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     fir.store {{%.*}} to [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   !$OMP END PARALLEL DO
   ! FIRDialect:  omp.terminator
 end subroutine
@@ -421,10 +421,10 @@ subroutine simd_loop_1
   end do
   !$OMP END SIMD
   ! FIRDialect:     omp.yield
-  ! FIRDialect:     {{%.*}} = fir.load [[R_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     {{%.*}} = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     fir.if {{%.*}} {
-  ! FIRDialect:     [[LD:%.*]] = fir.load [[R_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     [[LD:%.*]] = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     [[AD:%.*]] = fir.box_addr [[LD]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   ! FIRDialect:     fir.freemem [[AD]] : !fir.heap<f32>
-  ! FIRDialect:     fir.store {{%.*}} to [[R_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     fir.store {{%.*}} to [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
 end subroutine

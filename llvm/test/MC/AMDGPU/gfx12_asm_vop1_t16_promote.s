@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --check-prefix=GFX12 --implicit-check-not=_e32 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --check-prefix=GFX12 --implicit-check-not=_e32 %s
 
 v_ceil_f16 v128, 0xfe0b
 // GFX12: v_ceil_f16_e64

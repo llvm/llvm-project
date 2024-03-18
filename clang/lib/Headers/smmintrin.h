@@ -1188,6 +1188,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_testnzc_si128(__m128i __M,
 /// Compares each of the corresponding 64-bit values of the 128-bit
 ///    integer vectors for equality.
 ///
+///    Each comparison yields 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VPCMPEQQ / PCMPEQQ </c> instruction.
@@ -2300,6 +2302,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_minpos_epu16(__m128i __V) {
 /// Compares each of the corresponding 64-bit values of the 128-bit
 ///    integer vectors to determine if the values in the first operand are
 ///    greater than those in the second operand.
+///
+///    Each comparison yields 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
 ///
 /// \headerfile <x86intrin.h>
 ///

@@ -780,6 +780,8 @@ bool matchScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI) {
   auto &Unmerge = cast<GUnmerge>(MI);
   Register Src1Reg = Unmerge.getReg(Unmerge.getNumOperands() - 1);
   const LLT SrcTy = MRI.getType(Src1Reg);
+  if (SrcTy.getSizeInBits() != 128 && SrcTy.getSizeInBits() != 64)
+    return false;
   return SrcTy.isVector() && !SrcTy.isScalable() &&
          Unmerge.getNumOperands() == (unsigned)SrcTy.getNumElements() + 1;
 }

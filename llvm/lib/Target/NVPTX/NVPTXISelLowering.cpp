@@ -465,7 +465,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     case ISD::SMIN:
     case ISD::UMIN:
     case ISD::UMAX:
-    case ISD::SUB:
       IsOpSupported = STI.getSmVersion() >= 90 && STI.getPTXVersion() >= 80;
       break;
     }
@@ -646,8 +645,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::ConstantFP, MVT::f16, Legal);
   setOperationAction(ISD::ConstantFP, MVT::bf16, Legal);
 
-  // Lowering of DYNAMIC_STACKALLOC is unsupported.
-  // Custom lower to produce an error.
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Custom);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
 
@@ -938,6 +935,7 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::BFE)
     MAKE_CASE(NVPTXISD::BFI)
     MAKE_CASE(NVPTXISD::PRMT)
+    MAKE_CASE(NVPTXISD::DYNAMIC_STACKALLOC)
     MAKE_CASE(NVPTXISD::SETP_F16X2)
     MAKE_CASE(NVPTXISD::SETP_BF16X2)
     MAKE_CASE(NVPTXISD::Dummy)
@@ -2212,14 +2210,39 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
 SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  const Function &Fn = DAG.getMachineFunction().getFunction();
 
-  DiagnosticInfoUnsupported NoDynamicAlloca(
-      Fn, "dynamic alloca unsupported by NVPTX backend",
-      SDLoc(Op).getDebugLoc());
-  DAG.getContext()->diagnose(NoDynamicAlloca);
-  auto Ops = {DAG.getConstant(0, SDLoc(), Op.getValueType()), Op.getOperand(0)};
-  return DAG.getMergeValues(Ops, SDLoc());
+  if (STI.getPTXVersion() < 73 || STI.getSmVersion() < 52) {
+    const Function &Fn = DAG.getMachineFunction().getFunction();
+
+    DiagnosticInfoUnsupported NoDynamicAlloca(
+        Fn,
+        "Support for dynamic alloca introduced in PTX ISA version 7.3 and "
+        "requires target sm_52.",
+        SDLoc(Op).getDebugLoc());
+    DAG.getContext()->diagnose(NoDynamicAlloca);
+    auto Ops = {DAG.getConstant(0, SDLoc(), Op.getValueType()),
+                Op.getOperand(0)};
+    return DAG.getMergeValues(Ops, SDLoc());
+  }
+
+  SDValue Chain = Op.getOperand(0);
+  SDValue Size = Op.getOperand(1);
+  uint64_t Align = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
+  SDLoc DL(Op.getNode());
+
+  // The size for ptx alloca instruction is 64-bit for m64 and 32-bit for m32.
+  if (nvTM->is64Bit())
+    Size = DAG.getZExtOrTrunc(Size, DL, MVT::i64);
+  else
+    Size = DAG.getZExtOrTrunc(Size, DL, MVT::i32);
+
+  SDValue AllocOps[] = {Chain, Size,
+                        DAG.getTargetConstant(Align, DL, MVT::i32)};
+  SDValue Alloca = DAG.getNode(NVPTXISD::DYNAMIC_STACKALLOC, DL,
+                               nvTM->is64Bit() ? MVT::i64 : MVT::i32, AllocOps);
+
+  SDValue MergeOps[] = {Alloca, Chain};
+  return DAG.getMergeValues(MergeOps, DL);
 }
 
 // By default CONCAT_VECTORS is lowered by ExpandVectorBuildThroughStack()
@@ -6101,6 +6124,9 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
   if (AI->isFloatingPointOperation()) {
     if (AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
+      if (Ty->isHalfTy() && STI.getSmVersion() >= 70 &&
+          STI.getPTXVersion() >= 63)
+        return AtomicExpansionKind::None;
       if (Ty->isFloatTy())
         return AtomicExpansionKind::None;
       if (Ty->isDoubleTy() && STI.hasAtomAddF64())

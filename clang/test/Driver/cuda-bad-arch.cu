@@ -30,9 +30,9 @@
 // RUN: | FileCheck -check-prefix OK %s
 
 // We don't allow using NVPTX/AMDGCN for host compilation.
-// RUN: not %clang -### --cuda-host-only --target=nvptx-nvidia-cuda -nogpulib -nogpuinc -c %s 2>&1 \
+// RUN: not %clang -### --no-offload-new-driver --cuda-host-only --target=nvptx-nvidia-cuda -nogpulib -nogpuinc -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix HOST_NVPTX %s
-// RUN: not %clang -### --cuda-host-only --target=amdgcn-amd-amdhsa -nogpulib -nogpuinc -c %s 2>&1 \
+// RUN: not %clang -### --no-offload-new-driver --cuda-host-only --target=amdgcn-amd-amdhsa -nogpulib -nogpuinc -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix HOST_AMDGCN %s
 
 // OK-NOT: error: Unsupported CUDA gpu architecture

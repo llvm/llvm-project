@@ -123,7 +123,6 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    to provide compile-time errors when using features unavailable on some version of
    the shared library they shipped should turn this on and see `include/__availability`
    for more details." OFF)
-option(LIBCXX_ENABLE_CLANG_TIDY "Whether to compile and run clang-tidy checks" OFF)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
@@ -229,8 +228,6 @@ option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 # ABI Library options ---------------------------------------------------------
 if (MSVC)
   set(LIBCXX_DEFAULT_ABI_LIBRARY "vcruntime")
-elseif (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
-  set(LIBCXX_DEFAULT_ABI_LIBRARY "libcxxrt")
 else()
   set(LIBCXX_DEFAULT_ABI_LIBRARY "libcxxabi")
 endif()
@@ -864,10 +861,6 @@ add_subdirectory(utils)
 add_subdirectory(modules)
 
 set(LIBCXX_TEST_DEPS "cxx_experimental")
-
-if (LIBCXX_ENABLE_CLANG_TIDY)
-  list(APPEND LIBCXX_TEST_DEPS cxx-tidy)
-endif()
 
 list(APPEND LIBCXX_TEST_DEPS generate-cxx-modules)
 

@@ -1597,6 +1597,7 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
 void Editline::PrintAsync(Stream *stream, const char *s, size_t len) {
   std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
   if (m_editor_status == EditorStatus::Editing) {
+    SaveEditedLine();
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
     fprintf(m_output_file, ANSI_CLEAR_BELOW);
   }

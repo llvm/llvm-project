@@ -511,7 +511,8 @@ static void printCopyInfoImpl(int DeviceId, bool H2D, void *SrcPtrBegin,
        "Copying data from %s to %s, %sPtr=" DPxMOD ", %sPtr=" DPxMOD
        ", Size=%" PRId64 ", Name=%s\n",
        H2D ? "host" : "device", H2D ? "device" : "host", H2D ? "Hst" : "Tgt",
-       DPxPTR(SrcPtrBegin), H2D ? "Tgt" : "Hst", DPxPTR(DstPtrBegin), Size,
+       DPxPTR(H2D ? SrcPtrBegin : DstPtrBegin), H2D ? "Tgt" : "Hst",
+       DPxPTR(H2D ? DstPtrBegin : SrcPtrBegin), Size,
        (HT && HT->HstPtrName) ? getNameFromMapping(HT->HstPtrName).c_str()
                               : "unknown");
 }

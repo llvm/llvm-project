@@ -1,8 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify -Wno-unused-value %s
-// RUN: %clang_cc1 -verify=ref -Wno-unused-value %s
-
-// expected-no-diagnostics
-// ref-no-diagnostics
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=both,expected -Wno-unused-value %s
+// RUN: %clang_cc1 -verify=both,ref -Wno-unused-value %s
 
 constexpr _Complex double z1 = {1.0, 2.0};
 static_assert(__real(z1) == 1.0, "");
@@ -255,4 +252,114 @@ namespace DeclRefCopy {
     return __real(ArrayOfComplexInt[0]) + __imag(ArrayOfComplexInt[3]);
   }
   static_assert(localComplexArray() == (24 + 42), "");
+}
+
+namespace Builtin {
+  constexpr _Complex float A = __builtin_complex(10.0f, 20.0f);
+  static_assert(__real(A) == 10, "");
+  static_assert(__imag(A) == 20, "");
+
+  constexpr _Complex double B = __builtin_complex(10.0, 20.0);
+  static_assert(__real(B) == 10, "");
+  static_assert(__imag(B) == 20, "");
+
+
+  constexpr _Complex float C = __builtin_complex(10.0f, 20.0); // both-error {{arguments are of different types}}
+}
+
+namespace Cmp {
+  static_assert((0.0 + 0.0j) == (0.0 + 0.0j));
+  static_assert((0.0 + 0.0j) != (0.0 + 0.0j)); // both-error {{static assertion}} \
+                                               // both-note {{evaluates to}}
+
+  static_assert((0.0 + 0.0j) == 0.0);
+  static_assert(0.0 == (0.0 + 0.0j));
+  static_assert(0.0 == 0.0j);
+  static_assert((0.0 + 1.0j) != 0.0);
+  static_assert(1.0 != (0.0 + 0.0j));
+  static_assert(0.0 != 1.0j);
+
+  // Walk around the complex plane stepping between angular differences and
+  // equality.
+  static_assert((1.0 + 0.0j) == (0.0 + 0.0j)); // both-error {{static assertion}} \
+                                               // both-note {{evaluates to}}
+  static_assert((1.0 + 0.0j) == (1.0 + 0.0j));
+  static_assert((1.0 + 1.0j) == (1.0 + 0.0j)); // both-error {{static assertion}} \
+                                               // both-note {{evaluates to}}
+  static_assert((1.0 + 1.0j) == (1.0 + 1.0j));
+  static_assert((0.0 + 1.0j) == (1.0 + 1.0j)); // both-error {{static assertion}} \
+                                               // both-note {{evaluates to}}
+  static_assert((0.0 + 1.0j) == (0.0 + 1.0j));
+  static_assert((-1.0 + 1.0j) == (0.0 + 1.0j)); // both-error {{static assertion}} \
+                                                // both-note {{evaluates to}}
+  static_assert((-1.0 + 1.0j) == (-1.0 + 1.0j));
+  static_assert((-1.0 + 0.0j) == (-1.0 + 1.0j)); // both-error {{static assertion}} \
+                                                 // both-note {{evaluates to}}
+  static_assert((-1.0 + 0.0j) == (-1.0 + 0.0j));
+  static_assert((-1.0 - 1.0j) == (-1.0 + 0.0j)); // both-error {{static assertion}} \
+                                                 // both-note {{evaluates to}}
+  static_assert((-1.0 - 1.0j) == (-1.0 - 1.0j));
+  static_assert((0.0 - 1.0j) == (-1.0 - 1.0j)); // both-error {{static assertion}} \
+                                                // both-note {{evaluates to}}
+  static_assert((0.0 - 1.0j) == (0.0 - 1.0j));
+  static_assert((1.0 - 1.0j) == (0.0 - 1.0j)); // both-error {{static assertion}} \
+                                               // both-note {{evaluates to}}
+  static_assert((1.0 - 1.0j) == (1.0 - 1.0j));
+
+  /// Make sure these are rejected before reaching the constexpr interpreter.
+  static_assert((0.0 + 0.0j) & (0.0 + 0.0j)); // both-error {{invalid operands to binary expression}}
+  static_assert((0.0 + 0.0j) | (0.0 + 0.0j)); // both-error {{invalid operands to binary expression}}
+  static_assert((0.0 + 0.0j) < (0.0 + 0.0j)); // both-error {{invalid operands to binary expression}}
+  static_assert((0.0 + 0.0j) > (0.0 + 0.0j)); // both-error {{invalid operands to binary expression}}
+  static_assert((0.0 + 0.0j) ^ (0.0 + 0.0j)); // both-error {{invalid operands to binary expression}}
+}
+
+/// From test/SemaCXX/constant-expression-cxx11.cpp
+///
+/// Some of the diagnostics we emit are different than the one of the
+/// current interpreter.
+///
+/// FIXME: For the '&test3 + 1' test, we are _not_ creating an explicit pointer variable
+/// anywhere and so the &test3+1 is the same as __imag(test3) for us.
+namespace ComplexConstexpr {
+  constexpr _Complex float test1 = {};
+  constexpr _Complex float test2 = {1};
+  constexpr _Complex double test3 = {1,2};
+  constexpr _Complex int test4 = {4};
+  constexpr _Complex int test5 = 4;
+  constexpr _Complex int test6 = {5,6};
+  typedef _Complex float fcomplex;
+  constexpr fcomplex test7 = fcomplex();
+
+  constexpr const double &t2r = __real test3;
+  constexpr const double &t2i = __imag test3;
+  static_assert(&t2r + 1 == &t2i, "");
+  static_assert(t2r == 1.0, "");
+  static_assert(t2i == 2.0, "");
+  constexpr const double *t2p = &t2r;
+  static_assert(t2p[-1] == 0.0, ""); // both-error {{constant expr}} \
+                                     // both-note {{cannot refer to element -1 of array of 2 elements}}
+  static_assert(t2p[0] == 1.0, "");
+  static_assert(t2p[1] == 2.0, "");
+  static_assert(t2p[2] == 0.0, ""); // both-error {{constant expr}} \
+                                    // both-note {{one-past-the-end pointer}}
+  static_assert(t2p[3] == 0.0, ""); // both-error {{constant expr}} \
+                                    // both-note {{cannot refer to element 3 of array of 2 elements}}
+  constexpr _Complex float *p = 0;
+  constexpr float pr = __real *p; // both-error {{constant expr}} \
+                                  // ref-note {{cannot access real component of null}} \
+                                  // expected-note {{read of dereferenced null pointer}}
+  constexpr float pi = __imag *p; // both-error {{constant expr}} \
+                                  // ref-note {{cannot access imaginary component of null}} \
+                                  // expected-note {{cannot perform pointer arithmetic on null pointer}}
+  constexpr const _Complex double *q = &test3 + 1;
+  constexpr double qr = __real *q; // ref-error {{constant expr}} \
+                                   // ref-note {{cannot access real component of pointer past the end}}
+  constexpr double qi = __imag *q; // both-error {{constant expr}} \
+                                   // ref-note {{cannot access imaginary component of pointer past the end}} \
+                                   // expected-note {{read of dereferenced one-past-the-end pointer}}
+
+  static_assert(__real test6 == 5, "");
+  static_assert(__imag test6 == 6, "");
+  static_assert(&__imag test6 == &__real test6 + 1, "");
 }

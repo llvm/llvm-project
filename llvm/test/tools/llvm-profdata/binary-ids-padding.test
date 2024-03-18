@@ -14,6 +14,9 @@
 // INSTR_PROF_RAW_HEADER(uint64_t, NumVTables, NumVTables)
 // INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 
+// gnuwin32 printf does not work for this test because it will print \15 (CR)
+// whenever \12 (LF) is in the input string.
+UNSUPPORTED: system-windows
 RUN: printf '\201rforpl\377' > %t.profraw
 RUN: printf '\12\0\0\0\0\0\0\0' >> %t.profraw
 // There will be 2 20-byte binary IDs, so the total Binary IDs size will be 64 bytes.

@@ -1560,7 +1560,7 @@ Expected<bool> GenericPluginTy::checkELFImage(StringRef Image) const {
   return isELFCompatible(Image);
 }
 
-const bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
+bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
 #ifdef LIBOMPTARGET_RPC_SUPPORT
   return true;
 #else

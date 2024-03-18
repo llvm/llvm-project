@@ -37,18 +37,18 @@ class EXP_Pseudo<bit row, bit done>
 }
 
 // Real instruction with optional asm operands "compr" and "vm".
-class EXP_Real_ComprVM<string pseudo, int subtarget, EXP_Pseudo ps = !cast<EXP_Pseudo>(pseudo)>
+class EXP_Real_ComprVM<EXP_Pseudo ps, int subtarget>
   : EXPCommon<0, ps.done, "exp$tgt $src0, $src1, $src2, $src3"
                        #!if(ps.done, " done", "")#"$compr$vm">,
-    SIMCInstr<pseudo, subtarget> {
+    SIMCInstr<ps.PseudoInstr, subtarget> {
   let AsmMatchConverter = "cvtExp";
 }
 
 // Real instruction with optional asm operand "row_en".
-class EXP_Real_Row<string pseudo, int subtarget, string name = "exp", EXP_Pseudo ps = !cast<EXP_Pseudo>(pseudo)>
+class EXP_Real_Row<EXP_Pseudo ps, int subtarget, string name = "exp">
   : EXPCommon<ps.row, ps.done, name#"$tgt $src0, $src1, $src2, $src3"
                          #!if(ps.done, " done", "")#!if(ps.row, " row_en", "")>,
-    SIMCInstr<pseudo, subtarget> {
+    SIMCInstr<ps.PseudoInstr, subtarget> {
   let AsmMatchConverter = "cvtExp";
 }
 
@@ -58,12 +58,12 @@ class EXP_Real_Row<string pseudo, int subtarget, string name = "exp", EXP_Pseudo
 
 // DONE variants have mayLoad = 1.
 // ROW variants have an implicit use of M0.
-let SubtargetPredicate = isNotGFX90APlus in {
+let SubtargetPredicate = HasExportInsts in {
 def EXP          : EXP_Pseudo<0, 0>;
 def EXP_DONE     : EXP_Pseudo<0, 1>;
 def EXP_ROW      : EXP_Pseudo<1, 0>;
 def EXP_ROW_DONE : EXP_Pseudo<1, 1>;
-} // let SubtargetPredicate = isNotGFX90APlus
+} // let SubtargetPredicate = HasExportInsts
 
 //===----------------------------------------------------------------------===//
 // SI, VI, GFX10.
@@ -71,7 +71,7 @@ def EXP_ROW_DONE : EXP_Pseudo<1, 1>;
 
 multiclass EXP_Real_si {
   defvar ps = !cast<EXP_Pseudo>(NAME);
-  def _si : EXP_Real_ComprVM<NAME, SIEncodingFamily.SI>, EXPe_ComprVM {
+  def _si : EXP_Real_ComprVM<ps, SIEncodingFamily.SI>, EXPe_ComprVM {
     let AssemblerPredicate = isGFX6GFX7;
     let DecoderNamespace = "GFX6GFX7";
     let done = ps.done;
@@ -80,7 +80,7 @@ multiclass EXP_Real_si {
 
 multiclass EXP_Real_vi {
   defvar ps = !cast<EXP_Pseudo>(NAME);
-  def _vi : EXP_Real_ComprVM<NAME, SIEncodingFamily.VI>, EXPe_vi {
+  def _vi : EXP_Real_ComprVM<ps, SIEncodingFamily.VI>, EXPe_vi {
     let AssemblerPredicate = isGFX8GFX9;
     let SubtargetPredicate = isNotGFX90APlus;
     let DecoderNamespace = "GFX8";
@@ -90,7 +90,7 @@ multiclass EXP_Real_vi {
 
 multiclass EXP_Real_gfx10 {
   defvar ps = !cast<EXP_Pseudo>(NAME);
-  def _gfx10 : EXP_Real_ComprVM<NAME, SIEncodingFamily.GFX10>, EXPe_ComprVM {
+  def _gfx10 : EXP_Real_ComprVM<ps, SIEncodingFamily.GFX10>, EXPe_ComprVM {
     let AssemblerPredicate = isGFX10Only;
     let DecoderNamespace = "GFX10";
     let done = ps.done;
@@ -106,7 +106,7 @@ defm EXP_DONE : EXP_Real_si, EXP_Real_vi, EXP_Real_gfx10;
 
 multiclass EXP_Real_gfx11 {
   defvar ps = !cast<EXP_Pseudo>(NAME);
-  def _gfx11 : EXP_Real_Row<NAME, SIEncodingFamily.GFX11>, EXPe_Row {
+  def _gfx11 : EXP_Real_Row<ps, SIEncodingFamily.GFX11>, EXPe_Row {
     let AssemblerPredicate = isGFX11Only;
     let DecoderNamespace = "GFX11";
     let row = ps.row;
@@ -116,8 +116,8 @@ multiclass EXP_Real_gfx11 {
 
 multiclass VEXPORT_Real_gfx12 {
   defvar ps = !cast<EXP_Pseudo>(NAME);
-  def _gfx12 : EXP_Real_Row<NAME, SIEncodingFamily.GFX12, "export">,
-    EXPe_Row, MnemonicAlias<"exp", "export">, Requires<[isGFX12Plus]> {
+  def _gfx12 : EXP_Real_Row<ps, SIEncodingFamily.GFX12, "export">,
+    EXPe_Row, MnemonicAlias<"exp", "export">, Requires<[isGFX12Plus, HasExportInsts]> {
     let AssemblerPredicate = isGFX12Only;
     let DecoderNamespace = "GFX12";
     let row = ps.row;

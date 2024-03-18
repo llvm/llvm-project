@@ -126,7 +126,7 @@ size_t MachOWriter::totalSize() const {
     }
 
   if (!Ends.empty())
-    return *std::max_element(Ends.begin(), Ends.end());
+    return *llvm::max_element(Ends);
 
   // Otherwise, we have only Mach header and load commands.
   return headerSize() + loadCommandsSize();

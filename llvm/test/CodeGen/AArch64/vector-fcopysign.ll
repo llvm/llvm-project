@@ -185,142 +185,36 @@ declare <4 x double> @llvm.copysign.v4f64(<4 x double> %a, <4 x double> %b) #0
 ;============ v4f16
 
 define <4 x half> @test_copysign_v4f16_v4f16(<4 x half> %a, <4 x half> %b) #0 {
-; NOFP16-LABEL: test_copysign_v4f16_v4f16:
-; NOFP16:       ; %bb.0:
-; NOFP16-NEXT:    ; kill: def $d1 killed $d1 def $q1
-; NOFP16-NEXT:    ; kill: def $d0 killed $d0 def $q0
-; NOFP16-NEXT:    mov h3, v1[1]
-; NOFP16-NEXT:    mov h4, v0[1]
-; NOFP16-NEXT:    mov h5, v1[2]
-; NOFP16-NEXT:    mov h6, v0[2]
-; NOFP16-NEXT:    mvni.4s v2, #128, lsl #24
-; NOFP16-NEXT:    fcvt s7, h1
-; NOFP16-NEXT:    fcvt s16, h0
-; NOFP16-NEXT:    mov h1, v1[3]
-; NOFP16-NEXT:    fcvt s3, h3
-; NOFP16-NEXT:    fcvt s4, h4
-; NOFP16-NEXT:    fcvt s1, h1
-; NOFP16-NEXT:    bit.16b v3, v4, v2
-; NOFP16-NEXT:    fcvt s4, h5
-; NOFP16-NEXT:    fcvt s5, h6
-; NOFP16-NEXT:    mov.16b v6, v2
-; NOFP16-NEXT:    bsl.16b v6, v16, v7
-; NOFP16-NEXT:    mov h7, v0[3]
-; NOFP16-NEXT:    bit.16b v4, v5, v2
-; NOFP16-NEXT:    fcvt h3, s3
-; NOFP16-NEXT:    fcvt h0, s6
-; NOFP16-NEXT:    fcvt s5, h7
-; NOFP16-NEXT:    mov.h v0[1], v3[0]
-; NOFP16-NEXT:    fcvt h3, s4
-; NOFP16-NEXT:    bit.16b v1, v5, v2
-; NOFP16-NEXT:    mov.h v0[2], v3[0]
-; NOFP16-NEXT:    fcvt h1, s1
-; NOFP16-NEXT:    mov.h v0[3], v1[0]
-; NOFP16-NEXT:    ; kill: def $d0 killed $d0 killed $q0
-; NOFP16-NEXT:    ret
-;
-; FP16-LABEL: test_copysign_v4f16_v4f16:
-; FP16:       ; %bb.0:
-; FP16-NEXT:    mvni.4h v2, #128, lsl #8
-; FP16-NEXT:    bif.8b v0, v1, v2
-; FP16-NEXT:    ret
+; CHECK-LABEL: test_copysign_v4f16_v4f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mvni.4h v2, #128, lsl #8
+; CHECK-NEXT:    bif.8b v0, v1, v2
+; CHECK-NEXT:    ret
   %r = call <4 x half> @llvm.copysign.v4f16(<4 x half> %a, <4 x half> %b)
   ret <4 x half> %r
 }
 
 define <4 x half> @test_copysign_v4f16_v4f32(<4 x half> %a, <4 x float> %b) #0 {
-; NOFP16-LABEL: test_copysign_v4f16_v4f32:
-; NOFP16:       ; %bb.0:
-; NOFP16-NEXT:    fcvtn v1.4h, v1.4s
-; NOFP16-NEXT:    ; kill: def $d0 killed $d0 def $q0
-; NOFP16-NEXT:    mov h3, v0[1]
-; NOFP16-NEXT:    mov h5, v0[2]
-; NOFP16-NEXT:    mvni.4s v2, #128, lsl #24
-; NOFP16-NEXT:    fcvt s7, h0
-; NOFP16-NEXT:    mov h4, v1[1]
-; NOFP16-NEXT:    fcvt s3, h3
-; NOFP16-NEXT:    mov h6, v1[2]
-; NOFP16-NEXT:    fcvt s16, h1
-; NOFP16-NEXT:    mov h1, v1[3]
-; NOFP16-NEXT:    fcvt s4, h4
-; NOFP16-NEXT:    fcvt s1, h1
-; NOFP16-NEXT:    bif.16b v3, v4, v2
-; NOFP16-NEXT:    fcvt s4, h5
-; NOFP16-NEXT:    fcvt s5, h6
-; NOFP16-NEXT:    mov.16b v6, v2
-; NOFP16-NEXT:    bsl.16b v6, v7, v16
-; NOFP16-NEXT:    mov h7, v0[3]
-; NOFP16-NEXT:    bif.16b v4, v5, v2
-; NOFP16-NEXT:    fcvt h3, s3
-; NOFP16-NEXT:    fcvt h0, s6
-; NOFP16-NEXT:    fcvt s5, h7
-; NOFP16-NEXT:    mov.h v0[1], v3[0]
-; NOFP16-NEXT:    fcvt h3, s4
-; NOFP16-NEXT:    bit.16b v1, v5, v2
-; NOFP16-NEXT:    mov.h v0[2], v3[0]
-; NOFP16-NEXT:    fcvt h1, s1
-; NOFP16-NEXT:    mov.h v0[3], v1[0]
-; NOFP16-NEXT:    ; kill: def $d0 killed $d0 killed $q0
-; NOFP16-NEXT:    ret
-;
-; FP16-LABEL: test_copysign_v4f16_v4f32:
-; FP16:       ; %bb.0:
-; FP16-NEXT:    fcvtn v1.4h, v1.4s
-; FP16-NEXT:    mvni.4h v2, #128, lsl #8
-; FP16-NEXT:    bif.8b v0, v1, v2
-; FP16-NEXT:    ret
+; CHECK-LABEL: test_copysign_v4f16_v4f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    fcvtn v1.4h, v1.4s
+; CHECK-NEXT:    mvni.4h v2, #128, lsl #8
+; CHECK-NEXT:    bif.8b v0, v1, v2
+; CHECK-NEXT:    ret
   %tmp0 = fptrunc <4 x float> %b to <4 x half>
   %r = call <4 x half> @llvm.copysign.v4f16(<4 x half> %a, <4 x half> %tmp0)
   ret <4 x half> %r
 }
 
 define <4 x half> @test_copysign_v4f16_v4f64(<4 x half> %a, <4 x double> %b) #0 {
-; NOFP16-LABEL: test_copysign_v4f16_v4f64:
-; NOFP16:       ; %bb.0:
-; NOFP16-NEXT:    ; kill: def $d0 killed $d0 def $q0
-; NOFP16-NEXT:    mov d3, v1[1]
-; NOFP16-NEXT:    mov h4, v0[1]
-; NOFP16-NEXT:    fcvt s1, d1
-; NOFP16-NEXT:    fcvt s5, h0
-; NOFP16-NEXT:    mov h7, v0[2]
-; NOFP16-NEXT:    mvni.4s v6, #128, lsl #24
-; NOFP16-NEXT:    fcvt s3, d3
-; NOFP16-NEXT:    fcvt s4, h4
-; NOFP16-NEXT:    bit.16b v1, v5, v6
-; NOFP16-NEXT:    fcvt s7, h7
-; NOFP16-NEXT:    mov h5, v0[3]
-; NOFP16-NEXT:    bit.16b v3, v4, v6
-; NOFP16-NEXT:    mov d4, v2[1]
-; NOFP16-NEXT:    fcvt s2, d2
-; NOFP16-NEXT:    fcvt h0, s1
-; NOFP16-NEXT:    fcvt h1, s3
-; NOFP16-NEXT:    bit.16b v2, v7, v6
-; NOFP16-NEXT:    fcvt s3, d4
-; NOFP16-NEXT:    fcvt s4, h5
-; NOFP16-NEXT:    mov.h v0[1], v1[0]
-; NOFP16-NEXT:    fcvt h1, s2
-; NOFP16-NEXT:    mov.16b v2, v6
-; NOFP16-NEXT:    bsl.16b v2, v4, v3
-; NOFP16-NEXT:    mov.h v0[2], v1[0]
-; NOFP16-NEXT:    fcvt h1, s2
-; NOFP16-NEXT:    mov.h v0[3], v1[0]
-; NOFP16-NEXT:    ; kill: def $d0 killed $d0 killed $q0
-; NOFP16-NEXT:    ret
-;
-; FP16-LABEL: test_copysign_v4f16_v4f64:
-; FP16:       ; %bb.0:
-; FP16-NEXT:    mov d3, v1[1]
-; FP16-NEXT:    fcvt h1, d1
-; FP16-NEXT:    fcvt h3, d3
-; FP16-NEXT:    mov.h v1[1], v3[0]
-; FP16-NEXT:    fcvt h3, d2
-; FP16-NEXT:    mov d2, v2[1]
-; FP16-NEXT:    mov.h v1[2], v3[0]
-; FP16-NEXT:    fcvt h2, d2
-; FP16-NEXT:    mov.h v1[3], v2[0]
-; FP16-NEXT:    mvni.4h v2, #128, lsl #8
-; FP16-NEXT:    bif.8b v0, v1, v2
-; FP16-NEXT:    ret
+; CHECK-LABEL: test_copysign_v4f16_v4f64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-NEXT:    fcvtxn2 v1.4s, v2.2d
+; CHECK-NEXT:    mvni.4h v2, #128, lsl #8
+; CHECK-NEXT:    fcvtn v1.4h, v1.4s
+; CHECK-NEXT:    bif.8b v0, v1, v2
+; CHECK-NEXT:    ret
   %tmp0 = fptrunc <4 x double> %b to <4 x half>
   %r = call <4 x half> @llvm.copysign.v4f16(<4 x half> %a, <4 x half> %tmp0)
   ret <4 x half> %r
@@ -331,145 +225,23 @@ declare <4 x half> @llvm.copysign.v4f16(<4 x half> %a, <4 x half> %b) #0
 ;============ v8f16
 
 define <8 x half> @test_copysign_v8f16_v8f16(<8 x half> %a, <8 x half> %b) #0 {
-; NOFP16-LABEL: test_copysign_v8f16_v8f16:
-; NOFP16:       ; %bb.0:
-; NOFP16-NEXT:    mov h2, v1[1]
-; NOFP16-NEXT:    mov h4, v0[1]
-; NOFP16-NEXT:    fcvt s5, h1
-; NOFP16-NEXT:    fcvt s6, h0
-; NOFP16-NEXT:    mvni.4s v3, #128, lsl #24
-; NOFP16-NEXT:    mov h7, v1[2]
-; NOFP16-NEXT:    mov h16, v0[2]
-; NOFP16-NEXT:    mov h17, v1[3]
-; NOFP16-NEXT:    fcvt s2, h2
-; NOFP16-NEXT:    fcvt s4, h4
-; NOFP16-NEXT:    bit.16b v5, v6, v3
-; NOFP16-NEXT:    mov h6, v0[3]
-; NOFP16-NEXT:    fcvt s7, h7
-; NOFP16-NEXT:    fcvt s16, h16
-; NOFP16-NEXT:    fcvt s17, h17
-; NOFP16-NEXT:    bif.16b v4, v2, v3
-; NOFP16-NEXT:    fcvt h2, s5
-; NOFP16-NEXT:    mov.16b v5, v3
-; NOFP16-NEXT:    fcvt s6, h6
-; NOFP16-NEXT:    bsl.16b v5, v16, v7
-; NOFP16-NEXT:    fcvt h4, s4
-; NOFP16-NEXT:    mov h7, v1[4]
-; NOFP16-NEXT:    mov h16, v0[4]
-; NOFP16-NEXT:    bif.16b v6, v17, v3
-; NOFP16-NEXT:    mov h17, v0[5]
-; NOFP16-NEXT:    fcvt h5, s5
-; NOFP16-NEXT:    mov.h v2[1], v4[0]
-; NOFP16-NEXT:    fcvt s4, h7
-; NOFP16-NEXT:    fcvt s7, h16
-; NOFP16-NEXT:    mov h16, v1[5]
-; NOFP16-NEXT:    fcvt h6, s6
-; NOFP16-NEXT:    fcvt s17, h17
-; NOFP16-NEXT:    mov.h v2[2], v5[0]
-; NOFP16-NEXT:    mov h5, v1[6]
-; NOFP16-NEXT:    mov h1, v1[7]
-; NOFP16-NEXT:    bit.16b v4, v7, v3
-; NOFP16-NEXT:    mov h7, v0[6]
-; NOFP16-NEXT:    fcvt s16, h16
-; NOFP16-NEXT:    mov h0, v0[7]
-; NOFP16-NEXT:    mov.h v2[3], v6[0]
-; NOFP16-NEXT:    fcvt s5, h5
-; NOFP16-NEXT:    fcvt s1, h1
-; NOFP16-NEXT:    fcvt s6, h7
-; NOFP16-NEXT:    mov.16b v7, v3
-; NOFP16-NEXT:    fcvt h4, s4
-; NOFP16-NEXT:    fcvt s0, h0
-; NOFP16-NEXT:    bsl.16b v7, v17, v16
-; NOFP16-NEXT:    bit.16b v5, v6, v3
-; NOFP16-NEXT:    mov.h v2[4], v4[0]
-; NOFP16-NEXT:    bif.16b v0, v1, v3
-; NOFP16-NEXT:    fcvt h4, s7
-; NOFP16-NEXT:    fcvt h0, s0
-; NOFP16-NEXT:    mov.h v2[5], v4[0]
-; NOFP16-NEXT:    fcvt h4, s5
-; NOFP16-NEXT:    mov.h v2[6], v4[0]
-; NOFP16-NEXT:    mov.h v2[7], v0[0]
-; NOFP16-NEXT:    mov.16b v0, v2
-; NOFP16-NEXT:    ret
-;
-; FP16-LABEL: test_copysign_v8f16_v8f16:
-; FP16:       ; %bb.0:
-; FP16-NEXT:    mvni.8h v2, #128, lsl #8
-; FP16-NEXT:    bif.16b v0, v1, v2
-; FP16-NEXT:    ret
+; CHECK-LABEL: test_copysign_v8f16_v8f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mvni.8h v2, #128, lsl #8
+; CHECK-NEXT:    bif.16b v0, v1, v2
+; CHECK-NEXT:    ret
   %r = call <8 x half> @llvm.copysign.v8f16(<8 x half> %a, <8 x half> %b)
   ret <8 x half> %r
 }
 
 define <8 x half> @test_copysign_v8f16_v8f32(<8 x half> %a, <8 x float> %b) #0 {
-; NOFP16-LABEL: test_copysign_v8f16_v8f32:
-; NOFP16:       ; %bb.0:
-; NOFP16-NEXT:    fcvtn v1.4h, v1.4s
-; NOFP16-NEXT:    mov h4, v0[1]
-; NOFP16-NEXT:    fcvt s6, h0
-; NOFP16-NEXT:    mvni.4s v3, #128, lsl #24
-; NOFP16-NEXT:    mov h7, v0[2]
-; NOFP16-NEXT:    fcvtn v2.4h, v2.4s
-; NOFP16-NEXT:    mov h5, v1[1]
-; NOFP16-NEXT:    fcvt s16, h1
-; NOFP16-NEXT:    fcvt s4, h4
-; NOFP16-NEXT:    mov h17, v1[2]
-; NOFP16-NEXT:    mov h1, v1[3]
-; NOFP16-NEXT:    fcvt s7, h7
-; NOFP16-NEXT:    fcvt s5, h5
-; NOFP16-NEXT:    bif.16b v6, v16, v3
-; NOFP16-NEXT:    mov h16, v0[3]
-; NOFP16-NEXT:    fcvt s17, h17
-; NOFP16-NEXT:    fcvt s18, h1
-; NOFP16-NEXT:    bif.16b v4, v5, v3
-; NOFP16-NEXT:    fcvt h1, s6
-; NOFP16-NEXT:    mov.16b v6, v3
-; NOFP16-NEXT:    mov h5, v0[4]
-; NOFP16-NEXT:    fcvt s16, h16
-; NOFP16-NEXT:    bsl.16b v6, v7, v17
-; NOFP16-NEXT:    mov h7, v0[5]
-; NOFP16-NEXT:    mov h17, v2[1]
-; NOFP16-NEXT:    fcvt h4, s4
-; NOFP16-NEXT:    fcvt s5, h5
-; NOFP16-NEXT:    bif.16b v16, v18, v3
-; NOFP16-NEXT:    fcvt h6, s6
-; NOFP16-NEXT:    fcvt s7, h7
-; NOFP16-NEXT:    fcvt s17, h17
-; NOFP16-NEXT:    mov.h v1[1], v4[0]
-; NOFP16-NEXT:    fcvt s4, h2
-; NOFP16-NEXT:    bif.16b v7, v17, v3
-; NOFP16-NEXT:    bit.16b v4, v5, v3
-; NOFP16-NEXT:    fcvt h5, s16
-; NOFP16-NEXT:    mov.h v1[2], v6[0]
-; NOFP16-NEXT:    mov h6, v0[6]
-; NOFP16-NEXT:    mov h16, v2[2]
-; NOFP16-NEXT:    mov h0, v0[7]
-; NOFP16-NEXT:    mov h2, v2[3]
-; NOFP16-NEXT:    mov.h v1[3], v5[0]
-; NOFP16-NEXT:    fcvt h4, s4
-; NOFP16-NEXT:    fcvt s5, h6
-; NOFP16-NEXT:    fcvt s6, h16
-; NOFP16-NEXT:    fcvt s0, h0
-; NOFP16-NEXT:    fcvt s2, h2
-; NOFP16-NEXT:    mov.h v1[4], v4[0]
-; NOFP16-NEXT:    fcvt h4, s7
-; NOFP16-NEXT:    bif.16b v5, v6, v3
-; NOFP16-NEXT:    bif.16b v0, v2, v3
-; NOFP16-NEXT:    mov.h v1[5], v4[0]
-; NOFP16-NEXT:    fcvt h4, s5
-; NOFP16-NEXT:    fcvt h0, s0
-; NOFP16-NEXT:    mov.h v1[6], v4[0]
-; NOFP16-NEXT:    mov.h v1[7], v0[0]
-; NOFP16-NEXT:    mov.16b v0, v1
-; NOFP16-NEXT:    ret
-;
-; FP16-LABEL: test_copysign_v8f16_v8f32:
-; FP16:       ; %bb.0:
-; FP16-NEXT:    fcvtn v1.4h, v1.4s
-; FP16-NEXT:    fcvtn2 v1.8h, v2.4s
-; FP16-NEXT:    mvni.8h v2, #128, lsl #8
-; FP16-NEXT:    bif.16b v0, v1, v2
-; FP16-NEXT:    ret
+; CHECK-LABEL: test_copysign_v8f16_v8f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    fcvtn v1.4h, v1.4s
+; CHECK-NEXT:    fcvtn2 v1.8h, v2.4s
+; CHECK-NEXT:    mvni.8h v2, #128, lsl #8
+; CHECK-NEXT:    bif.16b v0, v1, v2
+; CHECK-NEXT:    ret
   %tmp0 = fptrunc <8 x float> %b to <8 x half>
   %r = call <8 x half> @llvm.copysign.v8f16(<8 x half> %a, <8 x half> %tmp0)
   ret <8 x half> %r
@@ -482,60 +254,8 @@ declare <8 x half> @llvm.copysign.v8f16(<8 x half> %a, <8 x half> %b) #0
 define <4 x bfloat> @test_copysign_v4bf16_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_copysign_v4bf16_v4bf16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h3, v1[1]
-; CHECK-NEXT:    mov h4, v0[1]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov h5, v1[2]
-; CHECK-NEXT:    mov h6, v0[2]
-; CHECK-NEXT:    fmov w11, s0
-; CHECK-NEXT:    mvni.4s v2, #128, lsl #24
-; CHECK-NEXT:    mov h1, v1[3]
-; CHECK-NEXT:    mov h0, v0[3]
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    lsl w11, w11, #16
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    fmov s7, w8
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    lsl w10, w10, #16
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    fmov s3, w9
-; CHECK-NEXT:    fmov s4, w10
-; CHECK-NEXT:    fmov w9, s6
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    bit.16b v3, v4, v2
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    fmov s4, w11
-; CHECK-NEXT:    fmov w11, s0
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    lsl w10, w10, #16
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    bif.16b v4, v7, v2
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    lsl w11, w11, #16
-; CHECK-NEXT:    bif.16b v1, v0, v2
-; CHECK-NEXT:    fmov s5, w11
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    fmov s4, w10
-; CHECK-NEXT:    fmov s3, w8
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov.16b v1, v2
-; CHECK-NEXT:    lsr w9, w9, #16
-; CHECK-NEXT:    bsl.16b v1, v5, v4
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    mov.h v0[1], v3[0]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    mov.h v0[2], v2[0]
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov.h v0[3], v1[0]
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mvni.4h v2, #128, lsl #8
+; CHECK-NEXT:    bif.8b v0, v1, v2
 ; CHECK-NEXT:    ret
   %r = call <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b)
   ret <4 x bfloat> %r
@@ -546,66 +266,16 @@ define <4 x bfloat> @test_copysign_v4bf16_v4f32(<4 x bfloat> %a, <4 x float> %b)
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    movi.4s v2, #127, msl #8
 ; CHECK-NEXT:    movi.4s v3, #1
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ushr.4s v4, v1, #16
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov h5, v0[2]
-; CHECK-NEXT:    mov h6, v0[3]
 ; CHECK-NEXT:    add.4s v2, v1, v2
 ; CHECK-NEXT:    and.16b v3, v4, v3
-; CHECK-NEXT:    fcmeq.4s v4, v1, v1
-; CHECK-NEXT:    orr.4s v1, #64, lsl #16
-; CHECK-NEXT:    lsl w9, w9, #16
 ; CHECK-NEXT:    add.4s v2, v3, v2
-; CHECK-NEXT:    mov h3, v0[1]
-; CHECK-NEXT:    bit.16b v1, v2, v4
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    shrn.4h v2, v1, #16
-; CHECK-NEXT:    mvni.4s v1, #128, lsl #24
-; CHECK-NEXT:    fmov s3, w8
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    fmov s5, w9
-; CHECK-NEXT:    mov h4, v2[1]
-; CHECK-NEXT:    mov h0, v2[2]
-; CHECK-NEXT:    fmov w11, s2
-; CHECK-NEXT:    mov h2, v2[3]
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    lsl w11, w11, #16
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    lsl w10, w10, #16
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    fmov s4, w10
-; CHECK-NEXT:    fmov w10, s6
-; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    bif.16b v3, v4, v1
-; CHECK-NEXT:    fmov s4, w11
-; CHECK-NEXT:    bit.16b v2, v0, v1
-; CHECK-NEXT:    lsl w10, w10, #16
-; CHECK-NEXT:    bit.16b v4, v5, v1
-; CHECK-NEXT:    fmov s5, w8
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    fmov w11, s4
-; CHECK-NEXT:    fmov s4, w10
-; CHECK-NEXT:    lsr w9, w9, #16
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    fmov s3, w9
-; CHECK-NEXT:    lsr w11, w11, #16
-; CHECK-NEXT:    bsl.16b v1, v4, v5
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    fmov s0, w11
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov.h v0[1], v3[0]
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    mov.h v0[2], v2[0]
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov.h v0[3], v1[0]
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcmeq.4s v3, v1, v1
+; CHECK-NEXT:    orr.4s v1, #64, lsl #16
+; CHECK-NEXT:    bit.16b v1, v2, v3
+; CHECK-NEXT:    mvni.4h v2, #128, lsl #8
+; CHECK-NEXT:    shrn.4h v1, v1, #16
+; CHECK-NEXT:    bif.8b v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <4 x float> %b to <4 x bfloat>
   %r = call <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> %a, <4 x bfloat> %tmp0)
@@ -615,51 +285,20 @@ define <4 x bfloat> @test_copysign_v4bf16_v4f32(<4 x bfloat> %a, <4 x float> %b)
 define <4 x bfloat> @test_copysign_v4bf16_v4f64(<4 x bfloat> %a, <4 x double> %b) #0 {
 ; CHECK-LABEL: test_copysign_v4bf16_v4f64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov h4, v0[1]
-; CHECK-NEXT:    mov h5, v0[2]
-; CHECK-NEXT:    mov d3, v1[1]
-; CHECK-NEXT:    fcvt s1, d1
-; CHECK-NEXT:    mov h0, v0[3]
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    mvni.4s v4, #128, lsl #24
-; CHECK-NEXT:    fmov s6, w8
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    fcvt s3, d3
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    bit.16b v1, v6, v4
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    mov d6, v2[1]
-; CHECK-NEXT:    fmov s7, w9
-; CHECK-NEXT:    fcvt s2, d2
-; CHECK-NEXT:    lsl w10, w10, #16
-; CHECK-NEXT:    fmov s5, w8
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov.16b v1, v4
-; CHECK-NEXT:    bit.16b v3, v7, v4
-; CHECK-NEXT:    bsl.16b v1, v5, v2
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    fcvt s2, d6
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    fmov s5, w10
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov.16b v1, v4
-; CHECK-NEXT:    lsr w9, w9, #16
-; CHECK-NEXT:    fmov s3, w9
-; CHECK-NEXT:    bsl.16b v1, v5, v2
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    mov.h v0[1], v3[0]
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov.h v0[2], v2[0]
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov.h v0[3], v1[0]
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-NEXT:    movi.4s v3, #1
+; CHECK-NEXT:    fcvtxn2 v1.4s, v2.2d
+; CHECK-NEXT:    movi.4s v2, #127, msl #8
+; CHECK-NEXT:    ushr.4s v4, v1, #16
+; CHECK-NEXT:    add.4s v2, v1, v2
+; CHECK-NEXT:    and.16b v3, v4, v3
+; CHECK-NEXT:    add.4s v2, v3, v2
+; CHECK-NEXT:    fcmeq.4s v3, v1, v1
+; CHECK-NEXT:    orr.4s v1, #64, lsl #16
+; CHECK-NEXT:    bit.16b v1, v2, v3
+; CHECK-NEXT:    mvni.4h v2, #128, lsl #8
+; CHECK-NEXT:    shrn.4h v1, v1, #16
+; CHECK-NEXT:    bif.8b v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <4 x double> %b to <4 x bfloat>
   %r = call <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> %a, <4 x bfloat> %tmp0)
@@ -673,111 +312,8 @@ declare <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) #0
 define <8 x bfloat> @test_copysign_v8bf16_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_copysign_v8bf16_v8bf16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov h2, v1[1]
-; CHECK-NEXT:    mov h4, v0[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov h6, v1[2]
-; CHECK-NEXT:    mov h7, v0[2]
-; CHECK-NEXT:    mvni.4s v3, #128, lsl #24
-; CHECK-NEXT:    mov h5, v1[3]
-; CHECK-NEXT:    mov h16, v0[3]
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    mov h17, v1[4]
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    mov h4, v0[4]
-; CHECK-NEXT:    fmov s18, w8
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    fmov w11, s7
-; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    lsl w9, w10, #16
-; CHECK-NEXT:    fmov w10, s6
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    fmov s7, w9
-; CHECK-NEXT:    bif.16b v2, v18, v3
-; CHECK-NEXT:    lsl w9, w11, #16
-; CHECK-NEXT:    fmov s6, w8
-; CHECK-NEXT:    lsl w8, w10, #16
-; CHECK-NEXT:    fmov w10, s5
-; CHECK-NEXT:    fmov w11, s16
-; CHECK-NEXT:    fmov s16, w9
-; CHECK-NEXT:    mov h18, v0[5]
-; CHECK-NEXT:    fmov s5, w8
-; CHECK-NEXT:    bit.16b v6, v7, v3
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    lsl w9, w10, #16
-; CHECK-NEXT:    lsl w10, w11, #16
-; CHECK-NEXT:    mov h7, v1[5]
-; CHECK-NEXT:    bit.16b v5, v16, v3
-; CHECK-NEXT:    fmov s16, w10
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    mov.16b v4, v3
-; CHECK-NEXT:    fmov w11, s6
-; CHECK-NEXT:    fmov s6, w9
-; CHECK-NEXT:    fmov w9, s17
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    lsr w11, w11, #16
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    lsl w8, w9, #16
-; CHECK-NEXT:    bsl.16b v4, v16, v6
-; CHECK-NEXT:    lsl w9, w10, #16
-; CHECK-NEXT:    fmov w10, s5
-; CHECK-NEXT:    fmov s6, w11
-; CHECK-NEXT:    fmov s5, w8
-; CHECK-NEXT:    lsr w8, w10, #16
-; CHECK-NEXT:    fmov w10, s7
-; CHECK-NEXT:    mov.h v2[1], v6[0]
-; CHECK-NEXT:    fmov s6, w9
-; CHECK-NEXT:    fmov w9, s18
-; CHECK-NEXT:    fmov s7, w8
-; CHECK-NEXT:    fmov w8, s4
-; CHECK-NEXT:    mov h4, v1[6]
-; CHECK-NEXT:    lsl w10, w10, #16
-; CHECK-NEXT:    mov h1, v1[7]
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    bit.16b v5, v6, v3
-; CHECK-NEXT:    mov h6, v0[6]
-; CHECK-NEXT:    mov.h v2[2], v7[0]
-; CHECK-NEXT:    fmov s7, w10
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    fmov s16, w9
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    mov h0, v0[7]
-; CHECK-NEXT:    fmov w10, s6
-; CHECK-NEXT:    bit.16b v7, v16, v3
-; CHECK-NEXT:    fmov s16, w8
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    lsl w10, w10, #16
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    mov.h v2[3], v16[0]
-; CHECK-NEXT:    fmov s5, w9
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    fmov s4, w8
-; CHECK-NEXT:    fmov w8, s7
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    mov.h v2[4], v4[0]
-; CHECK-NEXT:    fmov s4, w10
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    bif.16b v4, v5, v3
-; CHECK-NEXT:    lsl w10, w10, #16
-; CHECK-NEXT:    fmov s5, w10
-; CHECK-NEXT:    mov.h v2[5], v0[0]
-; CHECK-NEXT:    mov.16b v0, v3
-; CHECK-NEXT:    fmov w8, s4
-; CHECK-NEXT:    bsl.16b v0, v5, v1
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov.h v2[6], v1[0]
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov.h v2[7], v0[0]
-; CHECK-NEXT:    mov.16b v0, v2
+; CHECK-NEXT:    mvni.8h v2, #128, lsl #8
+; CHECK-NEXT:    bif.16b v0, v1, v2
 ; CHECK-NEXT:    ret
   %r = call <8 x bfloat> @llvm.copysign.v8bf16(<8 x bfloat> %a, <8 x bfloat> %b)
   ret <8 x bfloat> %r
@@ -788,126 +324,23 @@ define <8 x bfloat> @test_copysign_v8bf16_v8f32(<8 x bfloat> %a, <8 x float> %b)
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    movi.4s v3, #127, msl #8
 ; CHECK-NEXT:    movi.4s v4, #1
-; CHECK-NEXT:    ushr.4s v5, v1, #16
-; CHECK-NEXT:    fcmeq.4s v7, v1, v1
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    add.4s v6, v1, v3
-; CHECK-NEXT:    and.16b v5, v5, v4
-; CHECK-NEXT:    orr.4s v1, #64, lsl #16
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    add.4s v5, v5, v6
-; CHECK-NEXT:    ushr.4s v6, v2, #16
-; CHECK-NEXT:    and.16b v4, v6, v4
-; CHECK-NEXT:    mov h6, v0[2]
-; CHECK-NEXT:    bit.16b v1, v5, v7
+; CHECK-NEXT:    ushr.4s v5, v2, #16
+; CHECK-NEXT:    ushr.4s v6, v1, #16
 ; CHECK-NEXT:    add.4s v7, v2, v3
-; CHECK-NEXT:    mov h5, v0[1]
-; CHECK-NEXT:    fcmeq.4s v3, v2, v2
+; CHECK-NEXT:    add.4s v3, v1, v3
+; CHECK-NEXT:    and.16b v5, v5, v4
+; CHECK-NEXT:    and.16b v4, v6, v4
+; CHECK-NEXT:    fcmeq.4s v6, v2, v2
 ; CHECK-NEXT:    orr.4s v2, #64, lsl #16
-; CHECK-NEXT:    shrn.4h v1, v1, #16
-; CHECK-NEXT:    add.4s v4, v4, v7
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    mov h7, v0[3]
-; CHECK-NEXT:    mov h5, v0[4]
-; CHECK-NEXT:    mov h16, v1[1]
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    bsl.16b v3, v4, v2
-; CHECK-NEXT:    mov h4, v1[2]
-; CHECK-NEXT:    mov h17, v1[3]
-; CHECK-NEXT:    mvni.4s v2, #128, lsl #24
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    fmov w9, s6
-; CHECK-NEXT:    lsl w10, w10, #16
-; CHECK-NEXT:    fmov s6, w8
-; CHECK-NEXT:    fmov w8, s7
-; CHECK-NEXT:    fmov w11, s16
-; CHECK-NEXT:    fmov s7, w10
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    mov.16b v4, v2
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    shrn.4h v3, v3, #16
-; CHECK-NEXT:    lsl w11, w11, #16
-; CHECK-NEXT:    bif.16b v1, v7, v2
-; CHECK-NEXT:    fmov s16, w8
-; CHECK-NEXT:    fmov s7, w11
-; CHECK-NEXT:    bsl.16b v4, v6, v7
-; CHECK-NEXT:    fmov s7, w9
-; CHECK-NEXT:    lsl w9, w10, #16
-; CHECK-NEXT:    fmov w10, s17
-; CHECK-NEXT:    mov h6, v0[5]
-; CHECK-NEXT:    lsl w8, w10, #16
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    lsr w9, w10, #16
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    fmov s4, w8
-; CHECK-NEXT:    bif.16b v7, v1, v2
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    mov h5, v3[1]
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    lsr w10, w10, #16
-; CHECK-NEXT:    bit.16b v4, v16, v2
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    fmov s16, w10
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    fmov w10, s7
-; CHECK-NEXT:    mov h7, v0[6]
-; CHECK-NEXT:    mov h0, v0[7]
-; CHECK-NEXT:    mov.h v1[1], v16[0]
-; CHECK-NEXT:    fmov s16, w8
-; CHECK-NEXT:    fmov w8, s6
-; CHECK-NEXT:    fmov s6, w9
-; CHECK-NEXT:    fmov w9, s5
-; CHECK-NEXT:    lsr w10, w10, #16
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    bit.16b v6, v16, v2
-; CHECK-NEXT:    fmov s16, w10
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    fmov s5, w8
-; CHECK-NEXT:    fmov w8, s7
-; CHECK-NEXT:    fmov s7, w9
-; CHECK-NEXT:    mov h4, v3[2]
-; CHECK-NEXT:    mov h3, v3[3]
-; CHECK-NEXT:    mov.h v1[2], v16[0]
-; CHECK-NEXT:    lsr w10, w10, #16
-; CHECK-NEXT:    fmov w9, s6
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    bif.16b v5, v7, v2
-; CHECK-NEXT:    fmov s16, w10
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    fmov s4, w8
-; CHECK-NEXT:    lsr w9, w9, #16
-; CHECK-NEXT:    mov.h v1[3], v16[0]
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    lsl w10, w10, #16
-; CHECK-NEXT:    fmov s6, w9
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    fmov s5, w10
-; CHECK-NEXT:    fmov w10, s3
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    mov.h v1[4], v6[0]
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    bif.16b v4, v5, v2
-; CHECK-NEXT:    lsl w10, w10, #16
-; CHECK-NEXT:    fmov s3, w9
-; CHECK-NEXT:    fmov s5, w10
-; CHECK-NEXT:    mov.h v1[5], v0[0]
-; CHECK-NEXT:    mov.16b v0, v2
-; CHECK-NEXT:    fmov w8, s4
-; CHECK-NEXT:    bsl.16b v0, v3, v5
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov.h v1[6], v2[0]
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov.h v1[7], v0[0]
-; CHECK-NEXT:    mov.16b v0, v1
+; CHECK-NEXT:    add.4s v5, v5, v7
+; CHECK-NEXT:    add.4s v3, v4, v3
+; CHECK-NEXT:    fcmeq.4s v4, v1, v1
+; CHECK-NEXT:    orr.4s v1, #64, lsl #16
+; CHECK-NEXT:    bit.16b v2, v5, v6
+; CHECK-NEXT:    bit.16b v1, v3, v4
+; CHECK-NEXT:    uzp2.8h v1, v1, v2
+; CHECK-NEXT:    mvni.8h v2, #128, lsl #8
+; CHECK-NEXT:    bif.16b v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <8 x float> %b to <8 x bfloat>
   %r = call <8 x bfloat> @llvm.copysign.v8bf16(<8 x bfloat> %a, <8 x bfloat> %tmp0)
@@ -917,3 +350,6 @@ define <8 x bfloat> @test_copysign_v8bf16_v8f32(<8 x bfloat> %a, <8 x float> %b)
 declare <8 x bfloat> @llvm.copysign.v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) #0
 
 attributes #0 = { nounwind }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; FP16: {{.*}}
+; NOFP16: {{.*}}

@@ -65,6 +65,12 @@ RUN <<EOF
   echo "ALL ALL = (ALL) NOPASSWD: ALL" | tee /etc/sudoers || true
 EOF
 
+# Installing tzdata before other packages avoids the time zone prompts.
+# These prompts seem to ignore DEBIAN_FRONTEND=noninteractive.
+RUN sudo apt-get update \
+    && sudo apt-get install -y \
+        tzdata
+
 RUN sudo apt-get update \
     && sudo apt-get install -y \
         python3 \
