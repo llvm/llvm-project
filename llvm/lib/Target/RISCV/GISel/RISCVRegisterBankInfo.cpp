@@ -13,6 +13,7 @@
 #include "RISCVRegisterBankInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
@@ -402,7 +403,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
 
     if (Ty.isVector()) {
-      LLT TestTy = MRI.getType(MI.getOperand(2).getReg());
+      GSelect *Sel = cast<GSelect>(&MI);
+      LLT TestTy = MRI.getType(Sel->getCondReg());
       OpdsMapping[0] = OpdsMapping[2] = OpdsMapping[3] =
           getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue());
       OpdsMapping[1] =
