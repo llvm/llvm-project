@@ -2916,11 +2916,7 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXDefaultInitExpr(
     const CXXDefaultInitExpr *E) {
   SourceLocScope<Emitter> SLS(this, E);
-  if (Initializing)
-    return this->visitInitializer(E->getExpr());
-
-  assert(classify(E->getType()));
-  return this->visit(E->getExpr());
+  return this->delegate(E->getExpr());
 }
 
 template <class Emitter>

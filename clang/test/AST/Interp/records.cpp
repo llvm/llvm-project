@@ -1264,3 +1264,24 @@ namespace {
   static_assert(true_type::value, "");
   static_assert(true_type::value, "");
 }
+
+#if __cplusplus >= 202002L
+namespace {
+  /// Used to crash because the CXXDefaultInitExpr is of compound type.
+  struct A {
+    int &x;
+    constexpr ~A() { --x; }
+  };
+  struct B {
+    int &x;
+    const A &a = A{x};
+  };
+  constexpr int a() {
+    int x = 1;
+    int f = B{x}.x;
+    B{x}; // both-warning {{expression result unused}}
+
+    return 1;
+  }
+}
+#endif
