@@ -8700,11 +8700,11 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
   if (LegalOperations || OptLevel == CodeGenOptLevel::None)
     return SDValue();
 
-  // We only handle merging simple stores of 1-4 bytes.
-  // TODO: Allow unordered atomics when wider type is legal (see D66309)
+  // We only handle merging unordered stores of 1-4 bytes.
   EVT MemVT = N->getMemoryVT();
   if (!(MemVT == MVT::i8 || MemVT == MVT::i16 || MemVT == MVT::i32) ||
-      !N->isSimple() || N->isIndexed())
+      !N->isUnordered() || (N->isAtomic() && !isTypeLegal(MemVT)) ||
+      N->isIndexed())
     return SDValue();
 
   // Collect all of the stores in the chain, upto the maximum store width (i64).
@@ -18518,8 +18518,8 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   int64_t Offset;
 
   StoreSDNode *ST = getUniqueStoreFeeding(LD, Offset);
-  // TODO: Relax this restriction for unordered atomics (see D66309)
-  if (!ST || !ST->isSimple() || ST->getAddressSpace() != LD->getAddressSpace())
+  if (!ST || !ST->isUnordered() ||
+      ST->getAddressSpace() != LD->getAddressSpace())
     return SDValue();
 
   EVT LDType = LD->getValueType(0);
@@ -18651,8 +18651,7 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
   // If load is not volatile and there are no uses of the loaded value (and
   // the updated indexed value in case of indexed loads), change uses of the
   // chain value into uses of the chain input (i.e. delete the dead load).
-  // TODO: Allow this for unordered atomics (see D66309)
-  if (LD->isSimple()) {
+  if (LD->isUnordered()) {
     if (N->getValueType(1) == MVT::Other) {
       // Unindexed loads.
       if (!N->hasAnyUseOfValue(0)) {
@@ -21105,13 +21104,12 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   // If this is a load followed by a store to the same location, then the store
   // is dead/noop. Peek through any truncates if canCombineTruncStore failed.
   // TODO: Add big-endian truncate support with test coverage.
-  // TODO: Can relax for unordered atomics (see D66309)
   SDValue TruncVal = DAG.getDataLayout().isLittleEndian()
                          ? peekThroughTruncates(Value)
                          : Value;
   if (auto *Ld = dyn_cast<LoadSDNode>(TruncVal)) {
     if (Ld->getBasePtr() == Ptr && ST->getMemoryVT() == Ld->getMemoryVT() &&
-        ST->isUnindexed() && ST->isSimple() &&
+        ST->isUnindexed() && ST->isUnordered() &&
         Ld->getAddressSpace() == ST->getAddressSpace() &&
         // There can't be any side effects between the load and store, such as
         // a call or store.
@@ -21125,10 +21123,9 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   if (SDValue NewST = replaceStoreOfInsertLoad(ST))
     return NewST;
 
-  // TODO: Can relax for unordered atomics (see D66309)
   if (StoreSDNode *ST1 = dyn_cast<StoreSDNode>(Chain)) {
-    if (ST->isUnindexed() && ST->isSimple() &&
-        ST1->isUnindexed() && ST1->isSimple()) {
+    if (ST->isUnindexed() && ST->isUnordered() && ST1->isUnindexed() &&
+        ST1->isUnordered()) {
       if (OptLevel != CodeGenOptLevel::None && ST1->getBasePtr() == Ptr &&
           ST1->getValue() == Value && ST->getMemoryVT() == ST1->getMemoryVT() &&
           ST->getAddressSpace() == ST1->getAddressSpace()) {
@@ -21246,8 +21243,7 @@ SDValue DAGCombiner::visitLIFETIME_END(SDNode *N) {
       break;
     case ISD::STORE: {
       StoreSDNode *ST = dyn_cast<StoreSDNode>(Chain);
-      // TODO: Can relax for unordered atomics (see D66309)
-      if (!ST->isSimple() || ST->isIndexed())
+      if (!ST->isUnordered() || ST->isIndexed())
         continue;
       const TypeSize StoreSize = ST->getMemoryVT().getStoreSize();
       // The bounds of a scalable store are not known until runtime, so this
@@ -26837,8 +26833,7 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
     if (LHS.getOperand(0) != RHS.getOperand(0) ||
         // Do not let this transformation reduce the number of volatile loads.
         // Be conservative for atomics for the moment
-        // TODO: This does appear to be legal for unordered atomics (see D66309)
-        !LLD->isSimple() || !RLD->isSimple() ||
+        !LLD->isUnordered() || !RLD->isUnordered() ||
         // FIXME: If either is a pre/post inc/dec load,
         // we'd need to split out the address adjustment.
         LLD->isIndexed() || RLD->isIndexed() ||
@@ -27934,8 +27929,7 @@ void DAGCombiner::GatherAllAliases(SDNode *N, SDValue OriginalChain,
   SmallPtrSet<SDNode *, 16> Visited;  // Visited node set.
 
   // Get alias information for node.
-  // TODO: relax aliasing for unordered atomics (see D66309)
-  const bool IsLoad = isa<LoadSDNode>(N) && cast<LoadSDNode>(N)->isSimple();
+  const bool IsLoad = isa<LoadSDNode>(N) && cast<LoadSDNode>(N)->isUnordered();
 
   // Starting off.
   Chains.push_back(OriginalChain);
@@ -27951,9 +27945,8 @@ void DAGCombiner::GatherAllAliases(SDNode *N, SDValue OriginalChain,
     case ISD::LOAD:
     case ISD::STORE: {
       // Get alias information for C.
-      // TODO: Relax aliasing for unordered atomics (see D66309)
       bool IsOpLoad = isa<LoadSDNode>(C.getNode()) &&
-                      cast<LSBaseSDNode>(C.getNode())->isSimple();
+                      cast<LSBaseSDNode>(C.getNode())->isUnordered();
       if ((IsLoad && IsOpLoad) || !mayAlias(N, C.getNode())) {
         // Look further up the chain.
         C = C.getOperand(0);
@@ -28115,8 +28108,8 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
     // If the chain has more than one use, then we can't reorder the mem ops.
     if (!SDValue(Chain, 0)->hasOneUse())
       break;
-    // TODO: Relax for unordered atomics (see D66309)
-    if (!Chain->isSimple() || Chain->isIndexed())
+
+    if (!Chain->isUnordered() || Chain->isIndexed())
       break;
 
     // Find the base pointer and offset for this memory node.
