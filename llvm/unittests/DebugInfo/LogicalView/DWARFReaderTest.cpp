@@ -1,4 +1,4 @@
-//===- llvm/unittest/DebugInfo/LogicalView/ELFReaderTest.cpp --------------===//
+//===- llvm/unittest/DebugInfo/LogicalView/DWARFReaderTest.cpp ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -323,7 +323,7 @@ void compareElements(SmallString<128> &InputsDir) {
   checkElementComparison(Reference.get(), Target.get());
 }
 
-TEST(LogicalViewTest, ELFReader) {
+TEST(LogicalViewTest, DWARFReader) {
   // Initialize targets and assembly printers/parsers.
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();

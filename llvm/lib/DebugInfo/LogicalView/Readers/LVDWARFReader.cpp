@@ -1,4 +1,4 @@
-//===-- LVELFReader.cpp ---------------------------------------------------===//
+//===-- LVDWARFReader.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This implements the LVELFReader class.
+// This implements the LVDWARFReader class.
 // It supports ELF, Mach-O and Wasm binary formats.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/LogicalView/Readers/LVELFReader.h"
+#include "llvm/DebugInfo/LogicalView/Readers/LVDWARFReader.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
@@ -27,9 +27,9 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::logicalview;
 
-#define DEBUG_TYPE "ElfReader"
+#define DEBUG_TYPE "DWARFReader"
 
-LVElement *LVELFReader::createElement(dwarf::Tag Tag) {
+LVElement *LVDWARFReader::createElement(dwarf::Tag Tag) {
   CurrentScope = nullptr;
   CurrentSymbol = nullptr;
   CurrentType = nullptr;
@@ -243,8 +243,9 @@ LVElement *LVELFReader::createElement(dwarf::Tag Tag) {
   return nullptr;
 }
 
-void LVELFReader::processOneAttribute(const DWARFDie &Die, LVOffset *OffsetPtr,
-                                      const AttributeSpec &AttrSpec) {
+void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
+                                        LVOffset *OffsetPtr,
+                                        const AttributeSpec &AttrSpec) {
   uint64_t OffsetOnEntry = *OffsetPtr;
   DWARFUnit *U = Die.getDwarfUnit();
   const DWARFFormValue &FormValue =
@@ -515,8 +516,8 @@ void LVELFReader::processOneAttribute(const DWARFDie &Die, LVOffset *OffsetPtr,
   }
 }
 
-LVScope *LVELFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
-                                    DWARFDie &SkeletonDie) {
+LVScope *LVDWARFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
+                                      DWARFDie &SkeletonDie) {
   // If the input DIE corresponds to the compile unit, it can be:
   // a) Simple DWARF: a standard DIE. Ignore the skeleton DIE (is empty).
   // b) Split DWARF: the DIE for the split DWARF. The skeleton is the DIE
@@ -688,8 +689,8 @@ LVScope *LVELFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
   return CurrentScope;
 }
 
-void LVELFReader::traverseDieAndChildren(DWARFDie &DIE, LVScope *Parent,
-                                         DWARFDie &SkeletonDie) {
+void LVDWARFReader::traverseDieAndChildren(DWARFDie &DIE, LVScope *Parent,
+                                           DWARFDie &SkeletonDie) {
   // Process the current DIE.
   LVScope *Scope = processOneDie(DIE, Parent, SkeletonDie);
   if (Scope) {
@@ -709,13 +710,13 @@ void LVELFReader::traverseDieAndChildren(DWARFDie &DIE, LVScope *Parent,
   }
 }
 
-void LVELFReader::processLocationGaps() {
+void LVDWARFReader::processLocationGaps() {
   if (options().getAttributeAnyLocation())
     for (LVSymbol *Symbol : SymbolsWithLocations)
       Symbol->fillLocationGaps();
 }
 
-void LVELFReader::createLineAndFileRecords(
+void LVDWARFReader::createLineAndFileRecords(
     const DWARFDebugLine::LineTable *Lines) {
   if (!Lines)
     return;
@@ -772,8 +773,8 @@ void LVELFReader::createLineAndFileRecords(
     }
 }
 
-std::string LVELFReader::getRegisterName(LVSmall Opcode,
-                                         ArrayRef<uint64_t> Operands) {
+std::string LVDWARFReader::getRegisterName(LVSmall Opcode,
+                                           ArrayRef<uint64_t> Operands) {
   // The 'prettyPrintRegisterOp' function uses the DWARFUnit to support
   // DW_OP_regval_type. At this point we are operating on a logical view
   // item, with no access to the underlying DWARF data used by LLVM.
@@ -800,7 +801,7 @@ std::string LVELFReader::getRegisterName(LVSmall Opcode,
   return Stream.str();
 }
 
-Error LVELFReader::createScopes() {
+Error LVDWARFReader::createScopes() {
   LLVM_DEBUG({
     W.startLine() << "\n";
     W.printString("File", Obj.getFileName().str());
@@ -980,11 +981,11 @@ Error LVELFReader::createScopes() {
 }
 
 // Get the location information for the associated attribute.
-void LVELFReader::processLocationList(dwarf::Attribute Attr,
-                                      const DWARFFormValue &FormValue,
-                                      const DWARFDie &Die,
-                                      uint64_t OffsetOnEntry,
-                                      bool CallSiteLocation) {
+void LVDWARFReader::processLocationList(dwarf::Attribute Attr,
+                                        const DWARFFormValue &FormValue,
+                                        const DWARFDie &Die,
+                                        uint64_t OffsetOnEntry,
+                                        bool CallSiteLocation) {
 
   auto ProcessLocationExpression = [&](const DWARFExpression &Expression) {
     for (const DWARFExpression::Operation &Op : Expression)
@@ -1061,10 +1062,10 @@ void LVELFReader::processLocationList(dwarf::Attribute Attr,
   }
 }
 
-void LVELFReader::processLocationMember(dwarf::Attribute Attr,
-                                        const DWARFFormValue &FormValue,
-                                        const DWARFDie &Die,
-                                        uint64_t OffsetOnEntry) {
+void LVDWARFReader::processLocationMember(dwarf::Attribute Attr,
+                                          const DWARFFormValue &FormValue,
+                                          const DWARFDie &Die,
+                                          uint64_t OffsetOnEntry) {
   // Check if the value is an integer constant.
   if (FormValue.isFormClass(DWARFFormValue::FC_Constant))
     // Add a record to hold a constant as location.
@@ -1076,8 +1077,8 @@ void LVELFReader::processLocationMember(dwarf::Attribute Attr,
 }
 
 // Update the current element with the reference.
-void LVELFReader::updateReference(dwarf::Attribute Attr,
-                                  const DWARFFormValue &FormValue) {
+void LVDWARFReader::updateReference(dwarf::Attribute Attr,
+                                    const DWARFFormValue &FormValue) {
   // FIXME: We are assuming that at most one Reference (DW_AT_specification,
   // DW_AT_abstract_origin, ...) and at most one Type (DW_AT_import, DW_AT_type)
   // appear in any single DIE, but this may not be true.
@@ -1129,8 +1130,8 @@ void LVELFReader::updateReference(dwarf::Attribute Attr,
 }
 
 // Get an element given the DIE offset.
-LVElement *LVELFReader::getElementForOffset(LVOffset Offset, LVElement *Element,
-                                            bool IsType) {
+LVElement *LVDWARFReader::getElementForOffset(LVOffset Offset,
+                                              LVElement *Element, bool IsType) {
   auto Iter = ElementTable.try_emplace(Offset).first;
   // Update the element and all the references pointing to this element.
   LVElementEntry &Entry = Iter->second;
@@ -1143,7 +1144,7 @@ LVElement *LVELFReader::getElementForOffset(LVOffset Offset, LVElement *Element,
   return Entry.Element;
 }
 
-Error LVELFReader::loadTargetInfo(const ObjectFile &Obj) {
+Error LVDWARFReader::loadTargetInfo(const ObjectFile &Obj) {
   // Detect the architecture from the object file. We usually don't need OS
   // info to lookup a target and create register info.
   Triple TT;
@@ -1162,7 +1163,7 @@ Error LVELFReader::loadTargetInfo(const ObjectFile &Obj) {
   return loadGenericTargetInfo(TT.str(), FeaturesValue.getString());
 }
 
-void LVELFReader::mapRangeAddress(const ObjectFile &Obj) {
+void LVDWARFReader::mapRangeAddress(const ObjectFile &Obj) {
   for (auto Iter = Obj.symbol_begin(); Iter != Obj.symbol_end(); ++Iter) {
     const SymbolRef &Symbol = *Iter;
 
@@ -1238,9 +1239,9 @@ void LVELFReader::mapRangeAddress(const ObjectFile &Obj) {
   }
 }
 
-void LVELFReader::sortScopes() { Root->sort(); }
+void LVDWARFReader::sortScopes() { Root->sort(); }
 
-void LVELFReader::print(raw_ostream &OS) const {
+void LVDWARFReader::print(raw_ostream &OS) const {
   OS << "LVType\n";
   LLVM_DEBUG(dbgs() << "CreateReaders\n");
 }
