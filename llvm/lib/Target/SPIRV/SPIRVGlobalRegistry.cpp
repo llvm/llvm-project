@@ -24,7 +24,7 @@
 
 using namespace llvm;
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
-    : PointerSize(PointerSize) {}
+    : PointerSize(PointerSize), Bound(0) {}
 
 SPIRVType *SPIRVGlobalRegistry::assignIntTypeToVReg(unsigned BitWidth,
                                                     Register VReg,
@@ -894,6 +894,15 @@ const SPIRVType *SPIRVGlobalRegistry::retrieveScalarOrVectorIntType(
 bool SPIRVGlobalRegistry::isScalarOrVectorSigned(const SPIRVType *Type) const {
   const SPIRVType *IntType = retrieveScalarOrVectorIntType(Type);
   return IntType && IntType->getOperand(2).getImm() != 0;
+}
+
+unsigned SPIRVGlobalRegistry::getPointeeTypeOp(Register PtrReg) {
+  SPIRVType *PtrType = getSPIRVTypeForVReg(PtrReg);
+  SPIRVType *ElemType =
+      PtrType && PtrType->getOpcode() == SPIRV::OpTypePointer
+          ? getSPIRVTypeForVReg(PtrType->getOperand(2).getReg())
+          : nullptr;
+  return ElemType ? ElemType->getOpcode() : 0;
 }
 
 bool SPIRVGlobalRegistry::isBitcastCompatible(const SPIRVType *Type1,
