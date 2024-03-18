@@ -26,7 +26,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
