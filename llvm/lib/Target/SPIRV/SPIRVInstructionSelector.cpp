@@ -1228,12 +1228,34 @@ bool SPIRVInstructionSelector::selectConstVector(Register ResVReg,
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
 
+static unsigned getArrayComponentCount(MachineRegisterInfo *MRI,
+                                       const SPIRVType *ResType) {
+  Register OpReg = ResType->getOperand(2).getReg();
+  SPIRVType *OpDef = MRI->getVRegDef(OpReg);
+  if (!OpDef)
+    return 0;
+  if (OpDef->getOpcode() == SPIRV::ASSIGN_TYPE &&
+      OpDef->getOperand(1).isReg()) {
+    if (SPIRVType *RefDef = MRI->getVRegDef(OpDef->getOperand(1).getReg()))
+      OpDef = RefDef;
+  }
+  unsigned N = OpDef->getOpcode() == TargetOpcode::G_CONSTANT
+                   ? OpDef->getOperand(1).getCImm()->getValue().getZExtValue()
+                   : 0;
+  return N;
+}
+
 bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
                                                  const SPIRVType *ResType,
                                                  MachineInstr &I) const {
-  if (ResType->getOpcode() != SPIRV::OpTypeVector)
+  unsigned N = 0;
+  if (ResType->getOpcode() == SPIRV::OpTypeVector)
+    N = GR.getScalarOrVectorComponentCount(ResType);
+  else if (ResType->getOpcode() == SPIRV::OpTypeArray)
+    N = getArrayComponentCount(MRI, ResType);
+  else
     report_fatal_error("Cannot select G_SPLAT_VECTOR with a non-vector result");
-  unsigned N = GR.getScalarOrVectorComponentCount(ResType);
+
   unsigned OpIdx = I.getNumExplicitDefs();
   if (!I.getOperand(OpIdx).isReg())
     report_fatal_error("Unexpected argument in G_SPLAT_VECTOR");
