@@ -219,7 +219,7 @@ PPC_AIX_FEATURE("ppc32","CPU supports 32-bit mode execution",AIX_BUILTIN_PPC_TRU
 PPC_AIX_FEATURE("ppc601","CPU supports the old POWER ISA (eg, 601)",AIX_BUILTIN_PPC_FALSE,0,0,CmpInst::Predicate(),0)
 PPC_AIX_FEATURE("ppc64","CPU supports 64-bit mode execution",AIX_BUILTIN_PPC_TRUE,0,0,CmpInst::Predicate(),0)
 PPC_AIX_FEATURE("ppcle","CPU supports a little-endian mode that uses address swizzling",AIX_BUILTIN_PPC_FALSE,0,0,CmpInst::Predicate(),0)
-PPC_AIX_FEATURE("smt","CPU support simultaneous multi-threading",USE_SYS_CONF,AIX_SYSCON_SMT_IDX,0x3,ICmpInst::ICMP_EQ,0x3)
+PPC_AIX_FEATURE("smt","CPU supports simultaneous multi-threading",USE_SYS_CONF,AIX_SYSCON_SMT_IDX,0x3,ICmpInst::ICMP_EQ,0x3)
 PPC_AIX_FEATURE("spe","CPU has a signal processing extension unit",AIX_BUILTIN_PPC_FALSE,0,0,CmpInst::Predicate(),0)
 PPC_AIX_FEATURE("tar","CPU supports the target address register",USE_SYS_CONF,AIX_SYSCON_IMPL_IDX,0,ICmpInst::ICMP_UGE,AIX_PPC8_VALUE)
 PPC_AIX_FEATURE("true_le","CPU supports true little-endian mode",AIX_BUILTIN_PPC_TRUE,0,0,CmpInst::Predicate(),0)
