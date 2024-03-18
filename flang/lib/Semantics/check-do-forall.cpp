@@ -440,11 +440,10 @@ public:
       CheckForImpureCall(assignment->rhs);
 
       if (IsVariable(assignment->lhs)) {
-        if (const Symbol *symbol{GetLastSymbol(assignment->lhs)}) {
+        if (const Symbol * symbol{GetLastSymbol(assignment->lhs)}) {
           if (auto impureFinal{
                   HasImpureFinal(*symbol, assignment->lhs.Rank())}) {
-            context_.SayWithDecl(
-                *symbol, parser::FindSourceLocation(stmt),
+            context_.SayWithDecl(*symbol, parser::FindSourceLocation(stmt),
                 "Impure procedure '%s' is referenced by finalization in a %s"_err_en_US,
                 impureFinal->name(), LoopKindName());
           }
