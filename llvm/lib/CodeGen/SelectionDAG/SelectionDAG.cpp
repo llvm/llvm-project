@@ -4086,11 +4086,6 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::INTRINSIC_WO_CHAIN:
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_VOID:
-    // TODO: Probably okay to remove after audit; here to reduce change size
-    // in initial enablement patch for scalable vectors
-    if (Op.getValueType().isScalableVector())
-      break;
-
     // Allow the target to implement this method for its nodes.
     TLI->computeKnownBitsForTargetNode(Op, Known, DemandedElts, *this, Depth);
     break;
@@ -4929,18 +4924,12 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   }
 
   // Allow the target to implement this method for its nodes.
-  if (Opcode >= ISD::BUILTIN_OP_END ||
-      Opcode == ISD::INTRINSIC_WO_CHAIN ||
-      Opcode == ISD::INTRINSIC_W_CHAIN ||
-      Opcode == ISD::INTRINSIC_VOID) {
-    // TODO: This can probably be removed once target code is audited.  This
-    // is here purely to reduce patch size and review complexity.
-    if (!VT.isScalableVector()) {
-      unsigned NumBits =
+  if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
+      Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID) {
+    unsigned NumBits =
         TLI->ComputeNumSignBitsForTargetNode(Op, DemandedElts, *this, Depth);
-      if (NumBits > 1)
-        FirstAnswer = std::max(FirstAnswer, NumBits);
-    }
+    if (NumBits > 1)
+      FirstAnswer = std::max(FirstAnswer, NumBits);
   }
 
   // Finally, if we can prove that the top bits of the result are 0's or 1's,
