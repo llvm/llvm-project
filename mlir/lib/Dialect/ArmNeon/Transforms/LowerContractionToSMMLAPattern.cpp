@@ -38,10 +38,10 @@ static Type matchContainerType(Type element, Type container) {
   return element;
 }
 
-/// Lowering from a vector::contractOp arm neon smmla intrinsic. This up to an
-/// 8x8x8 vector contract that is tiled (up to 16) smmla instructions with
-/// unrolling. If no unrolling is necessary, a single smmla instruction is
-/// emitted.
+/// Lowering from a vector::contractOp arm neon smmla intrinsic. This will tile
+/// any vector.contract into multiple smmla instructions with unrolling so long
+/// as [2,2,8] is a divisor of its shape. If no unrolling is necessary, a single
+/// smmla instruction is emitted.
 class LowerContractionToSMMLAPattern
     : public OpRewritePattern<vector::ContractionOp> {
 public:
@@ -72,9 +72,9 @@ public:
     auto dimN = rhsType.getDimSize(0);
     auto dimK = lhsType.getDimSize(1);
 
-    // Unrolling patterns can handle [(2|4|8), (2|4|8), 8] shaped inputs for
+    // Unrolling patterns can handle any [2, 2, 8] shaped multiple of inputs for
     // tiling.
-    if (dimM % 2 != 0 || dimM > 8 || dimN % 2 != 0 || dimN > 8 || dimK != 8) {
+    if (dimM % 2 != 0 || dimN % 2 != 0 || dimK % 8 != 0) {
       return failure();
     }
 
@@ -139,15 +139,15 @@ public:
       AffineMap lhsPermutationMap = op.getIndexingMapsArray()[0];
       SmallVector<int64_t> lhsOffsets =
           applyPermutationMap(lhsPermutationMap, ArrayRef<int64_t>(offsets));
-      auto tiledLhs = extractOperand(extsiLhs, lhsPermutationMap, lhsOffsets);
+      Value tiledLhs = extractOperand(extsiLhs, lhsPermutationMap, lhsOffsets);
       AffineMap rhsPermutationMap = op.getIndexingMapsArray()[1];
       SmallVector<int64_t> rhsOffsets =
           applyPermutationMap(rhsPermutationMap, ArrayRef<int64_t>(offsets));
-      auto tiledRhs = extractOperand(extsiRhs, rhsPermutationMap, rhsOffsets);
+      Value tiledRhs = extractOperand(extsiRhs, rhsPermutationMap, rhsOffsets);
       AffineMap accPermutationMap = op.getIndexingMapsArray()[2];
       SmallVector<int64_t> accOffsets =
           applyPermutationMap(accPermutationMap, ArrayRef<int64_t>(offsets));
-      auto tiledAcc =
+      Value tiledAcc =
           extractOperand(op.getAcc(), accPermutationMap, accOffsets);
 
       // Collapse tiled operands to 1D vectors required by smmla intrinsic
