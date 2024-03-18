@@ -366,7 +366,7 @@ void PEI::calculateCallFrameInfo(MachineFunction &MF) {
     return;
 
   // (Re-)Compute the MaxCallFrameSize.
-  uint32_t MaxCFSIn =
+  [[maybe_unused]] uint32_t MaxCFSIn =
       MFI.isMaxCallFrameSizeComputed() ? MFI.getMaxCallFrameSize() : UINT32_MAX;
   std::vector<MachineBasicBlock::iterator> FrameSDOps;
   MFI.computeMaxCallFrameSize(MF, &FrameSDOps);
