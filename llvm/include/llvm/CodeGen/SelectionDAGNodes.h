@@ -558,6 +558,7 @@ BEGIN_TWO_BYTE_PACK()
 
   class LoadSDNodeBitfields {
     friend class LoadSDNode;
+    friend class AtomicSDNode;
     friend class VPLoadSDNode;
     friend class VPStridedLoadSDNode;
     friend class MaskedLoadSDNode;
@@ -1473,6 +1474,16 @@ public:
     : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
     assert(((Opc != ISD::ATOMIC_LOAD && Opc != ISD::ATOMIC_STORE) ||
             MMO->isAtomic()) && "then why are we using an AtomicSDNode?");
+  }
+
+  void setExtensionType(ISD::LoadExtType ETy) {
+    assert(getOpcode() == ISD::ATOMIC_LOAD && "Only used for atomic loads.");
+    LoadSDNodeBits.ExtTy = ETy;
+  }
+
+  ISD::LoadExtType getExtensionType() const {
+    assert(getOpcode() == ISD::ATOMIC_LOAD && "Only used for atomic loads.");
+    return static_cast<ISD::LoadExtType>(LoadSDNodeBits.ExtTy);
   }
 
   const SDValue &getBasePtr() const {

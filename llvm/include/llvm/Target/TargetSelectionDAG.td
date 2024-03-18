@@ -318,7 +318,7 @@ def SDTAtomicStore : SDTypeProfile<0, 2, [
   SDTCisInt<0>, SDTCisPtrTy<1>
 ]>;
 def SDTAtomicLoad : SDTypeProfile<1, 1, [
-  SDTCisInt<0>, SDTCisPtrTy<1>
+  SDTCisPtrTy<1>
 ]>;
 
 class SDCallSeqStart<list<SDTypeConstraint> constraints> :
