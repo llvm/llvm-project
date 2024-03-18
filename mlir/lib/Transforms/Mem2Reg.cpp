@@ -14,10 +14,8 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
@@ -635,13 +633,6 @@ LogicalResult mlir::tryToPromoteMemorySlots(
   return success(promotedAny);
 }
 
-LogicalResult
-Mem2RegPattern::matchAndRewrite(PromotableAllocationOpInterface allocator,
-                                PatternRewriter &rewriter) const {
-  hasBoundedRewriteRecursion();
-  return tryToPromoteMemorySlots({allocator}, rewriter, statistics);
-}
-
 namespace {
 
 struct Mem2Reg : impl::Mem2RegBase<Mem2Reg> {
@@ -650,17 +641,36 @@ struct Mem2Reg : impl::Mem2RegBase<Mem2Reg> {
   void runOnOperation() override {
     Operation *scopeOp = getOperation();
 
-    Mem2RegStatistics statictics{&promotedAmount, &newBlockArgumentAmount};
+    Mem2RegStatistics statistics{&promotedAmount, &newBlockArgumentAmount};
 
-    GreedyRewriteConfig config;
-    config.enableRegionSimplification = enableRegionSimplification;
+    bool changed = false;
 
-    RewritePatternSet rewritePatterns(&getContext());
-    rewritePatterns.add<Mem2RegPattern>(&getContext(), statictics);
-    FrozenRewritePatternSet frozen(std::move(rewritePatterns));
+    for (Region &region : scopeOp->getRegions()) {
+      if (region.getBlocks().empty())
+        continue;
 
-    if (failed(applyPatternsAndFoldGreedily(scopeOp, frozen, config)))
-      signalPassFailure();
+      OpBuilder builder(&region.front(), region.front().begin());
+      IRRewriter rewriter(builder);
+
+      // Promoting a slot can allow for further promotion of other slots,
+      // promotion is tried until no promotion succeeds.
+      while (true) {
+        SmallVector<PromotableAllocationOpInterface> allocators;
+        // Build a list of allocators to attempt to promote the slots of.
+        region.walk([&](PromotableAllocationOpInterface allocator) {
+          allocators.emplace_back(allocator);
+        });
+
+        // Attempt promoting until no promotion succeeds.
+        if (failed(tryToPromoteMemorySlots(allocators, rewriter, statistics)))
+          break;
+
+        changed = true;
+        getAnalysisManager().invalidate({});
+      }
+    }
+    if (!changed)
+      markAllAnalysesPreserved();
   }
 };
 
