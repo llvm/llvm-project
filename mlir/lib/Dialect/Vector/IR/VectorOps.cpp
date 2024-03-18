@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -31,6 +32,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -374,6 +376,14 @@ void VectorDialect::initialize() {
       >();
 
   addInterfaces<VectorInlinerInterface>();
+
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface,
+                            TransferReadOp, TransferWriteOp, GatherOp, MaskOp,
+                            YieldOp>();
+  declarePromisedInterfaces<SubsetOpInterface, TransferReadOp,
+                            TransferWriteOp>();
+  declarePromisedInterface<TransferReadOp, SubsetExtractionOpInterface>();
+  declarePromisedInterface<TransferWriteOp, SubsetInsertionOpInterface>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
