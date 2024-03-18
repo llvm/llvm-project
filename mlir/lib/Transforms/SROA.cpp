@@ -229,6 +229,8 @@ struct SROA : public impl::SROABase<SROA> {
       while (true) {
         SmallVector<DestructurableAllocationOpInterface> allocators;
         // Build a list of allocators to attempt to destructure the slots of.
+        // TODO: Update list on the fly to avoid repeated visiting of the same
+        // allocators.
         region.walk([&](DestructurableAllocationOpInterface allocator) {
           allocators.emplace_back(allocator);
         });
