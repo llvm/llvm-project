@@ -120,9 +120,7 @@ macro(add_msan_tests_for_arch arch kind cflags)
   set(MSAN_TEST_DEPS ${MSAN_TEST_OBJECTS} libcxx_msan_${arch}-build
                      ${MSAN_LOADABLE_SO}
 		     "${MSAN_LIBCXX_DIR}/libc++.a" "${MSAN_LIBCXX_DIR}/libc++abi.a")
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND MSAN_TEST_DEPS msan)
-  endif()
+  list(APPEND MSAN_TEST_DEPS msan)
   get_target_flags_for_arch(${arch} TARGET_LINK_FLAGS)
   add_compiler_rt_test(MsanUnitTests "Msan-${arch}${kind}-Test" ${arch}
     OBJECTS ${MSAN_TEST_OBJECTS} "${MSAN_LIBCXX_DIR}/libc++.a" "${MSAN_LIBCXX_DIR}/libc++abi.a"
