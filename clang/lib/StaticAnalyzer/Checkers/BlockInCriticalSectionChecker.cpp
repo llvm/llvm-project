@@ -222,7 +222,7 @@ std::optional<MutexDescriptor>
 BlockInCriticalSectionChecker::checkDescriptorMatch(const CallEvent &Call,
                                                     CheckerContext &C,
                                                     bool IsLock) const {
-  const MutexDescriptor *Descriptor =
+  const auto Descriptor =
       llvm::find_if(MutexDescriptors, [&Call, IsLock](auto &&Descriptor) {
         return std::visit(
             [&Call, IsLock](auto &&DescriptorImpl) {
@@ -351,7 +351,7 @@ BlockInCriticalSectionChecker::createCritSectionNote(CritSectionMarker M,
 
     // Find the index of the lock expression in the list of all locks for a
     // given mutex (in acquisition order).
-    const auto *Position =
+    const auto Position =
         llvm::find_if(std::as_const(LocksForMutex), [M](const auto &Marker) {
           return Marker.LockExpr == M.LockExpr;
         });
