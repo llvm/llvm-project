@@ -13,6 +13,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/fixed_point/fx_rep.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "test/UnitTest/TestLogger.h"
 
 #if __STDC_HOSTED__
@@ -39,7 +40,7 @@ TestLogger &operator<<(TestLogger &logger, Location Loc) {
 // digits.
 template <typename T>
 cpp::enable_if_t<(cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t))) ||
-                     cpp::is_big_int_v<T>,
+                     is_big_int_v<T>,
                  cpp::string>
 describeValue(T Value) {
   static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
@@ -215,18 +216,18 @@ TEST_SPECIALIZATION(bool);
 
 // We cannot just use a single UInt128 specialization as that resolves to only
 // one type, UInt<128> or __uint128_t. We want both overloads as we want to
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
 // When builtin __uint128_t type is available, include its specialization
 // also.
 TEST_SPECIALIZATION(__uint128_t);
-#endif
+#endif // LIBC_TYPES_HAS_INT128
 
-TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::Int<128>);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::Int<128>);
 
-TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::UInt<128>);
-TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::UInt<192>);
-TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::UInt<256>);
-TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::UInt<320>);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<128>);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<192>);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<256>);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<320>);
 
 TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::string_view);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::string);

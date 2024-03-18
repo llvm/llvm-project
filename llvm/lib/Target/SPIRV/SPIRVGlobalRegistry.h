@@ -34,6 +34,7 @@ class SPIRVGlobalRegistry {
   DenseMap<const MachineFunction *, DenseMap<Register, SPIRVType *>>
       VRegToTypeMap;
 
+  // Map LLVM Type* to <MF, Reg>
   SPIRVGeneralDuplicatesTracker DT;
 
   DenseMap<SPIRVType *, const Type *> SPIRVToLLVMType;
@@ -197,9 +198,10 @@ public:
   // opcode (e.g. OpTypeBool, or OpTypeVector %x 4, where %x is OpTypeBool).
   bool isScalarOrVectorOfType(Register VReg, unsigned TypeOpcode) const;
 
-  // Return number of elements in a vector if the given VReg is associated with
+  // Return number of elements in a vector if the argument is associated with
   // a vector type. Return 1 for a scalar type, and 0 for a missing type.
   unsigned getScalarOrVectorComponentCount(Register VReg) const;
+  unsigned getScalarOrVectorComponentCount(SPIRVType *Type) const;
 
   // For vectors or scalars of booleans, integers and floats, return the scalar
   // type's bitwidth. Otherwise calls llvm_unreachable().

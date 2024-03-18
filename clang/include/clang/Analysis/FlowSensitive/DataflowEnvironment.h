@@ -445,6 +445,11 @@ public:
     return createObjectInternal(&D, D.getType(), InitExpr);
   }
 
+  /// Initializes the fields (including synthetic fields) of `Loc` with values,
+  /// unless values of the field type are not supported or we hit one of the
+  /// limits at which we stop producing values.
+  void initializeFieldsWithValues(RecordStorageLocation &Loc);
+
   /// Assigns `Val` as the value of `Loc` in the environment.
   void setValue(const StorageLocation &Loc, Value &Val);
 

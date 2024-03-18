@@ -381,7 +381,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Portable assumptions</td>
       <td><a href="https://wg21.link/P1774R8">P1774R8</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
     <tr>
       <td>Support for UTF-8 as a portable source file encoding</td>
@@ -836,7 +836,13 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Class template argument deduction for alias templates</td>
       <td><a href="https://wg21.link/p1814r0">P1814R0</a></td>
-      <td class="none" align="center">No</td>
+      <td class="partial" align="center">
+        <details>
+          <summary>Clang 19 (Partial)</summary>
+          The associated constraints (over.match.class.deduct#3.3) for the
+          synthesized deduction guides are not yet implemented.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>Permit conversions to arrays of unknown bound</td>

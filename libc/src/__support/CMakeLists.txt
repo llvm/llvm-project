@@ -34,6 +34,7 @@ add_header_library(
   HDRS
     math_extras.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
@@ -195,29 +196,17 @@ add_header_library(
 )
 
 add_header_library(
-  integer_utils
-  HDRS
-    integer_utils.h
-  DEPENDS
-    .math_extras
-    .number_pair
-    libc.src.__support.common
-    libc.src.__support.CPP.bit
-    libc.src.__support.CPP.type_traits
-)
-
-add_header_library(
   uint
   HDRS
     UInt.h
   DEPENDS
-    .integer_utils
     .math_extras
     .number_pair
     libc.src.__support.CPP.array
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
@@ -226,6 +215,7 @@ add_header_library(
     UInt128.h
   DEPENDS
     .uint
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(

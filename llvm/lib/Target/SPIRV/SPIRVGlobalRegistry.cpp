@@ -20,6 +20,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/IR/TypedPointerType.h"
 
 using namespace llvm;
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
@@ -420,9 +421,10 @@ Register
 SPIRVGlobalRegistry::getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
                                              SPIRVType *SpvType) {
   const Type *LLVMTy = getTypeForSPIRVType(SpvType);
-  const PointerType *LLVMPtrTy = cast<PointerType>(LLVMTy);
+  const TypedPointerType *LLVMPtrTy = cast<TypedPointerType>(LLVMTy);
   // Find a constant in DT or build a new one.
-  Constant *CP = ConstantPointerNull::get(const_cast<PointerType *>(LLVMPtrTy));
+  Constant *CP = ConstantPointerNull::get(PointerType::get(
+      LLVMPtrTy->getElementType(), LLVMPtrTy->getAddressSpace()));
   Register Res = DT.find(CP, CurMF);
   if (!Res.isValid()) {
     LLT LLTy = LLT::pointer(LLVMPtrTy->getAddressSpace(), PointerSize);
@@ -517,6 +519,13 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
     LLT RegLLTy = LLT::pointer(MRI->getType(ResVReg).getAddressSpace(), 32);
     MRI->setType(Reg, RegLLTy);
     assignSPIRVTypeToVReg(BaseType, Reg, MIRBuilder.getMF());
+  } else {
+    // Our knowledge about the type may be updated.
+    // If that's the case, we need to update a type
+    // associated with the register.
+    SPIRVType *DefType = getSPIRVTypeForVReg(ResVReg);
+    if (!DefType || DefType != BaseType)
+      assignSPIRVTypeToVReg(BaseType, Reg, MIRBuilder.getMF());
   }
 
   // If it's a global variable with name, output OpName for it.
@@ -705,39 +714,43 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     }
     return getOpTypeFunction(RetTy, ParamTypes, MIRBuilder);
   }
-  if (auto PType = dyn_cast<PointerType>(Ty)) {
-    SPIRVType *SpvElementType;
-    // At the moment, all opaque pointers correspond to i8 element type.
-    // TODO: change the implementation once opaque pointers are supported
-    // in the SPIR-V specification.
-    SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
-    // Get access to information about available extensions
-    const SPIRVSubtarget *ST =
-        static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
-    auto SC = addressSpaceToStorageClass(PType->getAddressSpace(), *ST);
-    // Null pointer means we have a loop in type definitions, make and
-    // return corresponding OpTypeForwardPointer.
-    if (SpvElementType == nullptr) {
-      if (!ForwardPointerTypes.contains(Ty))
-        ForwardPointerTypes[PType] = getOpTypeForwardPointer(SC, MIRBuilder);
-      return ForwardPointerTypes[PType];
-    }
-    // If we have forward pointer associated with this type, use its register
-    // operand to create OpTypePointer.
-    if (ForwardPointerTypes.contains(PType)) {
-      Register Reg = getSPIRVTypeID(ForwardPointerTypes[PType]);
-      return getOpTypePointer(SC, SpvElementType, MIRBuilder, Reg);
-    }
-
-    return getOrCreateSPIRVPointerType(SpvElementType, MIRBuilder, SC);
+  unsigned AddrSpace = 0xFFFF;
+  if (auto PType = dyn_cast<TypedPointerType>(Ty))
+    AddrSpace = PType->getAddressSpace();
+  else if (auto PType = dyn_cast<PointerType>(Ty))
+    AddrSpace = PType->getAddressSpace();
+  else
+    report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
+  SPIRVType *SpvElementType;
+  // At the moment, all opaque pointers correspond to i8 element type.
+  // TODO: change the implementation once opaque pointers are supported
+  // in the SPIR-V specification.
+  SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+  // Get access to information about available extensions
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+  auto SC = addressSpaceToStorageClass(AddrSpace, *ST);
+  // Null pointer means we have a loop in type definitions, make and
+  // return corresponding OpTypeForwardPointer.
+  if (SpvElementType == nullptr) {
+    if (!ForwardPointerTypes.contains(Ty))
+      ForwardPointerTypes[Ty] = getOpTypeForwardPointer(SC, MIRBuilder);
+    return ForwardPointerTypes[Ty];
   }
-  llvm_unreachable("Unable to convert LLVM type to SPIRVType");
+  // If we have forward pointer associated with this type, use its register
+  // operand to create OpTypePointer.
+  if (ForwardPointerTypes.contains(Ty)) {
+    Register Reg = getSPIRVTypeID(ForwardPointerTypes[Ty]);
+    return getOpTypePointer(SC, SpvElementType, MIRBuilder, Reg);
+  }
+
+  return getOrCreateSPIRVPointerType(SpvElementType, MIRBuilder, SC);
 }
 
 SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
-  if (TypesInProcessing.count(Ty) && !Ty->isPointerTy())
+  if (TypesInProcessing.count(Ty) && !isPointerTy(Ty))
     return nullptr;
   TypesInProcessing.insert(Ty);
   SPIRVType *SpirvType = createSPIRVType(Ty, MIRBuilder, AccessQual, EmitIR);
@@ -749,11 +762,15 @@ SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
   // will be added later. For special types it is already added to DT.
   if (SpirvType->getOpcode() != SPIRV::OpTypeForwardPointer && !Reg.isValid() &&
       !isSpecialOpaqueType(Ty)) {
-    if (!Ty->isPointerTy())
+    if (!isPointerTy(Ty))
       DT.add(Ty, &MIRBuilder.getMF(), getSPIRVTypeID(SpirvType));
+    else if (isTypedPointerTy(Ty))
+      DT.add(cast<TypedPointerType>(Ty)->getElementType(),
+             getPointerAddressSpace(Ty), &MIRBuilder.getMF(),
+             getSPIRVTypeID(SpirvType));
     else
       DT.add(Type::getInt8Ty(MIRBuilder.getMF().getFunction().getContext()),
-             Ty->getPointerAddressSpace(), &MIRBuilder.getMF(),
+             getPointerAddressSpace(Ty), &MIRBuilder.getMF(),
              getSPIRVTypeID(SpirvType));
   }
 
@@ -774,12 +791,15 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
   Register Reg;
-  if (!Ty->isPointerTy())
+  if (!isPointerTy(Ty))
     Reg = DT.find(Ty, &MIRBuilder.getMF());
+  else if (isTypedPointerTy(Ty))
+    Reg = DT.find(cast<TypedPointerType>(Ty)->getElementType(),
+                  getPointerAddressSpace(Ty), &MIRBuilder.getMF());
   else
     Reg =
         DT.find(Type::getInt8Ty(MIRBuilder.getMF().getFunction().getContext()),
-                Ty->getPointerAddressSpace(), &MIRBuilder.getMF());
+                getPointerAddressSpace(Ty), &MIRBuilder.getMF());
 
   if (Reg.isValid() && !isSpecialOpaqueType(Ty))
     return getSPIRVTypeForVReg(Reg);
@@ -823,11 +843,16 @@ bool SPIRVGlobalRegistry::isScalarOrVectorOfType(Register VReg,
 
 unsigned
 SPIRVGlobalRegistry::getScalarOrVectorComponentCount(Register VReg) const {
-  if (SPIRVType *Type = getSPIRVTypeForVReg(VReg))
-    return Type->getOpcode() == SPIRV::OpTypeVector
-               ? static_cast<unsigned>(Type->getOperand(2).getImm())
-               : 1;
-  return 0;
+  return getScalarOrVectorComponentCount(getSPIRVTypeForVReg(VReg));
+}
+
+unsigned
+SPIRVGlobalRegistry::getScalarOrVectorComponentCount(SPIRVType *Type) const {
+  if (!Type)
+    return 0;
+  return Type->getOpcode() == SPIRV::OpTypeVector
+             ? static_cast<unsigned>(Type->getOperand(2).getImm())
+             : 1;
 }
 
 unsigned
@@ -1139,11 +1164,13 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     SPIRV::StorageClass::StorageClass SC) {
   const Type *PointerElementType = getTypeForSPIRVType(BaseType);
   unsigned AddressSpace = storageClassToAddressSpace(SC);
-  Type *LLVMTy =
-      PointerType::get(const_cast<Type *>(PointerElementType), AddressSpace);
+  Type *LLVMTy = TypedPointerType::get(const_cast<Type *>(PointerElementType),
+                                       AddressSpace);
+  // check if this type is already available
   Register Reg = DT.find(PointerElementType, AddressSpace, CurMF);
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
+  // create a new type
   auto MIB = BuildMI(MIRBuilder.getMBB(), MIRBuilder.getInsertPt(),
                      MIRBuilder.getDebugLoc(),
                      MIRBuilder.getTII().get(SPIRV::OpTypePointer))
@@ -1155,22 +1182,10 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
-    SPIRVType *BaseType, MachineInstr &I, const SPIRVInstrInfo &TII,
+    SPIRVType *BaseType, MachineInstr &I, const SPIRVInstrInfo &,
     SPIRV::StorageClass::StorageClass SC) {
-  const Type *PointerElementType = getTypeForSPIRVType(BaseType);
-  unsigned AddressSpace = storageClassToAddressSpace(SC);
-  Type *LLVMTy =
-      PointerType::get(const_cast<Type *>(PointerElementType), AddressSpace);
-  Register Reg = DT.find(PointerElementType, AddressSpace, CurMF);
-  if (Reg.isValid())
-    return getSPIRVTypeForVReg(Reg);
-  MachineBasicBlock &BB = *I.getParent();
-  auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpTypePointer))
-                 .addDef(createTypeVReg(CurMF->getRegInfo()))
-                 .addImm(static_cast<uint32_t>(SC))
-                 .addUse(getSPIRVTypeID(BaseType));
-  DT.add(PointerElementType, AddressSpace, CurMF, getSPIRVTypeID(MIB));
-  return finishCreatingSPIRVType(LLVMTy, MIB);
+  MachineIRBuilder MIRBuilder(I);
+  return getOrCreateSPIRVPointerType(BaseType, MIRBuilder, SC);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateUndef(MachineInstr &I,

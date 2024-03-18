@@ -1038,7 +1038,7 @@ public:
 
   ~ObjCClassSyntheticChildrenFrontEnd() override = default;
 
-  uint32_t CalculateNumChildren() override { return 0; }
+  llvm::Expected<uint32_t> CalculateNumChildren() override { return 0; }
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     return lldb::ValueObjectSP();

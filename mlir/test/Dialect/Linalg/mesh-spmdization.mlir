@@ -1,6 +1,5 @@
 // RUN: mlir-opt \
-// RUN:  --mesh-spmdization \
-// RUN:  --test-constant-fold \
+// RUN:  --pass-pipeline="builtin.module(func.func(mesh-spmdization,test-constant-fold))" \
 // RUN:  --split-input-file \
 // RUN:  %s | FileCheck %s
 

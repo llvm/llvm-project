@@ -432,8 +432,15 @@ void Environment::initialize() {
       }
     } else if (MethodDecl->isImplicitObjectMemberFunction()) {
       QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
-      setThisPointeeStorageLocation(
-          cast<RecordStorageLocation>(createObject(ThisPointeeType)));
+      auto &ThisLoc =
+          cast<RecordStorageLocation>(createStorageLocation(ThisPointeeType));
+      setThisPointeeStorageLocation(ThisLoc);
+      refreshRecordValue(ThisLoc, *this);
+      // Initialize fields of `*this` with values, but only if we're not
+      // analyzing a constructor; after all, it's the constructor's job to do
+      // this (and we want to be able to test that).
+      if (!isa<CXXConstructorDecl>(MethodDecl))
+        initializeFieldsWithValues(ThisLoc);
     }
   }
 }
@@ -817,6 +824,16 @@ Environment::getResultObjectLocation(const Expr &RecordPRValue) const {
 
 PointerValue &Environment::getOrCreateNullPointerValue(QualType PointeeType) {
   return DACtx->getOrCreateNullPointerValue(PointeeType);
+}
+
+void Environment::initializeFieldsWithValues(RecordStorageLocation &Loc) {
+  llvm::DenseSet<QualType> Visited;
+  int CreatedValuesCount = 0;
+  initializeFieldsWithValues(Loc, Visited, 0, CreatedValuesCount);
+  if (CreatedValuesCount > MaxCompositeValueSize) {
+    llvm::errs() << "Attempting to initialize a huge value of type: "
+                 << Loc.getType() << '\n';
+  }
 }
 
 void Environment::setValue(const StorageLocation &Loc, Value &Val) {
