@@ -4070,6 +4070,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     if (Op.getResNo() == 0) {
       if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
         Known.Zero.setBitsFrom(MemBits);
+      else if (Op->getOpcode() == ISD::ATOMIC_LOAD &&
+               cast<AtomicSDNode>(Op)->getExtensionType() == ISD::ZEXTLOAD)
+        Known.Zero.setBitsFrom(MemBits);
     }
     break;
   }
@@ -4875,6 +4878,13 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
         return VTBits - Tmp + 1;
       if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
         return VTBits - Tmp;
+      if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
+        ISD::LoadExtType ETy = cast<AtomicSDNode>(Op)->getExtensionType();
+        if (ETy == ISD::SEXTLOAD)
+          return VTBits - Tmp + 1;
+        if (ETy == ISD::ZEXTLOAD)
+          return VTBits - Tmp;
+      }
     }
     break;
   }
