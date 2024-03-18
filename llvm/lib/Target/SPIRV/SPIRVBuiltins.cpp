@@ -1280,7 +1280,8 @@ static bool generateAtomicInst(const SPIRV::IncomingCall *Call,
     return buildAtomicStoreInst(Call, MIRBuilder, GR);
   case SPIRV::OpAtomicCompareExchange:
   case SPIRV::OpAtomicCompareExchangeWeak:
-    return buildAtomicCompareExchangeInst(Call, Builtin, Opcode, MIRBuilder, GR);
+    return buildAtomicCompareExchangeInst(Call, Builtin, Opcode, MIRBuilder,
+                                          GR);
   case SPIRV::OpAtomicIAdd:
   case SPIRV::OpAtomicISub:
   case SPIRV::OpAtomicOr:
