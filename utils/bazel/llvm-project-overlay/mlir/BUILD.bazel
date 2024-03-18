@@ -13222,6 +13222,7 @@ cc_library(
         ":MLProgramTypesIncGen",
         ":Pass",
         ":Support",
+        ":Transforms",
         "//llvm:Support",
     ],
 )
