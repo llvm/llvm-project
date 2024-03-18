@@ -1327,7 +1327,7 @@ TEST(Local, ReplaceDPValue) {
   RetInst->DbgMarker = new DPMarker();
   RetInst->DbgMarker->MarkedInstr = RetInst;
   DPValue *DPV = new DPValue(DVI);
-  RetInst->DbgMarker->insertDPValue(DPV, false);
+  RetInst->DbgMarker->insertDbgRecord(DPV, false);
   // ... and erase the dbg.value.
   DVI->eraseFromParent();
 

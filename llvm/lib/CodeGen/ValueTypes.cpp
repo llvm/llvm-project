@@ -629,6 +629,8 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
   switch (Ty->getTypeID()) {
   default:
     return MVT::getVT(Ty, HandleUnknown);
+  case Type::TokenTyID:
+    return MVT::Untyped;
   case Type::IntegerTyID:
     return getIntegerVT(Ty->getContext(), cast<IntegerType>(Ty)->getBitWidth());
   case Type::FixedVectorTyID:

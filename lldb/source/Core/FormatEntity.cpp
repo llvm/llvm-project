@@ -926,7 +926,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     s.PutChar('[');
 
     if (index_higher < 0)
-      index_higher = valobj->GetNumChildren() - 1;
+      index_higher = valobj->GetNumChildrenIgnoringErrors() - 1;
 
     uint32_t max_num_children =
         target->GetTargetSP()->GetMaximumNumberOfChildrenToDisplay();
@@ -1792,7 +1792,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (sc && sc->line_entry.IsValid()) {
       Module *module = sc->module_sp.get();
       if (module) {
-        if (DumpFile(s, sc->line_entry.file, (FileKind)entry.number))
+        if (DumpFile(s, sc->line_entry.GetFile(), (FileKind)entry.number))
           return true;
       }
     }

@@ -517,7 +517,15 @@ def MethodSignatures : DiagGroup<"method-signatures">;
 def MismatchedParameterTypes : DiagGroup<"mismatched-parameter-types">;
 def MismatchedReturnTypes : DiagGroup<"mismatched-return-types">;
 def MismatchedTags : DiagGroup<"mismatched-tags">;
-def MissingFieldInitializers : DiagGroup<"missing-field-initializers">;
+def MissingDesignatedFieldInitializers : DiagGroup<"missing-designated-field-initializers">{
+  code Documentation = [{
+Warn about designated initializers with some fields missing (only in C++).
+  }];
+}
+// Default -Wmissing-field-initializers matches gcc behavior,
+// but missing-designated-field-initializers can be turned off to match old clang behavior.
+def MissingFieldInitializers : DiagGroup<"missing-field-initializers",
+                                         [MissingDesignatedFieldInitializers]>;
 def ModuleLock : DiagGroup<"module-lock">;
 def ModuleBuild : DiagGroup<"module-build">;
 def ModuleImport : DiagGroup<"module-import">;
@@ -609,7 +617,9 @@ def GNURedeclaredEnum : DiagGroup<"gnu-redeclared-enum">;
 def RedundantMove : DiagGroup<"redundant-move">;
 def Register : DiagGroup<"register", [DeprecatedRegister]>;
 def ReturnTypeCLinkage : DiagGroup<"return-type-c-linkage">;
-def ReturnType : DiagGroup<"return-type", [ReturnTypeCLinkage]>;
+def ReturnMismatch : DiagGroup<"return-mismatch">;
+def ReturnType : DiagGroup<"return-type", [ReturnTypeCLinkage, ReturnMismatch]>;
+
 def BindToTemporaryCopy : DiagGroup<"bind-to-temporary-copy",
                                     [CXX98CompatBindToTemporaryCopy]>;
 def SelfAssignmentField : DiagGroup<"self-assign-field">;
@@ -865,6 +875,7 @@ def ZeroLengthArray : DiagGroup<"zero-length-array">;
 def GNUZeroLineDirective : DiagGroup<"gnu-zero-line-directive">;
 def GNUZeroVariadicMacroArguments : DiagGroup<"gnu-zero-variadic-macro-arguments">;
 def MisleadingIndentation : DiagGroup<"misleading-indentation">;
+def PtrAuthNullPointers : DiagGroup<"ptrauth-null-pointers">;
 
 // This covers both the deprecated case (in C++98)
 // and the extension case (in C++11 onwards).
@@ -1125,9 +1136,11 @@ def NonGCC : DiagGroup<"non-gcc",
 def CXX14Attrs : DiagGroup<"c++14-attribute-extensions">;
 def CXX17Attrs : DiagGroup<"c++17-attribute-extensions">;
 def CXX20Attrs : DiagGroup<"c++20-attribute-extensions">;
+def CXX23Attrs : DiagGroup<"c++23-attribute-extensions">;
 def FutureAttrs : DiagGroup<"future-attribute-extensions", [CXX14Attrs,
                                                             CXX17Attrs,
-                                                            CXX20Attrs]>;
+                                                            CXX20Attrs,
+                                                            CXX23Attrs]>;
 
 def CXX23AttrsOnLambda : DiagGroup<"c++23-lambda-attributes">;
 

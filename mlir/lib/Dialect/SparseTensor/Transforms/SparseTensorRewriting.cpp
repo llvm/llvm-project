@@ -616,6 +616,11 @@ public:
     rewriter.create<vector::PrintOp>(
         loc, rewriter.getStringAttr("---- Sparse Tensor ----\nnse = "));
     rewriter.create<vector::PrintOp>(loc, nse);
+    // Print run-time contents for dim/lvl sizes.
+    rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("dim = "));
+    printSizes(rewriter, loc, tensor, stt.getDimRank(), /*isDim=*/true);
+    rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("lvl = "));
+    printSizes(rewriter, loc, tensor, stt.getLvlRank(), /*isDim=*/false);
     // Use the "codegen" foreach loop construct to iterate over
     // all typical sparse tensor components for printing.
     foreachFieldAndTypeInSparseTensor(stt, [&rewriter, &loc, &tensor,
@@ -687,8 +692,45 @@ private:
     rewriter.setInsertionPointToStart(forOp.getBody());
     auto idx = forOp.getInductionVar();
     auto val = rewriter.create<memref::LoadOp>(loc, vec, idx);
-    rewriter.create<vector::PrintOp>(loc, val, vector::PrintPunctuation::Comma);
+    if (llvm::isa<ComplexType>(val.getType())) {
+      // Since the vector dialect does not support complex types in any op,
+      // we split those into (real, imag) pairs here.
+      Value real = rewriter.create<complex::ReOp>(loc, val);
+      Value imag = rewriter.create<complex::ImOp>(loc, val);
+      rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Open);
+      rewriter.create<vector::PrintOp>(loc, real,
+                                       vector::PrintPunctuation::Comma);
+      rewriter.create<vector::PrintOp>(loc, imag,
+                                       vector::PrintPunctuation::Close);
+      rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Comma);
+    } else {
+      rewriter.create<vector::PrintOp>(loc, val,
+                                       vector::PrintPunctuation::Comma);
+    }
     rewriter.setInsertionPointAfter(forOp);
+    // Close bracket and end of line.
+    rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Close);
+    rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::NewLine);
+  }
+
+  // Helper method to print run-time lvl/dim sizes.
+  static void printSizes(PatternRewriter &rewriter, Location loc, Value tensor,
+                         unsigned size, bool isDim) {
+    // Open bracket.
+    rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Open);
+    // Print unrolled contents (dimop requires constant value).
+    for (unsigned i = 0; i < size; i++) {
+      auto idx = constantIndex(rewriter, loc, i);
+      Value val;
+      if (isDim)
+        val = rewriter.create<tensor::DimOp>(loc, tensor, idx);
+      else
+        val = rewriter.create<LvlOp>(loc, tensor, idx);
+      rewriter.create<vector::PrintOp>(
+          loc, val,
+          i != size - 1 ? vector::PrintPunctuation::Comma
+                        : vector::PrintPunctuation::NoPunctuation);
+    }
     // Close bracket and end of line.
     rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Close);
     rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::NewLine);
@@ -775,7 +817,8 @@ public:
           reshapeCvs(builder, loc, expandReass, collapsedSizes, collapsedDcvs,
                      dstSizes, dstDcvs);
 
-          auto t = builder.create<InsertOp>(loc, v, reduc.front(), dstDcvs);
+          auto t =
+              builder.create<tensor::InsertOp>(loc, v, reduc.front(), dstDcvs);
           builder.create<sparse_tensor::YieldOp>(loc, t);
         });
 
@@ -859,7 +902,8 @@ public:
           SmallVector<Value> dstDcvs;
           reshapeCvs(builder, loc, op.getReassociationIndices(), srcSizes,
                      srcDcvs, dstSizes, dstDcvs);
-          auto t = builder.create<InsertOp>(loc, v, reduc.front(), dstDcvs);
+          auto t =
+              builder.create<tensor::InsertOp>(loc, v, reduc.front(), dstDcvs);
           builder.create<sparse_tensor::YieldOp>(loc, t);
         });
 
@@ -1221,7 +1265,7 @@ public:
     }
 
     Value vals = loopEmitter.getValBuffer()[0];
-    Value pos = loopEmitter.getValPosits(0);
+    SmallVector<Value> pos = loopEmitter.getValPosits(0);
     // Loads the value from sparse tensor using position-index;
     // loads the value from dense tensor using coords.
     Value val = enc ? rewriter.create<memref::LoadOp>(loc, vals, pos)

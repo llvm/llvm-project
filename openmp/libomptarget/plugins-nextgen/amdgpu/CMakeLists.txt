@@ -109,7 +109,6 @@ if (LIBOMPTARGET_FOUND_AMDGPU_GPU OR LIBOMPTARGET_FORCE_AMDGPU_TESTS)
 else()
   libomptarget_say("Not generating AMDGPU tests, no supported devices detected."
                    " Use 'LIBOMPTARGET_FORCE_AMDGPU_TESTS' to override.")
-  return()
 endif()
 
 # Install plugin under the lib destination folder.

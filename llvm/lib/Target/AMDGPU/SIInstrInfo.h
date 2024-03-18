@@ -240,7 +240,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, unsigned &Width,
+      bool &OffsetIsScalable, LocationSize &Width,
       const TargetRegisterInfo *TRI) const final;
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
@@ -984,9 +984,7 @@ public:
 
   bool isInlineConstant(const APInt &Imm) const;
 
-  bool isInlineConstant(const APFloat &Imm) const {
-    return isInlineConstant(Imm.bitcastToAPInt());
-  }
+  bool isInlineConstant(const APFloat &Imm) const;
 
   // Returns true if this non-register operand definitely does not need to be
   // encoded as a 32-bit literal. Note that this function handles all kinds of

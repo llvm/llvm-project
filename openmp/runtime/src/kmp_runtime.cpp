@@ -1743,14 +1743,8 @@ __kmp_serial_fork_call(ident_t *loc, int gtid, enum fork_context_e call_context,
       __kmp_alloc_argv_entries(argc, team, TRUE);
       team->t.t_argc = argc;
       argv = (void **)team->t.t_argv;
-      if (ap) {
-        for (i = argc - 1; i >= 0; --i)
-          *argv++ = va_arg(kmp_va_deref(ap), void *);
-      } else {
-        for (i = 0; i < argc; ++i)
-          // Get args from parent team for teams construct
-          argv[i] = parent_team->t.t_argv[i];
-      }
+      for (i = argc - 1; i >= 0; --i)
+        *argv++ = va_arg(kmp_va_deref(ap), void *);
       // AC: revert change made in __kmpc_serialized_parallel()
       //     because initial code in teams should have level=0
       team->t.t_level--;
@@ -5376,7 +5370,8 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
           __kmp_reinitialize_team(team, new_icvs, NULL);
         }
 
-#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
+#if (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY) &&   \
+    KMP_AFFINITY_SUPPORTED
         /* Temporarily set full mask for primary thread before creation of
            workers. The reason is that workers inherit the affinity from the
            primary thread, so if a lot of workers are created on the single
@@ -5412,7 +5407,8 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
           }
         }
 
-#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
+#if (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY) &&   \
+    KMP_AFFINITY_SUPPORTED
         /* Restore initial primary thread's affinity mask */
         new_temp_affinity.restore();
 #endif

@@ -13,6 +13,19 @@
 // RUN: obj2yaml %t.o > %t.o.yaml
 // RUN: %clang -O0 -target %itanium_abi_triple %s -emit-ast -o %t.ast
 
+// RUN: echo 'void a() {}' >%t.a.cpp
+// RUN: echo 'void b() {}' >%t.b.cpp
+// RUN: %clang -target %itanium_abi_triple %t.a.cpp -c -o %t.a.o
+// RUN: %clang -target %itanium_abi_triple %t.b.cpp -c -o %t.b.o
+//
+// Remove .llvm_addrsig section since its offset changes after llvm-objcopy
+// removes clang-offload-bundler sections, therefore not good for comparison.
+//
+// RUN: llvm-objcopy --remove-section=.llvm_addrsig %t.a.o
+// RUN: llvm-objcopy --remove-section=.llvm_addrsig %t.b.o
+// RUN: obj2yaml %t.a.o > %t.a.yaml
+// RUN: obj2yaml %t.b.o > %t.b.yaml
+
 //
 // Generate an empty file to help with the checks of empty files.
 //
@@ -414,6 +427,25 @@
 // HIP-AR-906-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
 // HIP-AR-906-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx906
 
+//
+// Check unbundling archive for host target
+//
+// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa--gfx900 \
+// RUN:   -input=%t.a.o -input=%t.tgt1 -output=%t.a.bundled.o
+// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa--gfx900 \
+// RUN:   -input=%t.b.o -input=%t.tgt1 -output=%t.b.bundled.o
+// RUN: rm -f %t.bundled.a
+// RUN: llvm-ar cr %t.bundled.a %t.a.bundled.o %t.b.bundled.o
+// RUN: cp %t.bundled.a %t.bundled.a.bak
+// RUN: clang-offload-bundler -unbundle --targets=host-%itanium_abi_triple -type=a -input=%t.bundled.a -output=%t.host.a
+// RUN: rm -f *%itanium_abi_triple*.a.bundled.o *%itanium_abi_triple*.b.bundled.o
+// RUN: llvm-ar -x %t.host.a
+// RUN: diff %t.bundled.a %t.bundled.a.bak
+// RUN: obj2yaml *%itanium_abi_triple*.a.bundled.o > %t.a.unbundled.yaml
+// RUN: diff %t.a.unbundled.yaml %t.a.yaml
+// RUN: obj2yaml *%itanium_abi_triple*.b.bundled.o > %t.b.unbundled.yaml
+// RUN: diff %t.b.unbundled.yaml %t.b.yaml
+//
 // Check clang-offload-bundler reporting an error when trying to unbundle an archive but
 // the input file is not an archive.
 //

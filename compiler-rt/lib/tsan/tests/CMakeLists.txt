@@ -67,7 +67,7 @@ endforeach()
 set(TSAN_DEPS tsan)
 # TSan uses C++ standard library headers.
 if (TARGET cxx-headers OR HAVE_LIBCXX)
-  list(APPEND TSAN_DEPS cxx-headers)
+  set(TSAN_DEPS cxx-headers)
 endif()
 
 # add_tsan_unittest(<name>

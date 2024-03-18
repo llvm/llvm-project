@@ -27,9 +27,13 @@
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
 
+/clang/include/clang/Sema/Sema.h @Endilll
 /clang/test/CXX/drs/ @Endilll
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
+
+clang/lib/AST/Interp/ @tbaederr
+clang/test/AST/Interp/ @tbaederr
 
 /lldb/ @JDevlieghere
 
@@ -104,3 +108,6 @@
 
 # BOLT
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
+
+# Bazel build system.
+/utils/bazel/ @rupprecht

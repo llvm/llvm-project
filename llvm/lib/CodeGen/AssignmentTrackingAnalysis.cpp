@@ -217,15 +217,16 @@ void FunctionVarLocs::init(FunctionVarLocsBuilder &Builder) {
   // to the start and end position in the vector with VarLocsBeforeInst. This
   // block includes VarLocs for any DPValues attached to that instruction.
   for (auto &P : Builder.VarLocsBeforeInst) {
-    // Process VarLocs attached to a DPValue alongside their marker Instruction.
+    // Process VarLocs attached to a DbgRecord alongside their marker
+    // Instruction.
     if (isa<const DbgRecord *>(P.first))
       continue;
     const Instruction *I = cast<const Instruction *>(P.first);
     unsigned BlockStart = VarLocRecords.size();
-    // Any VarLocInfos attached to a DPValue should now be remapped to their
-    // marker Instruction, in order of DPValue appearance and prior to any
+    // Any VarLocInfos attached to a DbgRecord should now be remapped to their
+    // marker Instruction, in order of DbgRecord appearance and prior to any
     // VarLocInfos attached directly to that instruction.
-    for (const DPValue &DPV : DPValue::filter(I->getDbgValueRange())) {
+    for (const DPValue &DPV : filterDbgVars(I->getDbgRecordRange())) {
       // Even though DPV defines a variable location, VarLocsBeforeInst can
       // still be empty if that VarLoc was redundant.
       if (!Builder.VarLocsBeforeInst.count(&DPV))
@@ -829,7 +830,7 @@ class MemLocFragmentFill {
   void process(BasicBlock &BB, VarFragMap &LiveSet) {
     BBInsertBeforeMap[&BB].clear();
     for (auto &I : BB) {
-      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+      for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
         if (const auto *Locs = FnVarLocs->getWedge(&DPV)) {
           for (const VarLocInfo &Loc : *Locs) {
             addDef(Loc, &DPV, *I.getParent(), LiveSet);
@@ -1494,15 +1495,15 @@ const char *locStr(AssignmentTrackingLowering::LocKind Loc) {
 
 VarLocInsertPt getNextNode(const DbgRecord *DPV) {
   auto NextIt = ++(DPV->getIterator());
-  if (NextIt == DPV->getMarker()->getDbgValueRange().end())
+  if (NextIt == DPV->getMarker()->getDbgRecordRange().end())
     return DPV->getMarker()->MarkedInstr;
   return &*NextIt;
 }
 VarLocInsertPt getNextNode(const Instruction *Inst) {
   const Instruction *Next = Inst->getNextNode();
-  if (!Next->hasDbgValues())
+  if (!Next->hasDbgRecords())
     return Next;
-  return &*Next->getDbgValueRange().begin();
+  return &*Next->getDbgRecordRange().begin();
 }
 VarLocInsertPt getNextNode(VarLocInsertPt InsertPt) {
   if (isa<const Instruction *>(InsertPt))
@@ -1649,7 +1650,7 @@ void AssignmentTrackingLowering::processUntaggedInstruction(
     Ops.push_back(dwarf::DW_OP_deref);
     DIE = DIExpression::prependOpcodes(DIE, Ops, /*StackValue=*/false,
                                        /*EntryValue=*/false);
-    // Find a suitable insert point, before the next instruction or DPValue
+    // Find a suitable insert point, before the next instruction or DbgRecord
     // after I.
     auto InsertBefore = getNextNode(&I);
     assert(InsertBefore && "Shouldn't be inserting after a terminator");
@@ -1886,21 +1887,21 @@ void AssignmentTrackingLowering::resetInsertionPoint(DPValue &After) {
 }
 
 void AssignmentTrackingLowering::process(BasicBlock &BB, BlockInfo *LiveSet) {
-  // If the block starts with DPValues, we need to process those DPValues as
+  // If the block starts with DbgRecords, we need to process those DbgRecords as
   // their own frame without processing any instructions first.
-  bool ProcessedLeadingDPValues = !BB.begin()->hasDbgValues();
+  bool ProcessedLeadingDbgRecords = !BB.begin()->hasDbgRecords();
   for (auto II = BB.begin(), EI = BB.end(); II != EI;) {
     assert(VarsTouchedThisFrame.empty());
     // Process the instructions in "frames". A "frame" includes a single
     // non-debug instruction followed any debug instructions before the
     // next non-debug instruction.
 
-    // Skip the current instruction if it has unprocessed DPValues attached (see
-    // comment above `ProcessedLeadingDPValues`).
-    if (ProcessedLeadingDPValues) {
+    // Skip the current instruction if it has unprocessed DbgRecords attached
+    // (see comment above `ProcessedLeadingDbgRecords`).
+    if (ProcessedLeadingDbgRecords) {
       // II is now either a debug intrinsic, a non-debug instruction with no
-      // attached DPValues, or a non-debug instruction with attached processed
-      // DPValues.
+      // attached DbgRecords, or a non-debug instruction with attached processed
+      // DbgRecords.
       // II has not been processed.
       if (!isa<DbgInfoIntrinsic>(&*II)) {
         if (II->isTerminator())
@@ -1912,19 +1913,19 @@ void AssignmentTrackingLowering::process(BasicBlock &BB, BlockInfo *LiveSet) {
       }
     }
     // II is now either a debug intrinsic, a non-debug instruction with no
-    // attached DPValues, or a non-debug instruction with attached unprocessed
-    // DPValues.
-    if (II != EI && II->hasDbgValues()) {
+    // attached DbgRecords, or a non-debug instruction with attached unprocessed
+    // DbgRecords.
+    if (II != EI && II->hasDbgRecords()) {
       // Skip over non-variable debug records (i.e., labels). They're going to
       // be read from IR (possibly re-ordering them within the debug record
       // range) rather than from the analysis results.
-      for (DPValue &DPV : DPValue::filter(II->getDbgValueRange())) {
+      for (DPValue &DPV : filterDbgVars(II->getDbgRecordRange())) {
         resetInsertionPoint(DPV);
         processDPValue(DPV, LiveSet);
         assert(LiveSet->isValid());
       }
     }
-    ProcessedLeadingDPValues = true;
+    ProcessedLeadingDbgRecords = true;
     while (II != EI) {
       auto *Dbg = dyn_cast<DbgInfoIntrinsic>(&*II);
       if (!Dbg)
@@ -1934,9 +1935,9 @@ void AssignmentTrackingLowering::process(BasicBlock &BB, BlockInfo *LiveSet) {
       assert(LiveSet->isValid());
       ++II;
     }
-    // II is now a non-debug instruction either with no attached DPValues, or
-    // with attached processed DPValues. II has not been processed, and all
-    // debug instructions or DPValues in the frame preceding II have been
+    // II is now a non-debug instruction either with no attached DbgRecords, or
+    // with attached processed DbgRecords. II has not been processed, and all
+    // debug instructions or DbgRecords in the frame preceding II have been
     // processed.
 
     // We've processed everything in the "frame". Now determine which variables
@@ -2175,7 +2176,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
   };
   for (auto &BB : Fn) {
     for (auto &I : BB) {
-      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
+      for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange()))
         ProcessDbgRecord(&DPV, DPDeclares);
       if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
         ProcessDbgRecord(DII, InstDeclares);
@@ -2465,7 +2466,7 @@ bool AssignmentTrackingLowering::emitPromotedVarLocs(
   for (auto &BB : Fn) {
     for (auto &I : BB) {
       // Skip instructions other than dbg.values and dbg.assigns.
-      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
+      for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange()))
         if (DPV.isDbgValue() || DPV.isDbgAssign())
           TranslateDbgRecord(&DPV);
       auto *DVI = dyn_cast<DbgValueInst>(&I);
@@ -2567,7 +2568,7 @@ removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
       }
     };
     HandleLocsForWedge(&I);
-    for (DPValue &DPV : reverse(DPValue::filter(I.getDbgValueRange())))
+    for (DPValue &DPV : reverse(filterDbgVars(I.getDbgRecordRange())))
       HandleLocsForWedge(&DPV);
   }
 
@@ -2632,7 +2633,7 @@ removeRedundantDbgLocsUsingForwardScan(const BasicBlock *BB,
       }
     };
 
-    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
+    for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange()))
       HandleLocsForWedge(&DPV);
     HandleLocsForWedge(&I);
   }
@@ -2718,7 +2719,7 @@ removeUndefDbgLocsFromEntryBlock(const BasicBlock *BB,
         Changed = true;
       }
     };
-    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
+    for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange()))
       HandleLocsForWedge(&DPV);
     HandleLocsForWedge(&I);
   }

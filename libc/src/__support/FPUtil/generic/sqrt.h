@@ -27,11 +27,11 @@ template <typename T> struct SpecialLongDouble {
   static constexpr bool VALUE = false;
 };
 
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 template <> struct SpecialLongDouble<long double> {
   static constexpr bool VALUE = true;
 };
-#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 template <typename T>
 LIBC_INLINE void normalize(int &exponent,
@@ -43,12 +43,12 @@ LIBC_INLINE void normalize(int &exponent,
   mantissa <<= shift;
 }
 
-#ifdef LIBC_LONG_DOUBLE_IS_FLOAT64
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 template <>
 LIBC_INLINE void normalize<long double>(int &exponent, uint64_t &mantissa) {
   normalize<double>(exponent, mantissa);
 }
-#elif !defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#elif !defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 template <>
 LIBC_INLINE void normalize<long double>(int &exponent, UInt128 &mantissa) {
   const uint64_t hi_bits = static_cast<uint64_t>(mantissa >> 64);

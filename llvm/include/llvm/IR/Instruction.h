@@ -41,7 +41,7 @@ template <> struct ilist_alloc_traits<Instruction> {
   static inline void deleteNode(Instruction *V);
 };
 
-iterator_range<simple_ilist<DbgRecord>::iterator> getDbgValueRange(DPMarker *);
+iterator_range<simple_ilist<DbgRecord>::iterator> getDbgRecordRange(DPMarker *);
 
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock,
@@ -64,47 +64,48 @@ public:
 
   /// Clone any debug-info attached to \p From onto this instruction. Used to
   /// copy debugging information from one block to another, when copying entire
-  /// blocks. \see DebugProgramInstruction.h , because the ordering of DPValues
-  /// is still important, fine grain control of which instructions are moved and
-  /// where they go is necessary.
+  /// blocks. \see DebugProgramInstruction.h , because the ordering of
+  /// DbgRecords is still important, fine grain control of which instructions
+  /// are moved and where they go is necessary.
   /// \p From The instruction to clone debug-info from.
-  /// \p from_here Optional iterator to limit DPValues cloned to be a range from
+  /// \p from_here Optional iterator to limit DbgRecords cloned to be a range
+  /// from
   ///    from_here to end().
-  /// \p InsertAtHead Whether the cloned DPValues should be placed at the end
-  ///    or the beginning of existing DPValues attached to this.
-  /// \returns A range over the newly cloned DPValues.
+  /// \p InsertAtHead Whether the cloned DbgRecords should be placed at the end
+  ///    or the beginning of existing DbgRecords attached to this.
+  /// \returns A range over the newly cloned DbgRecords.
   iterator_range<simple_ilist<DbgRecord>::iterator> cloneDebugInfoFrom(
       const Instruction *From,
       std::optional<simple_ilist<DbgRecord>::iterator> FromHere = std::nullopt,
       bool InsertAtHead = false);
 
-  /// Return a range over the DPValues attached to this instruction.
-  iterator_range<simple_ilist<DbgRecord>::iterator> getDbgValueRange() const {
-    return llvm::getDbgValueRange(DbgMarker);
+  /// Return a range over the DbgRecords attached to this instruction.
+  iterator_range<simple_ilist<DbgRecord>::iterator> getDbgRecordRange() const {
+    return llvm::getDbgRecordRange(DbgMarker);
   }
 
-  /// Return an iterator to the position of the "Next" DPValue after this
+  /// Return an iterator to the position of the "Next" DbgRecord after this
   /// instruction, or std::nullopt. This is the position to pass to
-  /// BasicBlock::reinsertInstInDPValues when re-inserting an instruction.
+  /// BasicBlock::reinsertInstInDbgRecords when re-inserting an instruction.
   std::optional<simple_ilist<DbgRecord>::iterator> getDbgReinsertionPosition();
 
-  /// Returns true if any DPValues are attached to this instruction.
-  bool hasDbgValues() const;
+  /// Returns true if any DbgRecords are attached to this instruction.
+  bool hasDbgRecords() const;
 
-  /// Transfer any DPValues on the position \p It onto this instruction,
-  /// by simply adopting the sequence of DPValues (which is efficient) if
+  /// Transfer any DbgRecords on the position \p It onto this instruction,
+  /// by simply adopting the sequence of DbgRecords (which is efficient) if
   /// possible, by merging two sequences otherwise.
-  void adoptDbgValues(BasicBlock *BB, InstListType::iterator It,
-                      bool InsertAtHead);
+  void adoptDbgRecords(BasicBlock *BB, InstListType::iterator It,
+                       bool InsertAtHead);
 
-  /// Erase any DPValues attached to this instruction.
-  void dropDbgValues();
+  /// Erase any DbgRecords attached to this instruction.
+  void dropDbgRecords();
 
-  /// Erase a single DPValue \p I that is attached to this instruction.
-  void dropOneDbgValue(DbgRecord *I);
+  /// Erase a single DbgRecord \p I that is attached to this instruction.
+  void dropOneDbgRecord(DbgRecord *I);
 
   /// Handle the debug-info implications of this instruction being removed. Any
-  /// attached DPValues need to "fall" down onto the next instruction.
+  /// attached DbgRecords need to "fall" down onto the next instruction.
   void handleMarkerRemoval();
 
 protected:

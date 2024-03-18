@@ -2849,12 +2849,14 @@ define i8 @select_replacement_sub(i8 %x, i8 %y, i8 %z) {
   ret i8 %sel
 }
 
+; FIXME: This is safe to fold.
 define i8 @select_replacement_shift_noundef(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @select_replacement_shift_noundef(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i8 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @use_i8(i8 noundef [[SHR]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SHR]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[X]], i8 [[Z:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[Y]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[SHL]], i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %shr = lshr exact i8 %x, 1
@@ -2902,6 +2904,38 @@ define i32 @select_replacement_loop2(i32 %arg, i32 %arg2) {
   %cmp = icmp eq i32 %mul, %arg
   %sel = select i1 %cmp, i32 %div, i32 undef
   ret i32 %sel
+}
+
+define i8 @select_replacement_loop3(i32 noundef %x) {
+; CHECK-LABEL: @select_replacement_loop3(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[REV:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[TRUNC]])
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[REV]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[EXT]], [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[TRUNC]], i8 0
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %trunc = trunc i32 %x to i8
+  %rev = call i8 @llvm.bitreverse.i8(i8 %trunc)
+  %ext = zext i8 %rev to i32
+  %cmp = icmp eq i32 %ext, %x
+  %sel = select i1 %cmp, i8 %trunc, i8 0
+  ret i8 %sel
+}
+
+define i16 @select_replacement_loop4(i16 noundef %p_12) {
+; CHECK-LABEL: @select_replacement_loop4(
+; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[P_12:%.*]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i16 [[P_12]], 2
+; CHECK-NEXT:    [[AND3:%.*]] = select i1 [[CMP2]], i16 [[AND1]], i16 0
+; CHECK-NEXT:    ret i16 [[AND3]]
+;
+  %cmp1 = icmp ult i16 %p_12, 2
+  %and1 = and i16 %p_12, 1
+  %and2 = select i1 %cmp1, i16 %and1, i16 0
+  %cmp2 = icmp eq i16 %and2, %p_12
+  %and3 = select i1 %cmp2, i16 %and1, i16 0
+  ret i16 %and3
 }
 
 define ptr @select_replacement_gep_inbounds(ptr %base, i64 %offset) {
@@ -3423,7 +3457,7 @@ define <vscale x 2 x i32> @scalable_sign_bits(<vscale x 2 x i8> %x) {
 define <vscale x 2 x i1> @scalable_non_zero(<vscale x 2 x i32> %x) {
 ; CHECK-LABEL: @scalable_non_zero(
 ; CHECK-NEXT:    [[A:%.*]] = or <vscale x 2 x i32> [[X:%.*]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule <vscale x 2 x i32> [[A]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 56, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <vscale x 2 x i32> [[A]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 57, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[CMP]]
 ;
   %a = or <vscale x 2 x i32> %x, splat (i32 1)
@@ -3671,4 +3705,60 @@ define i32 @src_select_xxory_eq0_xorxy_y(i32 %x, i32 %y) {
   %xor0 = icmp eq i32 %xor, 0
   %cond = select i1 %xor0, i32 %xor, i32 %y
   ret i32 %cond
+}
+
+define i32 @sequence_select_with_same_cond_false(i1 %c1, i1 %c2){
+; CHECK-LABEL: @sequence_select_with_same_cond_false(
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], i32 23, i32 45
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 666, i32 [[S1]]
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], i32 789, i32 [[S2]]
+; CHECK-NEXT:    ret i32 [[S3]]
+;
+  %s1 = select i1 %c1, i32 23, i32 45
+  %s2 = select i1 %c2, i32 666, i32 %s1
+  %s3 = select i1 %c1, i32 789, i32 %s2
+  ret i32 %s3
+}
+
+define i32 @sequence_select_with_same_cond_true(i1 %c1, i1 %c2){
+; CHECK-LABEL: @sequence_select_with_same_cond_true(
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], i32 45, i32 23
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 [[S1]], i32 666
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], i32 [[S2]], i32 789
+; CHECK-NEXT:    ret i32 [[S3]]
+;
+  %s1 = select i1 %c1, i32 45, i32 23
+  %s2 = select i1 %c2, i32 %s1, i32 666
+  %s3 = select i1 %c1, i32 %s2, i32 789
+  ret i32 %s3
+}
+
+define double @sequence_select_with_same_cond_double(double %a, i1 %c1, i1 %c2, double %r1, double %r2){
+; CHECK-LABEL: @sequence_select_with_same_cond_double(
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], double 1.000000e+00, double 0.000000e+00
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], double [[S1]], double 2.000000e+00
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], double [[S2]], double 3.000000e+00
+; CHECK-NEXT:    ret double [[S3]]
+;
+  %s1 = select i1 %c1, double 1.0, double 0.0
+  %s2 = select i1 %c2, double %s1, double 2.0
+  %s3 = select i1 %c1, double %s2, double 3.0
+  ret double %s3
+}
+
+declare void @use32(i32)
+
+define i32 @sequence_select_with_same_cond_extra_use(i1 %c1, i1 %c2){
+; CHECK-LABEL: @sequence_select_with_same_cond_extra_use(
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], i32 23, i32 45
+; CHECK-NEXT:    call void @use32(i32 [[S1]])
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 666, i32 [[S1]]
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], i32 789, i32 [[S2]]
+; CHECK-NEXT:    ret i32 [[S3]]
+;
+  %s1 = select i1 %c1, i32 23, i32 45
+  call void @use32(i32 %s1)
+  %s2 = select i1 %c2, i32 666, i32 %s1
+  %s3 = select i1 %c1, i32 789, i32 %s2
+  ret i32 %s3
 }
