@@ -866,13 +866,10 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
         Proto.clear();
       }
       if (!Policy.SuppressTagKeyword && Policy.SuppressScope &&
-          !Policy.SuppressUnwrittenScope) {
+          !Policy.SuppressUnwrittenScope)
         MaybePrintTagKeywordIfSupressingScopes(Policy, AFT->getReturnType(),
                                                Out);
-        AFT->getReturnType().print(Out, Policy, Proto);
-      } else {
-        AFT->getReturnType().print(Out, Policy, Proto);
-      }
+      AFT->getReturnType().print(Out, Policy, Proto);
       Proto.clear();
     }
     Out << Proto;
