@@ -628,8 +628,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return DstTy.isVector() && SrcTy.getSizeInBits() > 128 &&
                DstTy.getScalarSizeInBits() * 2 <= SrcTy.getScalarSizeInBits();
       })
-      .customIf(all(typeInSet(0, {v4s8}),
-                    typeInSet(1, {v4s16})))
+      .customIf(all(typeInSet(0, {v4s8}), typeInSet(1, {v4s16})))
       .alwaysLegal();
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
@@ -1296,7 +1295,7 @@ bool AArch64LegalizerInfo::legalizeTrunc(MachineInstr &MI,
   auto BC = MIB.buildBitcast(LLT::fixed_vector(2, LLT::scalar(32)), Trunc);
   auto Extract = MIB.buildExtractVectorElement(
       LLT::scalar(32), BC, MIB.buildConstant(LLT::scalar(32), 0));
-  MIB.buildBitcast(DstReg, Extract);
+  MIB.buildBitcast(DstReg, Extract
 
   MI.eraseFromParent();
   return true;
