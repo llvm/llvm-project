@@ -44,7 +44,7 @@ define void @test_pr55100(i32 %N) {
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD_1]], [[IV_2_EXT]]
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i32 [[ADD_2]], 1
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add i16 [[IV_2]], 1
-; CHECK-NEXT:    br i1 [[C_4]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP_2_HEADER]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C_4]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP_2_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       loop.1.latch:
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add i32 [[IV_1]], 1
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER]]

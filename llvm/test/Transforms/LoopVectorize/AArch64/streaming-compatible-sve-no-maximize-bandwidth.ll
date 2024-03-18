@@ -24,8 +24,8 @@ define i32 @foo(i32 noundef %n, i32 noundef %lag, i32 noundef %shift) vscale_ran
 ; SC_SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SC_SVE:       vector.body:
 ; SC_SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; SC_SVE-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
 ; SC_SVE-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
-; SC_SVE-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SC_SVE-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
 ; SC_SVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i16], ptr @a, i64 0, i64 [[TMP1]]
 ; SC_SVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[TMP2]], i32 0
@@ -47,34 +47,34 @@ define i32 @foo(i32 noundef %n, i32 noundef %lag, i32 noundef %shift) vscale_ran
 ; SC_SVE-NEXT:    [[TMP16:%.*]] = shl <4 x i32> [[TMP15]], [[BROADCAST_SPLAT]]
 ; SC_SVE-NEXT:    [[TMP17]] = add <4 x i32> [[TMP16]], [[VEC_PHI]]
 ; SC_SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; SC_SVE-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
-; SC_SVE-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; SC_SVE-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; SC_SVE-NEXT:    [[TMP18]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
+; SC_SVE-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SC_SVE-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SC_SVE:       middle.block:
-; SC_SVE-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP17]])
+; SC_SVE-NEXT:    [[TMP20:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP17]])
 ; SC_SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; SC_SVE-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SC_SVE:       scalar.ph:
 ; SC_SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; SC_SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
+; SC_SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP20]], [[MIDDLE_BLOCK]] ]
 ; SC_SVE-NEXT:    br label [[FOR_BODY:%.*]]
 ; SC_SVE:       for.body:
 ; SC_SVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; SC_SVE-NEXT:    [[RET_018:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD9:%.*]], [[FOR_BODY]] ]
 ; SC_SVE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i16], ptr @a, i64 0, i64 [[INDVARS_IV]]
-; SC_SVE-NEXT:    [[TMP20:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
-; SC_SVE-NEXT:    [[CONV:%.*]] = sext i16 [[TMP20]] to i32
-; SC_SVE-NEXT:    [[TMP21:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; SC_SVE-NEXT:    [[SHR:%.*]] = ashr i32 [[CONV]], [[TMP21]]
-; SC_SVE-NEXT:    [[TMP22:%.*]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
-; SC_SVE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [32 x i16], ptr @b, i64 0, i64 [[TMP22]]
-; SC_SVE-NEXT:    [[TMP23:%.*]] = load i16, ptr [[ARRAYIDX2]], align 2
-; SC_SVE-NEXT:    [[CONV3:%.*]] = sext i16 [[TMP23]] to i32
-; SC_SVE-NEXT:    [[SHL:%.*]] = shl i32 [[CONV3]], [[TMP21]]
+; SC_SVE-NEXT:    [[TMP21:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
+; SC_SVE-NEXT:    [[CONV:%.*]] = sext i16 [[TMP21]] to i32
+; SC_SVE-NEXT:    [[TMP22:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; SC_SVE-NEXT:    [[SHR:%.*]] = ashr i32 [[CONV]], [[TMP22]]
+; SC_SVE-NEXT:    [[TMP23:%.*]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
+; SC_SVE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [32 x i16], ptr @b, i64 0, i64 [[TMP23]]
+; SC_SVE-NEXT:    [[TMP24:%.*]] = load i16, ptr [[ARRAYIDX2]], align 2
+; SC_SVE-NEXT:    [[CONV3:%.*]] = sext i16 [[TMP24]] to i32
+; SC_SVE-NEXT:    [[SHL:%.*]] = shl i32 [[CONV3]], [[TMP22]]
 ; SC_SVE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[SHL]], [[SHR]]
 ; SC_SVE-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [32 x i16], ptr @c, i64 0, i64 [[INDVARS_IV]]
-; SC_SVE-NEXT:    [[TMP24:%.*]] = load i16, ptr [[ARRAYIDX5]], align 2
-; SC_SVE-NEXT:    [[CONV6:%.*]] = sext i16 [[TMP24]] to i32
+; SC_SVE-NEXT:    [[TMP25:%.*]] = load i16, ptr [[ARRAYIDX5]], align 2
+; SC_SVE-NEXT:    [[CONV6:%.*]] = sext i16 [[TMP25]] to i32
 ; SC_SVE-NEXT:    [[ADD7:%.*]] = add nsw i32 [[MUL]], [[CONV6]]
 ; SC_SVE-NEXT:    [[SHL8:%.*]] = shl i32 [[ADD7]], [[SHIFT]]
 ; SC_SVE-NEXT:    [[ADD9]] = add nsw i32 [[SHL8]], [[RET_018]]
@@ -82,7 +82,7 @@ define i32 @foo(i32 noundef %n, i32 noundef %lag, i32 noundef %shift) vscale_ran
 ; SC_SVE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; SC_SVE-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; SC_SVE:       for.end:
-; SC_SVE-NEXT:    [[RET_0_LCSSA:%.*]] = phi i32 [ [[ADD9]], [[FOR_BODY]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
+; SC_SVE-NEXT:    [[RET_0_LCSSA:%.*]] = phi i32 [ [[ADD9]], [[FOR_BODY]] ], [ [[TMP20]], [[MIDDLE_BLOCK]] ]
 ; SC_SVE-NEXT:    ret i32 [[RET_0_LCSSA]]
 ;
 ; NO_SC_SVE-LABEL: @foo(
@@ -99,8 +99,8 @@ define i32 @foo(i32 noundef %n, i32 noundef %lag, i32 noundef %shift) vscale_ran
 ; NO_SC_SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO_SC_SVE:       vector.body:
 ; NO_SC_SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; NO_SC_SVE-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
 ; NO_SC_SVE-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
-; NO_SC_SVE-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO_SC_SVE-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
 ; NO_SC_SVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i16], ptr @a, i64 0, i64 [[TMP1]]
 ; NO_SC_SVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[TMP2]], i32 0
@@ -122,34 +122,34 @@ define i32 @foo(i32 noundef %n, i32 noundef %lag, i32 noundef %shift) vscale_ran
 ; NO_SC_SVE-NEXT:    [[TMP16:%.*]] = shl <8 x i32> [[TMP15]], [[BROADCAST_SPLAT]]
 ; NO_SC_SVE-NEXT:    [[TMP17]] = add <8 x i32> [[TMP16]], [[VEC_PHI]]
 ; NO_SC_SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; NO_SC_SVE-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
-; NO_SC_SVE-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO_SC_SVE-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; NO_SC_SVE-NEXT:    [[TMP18]] = add <8 x i32> [[VEC_IND]], <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
+; NO_SC_SVE-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO_SC_SVE-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO_SC_SVE:       middle.block:
-; NO_SC_SVE-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP17]])
+; NO_SC_SVE-NEXT:    [[TMP20:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP17]])
 ; NO_SC_SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; NO_SC_SVE-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; NO_SC_SVE:       scalar.ph:
 ; NO_SC_SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; NO_SC_SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
+; NO_SC_SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP20]], [[MIDDLE_BLOCK]] ]
 ; NO_SC_SVE-NEXT:    br label [[FOR_BODY:%.*]]
 ; NO_SC_SVE:       for.body:
 ; NO_SC_SVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; NO_SC_SVE-NEXT:    [[RET_018:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD9:%.*]], [[FOR_BODY]] ]
 ; NO_SC_SVE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i16], ptr @a, i64 0, i64 [[INDVARS_IV]]
-; NO_SC_SVE-NEXT:    [[TMP20:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
-; NO_SC_SVE-NEXT:    [[CONV:%.*]] = sext i16 [[TMP20]] to i32
-; NO_SC_SVE-NEXT:    [[TMP21:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; NO_SC_SVE-NEXT:    [[SHR:%.*]] = ashr i32 [[CONV]], [[TMP21]]
-; NO_SC_SVE-NEXT:    [[TMP22:%.*]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
-; NO_SC_SVE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [32 x i16], ptr @b, i64 0, i64 [[TMP22]]
-; NO_SC_SVE-NEXT:    [[TMP23:%.*]] = load i16, ptr [[ARRAYIDX2]], align 2
-; NO_SC_SVE-NEXT:    [[CONV3:%.*]] = sext i16 [[TMP23]] to i32
-; NO_SC_SVE-NEXT:    [[SHL:%.*]] = shl i32 [[CONV3]], [[TMP21]]
+; NO_SC_SVE-NEXT:    [[TMP21:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
+; NO_SC_SVE-NEXT:    [[CONV:%.*]] = sext i16 [[TMP21]] to i32
+; NO_SC_SVE-NEXT:    [[TMP22:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; NO_SC_SVE-NEXT:    [[SHR:%.*]] = ashr i32 [[CONV]], [[TMP22]]
+; NO_SC_SVE-NEXT:    [[TMP23:%.*]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
+; NO_SC_SVE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [32 x i16], ptr @b, i64 0, i64 [[TMP23]]
+; NO_SC_SVE-NEXT:    [[TMP24:%.*]] = load i16, ptr [[ARRAYIDX2]], align 2
+; NO_SC_SVE-NEXT:    [[CONV3:%.*]] = sext i16 [[TMP24]] to i32
+; NO_SC_SVE-NEXT:    [[SHL:%.*]] = shl i32 [[CONV3]], [[TMP22]]
 ; NO_SC_SVE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[SHL]], [[SHR]]
 ; NO_SC_SVE-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [32 x i16], ptr @c, i64 0, i64 [[INDVARS_IV]]
-; NO_SC_SVE-NEXT:    [[TMP24:%.*]] = load i16, ptr [[ARRAYIDX5]], align 2
-; NO_SC_SVE-NEXT:    [[CONV6:%.*]] = sext i16 [[TMP24]] to i32
+; NO_SC_SVE-NEXT:    [[TMP25:%.*]] = load i16, ptr [[ARRAYIDX5]], align 2
+; NO_SC_SVE-NEXT:    [[CONV6:%.*]] = sext i16 [[TMP25]] to i32
 ; NO_SC_SVE-NEXT:    [[ADD7:%.*]] = add nsw i32 [[MUL]], [[CONV6]]
 ; NO_SC_SVE-NEXT:    [[SHL8:%.*]] = shl i32 [[ADD7]], [[SHIFT]]
 ; NO_SC_SVE-NEXT:    [[ADD9]] = add nsw i32 [[SHL8]], [[RET_018]]
@@ -157,7 +157,7 @@ define i32 @foo(i32 noundef %n, i32 noundef %lag, i32 noundef %shift) vscale_ran
 ; NO_SC_SVE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; NO_SC_SVE-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; NO_SC_SVE:       for.end:
-; NO_SC_SVE-NEXT:    [[RET_0_LCSSA:%.*]] = phi i32 [ [[ADD9]], [[FOR_BODY]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
+; NO_SC_SVE-NEXT:    [[RET_0_LCSSA:%.*]] = phi i32 [ [[ADD9]], [[FOR_BODY]] ], [ [[TMP20]], [[MIDDLE_BLOCK]] ]
 ; NO_SC_SVE-NEXT:    ret i32 [[RET_0_LCSSA]]
 ;
 entry:

@@ -40,7 +40,7 @@ define void @f1() {
 ; CHECK-NEXT:    store ptr [[_TMP2]], ptr [[_TMP7]], align 8
 ; CHECK-NEXT:    [[_TMP9]] = add nsw i16 [[C_1_0]], 1
 ; CHECK-NEXT:    [[_TMP11:%.*]] = icmp slt i16 [[_TMP9]], 2
-; CHECK-NEXT:    br i1 [[_TMP11]], label [[BB2]], label [[BB3]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[_TMP11]], label [[BB2]], label [[BB3]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
 ;

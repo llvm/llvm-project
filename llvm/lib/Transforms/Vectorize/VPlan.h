@@ -1621,37 +1621,64 @@ public:
   }
 };
 
+/// A base class for all widen induction-like recipes
+class VPWidenInductionBasePHIRecipe : public VPHeaderPHIRecipe {
+protected:
+  const InductionDescriptor &IndDesc;
+
+public:
+  VPWidenInductionBasePHIRecipe(unsigned char VPDefID, Instruction *Instr,
+                                VPValue *Start, VPValue *Step,
+                                const InductionDescriptor &IndDesc)
+      : VPHeaderPHIRecipe(VPDefID, Instr, Start), IndDesc(IndDesc) {
+    addOperand(Step);
+  }
+
+  ~VPWidenInductionBasePHIRecipe() override = default;
+
+  /// Returns the step value of the induction.
+  VPValue *getStepValue() { return getOperand(1); }
+  const VPValue *getStepValue() const { return getOperand(1); }
+
+  /// Returns the induction descriptor for the recipe.
+  const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
+};
+
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their vector values.
-class VPWidenIntOrFpInductionRecipe : public VPHeaderPHIRecipe {
-  PHINode *IV;
-  TruncInst *Trunc;
-  const InductionDescriptor &IndDesc;
+class VPWidenIntOrFpInductionRecipe : public VPWidenInductionBasePHIRecipe {
+  PHINode *IV = nullptr;
+  TruncInst *Trunc = nullptr;
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 const InductionDescriptor &IndDesc)
-      : VPHeaderPHIRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start), IV(IV),
-        Trunc(nullptr), IndDesc(IndDesc) {
-    addOperand(Step);
-  }
+      : VPWidenInductionBasePHIRecipe(VPDef::VPWidenIntOrFpInductionSC, IV,
+                                      Start, Step, IndDesc),
+        IV(IV), Trunc(nullptr) {}
 
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 const InductionDescriptor &IndDesc,
                                 TruncInst *Trunc)
-      : VPHeaderPHIRecipe(VPDef::VPWidenIntOrFpInductionSC, Trunc, Start),
-        IV(IV), Trunc(Trunc), IndDesc(IndDesc) {
-    addOperand(Step);
-  }
+      : VPWidenInductionBasePHIRecipe(VPDef::VPWidenIntOrFpInductionSC, Trunc,
+                                      Start, Step, IndDesc),
+        IV(IV), Trunc(Trunc) {}
 
   ~VPWidenIntOrFpInductionRecipe() override = default;
 
   VPRecipeBase *clone() override {
-    return new VPWidenIntOrFpInductionRecipe(IV, getStartValue(),
-                                             getStepValue(), IndDesc, Trunc);
+    VPRecipeBase *Cloned = new VPWidenIntOrFpInductionRecipe(
+        getPHINode(), getStartValue(), getStepValue(), IndDesc, Trunc);
+    if (getNumOperands() == 3)
+      Cloned->addOperand(getOperand(2));
+    return Cloned;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
+
+  static inline bool classof(const VPHeaderPHIRecipe *R) {
+    return R->getVPDefID() == VPDef::VPWidenIntOrFpInductionSC;
+  }
 
   /// Generate the vectorized and scalarized versions of the phi node as
   /// needed by their users.
@@ -1663,23 +1690,16 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  VPValue *getBackedgeValue() override {
-    // TODO: All operands of base recipe must exist and be at same index in
-    // derived recipe.
-    llvm_unreachable(
-        "VPWidenIntOrFpInductionRecipe generates its own backedge value");
+  VPValue *getBackedgeValue() override final {
+    if (getNumOperands() != 3)
+      llvm_unreachable(
+          "VPWidenIntOrFpInductionRecipe::getBackedgeValue is not yet valid");
+    return getOperand(2);
   }
 
-  VPRecipeBase &getBackedgeRecipe() override {
-    // TODO: All operands of base recipe must exist and be at same index in
-    // derived recipe.
-    llvm_unreachable(
-        "VPWidenIntOrFpInductionRecipe generates its own backedge value");
+  VPRecipeBase &getBackedgeRecipe() override final {
+    return *getBackedgeValue()->getDefiningRecipe();
   }
-
-  /// Returns the step value of the induction.
-  VPValue *getStepValue() { return getOperand(1); }
-  const VPValue *getStepValue() const { return getOperand(1); }
 
   /// Returns the first defined value as TruncInst, if it is one or nullptr
   /// otherwise.
@@ -1687,9 +1707,7 @@ public:
   const TruncInst *getTruncInst() const { return Trunc; }
 
   PHINode *getPHINode() { return IV; }
-
-  /// Returns the induction descriptor for the recipe.
-  const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
+  const PHINode *getPHINode() const { return IV; }
 
   /// Returns true if the induction is canonical, i.e. starting at 0 and
   /// incremented by UF * VF (= the original IV is incremented by 1).
@@ -1697,7 +1715,7 @@ public:
 
   /// Returns the scalar type of the induction.
   Type *getScalarType() const {
-    return Trunc ? Trunc->getType() : IV->getType();
+    return Trunc ? Trunc->getType() : getPHINode()->getType();
   }
 };
 
@@ -2862,6 +2880,9 @@ class VPlan {
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPValue VFxUF;
 
+  /// Represents widened VF * UF for each UF of the vector loop region.
+  VPValue WidenVFxUF;
+
   /// Holds a mapping between Values and their corresponding VPValue inside
   /// VPlan.
   Value2VPValueTy Value2VPValue;
@@ -2951,6 +2972,10 @@ public:
 
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
+
+  /// Returns widened VF * UF of the vector loop region
+  VPValue &getWidenVFxUF() { return WidenVFxUF; }
+  const VPValue &getWidenVFxUF() const { return WidenVFxUF; }
 
   /// Mark the plan to indicate that using Value2VPValue is not safe any
   /// longer, because it may be stale.

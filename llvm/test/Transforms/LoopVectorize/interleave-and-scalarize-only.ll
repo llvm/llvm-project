@@ -78,6 +78,7 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT: <x1> vector loop: {
 ; DBG-NEXT:   vector.body:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; DBG-NEXT:     vp<[[STEPS2:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<false> + vp<[[CAN_IV]]> * ir<true>
 ; DBG-NEXT:     vp<[[STEPS1:%.+]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<true>
 ; DBG-NEXT:   Successor(s): pred.store
@@ -88,7 +89,6 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:     Successor(s): pred.store.if, pred.store.continue
 ; DBG-EMPTY:
 ; DBG-NEXT:     pred.store.if:
-; DBG-NEXT:       vp<[[STEPS2:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; DBG-NEXT:       CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS2]]>
 ; DBG-NEXT:       CLONE ir<%l> = load ir<%gep.src>
 ; DBG-NEXT:       CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[STEPS2]]>
@@ -96,7 +96,6 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:     Successor(s): pred.store.continue
 ; DBG-EMPTY:
 ; DBG-NEXT:     pred.store.continue:
-; DBG-NEXT:       PHI-PREDICATED-INSTRUCTION vp<{{.+}}> = ir<%l>
 ; DBG-NEXT:     No successors
 ; DBG-NEXT:   }
 ; DBG-NEXT:   Successor(s): cond.false.1
@@ -129,7 +128,6 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br label %pred.store.continue
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ poison, %vector.body ], [ [[TMP4]], %pred.store.if ]
 ; CHECK-NEXT:    br i1 [[INDUCTION3]], label %pred.store.if4, label %pred.store.continue5
 ; CHECK:       pred.store.if4:
 ; CHECK-NEXT:    [[INDUCTION5:%.*]] = add i64 [[INDEX]], 1
@@ -139,7 +137,6 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    br label %pred.store.continue5
 ; CHECK:       pred.store.continue5:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ poison, %pred.store.continue ], [ [[TMP7]], %pred.store.if4 ]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP9]], label %middle.block, label %vector.body
@@ -184,16 +181,15 @@ exit:
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
-; DBG-NEXT:   SCALAR-CAST vp<[[CAST:%.+]]> = trunc ir<1> to i32
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
 ; DBG-NEXT:   vector.body:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
-; DBG-NEXT:     SCALAR-CAST vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
-; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[TRUNC_IV]]>, vp<[[CAST]]>
-; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, vp<[[SCALAR_STEPS]]>
+; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, ir<%iv.trunc>
+; DBG-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; DBG-NEXT:     CLONE ir<%iv.trunc> = trunc vp<[[SCALAR_STEPS]]>
+; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, ir<%iv.trunc>
 ; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
 ; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; DBG-NEXT:     EMIT branch-on-count vp<[[IV_INC]]>, vp<[[VTC]]>
@@ -210,11 +206,12 @@ define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDUCTION1:%.*]], %vector.body ]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add i32 [[TMP3]], 0
-; CHECK-NEXT:    [[INDUCTION1]] = add i32 [[TMP3]], 1
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDUCTION]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[INDUCTION1]] to i32
 ; CHECK-NEXT:    store i32 [[VECTOR_RECUR]], ptr [[DST:%.*]], align 4
-; CHECK-NEXT:    store i32 [[INDUCTION]], ptr [[DST]], align 4
+; CHECK-NEXT:    store i32 [[TMP3]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], %n.vec
 ; CHECK-NEXT:    br i1 [[TMP4]], label %middle.block, label %vector.body

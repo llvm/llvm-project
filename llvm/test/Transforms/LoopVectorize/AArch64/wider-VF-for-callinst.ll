@@ -16,18 +16,18 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ; WIDE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
 ; WIDE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; WIDE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; WIDE-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; WIDE-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 4
+; WIDE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; WIDE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
 ; WIDE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; WIDE:       vector.body:
 ; WIDE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; WIDE-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[INDEX]]
-; WIDE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x double>, ptr [[TMP4]], align 8
-; WIDE-NEXT:    [[TMP5:%.*]] = fptrunc <vscale x 4 x double> [[WIDE_LOAD]] to <vscale x 4 x float>
-; WIDE-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x float> @foo_vector(<vscale x 4 x float> [[TMP5]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
-; WIDE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; WIDE-NEXT:    store <vscale x 4 x float> [[TMP6]], ptr [[TMP7]], align 4
-; WIDE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP9]]
+; WIDE-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[INDEX]]
+; WIDE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x double>, ptr [[TMP6]], align 8
+; WIDE-NEXT:    [[TMP7:%.*]] = fptrunc <vscale x 4 x double> [[WIDE_LOAD]] to <vscale x 4 x float>
+; WIDE-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x float> @foo_vector(<vscale x 4 x float> [[TMP7]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; WIDE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
+; WIDE-NEXT:    store <vscale x 4 x float> [[TMP8]], ptr [[TMP9]], align 4
+; WIDE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; WIDE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; WIDE-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; WIDE:       middle.block:

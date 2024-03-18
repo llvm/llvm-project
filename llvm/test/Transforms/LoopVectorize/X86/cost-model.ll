@@ -233,7 +233,7 @@ define float @PR27826(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 
 ; CHECK-NEXT:    [[ADD4]] = fadd fast float [[ADD]], [[T2]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 32
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[T0]]
-; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR]], label [[LOOPEXIT]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR]], label [[LOOPEXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    [[ADD4_LCSSA:%.*]] = phi float [ [[ADD4]], [[FOR]] ], [ [[TMP124]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_END]]

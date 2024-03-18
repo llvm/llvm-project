@@ -38,6 +38,32 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP16:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP14]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ 0.000000e+00, [[FOR_BODY_PREHEADER]] ], [ [[TMP16]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi double [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[TMP16]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[RES_0_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ADD_LCSSA]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    ret double [[RES_0_LCSSA]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[RES_07:%.*]] = phi double [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[OFFSET]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[TMP17]] to i64
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[IDXPROM1]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
+; CHECK-NEXT:    [[ADD]] = fadd double [[RES_07]], [[TMP18]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 ; SVE-LABEL: @test(
 ; SVE-NEXT:  entry:
@@ -54,23 +80,49 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; SVE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
 ; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
-; SVE-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; SVE-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 2
+; SVE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; SVE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
 ; SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SVE:       vector.body:
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x double> [ insertelement (<vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), double 0.000000e+00, i32 0), [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
-; SVE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[OFFSET:%.*]], i64 [[TMP4]]
-; SVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
-; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[TMP6]], align 4
-; SVE-NEXT:    [[TMP7:%.*]] = sext <vscale x 2 x i32> [[WIDE_LOAD]] to <vscale x 2 x i64>
-; SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[DATA:%.*]], <vscale x 2 x i64> [[TMP7]]
-; SVE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> [[TMP8]], i32 8, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x double> poison)
-; SVE-NEXT:    [[TMP9]] = fadd <vscale x 2 x double> [[VEC_PHI]], [[WIDE_MASKED_GATHER]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
+; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x double> [ insertelement (<vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), double 0.000000e+00, i32 0), [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; SVE-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
+; SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[OFFSET:%.*]], i64 [[TMP6]]
+; SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
+; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[TMP8]], align 4
+; SVE-NEXT:    [[TMP9:%.*]] = sext <vscale x 2 x i32> [[WIDE_LOAD]] to <vscale x 2 x i64>
+; SVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, ptr [[DATA:%.*]], <vscale x 2 x i64> [[TMP9]]
+; SVE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> [[TMP10]], i32 8, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x double> poison)
+; SVE-NEXT:    [[TMP11]] = fadd <vscale x 2 x double> [[VEC_PHI]], [[WIDE_MASKED_GATHER]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; SVE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; SVE:       middle.block:
+; SVE-NEXT:    [[TMP13:%.*]] = call double @llvm.vector.reduce.fadd.nxv2f64(double -0.000000e+00, <vscale x 2 x double> [[TMP11]])
+; SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
+; SVE-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; SVE:       scalar.ph:
+; SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ 0.000000e+00, [[FOR_BODY_PREHEADER]] ], [ [[TMP13]], [[MIDDLE_BLOCK]] ]
+; SVE-NEXT:    br label [[FOR_BODY:%.*]]
+; SVE:       for.cond.cleanup.loopexit:
+; SVE-NEXT:    [[ADD_LCSSA:%.*]] = phi double [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[TMP13]], [[MIDDLE_BLOCK]] ]
+; SVE-NEXT:    br label [[FOR_COND_CLEANUP]]
+; SVE:       for.cond.cleanup:
+; SVE-NEXT:    [[RES_0_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ADD_LCSSA]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; SVE-NEXT:    ret double [[RES_0_LCSSA]]
+; SVE:       for.body:
+; SVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; SVE-NEXT:    [[RES_07:%.*]] = phi double [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD]], [[FOR_BODY]] ]
+; SVE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[OFFSET]], i64 [[INDVARS_IV]]
+; SVE-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; SVE-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[TMP14]] to i64
+; SVE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[IDXPROM1]]
+; SVE-NEXT:    [[TMP15:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
+; SVE-NEXT:    [[ADD]] = fadd double [[RES_07]], [[TMP15]]
+; SVE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; SVE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; SVE-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 entry:
   %cmp6 = icmp sgt i32 %size, 0

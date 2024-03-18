@@ -363,6 +363,11 @@ public:
     return nullptr;
   }
 
+  const Instruction *getExactFPMathInst() const {
+    return const_cast<const Instruction *>(
+        const_cast<InductionDescriptor *>(this)->getExactFPMathInst());
+  }
+
   /// Returns binary opcode of the induction operator.
   Instruction::BinaryOps getInductionOpcode() const {
     return InductionBinOp ? InductionBinOp->getOpcode()

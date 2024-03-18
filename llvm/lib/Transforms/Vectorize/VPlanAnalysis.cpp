@@ -27,6 +27,18 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPBlendRecipe *R) {
 
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   switch (R->getOpcode()) {
+  case Instruction::Add:
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::Mul:
+  case Instruction::FMul: {
+    Type *ResTy = inferScalarType(R->getOperand(0));
+    VPValue *OtherV = R->getOperand(1);
+    assert(inferScalarType(OtherV) == ResTy &&
+           "different types inferred for different operands");
+    CachedTypes[OtherV] = ResTy;
+    return ResTy;
+  }
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));
     VPValue *OtherV = R->getOperand(2);

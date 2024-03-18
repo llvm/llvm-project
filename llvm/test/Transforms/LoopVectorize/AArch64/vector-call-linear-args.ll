@@ -19,41 +19,38 @@ define void @test_linear8(ptr noalias %a, ptr readnone %b, i64 %n) {
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_linear8
 ; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP2:%.*]], i32 0
-; NEON_INTERLEAVE:    [[TMP5:%.*]] = call <2 x i64> @vec_foo_linear8_nomask_neon(ptr [[TMP4]])
-; NEON_INTERLEAVE:    [[TMP6:%.*]] = extractelement <2 x ptr> [[TMP3:%.*]], i32 0
-; NEON_INTERLEAVE:    [[TMP7:%.*]] = call <2 x i64> @vec_foo_linear8_nomask_neon(ptr [[TMP6]])
+; NEON_INTERLEAVE:    [[TMP3:%.*]] = extractelement <2 x ptr> [[TMP2:%.*]], i32 0
+; NEON_INTERLEAVE:    [[TMP4:%.*]] = call <2 x i64> @vec_foo_linear8_nomask_neon(ptr [[TMP3]])
+; NEON_INTERLEAVE:    [[TMP5:%.*]] = call <2 x i64> @vec_foo_linear8_nomask_neon(ptr [[TMP3]])
 ; NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR0:[0-9]+]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linear8
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; SVE_OR_NEON:    [[TMP14:%.*]] = extractelement <vscale x 2 x ptr> [[TMP13:%.*]], i32 0
-; SVE_OR_NEON:    [[TMP15:%.*]] = call <vscale x 2 x i64> @vec_foo_linear8_nomask_sve(ptr [[TMP14]])
+; SVE_OR_NEON:    [[TMP13:%.*]] = extractelement <vscale x 2 x ptr> [[TMP12:%.*]], i32 0
+; SVE_OR_NEON:    [[TMP14:%.*]] = call <vscale x 2 x i64> @vec_foo_linear8_nomask_sve(ptr [[TMP13]])
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linear8
 ; SVE_OR_NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; SVE_OR_NEON_INTERLEAVE:    [[TMP33:%.*]] = extractelement <vscale x 2 x ptr> [[TMP31:%.*]], i32 0
+; SVE_OR_NEON_INTERLEAVE:    [[TMP33:%.*]] = extractelement <vscale x 2 x ptr> [[TMP32:%.*]], i32 0
 ; SVE_OR_NEON_INTERLEAVE:    [[TMP34:%.*]] = call <vscale x 2 x i64> @vec_foo_linear8_mask_sve(ptr [[TMP33]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
-; SVE_OR_NEON_INTERLEAVE:    [[TMP35:%.*]] = extractelement <vscale x 2 x ptr> [[TMP32:%.*]], i32 0
-; SVE_OR_NEON_INTERLEAVE:    [[TMP36:%.*]] = call <vscale x 2 x i64> @vec_foo_linear8_mask_sve(ptr [[TMP35]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2:%.*]])
-; SVE_OR_NEON_INTERLEAVE:    [[TMP48:%.*]] = extractelement <vscale x 2 x i1> [[TMP46:%.*]], i32 0
+; SVE_OR_NEON_INTERLEAVE:    [[TMP35:%.*]] = call <vscale x 2 x i64> @vec_foo_linear8_mask_sve(ptr [[TMP33]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK4:%.*]])
+; SVE_OR_NEON_INTERLEAVE:    [[TMP50:%.*]] = extractelement <vscale x 2 x i1> [[TMP48:%.*]], i32 0
 ; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
 ;
 ; SVE_TF-LABEL: define void @test_linear8
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; SVE_TF:    [[TMP20:%.*]] = extractelement <vscale x 2 x ptr> [[TMP19:%.*]], i32 0
-; SVE_TF:    [[TMP21:%.*]] = call <vscale x 2 x i64> @vec_foo_linear8_mask_sve(ptr [[TMP20]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
-; SVE_TF:    [[TMP25:%.*]] = extractelement <vscale x 2 x i1> [[TMP24:%.*]], i32 0
+; SVE_TF:    [[TMP19:%.*]] = extractelement <vscale x 2 x ptr> [[TMP18:%.*]], i32 0
+; SVE_TF:    [[TMP20:%.*]] = call <vscale x 2 x i64> @vec_foo_linear8_mask_sve(ptr [[TMP19]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE_TF:    [[TMP26:%.*]] = extractelement <vscale x 2 x i1> [[TMP25:%.*]], i32 0
 ; SVE_TF:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
 ;
 ; SVE_TF_INTERLEAVE-LABEL: define void @test_linear8
 ; SVE_TF_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; SVE_TF_INTERLEAVE:    [[TMP33:%.*]] = extractelement <vscale x 2 x ptr> [[TMP31:%.*]], i32 0
+; SVE_TF_INTERLEAVE:    [[TMP33:%.*]] = extractelement <vscale x 2 x ptr> [[TMP32:%.*]], i32 0
 ; SVE_TF_INTERLEAVE:    [[TMP34:%.*]] = call <vscale x 2 x i64> @vec_foo_linear8_mask_sve(ptr [[TMP33]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
-; SVE_TF_INTERLEAVE:    [[TMP35:%.*]] = extractelement <vscale x 2 x ptr> [[TMP32:%.*]], i32 0
-; SVE_TF_INTERLEAVE:    [[TMP36:%.*]] = call <vscale x 2 x i64> @vec_foo_linear8_mask_sve(ptr [[TMP35]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2:%.*]])
-; SVE_TF_INTERLEAVE:    [[TMP48:%.*]] = extractelement <vscale x 2 x i1> [[TMP46:%.*]], i32 0
+; SVE_TF_INTERLEAVE:    [[TMP35:%.*]] = call <vscale x 2 x i64> @vec_foo_linear8_mask_sve(ptr [[TMP33]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK4:%.*]])
+; SVE_TF_INTERLEAVE:    [[TMP50:%.*]] = extractelement <vscale x 2 x i1> [[TMP48:%.*]], i32 0
 ; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
 ;
 entry:
@@ -82,16 +79,15 @@ define void @test_vector_linear4(ptr noalias %a, ptr readnone %b, ptr readonly %
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_vector_linear4
 ; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    [[TMP8:%.*]] = extractelement <4 x ptr> [[TMP6:%.*]], i32 0
-; NEON_INTERLEAVE:    [[TMP9:%.*]] = call <4 x i32> @vec_baz_vector_linear4_nomask_neon(<4 x i32> [[WIDE_LOAD:%.*]], ptr [[TMP8]])
-; NEON_INTERLEAVE:    [[TMP10:%.*]] = extractelement <4 x ptr> [[TMP7:%.*]], i32 0
-; NEON_INTERLEAVE:    [[TMP11:%.*]] = call <4 x i32> @vec_baz_vector_linear4_nomask_neon(<4 x i32> [[WIDE_LOAD2:%.*]], ptr [[TMP10]])
+; NEON_INTERLEAVE:    [[TMP7:%.*]] = extractelement <4 x ptr> [[TMP6:%.*]], i32 0
+; NEON_INTERLEAVE:    [[TMP8:%.*]] = call <4 x i32> @vec_baz_vector_linear4_nomask_neon(<4 x i32> [[WIDE_LOAD:%.*]], ptr [[TMP7]])
+; NEON_INTERLEAVE:    [[TMP9:%.*]] = call <4 x i32> @vec_baz_vector_linear4_nomask_neon(<4 x i32> [[WIDE_LOAD1:%.*]], ptr [[TMP7]])
 ; NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR1:[0-9]+]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_vector_linear4
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON:    [[TMP16:%.*]] = extractelement <vscale x 4 x ptr> [[TMP15:%.*]], i32 0
-; SVE_OR_NEON:    [[TMP17:%.*]] = call <vscale x 4 x i32> @vec_baz_vector_linear4_nomask_sve(<vscale x 4 x i32> [[WIDE_LOAD:%.*]], ptr [[TMP16]])
+; SVE_OR_NEON:    [[TMP15:%.*]] = extractelement <vscale x 4 x ptr> [[TMP14:%.*]], i32 0
+; SVE_OR_NEON:    [[TMP16:%.*]] = call <vscale x 4 x i32> @vec_baz_vector_linear4_nomask_sve(<vscale x 4 x i32> [[WIDE_LOAD:%.*]], ptr [[TMP15]])
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_vector_linear4
@@ -186,8 +182,8 @@ define void @test_linear16_wide_stride(ptr noalias %a, ptr readnone %b, i64 %n) 
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linear16_wide_stride
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON:    [[TMP15:%.*]] = extractelement <vscale x 2 x ptr> [[TMP14:%.*]], i32 0
-; SVE_OR_NEON:    [[TMP16:%.*]] = call <vscale x 2 x i64> @vec_foo_linear16_nomask_sve(ptr [[TMP15]])
+; SVE_OR_NEON:    [[TMP14:%.*]] = extractelement <vscale x 2 x ptr> [[TMP13:%.*]], i32 0
+; SVE_OR_NEON:    [[TMP15:%.*]] = call <vscale x 2 x i64> @vec_foo_linear16_nomask_sve(ptr [[TMP14]])
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR4]]
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linear16_wide_stride
@@ -230,48 +226,42 @@ define void @test_linear4_linear8(ptr noalias %a, ptr readnone %b, ptr readonly 
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_linear4_linear8
 ; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    [[TMP6:%.*]] = extractelement <4 x ptr> [[TMP2:%.*]], i32 0
-; NEON_INTERLEAVE:    [[TMP7:%.*]] = extractelement <4 x ptr> [[TMP4:%.*]], i32 0
-; NEON_INTERLEAVE:    [[TMP8:%.*]] = call <4 x i32> @vec_quux_linear4_linear8_nomask_neon(ptr [[TMP6]], ptr [[TMP7]])
-; NEON_INTERLEAVE:    [[TMP9:%.*]] = extractelement <4 x ptr> [[TMP3:%.*]], i32 0
-; NEON_INTERLEAVE:    [[TMP10:%.*]] = extractelement <4 x ptr> [[TMP5:%.*]], i32 0
-; NEON_INTERLEAVE:    [[TMP11:%.*]] = call <4 x i32> @vec_quux_linear4_linear8_nomask_neon(ptr [[TMP9]], ptr [[TMP10]])
+; NEON_INTERLEAVE:    [[TMP4:%.*]] = extractelement <4 x ptr> [[TMP2:%.*]], i32 0
+; NEON_INTERLEAVE:    [[TMP5:%.*]] = extractelement <4 x ptr> [[TMP3:%.*]], i32 0
+; NEON_INTERLEAVE:    [[TMP6:%.*]] = call <4 x i32> @vec_quux_linear4_linear8_nomask_neon(ptr [[TMP4]], ptr [[TMP5]])
+; NEON_INTERLEAVE:    [[TMP7:%.*]] = call <4 x i32> @vec_quux_linear4_linear8_nomask_neon(ptr [[TMP4]], ptr [[TMP5]])
 ; NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linear4_linear8
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; SVE_OR_NEON:    [[TMP14:%.*]] = extractelement <vscale x 4 x ptr> [[TMP12:%.*]], i32 0
 ; SVE_OR_NEON:    [[TMP15:%.*]] = extractelement <vscale x 4 x ptr> [[TMP13:%.*]], i32 0
-; SVE_OR_NEON:    [[TMP16:%.*]] = extractelement <vscale x 4 x ptr> [[TMP14:%.*]], i32 0
-; SVE_OR_NEON:    [[TMP17:%.*]] = call <vscale x 4 x i32> @vec_quux_linear4_linear8_mask_sve(ptr [[TMP15]], ptr [[TMP16]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; SVE_OR_NEON:    [[TMP16:%.*]] = call <vscale x 4 x i32> @vec_quux_linear4_linear8_mask_sve(ptr [[TMP14]], ptr [[TMP15]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR5:[0-9]+]]
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linear4_linear8
 ; SVE_OR_NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON_INTERLEAVE:    [[TMP35:%.*]] = extractelement <vscale x 4 x ptr> [[TMP31:%.*]], i32 0
-; SVE_OR_NEON_INTERLEAVE:    [[TMP36:%.*]] = extractelement <vscale x 4 x ptr> [[TMP33:%.*]], i32 0
-; SVE_OR_NEON_INTERLEAVE:    [[TMP37:%.*]] = call <vscale x 4 x i32> @vec_quux_linear4_linear8_mask_sve(ptr [[TMP35]], ptr [[TMP36]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
-; SVE_OR_NEON_INTERLEAVE:    [[TMP38:%.*]] = extractelement <vscale x 4 x ptr> [[TMP32:%.*]], i32 0
-; SVE_OR_NEON_INTERLEAVE:    [[TMP39:%.*]] = extractelement <vscale x 4 x ptr> [[TMP34:%.*]], i32 0
-; SVE_OR_NEON_INTERLEAVE:    [[TMP40:%.*]] = call <vscale x 4 x i32> @vec_quux_linear4_linear8_mask_sve(ptr [[TMP38]], ptr [[TMP39]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK2:%.*]])
+; SVE_OR_NEON_INTERLEAVE:    [[TMP34:%.*]] = extractelement <vscale x 4 x ptr> [[TMP32:%.*]], i32 0
+; SVE_OR_NEON_INTERLEAVE:    [[TMP35:%.*]] = extractelement <vscale x 4 x ptr> [[TMP33:%.*]], i32 0
+; SVE_OR_NEON_INTERLEAVE:    [[TMP36:%.*]] = call <vscale x 4 x i32> @vec_quux_linear4_linear8_mask_sve(ptr [[TMP34]], ptr [[TMP35]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE_OR_NEON_INTERLEAVE:    [[TMP37:%.*]] = call <vscale x 4 x i32> @vec_quux_linear4_linear8_mask_sve(ptr [[TMP34]], ptr [[TMP35]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK4:%.*]])
 ; SVE_OR_NEON_INTERLEAVE:    [[TMP52:%.*]] = extractelement <vscale x 4 x i1> [[TMP50:%.*]], i32 0
 ; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR7:[0-9]+]]
 ;
 ; SVE_TF-LABEL: define void @test_linear4_linear8
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; SVE_TF:    [[TMP20:%.*]] = extractelement <vscale x 4 x ptr> [[TMP18:%.*]], i32 0
 ; SVE_TF:    [[TMP21:%.*]] = extractelement <vscale x 4 x ptr> [[TMP19:%.*]], i32 0
-; SVE_TF:    [[TMP22:%.*]] = extractelement <vscale x 4 x ptr> [[TMP20:%.*]], i32 0
-; SVE_TF:    [[TMP23:%.*]] = call <vscale x 4 x i32> @vec_quux_linear4_linear8_mask_sve(ptr [[TMP21]], ptr [[TMP22]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
-; SVE_TF:    [[TMP27:%.*]] = extractelement <vscale x 4 x i1> [[TMP26:%.*]], i32 0
+; SVE_TF:    [[TMP22:%.*]] = call <vscale x 4 x i32> @vec_quux_linear4_linear8_mask_sve(ptr [[TMP20]], ptr [[TMP21]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE_TF:    [[TMP28:%.*]] = extractelement <vscale x 4 x i1> [[TMP27:%.*]], i32 0
 ; SVE_TF:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR7:[0-9]+]]
 ;
 ; SVE_TF_INTERLEAVE-LABEL: define void @test_linear4_linear8
 ; SVE_TF_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF_INTERLEAVE:    [[TMP35:%.*]] = extractelement <vscale x 4 x ptr> [[TMP31:%.*]], i32 0
-; SVE_TF_INTERLEAVE:    [[TMP36:%.*]] = extractelement <vscale x 4 x ptr> [[TMP33:%.*]], i32 0
-; SVE_TF_INTERLEAVE:    [[TMP37:%.*]] = call <vscale x 4 x i32> @vec_quux_linear4_linear8_mask_sve(ptr [[TMP35]], ptr [[TMP36]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
-; SVE_TF_INTERLEAVE:    [[TMP38:%.*]] = extractelement <vscale x 4 x ptr> [[TMP32:%.*]], i32 0
-; SVE_TF_INTERLEAVE:    [[TMP39:%.*]] = extractelement <vscale x 4 x ptr> [[TMP34:%.*]], i32 0
-; SVE_TF_INTERLEAVE:    [[TMP40:%.*]] = call <vscale x 4 x i32> @vec_quux_linear4_linear8_mask_sve(ptr [[TMP38]], ptr [[TMP39]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK2:%.*]])
+; SVE_TF_INTERLEAVE:    [[TMP34:%.*]] = extractelement <vscale x 4 x ptr> [[TMP32:%.*]], i32 0
+; SVE_TF_INTERLEAVE:    [[TMP35:%.*]] = extractelement <vscale x 4 x ptr> [[TMP33:%.*]], i32 0
+; SVE_TF_INTERLEAVE:    [[TMP36:%.*]] = call <vscale x 4 x i32> @vec_quux_linear4_linear8_mask_sve(ptr [[TMP34]], ptr [[TMP35]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE_TF_INTERLEAVE:    [[TMP37:%.*]] = call <vscale x 4 x i32> @vec_quux_linear4_linear8_mask_sve(ptr [[TMP34]], ptr [[TMP35]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK4:%.*]])
 ; SVE_TF_INTERLEAVE:    [[TMP52:%.*]] = extractelement <vscale x 4 x i1> [[TMP50:%.*]], i32 0
 ; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR7:[0-9]+]]
 ;
@@ -310,8 +300,8 @@ define void @test_linear3_non_ptr(ptr noalias %a, i64 %n) {
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linear3_non_ptr
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON:    [[TMP14:%.*]] = extractelement <vscale x 4 x i32> [[TMP13:%.*]], i32 0
-; SVE_OR_NEON:    [[TMP15:%.*]] = call <vscale x 4 x i32> @vec_bar_linear3_nomask_sve(i32 [[TMP14]])
+; SVE_OR_NEON:    [[TMP16:%.*]] = extractelement <vscale x 4 x i32> [[TMP15:%.*]], i32 0
+; SVE_OR_NEON:    [[TMP17:%.*]] = call <vscale x 4 x i32> @vec_bar_linear3_nomask_sve(i32 [[TMP16]])
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR6:[0-9]+]]
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linear3_non_ptr
@@ -361,8 +351,8 @@ define void @test_linearn5_non_ptr_neg_stride(ptr noalias %a, i64 %n) {
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linearn5_non_ptr_neg_stride
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON:    [[TMP14:%.*]] = extractelement <vscale x 4 x i32> [[TMP13:%.*]], i32 0
-; SVE_OR_NEON:    [[TMP15:%.*]] = call <vscale x 4 x i32> @vec_bar_linearn5_nomask_sve(i32 [[TMP14]])
+; SVE_OR_NEON:    [[TMP16:%.*]] = extractelement <vscale x 4 x i32> [[TMP15:%.*]], i32 0
+; SVE_OR_NEON:    [[TMP17:%.*]] = call <vscale x 4 x i32> @vec_bar_linearn5_nomask_sve(i32 [[TMP16]])
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR7:[0-9]+]]
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linearn5_non_ptr_neg_stride
@@ -404,41 +394,38 @@ define void @test_linear8_return_void(ptr noalias %in, ptr noalias %out, i64 %n)
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_linear8_return_void
 ; NEON_INTERLEAVE-SAME: (ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    [[TMP8:%.*]] = extractelement <2 x ptr> [[TMP6:%.*]], i32 0
-; NEON_INTERLEAVE:    call void @vec_goo_linear8_nomask_neon(<2 x i64> [[WIDE_LOAD:%.*]], ptr [[TMP8]])
-; NEON_INTERLEAVE:    [[TMP9:%.*]] = extractelement <2 x ptr> [[TMP7:%.*]], i32 0
-; NEON_INTERLEAVE:    call void @vec_goo_linear8_nomask_neon(<2 x i64> [[WIDE_LOAD2:%.*]], ptr [[TMP9]])
+; NEON_INTERLEAVE:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP6:%.*]], i32 0
+; NEON_INTERLEAVE:    call void @vec_goo_linear8_nomask_neon(<2 x i64> [[WIDE_LOAD:%.*]], ptr [[TMP7]])
+; NEON_INTERLEAVE:    call void @vec_goo_linear8_nomask_neon(<2 x i64> [[WIDE_LOAD1:%.*]], ptr [[TMP7]])
 ; NEON_INTERLEAVE:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR6:[0-9]+]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linear8_return_void
 ; SVE_OR_NEON-SAME: (ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON:    [[TMP16:%.*]] = extractelement <vscale x 2 x ptr> [[TMP15:%.*]], i32 0
-; SVE_OR_NEON:    call void @vec_goo_linear8_nomask_sve(<vscale x 2 x i64> [[WIDE_LOAD:%.*]], ptr [[TMP16]])
+; SVE_OR_NEON:    [[TMP15:%.*]] = extractelement <vscale x 2 x ptr> [[TMP14:%.*]], i32 0
+; SVE_OR_NEON:    call void @vec_goo_linear8_nomask_sve(<vscale x 2 x i64> [[WIDE_LOAD:%.*]], ptr [[TMP15]])
 ; SVE_OR_NEON:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR8:[0-9]+]]
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linear8_return_void
 ; SVE_OR_NEON_INTERLEAVE-SAME: (ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON_INTERLEAVE:    [[TMP39:%.*]] = extractelement <vscale x 2 x ptr> [[TMP37:%.*]], i32 0
+; SVE_OR_NEON_INTERLEAVE:    [[TMP39:%.*]] = extractelement <vscale x 2 x ptr> [[TMP38:%.*]], i32 0
 ; SVE_OR_NEON_INTERLEAVE:    call void @vec_goo_linear8_mask_sve(<vscale x 2 x i64> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP39]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
-; SVE_OR_NEON_INTERLEAVE:    [[TMP40:%.*]] = extractelement <vscale x 2 x ptr> [[TMP38:%.*]], i32 0
-; SVE_OR_NEON_INTERLEAVE:    call void @vec_goo_linear8_mask_sve(<vscale x 2 x i64> [[WIDE_MASKED_LOAD4:%.*]], ptr [[TMP40]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2:%.*]])
-; SVE_OR_NEON_INTERLEAVE:    [[TMP46:%.*]] = extractelement <vscale x 2 x i1> [[TMP44:%.*]], i32 0
+; SVE_OR_NEON_INTERLEAVE:    call void @vec_goo_linear8_mask_sve(<vscale x 2 x i64> [[WIDE_MASKED_LOAD5:%.*]], ptr [[TMP39]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK4:%.*]])
+; SVE_OR_NEON_INTERLEAVE:    [[TMP48:%.*]] = extractelement <vscale x 2 x i1> [[TMP46:%.*]], i32 0
 ; SVE_OR_NEON_INTERLEAVE:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR10:[0-9]+]]
 ;
 ; SVE_TF-LABEL: define void @test_linear8_return_void
 ; SVE_TF-SAME: (ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF:    [[TMP22:%.*]] = extractelement <vscale x 2 x ptr> [[TMP21:%.*]], i32 0
-; SVE_TF:    call void @vec_goo_linear8_mask_sve(<vscale x 2 x i64> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP22]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
-; SVE_TF:    [[TMP24:%.*]] = extractelement <vscale x 2 x i1> [[TMP23:%.*]], i32 0
+; SVE_TF:    [[TMP21:%.*]] = extractelement <vscale x 2 x ptr> [[TMP20:%.*]], i32 0
+; SVE_TF:    call void @vec_goo_linear8_mask_sve(<vscale x 2 x i64> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP21]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE_TF:    [[TMP25:%.*]] = extractelement <vscale x 2 x i1> [[TMP24:%.*]], i32 0
 ; SVE_TF:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR10:[0-9]+]]
 ;
 ; SVE_TF_INTERLEAVE-LABEL: define void @test_linear8_return_void
 ; SVE_TF_INTERLEAVE-SAME: (ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF_INTERLEAVE:    [[TMP39:%.*]] = extractelement <vscale x 2 x ptr> [[TMP37:%.*]], i32 0
+; SVE_TF_INTERLEAVE:    [[TMP39:%.*]] = extractelement <vscale x 2 x ptr> [[TMP38:%.*]], i32 0
 ; SVE_TF_INTERLEAVE:    call void @vec_goo_linear8_mask_sve(<vscale x 2 x i64> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP39]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
-; SVE_TF_INTERLEAVE:    [[TMP40:%.*]] = extractelement <vscale x 2 x ptr> [[TMP38:%.*]], i32 0
-; SVE_TF_INTERLEAVE:    call void @vec_goo_linear8_mask_sve(<vscale x 2 x i64> [[WIDE_MASKED_LOAD4:%.*]], ptr [[TMP40]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2:%.*]])
-; SVE_TF_INTERLEAVE:    [[TMP46:%.*]] = extractelement <vscale x 2 x i1> [[TMP44:%.*]], i32 0
+; SVE_TF_INTERLEAVE:    call void @vec_goo_linear8_mask_sve(<vscale x 2 x i64> [[WIDE_MASKED_LOAD5:%.*]], ptr [[TMP39]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK4:%.*]])
+; SVE_TF_INTERLEAVE:    [[TMP48:%.*]] = extractelement <vscale x 2 x i1> [[TMP46:%.*]], i32 0
 ; SVE_TF_INTERLEAVE:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR10:[0-9]+]]
 ;
 entry:

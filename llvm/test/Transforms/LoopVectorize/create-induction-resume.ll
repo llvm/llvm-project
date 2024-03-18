@@ -36,8 +36,8 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c) {
 ; CHECK-NEXT:    br label [[L2_HEADER_BACKEDGE:%.*]]
 ; CHECK:       L2.header:
 ; CHECK-NEXT:    switch i32 [[L2_SWITCH:%.*]], label [[L2_HEADER_BACKEDGE]] [
-; CHECK-NEXT:    i32 8, label [[L2_EXIT:%.*]]
-; CHECK-NEXT:    i32 20, label [[L2_INNER_HEADER_PREHEADER:%.*]]
+; CHECK-NEXT:      i32 8, label [[L2_EXIT:%.*]]
+; CHECK-NEXT:      i32 20, label [[L2_INNER_HEADER_PREHEADER:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       L2.header.backedge:
 ; CHECK-NEXT:    br label [[L2_HEADER]]

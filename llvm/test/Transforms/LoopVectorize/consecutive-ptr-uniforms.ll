@@ -486,7 +486,7 @@ for.end:
 ; CHECK:       define void @pr61396_pointer_used_as_both_stored_value_and_pointer_operand_by_store(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK-NEXT:    [[VEC_IND:%.+]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ %vec.ind.next, %vector.body ]
+; CHECK-NEXT:    [[VEC_IND:%.+]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ %{{.*}}, %vector.body ]
 ; CHECK-NEXT:    [[GEP:%.+]] = getelementptr inbounds ptr, ptr %ary, <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[EXT:%.+]] = extractelement <4 x ptr> [[GEP]], i64 0
 ; CHECK-NEXT:    store <4 x ptr> [[GEP]], ptr [[EXT]], align 8
