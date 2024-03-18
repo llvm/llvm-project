@@ -7,6 +7,7 @@ import tempfile
 import struct
 
 import lldb
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
@@ -36,6 +37,7 @@ This file is for split-dwarf (dwp) scenarios.
 2 - A stripped, split binary target with an unstripped binary and a DWP file
 3 - A stripped, split binary target with an --only-keep-debug symbols file and a DWP file
 """
+@skipUnlessPlatform(["linux", "freebsd"])
 class DebugInfodDWPTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True

@@ -4,6 +4,7 @@ import tempfile
 import struct
 
 import lldb
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
@@ -34,6 +35,7 @@ For no-split-dwarf scenarios, there are 2 variations:
 1 - A stripped binary with it's corresponding unstripped binary:
 2 - A stripped binary with a corresponding --only-keep-debug symbols file
 """
+@skipUnlessPlatform(["linux", "freebsd"])
 class DebugInfodTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
