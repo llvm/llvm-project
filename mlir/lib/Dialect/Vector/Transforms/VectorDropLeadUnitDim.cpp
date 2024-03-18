@@ -398,13 +398,28 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
           transposeResults.push_back(targetExpr);
         }
       }
+
+      // Check if the transpose effects outer unit dims only. Such transposes do
+      // not materially effect the underlying vector and can be omitted.
+      bool tranposeNonOuterUnitDims = false;
+      for (int64_t i = 0; i < (int64_t)perm.size(); ++i) {
+        if (perm[i] != i && i != (int64_t)perm.size() - 1) {
+          if (operands[it.index()].getType().cast<ShapedType>().getDimSize(i) !=
+              1) {
+            tranposeNonOuterUnitDims = true;
+          }
+        }
+      }
+
       // Do the tranpose now if needed so that we can drop the
       // correct dim using extract later.
       if (tranposeNeeded) {
         map = AffineMap::get(map.getNumDims(), 0, transposeResults,
                              contractOp.getContext());
-        operands[it.index()] = rewriter.create<vector::TransposeOp>(
-            loc, operands[it.index()], perm);
+        if (tranposeNonOuterUnitDims) {
+          operands[it.index()] = rewriter.createOrFold<vector::TransposeOp>(
+              loc, operands[it.index()], perm);
+        }
       }
     }
     // We have taken care to have the dim to be dropped be
