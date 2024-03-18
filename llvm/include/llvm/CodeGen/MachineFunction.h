@@ -1058,8 +1058,9 @@ public:
                                           int64_t Offset, LocationSize Size) {
     return getMachineMemOperand(
         MMO, Offset,
-        !Size.hasValue() || Size.isScalable()
-            ? LLT()
+        !Size.hasValue() ? LLT()
+        : Size.isScalable()
+            ? LLT::scalable_vector(1, 8 * Size.getValue().getKnownMinValue())
             : LLT::scalar(8 * Size.getValue().getKnownMinValue()));
   }
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
