@@ -1637,9 +1637,13 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     NestedNameSpecifier *Qualifier = T->getQualifier();
     if (!Policy.SuppressTagKeyword && Policy.SuppressScope &&
         !Policy.SuppressUnwrittenScope) {
+      bool OldTagKeyword = Policy.SuppressTagKeyword;
+      bool OldSupressScope = Policy.SuppressScope;
       Policy.SuppressTagKeyword = true;
       Policy.SuppressScope = false;
       printBefore(T->getNamedType(), OS);
+      Policy.SuppressTagKeyword = OldTagKeyword;
+      Policy.SuppressScope = OldSupressScope;
       return;
     }
     if (Qualifier)
