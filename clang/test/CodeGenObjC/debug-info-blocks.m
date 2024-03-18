@@ -5,8 +5,8 @@
 
 // CHECK: define {{.*}}_block_invoke
 // CHECK: store ptr %.block_descriptor, ptr %[[ALLOCA:block.addr]], align
-// CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %[[ALLOCA]], metadata ![[SELF:[0-9]+]], metadata !{{.*}})
 // CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %d, metadata ![[D:[0-9]+]], metadata !{{.*}})
+// CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %[[ALLOCA]], metadata ![[SELF:[0-9]+]], metadata !{{.*}})
 
 // Test that we do emit scope info for the helper functions, and that the
 // parameters to these functions are marked as artificial (so the debugger
