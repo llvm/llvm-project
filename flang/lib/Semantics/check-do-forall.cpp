@@ -220,8 +220,11 @@ public:
       if (MightDeallocatePolymorphic(*entity, DeallocateNonCoarray)) {
         SayDeallocateOfPolymorph(variable.GetSource(), *entity, reason);
       }
-      if (const Symbol * impure{HasImpureFinal(*entity)}) {
-        SayDeallocateWithImpureFinal(*entity, reason, *impure);
+      if (const auto *assignment{GetAssignment(stmt)}) {
+        const auto &lhs{assignment->lhs};
+        if (const Symbol * impure{HasImpureFinal(*entity, lhs.Rank())}) {
+          SayDeallocateWithImpureFinal(*entity, reason, *impure);
+        }
       }
     }
     if (const auto *assignment{GetAssignment(stmt)}) {
