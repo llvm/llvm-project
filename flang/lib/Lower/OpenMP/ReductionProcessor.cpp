@@ -441,6 +441,10 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
 
     // from hlfir::createTempFromMold() but with the allocation changed to
     // use alloca so that we don't have to free it
+    // TODO: if the whole reduction is nested inside of a loop, this alloca
+    // could lead to a stack overflow (the memory is only freed at the end of
+    // the stack frame). The reduction declare operation needs a deallocation
+    // region to undo the init region.
     assert(source.isArray());
     mlir::Type sequenceType =
         hlfir::getFortranElementOrSequenceType(source.getType());
