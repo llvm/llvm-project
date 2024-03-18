@@ -15,25 +15,15 @@ combiner {
   %1 = llvm.fadd %arg0, %arg1 : f32
   omp.yield (%1 : f32)
 }
-atomic {
-^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
-  %2 = llvm.load %arg3 : !llvm.ptr -> f32
-  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
-  omp.yield
-}
 
 llvm.func @simple_reduction(%lb : i64, %ub : i64, %step : i64) {
   %c1 = llvm.mlir.constant(1 : i32) : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  omp.parallel {
-    omp.wsloop reduction(@add_f32 %0 -> %prv : !llvm.ptr)
-    for (%iv) : i64 = (%lb) to (%ub) step (%step) {
-      %1 = llvm.mlir.constant(2.0 : f32) : f32
-      %2 = llvm.load %prv : !llvm.ptr -> f32
-      %3 = llvm.fadd %1, %2 : f32
-      llvm.store %3, %prv : f32, !llvm.ptr
-      omp.yield
-    }
+  omp.parallel reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
+    %1 = llvm.mlir.constant(2.0 : f32) : f32
+    %2 = llvm.load %prv : !llvm.ptr -> f32
+    %3 = llvm.fadd %1, %2 : f32
+    llvm.store %3, %prv : f32, !llvm.ptr
     omp.terminator
   }
   llvm.return
