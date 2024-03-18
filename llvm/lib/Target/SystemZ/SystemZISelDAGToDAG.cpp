@@ -1780,14 +1780,6 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
   }
   }
 
-#ifndef NDEBUG
-  if (auto *AL = dyn_cast<AtomicSDNode>(Node))
-    if (AL->getOpcode() == ISD::ATOMIC_LOAD)
-      assert((AL->getExtensionType() == ISD::NON_EXTLOAD ||
-              AL->getMemoryVT().isScalarInteger()) &&
-             "Not expecting extending fp atomic_load nodes.");
-#endif
-
   SelectCode(Node);
 }
 
