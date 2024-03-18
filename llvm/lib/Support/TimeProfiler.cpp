@@ -64,12 +64,14 @@ using CountAndDurationType = std::pair<size_t, DurationType>;
 using NameAndCountAndDurationType =
     std::pair<std::string, CountAndDurationType>;
 
+} // anonymous namespace
+
 /// Represents an open or completed time section entry to be captured.
-struct TimeTraceProfilerEntry {
+struct llvm::TimeTraceProfilerEntry {
   const TimePointType Start;
   TimePointType End;
   const std::string Name;
-  const std::string Detail;
+  std::string Detail;
 
   TimeTraceProfilerEntry(TimePointType &&S, TimePointType &&E, std::string &&N,
                          std::string &&Dt)
@@ -92,8 +94,6 @@ struct TimeTraceProfilerEntry {
   }
 };
 
-} // anonymous namespace
-
 struct llvm::TimeTraceProfiler {
   TimeTraceProfiler(unsigned TimeTraceGranularity = 0, StringRef ProcName = "")
       : BeginningOfTime(system_clock::now()), StartTime(ClockType::now()),
@@ -102,9 +102,10 @@ struct llvm::TimeTraceProfiler {
     llvm::get_thread_name(ThreadName);
   }
 
-  void begin(std::string Name, llvm::function_ref<std::string()> Detail) {
-    Stack.emplace_back(ClockType::now(), TimePointType(), std::move(Name),
-                       Detail());
+  llvm::TimeTraceProfilerEntry *
+  begin(std::string Name, llvm::function_ref<std::string()> Detail) {
+    return &Stack.emplace_back(ClockType::now(), TimePointType(),
+                               std::move(Name), Detail());
   }
 
   void end() {
@@ -341,19 +342,36 @@ Error llvm::timeTraceProfilerWrite(StringRef PreferredFileName,
   return Error::success();
 }
 
-void llvm::timeTraceProfilerBegin(StringRef Name, StringRef Detail) {
+llvm::TimeTraceProfilerEntry *llvm::timeTraceProfilerBegin(StringRef Name,
+                                                           StringRef Detail) {
   if (TimeTraceProfilerInstance != nullptr)
-    TimeTraceProfilerInstance->begin(std::string(Name),
-                                     [&]() { return std::string(Detail); });
+    return TimeTraceProfilerInstance->begin(
+        std::string(Name), [&]() { return std::string(Detail); });
 }
 
-void llvm::timeTraceProfilerBegin(StringRef Name,
-                                  llvm::function_ref<std::string()> Detail) {
+llvm::TimeTraceProfilerEntry *
+llvm::timeTraceProfilerBegin(StringRef Name,
+                             llvm::function_ref<std::string()> Detail) {
   if (TimeTraceProfilerInstance != nullptr)
-    TimeTraceProfilerInstance->begin(std::string(Name), Detail);
+    return TimeTraceProfilerInstance->begin(std::string(Name), Detail);
 }
 
 void llvm::timeTraceProfilerEnd() {
   if (TimeTraceProfilerInstance != nullptr)
     TimeTraceProfilerInstance->end();
+}
+
+void llvm::timeTraceProfilerEntrySetDetail(llvm::TimeTraceProfilerEntry *Entry,
+                                           StringRef Detail) {
+  if (Entry != nullptr) {
+    Entry->Detail = Detail;
+  }
+}
+
+void llvm::timeTraceProfilerEntrySetDetail(
+    llvm::TimeTraceProfilerEntry *Entry,
+    llvm::function_ref<std::string()> Detail) {
+  if (Entry != nullptr) {
+    Entry->Detail = Detail();
+  }
 }
