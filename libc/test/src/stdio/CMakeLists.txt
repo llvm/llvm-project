@@ -14,6 +14,7 @@ add_libc_test(
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush
+    libc.src.stdio.fileno
     libc.src.stdio.fopen
     libc.src.stdio.fputs
     libc.src.stdio.fread
