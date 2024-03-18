@@ -647,11 +647,12 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
     // v16i8 respectively.
     if (Name.consume_front("bfdot.")) {
       // (arm|aarch64).neon.bfdot.*'.
-      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
-                             .Cases("v2f32.v8i8", "v4f32.v16i8",
-                                    IsArm ? Intrinsic::arm_neon_bfdot
-                                          : Intrinsic::aarch64_neon_bfdot)
-                             .Default(Intrinsic::not_intrinsic);
+      Intrinsic::ID ID =
+          StringSwitch<Intrinsic::ID>(Name)
+              .Cases("v2f32.v8i8", "v4f32.v16i8",
+                     IsArm ? (Intrinsic::ID)Intrinsic::arm_neon_bfdot
+                           : (Intrinsic::ID)Intrinsic::aarch64_neon_bfdot)
+              .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
         size_t OperandWidth = F->getReturnType()->getPrimitiveSizeInBits();
         assert((OperandWidth == 64 || OperandWidth == 128) &&
@@ -674,12 +675,15 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         // (arm|aarch64).neon.bfm*.v4f32.v16i8'.
         Intrinsic::ID ID =
             StringSwitch<Intrinsic::ID>(Name)
-                .Case("mla", IsArm ? Intrinsic::arm_neon_bfmmla
-                                   : Intrinsic::aarch64_neon_bfmmla)
-                .Case("lalb", IsArm ? Intrinsic::arm_neon_bfmlalb
-                                    : Intrinsic::aarch64_neon_bfmlalb)
-                .Case("lalt", IsArm ? Intrinsic::arm_neon_bfmlalt
-                                    : Intrinsic::aarch64_neon_bfmlalt)
+                .Case("mla",
+                      IsArm ? (Intrinsic::ID)Intrinsic::arm_neon_bfmmla
+                            : (Intrinsic::ID)Intrinsic::aarch64_neon_bfmmla)
+                .Case("lalb",
+                      IsArm ? (Intrinsic::ID)Intrinsic::arm_neon_bfmlalb
+                            : (Intrinsic::ID)Intrinsic::aarch64_neon_bfmlalb)
+                .Case("lalt",
+                      IsArm ? (Intrinsic::ID)Intrinsic::arm_neon_bfmlalt
+                            : (Intrinsic::ID)Intrinsic::aarch64_neon_bfmlalt)
                 .Default(Intrinsic::not_intrinsic);
         if (ID != Intrinsic::not_intrinsic) {
           NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
