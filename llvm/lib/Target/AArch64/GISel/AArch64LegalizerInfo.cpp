@@ -628,7 +628,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return DstTy.isVector() && SrcTy.getSizeInBits() > 128 &&
                DstTy.getScalarSizeInBits() * 2 <= SrcTy.getScalarSizeInBits();
       })
-
+      .customIf(all(typeInSet(0, {v4s8}),
+                    typeInSet(1, {v4s16})))
       .alwaysLegal();
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
@@ -1262,9 +1263,43 @@ bool AArch64LegalizerInfo::legalizeCustom(
     return legalizeDynStackAlloc(MI, Helper);
   case TargetOpcode::G_PREFETCH:
     return legalizePrefetch(MI, Helper);
+  case TargetOpcode::G_TRUNC:
+    return legalizeTrunc(MI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
+}
+
+bool AArch64LegalizerInfo::legalizeTrunc(MachineInstr &MI,
+                                         LegalizerHelper &Helper) const {
+  assert(MI.getOpcode() == TargetOpcode::G_TRUNC);
+
+  // Handle <4 x s8> = G_TRUNC <4 x s16> by widening to <8 x s16> first.
+  // So the sequence is:
+  // %orig_val(<4 x s16>) = ...
+  // %wide = G_MERGE_VALUES %orig_val, %undef:_(<4 x s16>)
+  // %wide_trunc:_(<8 x s8>) = G_TRUNC %wide
+  // %bc:_(<2 x s32>) = G_BITCAST %wide_trunc
+  // %eve:_(s32) = G_EXTRACT_VECTOR_ELT %bc, 0
+  // %final:_(<4 x s8>) = G_BITCAST %eve
+
+  MachineIRBuilder &MIB = Helper.MIRBuilder;
+
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  assert(DstTy == LLT::fixed_vector(4, LLT::scalar(8)) &&
+         SrcTy == LLT::fixed_vector(4, LLT::scalar(16)));
+
+  auto WideTy = LLT::fixed_vector(8, LLT::scalar(16));
+  auto Undef = MIB.buildUndef(SrcTy);
+  auto Merge = MIB.buildMergeLikeInstr(WideTy, {SrcReg, Undef});
+  auto Trunc = MIB.buildTrunc(LLT::fixed_vector(8, LLT::scalar(8)), Merge);
+  auto BC = MIB.buildBitcast(LLT::fixed_vector(2, LLT::scalar(32)), Trunc);
+  auto Extract = MIB.buildExtractVectorElement(
+      LLT::scalar(32), BC, MIB.buildConstant(LLT::scalar(32), 0));
+  MIB.buildBitcast(DstReg, Extract);
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AArch64LegalizerInfo::legalizeFunnelShift(MachineInstr &MI,

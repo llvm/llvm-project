@@ -4,8 +4,7 @@
 
 ; PR23065: SCALAR_TO_VECTOR implies the top elements 1 to N-1 of the N-element vector are undefined.
 
-; CHECK-GI:         warning: Instruction selection used fallback path for bitcast_v4i8_i32
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for bitcast_i32_v4i8
+; CHECK-GI:         warning: Instruction selection used fallback path for bitcast_i32_v4i8
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for bitcast_v2i16_i32
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for bitcast_i32_v2i16
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for bitcast_v2i16_v4i8
@@ -54,15 +53,22 @@ define <4 x i16> @foo2(<2 x i32> %a) {
 ; ===== To and From Scalar Types =====
 
 define i32 @bitcast_v4i8_i32(<4 x i8> %a, <4 x i8> %b){
-; CHECK-LABEL: bitcast_v4i8_i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: bitcast_v4i8_i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub sp, sp, #16
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    add sp, sp, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bitcast_v4i8_i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
   %c = add <4 x i8> %a, %b
   %d = bitcast <4 x i8> %c to i32
   ret i32 %d
