@@ -8,9 +8,9 @@ follow. **Following these rules will results in much faster PR approvals.**
 ### Precommit tests
 
 Tests for new optimizations or miscompilation fixes should be pre-committed.
-This means that you first commit the test with CHECK lines prior to your fix.
-Your actual change will then only contain CHECK line diffs relative to that
-baseline.
+This means that you first commit the test with CHECK lines showing the behavior
+*without* your change. Your actual change will then only contain CHECK line
+diffs relative to that baseline.
 
 This means that pull requests should generally contain two commits: First,
 one commit adding new tests with baseline check lines. Second, a commit with
@@ -218,52 +218,53 @@ define i8 @tgt_sub_add(i8 %x, i8 %y) {
 
 Proofs should operate on generic values, rather than specific constants, to the degree that this is possible.
 
-For example, this is a **bad** proof:
+For example, if we want to fold `X s/ C s< X` to `X s> 0`, the following would
+be a *bad* proof:
 
 ```llvm
 ; Don't do this!
-define i8 @src(i8 %x) {
-  %smax = call i8 @llvm.smax.i8(i8 %x, i8 5)
-  %umax = call i8 @llvm.umax.i8(i8 %smax, i8 7)
-  ret i8 %umax
+define i1 @src(i8 %x) {
+  %div = sdiv i8 %x, 123
+  %cmp = icmp slt i8 %div, %x
+  ret i1 %cmp
 }
 
-define i8 @tgt(i8 %x) {
-  %smax = call i8 @llvm.smax.i8(i8 %x, i8 7)
-  ret i8 %smax
+define i1 @tgt(i8 %x) {
+  %cmp = icmp sgt i8 %x, 0
+  ret i1 %cmp
 }
 ```
 
+This is because it only proves that the transform is correct for the specific
+constant 123. Maybe there are some constants for which the transform is
+incorrect?
+
 The correct way to write this proof is as follows
-([online](https://alive2.llvm.org/ce/z/Sgfq37)):
+([online](https://alive2.llvm.org/ce/z/acjwb6)):
 
 ```llvm
-define i8 @src(i8 %x, i8 %c1, i8 %c2) {
-  %cond1 = icmp sgt i8 %c1, -1
-  call void @llvm.assume(i1 %cond1)
-  %cond2 = icmp sgt i8 %c2, -1
-  call void @llvm.assume(i1 %cond2)
-
-  %smax = call i8 @llvm.smax.i8(i8 %x, i8 %c1)
-  %umax = call i8 @llvm.umax.i8(i8 %smax, i8 %c2)
-  ret i8 %umax
+define i1 @src(i8 %x, i8 %C) {
+  %precond = icmp ne i8 %C, 1
+  call void @llvm.assume(i1 %precond)
+  %div = sdiv i8 %x, %C
+  %cmp = icmp slt i8 %div, %x
+  ret i1 %cmp
 }
 
-define i8 @tgt(i8 %x, i8 %c1, i8 %c2) {
-  %umax = call i8 @llvm.umax.i8(i8 %c1, i8 %c2)
-  %smax = call i8 @llvm.smax.i8(i8 %x, i8 %umax)
-  ret i8 %smax
+define i1 @tgt(i8 %x, i8 %C) {
+  %cmp = icmp sgt i8 %x, 0
+  ret i1 %cmp
 }
 ```
 
 Note that the `@llvm.assume` intrinsic is used to specify pre-conditions for
-the transform. In this case, it specifies that the constants `%c1` and `%c2`
-must be non-negative.
+the transform. In this case, the proof will fail unless we specify `C != 1` as
+a pre-condition.
 
 It should be emphasized that there is, in general, no expectation that the
 IR in the proofs will be transformed by the implemented fold. In the above
-example, the transform would only actually apply if `%c1` and `%c2` are
-actually constants, but we need to use non-constants in the proof.
+example, the transform would only apply if `%C` is actually a constant, but we
+need to use non-constants in the proof.
 
 ### Common pre-conditions
 
@@ -320,8 +321,14 @@ the bitwidth by specifying a custom data layout:
 target datalayout = "p:16:16"
 ```
 
-If reducing the bitwidth does not help, try `-disable-undef-input`. If this
-still does not work, submit your proof despite the timeout.
+If reducing the bitwidth does not help, try `-disable-undef-input`. This will
+often significantly improve performance, but also implies that the correctness
+of the transform with `undef` values is no longer verified. This is usually
+fine if the transform does not increase the number of uses of any value.
+
+Finally, it's possible to build alive2 locally and use `-smt-to=<m>` to verify
+the proof with a larger timeout. If you don't want to do this (or it still
+does not work), please submit the proof you have despite the timeout.
 
 ## Implementation
 
@@ -412,12 +419,17 @@ Some common matchers are:
    `const APInt *C`. Does not permit undef/poison values.
  * `m_ImmConstant(C)`: Match any non-constant-expression constant into
    `Constant *C`.
- * `m_Constant(C)`: Match any constant into `Constant *C`. Don't use unless you
-   know what you're doing.
+ * `m_Constant(C)`: Match any constant into `Constant *C`. Don't use this unless
+   you know what you're doing.
  * `m_Add(M1, M2)`, `m_Sub(M1, M2)`, etc: Match an add/sub/etc where the first
    operand matches M1 and the second M2.
  * `m_c_Add(M1, M2)`, etc: Match an add commutatively. The operands must match
-   either M1 and M2 or M2 and M1.
+   either M1 and M2 or M2 and M1. Most instruction matchers have a commutative
+   variant.
+ * `m_ICmp(Pred, M1, M2)` and `m_c_ICmp(Pred, M1, M2): Match an icmp, writing
+   the predicate into `IcmpInst::Predicate Pred`. If the commutative version
+   is used, and the operands match in order M2, M1, then `Pred` will be the
+   swapped predicate.
  * `m_OneUse(M)`: Check that the value only has one use, and also matches M.
    For example `m_OneUse(m_Add(...))`. See the next section for more
    information.
@@ -432,7 +444,7 @@ single division instruction with multiple other instructions.
 
 For example, if you have a transform that replaces two instructions, with two
 other instructions, this is (usually) only profitable if *both* the original
-instructions can be removed. To ensure that both instructions get DCEd, you
+instructions can be removed. To ensure that both instructions are removed, you
 need to add a one-use check for the inner instruction.
 
 One-use checks can be performed using the `m_OneUse()` matcher, or the
