@@ -8045,6 +8045,13 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   Constant *RHSC;
   if (match(Op0, m_Instruction(LHSI)) && match(Op1, m_Constant(RHSC))) {
     switch (LHSI->getOpcode()) {
+    case Instruction::Select:
+      if ((Pred == FCmpInst::FCMP_UEQ || Pred == FCmpInst::FCMP_OEQ ||
+           Pred == FCmpInst::FCMP_UNE || Pred == FCmpInst::FCMP_ONE) &&
+          match(LHSI, m_Select(m_Value(), m_Value(X), m_FNeg(m_Value(Y)))) &&
+          X == Y && match(RHSC, m_AnyZeroFP()))
+        return new FCmpInst(Pred, X, RHSC);
+      break;
     case Instruction::PHI:
       if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
         return NV;
