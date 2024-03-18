@@ -1294,8 +1294,8 @@ bool AArch64LegalizerInfo::legalizeTrunc(MachineInstr &MI,
   auto Trunc = MIB.buildTrunc(LLT::fixed_vector(8, LLT::scalar(8)), Merge);
   auto BC = MIB.buildBitcast(LLT::fixed_vector(2, LLT::scalar(32)), Trunc);
   auto Extract = MIB.buildExtractVectorElement(
-      LLT::scalar(32), BC, MIB.buildConstant(LLT::scalar(32), 0));
-  MIB.buildBitcast(DstReg, Extract
+      LLT::scalar(32), BC, MIB.buildConstant(LLT::scalar(64), 0));
+  MIB.buildBitcast(DstReg, Extract);
 
   MI.eraseFromParent();
   return true;
