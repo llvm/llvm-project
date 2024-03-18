@@ -19,184 +19,48 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+#include <numeric>
+
 using namespace mlir;
 using namespace tosa;
 
-static bool findIntermediateShape(ArrayRef<int64_t> lhsShape,
-                                  ArrayRef<int64_t> rhsShape,
-                                  SmallVector<int64_t> &intermediateShape,
-                                  bool isDynamic) {
-  if (isDynamic) {
-    // TODO (natashaknk): Make dynamic intermediate shape not always be rank-1
-    intermediateShape = {ShapedType::kDynamic};
-    return true;
-  }
+// Compute the dimension size of the result tensor corresponding to the
+// placeholder value set to -1 in the 'new_shape' attribute of a 'tosa.reshape'
+// op. Argument 'newShape' is expected to contain exactly one value set to -1.
+static Value getReshapePlaceholderDimSize(OpBuilder &builder, Location loc,
+                                          TypedValue<TensorType> input,
+                                          ArrayRef<int64_t> newShape) {
+  // Calculate the product of all dimensions in the new shape. We expect to have
+  // exactly one size set to -1, so we can discard this component by just
+  // negating the final product.
+  auto newSizeValue = -std::accumulate(newShape.begin(), newShape.end(), 1,
+                                       std::multiplies<int64_t>());
+  assert(newSizeValue > 0);
+  auto newSize = builder.create<arith::ConstantIndexOp>(loc, newSizeValue);
 
-  if (lhsShape.empty() || rhsShape.empty()) {
-    intermediateShape = {};
-    return true;
-  }
-
-  unsigned currLhsDim = 0, currRhsDim = 0;
-  while (currLhsDim < lhsShape.size() && currRhsDim < rhsShape.size()) {
-    int64_t rhsSize = rhsShape[currRhsDim];
-    int64_t lhsSize = lhsShape[currLhsDim];
-    while (lhsSize != rhsSize && currLhsDim < lhsShape.size() &&
-           currRhsDim < rhsShape.size()) {
-      if (lhsSize < rhsSize) {
-        currLhsDim++;
-        if (currLhsDim < lhsShape.size()) {
-          lhsSize *= lhsShape[currLhsDim];
-        }
-      } else {
-        currRhsDim++;
-        if (currRhsDim < rhsShape.size()) {
-          rhsSize *= rhsShape[currRhsDim];
-        }
-      }
-    }
-    if (lhsSize == rhsSize) {
-      intermediateShape.push_back(lhsSize);
-    }
-    currRhsDim++;
-    currLhsDim++;
-  }
-
-  // If the iterators didn't reach the end and their leftover dimensions are not
-  // equal to 1 an intermediate shape was not found.
-  while (currLhsDim < lhsShape.size()) {
-    if (lhsShape[currLhsDim++] != 1) {
-      return false;
+  // Calculate input tensor size. Traverse static dimensions first to fold as
+  // many results as possible.
+  auto inputShape = input.getType().getShape();
+  int64_t staticInputSize = 1;
+  for (auto size : inputShape)
+    if (size != ShapedType::kDynamic)
+      staticInputSize *= size;
+ 
+  // Continue calculating input tensor size by multiplying dynamic dimensions.
+  Value inputSize = builder.create<arith::ConstantIndexOp>(loc, staticInputSize);
+  for (auto [index, size] : llvm::enumerate(inputShape)) {
+    if (size == ShapedType::kDynamic) {
+      auto dimSize = builder.create<tensor::DimOp>(loc, input, index);
+      inputSize = builder.create<arith::MulIOp>(loc, inputSize, dimSize);
     }
   }
 
-  while (currRhsDim < rhsShape.size()) {
-    if (rhsShape[currRhsDim++] != 1) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-static bool createReassociationMapsForCollapse(
-    PatternRewriter &rewriter, ArrayRef<int64_t> srcShape,
-    ArrayRef<int64_t> dstShape,
-    SmallVector<ReassociationExprs, 4> &reassociationMap, bool isDynamic) {
-
-  // If the shape is dynamic, create a map for collapsing into one dimension.
-  if (isDynamic) {
-    SmallVector<AffineExpr, 2> exprs;
-    for (int i = 0, s = srcShape.size(); i < s; ++i)
-      exprs.push_back(rewriter.getAffineDimExpr(i));
-    reassociationMap = {exprs};
-    return true;
-  }
-
-  if (dstShape.empty()) {
-    reassociationMap = {};
-    return true;
-  }
-
-  reassociationMap.resize(dstShape.size());
-  unsigned currSrcDim = 0, currDstDim = 0;
-  while (currSrcDim < srcShape.size() && currDstDim < dstShape.size()) {
-    int64_t dstSize = dstShape[currDstDim];
-    int64_t srcSize = srcShape[currSrcDim];
-    while (srcSize < dstSize && currSrcDim < srcShape.size()) {
-      reassociationMap[currDstDim].push_back(
-          rewriter.getAffineDimExpr(currSrcDim++));
-      srcSize *= srcShape[currSrcDim];
-    }
-    if (srcSize == dstSize) {
-      reassociationMap[currDstDim].push_back(
-          rewriter.getAffineDimExpr(currSrcDim++));
-      // If the next dim in collapsedShape is not 1, treat subsequent dims in
-      // expandedShape which are 1 to be collapsed.
-      if (currDstDim == dstShape.size() - 1 || dstShape[currDstDim + 1] != 1) {
-        while (currSrcDim < srcShape.size() && srcShape[currSrcDim] == 1) {
-          reassociationMap[currDstDim].push_back(
-              rewriter.getAffineDimExpr(currSrcDim++));
-        }
-      }
-    }
-    currDstDim++;
-  }
-
-  // If both iterators didn't reach the end, we have leftover dimentions which
-  // implies that we have a mismatch in shape.
-  return currSrcDim == srcShape.size() && currDstDim == dstShape.size();
+  // Calculate placeholder size, which will be folded if input tensor was
+  // statically shaped.
+  return builder.createOrFold<arith::DivUIOp>(loc, inputSize, newSize);
 }
 
 namespace {
-Value createCollapse(ConversionPatternRewriter &rewriter, Location loc,
-                     ShapedType resultTy, Value operand) {
-  ShapedType operandTy = cast<ShapedType>(operand.getType());
-  if (resultTy == operandTy)
-    return operand;
-
-  bool isDynamic = !operandTy.hasStaticShape();
-
-  if (isDynamic && resultTy.getRank() != 1) {
-    (void)rewriter.notifyMatchFailure(
-        loc, "Cannot collapse dynamic dims to more than one dimension");
-    return {};
-  }
-
-  SmallVector<ReassociationExprs, 4> reassociationMap;
-  if (!createReassociationMapsForCollapse(rewriter, operandTy.getShape(),
-                                          resultTy.getShape(),
-                                          reassociationMap, isDynamic)) {
-    (void)rewriter.notifyMatchFailure(
-        loc, "tosa.reshape Attempting to collapse into an incompatible shape");
-    return {};
-  }
-
-  SmallVector<int64_t> intermediateShape;
-  if (!findIntermediateShape(operandTy.getShape(), resultTy.getShape(),
-                             intermediateShape, isDynamic)) {
-    (void)rewriter.notifyMatchFailure(
-        loc, "tosa.reshape Cannot collapse into given shape");
-    return {};
-  }
-  return rewriter.create<tensor::CollapseShapeOp>(loc, resultTy, operand,
-                                                  reassociationMap);
-}
-
-Value createExpand(ConversionPatternRewriter &rewriter, Location loc,
-                   ShapedType resultTy, Value operand) {
-  ShapedType operandTy = cast<ShapedType>(operand.getType());
-  if (resultTy == operandTy)
-    return operand;
-
-  bool isDynamic = !operandTy.hasStaticShape();
-
-  if (isDynamic && operandTy.getRank() != 1) {
-    (void)rewriter.notifyMatchFailure(
-        loc, "Cannot expand dynamic dims from more than one dimension");
-    return {};
-  }
-
-  SmallVector<ReassociationExprs, 4> reassociationMap;
-  if (!createReassociationMapsForCollapse(rewriter, resultTy.getShape(),
-                                          operandTy.getShape(),
-                                          reassociationMap, isDynamic)) {
-    (void)rewriter.notifyMatchFailure(
-        loc, "tosa.reshape Attempting to expand into an incompatible shape");
-    return {};
-  }
-
-  SmallVector<int64_t> intermediateShape;
-  if (!findIntermediateShape(operandTy.getShape(), resultTy.getShape(),
-                             intermediateShape, isDynamic) ||
-      intermediateShape != operandTy.getShape()) {
-    (void)rewriter.notifyMatchFailure(
-        loc, "tosa.reshape Cannot expand into given shape");
-    return {};
-  }
-  return rewriter.create<tensor::ExpandShapeOp>(loc, resultTy, operand,
-                                                reassociationMap);
-}
 
 class ReshapeConverterCollapseExpand
     : public OpConversionPattern<tosa::ReshapeOp> {
@@ -206,30 +70,23 @@ public:
   LogicalResult
   matchAndRewrite(tosa::ReshapeOp reshape, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    ShapedType operandTy = cast<ShapedType>(adaptor.getInput1().getType());
-    ShapedType resultTy = cast<ShapedType>(reshape.getType());
-    bool isDynamic = !operandTy.hasStaticShape();
+    auto loc = reshape.getLoc();
+    auto input = reshape.getInput1();
+    auto newShape = reshape.getNewShape();
 
-    SmallVector<int64_t> intermediateShape;
-    if (!findIntermediateShape(resultTy.getShape(), operandTy.getShape(),
-                               intermediateShape, isDynamic)) {
-      return rewriter.notifyMatchFailure(
-          reshape, "tosa.reshape Cannot identify an intermediate shape between "
-                   "the given two shapes");
+    // Create list of values for new shape
+    SmallVector<Value> newShapeList(reshape.getNewShape().size());
+    for (auto [index, size] : llvm::enumerate(reshape.getNewShape())) {
+      newShapeList[index] = size == -1 ?
+          getReshapePlaceholderDimSize(rewriter, loc, input, newShape) :
+          rewriter.create<arith::ConstantIndexOp>(loc, size);
     }
-    auto intermediateTy = RankedTensorType::get(
-        intermediateShape, reshape.getType().getElementType());
 
-    Value collapse = createCollapse(rewriter, reshape.getLoc(), intermediateTy,
-                                    adaptor.getInput1());
-    if (!collapse)
-      return failure();
-
-    Value expand = createExpand(rewriter, reshape.getLoc(), resultTy, collapse);
-    if (!expand)
-      return failure();
-
-    rewriter.replaceOp(reshape, expand);
+    // Reshape tensor
+    auto newShapeTensor = rewriter.createOrFold<tensor::FromElementsOp>(
+        loc, newShapeList);
+    rewriter.replaceOpWithNewOp<tensor::ReshapeOp>(
+        reshape, reshape.getResult().getType(), input, newShapeTensor);
     return success();
   }
 };
