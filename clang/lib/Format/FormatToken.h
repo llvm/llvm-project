@@ -156,7 +156,11 @@ extern bool IsCpp;
   TYPE(TableGenDAGArgCloser)                                                   \
   TYPE(TableGenDAGArgListColon)                                                \
   TYPE(TableGenDAGArgListComma)                                                \
+  TYPE(TableGenDAGArgListCommaToBreak)                                         \
   TYPE(TableGenDAGArgOpener)                                                   \
+  TYPE(TableGenDAGArgOpenerToBreak)                                            \
+  TYPE(TableGenDAGArgOperatorID)                                               \
+  TYPE(TableGenDAGArgOperatorToBreak)                                          \
   TYPE(TableGenListCloser)                                                     \
   TYPE(TableGenListOpener)                                                     \
   TYPE(TableGenMultiLineString)                                                \
