@@ -1,0 +1,4 @@
+SWIFT_SOURCES := main.swift
+SWIFT_ENABLE_EXPLICIT_MODULES := YES
+USE_PRIVATE_MODULE_CACHE := YES
+include Makefile.rules

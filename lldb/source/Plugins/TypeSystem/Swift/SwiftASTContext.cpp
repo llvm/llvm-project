@@ -57,6 +57,7 @@
 #include "clang/Driver/Driver.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -64,6 +65,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
@@ -1595,9 +1597,50 @@ void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &source,
   }
 }
 
+namespace {
+
+bool HasNonexistentExplicitModule(const std::vector<std::string> &args) {
+  for (const std::string &arg : args) {
+    StringRef value = arg;
+    if (!value.consume_front("-fmodule-file="))
+      continue;
+    StringRef path = value;
+    size_t eq = value.find('=');
+    // The value that follows is in one of two formats:
+    //   1. ModuleName=ModulePath
+    //   2. ModulePath
+    if (eq != std::string::npos)
+      // The value appears to be in ModuleName=ModulePath forat.
+      path = value.drop_front(eq + 1);
+    // Check both path and value. This is to handle paths containing '='.
+    if (!llvm::sys::fs::exists(path) && !llvm::sys::fs::exists(value)) {
+      std::string m_description;
+      HEALTH_LOG_PRINTF("Nonexistent explicit module file %s", arg.data());
+      return true;
+    }
+  }
+  return false;
+}
+
+void RemoveExplicitModules(std::vector<std::string> &args) {
+  llvm::erase_if(args, [](const std::string &arg) {
+    if (arg == "-fno-implicit-modules" || arg == "-fno-implicit-module-maps")
+      return true;
+    StringRef s = arg;
+    if (s.starts_with("-fmodule-file=") || s.starts_with("-fmodule-map-file="))
+      return true;
+
+    return false;
+  });
+}
+
+} // namespace
+
 void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &ExtraArgs) {
   swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
   AddExtraClangArgs(ExtraArgs, importer_options.ExtraArgs);
+  if (HasNonexistentExplicitModule(importer_options.ExtraArgs))
+    RemoveExplicitModules(importer_options.ExtraArgs);
 }
 
 void SwiftASTContext::AddUserClangArgs(TargetProperties &props) {
