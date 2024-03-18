@@ -141,13 +141,13 @@ class SingleFusion<string name, string fieldName, string desc,
                    MCInstPredicate secondInstPred = TruePred,
                    list<FusionPredicate> prolog = [],
                    list<FusionPredicate> epilog = []>
-    : SimpleFusion<name, fieldName, desc,
-                   CheckAll<!listconcat(
-                              [CheckOpcode<[firstInst]>],
-                              [firstInstPred])>,
-                   CheckAll<!listconcat(
-                              [CheckOpcode<[secondInst]>],
-                              [secondInstPred])>,
-                   prolog, epilog> {
+  : SimpleFusion<name, fieldName, desc,
+                 CheckAll<!listconcat(
+                            [CheckOpcode<[firstInst]>],
+                            [firstInstPred])>,
+                 CheckAll<!listconcat(
+                            [CheckOpcode<[secondInst]>],
+                            [secondInstPred])>,
+                 prolog, epilog> {
   let IsCommutable = secondInst.isCommutable;
 }
