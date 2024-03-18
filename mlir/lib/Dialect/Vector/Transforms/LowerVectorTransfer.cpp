@@ -41,8 +41,16 @@ static Value extendVectorRank(OpBuilder &builder, Location loc, Value vec,
   SmallVector<int64_t> newShape(addedRank, 1);
   newShape.append(originalVecType.getShape().begin(),
                   originalVecType.getShape().end());
-  VectorType newVecType =
-      VectorType::get(newShape, originalVecType.getElementType());
+
+  ArrayRef<bool> originalScalableDims = originalVecType.getScalableDims();
+  SmallVector<bool> tempScalableDims(originalVecType.getShape().size());
+  for (const auto &pos : llvm::enumerate(originalScalableDims)) {
+    tempScalableDims[pos.index()] = originalScalableDims[pos.index()];
+  }
+  SmallVector<bool> newScalableDims(addedRank, 0);
+  newScalableDims.append(tempScalableDims);
+  VectorType newVecType = VectorType::get(
+      newShape, originalVecType.getElementType(), newScalableDims);
   return builder.create<vector::BroadcastOp>(loc, newVecType, vec);
 }
 
