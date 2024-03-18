@@ -547,8 +547,9 @@ static VPValue *createScalarIVSteps(VPlan &Plan,
   return Steps;
 }
 
-/// Legalize VPWidenPointer induction, by replacing it with a PtrAdd (IndStart,
-/// ScalarIVSteps (0, Step)) if only its scalar values are used. Als optimize
+/// Legalize VPWidenPointerInductionRecipe, by replacing it with a PtrAdd
+/// (IndStart, ScalarIVSteps (0, Step)) if only its scalar values are used, as
+/// VPWidenPointerInductionRecipe cannot generate scalars. Also optimize
 /// VPWidenIntOrFpInductionRecipe, if any of its users needs scalar values, by
 /// providing them by building scalar steps off of the canonical scalar IV and
 /// update the original IV's users. This is an optional optimization to reduce

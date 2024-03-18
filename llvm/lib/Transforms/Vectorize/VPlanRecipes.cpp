@@ -555,8 +555,9 @@ void VPInstruction::execute(VPTransformState &State) {
       canGenerateScalarForFirstLane() &&
       (vputils::onlyFirstLaneUsed(this) ||
        getOpcode() == VPInstruction::ComputeReductionResult);
+  bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
   for (unsigned Part = 0; Part < State.UF; ++Part) {
-    if (doesGeneratePerAllLanes()) {
+    if (GeneratesPerAllLanes) {
       for (unsigned Lane = 0, NumLanes = State.VF.getKnownMinValue();
            Lane != NumLanes; ++Lane) {
         Value *P = generatePerLane(State, VPIteration(Part, Lane));
