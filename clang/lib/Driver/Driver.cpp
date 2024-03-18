@@ -4647,7 +4647,8 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
 
   // All kinds exit now in device-only mode except for non-RDC mode HIP.
   if (offloadDeviceOnly() &&
-      (!C.isOffloadingHostKind(Action::OFK_HIP) ||
+      (getFinalPhase(Args) == phases::Preprocess ||
+       !C.isOffloadingHostKind(Action::OFK_HIP) ||
        !Args.hasFlag(options::OPT_gpu_bundle_output,
                      options::OPT_no_gpu_bundle_output, true) ||
        Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false)))
