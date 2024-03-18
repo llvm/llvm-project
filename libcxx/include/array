@@ -127,9 +127,7 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constructible.h>
-#include <__type_traits/is_move_constructible.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_nothrow_move_constructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/remove_cv.h>

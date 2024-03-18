@@ -14,10 +14,8 @@
 #include <__fwd/functional.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/invoke.h>
-#include <__type_traits/is_copy_constructible.h>
-#include <__type_traits/is_default_constructible.h>
+#include <__type_traits/is_constructible.h>
 #include <__type_traits/is_enum.h>
-#include <__type_traits/is_move_constructible.h>
 #include <__type_traits/underlying_type.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
