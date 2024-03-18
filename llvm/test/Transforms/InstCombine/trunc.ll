@@ -1021,3 +1021,37 @@ define i16 @PR44545(i32 %t0, i32 %data) {
   %sub = add nsw i16 %cast, -1
   ret i16 %sub
 }
+
+; Make sure that SimplifyDemandedBits drops the nowrap flags
+define i16 @drop_nsw_trunc(i32 %x) {
+; CHECK-LABEL: @drop_nsw_trunc(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[B:%.*]] = and i16 [[TMP1]], -2
+; CHECK-NEXT:    ret i16 [[B]]
+;
+  %t = and i32 %x, -2
+  %b = trunc nsw i32 %t to i16
+  ret i16 %b
+}
+
+define i16 @drop_nuw_trunc(i32 %x) {
+; CHECK-LABEL: @drop_nuw_trunc(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[B:%.*]] = and i16 [[TMP1]], 1
+; CHECK-NEXT:    ret i16 [[B]]
+;
+  %t = and i32 %x, 1
+  %b = trunc nuw i32 %t to i16
+  ret i16 %b
+}
+
+define i16 @drop_both_trunc(i32 %x) {
+; CHECK-LABEL: @drop_both_trunc(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[B:%.*]] = and i16 [[TMP1]], -2
+; CHECK-NEXT:    ret i16 [[B]]
+;
+  %t = and i32 %x, -2
+  %b = trunc nsw nuw i32 %t to i16
+  ret i16 %b
+}
