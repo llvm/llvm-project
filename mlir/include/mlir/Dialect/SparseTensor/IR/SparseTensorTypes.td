@@ -72,4 +72,80 @@ def SparseTensorStorageSpecifier
     : Type<CPred<"::llvm::isa<::mlir::sparse_tensor::StorageSpecifierType>($_self)">, "metadata",
           "::mlir::sparse_tensor::StorageSpecifierType">;
 
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Iteration Types.
+//===----------------------------------------------------------------------===//
+
+def LevelTypeArrayParameter : ArrayRefParameter<"::mlir::sparse_tensor::LevelType", "level-types"> {
+  let printer = [{
+    auto lvlStrings = llvm::map_range($_self, [](auto lt){ return lt.toMLIRString(); });
+    $_printer << "[" << llvm::join(lvlStrings, ",") << "]";
+  }];
+
+  let parser = [{ [&]() -> FailureOr<SmallVector<::mlir::sparse_tensor::LevelType>> {
+    SmallVector<::mlir::sparse_tensor::LevelType> ret;
+
+    const auto res = $_parser.parseCommaSeparatedList(
+      mlir::OpAsmParser::Delimiter::Square,
+      [&]() -> ParseResult {
+        ::mlir::sparse_tensor::ir_detail::LvlTypeParser lParser;
+        auto lvlTpOrFail = lParser.parseLvlType($_parser);
+        if (failed(lvlTpOrFail))
+          return failure();
+        ret.emplace_back(*lvlTpOrFail);
+        return success();
+      }, " in level-type list");
+
+    if (failed(res))
+      return failure();
+    return ret;
+  }() }];
+}
+
+def SparseTensor_Iterator : SparseTensor_Type<"Iterator"> {
+  let mnemonic = "iterator";
+
+  let parameters = (ins
+     LevelTypeArrayParameter: $lvlTypes
+  );
+
+  // let skipDefaultBuilders = 1;
+  // let hasCustomAssemblyFormat = 1;
+  let assemblyFormat="`<` $lvlTypes `>`";
+}
+
+
+def SparseTensor_IterSpace : SparseTensor_Type<"IterSpace"> {
+  let mnemonic = "iter_space";
+
+  let parameters = (ins
+     LevelTypeArrayParameter: $lvlTypes
+  );
+
+  let extraClassDeclaration = [{
+     ::mlir::sparse_tensor::IteratorType getIteratorType() const {
+        return IteratorType::get(getContext(), getLvlTypes());
+     }
+  }];
+
+  // let skipDefaultBuilders = 1;
+  // let hasCustomAssemblyFormat = 1;
+  let assemblyFormat="`<` $lvlTypes `>`";
+}
+
+def IsSparseSparseIterSpaceTypePred
+    : CPred<"::llvm::isa<::mlir::sparse_tensor::IterSpaceType>($_self)">;
+
+def IsSparseSparseIteratorTypePred
+    : CPred<"::llvm::isa<::mlir::sparse_tensor::IteratorType>($_self)">;
+
+def AnySparseIterSpace
+    : Type<IsSparseSparseIterSpaceTypePred, "sparse iteration space",
+          "::mlir::sparse_tensor::IterSpaceType">;
+
+def AnySparseIterator
+    : Type<IsSparseSparseIteratorTypePred, "sparse iterator",
+          "::mlir::sparse_tensor::IteratorType">;
+
+
 #endif // SPARSETENSOR_TYPES
