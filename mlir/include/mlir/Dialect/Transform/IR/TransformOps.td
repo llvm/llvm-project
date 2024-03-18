@@ -203,6 +203,16 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
     lower ops to different ops (from a different dialect). More details can be
     found at the documentation site of `TrackingListener`.
 
+    The way op handles are updated can be customized with `find_replacements`.
+    If `find_replacements` is set, replacement ops are *not* deduced from the
+    replacement SSA values. The `find_replacements` dictionary attribute
+    specifies the kind of op that should be considered as a replacement for a
+    replaced tracked op. E.g., "arith.mulf => llvm.fmul" specifies that the
+    replacement op for a tracked "arith.mulf" must be an "llvm.fmul" op that was
+    created in the same pattern that replaced the "arith.mulf" op. If there is
+    no such op or if there are multiple such ops, a tracking listener failure
+    is produced.
+
     This transform produces a silenceable failure if the dialect conversion was
     unsuccessful or the tracking listener failed to find a replacement op.
   }];
@@ -212,6 +222,7 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
                        OptionalAttr<StrArrayAttr>:$illegal_ops,
                        OptionalAttr<StrArrayAttr>:$legal_dialects,
                        OptionalAttr<StrArrayAttr>:$illegal_dialects,
+                       OptionalAttr<DictionaryAttr>:$find_replacements,
                        UnitAttr:$partial_conversion,
                        UnitAttr:$preserve_handles);
   let results = (outs);

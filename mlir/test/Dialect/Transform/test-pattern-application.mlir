@@ -447,3 +447,42 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// "arith.mulsi_extended" is tracked and replaced with "llvm.mul" (and other
+// ops) during a dialect conversion. Make sure that the handle is updated
+// accordingly.
+
+// CHECK-LABEL: func @dialect_conversion_find_replacements(
+//  CHECK-SAME:     %[[arg0:.*]]: vector<4xi32>, %[[arg1:.*]]: vector<4xi32>)
+//       CHECK:   %[[VAL0:.*]] = llvm.sext %[[arg0]] : vector<4xi32> to vector<4xi64>
+//       CHECK:   %[[VAL1:.*]] = llvm.sext %[[arg1]] : vector<4xi32> to vector<4xi64>
+//       CHECK:   %[[VAL2:.*]] = llvm.mul %[[VAL0]], %[[VAL1]]  {annotated} : vector<4xi64>
+//       CHECK:   %[[VAL3:.*]] = llvm.trunc %[[VAL2]] : vector<4xi64> to vector<4xi32>
+//       CHECK:   %[[VAL4:.*]] = llvm.mlir.constant(dense<32> : vector<4xi64>) : vector<4xi64>
+//       CHECK:   %[[VAL5:.*]] = llvm.lshr %[[VAL2]], %[[VAL4]]  : vector<4xi64>
+//       CHECK:   %[[VAL6:.*]] = llvm.trunc %[[VAL5]] : vector<4xi64> to vector<4xi32>
+//       CHECK:   return %[[VAL3]], %[[VAL6]] : vector<4xi32>, vector<4xi32>
+func.func @dialect_conversion_find_replacements(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> (vector<4xi32>, vector<4xi32>) {
+  %c:2 = arith.mulsi_extended %arg0, %arg1 : vector<4xi32>
+  return %c#0, %c#1 : vector<4xi32>, vector<4xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.match ops{["arith.mulsi_extended"]} in %0 : (!transform.any_op) -> !transform.any_op
+    // arith.mulsi_extended handles are updated to llvm.mul.
+    transform.apply_conversion_patterns to %0 {
+      transform.apply_conversion_patterns.dialect_to_llvm "arith"
+    } with type_converter {
+      transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
+    } {legal_dialects = ["func", "llvm"], preserve_handles,
+       find_replacements = {"arith.mulsi_extended" = "llvm.mul"}}
+        : !transform.any_op
+    // Add an attribute to %1, which is now mapped to a new op.
+    transform.annotate %1 "annotated" : !transform.any_op
+    transform.yield
+  }
+}
