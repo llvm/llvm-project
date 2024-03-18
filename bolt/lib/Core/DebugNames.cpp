@@ -318,7 +318,6 @@ DWARF5AcceleratorTable::addAccelTableEntry(
     const DIEValue Value = Die.findAttribute(Attr);
     if (!Value)
       return std::nullopt;
-    ;
     const DIEEntry &DIEENtry = Value.getDIEEntry();
     DIE &EntryDie = DIEENtry.getEntry();
     addEntry(EntryDie.findAttribute(dwarf::Attribute::DW_AT_linkage_name));
