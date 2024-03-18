@@ -10,8 +10,8 @@
 #include "src/__support/UInt.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
+#include "include/llvm-libc-macros/math-macros.h" // HUGE_VALF, HUGE_VALF
 #include "test/UnitTest/Test.h"
-#include <math.h> // HUGE_VALF, HUGE_VALF
 
 namespace LIBC_NAMESPACE {
 

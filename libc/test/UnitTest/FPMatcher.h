@@ -17,7 +17,7 @@
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 namespace LIBC_NAMESPACE {
 namespace testing {
