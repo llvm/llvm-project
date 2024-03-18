@@ -465,7 +465,15 @@ void CodeGenFunction::PopCleanupBlocks(
 /// cleanups from the given savepoint in the lifetime-extended cleanups stack.
 void CodeGenFunction::PopCleanupBlocks(
     EHScopeStack::stable_iterator Old, size_t OldLifetimeExtendedSize,
+    size_t OldDeactivateAfterFullExprStackSize,
     std::initializer_list<llvm::Value **> ValuesToReload) {
+  for (size_t I = DeactivateAfterFullExprStack.size();
+       I > OldDeactivateAfterFullExprStackSize; I--) {
+    DeactivateCleanupBlock(DeactivateAfterFullExprStack[I - 1].Cleanup,
+                           DeactivateAfterFullExprStack[I - 1].DominatingIP);
+    DeactivateAfterFullExprStack[I - 1].DominatingIP->eraseFromParent();
+  }
+  DeactivateAfterFullExprStack.resize(OldDeactivateAfterFullExprStackSize);
   PopCleanupBlocks(Old, ValuesToReload);
 
   // Move our deferred cleanups onto the EH stack.

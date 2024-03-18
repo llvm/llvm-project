@@ -246,6 +246,8 @@ public:
     return static_cast<bool>(getDependence() & ExprDependence::Error);
   }
 
+  bool containsControlFlow() const;
+
   /// getExprLoc - Return the preferred location for the arrow when diagnosing
   /// a problem with a generic expression.
   SourceLocation getExprLoc() const LLVM_READONLY;

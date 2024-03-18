@@ -670,6 +670,12 @@ public:
 
   EHScopeStack EHStack;
   llvm::SmallVector<char, 256> LifetimeExtendedCleanupStack;
+  struct DeactivateAfterFullExprCleanup {
+    EHScopeStack::stable_iterator Cleanup;
+    llvm::Instruction *DominatingIP;
+  };
+  llvm::SmallVector<DeactivateAfterFullExprCleanup>
+      DeactivateAfterFullExprStack;
   llvm::SmallVector<const JumpDest *, 2> SEHTryEpilogueStack;
 
   llvm::Instruction *CurrentFuncletPad = nullptr;
@@ -926,6 +932,7 @@ public:
   class RunCleanupsScope {
     EHScopeStack::stable_iterator CleanupStackDepth, OldCleanupScopeDepth;
     size_t LifetimeExtendedCleanupStackSize;
+    size_t DeactivateAfterFullExprStackSize;
     bool OldDidCallStackSave;
   protected:
     bool PerformCleanup;
@@ -945,6 +952,8 @@ public:
       CleanupStackDepth = CGF.EHStack.stable_begin();
       LifetimeExtendedCleanupStackSize =
           CGF.LifetimeExtendedCleanupStack.size();
+      DeactivateAfterFullExprStackSize =
+          CGF.DeactivateAfterFullExprStack.size();
       OldDidCallStackSave = CGF.DidCallStackSave;
       CGF.DidCallStackSave = false;
       OldCleanupScopeDepth = CGF.CurrentCleanupScopeDepth;
@@ -972,7 +981,7 @@ public:
       assert(PerformCleanup && "Already forced cleanup");
       CGF.DidCallStackSave = OldDidCallStackSave;
       CGF.PopCleanupBlocks(CleanupStackDepth, LifetimeExtendedCleanupStackSize,
-                           ValuesToReload);
+                           DeactivateAfterFullExprStackSize, ValuesToReload);
       PerformCleanup = false;
       CGF.CurrentCleanupScopeDepth = OldCleanupScopeDepth;
     }
@@ -1194,6 +1203,7 @@ public:
   void
   PopCleanupBlocks(EHScopeStack::stable_iterator OldCleanupStackSize,
                    size_t OldLifetimeExtendedStackSize,
+                   size_t OldDeactivateAfterFullExprStackSize,
                    std::initializer_list<llvm::Value **> ValuesToReload = {});
 
   void ResolveBranchFixups(llvm::BasicBlock *Target);

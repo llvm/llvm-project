@@ -19,6 +19,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "EHScopeStack.h"
 #include "PatternInit.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -2220,10 +2221,16 @@ void CodeGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
     // Push an EH-only cleanup for the object now.
     // FIXME: When popping normal cleanups, we need to keep this EH cleanup
     // around in case a temporary's destructor throws an exception.
-    if (cleanupKind & EHCleanup)
-      EHStack.pushCleanup<DestroyObject>(
-          static_cast<CleanupKind>(cleanupKind & ~NormalCleanup), addr, type,
-          destroyer, useEHCleanupForArray);
+    if (cleanupKind) {
+      // Placeholder dominating IP for this cleanup.
+      llvm::Instruction *CleanupDominator = Builder.CreateAlignedLoad(
+          Int8Ty, llvm::Constant::getNullValue(Int8PtrTy), CharUnits::One());
+      EHStack.pushCleanup<DestroyObject>(static_cast<CleanupKind>(cleanupKind),
+                                         addr, type, destroyer,
+                                         useEHCleanupForArray);
+      DeactivateAfterFullExprStack.push_back(
+          {EHStack.stable_begin(), CleanupDominator});
+    }
 
     return pushCleanupAfterFullExprWithActiveFlag<DestroyObject>(
         cleanupKind, Address::invalid(), addr, type, destroyer, useEHCleanupForArray);
@@ -2453,10 +2460,9 @@ void CodeGenFunction::pushIrregularPartialArrayCleanup(llvm::Value *arrayBegin,
                                                        QualType elementType,
                                                        CharUnits elementAlign,
                                                        Destroyer *destroyer) {
-  pushFullExprCleanup<IrregularPartialArrayDestroy>(EHCleanup,
-                                                    arrayBegin, arrayEndPointer,
-                                                    elementType, elementAlign,
-                                                    destroyer);
+  pushFullExprCleanup<IrregularPartialArrayDestroy>(
+      NormalAndEHCleanup, arrayBegin, arrayEndPointer, elementType,
+      elementAlign, destroyer);
 }
 
 /// pushRegularPartialArrayCleanup - Push an EH cleanup to destroy
