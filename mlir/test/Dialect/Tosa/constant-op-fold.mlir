@@ -114,6 +114,25 @@ func.func @transpose_nofold_quantized_types() -> tensor<1x1x2x2x!quant.uniform<i
 
 // -----
 
+// CHECK-LABEL: @transpose_dense_resource
+func.func @transpose_dense_resource() -> tensor<2x2xf32> {
+    %0 = "tosa.const"() <{value = dense_resource<resource> : tensor<2x2xf32>}> : () -> tensor<2x2xf32>
+    %1 = "tosa.const"() <{value = dense<[1, 0]> : tensor<2xi32>}> : () -> tensor<2xi32>
+
+    // CHECK: tosa.transpose
+    %2 = tosa.transpose %0, %1 : (tensor<2x2xf32>, tensor<2xi32>) -> tensor<2x2xf32>
+    return %2 : tensor<2x2xf32>
+}
+{-#
+  dialect_resources: {
+    builtin: {
+      resource: "0x08000000010000000000000002000000000000000300000000000000"
+    }
+  }
+#-}
+
+// -----
+
 // CHECK-LABEL: @fold_add_zero_rhs_f32
 func.func @fold_add_zero_rhs_f32(%arg0: tensor<f32>) -> tensor<f32> {
   %zero = "tosa.const"() {value = dense<0.0> : tensor<f32>} : () -> tensor<f32>
