@@ -4024,8 +4024,7 @@ void MicrosoftMangleContextImpl::mangleStringLiteral(const StringLiteral *SL,
   // used for mangling, and any trailing null-bytes also need to be mangled.
   unsigned StringLength = getASTContext()
                               .getAsConstantArrayType(SL->getType())
-                              ->getSize()
-                              .getZExtValue();
+                              ->getZExtSize();
   unsigned StringByteLength = StringLength * SL->getCharByteWidth();
 
   // <char-type>: The "kind" of string literal is encoded into the mangled name.

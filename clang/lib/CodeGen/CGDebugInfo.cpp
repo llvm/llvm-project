@@ -3239,7 +3239,7 @@ llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
     //   };
     int64_t Count = -1; // Count == -1 is an unbounded array.
     if (const auto *CAT = dyn_cast<ConstantArrayType>(Ty))
-      Count = CAT->getSize().getZExtValue();
+      Count = CAT->getZExtSize();
     else if (const auto *VAT = dyn_cast<VariableArrayType>(Ty)) {
       if (Expr *Size = VAT->getSizeExpr()) {
         Expr::EvalResult Result;

@@ -159,6 +159,22 @@ ArrayType::ArrayType(TypeClass tc, QualType et, QualType can,
   ArrayTypeBits.SizeModifier = llvm::to_underlying(sm);
 }
 
+ConstantArrayType *
+ConstantArrayType::Create(const ASTContext &Ctx, QualType ET, QualType Can,
+                          const llvm::APInt &Sz, const Expr *SzExpr,
+                          ArraySizeModifier SzMod, unsigned Qual) {
+  bool NeedsExternalSize = SzExpr != nullptr || Sz.ugt(0x0FFFFFFFFFFFFFFF) ||
+                           Sz.getBitWidth() > 0xFF;
+  if (!NeedsExternalSize)
+    return new (Ctx, alignof(ConstantArrayType)) ConstantArrayType(
+        ET, Can, Sz.getBitWidth(), Sz.getZExtValue(), SzMod, Qual);
+
+  auto *SzPtr = new (Ctx, alignof(ConstantArrayType::ExternalSize))
+      ConstantArrayType::ExternalSize(Sz, SzExpr);
+  return new (Ctx, alignof(ConstantArrayType))
+      ConstantArrayType(ET, Can, SzPtr, SzMod, Qual);
+}
+
 unsigned ConstantArrayType::getNumAddressingBits(const ASTContext &Context,
                                                  QualType ElementType,
                                                const llvm::APInt &NumElements) {
@@ -213,11 +229,11 @@ unsigned ConstantArrayType::getMaxSizeBits(const ASTContext &Context) {
 
 void ConstantArrayType::Profile(llvm::FoldingSetNodeID &ID,
                                 const ASTContext &Context, QualType ET,
-                                const llvm::APInt &ArraySize,
+                                uint64_t ArraySize,
                                 const Expr *SizeExpr, ArraySizeModifier SizeMod,
                                 unsigned TypeQuals) {
   ID.AddPointer(ET.getAsOpaquePtr());
-  ID.AddInteger(ArraySize.getZExtValue());
+  ID.AddInteger(ArraySize);
   ID.AddInteger(llvm::to_underlying(SizeMod));
   ID.AddInteger(TypeQuals);
   ID.AddBoolean(SizeExpr != nullptr);

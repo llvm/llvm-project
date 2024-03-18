@@ -5282,7 +5282,7 @@ static bool isIncompleteOrZeroLengthArrayType(ASTContext &Context, QualType T) {
     return true;
 
   while (const ConstantArrayType *ArrayT = Context.getAsConstantArrayType(T)) {
-    if (!ArrayT->getSize())
+    if (ArrayT->isZeroSize())
       return true;
 
     T = ArrayT->getElementType();

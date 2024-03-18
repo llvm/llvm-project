@@ -66,7 +66,7 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
                                   const Pointer &BasePtr,
                                   const ConstantArrayType *CAT) {
   bool Result = true;
-  size_t NumElems = CAT->getSize().getZExtValue();
+  size_t NumElems = CAT->getZExtSize();
   QualType ElemType = CAT->getElementType();
 
   if (ElemType->isRecordType()) {

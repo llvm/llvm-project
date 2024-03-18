@@ -6834,8 +6834,8 @@ Sema::CheckStaticArrayArgument(SourceLocation CallLoc,
     if (ArgCAT->getSize().ult(CAT->getSize())) {
       Diag(CallLoc, diag::warn_static_array_too_small)
           << ArgExpr->getSourceRange()
-          << (unsigned)ArgCAT->getSize().getZExtValue()
-          << (unsigned)CAT->getSize().getZExtValue() << 0;
+          << (unsigned)ArgCAT->getZExtSize()
+          << (unsigned)CAT->getZExtSize() << 0;
       DiagnoseCalleeStaticArrayParam(*this, Param);
     }
     return;

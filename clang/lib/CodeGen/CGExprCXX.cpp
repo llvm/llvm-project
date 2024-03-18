@@ -1073,8 +1073,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
       // Move past these elements.
       InitListElements =
           cast<ConstantArrayType>(Init->getType()->getAsArrayTypeUnsafe())
-              ->getSize()
-              .getZExtValue();
+              ->getZExtSize();
       CurPtr = Builder.CreateConstInBoundsGEP(
           CurPtr, InitListElements, "string.init.end");
 
@@ -1591,8 +1590,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
         isa<StringLiteral>(IgnoreParen) || isa<ObjCEncodeExpr>(IgnoreParen)) {
       minElements =
           cast<ConstantArrayType>(Init->getType()->getAsArrayTypeUnsafe())
-              ->getSize()
-              .getZExtValue();
+              ->getZExtSize();
     } else if (ILE || CPLIE) {
       minElements = ILE ? ILE->getNumInits() : CPLIE->getInitExprs().size();
     }
