@@ -119,6 +119,7 @@ class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
+  let hasPostISelHook = 1;
 
   let VM_CNT = 1;
   let EXP_CNT = 1;
@@ -323,6 +324,7 @@ class MUBUF_Pseudo <string opName, dag outs, dag ins,
   Instruction BaseOpcode = !cast<Instruction>(MUBUFGetBaseOpcode<NAME>.ret);
   let MUBUF = 1;
   let AsmMatchConverter = "cvtMubuf";
+  let hasPostISelHook = 1;
 }
 
 class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
@@ -330,6 +332,7 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
+  let hasPostISelHook = 1;
 
   let VM_CNT = 1;
   let EXP_CNT = 1;
@@ -390,6 +393,7 @@ class MUBUF_Invalidate <string opName, SDPatternOperator node = null_frag> :
   let has_slc     = 0;
   let has_sccb    = 0;
   let sccb_value  = 0;
+  let tfe         = 0;
 }
 
 class getLdStVDataRegisterOperand<RegisterClass RC, bit isTFE> {
@@ -675,6 +679,7 @@ class MUBUF_Pseudo_Store_Lds<string opName>
   let has_vaddr = 0;
   let lds = 1;
   let VALU = 1;
+  let tfe = 0;
 
   let Uses = [EXEC, M0];
   let AsmMatchConverter = "cvtMubuf";
@@ -733,6 +738,7 @@ class MUBUF_Atomic_Pseudo<string opName,
   let has_glc = 0;
   let has_dlc = 0;
   let has_sccb = 1;
+  let tfe = 0;
   let AsmMatchConverter = "cvtMubufAtomic";
 }
 
@@ -3369,7 +3375,7 @@ def MUBUFInfoTable : GenericTable {
   let CppTypeName = "MUBUFInfo";
   let Fields = [
     "Opcode", "BaseOpcode", "elements", "has_vaddr", "has_srsrc", "has_soffset",
-    "IsBufferInv"
+    "IsBufferInv", "tfe"
   ];
 
   let PrimaryKey = ["Opcode"];
