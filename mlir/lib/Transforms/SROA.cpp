@@ -9,7 +9,6 @@
 #include "mlir/Transforms/SROA.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 
 namespace mlir {
@@ -205,13 +204,6 @@ LogicalResult mlir::tryToDestructureMemorySlots(
   return success(destructuredAny);
 }
 
-LogicalResult
-SROAPattern::matchAndRewrite(DestructurableAllocationOpInterface allocator,
-                             PatternRewriter &rewriter) const {
-  hasBoundedRewriteRecursion();
-  return tryToDestructureMemorySlots({allocator}, rewriter, statistics);
-}
-
 namespace {
 
 struct SROA : public impl::SROABase<SROA> {
@@ -223,12 +215,35 @@ struct SROA : public impl::SROABase<SROA> {
     SROAStatistics statistics{&destructuredAmount, &slotsWithMemoryBenefit,
                               &maxSubelementAmount};
 
-    RewritePatternSet rewritePatterns(&getContext());
-    rewritePatterns.add<SROAPattern>(&getContext(), statistics);
-    FrozenRewritePatternSet frozen(std::move(rewritePatterns));
+    bool changed = false;
 
-    if (failed(applyPatternsAndFoldGreedily(scopeOp, frozen)))
-      signalPassFailure();
+    for (Region &region : scopeOp->getRegions()) {
+      if (region.getBlocks().empty())
+        continue;
+
+      OpBuilder builder(&region.front(), region.front().begin());
+      IRRewriter rewriter(builder);
+
+      // Destructuring a slot can allow for further destructuring of other
+      // slots, destructuring is tried until no destructuring succeeds.
+      while (true) {
+        SmallVector<DestructurableAllocationOpInterface> allocators;
+        // Build a list of allocators to attempt to destructure the slots of.
+        // TODO: Update list on the fly to avoid repeated visiting of the same
+        // allocators.
+        region.walk([&](DestructurableAllocationOpInterface allocator) {
+          allocators.emplace_back(allocator);
+        });
+
+        if (failed(
+                tryToDestructureMemorySlots(allocators, rewriter, statistics)))
+          break;
+
+        changed = true;
+      }
+    }
+    if (!changed)
+      markAllAnalysesPreserved();
   }
 };
 
