@@ -252,7 +252,7 @@ struct MemoryChecker {
     MemoryChecker(MemoryChecker&& other) : _value(other.value()) {
         // check for EXPECT_TRUE(state() != alive_state, ...) has not been done since
         // compiler can optimize out the move ctor call that results in false positive failure
-        EXPECT_TRUE(other.state() == alive_state, "wrong effect from MemoryChecker(MemoryChecker&&): attemp to construct an object from non-existing object");
+        EXPECT_TRUE(other.state() == alive_state, "wrong effect from MemoryChecker(MemoryChecker&&): attempt to construct an object from non-existing object");
         // set constructed state and increment counter for living object
         inc_alive_objects();
         _state = alive_state;
@@ -260,15 +260,15 @@ struct MemoryChecker {
     MemoryChecker(const MemoryChecker& other) : _value(other.value()) {
         // check for EXPECT_TRUE(state() != alive_state, ...) has not been done since
         // compiler can optimize out the copy ctor call that results in false positive failure
-        EXPECT_TRUE(other.state() == alive_state, "wrong effect from MemoryChecker(const MemoryChecker&): attemp to construct an object from non-existing object");
+        EXPECT_TRUE(other.state() == alive_state, "wrong effect from MemoryChecker(const MemoryChecker&): attempt to construct an object from non-existing object");
         // set constructed state and increment counter for living object
         inc_alive_objects();
         _state = alive_state;
     }
     MemoryChecker& operator=(MemoryChecker&& other) {
         // check if we do not assign over uninitialized memory
-        EXPECT_TRUE(state() == alive_state, "wrong effect from MemoryChecker::operator=(MemoryChecker&& other): attemp to assign to non-existing object");
-        EXPECT_TRUE(other.state() == alive_state, "wrong effect from MemoryChecker::operator=(MemoryChecker&& other): attemp to assign from non-existing object");
+        EXPECT_TRUE(state() == alive_state, "wrong effect from MemoryChecker::operator=(MemoryChecker&& other): attempt to assign to non-existing object");
+        EXPECT_TRUE(other.state() == alive_state, "wrong effect from MemoryChecker::operator=(MemoryChecker&& other): attempt to assign from non-existing object");
         // just assign new value, counter is the same, state is the same
         _value = other.value();
 
@@ -276,8 +276,8 @@ struct MemoryChecker {
     }
     MemoryChecker& operator=(const MemoryChecker& other) {
         // check if we do not assign over uninitialized memory
-        EXPECT_TRUE(state() == alive_state, "wrong effect from MemoryChecker::operator=(const MemoryChecker& other): attemp to assign to non-existing object");
-        EXPECT_TRUE(other.state() == alive_state, "wrong effect from MemoryChecker::operator=(const MemoryChecker& other): attemp to assign from non-existing object");
+        EXPECT_TRUE(state() == alive_state, "wrong effect from MemoryChecker::operator=(const MemoryChecker& other): attempt to assign to non-existing object");
+        EXPECT_TRUE(other.state() == alive_state, "wrong effect from MemoryChecker::operator=(const MemoryChecker& other): attempt to assign from non-existing object");
         // just assign new value, counter is the same, state is the same
         _value = other.value();
 
@@ -285,7 +285,7 @@ struct MemoryChecker {
     }
     ~MemoryChecker() {
         // check if we do not double destruct the object
-        EXPECT_TRUE(state() == alive_state, "wrong effect from ~MemoryChecker(): attemp to destroy non-existing object");
+        EXPECT_TRUE(state() == alive_state, "wrong effect from ~MemoryChecker(): attempt to destroy non-existing object");
         // set destructed state and decrement counter for living object
         static_cast<volatile std::int64_t&>(_state) = dead_state;
         dec_alive_objects();
