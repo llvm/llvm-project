@@ -142,10 +142,17 @@ public:
   MlirOptMainConfig &
   splitInputFile(std::string splitMarker = kDefaultSplitMarker) {
     splitInputFileFlag = std::move(splitMarker);
+    splitInputFileSpecified = true;
     return *this;
   }
-  bool shouldSplitInputFile() const { return splitInputFileFlag.empty(); }
-  StringRef inputSplitMarker() const { return splitInputFileFlag; }
+  bool shouldSplitInputFile() const {
+    return splitInputFileSpecified || !splitInputFileFlag.empty();
+  }
+  std::string inputSplitMarker() const {
+    return splitInputFileSpecified && splitInputFileFlag.empty()
+               ? kDefaultSplitMarker
+               : splitInputFileFlag;
+  }
 
   /// Set whether to merge the output chunks into one file using the given
   /// marker.
@@ -226,6 +233,9 @@ protected:
 
   /// Show the registered dialects before trying to load the input file.
   bool showDialectsFlag = false;
+
+  /// Whether the split-input-file flag was specified.
+  bool splitInputFileSpecified = false;
 
   /// Split the input file based on the given marker into chunks and process
   /// each chunk independently. Input is not split if empty.
