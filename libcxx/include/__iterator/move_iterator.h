@@ -330,6 +330,12 @@ operator+(typename move_iterator<_Iter>::difference_type __n, const move_iterato
 }
 #endif // _LIBCPP_STD_VER >= 20
 
+#if _LIBCPP_STD_VER >= 20
+template <class _Iter1, class _Iter2>
+  requires(!sized_sentinel_for<_Iter1, _Iter2>)
+inline constexpr bool disable_sized_sentinel_for<move_iterator<_Iter1>, move_iterator<_Iter2>> = true;
+#endif // _LIBCPP_STD_VER >= 20
+
 template <class _Iter>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 move_iterator<_Iter> make_move_iterator(_Iter __i) {
   return move_iterator<_Iter>(std::move(__i));
