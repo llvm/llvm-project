@@ -180,7 +180,8 @@ const Symbol *IsFinalizable(const Symbol &,
 const Symbol *IsFinalizable(const DerivedTypeSpec &,
     std::set<const DerivedTypeSpec *> * = nullptr,
     bool withImpureFinalizer = false, std::optional<int> rank = std::nullopt);
-const Symbol *HasImpureFinal(const Symbol &);
+const Symbol *HasImpureFinal(
+    const Symbol &, std::optional<int> rank = std::nullopt);
 // Is this type finalizable or does it contain any polymorphic allocatable
 // ultimate components?
 bool MayRequireFinalization(const DerivedTypeSpec &derived);
