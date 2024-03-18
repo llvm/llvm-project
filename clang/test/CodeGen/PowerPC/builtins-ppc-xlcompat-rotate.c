@@ -1,8 +1,10 @@
 // REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu \
-// RUN:   -emit-llvm %s -o - -target-cpu pwr7 | FileCheck %s
+// RUN:   -emit-llvm %s -o - -target-cpu pwr7 | FileCheck %s \
+// RUN:   -check-prefixes=PPC64,CHECK
 // RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu \
-// RUN:   -emit-llvm %s -o - -target-cpu pwr8 | FileCheck %s
+// RUN:   -emit-llvm %s -o - -target-cpu pwr8 | FileCheck %s \
+// RUN:   -check-prefixes=PPC64,CHECK
 // RUN: %clang_cc1 -triple powerpc-unknown-aix \
 // RUN:   -emit-llvm %s -o - -target-cpu pwr7 | FileCheck %s
 // RUN: %clang_cc1 -triple powerpc64-unknown-aix \
@@ -11,18 +13,20 @@
 extern unsigned int ui;
 extern unsigned long long ull;
 
+#ifdef __PPC64__
 void test_builtin_ppc_rldimi() {
-  // CHECK-LABEL: test_builtin_ppc_rldimi
-  // CHECK:       %res = alloca i64, align 8
-  // CHECK-NEXT:  [[RA:%[0-9]+]] = load i64, ptr @ull, align 8
-  // CHECK-NEXT:  [[RB:%[0-9]+]] = load i64, ptr @ull, align 8
-  // CHECK-NEXT:  [[RC:%[0-9]+]] = call i64 @llvm.ppc.rldimi(i64 [[RA]], i64 [[RB]], i32 63, i64 72057593769492480)
-  // CHECK-NEXT:  store i64 [[RC]], ptr %res, align 8
-  // CHECK-NEXT:  ret void
+  // PPC64-LABEL: test_builtin_ppc_rldimi
+  // PPC64:       %res = alloca i64, align 8
+  // PPC64-NEXT:  [[RA:%[0-9]+]] = load i64, ptr @ull, align 8
+  // PPC64-NEXT:  [[RB:%[0-9]+]] = load i64, ptr @ull, align 8
+  // PPC64-NEXT:  [[RC:%[0-9]+]] = call i64 @llvm.ppc.rldimi(i64 [[RA]], i64 [[RB]], i32 63, i64 72057593769492480)
+  // PPC64-NEXT:  store i64 [[RC]], ptr %res, align 8
+  // PPC64-NEXT:  ret void
 
   /*shift = 63, mask = 0x00FFFFFFF0000000 = 72057593769492480, ~mask = 0xFF0000000FFFFFFF = -72057593769492481*/
   unsigned long long res = __builtin_ppc_rldimi(ull, ull, 63, 0x00FFFFFFF0000000);
 }
+#endif
 
 void test_builtin_ppc_rlwimi() {
   // CHECK-LABEL: test_builtin_ppc_rlwimi

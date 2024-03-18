@@ -5189,6 +5189,7 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_ppc_fetch_and_andlp:
   case PPC::BI__builtin_ppc_fetch_and_orlp:
   case PPC::BI__builtin_ppc_fetch_and_swaplp:
+  case PPC::BI__builtin_ppc_rldimi:
     return true;
   }
   return false;
@@ -5290,8 +5291,10 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case PPC::BI__builtin_ppc_rlwnm:
     return SemaValueIsRunOfOnes(TheCall, 2);
   case PPC::BI__builtin_ppc_rlwimi:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 31) ||
+           SemaValueIsRunOfOnes(TheCall, 3);
   case PPC::BI__builtin_ppc_rldimi:
-    return SemaBuiltinConstantArg(TheCall, 2, Result) ||
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 63) ||
            SemaValueIsRunOfOnes(TheCall, 3);
   case PPC::BI__builtin_ppc_addex: {
     if (SemaBuiltinConstantArgRange(TheCall, 2, 0, 3))
