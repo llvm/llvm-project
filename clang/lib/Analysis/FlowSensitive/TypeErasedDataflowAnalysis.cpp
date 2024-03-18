@@ -62,7 +62,7 @@ static bool isBackedgeNode(const CFGBlock &B) {
 
 namespace {
 
-/// Extracts the condition expression.
+/// Extracts the terminator's condition expression.
 class TerminatorVisitor
     : public ConstStmtVisitor<TerminatorVisitor, const Expr *> {
 public:
@@ -200,8 +200,12 @@ public:
     return Result;
   }
 };
-
 } // namespace
+
+static const Expr *getTerminatorCondition(const Stmt *TerminatorStmt) {
+  return TerminatorStmt == nullptr ? nullptr
+                                   : TerminatorVisitor().Visit(TerminatorStmt);
+}
 
 /// Computes the input state for a given basic block by joining the output
 /// states of its predecessors.
@@ -273,33 +277,33 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
         AC.BlockStates[Pred->getBlockID()];
     if (!MaybePredState)
       continue;
-    const TypeErasedDataflowAnalysisState &PredState = *MaybePredState;
 
-    if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
-      bool BranchVal = blockIndexInPredecessor(*Pred, Block) == 0;
-      const Expr *Cond = TerminatorVisitor().Visit(PredTerminatorStmt);
-      if (Cond != nullptr) {
-        // `transferBranch` may need to mutate the environment to describe the
-        // dynamic effect of the terminator for a given branch.  Copy now.
-        TypeErasedDataflowAnalysisState Copy = MaybePredState->fork();
-        if (AC.Analysis.builtinOptions()) {
-          auto *CondVal = Copy.Env.get<BoolValue>(*Cond);
-          // In transferCFGBlock(), we ensure that we always have a `Value`
-          // for the terminator condition, so assert this. We consciously
-          // assert ourselves instead of asserting via `cast()` so that we get
-          // a more meaningful line number if the assertion fails.
-          assert(CondVal != nullptr);
-          BoolValue *AssertedVal =
-              BranchVal ? CondVal : &Copy.Env.makeNot(*CondVal);
-          Copy.Env.assume(AssertedVal->formula());
-        }
-        AC.Analysis.transferBranchTypeErased(BranchVal, Cond, Copy.Lattice,
-                                             Copy.Env);
-        Builder.addOwned(std::move(Copy));
-        continue;
-      }
+    const TypeErasedDataflowAnalysisState &PredState = *MaybePredState;
+    const Expr *Cond = getTerminatorCondition(Pred->getTerminatorStmt());
+    if (Cond == nullptr) {
+      Builder.addUnowned(PredState);
+      continue;
     }
-    Builder.addUnowned(PredState);
+
+    bool BranchVal = blockIndexInPredecessor(*Pred, Block) == 0;
+
+    // `transferBranch` may need to mutate the environment to describe the
+    // dynamic effect of the terminator for a given branch.  Copy now.
+    TypeErasedDataflowAnalysisState Copy = MaybePredState->fork();
+    if (AC.Analysis.builtinOptions()) {
+      auto *CondVal = Copy.Env.get<BoolValue>(*Cond);
+      // In transferCFGBlock(), we ensure that we always have a `Value`
+      // for the terminator condition, so assert this. We consciously
+      // assert ourselves instead of asserting via `cast()` so that we get
+      // a more meaningful line number if the assertion fails.
+      assert(CondVal != nullptr);
+      BoolValue *AssertedVal =
+          BranchVal ? CondVal : &Copy.Env.makeNot(*CondVal);
+      Copy.Env.assume(AssertedVal->formula());
+    }
+    AC.Analysis.transferBranchTypeErased(BranchVal, Cond, Copy.Lattice,
+                                         Copy.Env);
+    Builder.addOwned(std::move(Copy));
   }
   return std::move(Builder).take();
 }
