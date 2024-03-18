@@ -541,7 +541,9 @@ bool AsmPrinter::doInitialization(Module &M) {
     emitInlineAsm(
         M.getModuleInlineAsm() + "\n", *TM.getMCSubtargetInfo(),
         TM.Options.MCOptions, nullptr,
-        InlineAsm::AsmDialect(TM.getMCAsmInfo()->getAssemblerDialect()));
+        TM.getTargetTriple().isWindowsMSVCEnvironment()
+            ? InlineAsm::AD_ATT
+            : InlineAsm::AsmDialect(TM.getMCAsmInfo()->getAssemblerDialect()));
     OutStreamer->AddComment("End of file scope inline assembly");
     OutStreamer->addBlankLine();
   }
