@@ -30,6 +30,7 @@ registers:
   - { id: 11, class: gr32bit }
 frameInfo:
   maxAlignment:    1
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo: {}
 body:             |
