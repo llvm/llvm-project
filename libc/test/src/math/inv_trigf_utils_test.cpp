@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "in_float_range_test_helper.h"
+#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/generic/inv_trigf_utils.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
 using LlvmLibcAtanfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
