@@ -16605,12 +16605,26 @@ static void AnalyzeImplicitConversions(
         BO->getRHS()->isKnownToHaveBooleanValue() &&
         BO->getLHS()->HasSideEffects(S.Context) &&
         BO->getRHS()->HasSideEffects(S.Context)) {
-      S.Diag(BO->getBeginLoc(), diag::warn_bitwise_instead_of_logical)
-          << (BO->getOpcode() == BO_And ? "&" : "|") << OrigE->getSourceRange()
-          << FixItHint::CreateReplacement(
-                 BO->getOperatorLoc(),
-                 (BO->getOpcode() == BO_And ? "&&" : "||"));
-      S.Diag(BO->getBeginLoc(), diag::note_cast_operand_to_int);
+      SourceManager &SM = S.getSourceManager();
+      const LangOptions &LO = S.getLangOpts();
+      SourceLocation BLoc = BO->getOperatorLoc();
+      SourceLocation ELoc = Lexer::getLocForEndOfToken(BLoc, 0, SM, LO);
+      StringRef SR = clang::Lexer::getSourceText(
+          clang::CharSourceRange::getTokenRange(BLoc, ELoc), SM, LO);
+      // To reduce false positives, only issue the diagnostic if the operator
+      // is explicitly spelled as a punctuator. This suppresses the diagnostic
+      // when using 'bitand' or 'bitor' either as keywords in C++ or as macros
+      // in C, along with other macro spellings the user might invent.
+      if (SR.str() == "&" || SR.str() == "|") {
+
+        S.Diag(BO->getBeginLoc(), diag::warn_bitwise_instead_of_logical)
+            << (BO->getOpcode() == BO_And ? "&" : "|")
+            << OrigE->getSourceRange()
+            << FixItHint::CreateReplacement(
+                   BO->getOperatorLoc(),
+                   (BO->getOpcode() == BO_And ? "&&" : "||"));
+        S.Diag(BO->getBeginLoc(), diag::note_cast_operand_to_int);
+      }
     }
 
   // For conditional operators, we analyze the arguments as if they
