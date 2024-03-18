@@ -1147,15 +1147,28 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     MCSymbolRefExpr::VariantKind VK = GetVKForMO(MO);
 
-    // Always use TOC on AIX. Map the global address operand to be a reference
-    // to the TOC entry we will synthesize later. 'TOCEntry' is a label used to
-    // reference the storage allocated in the TOC which contains the address of
-    // 'MOSymbol'.
-    MCSymbol *TOCEntry =
-        lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
-    const MCExpr *Exp = MCSymbolRefExpr::create(TOCEntry,
-                                                MCSymbolRefExpr::VK_PPC_U,
-                                                OutContext);
+    // If the symbol isn't toc-data then use the TOC on AIX.
+    // Map the global address operand to be a reference to the TOC entry we
+    // will synthesize later. 'TOCEntry' is a label used to reference the
+    // storage allocated in the TOC which contains the address of 'MOSymbol'.
+    // If the toc-data attribute is used, the TOC entry contains the data
+    // rather than the address of the MOSymbol.
+    auto isSymbolTD = [](const MachineOperand &MO) {
+      if (!MO.isGlobal())
+        return false;
+
+      const GlobalVariable *GV = dyn_cast<GlobalVariable>(MO.getGlobal());
+      if (!GV)
+        return false;
+
+      return GV->hasAttribute("toc-data");
+    };
+
+    if (!isSymbolTD(MO))
+      MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
+
+    const MCExpr *Exp = MCSymbolRefExpr::create(
+        MOSymbol, MCSymbolRefExpr::VK_PPC_U, OutContext);
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -1272,6 +1285,30 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
+  case PPC::ADDItocL: {
+    // Transform %xd = ADDItocL %xs, @sym
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
+
+    // Change the opcode to load address.
+    TmpInst.setOpcode(PPC::LA);
+
+    const MachineOperand &MO = MI->getOperand(2);
+    assert(MO.isGlobal() && "Invalid operand for ADDItocL.");
+
+    LLVM_DEBUG(assert(
+        !(MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
+        "Interposable definitions must use indirect accesses."));
+
+    // Map the operand to its corresponding MCSymbol.
+    const MCSymbol *const MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
+
+    const MCExpr *Exp = MCSymbolRefExpr::create(
+        MOSymbol, MCSymbolRefExpr::VK_PPC_L, OutContext);
+
+    TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
+    EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
   case PPC::ADDItocL8: {
     // Transform %xd = ADDItocL8 %xs, @sym
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
@@ -1286,7 +1323,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     LLVM_DEBUG(assert(
         !(MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
-        "Interposable definitions must use indirect access."));
+        "Interposable definitions must use indirect accesses."));
 
     const MCExpr *Exp =
         MCSymbolRefExpr::create(getMCSymbolForTOCPseudoMO(MO, *this),

@@ -510,7 +510,7 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
 }
 
 // Check if a SDValue has the toc-data attribute.
-static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
+static bool hasTocDataAttr(SDValue Val) {
   GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Val);
   if (!GA)
     return false;
@@ -6115,8 +6115,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
       assert(isAIXABI && "ELF ABI already handled");
 
-      if (hasTocDataAttr(N->getOperand(0),
-                         CurDAG->getDataLayout().getPointerSize())) {
+      if (hasTocDataAttr(N->getOperand(0))) {
         replaceWith(PPC::ADDItoc, N, MVT::i32);
         return;
       }
@@ -6128,8 +6127,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     if (isPPC64 && CModel == CodeModel::Small) {
       assert(isAIXABI && "ELF ABI handled in common SelectCode");
 
-      if (hasTocDataAttr(N->getOperand(0),
-                         CurDAG->getDataLayout().getPointerSize())) {
+      if (hasTocDataAttr(N->getOperand(0))) {
         replaceWith(PPC::ADDItoc8, N, MVT::i64);
         return;
       }
@@ -6144,9 +6142,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
            " ELF/AIX or 32-bit AIX in the following.");
 
     // Transforms the ISD::TOC_ENTRY node for 32-bit AIX large code model mode
-    // or 64-bit medium (ELF-only) or large (ELF and AIX) code model code. We
-    // generate two instructions as described below. The first source operand
-    // is a symbol reference. If it must be toc-referenced according to
+    // or 64-bit medium (ELF-only) or large (ELF and AIX) code model code non
+    // toc-data symbols.
+    // We generate two instructions as described below. The first source
+    // operand is a symbol reference. If it must be toc-referenced according to
     // Subtarget, we generate:
     // [32-bit AIX]
     //   LWZtocL(@sym, ADDIStocHA(%r2, @sym))
@@ -6154,12 +6153,32 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     //   LDtocL(@sym, ADDIStocHA8(%x2, @sym))
     // Otherwise we generate:
     //   ADDItocL8(ADDIStocHA8(%x2, @sym), @sym)
+
+    // For large code model toc-data symbols we generate:
+    // [32-bit AIX]
+    //   ADDItocL(ADDIStocHA(%x2, @sym), @sym)
+    // [64-bit AIX]
+    //   ADDItocL8(ADDIStocHA8(%x2, @sym), @sym)
+
     SDValue GA = N->getOperand(0);
     SDValue TOCbase = N->getOperand(1);
 
     EVT VT = isPPC64 ? MVT::i64 : MVT::i32;
     SDNode *Tmp = CurDAG->getMachineNode(
         isPPC64 ? PPC::ADDIStocHA8 : PPC::ADDIStocHA, dl, VT, TOCbase, GA);
+
+    // On AIX if the symbol has the toc-data attribute it will be defined
+    // in the TOC entry, so we use an ADDItocL similar to the medium code
+    // model ELF abi.
+    if (isAIXABI && hasTocDataAttr(GA)) {
+      if (isPPC64)
+        report_fatal_error(
+            "64-bit large code model toc-data not yet supported");
+
+      ReplaceNode(N, CurDAG->getMachineNode(PPC::ADDItocL, dl, VT,
+                                            SDValue(Tmp, 0), GA));
+      return;
+    }
 
     if (PPCLowering->isAccessedAsGotIndirect(GA)) {
       // If it is accessed as got-indirect, we need an extra LWZ/LD to load
