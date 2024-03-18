@@ -245,8 +245,10 @@ ListeningSocket::~ListeningSocket() {
   // Close the pipe's FDs in the destructor instead of within
   // ListeningSocket::shutdown to avoid unnecessary synchronization issues that
   // would occur as PipeFD's values would have to be changed to -1
-  ::close(PipeFD[0]);
-  ::close(PipeFD[1]);
+  if (PipeFD[0] != -1)
+    ::close(PipeFD[0]);
+  if (PipeFD[1] != -1)
+    ::close(PipeFD[1]);
 }
 
 //===----------------------------------------------------------------------===//
