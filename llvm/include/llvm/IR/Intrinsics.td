@@ -1528,6 +1528,12 @@ def int_umax : DefaultAttrsIntrinsic<
 def int_umin : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>],
     [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+def int_scmp : DefaultAttrsIntrinsic<
+    [llvm_anyint_ty], [llvm_anyint_ty, LLVMMatchType<1>],
+    [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+def int_ucmp : DefaultAttrsIntrinsic<
+    [llvm_anyint_ty], [llvm_anyint_ty, LLVMMatchType<1>],
+    [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
 //===------------------------- Memory Use Markers -------------------------===//
 //
