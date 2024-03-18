@@ -16,6 +16,7 @@
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -25,8 +26,6 @@
 #include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
-
-using namespace llvm::PatternMatch;
 
 void VPlanTransforms::VPInstructionsToVPRecipes(
     VPlanPtr &Plan,
@@ -157,8 +156,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
     if (NeedsDuplicating) {
       if (ScalarVFOnly)
         continue;
-      Instruction *I = cast<Instruction>(
-          cast<VPReplicateRecipe>(SinkCandidate)->getUnderlyingValue());
+      Instruction *I = SinkCandidate->getUnderlyingInstr();
       auto *Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
@@ -486,6 +484,7 @@ static void removeDeadRecipes(VPlan &Plan) {
                  [](VPValue *V) { return V->getNumUsers(); }))
         continue;
 
+      using namespace llvm::PatternMatch;
       // Having side effects keeps R alive, but do remove conditional assume
       // instructions as their conditions may be flattened.
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
@@ -595,15 +594,6 @@ static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
   }
 }
 
-static bool canSimplifyBranchOnCond(VPInstruction *Term) {
-  VPInstruction *Not = dyn_cast<VPInstruction>(Term->getOperand(0));
-  if (!Not || Not->getOpcode() != VPInstruction::Not)
-    return false;
-
-  VPInstruction *ALM = dyn_cast<VPInstruction>(Not->getOperand(0));
-  return ALM && ALM->getOpcode() == VPInstruction::ActiveLaneMask;
-}
-
 void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                          unsigned BestUF,
                                          PredicatedScalarEvolution &PSE) {
@@ -611,23 +601,24 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
   VPBasicBlock *ExitingVPBB =
       Plan.getVectorLoopRegion()->getExitingBasicBlock();
-  auto *Term = dyn_cast<VPInstruction>(&ExitingVPBB->back());
+  auto *Term = &ExitingVPBB->back();
   // Try to simplify the branch condition if TC <= VF * UF when preparing to
   // execute the plan for the main vector loop. We only do this if the
   // terminator is:
   //  1. BranchOnCount, or
   //  2. BranchOnCond where the input is Not(ActiveLaneMask).
-  if (!Term || (Term->getOpcode() != VPInstruction::BranchOnCount &&
-                (Term->getOpcode() != VPInstruction::BranchOnCond ||
-                 !canSimplifyBranchOnCond(Term))))
+  using namespace llvm::VPlanPatternMatch;
+  if (!match(Term, m_BranchOnCount(m_VPValue(), m_VPValue())) &&
+      !match(Term,
+             m_BranchOnCond(m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue())))))
     return;
 
   Type *IdxTy =
       Plan.getCanonicalIV()->getStartValue()->getLiveInIRValue()->getType();
   const SCEV *TripCount = createTripCountSCEV(IdxTy, PSE);
   ScalarEvolution &SE = *PSE.getSE();
-  const SCEV *C =
-      SE.getConstant(TripCount->getType(), BestVF.getKnownMinValue() * BestUF);
+  ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
+  const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
   if (TripCount->isZero() ||
       !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
     return;
@@ -823,27 +814,6 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   }
 }
 
-/// Returns true is \p V is constant one.
-static bool isConstantOne(VPValue *V) {
-  if (!V->isLiveIn())
-    return false;
-  auto *C = dyn_cast<ConstantInt>(V->getLiveInIRValue());
-  return C && C->isOne();
-}
-
-/// Returns the llvm::Instruction opcode for \p R.
-static unsigned getOpcodeForRecipe(VPRecipeBase &R) {
-  if (auto *WidenR = dyn_cast<VPWidenRecipe>(&R))
-    return WidenR->getUnderlyingInstr()->getOpcode();
-  if (auto *WidenC = dyn_cast<VPWidenCastRecipe>(&R))
-    return WidenC->getOpcode();
-  if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R))
-    return RepR->getUnderlyingInstr()->getOpcode();
-  if (auto *VPI = dyn_cast<VPInstruction>(&R))
-    return VPI->getOpcode();
-  return 0;
-}
-
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // Try to remove redundant blend recipes.
@@ -857,24 +827,9 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  switch (getOpcodeForRecipe(R)) {
-  case Instruction::Mul: {
-    VPValue *A = R.getOperand(0);
-    VPValue *B = R.getOperand(1);
-    if (isConstantOne(A))
-      return R.getVPSingleValue()->replaceAllUsesWith(B);
-    if (isConstantOne(B))
-      return R.getVPSingleValue()->replaceAllUsesWith(A);
-    break;
-  }
-  case Instruction::Trunc: {
-    VPRecipeBase *Ext = R.getOperand(0)->getDefiningRecipe();
-    if (!Ext)
-      break;
-    unsigned ExtOpcode = getOpcodeForRecipe(*Ext);
-    if (ExtOpcode != Instruction::ZExt && ExtOpcode != Instruction::SExt)
-      break;
-    VPValue *A = Ext->getOperand(0);
+  using namespace llvm::VPlanPatternMatch;
+  VPValue *A;
+  if (match(&R, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
     VPValue *Trunc = R.getVPSingleValue();
     Type *TruncTy = TypeInfo.inferScalarType(Trunc);
     Type *ATy = TypeInfo.inferScalarType(A);
@@ -883,8 +838,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     } else {
       // Don't replace a scalarizing recipe with a widened cast.
       if (isa<VPReplicateRecipe>(&R))
-        break;
+        return;
       if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
+
+        unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
+                                 ? Instruction::SExt
+                                 : Instruction::ZExt;
         auto *VPC =
             new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
         VPC->insertBefore(&R);
@@ -910,11 +869,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         assert(TypeInfo.inferScalarType(VPV) == TypeInfo2.inferScalarType(VPV));
     }
 #endif
-    break;
   }
-  default:
-    break;
-  }
+
+  if (match(&R, m_CombineOr(m_Mul(m_VPValue(A), m_SpecificInt(1)),
+                            m_Mul(m_SpecificInt(1), m_VPValue(A)))))
+    return R.getVPSingleValue()->replaceAllUsesWith(A);
 }
 
 /// Try to simplify the recipes in \p Plan.
@@ -1200,10 +1159,10 @@ void VPlanTransforms::addActiveLaneMask(
     LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
         Plan, DataAndControlFlowWithoutRuntimeCheck);
   } else {
-    LaneMask = new VPInstruction(VPInstruction::ActiveLaneMask,
-                                 {WideCanonicalIV, Plan.getTripCount()},
-                                 nullptr, "active.lane.mask");
-    LaneMask->insertAfter(WideCanonicalIV);
+    VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
+    LaneMask = B.createNaryOp(VPInstruction::ActiveLaneMask,
+                              {WideCanonicalIV, Plan.getTripCount()}, nullptr,
+                              "active.lane.mask");
   }
 
   // Walk users of WideCanonicalIV and replace all compares of the form

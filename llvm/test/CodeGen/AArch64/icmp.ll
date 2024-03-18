@@ -177,15 +177,13 @@ define <3 x i32> @v3i32_i32(<3 x i32> %a, <3 x i32> %b, <3 x i32> %d, <3 x i32> 
 ; CHECK-GI-NEXT:    mov v4.s[1], w8
 ; CHECK-GI-NEXT:    mov v4.s[2], w8
 ; CHECK-GI-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-GI-NEXT:    fmov s5, w8
-; CHECK-GI-NEXT:    mov v5.s[1], w8
-; CHECK-GI-NEXT:    mov v4.s[3], w8
-; CHECK-GI-NEXT:    mov v5.s[2], w8
-; CHECK-GI-NEXT:    neg v1.4s, v4.4s
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov v1.s[1], w8
+; CHECK-GI-NEXT:    neg v5.4s, v4.4s
 ; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    mov v5.s[3], w8
-; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v5.16b
+; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v5.4s
+; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b

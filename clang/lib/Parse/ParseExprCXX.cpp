@@ -3908,7 +3908,10 @@ ExprResult Parser::ParseTypeTrait() {
   SmallVector<ParsedType, 2> Args;
   do {
     // Parse the next type.
-    TypeResult Ty = ParseTypeName();
+    TypeResult Ty =
+        ParseTypeName(/*SourceRange=*/nullptr,
+                      getLangOpts().CPlusPlus ? DeclaratorContext::TemplateArg
+                                              : DeclaratorContext::TypeName);
     if (Ty.isInvalid()) {
       Parens.skipToEnd();
       return ExprError();
@@ -3950,7 +3953,8 @@ ExprResult Parser::ParseArrayTypeTrait() {
   if (T.expectAndConsume())
     return ExprError();
 
-  TypeResult Ty = ParseTypeName();
+  TypeResult Ty =
+      ParseTypeName(/*SourceRange=*/nullptr, DeclaratorContext::TemplateArg);
   if (Ty.isInvalid()) {
     SkipUntil(tok::comma, StopAtSemi);
     SkipUntil(tok::r_paren, StopAtSemi);

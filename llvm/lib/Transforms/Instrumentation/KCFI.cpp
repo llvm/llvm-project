@@ -82,8 +82,8 @@ PreservedAnalyses KCFIPass::run(Function &F, FunctionAnalysisManager &AM) {
             ->getZExtValue();
 
     // Drop the KCFI operand bundle.
-    CallBase *Call =
-        CallBase::removeOperandBundle(CI, LLVMContext::OB_kcfi, CI);
+    CallBase *Call = CallBase::removeOperandBundle(CI, LLVMContext::OB_kcfi,
+                                                   CI->getIterator());
     assert(Call != CI);
     Call->copyMetadata(*CI);
     CI->replaceAllUsesWith(Call);

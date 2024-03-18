@@ -190,11 +190,21 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
     The `legal_ops`, `illegal_ops`, `legal_dialects`, `illegal_dialects`
     attributes specify the conversion target.
 
-    This transform consumes the `target` handle and modifies the payload. It
-    does not produce any handles.
+    This transform modifies the payload. By default, it consumes the `target`
+    handle. It does not produce any handles.
+
+    If the `preserve_handles` attribute is set, this transform does not consume
+    the `target` handle and instead updates handles based on notifications from
+    a tracking listener that is attached to the dialect conversion, similar to
+    `transform.apply_patterns`. Only replacements via `RewriterBase::replaceOp`
+    or `replaceOpWithNewOp` are considered "payload op replacements". In
+    contrast to `transform.apply_patterns`, we allow replacement ops even if the
+    op name has changed. This is because conversion patterns are expected to
+    lower ops to different ops (from a different dialect). More details can be
+    found at the documentation site of `TrackingListener`.
 
     This transform produces a silenceable failure if the dialect conversion was
-    unsuccessful.
+    unsuccessful or the tracking listener failed to find a replacement op.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
@@ -202,7 +212,8 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
                        OptionalAttr<StrArrayAttr>:$illegal_ops,
                        OptionalAttr<StrArrayAttr>:$legal_dialects,
                        OptionalAttr<StrArrayAttr>:$illegal_dialects,
-                       UnitAttr:$partial_conversion);
+                       UnitAttr:$partial_conversion,
+                       UnitAttr:$preserve_handles);
   let results = (outs);
   let regions = (region
       MaxSizedRegion<1>:$patterns,

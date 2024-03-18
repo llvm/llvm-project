@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -374,7 +375,7 @@ Level SparseTensorEncodingAttr::getLvlRank() const {
 
 LevelType SparseTensorEncodingAttr::getLvlType(Level l) const {
   if (!getImpl())
-    return LevelFormat::Dense;
+    return LevelFormat::Batch;
   assert(l < getLvlRank() && "Level is out of bounds");
   return getLvlTypes()[l];
 }
@@ -413,8 +414,8 @@ SparseTensorEncodingAttr::getStaticLvlSliceStride(Level lvl) const {
 }
 
 SmallVector<int64_t>
-SparseTensorEncodingAttr::tranlateShape(ArrayRef<int64_t> srcShape,
-                                        CrdTransDirectionKind dir) const {
+SparseTensorEncodingAttr::translateShape(ArrayRef<int64_t> srcShape,
+                                         CrdTransDirectionKind dir) const {
   if (isIdentity())
     return SmallVector<int64_t>(srcShape);
 
@@ -646,28 +647,16 @@ void SparseTensorEncodingAttr::printDimensions(
   }
 }
 
-std::string getNOutOfMString(LevelType lt) {
-  if (isNOutOfMLT(lt)) {
-    unsigned n = getN(lt);
-    unsigned m = getM(lt);
-    auto output = "[" + std::to_string(n) + ", " + std::to_string(m) + "]";
-    return output;
-  }
-  return "";
-}
-
 void SparseTensorEncodingAttr::printLevels(AffineMap &map, AsmPrinter &printer,
                                            ArrayRef<LevelType> lvlTypes) const {
   for (unsigned i = 0, n = map.getNumResults() - 1; i < n; i++) {
     map.getResult(i).print(printer.getStream());
-    printer << " : " << toMLIRString(lvlTypes[i])
-            << getNOutOfMString(lvlTypes[i]) << ", ";
+    printer << " : " << toMLIRString(lvlTypes[i]) << ", ";
   }
   if (map.getNumResults() >= 1) {
     auto lastIndex = map.getNumResults() - 1;
     map.getResult(lastIndex).print(printer.getStream());
-    printer << " : " << toMLIRString(lvlTypes[lastIndex])
-            << getNOutOfMString(lvlTypes[lastIndex]);
+    printer << " : " << toMLIRString(lvlTypes[lastIndex]);
   }
 }
 
@@ -1392,7 +1381,7 @@ void ReinterpretMapOp::build(OpBuilder &odsBuilder, OperationState &odsState,
   auto srcStt = getSparseTensorType(source);
   SmallVector<int64_t> srcLvlShape = srcStt.getLvlShape();
   SmallVector<int64_t> dstDimShape =
-      dstEnc.tranlateShape(srcLvlShape, CrdTransDirectionKind::lvl2dim);
+      dstEnc.translateShape(srcLvlShape, CrdTransDirectionKind::lvl2dim);
   auto dstTp =
       RankedTensorType::get(dstDimShape, srcStt.getElementType(), dstEnc);
   return build(odsBuilder, odsState, dstTp, source);
@@ -1753,13 +1742,6 @@ LogicalResult ConcatenateOp::verify() {
   return success();
 }
 
-LogicalResult InsertOp::verify() {
-  const auto stt = getSparseTensorType(getTensor());
-  if (stt.getLvlRank() != static_cast<Level>(getLvlCoords().size()))
-    return emitOpError("incorrect number of coordinates");
-  return success();
-}
-
 void PushBackOp::build(OpBuilder &builder, OperationState &result,
                        Value curSize, Value inBuffer, Value value) {
   build(builder, result, curSize, inBuffer, value, Value());
@@ -1975,6 +1957,10 @@ void SparseTensorDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorOps.cpp.inc"
       >();
+  declarePromisedInterfaces<
+      bufferization::BufferizableOpInterface, ConcatenateOp, ConvertOp, LoadOp,
+      NewOp, NumberOfEntriesOp, AssembleOp, DisassembleOp,
+      ToCoordinatesBufferOp, ToCoordinatesOp, ToPositionsOp, ToValuesOp>();
 }
 
 #define GET_OP_CLASSES

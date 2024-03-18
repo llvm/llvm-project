@@ -886,9 +886,11 @@ void AArch64ABIInfo::appendAttributeMangling(StringRef AttrStr,
     return LHS.compare(RHS) < 0;
   });
 
+  llvm::SmallDenseSet<StringRef, 8> UniqueFeats;
   for (auto &Feat : Features)
     if (auto Ext = llvm::AArch64::parseArchExtension(Feat))
-      Out << 'M' << Ext->Name;
+      if (UniqueFeats.insert(Ext->Name).second)
+        Out << 'M' << Ext->Name;
 }
 
 std::unique_ptr<TargetCodeGenInfo>

@@ -717,9 +717,19 @@ SmallVector<SectionPattern, 0> ScriptParser::readInputSectionsList() {
 
     StringMatcher SectionMatcher;
     // Break if the next token is ), EXCLUDE_FILE, or SORT*.
-    while (!errorCount() && peek() != ")" && peek() != "EXCLUDE_FILE" &&
-           peekSortKind() == SortSectionPolicy::Default)
+    while (!errorCount() && peekSortKind() == SortSectionPolicy::Default) {
+      StringRef s = peek();
+      if (s == ")" || s == "EXCLUDE_FILE")
+        break;
+      // Detect common mistakes when certain non-wildcard meta characters are
+      // used without a closing ')'.
+      if (!s.empty() && strchr("(){}", s[0])) {
+        skip();
+        setError("section pattern is expected");
+        break;
+      }
       SectionMatcher.addPattern(unquote(next()));
+    }
 
     if (!SectionMatcher.empty())
       ret.push_back({std::move(excludeFilePat), std::move(SectionMatcher)});

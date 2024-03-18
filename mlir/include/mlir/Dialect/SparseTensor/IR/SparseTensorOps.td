@@ -55,8 +55,8 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
 }
 
 def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
-    Arguments<(ins TensorOf<[AnyType]>:$values,
-                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels)>,
+    Arguments<(ins Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels,
+                   TensorOf<[AnyType]>:$values)>,
     Results<(outs AnySparseTensor: $result)> {
   let summary = "Returns a sparse tensor assembled from the given values and levels";
 
@@ -96,20 +96,20 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
   }];
 
   let assemblyFormat =
-    "$values `,` $levels attr-dict"
-    "`:` type($values) `,` type($levels) `to` type($result)";
+    "` ` `(` $levels `)` `,` $values attr-dict"
+    " `:` `(` type($levels) `)` `,` type($values) `to` type($result)";
 
   let hasVerifier = 1;
 }
 
 def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVariadicResultSize]>,
     Arguments<(ins AnySparseTensor:$tensor,
-                   TensorOf<[AnyType]>:$out_values,
-                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels)>,
-    Results<(outs TensorOf<[AnyType]>:$ret_values,
-                  Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
-                  AnyIndexingScalarLike:$val_len,
-                  Variadic<AnyIndexingScalarLike>:$lvl_lens)> {
+                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels,
+                   TensorOf<[AnyType]>:$out_values)>,
+    Results<(outs Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
+                  TensorOf<[AnyType]>:$ret_values,
+                  Variadic<AnyIndexingScalarLike>:$lvl_lens,
+                  AnyIndexingScalarLike:$val_len)> {
   let summary = "Returns the (values, coordinates) pair disassembled from the input tensor";
 
   let description = [{
@@ -134,8 +134,9 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
     //                  |0.0, 0.0, 0.0, 0.0|
     %v, %p, %c, %v_len, %p_len, %c_len =
         sparse_tensor.disassemble %sp : tensor<3x4xf64, #COO>
-          outs(%od, %op, %oi : tensor<3xf64>, tensor<2xindex>, tensor<3x2xindex>)
-                            -> tensor<3xf64>, (tensor<2xindex>, tensor<3x2xindex>), index, (index, index)
+          out_lvls(%op, %oi) : tensor<2xindex>, tensor<3x2xindex>,
+          out_vals(%od) : tensor<3xf64> ->
+          tensor<3xf64>, (tensor<2xindex>, tensor<3x2xindex>), index, (index, index)
     // %v = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
     // %p = arith.constant dense<[ 0,              3 ]> : tensor<2xindex>
     // %c = arith.constant dense<[[0,0], [1,2], [1,3]]> : tensor<3x2xindex>
@@ -147,8 +148,10 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
 
   let assemblyFormat =
     "$tensor `:` type($tensor) "
-    "`outs` `(` $out_values `,` $out_levels `:` type($out_values) `,` type($out_levels) `)` attr-dict"
-    "`->` type($ret_values) `,` `(` type($ret_levels) `)` `,` type($val_len) `,` `(` type($lvl_lens) `)`";
+    "`out_lvls` `(` $out_levels `:` type($out_levels) `)` "
+    "`out_vals` `(` $out_values `:` type($out_values) `)` attr-dict"
+    "`->` `(` type($ret_levels) `)` `,` type($ret_values) `,` "
+    "`(` type($lvl_lens) `)` `,` type($val_len)";
 
   let hasVerifier = 1;
 }
@@ -664,48 +667,6 @@ def SparseTensor_CrdTranslateOp : SparseTensor_Op<"crd_translate", [Pure]>,
 // code generation on the other hand. The semantics of these operations may be
 // refined over time as our sparse abstractions evolve.
 //===----------------------------------------------------------------------===//
-
-def SparseTensor_InsertOp : SparseTensor_Op<"insert",
-    [TypesMatchWith<"value type matches element type of tensor",
-                    "tensor", "value",
-                    "::llvm::cast<ShapedType>($_self).getElementType()">,
-     AllTypesMatch<["tensor", "result"]>]>,
-    Arguments<(ins AnyType:$value,
-               AnySparseTensor:$tensor,
-               Variadic<Index>:$lvlCoords)>,
-    Results<(outs AnySparseTensor:$result)> {
-  string summary = "Inserts a value into the sparse tensor";
-  string description = [{
-    Inserts the value into the underlying storage of the tensor at the
-    given level-coordinates. The arity of `lvlCoords` must match the
-    level-rank of the tensor. This operation can only be applied when
-    the tensor materializes unintialized from a `tensor.empty` operation
-    and the final tensor is constructed with a `load` operation which
-    has the `hasInserts` attribute set.
-
-    The level-properties of the sparse tensor type fully describe what
-    kind of insertion order is allowed.  When all levels have "unique"
-    and "ordered" properties, for example, insertions should occur in
-    strict lexicographical level-coordinate order.  Other properties
-    define different insertion regimens.  Inserting in a way contrary
-    to these properties results in undefined behavior.
-
-    Note that this operation is "impure" in the sense that even though
-    the result is modeled through an SSA value, the insertion is eventually
-    done "in place", and referencing the old SSA value is undefined behavior.
-    This operation is scheduled to be unified with the dense counterpart
-    `tensor.insert` that has pure SSA semantics.
-
-    Example:
-
-    ```mlir
-    %result = sparse_tensor.insert %val into %tensor[%i,%j] : tensor<1024x1024xf64, #CSR>
-    ```
-  }];
-  let assemblyFormat = "$value `into` $tensor `[` $lvlCoords `]` attr-dict"
-                       "`:` type($tensor)";
-  let hasVerifier = 1;
-}
 
 def SparseTensor_PushBackOp : SparseTensor_Op<"push_back",
     [TypesMatchWith<"value type matches element type of inBuffer",
@@ -1458,7 +1419,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse Tensor Debugging Operations.
+// Sparse Tensor Debugging and Test-Only Operations.
 //===----------------------------------------------------------------------===//
 
 def SparseTensor_PrintOp : SparseTensor_Op<"print">,
@@ -1477,6 +1438,17 @@ def SparseTensor_PrintOp : SparseTensor_Op<"print">,
     ```
   }];
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
+}
+
+def SparseTensor_HasRuntimeLibraryOp
+    : SparseTensor_Op<"has_runtime_library", []>, Results<(outs I1:$result)> {
+  string summary = "Indicates whether running in runtime/codegen mode";
+  string description = [{
+    Returns a boolean value that indicates whether the sparse compiler runs in
+    runtime library mode or not. For testing only: This op is useful for writing
+    test cases that require different IR depending on runtime/codegen mode.
+  }];
+  let assemblyFormat = "attr-dict";
 }
 
 #endif // SPARSETENSOR_OPS

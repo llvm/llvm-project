@@ -32,7 +32,8 @@ public:
            std::to_string(lvl) + "]";
   }
 
-  virtual Value peekCrdAt(OpBuilder &b, Location l, Value iv) const = 0;
+  virtual Value peekCrdAt(OpBuilder &b, Location l, ValueRange batchPrefix,
+                          Value iv) const = 0;
 
   /// Peeks the lower and upper bound to *fully* traverse the level with
   /// the given position `p` that the immediate parent level is current at.
@@ -47,7 +48,8 @@ public:
   ///
   /// `bound` is only used when the level is `non-unique` and deduplication is
   /// required. It specifies the max upper bound of the non-unique segment.
-  virtual std::pair<Value, Value> peekRangeAt(OpBuilder &b, Location l, Value p,
+  virtual std::pair<Value, Value> peekRangeAt(OpBuilder &b, Location l,
+                                              ValueRange batchPrefix, Value p,
                                               Value segHi = Value()) const = 0;
 
   Level getLevel() const { return lvl; }
@@ -89,7 +91,7 @@ protected:
   SparseIterator(IterKind kind, unsigned tid, unsigned lvl,
                  unsigned cursorValsCnt,
                  SmallVectorImpl<Value> &cursorValStorage)
-      : kind(kind), tid(tid), lvl(lvl), crd(nullptr),
+      : batchCrds(0), kind(kind), tid(tid), lvl(lvl), crd(nullptr),
         cursorValsCnt(cursorValsCnt), cursorValsStorageRef(cursorValStorage){};
 
   SparseIterator(IterKind kind, unsigned cursorValsCnt,
@@ -119,6 +121,7 @@ public:
   virtual SmallVector<Type> getCursorValTypes(OpBuilder &b) const = 0;
 
   Value getCrd() const { return crd; }
+  ValueRange getBatchCrds() const { return batchCrds; }
   ValueRange getCursor() const {
     return ValueRange(cursorValsStorageRef).take_front(cursorValsCnt);
   };
@@ -134,6 +137,9 @@ public:
   //
   // Iterator properties.
   //
+
+  // Whether the iterator is a iterator over a batch level.
+  virtual bool isBatchIterator() const = 0;
 
   // Whether the iterator support random access (i.e., support look up by
   // *coordinate*). A random access iterator must also traverses a dense space.
@@ -243,12 +249,18 @@ public:
 
 protected:
   void updateCrd(Value crd) { this->crd = crd; }
+
   MutableArrayRef<Value> getMutCursorVals() {
     MutableArrayRef<Value> ref = cursorValsStorageRef;
     return ref.take_front(cursorValsCnt);
   }
 
+  void inherentBatch(const SparseIterator &parent) {
+    batchCrds = parent.batchCrds;
+  }
+
   SparseEmitStrategy emitStrategy;
+  SmallVector<Value> batchCrds;
 
 public:
   const IterKind kind;     // For LLVM-style RTTI.

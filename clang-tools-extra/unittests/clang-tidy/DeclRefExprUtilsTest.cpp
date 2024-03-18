@@ -51,6 +51,8 @@ template <int Indirections> void RunTest(StringRef Snippet) {
       void constMethod() const;
       void nonConstMethod();
 
+      static void staticMethod();
+
       void operator()(ConstTag) const;
       void operator()(NonConstTag);
 
@@ -109,10 +111,12 @@ TEST(ConstReferenceDeclRefExprsTest, ConstValueVar) {
       useConstPtr(&/*const*/target);
       useConstPtrConstRef(&/*const*/target);
       /*const*/target.constMethod();
+      /*const*/target.staticMethod();
       /*const*/target(ConstTag{});
       /*const*/target[42];
       useConstRef((/*const*/target));
       (/*const*/target).constMethod();
+      /*const*/target.staticMethod();
       (void)(/*const*/target == /*const*/target);
       (void)/*const*/target;
       (void)&/*const*/target;
@@ -140,6 +144,7 @@ TEST(ConstReferenceDeclRefExprsTest, ConstRefVar) {
       useConstPtr(&/*const*/target);
       useConstPtrConstRef(&/*const*/target);
       /*const*/target.constMethod();
+      /*const*/target.staticMethod();
       /*const*/target(ConstTag{});
       /*const*/target[42];
       useConstRef((/*const*/target));
@@ -179,6 +184,7 @@ TEST(ConstReferenceDeclRefExprsTest, ValueVar) {
       useConstPtr(&/*const*/target);
       useConstPtrConstRef(&/*const*/target);
       /*const*/target.constMethod();
+      /*const*/target.staticMethod();
       target.nonConstMethod();
       /*const*/target(ConstTag{});
       target[42];
@@ -218,6 +224,7 @@ TEST(ConstReferenceDeclRefExprsTest, RefVar) {
       useConstPtr(&/*const*/target);
       useConstPtrConstRef(&/*const*/target);
       /*const*/target.constMethod();
+      /*const*/target.staticMethod();
       target.nonConstMethod();
       /*const*/target(ConstTag{});
       target[42];
@@ -256,6 +263,7 @@ TEST(ConstReferenceDeclRefExprsTest, PtrVar) {
       useConstPtrConstRef(/*const*/target);
       usePtrConstPtr(&target);
       /*const*/target->constMethod();
+      /*const*/target->staticMethod();
       target->nonConstMethod();
       (*/*const*/target)(ConstTag{});
       (*target)[42];
@@ -292,6 +300,7 @@ TEST(ConstReferenceDeclRefExprsTest, ConstPtrVar) {
       useConstPtrConstPtr(&/*const*/target);
       useConstPtrConstRef(/*const*/target);
       /*const*/target->constMethod();
+      /*const*/target->staticMethod();
       (*/*const*/target)(ConstTag{});
       (*/*const*/target)[42];
       /*const*/target->operator[](42);

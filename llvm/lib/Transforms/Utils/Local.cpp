@@ -1649,15 +1649,15 @@ static void insertDbgValueOrDPValue(DIBuilder &Builder, Value *DV,
                                     const DebugLoc &NewLoc,
                                     BasicBlock::iterator Instr) {
   if (!UseNewDbgInfoFormat) {
-    auto *DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
-                                                   (Instruction *)nullptr);
-    DbgVal->insertBefore(Instr);
+    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
+                                                  (Instruction *)nullptr);
+    DbgVal.get<Instruction *>()->insertBefore(Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DPValue directly instead of a dbg.value intrinsic.
     ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
     DPValue *DV = new DPValue(DVAM, DIVar, DIExpr, NewLoc.get());
-    Instr->getParent()->insertDPValueBefore(DV, Instr);
+    Instr->getParent()->insertDbgRecordBefore(DV, Instr);
   }
 }
 
@@ -1667,15 +1667,15 @@ static void insertDbgValueOrDPValueAfter(DIBuilder &Builder, Value *DV,
                                          const DebugLoc &NewLoc,
                                          BasicBlock::iterator Instr) {
   if (!UseNewDbgInfoFormat) {
-    auto *DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
-                                                   (Instruction *)nullptr);
-    DbgVal->insertAfter(&*Instr);
+    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
+                                                  (Instruction *)nullptr);
+    DbgVal.get<Instruction *>()->insertAfter(&*Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DPValue directly instead of a dbg.value intrinsic.
     ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
     DPValue *DV = new DPValue(DVAM, DIVar, DIExpr, NewLoc.get());
-    Instr->getParent()->insertDPValueAfter(DV, &*Instr);
+    Instr->getParent()->insertDbgRecordAfter(DV, &*Instr);
   }
 }
 
@@ -1794,7 +1794,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV, StoreInst *SI,
   DV = UndefValue::get(DV->getType());
   ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
   DPValue *NewDPV = new DPValue(DVAM, DIVar, DIExpr, NewLoc.get());
-  SI->getParent()->insertDPValueBefore(NewDPV, SI->getIterator());
+  SI->getParent()->insertDbgRecordBefore(NewDPV, SI->getIterator());
 }
 
 /// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
@@ -1856,7 +1856,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV, LoadInst *LI,
   // Create a DPValue directly and insert.
   ValueAsMetadata *LIVAM = ValueAsMetadata::get(LI);
   DPValue *DV = new DPValue(LIVAM, DIVar, DIExpr, NewLoc.get());
-  LI->getParent()->insertDPValueAfter(DV, LI);
+  LI->getParent()->insertDbgRecordAfter(DV, LI);
 }
 
 /// Determine whether this alloca is either a VLA or an array.
@@ -1911,7 +1911,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
     for (Instruction &BI : FI) {
       if (auto *DDI = dyn_cast<DbgDeclareInst>(&BI))
         Dbgs.push_back(DDI);
-      for (DPValue &DPV : DPValue::filter(BI.getDbgValueRange())) {
+      for (DPValue &DPV : filterDbgVars(BI.getDbgRecordRange())) {
         if (DPV.getType() == DPValue::LocationType::Declare)
           DPVs.push_back(&DPV);
       }
@@ -1996,7 +1996,7 @@ static void insertDPValuesForPHIs(BasicBlock *BB,
   // Map existing PHI nodes to their DPValues.
   DenseMap<Value *, DPValue *> DbgValueMap;
   for (auto &I : *BB) {
-    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+    for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
       for (Value *V : DPV.location_ops())
         if (auto *Loc = dyn_cast_or_null<PHINode>(V))
           DbgValueMap.insert({Loc, &DPV});
@@ -2044,7 +2044,7 @@ static void insertDPValuesForPHIs(BasicBlock *BB,
     auto InsertionPt = Parent->getFirstInsertionPt();
     assert(InsertionPt != Parent->end() && "Ill-formed basic block");
 
-    Parent->insertDPValueBefore(NewDbgII, InsertionPt);
+    Parent->insertDbgRecordBefore(NewDbgII, InsertionPt);
   }
 }
 
@@ -2620,7 +2620,7 @@ static bool rewriteDebugUsers(
         LLVM_DEBUG(dbgs() << "MOVE:  " << *DPV << '\n');
         DPV->removeFromParent();
         // Ensure there's a marker.
-        DomPoint.getParent()->insertDPValueAfter(DPV, &DomPoint);
+        DomPoint.getParent()->insertDbgRecordAfter(DPV, &DomPoint);
         Changed = true;
       } else if (!DT.dominates(&DomPoint, MarkedInstr)) {
         UndefOrSalvageDPV.insert(DPV);
@@ -2762,6 +2762,23 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
   return false;
 }
 
+bool llvm::handleUnreachableTerminator(
+    Instruction *I, SmallVectorImpl<Value *> &PoisonedValues) {
+  bool Changed = false;
+  // RemoveDIs: erase debug-info on this instruction manually.
+  I->dropDbgRecords();
+  for (Use &U : I->operands()) {
+    Value *Op = U.get();
+    if (isa<Instruction>(Op) && !Op->getType()->isTokenTy()) {
+      U.set(PoisonValue::get(Op->getType()));
+      PoisonedValues.push_back(Op);
+      Changed = true;
+    }
+  }
+
+  return Changed;
+}
+
 std::pair<unsigned, unsigned>
 llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
   unsigned NumDeadInst = 0;
@@ -2769,8 +2786,9 @@ llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
   // Delete the instructions backwards, as it has a reduced likelihood of
   // having to update as many def-use and use-def chains.
   Instruction *EndInst = BB->getTerminator(); // Last not to be deleted.
-  // RemoveDIs: erasing debug-info must be done manually.
-  EndInst->dropDbgValues();
+  SmallVector<Value *> Uses;
+  handleUnreachableTerminator(EndInst, Uses);
+
   while (EndInst != &BB->front()) {
     // Delete the next to last instruction.
     Instruction *Inst = &*--EndInst->getIterator();
@@ -2779,7 +2797,7 @@ llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
     if (Inst->isEHPad() || Inst->getType()->isTokenTy()) {
       // EHPads can't have DPValues attached to them, but it might be possible
       // for things with token type.
-      Inst->dropDbgValues();
+      Inst->dropDbgRecords();
       EndInst = Inst;
       continue;
     }
@@ -2788,7 +2806,7 @@ llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
     else
       ++NumDeadInst;
     // RemoveDIs: erasing debug-info must be done manually.
-    Inst->dropDbgValues();
+    Inst->dropDbgRecords();
     Inst->eraseFromParent();
   }
   return {NumDeadInst, NumDeadDbgInst};
@@ -2811,7 +2829,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool PreserveLCSSA,
     if (DTU)
       UniqueSuccessors.insert(Successor);
   }
-  auto *UI = new UnreachableInst(I->getContext(), I);
+  auto *UI = new UnreachableInst(I->getContext(), I->getIterator());
   UI->setDebugLoc(I->getDebugLoc());
 
   // All instructions after this are dead.
@@ -2830,7 +2848,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool PreserveLCSSA,
       Updates.push_back({DominatorTree::Delete, BB, UniqueSuccessor});
     DTU->applyUpdates(Updates);
   }
-  BB->flushTerminatorDbgValues();
+  BB->flushTerminatorDbgRecords();
   return NumInstrsRemoved;
 }
 
@@ -2868,7 +2886,7 @@ CallInst *llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
 
   // Follow the call by a branch to the normal destination.
   BasicBlock *NormalDestBB = II->getNormalDest();
-  BranchInst::Create(NormalDestBB, II);
+  BranchInst::Create(NormalDestBB, II->getIterator());
 
   // Update PHI nodes in the unwind destination
   BasicBlock *BB = II->getParent();
@@ -3048,7 +3066,7 @@ static bool markAliveBlocks(Function &F,
             // jump to the normal destination branch.
             BasicBlock *NormalDestBB = II->getNormalDest();
             BasicBlock *UnwindDestBB = II->getUnwindDest();
-            BranchInst::Create(NormalDestBB, II);
+            BranchInst::Create(NormalDestBB, II->getIterator());
             UnwindDestBB->removePredecessor(II->getParent());
             II->eraseFromParent();
             if (DTU)
@@ -3131,12 +3149,12 @@ Instruction *llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
   BasicBlock *UnwindDest;
 
   if (auto *CRI = dyn_cast<CleanupReturnInst>(TI)) {
-    NewTI = CleanupReturnInst::Create(CRI->getCleanupPad(), nullptr, CRI);
+    NewTI = CleanupReturnInst::Create(CRI->getCleanupPad(), nullptr, CRI->getIterator());
     UnwindDest = CRI->getUnwindDest();
   } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(TI)) {
     auto *NewCatchSwitch = CatchSwitchInst::Create(
         CatchSwitch->getParentPad(), nullptr, CatchSwitch->getNumHandlers(),
-        CatchSwitch->getName(), CatchSwitch);
+        CatchSwitch->getName(), CatchSwitch->getIterator());
     for (BasicBlock *PadBB : CatchSwitch->handlers())
       NewCatchSwitch->addHandler(PadBB);
 
@@ -3564,7 +3582,7 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
     if (I->isUsedByMetadata())
       dropDebugUsers(*I);
     // RemoveDIs: drop debug-info too as the following code does.
-    I->dropDbgValues();
+    I->dropDbgRecords();
     if (I->isDebugOrPseudoInst()) {
       // Remove DbgInfo and pseudo probe Intrinsics.
       II = I->eraseFromParent();
@@ -3972,23 +3990,23 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   // We may need to truncate the provider.
   if (DemandedTy != Provider->getType()) {
     auto *Trunc =
-        CastInst::CreateIntegerCast(Provider, DemandedTy, false, "trunc", I);
+        CastInst::CreateIntegerCast(Provider, DemandedTy, false, "trunc", I->getIterator());
     InsertedInsts.push_back(Trunc);
     Provider = Trunc;
   }
 
-  Instruction *Result = CallInst::Create(F, Provider, "rev", I);
+  Instruction *Result = CallInst::Create(F, Provider, "rev", I->getIterator());
   InsertedInsts.push_back(Result);
 
   if (!DemandedMask.isAllOnes()) {
     auto *Mask = ConstantInt::get(DemandedTy, DemandedMask);
-    Result = BinaryOperator::Create(Instruction::And, Result, Mask, "mask", I);
+    Result = BinaryOperator::Create(Instruction::And, Result, Mask, "mask", I->getIterator());
     InsertedInsts.push_back(Result);
   }
 
   // We may need to zeroextend back to the result type.
   if (ITy != Result->getType()) {
-    auto *ExtInst = CastInst::CreateIntegerCast(Result, ITy, false, "zext", I);
+    auto *ExtInst = CastInst::CreateIntegerCast(Result, ITy, false, "zext", I->getIterator());
     InsertedInsts.push_back(ExtInst);
   }
 

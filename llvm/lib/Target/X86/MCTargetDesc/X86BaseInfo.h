@@ -545,6 +545,14 @@ enum : uint64_t {
   /// PrefixByte - This form is used for instructions that represent a prefix
   /// byte like data16 or rep.
   PrefixByte = 10,
+  /// MRMDestRegCC - This form is used for the cfcmov instructions, which use
+  /// the Mod/RM byte to specify the operands reg(r/m) and reg(reg) and also
+  /// encodes a condition code.
+  MRMDestRegCC = 18,
+  /// MRMDestMemCC - This form is used for the cfcmov instructions, which use
+  /// the Mod/RM byte to specify the operands mem(r/m) and reg(reg) and also
+  /// encodes a condition code.
+  MRMDestMemCC = 19,
   /// MRMDestMem4VOp3CC - This form is used for instructions that use the Mod/RM
   /// byte to specify a destination which in this case is memory and operand 3
   /// with VEX.VVVV, and also encodes a condition code.
@@ -875,7 +883,10 @@ enum : uint64_t {
   ExplicitOpPrefixMask = 3ULL << ExplicitOpPrefixShift,
   /// EVEX_NF - Set if this instruction has EVEX.NF field set.
   EVEX_NFShift = ExplicitOpPrefixShift + 2,
-  EVEX_NF = 1ULL << EVEX_NFShift
+  EVEX_NF = 1ULL << EVEX_NFShift,
+  // TwoConditionalOps - Set if this instruction has two conditional operands
+  TwoConditionalOps_Shift = EVEX_NFShift + 1,
+  TwoConditionalOps = 1ULL << TwoConditionalOps_Shift
 };
 
 /// \returns true if the instruction with given opcode is a prefix.
@@ -1029,6 +1040,7 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
     return -1;
   case X86II::MRMDestMem:
   case X86II::MRMDestMemFSIB:
+  case X86II::MRMDestMemCC:
     return hasNewDataDest(TSFlags);
   case X86II::MRMSrcMem:
   case X86II::MRMSrcMemFSIB:
@@ -1042,11 +1054,13 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
     // Skip registers encoded in reg, VEX_VVVV, and I8IMM.
     return 3;
   case X86II::MRMSrcMemCC:
+    return 1 + hasNewDataDest(TSFlags);
   case X86II::MRMDestMem4VOp3CC:
     // Start from 1, skip any registers encoded in VEX_VVVV or I8IMM, or a
     // mask register.
     return 1;
   case X86II::MRMDestReg:
+  case X86II::MRMDestRegCC:
   case X86II::MRMSrcReg:
   case X86II::MRMSrcReg4VOp3:
   case X86II::MRMSrcRegOp4:

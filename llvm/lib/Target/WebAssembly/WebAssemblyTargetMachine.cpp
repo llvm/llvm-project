@@ -478,8 +478,9 @@ void WebAssemblyPassConfig::addISelPrepare() {
       WasmTM->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
                                std::string(WasmTM->getTargetFeatureString()));
   if (Subtarget->hasReferenceTypes()) {
-    // We need to remove allocas for reference types
-    addPass(createPromoteMemoryToRegisterPass(true));
+    // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
+    // loads and stores are promoted to local.gets/local.sets.
+    addPass(createWebAssemblyRefTypeMem2Local());
   }
   // Lower atomics and TLS if necessary
   addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
