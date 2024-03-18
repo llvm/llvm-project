@@ -5596,6 +5596,9 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         if (Assumption->isValueDependent())
           return ESR_Failed;
 
+        if (Assumption->HasSideEffects(Info.getCtx()))
+          continue;
+
         bool Value;
         if (!EvaluateAsBooleanCondition(Assumption, Value, Info))
           return ESR_Failed;
