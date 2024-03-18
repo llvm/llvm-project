@@ -252,12 +252,6 @@ static FunctionType *getDXILOpFunctionType(const OpCodeProperty *Prop,
 namespace llvm {
 namespace dxil {
 
-// Create an instruction that calls DXIL Op with return type, specified opcode,
-// and call arguments.
-// \param OpCode Opcode of the DXIL Op call constructed
-// \param ReturnTy Return type of the DXIL Op call constructed
-// \param OverloadTy Overload type of the DXIL Op call constructed
-// \ret DXIL Op call constructed
 CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
                                           Type *OverloadTy,
                                           llvm::iterator_range<Use *> Args) {

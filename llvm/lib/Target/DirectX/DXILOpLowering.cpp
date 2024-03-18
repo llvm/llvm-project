@@ -44,10 +44,6 @@ static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
     Args.emplace_back(DXILOpArg);
     Args.append(CI->arg_begin(), CI->arg_end());
     B.SetInsertPoint(CI);
-    // Return type of F may be different from that of its arguments.
-    // It may not correspond to any overload type (if one exists) of the
-    // parameters. Pass the return type and overload type separately to handle
-    // such situations.
     CallInst *DXILCI = DXILB.createDXILOpCall(DXILOp, F.getReturnType(),
                                               OverloadTy, CI->args());
 
