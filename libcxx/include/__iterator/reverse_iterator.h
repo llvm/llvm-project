@@ -34,7 +34,7 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_nothrow_copy_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
 #include <__utility/declval.h>

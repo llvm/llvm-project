@@ -1902,7 +1902,6 @@ module std_private_type_traits_is_core_convertible                       [system
   header "__type_traits/is_core_convertible.h"
   export std_private_type_traits_integral_constant
 }
-module std_private_type_traits_is_default_constructible                  [system] { header "__type_traits/is_default_constructible.h" }
 module std_private_type_traits_is_destructible                           [system] { header "__type_traits/is_destructible.h" }
 module std_private_type_traits_is_empty                                  [system] { header "__type_traits/is_empty.h" }
 module std_private_type_traits_is_enum                                   [system] {
@@ -1927,25 +1926,15 @@ module std_private_type_traits_is_literal_type                           [system
 module std_private_type_traits_is_member_function_pointer                [system] { header "__type_traits/is_member_function_pointer.h" }
 module std_private_type_traits_is_member_object_pointer                  [system] { header "__type_traits/is_member_object_pointer.h" }
 module std_private_type_traits_is_member_pointer                         [system] { header "__type_traits/is_member_pointer.h" }
-module std_private_type_traits_is_move_assignable                        [system] { header "__type_traits/is_move_assignable.h" }
-module std_private_type_traits_is_move_constructible                     [system] { header "__type_traits/is_move_constructible.h" }
 module std_private_type_traits_is_nothrow_assignable                     [system] { header "__type_traits/is_nothrow_assignable.h" }
-module std_private_type_traits_is_nothrow_constructible                  [system] { header "__type_traits/is_nothrow_constructible.h" }
-module std_private_type_traits_is_nothrow_convertible                    [system] { header "__type_traits/is_nothrow_convertible.h" }
-module std_private_type_traits_is_nothrow_copy_assignable                [system] { header "__type_traits/is_nothrow_copy_assignable.h" }
-module std_private_type_traits_is_nothrow_copy_constructible             [system] { header "__type_traits/is_nothrow_copy_constructible.h" }
-module std_private_type_traits_is_nothrow_default_constructible          [system] {
-  header "__type_traits/is_nothrow_default_constructible.h"
+module std_private_type_traits_is_nothrow_constructible                  [system] {
+  header "__type_traits/is_nothrow_constructible.h"
   export std_private_type_traits_integral_constant
 }
+module std_private_type_traits_is_nothrow_convertible                    [system] { header "__type_traits/is_nothrow_convertible.h" }
 module std_private_type_traits_is_nothrow_destructible                   [system] {
   header "__type_traits/is_nothrow_destructible.h"
   export std_private_type_traits_is_destructible
-}
-module std_private_type_traits_is_nothrow_move_assignable                [system] { header "__type_traits/is_nothrow_move_assignable.h" }
-module std_private_type_traits_is_nothrow_move_constructible             [system] {
-  header "__type_traits/is_nothrow_move_constructible.h"
-  export std_private_type_traits_is_nothrow_constructible
 }
 module std_private_type_traits_is_null_pointer                           [system] {
   header "__type_traits/is_null_pointer.h"
@@ -1985,14 +1974,9 @@ module std_private_type_traits_is_swappable                              [system
 module std_private_type_traits_is_trivial                                [system] { header "__type_traits/is_trivial.h" }
 module std_private_type_traits_is_trivially_assignable                   [system] { header "__type_traits/is_trivially_assignable.h" }
 module std_private_type_traits_is_trivially_constructible                [system] { header "__type_traits/is_trivially_constructible.h" }
-module std_private_type_traits_is_trivially_copy_assignable              [system] { header "__type_traits/is_trivially_copy_assignable.h" }
-module std_private_type_traits_is_trivially_copy_constructible           [system] { header "__type_traits/is_trivially_copy_constructible.h" }
 module std_private_type_traits_is_trivially_copyable                     [system] { header "__type_traits/is_trivially_copyable.h" }
-module std_private_type_traits_is_trivially_default_constructible        [system] { header "__type_traits/is_trivially_default_constructible.h" }
 module std_private_type_traits_is_trivially_destructible                 [system] { header "__type_traits/is_trivially_destructible.h" }
 module std_private_type_traits_is_trivially_lexicographically_comparable [system] { header "__type_traits/is_trivially_lexicographically_comparable.h" }
-module std_private_type_traits_is_trivially_move_assignable              [system] { header "__type_traits/is_trivially_move_assignable.h" }
-module std_private_type_traits_is_trivially_move_constructible           [system] { header "__type_traits/is_trivially_move_constructible.h" }
 module std_private_type_traits_is_trivially_relocatable                  [system] { header "__type_traits/is_trivially_relocatable.h" }
 module std_private_type_traits_is_unbounded_array                        [system] { header "__type_traits/is_unbounded_array.h" }
 module std_private_type_traits_is_union                                  [system] { header "__type_traits/is_union.h" }

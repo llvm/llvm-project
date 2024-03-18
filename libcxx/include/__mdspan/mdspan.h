@@ -27,7 +27,6 @@
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_default_constructible.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>

@@ -12,8 +12,8 @@
 
 #include <__config>
 #include <__type_traits/conditional.h>
-#include <__type_traits/is_copy_constructible.h>
-#include <__type_traits/is_nothrow_move_constructible.h>
+#include <__type_traits/is_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/remove_reference.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
