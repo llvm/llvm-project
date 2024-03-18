@@ -59,17 +59,17 @@ jobs:
       - name: Setup Variables
         id: vars
         run: |
-          # libLLVM:
+          # C++ ABI:
           # 18.1.0 we aren't doing ABI checks.
           # 18.1.1 We want to check 18.1.0.
-          # libclang:
+          # C ABI:
           # 18.1.0 We want to check 17.0.x
           # 18.1.1 We want to check 18.1.0
           echo "BASELINE_VERSION_MINOR=1" >> "$GITHUB_OUTPUT"
           if [ ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
             {
               echo "BASELINE_VERSION_MAJOR=$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))"
-              echo "ABI_HEADERS=llvm-c"  
+              echo "ABI_HEADERS=llvm-c"
             } >> "$GITHUB_OUTPUT"
           else
             {
