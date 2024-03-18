@@ -262,6 +262,9 @@ Miscellaneous
   option is specified. Now ``clang-apply-replacements`` applies formatting only with
   the option.
 
+- Fixed ``--verify-check`` option not properly parsing checks when using the 
+  literal operator in the ``.clang-tidy`` config
+
 Improvements to include-fixer
 -----------------------------
 

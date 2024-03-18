@@ -454,11 +454,14 @@ static constexpr StringLiteral VerifyConfigWarningEnd = " [-verify-config]\n";
 
 static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
                          StringRef Source) {
-  llvm::StringRef Cur, Rest;
+  llvm::StringRef Cur = CheckGlob;
+  llvm::StringRef Rest = CheckGlob;
   bool AnyInvalid = false;
-  for (std::tie(Cur, Rest) = CheckGlob.split(',');
-       !(Cur.empty() && Rest.empty()); std::tie(Cur, Rest) = Rest.split(',')) {
+  while (!Cur.empty() || !Rest.empty()) {
+    Cur = Rest.substr(0, Rest.find_first_of(",\n"));
+    Rest = Rest.substr(Cur.size() + 1);
     Cur = Cur.trim();
+
     if (Cur.empty())
       continue;
     Cur.consume_front("-");
