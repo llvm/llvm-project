@@ -176,33 +176,6 @@ struct BinaryRecipe_match {
   }
 };
 
-<<<<<<< HEAD
-template <typename RecipeTy, typename Op0_t, typename Op1_t, unsigned Opcode>
-struct BinaryRecipe_match {
-  Op0_t Op0;
-  Op1_t Op1;
-
-  BinaryRecipe_match(Op0_t Op0, Op1_t Op1) : Op0(Op0), Op1(Op1) {}
-
-  bool match(const VPValue *V) {
-    auto *DefR = V->getDefiningRecipe();
-    return DefR && match(DefR);
-  }
-
-  bool match(const VPRecipeBase *R) {
-    auto *DefR = dyn_cast<RecipeTy>(R);
-    if (!DefR || DefR->getOpcode() != Opcode)
-      return false;
-    assert(DefR->getNumOperands() == 2 &&
-           "recipe with matched opcode does not have 2 operands");
-    return Op0.match(DefR->getOperand(0)) && Op1.match(DefR->getOperand(1));
-  }
-
-  bool match(const VPSingleDefRecipe *R) {
-    return match(static_cast<const VPRecipeBase *>(R));
-  }
-};
-=======
 template <typename Op0_t, typename Op1_t, unsigned Opcode>
 using BinaryVPInstruction_match =
     BinaryRecipe_match<Op0_t, Op1_t, Opcode, VPInstruction>;
@@ -211,15 +184,6 @@ template <typename Op0_t, typename Op1_t, unsigned Opcode>
 using AllBinaryRecipe_match =
     BinaryRecipe_match<Op0_t, Op1_t, Opcode, VPWidenRecipe, VPReplicateRecipe,
                        VPWidenCastRecipe, VPInstruction>;
->>>>>>> origin/main
-
-template <typename Op0_t, typename Op1_t, unsigned Opcode>
-using BinaryVPInstruction_match =
-    BinaryRecipe_match<VPInstruction, Op0_t, Op1_t, Opcode>;
-
-template <typename Op0_t, typename Op1_t, unsigned Opcode>
-using BinaryVPReplicate_match =
-    BinaryRecipe_match<VPReplicateRecipe, Op0_t, Op1_t, Opcode>;
 
 template <unsigned Opcode, typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, Opcode>
@@ -255,12 +219,6 @@ template <typename Op0_t, typename Op1_t>
 inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::BranchOnCount>
 m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
-}
-
-template <unsigned Opcode, typename Op0_t, typename Op1_t>
-inline BinaryVPReplicate_match<Op0_t, Op1_t, Opcode>
-m_VPReplicate(const Op0_t &Op0, const Op1_t &Op1) {
-  return BinaryVPReplicate_match<Op0_t, Op1_t, Opcode>(Op0, Op1);
 }
 
 template <unsigned Opcode, typename Op0_t>
@@ -303,6 +261,11 @@ m_Mul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::Mul, Op0_t, Op1_t>(Op0, Op1);
 }
 
+template <typename Op0_t, typename Op1_t>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or>
+m_Or(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::Or, Op0_t, Op1_t>(Op0, Op1);
+}
 } // namespace VPlanPatternMatch
 } // namespace llvm
 

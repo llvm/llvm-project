@@ -1224,7 +1224,7 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
         // This is possible as all users of the disjoint OR only access lanes
         // where the operands are disjoint or poison otherwise.
         if (match(RecWithFlags,
-                  m_VPReplicate<Instruction::Or>(m_VPValue(A), m_VPValue(B))) &&
+                  m_Or(m_VPValue(A), m_VPValue(B))) &&
             RecWithFlags->isDisjoint()) {
           VPBuilder Builder(RecWithFlags);
           VPInstruction *New = Builder.createOverflowingOp(
