@@ -22,51 +22,45 @@
 #include <unordered_set>
 
 using namespace llvm;
-static cl::opt<bool>
-    MFCFGHashDump("mf-cfg-hash-dump",
-                  cl::desc("Dump machine function's control flow grpah hash"),
-                  cl::init(false), cl::Hidden);
 
 // Calculate machine function hash in level order traversal.
-// For each machine basic block, using its mbb's BaseID,
-// size of successors and  successors' mbb's BaseID to update hash.
-// These informations can make graph unique.
-static uint64_t calculateMBBCFGHash(MachineFunction &MF) {
-  std::unordered_set<MachineBasicBlock *> Visited;
+// The control flow graph is uniquely represented by its level-order traversal.
+static uint64_t calculateMBBCFGHash(const MachineFunction &MF) {
+  if (MF.empty())
+    return 0;
+  std::unordered_set<const MachineBasicBlock *> Visited;
   MD5 Hash;
-  std::queue<MachineBasicBlock *> Q;
-  if (!MF.empty()) {
-    Q.push(&*MF.begin());
-  }
-  while (!Q.empty()) {
-    MachineBasicBlock *Now = Q.front();
-    Q.pop();
-    using namespace llvm::support;
-    uint32_t Value = endian::byte_swap<uint32_t, llvm::endianness::little>(
-        Now->getBBID()->BaseID);
-    uint32_t Size =
-        endian::byte_swap<uint32_t, llvm::endianness::little>(Now->succ_size());
-    Hash.update(llvm::ArrayRef((uint8_t *)&Value, sizeof(Value)));
-    Hash.update(llvm::ArrayRef((uint8_t *)&Size, sizeof(Size)));
-    if (Visited.count(Now)) {
+  std::queue<const MachineBasicBlock *> WorkList;
+  WorkList.push(&*MF.begin());
+  while (!WorkList.empty()) {
+    const MachineBasicBlock *CurrentBB = WorkList.front();
+    WorkList.pop();
+    uint32_t Value = support::endian::byte_swap<uint32_t, endianness::little>(
+        CurrentBB->getBBID()->BaseID);
+    uint32_t Size = support::endian::byte_swap<uint32_t, endianness::little>(
+        CurrentBB->succ_size());
+    Hash.update(ArrayRef((uint8_t *)&Value, sizeof(Value)));
+    Hash.update(ArrayRef((uint8_t *)&Size, sizeof(Size)));
+    if (Visited.count(CurrentBB))
       continue;
-    }
-    Visited.insert(Now);
-    for (MachineBasicBlock *Succ : Now->successors()) {
-      Q.push(Succ);
+    Visited.insert(CurrentBB);
+    std::vector<MachineBasicBlock *> Successors(CurrentBB->succ_begin(),
+                                                CurrentBB->succ_end());
+    std::sort(Successors.begin(), Successors.end(),
+              [](const MachineBasicBlock *MBB1, const MachineBasicBlock *MBB2) {
+                return MBB1->getBBID()->BaseID < MBB2->getBBID()->BaseID;
+              });
+    for (MachineBasicBlock *Succ : Successors) {
+      WorkList.push(Succ);
     }
   }
-  llvm::MD5::MD5Result Result;
+  MD5::MD5Result Result;
   Hash.final(Result);
   return Result.low();
 }
 
 bool MachineFunctionHashBuilder::runOnMachineFunction(MachineFunction &MF) {
   setCFGHash(MF.getName(), calculateMBBCFGHash(MF));
-  if (MFCFGHashDump) {
-    llvm::outs() << "Function name: " << MF.getName().str()
-                 << " Hash: " << getCFGHash(MF.getName()) << "\n";
-  }
   return true;
 }
 

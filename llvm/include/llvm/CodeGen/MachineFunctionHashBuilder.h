@@ -41,12 +41,9 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  uint64_t getCFGHash(StringRef Name) {
-    if (!CFGHash.count(Name)) {
-      return 0;
-    }
-    return CFGHash[Name];
-  }
+  // Return machine function's cfg hash calculated by its machine basic block's
+  // BaseID.
+  uint64_t getCFGHash(StringRef Name) { return CFGHash.lookup(Name); }
 
 private:
   void setCFGHash(StringRef Name, uint64_t Hash) { CFGHash[Name] = Hash; }

@@ -1,16 +1,12 @@
-; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=labels \
-; RUN: -mf-cfg-hash=true -mf-cfg-hash-dump=true | FileCheck %s -check-prefix=HASH
-
 ;; Foo's cfg is:
 ;; 0->2->3
 ;;  ->1->3 
-;; Hash is calculated by order: 0 2 2 1 1 1 3 0 3 0.
-; HASH: Function name: _Z3fooi Hash: 4924244626749595063
+;; Hash is calculated by order: 0 2 1 1 2 1 3 0 3 0.
 
 ;; Profile for version 1:
 ; RUN: echo 'v1' > %t1
 ; RUN: echo 'f _Z3fooi' >> %t1
-; RUN: echo 'h 4924244626749595063' >> %t1
+; RUN: echo 'h 1552303144703514280' >> %t1
 ; RUN: echo 'c 0 2' >> %t1
 ; RUN: echo 'c 1' >> %t1
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t1 \
@@ -24,6 +20,7 @@
 ; RUN: echo 'c 1' >> %t2
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2 \
 ; RUN: -mf-cfg-hash=true | FileCheck %s -check-prefix=DISMATCH
+
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2 \
 ; RUN: | FileCheck %s -check-prefix=MATCH
 
