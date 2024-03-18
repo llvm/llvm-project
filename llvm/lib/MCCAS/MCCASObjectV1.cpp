@@ -505,7 +505,7 @@ static Error materializeDebugInfoOpt(MCCASReader &Reader,
                           StringRef FormData, bool) {
     if (Form == dwarf::Form::DW_FORM_ref4_cas ||
         Form == dwarf::Form::DW_FORM_strp_cas) {
-      DataExtractor Extractor(FormData, true, 8);
+      DataExtractor Extractor(FormData, true, Reader.getAddressSize());
       DataExtractor::Cursor Cursor(0);
       uint64_t Data64 = Extractor.getULEB128(Cursor);
       if (!Cursor)
@@ -529,7 +529,7 @@ static Error materializeDebugInfoOpt(MCCASReader &Reader,
 
     if (auto E = visitDebugInfo(TotAbbrevEntries, std::move(MaybeTopRef),
                                 HeaderCallback, StartTagCallback, AttrCallback,
-                                EndTagCallback))
+                                EndTagCallback, Reader.getAddressSize()))
       return E;
   }
   return Error::success();
@@ -826,10 +826,11 @@ getLineTableLengthInfoAndVersion(DWARFDataExtractor &LineTableDataReader,
     auto AddressSize = LineTableDataReader.getU8(OffsetPtr, &Err);
     if (Err)
       return std::move(Err);
-    if (AddressSize != 8)
+    if (AddressSize != LineTableDataReader.getAddressSize())
       return createStringError(
           inconvertibleErrorCode(),
-          "Address size is not 8 bytes, unsupported architecture for MCCAS!");
+          "Address size in line table header is not the same as Address size "
+          "for the target architecture, something went really wrong!");
     LineTableDataReader.getU8(OffsetPtr, &Err);
     if (Err)
       return std::move(Err);
@@ -956,9 +957,12 @@ handleStandardOpcodesForLineTable(DWARFDataExtractor &LineTableDataReader,
 static Expected<std::pair<uint64_t, uint64_t>>
 getOpcodeAndOperandSize(StringRef DistinctData, StringRef LineTableData,
                         uint64_t DistinctOffset, uint64_t LineTableOffset,
-                        bool IsLittleEndian, uint8_t OpcodeBase) {
-  DWARFDataExtractor LineTableDataReader(LineTableData, IsLittleEndian, 8);
-  DWARFDataExtractor DistinctDataReader(DistinctData, IsLittleEndian, 8);
+                        bool IsLittleEndian, uint8_t OpcodeBase,
+                        uint8_t AddressSize) {
+  DWARFDataExtractor LineTableDataReader(LineTableData, IsLittleEndian,
+                                         AddressSize);
+  DWARFDataExtractor DistinctDataReader(DistinctData, IsLittleEndian,
+                                        AddressSize);
   DWARFDataExtractor::Cursor LineTableCursor(LineTableOffset);
   DWARFDataExtractor::Cursor DistinctCursor(DistinctOffset);
 
@@ -1068,7 +1072,7 @@ materializeDebugLineSection(MCCASReader &Reader,
       assert((Endian == endianness::big || Endian == endianness::little) &&
              "Endian must be either big or little");
       DWARFDataExtractor LineTableDataReader(Data, Endian == endianness::little,
-                                             8);
+                                             Reader.getAddressSize());
       auto Prologue = parseLineTableHeaderAndSkip(LineTableDataReader);
       if (!Prologue)
         return Prologue.takeError();
@@ -1093,7 +1097,7 @@ materializeDebugLineSection(MCCASReader &Reader,
                "Endian must be either big or little");
         auto Sizes = getOpcodeAndOperandSize(
             toStringRef(DistinctData), Data, DistinctOffset, LineTableOffset,
-            Endian == endianness::little, OpcodeBase);
+            Endian == endianness::little, OpcodeBase, Reader.getAddressSize());
         if (!Sizes)
           return Sizes.takeError();
         // Copy opcode and operand, only in the case of DW_LNS_set_file, the
@@ -1732,11 +1736,11 @@ static Expected<size_t> getSizeFromDwarfHeader(DataExtractor &Extractor,
 /// contained in CUData, as well as the total number of bytes taken by the CU.
 /// Note: this is different from the length field of the Dwarf header, which
 /// does not account for the header size.
-static Expected<CUInfo>
-getAndSetDebugAbbrevOffsetAndSkip(MutableArrayRef<char> CUData,
-                                  endianness Endian,
-                                  std::optional<uint32_t> NewOffset) {
-  DataExtractor Extractor(toStringRef(CUData), Endian == endianness::little, 8);
+static Expected<CUInfo> getAndSetDebugAbbrevOffsetAndSkip(
+    MutableArrayRef<char> CUData, endianness Endian,
+    std::optional<uint32_t> NewOffset, uint8_t AddressSize) {
+  DataExtractor Extractor(toStringRef(CUData), Endian == endianness::little,
+                          AddressSize);
   DataExtractor::Cursor Cursor(0);
   Expected<size_t> Size = getSizeFromDwarfHeader(Extractor, Cursor);
   if (!Size)
@@ -1760,13 +1764,14 @@ getAndSetDebugAbbrevOffsetAndSkip(MutableArrayRef<char> CUData,
       return createStringError(
           inconvertibleErrorCode(),
           "Unit type is not DW_UT_compile, and is incompatible with MCCAS!");
-    uint8_t AddressSize = Extractor.getU8(Cursor);
+    uint8_t HeaderAddressSize = Extractor.getU8(Cursor);
     if (!Cursor)
       return Cursor.takeError();
-    if (AddressSize != 8)
+    if (HeaderAddressSize != AddressSize)
       return createStringError(
           inconvertibleErrorCode(),
-          "Address size is not 8 bytes, unsupported architecture for MCCAS!");
+          "Address size in Compile Unit header is not the same as Address size "
+          "for the target architecture, something went really wrong!");
   }
 
   // TODO: Handle Dwarf 64 format, which uses 8 bytes.
@@ -1821,7 +1826,8 @@ MCCASBuilder::splitDebugInfoSectionData(MutableArrayRef<char> DebugInfoData) {
   // CU splitting loop.
   while (!DebugInfoData.empty()) {
     Expected<CUInfo> Info = getAndSetDebugAbbrevOffsetAndSkip(
-        DebugInfoData, Asm.getBackend().Endian, /*NewOffset*/ 0);
+        DebugInfoData, Asm.getBackend().Endian, /*NewOffset*/ 0,
+        ObjectWriter.getAddressSize());
     if (!Info)
       return Info.takeError();
     Split.SplitCUData.push_back(DebugInfoData.take_front(Info->CUSize));
@@ -1987,13 +1993,16 @@ Error InMemoryCASDWARFObject::partitionCUData(ArrayRef<char> DebugInfoData,
                                               uint16_t DwarfVersion) {
   StringRef AbbrevSectionContribution =
       getAbbrevSection().drop_front(AbbrevOffset);
-  DataExtractor Data(AbbrevSectionContribution, isLittleEndian(), 8);
+  DataExtractor Data(AbbrevSectionContribution, isLittleEndian(),
+                     Builder.ObjectWriter.getAddressSize());
   DWARFDebugAbbrev Abbrev(Data);
   uint64_t OffsetPtr = 0;
   DWARFUnitHeader Header;
   DWARFSection Section = {toStringRef(DebugInfoData), 0 /*Address*/};
   if (Error E = Header.extract(
-          *Ctx, DWARFDataExtractor(*this, Section, isLittleEndian(), 8),
+          *Ctx,
+          DWARFDataExtractor(*this, Section, isLittleEndian(),
+                             Builder.ObjectWriter.getAddressSize()),
           &OffsetPtr, DWARFSectionKind::DW_SECT_INFO))
     return E;
 
@@ -2096,7 +2105,8 @@ MCCASBuilder::createOptimizedLineSection(StringRef DebugLineStrRef) {
   assert((Endian == endianness::big || Endian == endianness::little) &&
          "Endian must be either big or little");
   DWARFDataExtractor LineTableDataReader(DebugLineStrRef,
-                                         Endian == endianness::little, 8);
+                                         Endian == endianness::little,
+                                         ObjectWriter.getAddressSize());
   auto Prologue = parseLineTableHeaderAndSkip(LineTableDataReader);
   if (!Prologue)
     return Prologue.takeError();
@@ -3138,9 +3148,8 @@ Error DIEVisitor::visitDIEAttrs(DataExtractor &Extractor,
                                 StringRef DIEData,
                                 ArrayRef<AbbrevContent> DIEContents) {
   constexpr auto IsLittleEndian = true;
-  constexpr auto AddrSize = 8;
-  auto FormParams =
-      dwarf::FormParams{DwarfVersion, AddrSize, dwarf::DwarfFormat::DWARF32};
+  auto FormParams = dwarf::FormParams{DwarfVersion, Extractor.getAddressSize(),
+                                      dwarf::DwarfFormat::DWARF32};
 
   for (auto Contents : DIEContents) {
     bool DataInDistinct = Contents.FormInDistinctData;
@@ -3148,10 +3157,10 @@ Error DIEVisitor::visitDIEAttrs(DataExtractor &Extractor,
     auto &CursorForData = DataInDistinct ? DistinctCursor : Cursor;
     StringRef DataToUse = DataInDistinct ? DistinctData : DIEData;
     Expected<uint64_t> FormSize =
-        Contents.FormSize
-            ? *Contents.FormSize
-            : getFormSize(Contents.Form, FormParams, DataToUse,
-                          CursorForData.tell(), IsLittleEndian, AddrSize);
+        Contents.FormSize ? *Contents.FormSize
+                          : getFormSize(Contents.Form, FormParams, DataToUse,
+                                        CursorForData.tell(), IsLittleEndian,
+                                        Extractor.getAddressSize());
     if (!FormSize)
       return FormSize.takeError();
 
@@ -3252,9 +3261,9 @@ static std::optional<uint8_t> getNonULEBFormSize(dwarf::Form Form,
 }
 
 Error DIEVisitor::materializeAbbrevDIE(unsigned AbbrevIdx) {
-  constexpr auto AddrSize = 8;
   auto FormParams =
-      dwarf::FormParams{DwarfVersion, AddrSize, dwarf::DwarfFormat::DWARF32};
+      dwarf::FormParams{DwarfVersion, DistinctExtractor.getAddressSize(),
+                        dwarf::DwarfFormat::DWARF32};
 
   AbbrevEntryReader AbbrevReader =
       getAbbrevEntryReader(AbbrevEntries, AbbrevIdx);
@@ -3292,9 +3301,10 @@ Error DIEVisitor::materializeAbbrevDIE(unsigned AbbrevIdx) {
 /// previous stack frame.
 static void popStack(DataExtractor &Extractor, DataExtractor::Cursor &Cursor,
                      StringRef &Data,
-                     std::stack<std::pair<StringRef, unsigned>> &StackOfNodes) {
+                     std::stack<std::pair<StringRef, unsigned>> &StackOfNodes,
+                     uint8_t AddressSize) {
   auto DataAndOffset = StackOfNodes.top();
-  Extractor = DataExtractor(DataAndOffset.first, true, 8);
+  Extractor = DataExtractor(DataAndOffset.first, true, AddressSize);
   Data = DataAndOffset.first;
   Cursor.seek(DataAndOffset.second);
   StackOfNodes.pop();
@@ -3310,7 +3320,7 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
   std::stack<std::pair<StringRef, unsigned>> StackOfNodes;
   auto Data = DIEChildrenStack.empty() ? StringRef()
                                        : DIEChildrenStack.front().getData();
-  DataExtractor Extractor(Data, true, 8);
+  DataExtractor Extractor(Data, true, DistinctExtractor.getAddressSize());
   DataExtractor::Cursor Cursor(0);
 
   while (!DistinctExtractor.eof(DistinctCursor)) {
@@ -3327,7 +3337,8 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
     if (AbbrevIdx == getEndOfDIESiblingsMarker()) {
       EndTagCallback(true /*HadChildren*/);
       if (!StackOfNodes.empty() && Extractor.eof(Cursor))
-        popStack(Extractor, Cursor, Data, StackOfNodes);
+        popStack(Extractor, Cursor, Data, StackOfNodes,
+                 DistinctExtractor.getAddressSize());
       continue;
     }
 
@@ -3339,7 +3350,7 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
       DIEChildrenStack = DIEChildrenStack.drop_front();
       Data = DIEChildrenStack.front().getData();
       NewBlockCallback(DIEChildrenStack.front().getID().toString());
-      Extractor = DataExtractor(Data, true, 8);
+      Extractor = DataExtractor(Data, true, DistinctExtractor.getAddressSize());
       Cursor.seek(0);
       continue;
     }
@@ -3358,7 +3369,8 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
     // parent's siblings that may exist.
     if (!AbbrevEntryCacheVal.HasChildren) {
       if (!StackOfNodes.empty() && Extractor.eof(Cursor))
-        popStack(Extractor, Cursor, Data, StackOfNodes);
+        popStack(Extractor, Cursor, Data, StackOfNodes,
+                 DistinctExtractor.getAddressSize());
       EndTagCallback(false /*HadChildren*/);
     }
   }
@@ -3398,7 +3410,7 @@ Error mccasformats::v1::visitDebugInfo(
     std::function<void(dwarf::Tag, uint64_t)> StartTagCallback,
     std::function<void(dwarf::Attribute, dwarf::Form, StringRef, bool)>
         AttrCallback,
-    std::function<void(bool)> EndTagCallback,
+    std::function<void(bool)> EndTagCallback, uint8_t AddressSize,
     std::function<void(StringRef)> NewBlockCallback) {
 
   Expected<LoadedDIETopLevel> LoadedTopRef =
@@ -3417,7 +3429,7 @@ Error mccasformats::v1::visitDebugInfo(
     return E;
   DistinctData = toStringRef(OutBuff);
 #endif
-  DataExtractor DistinctExtractor(DistinctData, true, 8);
+  DataExtractor DistinctExtractor(DistinctData, true, AddressSize);
   DataExtractor::Cursor DistinctCursor(0);
 
   auto Size = getSizeFromDwarfHeader(DistinctExtractor, DistinctCursor);

@@ -639,6 +639,8 @@ public:
 
   Triple::ArchType getArch() { return Target.getArch(); }
 
+  uint8_t getAddressSize() { return Target.isArch32Bit() ? 4 : 8; }
+
   Expected<uint64_t> materializeGroup(cas::ObjectRef ID);
   Expected<uint64_t> materializeDebugAbbrevUnopt(ArrayRef<cas::ObjectRef> Refs);
   Expected<uint64_t> materializeSection(cas::ObjectRef ID, raw_ostream *Stream);
@@ -740,7 +742,7 @@ Error visitDebugInfo(
     std::function<void(dwarf::Tag, uint64_t)> StartTagCallback,
     std::function<void(dwarf::Attribute, dwarf::Form, StringRef, bool)>
         AttrCallback,
-    std::function<void(bool)> EndTagCallback,
+    std::function<void(bool)> EndTagCallback, uint8_t AddressSize,
     std::function<void(StringRef)> NewBlockCallback = [](StringRef) {});
 
 } // namespace v1
