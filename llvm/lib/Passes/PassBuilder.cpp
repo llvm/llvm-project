@@ -504,15 +504,6 @@ static std::optional<int> parseDevirtPassName(StringRef Name) {
   return Count;
 }
 
-static bool checkParametrizedPassName(StringRef Name, StringRef PassName) {
-  if (!Name.consume_front(PassName))
-    return false;
-  // normal pass name w/o parameters == default parameters
-  if (Name.empty())
-    return true;
-  return Name.starts_with("<") && Name.ends_with(">");
-}
-
 static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
   return StringSwitch<std::optional<OptimizationLevel>>(S)
       .Case("O0", OptimizationLevel::O0)
@@ -525,42 +516,6 @@ static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
 }
 
 namespace {
-
-/// This performs customized parsing of pass name with parameters.
-///
-/// We do not need parametrization of passes in textual pipeline very often,
-/// yet on a rare occasion ability to specify parameters right there can be
-/// useful.
-///
-/// \p Name - parameterized specification of a pass from a textual pipeline
-/// is a string in a form of :
-///      PassName '<' parameter-list '>'
-///
-/// Parameter list is being parsed by the parser callable argument, \p Parser,
-/// It takes a string-ref of parameters and returns either StringError or a
-/// parameter list in a form of a custom parameters type, all wrapped into
-/// Expected<> template class.
-///
-template <typename ParametersParseCallableT>
-auto parsePassParameters(ParametersParseCallableT &&Parser, StringRef Name,
-                         StringRef PassName) -> decltype(Parser(StringRef{})) {
-  using ParametersT = typename decltype(Parser(StringRef{}))::value_type;
-
-  StringRef Params = Name;
-  if (!Params.consume_front(PassName)) {
-    assert(false &&
-           "unable to strip pass name from parametrized pass specification");
-  }
-  if (!Params.empty() &&
-      (!Params.consume_front("<") || !Params.consume_back(">"))) {
-    assert(false && "invalid format for parametrized pass name");
-  }
-
-  Expected<ParametersT> Result = Parser(Params);
-  assert((Result || Result.template errorIsA<StringError>()) &&
-         "Pass parameter parser can only return StringErrors.");
-  return Result;
-}
 
 /// Parser of parameters for HardwareLoops  pass.
 Expected<HardwareLoopOptions> parseHardwareLoopOptions(StringRef Params) {
@@ -1197,7 +1152,7 @@ static bool isModulePassName(StringRef Name, CallbacksT &Callbacks) {
   if (Name == NAME)                                                            \
     return true;
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)      \
-  if (checkParametrizedPassName(Name, NAME))                                   \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME))                      \
     return true;
 #define MODULE_ANALYSIS(NAME, CREATE_PASS)                                     \
   if (Name == "require<" NAME ">" || Name == "invalidate<" NAME ">")           \
@@ -1226,7 +1181,7 @@ static bool isCGSCCPassName(StringRef Name, CallbacksT &Callbacks) {
   if (Name == NAME)                                                            \
     return true;
 #define CGSCC_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)       \
-  if (checkParametrizedPassName(Name, NAME))                                   \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME))                      \
     return true;
 #define CGSCC_ANALYSIS(NAME, CREATE_PASS)                                      \
   if (Name == "require<" NAME ">" || Name == "invalidate<" NAME ">")           \
@@ -1253,7 +1208,7 @@ static bool isFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
   if (Name == NAME)                                                            \
     return true;
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)    \
-  if (checkParametrizedPassName(Name, NAME))                                   \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME))                      \
     return true;
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
   if (Name == "require<" NAME ">" || Name == "invalidate<" NAME ">")           \
@@ -1294,7 +1249,7 @@ static bool isLoopNestPassName(StringRef Name, CallbacksT &Callbacks,
   if (parseRepeatPassName(Name))
     return true;
 
-  if (checkParametrizedPassName(Name, "lnicm")) {
+  if (PassBuilder::checkParametrizedPassName(Name, "lnicm")) {
     UseMemorySSA = true;
     return true;
   }
@@ -1316,7 +1271,7 @@ static bool isLoopPassName(StringRef Name, CallbacksT &Callbacks,
   if (parseRepeatPassName(Name))
     return true;
 
-  if (checkParametrizedPassName(Name, "licm")) {
+  if (PassBuilder::checkParametrizedPassName(Name, "licm")) {
     UseMemorySSA = true;
     return true;
   }
@@ -1325,7 +1280,7 @@ static bool isLoopPassName(StringRef Name, CallbacksT &Callbacks,
   if (Name == NAME)                                                            \
     return true;
 #define LOOP_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)        \
-  if (checkParametrizedPassName(Name, NAME))                                   \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME))                      \
     return true;
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)                                       \
   if (Name == "require<" NAME ">" || Name == "invalidate<" NAME ">")           \
