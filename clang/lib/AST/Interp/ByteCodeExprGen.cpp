@@ -401,6 +401,17 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   const Expr *LHS = BO->getLHS();
   const Expr *RHS = BO->getRHS();
 
+  // Handle comma operators. Just discard the LHS
+  // and delegate to RHS.
+  if (BO->isCommaOp()) {
+    if (!this->discard(LHS))
+      return false;
+    if (RHS->getType()->isVoidType())
+      return this->discard(RHS);
+
+    return this->delegate(RHS);
+  }
+
   if (BO->getType()->isAnyComplexType())
     return this->VisitComplexBinOp(BO);
   if ((LHS->getType()->isAnyComplexType() ||
@@ -415,16 +426,6 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   std::optional<PrimType> LT = classify(LHS->getType());
   std::optional<PrimType> RT = classify(RHS->getType());
   std::optional<PrimType> T = classify(BO->getType());
-
-  // Deal with operations which have composite or void types.
-  if (BO->isCommaOp()) {
-    if (!this->discard(LHS))
-      return false;
-    if (RHS->getType()->isVoidType())
-      return this->discard(RHS);
-
-    return this->delegate(RHS);
-  }
 
   // Special case for C++'s three-way/spaceship operator <=>, which
   // returns a std::{strong,weak,partial}_ordering (which is a class, so doesn't
