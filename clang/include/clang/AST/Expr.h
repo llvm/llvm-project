@@ -3552,6 +3552,15 @@ public:
   /// function that it invokes.
   NamedDecl *getConversionFunction() const;
 
+  /// Path through the class hierarchy taken by a `DerivedToBase` or
+  /// `UncheckedDerivedToBase` cast. For each derived-to-base edge in the path,
+  /// the path contains a `CXXBaseSpecifier` for the base class of that edge;
+  /// the entries are ordered from derived class to base class.
+  ///
+  /// For example, given classes `Base`, `Intermediate : public Base` and
+  /// `Derived : public Intermediate`, the path for a cast from `Derived *` to
+  /// `Base *` contains two entries: One for `Intermediate`, and one for `Base`,
+  /// in that order.
   typedef CXXBaseSpecifier **path_iterator;
   typedef const CXXBaseSpecifier *const *path_const_iterator;
   bool path_empty() const { return path_size() == 0; }
