@@ -82,7 +82,6 @@ Deprecations and Removals
   libatomic is not available. If you are one such user, please reach out to the libc++ developers so we can collaborate
   on a path for supporting atomics properly on freestanding platforms.
 
-
 Upcoming Deprecations and Removals
 ----------------------------------
 
@@ -107,3 +106,6 @@ Build System Changes
 
 - The ``LIBCXX_EXECUTOR`` and ``LIBCXXABI_EXECUTOR`` CMake variables have been removed. Please
   set ``LIBCXX_TEST_PARAMS`` to ``executor=<...>`` instead.
+
+- The Cmake variable ``LIBCXX_ENABLE_CLANG_TIDY`` has been removed. The build system has been changed
+  to automatically detect the presence of ``clang-tidy`` and the required ``Clang`` libraries.
