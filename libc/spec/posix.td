@@ -246,6 +246,7 @@ def POSIX : StandardSpec<"POSIX"> {
       [
         SizeTType,
         OffTType,
+        ModeTType,
       ],
       [], // Enumerations
       [
@@ -309,6 +310,16 @@ def POSIX : StandardSpec<"POSIX"> {
           "msync",
           RetValSpec<IntType>,
           [ArgSpec<VoidPtr>, ArgSpec<SizeTType>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "shm_open",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<IntType>, ArgSpec<ModeTType>]
+        >,
+        FunctionSpec<
+          "shm_unlink",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>]
         >,
       ]
   >;
