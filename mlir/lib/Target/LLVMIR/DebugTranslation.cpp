@@ -225,6 +225,8 @@ DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
   auto setRecursivePlaceholder = [&](llvm::DIType *placeholder) {
     [[maybe_unused]] auto [iter, inserted] =
         recursiveTypeMap.try_emplace(recursiveId, placeholder);
+    (void)iter;
+    (void)inserted;
     assert(inserted && "illegal reuse of recursive id");
   };
 
