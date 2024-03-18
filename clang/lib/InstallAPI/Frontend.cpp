@@ -16,41 +16,47 @@ using namespace llvm;
 using namespace llvm::MachO;
 
 namespace clang::installapi {
-
-GlobalRecord *FrontendRecordsSlice::addGlobal(
+std::pair<GlobalRecord *, FrontendAttrs *> FrontendRecordsSlice::addGlobal(
     StringRef Name, RecordLinkage Linkage, GlobalRecord::Kind GV,
     const clang::AvailabilityInfo Avail, const Decl *D, const HeaderType Access,
     SymbolFlags Flags, bool Inlined) {
 
-  auto *GR =
+  GlobalRecord *GR =
       llvm::MachO::RecordsSlice::addGlobal(Name, Linkage, GV, Flags, Inlined);
-  FrontendRecords.insert({GR, FrontendAttrs{Avail, D, Access}});
-  return GR;
+  auto Result = FrontendRecords.insert({GR, FrontendAttrs{Avail, D, Access}});
+  return {GR, &(Result.first->second)};
 }
 
-ObjCInterfaceRecord *FrontendRecordsSlice::addObjCInterface(
-    StringRef Name, RecordLinkage Linkage, const clang::AvailabilityInfo Avail,
-    const Decl *D, HeaderType Access, bool IsEHType) {
+std::pair<ObjCInterfaceRecord *, FrontendAttrs *>
+FrontendRecordsSlice::addObjCInterface(StringRef Name, RecordLinkage Linkage,
+                                       const clang::AvailabilityInfo Avail,
+                                       const Decl *D, HeaderType Access,
+                                       bool IsEHType) {
   ObjCIFSymbolKind SymType =
       ObjCIFSymbolKind::Class | ObjCIFSymbolKind::MetaClass;
   if (IsEHType)
     SymType |= ObjCIFSymbolKind::EHType;
-  auto *ObjCR =
+
+  ObjCInterfaceRecord *ObjCR =
       llvm::MachO::RecordsSlice::addObjCInterface(Name, Linkage, SymType);
-  FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
-  return ObjCR;
+  auto Result =
+      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  return {ObjCR, &(Result.first->second)};
 }
 
-ObjCCategoryRecord *FrontendRecordsSlice::addObjCCategory(
-    StringRef ClassToExtend, StringRef CategoryName,
-    const clang::AvailabilityInfo Avail, const Decl *D, HeaderType Access) {
-  auto *ObjCR =
+std::pair<ObjCCategoryRecord *, FrontendAttrs *>
+FrontendRecordsSlice::addObjCCategory(StringRef ClassToExtend,
+                                      StringRef CategoryName,
+                                      const clang::AvailabilityInfo Avail,
+                                      const Decl *D, HeaderType Access) {
+  ObjCCategoryRecord *ObjCR =
       llvm::MachO::RecordsSlice::addObjCCategory(ClassToExtend, CategoryName);
-  FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
-  return ObjCR;
+  auto Result =
+      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  return {ObjCR, &(Result.first->second)};
 }
 
-ObjCIVarRecord *FrontendRecordsSlice::addObjCIVar(
+std::pair<ObjCIVarRecord *, FrontendAttrs *> FrontendRecordsSlice::addObjCIVar(
     ObjCContainerRecord *Container, StringRef IvarName, RecordLinkage Linkage,
     const clang::AvailabilityInfo Avail, const Decl *D, HeaderType Access,
     const clang::ObjCIvarDecl::AccessControl AC) {
@@ -59,11 +65,12 @@ ObjCIVarRecord *FrontendRecordsSlice::addObjCIVar(
   if ((Linkage == RecordLinkage::Exported) &&
       ((AC == ObjCIvarDecl::Private) || (AC == ObjCIvarDecl::Package)))
     Linkage = RecordLinkage::Internal;
-  auto *ObjCR =
+  ObjCIVarRecord *ObjCR =
       llvm::MachO::RecordsSlice::addObjCIVar(Container, IvarName, Linkage);
-  FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  auto Result =
+      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
 
-  return nullptr;
+  return {ObjCR, &(Result.first->second)};
 }
 
 std::optional<HeaderType>

@@ -4639,7 +4639,11 @@ bool AMDGPUInstructionSelector::selectScaleOffset(MachineOperand &Root,
 
   const MachineInstr &MI = *Root.getParent();
   MachineMemOperand *MMO = *MI.memoperands_begin();
-  uint64_t Size = MMO->getSize();
+
+  if (!MMO->getSize().hasValue())
+    return false;
+
+  uint64_t Size = MMO->getSize().getValue();
 
   Register OffsetReg = matchExtendFromS32OrS32(Offset, IsSigned);
   if (!OffsetReg)

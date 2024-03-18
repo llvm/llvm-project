@@ -13,11 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TokenAnnotator.h"
-#include "FormatToken.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "format-token-annotator"
 
@@ -3595,6 +3591,13 @@ static bool isFunctionDeclarationName(const FormatToken &Current,
   if (!Current.Tok.getIdentifierInfo())
     return false;
 
+  const auto &Previous = *Current.Previous;
+
+  if (const auto *PrevPrev = Previous.Previous;
+      PrevPrev && PrevPrev->is(TT_ObjCDecl)) {
+    return false;
+  }
+
   auto skipOperatorName = [](const FormatToken *Next) -> const FormatToken * {
     for (; Next; Next = Next->Next) {
       if (Next->is(TT_OverloadedOperatorLParen))
@@ -3633,18 +3636,17 @@ static bool isFunctionDeclarationName(const FormatToken &Current,
   // Find parentheses of parameter list.
   const FormatToken *Next = Current.Next;
   if (Current.is(tok::kw_operator)) {
-    const auto *Previous = Current.Previous;
-    if (Previous->Tok.getIdentifierInfo() &&
-        !Previous->isOneOf(tok::kw_return, tok::kw_co_return)) {
+    if (Previous.Tok.getIdentifierInfo() &&
+        !Previous.isOneOf(tok::kw_return, tok::kw_co_return)) {
       return true;
     }
-    if (Previous->is(tok::r_paren) && Previous->is(TT_TypeDeclarationParen)) {
-      assert(Previous->MatchingParen);
-      assert(Previous->MatchingParen->is(tok::l_paren));
-      assert(Previous->MatchingParen->is(TT_TypeDeclarationParen));
+    if (Previous.is(tok::r_paren) && Previous.is(TT_TypeDeclarationParen)) {
+      assert(Previous.MatchingParen);
+      assert(Previous.MatchingParen->is(tok::l_paren));
+      assert(Previous.MatchingParen->is(TT_TypeDeclarationParen));
       return true;
     }
-    if (!Previous->isPointerOrReference() && Previous->isNot(TT_TemplateCloser))
+    if (!Previous.isPointerOrReference() && Previous.isNot(TT_TemplateCloser))
       return false;
     Next = skipOperatorName(Next);
   } else {
@@ -4265,6 +4267,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return Left.is(tok::hash);
   if (Left.isOneOf(tok::hashhash, tok::hash))
     return Right.is(tok::hash);
+  if (Left.is(BK_Block) && Right.is(tok::r_brace) &&
+      Right.MatchingParen == &Left && Line.Children.empty()) {
+    return Style.SpaceInEmptyBlock;
+  }
   if ((Left.is(tok::l_paren) && Right.is(tok::r_paren)) ||
       (Left.is(tok::l_brace) && Left.isNot(BK_Block) &&
        Right.is(tok::r_brace) && Right.isNot(BK_Block))) {
@@ -4607,7 +4613,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       return Style.SpaceBeforeParensOptions.AfterFunctionDefinitionName ||
              spaceRequiredBeforeParens(Right);
     }
-    if (!Left.Previous || Left.Previous->isNot(tok::period)) {
+    if (!Left.Previous || !Left.Previous->isOneOf(tok::period, tok::arrow)) {
       if (Left.isOneOf(tok::kw_try, Keywords.kw___except, tok::kw_catch)) {
         return Style.SpaceBeforeParensOptions.AfterControlStatements ||
                spaceRequiredBeforeParens(Right);

@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
@@ -3329,4 +3331,67 @@ TEST(RedirectingFileSystemTest, Used) {
   EXPECT_TRUE(Redirecting2->exists("/b"));
   EXPECT_TRUE(Redirecting1->hasBeenUsed());
   EXPECT_FALSE(Redirecting2->hasBeenUsed());
+}
+
+// Check that paths looked up in the external filesystem are unmodified, except
+// potentially to add the working directory. We cannot canonicalize away ..
+// in the presence of symlinks in the external filesystem.
+TEST(RedirectingFileSystemTest, ExternalPaths) {
+  struct InterceptorFS : llvm::vfs::ProxyFileSystem {
+    std::vector<std::string> SeenPaths;
+
+    InterceptorFS(IntrusiveRefCntPtr<FileSystem> UnderlyingFS)
+        : ProxyFileSystem(UnderlyingFS) {}
+
+    llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override {
+      SeenPaths.push_back(Path.str());
+      return ProxyFileSystem::status(Path);
+    }
+
+    llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
+    openFileForRead(const Twine &Path) override {
+      SeenPaths.push_back(Path.str());
+      return ProxyFileSystem::openFileForRead(Path);
+    }
+
+    std::error_code isLocal(const Twine &Path, bool &Result) override {
+      SeenPaths.push_back(Path.str());
+      return ProxyFileSystem::isLocal(Path, Result);
+    }
+
+    vfs::directory_iterator dir_begin(const Twine &Dir,
+                                      std::error_code &EC) override {
+      SeenPaths.push_back(Dir.str());
+      return ProxyFileSystem::dir_begin(Dir, EC);
+    }
+  };
+
+  std::error_code EC;
+  auto BaseFS = makeIntrusiveRefCnt<DummyFileSystem>();
+  BaseFS->setCurrentWorkingDirectory("/cwd");
+  auto CheckFS = makeIntrusiveRefCnt<InterceptorFS>(BaseFS);
+  auto FS = vfs::RedirectingFileSystem::create({}, /*UseExternalNames=*/false,
+                                               *CheckFS);
+
+  FS->status("/a/../b");
+  FS->openFileForRead("c");
+  FS->exists("./d");
+  bool IsLocal = false;
+  FS->isLocal("/e/./../f", IsLocal);
+  FS->dir_begin(".././g", EC);
+
+  std::vector<std::string> Expected{"/a/../b", "/cwd/c", "/cwd/./d",
+                                    "/e/./../f", "/cwd/.././g"};
+
+  EXPECT_EQ(CheckFS->SeenPaths, Expected);
+
+  CheckFS->SeenPaths.clear();
+  FS->setRedirection(vfs::RedirectingFileSystem::RedirectKind::Fallback);
+  FS->status("/a/../b");
+  FS->openFileForRead("c");
+  FS->exists("./d");
+  FS->isLocal("/e/./../f", IsLocal);
+  FS->dir_begin(".././g", EC);
+
+  EXPECT_EQ(CheckFS->SeenPaths, Expected);
 }

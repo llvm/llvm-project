@@ -18,6 +18,7 @@
 #include "llvm/TextAPI/PackedVersion.h"
 #include "llvm/TextAPI/Platform.h"
 #include "llvm/TextAPI/RecordVisitor.h"
+#include "llvm/TextAPI/Symbol.h"
 #include "llvm/TextAPI/Target.h"
 #include "llvm/TextAPI/TextAPIWriter.h"
 #include "llvm/TextAPI/Utils.h"
@@ -33,8 +34,10 @@ using ObjCIVarRecord = llvm::MachO::ObjCIVarRecord;
 using Records = llvm::MachO::Records;
 using BinaryAttrs = llvm::MachO::RecordsSlice::BinaryAttrs;
 using SymbolSet = llvm::MachO::SymbolSet;
+using SimpleSymbol = llvm::MachO::SimpleSymbol;
 using FileType = llvm::MachO::FileType;
 using PackedVersion = llvm::MachO::PackedVersion;
 using Target = llvm::MachO::Target;
+using TargetList = llvm::MachO::TargetList;
 
 #endif // LLVM_CLANG_INSTALLAPI_MACHO_H
