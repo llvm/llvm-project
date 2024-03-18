@@ -494,6 +494,10 @@ private:
                         InvalidatedSymbols *IS,
                         RegionAndSymbolInvalidationTraits *HTraits,
                         const CallEvent *Call) const;
+
+  /// FieldRegions are expected to be wrapped by an ElementRegion as a canonical
+  /// representation. See f8643a9b31c4029942f67d4534c9139b45173504 why.
+  SVal wrapSymbolicRegion(SVal Base) const;
 };
 
 //===----------------------------------------------------------------------===//

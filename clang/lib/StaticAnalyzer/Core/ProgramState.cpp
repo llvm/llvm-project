@@ -226,6 +226,18 @@ ProgramStateRef ProgramState::killBinding(Loc LV) const {
   return makeWithStore(newStore);
 }
 
+SVal ProgramState::wrapSymbolicRegion(SVal Base) const {
+  const auto *SymbolicBase =
+      dyn_cast_or_null<SymbolicRegion>(Base.getAsRegion());
+
+  if (!SymbolicBase)
+    return Base;
+
+  StoreManager &SM = getStateManager().getStoreManager();
+  QualType ElemTy = SymbolicBase->getPointeeStaticType();
+  return loc::MemRegionVal{SM.GetElementZeroRegion(SymbolicBase, ElemTy)};
+}
+
 ProgramStateRef
 ProgramState::enterStackFrame(const CallEvent &Call,
                               const StackFrameContext *CalleeCtx) const {
@@ -451,28 +463,14 @@ void ProgramState::setStore(const StoreRef &newStore) {
   store = newStoreStore;
 }
 
-/// FieldRegions are expected to be wrapped by an ElementRegion as a canonical
-/// representation. See f8643a9b31c4029942f67d4534c9139b45173504 why.
-static SVal wrapSymbolicRegion(const ProgramState &State, SVal Base) {
-  const auto *SymbolicBase =
-      dyn_cast_or_null<SymbolicRegion>(Base.getAsRegion());
-
-  if (!SymbolicBase)
-    return Base;
-
-  StoreManager &SM = State.getStateManager().getStoreManager();
-  QualType ElemTy = SymbolicBase->getPointeeStaticType();
-  return loc::MemRegionVal{SM.GetElementZeroRegion(SymbolicBase, ElemTy)};
-}
-
 SVal ProgramState::getLValue(const FieldDecl *D, SVal Base) const {
-  Base = wrapSymbolicRegion(*this, Base);
+  Base = wrapSymbolicRegion(Base);
   return getStateManager().StoreMgr->getLValueField(D, Base);
 }
 
 SVal ProgramState::getLValue(const IndirectFieldDecl *D, SVal Base) const {
   StoreManager &SM = *getStateManager().StoreMgr;
-  Base = wrapSymbolicRegion(*this, Base);
+  Base = wrapSymbolicRegion(Base);
 
   // FIXME: This should work with `SM.getLValueField(D->getAnonField(), Base)`,
   // but that would break some tests. There is probably a bug somewhere that it
