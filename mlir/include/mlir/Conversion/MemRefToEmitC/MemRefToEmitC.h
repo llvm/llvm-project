@@ -8,14 +8,9 @@
 #ifndef MLIR_CONVERSION_MEMREFTOEMITC_MEMREFTOEMITC_H
 #define MLIR_CONVERSION_MEMREFTOEMITC_MEMREFTOEMITC_H
 
-#include "mlir/Pass/Pass.h"
-
 namespace mlir {
 class RewritePatternSet;
 class TypeConverter;
-
-#define GEN_PASS_DECL_CONVERTMEMREFTOEMITC
-#include "mlir/Conversion/Passes.h.inc"
 
 void populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter);
 
