@@ -1269,7 +1269,11 @@ static void DFsanInit(int argc, char **argv, char **envp) {
 
   CheckASLR();
 
-  InitShadowWithReExec(dfsan_get_track_origins());
+  if (!InitShadowWithReExec(dfsan_get_track_origins())) {
+    Printf("FATAL: DataflowSanitizer can not mmap the shadow memory.\n");
+    DumpProcessMap();
+    Die();
+  }
 
   initialize_interceptors();
 
