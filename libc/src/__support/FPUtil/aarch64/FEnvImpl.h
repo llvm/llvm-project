@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_FENVIMPL_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_FENVIMPL_H
 
+#include "include/llvm-libc-macros/fenv-macros.h"
+#include "include/llvm-libc-types/fenv_t.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
 
@@ -17,7 +19,6 @@
 #endif
 
 #include <arm_acle.h>
-#include <fenv.h>
 #include <stdint.h>
 
 #include "src/__support/FPUtil/FPBits.h"
