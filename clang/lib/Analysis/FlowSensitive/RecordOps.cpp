@@ -16,17 +16,17 @@
 
 namespace clang::dataflow {
 
-static void copyField(const ValueDecl *Field, StorageLocation *SrcFieldLoc,
+static void copyField(const ValueDecl &Field, StorageLocation *SrcFieldLoc,
                       StorageLocation *DstFieldLoc, RecordStorageLocation &Dst,
                       Environment &Env) {
-  assert(Field->getType()->isReferenceType() ||
+  assert(Field.getType()->isReferenceType() ||
          (SrcFieldLoc != nullptr && DstFieldLoc != nullptr));
 
-  if (Field->getType()->isRecordType()) {
+  if (Field.getType()->isRecordType()) {
     copyRecord(cast<RecordStorageLocation>(*SrcFieldLoc),
                cast<RecordStorageLocation>(*DstFieldLoc), Env);
-  } else if (Field->getType()->isReferenceType()) {
-    Dst.setChild(*Field, SrcFieldLoc);
+  } else if (Field.getType()->isReferenceType()) {
+    Dst.setChild(Field, SrcFieldLoc);
   } else {
     if (Value *Val = Env.getValue(*SrcFieldLoc))
       Env.setValue(*DstFieldLoc, *Val);
@@ -72,13 +72,13 @@ void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
   if (SrcType == DstType || (SrcDecl != nullptr && DstDecl != nullptr &&
                              SrcDecl->isDerivedFrom(DstDecl))) {
     for (auto [Field, DstFieldLoc] : Dst.children())
-      copyField(Field, Src.getChild(*Field), DstFieldLoc, Dst, Env);
+      copyField(*Field, Src.getChild(*Field), DstFieldLoc, Dst, Env);
     for (const auto &[Name, DstFieldLoc] : Dst.synthetic_fields())
       copySyntheticField(DstFieldLoc->getType(), Src.getSyntheticField(Name),
                          *DstFieldLoc, Env);
   } else {
     for (auto [Field, SrcFieldLoc] : Src.children())
-      copyField(Field, SrcFieldLoc, Dst.getChild(*Field), Dst, Env);
+      copyField(*Field, SrcFieldLoc, Dst.getChild(*Field), Dst, Env);
     for (const auto &[Name, SrcFieldLoc] : Src.synthetic_fields())
       copySyntheticField(SrcFieldLoc->getType(), *SrcFieldLoc,
                          Dst.getSyntheticField(Name), Env);
