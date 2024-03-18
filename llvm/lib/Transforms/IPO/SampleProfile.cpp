@@ -438,6 +438,7 @@ class SampleProfileMatcher {
   Module &M;
   SampleProfileReader &Reader;
   const PseudoProbeManager *ProbeManager;
+  const ThinOrFullLTOPhase LTOPhase;
   SampleProfileMap FlattenedProfiles;
   // For each function, the matcher generates a map, of which each entry is a
   // mapping from the source location of current build to the source location in
@@ -489,8 +490,9 @@ class SampleProfileMatcher {
 
 public:
   SampleProfileMatcher(Module &M, SampleProfileReader &Reader,
-                       const PseudoProbeManager *ProbeManager)
-      : M(M), Reader(Reader), ProbeManager(ProbeManager){};
+                       const PseudoProbeManager *ProbeManager,
+                       ThinOrFullLTOPhase LTOPhase)
+      : M(M), Reader(Reader), ProbeManager(ProbeManager), LTOPhase(LTOPhase){};
   void runOnModule();
   void clearMatchingData() {
     // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which
@@ -506,7 +508,7 @@ private:
       return &It->second;
     return nullptr;
   }
-  void runOnFunction(const Function &F);
+  void runOnFunction(Function &F);
   void findIRAnchors(const Function &F,
                      std::map<LineLocation, StringRef> &IRAnchors);
   void findProfileAnchors(
@@ -2177,8 +2179,8 @@ bool SampleProfileLoader::doInitialization(Module &M,
 
   if (ReportProfileStaleness || PersistProfileStaleness ||
       SalvageStaleProfile) {
-    MatchingManager =
-        std::make_unique<SampleProfileMatcher>(M, *Reader, ProbeManager.get());
+    MatchingManager = std::make_unique<SampleProfileMatcher>(
+        M, *Reader, ProbeManager.get(), LTOPhase);
   }
 
   return true;
@@ -2383,7 +2385,7 @@ void SampleProfileMatcher::runStaleProfileMatching(
   }
 }
 
-void SampleProfileMatcher::runOnFunction(const Function &F) {
+void SampleProfileMatcher::runOnFunction(Function &F) {
   // We need to use flattened function samples for matching.
   // Unlike IR, which includes all callsites from the source code, the callsites
   // in profile only show up when they are hit by samples, i,e. the profile
@@ -2410,17 +2412,26 @@ void SampleProfileMatcher::runOnFunction(const Function &F) {
 
   // Run profile matching for checksum mismatched profile, currently only
   // support for pseudo-probe.
-  if (SalvageStaleProfile && FunctionSamples::ProfileIsProbeBased &&
-      !ProbeManager->profileIsValid(F, *FSFlattened)) {
-    // The matching result will be saved to IRToProfileLocationMap, create a new
-    // map for each function.
-    auto &IRToProfileLocationMap = getIRToProfileLocationMap(F);
-    runStaleProfileMatching(F, IRAnchors, ProfileAnchors,
-                            IRToProfileLocationMap);
-    // Find and update callsite match states after matching.
-    if (ReportProfileStaleness || PersistProfileStaleness)
-      recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors,
-                                &IRToProfileLocationMap);
+  if (SalvageStaleProfile && FunctionSamples::ProfileIsProbeBased) {
+    const auto *Desc = ProbeManager->getDesc(F);
+    // For imported functions, the checksum metadata(pseudo_probe_desc) are
+    // dropped, so we leverage function attribute(profile-checksum-mismatch) to
+    // transfer the info: add the attribute during pre-link phase and check it
+    // during post-link phase.
+    if ((Desc && ProbeManager->profileIsHashMismatched(*Desc, *FSFlattened)) ||
+        F.hasFnAttribute("profile-checksum-mismatch")) {
+      if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink)
+        F.addFnAttr("profile-checksum-mismatch");
+      // The matching result will be saved to IRToProfileLocationMap, create a
+      // new map for each function.
+      auto &IRToProfileLocationMap = getIRToProfileLocationMap(F);
+      runStaleProfileMatching(F, IRAnchors, ProfileAnchors,
+                              IRToProfileLocationMap);
+      // Find and update callsite match states after matching.
+      if (ReportProfileStaleness || PersistProfileStaleness)
+        recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors,
+                                  &IRToProfileLocationMap);
+    }
   }
 }
 
@@ -2689,8 +2700,9 @@ void SampleProfileMatcher::distributeIRToProfileLocationMap(
     FS.setIRToProfileLocationMap(&(ProfileMappings->second));
   }
 
-  for (auto &Inlinees : FS.getCallsiteSamples()) {
-    for (auto FS : Inlinees.second) {
+  for (auto &Callees :
+       const_cast<CallsiteSampleMap &>(FS.getCallsiteSamples())) {
+    for (auto &FS : Callees.second) {
       distributeIRToProfileLocationMap(FS.second);
     }
   }
