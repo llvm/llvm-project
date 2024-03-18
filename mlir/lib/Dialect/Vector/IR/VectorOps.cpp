@@ -6064,7 +6064,7 @@ LogicalResult MaskOp::fold(FoldAdaptor adaptor,
   maskableOp->dropAllUses();
   maskableOp->moveBefore(getOperation());
 
-  results.push_back(maskableOp->getResult(0));
+  llvm::append_range(results, maskableOp->getResults());
   return success();
 }
 
