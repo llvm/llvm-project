@@ -250,10 +250,9 @@ Improvements to Clang's diagnostics
   such as attempting to call ``free`` on an unallocated object. Fixes
   `#79443 <https://github.com/llvm/llvm-project/issues/79443>`_.
 
-- Clang now does not warn in cases where bitand operator is
-  intentionally used with boolean operands, distinguishing it
-  from potential typographical errors or unintended bitwise operations.
-  Fixes (`#77601 <https://github.com/llvm/llvm-project/issues/77601>`)
+- Clang no longer warns when the ``bitand`` operator is used with boolean
+  operands, distinguishing it from potential typographical errors or unintended
+  bitwise operations. Fixes #GH77601.
 
 Improvements to Clang's time-trace
 ----------------------------------
