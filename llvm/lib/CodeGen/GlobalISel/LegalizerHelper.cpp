@@ -5411,6 +5411,9 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_TRUNC:
   case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_FPEXT:
