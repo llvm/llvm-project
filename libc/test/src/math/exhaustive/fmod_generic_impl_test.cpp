@@ -6,53 +6,55 @@
 //
 //===----------------------------------------------------------------------===//
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/ManipulationFunctions.h" // ldexp
 #include "src/__support/FPUtil/generic/FMod.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 #include <array>
-#include <limits>
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 template <typename T, bool InverseMultiplication>
 class LlvmLibcFModTest : public LIBC_NAMESPACE::testing::Test {
 
-  using U = typename LIBC_NAMESPACE::fputil::FPBits<T>::StorageType;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
+  using U = typename FPBits::StorageType;
   using DivisionHelper = LIBC_NAMESPACE::cpp::conditional_t<
       InverseMultiplication,
       LIBC_NAMESPACE::fputil::generic::FModDivisionInvMultHelper<U>,
       LIBC_NAMESPACE::fputil::generic::FModDivisionSimpleHelper<U>>;
 
-  static constexpr std::array<T, 11> test_bases = {
+  static constexpr std::array<T, 11> TEST_BASES = {
       T(0.0),
       T(1.0),
       T(3.0),
       T(27.0),
       T(11.0 / 8.0),
       T(2.764443),
-      T(1.0) - std::numeric_limits<T>::epsilon(),
-      T(1.0) + std::numeric_limits<T>::epsilon(),
-      T(M_PI),
-      T(M_SQRT2),
-      T(M_E)};
+      T(1.0) - T(0x1.0p-23) - T(0x1.0p-52) - T(0x1.0p-112),
+      T(1.0) + T(0x1.0p-23) + T(0x1.0p-52) + T(0x1.0p-112),
+      T(3.14159265),
+      T(1.41421356),
+      T(2.71828183)};
 
 public:
   void testExtensive() {
     using FMod = LIBC_NAMESPACE::fputil::generic::FMod<T, U, DivisionHelper>;
-    using nl = std::numeric_limits<T>;
-    int min2 = nl::min_exponent - nl::digits - 5;
-    int max2 = nl::max_exponent + 3;
-    for (T by : test_bases) {
+    int min2 = -(FPBits::MAX_BIASED_EXPONENT + FPBits::SIG_LEN) / 2;
+    int max2 = 3 + FPBits::MAX_BIASED_EXPONENT / 2;
+    for (T by : TEST_BASES) {
       for (int iy = min2; iy < max2; iy++) {
-        T y = by * std::ldexp(2, iy);
-        if (y == 0 || !std::isfinite(y))
+        T y = by * LIBC_NAMESPACE::fputil::ldexp(2.0, iy);
+        FPBits y_bits(y);
+        if (y_bits.is_zero() || !y_bits.is_finite())
           continue;
-        for (T bx : test_bases) {
+        for (T bx : TEST_BASES) {
           for (int ix = min2; ix < max2; ix++) {
-            T x = bx * std::ldexp(2, ix);
-            if (!std::isfinite(x))
+            T x = bx * LIBC_NAMESPACE::fputil::ldexp(2.0, ix);
+            if (!FPBits(x).is_finite())
               continue;
             T result = FMod::eval(x, y);
             mpfr::BinaryInput<T> input{x, y};

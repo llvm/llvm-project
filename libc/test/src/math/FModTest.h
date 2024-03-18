@@ -14,7 +14,7 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 #define TEST_SPECIAL(x, y, expected, dom_err, expected_exception)              \
   EXPECT_FP_EQ(expected, f(x, y));                                             \

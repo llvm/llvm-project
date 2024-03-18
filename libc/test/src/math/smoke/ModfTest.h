@@ -11,7 +11,7 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 template <typename T> class ModfTest : public LIBC_NAMESPACE::testing::Test {
 
