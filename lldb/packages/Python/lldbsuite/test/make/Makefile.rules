@@ -51,7 +51,7 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 #
 # GNUWin32 uname gives "windows32" or "server version windows32" while
 # some versions of MSYS uname return "MSYS_NT*", but most environments
-# standardize on "Windows_NT", so we'll make it consistent here.
+# standardize on "Windows_NT", so we'll make it consistent here. 
 # When running tests from Visual Studio, the environment variable isn't
 # inherited all the way down to the process spawned for make.
 #----------------------------------------------------------------------
@@ -589,7 +589,7 @@ endif
 
 
 #----------------------------------------------------------------------
-# Support emitting the context of the GNU build-id into a file
+# Support emitting the content of the GNU build-id into a file
 # This needs to be used in conjunction with GEN_GNU_BUILD_ID := YES
 #----------------------------------------------------------------------
 $(EXE).uuid : $(EXE)
