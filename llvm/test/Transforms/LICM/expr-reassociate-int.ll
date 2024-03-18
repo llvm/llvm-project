@@ -23,7 +23,7 @@ define void @innermost_loop_1d_shouldhoist(i32 %i, i64 %d1, i64 %delta, ptr %cel
 ; CHECK-LABEL: define void @innermost_loop_1d_shouldhoist
 ; CHECK-SAME: (i32 [[I:%.*]], i64 [[D1:%.*]], i64 [[DELTA:%.*]], ptr [[CELLS:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL_1:%.*]] = mul i64 [[DELTA]], [[D1]]
+; CHECK-NEXT:    [[MUL_1:%.*]] = mul nuw nsw i64 [[DELTA]], [[D1]]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_J_1:%.*]], [[FOR_BODY:%.*]] ]
@@ -55,7 +55,7 @@ for.body:
   %idxprom.j.1 = zext i32 %add.j.1 to i64
   %arrayidx.j.1 = getelementptr inbounds i64, ptr %cells, i64 %idxprom.j.1
   %cell.1 = load i64, ptr %arrayidx.j.1, align 8
-  %mul.1 = mul i64 %delta, %d1
+  %mul.1 = mul nsw nuw i64 %delta, %d1
   %mul.2 = mul i64 %mul.1, %cell.1
   %idxprom.j = zext i32 %j to i64
   %arrayidx.j = getelementptr inbounds i64, ptr %cells, i64 %idxprom.j
@@ -130,8 +130,8 @@ define void @innermost_loop_2d(i32 %i, i64 %d1, i64 %d2, i64 %delta, ptr %cells)
 ; CONSTRAINED-NEXT:    [[IDXPROM_J:%.*]] = zext i32 [[J]] to i64
 ; CONSTRAINED-NEXT:    [[ARRAYIDX_J:%.*]] = getelementptr inbounds i64, ptr [[CELLS]], i64 [[IDXPROM_J]]
 ; CONSTRAINED-NEXT:    [[CELL_2:%.*]] = load i64, ptr [[ARRAYIDX_J]], align 8
-; CONSTRAINED-NEXT:    [[MUL_2:%.*]] = mul i64 [[CELL_2]], [[D2]]
-; CONSTRAINED-NEXT:    [[REASS_ADD:%.*]] = add i64 [[MUL_2]], [[MUL_1]]
+; CONSTRAINED-NEXT:    [[MUL_2:%.*]] = mul nuw nsw i64 [[CELL_2]], [[D2]]
+; CONSTRAINED-NEXT:    [[REASS_ADD:%.*]] = add nuw nsw i64 [[MUL_2]], [[MUL_1]]
 ; CONSTRAINED-NEXT:    [[REASS_MUL:%.*]] = mul i64 [[REASS_ADD]], [[DELTA]]
 ; CONSTRAINED-NEXT:    store i64 [[REASS_MUL]], ptr [[ARRAYIDX_J]], align 8
 ; CONSTRAINED-NEXT:    br label [[FOR_COND]]
@@ -155,8 +155,8 @@ for.body:
   %idxprom.j = zext i32 %j to i64
   %arrayidx.j = getelementptr inbounds i64, ptr %cells, i64 %idxprom.j
   %cell.2 = load i64, ptr %arrayidx.j, align 8
-  %mul.2 = mul i64 %cell.2, %d2
-  %reass.add = add i64 %mul.2, %mul.1
+  %mul.2 = mul nsw nuw i64 %cell.2, %d2
+  %reass.add = add nsw nuw i64 %mul.2, %mul.1
   %reass.mul = mul i64 %reass.add, %delta
   store i64 %reass.mul, ptr %arrayidx.j, align 8
   br label %for.cond
@@ -243,10 +243,10 @@ define void @innermost_loop_3d(i32 %i, i64 %d1, i64 %d2, i64 %d3, i64 %delta, pt
 ; CONSTRAINED-NEXT:    [[IDXPROM_J_2:%.*]] = zext i32 [[ADD_J_2]] to i64
 ; CONSTRAINED-NEXT:    [[ARRAYIDX_J_2:%.*]] = getelementptr inbounds i64, ptr [[CELLS]], i64 [[IDXPROM_J_2]]
 ; CONSTRAINED-NEXT:    [[CELL_3:%.*]] = load i64, ptr [[ARRAYIDX_J_2]], align 8
-; CONSTRAINED-NEXT:    [[MUL_3:%.*]] = mul i64 [[CELL_3]], [[D3]]
-; CONSTRAINED-NEXT:    [[REASS_ADD:%.*]] = add i64 [[MUL_2]], [[MUL_1]]
-; CONSTRAINED-NEXT:    [[REASS_ADD1:%.*]] = add i64 [[REASS_ADD]], [[MUL_3]]
-; CONSTRAINED-NEXT:    [[REASS_MUL:%.*]] = mul i64 [[REASS_ADD1]], [[DELTA]]
+; CONSTRAINED-NEXT:    [[MUL_3:%.*]] = mul nuw nsw i64 [[CELL_3]], [[D3]]
+; CONSTRAINED-NEXT:    [[REASS_ADD:%.*]] = add nuw nsw i64 [[MUL_2]], [[MUL_1]]
+; CONSTRAINED-NEXT:    [[REASS_ADD1:%.*]] = add nuw nsw i64 [[REASS_ADD]], [[MUL_3]]
+; CONSTRAINED-NEXT:    [[REASS_MUL:%.*]] = mul nuw nsw i64 [[REASS_ADD1]], [[DELTA]]
 ; CONSTRAINED-NEXT:    store i64 [[REASS_MUL]], ptr [[ARRAYIDX_J_2]], align 8
 ; CONSTRAINED-NEXT:    br label [[FOR_COND]]
 ; CONSTRAINED:       for.end:
@@ -274,10 +274,10 @@ for.body:
   %idxprom.j.2 = zext i32 %add.j.2 to i64
   %arrayidx.j.2 = getelementptr inbounds i64, ptr %cells, i64 %idxprom.j.2
   %cell.3 = load i64, ptr %arrayidx.j.2, align 8
-  %mul.3 = mul i64 %cell.3, %d3
-  %reass.add = add i64 %mul.2, %mul.1
-  %reass.add1 = add i64 %reass.add, %mul.3
-  %reass.mul = mul i64 %reass.add1, %delta
+  %mul.3 = mul nsw nuw i64 %cell.3, %d3
+  %reass.add = add nsw nuw i64 %mul.2, %mul.1
+  %reass.add1 = add nsw nuw i64 %reass.add, %mul.3
+  %reass.mul = mul nsw nuw i64 %reass.add1, %delta
   store i64 %reass.mul, ptr %arrayidx.j.2, align 8
   br label %for.cond
 
@@ -361,4 +361,35 @@ for.body:
 
 for.end:
   ret void
+}
+
+; Make sure we drop poison flags on the mul in the loop.
+define i32 @pr85457(i32 %x, i32 %y) {
+; CHECK-LABEL: define i32 @pr85457
+; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[FACTOR_OP_MUL:%.*]] = mul i32 [[X]], [[Y]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[MUL0:%.*]] = mul i32 [[FACTOR_OP_MUL]], [[IV]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[MUL0]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i32 %iv, 1
+  %mul0 = mul nuw nsw i32 %x, %iv
+  %mul1 = mul nuw i32 %mul0, %y
+  %cmp = icmp slt i32 %mul1, 1
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret i32 0
 }
