@@ -636,6 +636,7 @@ void ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
       /*extra null value*/ target->wordSize;
   assert(expectedListSize == ptrListSym->isec->data.size() &&
          "Protocol list does not match expected size");
+  (void)expectedListSize;
 
   uint32_t off = protocolListHeaderLayout.totalSize;
   for (uint32_t inx = 0; inx < protocolCount; ++inx) {
@@ -1033,6 +1034,7 @@ void ObjcCategoryMerger::mergeCategoriesIntoSingleCategory(
 
   Defined *newCatDef = emitCategory(extInfo);
   assert(newCatDef && "Failed to create a new category");
+  (void)newCatDef;
 
   for (auto &catInfo : categories)
     catInfo.wasMerged = true;
