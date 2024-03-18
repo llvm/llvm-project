@@ -187,3 +187,14 @@ float func_18(float x, float y) {
 // CHECK:         CompoundStmt {{.*}} ConstRoundingMode=downward
 // CHECK:           ReturnStmt
 // CHECK:             BinaryOperator {{.*}} ConstRoundingMode=downward
+
+#pragma float_control(precise, off)
+__attribute__((optnone))
+float func_19(float x, float y) {
+  return x + y;
+}
+
+// CHECK-LABEL: FunctionDecl {{.*}} func_19 'float (float, float)'
+// CHECK:         CompoundStmt {{.*}} MathErrno=1
+// CHECK:           ReturnStmt
+// CHECK:             BinaryOperator {{.*}} 'float' '+' ConstRoundingMode=downward MathErrno=1

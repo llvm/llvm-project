@@ -15910,6 +15910,16 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   return D;
 }
 
+void Sema::applyFunctionAttributesBeforeParsingBody(Decl *FD) {
+  if (FD && FD->hasAttr<OptimizeNoneAttr>()) {
+    FPOptionsOverride FPO;
+    FPO.setDisallowOptimizations();
+    CurFPFeatures.applyChanges(FPO);
+    FpPragmaStack.CurrentValue =
+        CurFPFeatures.getChangesFrom(FPOptions(LangOpts));
+  }
+}
+
 /// Given the set of return statements within a function body,
 /// compute the variables that are subject to the named return value
 /// optimization.

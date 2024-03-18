@@ -2508,6 +2508,10 @@ Decl *Parser::ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope) {
   Sema::PragmaStackSentinelRAII
     PragmaStackSentinel(Actions, "InternalPragmaState", IsCXXMethod);
 
+  // Some function attributes (like OptimizeNoneAttr) affect FP options.
+  Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
+  Actions.applyFunctionAttributesBeforeParsingBody(Decl);
+
   // Do not enter a scope for the brace, as the arguments are in the same scope
   // (the function body) as the body itself.  Instead, just read the statement
   // list and put it into a CompoundStmt for safe keeping.
