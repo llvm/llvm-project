@@ -1542,7 +1542,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
   // Go back to the entry.
   if (entry_ptr->getNextNonDebugInstruction())
     entry_ptr = entry_ptr->getNextNonDebugInstruction()->getIterator();
-  else 
+  else
     entry_ptr = entry->end();
   Builder.SetInsertPoint(entry, entry_ptr);
 
