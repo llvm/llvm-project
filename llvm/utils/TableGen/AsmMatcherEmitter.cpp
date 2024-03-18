@@ -1986,16 +1986,16 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   }
   CvtOS << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n";
   CvtOS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
-  CvtOS << "  unsigned OpIdx;\n";
   CvtOS << "  Inst.setOpcode(Opcode);\n";
   CvtOS << "  for (const uint8_t *p = Converter; *p; p += 2) {\n";
   if (HasOptionalOperands) {
     // When optional operands are involved, formal and actual operand indices
     // may differ. Map the former to the latter by subtracting the number of
     // absent optional operands.
-    CvtOS << "    OpIdx = *(p + 1) - DefaultsOffset[*(p + 1)];\n";
+    // FIXME: This is not an operand index in the CVT_Tied case
+    CvtOS << "    unsigned OpIdx = *(p + 1) - DefaultsOffset[*(p + 1)];\n";
   } else {
-    CvtOS << "    OpIdx = *(p + 1);\n";
+    CvtOS << "    unsigned OpIdx = *(p + 1);\n";
   }
   CvtOS << "    switch (*p) {\n";
   CvtOS << "    default: llvm_unreachable(\"invalid conversion entry!\");\n";
@@ -2004,11 +2004,11 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         << " &>(*Operands[OpIdx]).addRegOperands(Inst, 1);\n";
   CvtOS << "      break;\n";
   CvtOS << "    case CVT_Tied: {\n";
-  CvtOS << "      assert(OpIdx < (size_t)(std::end(TiedAsmOperandTable) -\n";
+  CvtOS << "      assert(*(p + 1) < (size_t)(std::end(TiedAsmOperandTable) -\n";
   CvtOS
       << "                              std::begin(TiedAsmOperandTable)) &&\n";
   CvtOS << "             \"Tied operand not found\");\n";
-  CvtOS << "      unsigned TiedResOpnd = TiedAsmOperandTable[OpIdx][0];\n";
+  CvtOS << "      unsigned TiedResOpnd = TiedAsmOperandTable[*(p + 1)][0];\n";
   CvtOS << "      if (TiedResOpnd != (uint8_t)-1)\n";
   CvtOS << "        Inst.addOperand(Inst.getOperand(TiedResOpnd));\n";
   CvtOS << "      break;\n";
