@@ -22,7 +22,7 @@ def getUUID(aoutuuid):
         if len(header) != 4:
             return None
         # 4 element 'prefix', 20 bytes of uuid, 3 byte long string: 'GNU':
-        if header[0] != 4 or header[1] != 20 or header[2] != 3 or header[3] != 0x554e47:
+        if header[0] != 4 or header[1] != 20 or header[2] != 3 or header[3] != 0x554E47:
             return None
         return data[16:].hex()
 
@@ -35,6 +35,8 @@ For no-split-dwarf scenarios, there are 2 variations:
 1 - A stripped binary with it's corresponding unstripped binary:
 2 - A stripped binary with a corresponding --only-keep-debug symbols file
 """
+
+
 @skipUnlessPlatform(["linux", "freebsd"])
 class DebugInfodTests(TestBase):
     # No need to try every flavor of debug inf.
@@ -99,14 +101,21 @@ class DebugInfodTests(TestBase):
         addr = loc.GetAddress()
         self.assertTrue(addr and addr.IsValid(), "Loc address is valid")
         line_entry = addr.GetLineEntry()
-        self.assertEqual(should_have_loc, line_entry != None and line_entry.IsValid(), "Loc line entry is valid")
+        self.assertEqual(
+            should_have_loc,
+            line_entry != None and line_entry.IsValid(),
+            "Loc line entry is valid",
+        )
         if should_have_loc:
             self.assertEqual(line_entry.GetLine(), 4)
-            self.assertEqual(line_entry.GetFileSpec().GetFilename(), self.main_source_file.GetFilename())
+            self.assertEqual(
+                line_entry.GetFileSpec().GetFilename(),
+                self.main_source_file.GetFilename(),
+            )
         self.dbg.DeleteTarget(target)
         shutil.rmtree(self.tmp_dir)
 
-    def config_test(self, local_files, debuginfo = None, executable = None):
+    def config_test(self, local_files, debuginfo=None, executable=None):
         """
         Set up a test with local_files[] copied to a different location
         so that we control which files are, or are not, found in the file system.
@@ -138,7 +147,7 @@ class DebugInfodTests(TestBase):
         for f in local_files:
             shutil.copy(self.getBuildArtifact(f), test_dir)
             # The first item is the binary to be used for the test
-            if (self.aout == ""):
+            if self.aout == "":
                 self.aout = os.path.join(test_dir, f)
 
         use_debuginfod = debuginfo != None or executable != None
@@ -149,13 +158,28 @@ class DebugInfodTests(TestBase):
             uuid_dir = os.path.join(self.tmp_dir, "buildid", uuid)
             os.makedirs(uuid_dir)
             if debuginfo:
-                shutil.copy(self.getBuildArtifact(debuginfo), os.path.join(uuid_dir, "debuginfo"))
+                shutil.copy(
+                    self.getBuildArtifact(debuginfo),
+                    os.path.join(uuid_dir, "debuginfo"),
+                )
             if executable:
-                shutil.copy(self.getBuildArtifact(executable), os.path.join(uuid_dir, "executable"))
+                shutil.copy(
+                    self.getBuildArtifact(executable),
+                    os.path.join(uuid_dir, "executable"),
+                )
 
         # Configure LLDB for the test:
-        self.runCmd("settings set symbols.enable-external-lookup %s" % str(use_debuginfod).lower())
+        self.runCmd(
+            "settings set symbols.enable-external-lookup %s"
+            % str(use_debuginfod).lower()
+        )
         self.runCmd("settings clear plugin.symbol-locator.debuginfod.server-urls")
         if use_debuginfod:
-            self.runCmd("settings set plugin.symbol-locator.debuginfod.cache-path %s/cache" % self.tmp_dir)
-            self.runCmd("settings insert-before plugin.symbol-locator.debuginfod.server-urls 0 file://%s" % self.tmp_dir)
+            self.runCmd(
+                "settings set plugin.symbol-locator.debuginfod.cache-path %s/cache"
+                % self.tmp_dir
+            )
+            self.runCmd(
+                "settings insert-before plugin.symbol-locator.debuginfod.server-urls 0 file://%s"
+                % self.tmp_dir
+            )
