@@ -2422,6 +2422,38 @@ void LLVMSetGC(LLVMValueRef Fn, const char *GC) {
     F->clearGC();
 }
 
+LLVMValueRef LLVMGetPrefixData(LLVMValueRef Fn) {
+  Function *F = unwrap<Function>(Fn);
+  return wrap(F->getPrefixData());
+}
+
+LLVMBool LLVMHasPrefixData(LLVMValueRef Fn) {
+  Function *F = unwrap<Function>(Fn);
+  return F->hasPrefixData();
+}
+
+void LLVMSetPrefixData(LLVMValueRef Fn, LLVMValueRef prefixData) {
+  Function *F = unwrap<Function>(Fn);
+  Constant *prefix = unwrap<Constant>(prefixData);
+  F->setPrefixData(prefix);
+}
+
+LLVMValueRef LLVMGetPrologueData(LLVMValueRef Fn) {
+  Function *F = unwrap<Function>(Fn);
+  return wrap(F->getPrologueData());
+}
+
+LLVMBool LLVMHasPrologueData(LLVMValueRef Fn) {
+  Function *F = unwrap<Function>(Fn);
+  return F->hasPrologueData();
+}
+
+void LLVMSetPrologueData(LLVMValueRef Fn, LLVMValueRef prologueData) {
+  Function *F = unwrap<Function>(Fn);
+  Constant *prologue = unwrap<Constant>(prologueData);
+  F->setPrologueData(prologue);
+}
+
 void LLVMAddAttributeAtIndex(LLVMValueRef F, LLVMAttributeIndex Idx,
                              LLVMAttributeRef A) {
   unwrap<Function>(F)->addAttributeAtIndex(Idx, unwrap(A));
