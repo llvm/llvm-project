@@ -450,6 +450,25 @@ public:
     Env.setStorageLocation(*S, *MemberLoc);
   }
 
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *S) {
+    const Expr *ArgExpr = S->getExpr();
+    assert(ArgExpr != nullptr);
+    propagateValueOrStorageLocation(*ArgExpr, *S, Env);
+
+    // If this is a prvalue of record type, we consider it to be an "original
+    // record constructor", which we always require to have a `RecordValue`.
+    // So make sure we have a value if we didn't propagate one above.
+    if (S->isPRValue() && S->getType()->isRecordType()) {
+      if (Env.getValue(*S) == nullptr) {
+        Value *Val = Env.createValue(S->getType());
+        // We're guaranteed to always be able to create a value for record
+        // types.
+        assert(Val != nullptr);
+        Env.setValue(*S, *Val);
+      }
+    }
+  }
+
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *S) {
     const Expr *InitExpr = S->getExpr();
     assert(InitExpr != nullptr);
