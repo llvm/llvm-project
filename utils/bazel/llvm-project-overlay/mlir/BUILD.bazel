@@ -13217,6 +13217,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":FunctionInterfaces",
         ":IR",
+        ":InliningUtils",
         ":MLProgramAttributesIncGen",
         ":MLProgramOpsIncGen",
         ":MLProgramTypesIncGen",
