@@ -226,20 +226,121 @@ signature blob.
 The root signature parsing will generate a HLSLRootSignatureAttr with member 
 represents the root signature string and the parsed information for each 
 resource in the root signature. It will bind to the entry function in the AST. 
+HLSLRootSignatureAttr will be something like this:
+Note, VersionedRootSignatureDesc is not D3D12_ROOT_SIGNATURE_DESC, it is just 
+a simple struct to collect all the information in the root signature string.
 
-For case compile to a standalone root signature blob, the HLSLRootSignatureAttr 
-will be bind to a fake empty entry.
+.. code-block:: c++
+
+    struct DescriptorRange {
+      DescriptorRangeType RangeType;
+      uint32_t NumDescriptors = 1;
+      uint32_t BaseShaderRegister;
+      uint32_t RegisterSpace = 0;
+      DescriptorRangeFlags Flags = DescriptorRangeFlags::None;
+      uint32_t OffsetInDescriptorsFromTableStart = DescriptorRangeOffsetAppend;
+    };
+
+    struct RootDescriptorTable {
+      std::vector<DescriptorRange> DescriptorRanges;
+    };
+    struct RootConstants {
+      uint32_t ShaderRegister;
+      uint32_t RegisterSpace = 0;
+      uint32_t Num32BitValues;
+    };
+
+    struct RootDescriptor {
+      uint32_t ShaderRegister;
+      uint32_t RegisterSpace = 0;
+      RootDescriptorFlags Flags = RootDescriptorFlags::None;
+    };
+    struct RootParameter {
+      RootParameterType ParameterType;
+      std::variant<RootDescriptorTable, RootConstants, RootDescriptor>
+            Parameter;
+      ShaderVisibility ShaderVisibility = ShaderVisibility::All;
+    };
+
+    struct StaticSamplerDesc {
+      Filter Filter = Filter::ANISOTROPIC;
+      TextureAddressMode AddressU = TextureAddressMode::Wrap;
+      TextureAddressMode AddressV = TextureAddressMode::Wrap;
+      TextureAddressMode AddressW = TextureAddressMode::Wrap;
+      float MipLODBias = 0.f;
+      uint32_t MaxAnisotropy = 16;
+      ComparisonFunc ComparisonFunc = ComparisonFunc::LessEqual;
+      StaticBorderColor BorderColor = StaticBorderColor::OpaqueWhite;
+      float MinLOD = 0.f;
+      float MaxLOD = MaxLOD;
+      uint32_t ShaderRegister;
+      uint32_t RegisterSpace = 0;
+      ShaderVisibility ShaderVisibility = ShaderVisibility::All;
+    };
+
+    struct RootSignatureDesc {
+      std::vector<RootParameter> Parameters;
+      std::vector<StaticSamplerDesc> StaticSamplers;
+      RootSignatureFlags Flags;
+    };
+
+    struct VersionedRootSignatureDesc {
+      RootSignatureVersion Version;
+      RootSignatureDesc Desc;
+    };
+
+    class HLSLRootSignatureAttr : public InheritableAttr {
+    protected:
+      std::string RootSignatureStr;
+      VersionedRootSignatureDesc RootSignature;
+    };
+
+
+.. code-block:: c++
+
+    def HLSLEntryRootSignature: HLSLRootSignatureAttr {
+      let Spellings = [GNU<"RootSignature">];
+      let Subjects = Subjects<[HLSLEntry]>;
+      let LangOpts = [HLSL];
+      let Args = [StringArgument<"InputString">];
+    }
+
+For case compile to a standalone root signature blob, the 
+HLSLRootSignatureAttr will be bind to a fake empty entry.
 
 In clang code generation, the HLSLRootSignatureAttr in AST will be translated 
-into a global variable with struct type to express the layout and a constant 
-initializer to save things like space and NumDescriptors in LLVM IR. 
+into a global variable with struct type to express the layout and metadata to 
+save things like static sampler, root flags, space and NumDescriptors in LLVM IR. 
+The struct type will be look like this:
+
+.. code-block:: c++
+
+  %struct.TABLE0 = type { target("dx.rs.desc"),
+                          target("dx.rs.sampler")}
+
+  %struct.RS = type { target("dx.rs.rootconstant", 4), 
+                      %struct.TABLE0,
+                      target("dx.rs.rootdescriptor") }
+
+The metadata will be look like this:
+
+.. code-block:: c++
+
+  !1 = !{ data for static sampler } ; Save informations for single static 
+                                    ; sampler
+  !2 = !{!1} ; All static samplers
+  !3 = !{ data for descriptors } ; Save informations for single descriptor 
+  !4 = !{ !3 } ; All descriptors
+  !5 = !{void ()* @main, %struct.RS undef, i32 rootFlags, !2, !4}
+
 
 CGHLSLRuntime will generate metadata to link the global variable as root 
 signature for given entry function. 
 
 In LLVM DirectX backend, the global variable will be serialized and saved as 
 another global variable with section 'RTS0' with the serialized root signature 
-as initializer in DXContainerGlobals pass. 
+as initializer in DXContainerGlobals pass. The serialized root signature is in 
+exactly the format it will be written out to the DXContainer object.
 The MC ObjectWriter for DXContainer will take the global and write it to the 
 correct part based on the section name given to the global.
 
