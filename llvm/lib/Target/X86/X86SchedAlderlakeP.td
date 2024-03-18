@@ -2158,16 +2158,16 @@ def ADLPWriteResGroup244 : SchedWriteRes<[ADLPPort00_01_05, ADLPPort02_03_11]> {
   let Latency = 9;
   let NumMicroOps = 4;
 }
-def : InstRW<[ADLPWriteResGroup244, ReadAfterVecXLd, ReadAfterVecXLd, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault], (instregex "^VBLENDVP(D|S)rm$")>;
-def : InstRW<[ADLPWriteResGroup244, ReadAfterVecXLd, ReadAfterVecXLd, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault], (instrs VPBLENDVBrm)>;
+def : InstRW<[ADLPWriteResGroup244, ReadAfterVecXLd, ReadAfterVecXLd, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault], (instregex "^VBLENDVP(D|S)rmr$")>;
+def : InstRW<[ADLPWriteResGroup244, ReadAfterVecXLd, ReadAfterVecXLd, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault], (instrs VPBLENDVBrmr)>;
 
 def ADLPWriteResGroup245 : SchedWriteRes<[ADLPPort00_01_05]> {
   let ReleaseAtCycles = [3];
   let Latency = 3;
   let NumMicroOps = 3;
 }
-def : InstRW<[ADLPWriteResGroup245], (instregex "^VBLENDVP(D|S)rr$")>;
-def : InstRW<[ADLPWriteResGroup245], (instrs VPBLENDVBrr)>;
+def : InstRW<[ADLPWriteResGroup245], (instregex "^VBLENDVP(D|S)rrr$")>;
+def : InstRW<[ADLPWriteResGroup245], (instrs VPBLENDVBrrr)>;
 
 def ADLPWriteResGroup246 : SchedWriteRes<[ADLPPort00, ADLPPort01, ADLPPort02_03_11]> {
   let ReleaseAtCycles = [6, 7, 18];

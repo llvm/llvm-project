@@ -18,6 +18,10 @@
 #include <limits>
 #include <string>
 
+// Some environments, viz. glibc 2.17, allow the macro HUGE
+// to leak out of <math.h>.
+#undef HUGE
+
 namespace llvm {
 class raw_ostream;
 }

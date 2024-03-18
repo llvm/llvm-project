@@ -65,9 +65,18 @@
 // MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX90a]]"], output: "[[GFX90a_OUT:.+]]"
 //
 // RUN: not %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc \
-// RUN:        --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c -o %t %s 2>&1 \
+// RUN:        --no-gpu-bundle-output --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c -o %t %s 2>&1 \
+// RUN: | FileCheck -check-prefix=MULTI-D-ONLY-NO-BUNDLE-O %s
+// MULTI-D-ONLY-NO-BUNDLE-O: error: cannot specify -o when generating multiple output files
+
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc \
+// RUN:        --gpu-bundle-output --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c -o a.out %s 2>&1 \
 // RUN: | FileCheck -check-prefix=MULTI-D-ONLY-O %s
-// MULTI-D-ONLY-O: error: cannot specify -o when generating multiple output files
+//      MULTI-D-ONLY-O: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[GFX908_OBJ:.+]]"
+// MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX908_OBJ]]"], output: "[[GFX908:.+]]"
+// MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[GFX90A_OBJ:.+]]"
+// MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX90A_OBJ]]"], output: "[[GFX90A:.+]]"
+// MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX908]]", "[[GFX90A]]"], output: "a.out"
 
 //
 // Check to ensure that we can use '-fsyntax-only' for HIP output with the new

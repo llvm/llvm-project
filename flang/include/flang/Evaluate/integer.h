@@ -27,6 +27,10 @@
 #include <string>
 #include <type_traits>
 
+// Some environments, viz. glibc 2.17, allow the macro HUGE
+// to leak out of <math.h>.
+#undef HUGE
+
 namespace Fortran::evaluate::value {
 
 // Implements an integer as an assembly of smaller host integer parts
@@ -150,7 +154,10 @@ public:
           }
         }
       } else {
-        INT signExtension{-(n < 0)};
+        // Avoid left shifts of negative signed values (that's an undefined
+        // behavior in C++).
+        auto signExtension{std::make_unsigned_t<INT>(n < 0)};
+        signExtension = ~signExtension + 1;
         static_assert(nBits >= partBits);
         if constexpr (nBits > partBits) {
           signExtension <<= nBits - partBits;
@@ -474,7 +481,12 @@ public:
     SINT n = ToUInt<UINT>();
     constexpr std::size_t maxBits{CHAR_BIT * sizeof n};
     if constexpr (bits < maxBits) {
-      n |= -(n >> (bits - 1)) << bits;
+      // Avoid left shifts of negative signed values (that's an undefined
+      // behavior in C++).
+      auto u{std::make_unsigned_t<SINT>(ToUInt())};
+      u = (u >> (bits - 1)) << (bits - 1); // Get the sign bit only.
+      u = ~u + 1; // Negate top bits if not 0.
+      n |= static_cast<SINT>(u);
     }
     return n;
   }

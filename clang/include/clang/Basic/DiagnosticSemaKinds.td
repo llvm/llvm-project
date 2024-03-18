@@ -911,6 +911,22 @@ def warn_fortify_scanf_overflow : Warning<
 def err_function_start_invalid_type: Error<
   "argument must be a function">;
 
+def err_ptrauth_disabled :
+  Error<"this target does not support pointer authentication">;
+def err_ptrauth_invalid_key :
+  Error<"%0 does not identify a valid pointer authentication key for "
+        "the current target">;
+def err_ptrauth_value_bad_type :
+  Error<"%select{signed value|extra discriminator|blended pointer|blended "
+        "integer}0 must have %select{pointer|integer|pointer or integer}1 "
+        "type; type here is %2">;
+def warn_ptrauth_sign_null_pointer :
+  Warning<"signing a null pointer will yield a non-null pointer">,
+  InGroup<PtrAuthNullPointers>;
+def warn_ptrauth_auth_null_pointer :
+  Warning<"authenticating a null pointer will almost certainly trap">,
+  InGroup<PtrAuthNullPointers>;
+
 /// main()
 // static main() is not an error in C, just in C++.
 def warn_static_main : Warning<"'main' should not be declared static">,
@@ -10248,14 +10264,14 @@ def warn_second_parameter_to_va_arg_never_compatible : Warning<
 
 def warn_return_missing_expr : Warning<
   "non-void %select{function|method}1 %0 should return a value">, DefaultError,
-  InGroup<ReturnType>;
+  InGroup<ReturnMismatch>;
 def ext_return_missing_expr : ExtWarn<
   "non-void %select{function|method}1 %0 should return a value">, DefaultError,
-  InGroup<ReturnType>;
+  InGroup<ReturnMismatch>;
 def ext_return_has_expr : ExtWarn<
   "%select{void function|void method|constructor|destructor}1 %0 "
   "should not return a value">,
-  DefaultError, InGroup<ReturnType>;
+  DefaultError, InGroup<ReturnMismatch>;
 def ext_return_has_void_expr : Extension<
   "void %select{function|method|block}1 %0 should not return void expression">;
 def err_return_init_list : Error<
@@ -11516,8 +11532,6 @@ def err_module_not_defined : Error<
 def err_module_redeclaration : Error<
   "translation unit contains multiple module declarations">;
 def note_prev_module_declaration : Note<"previous module declaration is here">;
-def err_module_declaration_missing : Error<
-  "missing 'export module' declaration in module interface unit">;
 def err_module_declaration_missing_after_global_module_introducer : Error<
   "missing 'module' declaration at end of global module fragment "
   "introduced here">;
