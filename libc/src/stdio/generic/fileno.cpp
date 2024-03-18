@@ -15,8 +15,7 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fileno, (::FILE * stream)) {
-  int result =
-      reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->get_fileno(stream);
+  int result = get_fileno(reinterpret_cast<LIBC_NAMESPACE::File *>(stream));
   return result;
 }
 
