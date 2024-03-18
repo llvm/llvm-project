@@ -841,6 +841,18 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
   } else if (const MemSDNode *M = dyn_cast<MemSDNode>(this)) {
     OS << "<";
     printMemOperand(OS, *M->getMemOperand(), G);
+    if (auto *A = dyn_cast<AtomicSDNode>(M))
+      if (A->getOpcode() == ISD::ATOMIC_LOAD) {
+        bool doExt = true;
+        switch (A->getExtensionType()) {
+        default: doExt = false; break;
+        case ISD::EXTLOAD:  OS << ", anyext"; break;
+        case ISD::SEXTLOAD: OS << ", sext"; break;
+        case ISD::ZEXTLOAD: OS << ", zext"; break;
+        }
+        if (doExt)
+          OS << " from " << A->getMemoryVT();
+      }
     OS << ">";
   } else if (const BlockAddressSDNode *BA =
                dyn_cast<BlockAddressSDNode>(this)) {
