@@ -45,6 +45,7 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<MemRefType> source,
                            llvm::ArrayRef<OpFoldResult> offsets) {
   auto ty = source.getType();
+  (void)ty;
   assert(ty && ty.hasStaticShape() && offsets.size() == (size_t)ty.getRank());
 
   llvm::SmallVector<int64_t> staticOffsets;
