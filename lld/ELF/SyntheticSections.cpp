@@ -1600,7 +1600,7 @@ uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
   if (!needsDynSymIndex())
     return 0;
 
-  size_t index = symTab->getSymbolIndex(sym);
+  size_t index = symTab->getSymbolIndex(*sym);
   assert((index != 0 || (type != target->gotRel && type != target->pltRel) ||
           !mainPart->dynSymTab->getParent()) &&
          "GOT or PLT relocation must refer to symbol in dynamic symbol table");
@@ -2172,9 +2172,9 @@ void SymbolTableBaseSection::addSymbol(Symbol *b) {
   symbols.push_back({b, strTabSec.addString(b->getName(), false)});
 }
 
-size_t SymbolTableBaseSection::getSymbolIndex(Symbol *sym) {
+size_t SymbolTableBaseSection::getSymbolIndex(const Symbol &sym) {
   if (this == mainPart->dynSymTab.get())
-    return sym->dynsymIndex;
+    return sym.dynsymIndex;
 
   // Initializes symbol lookup tables lazily. This is used only for -r,
   // --emit-relocs and dynsyms in partitions other than the main one.
@@ -2191,9 +2191,9 @@ size_t SymbolTableBaseSection::getSymbolIndex(Symbol *sym) {
 
   // Section symbols are mapped based on their output sections
   // to maintain their semantics.
-  if (sym->type == STT_SECTION)
-    return sectionIndexMap.lookup(sym->getOutputSection());
-  return symbolIndexMap.lookup(sym);
+  if (sym.type == STT_SECTION)
+    return sectionIndexMap.lookup(sym.getOutputSection());
+  return symbolIndexMap.lookup(&sym);
 }
 
 template <class ELFT>
@@ -2427,7 +2427,7 @@ void GnuHashTableSection::writeTo(uint8_t *buf) {
     // Write a hash bucket. Hash buckets contain indices in the following hash
     // value table.
     write32(buckets + i->bucketIdx,
-            getPartition().dynSymTab->getSymbolIndex(i->sym));
+            getPartition().dynSymTab->getSymbolIndex(*i->sym));
     oldBucket = i->bucketIdx;
   }
 }
