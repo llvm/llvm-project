@@ -10,8 +10,6 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_PIPE2_H
 #define LLVM_LIBC_SRC_UNISTD_PIPE2_H
 
-#include <unistd.h>
-
 namespace LIBC_NAMESPACE {
 
 int pipe2(int pipefd[2], int flags);

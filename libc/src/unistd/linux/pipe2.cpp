@@ -11,8 +11,8 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-
 #include "src/errno/libc_errno.h"
+
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE {
@@ -26,7 +26,7 @@ LLVM_LIBC_FUNCTION(int, pipe2, (int pipefd[2], int flags)) {
 #else
 #error "pipe and pipe2 not available."
 #endif
-  if (ret == -1) {
+  if (ret < 0) {
     libc_errno = -ret;
     return -1;
   }

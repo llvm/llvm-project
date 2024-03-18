@@ -46,7 +46,7 @@ TEST(LlvmLibcPipe2Test, ReadAndWriteViaPipe2) {
   ASSERT_ERRNO_SUCCESS();
 }
 
-TEST(LlvmLibcPipe2Test, Pipe2InvalidFlags) {
+TEST(LlvmLibcPipe2Test,Pipe2InvalidFlags) {
   int invalidflags = O_CREAT | O_PATH | O_SYNC;
   int pipefd[2];
 
