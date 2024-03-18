@@ -7,8 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-types/FILE.h"
 #include "src/stdio/fileno.h"
+
+#include "include/llvm-libc-types/FILE.h"
 #include "src/__support/File/file.h"
 
 namespace LIBC_NAMESPACE {
