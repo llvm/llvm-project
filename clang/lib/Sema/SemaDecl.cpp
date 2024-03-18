@@ -11916,6 +11916,10 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
   if (NewTA && S.getASTContext().getTargetInfo().getTriple().isAArch64())
     return false;
 
+  // Target attribute on RISCV is not used for multiversioning
+  if (NewTA && S.getASTContext().getTargetInfo().getTriple().isRISCV())
+    return false;
+
   if (!OldDecl || !OldDecl->getAsFunction() ||
       OldDecl->getDeclContext()->getRedeclContext() !=
           NewFD->getDeclContext()->getRedeclContext()) {
