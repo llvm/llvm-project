@@ -12620,10 +12620,13 @@ gentbl_cc_library(
 cc_library(
     name = "ArithDialect",
     srcs = [
+        "include/mlir/Interfaces/ValueBoundsOpInterface.h",
         "lib/Dialect/Arith/IR/ArithDialect.cpp",
         "lib/Dialect/Arith/IR/ArithOps.cpp",
         "lib/Dialect/Arith/IR/InferIntRangeInterfaceImpls.cpp",
-    ],
+    ] + glob([
+        "include/mlir/Analysis/**/*.h",
+    ]),
     hdrs = [
         "include/mlir/Dialect/Arith/IR/Arith.h",
     ],
@@ -12636,14 +12639,18 @@ cc_library(
         ":BufferizationInterfaces",
         ":CastInterfaces",
         ":CommonFolders",
+        ":ControlFlowInterfaces",
         ":ConvertToLLVMInterface",
+        ":DestinationStyleOpInterface",
         ":IR",
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":Pass",
         ":Support",
         ":UBDialect",
+        ":ValueBoundsOpInterfaceIncGen",
         ":VectorInterfaces",
         "//llvm:Support",
     ],
