@@ -21,7 +21,8 @@ using namespace TestUtils;
 struct test_is_sorted
 {
     template <typename Policy, typename Iterator>
-    void operator()(Policy&& exec, Iterator first, Iterator last, bool exam)
+    void
+    operator()(Policy&& exec, Iterator first, Iterator last, bool exam)
     {
         using namespace std;
         typedef typename std::iterator_traits<Iterator>::value_type T;
@@ -45,7 +46,8 @@ struct test_is_sorted
 };
 
 template <typename T>
-void test_is_sorted_by_type()
+void
+test_is_sorted_by_type()
 {
     Sequence<T> in(99999, [](size_t v) -> T { return T(v); });
     // fill 0..n
@@ -75,14 +77,16 @@ template <typename Iterator>
 struct test_non_const
 {
     template <typename Policy>
-    void operator()(Policy&& exec, Iterator iter)
+    void
+    operator()(Policy&& exec, Iterator iter)
     {
         is_sorted(exec, iter, iter, std::less<>());
         is_sorted_until(exec, iter, iter, std::less<>());
     }
 };
 
-int main()
+int
+main()
 {
     test_is_sorted_by_type<int>();
     test_is_sorted_by_type<double>();
