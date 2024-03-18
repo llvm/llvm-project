@@ -11707,7 +11707,7 @@ def err_coroutine_promise_new_requires_nothrow : Error<
 def note_coroutine_promise_call_implicitly_required : Note<
   "call to %0 implicitly required by coroutine function here">;
 def err_await_suspend_invalid_return_type : Error<
-  "return type of 'await_suspend' is required to be 'void' or 'bool' (have %0)"
+  "return type of 'await_suspend' is required to be 'void', 'bool', or 'std::coroutine_handle' (have %0)"
 >;
 def note_await_ready_no_bool_conversion : Note<
   "return type of 'await_ready' is required to be contextually convertible to 'bool'"

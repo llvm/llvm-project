@@ -1005,12 +1005,24 @@ coro<promise_no_return_func> no_return_value_or_return_void_3() {
   co_return 43; // expected-error {{no member named 'return_value'}}
 }
 
-struct bad_await_suspend_return {
+struct non_trivial_destruction_type {
+  ~non_trivial_destruction_type();
+};
+
+struct bad_await_suspend_return_1 {
   bool await_ready();
-  // expected-error@+1 {{return type of 'await_suspend' is required to be 'void' or 'bool' (have 'char')}}
+  // expected-error@+1 {{return type of 'await_suspend' is required to be 'void', 'bool', or 'std::coroutine_handle' (have 'char')}}
   char await_suspend(std::coroutine_handle<>);
   void await_resume();
 };
+
+struct bad_await_suspend_return_2 {
+  bool await_ready();
+  // expected-error@+1 {{return type of 'await_suspend' is required to be 'void', 'bool', or 'std::coroutine_handle' (have 'non_trivial_destruction_type')}}
+  non_trivial_destruction_type await_suspend(std::coroutine_handle<>);
+  void await_resume();
+};
+
 struct bad_await_ready_return {
   // expected-note@+1 {{return type of 'await_ready' is required to be contextually convertible to 'bool'}}
   void await_ready();
@@ -1028,8 +1040,8 @@ struct await_ready_explicit_bool {
 template <class SuspendTy>
 struct await_suspend_type_test {
   bool await_ready();
-  // expected-error@+2 {{return type of 'await_suspend' is required to be 'void' or 'bool' (have 'bool &')}}
-  // expected-error@+1 {{return type of 'await_suspend' is required to be 'void' or 'bool' (have 'bool &&')}}
+  // expected-error@+2 {{return type of 'await_suspend' is required to be 'void', 'bool', or 'std::coroutine_handle' (have 'bool &')}}
+  // expected-error@+1 {{return type of 'await_suspend' is required to be 'void', 'bool', or 'std::coroutine_handle' (have 'bool &&')}}
   SuspendTy await_suspend(std::coroutine_handle<>);
   // cxx20_23-warning@-1 {{volatile-qualified return type 'const volatile bool' is deprecated}}
   void await_resume();
@@ -1042,8 +1054,12 @@ void test_bad_suspend() {
     co_await a; // expected-note {{call to 'await_ready' implicitly required by coroutine function here}}
   }
   {
-    bad_await_suspend_return b;
-    co_await b; // expected-note {{call to 'await_suspend' implicitly required by coroutine function here}}
+    bad_await_suspend_return_1 b1;
+    co_await b1; // expected-note {{call to 'await_suspend' implicitly required by coroutine function here}}
+  }
+  {
+    bad_await_suspend_return_2 b2;
+    co_await b2; // expected-note {{call to 'await_suspend' implicitly required by coroutine function here}}
   }
   {
     await_ready_explicit_bool c;

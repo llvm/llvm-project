@@ -137,12 +137,8 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
   return PromiseType;
 }
 
-/// Look up the std::coroutine_handle<PromiseType>.
-static QualType lookupCoroutineHandleType(Sema &S, QualType PromiseType,
-                                          SourceLocation Loc) {
-  if (PromiseType.isNull())
-    return QualType();
-
+static ClassTemplateDecl *lookupCoroutineHandleTemplate(Sema &S,
+                                                        SourceLocation Loc) {
   NamespaceDecl *CoroNamespace = S.getStdNamespace();
   assert(CoroNamespace && "Should already be diagnosed");
 
@@ -151,17 +147,31 @@ static QualType lookupCoroutineHandleType(Sema &S, QualType PromiseType,
   if (!S.LookupQualifiedName(Result, CoroNamespace)) {
     S.Diag(Loc, diag::err_implied_coroutine_type_not_found)
         << "std::coroutine_handle";
-    return QualType();
+    return nullptr;
   }
 
-  ClassTemplateDecl *CoroHandle = Result.getAsSingle<ClassTemplateDecl>();
+  auto *CoroHandle = Result.getAsSingle<ClassTemplateDecl>();
+
   if (!CoroHandle) {
     Result.suppressDiagnostics();
     // We found something weird. Complain about the first thing we found.
     NamedDecl *Found = *Result.begin();
     S.Diag(Found->getLocation(), diag::err_malformed_std_coroutine_handle);
-    return QualType();
+    return nullptr;
   }
+
+  return CoroHandle;
+}
+
+/// Look up the std::coroutine_handle<PromiseType>.
+static QualType lookupCoroutineHandleType(Sema &S, QualType PromiseType,
+                                          SourceLocation Loc) {
+  if (PromiseType.isNull())
+    return QualType();
+
+  ClassTemplateDecl *CoroHandle = lookupCoroutineHandleTemplate(S, Loc);
+  if (!CoroHandle)
+    return QualType();
 
   // Form template argument list for coroutine_handle<Promise>.
   TemplateArgumentListInfo Args(Loc, Loc);
@@ -331,15 +341,11 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
 // coroutine.
 static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
                            SourceLocation Loc) {
-  if (RetType->isReferenceType())
-    return nullptr;
+  assert(!RetType->isReferenceType() &&
+         "Should have diagnosed reference types.");
   Type const *T = RetType.getTypePtr();
   if (!T->isClassType() && !T->isStructureType())
     return nullptr;
-
-  // FIXME: Add convertability check to coroutine_handle<>. Possibly via
-  // EvaluateBinaryTypeTrait(BTT_IsConvertible, ...) which is at the moment
-  // a private function in SemaExprCXX.cpp
 
   ExprResult AddressExpr = buildMemberCall(S, E, Loc, "address", std::nullopt);
   if (AddressExpr.isInvalid())
@@ -356,6 +362,30 @@ static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
   // Clean up temporary objects, because the resulting expression
   // will become the body of await_suspend wrapper.
   return S.MaybeCreateExprWithCleanups(JustAddress);
+}
+
+static bool isSpecializationOfCoroutineHandle(Sema &S, QualType Ty,
+                                              SourceLocation Loc) {
+  auto *CoroutineHandleClassTemplateDecl =
+      lookupCoroutineHandleTemplate(S, Loc);
+
+  if (!CoroutineHandleClassTemplateDecl)
+    return false;
+
+  auto *RecordTy = Ty->getAs<RecordType>();
+  if (!RecordTy)
+    return false;
+
+  auto *D = RecordTy->getDecl();
+  if (!D)
+    return false;
+
+  auto *SpecializationDecl = dyn_cast<ClassTemplateSpecializationDecl>(D);
+  if (!SpecializationDecl)
+    return false;
+
+  return CoroutineHandleClassTemplateDecl->getCanonicalDecl() ==
+         SpecializationDecl->getSpecializedTemplate()->getCanonicalDecl();
 }
 
 /// Build calls to await_ready, await_suspend, and await_resume for a co_await
@@ -418,39 +448,60 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     return Calls;
   }
   Expr *CoroHandle = CoroHandleRes.get();
-  CallExpr *AwaitSuspend = cast_or_null<CallExpr>(
-      BuildSubExpr(ACT::ACT_Suspend, "await_suspend", CoroHandle));
+  auto *AwaitSuspend = [&]() -> CallExpr * {
+    auto *SubExpr = BuildSubExpr(ACT::ACT_Suspend, "await_suspend", CoroHandle);
+    if (!SubExpr)
+      return nullptr;
+    if (auto *E = dyn_cast<CXXBindTemporaryExpr>(SubExpr)) {
+      // This happens when await_suspend return type is not trivially
+      // destructible. This doesn't happen for the permitted return types of
+      // such function. Diagnose it later.
+      return cast_or_null<CallExpr>(E->getSubExpr());
+    } else {
+      return cast_or_null<CallExpr>(SubExpr);
+    }
+  }();
+
   if (!AwaitSuspend)
     return Calls;
+
   if (!AwaitSuspend->getType()->isDependentType()) {
+    auto InvalidAwaitSuspendReturnType = [&](QualType RetType) {
+      // non-class prvalues always have cv-unqualified types
+      S.Diag(AwaitSuspend->getCalleeDecl()->getLocation(),
+             diag::err_await_suspend_invalid_return_type)
+          << RetType;
+      S.Diag(Loc, diag::note_coroutine_promise_call_implicitly_required)
+          << AwaitSuspend->getDirectCallee();
+      Calls.IsInvalid = true;
+    };
+
     // [expr.await]p3 [...]
     //   - await-suspend is the expression e.await_suspend(h), which shall be
     //     a prvalue of type void, bool, or std::coroutine_handle<Z> for some
     //     type Z.
     QualType RetType = AwaitSuspend->getCallReturnType(S.Context);
 
-    // Support for coroutine_handle returning await_suspend.
-    if (Expr *TailCallSuspend =
-            maybeTailCall(S, RetType, AwaitSuspend, Loc))
+    if (RetType->isReferenceType()) {
+      InvalidAwaitSuspendReturnType(RetType);
+    } else if (RetType->isBooleanType() || RetType->isVoidType()) {
+      Calls.Results[ACT::ACT_Suspend] =
+          S.MaybeCreateExprWithCleanups(AwaitSuspend);
+    } else if (isSpecializationOfCoroutineHandle(S, RetType, Loc)) {
+      // Support for coroutine_handle returning await_suspend.
+      //
       // Note that we don't wrap the expression with ExprWithCleanups here
       // because that might interfere with tailcall contract (e.g. inserting
       // clean up instructions in-between tailcall and return). Instead
       // ExprWithCleanups is wrapped within maybeTailCall() prior to the resume
       // call.
-      Calls.Results[ACT::ACT_Suspend] = TailCallSuspend;
-    else {
-      // non-class prvalues always have cv-unqualified types
-      if (RetType->isReferenceType() ||
-          (!RetType->isBooleanType() && !RetType->isVoidType())) {
-        S.Diag(AwaitSuspend->getCalleeDecl()->getLocation(),
-               diag::err_await_suspend_invalid_return_type)
-            << RetType;
-        S.Diag(Loc, diag::note_coroutine_promise_call_implicitly_required)
-            << AwaitSuspend->getDirectCallee();
-        Calls.IsInvalid = true;
-      } else
-        Calls.Results[ACT::ACT_Suspend] =
-            S.MaybeCreateExprWithCleanups(AwaitSuspend);
+      Expr *TailCallSuspend = maybeTailCall(S, RetType, AwaitSuspend, Loc);
+      if (TailCallSuspend)
+        Calls.Results[ACT::ACT_Suspend] = TailCallSuspend;
+      else
+        InvalidAwaitSuspendReturnType(RetType);
+    } else {
+      InvalidAwaitSuspendReturnType(RetType);
     }
   }
 
