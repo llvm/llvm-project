@@ -15,6 +15,7 @@ using namespace ast_matchers;
 class IsCLibraryFunctionTest : public testing::Test {
   std::unique_ptr<ASTUnit> ASTUnitP;
   const FunctionDecl *Result = nullptr;
+
 public:
   const FunctionDecl *getFunctionDecl() const { return Result; }
 
@@ -51,7 +52,8 @@ TEST_F(IsCLibraryFunctionTest, AcceptsExternCGlobal) {
 }
 
 TEST_F(IsCLibraryFunctionTest, RejectsNoInlineNoExternalLinkage) {
-  // Functions that are neither inlined nor externally visible cannot be C library functions.
+  // Functions that are neither inlined nor externally visible cannot be C
+  // library functions.
   ASSERT_TRUE(buildAST(R"cpp(static void fun();)cpp"));
   EXPECT_FALSE(CheckerContext::isCLibraryFunction(getFunctionDecl()));
 }
