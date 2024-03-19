@@ -42,8 +42,8 @@ def TestBothFusionPredicate: Fusion<"test-both-fusion-predicate", "HasBothFusion
 def TestFusion: SimpleFusion<"test-fusion", "HasTestFusion", "Test Fusion",
                              CheckOpcode<[Inst0]>,
                              CheckAll<[
-                              CheckOpcode<[Inst1]>,
-                              CheckRegOperand<0, X0>
+                               CheckOpcode<[Inst1]>,
+                               CheckRegOperand<0, X0>
                              ]>>;
 
 let IsCommutable = 1 in
@@ -51,8 +51,8 @@ def TestCommutableFusion: SimpleFusion<"test-commutable-fusion", "HasTestCommuta
                                        "Test Commutable Fusion",
                                        CheckOpcode<[Inst0]>,
                                        CheckAll<[
-                                        CheckOpcode<[Inst1]>,
-                                        CheckRegOperand<0, X0>
+                                         CheckOpcode<[Inst1]>,
+                                         CheckRegOperand<0, X0>
                                        ]>>;
 
 // CHECK-PREDICATOR:       #ifdef GET_Test_MACRO_FUSION_PRED_DECL
@@ -177,6 +177,8 @@ def TestCommutableFusion: SimpleFusion<"test-commutable-fusion", "HasTestCommuta
 // CHECK-PREDICATOR-NEXT:  #endif
 
 // Check that we have generated target subfeature.
+// CHECK-SUBTARGET: { "test-both-fusion-predicate", "Test BothFusionPredicate", Test::TestBothFusionPredicate
+// CHECK-SUBTARGET: { "test-commutable-fusion", "Test Commutable Fusion", Test::TestCommutableFusion
 // CHECK-SUBTARGET: { "test-fusion", "Test Fusion", Test::TestFusion
 
 // Check that we have generated `getMacroFusions()` function.
