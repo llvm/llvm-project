@@ -17,7 +17,7 @@
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 namespace LIBC_NAMESPACE {
 namespace testing {
@@ -102,8 +102,10 @@ template <typename T> struct FPTest : public Test {
   const T inf = FPBits::inf(Sign::POS).get_val();                              \
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();                          \
   const T min_normal = FPBits::min_normal().get_val();                         \
-  const T max_normal = FPBits::max_normal().get_val();                         \
-  const T min_denormal = FPBits::min_subnormal().get_val();                    \
+  const T max_normal = FPBits::max_normal(Sign::POS).get_val();                \
+  const T neg_max_normal = FPBits::max_normal(Sign::NEG).get_val();            \
+  const T min_denormal = FPBits::min_subnormal(Sign::POS).get_val();           \
+  const T neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();       \
   const T max_denormal = FPBits::max_subnormal().get_val();
 
 #define EXPECT_FP_EQ(expected, actual)                                         \

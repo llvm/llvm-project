@@ -255,7 +255,7 @@ struct ObjCImageInfoFlags {
 namespace llvm {
 namespace orc {
 
-MachOPlatform::HeaderOptions::BuildVersionOpts
+std::optional<MachOPlatform::HeaderOptions::BuildVersionOpts>
 MachOPlatform::HeaderOptions::BuildVersionOpts::fromTriple(const Triple &TT,
                                                            uint32_t MinOS,
                                                            uint32_t SDK) {
@@ -263,26 +263,25 @@ MachOPlatform::HeaderOptions::BuildVersionOpts::fromTriple(const Triple &TT,
   uint32_t Platform;
   switch (TT.getOS()) {
   case Triple::IOS:
-    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_IOS
-                                           : MachO::PLATFORM_IOSSIMULATOR;
+    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_IOSSIMULATOR
+                                           : MachO::PLATFORM_IOS;
     break;
   case Triple::MacOSX:
     Platform = MachO::PLATFORM_MACOS;
     break;
   case Triple::TvOS:
-    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_TVOS
-                                           : MachO::PLATFORM_TVOSSIMULATOR;
+    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_TVOSSIMULATOR
+                                           : MachO::PLATFORM_TVOS;
     break;
   case Triple::WatchOS:
-    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_WATCHOS
-                                           : MachO::PLATFORM_WATCHOSSIMULATOR;
+    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_WATCHOSSIMULATOR
+                                           : MachO::PLATFORM_WATCHOS;
     break;
   default:
-    Platform = MachO::PLATFORM_UNKNOWN;
-    break;
+    return std::nullopt;
   }
 
-  return {Platform, MinOS, SDK};
+  return MachOPlatform::HeaderOptions::BuildVersionOpts{Platform, MinOS, SDK};
 }
 
 Expected<std::unique_ptr<MachOPlatform>> MachOPlatform::Create(
@@ -1725,11 +1724,9 @@ jitlink::Block &createHeaderBlock(MachOPlatform &MOP,
   else
     B.template addLoadCommand<MachO::LC_ID_DYLIB>(JD.getName(), 0, 0, 0);
 
-  if (Opts.BuildVersion)
+  for (auto &BV : Opts.BuildVersions)
     B.template addLoadCommand<MachO::LC_BUILD_VERSION>(
-        Opts.BuildVersion->Platform, Opts.BuildVersion->MinOS,
-        Opts.BuildVersion->SDK, static_cast<uint32_t>(0));
-
+        BV.Platform, BV.MinOS, BV.SDK, static_cast<uint32_t>(0));
   for (auto &D : Opts.LoadDylibs)
     B.template addLoadCommand<MachO::LC_LOAD_DYLIB>(
         D.Name, D.Timestamp, D.CurrentVersion, D.CompatibilityVersion);

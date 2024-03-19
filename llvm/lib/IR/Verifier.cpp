@@ -682,9 +682,9 @@ void Verifier::visitDbgRecords(Instruction &I) {
     return;
   CheckDI(I.DbgMarker->MarkedInstr == &I, "Instruction has invalid DbgMarker",
           &I);
-  CheckDI(!isa<PHINode>(&I) || !I.hasDbgValues(),
+  CheckDI(!isa<PHINode>(&I) || !I.hasDbgRecords(),
           "PHI Node must not have any attached DbgRecords", &I);
-  for (DbgRecord &DR : I.getDbgValueRange()) {
+  for (DbgRecord &DR : I.getDbgRecordRange()) {
     CheckDI(DR.getMarker() == I.DbgMarker, "DbgRecord had invalid DbgMarker",
             &I, &DR);
     if (auto *Loc =
@@ -2691,6 +2691,11 @@ void Verifier::visitFunction(const Function &F) {
   Check(verifyAttributeCount(Attrs, FT->getNumParams()),
         "Attribute after last parameter!", &F);
 
+  CheckDI(F.IsNewDbgInfoFormat == F.getParent()->IsNewDbgInfoFormat,
+          "Function debug format should match parent module", &F,
+          F.IsNewDbgInfoFormat, F.getParent(),
+          F.getParent()->IsNewDbgInfoFormat);
+
   bool IsIntrinsic = F.isIntrinsic();
 
   // Check function attributes.
@@ -3034,9 +3039,14 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
     Check(I.getParent() == &BB, "Instruction has bogus parent pointer!");
   }
 
+  CheckDI(BB.IsNewDbgInfoFormat == BB.getParent()->IsNewDbgInfoFormat,
+          "BB debug format should match parent function", &BB,
+          BB.IsNewDbgInfoFormat, BB.getParent(),
+          BB.getParent()->IsNewDbgInfoFormat);
+
   // Confirm that no issues arise from the debug program.
   if (BB.IsNewDbgInfoFormat)
-    CheckDI(!BB.getTrailingDPValues(), "Basic Block has trailing DbgRecords!",
+    CheckDI(!BB.getTrailingDbgRecords(), "Basic Block has trailing DbgRecords!",
             &BB);
 }
 
@@ -4999,6 +5009,9 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::seh_scope_end ||
                 F->getIntrinsicID() == Intrinsic::coro_resume ||
                 F->getIntrinsicID() == Intrinsic::coro_destroy ||
+                F->getIntrinsicID() == Intrinsic::coro_await_suspend_void ||
+                F->getIntrinsicID() == Intrinsic::coro_await_suspend_bool ||
+                F->getIntrinsicID() == Intrinsic::coro_await_suspend_handle ||
                 F->getIntrinsicID() ==
                     Intrinsic::experimental_patchpoint_void ||
                 F->getIntrinsicID() == Intrinsic::experimental_patchpoint_i64 ||
@@ -5249,6 +5262,29 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       } else if (Attribute::canUseAsFnAttr(Kind)) {
         Check((ArgCount) == 0, "this attribute has no argument", Call);
       }
+    }
+    break;
+  }
+  case Intrinsic::ucmp:
+  case Intrinsic::scmp: {
+    Type *SrcTy = Call.getOperand(0)->getType();
+    Type *DestTy = Call.getType();
+
+    Check(DestTy->getScalarSizeInBits() >= 2,
+          "result type must be at least 2 bits wide", Call);
+
+    bool IsDestTypeVector = DestTy->isVectorTy();
+    Check(SrcTy->isVectorTy() == IsDestTypeVector,
+          "ucmp/scmp argument and result types must both be either vector or "
+          "scalar types",
+          Call);
+    if (IsDestTypeVector) {
+      auto SrcVecLen = cast<VectorType>(SrcTy)->getElementCount();
+      auto DestVecLen = cast<VectorType>(DestTy)->getElementCount();
+      Check(SrcVecLen == DestVecLen,
+            "return type and arguments must have the same number of "
+            "elements",
+            Call);
     }
     break;
   }

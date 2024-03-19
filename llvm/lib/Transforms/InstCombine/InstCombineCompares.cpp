@@ -1962,6 +1962,17 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
     return BinaryOperator::CreateAnd(TruncY, X);
   }
 
+  // (icmp eq/ne (and (shl -1, X), Y), 0)
+  //    -> (icmp eq/ne (lshr Y, X), 0)
+  // We could technically handle any C == 0 or (C < 0 && isOdd(C)) but it seems
+  // highly unlikely the non-zero case will ever show up in code.
+  if (C.isZero() &&
+      match(And, m_OneUse(m_c_And(m_OneUse(m_Shl(m_AllOnes(), m_Value(X))),
+                                  m_Value(Y))))) {
+    Value *LShr = Builder.CreateLShr(Y, X);
+    return new ICmpInst(Pred, LShr, Constant::getNullValue(LShr->getType()));
+  }
+
   return nullptr;
 }
 
@@ -4102,9 +4113,12 @@ static bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
     if (match(V, m_Not(m_Value(X))))
       return isMaskOrZero(X, !Not, Q, Depth);
 
+    // (X ^ -X) is a ~Mask
+    if (Not)
+      return match(V, m_c_Xor(m_Value(X), m_Neg(m_Deferred(X))));
     // (X ^ (X - 1)) is a Mask
-    return !Not &&
-           match(V, m_c_Xor(m_Value(X), m_Add(m_Deferred(X), m_AllOnes())));
+    else
+      return match(V, m_c_Xor(m_Value(X), m_Add(m_Deferred(X), m_AllOnes())));
   case Instruction::Select:
     // c ? Mask0 : Mask1 is a Mask.
     return isMaskOrZero(I->getOperand(1), Not, Q, Depth) &&
