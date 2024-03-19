@@ -18,6 +18,8 @@
 namespace clang {
 namespace format {
 
+bool IsCpp = false;
+
 const char *getTokenTypeName(TokenType Type) {
   static const char *const TokNames[] = {
 #define TYPE(X) #X,
