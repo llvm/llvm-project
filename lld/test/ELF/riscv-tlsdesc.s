@@ -29,6 +29,12 @@
 # RUN: ld.lld -e 0 -z now a.32.o c.32.so -o a.32.ie
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d a.32.ie | FileCheck %s --check-prefix=IE32
 
+# RUN: llvm-mc -triple=riscv64 --position-independent -filetype=obj d.s -o d.64.o
+# RUN: not ld.lld -shared -soname=libd.64.so -o libd.64.so d.64.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL
+
+# RUN: llvm-mc -triple=riscv32 --position-independent -filetype=obj d.s -o d.32.o
+# RUN: not ld.lld -shared -soname=libd.32.so -o libd.32.so d.32.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL
+
 # GD64-RELA:      .rela.dyn {
 # GD64-RELA-NEXT:   0x2408 R_RISCV_TLSDESC - 0x7FF
 # GD64-RELA-NEXT:   0x23E8 R_RISCV_TLSDESC a 0x0
@@ -150,6 +156,9 @@
 # IE32-NEXT:         lw      a0, 0x80(a0)
 # IE32-NEXT:         add     a0, a0, tp
 
+## FIXME This should not pass, but the code MC layer needs a fix to prevent this.
+# BADTLSLABEL: error: d.{{.*}}.o has an STT_TLS symbol but doesn't have an SHF_TLS section
+
 #--- a.s
 .macro load dst, src
 .ifdef ELF32
@@ -192,3 +201,31 @@ b:
 .tbss
 .globl c
 c: .zero 4
+
+#--- d.s
+  .text
+  .attribute	4, 16
+  .attribute	5, "rv64i2p1_m2p0_a2p1_c2p0"
+  .globl	bar
+  .p2align	1
+  .type	bar,@function
+bar:
+  addi	sp, sp, -16
+.Lpcrel_hi0:
+  auipc	a0, %got_pcrel_hi(_ZTH3foo)
+  ld	a0, %pcrel_lo(.Lpcrel_hi0)(a0)
+  beqz	a0, .Ltlsdesc_hi0
+  call	_ZTH3foo
+.Ltlsdesc_hi0:
+  auipc	a0, %tlsdesc_hi(foo)
+  ld	a1, %tlsdesc_load_lo(.Ltlsdesc_hi0)(a0)
+  addi	a0, a0, %tlsdesc_add_lo(.Ltlsdesc_hi0)
+  jalr	t0, 0(a1), %tlsdesc_call(.Ltlsdesc_hi0)
+  add	a1, a0, tp
+  lw	a0, 0(a1)
+  addiw	a0, a0, 1
+  sw	a0, 0(a1)
+  addi	sp, sp, 16
+  ret
+
+.weak _ZTH3foo
