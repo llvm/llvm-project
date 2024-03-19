@@ -2641,8 +2641,8 @@ define float @assume_false_smallest_normal(float %arg) {
 }
 
 define float @clamp_false_nan(float %arg) {
-; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @clamp_false_nan(
-; CHECK-SAME: float returned nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define float @clamp_false_nan(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fcmp = fcmp false float %arg, 0x7FF8000000000000
@@ -2784,12 +2784,12 @@ define float @clamp_true_smallest_normal_0.0(float %arg) {
 }
 
 define float @clamp_true_nan(float %arg) {
-; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub norm) float @clamp_true_nan(
-; CHECK-SAME: float nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-LABEL: define float @clamp_true_nan(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fcmp = fcmp true float %arg, 0x7FF8000000000000
-  %select = select i1 %fcmp, float 0.0, float %arg
+  %select = select i1 %fcmp, float %arg, float 0.0
   ret float %select
 }
 
