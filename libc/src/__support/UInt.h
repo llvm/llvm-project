@@ -14,10 +14,10 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/attributes.h"       // LIBC_INLINE
-#include "src/__support/macros/optimization.h"     // LIBC_UNLIKELY
-#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
-#include "src/__support/math_extras.h"             // SumCarry, DiffBorrow
+#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128, LIBC_TYPES_HAS_INT64
+#include "src/__support/math_extras.h" // SumCarry, DiffBorrow
 #include "src/__support/number_pair.h"
 
 #include <stddef.h> // For size_t
@@ -940,11 +940,11 @@ namespace internal {
 // availability.
 template <size_t Bits>
 struct WordTypeSelector : cpp::type_identity<
-#if defined(UINT64_MAX)
+#ifdef LIBC_TYPES_HAS_INT64
                               uint64_t
 #else
                               uint32_t
-#endif
+#endif // LIBC_TYPES_HAS_INT64
                               > {
 };
 // Except if we request 32 bits explicitly.
@@ -992,6 +992,68 @@ struct is_big_int<BigInt<Bits, Signed, T>> : cpp::true_type {};
 
 template <class T>
 LIBC_INLINE_VAR constexpr bool is_big_int_v = is_big_int<T>::value;
+
+// extensions of type traits to include BigInt
+
+// is_integral_or_big_int
+template <typename T>
+struct is_integral_or_big_int
+    : cpp::bool_constant<(cpp::is_integral_v<T> || is_big_int_v<T>)> {};
+
+template <typename T>
+LIBC_INLINE_VAR constexpr bool is_integral_or_big_int_v =
+    is_integral_or_big_int<T>::value;
+
+// make_big_int_unsigned
+template <typename T> struct make_big_int_unsigned;
+
+template <size_t Bits, bool Signed, typename T>
+struct make_big_int_unsigned<BigInt<Bits, Signed, T>>
+    : cpp::type_identity<BigInt<Bits, false, T>> {};
+
+template <typename T>
+using make_big_int_unsigned_t = typename make_big_int_unsigned<T>::type;
+
+// make_big_int_signed
+template <typename T> struct make_big_int_signed;
+
+template <size_t Bits, bool Signed, typename T>
+struct make_big_int_signed<BigInt<Bits, Signed, T>>
+    : cpp::type_identity<BigInt<Bits, true, T>> {};
+
+template <typename T>
+using make_big_int_signed_t = typename make_big_int_signed<T>::type;
+
+// make_integral_or_big_int_unsigned
+template <typename T, class = void> struct make_integral_or_big_int_unsigned;
+
+template <typename T>
+struct make_integral_or_big_int_unsigned<
+    T, cpp::enable_if_t<cpp::is_integral_v<T>>> : cpp::make_unsigned<T> {};
+
+template <typename T>
+struct make_integral_or_big_int_unsigned<T, cpp::enable_if_t<is_big_int_v<T>>>
+    : make_big_int_unsigned<T> {};
+
+template <typename T>
+using make_integral_or_big_int_unsigned_t =
+    typename make_integral_or_big_int_unsigned<T>::type;
+
+// make_integral_or_big_int_signed
+template <typename T, class = void> struct make_integral_or_big_int_signed;
+
+template <typename T>
+struct make_integral_or_big_int_signed<T,
+                                       cpp::enable_if_t<cpp::is_integral_v<T>>>
+    : cpp::make_signed<T> {};
+
+template <typename T>
+struct make_integral_or_big_int_signed<T, cpp::enable_if_t<is_big_int_v<T>>>
+    : make_big_int_signed<T> {};
+
+template <typename T>
+using make_integral_or_big_int_signed_t =
+    typename make_integral_or_big_int_signed<T>::type;
 
 namespace cpp {
 

@@ -500,6 +500,23 @@ void AffineScopeOp::print(OpAsmPrinter &p) {
 }
 
 //===----------------------------------------------------------------------===//
+// Test OptionalCustomAttrOp
+//===----------------------------------------------------------------------===//
+
+static OptionalParseResult parseOptionalCustomParser(AsmParser &p,
+                                                     IntegerAttr &result) {
+  if (succeeded(p.parseOptionalKeyword("foo")))
+    return p.parseAttribute(result);
+  return {};
+}
+
+static void printOptionalCustomParser(AsmPrinter &p, Operation *,
+                                      IntegerAttr result) {
+  p << "foo ";
+  p.printAttribute(result);
+}
+
+//===----------------------------------------------------------------------===//
 // Test removing op with inner ops.
 //===----------------------------------------------------------------------===//
 

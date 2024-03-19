@@ -6,11 +6,11 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 template <typename T>
 class FDimTestTemplate : public LIBC_NAMESPACE::testing::Test {
