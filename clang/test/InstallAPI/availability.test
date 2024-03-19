@@ -9,27 +9,30 @@
 ; RUN: -install_name /System/Library/Frameworks/Availability.framework/Versions/A/Availability \
 ; RUN: -current_version 1 -compatibility_version 1 \
 ; RUN: -F %t/System/Library/Frameworks \
-; RUN: %t/inputs.json -o output.tbd \
+; RUN: %t/inputs.json -o %t/output.tbd \
 ; RUN: --verify-against=%t/System/Library/Frameworks/Availability.framework/Availability \
-; RUN: --verify-mode=ErrorsOnly --filetype=tbd-v5 2>&1 | FileCheck -allow-empty -check-prefix=ERRORSONLY %s
+; RUN: --verify-mode=ErrorsOnly --filetype=tbd-v5 2> %t/errors.log
+; RUN: FileCheck -allow-empty -check-prefix=ERRORSONLY -input-file %t/errors.log %s
 
 ; RUN: clang-installapi \
 ; RUN: --target=x86_64-apple-macos13 \
 ; RUN: -install_name /System/Library/Frameworks/Availability.framework/Versions/A/Availability \
 ; RUN: -current_version 1 -compatibility_version 1 \
 ; RUN: -F %t/System/Library/Frameworks \
-; RUN: %t/inputs.json -o output-warnings.tbd \
+; RUN: %t/inputs.json -o %t/output-warnings.tbd \
 ; RUN: --verify-against=%t/System/Library/Frameworks/Availability.framework/Availability \
-; RUN: --verify-mode=ErrorsAndWarnings 2>&1 | FileCheck -check-prefixes=VIOLATIONS,ERRORSANDWARNINGS %s
+; RUN: --verify-mode=ErrorsAndWarnings 2> %t/errors.log
+; RUN: FileCheck -check-prefixes=VIOLATIONS,ERRORSANDWARNINGS -input-file %t/errors.log %s
 
 ; RUN: not clang-installapi \
 ; RUN: --target=x86_64-apple-macos13 \
 ; RUN: -install_name /System/Library/Frameworks/Availability.framework/Versions/A/Availability \
 ; RUN: -current_version 1 -compatibility_version 1 \
 ; RUN: -F %t/System/Library/Frameworks \
-; RUN: %t/inputs.json -o output-pedantic.tbd \
+; RUN: %t/inputs.json -o %t/output-pedantic.tbd \
 ; RUN: --verify-against=%t/System/Library/Frameworks/Availability.framework/Availability \
-; RUN: --verify-mode=Pedantic 2>&1 | FileCheck -check-prefixes=VIOLATIONS,PEDANTIC %s
+; RUN: --verify-mode=Pedantic 2> %t/errors.log
+; RUN: FileCheck -check-prefixes=VIOLATIONS,PEDANTIC -input-file %t/errors.log %s
 
 ; ERRORSONLY-NOT:        error
 ; ERRORSONLY-NOT:        warning
@@ -40,6 +43,8 @@
 ; VIOLATIONS-NEXT:       extern int publicGlobalVariable NS_AVAILABLE
 ; VIOLATIONS:            declaration 'Foo' is marked unavailable, but symbol is exported in dynamic library
 ; VIOLATIONS-NEXT:       @interface Foo : NSObject
+; VIOLATIONS:            declaration 'publicGlobalVariable3' is marked unavailable, but symbol is exported in dynamic library
+; VIOLATIONS-NEXT:       extern int publicGlobalVariable3 __attribute__((unavailable))
 ; VIOLATIONS:            declaration 'privateGlobalVariable' is marked unavailable, but symbol is exported in dynamic library
 ; VIOLATIONS-NEXT:       extern int privateGlobalVariable;
 

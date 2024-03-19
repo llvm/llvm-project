@@ -79,8 +79,11 @@ struct AvailabilityInfo {
   /// Check if the symbol has been obsoleted.
   bool isObsoleted() const { return !Obsoleted.empty(); }
 
-  /// Check if the symbol is unavailable for the active platform and os version.
-  bool isUnavailable() const { return Unavailable; }
+  /// Check if the symbol is unavailable unconditionally or
+  /// on the active platform and os version.
+  bool isUnavailable() const {
+    return Unavailable || isUnconditionallyUnavailable();
+  }
 
   /// Check if the symbol is unconditionally deprecated.
   ///
