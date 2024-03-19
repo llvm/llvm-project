@@ -69,7 +69,7 @@ struct PassConcept {
 template <typename IRUnitT, typename PassT, typename AnalysisManagerT,
           typename... ExtraArgTs>
 struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
-  explicit PassModel(PassT Pass) : Pass(std::move(Pass)) {}
+  explicit PassModel(PassT &&Pass) : Pass(std::move(Pass)) {}
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
   PassModel(const PassModel &Arg) : Pass(Arg.Pass) {}
@@ -198,7 +198,7 @@ template <typename IRUnitT, typename PassT, typename ResultT,
           typename InvalidatorT>
 struct AnalysisResultModel<IRUnitT, PassT, ResultT, InvalidatorT, false>
     : AnalysisResultConcept<IRUnitT, InvalidatorT> {
-  explicit AnalysisResultModel(ResultT Result) : Result(std::move(Result)) {}
+  explicit AnalysisResultModel(ResultT &&Result) : Result(std::move(Result)) {}
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
   AnalysisResultModel(const AnalysisResultModel &Arg) : Result(Arg.Result) {}
@@ -236,7 +236,7 @@ template <typename IRUnitT, typename PassT, typename ResultT,
           typename InvalidatorT>
 struct AnalysisResultModel<IRUnitT, PassT, ResultT, InvalidatorT, true>
     : AnalysisResultConcept<IRUnitT, InvalidatorT> {
-  explicit AnalysisResultModel(ResultT Result) : Result(std::move(Result)) {}
+  explicit AnalysisResultModel(ResultT &&Result) : Result(std::move(Result)) {}
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
   AnalysisResultModel(const AnalysisResultModel &Arg) : Result(Arg.Result) {}
@@ -290,7 +290,7 @@ template <typename IRUnitT, typename PassT, typename InvalidatorT,
           typename... ExtraArgTs>
 struct AnalysisPassModel
     : AnalysisPassConcept<IRUnitT, InvalidatorT, ExtraArgTs...> {
-  explicit AnalysisPassModel(PassT Pass) : Pass(std::move(Pass)) {}
+  explicit AnalysisPassModel(PassT &&Pass) : Pass(std::move(Pass)) {}
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
   AnalysisPassModel(const AnalysisPassModel &Arg) : Pass(Arg.Pass) {}
