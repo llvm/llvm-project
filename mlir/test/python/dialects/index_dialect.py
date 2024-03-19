@@ -16,7 +16,7 @@ def testConstantOp():
         module = Module.create()
         with InsertionPoint(module.body):
             a = index.ConstantOp(value=42)
-        # CHECK: %[[A:.*]] = index.constant 42
+        # CHECK: {{.*}} = index.constant 42
         print(module)
 
 
@@ -27,7 +27,7 @@ def testBoolConstantOp():
         module = Module.create()
         with InsertionPoint(module.body):
             a = index.BoolConstantOp(value=True)
-        # CHECK: %[[A:.*]] = index.bool.constant true
+        # CHECK: {{.*}} = index.bool.constant true
         print(module)
 
 
@@ -39,7 +39,7 @@ def testAndOp():
         with InsertionPoint(module.body):
             a = index.ConstantOp(value=42)
             r = index.AndOp(a, a)
-        # CHECK: %[[R:.*]] = index.and {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.and {{.*}}, {{.*}}
         print(module)
 
 
@@ -51,7 +51,7 @@ def testOrOp():
         with InsertionPoint(module.body):
             a = index.ConstantOp(value=42)
             r = index.OrOp(a, a)
-        # CHECK: %[[R:.*]] = index.or {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.or {{.*}}, {{.*}}
         print(module)
 
 
@@ -63,7 +63,7 @@ def testXOrOp():
         with InsertionPoint(module.body):
             a = index.ConstantOp(value=42)
             r = index.XOrOp(a, a)
-        # CHECK: %[[R:.*]] = index.xor {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.xor {{.*}}, {{.*}}
         print(module)
 
 
@@ -77,8 +77,8 @@ def testCastSOp():
             b = arith.ConstantOp(value=23, result=IntegerType.get_signless(64))
             c = index.CastSOp(input=a, output=IntegerType.get_signless(32))
             d = index.CastSOp(input=b, output=IndexType.get())
-        # CHECK: %[[C:.*]] = index.casts {{.*}} : index to i32
-        # CHECK: %[[D:.*]] = index.casts {{.*}} : i64 to index
+        # CHECK: {{.*}} = index.casts {{.*}} : index to i32
+        # CHECK: {{.*}} = index.casts {{.*}} : i64 to index
         print(module)
 
 
@@ -92,8 +92,8 @@ def testCastUOp():
             b = arith.ConstantOp(value=23, result=IntegerType.get_signless(64))
             c = index.CastUOp(input=a, output=IntegerType.get_signless(32))
             d = index.CastUOp(input=b, output=IndexType.get())
-        # CHECK: %[[C:.*]] = index.castu {{.*}} : index to i32
-        # CHECK: %[[D:.*]] = index.castu {{.*}} : i64 to index
+        # CHECK: {{.*}} = index.castu {{.*}} : index to i32
+        # CHECK: {{.*}} = index.castu {{.*}} : i64 to index
         print(module)
 
 
@@ -105,7 +105,7 @@ def testCeilDivSOp():
         with InsertionPoint(module.body):
             a = index.ConstantOp(value=42)
             r = index.CeilDivSOp(a, a)
-        # CHECK: %[[R:.*]] = index.ceildivs {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.ceildivs {{.*}}, {{.*}}
         print(module)
 
 
@@ -117,7 +117,7 @@ def testCeilDivUOp():
         with InsertionPoint(module.body):
             a = index.ConstantOp(value=42)
             r = index.CeilDivUOp(a, a)
-        # CHECK: %[[R:.*]] = index.ceildivu {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.ceildivu {{.*}}, {{.*}}
         print(module)
 
 
@@ -131,7 +131,7 @@ def testCmpOp():
             b = index.ConstantOp(value=23)
             pred = AttrBuilder.get("IndexCmpPredicateAttr")("slt", context=ctx)
             r = index.CmpOp(pred, lhs=a, rhs=b)
-        # CHECK: %[[R:.*]] = index.cmp slt({{.*}}, {{.*}})
+        # CHECK: {{.*}} = index.cmp slt({{.*}}, {{.*}})
         print(module)
 
 
@@ -143,7 +143,7 @@ def testAddOp():
         with InsertionPoint(module.body):
             a = index.ConstantOp(value=42)
             r = index.AddOp(a, a)
-        # CHECK: %[[R:.*]] = index.add {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.add {{.*}}, {{.*}}
         print(module)
 
 
@@ -155,7 +155,7 @@ def testSubOp():
         with InsertionPoint(module.body):
             a = index.ConstantOp(value=42)
             r = index.SubOp(a, a)
-        # CHECK: %[[R:.*]] = index.sub {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.sub {{.*}}, {{.*}}
         print(module)
 
 
@@ -167,7 +167,7 @@ def testMulOp():
         with InsertionPoint(module.body):
             a = index.ConstantOp(value=42)
             r = index.MulOp(a, a)
-        # CHECK: %[[R:.*]] = index.mul {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.mul {{.*}}, {{.*}}
         print(module)
 
 
@@ -179,7 +179,7 @@ def testDivSOp():
         with InsertionPoint(module.body):
             a = index.ConstantOp(value=42)
             r = index.DivSOp(a, a)
-        # CHECK: %[[R:.*]] = index.divs {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.divs {{.*}}, {{.*}}
         print(module)
 
 
@@ -191,7 +191,7 @@ def testDivUOp():
         with InsertionPoint(module.body):
             a = index.ConstantOp(value=42)
             r = index.DivUOp(a, a)
-        # CHECK: %[[R:.*]] = index.divu {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.divu {{.*}}, {{.*}}
         print(module)
 
 
@@ -203,7 +203,7 @@ def testFloorDivSOp():
         with InsertionPoint(module.body):
             a = index.ConstantOp(value=42)
             r = index.FloorDivSOp(a, a)
-        # CHECK: %[[R:.*]] = index.floordivs {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.floordivs {{.*}}, {{.*}}
         print(module)
 
 
@@ -216,7 +216,7 @@ def testMaxSOp():
             a = index.ConstantOp(value=42)
             b = index.ConstantOp(value=23)
             r = index.MaxSOp(a, b)
-        # CHECK: %[[R:.*]] = index.maxs {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.maxs {{.*}}, {{.*}}
         print(module)
 
 
@@ -229,7 +229,7 @@ def testMaxUOp():
             a = index.ConstantOp(value=42)
             b = index.ConstantOp(value=23)
             r = index.MaxUOp(a, b)
-        # CHECK: %[[R:.*]] = index.maxu {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.maxu {{.*}}, {{.*}}
         print(module)
 
 
@@ -242,7 +242,7 @@ def testMinSOp():
             a = index.ConstantOp(value=42)
             b = index.ConstantOp(value=23)
             r = index.MinSOp(a, b)
-        # CHECK: %[[R:.*]] = index.mins {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.mins {{.*}}, {{.*}}
         print(module)
 
 
@@ -255,7 +255,7 @@ def testMinUOp():
             a = index.ConstantOp(value=42)
             b = index.ConstantOp(value=23)
             r = index.MinUOp(a, b)
-        # CHECK: %[[R:.*]] = index.minu {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.minu {{.*}}, {{.*}}
         print(module)
 
 
@@ -268,7 +268,7 @@ def testRemSOp():
             a = index.ConstantOp(value=42)
             b = index.ConstantOp(value=23)
             r = index.RemSOp(a, b)
-        # CHECK: %[[R:.*]] = index.rems {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.rems {{.*}}, {{.*}}
         print(module)
 
 
@@ -281,7 +281,7 @@ def testRemUOp():
             a = index.ConstantOp(value=42)
             b = index.ConstantOp(value=23)
             r = index.RemUOp(a, b)
-        # CHECK: %[[R:.*]] = index.remu {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.remu {{.*}}, {{.*}}
         print(module)
 
 
@@ -294,7 +294,7 @@ def testShlOp():
             a = index.ConstantOp(value=42)
             b = index.ConstantOp(value=3)
             r = index.ShlOp(a, b)
-        # CHECK: %[[R:.*]] = index.shl {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.shl {{.*}}, {{.*}}
         print(module)
 
 
@@ -307,7 +307,7 @@ def testShrSOp():
             a = index.ConstantOp(value=42)
             b = index.ConstantOp(value=3)
             r = index.ShrSOp(a, b)
-        # CHECK: %[[R:.*]] = index.shrs {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.shrs {{.*}}, {{.*}}
         print(module)
 
 
@@ -320,7 +320,7 @@ def testShrUOp():
             a = index.ConstantOp(value=42)
             b = index.ConstantOp(value=3)
             r = index.ShrUOp(a, b)
-        # CHECK: %[[R:.*]] = index.shru {{.*}}, {{.*}}
+        # CHECK: {{.*}} = index.shru {{.*}}, {{.*}}
         print(module)
 
 
@@ -331,5 +331,5 @@ def testSizeOfOp():
         module = Module.create()
         with InsertionPoint(module.body):
             r = index.SizeOfOp()
-        # CHECK: %[[R:.*]] = index.sizeof
+        # CHECK: {{.*}} = index.sizeof
         print(module)
