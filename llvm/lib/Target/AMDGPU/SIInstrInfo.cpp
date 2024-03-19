@@ -2026,6 +2026,53 @@ void SIInstrInfo::insertReturn(MachineBasicBlock &MBB) const {
   }
 }
 
+MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
+                                                    MachineBasicBlock &MBB,
+                                                    MachineInstr &MI,
+                                                    const DebugLoc &DL) const {
+  MachineFunction *MF = MBB.getParent();
+  MachineBasicBlock *SplitBB = MBB.splitAt(MI, /*UpdateLiveIns=*/false);
+  MachineBasicBlock *HaltLoop = MF->CreateMachineBasicBlock();
+  MF->push_back(HaltLoop);
+
+  // Start with a `s_trap 2`, if we're in PRIV=1 and we need the workaround this
+  // will be a nop.
+  BuildMI(MBB, MI, DL, get(AMDGPU::S_TRAP))
+      .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap));
+  Register DoorbellReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  BuildMI(MBB, MI, DL, get(AMDGPU::S_SENDMSG_RTN_B32), DoorbellReg)
+      .addImm(AMDGPU::SendMsg::ID_RTN_GET_DOORBELL);
+  BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::TTMP2)
+      .addUse(AMDGPU::M0);
+  Register And0x3ff = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  BuildMI(MBB, MI, DL, get(AMDGPU::S_AND_B32), And0x3ff)
+      .addUse(DoorbellReg)
+      .addImm(0x3ff);
+  Register SetWaveAbortBit =
+      MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  BuildMI(MBB, MI, DL, get(AMDGPU::S_OR_B32), SetWaveAbortBit)
+      .addUse(And0x3ff)
+      .addImm(0x400);
+  BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+      .addUse(SetWaveAbortBit);
+  BuildMI(MBB, MI, DL, get(AMDGPU::S_SENDMSG))
+      .addImm(AMDGPU::SendMsg::ID_INTERRUPT);
+  BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+      .addUse(AMDGPU::TTMP2);
+  BuildMI(MBB, MI, DL, get(AMDGPU::S_BRANCH)).addMBB(HaltLoop);
+
+  BuildMI(*HaltLoop, HaltLoop->end(), DL, get(AMDGPU::S_SETHALT)).addImm(5);
+  BuildMI(*HaltLoop, HaltLoop->end(), DL, get(AMDGPU::S_BRANCH))
+      .addMBB(HaltLoop);
+
+  if (SplitBB != &MBB)
+    MBB.removeSuccessor(SplitBB);
+  MBB.addSuccessor(HaltLoop);
+  HaltLoop->addSuccessor(HaltLoop);
+
+  return SplitBB;
+}
+
 unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:

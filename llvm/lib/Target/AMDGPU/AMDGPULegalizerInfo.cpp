@@ -6726,8 +6726,14 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
 
 bool AMDGPULegalizerInfo::legalizeTrapHsa(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
-  B.buildInstr(AMDGPU::S_TRAP)
-      .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap));
+  if (!ST.requiresSimulatedTrap()) {
+    B.buildInstr(AMDGPU::S_TRAP)
+        .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap));
+    MI.eraseFromParent();
+    return true;
+  }
+
+  ST.getInstrInfo()->insertSimulatedTrap(MRI, B.getMBB(), MI, MI.getDebugLoc());
   MI.eraseFromParent();
   return true;
 }

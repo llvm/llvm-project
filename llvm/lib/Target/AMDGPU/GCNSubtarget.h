@@ -443,6 +443,8 @@ public:
     return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
   }
 
+  bool requiresSimulatedTrap() const { return getGeneration() == GFX11; }
+
   bool supportsGetDoorbellID() const {
     // The S_GETREG DOORBELL_ID is supported by all GFX9 onward targets.
     return getGeneration() >= GFX9;
