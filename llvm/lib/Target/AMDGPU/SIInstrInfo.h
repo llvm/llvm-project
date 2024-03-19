@@ -815,7 +815,7 @@ public:
   }
 
   static bool isMFMAorWMMA(const MachineInstr &MI) {
-    return isMFMA(MI) || isWMMA(MI);
+    return isMFMA(MI) || isWMMA(MI) || isSWMMAC(MI);
   }
 
   static bool isSWMMAC(const MachineInstr &MI) {
