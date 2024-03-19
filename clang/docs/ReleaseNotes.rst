@@ -284,6 +284,9 @@ Bug Fixes in This Version
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
 
+- Fix value of predefined macro ``__FUNCTION__`` in MSVC compatibility mode.
+  Fixes (#GH66114).
+
 - Clang now emits errors for explicit specializations/instatiations of lambda call
   operator.
   Fixes (#GH83267).
