@@ -54,7 +54,7 @@ entry:
 ; CHECK-NEXT:      ParameterHashIndex: 0x0
 ; CHECK-NEXT:      TypeChkSectNum: 0x0
 ; CHECK-NEXT:      SymbolAlignmentLog2: 0
-; CHECK-NEXT:      SymbolType: XTY_LD (0x2
+; CHECK-NEXT:      SymbolType: XTY_LD (0x2)
 ; CHECK-NEXT:      StorageMappingClass: XMC_PR (0x0)
 ; CHECK-NEXT:      StabInfoIndex: 0x0
 ; CHECK-NEXT:      StabSectNum: 0x0
