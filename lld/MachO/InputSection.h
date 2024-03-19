@@ -93,9 +93,9 @@ public:
   // .subsections_via_symbols, there is typically only one element here.
   llvm::TinyPtrVector<Defined *> symbols;
 
+protected:
   const Section &section;
 
-protected:
   const Defined *getContainingSymbol(uint64_t off) const;
 };
 
