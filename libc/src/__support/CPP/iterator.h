@@ -28,28 +28,29 @@ template <typename Iter> class reverse_iterator {
 public:
   using reference = typename iterator_traits<Iter>::reference;
 
-  reverse_iterator() : current() {}
-  constexpr explicit reverse_iterator(Iter it) : current(it) {}
+  LIBC_INLINE reverse_iterator() : current() {}
+  LIBC_INLINE constexpr explicit reverse_iterator(Iter it) : current(it) {}
 
   template <typename Other,
             cpp::enable_if_t<!cpp::is_same_v<Iter, Other> &&
                                  cpp::is_convertible_v<const Other &, Iter>,
                              int> = 0>
-  constexpr explicit reverse_iterator(const Other &it) : current(it) {}
+  LIBC_INLINE constexpr explicit reverse_iterator(const Other &it)
+      : current(it) {}
 
-  constexpr reference operator*() const {
+  LIBC_INLINE constexpr reference operator*() const {
     Iter tmp = current;
     return *--tmp;
   }
-  constexpr reverse_iterator operator--() {
+  LIBC_INLINE constexpr reverse_iterator operator--() {
     ++current;
     return *this;
   }
-  constexpr reverse_iterator &operator++() {
+  LIBC_INLINE constexpr reverse_iterator &operator++() {
     --current;
     return *this;
   }
-  constexpr reverse_iterator operator++(int) {
+  LIBC_INLINE constexpr reverse_iterator operator++(int) {
     reverse_iterator tmp(*this);
     --current;
     return tmp;
