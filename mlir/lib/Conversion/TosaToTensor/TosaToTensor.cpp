@@ -24,46 +24,71 @@
 using namespace mlir;
 using namespace tosa;
 
+static Value getIndexConstant(OpBuilder& builder, Location loc, int64_t index) {
+  return builder.create<arith::ConstantIndexOp>(loc, index);
+}
+
+// Return the total size of the given input tensor.
+static Value getTensorSize(OpBuilder& builder, Location loc, TypedValue<TensorType> input) {
+  // If the input tensor is statically shaped, return its size as a constant.
+  if (input.getType().hasStaticShape()) {
+    auto shape = input.getType().getShape();
+    auto size = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies());
+    return getIndexConstant(builder, loc, size);
+  }
+
+  // When the input tensor has at least one dynamic dimension, collapse it into
+  // a 1D tensor and get its size.
+  auto rank = input.getType().getRank();
+  auto elementType = input.getType().getElementType();
+  auto collapsedType = RankedTensorType::get({ShapedType::kDynamic}, elementType);
+  auto reassociationIndices = SmallVector<ReassociationIndices>{
+    llvm::to_vector(llvm::seq<int64_t>(rank))
+  };
+  auto collapsed = builder.create<tensor::CollapseShapeOp>(
+      loc, collapsedType, input, reassociationIndices);
+  return builder.create<tensor::DimOp>(loc, collapsed, 0);
+}
+
 // Compute the dimension size of the result tensor corresponding to the
 // placeholder value set to -1 in the 'new_shape' attribute of a 'tosa.reshape'
-// op. Argument 'newShape' is expected to contain exactly one value set to -1.
-static Value getReshapePlaceholderDimSize(OpBuilder &builder, Location loc,
-                                          TypedValue<TensorType> input,
-                                          ArrayRef<int64_t> newShape) {
+// op. Argument 'index' indicates the position of the -1 placeholder.
+static Value getReshapePlaceholderDimSize(OpBuilder &builder,
+                                          tosa::ReshapeOp reshape,
+                                          int64_t index) {
+  auto loc = reshape.getLoc();
+  auto input = reshape.getInput1();
+  auto newShape = reshape.getNewShape();
+  auto resultType = reshape.getResult().getType();
+
+  // If the corresponding dimension in the result type is static, take the
+  // dimension size from there.
+  assert(newShape[index] == -1);
+  if (!resultType.isDynamicDim(index))
+    return getIndexConstant(builder, loc, resultType.getDimSize(index));
+
   // Calculate the product of all dimensions in the new shape. We expect to have
   // exactly one size set to -1, so we can discard this component by just
   // negating the final product.
-  auto newSizeValue = -std::accumulate(newShape.begin(), newShape.end(), 1,
-                                       std::multiplies<int64_t>());
-  assert(newSizeValue > 0);
-  auto newSize = builder.create<arith::ConstantIndexOp>(loc, newSizeValue);
+  auto newSizeLiteral = -std::accumulate(newShape.begin(), newShape.end(), 1,
+                                         std::multiplies<int64_t>());
+  assert(newSizeLiteral >= 0);
+  auto newSize = builder.create<arith::ConstantIndexOp>(loc, newSizeLiteral);
 
-  // Calculate input tensor size. Traverse static dimensions first to fold as
-  // many results as possible.
-  auto inputShape = input.getType().getShape();
-  int64_t staticInputSize = 1;
-  for (auto size : inputShape)
-    if (size != ShapedType::kDynamic)
-      staticInputSize *= size;
- 
-  // Continue calculating input tensor size by multiplying dynamic dimensions.
-  Value inputSize = builder.create<arith::ConstantIndexOp>(loc, staticInputSize);
-  for (auto [index, size] : llvm::enumerate(inputShape)) {
-    if (size == ShapedType::kDynamic) {
-      auto dimSize = builder.create<tensor::DimOp>(loc, input, index);
-      inputSize = builder.create<arith::MulIOp>(loc, inputSize, dimSize);
-    }
-  }
+  // Avoid a division by zero. If any of the given dimension sizes was set to
+  // zero, set the placeholder size to zero, too.
+  if (newSizeLiteral == 0)
+    return newSize;
 
-  // Calculate placeholder size, which will be folded if input tensor was
-  // statically shaped.
+  // The size of the placeholder dimension is the size of the input tensor
+  // divided by all non-placeholder dimension sizes.
+  auto inputSize = getTensorSize(builder, loc, input);
   return builder.createOrFold<arith::DivUIOp>(loc, inputSize, newSize);
 }
 
 namespace {
 
-class ReshapeConverterCollapseExpand
-    : public OpConversionPattern<tosa::ReshapeOp> {
+class ReshapeConverter : public OpConversionPattern<tosa::ReshapeOp> {
 public:
   using OpConversionPattern<tosa::ReshapeOp>::OpConversionPattern;
 
@@ -72,19 +97,18 @@ public:
                   ConversionPatternRewriter &rewriter) const final {
     auto loc = reshape.getLoc();
     auto input = reshape.getInput1();
-    auto newShape = reshape.getNewShape();
 
     // Create list of values for new shape
-    SmallVector<Value> newShapeList(reshape.getNewShape().size());
+    SmallVector<Value> newShapeVector(reshape.getNewShape().size());
     for (auto [index, size] : llvm::enumerate(reshape.getNewShape())) {
-      newShapeList[index] = size == -1 ?
-          getReshapePlaceholderDimSize(rewriter, loc, input, newShape) :
-          rewriter.create<arith::ConstantIndexOp>(loc, size);
+      newShapeVector[index] = size == -1 ?
+          getReshapePlaceholderDimSize(rewriter, reshape, index) :
+          getIndexConstant(rewriter, loc, size);
     }
 
     // Reshape tensor
     auto newShapeTensor = rewriter.createOrFold<tensor::FromElementsOp>(
-        loc, newShapeList);
+        loc, newShapeVector);
     rewriter.replaceOpWithNewOp<tensor::ReshapeOp>(
         reshape, reshape.getResult().getType(), input, newShapeTensor);
     return success();
@@ -273,8 +297,10 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
 
 void mlir::tosa::populateTosaToTensorConversionPatterns(
     RewritePatternSet *patterns) {
-  patterns->add<SliceConverter, PadConverter, ConcatConverter>(
-      patterns->getContext());
-
-  patterns->add<ReshapeConverterCollapseExpand>(patterns->getContext());
+  patterns->add<
+    ConcatConverter,
+    PadConverter,
+    ReshapeConverter,
+    SliceConverter
+  >(patterns->getContext());
 }
