@@ -1943,7 +1943,7 @@ public:
 
       // And be in the right range, depending on the amount that it is shifted
       // by.  Shift 0, is equal to 7 unsigned bits, the sign bit is set
-      // separately.
+      // ly.
       int64_t Range = (1U << (7 + shift)) - 1;
       return (Val == INT32_MIN) || (Val > -Range && Val < Range);
     }
@@ -4319,7 +4319,7 @@ int ARMAsmParser::tryParseShiftRegister(OperandVector &Operands) {
   }
 
   auto MnemonicOp = static_cast<ARMOperand &>(*Operands[0]);
-  // These instructions handle shift operands as seperate operators to the
+  // These instructions handle shift operands as separate operators to the
   // register. In these cases doing the default conversion makes nonsense
   // diagnostics.
   // FIXME: Unify the different methods for handling shift operators
@@ -6190,7 +6190,7 @@ ParseStatus ARMAsmParser::parseFPImm(OperandVector &Operands) {
 
   Parser.Lex(); // Eat '#' or '$'.
 
-  // Handle negation, as that still comes through as a separate token.
+  // Handle negation, as that still comes through as a  token.
   bool isNegative = false;
   if (Parser.getTok().is(AsmToken::Minus)) {
     isNegative = true;
@@ -6333,7 +6333,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
       Operands.push_back(ARMOperand::CreateImm(ImmVal, S, E));
 
-      // There can be a trailing '!' on operands that we want as a separate
+      // There can be a trailing '!' on operands that we want as a 
       // '!' Token operand. Handle that here. For example, the compatibility
       // alias for 'srsdb sp!, #imm' is 'srsdb #imm!'.
       if (Parser.getTok().is(AsmToken::Exclaim)) {
@@ -7315,7 +7315,7 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     if (!usedVPTPredicationCode) {
       // If we have a VPT predication code and we haven't just turned it
       // into an operand, then it was a mistake for splitMnemonic to
-      // separate it from the rest of the mnemonic in the first place,
+      //  it from the rest of the mnemonic in the first place,
       // and this may lead to wrong disassembly (e.g. scalar floating
       // point VCMPE is actually a different instruction from VCMP, so
       // we mustn't treat them the same). In that situation, glue it
