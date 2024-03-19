@@ -22,13 +22,11 @@ static bool isExpandableUser(User *U) {
   return isa<ConstantExpr>(U) || isa<ConstantAggregate>(U);
 }
 
-static SmallVector<Instruction *, 4> expandUser(BasicBlock::iterator InsertPt,
+static SmallVector<Instruction *, 4> expandUser(Instruction *InsertPt,
                                                 Constant *C) {
   SmallVector<Instruction *, 4> NewInsts;
   if (auto *CE = dyn_cast<ConstantExpr>(C)) {
-    Instruction *ConstInst = CE->getAsInstruction();
-    ConstInst->insertBefore(*InsertPt->getParent(), InsertPt);
-    NewInsts.push_back(ConstInst);
+    NewInsts.push_back(CE->getAsInstruction(InsertPt));
   } else if (isa<ConstantStruct>(C) || isa<ConstantArray>(C)) {
     Value *V = PoisonValue::get(C->getType());
     for (auto [Idx, Op] : enumerate(C->operands())) {
@@ -82,11 +80,12 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
     Instruction *I = InstructionWorklist.pop_back_val();
     DebugLoc Loc = I->getDebugLoc();
     for (Use &U : I->operands()) {
-      BasicBlock::iterator BI = I->getIterator();
+      auto *BI = I;
       if (auto *Phi = dyn_cast<PHINode>(I)) {
         BasicBlock *BB = Phi->getIncomingBlock(U);
-        BI = BB->getFirstInsertionPt();
-        assert(BI != BB->end() && "Unexpected empty basic block");
+        BasicBlock::iterator It = BB->getFirstInsertionPt();
+        assert(It != BB->end() && "Unexpected empty basic block");
+        BI = &*It;
       }
 
       if (auto *C = dyn_cast<Constant>(U.get())) {
