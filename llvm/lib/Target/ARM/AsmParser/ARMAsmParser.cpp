@@ -4318,6 +4318,23 @@ int ARMAsmParser::tryParseShiftRegister(OperandVector &Operands) {
     }
   }
 
+  auto MnemonicOp = static_cast<ARMOperand &>(*Operands[0]);
+  // These instructions handle shift operands as seperate operators to the
+  // register. In these cases doing the default conversion makes nonsense
+  // diagnostics.
+  // FIXME: Unify the different methods for handling shift operators
+  // and use TableGen matching mechanisms to do the validation.
+  static const DenseSet<StringRef> NoDefaultConvertSet{"pkhbt", "pkhtb"};
+  bool ShouldDefaultConvert =
+      (MnemonicOp.isToken() &&
+       !NoDefaultConvertSet.contains(MnemonicOp.getToken()));
+  if (!ShouldDefaultConvert) {
+    // If we get to this point the parsing for the shift operator in
+    // parsePKHLSLImm has failed. So we can generate a diagnostic here.
+    Error(S, "shift operator is malformed for this instruction");
+    return -1;
+  }
+
   if (ShiftReg && ShiftTy != ARM_AM::rrx)
     Operands.push_back(ARMOperand::CreateShiftedRegister(ShiftTy, SrcReg,
                                                          ShiftReg, Imm,
@@ -5289,12 +5306,12 @@ ParseStatus ARMAsmParser::parsePKHImm(OperandVector &Operands, StringRef Op,
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
   if (Tok.isNot(AsmToken::Identifier))
-    return Error(Parser.getTok().getLoc(), Op + " operand expected.");
+    return ParseStatus::NoMatch;
   StringRef ShiftName = Tok.getString();
   std::string LowerOp = Op.lower();
   std::string UpperOp = Op.upper();
   if (ShiftName != LowerOp && ShiftName != UpperOp)
-    return Error(Parser.getTok().getLoc(), Op + " operand expected.");
+    return ParseStatus::NoMatch;
   Parser.Lex(); // Eat shift type token.
 
   // There must be a '#' and a shift amount.
