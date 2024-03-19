@@ -11,6 +11,7 @@
 #include "ClangDeclVendor.h"
 #include "ClangModulesDeclVendor.h"
 
+#include "NameSearchContext.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
@@ -21,6 +22,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Basic/SourceManager.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
@@ -613,6 +615,125 @@ bool ClangASTSource::IgnoreName(const ConstString name,
   return name_string_ref.empty() ||
          (ignore_all_dollar_names && name_string_ref.starts_with("$")) ||
          name_string_ref.starts_with("_$");
+}
+
+bool ClangASTSource::FindExternalVisibleMethodsByName(
+    const clang::DeclContext *DC, clang::DeclarationName Name) {
+  if (!TypeSystemClang::UseRedeclCompletion())
+    return true;
+
+  SmallVector<clang::NamedDecl *> decls;
+  NameSearchContext context(*m_clang_ast_context, decls, Name, DC);
+  FindExternalVisibleMethods(context);
+
+  return true;
+}
+
+void ClangASTSource::FindExternalVisibleMethods(NameSearchContext &context) {
+  assert(m_ast_context);
+
+  const ConstString name(context.m_decl_name.getAsString().c_str());
+  CompilerDeclContext namespace_decl;
+  FindExternalVisibleMethods(context, lldb::ModuleSP(), namespace_decl);
+}
+
+bool ClangASTSource::CompilerDeclContextsMatch(
+    CompilerDeclContext candidate_decl_ctx, DeclContext const *context,
+    TypeSystemClang &ts) {
+  auto CDC1 = candidate_decl_ctx.GetTypeSystem()->DeclContextGetCompilerContext(
+      candidate_decl_ctx.GetOpaqueDeclContext());
+
+  // Member functions have at least 2 entries (1
+  // for method name, 1 for parent class)
+  assert(CDC1.size() > 1);
+
+  // drop last entry (which is function name)
+  CDC1.pop_back();
+
+  const auto CDC2 = ts.DeclContextGetCompilerContext(
+      const_cast<clang::DeclContext *>(context));
+
+  // Quick by-name check of the entire context hierarchy.
+  if (CDC1 == CDC2)
+    return true;
+
+  // Otherwise, check whether the 'candidate_decl_ctx' is a base class of
+  // 'context'.
+  auto const *candidate_context =
+      (static_cast<clang::DeclContext *>(
+           candidate_decl_ctx.GetOpaqueDeclContext()))
+          ->getParent();
+
+  auto const *candidate_cxx_record =
+      dyn_cast<clang::CXXRecordDecl>(candidate_context);
+  if (!candidate_cxx_record)
+    return false;
+
+  auto const *cxx_record = dyn_cast<clang::CXXRecordDecl>(context);
+  if (!cxx_record)
+    return false;
+
+  // cxx_record comes from user expression AST. So we need to get origin
+  // to compare against candidate_context.
+  auto orig = GetDeclOrigin(cxx_record);
+  if (!orig.Valid())
+    return false;
+
+  if (llvm::cast<CXXRecordDecl>(orig.decl)->isDerivedFrom(candidate_cxx_record))
+    return true;
+
+  return false;
+}
+
+void ClangASTSource::FindExternalVisibleMethods(
+    NameSearchContext &context, lldb::ModuleSP module_sp,
+    CompilerDeclContext &namespace_decl) {
+  assert(m_ast_context);
+
+  SymbolContextList sc_list;
+  const ConstString name(context.m_decl_name.getAsString().c_str());
+  if (!m_target)
+    return;
+
+  if (context.m_found_type)
+    return;
+
+  ModuleFunctionSearchOptions function_options;
+  function_options.include_inlines = false;
+  function_options.include_symbols = false;
+  m_target->GetImages().FindFunctions(name, lldb::eFunctionNameTypeMethod,
+                                      function_options, sc_list);
+
+  auto num_matches = sc_list.GetSize();
+  if (num_matches == 0)
+    return;
+
+  for (const SymbolContext &sym_ctx : sc_list) {
+    assert(sym_ctx.function);
+    CompilerDeclContext decl_ctx = sym_ctx.function->GetDeclContext();
+    if (!decl_ctx)
+      continue;
+
+    assert(decl_ctx.IsClassMethod());
+
+    if (!CompilerDeclContextsMatch(decl_ctx, context.m_decl_context,
+                                   context.m_clang_ts))
+      continue;
+
+    clang::CXXMethodDecl *src_method = llvm::cast<CXXMethodDecl>(
+        static_cast<clang::DeclContext *>(decl_ctx.GetOpaqueDeclContext()));
+    Decl *copied_decl = CopyDecl(src_method);
+
+    if (!copied_decl)
+      continue;
+
+    CXXMethodDecl *copied_method_decl = dyn_cast<CXXMethodDecl>(copied_decl);
+
+    if (!copied_method_decl)
+      continue;
+
+    context.AddNamedDecl(copied_method_decl);
+  }
 }
 
 void ClangASTSource::FindExternalVisibleDecls(

@@ -18,6 +18,7 @@
 #include "ClangASTSource.h"
 #include "ClangExpressionVariable.h"
 
+#include "Plugins/ExpressionParser/Clang/NameSearchContext.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -266,6 +267,7 @@ public:
   /// \param[in] context
   ///     The NameSearchContext that can construct Decls for this name.
   void FindExternalVisibleDecls(NameSearchContext &context) override;
+  void FindExternalVisibleMethods(NameSearchContext &context) override;
 
   /// Find all entities matching a given name in a given module/namespace,
   /// using a NameSearchContext to make Decls for them.

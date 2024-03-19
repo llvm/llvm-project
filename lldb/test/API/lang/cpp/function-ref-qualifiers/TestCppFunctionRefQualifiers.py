@@ -34,11 +34,11 @@ class TestFunctionRefQualifiers(TestBase):
         self.expect_expr("Foo{}.func()", result_type="int64_t", result_value="3")
 
         self.filecheck("target modules dump ast", __file__)
-        # CHECK:      |-CXXMethodDecl {{.*}} func 'uint32_t () const &'
-        # CHECK-NEXT: | `-AsmLabelAttr {{.*}}
-        # CHECK-NEXT: |-CXXMethodDecl {{.*}} func 'int64_t () const &&'
-        # CHECK-NEXT: | `-AsmLabelAttr {{.*}}
-        # CHECK-NEXT: |-CXXMethodDecl {{.*}} func 'uint32_t () &'
-        # CHECK-NEXT: | `-AsmLabelAttr {{.*}}
-        # CHECK-NEXT: `-CXXMethodDecl {{.*}} func 'int64_t () &&'
-        # CHECK-NEXT:   `-AsmLabelAttr {{.*}}
+        # CHECK-DAG: CXXMethodDecl {{.*}} func 'uint32_t () const &'
+        # CHECK-DAG: `-AsmLabelAttr {{.*}}
+        # CHECK-DAG: CXXMethodDecl {{.*}} func 'int64_t () const &&'
+        # CHECK-DAG: `-AsmLabelAttr {{.*}}
+        # CHECK-DAG: CXXMethodDecl {{.*}} func 'uint32_t () &'
+        # CHECK-DAG: `-AsmLabelAttr {{.*}}
+        # CHECK-DAG: CXXMethodDecl {{.*}} func 'int64_t () &&'
+        # CHECK-DAG: `-AsmLabelAttr {{.*}}
