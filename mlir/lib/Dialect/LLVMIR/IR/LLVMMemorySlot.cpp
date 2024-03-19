@@ -13,10 +13,8 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
@@ -71,12 +69,8 @@ SmallVector<DestructurableMemorySlot> LLVM::AllocaOp::getDestructurableSlots() {
   if (!destructuredType)
     return {};
 
-  DenseMap<Attribute, Type> allocaTypeMap;
-  for (Attribute index : llvm::make_first_range(destructuredType.value()))
-    allocaTypeMap.insert({index, LLVM::LLVMPointerType::get(getContext())});
-
-  return {
-      DestructurableMemorySlot{{getResult(), getElemType()}, {allocaTypeMap}}};
+  return {DestructurableMemorySlot{{getResult(), getElemType()},
+                                   *destructuredType}};
 }
 
 DenseMap<Attribute, MemorySlot>
@@ -182,17 +176,107 @@ DeletionKind LLVM::StoreOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
+/// Checks if `slot` can be accessed through the provided access type.
+static bool isValidAccessType(const MemorySlot &slot, Type accessType,
+                              const DataLayout &dataLayout) {
+  return dataLayout.getTypeSize(accessType) <=
+         dataLayout.getTypeSize(slot.elemType);
+}
+
 LogicalResult LLVM::LoadOp::ensureOnlySafeAccesses(
     const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
     const DataLayout &dataLayout) {
-  return success(getAddr() != slot.ptr || getType() == slot.elemType);
+  return success(getAddr() != slot.ptr ||
+                 isValidAccessType(slot, getType(), dataLayout));
 }
 
 LogicalResult LLVM::StoreOp::ensureOnlySafeAccesses(
     const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
     const DataLayout &dataLayout) {
   return success(getAddr() != slot.ptr ||
-                 getValue().getType() == slot.elemType);
+                 isValidAccessType(slot, getValue().getType(), dataLayout));
+}
+
+/// Returns the subslot's type at the requested index.
+static Type getTypeAtIndex(const DestructurableMemorySlot &slot,
+                           Attribute index) {
+  auto subelementIndexMap =
+      slot.elemType.cast<DestructurableTypeInterface>().getSubelementIndexMap();
+  if (!subelementIndexMap)
+    return {};
+  assert(!subelementIndexMap->empty());
+
+  // Note: Returns a null-type when no entry was found.
+  return subelementIndexMap->lookup(index);
+}
+
+bool LLVM::LoadOp::canRewire(const DestructurableMemorySlot &slot,
+                             SmallPtrSetImpl<Attribute> &usedIndices,
+                             SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+                             const DataLayout &dataLayout) {
+  if (getVolatile_())
+    return false;
+
+  // A load always accesses the first element of the destructured slot.
+  auto index = IntegerAttr::get(IntegerType::get(getContext(), 32), 0);
+  Type subslotType = getTypeAtIndex(slot, index);
+  if (!subslotType)
+    return false;
+
+  // The access can only be replaced when the subslot is read within its bounds.
+  if (dataLayout.getTypeSize(getType()) > dataLayout.getTypeSize(subslotType))
+    return false;
+
+  usedIndices.insert(index);
+  return true;
+}
+
+DeletionKind LLVM::LoadOp::rewire(const DestructurableMemorySlot &slot,
+                                  DenseMap<Attribute, MemorySlot> &subslots,
+                                  RewriterBase &rewriter,
+                                  const DataLayout &dataLayout) {
+  auto index = IntegerAttr::get(IntegerType::get(getContext(), 32), 0);
+  auto it = subslots.find(index);
+  assert(it != subslots.end());
+
+  rewriter.modifyOpInPlace(
+      *this, [&]() { getAddrMutable().set(it->getSecond().ptr); });
+  return DeletionKind::Keep;
+}
+
+bool LLVM::StoreOp::canRewire(const DestructurableMemorySlot &slot,
+                              SmallPtrSetImpl<Attribute> &usedIndices,
+                              SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+                              const DataLayout &dataLayout) {
+  if (getVolatile_())
+    return false;
+
+  // A load always accesses the first element of the destructured slot.
+  auto index = IntegerAttr::get(IntegerType::get(getContext(), 32), 0);
+  Type subslotType = getTypeAtIndex(slot, index);
+  if (!subslotType)
+    return false;
+
+  // The access can only be replaced when the subslot is read within its bounds.
+  if (dataLayout.getTypeSize(getValue().getType()) >
+      dataLayout.getTypeSize(subslotType))
+    return false;
+
+  usedIndices.insert(index);
+  return true;
+}
+
+DeletionKind LLVM::StoreOp::rewire(const DestructurableMemorySlot &slot,
+                                   DenseMap<Attribute, MemorySlot> &subslots,
+                                   RewriterBase &rewriter,
+                                   const DataLayout &dataLayout) {
+  auto index = IntegerAttr::get(IntegerType::get(getContext(), 32), 0);
+  auto it = subslots.find(index);
+  assert(it != subslots.end());
+
+  rewriter.modifyOpInPlace(
+      *this, [&]() { getAddrMutable().set(it->getSecond().ptr); });
+  return DeletionKind::Keep;
 }
 
 //===----------------------------------------------------------------------===//
@@ -384,16 +468,17 @@ bool LLVM::GEPOp::canRewire(const DestructurableMemorySlot &slot,
   // dynamic indices can never be properly rewired.
   if (!getDynamicIndices().empty())
     return false;
+  //// TODO: This is not necessary, I think.
+  // if (slot.elemType != getElemType())
+  //   return false;
   Type reachedType = getResultPtrElementType();
   if (!reachedType || getIndices().size() < 2)
     return false;
   auto firstLevelIndex = dyn_cast<IntegerAttr>(getIndices()[1]);
   if (!firstLevelIndex)
     return false;
-  assert(slot.elementPtrs.contains(firstLevelIndex));
-  if (!llvm::isa<LLVM::LLVMPointerType>(slot.elementPtrs.at(firstLevelIndex)))
-    return false;
   mustBeSafelyUsed.emplace_back<MemorySlot>({getResult(), reachedType});
+  assert(slot.elementPtrs.contains(firstLevelIndex));
   usedIndices.insert(firstLevelIndex);
   return true;
 }
