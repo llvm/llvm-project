@@ -134,3 +134,20 @@ class SimpleFusion<string name, string fieldName, string desc,
                 TieReg<0, 1>,
               ],
               epilog)>;
+
+class SingleFusion<string name, string fieldName, string desc,
+                   Instruction firstInst, Instruction secondInst,
+                   MCInstPredicate firstInstPred = TruePred,
+                   MCInstPredicate secondInstPred = TruePred,
+                   list<FusionPredicate> prolog = [],
+                   list<FusionPredicate> epilog = []>
+  : SimpleFusion<name, fieldName, desc,
+                 CheckAll<!listconcat(
+                            [CheckOpcode<[firstInst]>],
+                            [firstInstPred])>,
+                 CheckAll<!listconcat(
+                            [CheckOpcode<[secondInst]>],
+                            [secondInstPred])>,
+                 prolog, epilog> {
+  let IsCommutable = secondInst.isCommutable;
+}
