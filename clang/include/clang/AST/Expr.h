@@ -3552,6 +3552,15 @@ public:
   /// function that it invokes.
   NamedDecl *getConversionFunction() const;
 
+  typedef CXXBaseSpecifier **path_iterator;
+  typedef const CXXBaseSpecifier *const *path_const_iterator;
+  bool path_empty() const { return path_size() == 0; }
+  unsigned path_size() const { return CastExprBits.BasePathSize; }
+  path_iterator path_begin() { return path_buffer(); }
+  path_iterator path_end() { return path_buffer() + path_size(); }
+  path_const_iterator path_begin() const { return path_buffer(); }
+  path_const_iterator path_end() const { return path_buffer() + path_size(); }
+
   /// Path through the class hierarchy taken by casts between base and derived
   /// classes (see implementation of `CastConsistency()` for a full list of
   /// cast kinds that have a path).
@@ -3564,15 +3573,6 @@ public:
   /// `Derived : public Intermediate`, the path for a cast from `Derived *` to
   /// `Base *` contains two entries: One for `Intermediate`, and one for `Base`,
   /// in that order.
-  typedef CXXBaseSpecifier **path_iterator;
-  typedef const CXXBaseSpecifier *const *path_const_iterator;
-  bool path_empty() const { return path_size() == 0; }
-  unsigned path_size() const { return CastExprBits.BasePathSize; }
-  path_iterator path_begin() { return path_buffer(); }
-  path_iterator path_end() { return path_buffer() + path_size(); }
-  path_const_iterator path_begin() const { return path_buffer(); }
-  path_const_iterator path_end() const { return path_buffer() + path_size(); }
-
   llvm::iterator_range<path_iterator> path() {
     return llvm::make_range(path_begin(), path_end());
   }
