@@ -173,10 +173,11 @@ private:
   void collectMatInsertPts(
       const consthoist::RebasedConstantListType &RebasedConstants,
       SmallVectorImpl<BasicBlock::iterator> &MatInsertPts) const;
-  BasicBlock::iterator findMatInsertPt(Instruction *Inst, unsigned Idx = ~0U) const;
-  SetVector<BasicBlock::iterator>
-  findConstantInsertionPoint(const consthoist::ConstantInfo &ConstInfo,
-                             const ArrayRef<BasicBlock::iterator> MatInsertPts) const;
+  BasicBlock::iterator findMatInsertPt(Instruction *Inst,
+                                       unsigned Idx = ~0U) const;
+  SetVector<BasicBlock::iterator> findConstantInsertionPoint(
+      const consthoist::ConstantInfo &ConstInfo,
+      const ArrayRef<BasicBlock::iterator> MatInsertPts) const;
   void collectConstantCandidates(ConstCandMapType &ConstCandMap,
                                  Instruction *Inst, unsigned Idx,
                                  ConstantInt *ConstInt);

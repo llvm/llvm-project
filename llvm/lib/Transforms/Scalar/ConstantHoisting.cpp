@@ -170,7 +170,7 @@ void ConstantHoistingPass::collectMatInsertPts(
 
 /// Find the constant materialization insertion point.
 BasicBlock::iterator ConstantHoistingPass::findMatInsertPt(Instruction *Inst,
-                                                   unsigned Idx) const {
+                                                           unsigned Idx) const {
   // If the operand is a cast instruction, then we have to materialize the
   // constant before the cast instruction.
   if (Idx != ~0U) {
@@ -314,7 +314,8 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
 }
 
 /// Find an insertion point that dominates all uses.
-SetVector<BasicBlock::iterator> ConstantHoistingPass::findConstantInsertionPoint(
+SetVector<BasicBlock::iterator>
+ConstantHoistingPass::findConstantInsertionPoint(
     const ConstantInfo &ConstInfo,
     const ArrayRef<BasicBlock::iterator> MatInsertPts) const {
   assert(!ConstInfo.RebasedConstants.empty() && "Invalid constant info entry.");
@@ -761,11 +762,13 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
       Mat = GetElementPtrInst::Create(Type::getInt8Ty(*Ctx), Base, Adj->Offset,
                                       "mat_gep", Adj->MatInsertPt);
       // Hide it behind a bitcast.
-      Mat = new BitCastInst(Mat, Adj->Ty, "mat_bitcast", Adj->MatInsertPt->getIterator());
+      Mat = new BitCastInst(Mat, Adj->Ty, "mat_bitcast",
+                            Adj->MatInsertPt->getIterator());
     } else
       // Constant being rebased is a ConstantInt.
-      Mat = BinaryOperator::Create(Instruction::Add, Base, Adj->Offset,
-                                   "const_mat", Adj->MatInsertPt->getIterator());
+      Mat =
+          BinaryOperator::Create(Instruction::Add, Base, Adj->Offset,
+                                 "const_mat", Adj->MatInsertPt->getIterator());
 
     LLVM_DEBUG(dbgs() << "Materialize constant (" << *Base->getOperand(0)
                       << " + " << *Adj->Offset << ") in BB "
