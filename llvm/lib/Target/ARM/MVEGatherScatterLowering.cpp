@@ -780,7 +780,8 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingGatScat(
   // Make sure the offsets are scaled correctly
   Instruction *ScaledOffsets = BinaryOperator::Create(
       Instruction::Shl, OffsetsIncoming,
-      Builder.CreateVectorSplat(Ty->getNumElements(), Builder.getInt32(TypeScale)),
+      Builder.CreateVectorSplat(Ty->getNumElements(),
+                                Builder.getInt32(TypeScale)),
       "ScaledIndex", I->getIterator());
   // Add the base to the offsets
   OffsetsIncoming = BinaryOperator::Create(
@@ -838,7 +839,8 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingWBGatScat(
   Instruction *ScaledOffsets = BinaryOperator::Create(
       Instruction::Shl, Phi->getIncomingValue(1 - IncrementIndex),
       Builder.CreateVectorSplat(NumElems, Builder.getInt32(TypeScale)),
-      "ScaledIndex", Phi->getIncomingBlock(1 - IncrementIndex)->back().getIterator());
+      "ScaledIndex",
+      Phi->getIncomingBlock(1 - IncrementIndex)->back().getIterator());
   // Add the base to the offsets
   OffsetsIncoming = BinaryOperator::Create(
       Instruction::Add, ScaledOffsets,
@@ -847,7 +849,8 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingWBGatScat(
           Builder.CreatePtrToInt(
               BasePtr,
               cast<VectorType>(ScaledOffsets->getType())->getElementType())),
-      "StartIndex", Phi->getIncomingBlock(1 - IncrementIndex)->back().getIterator());
+      "StartIndex",
+      Phi->getIncomingBlock(1 - IncrementIndex)->back().getIterator());
   // The gather is pre-incrementing
   OffsetsIncoming = BinaryOperator::Create(
       Instruction::Sub, OffsetsIncoming,
@@ -887,7 +890,7 @@ void MVEGatherScatterLowering::pushOutAdd(PHINode *&Phi,
                                           unsigned StartIndex) {
   LLVM_DEBUG(dbgs() << "masked gathers/scatters: optimising add instruction\n");
   BasicBlock::iterator InsertionPoint =
-        Phi->getIncomingBlock(StartIndex)->back().getIterator();
+      Phi->getIncomingBlock(StartIndex)->back().getIterator();
   // Initialize the phi with a vector that contains a sum of the constants
   Instruction *NewIndex = BinaryOperator::Create(
       Instruction::Add, Phi->getIncomingValue(StartIndex), OffsSecondOperand,
@@ -925,13 +928,12 @@ void MVEGatherScatterLowering::pushOutMulShl(unsigned Opcode, PHINode *&Phi,
                              OffsSecondOperand, "Product", InsertionPoint);
 
   BasicBlock::iterator NewIncrInsertPt =
-    Phi->getIncomingBlock(LoopIncrement)->back().getIterator();
+      Phi->getIncomingBlock(LoopIncrement)->back().getIterator();
   NewIncrInsertPt = std::prev(NewIncrInsertPt);
 
   // Increment NewIndex by Product instead of the multiplication
   Instruction *NewIncrement = BinaryOperator::Create(
-      Instruction::Add, Phi, Product, "IncrementPushedOutMul",
-      NewIncrInsertPt);
+      Instruction::Add, Phi, Product, "IncrementPushedOutMul", NewIncrInsertPt);
 
   Phi->addIncoming(StartIndex,
                    Phi->getIncomingBlock(LoopIncrement == 1 ? 0 : 1));

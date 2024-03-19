@@ -464,8 +464,8 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
   }
 
   // Register the function context and make sure it's known to not throw
-  CallInst *Register =
-      CallInst::Create(RegisterFn, FuncCtx, "", EntryBB->getTerminator()->getIterator());
+  CallInst *Register = CallInst::Create(
+      RegisterFn, FuncCtx, "", EntryBB->getTerminator()->getIterator());
   Register->setDoesNotThrow();
 
   // Following any allocas not in the entry block, update the saved SP in the
@@ -482,7 +482,8 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
       }
       Instruction *StackAddr = CallInst::Create(StackAddrFn, "sp");
       StackAddr->insertAfter(&I);
-      new StoreInst(StackAddr, StackPtr, true, std::next(StackAddr->getIterator()));
+      new StoreInst(StackAddr, StackPtr, true,
+                    std::next(StackAddr->getIterator()));
     }
   }
 

@@ -470,8 +470,10 @@ bool AMDGPULibCalls::sincosUseNative(CallInst *aCI, const FuncInfo &FInfo) {
     nf.setId(AMDGPULibFunc::EI_COS);
     FunctionCallee cosExpr = getFunction(M, nf);
     if (sinExpr && cosExpr) {
-      Value *sinval = CallInst::Create(sinExpr, opr0, "splitsin", aCI->getIterator());
-      Value *cosval = CallInst::Create(cosExpr, opr0, "splitcos", aCI->getIterator());
+      Value *sinval =
+          CallInst::Create(sinExpr, opr0, "splitsin", aCI->getIterator());
+      Value *cosval =
+          CallInst::Create(cosExpr, opr0, "splitcos", aCI->getIterator());
       new StoreInst(cosval, aCI->getArgOperand(1), aCI->getIterator());
 
       DEBUG_WITH_TYPE("usenative", dbgs() << "<useNative> replace " << *aCI

@@ -1308,7 +1308,8 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
       auto InstIt = Builder.GetInsertBlock()
                         ->getParent()
                         ->getEntryBlock()
-                        .getTerminator()->getIterator();
+                        .getTerminator()
+                        ->getIterator();
 
       auto *CreatedArray = new AllocaInst(NewArrayType, DL.getAllocaAddrSpace(),
                                           SAI->getName(), InstIt);

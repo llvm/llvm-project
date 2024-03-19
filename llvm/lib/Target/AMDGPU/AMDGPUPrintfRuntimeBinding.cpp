@@ -290,8 +290,8 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     Value *sumC = ConstantInt::get(SizetTy, Sum, false);
     SmallVector<Value *, 1> alloc_args;
     alloc_args.push_back(sumC);
-    CallInst *pcall =
-        CallInst::Create(PrintfAllocFn, alloc_args, "printf_alloc_fn", CI->getIterator());
+    CallInst *pcall = CallInst::Create(PrintfAllocFn, alloc_args,
+                                       "printf_alloc_fn", CI->getIterator());
 
     //
     // Insert code to split basicblock with a
@@ -316,7 +316,8 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     // store unique printf id in the buffer
     //
     GetElementPtrInst *BufferIdx = GetElementPtrInst::Create(
-        I8Ty, pcall, ConstantInt::get(Ctx, APInt(32, 0)), "PrintBuffID", BrnchPoint);
+        I8Ty, pcall, ConstantInt::get(Ctx, APInt(32, 0)), "PrintBuffID",
+        BrnchPoint);
 
     Type *idPointer = PointerType::get(I32Ty, AMDGPUAS::GLOBAL_ADDRESS);
     Value *id_gep_cast =

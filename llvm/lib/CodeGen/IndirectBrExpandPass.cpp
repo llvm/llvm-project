@@ -207,9 +207,10 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
   }
 
   auto GetSwitchValue = [CommonITy](IndirectBrInst *IBr) {
-    return CastInst::CreatePointerCast(
-        IBr->getAddress(), CommonITy,
-        Twine(IBr->getAddress()->getName()) + ".switch_cast", IBr->getIterator());
+    return CastInst::CreatePointerCast(IBr->getAddress(), CommonITy,
+                                       Twine(IBr->getAddress()->getName()) +
+                                           ".switch_cast",
+                                       IBr->getIterator());
   };
 
   SmallVector<DominatorTree::UpdateType, 8> Updates;

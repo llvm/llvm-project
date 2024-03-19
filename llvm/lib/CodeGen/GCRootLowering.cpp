@@ -213,8 +213,8 @@ bool DoLowering(Function &F, GCStrategy &S) {
       default: break;
       case Intrinsic::gcwrite: {
         // Replace a write barrier with a simple store.
-        Value *St = new StoreInst(CI->getArgOperand(0),
-                                  CI->getArgOperand(2), CI->getIterator());
+        Value *St = new StoreInst(CI->getArgOperand(0), CI->getArgOperand(2),
+                                  CI->getIterator());
         CI->replaceAllUsesWith(St);
         CI->eraseFromParent();
         MadeChange = true;
@@ -222,7 +222,8 @@ bool DoLowering(Function &F, GCStrategy &S) {
       }
       case Intrinsic::gcread: {
         // Replace a read barrier with a simple load.
-        Value *Ld = new LoadInst(CI->getType(), CI->getArgOperand(1), "", CI->getIterator());
+        Value *Ld = new LoadInst(CI->getType(), CI->getArgOperand(1), "",
+                                 CI->getIterator());
         Ld->takeName(CI);
         CI->replaceAllUsesWith(Ld);
         CI->eraseFromParent();

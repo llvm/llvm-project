@@ -807,8 +807,7 @@ Instruction *PPCLoopInstrFormPrep::rewriteForBucketElement(
       PtrIP = Element.Instr->getIterator();
 
     assert(OffToBase && "There should be an offset for non base element!\n");
-    GetElementPtrInst *NewPtr =
-      GetElementPtrInst::Create(
+    GetElementPtrInst *NewPtr = GetElementPtrInst::Create(
         I8Ty, PtrInc, OffToBase,
         getInstrName(Element.Instr, GEPNodeOffNameSuffix));
     if (PtrIP)
