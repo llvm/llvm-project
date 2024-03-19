@@ -859,6 +859,18 @@ define <4 x i32> @urhadd_v4i32(<4 x i32> %x) {
   ret <4 x i32> %r
 }
 
+define <8 x i16> @uhadd_fixedwidth_v4i32(<8 x i16> %a0, <8 x i16> %a1)  {
+; CHECK-LABEL: uhadd_fixedwidth_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %and = and <8 x i16> %a0, %a1
+  %xor = xor <8 x i16> %a0, %a1
+  %srl = lshr <8 x i16> %xor, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %res = add <8 x i16> %and, %srl
+  ret <8 x i16> %res
+}
+
 declare <8 x i8> @llvm.aarch64.neon.shadd.v8i8(<8 x i8>, <8 x i8>)
 declare <4 x i16> @llvm.aarch64.neon.shadd.v4i16(<4 x i16>, <4 x i16>)
 declare <2 x i32> @llvm.aarch64.neon.shadd.v2i32(<2 x i32>, <2 x i32>)
