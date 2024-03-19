@@ -39,13 +39,13 @@ public:
     llvm::MachO::Target Target;
 
     // Target specific API from binary.
-    RecordsSlice *DylibSlice;
+    RecordsSlice *DylibSlice = nullptr;
 
     // Query state of verification after AST has been traversed.
-    Result FrontendState;
+    Result FrontendState = Result::Ignore;
 
     // First error for AST traversal, which is tied to the target triple.
-    bool DiscoveredFirstError;
+    bool DiscoveredFirstError = false;
 
     // Determines what kind of banner to print a violation for.
     bool PrintArch = false;
