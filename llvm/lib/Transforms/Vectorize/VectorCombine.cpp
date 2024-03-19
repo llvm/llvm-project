@@ -786,9 +786,12 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   // intrinsic
   VectorType *VecTy = cast<VectorType>(VPI.getType());
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  SmallVector<int> Mask;
+  if (auto *FVTy = dyn_cast<FixedVectorType>(VecTy))
+    Mask.resize(FVTy->getNumElements(), 0);
   InstructionCost SplatCost =
       TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy);
+      TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy, Mask);
 
   // Calculate the cost of the VP Intrinsic
   SmallVector<Type *, 4> Args;
