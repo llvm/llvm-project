@@ -42,6 +42,7 @@ namespace clang {
       DIAG_SIZE_SEMA          = 4500,
       DIAG_SIZE_ANALYSIS      =  100,
       DIAG_SIZE_REFACTORING   = 1000,
+      DIAG_SIZE_INSTALLAPI    =  100,
       DIAG_SIZE_CAS           =  100,
     };
     // Start position for diagnostics.
@@ -58,7 +59,8 @@ namespace clang {
       DIAG_START_SEMA          = DIAG_START_CROSSTU       + static_cast<int>(DIAG_SIZE_CROSSTU),
       DIAG_START_ANALYSIS      = DIAG_START_SEMA          + static_cast<int>(DIAG_SIZE_SEMA),
       DIAG_START_REFACTORING   = DIAG_START_ANALYSIS      + static_cast<int>(DIAG_SIZE_ANALYSIS),
-      DIAG_START_CAS           = DIAG_START_REFACTORING   + static_cast<int>(DIAG_SIZE_REFACTORING),
+      DIAG_START_INSTALLAPI    = DIAG_START_REFACTORING   + static_cast<int>(DIAG_SIZE_REFACTORING),
+      DIAG_START_CAS           = DIAG_START_INSTALLAPI    + static_cast<int>(DIAG_START_INSTALLAPI),
       DIAG_UPPER_LIMIT         = DIAG_START_CAS           + static_cast<int>(DIAG_SIZE_CAS)
     };
 

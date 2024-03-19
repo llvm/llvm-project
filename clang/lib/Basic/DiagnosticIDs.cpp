@@ -50,6 +50,7 @@ struct StaticDiagInfoDescriptionStringTable {
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
 #include "clang/Basic/DiagnosticCASKinds.inc"
+#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
   // clang-format on
 #undef DIAG
 };
@@ -72,7 +73,8 @@ const StaticDiagInfoDescriptionStringTable StaticDiagInfoDescriptions = {
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
 #include "clang/Basic/DiagnosticCASKinds.inc"
-  // clang-format on
+#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
+// clang-format on
 #undef DIAG
 };
 
@@ -98,7 +100,8 @@ const uint32_t StaticDiagInfoDescriptionOffsets[] = {
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
 #include "clang/Basic/DiagnosticCASKinds.inc"
-  // clang-format on
+#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
+// clang-format on
 #undef DIAG
 };
 
@@ -177,6 +180,7 @@ VALIDATE_DIAG_SIZE(SEMA)
 VALIDATE_DIAG_SIZE(ANALYSIS)
 VALIDATE_DIAG_SIZE(REFACTORING)
 VALIDATE_DIAG_SIZE(CAS)
+VALIDATE_DIAG_SIZE(INSTALLAPI)
 #undef VALIDATE_DIAG_SIZE
 #undef STRINGIFY_NAME
 
@@ -209,6 +213,7 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
 #include "clang/Basic/DiagnosticCASKinds.inc"
+#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
 // clang-format on
 #undef DIAG
 };
@@ -252,6 +257,7 @@ CATEGORY(SEMA, CROSSTU)
 CATEGORY(ANALYSIS, SEMA)
 CATEGORY(REFACTORING, ANALYSIS)
 CATEGORY(CAS, REFACTORING)
+CATEGORY(INSTALLAPI, REFACTORING)
 #undef CATEGORY
 
   // Avoid out of bounds reads.
