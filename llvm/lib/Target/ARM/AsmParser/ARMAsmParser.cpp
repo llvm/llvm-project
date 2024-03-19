@@ -1945,7 +1945,7 @@ public:
 
       // And be in the right range, depending on the amount that it is shifted
       // by.  Shift 0, is equal to 7 unsigned bits, the sign bit is set
-      // ly.
+      // separately.
       int64_t Range = (1U << (7 + shift)) - 1;
       return (Val == INT32_MIN) || (Val > -Range && Val < Range);
     }
@@ -4235,7 +4235,7 @@ std::optional<ARM_AM::ShiftOpc> ARMAsmParser::tryParseShiftToken() {
   const AsmToken &Tok = Parser.getTok();
   if (Tok.isNot(AsmToken::Identifier))
     return std::nullopt;
-  
+
   std::string lowerCase = Tok.getString().lower();
   return StringSwitch<std::optional<ARM_AM::ShiftOpc>>(lowerCase)
       .Case("asl", ARM_AM::lsl)
@@ -4325,7 +4325,6 @@ int ARMAsmParser::tryParseShiftRegister(OperandVector &Operands) {
       return -1;
     }
   }
-
 
   if (ShiftReg && ShiftTy != ARM_AM::rrx)
     Operands.push_back(ARMOperand::CreateShiftedRegister(ShiftTy, SrcReg,
