@@ -1937,16 +1937,13 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArmNeonDialect",
-        ":ArmNeonIncGen",
+        ":DialectUtils",
         ":FuncDialect",
         ":IR",
         ":LLVMDialect",
-        ":SideEffectInterfaces",
         ":Support",
         ":Transforms",
         ":VectorDialect",
-        "//llvm:Core",
-        "//llvm:Support",
     ],
 )
 
