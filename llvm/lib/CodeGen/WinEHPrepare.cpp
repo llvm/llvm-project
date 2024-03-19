@@ -1234,10 +1234,10 @@ AllocaInst *WinEHPrepareImpl::insertPHILoads(PHINode *PN, Function &F) {
     // that will dominate all uses.
     SpillSlot = new AllocaInst(PN->getType(), DL->getAllocaAddrSpace(), nullptr,
                                Twine(PN->getName(), ".wineh.spillslot"),
-                               &F.getEntryBlock().front());
+                               F.getEntryBlock().begin());
     Value *V = new LoadInst(PN->getType(), SpillSlot,
                             Twine(PN->getName(), ".wineh.reload"),
-                            &*PHIBlock->getFirstInsertionPt());
+                            PHIBlock->getFirstInsertionPt());
     PN->replaceAllUsesWith(V);
     return SpillSlot;
   }
@@ -1309,7 +1309,7 @@ void WinEHPrepareImpl::insertPHIStore(
   }
 
   // Otherwise, insert the store at the end of the basic block.
-  new StoreInst(PredVal, SpillSlot, PredBlock->getTerminator());
+  new StoreInst(PredVal, SpillSlot, PredBlock->getTerminator()->getIterator());
 }
 
 void WinEHPrepareImpl::replaceUseWithLoad(
@@ -1319,7 +1319,7 @@ void WinEHPrepareImpl::replaceUseWithLoad(
   if (!SpillSlot)
     SpillSlot = new AllocaInst(V->getType(), DL->getAllocaAddrSpace(), nullptr,
                                Twine(V->getName(), ".wineh.spillslot"),
-                               &F.getEntryBlock().front());
+                               F.getEntryBlock().begin());
 
   auto *UsingInst = cast<Instruction>(U.getUser());
   if (auto *UsingPHI = dyn_cast<PHINode>(UsingInst)) {
@@ -1376,16 +1376,16 @@ void WinEHPrepareImpl::replaceUseWithLoad(
     Value *&Load = Loads[IncomingBlock];
     // Insert the load into the predecessor block
     if (!Load)
-      Load = new LoadInst(V->getType(), SpillSlot,
-                          Twine(V->getName(), ".wineh.reload"),
-                          /*isVolatile=*/false, IncomingBlock->getTerminator());
+      Load = new LoadInst(
+          V->getType(), SpillSlot, Twine(V->getName(), ".wineh.reload"),
+          /*isVolatile=*/false, IncomingBlock->getTerminator()->getIterator());
 
     U.set(Load);
   } else {
     // Reload right before the old use.
     auto *Load = new LoadInst(V->getType(), SpillSlot,
                               Twine(V->getName(), ".wineh.reload"),
-                              /*isVolatile=*/false, UsingInst);
+                              /*isVolatile=*/false, UsingInst->getIterator());
     U.set(Load);
   }
 }
