@@ -236,8 +236,9 @@ static cl::opt<unsigned> ProfileICPRelativeHotnessSkip(
 
 static cl::opt<unsigned> HotFuncCutoffForStalenessError(
     "hot-func-cutoff-for-staleness-error", cl::Hidden, cl::init(999000),
-    cl::desc("Hot function cutoff for staleness error. It's percentile value "
-             "(multiplied by 10000), e.g. 995000 for 99.5 percentile."));
+    cl::desc("A function is considered hot for staleness error check if its "
+             "total sample count is above the specified percentile(multiplied "
+             "by 10000, e.g. 995000 for 99.5 percentile)."));
 
 static cl::opt<unsigned> MinfuncsForStalenessError(
     "min-functions-for-staleness-error", cl::Hidden, cl::init(50),
