@@ -43,7 +43,7 @@ static Value extendVectorRank(OpBuilder &builder, Location loc, Value vec,
                   originalVecType.getShape().end());
 
   SmallVector<bool> newScalableDims(addedRank, false);
-  newScalableDims.append(originalVecType.getScalableDims().begin(), 
+  newScalableDims.append(originalVecType.getScalableDims().begin(),
                          originalVecType.getScalableDims().end());
   VectorType newVecType = VectorType::get(
       newShape, originalVecType.getElementType(), newScalableDims);
