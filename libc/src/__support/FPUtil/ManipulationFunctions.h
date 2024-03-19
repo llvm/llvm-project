@@ -15,14 +15,13 @@
 #include "dyadic_float.h"
 #include "rounding_mode.h"
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-
-#include <math.h>
 
 namespace LIBC_NAMESPACE {
 namespace fputil {
@@ -259,6 +258,7 @@ LIBC_INLINE constexpr T nextupdown(T x) {
 
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #include "x86_64/NextAfterLongDouble.h"
+#include "x86_64/NextUpDownLongDouble.h"
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H

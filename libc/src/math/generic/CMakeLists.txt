@@ -1891,6 +1891,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nextdownl
+  SRCS
+    nextdownl.cpp
+  HDRS
+    ../nextdownl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   nextdownf
   SRCS
     nextdownf.cpp
@@ -1921,6 +1933,18 @@ add_entrypoint_object(
     nextup.cpp
   HDRS
     ../nextup.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nextupl
+  SRCS
+    nextupl.cpp
+  HDRS
+    ../nextupl.h
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
@@ -2131,16 +2155,9 @@ add_object_library(
   SRCS
     inv_trigf_utils.cpp
   DEPENDS
-    .math_utils
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.common
-    libc.include.errno
-    libc.src.errno.errno
-    libc.include.math
 )
 
 add_entrypoint_object(
@@ -2187,8 +2204,11 @@ add_entrypoint_object(
     ../atanf.h
   DEPENDS
     .inv_trigf_utils
-    .math_utils
+    libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS

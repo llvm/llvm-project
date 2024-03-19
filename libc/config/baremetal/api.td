@@ -68,12 +68,20 @@ def StdlibAPI : PublicAPI<"stdlib.h"> {
     "size_t",
     "__bsearchcompare_t",
     "__qsortcompare_t",
-    "__atexithandler_t",
   ];
 }
 
 def StringAPI : PublicAPI<"string.h"> {
   let Types = ["size_t"];
+}
+
+def TimeAPI : PublicAPI<"time.h"> {
+  let Types = [
+    "clock_t",
+    "time_t",
+    "struct tm",
+    "struct timespec",
+  ];
 }
 
 def UCharAPI : PublicAPI<"uchar.h"> {

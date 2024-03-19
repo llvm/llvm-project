@@ -1143,9 +1143,15 @@ void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
     // Process metadata used by DbgRecords; we only specifically care about the
     // DILocalVariable, DILocation, and DIAssignID fields, as the Value and
     // Expression fields should only be printed inline and so do not use a slot.
+    // Note: The above doesn't apply for empty-metadata operands.
+    if (auto *Empty = dyn_cast<MDNode>(DPV->getRawLocation()))
+      CreateMetadataSlot(Empty);
     CreateMetadataSlot(DPV->getRawVariable());
-    if (DPV->isDbgAssign())
+    if (DPV->isDbgAssign()) {
       CreateMetadataSlot(cast<MDNode>(DPV->getRawAssignID()));
+      if (auto *Empty = dyn_cast<MDNode>(DPV->getRawAddress()))
+        CreateMetadataSlot(Empty);
+    }
   } else if (const DPLabel *DPL = dyn_cast<const DPLabel>(&DR)) {
     CreateMetadataSlot(DPL->getRawLabel());
   } else {
@@ -2135,6 +2141,16 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
     Printer.printInt("dwarfAddressSpace", *DWARFAddressSpace,
                      /* ShouldSkipZero */ false);
   Printer.printMetadata("annotations", N->getRawAnnotations());
+  if (auto PtrAuthData = N->getPtrAuthData()) {
+    Printer.printInt("ptrAuthKey", PtrAuthData->key());
+    Printer.printBool("ptrAuthIsAddressDiscriminated",
+                      PtrAuthData->isAddressDiscriminated());
+    Printer.printInt("ptrAuthExtraDiscriminator",
+                     PtrAuthData->extraDiscriminator());
+    Printer.printBool("ptrAuthIsaPointer", PtrAuthData->isaPointer());
+    Printer.printBool("ptrAuthAuthenticatesNullValues",
+                      PtrAuthData->authenticatesNullValues());
+  }
   Out << ")";
 }
 

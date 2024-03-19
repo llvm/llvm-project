@@ -1567,7 +1567,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                                                const SPIRVType *ResType,
                                                MachineInstr &I) const {
   MachineBasicBlock &BB = *I.getParent();
-  switch (cast<GIntrinsic>(I).getIntrinsicID()) {
+  Intrinsic::ID IID = cast<GIntrinsic>(I).getIntrinsicID();
+  switch (IID) {
   case Intrinsic::spv_load:
     return selectLoad(ResVReg, ResType, I);
   case Intrinsic::spv_store:
@@ -1661,8 +1662,25 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     break;
   case Intrinsic::spv_thread_id:
     return selectSpvThreadId(ResVReg, ResType, I);
-  default:
-    llvm_unreachable("Intrinsic selection not implemented");
+  case Intrinsic::spv_lifetime_start:
+  case Intrinsic::spv_lifetime_end: {
+    unsigned Op = IID == Intrinsic::spv_lifetime_start ? SPIRV::OpLifetimeStart
+                                                       : SPIRV::OpLifetimeStop;
+    int64_t Size = I.getOperand(I.getNumExplicitDefs() + 1).getImm();
+    Register PtrReg = I.getOperand(I.getNumExplicitDefs() + 2).getReg();
+    unsigned PonteeOpType = GR.getPointeeTypeOp(PtrReg);
+    bool IsNonvoidPtr = PonteeOpType != 0 && PonteeOpType != SPIRV::OpTypeVoid;
+    if (Size == -1 || IsNonvoidPtr)
+      Size = 0;
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(Op)).addUse(PtrReg).addImm(Size);
+  } break;
+  default: {
+    std::string DiagMsg;
+    raw_string_ostream OS(DiagMsg);
+    I.print(OS);
+    DiagMsg = "Intrinsic selection not implemented: " + DiagMsg;
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
   }
   return true;
 }

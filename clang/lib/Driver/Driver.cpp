@@ -2197,6 +2197,12 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     return false;
   }
 
+  if (C.getArgs().hasArg(options::OPT_print_std_module_manifest_path)) {
+    llvm::outs() << GetStdModuleManifestPath(C, C.getDefaultToolChain())
+                 << '\n';
+    return false;
+  }
+
   if (C.getArgs().hasArg(options::OPT_print_runtime_dir)) {
     if (std::optional<std::string> RuntimePath = TC.getRuntimePath())
       llvm::outs() << *RuntimePath << '\n';
@@ -4641,7 +4647,8 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
 
   // All kinds exit now in device-only mode except for non-RDC mode HIP.
   if (offloadDeviceOnly() &&
-      (!C.isOffloadingHostKind(Action::OFK_HIP) ||
+      (getFinalPhase(Args) == phases::Preprocess ||
+       !C.isOffloadingHostKind(Action::OFK_HIP) ||
        !Args.hasFlag(options::OPT_gpu_bundle_output,
                      options::OPT_no_gpu_bundle_output, true) ||
        Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false)))
@@ -6184,6 +6191,44 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
   }
 
   return std::string(Name);
+}
+
+std::string Driver::GetStdModuleManifestPath(const Compilation &C,
+                                             const ToolChain &TC) const {
+  std::string error = "<NOT PRESENT>";
+
+  switch (TC.GetCXXStdlibType(C.getArgs())) {
+  case ToolChain::CST_Libcxx: {
+    std::string lib = GetFilePath("libc++.so", TC);
+
+    // Note when there are multiple flavours of libc++ the module json needs to
+    // look at the command-line arguments for the proper json.
+    // These flavours do not exist at the moment, but there are plans to
+    // provide a variant that is built with sanitizer instrumentation enabled.
+
+    // For example
+    //  StringRef modules = [&] {
+    //    const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
+    //    if (Sanitize.needsAsanRt())
+    //      return "modules-asan.json";
+    //    return "modules.json";
+    //  }();
+
+    SmallString<128> path(lib.begin(), lib.end());
+    llvm::sys::path::remove_filename(path);
+    llvm::sys::path::append(path, "modules.json");
+    if (TC.getVFS().exists(path))
+      return static_cast<std::string>(path);
+
+    return error;
+  }
+
+  case ToolChain::CST_Libstdcxx:
+    // libstdc++ does not provide Standard library modules yet.
+    return error;
+  }
+
+  return error;
 }
 
 std::string Driver::GetTemporaryPath(StringRef Prefix, StringRef Suffix) const {
