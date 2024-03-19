@@ -21,10 +21,8 @@ LLVM_LIBC_FUNCTION(int, pipe2, (int pipefd[2], int flags)) {
   int ret;
 #ifdef SYS_pipe2
   ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_pipe2, pipefd, flags);
-#elif defined(SYS_pipe)
-  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_pipe, pipefd);
 #else
-#error "pipe and pipe2 not available."
+#error "pipe2 not available."
 #endif
   if (ret < 0) {
     libc_errno = -ret;
