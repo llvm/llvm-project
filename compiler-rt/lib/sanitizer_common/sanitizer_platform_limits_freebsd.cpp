@@ -476,6 +476,7 @@ CHECK_TYPE_SIZE(sigset_t);
 
 COMPILER_CHECK(sizeof(__sanitizer_sigaction) == sizeof(struct sigaction));
 COMPILER_CHECK(sizeof(__sanitizer_siginfo) == sizeof(siginfo_t));
+COMPILER_CHECK(sizeof(__sanitizer_sockaddr) == sizeof(struct sockaddr));
 CHECK_SIZE_AND_OFFSET(siginfo_t, si_value);
 // Can't write checks for sa_handler and sa_sigaction due to them being
 // preprocessor macros.
