@@ -198,7 +198,8 @@ mlir::Value hlfir::Entity::getFirBase() const {
 fir::FortranVariableOpInterface
 hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                   const fir::ExtendedValue &exv, llvm::StringRef name,
-                  fir::FortranVariableFlagsAttr flags) {
+                  fir::FortranVariableFlagsAttr flags,
+                  fir::CUDADataAttributeAttr cudaAttr) {
 
   mlir::Value base = fir::getBase(exv);
   assert(fir::conformsWithPassByRef(base.getType()) &&
@@ -228,7 +229,7 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
       },
       [](const auto &) {});
   auto declareOp = builder.create<hlfir::DeclareOp>(
-      loc, base, name, shapeOrShift, lenParams, flags);
+      loc, base, name, shapeOrShift, lenParams, flags, cudaAttr);
   return mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
 }
 
@@ -847,36 +848,38 @@ hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
 
 static fir::ExtendedValue
 translateVariableToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                                 hlfir::Entity variable) {
+                                 hlfir::Entity variable,
+                                 bool forceHlfirBase = false) {
   assert(variable.isVariable() && "must be a variable");
   /// When going towards FIR, use the original base value to avoid
   /// introducing descriptors at runtime when they are not required.
-  mlir::Value firBase = variable.getFirBase();
+  mlir::Value base =
+      forceHlfirBase ? variable.getBase() : variable.getFirBase();
   if (variable.isMutableBox())
-    return fir::MutableBoxValue(firBase, getExplicitTypeParams(variable),
+    return fir::MutableBoxValue(base, getExplicitTypeParams(variable),
                                 fir::MutableProperties{});
 
-  if (firBase.getType().isa<fir::BaseBoxType>()) {
+  if (base.getType().isa<fir::BaseBoxType>()) {
     if (!variable.isSimplyContiguous() || variable.isPolymorphic() ||
         variable.isDerivedWithLengthParameters() || variable.isOptional()) {
       llvm::SmallVector<mlir::Value> nonDefaultLbounds =
           getNonDefaultLowerBounds(loc, builder, variable);
-      return fir::BoxValue(firBase, nonDefaultLbounds,
+      return fir::BoxValue(base, nonDefaultLbounds,
                            getExplicitTypeParams(variable));
     }
     // Otherwise, the variable can be represented in a fir::ExtendedValue
     // without the overhead of a fir.box.
-    firBase = genVariableRawAddress(loc, builder, variable);
+    base = genVariableRawAddress(loc, builder, variable);
   }
 
   if (variable.isScalar()) {
     if (variable.isCharacter()) {
-      if (firBase.getType().isa<fir::BoxCharType>())
-        return genUnboxChar(loc, builder, firBase);
+      if (base.getType().isa<fir::BoxCharType>())
+        return genUnboxChar(loc, builder, base);
       mlir::Value len = genCharacterVariableLength(loc, builder, variable);
-      return fir::CharBoxValue{firBase, len};
+      return fir::CharBoxValue{base, len};
     }
-    return firBase;
+    return base;
   }
   llvm::SmallVector<mlir::Value> extents;
   llvm::SmallVector<mlir::Value> nonDefaultLbounds;
@@ -892,15 +895,16 @@ translateVariableToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
   }
   if (variable.isCharacter())
     return fir::CharArrayBoxValue{
-        firBase, genCharacterVariableLength(loc, builder, variable), extents,
+        base, genCharacterVariableLength(loc, builder, variable), extents,
         nonDefaultLbounds};
-  return fir::ArrayBoxValue{firBase, extents, nonDefaultLbounds};
+  return fir::ArrayBoxValue{base, extents, nonDefaultLbounds};
 }
 
 fir::ExtendedValue
 hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                                fir::FortranVariableOpInterface var) {
-  return translateVariableToExtendedValue(loc, builder, var);
+                                fir::FortranVariableOpInterface var,
+                                bool forceHlfirBase) {
+  return translateVariableToExtendedValue(loc, builder, var, forceHlfirBase);
 }
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
@@ -1032,9 +1036,9 @@ hlfir::cloneToElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
     return hlfir::loadTrivialScalar(l, b, newAddr);
   };
   mlir::Type elementType = scalarAddress.getFortranElementType();
-  return hlfir::genElementalOp(loc, builder, elementType,
-                               elementalAddrOp.getShape(), typeParams,
-                               genKernel, !elementalAddrOp.isOrdered());
+  return hlfir::genElementalOp(
+      loc, builder, elementType, elementalAddrOp.getShape(), typeParams,
+      genKernel, !elementalAddrOp.isOrdered(), elementalAddrOp.getMold());
 }
 
 bool hlfir::elementalOpMustProduceTemp(hlfir::ElementalOp elemental) {

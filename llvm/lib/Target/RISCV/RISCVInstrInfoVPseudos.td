@@ -2066,10 +2066,10 @@ multiclass VPseudoVID_V {
     defvar mx = m.MX;
     let VLMul = m.value in {
       def "_V_" # mx : VPseudoNullaryNoMask<m.vrclass>,
-                         SchedNullary<"WriteVMIdxV", mx, forceMergeOpRead=true>;
+                         SchedNullary<"WriteVIdxV", mx, forceMergeOpRead=true>;
       def "_V_" # mx # "_MASK" : VPseudoNullaryMask<m.vrclass>,
                                    RISCVMaskedPseudo<MaskIdx=1>,
-                                   SchedNullary<"WriteVMIdxV", mx,
+                                   SchedNullary<"WriteVIdxV", mx,
                                                 forceMergeOpRead=true>;
     }
   }
@@ -2084,17 +2084,17 @@ multiclass VPseudoNullaryPseudoM <string BaseInst> {
   }
 }
 
-multiclass VPseudoVIOT_M {
+multiclass VPseudoVIOTA_M {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxList in {
     defvar mx = m.MX;
     let VLMul = m.value in {
       def "_" # mx : VPseudoUnaryNoMask<m.vrclass, VR, constraint>,
-                       SchedUnary<"WriteVMIotV", "ReadVMIotV", mx,
+                       SchedUnary<"WriteVIotaV", "ReadVIotaV", mx,
                                   forceMergeOpRead=true>;
       def "_" # mx # "_MASK" : VPseudoUnaryMask<m.vrclass, VR, constraint>,
                                  RISCVMaskedPseudo<MaskIdx=2, MaskAffectsRes=true>,
-                                 SchedUnary<"WriteVMIotV", "ReadVMIotV", mx,
+                                 SchedUnary<"WriteVIotaV", "ReadVIotaV", mx,
                                             forceMergeOpRead=true>;
     }
   }
@@ -6747,7 +6747,7 @@ defm PseudoVMSOF: VPseudoVSFS_M;
 //===----------------------------------------------------------------------===//
 // 15.8.  Vector Iota Instruction
 //===----------------------------------------------------------------------===//
-defm PseudoVIOTA_M: VPseudoVIOT_M;
+defm PseudoVIOTA_M: VPseudoVIOTA_M;
 
 //===----------------------------------------------------------------------===//
 // 15.9. Vector Element Index Instruction
@@ -6767,14 +6767,14 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   let HasSEWOp = 1, BaseInstr = VMV_X_S in
   def PseudoVMV_X_S:
     Pseudo<(outs GPR:$rd), (ins VR:$rs2, ixlenimm:$sew), []>,
-    Sched<[WriteVIMovVX, ReadVIMovVX]>,
+    Sched<[WriteVMovXS, ReadVMovXS]>,
     RISCVVPseudo;
   let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X,
       Constraints = "$rd = $rs1" in
   def PseudoVMV_S_X: Pseudo<(outs VR:$rd),
                             (ins VR:$rs1, GPR:$rs2, AVL:$vl, ixlenimm:$sew),
                             []>,
-    Sched<[WriteVIMovXV, ReadVIMovXV, ReadVIMovXX]>,
+    Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]>,
     RISCVVPseudo;
 }
 } // Predicates = [HasVInstructions]
@@ -6793,7 +6793,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
         def "PseudoVFMV_" # f.FX # "_S_" # mx :
           Pseudo<(outs f.fprclass:$rd),
                  (ins m.vrclass:$rs2, ixlenimm:$sew), []>,
-          Sched<[WriteVFMovVF, ReadVFMovVF]>,
+          Sched<[WriteVMovFS, ReadVMovFS]>,
           RISCVVPseudo;
         let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F,
             Constraints = "$rd = $rs1" in
@@ -6802,7 +6802,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
                                                  (ins m.vrclass:$rs1, f.fprclass:$rs2,
                                                       AVL:$vl, ixlenimm:$sew),
                                                  []>,
-          Sched<[WriteVFMovFV, ReadVFMovFV, ReadVFMovFX]>,
+          Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>,
           RISCVVPseudo;
       }
     }

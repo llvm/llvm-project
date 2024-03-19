@@ -79,6 +79,11 @@ public:
 
   virtual bool IsValidForOperatingSystemThread(Thread &thread) { return true; }
 
+  /// A Continue operation can result in a false stop event
+  /// before any execution has happened. We need to detect this
+  /// and silently continue again one more time.
+  virtual bool WasContinueInterrupted(Thread &thread) { return false; }
+
   // Sometimes the thread plan logic will know that it wants a given stop to
   // stop or not, regardless of what the ordinary logic for that StopInfo would
   // dictate.  The main example of this is the ThreadPlanCallFunction, which

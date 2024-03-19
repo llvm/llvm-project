@@ -158,6 +158,12 @@ void DebugValueUser::handleChangedValue(void *Old, Metadata *New) {
   // getOwner, if needed.
   auto OldMD = static_cast<Metadata **>(Old);
   ptrdiff_t Idx = std::distance(&*DebugValues.begin(), OldMD);
+  // If replacing a ValueAsMetadata with a nullptr, replace it with a
+  // PoisonValue instead.
+  if (OldMD && isa<ValueAsMetadata>(*OldMD) && !New) {
+    auto *OldVAM = cast<ValueAsMetadata>(*OldMD);
+    New = ValueAsMetadata::get(PoisonValue::get(OldVAM->getValue()->getType()));
+  }
   resetDebugValue(Idx, New);
 }
 

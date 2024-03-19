@@ -162,10 +162,3 @@ void host_dev(int device) {
 // MANDATORY:       omp_offload.cont:
 // MANDATORY-NEXT:    ret void
 //
-//
-// MANDATORY-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// MANDATORY-SAME: () #[[ATTR3:[0-9]+]] {
-// MANDATORY-NEXT:  entry:
-// MANDATORY-NEXT:    call void @__tgt_register_requires(i64 1)
-// MANDATORY-NEXT:    ret void
-//

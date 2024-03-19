@@ -83,6 +83,46 @@ cl::opt<std::string> CompDirOverride(
 namespace llvm {
 namespace bolt {
 
+char BOLTError::ID = 0;
+
+BOLTError::BOLTError(bool IsFatal, const Twine &S)
+    : IsFatal(IsFatal), Msg(S.str()) {}
+
+void BOLTError::log(raw_ostream &OS) const {
+  if (IsFatal)
+    OS << "FATAL ";
+  StringRef ErrMsg = StringRef(Msg);
+  // Prepend our error prefix if it is missing
+  if (ErrMsg.empty()) {
+    OS << "BOLT-ERROR\n";
+  } else {
+    if (!ErrMsg.starts_with("BOLT-ERROR"))
+      OS << "BOLT-ERROR: ";
+    OS << ErrMsg << "\n";
+  }
+}
+
+std::error_code BOLTError::convertToErrorCode() const {
+  return inconvertibleErrorCode();
+}
+
+Error createNonFatalBOLTError(const Twine &S) {
+  return make_error<BOLTError>(/*IsFatal*/ false, S);
+}
+
+Error createFatalBOLTError(const Twine &S) {
+  return make_error<BOLTError>(/*IsFatal*/ true, S);
+}
+
+void BinaryContext::logBOLTErrorsAndQuitOnFatal(Error E) {
+  handleAllErrors(Error(std::move(E)), [&](const BOLTError &E) {
+    if (!E.getMessage().empty())
+      E.log(this->errs());
+    if (E.isFatal())
+      exit(1);
+  });
+}
+
 BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
                              std::unique_ptr<DWARFContext> DwCtx,
                              std::unique_ptr<Triple> TheTriple,
@@ -96,13 +136,15 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
                              std::unique_ptr<const MCInstrAnalysis> MIA,
                              std::unique_ptr<MCPlusBuilder> MIB,
                              std::unique_ptr<const MCRegisterInfo> MRI,
-                             std::unique_ptr<MCDisassembler> DisAsm)
+                             std::unique_ptr<MCDisassembler> DisAsm,
+                             JournalingStreams Logger)
     : Ctx(std::move(Ctx)), DwCtx(std::move(DwCtx)),
       TheTriple(std::move(TheTriple)), TheTarget(TheTarget),
       TripleName(TripleName), MCE(std::move(MCE)), MOFI(std::move(MOFI)),
       AsmInfo(std::move(AsmInfo)), MII(std::move(MII)), STI(std::move(STI)),
       InstPrinter(std::move(InstPrinter)), MIA(std::move(MIA)),
-      MIB(std::move(MIB)), MRI(std::move(MRI)), DisAsm(std::move(DisAsm)) {
+      MIB(std::move(MIB)), MRI(std::move(MRI)), DisAsm(std::move(DisAsm)),
+      Logger(Logger) {
   Relocation::Arch = this->TheTriple->getArch();
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
@@ -122,7 +164,8 @@ BinaryContext::~BinaryContext() {
 /// triple \p TripleName.
 Expected<std::unique_ptr<BinaryContext>>
 BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
-                                   std::unique_ptr<DWARFContext> DwCtx) {
+                                   std::unique_ptr<DWARFContext> DwCtx,
+                                   JournalingStreams Logger) {
   StringRef ArchName = "";
   std::string FeaturesStr = "";
   switch (File->getArch()) {
@@ -241,17 +284,12 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
   std::unique_ptr<MCCodeEmitter> MCE(
       TheTarget->createMCCodeEmitter(*MII, *Ctx));
 
-  // Make sure we don't miss any output on core dumps.
-  outs().SetUnbuffered();
-  errs().SetUnbuffered();
-  dbgs().SetUnbuffered();
-
   auto BC = std::make_unique<BinaryContext>(
       std::move(Ctx), std::move(DwCtx), std::move(TheTriple), TheTarget,
       std::string(TripleName), std::move(MCE), std::move(MOFI),
       std::move(AsmInfo), std::move(MII), std::move(STI),
       std::move(InstructionPrinter), std::move(MIA), nullptr, std::move(MRI),
-      std::move(DisAsm));
+      std::move(DisAsm), Logger);
 
   BC->LSDAEncoding = LSDAEncoding;
 
@@ -304,9 +342,9 @@ bool BinaryContext::validateObjectNesting() const {
            Itr->second->containsRange(Next->second->getAddress(),
                                       Next->second->getSize())) {
       if (Next->second->Parent != Itr->second) {
-        errs() << "BOLT-WARNING: object nesting incorrect for:\n"
-               << "BOLT-WARNING:  " << *Itr->second << "\n"
-               << "BOLT-WARNING:  " << *Next->second << "\n";
+        this->errs() << "BOLT-WARNING: object nesting incorrect for:\n"
+                     << "BOLT-WARNING:  " << *Itr->second << "\n"
+                     << "BOLT-WARNING:  " << *Next->second << "\n";
         Valid = false;
       }
       ++Next;
@@ -323,14 +361,16 @@ bool BinaryContext::validateHoles() const {
       uint64_t RelAddr = Rel.Offset + Section.getAddress();
       const BinaryData *BD = getBinaryDataContainingAddress(RelAddr);
       if (!BD) {
-        errs() << "BOLT-WARNING: no BinaryData found for relocation at address"
-               << " 0x" << Twine::utohexstr(RelAddr) << " in "
-               << Section.getName() << "\n";
+        this->errs()
+            << "BOLT-WARNING: no BinaryData found for relocation at address"
+            << " 0x" << Twine::utohexstr(RelAddr) << " in " << Section.getName()
+            << "\n";
         Valid = false;
       } else if (!BD->getAtomicRoot()) {
-        errs() << "BOLT-WARNING: no atomic BinaryData found for relocation at "
-               << "address 0x" << Twine::utohexstr(RelAddr) << " in "
-               << Section.getName() << "\n";
+        this->errs()
+            << "BOLT-WARNING: no atomic BinaryData found for relocation at "
+            << "address 0x" << Twine::utohexstr(RelAddr) << " in "
+            << Section.getName() << "\n";
         Valid = false;
       }
     }
@@ -438,8 +478,9 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
         // The address could potentially escape. Mark it as another entry
         // point into the function.
         if (opts::Verbosity >= 1) {
-          outs() << "BOLT-INFO: potentially escaped address 0x"
-                 << Twine::utohexstr(Address) << " in function " << BF << '\n';
+          this->outs() << "BOLT-INFO: potentially escaped address 0x"
+                       << Twine::utohexstr(Address) << " in function " << BF
+                       << '\n';
         }
         BF.HasInternalLabelReference = true;
         return std::make_pair(
@@ -482,9 +523,9 @@ MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
     // internal function addresses to escape the function scope - we
     // consider it a tail call.
     if (opts::Verbosity > 1) {
-      errs() << "BOLT-WARNING: no section for address 0x"
-             << Twine::utohexstr(Address) << " referenced from function " << BF
-             << '\n';
+      this->errs() << "BOLT-WARNING: no section for address 0x"
+                   << Twine::utohexstr(Address) << " referenced from function "
+                   << BF << '\n';
     }
     return MemoryContentsType::UNKNOWN;
   }
@@ -730,7 +771,7 @@ void BinaryContext::skipMarkedFragments() {
     assert(FragmentsToSkip.count(BF) &&
            "internal error in traversing function fragments");
     if (opts::Verbosity >= 1)
-      errs() << "BOLT-WARNING: Ignoring " << BF->getPrintName() << '\n';
+      this->errs() << "BOLT-WARNING: Ignoring " << BF->getPrintName() << '\n';
     BF->setSimple(false);
     BF->setHasIndirectTargetToSplitFragment(true);
 
@@ -738,9 +779,9 @@ void BinaryContext::skipMarkedFragments() {
     llvm::for_each(BF->ParentFragments, addToWorklist);
   }
   if (!FragmentsToSkip.empty())
-    errs() << "BOLT-WARNING: skipped " << FragmentsToSkip.size() << " function"
-           << (FragmentsToSkip.size() == 1 ? "" : "s")
-           << " due to cold fragments\n";
+    this->errs() << "BOLT-WARNING: skipped " << FragmentsToSkip.size()
+                 << " function" << (FragmentsToSkip.size() == 1 ? "" : "s")
+                 << " due to cold fragments\n";
 }
 
 MCSymbol *BinaryContext::getOrCreateGlobalSymbol(uint64_t Address, Twine Prefix,
@@ -791,10 +832,10 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
       // Duplicate the entry for the parent function for easy access
       JT->Parents.push_back(&Function);
       if (opts::Verbosity > 2) {
-        outs() << "BOLT-INFO: Multiple fragments access same jump table: "
-               << JT->Parents[0]->getPrintName() << "; "
-               << Function.getPrintName() << "\n";
-        JT->print(outs());
+        this->outs() << "BOLT-INFO: Multiple fragments access same jump table: "
+                     << JT->Parents[0]->getPrintName() << "; "
+                     << Function.getPrintName() << "\n";
+        JT->print(this->outs());
       }
       Function.JumpTables.emplace(Address, JT);
       JT->Parents[0]->setHasIndirectTargetToSplitFragment(true);
@@ -832,7 +873,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
                                 *getSectionForAddress(Address));
   JT->Parents.push_back(&Function);
   if (opts::Verbosity > 2)
-    JT->print(outs());
+    JT->print(this->outs());
   JumpTables.emplace(Address, JT);
 
   // Duplicate the entry for the parent function for easy access.
@@ -961,12 +1002,13 @@ bool BinaryContext::hasValidCodePadding(const BinaryFunction &BF) {
     return true;
 
   if (opts::Verbosity >= 1) {
-    errs() << "BOLT-WARNING: bad padding at address 0x"
-           << Twine::utohexstr(BF.getAddress() + BF.getSize())
-           << " starting at offset " << (Offset - BF.getSize())
-           << " in function " << BF << '\n'
-           << FunctionData->slice(BF.getSize(), BF.getMaxSize() - BF.getSize())
-           << '\n';
+    this->errs() << "BOLT-WARNING: bad padding at address 0x"
+                 << Twine::utohexstr(BF.getAddress() + BF.getSize())
+                 << " starting at offset " << (Offset - BF.getSize())
+                 << " in function " << BF << '\n'
+                 << FunctionData->slice(BF.getSize(),
+                                        BF.getMaxSize() - BF.getSize())
+                 << '\n';
   }
 
   return false;
@@ -981,8 +1023,8 @@ void BinaryContext::adjustCodePadding() {
     if (!hasValidCodePadding(BF)) {
       if (HasRelocations) {
         if (opts::Verbosity >= 1) {
-          outs() << "BOLT-INFO: function " << BF
-                 << " has invalid padding. Ignoring the function.\n";
+          this->outs() << "BOLT-INFO: function " << BF
+                       << " has invalid padding. Ignoring the function.\n";
         }
         BF.setIgnored();
       } else {
@@ -1130,8 +1172,8 @@ void BinaryContext::generateSymbolHashes() {
       // (i.e. all zeros or a "hole")
       if (!isPadding(BD)) {
         if (opts::Verbosity) {
-          errs() << "BOLT-WARNING: collision detected when hashing " << BD
-                 << " with new name (" << NewName << "), skipping.\n";
+          this->errs() << "BOLT-WARNING: collision detected when hashing " << BD
+                       << " with new name (" << NewName << "), skipping.\n";
         }
         ++NumCollisions;
       }
@@ -1141,11 +1183,11 @@ void BinaryContext::generateSymbolHashes() {
     GlobalSymbols[NewName] = &BD;
   }
   if (NumCollisions) {
-    errs() << "BOLT-WARNING: " << NumCollisions
-           << " collisions detected while hashing binary objects";
+    this->errs() << "BOLT-WARNING: " << NumCollisions
+                 << " collisions detected while hashing binary objects";
     if (!opts::Verbosity)
-      errs() << ". Use -v=1 to see the list.";
-    errs() << '\n';
+      this->errs() << ". Use -v=1 to see the list.";
+    this->errs() << '\n';
   }
 }
 
@@ -1161,8 +1203,8 @@ bool BinaryContext::registerFragment(BinaryFunction &TargetFunction,
     Function.setSimple(false);
   }
   if (opts::Verbosity >= 1) {
-    outs() << "BOLT-INFO: marking " << TargetFunction << " as a fragment of "
-           << Function << '\n';
+    this->outs() << "BOLT-INFO: marking " << TargetFunction
+                 << " as a fragment of " << Function << '\n';
   }
   return true;
 }
@@ -1276,10 +1318,11 @@ void BinaryContext::processInterproceduralReferences() {
     if (TargetFunction) {
       if (TargetFunction->isFragment() &&
           !TargetFunction->isChildOf(Function)) {
-        errs() << "BOLT-WARNING: interprocedural reference between unrelated "
-                  "fragments: "
-               << Function.getPrintName() << " and "
-               << TargetFunction->getPrintName() << '\n';
+        this->errs()
+            << "BOLT-WARNING: interprocedural reference between unrelated "
+               "fragments: "
+            << Function.getPrintName() << " and "
+            << TargetFunction->getPrintName() << '\n';
       }
       if (uint64_t Offset = Address - TargetFunction->getAddress())
         TargetFunction->addEntryPointAtOffset(Offset);
@@ -1305,9 +1348,10 @@ void BinaryContext::processInterproceduralReferences() {
       continue;
 
     if (opts::processAllFunctions()) {
-      errs() << "BOLT-ERROR: cannot process binaries with unmarked "
-             << "object in code at address 0x" << Twine::utohexstr(Address)
-             << " belonging to section " << SectionName << " in current mode\n";
+      this->errs() << "BOLT-ERROR: cannot process binaries with unmarked "
+                   << "object in code at address 0x"
+                   << Twine::utohexstr(Address) << " belonging to section "
+                   << SectionName << " in current mode\n";
       exit(1);
     }
 
@@ -1317,9 +1361,10 @@ void BinaryContext::processInterproceduralReferences() {
     // We are not going to overwrite non-simple functions, but for simple
     // ones - adjust the padding size.
     if (TargetFunction && TargetFunction->isSimple()) {
-      errs() << "BOLT-WARNING: function " << *TargetFunction
-             << " has an object detected in a padding region at address 0x"
-             << Twine::utohexstr(Address) << '\n';
+      this->errs()
+          << "BOLT-WARNING: function " << *TargetFunction
+          << " has an object detected in a padding region at address 0x"
+          << Twine::utohexstr(Address) << '\n';
       TargetFunction->setMaxSize(TargetFunction->getSize());
     }
   }
@@ -1336,7 +1381,8 @@ void BinaryContext::postProcessSymbolTable() {
          BD->getName().starts_with("DATAat")) &&
         !BD->getParent() && !BD->getSize() && !BD->isAbsolute() &&
         BD->getSection()) {
-      errs() << "BOLT-WARNING: zero-sized top level symbol: " << *BD << "\n";
+      this->errs() << "BOLT-WARNING: zero-sized top level symbol: " << *BD
+                   << "\n";
       Valid = false;
     }
   }
@@ -1592,17 +1638,18 @@ void BinaryContext::preprocessDWODebugInfo() {
       DWARFUnit *DWOCU =
           DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
-        outs() << "BOLT-WARNING: Debug Fission: DWO debug information for "
-               << DWOName
-               << " was not retrieved and won't be updated. Please check "
-                  "relative path.\n";
+        this->outs()
+            << "BOLT-WARNING: Debug Fission: DWO debug information for "
+            << DWOName
+            << " was not retrieved and won't be updated. Please check "
+               "relative path.\n";
         continue;
       }
       DWOCUs[*DWOId] = DWOCU;
     }
   }
   if (!DWOCUs.empty())
-    outs() << "BOLT-INFO: processing split DWARF\n";
+    this->outs() << "BOLT-INFO: processing split DWARF\n";
 }
 
 void BinaryContext::preprocessDebugInfo() {
@@ -1663,8 +1710,8 @@ void BinaryContext::preprocessDebugInfo() {
   }
 
   if (opts::Verbosity >= 1) {
-    outs() << "BOLT-INFO: " << ProcessedCUs.size() << " out of "
-           << DwCtx->getNumCompileUnits() << " CUs will be updated\n";
+    this->outs() << "BOLT-INFO: " << ProcessedCUs.size() << " out of "
+                 << DwCtx->getNumCompileUnits() << " CUs will be updated\n";
   }
 
   preprocessDWODebugInfo();
@@ -1920,7 +1967,7 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
     OS << " # Offset: " << *Offset;
   if (std::optional<uint32_t> Size = MIB->getSize(Instruction))
     OS << " # Size: " << *Size;
-  if (MCSymbol *Label = MIB->getLabel(Instruction))
+  if (MCSymbol *Label = MIB->getInstLabel(Instruction))
     OS << " # Label: " << *Label;
 
   MIB->printAnnotations(Instruction, OS);
@@ -2245,23 +2292,26 @@ BinaryFunction *BinaryContext::getFunctionForSymbol(const MCSymbol *Symbol,
   return BF;
 }
 
-void BinaryContext::exitWithBugReport(StringRef Message,
-                                      const BinaryFunction &Function) const {
-  errs() << "=======================================\n";
-  errs() << "BOLT is unable to proceed because it couldn't properly understand "
-            "this function.\n";
-  errs() << "If you are running the most recent version of BOLT, you may "
-            "want to "
-            "report this and paste this dump.\nPlease check that there is no "
-            "sensitive contents being shared in this dump.\n";
-  errs() << "\nOffending function: " << Function.getPrintName() << "\n\n";
-  ScopedPrinter SP(errs());
+std::string
+BinaryContext::generateBugReportMessage(StringRef Message,
+                                        const BinaryFunction &Function) const {
+  std::string Msg;
+  raw_string_ostream SS(Msg);
+  SS << "=======================================\n";
+  SS << "BOLT is unable to proceed because it couldn't properly understand "
+        "this function.\n";
+  SS << "If you are running the most recent version of BOLT, you may "
+        "want to "
+        "report this and paste this dump.\nPlease check that there is no "
+        "sensitive contents being shared in this dump.\n";
+  SS << "\nOffending function: " << Function.getPrintName() << "\n\n";
+  ScopedPrinter SP(SS);
   SP.printBinaryBlock("Function contents", *Function.getData());
-  errs() << "\n";
-  Function.dump();
-  errs() << "ERROR: " << Message;
-  errs() << "\n=======================================\n";
-  exit(1);
+  SS << "\n";
+  const_cast<BinaryFunction &>(Function).print(SS, "");
+  SS << "ERROR: " << Message;
+  SS << "\n=======================================\n";
+  return Msg;
 }
 
 BinaryFunction *
@@ -2399,9 +2449,9 @@ bool BinaryContext::validateInstructionEncoding(
   auto OutputSequence = ArrayRef<uint8_t>((uint8_t *)Code.data(), Code.size());
   if (InputSequence != OutputSequence) {
     if (opts::Verbosity > 1) {
-      errs() << "BOLT-WARNING: mismatched encoding detected\n"
-             << "      input: " << InputSequence << '\n'
-             << "     output: " << OutputSequence << '\n';
+      this->errs() << "BOLT-WARNING: mismatched encoding detected\n"
+                   << "      input: " << InputSequence << '\n'
+                   << "     output: " << OutputSequence << '\n';
     }
     return false;
   }

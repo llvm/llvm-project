@@ -34,6 +34,14 @@ public:
     {}
 };
 
+template <unsigned Value> struct PointerInfo {
+  enum Masks1 { pointer_mask };
+  enum class Masks2 { pointer_mask };
+};
+
+template <unsigned Value, typename InfoType = PointerInfo<Value>>
+struct Pointer {};
+
 enum EnumType {};
 enum class ScopedEnumType {};
 enum class EnumUChar : unsigned char {};
@@ -70,6 +78,10 @@ int main (int argc, char const *argv[])
     EnumType enum_type;
     ScopedEnumType scoped_enum_type;
     EnumUChar scoped_enum_type_uchar;
+
+    Pointer<3> pointer;
+    PointerInfo<3>::Masks1 mask1 = PointerInfo<3>::Masks1::pointer_mask;
+    PointerInfo<3>::Masks2 mask2 = PointerInfo<3>::Masks2::pointer_mask;
 
     return 0; // Break at this line
 }

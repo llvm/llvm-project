@@ -250,8 +250,8 @@ private:
     assert(inserted.second && "expected newly created op");
   }
 
-  void notifyOperationRemoved(Operation *op) override {
-    ForwardingListener::notifyOperationRemoved(op);
+  void notifyOperationErased(Operation *op) override {
+    ForwardingListener::notifyOperationErased(op);
     op->walk([&](Operation *op) { newOps.erase(op); });
   }
 
@@ -2112,15 +2112,31 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
 // ConvertToLoopsOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure transform::ConvertToLoopsOp::applyToOne(
-    transform::TransformRewriter &rewriter, TilingInterface target,
-    transform::ApplyToEachResultList &results,
-    transform::TransformState &state) {
-  rewriter.setInsertionPoint(target);
-  FailureOr<SmallVector<scf::ForOp>> loops =
-      scf::lowerToLoopsUsingSCFForOp(rewriter, target);
-  if (failed(loops))
-    return emitDefaultDefiniteFailure(target);
+DiagnosedSilenceableFailure
+transform::ConvertToLoopsOp::apply(transform::TransformRewriter &rewriter,
+                                   transform::TransformResults &results,
+                                   transform::TransformState &state) {
+  SmallVector<Operation *> loops;
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    auto tilingOp = dyn_cast<TilingInterface>(*target);
+    if (!target) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
+          << "expected the payload to implement TilingInterface";
+      diag.attachNote(target->getLoc()) << "payload op";
+      return diag;
+    }
+    rewriter.setInsertionPoint(target);
+    FailureOr<SmallVector<scf::ForOp>> generatedLoops =
+        scf::lowerToLoopsUsingSCFForOp(rewriter, tilingOp);
+    if (failed(generatedLoops))
+      return emitDefaultDefiniteFailure(target);
+    for (scf::ForOp &loop : *generatedLoops) {
+      loops.push_back(loop.getOperation());
+    }
+    rewriter.eraseOp(target);
+  }
+  results.set(cast<OpResult>(getResult()), loops);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -3152,7 +3168,8 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
 
   // TODO: Check that the correct number of vectorSizes was provided.
   for (Operation *target : targets) {
-    if (!isa<linalg::LinalgOp, tensor::PadOp>(target)) {
+    if (!isa<linalg::LinalgOp, tensor::PadOp, tensor::PackOp, tensor::UnPackOp>(
+            target)) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Unsupported Op, cannot vectorize";
     }
@@ -3240,6 +3257,31 @@ DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
   results.push_back(maybeTransformed->first);
   // Handle to the operation that replaces the original convolution.
   results.push_back(maybeTransformed->second);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// FlattenElementwiseLinalgOp.
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  if (target.getNumLoops() <= 1)
+    return DiagnosedSilenceableFailure::success();
+  ReassociationIndices reassociation(target.getNumLoops());
+  std::iota(reassociation.begin(), reassociation.end(), 0);
+  auto maybeFlattened =
+      (isElementwise(target))
+          ? collapseOpIterationDims(target, reassociation, rewriter)
+          : FailureOr<CollapseResult>(rewriter.notifyMatchFailure(
+                target, "only elementwise flattening is supported"));
+  if (failed(maybeFlattened))
+    return emitDefaultSilenceableFailure(target);
+  results.push_back(maybeFlattened->collapsedOp);
+  rewriter.replaceOp(target, maybeFlattened->results);
   return DiagnosedSilenceableFailure::success();
 }
 

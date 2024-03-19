@@ -1200,8 +1200,8 @@ static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC) {
     // Perform template argument deduction against the type that we would
     // expect the function to have.
     if (R.getSema().DeduceTemplateArguments(ConvTemplate, nullptr, ExpectedType,
-                                            Specialization, Info)
-          == Sema::TDK_Success) {
+                                            Specialization, Info) ==
+        TemplateDeductionResult::Success) {
       R.addDecl(Specialization);
       Found = true;
     }

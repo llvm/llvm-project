@@ -179,6 +179,19 @@ ExprResult Parser::ParseAssignmentExpression(TypeCastState isTypeCast) {
   return ParseRHSOfBinaryExpression(LHS, prec::Assignment);
 }
 
+ExprResult Parser::ParseConditionalExpression() {
+  if (Tok.is(tok::code_completion)) {
+    cutOffParsing();
+    Actions.CodeCompleteExpression(getCurScope(),
+                                   PreferredType.get(Tok.getLocation()));
+    return ExprError();
+  }
+
+  ExprResult LHS = ParseCastExpression(
+      AnyCastExpr, /*isAddressOfOperand=*/false, NotTypeCast);
+  return ParseRHSOfBinaryExpression(LHS, prec::Conditional);
+}
+
 /// Parse an assignment expression where part of an Objective-C message
 /// send has already been parsed.
 ///
@@ -1114,6 +1127,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_fundamental);
           REVERTIBLE_TYPE_TRAIT(__is_integral);
           REVERTIBLE_TYPE_TRAIT(__is_interface_class);
+          REVERTIBLE_TYPE_TRAIT(__is_layout_compatible);
           REVERTIBLE_TYPE_TRAIT(__is_literal);
           REVERTIBLE_TYPE_TRAIT(__is_lvalue_expr);
           REVERTIBLE_TYPE_TRAIT(__is_lvalue_reference);
@@ -1462,8 +1476,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     return Res;
   }
   case tok::kw__Alignof:   // unary-expression: '_Alignof' '(' type-name ')'
-    if (!getLangOpts().C11)
-      Diag(Tok, diag::ext_c11_feature) << Tok.getName();
+    diagnoseUseOfC11Keyword(Tok);
     [[fallthrough]];
   case tok::kw_alignof:    // unary-expression: 'alignof' '(' type-id ')'
   case tok::kw___alignof:  // unary-expression: '__alignof' unary-expression
@@ -3389,8 +3402,8 @@ ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
 /// \endverbatim
 ExprResult Parser::ParseGenericSelectionExpression() {
   assert(Tok.is(tok::kw__Generic) && "_Generic keyword expected");
-  if (!getLangOpts().C11)
-    Diag(Tok, diag::ext_c11_feature) << Tok.getName();
+
+  diagnoseUseOfC11Keyword(Tok);
 
   SourceLocation KeyLoc = ConsumeToken();
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -3863,7 +3876,8 @@ std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
     StringRef Platform =
         AvailabilityAttr::canonicalizePlatformName(GivenPlatform);
 
-    if (AvailabilityAttr::getPrettyPlatformName(Platform).empty()) {
+    if (AvailabilityAttr::getPrettyPlatformName(Platform).empty() ||
+        (GivenPlatform.contains("xros") || GivenPlatform.contains("xrOS"))) {
       Diag(PlatformIdentifier->Loc,
            diag::err_avail_query_unrecognized_platform_name)
           << GivenPlatform;

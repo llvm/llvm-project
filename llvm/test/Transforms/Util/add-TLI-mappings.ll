@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=SVML -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,SVML
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=AMDLIBM -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,AMDLIBM
 ; RUN: opt -mtriple=powerpc64-unknown-linux-gnu -vector-library=MASSV -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,MASSV
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=LIBMVEC-X86 -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,LIBMVEC-X86
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=Accelerate -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,ACCELERATE
@@ -13,6 +14,13 @@
 ; SVML-SAME:          ptr @__svml_log10f4,
 ; SVML-SAME:          ptr @__svml_log10f8,
 ; SVML-SAME:          ptr @__svml_log10f16
+; AMDLIBM-SAME:     [6 x ptr] [
+; AMDLIBM-SAME:       ptr @amd_vrd2_sin,
+; AMDLIBM-SAME:       ptr @amd_vrd4_sin,
+; AMDLIBM-SAME:       ptr @amd_vrd8_sin,
+; AMDLIBM-SAME:       ptr @amd_vrs4_log10f,
+; AMDLIBM-SAME:       ptr @amd_vrs8_log10f,
+; AMDLIBM-SAME:       ptr @amd_vrs16_log10f
 ; MASSV-SAME:       [2 x ptr] [
 ; MASSV-SAME:         ptr @__sind2,
 ; MASSV-SAME:         ptr @__log10f4
@@ -74,6 +82,7 @@ declare float @modff(float, ptr) #0
 define double @sin_f64(double %in) {
 ; COMMON-LABEL: @sin_f64(
 ; SVML:         call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
+; AMDLIBM:      call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; MASSV:        call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; ACCELERATE:   call double @sin(double %{{.*}})
 ; LIBMVEC-X86:  call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
@@ -130,6 +139,7 @@ declare void @sincospif(float, ptr, ptr) #0
 define float @call_llvm.log10.f32(float %in) {
 ; COMMON-LABEL: @call_llvm.log10.f32(
 ; SVML:         call float @llvm.log10.f32(float %{{.*}})
+; AMDLIBM:      call float @llvm.log10.f32(float %{{.*}})
 ; LIBMVEC-X86:  call float @llvm.log10.f32(float %{{.*}})
 ; MASSV:        call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; ACCELERATE:   call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
@@ -137,6 +147,7 @@ define float @call_llvm.log10.f32(float %in) {
 ; ARMPL:        call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; No mapping of "llvm.log10.f32" to a vector function for SVML.
 ; SVML-NOT:        _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
+; AMDLIBM-NOT:        _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
 ; LIBMVEC-X86-NOT: _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
   %call = tail call float @llvm.log10.f32(float %in)
   ret float %call
@@ -150,6 +161,13 @@ declare float @llvm.log10.f32(float) #0
 ; SVML: declare <4 x float> @__svml_log10f4(<4 x float>)
 ; SVML: declare <8 x float> @__svml_log10f8(<8 x float>)
 ; SVML: declare <16 x float> @__svml_log10f16(<16 x float>)
+
+; AMDLIBM: declare <2 x double> @amd_vrd2_sin(<2 x double>)
+; AMDLIBM: declare <4 x double> @amd_vrd4_sin(<4 x double>)
+; AMDLIBM: declare <8 x double> @amd_vrd8_sin(<8 x double>)
+; AMDLIBM: declare <4 x float> @amd_vrs4_log10f(<4 x float>)
+; AMDLIBM: declare <8 x float> @amd_vrs8_log10f(<8 x float>)
+; AMDLIBM: declare <16 x float> @amd_vrs16_log10f(<16 x float>)
 
 ; MASSV: declare <2 x double> @__sind2(<2 x double>)
 ; MASSV: declare <4 x float> @__log10f4(<4 x float>)
@@ -193,6 +211,11 @@ attributes #0 = { nounwind readnone }
 ; SVML-SAME:   "_ZGV_LLVM_N2v_sin(__svml_sin2),
 ; SVML-SAME:   _ZGV_LLVM_N4v_sin(__svml_sin4),
 ; SVML-SAME:   _ZGV_LLVM_N8v_sin(__svml_sin8)" }
+
+; AMDLIBM:      attributes #[[SIN]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N2v_sin(amd_vrd2_sin),
+; AMDLIBM-SAME:   _ZGV_LLVM_N4v_sin(amd_vrd4_sin),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8v_sin(amd_vrd8_sin)" }
 
 ; MASSV:      attributes #[[SIN]] = { "vector-function-abi-variant"=
 ; MASSV-SAME:   "_ZGV_LLVM_N2v_sin(__sind2)" }

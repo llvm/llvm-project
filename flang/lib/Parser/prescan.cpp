@@ -630,9 +630,11 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     preventHollerith_ = false;
   } else if (IsLegalInIdentifier(*at_)) {
     int parts{1};
+    const char *afterLast{nullptr};
     do {
       EmitChar(tokens, *at_);
       ++at_, ++column_;
+      afterLast = at_;
       if (SkipToNextSignificantCharacter() && IsLegalIdentifierStart(*at_)) {
         tokens.CloseToken();
         ++parts;
@@ -640,12 +642,20 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     } while (IsLegalInIdentifier(*at_));
     if (parts >= 3) {
       // Subtlety: When an identifier is split across three or more continuation
-      // lines, its parts are kept as distinct pp-tokens so that macro
-      // operates on them independently.  This trick accommodates the historic
-      // practice of using line continuation for token pasting after
-      // replacement.
+      // lines (or two continuation lines, immediately preceded or followed
+      // by '&' free form continuation line markers, its parts are kept as
+      // distinct pp-tokens so that macro operates on them independently.
+      // This trick accommodates the historic practice of using line
+      // continuation for token pasting after replacement.
     } else if (parts == 2) {
-      tokens.ReopenLastToken();
+      if ((start > start_ && start[-1] == '&') ||
+          (afterLast < limit_ && (*afterLast == '&' || *afterLast == '\n'))) {
+        // call &                call foo&        call foo&
+        //   &MACRO&      OR       &MACRO&   OR     &MACRO
+        //   &foo(...)             &(...)
+      } else {
+        tokens.ReopenLastToken();
+      }
     }
     if (InFixedFormSource()) {
       SkipSpaces();

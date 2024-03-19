@@ -25,6 +25,7 @@ using namespace Fortran::parser::literals;
 namespace Fortran::evaluate::characteristics {
 
 // Copy attributes from a symbol to dst based on the mapping in pairs.
+// An ASYNCHRONOUS attribute counts even if it is implied.
 template <typename A, typename B>
 static void CopyAttrs(const semantics::Symbol &src, A &dst,
     const std::initializer_list<std::pair<semantics::Attr, B>> &pairs) {
@@ -461,6 +462,34 @@ bool DummyDataObject::CanBePassedViaImplicitInterface(
   }
 }
 
+bool DummyDataObject::IsPassedByDescriptor(bool isBindC) const {
+  constexpr TypeAndShape::Attrs shapeRequiringBox = {
+      TypeAndShape::Attr::AssumedShape, TypeAndShape::Attr::DeferredShape,
+      TypeAndShape::Attr::AssumedRank, TypeAndShape::Attr::Coarray};
+  if ((attrs & Attrs{Attr::Allocatable, Attr::Pointer}).any()) {
+    return true;
+  } else if ((type.attrs() & shapeRequiringBox).any()) {
+    // Need to pass shape/coshape info in a descriptor.
+    return true;
+  } else if (type.type().IsPolymorphic() && !type.type().IsAssumedType()) {
+    // Need to pass dynamic type info in a descriptor.
+    return true;
+  } else if (const auto *derived{GetDerivedTypeSpec(type.type())}) {
+    if (!derived->parameters().empty()) {
+      for (const auto &param : derived->parameters()) {
+        if (param.second.isLen()) {
+          // Need to pass length type parameters in a descriptor.
+          return true;
+        }
+      }
+    }
+  } else if (isBindC && type.type().IsAssumedLengthCharacter()) {
+    // Fortran 2018 18.3.6 point 2 (5)
+    return true;
+  }
+  return false;
+}
+
 llvm::raw_ostream &DummyDataObject::Dump(llvm::raw_ostream &o) const {
   attrs.Dump(o, EnumToString);
   if (intent != common::Intent::Default) {
@@ -505,7 +534,8 @@ bool DummyProcedure::IsCompatibleWith(
     }
     return false;
   }
-  if (!procedure.value().IsCompatibleWith(actual.procedure.value(), whyNot)) {
+  if (!procedure.value().IsCompatibleWith(actual.procedure.value(),
+          /*ignoreImplicitVsExplicit=*/false, whyNot)) {
     if (whyNot) {
       *whyNot = "incompatible dummy procedure interfaces: "s + *whyNot;
     }
@@ -1178,7 +1208,8 @@ bool FunctionResult::IsCompatibleWith(
     CHECK(ifaceProc != nullptr);
     if (const auto *actualProc{
             std::get_if<CopyableIndirection<Procedure>>(&actual.u)}) {
-      if (ifaceProc->value().IsCompatibleWith(actualProc->value(), whyNot)) {
+      if (ifaceProc->value().IsCompatibleWith(actualProc->value(),
+              /*ignoreImplicitVsExplicit=*/false, whyNot)) {
         return true;
       }
       if (whyNot) {
@@ -1223,7 +1254,8 @@ bool Procedure::operator==(const Procedure &that) const {
       cudaSubprogramAttrs == that.cudaSubprogramAttrs;
 }
 
-bool Procedure::IsCompatibleWith(const Procedure &actual, std::string *whyNot,
+bool Procedure::IsCompatibleWith(const Procedure &actual,
+    bool ignoreImplicitVsExplicit, std::string *whyNot,
     const SpecificIntrinsic *specificIntrinsic,
     std::optional<std::string> *warning) const {
   // 15.5.2.9(1): if dummy is not pure, actual need not be.
@@ -1237,6 +1269,9 @@ bool Procedure::IsCompatibleWith(const Procedure &actual, std::string *whyNot,
   }
   Attrs differences{attrs ^ actualAttrs};
   differences.reset(Attr::Subroutine); // dealt with specifically later
+  if (ignoreImplicitVsExplicit) {
+    differences.reset(Attr::ImplicitInterface);
+  }
   if (!differences.empty()) {
     if (whyNot) {
       auto sep{": "s};

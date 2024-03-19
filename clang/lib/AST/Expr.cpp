@@ -263,6 +263,17 @@ namespace {
   }
 }
 
+QualType Expr::getEnumCoercedType(const ASTContext &Ctx) const {
+  if (isa<EnumType>(getType()))
+    return getType();
+  if (const auto *ECD = getEnumConstantDecl()) {
+    const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
+    if (ED->isCompleteDefinition())
+      return Ctx.getTypeDeclType(ED);
+  }
+  return getType();
+}
+
 SourceLocation Expr::getExprLoc() const {
   switch (getStmtClass()) {
   case Stmt::NoStmtClass: llvm_unreachable("statement without class");
@@ -1897,6 +1908,7 @@ bool CastExpr::CastConsistency() const {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
     assert(!getType()->isBooleanType() && "unheralded conversion to bool");
     goto CheckNoBasePath;
 
@@ -3328,6 +3340,12 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
            DIUE->getUpdater()->isConstantInitializer(Ctx, false, Culprit);
   }
   case InitListExprClass: {
+    // C++ [dcl.init.aggr]p2:
+    //   The elements of an aggregate are:
+    //   - for an array, the array elements in increasing subscript order, or
+    //   - for a class, the direct base classes in declaration order, followed
+    //     by the direct non-static data members (11.4) that are not members of
+    //     an anonymous union, in declaration order.
     const InitListExpr *ILE = cast<InitListExpr>(this);
     assert(ILE->isSemanticForm() && "InitListExpr must be in semantic form");
     if (ILE->getType()->isArrayType()) {
@@ -3342,6 +3360,19 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     if (ILE->getType()->isRecordType()) {
       unsigned ElementNo = 0;
       RecordDecl *RD = ILE->getType()->castAs<RecordType>()->getDecl();
+
+      // In C++17, bases were added to the list of members used by aggregate
+      // initialization.
+      if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        for (unsigned i = 0, e = CXXRD->getNumBases(); i < e; i++) {
+          if (ElementNo < ILE->getNumInits()) {
+            const Expr *Elt = ILE->getInit(ElementNo++);
+            if (!Elt->isConstantInitializer(Ctx, false, Culprit))
+              return false;
+          }
+        }
+      }
+
       for (const auto *Field : RD->fields()) {
         // If this is a union, skip all the fields that aren't being initialized.
         if (RD->isUnion() && ILE->getInitializedFieldInUnion() != Field)
@@ -4078,6 +4109,13 @@ FieldDecl *Expr::getSourceBitField() {
   return nullptr;
 }
 
+EnumConstantDecl *Expr::getEnumConstantDecl() {
+  Expr *E = this->IgnoreParenImpCasts();
+  if (auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return dyn_cast<EnumConstantDecl>(DRE->getDecl());
+  return nullptr;
+}
+
 bool Expr::refersToVectorElement() const {
   // FIXME: Why do we not just look at the ObjectKind here?
   const Expr *E = this->IgnoreParens();
@@ -4566,8 +4604,17 @@ SourceRange DesignatedInitExpr::getDesignatorsSourceRange() const {
 SourceLocation DesignatedInitExpr::getBeginLoc() const {
   auto *DIE = const_cast<DesignatedInitExpr *>(this);
   Designator &First = *DIE->getDesignator(0);
-  if (First.isFieldDesignator())
-    return GNUSyntax ? First.getFieldLoc() : First.getDotLoc();
+  if (First.isFieldDesignator()) {
+    // Skip past implicit designators for anonymous structs/unions, since
+    // these do not have valid source locations.
+    for (unsigned int i = 0; i < DIE->size(); i++) {
+      Designator &Des = *DIE->getDesignator(i);
+      SourceLocation retval = GNUSyntax ? Des.getFieldLoc() : Des.getDotLoc();
+      if (!retval.isValid())
+        continue;
+      return retval;
+    }
+  }
   return First.getLBracketLoc();
 }
 

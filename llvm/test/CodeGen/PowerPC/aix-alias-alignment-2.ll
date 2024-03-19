@@ -58,7 +58,7 @@ define void @foo3(%struct.B %a1) {
 ; ASM-NEXT:      .vbyte     4, 34
 
 ; SYM:      SYMBOL TABLE:
-; SYM-NEXT: 00000000      df *DEBUG*	00000000 <stdin>
+; SYM-NEXT: 00000000      df *DEBUG*	00000000 .file
 ; SYM-NEXT: 00000000 l       .text	0000008a 
 ; SYM-NEXT: 00000000 g     F .text (csect: ) 	00000000 .foo1
 ; SYM-NEXT: 00000030 g     F .text (csect: ) 	00000000 .foo2

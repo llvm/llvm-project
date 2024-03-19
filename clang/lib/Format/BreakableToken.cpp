@@ -15,10 +15,6 @@
 #include "BreakableToken.h"
 #include "ContinuationIndenter.h"
 #include "clang/Basic/CharInfo.h"
-#include "clang/Format/Format.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Debug.h"
-#include <algorithm>
 
 #define DEBUG_TYPE "format-token-breaker"
 
@@ -449,11 +445,11 @@ const FormatToken &BreakableComment::tokenAt(unsigned LineIndex) const {
 
 static bool mayReflowContent(StringRef Content) {
   Content = Content.trim(Blanks);
-  // Lines starting with '@' commonly have special meaning.
+  // Lines starting with '@' or '\' commonly have special meaning.
   // Lines starting with '-', '-#', '+' or '*' are bulleted/numbered lists.
   bool hasSpecialMeaningPrefix = false;
   for (StringRef Prefix :
-       {"@", "TODO", "FIXME", "XXX", "-# ", "- ", "+ ", "* "}) {
+       {"@", "\\", "TODO", "FIXME", "XXX", "-# ", "- ", "+ ", "* "}) {
     if (Content.starts_with(Prefix)) {
       hasSpecialMeaningPrefix = true;
       break;

@@ -12,12 +12,15 @@
 
 add_subdirectory(common)
 
-# void build_generic_elf64(string tmachine, string tmachine_name, string tmachine_libname, string elf_machine_id);
+# void build_generic_elf64(string tmachine, string tmachine_name, string tmachine_libname,
+#                          string tmachine_llvm, string tmachine_triple, string elf_machine_id);
 # - build a plugin for an ELF based generic 64-bit target based on libffi.
 # - tmachine: name of the machine processor as used in the cmake build system.
 # - tmachine_name: name of the machine to be printed with the debug messages.
 # - tmachine_libname: machine name to be appended to the plugin library name.
-macro(build_generic_elf64 tmachine tmachine_name tmachine_libname tmachine_triple elf_machine_id)
+# - tmachine_llvm: LLVM triple for the processor
+# - tmachine_triple: GNU target triple
+macro(build_generic_elf64 tmachine tmachine_name tmachine_libname tmachine_llvm tmachine_triple elf_machine_id)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
   # Define macro to be used as prefix of the runtime messages for this target.
   add_definitions("-DTARGET_NAME=${tmachine_name}")
@@ -30,7 +33,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
   add_definitions("-DTARGET_ELF_ID=${elf_machine_id}")
 
   # Define target triple
-  add_definitions("-DLIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE=${tmachine}")
+  add_definitions("-DLIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE=${tmachine_llvm}")
 
   add_llvm_library("omptarget.rtl.${tmachine_libname}"
     SHARED
@@ -46,6 +49,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
       ${OPENMP_PTHREAD_LIB}
 
     NO_INSTALL_RPATH
+    BUILDTREE_ONLY
   )
 
   if(LIBOMPTARGET_DEP_LIBFFI_FOUND)

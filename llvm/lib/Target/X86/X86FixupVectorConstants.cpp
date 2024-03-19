@@ -8,9 +8,10 @@
 //
 // This file examines all full size vector constant pool loads and attempts to
 // replace them with smaller constant pool entries, including:
-// * Converting AVX512 memory-fold instructions to their broadcast-fold form
+// * Converting AVX512 memory-fold instructions to their broadcast-fold form.
+// * Using vzload scalar loads.
 // * Broadcasting of full width loads.
-// * TODO: Zero extension of full width loads.
+// * Sign/Zero extension of full width loads.
 //
 //===----------------------------------------------------------------------===//
 
@@ -120,6 +121,13 @@ static std::optional<APInt> extractConstantBits(const Constant *C) {
   return std::nullopt;
 }
 
+static std::optional<APInt> extractConstantBits(const Constant *C,
+                                                unsigned NumBits) {
+  if (std::optional<APInt> Bits = extractConstantBits(C))
+    return Bits->zextOrTrunc(NumBits);
+  return std::nullopt;
+}
+
 // Attempt to compute the splat width of bits data by normalizing the splat to
 // remove undefs.
 static std::optional<APInt> getSplatableConstant(const Constant *C,
@@ -216,16 +224,16 @@ static Constant *rebuildConstant(LLVMContext &Ctx, Type *SclTy,
 
 // Attempt to rebuild a normalized splat vector constant of the requested splat
 // width, built up of potentially smaller scalar values.
-static Constant *rebuildSplatCst(const Constant *C, unsigned /*NumElts*/,
-                                 unsigned SplatBitWidth) {
+static Constant *rebuildSplatCst(const Constant *C, unsigned /*NumBits*/,
+                                 unsigned /*NumElts*/, unsigned SplatBitWidth) {
+  // TODO: Truncate to NumBits once ConvertToBroadcastAVX512 support this.
   std::optional<APInt> Splat = getSplatableConstant(C, SplatBitWidth);
   if (!Splat)
     return nullptr;
 
   // Determine scalar size to use for the constant splat vector, clamping as we
   // might have found a splat smaller than the original constant data.
-  const Type *OriginalType = C->getType();
-  Type *SclTy = OriginalType->getScalarType();
+  Type *SclTy = C->getType()->getScalarType();
   unsigned NumSclBits = SclTy->getPrimitiveSizeInBits();
   NumSclBits = std::min<unsigned>(NumSclBits, SplatBitWidth);
 
@@ -235,20 +243,19 @@ static Constant *rebuildSplatCst(const Constant *C, unsigned /*NumElts*/,
                    : 64;
 
   // Extract per-element bits.
-  return rebuildConstant(OriginalType->getContext(), SclTy, *Splat, NumSclBits);
+  return rebuildConstant(C->getContext(), SclTy, *Splat, NumSclBits);
 }
 
-static Constant *rebuildZeroUpperCst(const Constant *C, unsigned /*NumElts*/,
+static Constant *rebuildZeroUpperCst(const Constant *C, unsigned NumBits,
+                                     unsigned /*NumElts*/,
                                      unsigned ScalarBitWidth) {
-  Type *Ty = C->getType();
-  Type *SclTy = Ty->getScalarType();
-  unsigned NumBits = Ty->getPrimitiveSizeInBits();
+  Type *SclTy = C->getType()->getScalarType();
   unsigned NumSclBits = SclTy->getPrimitiveSizeInBits();
   LLVMContext &Ctx = C->getContext();
 
   if (NumBits > ScalarBitWidth) {
     // Determine if the upper bits are all zero.
-    if (std::optional<APInt> Bits = extractConstantBits(C)) {
+    if (std::optional<APInt> Bits = extractConstantBits(C, NumBits)) {
       if (Bits->countLeadingZeros() >= (NumBits - ScalarBitWidth)) {
         // If the original constant was made of smaller elements, try to retain
         // those types.
@@ -265,16 +272,15 @@ static Constant *rebuildZeroUpperCst(const Constant *C, unsigned /*NumElts*/,
   return nullptr;
 }
 
-static Constant *rebuildExtCst(const Constant *C, bool IsSExt, unsigned NumElts,
+static Constant *rebuildExtCst(const Constant *C, bool IsSExt,
+                               unsigned NumBits, unsigned NumElts,
                                unsigned SrcEltBitWidth) {
-  Type *Ty = C->getType();
-  unsigned NumBits = Ty->getPrimitiveSizeInBits();
   unsigned DstEltBitWidth = NumBits / NumElts;
   assert((NumBits % NumElts) == 0 && (NumBits % SrcEltBitWidth) == 0 &&
          (DstEltBitWidth % SrcEltBitWidth) == 0 &&
          (DstEltBitWidth > SrcEltBitWidth) && "Illegal extension width");
 
-  if (std::optional<APInt> Bits = extractConstantBits(C)) {
+  if (std::optional<APInt> Bits = extractConstantBits(C, NumBits)) {
     assert((Bits->getBitWidth() / DstEltBitWidth) == NumElts &&
            (Bits->getBitWidth() % DstEltBitWidth) == 0 &&
            "Unexpected constant extension");
@@ -289,19 +295,20 @@ static Constant *rebuildExtCst(const Constant *C, bool IsSExt, unsigned NumElts,
       TruncBits.insertBits(Elt.trunc(SrcEltBitWidth), I * SrcEltBitWidth);
     }
 
+    Type *Ty = C->getType();
     return rebuildConstant(Ty->getContext(), Ty->getScalarType(), TruncBits,
                            SrcEltBitWidth);
   }
 
   return nullptr;
 }
-static Constant *rebuildSExtCst(const Constant *C, unsigned NumElts,
-                                unsigned SrcEltBitWidth) {
-  return rebuildExtCst(C, true, NumElts, SrcEltBitWidth);
+static Constant *rebuildSExtCst(const Constant *C, unsigned NumBits,
+                                unsigned NumElts, unsigned SrcEltBitWidth) {
+  return rebuildExtCst(C, true, NumBits, NumElts, SrcEltBitWidth);
 }
-static Constant *rebuildZExtCst(const Constant *C, unsigned NumElts,
-                                unsigned SrcEltBitWidth) {
-  return rebuildExtCst(C, false, NumElts, SrcEltBitWidth);
+static Constant *rebuildZExtCst(const Constant *C, unsigned NumBits,
+                                unsigned NumElts, unsigned SrcEltBitWidth) {
+  return rebuildExtCst(C, false, NumBits, NumElts, SrcEltBitWidth);
 }
 
 bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
@@ -318,30 +325,33 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   struct FixupEntry {
     int Op;
     int NumCstElts;
-    int BitWidth;
-    std::function<Constant *(const Constant *, unsigned, unsigned)>
+    int MemBitWidth;
+    std::function<Constant *(const Constant *, unsigned, unsigned, unsigned)>
         RebuildConstant;
   };
-  auto FixupConstant = [&](ArrayRef<FixupEntry> Fixups, unsigned OperandNo) {
+  auto FixupConstant = [&](ArrayRef<FixupEntry> Fixups, unsigned RegBitWidth,
+                           unsigned OperandNo) {
 #ifdef EXPENSIVE_CHECKS
     assert(llvm::is_sorted(Fixups,
                            [](const FixupEntry &A, const FixupEntry &B) {
-                             return (A.NumCstElts * A.BitWidth) <
-                                    (B.NumCstElts * B.BitWidth);
+                             return (A.NumCstElts * A.MemBitWidth) <
+                                    (B.NumCstElts * B.MemBitWidth);
                            }) &&
            "Constant fixup table not sorted in ascending constant size");
 #endif
     assert(MI.getNumOperands() >= (OperandNo + X86::AddrNumOperands) &&
            "Unexpected number of operands!");
     if (auto *C = X86::getConstantFromPool(MI, OperandNo)) {
+      RegBitWidth =
+          RegBitWidth ? RegBitWidth : C->getType()->getPrimitiveSizeInBits();
       for (const FixupEntry &Fixup : Fixups) {
         if (Fixup.Op) {
           // Construct a suitable constant and adjust the MI to use the new
           // constant pool entry.
-          if (Constant *NewCst =
-                  Fixup.RebuildConstant(C, Fixup.NumCstElts, Fixup.BitWidth)) {
+          if (Constant *NewCst = Fixup.RebuildConstant(
+                  C, RegBitWidth, Fixup.NumCstElts, Fixup.MemBitWidth)) {
             unsigned NewCPI =
-                CP->getConstantPoolIndex(NewCst, Align(Fixup.BitWidth / 8));
+                CP->getConstantPoolIndex(NewCst, Align(Fixup.MemBitWidth / 8));
             MI.setDesc(TII->get(Fixup.Op));
             MI.getOperand(OperandNo + X86::AddrDisp).setIndex(NewCPI);
             return true;
@@ -370,7 +380,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     // TODO: SSE3 MOVDDUP Handling
     return FixupConstant({{X86::MOVSSrm, 1, 32, rebuildZeroUpperCst},
                           {X86::MOVSDrm, 1, 64, rebuildZeroUpperCst}},
-                         1);
+                         128, 1);
   case X86::VMOVAPDrm:
   case X86::VMOVAPSrm:
   case X86::VMOVUPDrm:
@@ -379,7 +389,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
                           {X86::VBROADCASTSSrm, 1, 32, rebuildSplatCst},
                           {X86::VMOVSDrm, 1, 64, rebuildZeroUpperCst},
                           {X86::VMOVDDUPrm, 1, 64, rebuildSplatCst}},
-                         1);
+                         128, 1);
   case X86::VMOVAPDYrm:
   case X86::VMOVAPSYrm:
   case X86::VMOVUPDYrm:
@@ -387,7 +397,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     return FixupConstant({{X86::VBROADCASTSSYrm, 1, 32, rebuildSplatCst},
                           {X86::VBROADCASTSDYrm, 1, 64, rebuildSplatCst},
                           {X86::VBROADCASTF128rm, 1, 128, rebuildSplatCst}},
-                         1);
+                         256, 1);
   case X86::VMOVAPDZ128rm:
   case X86::VMOVAPSZ128rm:
   case X86::VMOVUPDZ128rm:
@@ -396,7 +406,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
                           {X86::VBROADCASTSSZ128rm, 1, 32, rebuildSplatCst},
                           {X86::VMOVSDZrm, 1, 64, rebuildZeroUpperCst},
                           {X86::VMOVDDUPZ128rm, 1, 64, rebuildSplatCst}},
-                         1);
+                         128, 1);
   case X86::VMOVAPDZ256rm:
   case X86::VMOVAPSZ256rm:
   case X86::VMOVUPDZ256rm:
@@ -405,7 +415,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {{X86::VBROADCASTSSZ256rm, 1, 32, rebuildSplatCst},
          {X86::VBROADCASTSDZ256rm, 1, 64, rebuildSplatCst},
          {X86::VBROADCASTF32X4Z256rm, 1, 128, rebuildSplatCst}},
-        1);
+        256, 1);
   case X86::VMOVAPDZrm:
   case X86::VMOVAPSZrm:
   case X86::VMOVUPDZrm:
@@ -414,7 +424,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
                           {X86::VBROADCASTSDZrm, 1, 64, rebuildSplatCst},
                           {X86::VBROADCASTF32X4rm, 1, 128, rebuildSplatCst},
                           {X86::VBROADCASTF64X4rm, 1, 256, rebuildSplatCst}},
-                         1);
+                         512, 1);
     /* Integer Loads */
   case X86::MOVDQArm:
   case X86::MOVDQUrm: {
@@ -433,7 +443,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {HasSSE41 ? X86::PMOVZXWDrm : 0, 4, 16, rebuildZExtCst},
         {HasSSE41 ? X86::PMOVSXDQrm : 0, 2, 32, rebuildSExtCst},
         {HasSSE41 ? X86::PMOVZXDQrm : 0, 2, 32, rebuildZExtCst}};
-    return FixupConstant(Fixups, 1);
+    return FixupConstant(Fixups, 128, 1);
   }
   case X86::VMOVDQArm:
   case X86::VMOVDQUrm: {
@@ -458,7 +468,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {X86::VPMOVZXWDrm, 4, 16, rebuildZExtCst},
         {X86::VPMOVSXDQrm, 2, 32, rebuildSExtCst},
         {X86::VPMOVZXDQrm, 2, 32, rebuildZExtCst}};
-    return FixupConstant(Fixups, 1);
+    return FixupConstant(Fixups, 128, 1);
   }
   case X86::VMOVDQAYrm:
   case X86::VMOVDQUYrm: {
@@ -483,7 +493,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {HasAVX2 ? X86::VPMOVZXWDYrm : 0, 8, 16, rebuildZExtCst},
         {HasAVX2 ? X86::VPMOVSXDQYrm : 0, 4, 32, rebuildSExtCst},
         {HasAVX2 ? X86::VPMOVZXDQYrm : 0, 4, 32, rebuildZExtCst}};
-    return FixupConstant(Fixups, 1);
+    return FixupConstant(Fixups, 256, 1);
   }
   case X86::VMOVDQA32Z128rm:
   case X86::VMOVDQA64Z128rm:
@@ -508,7 +518,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {X86::VPMOVZXWDZ128rm, 4, 16, rebuildZExtCst},
         {X86::VPMOVSXDQZ128rm, 2, 32, rebuildSExtCst},
         {X86::VPMOVZXDQZ128rm, 2, 32, rebuildZExtCst}};
-    return FixupConstant(Fixups, 1);
+    return FixupConstant(Fixups, 128, 1);
   }
   case X86::VMOVDQA32Z256rm:
   case X86::VMOVDQA64Z256rm:
@@ -532,7 +542,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {X86::VPMOVZXWDZ256rm, 8, 16, rebuildZExtCst},
         {X86::VPMOVSXDQZ256rm, 4, 32, rebuildSExtCst},
         {X86::VPMOVZXDQZ256rm, 4, 32, rebuildZExtCst}};
-    return FixupConstant(Fixups, 1);
+    return FixupConstant(Fixups, 256, 1);
   }
   case X86::VMOVDQA32Zrm:
   case X86::VMOVDQA64Zrm:
@@ -557,7 +567,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {X86::VPMOVZXWDZrm, 16, 16, rebuildZExtCst},
         {X86::VPMOVSXDQZrm, 8, 32, rebuildSExtCst},
         {X86::VPMOVZXDQZrm, 8, 32, rebuildZExtCst}};
-    return FixupConstant(Fixups, 1);
+    return FixupConstant(Fixups, 512, 1);
   }
   }
 
@@ -585,7 +595,9 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
       unsigned OpNo = OpBcst32 == 0 ? OpNoBcst64 : OpNoBcst32;
       FixupEntry Fixups[] = {{(int)OpBcst32, 32, 32, rebuildSplatCst},
                              {(int)OpBcst64, 64, 64, rebuildSplatCst}};
-      return FixupConstant(Fixups, OpNo);
+      // TODO: Add support for RegBitWidth, but currently rebuildSplatCst
+      // doesn't require it (defaults to Constant::getPrimitiveSizeInBits).
+      return FixupConstant(Fixups, 0, OpNo);
     }
     return false;
   };

@@ -29,6 +29,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
@@ -1349,7 +1350,9 @@ static MCAsmBackend *createARMAsmBackend(const Target &T,
     return new ARMAsmBackendWinCOFF(T, STI.getTargetTriple().isThumb());
   case Triple::ELF:
     assert(TheTriple.isOSBinFormatELF() && "using ELF for non-ELF target");
-    uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
+    uint8_t OSABI = Options.FDPIC
+                        ? ELF::ELFOSABI_ARM_FDPIC
+                        : MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
     return new ARMAsmBackendELF(T, STI.getTargetTriple().isThumb(), OSABI,
                                 Endian);
   }

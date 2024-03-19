@@ -13,18 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "../../lib/Format/MatchFilePath.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/Format/Format.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/Process.h"
 #include <fstream>
 
 using namespace llvm;
@@ -399,7 +393,8 @@ class ClangFormatDiagConsumer : public DiagnosticConsumer {
 };
 
 // Returns true on error.
-static bool format(StringRef FileName, bool IsSTDIN) {
+static bool format(StringRef FileName) {
+  const bool IsSTDIN = FileName == "-";
   if (!OutputXML && Inplace && IsSTDIN) {
     errs() << "error: cannot use -i when reading from stdin.\n";
     return false;
@@ -545,24 +540,25 @@ static void PrintVersion(raw_ostream &OS) {
 }
 
 // Dump the configuration.
-static int dumpConfig(bool IsSTDIN) {
+static int dumpConfig() {
   std::unique_ptr<llvm::MemoryBuffer> Code;
-
-  // `FileNames` must have at least "-" in it even if no file was specified.
-  assert(!FileNames.empty());
-
-  // Read in the code in case the filename alone isn't enough to detect the
-  // language.
-  ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-      MemoryBuffer::getFileOrSTDIN(FileNames[0]);
-  if (std::error_code EC = CodeOrErr.getError()) {
-    llvm::errs() << EC.message() << "\n";
-    return 1;
+  // We can't read the code to detect the language if there's no file name.
+  if (!FileNames.empty()) {
+    // Read in the code in case the filename alone isn't enough to detect the
+    // language.
+    ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
+        MemoryBuffer::getFileOrSTDIN(FileNames[0]);
+    if (std::error_code EC = CodeOrErr.getError()) {
+      llvm::errs() << EC.message() << "\n";
+      return 1;
+    }
+    Code = std::move(CodeOrErr.get());
   }
-  Code = std::move(CodeOrErr.get());
-
   llvm::Expected<clang::format::FormatStyle> FormatStyle =
-      clang::format::getStyle(Style, IsSTDIN ? AssumeFileName : FileNames[0],
+      clang::format::getStyle(Style,
+                              FileNames.empty() || FileNames[0] == "-"
+                                  ? AssumeFileName
+                                  : FileNames[0],
                               FallbackStyle, Code ? Code->getBuffer() : "");
   if (!FormatStyle) {
     llvm::errs() << llvm::toString(FormatStyle.takeError()) << "\n";
@@ -682,11 +678,8 @@ int main(int argc, const char **argv) {
     return 0;
   }
 
-  if (FileNames.empty())
-    FileNames.push_back("-");
-
   if (DumpConfig)
-    return dumpConfig(FileNames[0] == "-");
+    return dumpConfig();
 
   if (!Files.empty()) {
     std::ifstream ExternalFileOfFiles{std::string(Files)};
@@ -699,7 +692,10 @@ int main(int argc, const char **argv) {
     errs() << "Clang-formating " << LineNo << " files\n";
   }
 
-  if (FileNames.size() != 1 &&
+  if (FileNames.empty())
+    return clang::format::format("-");
+
+  if (FileNames.size() > 1 &&
       (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty())) {
     errs() << "error: -offset, -length and -lines can only be used for "
               "single file.\n";
@@ -709,14 +705,13 @@ int main(int argc, const char **argv) {
   unsigned FileNo = 1;
   bool Error = false;
   for (const auto &FileName : FileNames) {
-    const bool IsSTDIN = FileName == "-";
-    if (!IsSTDIN && isIgnored(FileName))
+    if (isIgnored(FileName))
       continue;
     if (Verbose) {
       errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "
              << FileName << "\n";
     }
-    Error |= clang::format::format(FileName, IsSTDIN);
+    Error |= clang::format::format(FileName);
   }
   return Error ? 1 : 0;
 }

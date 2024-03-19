@@ -1463,7 +1463,7 @@ class DeLICMPrinterLegacyPass final : public ScopPass {
 public:
   static char ID;
 
-  DeLICMPrinterLegacyPass() : DeLICMPrinterLegacyPass(outs()){};
+  DeLICMPrinterLegacyPass() : DeLICMPrinterLegacyPass(outs()) {}
   explicit DeLICMPrinterLegacyPass(llvm::raw_ostream &OS)
       : ScopPass(ID), OS(OS) {}
 

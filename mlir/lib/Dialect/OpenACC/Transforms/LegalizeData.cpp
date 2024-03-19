@@ -24,10 +24,10 @@ using namespace mlir;
 
 namespace {
 
-template <typename Op>
-static void collectAndReplaceInRegion(Op &op, bool hostToDevice) {
-  llvm::SmallVector<std::pair<Value, Value>> values;
-  for (auto operand : op.getDataClauseOperands()) {
+static void collectPtrs(mlir::ValueRange operands,
+                        llvm::SmallVector<std::pair<Value, Value>> &values,
+                        bool hostToDevice) {
+  for (auto operand : operands) {
     Value varPtr = acc::getVarPtr(operand.getDefiningOp());
     Value accPtr = acc::getAccPtr(operand.getDefiningOp());
     if (varPtr && accPtr) {
@@ -35,6 +35,23 @@ static void collectAndReplaceInRegion(Op &op, bool hostToDevice) {
         values.push_back({varPtr, accPtr});
       else
         values.push_back({accPtr, varPtr});
+    }
+  }
+}
+
+template <typename Op>
+static void collectAndReplaceInRegion(Op &op, bool hostToDevice) {
+  llvm::SmallVector<std::pair<Value, Value>> values;
+
+  if constexpr (std::is_same_v<Op, acc::LoopOp>) {
+    collectPtrs(op.getReductionOperands(), values, hostToDevice);
+    collectPtrs(op.getPrivateOperands(), values, hostToDevice);
+  } else {
+    collectPtrs(op.getDataClauseOperands(), values, hostToDevice);
+    if constexpr (!std::is_same_v<Op, acc::KernelsOp>) {
+      collectPtrs(op.getReductionOperands(), values, hostToDevice);
+      collectPtrs(op.getGangPrivateOperands(), values, hostToDevice);
+      collectPtrs(op.getGangFirstPrivateOperands(), values, hostToDevice);
     }
   }
 
@@ -50,7 +67,7 @@ struct LegalizeDataInRegion
     bool replaceHostVsDevice = this->hostToDevice.getValue();
 
     funcOp.walk([&](Operation *op) {
-      if (!isa<ACC_COMPUTE_CONSTRUCT_OPS>(*op))
+      if (!isa<ACC_COMPUTE_CONSTRUCT_OPS>(*op) && !isa<acc::LoopOp>(*op))
         return;
 
       if (auto parallelOp = dyn_cast<acc::ParallelOp>(*op)) {
@@ -59,6 +76,8 @@ struct LegalizeDataInRegion
         collectAndReplaceInRegion(serialOp, replaceHostVsDevice);
       } else if (auto kernelsOp = dyn_cast<acc::KernelsOp>(*op)) {
         collectAndReplaceInRegion(kernelsOp, replaceHostVsDevice);
+      } else if (auto loopOp = dyn_cast<acc::LoopOp>(*op)) {
+        collectAndReplaceInRegion(loopOp, replaceHostVsDevice);
       }
     });
   }

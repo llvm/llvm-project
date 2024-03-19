@@ -189,8 +189,8 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
       return ExecutorAddr::fromPtr((void *)nullptr);
     }
 
-    Expected<std::vector<tpctypes::LookupResult>>
-    lookupSymbols(ArrayRef<LookupRequest> Request) override {
+    void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                            SymbolLookupCompleteFn Complete) override {
       std::vector<ExecutorSymbolDef> Result;
       EXPECT_EQ(Request.size(), 1u);
       for (auto &LR : Request) {
@@ -205,7 +205,7 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
           }
         }
       }
-      return std::vector<tpctypes::LookupResult>{1, Result};
+      Complete(std::vector<tpctypes::LookupResult>{1, Result});
     }
   };
 

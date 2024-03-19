@@ -74,11 +74,9 @@ MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
 /// Parse a type list.
 /// This is out-of-line to work-around https://github.com/llvm/llvm-project/issues/62918
 ParseResult AsmParser::parseTypeList(SmallVectorImpl<Type> &result) {
-    return parseCommaSeparatedList(
-        [&]() { return parseType(result.emplace_back()); });
-  }
-
-
+  return parseCommaSeparatedList(
+      [&]() { return parseType(result.emplace_back()); });
+}
 
 //===----------------------------------------------------------------------===//
 // DialectAsmPrinter
@@ -1097,7 +1095,7 @@ std::pair<size_t, size_t> AliasInitializer::visitImpl(
 }
 
 void AliasInitializer::markAliasNonDeferrable(size_t aliasIndex) {
-  auto it = std::next(aliases.begin(), aliasIndex);
+  auto *it = std::next(aliases.begin(), aliasIndex);
 
   // If already marked non-deferrable stop the recursion.
   // All children should already be marked non-deferrable as well.
@@ -1192,7 +1190,7 @@ void AliasState::initialize(
 }
 
 LogicalResult AliasState::getAlias(Attribute attr, raw_ostream &os) const {
-  auto it = attrTypeToAlias.find(attr.getAsOpaquePointer());
+  const auto *it = attrTypeToAlias.find(attr.getAsOpaquePointer());
   if (it == attrTypeToAlias.end())
     return failure();
   it->second.print(os);
@@ -1200,7 +1198,7 @@ LogicalResult AliasState::getAlias(Attribute attr, raw_ostream &os) const {
 }
 
 LogicalResult AliasState::getAlias(Type ty, raw_ostream &os) const {
-  auto it = attrTypeToAlias.find(ty.getAsOpaquePointer());
+  const auto *it = attrTypeToAlias.find(ty.getAsOpaquePointer());
   if (it == attrTypeToAlias.end())
     return failure();
 
@@ -1896,9 +1894,6 @@ static OpPrintingFlags verifyOpAndAdjustFlags(Operation *op,
   if (printerFlags.shouldPrintGenericOpForm() ||
       printerFlags.shouldAssumeVerified())
     return printerFlags;
-
-  LLVM_DEBUG(llvm::dbgs() << DEBUG_TYPE << ": Verifying operation: "
-                          << op->getName() << "\n");
 
   // Ignore errors emitted by the verifier. We check the thread id to avoid
   // consuming other threads' errors.

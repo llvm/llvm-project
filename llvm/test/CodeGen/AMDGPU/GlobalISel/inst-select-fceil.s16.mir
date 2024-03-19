@@ -50,7 +50,7 @@ body: |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
-    ; GFX11-NEXT: [[V_CEIL_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_CEIL_F16_t16_e64 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CEIL_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_CEIL_F16_t16_e64 0, [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CEIL_F16_t16_e64_]]
     ; GFX11-NEXT: $vgpr0 = COPY [[COPY2]]
     ;
@@ -88,7 +88,7 @@ body: |
     ; GFX11: liveins: $sgpr0
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX11-NEXT: [[V_CEIL_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_CEIL_F16_t16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CEIL_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_CEIL_F16_t16_e64 0, [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_CEIL_F16_t16_e64_]]
     ; GFX11-NEXT: $vgpr0 = COPY [[COPY1]]
     ;
@@ -127,7 +127,7 @@ body: |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
-    ; GFX11-NEXT: [[V_CEIL_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_CEIL_F16_t16_e64 1, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CEIL_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_CEIL_F16_t16_e64 1, [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CEIL_F16_t16_e64_]]
     ; GFX11-NEXT: $vgpr0 = COPY [[COPY2]]
     ;
