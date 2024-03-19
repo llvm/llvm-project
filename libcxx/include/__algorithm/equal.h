@@ -69,20 +69,6 @@ equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first
 }
 
 #if _LIBCPP_STD_VER >= 14
-template <class _BinaryPredicate, class _InputIterator1, class _InputIterator2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-__equal(_InputIterator1 __first1,
-        _InputIterator1 __last1,
-        _InputIterator2 __first2,
-        _InputIterator2 __last2,
-        _BinaryPredicate __pred,
-        input_iterator_tag,
-        input_iterator_tag) {
-  for (; __first1 != __last1 && __first2 != __last2; ++__first1, (void)++__first2)
-    if (!__pred(*__first1, *__first2))
-      return false;
-  return __first1 == __last1 && __first2 == __last2;
-}
 
 template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class _Pred, class _Proj1, class _Proj2>
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_impl(
@@ -110,17 +96,18 @@ __equal_impl(_Tp* __first1, _Tp* __last1, _Up* __first2, _Up*, _Pred&, _Proj1&, 
   return std::__constexpr_memcmp_equal(__first1, __first2, __element_count(__last1 - __first1));
 }
 
-template <class _BinaryPredicate, class _RandomAccessIterator1, class _RandomAccessIterator2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-__equal(_RandomAccessIterator1 __first1,
-        _RandomAccessIterator1 __last1,
-        _RandomAccessIterator2 __first2,
-        _RandomAccessIterator2 __last2,
-        _BinaryPredicate __pred,
-        random_access_iterator_tag,
-        random_access_iterator_tag) {
-  if (std::distance(__first1, __last1) != std::distance(__first2, __last2))
-    return false;
+template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+equal(_InputIterator1 __first1,
+      _InputIterator1 __last1,
+      _InputIterator2 __first2,
+      _InputIterator2 __last2,
+      _BinaryPredicate __pred) {
+  if constexpr (__has_random_access_iterator_category<_InputIterator1>::value &&
+                __has_random_access_iterator_category<_InputIterator2>::value) {
+    if (std::distance(__first1, __last1) != std::distance(__first2, __last2))
+      return false;
+  }
   __identity __proj;
   return std::__equal_impl(
       std::__unwrap_iter(__first1),
@@ -132,36 +119,13 @@ __equal(_RandomAccessIterator1 __first1,
       __proj);
 }
 
-template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-equal(_InputIterator1 __first1,
-      _InputIterator1 __last1,
-      _InputIterator2 __first2,
-      _InputIterator2 __last2,
-      _BinaryPredicate __pred) {
-  return std::__equal<_BinaryPredicate&>(
-      __first1,
-      __last1,
-      __first2,
-      __last2,
-      __pred,
-      typename iterator_traits<_InputIterator1>::iterator_category(),
-      typename iterator_traits<_InputIterator2>::iterator_category());
-}
-
 template <class _InputIterator1, class _InputIterator2>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2) {
-  return std::__equal(
-      __first1,
-      __last1,
-      __first2,
-      __last2,
-      __equal_to(),
-      typename iterator_traits<_InputIterator1>::iterator_category(),
-      typename iterator_traits<_InputIterator2>::iterator_category());
+  return std::equal(__first1, __last1, __first2, __last2, __equal_to());
 }
-#endif
+
+#endif // _LIBCPP_STD_VER >= 14
 
 _LIBCPP_END_NAMESPACE_STD
 
