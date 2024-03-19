@@ -600,7 +600,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalIf(ExtLegalFunc)
       .legalFor({{v2s64, v2s32}, {v4s32, v4s16}, {v8s16, v8s8}})
       .clampScalar(0, s64, s64) // Just for s128, others are handled above.
-      .moreElementsToNextPow2(1)
+      .moreElementsToNextPow2(0)
       .clampMaxNumElements(1, s8, 8)
       .clampMaxNumElements(1, s16, 4)
       .clampMaxNumElements(1, s32, 2)
