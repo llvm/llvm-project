@@ -265,6 +265,68 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// CmpThreeWayInfoAttr
+//===----------------------------------------------------------------------===//
+
+def CmpOrdering_Strong : I32EnumAttrCase<"Strong", 1, "strong">;
+def CmpOrdering_Partial : I32EnumAttrCase<"Partial", 2, "partial">;
+
+def CmpOrdering : I32EnumAttr<
+  "CmpOrdering", "three-way comparison ordering kind",
+  [CmpOrdering_Strong, CmpOrdering_Partial]
+> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmp3way_info"> {
+  let summary = "Holds information about a three-way comparison operation";
+  let description = [{
+    The `#cmp3way_info` attribute contains information about a three-way
+    comparison operation `cir.cmp3way`.
+
+    The `ordering` parameter gives the ordering kind of the three-way comparison
+    operation. It may be either strong ordering or partial ordering.
+
+    Given the two input operands of the three-way comparison operation `lhs` and
+    `rhs`, the `lt`, `eq`, `gt`, and `unordered` parameters gives the result
+    value that should be produced by the three-way comparison operation when the
+    ordering between `lhs` and `rhs` is `lhs < rhs`, `lhs == rhs`, `lhs > rhs`,
+    or neither, respectively.
+  }];
+
+  let parameters = (ins "CmpOrdering":$ordering, "int64_t":$lt, "int64_t":$eq,
+                        "int64_t":$gt,
+                        OptionalParameter<"std::optional<int64_t>">:$unordered);
+
+  let builders = [
+    AttrBuilder<(ins "int64_t":$lt, "int64_t":$eq, "int64_t":$gt), [{
+      return $_get($_ctxt, CmpOrdering::Strong, lt, eq, gt, std::nullopt);
+    }]>,
+    AttrBuilder<(ins "int64_t":$lt, "int64_t":$eq, "int64_t":$gt,
+                     "int64_t":$unordered), [{
+      return $_get($_ctxt, CmpOrdering::Partial, lt, eq, gt, unordered);
+    }]>,
+  ];
+
+  let extraClassDeclaration = [{
+    /// Get attribute alias name for this attribute.
+    std::string getAlias() const;
+  }];
+
+  let assemblyFormat = [{
+    `<`
+      $ordering `,`
+      `lt` `=` $lt `,`
+      `eq` `=` $eq `,`
+      `gt` `=` $gt
+      (`,` `unordered` `=` $unordered^)?
+    `>`
+  }];
+
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // DataMemberAttr
 //===----------------------------------------------------------------------===//
 
