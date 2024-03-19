@@ -117,5 +117,34 @@ Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer) {
   return Result;
 }
 
+// Verify that the set of CallStackIds and the set of call stacks have
+// one-to-one correspondence.  This function is intended to help transition from
+// CallStack to CSId in IndexedAllocationInfo.
+void verifyFunctionProfileData(
+    const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>
+        &FunctionProfileData) {
+  DenseMap<CallStackId, SmallVector<FrameId>> CSIdToCS;
+  std::map<llvm::SmallVector<FrameId>, CallStackId> CSToCSId;
+  for (const auto &[GUID, Record] : FunctionProfileData) {
+    (void)GUID;
+    for (const auto &AS : Record.AllocSites) {
+      auto Result = CSToCSId.insert({AS.CallStack, AS.CSId});
+      if (!Result.second) {
+        assert(Result.first->second == AS.CSId);
+      }
+      auto Result2 = CSIdToCS.insert({AS.CSId, AS.CallStack});
+      if (!Result2.second) {
+        const auto &Other = Result2.first->second;
+        assert(Other.size() == AS.CallStack.size());
+        (void)Other;
+        for (size_t I = 0, E = AS.CallStack.size(); I != E; ++I) {
+          assert(Other[I] == AS.CallStack[I]);
+        }
+      }
+    }
+  }
+  assert(CSIdToCS.size() == CSToCSId.size());
+}
+
 } // namespace memprof
 } // namespace llvm
