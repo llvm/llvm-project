@@ -3337,6 +3337,8 @@ template <class Emitter>
 unsigned
 ByteCodeExprGen<Emitter>::collectBaseOffset(const RecordType *BaseType,
                                             const RecordType *DerivedType) {
+  assert(BaseType);
+  assert(DerivedType);
   const auto *FinalDecl = cast<CXXRecordDecl>(BaseType->getDecl());
   const RecordDecl *CurDecl = DerivedType->getDecl();
   const Record *CurRecord = getRecord(CurDecl);
