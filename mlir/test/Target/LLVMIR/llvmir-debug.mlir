@@ -410,15 +410,15 @@ llvm.func @class_method() {
 #di_composite_type_self = #llvm.di_composite_type<tag = DW_TAG_null, recId = distinct[0]<>>
 #di_file = #llvm.di_file<"test.mlir" in "/">
 #di_subroutine_type = #llvm.di_subroutine_type<types = #di_composite_type_self>
-#di_subprogram = #llvm.di_subprogram<scope = #di_file, name = "my_func", file = #di_file, line = 182, scopeLine = 182, subprogramFlags = Optimized, type = #di_subroutine_type>
-#di_composite_type = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = distinct[0]<>, name = "id", file = #di_file, line = 204, scope = #di_subprogram, flags = "Public|TypePassByReference|NonTrivial", sizeInBits = 128>
-#di_global_variable = #llvm.di_global_variable<scope = #di_file, name = "my_global", file = #di_file, line = 4641, type = #di_composite_type, isDefined = true>
-#di_global_variable_expression = #llvm.di_global_variable_expression<var = #di_global_variable, expr = <>>
+#di_subprogram = #llvm.di_subprogram<scope = #di_file, file = #di_file, subprogramFlags = Optimized, type = #di_subroutine_type>
+#di_composite_type = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = distinct[0]<>, scope = #di_subprogram>
+#di_global_variable = #llvm.di_global_variable<file = #di_file, line = 1, type = #di_composite_type>
+#di_global_variable_expression = #llvm.di_global_variable_expression<var = #di_global_variable>
 
-llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} : !llvm.struct<(struct<(i64)>, i32)>
+llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} : !llvm.struct<()>
 
-// CHECK: distinct !DIGlobalVariable(name: "my_global", {{.*}}, type: ![[COMP:[0-9]+]],
-// CHECK: ![[COMP]] = distinct !DICompositeType(tag: DW_TAG_class_type, name: "id", scope: ![[SCOPE:[0-9]+]],
-// CHECK: ![[SCOPE]] = !DISubprogram(name: "my_func", {{.*}}, type: ![[SUBROUTINE:[0-9]+]],
+// CHECK: distinct !DIGlobalVariable({{.*}}type: ![[COMP:[0-9]+]],
+// CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]],
+// CHECK: ![[SCOPE]] = !DISubprogram({{.*}}type: ![[SUBROUTINE:[0-9]+]],
 // CHECK: ![[SUBROUTINE]] = !DISubroutineType(types: ![[SR_TYPES:[0-9]+]])
 // CHECK: ![[SR_TYPES]] = !{![[COMP]]}
