@@ -1051,7 +1051,6 @@ def TENSOR_SAVE : FLAT_Global_Tensor_Pseudo<"tensor_save", 1>;
 def TENSOR_STOP : FLAT_Global_Tensor_Pseudo<"tensor_stop">;
 } // End SubtargetPredicate = isGFX12_10Plus
 
-let SubtargetPredicate = HasFlatScratchInsts in {
 defm SCRATCH_LOAD_UBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte", VGPR_32>;
 defm SCRATCH_LOAD_SBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_sbyte", VGPR_32>;
 defm SCRATCH_LOAD_USHORT   : FLAT_Scratch_Load_Pseudo <"scratch_load_ushort", VGPR_32>;
@@ -1086,7 +1085,6 @@ defm SCRATCH_LOAD_LDS_USHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_u
 defm SCRATCH_LOAD_LDS_SSHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_sshort">;
 defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_dword">;
 
-} // End SubtargetPredicate = HasFlatScratchInsts
 
 let SubtargetPredicate = isGFX12_10Plus in {
 def FLAT_LOAD_MONITOR_B32    : FLAT_Load_Pseudo <"flat_load_monitor_b32",  VGPR_32>;
@@ -2493,9 +2491,7 @@ multiclass FLAT_Real_SADDR_RTN_gfx10<bits<7> op> {
 
 multiclass FLAT_Real_ST_gfx10<bits<7> op> {
   def _ST_gfx10 :
-    FLAT_Real_gfx10<op, !cast<FLAT_Pseudo>(NAME#"_ST")> {
-      let OtherPredicates = [HasFlatScratchSTMode];
-    }
+    FLAT_Real_gfx10<op, !cast<FLAT_Pseudo>(NAME#"_ST")>;
 }
 
 multiclass FLAT_Real_AllAddr_gfx10<bits<7> op> :
@@ -2730,15 +2726,11 @@ multiclass FLAT_Real_SADDR_RTN_gfx11<bits<7> op, string ps, string opName> {
 }
 
 multiclass FLAT_Real_ST_gfx11<bits<7> op, string ps, string opName> {
-  def _ST_gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps#"_ST"), opName> {
-    let OtherPredicates = [HasFlatScratchSTMode];
-  }
+  def _ST_gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps#"_ST"), opName>;
 }
 
 multiclass FLAT_Real_SVS_gfx11<bits<7> op, string ps, string opName> {
-  def _SVS_gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps#"_SVS"), opName> {
-    let OtherPredicates = [HasFlatScratchSVSMode];
-  }
+  def _SVS_gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps#"_SVS"), opName>;
 }
 
 multiclass FLAT_Real_AllAddr_gfx11<bits<7> op, string ps, string opName, int renamed = false> :
@@ -2941,15 +2933,11 @@ multiclass VFLAT_Real_SADDR_RTN_gfx12<bits<8> op, string ps, string opName> {
 }
 
 multiclass VFLAT_Real_ST_gfx12<bits<8> op, string ps, string opName> {
-  def _ST_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_ST"), opName> {
-    let OtherPredicates = [HasFlatScratchSTMode];
-  }
+  def _ST_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_ST"), opName>;
 }
 
 multiclass VFLAT_Real_SVS_gfx12<bits<8> op, string ps, string opName> {
-  def _SVS_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_SVS"), opName> {
-    let OtherPredicates = [HasFlatScratchSVSMode];
-  }
+  def _SVS_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_SVS"), opName>;
 }
 
 multiclass VFLAT_Real_Atomics_gfx12<bits<8> op, string ps = NAME, string opName = !tolower(NAME),
