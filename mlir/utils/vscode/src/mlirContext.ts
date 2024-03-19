@@ -176,22 +176,18 @@ export class MLIRContext implements vscode.Disposable {
     let configsToWatch: string[] = [];
     let filepathsToWatch: string[] = [];
     let additionalServerArgs: string[] = [];
+    additionalServerArgs = config.get<string[]>(languageName + "_additional_server_args", null, []);
 
     // Initialize additional configurations for this server.
     if (languageName === 'pdll') {
-      additionalServerArgs = config.get<string[]>("pdll_additional_server_args", null, []);
       await this.preparePDLLServerOptions(workspaceFolder, configsToWatch,
                                           filepathsToWatch,
                                           additionalServerArgs);
     } else if (languageName == 'tablegen') {
-      additionalServerArgs = config.get<string[]>("table_additional_server_args", null, []);
       await this.prepareTableGenServerOptions(workspaceFolder, configsToWatch,
                                               filepathsToWatch,
                                               additionalServerArgs);
     }
-     else {
-      additionalServerArgs = config.get<string[]>("mlir_additional_server_args", null, []);
-     }
 
     // Try to activate the language client.
     const [server, serverPath] = await this.startLanguageClient(
