@@ -13644,15 +13644,18 @@ struct NodeExtensionHelper {
     SupportsFPExt = false;
     EnforceOneUse = true;
     CheckMask = true;
-    SDValue NarrowOp;
     unsigned Opc = OrigOperand.getOpcode();
     switch (Opc) {
     case ISD::ZERO_EXTEND:
     case ISD::SIGN_EXTEND: {
-      NarrowOp = OrigOperand.getOperand(0);
-
       MVT VT = OrigOperand.getSimpleValueType();
       if (!VT.isVector())
+        break;
+
+      SDValue NarrowElt = OrigOperand.getOperand(0);
+      MVT NarrowVT = NarrowElt.getSimpleValueType();
+      // i1 types are legal but we can't select V{S,Z}EXT_VLs with them.
+      if (NarrowVT.getVectorElementType() == MVT::i1)
         break;
 
       SupportsZExt = Opc == ISD::ZERO_EXTEND;
@@ -13663,19 +13666,16 @@ struct NodeExtensionHelper {
       break;
     }
     case RISCVISD::VZEXT_VL:
-      NarrowOp = OrigOperand.getOperand(0);
       SupportsZExt = true;
       Mask = OrigOperand.getOperand(1);
       VL = OrigOperand.getOperand(2);
       break;
     case RISCVISD::VSEXT_VL:
-      NarrowOp = OrigOperand.getOperand(0);
       SupportsSExt = true;
       Mask = OrigOperand.getOperand(1);
       VL = OrigOperand.getOperand(2);
       break;
     case RISCVISD::FP_EXTEND_VL:
-      NarrowOp = OrigOperand.getOperand(0);
       SupportsFPExt = true;
       Mask = OrigOperand.getOperand(1);
       VL = OrigOperand.getOperand(2);
@@ -13694,13 +13694,13 @@ struct NodeExtensionHelper {
         break;
 
       // Get the scalar value.
-      NarrowOp = OrigOperand.getOperand(1);
+      SDValue Op = OrigOperand.getOperand(1);
 
       // See if we have enough sign bits or zero bits in the scalar to use a
       // widening opcode by splatting to smaller element size.
       MVT VT = Root->getSimpleValueType(0);
       unsigned EltBits = VT.getScalarSizeInBits();
-      unsigned ScalarBits = NarrowOp.getValueSizeInBits();
+      unsigned ScalarBits = Op.getValueSizeInBits();
       // Make sure we're getting all element bits from the scalar register.
       // FIXME: Support implicit sign extension of vmv.v.x?
       if (ScalarBits < EltBits)
@@ -13712,22 +13712,15 @@ struct NodeExtensionHelper {
       if (NarrowSize < 8)
         break;
 
-      if (DAG.ComputeMaxSignificantBits(NarrowOp) <= NarrowSize)
+      if (DAG.ComputeMaxSignificantBits(Op) <= NarrowSize)
         SupportsSExt = true;
-      if (DAG.MaskedValueIsZero(NarrowOp,
+      if (DAG.MaskedValueIsZero(Op,
                                 APInt::getBitsSetFrom(ScalarBits, NarrowSize)))
         SupportsZExt = true;
       break;
     }
     default:
       break;
-    }
-
-    // i1 types are legal but we can't select V{S,Z}EXT_VLs with them.
-    if (NarrowOp && NarrowOp.getSimpleValueType().getScalarType() == MVT::i1) {
-      SupportsSExt = false;
-      SupportsZExt = false;
-      SupportsFPExt = false;
     }
   }
 
