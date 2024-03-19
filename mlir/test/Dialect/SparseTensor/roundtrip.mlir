@@ -728,3 +728,13 @@ func.func @sparse_print(%arg0: tensor<10x10xf64, #CSR>) {
   sparse_tensor.print %arg0 : tensor<10x10xf64, #CSR>
   return
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @sparse_has_runtime() -> i1
+// CHECK:           %[[H:.*]] = sparse_tensor.has_runtime_library
+// CHECK:           return %[[H]] : i1
+func.func @sparse_has_runtime() -> i1 {
+  %has_runtime = sparse_tensor.has_runtime_library
+  return %has_runtime : i1
+}
