@@ -541,6 +541,7 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
   uint32_t AlignInBits;
   std::optional<unsigned> DWARFAddressSpace;
   dwarf::MemorySpace DWARFMemorySpace;
+  std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
   unsigned Flags;
   Metadata *ExtraData;
   Metadata *Annotations;
@@ -549,20 +550,20 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
                 uint32_t AlignInBits, uint64_t OffsetInBits,
                 std::optional<unsigned> DWARFAddressSpace,
-                dwarf::MemorySpace DWARFMemorySpace, unsigned Flags,
-                Metadata *ExtraData, Metadata *Annotations)
+                dwarf::MemorySpace DWARFMemorySpace, std::optional<DIDerivedType::PtrAuthData> PtrAuthData,
+                unsigned Flags, Metadata *ExtraData, Metadata *Annotations)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
         AlignInBits(AlignInBits), DWARFAddressSpace(DWARFAddressSpace),
-        DWARFMemorySpace(DWARFMemorySpace), Flags(Flags), ExtraData(ExtraData),
+        DWARFMemorySpace(DWARFMemorySpace), PtrAuthData(PtrAuthData), Flags(Flags), ExtraData(ExtraData),
         Annotations(Annotations) {}
   MDNodeKeyImpl(const DIDerivedType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
         BaseType(N->getRawBaseType()), SizeInBits(N->getSizeInBits()),
         OffsetInBits(N->getOffsetInBits()), AlignInBits(N->getAlignInBits()),
-        DWARFAddressSpace(N->getDWARFAddressSpace()),
-        DWARFMemorySpace(N->getDWARFMemorySpace()), Flags(N->getFlags()),
+        DWARFAddressSpace(N->getDWARFAddressSpace()), DWARFMemorySpace(N->getDWARFMemorySpace()), 
+        PtrAuthData(N->getPtrAuthData()), Flags(N->getFlags()),
         ExtraData(N->getRawExtraData()), Annotations(N->getRawAnnotations()) {}
 
   bool isKeyOf(const DIDerivedType *RHS) const {
@@ -573,7 +574,7 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
            AlignInBits == RHS->getAlignInBits() &&
            OffsetInBits == RHS->getOffsetInBits() &&
            DWARFAddressSpace == RHS->getDWARFAddressSpace() &&
-           DWARFMemorySpace == RHS->getDWARFMemorySpace() &&
+           DWARFMemorySpace == RHS->getDWARFMemorySpace() && PtrAuthData == RHS->getPtrAuthData() &&
            Flags == RHS->getFlags() && ExtraData == RHS->getRawExtraData() &&
            Annotations == RHS->getRawAnnotations();
   }

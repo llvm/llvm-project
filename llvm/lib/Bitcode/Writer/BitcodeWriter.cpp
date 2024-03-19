@@ -1834,6 +1834,11 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
   Record.push_back(static_cast<uint64_t>(N->getDWARFMemorySpace()));
 
+  if (auto PtrAuthData = N->getPtrAuthData())
+    Record.push_back(PtrAuthData->RawData);
+  else
+    Record.push_back(0);
+
   Stream.EmitRecord(bitc::METADATA_DERIVED_TYPE, Record, Abbrev);
   Record.clear();
 }
