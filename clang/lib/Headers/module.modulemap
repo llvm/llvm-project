@@ -314,3 +314,8 @@ module opencl_c {
   requires opencl
   header "opencl-c.h"
 }
+
+module ptrauth {
+  header "ptrauth.h"
+  export *
+}

@@ -37,6 +37,7 @@
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -49,7 +50,6 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include <mlir/Dialect/LLVMIR/LLVMAttrs.h>
 
 namespace fir {
 #define GEN_PASS_DEF_FIRTOLLVMLOWERING
@@ -410,8 +410,15 @@ protected:
       mlir::ConversionPatternRewriter &rewriter) const {
     auto thisPt = rewriter.saveInsertionPoint();
     mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
-    mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp);
-    rewriter.setInsertionPointToStart(insertBlock);
+    if (mlir::isa<mlir::omp::ReductionDeclareOp>(parentOp)) {
+      // ReductionDeclareOp has multiple child regions. We want to get the first
+      // block of whichever of those regions we are currently in
+      mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
+      rewriter.setInsertionPointToStart(&parentRegion->front());
+    } else {
+      mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp);
+      rewriter.setInsertionPointToStart(insertBlock);
+    }
     auto size = genI32Constant(loc, rewriter, 1);
     unsigned allocaAs = getAllocaAddressSpace(rewriter);
     unsigned programAs = getProgramAddressSpace(rewriter);

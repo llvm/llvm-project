@@ -597,8 +597,8 @@ namespace {
     SDValue foldSextSetcc(SDNode *N);
     SDValue foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
                               const SDLoc &DL);
-    SDValue foldSubToUSubSat(EVT DstVT, SDNode *N);
-    SDValue foldABSToABD(SDNode *N);
+    SDValue foldSubToUSubSat(EVT DstVT, SDNode *N, const SDLoc &DL);
+    SDValue foldABSToABD(SDNode *N, const SDLoc &DL);
     SDValue unfoldMaskedMerge(SDNode *N);
     SDValue unfoldExtremeBitClearingToShifts(SDNode *N);
     SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
@@ -2703,11 +2703,11 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   SDValue A, B, C;
 
   // fold ((0-A) + B) -> B-A
-  if (sd_match(N0, m_Sub(m_Zero(), m_Value(A))))
+  if (sd_match(N0, m_Neg(m_Value(A))))
     return DAG.getNode(ISD::SUB, DL, VT, N1, A);
 
   // fold (A + (0-B)) -> A-B
-  if (sd_match(N1, m_Sub(m_Zero(), m_Value(B))))
+  if (sd_match(N1, m_Neg(m_Value(B))))
     return DAG.getNode(ISD::SUB, DL, VT, N0, B);
 
   // fold (A+(B-A)) -> B
@@ -2820,6 +2820,23 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   return SDValue();
 }
 
+// Attempt to form avgflooru(A, B) from (A & B) + ((A ^ B) >> 1)
+static SDValue combineFixedwidthToAVGFLOORU(SDNode *N, SelectionDAG &DAG) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N0.getValueType();
+  SDLoc DL(N);
+  if (TLI.isOperationLegal(ISD::AVGFLOORU, VT)) {
+    SDValue A, B;
+    if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
+                          m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
+                                m_SpecificInt(1))))) {
+      return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
+    }
+  }
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitADD(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -2833,6 +2850,10 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
     return V;
 
   if (SDValue V = foldAddSubOfSignBit(N, DAG))
+    return V;
+
+  // Try to match AVGFLOORU fixedwidth pattern
+  if (SDValue V = combineFixedwidthToAVGFLOORU(N, DAG))
     return V;
 
   // fold (a+b) -> (a|b) iff a and b share no bits.
@@ -3596,7 +3617,7 @@ static SDValue getTruncatedUSUBSAT(EVT DstVT, EVT SrcVT, SDValue LHS,
 
 // Try to find umax(a,b) - b or a - umin(a,b) patterns that may be converted to
 // usubsat(a,b), optionally as a truncated type.
-SDValue DAGCombiner::foldSubToUSubSat(EVT DstVT, SDNode *N) {
+SDValue DAGCombiner::foldSubToUSubSat(EVT DstVT, SDNode *N, const SDLoc &DL) {
   if (N->getOpcode() != ISD::SUB ||
       !(!LegalOperations || hasOperation(ISD::USUBSAT, DstVT)))
     return SDValue();
@@ -3611,18 +3632,18 @@ SDValue DAGCombiner::foldSubToUSubSat(EVT DstVT, SDNode *N) {
     SDValue MaxLHS = Op0.getOperand(0);
     SDValue MaxRHS = Op0.getOperand(1);
     if (MaxLHS == Op1)
-      return getTruncatedUSUBSAT(DstVT, SubVT, MaxRHS, Op1, DAG, SDLoc(N));
+      return getTruncatedUSUBSAT(DstVT, SubVT, MaxRHS, Op1, DAG, DL);
     if (MaxRHS == Op1)
-      return getTruncatedUSUBSAT(DstVT, SubVT, MaxLHS, Op1, DAG, SDLoc(N));
+      return getTruncatedUSUBSAT(DstVT, SubVT, MaxLHS, Op1, DAG, DL);
   }
 
   if (Op1.getOpcode() == ISD::UMIN && Op1.hasOneUse()) {
     SDValue MinLHS = Op1.getOperand(0);
     SDValue MinRHS = Op1.getOperand(1);
     if (MinLHS == Op0)
-      return getTruncatedUSUBSAT(DstVT, SubVT, Op0, MinRHS, DAG, SDLoc(N));
+      return getTruncatedUSUBSAT(DstVT, SubVT, Op0, MinRHS, DAG, DL);
     if (MinRHS == Op0)
-      return getTruncatedUSUBSAT(DstVT, SubVT, Op0, MinLHS, DAG, SDLoc(N));
+      return getTruncatedUSUBSAT(DstVT, SubVT, Op0, MinLHS, DAG, DL);
   }
 
   // sub(a,trunc(umin(zext(a),b))) -> usubsat(a,trunc(umin(b,SatLimit)))
@@ -3633,10 +3654,10 @@ SDValue DAGCombiner::foldSubToUSubSat(EVT DstVT, SDNode *N) {
     SDValue MinRHS = Op1.getOperand(0).getOperand(1);
     if (MinLHS.getOpcode() == ISD::ZERO_EXTEND && MinLHS.getOperand(0) == Op0)
       return getTruncatedUSUBSAT(DstVT, MinLHS.getValueType(), MinLHS, MinRHS,
-                                 DAG, SDLoc(N));
+                                 DAG, DL);
     if (MinRHS.getOpcode() == ISD::ZERO_EXTEND && MinRHS.getOperand(0) == Op0)
       return getTruncatedUSUBSAT(DstVT, MinLHS.getValueType(), MinRHS, MinLHS,
-                                 DAG, SDLoc(N));
+                                 DAG, DL);
   }
 
   return SDValue();
@@ -3812,7 +3833,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return DAG.getNode(ISD::AND, DL, VT, N0, DAG.getNOT(DL, B, VT));
 
   // fold (A - (-B * C)) -> (A + (B * C))
-  if (sd_match(N1, m_OneUse(m_Mul(m_Sub(m_Zero(), m_Value(B)), m_Value(C)))))
+  if (sd_match(N1, m_OneUse(m_Mul(m_Neg(m_Value(B)), m_Value(C)))))
     return DAG.getNode(ISD::ADD, DL, VT, N0,
                        DAG.getNode(ISD::MUL, DL, VT, B, C));
 
@@ -3831,7 +3852,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, SDLoc(N)))
     return V;
 
-  if (SDValue V = foldSubToUSubSat(VT, N))
+  if (SDValue V = foldSubToUSubSat(VT, N, DL))
     return V;
 
   // (A - B) - 1  ->  add (xor B, -1), A
@@ -6655,7 +6676,7 @@ static SDValue combineShiftAnd1ToBitTest(SDNode *And, SelectionDAG &DAG) {
 
 /// For targets that support usubsat, match a bit-hack form of that operation
 /// that ends in 'and' and convert it.
-static SDValue foldAndToUsubsat(SDNode *N, SelectionDAG &DAG) {
+static SDValue foldAndToUsubsat(SDNode *N, SelectionDAG &DAG, const SDLoc &DL) {
   EVT VT = N->getValueType(0);
   unsigned BitWidth = VT.getScalarSizeInBits();
   APInt SignMask = APInt::getSignMask(BitWidth);
@@ -6672,7 +6693,6 @@ static SDValue foldAndToUsubsat(SDNode *N, SelectionDAG &DAG) {
                                         m_SpecificInt(BitWidth - 1))))))
     return SDValue();
 
-  SDLoc DL(N);
   return DAG.getNode(ISD::USUBSAT, DL, VT, X,
                      DAG.getConstant(SignMask, DL, VT));
 }
@@ -7164,7 +7184,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0));
 
   if (hasOperation(ISD::USUBSAT, VT))
-    if (SDValue V = foldAndToUsubsat(N, DAG))
+    if (SDValue V = foldAndToUsubsat(N, DAG, DL))
       return V;
 
   // Postpone until legalization completed to avoid interference with bswap
@@ -10721,7 +10741,7 @@ SDValue DAGCombiner::visitSHLSAT(SDNode *N) {
 // (ABS (SUB (EXTEND a), (EXTEND b))).
 // (TRUNC (ABS (SUB (EXTEND a), (EXTEND b)))).
 // Generates UABD/SABD instruction.
-SDValue DAGCombiner::foldABSToABD(SDNode *N) {
+SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
   EVT SrcVT = N->getValueType(0);
 
   if (N->getOpcode() == ISD::TRUNCATE)
@@ -10733,7 +10753,6 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue AbsOp1 = N->getOperand(0);
   SDValue Op0, Op1;
-  SDLoc DL(N);
 
   if (AbsOp1.getOpcode() != ISD::SUB)
     return SDValue();
@@ -10792,9 +10811,10 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N) {
 SDValue DAGCombiner::visitABS(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (abs c1) -> c2
-  if (SDValue C = DAG.FoldConstantArithmetic(ISD::ABS, SDLoc(N), VT, {N0}))
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::ABS, DL, VT, {N0}))
     return C;
   // fold (abs (abs x)) -> (abs x)
   if (N0.getOpcode() == ISD::ABS)
@@ -10803,7 +10823,7 @@ SDValue DAGCombiner::visitABS(SDNode *N) {
   if (DAG.SignBitIsZero(N0))
     return N0;
 
-  if (SDValue ABD = foldABSToABD(N))
+  if (SDValue ABD = foldABSToABD(N, DL))
     return ABD;
 
   // fold (abs (sign_extend_inreg x)) -> (zero_extend (abs (truncate x)))
@@ -10813,7 +10833,6 @@ SDValue DAGCombiner::visitABS(SDNode *N) {
     if (TLI.isTruncateFree(VT, ExtVT) && TLI.isZExtFree(ExtVT, VT) &&
         TLI.isTypeDesirableForOp(ISD::ABS, ExtVT) &&
         hasOperation(ISD::ABS, ExtVT)) {
-      SDLoc DL(N);
       return DAG.getNode(
           ISD::ZERO_EXTEND, DL, VT,
           DAG.getNode(ISD::ABS, DL, ExtVT,
@@ -14718,10 +14737,10 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     }
   }
 
-  if (SDValue V = foldSubToUSubSat(VT, N0.getNode()))
+  if (SDValue V = foldSubToUSubSat(VT, N0.getNode(), DL))
     return V;
 
-  if (SDValue ABD = foldABSToABD(N))
+  if (SDValue ABD = foldABSToABD(N, DL))
     return ABD;
 
   // Attempt to pre-truncate BUILD_VECTOR sources.
@@ -24162,7 +24181,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   // TODO: Use "BaseIndexOffset" to make this more effective.
   SDValue NewAddr = DAG.getMemBasePlusOffset(Ld->getBasePtr(), Offset, DL);
 
-  uint64_t StoreSize = MemoryLocation::getSizeOrUnknown(VT.getStoreSize());
+  LocationSize StoreSize = MemoryLocation::getSizeOrUnknown(VT.getStoreSize());
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO;
   if (Offset.isScalable()) {
@@ -27807,14 +27826,13 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
                  : (LSN->getAddressingMode() == ISD::PRE_DEC)
                      ? -1 * C->getSExtValue()
                      : 0;
-      uint64_t Size =
+      LocationSize Size =
           MemoryLocation::getSizeOrUnknown(LSN->getMemoryVT().getStoreSize());
       return {LSN->isVolatile(),
               LSN->isAtomic(),
               LSN->getBasePtr(),
               Offset /*base offset*/,
-              Size != ~UINT64_C(0) ? LocationSize::precise(Size)
-                                   : LocationSize::beforeOrAfterPointer(),
+              Size,
               LSN->getMemOperand()};
     }
     if (const auto *LN = cast<LifetimeSDNode>(N))

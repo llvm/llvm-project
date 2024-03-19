@@ -119,6 +119,36 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
 #undef RET_CASE
 }
 
+static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
+                                                  const InterpFrame *Frame,
+                                                  const CallExpr *Call) {
+  // The current frame is the one for __builtin_is_constant_evaluated.
+  // The one above that, potentially the one for std::is_constant_evaluated().
+  if (S.inConstantContext() && !S.checkingPotentialConstantExpression() &&
+      Frame->Caller && S.getEvalStatus().Diag) {
+    auto isStdCall = [](const FunctionDecl *F) -> bool {
+      return F && F->isInStdNamespace() && F->getIdentifier() &&
+             F->getIdentifier()->isStr("is_constant_evaluated");
+    };
+    const InterpFrame *Caller = Frame->Caller;
+
+    if (Caller->Caller && isStdCall(Caller->getCallee())) {
+      const Expr *E = Caller->Caller->getExpr(Caller->getRetPC());
+      S.report(E->getExprLoc(),
+               diag::warn_is_constant_evaluated_always_true_constexpr)
+          << "std::is_constant_evaluated";
+    } else {
+      const Expr *E = Frame->Caller->getExpr(Frame->getRetPC());
+      S.report(E->getExprLoc(),
+               diag::warn_is_constant_evaluated_always_true_constexpr)
+          << "__builtin_is_constant_evaluated";
+    }
+  }
+
+  S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
+  return true;
+}
+
 static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call) {
@@ -917,14 +947,15 @@ static bool interp__builtin_complex(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
-  InterpFrame *Frame = S.Current;
+  const InterpFrame *Frame = S.Current;
   APValue Dummy;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);
 
   switch (F->getBuiltinID()) {
   case Builtin::BI__builtin_is_constant_evaluated:
-    S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
+    if (!interp__builtin_is_constant_evaluated(S, OpPC, Frame, Call))
+      return false;
     break;
   case Builtin::BI__builtin_assume:
   case Builtin::BI__assume:

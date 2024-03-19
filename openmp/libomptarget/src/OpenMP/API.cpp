@@ -16,6 +16,7 @@
 #include "rtl.h"
 
 #include "OpenMP/InternalTypes.h"
+#include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "OpenMP/omp.h"
 #include "Shared/Profile.h"
@@ -35,6 +36,13 @@ EXTERN int ompx_get_team_procs(int DeviceNum) {
   int TeamProcs = DeviceOrErr->getTeamProcs();
   DP("Call to ompx_get_team_procs returning %d\n", TeamProcs);
   return TeamProcs;
+}
+
+EXTERN void ompx_dump_mapping_tables() {
+  ident_t Loc = {0, 0, 0, 0, ";libomptarget;libomptarget;0;0;;"};
+  auto ExclusiveDevicesAccessor = PM->getExclusiveDevicesAccessor();
+  for (auto &Device : PM->devices(ExclusiveDevicesAccessor))
+    dumpTargetPointerMappings(&Loc, Device, true);
 }
 
 #ifdef OMPT_SUPPORT

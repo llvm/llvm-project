@@ -56,7 +56,7 @@ struct MachinePassConcept
 };
 
 template <typename PassT> struct MachinePassModel : MachinePassConcept {
-  explicit MachinePassModel(PassT Pass) : Pass(std::move(Pass)) {}
+  explicit MachinePassModel(PassT &&Pass) : Pass(std::move(Pass)) {}
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
   MachinePassModel(const MachinePassModel &Arg) : Pass(Arg.Pass) {}

@@ -28,7 +28,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
@@ -100,7 +100,7 @@ struct AnalysisOutputs {
   const FunctionDecl *Target;
   /// Contains the control flow graph built from the body of the `Target`
   /// function and is analyzed.
-  const ControlFlowContext &CFCtx;
+  const AdornedCFG &ACFG;
   /// The analysis to be run.
   TypeErasedDataflowAnalysis &Analysis;
   /// Initial state to start the analysis.
@@ -261,9 +261,10 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
           llvm::errc::invalid_argument, "Could not find the target function.");
 
     // Build the control flow graph for the target function.
-    auto MaybeCFCtx = ControlFlowContext::build(*Target);
-    if (!MaybeCFCtx) return MaybeCFCtx.takeError();
-    auto &CFCtx = *MaybeCFCtx;
+    auto MaybeACFG = AdornedCFG::build(*Target);
+    if (!MaybeACFG)
+      return MaybeACFG.takeError();
+    auto &ACFG = *MaybeACFG;
 
     // Initialize states for running dataflow analysis.
     DataflowAnalysisContext DACtx(AI.SolverFactory(),
@@ -271,7 +272,7 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     Environment InitEnv(DACtx, *Target);
     auto Analysis = AI.MakeAnalysis(Context, InitEnv);
 
-    AnalysisOutputs AO{AnnotatedCode, Context, Target, CFCtx,
+    AnalysisOutputs AO{AnnotatedCode, Context, Target, ACFG,
                        Analysis,      InitEnv, {}};
 
     // Additional test setup.
@@ -283,7 +284,7 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     // the post-analysis states for the CFG blocks that have been evaluated.
     llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
         MaybeBlockStates =
-            runTypeErasedDataflowAnalysis(CFCtx, Analysis, InitEnv,
+            runTypeErasedDataflowAnalysis(ACFG, Analysis, InitEnv,
                                           TypeErasedPostVisitCFG,
                                           MaxBlockVisitsInAnalysis);
     if (!MaybeBlockStates) return MaybeBlockStates.takeError();

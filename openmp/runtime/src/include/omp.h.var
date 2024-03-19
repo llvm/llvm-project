@@ -165,6 +165,7 @@
     typedef intptr_t omp_intptr_t;
 
     extern int  __KAI_KMPC_CONVENTION  ompx_get_team_procs(int);
+    extern void __KAI_KMPC_CONVENTION ompx_dump_mapping_tables(void);
 
     /* 0..omp_get_num_interop_properties()-1 are reserved for implementation-defined properties */
     typedef enum omp_interop_property {

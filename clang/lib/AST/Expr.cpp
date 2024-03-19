@@ -4604,8 +4604,17 @@ SourceRange DesignatedInitExpr::getDesignatorsSourceRange() const {
 SourceLocation DesignatedInitExpr::getBeginLoc() const {
   auto *DIE = const_cast<DesignatedInitExpr *>(this);
   Designator &First = *DIE->getDesignator(0);
-  if (First.isFieldDesignator())
-    return GNUSyntax ? First.getFieldLoc() : First.getDotLoc();
+  if (First.isFieldDesignator()) {
+    // Skip past implicit designators for anonymous structs/unions, since
+    // these do not have valid source locations.
+    for (unsigned int i = 0; i < DIE->size(); i++) {
+      Designator &Des = *DIE->getDesignator(i);
+      SourceLocation retval = GNUSyntax ? Des.getFieldLoc() : Des.getDotLoc();
+      if (!retval.isValid())
+        continue;
+      return retval;
+    }
+  }
   return First.getLBracketLoc();
 }
 

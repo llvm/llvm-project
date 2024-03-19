@@ -110,6 +110,9 @@ public:
   /// device image or create it if did not exist.
   const ELF64LEObjectFile *
   getOrCreateELFObjectFile(const GenericDeviceTy &Device, DeviceImageTy &Image);
+  
+  /// Helper function for getting an ELF from a device image.
+  Expected<std::unique_ptr<ObjectFile>> getELFObjectFile(DeviceImageTy &Image);
 
   /// Returns whether the symbol named \p SymName is present in the given \p
   /// Image.
