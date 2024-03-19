@@ -40,6 +40,16 @@ getOffsetDistribution(size_t BufferSize, size_t MaxSizeValue,
   return std::uniform_int_distribution<uint32_t>(0, MaxOffset);
 }
 
+class OffsetDistribution {
+public:
+  OffsetDistribution(size_t BufferSize, size_t MaxSizeValue,
+                     MaybeAlign AccessAlignment);
+
+private:
+  std::uniform_int_distribution<uint32_t> Distribution;
+  size_t Factor;
+};
+
 OffsetDistribution::OffsetDistribution(size_t BufferSize, size_t MaxSizeValue,
                                        MaybeAlign AccessAlignment)
     : Distribution(
@@ -47,6 +57,16 @@ OffsetDistribution::OffsetDistribution(size_t BufferSize, size_t MaxSizeValue,
       Factor(AccessAlignment.valueOrOne().value()) {}
 
 // Precomputes offset where to insert mismatches between the two buffers.
+class MismatchOffsetDistribution {
+public:
+  MismatchOffsetDistribution(size_t BufferSize, size_t MaxSizeValue, size_t MismatchAt);
+
+private:
+  size_t MismatchAt;
+  std::vector<size_t> MismatchIndices;
+  std::uniform_int_distribution<size_t> MismatchIndexSelector;
+};
+
 MismatchOffsetDistribution::MismatchOffsetDistribution(size_t BufferSize,
                                                        size_t MaxSizeValue,
                                                        size_t MismatchAt)
@@ -79,6 +99,18 @@ static constexpr int64_t L1LeftAsideBytes = 1 * KiB;
 static size_t getAvailableBufferSize() {
   return getL1DataCacheSize() - L1LeftAsideBytes - ParameterStorageBytes;
 }
+
+class ParameterBatch {
+public:
+  ParameterBatch(size_t BufferCount);
+  size_t getBatchBytes() const;
+  void checkValid(const ParameterType &P) const;
+
+private:
+  size_t BufferSize;
+  size_t BatchSize;
+  std::vector<ParameterType> Parameters;
+};
 
 ParameterBatch::ParameterBatch(size_t BufferCount)
     : BufferSize(getAvailableBufferSize() / BufferCount),
@@ -113,12 +145,41 @@ void ParameterBatch::checkValid(const ParameterType &P) const {
             .concat(llvm::Twine(BufferSize)));
 }
 
+class CopySetup {
+public:
+  CopySetup();
+
+private:
+  ParameterBatch ParameterBatch;
+  AlignedBuffer SrcBuffer;
+  AlignedBuffer DstBuffer;
+};
+
 CopySetup::CopySetup()
     : ParameterBatch(2), SrcBuffer(ParameterBatch::BufferSize),
       DstBuffer(ParameterBatch::BufferSize) {}
 
+class MoveSetup {
+public:
+  MoveSetup();
+
+private:
+  ParameterBatch ParameterBatch;
+  AlignedBuffer Buffer;
+};
+
 MoveSetup::MoveSetup()
     : ParameterBatch(3), Buffer(ParameterBatch::BufferSize * 3) {}
+
+class ComparisonSetup {
+public:
+  ComparisonSetup();
+
+private:
+  ParameterBatch ParameterBatch;
+  AlignedBuffer LhsBuffer;
+  AlignedBuffer RhsBuffer;
+};
 
 ComparisonSetup::ComparisonSetup()
     : ParameterBatch(2), LhsBuffer(ParameterBatch::BufferSize),
@@ -127,6 +188,15 @@ ComparisonSetup::ComparisonSetup()
   memset(LhsBuffer.begin(), 0xF, BufferSize);
   memset(RhsBuffer.begin(), 0xF, BufferSize);
 }
+
+class SetSetup {
+public:
+  SetSetup();
+
+private:
+  ParameterBatch ParameterBatch;
+  AlignedBuffer DstBuffer;
+};
 
 SetSetup::SetSetup()
     : ParameterBatch(1), DstBuffer(ParameterBatch::BufferSize) {}
