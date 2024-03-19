@@ -466,15 +466,16 @@ them.
 
 .. option:: --skip-symbol <symbol>
 
- Do not change parameters of symbol <symbol> when executing other options that
- can change the symbol's name, binding or visibility.
+ Do not change the parameters of symbol ``<symbol>`` when executing other
+ options that can change the symbol's name, binding or visibility.
 
 .. option:: --skip-symbols <filename>
 
- Read a list of symbols from <filename> and run as if --skip-symbol=<symbol>
- is set for each one. <filename> contains one symbol per line and may contain
- comments beginning with '#'. Leading and trailing whitespace is stripped from
- each line. May be repeated to read symbols from many files.
+ Do not change the parameters of symbols named in the file ``<filename>`` when
+ executing other options that can change the symbol's name, binding or
+ visibility. In the file, each line represents a single symbol, with leading
+ and trailing whitespace ignored, as is anything following a '#'.
+ Can be specified multiple times to read names from multiple files.
 
 .. option:: --split-dwo <dwo-file>
 
