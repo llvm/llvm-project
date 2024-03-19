@@ -235,10 +235,10 @@
 @ CHECK-ERRORS: error: immediate value out of range
 @ CHECK-ERRORS:         pkhtb r2, r2, r3, asr #33
 @ CHECK-ERRORS:                                ^
-@ CHECK-ERRORS: error: shift operator is malformed for this instruction
+@ CHECK-ERRORS: error: lsl operand expected.
 @ CHECK-ERRORS:         pkhbt r2, r2, r3, asr #3
 @ CHECK-ERRORS:                           ^
-@ CHECK-ERRORS: error: shift operator is malformed for this instruction
+@ CHECK-ERRORS: error: asr operand expected.
 @ CHECK-ERRORS:         pkhtb r2, r2, r3, lsl #3
 @ CHECK-ERRORS:                           ^
 
