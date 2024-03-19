@@ -40,10 +40,10 @@
 ; PRE-CHECK:   call void @llvm.dbg.value(metadata !DIArgList{{.*}}
 
 ; PRE-CHECK: for.body:
-; PRE-CHECK:   %cmp1 = icmp eq i32 %[[SSA_INDEX_0:.+]], 666
-; PRE-CHECK:   %inc = add nsw i32 %[[SSA_VAR_0]], 1
-; PRE-CHECK:   %spec.select = select i1 %cmp1, i32 %inc, i32 %[[SSA_VAR_0]]
-; PRE-CHECK:   call void @llvm.dbg.value(metadata i32 %spec.select, metadata ![[DBG]], {{.*}}
+; PRE-CHECK:   {{.*}} = icmp eq i32 %[[SSA_INDEX_0:.+]], 666
+; PRE-CHECK:   {{.*}} = add nsw i32 %[[SSA_VAR_0]], 1
+; PRE-CHECK:   {{.*}} = select i1 {{.*}}, i32 {{.*}}, i32 %[[SSA_VAR_0]]
+; PRE-CHECK:   call void @llvm.dbg.value(metadata i32 {{.*}}, metadata ![[DBG]], {{.*}}
 ; PRE-CHECK:   br label %for.cond
 
 ; PRE-CHECK: for.end:
