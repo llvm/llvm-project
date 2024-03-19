@@ -18,7 +18,11 @@ void test() {
   int range[] = {1, 2, 3, 0, 1, 2};
 
   std::views::chunk(2); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::chunk(range, 2); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  range | std::views::chunk(2); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::all | std::views::chunk(2); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::chunk(
+      range, 2); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  range | std::views::chunk(
+              2); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::all |
+      std::views::chunk(
+          2); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
