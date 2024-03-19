@@ -1567,12 +1567,17 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       DWARFAddressSpace = Record[12] - 1;
 
     Metadata *Annotations = nullptr;
-    if (Record.size() > 13 && Record[13])
-      Annotations = getMDOrNull(Record[13]);
-
     std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
-    if (Record.size() > 14 && Record[14])
-      PtrAuthData = DIDerivedType::PtrAuthData(Record[14]);
+
+    // Only look for annotations/ptrauth if both are allocated.
+    // If not, we can't tell which was intended to be embedded, as both ptrauth
+    // and annotations have been expected at Record[13] at various times.
+    if (Record.size() > 14) {
+      if (Record[13])
+        Annotations = getMDOrNull(Record[13]);
+      if (Record[14])
+        PtrAuthData.emplace(Record[14]);
+    }
 
     IsDistinct = Record[0];
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);

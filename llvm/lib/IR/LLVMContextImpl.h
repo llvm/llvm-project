@@ -580,7 +580,8 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
            OffsetInBits == RHS->getOffsetInBits() &&
            DWARFAddressSpace == RHS->getDWARFAddressSpace() &&
            PtrAuthData == RHS->getPtrAuthData() && Flags == RHS->getFlags() &&
-           ExtraData == RHS->getRawExtraData() && Annotations == RHS->getRawAnnotations();
+           ExtraData == RHS->getRawExtraData() &&
+           Annotations == RHS->getRawAnnotations();
   }
 
   unsigned getHashValue() const {

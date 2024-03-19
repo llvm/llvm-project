@@ -277,7 +277,9 @@ namespace llvm {
     /// Create a __ptrauth qualifier.
     DIDerivedType *createPtrAuthQualifiedType(DIType *FromTy, unsigned Key,
                                               bool IsAddressDiscriminated,
-                                              unsigned ExtraDiscriminator);
+                                              unsigned ExtraDiscriminator,
+                                              bool IsaPointer,
+                                              bool authenticatesNullValues);
 
     /// Create debugging information entry for a pointer to member.
     /// \param PointeeTy Type pointed to by this pointer.

@@ -1869,7 +1869,8 @@ TEST_F(DIDerivedTypeTest, get) {
   DIType *BaseType = getBasicType("basic");
   MDTuple *ExtraData = getTuple();
   unsigned DWARFAddressSpace = 8;
-  DIDerivedType::PtrAuthData PtrAuthData(1, false, 1234);
+  DIDerivedType::PtrAuthData PtrAuthData(1, false, 1234, true, true);
+  DIDerivedType::PtrAuthData PtrAuthData2(1, false, 1234, true, false);
   DINode::DIFlags Flags5 = static_cast<DINode::DIFlags>(5);
   DINode::DIFlags Flags4 = static_cast<DINode::DIFlags>(4);
 
@@ -1891,6 +1892,7 @@ TEST_F(DIDerivedTypeTest, get) {
   EXPECT_EQ(DWARFAddressSpace, *N->getDWARFAddressSpace());
   EXPECT_EQ(std::nullopt, N->getPtrAuthData());
   EXPECT_EQ(PtrAuthData, N1->getPtrAuthData());
+  EXPECT_NE(PtrAuthData2, N1->getPtrAuthData());
   EXPECT_EQ(5u, N->getFlags());
   EXPECT_EQ(ExtraData, N->getExtraData());
   EXPECT_EQ(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
@@ -1918,10 +1920,10 @@ TEST_F(DIDerivedTypeTest, get) {
                                   "something", File, 1, getSubprogram(),
                                   BaseType, 2, 3, 4, DWARFAddressSpace,
                                   std::nullopt, Flags5, ExtraData));
-  EXPECT_NE(
-      N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type, "something",
-                            File, 1, Scope, getBasicType("basic2"), 2, 3, 4,
-                            DWARFAddressSpace, std::nullopt, Flags5, ExtraData));
+  EXPECT_NE(N, DIDerivedType::get(
+                   Context, dwarf::DW_TAG_pointer_type, "something", File, 1,
+                   Scope, getBasicType("basic2"), 2, 3, 4, DWARFAddressSpace,
+                   std::nullopt, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 3, 3,
                                   4, DWARFAddressSpace, std::nullopt, Flags5,
@@ -1936,11 +1938,12 @@ TEST_F(DIDerivedTypeTest, get) {
                                   ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace + 1, std::nullopt, Flags5,
-                                  ExtraData));
-  EXPECT_NE(N1, DIDerivedType::get(Context, dwarf::DW_TAG_LLVM_ptrauth_type,
-                                   "", File, 1, Scope, N, 2, 3, 4,
-                                   DWARFAddressSpace, std::nullopt, Flags5, ExtraData));
+                                  4, DWARFAddressSpace + 1, std::nullopt,
+                                  Flags5, ExtraData));
+  EXPECT_NE(N1,
+            DIDerivedType::get(Context, dwarf::DW_TAG_LLVM_ptrauth_type, "",
+                               File, 1, Scope, N, 2, 3, 4, DWARFAddressSpace,
+                               std::nullopt, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
                                   4, DWARFAddressSpace, std::nullopt, Flags4,
@@ -1975,10 +1978,11 @@ TEST_F(DIDerivedTypeTest, getWithLargeValues) {
   auto *N1 = DIDerivedType::get(
       Context, dwarf::DW_TAG_LLVM_ptrauth_type, "", File, 1, Scope, N,
       UINT64_MAX, UINT32_MAX - 1, UINT64_MAX - 2, UINT32_MAX - 3,
-      DIDerivedType::PtrAuthData(7, true, 0xffff), Flags, ExtraData);
-  EXPECT_EQ(7U, *N1->getPtrAuthKey());
-  EXPECT_EQ(true, *N1->isPtrAuthAddressDiscriminated());
-  EXPECT_EQ(0xffffU, *N1->getPtrAuthExtraDiscriminator());
+      DIDerivedType::PtrAuthData(7, true, 0xffff, true, false), Flags,
+      ExtraData);
+  EXPECT_EQ(7U, N1->getPtrAuthData()->key());
+  EXPECT_EQ(true, N1->getPtrAuthData()->isAddressDiscriminated());
+  EXPECT_EQ(0xffffU, N1->getPtrAuthData()->extraDiscriminator());
 }
 
 typedef MetadataTest DICompositeTypeTest;
