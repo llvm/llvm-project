@@ -18,7 +18,7 @@
 ; CHECK-NEXT: ; TCP_SPLIT 0
 ; CHECK-NEXT: ; ENABLE_DIDT_THROTTLE 0
 ; CHECK-NEXT: ; IMAGE_OP 0
-; CHECK-NEXT: .amdhsa_next_free_vgpr 16
+; CHECK-NEXT: .amdhsa_next_free_vgpr 32
 ; CHECK-NEXT: .amdhsa_reserve_vcc 0
 ; CHECK-NEXT: .amdhsa_reserve_xnack_mask 0
 ; CHECK-NEXT: .amdhsa_next_free_sgpr 8
@@ -50,7 +50,7 @@
 ; CHECK-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_private_segment_size 0
-; CHECK-NEXT: .amdhsa_wavefront_size32 0
+; CHECK-NEXT: .amdhsa_wavefront_size32 1
 ; CHECK-NEXT: .amdhsa_uses_dynamic_stack 0
 ; CHECK-NEXT: .end_amdhsa_kernel
 .amdhsa_kernel kernel
@@ -74,7 +74,7 @@
 ; CHECK-NEXT: ; TCP_SPLIT 0
 ; CHECK-NEXT: ; ENABLE_DIDT_THROTTLE 0
 ; CHECK-NEXT: ; IMAGE_OP 0
-; CHECK-NEXT: .amdhsa_next_free_vgpr 16
+; CHECK-NEXT: .amdhsa_next_free_vgpr 32
 ; CHECK-NEXT: .amdhsa_reserve_vcc 0
 ; CHECK-NEXT: .amdhsa_reserve_xnack_mask 0
 ; CHECK-NEXT: .amdhsa_next_free_sgpr 8
@@ -106,7 +106,7 @@
 ; CHECK-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_private_segment_size 0
-; CHECK-NEXT: .amdhsa_wavefront_size32 0
+; CHECK-NEXT: .amdhsa_wavefront_size32 1
 ; CHECK-NEXT: .amdhsa_uses_dynamic_stack 0
 ; CHECK-NEXT: .end_amdhsa_kernel
 .amdhsa_kernel kernel
