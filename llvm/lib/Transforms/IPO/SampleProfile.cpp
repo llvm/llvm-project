@@ -234,11 +234,10 @@ static cl::opt<unsigned> ProfileICPRelativeHotnessSkip(
     cl::desc(
         "Skip relative hotness check for ICP up to given number of targets."));
 
-static cl::opt<unsigned> ChecksumMismatchFuncHotBlockSkip(
-    "checksum-mismatch-func-hot-block-skip", cl::Hidden, cl::init(100),
-    cl::desc("For checksum-mismatch error check, skip checking the function "
-             "whose num of hot(on average) blocks is smaller than the "
-             "given number."));
+static cl::opt<unsigned> HotFuncCutoffForStalenessError(
+    "hot-func-cutoff-for-staleness-error", cl::Hidden, cl::init(999000),
+    cl::desc("Hot function cutoff for staleness error. It's percentile value "
+             "(multiplied by 10000), e.g. 995000 for 99.5 percentile."));
 
 static cl::opt<unsigned> MinfuncsForStalenessError(
     "min-functions-for-staleness-error", cl::Hidden, cl::init(50),
@@ -647,7 +646,7 @@ protected:
   std::unique_ptr<ProfiledCallGraph> buildProfiledCallGraph(Module &M);
   void generateMDProfMetadata(Function &F);
   bool rejectHighStalenessProfile(Module &M, ProfileSummaryInfo *PSI,
-                                   const SampleProfileMap &Profiles);
+                                  const SampleProfileMap &Profiles);
 
   /// Map from function name to Function *. Used to find the function from
   /// the function name. If the function name contains suffix, additional
@@ -2214,7 +2213,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
 // big set of functions that are supposed to be globally performance
 // significant, only compute and check the mismatch within those functions. The
 // function selection is based on two criteria: 1) The function is "hot" enough,
-// which is tuned by a hotness-based flag(ChecksumMismatchFuncHotBlockSkip). 2)
+// which is tuned by a hotness-based flag(HotFuncCutoffForStalenessError). 2)
 // The num of function is large enough which is tuned by the
 // MinfuncsForStalenessError flag.
 bool SampleProfileLoader::rejectHighStalenessProfile(
@@ -2234,8 +2233,8 @@ bool SampleProfileLoader::rejectHighStalenessProfile(
     // checksum-mismatched and dropped, the whole binary will likely be
     // impacted, so here we use a hotness-based threshold to control the
     // selection.
-    if (FS.getTotalSamples() <
-        ChecksumMismatchFuncHotBlockSkip * PSI->getOrCompHotCountThreshold())
+    if (!PSI->isHotCountNthPercentile(HotFuncCutoffForStalenessError,
+                                      FS.getTotalSamples()))
       continue;
 
     TotalHotFunc++;
