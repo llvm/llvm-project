@@ -2863,9 +2863,9 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
 /// Supports values with integer or pointer type and vectors of integers.
 bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
                     const SimplifyQuery &Q) {
+  Type *Ty = V->getType();
 
 #ifndef NDEBUG
-  Type *Ty = V->getType();
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
 
   if (auto *FVTy = dyn_cast<FixedVectorType>(Ty)) {
@@ -2887,7 +2887,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
 
     // For constant vectors, check that all elements are undefined or known
     // non-zero to determine that the whole vector is known non-zero.
-    if (auto *VecTy = dyn_cast<FixedVectorType>(C->getType())) {
+    if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
       for (unsigned i = 0, e = VecTy->getNumElements(); i != e; ++i) {
         if (!DemandedElts[i])
           continue;
@@ -2918,7 +2918,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     if (MDNode *Ranges = Q.IIQ.getMetadata(I, LLVMContext::MD_range)) {
       // If the possible ranges don't contain zero, then the value is
       // definitely non-zero.
-      assert(V->getType()->isIntOrIntVectorTy() && "Range on non-integer?");
+      assert(Ty->isIntOrIntVectorTy() && "Range on non-integer?");
       const APInt ZeroValue(Ty->getScalarSizeInBits(), 0);
       if (rangeMetadataExcludesValue(Ranges, ZeroValue))
         return true;
@@ -2934,7 +2934,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
 
   // Check for pointer simplifications.
 
-  if (PointerType *PtrTy = dyn_cast<PointerType>(V->getType())) {
+  if (PointerType *PtrTy = dyn_cast<PointerType>(Ty)) {
     // A byval, inalloca may not be null in a non-default addres space. A
     // nonnull argument is assumed never 0.
     if (const Argument *A = dyn_cast<Argument>(V)) {
