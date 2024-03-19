@@ -2278,7 +2278,7 @@ by local register variables, such as:
   assemblies if the value is expected in different hard regs
 
 The code below is an example of an inline assembly statement using local
-register variables.
+register variables:
 
 .. code-block:: c++
 
@@ -2288,6 +2288,7 @@ register variables.
     register int *result asm ("r0");
     asm ("sysint" : "=r" (result) : "0" (p1), "r" (p2));
   }
+
 Below is the same code but using hard register operands.
 
 .. code-block:: c++
