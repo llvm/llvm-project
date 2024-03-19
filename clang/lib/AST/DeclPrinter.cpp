@@ -1037,12 +1037,9 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
              : D->getName();
 
   if (!Policy.SuppressTagKeyword && Policy.SuppressScope &&
-      !Policy.SuppressUnwrittenScope) {
+      !Policy.SuppressUnwrittenScope)
     MaybePrintTagKeywordIfSupressingScopes(Policy, T, Out);
-    printDeclType(T, Name);
-  } else {
-    printDeclType(T, Name);
-  }
+  printDeclType(T, Name);
 
   // Print the attributes that should be placed right before the end of the
   // decl.
