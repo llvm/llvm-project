@@ -46,7 +46,8 @@ FileHeader:
 # RUN: llvm-readelf --hex-dump=.sec %t2.out1 | \
 # RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SPACES1
 
-#      SPACES1:Hex dump of section '.sec':
+#      SPACES1:{{^$}}
+# SPACES1-NEXT:Hex dump of section '.sec':
 # SPACES1-NEXT:0x00000000 00000000 00000000 00000000 00000000 ................
 # SPACES1-NEXT:0x00000010 0000                                ..
 
