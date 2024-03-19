@@ -299,5 +299,6 @@ void FIROpsDialect::registerAttributes() {
   addAttributes<ClosedIntervalAttr, ExactTypeAttr, FortranVariableFlagsAttr,
                 LowerBoundAttr, PointIntervalAttr, RealAttr, SubclassAttr,
                 UpperBoundAttr, CUDADataAttributeAttr, CUDAProcAttributeAttr,
-                CUDALaunchBoundsAttr, CUDAClusterDimsAttr>();
+                CUDALaunchBoundsAttr, CUDAClusterDimsAttr,
+                CUDADataTransferKindAttr>();
 }
