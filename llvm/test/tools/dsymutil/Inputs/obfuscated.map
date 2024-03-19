@@ -1,0 +1,17 @@
+one
+two
+three
+four
+five
+six
+.str
+Apple LLVM version 7.0.0 (clang-700.2.38.2)
+main
+main.c
+/Users/steven/dev/alpena/tests/src
+one.c
+two.c
+three.c
+four.c
+five.c
+six.c

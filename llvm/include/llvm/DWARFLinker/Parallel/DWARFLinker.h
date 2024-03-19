@@ -123,7 +123,8 @@ public:
 
   /// Creates dwarf linker instance.
   static std::unique_ptr<DWARFLinker>
-  createLinker(MessageHandlerTy ErrorHandler, MessageHandlerTy WarningHandler);
+  createLinker(MessageHandlerTy ErrorHandler, MessageHandlerTy WarningHandler,
+               TranslatorFuncTy StringsTranslator = nullptr);
 
   /// Set output DWARF handler. Result of linking DWARF is set of sections
   /// containing final debug info. DWARFLinkerBase::link() pass generated

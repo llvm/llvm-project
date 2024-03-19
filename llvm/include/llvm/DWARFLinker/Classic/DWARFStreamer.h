@@ -45,13 +45,16 @@ class DwarfStreamer : public DwarfEmitter {
 public:
   DwarfStreamer(DWARFLinkerBase::OutputFileType OutFileType,
                 raw_pwrite_stream &OutFile,
+                DWARFLinkerBase::TranslatorFuncTy Translator,
                 DWARFLinkerBase::MessageHandlerTy Warning)
-      : OutFile(OutFile), OutFileType(OutFileType), WarningHandler(Warning) {}
+      : OutFile(OutFile), OutFileType(OutFileType), Translator(Translator),
+        WarningHandler(Warning) {}
   virtual ~DwarfStreamer() = default;
 
   static Expected<std::unique_ptr<DwarfStreamer>> createStreamer(
       const Triple &TheTriple, DWARFLinkerBase::OutputFileType FileType,
-      raw_pwrite_stream &OutFile, DWARFLinkerBase::MessageHandlerTy Warning);
+      raw_pwrite_stream &OutFile, DWARFLinkerBase::TranslatorFuncTy Translator,
+      DWARFLinkerBase::MessageHandlerTy Warning);
 
   Error init(Triple TheTriple, StringRef Swift5ReflectionSegmentName);
 
@@ -292,6 +295,7 @@ private:
   /// The output file we stream the linked Dwarf to.
   raw_pwrite_stream &OutFile;
   DWARFLinker::OutputFileType OutFileType = DWARFLinker::OutputFileType::Object;
+  std::function<StringRef(StringRef Input)> Translator;
 
   uint64_t RangesSectionSize = 0;
   uint64_t RngListsSectionSize = 0;
