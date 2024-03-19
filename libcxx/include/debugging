@@ -33,8 +33,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_EXPORTED_FROM_ABI void __breakpoint() noexcept;
 
-_LIBCPP_EXPORTED_FROM_ABI void __breakpoint_if_debugging() noexcept;
-
 _LIBCPP_EXPORTED_FROM_ABI bool __is_debugger_present() noexcept;
 
 _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_HIDE_FROM_ABI void breakpoint() noexcept { __breakpoint(); }
