@@ -3,7 +3,7 @@
 ; RUN: opt -module-summary %p/Inputs/thinlto.ll -o %t2.o
 
 ; RUN: rm -f %t1.o.4.opt.bc
-; RUN: lld-link /lto-sample-profile:%p/Inputs/sample-profile.prof /lldsavetemps /entry:f /subsystem:console %t1.o %t2.o /out:%t3.exe
+; RUN: lld-link /lto-sample-profile:%p/Inputs/lto-sample-profile.prof /lldsavetemps /entry:f /subsystem:console %t1.o %t2.o /out:%t3.exe
 ; RUN: opt -S %t1.o.4.opt.bc | FileCheck %s
 
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
