@@ -15085,9 +15085,7 @@ void SITargetLowering::AddMemOpInit(MachineInstr &MI) const {
     if (DstSize < InitIdx)
       return;
   } else if (TII->isMUBUF(MI) && AMDGPU::getMUBUFHasTFE(MI.getOpcode())) {
-    uint32_t DstSize =
-        TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
-    InitIdx = DstSize;
+    InitIdx = TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
   } else {
     return;
   }
