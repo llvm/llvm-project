@@ -22,7 +22,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
@@ -195,8 +195,7 @@ template <typename AnalysisT>
 llvm::Expected<std::vector<
     std::optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
 runDataflowAnalysis(
-    const ControlFlowContext &CFCtx, AnalysisT &Analysis,
-    const Environment &InitEnv,
+    const AdornedCFG &ACFG, AnalysisT &Analysis, const Environment &InitEnv,
     std::function<void(const CFGElement &, const DataflowAnalysisState<
                                                typename AnalysisT::Lattice> &)>
         PostVisitCFG = nullptr,
@@ -218,7 +217,7 @@ runDataflowAnalysis(
   }
 
   auto TypeErasedBlockStates = runTypeErasedDataflowAnalysis(
-      CFCtx, Analysis, InitEnv, PostVisitCFGClosure, MaxBlockVisits);
+      ACFG, Analysis, InitEnv, PostVisitCFGClosure, MaxBlockVisits);
   if (!TypeErasedBlockStates)
     return TypeErasedBlockStates.takeError();
 
@@ -280,8 +279,7 @@ llvm::Expected<llvm::SmallVector<Diagnostic>> diagnoseFunction(
         Diagnoser,
     std::int64_t MaxSATIterations = 1'000'000'000,
     std::int32_t MaxBlockVisits = 20'000) {
-  llvm::Expected<ControlFlowContext> Context =
-      ControlFlowContext::build(FuncDecl);
+  llvm::Expected<AdornedCFG> Context = AdornedCFG::build(FuncDecl);
   if (!Context)
     return Context.takeError();
 
