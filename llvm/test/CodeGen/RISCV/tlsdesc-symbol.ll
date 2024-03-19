@@ -1,10 +1,10 @@
 ; RUN: llc -mtriple=riscv64 -relocation-model=pic -enable-tlsdesc < %s \
-; RUN:     | llvm-mc -triple=riscv64 -filetype=obj -o - --position-independent \
+; RUN:     | llvm-mc -triple=riscv64 -filetype=obj -o - \
 ; RUN:     | llvm-readelf --symbols - \
 ; RUN:     | FileCheck %s
 
 ; RUN: llc -mtriple=riscv32 -relocation-model=pic -enable-tlsdesc < %s \
-; RUN:     | llvm-mc -triple=riscv32 -filetype=obj -o - --position-independent \
+; RUN:     | llvm-mc -triple=riscv32 -filetype=obj -o - \
 ; RUN:     | llvm-readelf --symbols - \
 ; RUN:     | FileCheck %s
 
