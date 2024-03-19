@@ -14,28 +14,28 @@
   ; CHECK-NEXT:    .cfi_def_cfa_offset 2064
   ; CHECK-NEXT:    lui t0, 1
   ; CHECK-NEXT:    add t0, sp, t0
-  ; CHECK-NEXT:    sw a0, -2040(t0)
-  ; CHECK-NEXT:    sw a1, -2036(t0)
+  ; CHECK-NEXT:    sw a0, -2040(t0) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw a1, -2036(t0) # 4-byte Folded Spill
   ; CHECK-NEXT:    lui a0, 1
   ; CHECK-NEXT:    add a0, sp, a0
-  ; CHECK-NEXT:    sw a2, -2048(a0)
-  ; CHECK-NEXT:    sw a3, -2044(a0)
-  ; CHECK-NEXT:    sw a4, 2040(sp)
-  ; CHECK-NEXT:    sw a5, 2044(sp)
-  ; CHECK-NEXT:    sw a6, 2032(sp)
-  ; CHECK-NEXT:    sw a7, 2036(sp)
+  ; CHECK-NEXT:    sw a2, -2048(a0) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw a3, -2044(a0) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw a4, 2040(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw a5, 2044(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw a6, 2032(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw a7, 2036(sp) # 4-byte Folded Spill
   ; CHECK-NEXT:    lui a0, 1
   ; CHECK-NEXT:    add a0, sp, a0
-  ; CHECK-NEXT:    lw a1, -2036(a0)
-  ; CHECK-NEXT:    lw a0, -2040(a0)
+  ; CHECK-NEXT:    lw a1, -2036(a0) # 4-byte Folded Reload
+  ; CHECK-NEXT:    lw a0, -2040(a0) # 4-byte Folded Reload
   ; CHECK-NEXT:    lui a0, 1
   ; CHECK-NEXT:    add a0, sp, a0
-  ; CHECK-NEXT:    lw a2, -2048(a0)
-  ; CHECK-NEXT:    lw a3, -2044(a0)
-  ; CHECK-NEXT:    lw a4, 2040(sp)
-  ; CHECK-NEXT:    lw a5, 2044(sp)
-  ; CHECK-NEXT:    lw a6, 2032(sp)
-  ; CHECK-NEXT:    lw a7, 2036(sp)
+  ; CHECK-NEXT:    lw a2, -2048(a0) # 4-byte Folded Reload
+  ; CHECK-NEXT:    lw a3, -2044(a0) # 4-byte Folded Reload
+  ; CHECK-NEXT:    lw a4, 2040(sp) # 4-byte Folded Reload
+  ; CHECK-NEXT:    lw a5, 2044(sp) # 4-byte Folded Reload
+  ; CHECK-NEXT:    lw a6, 2032(sp) # 4-byte Folded Reload
+  ; CHECK-NEXT:    lw a7, 2036(sp) # 4-byte Folded Reload
   ; CHECK-NEXT:    addi sp, sp, 2032
   ; CHECK-NEXT:    addi sp, sp, 32
   ; CHECK-NEXT:    ret
