@@ -65,6 +65,9 @@
 #elif KMP_OS_NETBSD || KMP_OS_OPENBSD
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#if KMP_OS_NETBSD
+#include <sched.h>
+#endif
 #elif KMP_OS_SOLARIS
 #include <libproc.h>
 #include <procfs.h>
@@ -122,7 +125,8 @@ static void __kmp_print_cond(char *buffer, kmp_cond_align_t *cond) {
 }
 #endif
 
-#if ((KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED)
+#if ((KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY) &&  \
+     KMP_AFFINITY_SUPPORTED)
 
 /* Affinity support */
 
@@ -147,8 +151,10 @@ void __kmp_affinity_determine_capable(const char *env_var) {
 #if KMP_OS_LINUX
 #define KMP_CPU_SET_SIZE_LIMIT (1024 * 1024)
 #define KMP_CPU_SET_TRY_SIZE CACHE_LINE
-#elif KMP_OS_FREEBSD
+#elif KMP_OS_FREEBSD || KMP_OS_DRAGONFLY
 #define KMP_CPU_SET_SIZE_LIMIT (sizeof(cpuset_t))
+#elif KMP_OS_NETBSD
+#define KMP_CPU_SET_SIZE_LIMIT (256)
 #endif
 
   int verbose = __kmp_affinity.flags.verbose;
@@ -236,7 +242,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
     KMP_INTERNAL_FREE(buf);
     return;
   }
-#elif KMP_OS_FREEBSD
+#elif KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
   long gCode;
   unsigned char *buf;
   buf = (unsigned char *)KMP_INTERNAL_MALLOC(KMP_CPU_SET_SIZE_LIMIT);
@@ -1262,7 +1268,7 @@ static void __kmp_atfork_child(void) {
   ++__kmp_fork_count;
 
 #if KMP_AFFINITY_SUPPORTED
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
   // reset the affinity in the child to the initial thread
   // affinity in the parent
   kmp_set_thread_affinity_mask_initial();
@@ -2604,6 +2610,43 @@ finish: // Clean up and exit.
       KMP_ARCH_PPC64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||            \
       KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC_XCOFF)
 
+// Because WebAssembly will use `call_indirect` to invoke the microtask and
+// WebAssembly indirect calls check that the called signature is a precise
+// match, we need to cast each microtask function pointer back from `void *` to
+// its original type.
+typedef void (*microtask_t0)(int *, int *);
+typedef void (*microtask_t1)(int *, int *, void *);
+typedef void (*microtask_t2)(int *, int *, void *, void *);
+typedef void (*microtask_t3)(int *, int *, void *, void *, void *);
+typedef void (*microtask_t4)(int *, int *, void *, void *, void *, void *);
+typedef void (*microtask_t5)(int *, int *, void *, void *, void *, void *,
+                             void *);
+typedef void (*microtask_t6)(int *, int *, void *, void *, void *, void *,
+                             void *, void *);
+typedef void (*microtask_t7)(int *, int *, void *, void *, void *, void *,
+                             void *, void *, void *);
+typedef void (*microtask_t8)(int *, int *, void *, void *, void *, void *,
+                             void *, void *, void *, void *);
+typedef void (*microtask_t9)(int *, int *, void *, void *, void *, void *,
+                             void *, void *, void *, void *, void *);
+typedef void (*microtask_t10)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *);
+typedef void (*microtask_t11)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *);
+typedef void (*microtask_t12)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *);
+typedef void (*microtask_t13)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *, void *);
+typedef void (*microtask_t14)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *, void *, void *);
+typedef void (*microtask_t15)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *);
+
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function
 int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
@@ -2623,66 +2666,76 @@ int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
     fflush(stderr);
     exit(-1);
   case 0:
-    (*pkfn)(&gtid, &tid);
+    (*(microtask_t0)pkfn)(&gtid, &tid);
     break;
   case 1:
-    (*pkfn)(&gtid, &tid, p_argv[0]);
+    (*(microtask_t1)pkfn)(&gtid, &tid, p_argv[0]);
     break;
   case 2:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1]);
+    (*(microtask_t2)pkfn)(&gtid, &tid, p_argv[0], p_argv[1]);
     break;
   case 3:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2]);
+    (*(microtask_t3)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2]);
     break;
   case 4:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3]);
+    (*(microtask_t4)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3]);
     break;
   case 5:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4]);
+    (*(microtask_t5)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4]);
     break;
   case 6:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5]);
+    (*(microtask_t6)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4], p_argv[5]);
     break;
   case 7:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6]);
+    (*(microtask_t7)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4], p_argv[5], p_argv[6]);
     break;
   case 8:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7]);
+    (*(microtask_t8)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                          p_argv[7]);
     break;
   case 9:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8]);
+    (*(microtask_t9)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4], p_argv[5], p_argv[6], p_argv[7],
+                          p_argv[8]);
     break;
   case 10:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9]);
+    (*(microtask_t10)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9]);
     break;
   case 11:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10]);
+    (*(microtask_t11)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10]);
     break;
   case 12:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
-            p_argv[11]);
+    (*(microtask_t12)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+                           p_argv[11]);
     break;
   case 13:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
-            p_argv[11], p_argv[12]);
+    (*(microtask_t13)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+                           p_argv[11], p_argv[12]);
     break;
   case 14:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
-            p_argv[11], p_argv[12], p_argv[13]);
+    (*(microtask_t14)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+                           p_argv[11], p_argv[12], p_argv[13]);
     break;
   case 15:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
-            p_argv[11], p_argv[12], p_argv[13], p_argv[14]);
+    (*(microtask_t15)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+                           p_argv[11], p_argv[12], p_argv[13], p_argv[14]);
     break;
   }
 

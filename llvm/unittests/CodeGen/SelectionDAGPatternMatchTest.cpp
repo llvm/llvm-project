@@ -130,6 +130,13 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   SDValue Add = DAG->getNode(ISD::ADD, DL, Int32VT, Op0, Op1);
   SDValue Sub = DAG->getNode(ISD::SUB, DL, Int32VT, Add, Op0);
   SDValue Mul = DAG->getNode(ISD::MUL, DL, Int32VT, Add, Sub);
+  SDValue And = DAG->getNode(ISD::AND, DL, Int32VT, Op0, Op1);
+  SDValue Xor = DAG->getNode(ISD::XOR, DL, Int32VT, Op1, Op0);
+  SDValue Or  = DAG->getNode(ISD::OR, DL, Int32VT, Op0, Op1);
+  SDValue SMax = DAG->getNode(ISD::SMAX, DL, Int32VT, Op0, Op1);
+  SDValue SMin = DAG->getNode(ISD::SMIN, DL, Int32VT, Op1, Op0);
+  SDValue UMax = DAG->getNode(ISD::UMAX, DL, Int32VT, Op0, Op1);
+  SDValue UMin = DAG->getNode(ISD::UMIN, DL, Int32VT, Op1, Op0);
 
   SDValue SFAdd = DAG->getNode(ISD::STRICT_FADD, DL, {Float32VT, MVT::Other},
                                {DAG->getEntryNode(), Op2, Op2});
@@ -144,6 +151,23 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(
       sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_SpecificVT(Float32VT),
                                      m_SpecificVT(Float32VT))));
+
+  EXPECT_TRUE(sd_match(And, m_c_BinOp(ISD::AND, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(And, m_And(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Xor, m_c_BinOp(ISD::XOR, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Xor, m_Xor(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Or, m_c_BinOp(ISD::OR, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Or, m_Or(m_Value(), m_Value())));
+
+  EXPECT_TRUE(sd_match(SMax, m_c_BinOp(ISD::SMAX, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(SMax, m_SMax(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(SMin, m_c_BinOp(ISD::SMIN, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(SMin, m_SMin(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMax, m_c_BinOp(ISD::UMAX, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMax, m_UMax(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMin, m_c_BinOp(ISD::UMIN, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMin, m_UMin(m_Value(), m_Value())));
+
   SDValue BindVal;
   EXPECT_TRUE(sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_Value(BindVal),
                                              m_Deferred(BindVal))));
@@ -163,10 +187,20 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDValue SExt = DAG->getNode(ISD::SIGN_EXTEND, DL, Int64VT, Op0);
   SDValue Trunc = DAG->getNode(ISD::TRUNCATE, DL, Int32VT, Op1);
 
+  SDValue Sub = DAG->getNode(ISD::SUB, DL, Int32VT, Trunc, Op0);
+  SDValue Neg = DAG->getNegative(Op0, DL, Int32VT);
+  SDValue Not = DAG->getNOT(DL, Op0, Int32VT);
+
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(ZExt, m_UnaryOp(ISD::ZERO_EXTEND, m_Value())));
   EXPECT_TRUE(sd_match(SExt, m_SExt(m_Value())));
   EXPECT_TRUE(sd_match(Trunc, m_Trunc(m_Specific(Op1))));
+
+  EXPECT_TRUE(sd_match(Neg, m_Neg(m_Value())));
+  EXPECT_TRUE(sd_match(Not, m_Not(m_Value())));
+  EXPECT_FALSE(sd_match(ZExt, m_Neg(m_Value())));
+  EXPECT_FALSE(sd_match(Sub, m_Neg(m_Value())));
+  EXPECT_FALSE(sd_match(Neg, m_Not(m_Value())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchConstants) {

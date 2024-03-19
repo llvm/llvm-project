@@ -735,6 +735,8 @@ void GH67492() {
   auto lambda = (test, []() noexcept(true) {});
 }
 
+// FIXME: This currently causes clang to crash in C++11 mode.
+#if __cplusplus >= 201402L
 namespace GH83267 {
 auto l = [](auto a) { return 1; };
 using type = decltype(l);
@@ -749,3 +751,4 @@ using t = decltype(ll);
 template auto t::operator()<int>(int a) const; // expected-note {{in instantiation}}
 
 }
+#endif

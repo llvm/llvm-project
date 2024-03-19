@@ -141,7 +141,7 @@ enum class PartType {
 #include "DXContainerConstants.def"
 };
 
-#define SHADER_FEATURE_FLAG(Num, Val, Str) Val = 1ull << Num,
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str) Val = 1ull << Num,
 enum class FeatureFlags : uint64_t {
 #include "DXContainerConstants.def"
 };

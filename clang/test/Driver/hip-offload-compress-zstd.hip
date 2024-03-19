@@ -9,13 +9,14 @@
 // RUN:   -x hip --offload-arch=gfx1100 --offload-arch=gfx1101 \
 // RUN:   --no-offload-new-driver -fgpu-rdc -nogpuinc -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
-// RUN:   --offload-compress --offload-device-only --gpu-bundle-output \
+// RUN:   --offload-compress --offload-compression-level=9 \
+// RUN:   --offload-device-only --gpu-bundle-output \
 // RUN:   -o %t.bc \
 // RUN: 2>&1 | FileCheck %s
 
 // CHECK: clang-offload-bundler{{.*}} -type=bc
 // CHECK-SAME: -targets={{.*}}hip-amdgcn-amd-amdhsa-gfx1100,hip-amdgcn-amd-amdhsa-gfx1101
-// CHECK-SAME: -compress -verbose
+// CHECK-SAME: -compress -verbose -compression-level=9
 // CHECK: Compressed bundle format
 
 // Test uncompress of bundled bitcode.

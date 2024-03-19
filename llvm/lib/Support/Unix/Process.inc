@@ -86,7 +86,7 @@ Expected<unsigned> Process::getPageSize() {
 #error Cannot get the page size on this machine
 #endif
   if (page_size == -1)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
 
   return static_cast<unsigned>(page_size);
 }
@@ -235,7 +235,7 @@ std::error_code Process::FixupStandardFileDescriptors() {
       assert(errno && "expected errno to be set if fstat failed!");
       // fstat should return EBADF if the file descriptor is closed.
       if (errno != EBADF)
-        return std::error_code(errno, std::generic_category());
+        return errnoAsErrorCode();
     }
     // if fstat succeeds, move on to the next FD.
     if (!errno)
@@ -247,13 +247,13 @@ std::error_code Process::FixupStandardFileDescriptors() {
       // RetryAfterSignal when open is overloaded, such as in Bionic.
       auto Open = [&]() { return ::open("/dev/null", O_RDWR); };
       if ((NullFD = RetryAfterSignal(-1, Open)) < 0)
-        return std::error_code(errno, std::generic_category());
+        return errnoAsErrorCode();
     }
 
     if (NullFD == StandardFD)
       FDC.keepOpen();
     else if (dup2(NullFD, StandardFD) < 0)
-      return std::error_code(errno, std::generic_category());
+      return errnoAsErrorCode();
   }
   return std::error_code();
 }
@@ -262,7 +262,7 @@ std::error_code Process::SafelyCloseFileDescriptor(int FD) {
   // Create a signal set filled with *all* signals.
   sigset_t FullSet, SavedSet;
   if (sigfillset(&FullSet) < 0 || sigfillset(&SavedSet) < 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
     // Atomically swap our current signal mask with a full mask.
 #if LLVM_ENABLE_THREADS
@@ -270,7 +270,7 @@ std::error_code Process::SafelyCloseFileDescriptor(int FD) {
     return std::error_code(EC, std::generic_category());
 #else
   if (sigprocmask(SIG_SETMASK, &FullSet, &SavedSet) < 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 #endif
   // Attempt to close the file descriptor.
   // We need to save the error, if one occurs, because our subsequent call to

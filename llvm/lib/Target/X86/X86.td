@@ -683,6 +683,12 @@ def TuningFastGather
     : SubtargetFeature<"fast-gather", "HasFastGather", "true",
                        "Indicates if gather is reasonably fast (this is true for Skylake client and all AVX-512 CPUs)">;
 
+// Generate vpdpwssd instead of vpmaddwd+vpaddd sequence.
+def TuningFastDPWSSD
+    : SubtargetFeature<
+          "fast-dpwssd", "HasFastDPWSSD", "true",
+          "Prefer vpdpwssd instruction over vpmaddwd+vpaddd instruction sequence">;
+
 def TuningPreferNoGather
     : SubtargetFeature<"prefer-no-gather", "PreferGather", "false",
                        "Prefer no gather instructions">;
@@ -1237,8 +1243,6 @@ def ProcessorFeatures {
   // Gracemont
   list<SubtargetFeature> GRTTuning = [TuningMacroFusion,
                                       TuningSlow3OpsLEA,
-                                      TuningSlowDivide32,
-                                      TuningSlowDivide64,
                                       TuningFastScalarFSQRT,
                                       TuningFastVectorFSQRT,
                                       TuningFast15ByteNOP,
@@ -1504,7 +1508,11 @@ def ProcessorFeatures {
     !listconcat(ZN2Tuning, ZN3AdditionalTuning);
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
-  list<SubtargetFeature> ZN4Tuning = ZN3Tuning;
+
+
+  list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD];
+  list<SubtargetFeature> ZN4Tuning =
+    !listconcat(ZN3Tuning, ZN4AdditionalTuning);
   list<SubtargetFeature> ZN4AdditionalFeatures = [FeatureAVX512,
                                                   FeatureEVEX512,
                                                   FeatureCDI,

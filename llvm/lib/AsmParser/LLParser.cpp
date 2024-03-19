@@ -1596,6 +1596,8 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
 
     return true;
   }
+  case Attribute::Range:
+    return parseRangeAttr(B);
   default:
     B.addAttribute(Attr);
     Lex.Lex();
@@ -3005,6 +3007,47 @@ bool LLParser::parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
     return error(Lex.getLoc(), "expected ')'");
 
   B.addTypeAttr(AttrKind, Ty);
+  return false;
+}
+
+/// parseRangeAttr
+///   ::= range(<ty> <n>,<n>)
+bool LLParser::parseRangeAttr(AttrBuilder &B) {
+  Lex.Lex();
+
+  APInt Lower;
+  APInt Upper;
+  Type *Ty = nullptr;
+  LocTy TyLoc;
+
+  auto ParseAPSInt = [&](unsigned BitWidth, APInt &Val) {
+    if (Lex.getKind() != lltok::APSInt)
+      return tokError("expected integer");
+    if (Lex.getAPSIntVal().getBitWidth() > BitWidth)
+      return tokError(
+          "integer is too large for the bit width of specified type");
+    Val = Lex.getAPSIntVal().extend(BitWidth);
+    Lex.Lex();
+    return false;
+  };
+
+  if (parseToken(lltok::lparen, "expected '('") || parseType(Ty, TyLoc))
+    return true;
+  if (!Ty->isIntegerTy())
+    return error(TyLoc, "the range must have integer type!");
+
+  unsigned BitWidth = Ty->getPrimitiveSizeInBits();
+
+  if (ParseAPSInt(BitWidth, Lower) ||
+      parseToken(lltok::comma, "expected ','") || ParseAPSInt(BitWidth, Upper))
+    return true;
+  if (Lower == Upper)
+    return tokError("the range should not represent the full or empty set!");
+
+  if (parseToken(lltok::rparen, "expected ')'"))
+    return true;
+
+  B.addRangeAttr(ConstantRange(Lower, Upper));
   return false;
 }
 
@@ -6484,7 +6527,7 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
 
     // Attach any preceding debug values to this instruction.
     for (DbgRecordPtr &DR : TrailingDbgRecord)
-      BB->insertDPValueBefore(DR.release(), Inst->getIterator());
+      BB->insertDbgRecordBefore(DR.release(), Inst->getIterator());
     TrailingDbgRecord.clear();
   } while (!Inst->isTerminator());
 
