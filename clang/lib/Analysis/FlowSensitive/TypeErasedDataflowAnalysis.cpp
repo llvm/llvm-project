@@ -150,20 +150,19 @@ private:
 
 /// Holds data structures required for running dataflow analysis.
 struct AnalysisContext {
-  AnalysisContext(const ControlFlowContext &CFCtx,
-                  TypeErasedDataflowAnalysis &Analysis,
+  AnalysisContext(const AdornedCFG &ACFG, TypeErasedDataflowAnalysis &Analysis,
                   const Environment &InitEnv,
                   llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>>
                       BlockStates)
-      : CFCtx(CFCtx), Analysis(Analysis), InitEnv(InitEnv),
+      : ACFG(ACFG), Analysis(Analysis), InitEnv(InitEnv),
         Log(*InitEnv.getDataflowAnalysisContext().getOptions().Log),
         BlockStates(BlockStates) {
-    Log.beginAnalysis(CFCtx, Analysis);
+    Log.beginAnalysis(ACFG, Analysis);
   }
   ~AnalysisContext() { Log.endAnalysis(); }
 
   /// Contains the CFG being analyzed.
-  const ControlFlowContext &CFCtx;
+  const AdornedCFG &ACFG;
   /// The analysis to be run.
   TypeErasedDataflowAnalysis &Analysis;
   /// Initial state to start the analysis.
@@ -176,19 +175,19 @@ struct AnalysisContext {
 
 class PrettyStackTraceAnalysis : public llvm::PrettyStackTraceEntry {
 public:
-  PrettyStackTraceAnalysis(const ControlFlowContext &CFCtx, const char *Message)
-      : CFCtx(CFCtx), Message(Message) {}
+  PrettyStackTraceAnalysis(const AdornedCFG &ACFG, const char *Message)
+      : ACFG(ACFG), Message(Message) {}
 
   void print(raw_ostream &OS) const override {
     OS << Message << "\n";
     OS << "Decl:\n";
-    CFCtx.getDecl().dump(OS);
+    ACFG.getDecl().dump(OS);
     OS << "CFG:\n";
-    CFCtx.getCFG().print(OS, LangOptions(), false);
+    ACFG.getCFG().print(OS, LangOptions(), false);
   }
 
 private:
-  const ControlFlowContext &CFCtx;
+  const AdornedCFG &ACFG;
   const char *Message;
 };
 
@@ -303,7 +302,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     // See `NoreturnDestructorTest` for concrete examples.
     if (Block.succ_begin()->getReachableBlock() != nullptr &&
         Block.succ_begin()->getReachableBlock()->hasNoReturnElement()) {
-      auto &StmtToBlock = AC.CFCtx.getStmtToBlock();
+      auto &StmtToBlock = AC.ACFG.getStmtToBlock();
       auto StmtBlock = StmtToBlock.find(Block.getTerminatorStmt());
       assert(StmtBlock != StmtToBlock.end());
       llvm::erase(Preds, StmtBlock->getSecond());
@@ -319,7 +318,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
   // all predecessors have expression state consumed in a different block.
   Environment::ExprJoinBehavior JoinBehavior = Environment::DiscardExprState;
   for (const CFGBlock *Pred : Preds) {
-    if (Pred && AC.CFCtx.containsExprConsumedInDifferentBlock(*Pred)) {
+    if (Pred && AC.ACFG.containsExprConsumedInDifferentBlock(*Pred)) {
       JoinBehavior = Environment::KeepExprState;
       break;
     }
@@ -368,7 +367,7 @@ builtinTransferStatement(unsigned CurBlockID, const CFGStmt &Elt,
                          AnalysisContext &AC) {
   const Stmt *S = Elt.getStmt();
   assert(S != nullptr);
-  transfer(StmtToEnvMap(AC.CFCtx, AC.BlockStates, CurBlockID, InputState), *S,
+  transfer(StmtToEnvMap(AC.ACFG, AC.BlockStates, CurBlockID, InputState), *S,
            InputState.Env);
 }
 
@@ -511,9 +510,8 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
       // takes a `CFGElement` as input, but some expressions only show up as a
       // terminator condition, but not as a `CFGElement`. The condition of an if
       // statement is one such example.
-      transfer(
-          StmtToEnvMap(AC.CFCtx, AC.BlockStates, Block.getBlockID(), State),
-          *TerminatorCond, State.Env);
+      transfer(StmtToEnvMap(AC.ACFG, AC.BlockStates, Block.getBlockID(), State),
+               *TerminatorCond, State.Env);
 
     // If the transfer function didn't produce a value, create an atom so that
     // we have *some* value for the condition expression. This ensures that
@@ -528,13 +526,13 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
 
 llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
-    const ControlFlowContext &CFCtx, TypeErasedDataflowAnalysis &Analysis,
+    const AdornedCFG &ACFG, TypeErasedDataflowAnalysis &Analysis,
     const Environment &InitEnv,
     std::function<void(const CFGElement &,
                        const TypeErasedDataflowAnalysisState &)>
         PostVisitCFG,
     std::int32_t MaxBlockVisits) {
-  PrettyStackTraceAnalysis CrashInfo(CFCtx, "runTypeErasedDataflowAnalysis");
+  PrettyStackTraceAnalysis CrashInfo(ACFG, "runTypeErasedDataflowAnalysis");
 
   std::optional<Environment> MaybeStartingEnv;
   if (InitEnv.callStackSize() == 1) {
@@ -544,7 +542,7 @@ runTypeErasedDataflowAnalysis(
   const Environment &StartingEnv =
       MaybeStartingEnv ? *MaybeStartingEnv : InitEnv;
 
-  const clang::CFG &CFG = CFCtx.getCFG();
+  const clang::CFG &CFG = ACFG.getCFG();
   PostOrderCFGView POV(&CFG);
   ForwardDataflowWorklist Worklist(CFG, &POV);
 
@@ -557,7 +555,7 @@ runTypeErasedDataflowAnalysis(
                                      StartingEnv.fork()};
   Worklist.enqueueSuccessors(&Entry);
 
-  AnalysisContext AC(CFCtx, Analysis, StartingEnv, BlockStates);
+  AnalysisContext AC(ACFG, Analysis, StartingEnv, BlockStates);
   std::int32_t BlockVisits = 0;
   while (const CFGBlock *Block = Worklist.dequeue()) {
     LLVM_DEBUG(llvm::dbgs()
@@ -615,7 +613,7 @@ runTypeErasedDataflowAnalysis(
   // state set to `std::nullopt` at this point) to also analyze dead code.
 
   if (PostVisitCFG) {
-    for (const CFGBlock *Block : CFCtx.getCFG()) {
+    for (const CFGBlock *Block : ACFG.getCFG()) {
       // Skip blocks that were not evaluated.
       if (!BlockStates[Block->getBlockID()])
         continue;
