@@ -1099,12 +1099,13 @@ ExprResult Sema::DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
   return E;
 }
 
-/// Converts an integer to complex float type.  Helper function of
+/// Convert complex integers to complex floats and real integers to
+/// real floats as required for complex arithmetic. Helper function of
 /// UsualArithmeticConversions()
 ///
 /// \return false if the integer expression is an integer type and is
-/// successfully converted to the complex type.
-static bool handleIntegerToComplexFloatConversion(Sema &S, ExprResult &IntExpr,
+/// successfully converted to the (complex) float type.
+static bool handleComplexIntegerToFloatConversion(Sema &S, ExprResult &IntExpr,
                                                   ExprResult &ComplexExpr,
                                                   QualType IntTy,
                                                   QualType ComplexTy,
@@ -1114,8 +1115,6 @@ static bool handleIntegerToComplexFloatConversion(Sema &S, ExprResult &IntExpr,
   if (IntTy->isIntegerType()) {
     QualType fpTy = ComplexTy->castAs<ComplexType>()->getElementType();
     IntExpr = S.ImpCastExprToType(IntExpr.get(), fpTy, CK_IntegralToFloating);
-    IntExpr = S.ImpCastExprToType(IntExpr.get(), ComplexTy,
-                                  CK_FloatingRealToComplex);
   } else {
     assert(IntTy->isComplexIntegerType());
     IntExpr = S.ImpCastExprToType(IntExpr.get(), ComplexTy,
@@ -1160,11 +1159,11 @@ static QualType handleComplexFloatConversion(Sema &S, ExprResult &Shorter,
 static QualType handleComplexConversion(Sema &S, ExprResult &LHS,
                                         ExprResult &RHS, QualType LHSType,
                                         QualType RHSType, bool IsCompAssign) {
-  // if we have an integer operand, the result is the complex type.
-  if (!handleIntegerToComplexFloatConversion(S, RHS, LHS, RHSType, LHSType,
+  // Handle (complex) integer types.
+  if (!handleComplexIntegerToFloatConversion(S, RHS, LHS, RHSType, LHSType,
                                              /*SkipCast=*/false))
     return LHSType;
-  if (!handleIntegerToComplexFloatConversion(S, LHS, RHS, LHSType, RHSType,
+  if (!handleComplexIntegerToFloatConversion(S, LHS, RHS, LHSType, RHSType,
                                              /*SkipCast=*/IsCompAssign))
     return RHSType;
 
@@ -3741,7 +3740,10 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
   else {
     // Pre-defined identifiers are of type char[x], where x is the length of
     // the string.
-    auto Str = PredefinedExpr::ComputeName(IK, currentDecl);
+    bool ForceElaboratedPrinting =
+        IK == PredefinedIdentKind::Function && getLangOpts().MSVCCompat;
+    auto Str =
+        PredefinedExpr::ComputeName(IK, currentDecl, ForceElaboratedPrinting);
     unsigned Length = Str.length();
 
     llvm::APInt LengthI(32, Length + 1);

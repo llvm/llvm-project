@@ -47,6 +47,12 @@ C++ Specific Potentially Breaking Changes
 
 ABI Changes in This Version
 ---------------------------
+- Fixed Microsoft name mangling of implicitly defined variables used for thread
+  safe static initialization of static local variables. This change resolves
+  incompatibilities with code compiled by MSVC but might introduce
+  incompatibilities with code compiled by earlier versions of Clang when an
+  inline member function that contains a static local variable with a dynamic
+  initializer is declared with ``__declspec(dllimport)``. (#GH83616).
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -191,6 +197,9 @@ Removed Compiler Flags
 -------------------------
 
 - The ``-freroll-loops`` flag has been removed. It had no effect since Clang 13.
+- ``-m[no-]unaligned-access`` is removed for RISC-V and LoongArch.
+  ``-m[no-]strict-align``, also supported by GCC, should be used instead.
+  (`#85350 <https://github.com/llvm/llvm-project/pull/85350>`_.)
 
 Attribute Changes in Clang
 --------------------------
@@ -237,6 +246,14 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses lambda function expressions being implicitly cast to boolean values, under ``-Wpointer-bool-conversion``.
   Fixes #GH82512.
 
+- Clang now provides improved warnings for the ``cleanup`` attribute to detect misuse scenarios,
+  such as attempting to call ``free`` on an unallocated object. Fixes
+  `#79443 <https://github.com/llvm/llvm-project/issues/79443>`_.
+
+- Clang no longer warns when the ``bitand`` operator is used with boolean
+  operands, distinguishing it from potential typographical errors or unintended
+  bitwise operations. Fixes #GH77601.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -267,12 +284,25 @@ Bug Fixes in This Version
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
 
+- Fix value of predefined macro ``__FUNCTION__`` in MSVC compatibility mode.
+  Fixes (#GH66114).
+
 - Clang now emits errors for explicit specializations/instatiations of lambda call
   operator.
   Fixes (#GH83267).
 
 - Clang now correctly generates overloads for bit-precise integer types for
   builtin operators in C++. Fixes #GH82998.
+
+- When performing mixed arithmetic between ``_Complex`` floating-point types and integers,
+  Clang now correctly promotes the integer to its corresponding real floating-point
+  type only rather than to the complex type (e.g. ``_Complex float / int`` is now evaluated
+  as ``_Complex float / float`` rather than ``_Complex float / _Complex float``), as mandated
+  by the C standard. This significantly improves codegen of `*` and `/` especially.
+  Fixes (`#31205 <https://github.com/llvm/llvm-project/issues/31205>`_).
+
+- Fixes an assertion failure on invalid code when trying to define member
+  functions in lambdas.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -360,9 +390,21 @@ Bug Fixes to C++ Support
   when one of the function had more specialized templates.
   Fixes (`#82509 <https://github.com/llvm/llvm-project/issues/82509>`_)
   and (`#74494 <https://github.com/llvm/llvm-project/issues/74494>`_)
+- Allow access to a public template alias declaration that refers to friend's
+  private nested type. (#GH25708).
+- Fixed a crash in constant evaluation when trying to access a
+  captured ``this`` pointer in a lambda with an explicit object parameter.
+  Fixes (#GH80997)
+- Fix an issue where missing set friend declaration in template class instantiation.
+  Fixes (#GH84368).
+- Fixed a crash while checking constraints of a trailing requires-expression of a lambda, that the
+  expression references to an entity declared outside of the lambda. (#GH64808)
+- Clang's __builtin_bit_cast will now produce a constant value for records with empty bases. See:
+  (#GH82383)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -406,12 +448,34 @@ Arm and AArch64 Support
   like ``target_version`` or ``target_clones``.
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
     * Arm Cortex-A78AE (cortex-a78ae).
+    * Arm Cortex-A520AE (cortex-a520ae).
+    * Arm Cortex-A720AE (cortex-a720ae).
 
 Android Support
 ^^^^^^^^^^^^^^^
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- Clang-cl now supports function targets with intrinsic headers. This allows
+  for runtime feature detection of intrinsics. Previously under clang-cl
+  ``immintrin.h`` and similar intrinsic headers would only include the intrinsics
+  if building with that feature enabled at compile time, e.g. ``avxintrin.h``
+  would only be included if AVX was enabled at compile time. This was done to work
+  around include times from MSVC STL including ``intrin.h`` under clang-cl.
+  Clang-cl now provides ``intrin0.h`` for MSVC STL and therefore all intrinsic
+  features without requiring enablement at compile time.
+  Fixes: (`#53520 <https://github.com/llvm/llvm-project/issues/53520>`_)
+
+- Improved compile times with MSVC STL. MSVC provides ``intrin0.h`` which is a
+  header that only includes intrinsics that are used by MSVC STL to avoid the
+  use of ``intrin.h``. MSVC STL when compiled under clang uses ``intrin.h``
+  instead. Clang-cl now provides ``intrin0.h`` for the same compiler throughput
+  purposes as MSVC. Clang-cl also provides ``yvals_core.h`` to redefine
+  ``_STL_INTRIN_HEADER`` to expand to ``intrin0.h`` instead of ``intrin.h``.
+  This also means that if all intrinsic features are enabled at compile time
+  including STL headers will no longer slow down compile times since ``intrin.h``
+  is not included from MSVC STL.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -473,6 +537,10 @@ libclang
 Static Analyzer
 ---------------
 
+- Fixed crashing on loops if the loop variable was declared in switch blocks
+  but not under any case blocks if ``unroll-loops=true`` analyzer config is
+  set. (#GH68819)
+
 New features
 ^^^^^^^^^^^^
 
@@ -507,6 +575,8 @@ Python Binding Changes
 ----------------------
 
 - Exposed `CXRewriter` API as `class Rewriter`.
+- Add some missing kinds from Index.h (CursorKind: 149-156, 272-320, 420-437.
+  TemplateArgumentKind: 5-9. TypeKind: 161-175 and 178).
 
 OpenMP Support
 --------------

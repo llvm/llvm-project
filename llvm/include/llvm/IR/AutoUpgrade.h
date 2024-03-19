@@ -88,9 +88,6 @@ namespace llvm {
   /// info. Return true if module is modified.
   bool UpgradeDebugInfo(Module &M);
 
-  /// Copies module attributes to the functions in the module.
-  void CopyModuleAttrToFunctions(Module &M);
-
   /// Check whether a string looks like an old loop attachment tag.
   inline bool mayBeOldLoopAttachmentTag(StringRef Name) {
     return Name.starts_with("llvm.vectorizer.");

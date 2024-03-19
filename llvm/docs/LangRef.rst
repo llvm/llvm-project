@@ -14574,6 +14574,63 @@ The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
 integer element type. The argument types must match each other, and the return
 type must match the argument type.
 
+.. _int_scmp:
+
+'``llvm.scmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.scmp`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i2 @llvm.scmp.i2.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return ``-1`` if ``%a`` is signed less than ``%b``, ``0`` if they are equal, and 
+``1`` if ``%a`` is signed greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must be at least as wide as ``i2``, to hold the three possible return values.
+
+.. _int_ucmp:
+
+'``llvm.ucmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.ucmp`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i2 @llvm.ucmp.i2.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return ``-1`` if ``%a`` is unsigned less than ``%b``, ``0`` if they are equal, and 
+``1`` if ``%a`` is unsigned greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must be at least as wide as ``i2``, to hold the three possible return values.
 
 .. _int_memcpy:
 
@@ -27553,12 +27610,12 @@ in example below:
 .. code-block:: text
 
     %cond = call i1 @llvm.experimental.widenable.condition()
-    br i1 %cond, label %solution_1, label %solution_2
+    br i1 %cond, label %fast_path, label %slow_path
 
-  label %fast_path:
+  fast_path:
     ; Apply memory-consuming but fast solution for a task.
 
-  label %slow_path:
+  slow_path:
     ; Cheap in memory but slow solution.
 
 Whether the result of intrinsic's call is `true` or `false`,

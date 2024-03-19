@@ -1,5 +1,5 @@
 ! Test lowering of derived type array constructors to HLFIR.
-! RUN: bbc -emit-hlfir --polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 module types
   type simple

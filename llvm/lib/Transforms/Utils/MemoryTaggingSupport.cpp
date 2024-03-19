@@ -110,21 +110,21 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
 
 void StackInfoBuilder::visit(Instruction &Inst) {
   // Visit non-intrinsic debug-info records attached to Inst.
-  for (DPValue &DPV : DPValue::filter(Inst.getDbgRecordRange())) {
+  for (DbgVariableRecord &DVR : filterDbgVars(Inst.getDbgRecordRange())) {
     auto AddIfInteresting = [&](Value *V) {
       if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
         if (!isInterestingAlloca(*AI))
           return;
         AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
-        auto &DPVVec = AInfo.DbgVariableRecords;
-        if (DPVVec.empty() || DPVVec.back() != &DPV)
-          DPVVec.push_back(&DPV);
+        auto &DVRVec = AInfo.DbgVariableRecords;
+        if (DVRVec.empty() || DVRVec.back() != &DVR)
+          DVRVec.push_back(&DVR);
       }
     };
 
-    for_each(DPV.location_ops(), AddIfInteresting);
-    if (DPV.isDbgAssign())
-      AddIfInteresting(DPV.getAddress());
+    for_each(DVR.location_ops(), AddIfInteresting);
+    if (DVR.isDbgAssign())
+      AddIfInteresting(DVR.getAddress());
   }
 
   if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
@@ -234,6 +234,11 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   Info.AI->replaceAllUsesWith(NewPtr);
   Info.AI->eraseFromParent();
   Info.AI = NewAI;
+}
+
+bool isLifetimeIntrinsic(Value *V) {
+  auto *II = dyn_cast<IntrinsicInst>(V);
+  return II && II->isLifetimeStartOrEnd();
 }
 
 } // namespace memtag

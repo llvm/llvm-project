@@ -11,6 +11,7 @@
 
 #include "clang/AST/Availability.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/InstallAPI/HeaderFile.h"
 #include "clang/InstallAPI/MachO.h"
 
 namespace clang {
@@ -42,13 +43,13 @@ public:
   /// \param Flags The flags that describe attributes of the symbol.
   /// \param Inlined Whether declaration is inlined, only applicable to
   /// functions.
-  /// \return The non-owning pointer to added record in slice.
-  GlobalRecord *addGlobal(StringRef Name, RecordLinkage Linkage,
-                          GlobalRecord::Kind GV,
-                          const clang::AvailabilityInfo Avail, const Decl *D,
-                          const HeaderType Access,
-                          SymbolFlags Flags = SymbolFlags::None,
-                          bool Inlined = false);
+  /// \return The non-owning pointer to added record in slice with it's frontend
+  /// attributes.
+  std::pair<GlobalRecord *, FrontendAttrs *>
+  addGlobal(StringRef Name, RecordLinkage Linkage, GlobalRecord::Kind GV,
+            const clang::AvailabilityInfo Avail, const Decl *D,
+            const HeaderType Access, SymbolFlags Flags = SymbolFlags::None,
+            bool Inlined = false);
 
   /// Add ObjC Class record with attributes from AST.
   ///
@@ -59,11 +60,12 @@ public:
   /// \param D The pointer to the declaration from traversing AST.
   /// \param Access The intended access level of symbol.
   /// \param IsEHType Whether declaration has an exception attribute.
-  /// \return The non-owning pointer to added record in slice.
-  ObjCInterfaceRecord *addObjCInterface(StringRef Name, RecordLinkage Linkage,
-                                        const clang::AvailabilityInfo Avail,
-                                        const Decl *D, HeaderType Access,
-                                        bool IsEHType);
+  /// \return The non-owning pointer to added record in slice with it's frontend
+  /// attributes.
+  std::pair<ObjCInterfaceRecord *, FrontendAttrs *>
+  addObjCInterface(StringRef Name, RecordLinkage Linkage,
+                   const clang::AvailabilityInfo Avail, const Decl *D,
+                   HeaderType Access, bool IsEHType);
 
   /// Add ObjC Category record with attributes from AST.
   ///
@@ -74,11 +76,12 @@ public:
   /// to the active target triple.
   /// \param D The pointer to the declaration from traversing AST.
   /// \param Access The intended access level of symbol.
-  /// \return The non-owning pointer to added record in slice.
-  ObjCCategoryRecord *addObjCCategory(StringRef ClassToExtend,
-                                      StringRef CategoryName,
-                                      const clang::AvailabilityInfo Avail,
-                                      const Decl *D, HeaderType Access);
+  /// \return The non-owning pointer to added record in slice with it's frontend
+  /// attributes.
+  std::pair<ObjCCategoryRecord *, FrontendAttrs *>
+  addObjCCategory(StringRef ClassToExtend, StringRef CategoryName,
+                  const clang::AvailabilityInfo Avail, const Decl *D,
+                  HeaderType Access);
 
   /// Add ObjC IVar record with attributes from AST.
   ///
@@ -90,12 +93,13 @@ public:
   /// \param D The pointer to the declaration from traversing AST.
   /// \param Access The intended access level of symbol.
   /// \param AC The access control tied to the ivar declaration.
-  /// \return The non-owning pointer to added record in slice.
-  ObjCIVarRecord *addObjCIVar(ObjCContainerRecord *Container,
-                              StringRef IvarName, RecordLinkage Linkage,
-                              const clang::AvailabilityInfo Avail,
-                              const Decl *D, HeaderType Access,
-                              const clang::ObjCIvarDecl::AccessControl AC);
+  /// \return The non-owning pointer to added record in slice with it's frontend
+  /// attributes.
+  std::pair<ObjCIVarRecord *, FrontendAttrs *>
+  addObjCIVar(ObjCContainerRecord *Container, StringRef IvarName,
+              RecordLinkage Linkage, const clang::AvailabilityInfo Avail,
+              const Decl *D, HeaderType Access,
+              const clang::ObjCIvarDecl::AccessControl AC);
 
 private:
   /// Mapping of records stored in slice to their frontend attributes.

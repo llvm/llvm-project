@@ -87,7 +87,7 @@ static void registerJITLoaderVTuneUnregisterImpl(
   for (auto &Method : UM) {
     JITEventWrapper::Wrapper->iJIT_NotifyEvent(
         iJVM_EVENT_TYPE_METHOD_UNLOAD_START,
-        const_cast<unsigned long *>(&Method.first));
+        const_cast<uint64_t *>(&Method.first));
   }
 }
 
