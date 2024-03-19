@@ -41,7 +41,7 @@ namespace {
 // position that it already resides at. This is fine -- but gets complicated
 // with dbg.value intrinsics. By moving an instruction, we can end up changing
 // nothing but the location of debug-info intrinsics. That has to be modelled
-// by DPValues, the dbg.value replacement.
+// by DbgVariableRecords, the dbg.value replacement.
 TEST(BasicBlockDbgInfoTest, InsertAfterSelf) {
   LLVMContext C;
   UseNewDbgInfoFormat = true;
@@ -90,10 +90,10 @@ TEST(BasicBlockDbgInfoTest, InsertAfterSelf) {
   //    %b = add
   //    %c = add
   //    dbg.value
-  // Check that this is replicated by DPValues.
+  // Check that this is replicated by DbgVariableRecords.
   Inst2->moveAfter(Inst1);
 
-  // Inst1 should only have one DPValue on it.
+  // Inst1 should only have one DbgVariableRecord on it.
   EXPECT_TRUE(Inst1->hasDbgRecords());
   auto Range1 = Inst1->getDbgRecordRange();
   EXPECT_EQ(std::distance(Range1.begin(), Range1.end()), 1u);
@@ -158,44 +158,44 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   EXPECT_EQ(BB.getNextMarker(Instr1), Marker2);
   EXPECT_EQ(BB.getNextMarker(Instr2), EndMarker); // Is nullptr.
 
-  // There should be two DPValues,
+  // There should be two DbgVariableRecords,
   EXPECT_EQ(Marker1->StoredDbgRecords.size(), 1u);
   EXPECT_EQ(Marker2->StoredDbgRecords.size(), 1u);
 
   // Unlink them and try to re-insert them through the basic block.
-  DbgRecord *DPV1 = &*Marker1->StoredDbgRecords.begin();
-  DbgRecord *DPV2 = &*Marker2->StoredDbgRecords.begin();
-  DPV1->removeFromParent();
-  DPV2->removeFromParent();
+  DbgRecord *DVR1 = &*Marker1->StoredDbgRecords.begin();
+  DbgRecord *DVR2 = &*Marker2->StoredDbgRecords.begin();
+  DVR1->removeFromParent();
+  DVR2->removeFromParent();
   EXPECT_TRUE(Marker1->StoredDbgRecords.empty());
   EXPECT_TRUE(Marker2->StoredDbgRecords.empty());
 
   // This should appear in Marker1.
-  BB.insertDbgRecordBefore(DPV1, BB.begin());
+  BB.insertDbgRecordBefore(DVR1, BB.begin());
   EXPECT_EQ(Marker1->StoredDbgRecords.size(), 1u);
-  EXPECT_EQ(DPV1, &*Marker1->StoredDbgRecords.begin());
+  EXPECT_EQ(DVR1, &*Marker1->StoredDbgRecords.begin());
 
   // This should attach to Marker2.
-  BB.insertDbgRecordAfter(DPV2, &*BB.begin());
+  BB.insertDbgRecordAfter(DVR2, &*BB.begin());
   EXPECT_EQ(Marker2->StoredDbgRecords.size(), 1u);
-  EXPECT_EQ(DPV2, &*Marker2->StoredDbgRecords.begin());
+  EXPECT_EQ(DVR2, &*Marker2->StoredDbgRecords.begin());
 
-  // Now, how about removing instructions? That should cause any DPValues to
-  // "fall down".
+  // Now, how about removing instructions? That should cause any
+  // DbgVariableRecords to "fall down".
   Instr1->removeFromParent();
   Marker1 = nullptr;
-  // DPValues should now be in Marker2.
+  // DbgVariableRecords should now be in Marker2.
   EXPECT_EQ(BB.size(), 1u);
   EXPECT_EQ(Marker2->StoredDbgRecords.size(), 2u);
   // They should also be in the correct order.
-  SmallVector<DbgRecord *, 2> DPVs;
-  for (DbgRecord &DPV : Marker2->getDbgRecordRange())
-    DPVs.push_back(&DPV);
-  EXPECT_EQ(DPVs[0], DPV1);
-  EXPECT_EQ(DPVs[1], DPV2);
+  SmallVector<DbgRecord *, 2> DVRs;
+  for (DbgRecord &DVR : Marker2->getDbgRecordRange())
+    DVRs.push_back(&DVR);
+  EXPECT_EQ(DVRs[0], DVR1);
+  EXPECT_EQ(DVRs[1], DVR2);
 
-  // If we remove the end instruction, the DPValues should fall down into
-  // the trailing marker.
+  // If we remove the end instruction, the DbgVariableRecords should fall down
+  // into the trailing marker.
   EXPECT_EQ(BB.getTrailingDbgRecords(), nullptr);
   Instr2->removeFromParent();
   EXPECT_TRUE(BB.empty());
@@ -204,35 +204,35 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   EXPECT_EQ(EndMarker->StoredDbgRecords.size(), 2u);
   // Again, these should arrive in the correct order.
 
-  DPVs.clear();
-  for (DbgRecord &DPV : EndMarker->getDbgRecordRange())
-    DPVs.push_back(&DPV);
-  EXPECT_EQ(DPVs[0], DPV1);
-  EXPECT_EQ(DPVs[1], DPV2);
+  DVRs.clear();
+  for (DbgRecord &DVR : EndMarker->getDbgRecordRange())
+    DVRs.push_back(&DVR);
+  EXPECT_EQ(DVRs[0], DVR1);
+  EXPECT_EQ(DVRs[1], DVR2);
 
   // Inserting a normal instruction at the beginning: shouldn't dislodge the
-  // DPValues. It's intended to not go at the start.
+  // DbgVariableRecords. It's intended to not go at the start.
   Instr1->insertBefore(BB, BB.begin());
   EXPECT_EQ(EndMarker->StoredDbgRecords.size(), 2u);
   Instr1->removeFromParent();
 
-  // Inserting at end(): should dislodge the DPValues, if they were dbg.values
-  // then they would sit "above" the new instruction.
+  // Inserting at end(): should dislodge the DbgVariableRecords, if they were
+  // dbg.values then they would sit "above" the new instruction.
   Instr1->insertBefore(BB, BB.end());
   EXPECT_EQ(Instr1->DbgMarker->StoredDbgRecords.size(), 2u);
   // We should de-allocate the trailing marker when something is inserted
   // at end().
   EXPECT_EQ(BB.getTrailingDbgRecords(), nullptr);
 
-  // Remove Instr1: now the DPValues will fall down again,
+  // Remove Instr1: now the DbgVariableRecords will fall down again,
   Instr1->removeFromParent();
   EndMarker = BB.getTrailingDbgRecords();
   EXPECT_EQ(EndMarker->StoredDbgRecords.size(), 2u);
 
   // Inserting a terminator, however it's intended, should dislodge the
-  // trailing DPValues, as it's the clear intention of the caller that this be
-  // the final instr in the block, and DPValues aren't allowed to live off the
-  // end forever.
+  // trailing DbgVariableRecords, as it's the clear intention of the caller that
+  // this be the final instr in the block, and DbgVariableRecords aren't allowed
+  // to live off the end forever.
   Instr2->insertBefore(BB, BB.begin());
   EXPECT_EQ(Instr2->DbgMarker->StoredDbgRecords.size(), 2u);
   EXPECT_EQ(BB.getTrailingDbgRecords(), nullptr);
@@ -300,29 +300,30 @@ TEST(BasicBlockDbgInfoTest, HeadBitOperations) {
   ASSERT_TRUE(CInst->DbgMarker);
   EXPECT_FALSE(CInst->DbgMarker->StoredDbgRecords.empty());
 
-  // If we move "c" to the start of the block, just normally, then the DPValues
-  // should fall down to "d".
+  // If we move "c" to the start of the block, just normally, then the
+  // DbgVariableRecords should fall down to "d".
   CInst->moveBefore(BB, BeginIt2);
   EXPECT_TRUE(!CInst->DbgMarker || CInst->DbgMarker->StoredDbgRecords.empty());
   ASSERT_TRUE(DInst->DbgMarker);
   EXPECT_FALSE(DInst->DbgMarker->StoredDbgRecords.empty());
 
   // Wheras if we move D to the start of the block with moveBeforePreserving,
-  // the DPValues should move with it.
+  // the DbgVariableRecords should move with it.
   DInst->moveBeforePreserving(BB, BB.begin());
   EXPECT_FALSE(DInst->DbgMarker->StoredDbgRecords.empty());
   EXPECT_EQ(&*BB.begin(), DInst);
 
-  // Similarly, moveAfterPreserving "D" to "C" should move DPValues with "D".
+  // Similarly, moveAfterPreserving "D" to "C" should move DbgVariableRecords
+  // with "D".
   DInst->moveAfterPreserving(CInst);
   EXPECT_FALSE(DInst->DbgMarker->StoredDbgRecords.empty());
 
   // (move back to the start...)
   DInst->moveBeforePreserving(BB, BB.begin());
 
-  // Current order of insts: "D -> C -> B -> Ret". DPValues on "D".
+  // Current order of insts: "D -> C -> B -> Ret". DbgVariableRecords on "D".
   // If we move "C" to the beginning of the block, it should go before the
-  // DPValues. They'll stay on "D".
+  // DbgVariableRecords. They'll stay on "D".
   CInst->moveBefore(BB, BB.begin());
   EXPECT_TRUE(!CInst->DbgMarker || CInst->DbgMarker->StoredDbgRecords.empty());
   EXPECT_FALSE(DInst->DbgMarker->StoredDbgRecords.empty());
@@ -333,14 +334,14 @@ TEST(BasicBlockDbgInfoTest, HeadBitOperations) {
   CInst->moveBefore(BInst);
   EXPECT_EQ(&*BB.begin(), DInst);
 
-  // Current order of insts: "D -> C -> B -> Ret". DPValues on "D".
+  // Current order of insts: "D -> C -> B -> Ret". DbgVariableRecords on "D".
   // Now move CInst to the position of DInst, but using getIterator instead of
   // BasicBlock::begin. This signals that we want the "C" instruction to be
-  // immediately before "D", with any DPValues on "D" now moving to "C".
-  // It's the equivalent of moving an instruction to the position between a
+  // immediately before "D", with any DbgVariableRecords on "D" now moving to
+  // "C". It's the equivalent of moving an instruction to the position between a
   // run of dbg.values and the next instruction.
   CInst->moveBefore(BB, DInst->getIterator());
-  // CInst gains the DPValues.
+  // CInst gains the DbgVariableRecords.
   EXPECT_TRUE(!DInst->DbgMarker || DInst->DbgMarker->StoredDbgRecords.empty());
   EXPECT_FALSE(CInst->DbgMarker->StoredDbgRecords.empty());
   EXPECT_EQ(&*BB.begin(), CInst);
@@ -378,8 +379,8 @@ TEST(BasicBlockDbgInfoTest, InstrDbgAccess) {
     !11 = !DILocation(line: 1, column: 1, scope: !6)
 )");
 
-  // Check that DPValues can be accessed from Instructions without digging
-  // into the depths of DPMarkers.
+  // Check that DbgVariableRecords can be accessed from Instructions without
+  // digging into the depths of DPMarkers.
   BasicBlock &BB = M->getFunction("f")->getEntryBlock();
   // Convert the module to "new" form debug-info.
   M->convertToNewDbgValues();
@@ -391,25 +392,25 @@ TEST(BasicBlockDbgInfoTest, InstrDbgAccess) {
   ASSERT_FALSE(BInst->DbgMarker);
   ASSERT_TRUE(CInst->DbgMarker);
   ASSERT_EQ(CInst->DbgMarker->StoredDbgRecords.size(), 1u);
-  DbgRecord *DPV1 = &*CInst->DbgMarker->StoredDbgRecords.begin();
-  ASSERT_TRUE(DPV1);
+  DbgRecord *DVR1 = &*CInst->DbgMarker->StoredDbgRecords.begin();
+  ASSERT_TRUE(DVR1);
   EXPECT_FALSE(BInst->hasDbgRecords());
 
-  // Clone DPValues from one inst to another. Other arguments to clone are
-  // tested in DPMarker test.
+  // Clone DbgVariableRecords from one inst to another. Other arguments to clone
+  // are tested in DPMarker test.
   auto Range1 = BInst->cloneDebugInfoFrom(CInst);
   EXPECT_EQ(BInst->DbgMarker->StoredDbgRecords.size(), 1u);
-  DbgRecord *DPV2 = &*BInst->DbgMarker->StoredDbgRecords.begin();
+  DbgRecord *DVR2 = &*BInst->DbgMarker->StoredDbgRecords.begin();
   EXPECT_EQ(std::distance(Range1.begin(), Range1.end()), 1u);
-  EXPECT_EQ(&*Range1.begin(), DPV2);
-  EXPECT_NE(DPV1, DPV2);
+  EXPECT_EQ(&*Range1.begin(), DVR2);
+  EXPECT_NE(DVR1, DVR2);
 
   // We should be able to get a range over exactly the same information.
   auto Range2 = BInst->getDbgRecordRange();
   EXPECT_EQ(Range1.begin(), Range2.begin());
   EXPECT_EQ(Range1.end(), Range2.end());
 
-  // We should be able to query if there are DPValues,
+  // We should be able to query if there are DbgVariableRecords,
   EXPECT_TRUE(BInst->hasDbgRecords());
   EXPECT_TRUE(CInst->hasDbgRecords());
   EXPECT_FALSE(DInst->hasDbgRecords());
@@ -419,8 +420,8 @@ TEST(BasicBlockDbgInfoTest, InstrDbgAccess) {
   EXPECT_FALSE(BInst->hasDbgRecords());
   EXPECT_EQ(BInst->DbgMarker->StoredDbgRecords.size(), 0u);
 
-  // And we should be able to drop individual DPValues.
-  CInst->dropOneDbgRecord(DPV1);
+  // And we should be able to drop individual DbgVariableRecords.
+  CInst->dropOneDbgRecord(DVR1);
   EXPECT_FALSE(CInst->hasDbgRecords());
   EXPECT_EQ(CInst->DbgMarker->StoredDbgRecords.size(), 0u);
 
@@ -514,7 +515,7 @@ protected:
   BasicBlock *BBEntry, *BBExit;
   BasicBlock::iterator Dest, First, Last;
   Instruction *BInst, *Branch, *CInst;
-  DPValue *DPVA, *DPVB, *DPVConst;
+  DbgVariableRecord *DVRA, *DVRB, *DVRConst;
 
   void SetUp() override {
     UseNewDbgInfoFormat = true;
@@ -531,18 +532,21 @@ protected:
     Branch = &*Last;
     CInst = &*Dest;
 
-    DPVA = cast<DPValue>(&*BInst->DbgMarker->StoredDbgRecords.begin());
-    DPVB = cast<DPValue>(&*Branch->DbgMarker->StoredDbgRecords.begin());
-    DPVConst = cast<DPValue>(&*CInst->DbgMarker->StoredDbgRecords.begin());
+    DVRA =
+        cast<DbgVariableRecord>(&*BInst->DbgMarker->StoredDbgRecords.begin());
+    DVRB =
+        cast<DbgVariableRecord>(&*Branch->DbgMarker->StoredDbgRecords.begin());
+    DVRConst =
+        cast<DbgVariableRecord>(&*CInst->DbgMarker->StoredDbgRecords.begin());
   }
 
   void TearDown() override { UseNewDbgInfoFormat = false; }
 
-  bool InstContainsDPValue(Instruction *I, DPValue *DPV) {
+  bool InstContainsDbgVariableRecord(Instruction *I, DbgVariableRecord *DVR) {
     for (DbgRecord &D : I->getDbgRecordRange()) {
-      if (&D == DPV) {
+      if (&D == DVR) {
         // Confirm too that the links between the records are correct.
-        EXPECT_EQ(DPV->Marker, I->DbgMarker);
+        EXPECT_EQ(DVR->Marker, I->DbgMarker);
         EXPECT_EQ(I->DbgMarker->MarkedInstr, I);
         return true;
       }
@@ -550,7 +554,8 @@ protected:
     return false;
   }
 
-  bool CheckDPVOrder(Instruction *I, SmallVector<DPValue *> CheckVals) {
+  bool CheckDVROrder(Instruction *I,
+                     SmallVector<DbgVariableRecord *> CheckVals) {
     SmallVector<DbgRecord *> Vals;
     for (DbgRecord &D : I->getDbgRecordRange())
       Vals.push_back(&D);
@@ -578,15 +583,15 @@ TEST_F(DbgSpliceTest, DbgSpliceTest0) {
   /*
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 DVRB      call
+void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()),
+!dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0,
+!dbg !11
         }
 
     Splice from First, not including leading dbg.value, to Last, including the
@@ -595,15 +600,14 @@ Dest      %c = add i16 %b, 1, !dbg !11
 
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 DVRB      call
+void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()),
+!dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0, !dbg !11
         }
 
 
@@ -613,14 +617,14 @@ Dest      %c = add i16 %b, 1, !dbg !11
   EXPECT_EQ(CInst->getParent(), BBExit);
   EXPECT_EQ(Branch->getParent(), BBEntry);
 
-  // DPVB: should be on Dest, in exit block.
-  EXPECT_TRUE(InstContainsDPValue(CInst, DPVB));
+  // DVRB: should be on Dest, in exit block.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(CInst, DVRB));
 
-  // DPVA, should have "fallen" onto the branch, remained in entry block.
-  EXPECT_TRUE(InstContainsDPValue(Branch, DPVA));
+  // DVRA, should have "fallen" onto the branch, remained in entry block.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(Branch, DVRA));
 
-  // DPVConst should be on the moved %b instruction.
-  EXPECT_TRUE(InstContainsDPValue(BInst, DPVConst));
+  // DVRConst should be on the moved %b instruction.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(BInst, DVRConst));
 }
 
 TEST_F(DbgSpliceTest, DbgSpliceTest1) {
@@ -631,15 +635,15 @@ TEST_F(DbgSpliceTest, DbgSpliceTest1) {
   /*
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 DVRB      call
+void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()),
+!dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0,
+!dbg !11
         }
 
     Splice from First, not including leading dbg.value, to Last, including the
@@ -648,15 +652,15 @@ Dest      %c = add i16 %b, 1, !dbg !11
 
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
 First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata
+!DIExpression()), !dbg !11 DVRConst  call void @llvm.dbg.value(metadata i16 0,
+metadata !9, metadata !DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1,
+!dbg !11 ret i16 0, !dbg !11
         }
 
 
@@ -666,17 +670,17 @@ Dest      %c = add i16 %b, 1, !dbg !11
   EXPECT_EQ(CInst->getParent(), BBExit);
   EXPECT_EQ(Branch->getParent(), BBEntry);
 
-  // DPVB: should be on CInst, in exit block.
-  EXPECT_TRUE(InstContainsDPValue(CInst, DPVB));
+  // DVRB: should be on CInst, in exit block.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(CInst, DVRB));
 
-  // DPVA, should have "fallen" onto the branch, remained in entry block.
-  EXPECT_TRUE(InstContainsDPValue(Branch, DPVA));
+  // DVRA, should have "fallen" onto the branch, remained in entry block.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(Branch, DVRA));
 
-  // DPVConst should be behind / after the moved instructions, remain on CInst.
-  EXPECT_TRUE(InstContainsDPValue(CInst, DPVConst));
+  // DVRConst should be behind / after the moved instructions, remain on CInst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(CInst, DVRConst));
 
-  // Order of DPVB and DPVConst should be thus:
-  EXPECT_TRUE(CheckDPVOrder(CInst, {DPVB, DPVConst}));
+  // Order of DVRB and DVRConst should be thus:
+  EXPECT_TRUE(CheckDVROrder(CInst, {DVRB, DVRConst}));
 }
 
 TEST_F(DbgSpliceTest, DbgSpliceTest2) {
@@ -687,15 +691,15 @@ TEST_F(DbgSpliceTest, DbgSpliceTest2) {
   /*
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 DVRB      call
+void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()),
+!dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0,
+!dbg !11
         }
 
     Splice from head of First, which includes the leading dbg.value, to Last,
@@ -707,12 +711,12 @@ BBEntry entry:
 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 DVRA      call void @llvm.dbg.value(metadata i16 %a,
+metadata !9, metadata !DIExpression()), !dbg !11 First     %b = add i16 %a, 1,
+!dbg !11 DVRB      call void @llvm.dbg.value(metadata i16 %b, metadata !9,
+metadata !DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret
+i16 0, !dbg !11
         }
 
 
@@ -721,18 +725,18 @@ Dest      %c = add i16 %b, 1, !dbg !11
   EXPECT_EQ(BInst->getParent(), BBExit);
   EXPECT_EQ(CInst->getParent(), BBExit);
 
-  // DPVB: should be on CInst, in exit block.
-  EXPECT_TRUE(InstContainsDPValue(CInst, DPVB));
+  // DVRB: should be on CInst, in exit block.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(CInst, DVRB));
 
-  // DPVA, should have transferred with the spliced instructions, remains on
+  // DVRA, should have transferred with the spliced instructions, remains on
   // the "b" inst.
-  EXPECT_TRUE(InstContainsDPValue(BInst, DPVA));
+  EXPECT_TRUE(InstContainsDbgVariableRecord(BInst, DVRA));
 
-  // DPVConst should be ahead of the moved instructions, ahead of BInst.
-  EXPECT_TRUE(InstContainsDPValue(BInst, DPVConst));
+  // DVRConst should be ahead of the moved instructions, ahead of BInst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(BInst, DVRConst));
 
-  // Order of DPVA and DPVConst should be thus:
-  EXPECT_TRUE(CheckDPVOrder(BInst, {DPVConst, DPVA}));
+  // Order of DVRA and DVRConst should be thus:
+  EXPECT_TRUE(CheckDVROrder(BInst, {DVRConst, DVRA}));
 }
 
 TEST_F(DbgSpliceTest, DbgSpliceTest3) {
@@ -743,15 +747,15 @@ TEST_F(DbgSpliceTest, DbgSpliceTest3) {
   /*
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 DVRB      call
+void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()),
+!dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0,
+!dbg !11
         }
 
     Splice from head of First, which includes the leading dbg.value, to Last,
@@ -763,12 +767,12 @@ BBEntry entry:
 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 DVRB      call
+void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()),
+!dbg !11 DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9,
+metadata !DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret
+i16 0, !dbg !11
         }
 
   */
@@ -776,18 +780,18 @@ Dest      %c = add i16 %b, 1, !dbg !11
   EXPECT_EQ(BInst->getParent(), BBExit);
   EXPECT_EQ(CInst->getParent(), BBExit);
 
-  // DPVB: should be on CInst, in exit block.
-  EXPECT_TRUE(InstContainsDPValue(CInst, DPVB));
+  // DVRB: should be on CInst, in exit block.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(CInst, DVRB));
 
-  // DPVA, should have transferred with the spliced instructions, remains on
+  // DVRA, should have transferred with the spliced instructions, remains on
   // the "b" inst.
-  EXPECT_TRUE(InstContainsDPValue(BInst, DPVA));
+  EXPECT_TRUE(InstContainsDbgVariableRecord(BInst, DVRA));
 
-  // DPVConst should be behind the moved instructions, ahead of CInst.
-  EXPECT_TRUE(InstContainsDPValue(CInst, DPVConst));
+  // DVRConst should be behind the moved instructions, ahead of CInst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(CInst, DVRConst));
 
-  // Order of DPVB and DPVConst should be thus:
-  EXPECT_TRUE(CheckDPVOrder(CInst, {DPVB, DPVConst}));
+  // Order of DVRB and DVRConst should be thus:
+  EXPECT_TRUE(CheckDVROrder(CInst, {DVRB, DVRConst}));
 }
 
 TEST_F(DbgSpliceTest, DbgSpliceTest4) {
@@ -798,15 +802,15 @@ TEST_F(DbgSpliceTest, DbgSpliceTest4) {
   /*
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 DVRB      call
+void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()),
+!dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0,
+!dbg !11
         }
 
     Splice from First, not including the leading dbg.value, to Last, but NOT
@@ -815,15 +819,15 @@ Dest      %c = add i16 %b, 1, !dbg !11
 
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 DVRB      call void @llvm.dbg.value(metadata i16 %b,
+metadata !9, metadata !DIExpression()), !dbg !11 Last      br label %exit, !dbg
+!11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 Dest      %c =
+add i16 %b, 1, !dbg !11 ret i16 0, !dbg !11
         }
 
   */
@@ -832,17 +836,17 @@ Dest      %c = add i16 %b, 1, !dbg !11
   EXPECT_EQ(CInst->getParent(), BBExit);
   EXPECT_EQ(Branch->getParent(), BBEntry);
 
-  // DPVB: should be on Branch as before, remain in entry block.
-  EXPECT_TRUE(InstContainsDPValue(Branch, DPVB));
+  // DVRB: should be on Branch as before, remain in entry block.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(Branch, DVRB));
 
-  // DPVA, should have remained in entry block, falls onto Branch inst.
-  EXPECT_TRUE(InstContainsDPValue(Branch, DPVA));
+  // DVRA, should have remained in entry block, falls onto Branch inst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(Branch, DVRA));
 
-  // DPVConst should be ahead of the moved instructions, BInst.
-  EXPECT_TRUE(InstContainsDPValue(BInst, DPVConst));
+  // DVRConst should be ahead of the moved instructions, BInst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(BInst, DVRConst));
 
-  // Order of DPVA and DPVA should be thus:
-  EXPECT_TRUE(CheckDPVOrder(Branch, {DPVA, DPVB}));
+  // Order of DVRA and DVRA should be thus:
+  EXPECT_TRUE(CheckDVROrder(Branch, {DVRA, DVRB}));
 }
 
 TEST_F(DbgSpliceTest, DbgSpliceTest5) {
@@ -853,15 +857,15 @@ TEST_F(DbgSpliceTest, DbgSpliceTest5) {
   /*
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 DVRB      call
+void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()),
+!dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0,
+!dbg !11
         }
 
     Splice from First, not including the leading dbg.value, to Last, but NOT
@@ -870,15 +874,16 @@ Dest      %c = add i16 %b, 1, !dbg !11
 
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 DVRB      call void @llvm.dbg.value(metadata i16 %b,
+metadata !9, metadata !DIExpression()), !dbg !11 Last      br label %exit, !dbg
+!11
 
 BBExit  exit:
 First     %b = add i16 %a, 1, !dbg !11
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0,
+!dbg !11
         }
 
   */
@@ -887,17 +892,17 @@ Dest      %c = add i16 %b, 1, !dbg !11
   EXPECT_EQ(CInst->getParent(), BBExit);
   EXPECT_EQ(Branch->getParent(), BBEntry);
 
-  // DPVB: should be on Branch as before, remain in entry block.
-  EXPECT_TRUE(InstContainsDPValue(Branch, DPVB));
+  // DVRB: should be on Branch as before, remain in entry block.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(Branch, DVRB));
 
-  // DPVA, should have remained in entry block, falls onto Branch inst.
-  EXPECT_TRUE(InstContainsDPValue(Branch, DPVA));
+  // DVRA, should have remained in entry block, falls onto Branch inst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(Branch, DVRA));
 
-  // DPVConst should be behind of the moved instructions, on CInst.
-  EXPECT_TRUE(InstContainsDPValue(CInst, DPVConst));
+  // DVRConst should be behind of the moved instructions, on CInst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(CInst, DVRConst));
 
-  // Order of DPVA and DPVB should be thus:
-  EXPECT_TRUE(CheckDPVOrder(Branch, {DPVA, DPVB}));
+  // Order of DVRA and DVRB should be thus:
+  EXPECT_TRUE(CheckDVROrder(Branch, {DVRA, DVRB}));
 }
 
 TEST_F(DbgSpliceTest, DbgSpliceTest6) {
@@ -908,15 +913,15 @@ TEST_F(DbgSpliceTest, DbgSpliceTest6) {
   /*
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 DVRB      call
+void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()),
+!dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0,
+!dbg !11
         }
 
     Splice from First, including the leading dbg.value, to Last, but NOT
@@ -925,15 +930,14 @@ Dest      %c = add i16 %b, 1, !dbg !11
 
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata
+!DIExpression()), !dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 DVRA      call void @llvm.dbg.value(metadata i16 %a,
+metadata !9, metadata !DIExpression()), !dbg !11 First     %b = add i16 %a, 1,
+!dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0, !dbg !11
         }
 
   */
@@ -942,17 +946,17 @@ Dest      %c = add i16 %b, 1, !dbg !11
   EXPECT_EQ(CInst->getParent(), BBExit);
   EXPECT_EQ(Branch->getParent(), BBEntry);
 
-  // DPVB: should be on Branch as before, remain in entry block.
-  EXPECT_TRUE(InstContainsDPValue(Branch, DPVB));
+  // DVRB: should be on Branch as before, remain in entry block.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(Branch, DVRB));
 
-  // DPVA, should have transferred to BBExit, on B inst.
-  EXPECT_TRUE(InstContainsDPValue(BInst, DPVA));
+  // DVRA, should have transferred to BBExit, on B inst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(BInst, DVRA));
 
-  // DPVConst should be ahead of the moved instructions, on BInst.
-  EXPECT_TRUE(InstContainsDPValue(BInst, DPVConst));
+  // DVRConst should be ahead of the moved instructions, on BInst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(BInst, DVRConst));
 
-  // Order of DPVA and DPVConst should be thus:
-  EXPECT_TRUE(CheckDPVOrder(BInst, {DPVConst, DPVA}));
+  // Order of DVRA and DVRConst should be thus:
+  EXPECT_TRUE(CheckDVROrder(BInst, {DVRConst, DVRA}));
 }
 
 TEST_F(DbgSpliceTest, DbgSpliceTest7) {
@@ -963,15 +967,15 @@ TEST_F(DbgSpliceTest, DbgSpliceTest7) {
   /*
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 DVRB      call
+void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()),
+!dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0,
+!dbg !11
         }
 
     Splice from First, including the leading dbg.value, to Last, but NOT
@@ -980,15 +984,14 @@ Dest      %c = add i16 %b, 1, !dbg !11
 
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata
+!DIExpression()), !dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 DVRConst  call
+void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()),
+!dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0, !dbg !11
         }
 
   */
@@ -997,21 +1000,21 @@ Dest      %c = add i16 %b, 1, !dbg !11
   EXPECT_EQ(CInst->getParent(), BBExit);
   EXPECT_EQ(Branch->getParent(), BBEntry);
 
-  // DPVB: should be on Branch as before, remain in entry block.
-  EXPECT_TRUE(InstContainsDPValue(Branch, DPVB));
+  // DVRB: should be on Branch as before, remain in entry block.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(Branch, DVRB));
 
-  // DPVA, should have transferred to BBExit, on B inst.
-  EXPECT_TRUE(InstContainsDPValue(BInst, DPVA));
+  // DVRA, should have transferred to BBExit, on B inst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(BInst, DVRA));
 
-  // DPVConst should be after of the moved instructions, on CInst.
-  EXPECT_TRUE(InstContainsDPValue(CInst, DPVConst));
+  // DVRConst should be after of the moved instructions, on CInst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(CInst, DVRConst));
 }
 
 // But wait, there's more! What if you splice a range that is empty, but
 // implicitly contains debug-info? In the dbg.value design for debug-info,
-// this would be an explicit range, but in DPValue debug-info, it isn't.
-// Check that if we try to do that, with differing head-bit values, that
-// DPValues are transferred.
+// this would be an explicit range, but in DbgVariableRecord debug-info, it
+// isn't. Check that if we try to do that, with differing head-bit values, that
+// DbgVariableRecords are transferred.
 // Test with empty transfers to Dest, with head bit set and not set.
 
 TEST_F(DbgSpliceTest, DbgSpliceEmpty0) {
@@ -1021,31 +1024,31 @@ TEST_F(DbgSpliceTest, DbgSpliceEmpty0) {
   /*
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 DVRB      call
+void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()),
+!dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0,
+!dbg !11
         }
 
     Splice from BBEntry.getFirstInsertionPt to First -- this implicitly is a
-    splice of DPVA, but the iterators are pointing at the same instruction. The
+    splice of DVRA, but the iterators are pointing at the same instruction. The
     only difference is the setting of the head bit. Becomes;
 
         define i16 @f(i16 %a) !dbg !6 {
 First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata
+!DIExpression()), !dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 DVRA      call void @llvm.dbg.value(metadata i16 %a,
+metadata !9, metadata !DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1,
+!dbg !11 ret i16 0, !dbg !11
         }
 
   */
@@ -1054,17 +1057,17 @@ Dest      %c = add i16 %b, 1, !dbg !11
   EXPECT_EQ(CInst->getParent(), BBExit);
   EXPECT_EQ(Branch->getParent(), BBEntry);
 
-  // DPVB: should be on Branch as before, remain in entry block.
-  EXPECT_TRUE(InstContainsDPValue(Branch, DPVB));
+  // DVRB: should be on Branch as before, remain in entry block.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(Branch, DVRB));
 
-  // DPVA, should have transferred to BBExit, on C inst.
-  EXPECT_TRUE(InstContainsDPValue(CInst, DPVA));
+  // DVRA, should have transferred to BBExit, on C inst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(CInst, DVRA));
 
-  // DPVConst should be ahead of the moved DPValue, on CInst.
-  EXPECT_TRUE(InstContainsDPValue(CInst, DPVConst));
+  // DVRConst should be ahead of the moved DbgVariableRecord, on CInst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(CInst, DVRConst));
 
-  // Order of DPVA and DPVConst should be thus:
-  EXPECT_TRUE(CheckDPVOrder(CInst, {DPVConst, DPVA}));
+  // Order of DVRA and DVRConst should be thus:
+  EXPECT_TRUE(CheckDVROrder(CInst, {DVRConst, DVRA}));
 }
 
 TEST_F(DbgSpliceTest, DbgSpliceEmpty1) {
@@ -1074,32 +1077,32 @@ TEST_F(DbgSpliceTest, DbgSpliceEmpty1) {
   /*
         define i16 @f(i16 %a) !dbg !6 {
 BBEntry entry:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 First     %b = add i16 %a, 1, !dbg !11 DVRB      call
+void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()),
+!dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata
+!DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1, !dbg !11 ret i16 0,
+!dbg !11
         }
 
     Splice from BBEntry.getFirstInsertionPt to First -- this implicitly is a
-    splice of DPVA, but the iterators are pointing at the same instruction. The
+    splice of DVRA, but the iterators are pointing at the same instruction. The
     only difference is the setting of the head bit. Insert at head of Dest,
-    i.e. before DPVConst. Becomes;
+    i.e. before DVRConst. Becomes;
 
         define i16 @f(i16 %a) !dbg !6 {
 First     %b = add i16 %a, 1, !dbg !11
-DPVB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-Last      br label %exit, !dbg !11
+DVRB      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata
+!DIExpression()), !dbg !11 Last      br label %exit, !dbg !11
 
 BBExit  exit:
-DPVA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
-DPVConst  call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
-Dest      %c = add i16 %b, 1, !dbg !11
-          ret i16 0, !dbg !11
+DVRA      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata
+!DIExpression()), !dbg !11 DVRConst  call void @llvm.dbg.value(metadata i16 0,
+metadata !9, metadata !DIExpression()), !dbg !11 Dest      %c = add i16 %b, 1,
+!dbg !11 ret i16 0, !dbg !11
         }
 
   */
@@ -1108,21 +1111,21 @@ Dest      %c = add i16 %b, 1, !dbg !11
   EXPECT_EQ(CInst->getParent(), BBExit);
   EXPECT_EQ(Branch->getParent(), BBEntry);
 
-  // DPVB: should be on Branch as before, remain in entry block.
-  EXPECT_TRUE(InstContainsDPValue(Branch, DPVB));
+  // DVRB: should be on Branch as before, remain in entry block.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(Branch, DVRB));
 
-  // DPVA, should have transferred to BBExit, on C inst.
-  EXPECT_TRUE(InstContainsDPValue(CInst, DPVA));
+  // DVRA, should have transferred to BBExit, on C inst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(CInst, DVRA));
 
-  // DPVConst should be ahead of the moved DPValue, on CInst.
-  EXPECT_TRUE(InstContainsDPValue(CInst, DPVConst));
+  // DVRConst should be ahead of the moved DbgVariableRecord, on CInst.
+  EXPECT_TRUE(InstContainsDbgVariableRecord(CInst, DVRConst));
 
-  // Order of DPVA and DPVConst should be thus:
-  EXPECT_TRUE(CheckDPVOrder(CInst, {DPVA, DPVConst}));
+  // Order of DVRA and DVRConst should be thus:
+  EXPECT_TRUE(CheckDVROrder(CInst, {DVRA, DVRConst}));
 }
 
-// If we splice new instructions into a block with trailing DPValues, then
-// the trailing DPValues should get flushed back out.
+// If we splice new instructions into a block with trailing DbgVariableRecords,
+// then the trailing DbgVariableRecords should get flushed back out.
 TEST(BasicBlockDbgInfoTest, DbgSpliceTrailing) {
   LLVMContext C;
   UseNewDbgInfoFormat = true;
@@ -1159,7 +1162,7 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceTrailing) {
   BasicBlock &Exit = *Entry.getNextNode();
   M->convertToNewDbgValues();
 
-  // Begin by forcing entry block to have dangling DPValue.
+  // Begin by forcing entry block to have dangling DbgVariableRecord.
   Entry.getTerminator()->eraseFromParent();
   ASSERT_NE(Entry.getTrailingDbgRecords(), nullptr);
   EXPECT_TRUE(Entry.empty());
@@ -1167,8 +1170,8 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceTrailing) {
   // Now transfer the entire contents of the exit block into the entry.
   Entry.splice(Entry.end(), &Exit, Exit.begin(), Exit.end());
 
-  // The trailing DPValue should have been placed at the front of what's been
-  // spliced in.
+  // The trailing DbgVariableRecord should have been placed at the front of
+  // what's been spliced in.
   Instruction *BInst = &*Entry.begin();
   ASSERT_TRUE(BInst->DbgMarker);
   EXPECT_EQ(BInst->DbgMarker->StoredDbgRecords.size(), 1u);
@@ -1176,10 +1179,10 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceTrailing) {
   UseNewDbgInfoFormat = false;
 }
 
-// When we remove instructions from the program, adjacent DPValues coalesce
-// together into one DPMarker. In "old" dbg.value mode you could re-insert
-// the removed instruction back into the middle of a sequence of dbg.values.
-// Test that this can be replicated correctly by DPValues
+// When we remove instructions from the program, adjacent DbgVariableRecords
+// coalesce together into one DPMarker. In "old" dbg.value mode you could
+// re-insert the removed instruction back into the middle of a sequence of
+// dbg.values. Test that this can be replicated correctly by DbgVariableRecords
 TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
   LLVMContext C;
   UseNewDbgInfoFormat = true;
@@ -1221,7 +1224,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
   Instruction *RetInst = AddInst->getNextNode();
   ASSERT_TRUE(isa<ReturnInst>(RetInst));
 
-  // add and sub should both have one DPValue on add and ret.
+  // add and sub should both have one DbgVariableRecord on add and ret.
   EXPECT_FALSE(SubInst->hasDbgRecords());
   EXPECT_TRUE(AddInst->hasDbgRecords());
   EXPECT_TRUE(RetInst->hasDbgRecords());
@@ -1232,20 +1235,21 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
 
   // The Supported (TM) code sequence for removing then reinserting insts
   // after another instruction:
-  std::optional<DPValue::self_iterator> Pos =
+  std::optional<DbgVariableRecord::self_iterator> Pos =
       AddInst->getDbgReinsertionPosition();
   AddInst->removeFromParent();
 
   // We should have a re-insertion position.
   ASSERT_TRUE(Pos);
-  // Both DPValues should now be attached to the ret inst.
+  // Both DbgVariableRecords should now be attached to the ret inst.
   auto R3 = RetInst->getDbgRecordRange();
   EXPECT_EQ(std::distance(R3.begin(), R3.end()), 2u);
 
   // Re-insert and re-insert.
   AddInst->insertAfter(SubInst);
   Entry.reinsertInstInDbgRecords(AddInst, Pos);
-  // We should be back into a position of having one DPValue on add and ret.
+  // We should be back into a position of having one DbgVariableRecord on add
+  // and ret.
   EXPECT_FALSE(SubInst->hasDbgRecords());
   EXPECT_TRUE(AddInst->hasDbgRecords());
   EXPECT_TRUE(RetInst->hasDbgRecords());
@@ -1257,9 +1261,9 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
   UseNewDbgInfoFormat = false;
 }
 
-// Test instruction removal and re-insertion, this time with one DPValue that
-// should hop up one instruction.
-TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDPValue) {
+// Test instruction removal and re-insertion, this time with one
+// DbgVariableRecord that should hop up one instruction.
+TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDbgVariableRecord) {
   LLVMContext C;
   UseNewDbgInfoFormat = true;
 
@@ -1299,7 +1303,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDPValue) {
   Instruction *RetInst = AddInst->getNextNode();
   ASSERT_TRUE(isa<ReturnInst>(RetInst));
 
-  // There should be one DPValue.
+  // There should be one DbgVariableRecord.
   EXPECT_FALSE(SubInst->hasDbgRecords());
   EXPECT_TRUE(AddInst->hasDbgRecords());
   EXPECT_FALSE(RetInst->hasDbgRecords());
@@ -1307,13 +1311,13 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDPValue) {
   EXPECT_EQ(std::distance(R1.begin(), R1.end()), 1u);
 
   // The Supported (TM) code sequence for removing then reinserting insts:
-  std::optional<DPValue::self_iterator> Pos =
+  std::optional<DbgVariableRecord::self_iterator> Pos =
       AddInst->getDbgReinsertionPosition();
   AddInst->removeFromParent();
 
-  // No re-insertion position as there were no DPValues on the ret.
+  // No re-insertion position as there were no DbgVariableRecords on the ret.
   ASSERT_FALSE(Pos);
-  // The single DPValue should now be attached to the ret inst.
+  // The single DbgVariableRecord should now be attached to the ret inst.
   EXPECT_TRUE(RetInst->hasDbgRecords());
   auto R2 = RetInst->getDbgRecordRange();
   EXPECT_EQ(std::distance(R2.begin(), R2.end()), 1u);
@@ -1321,7 +1325,8 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDPValue) {
   // Re-insert and re-insert.
   AddInst->insertAfter(SubInst);
   Entry.reinsertInstInDbgRecords(AddInst, Pos);
-  // We should be back into a position of having one DPValue on the AddInst.
+  // We should be back into a position of having one DbgVariableRecord on the
+  // AddInst.
   EXPECT_FALSE(SubInst->hasDbgRecords());
   EXPECT_TRUE(AddInst->hasDbgRecords());
   EXPECT_FALSE(RetInst->hasDbgRecords());
@@ -1374,7 +1379,7 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty1) {
   BasicBlock &Exit = *Entry.getNextNode();
   M->convertToNewDbgValues();
 
-  // Begin by forcing entry block to have dangling DPValue.
+  // Begin by forcing entry block to have dangling DbgVariableRecord.
   Entry.getTerminator()->eraseFromParent();
   ASSERT_NE(Entry.getTrailingDbgRecords(), nullptr);
   EXPECT_TRUE(Entry.empty());
@@ -1388,16 +1393,16 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty1) {
   Instruction *BInst = &*Entry.begin();
   ASSERT_TRUE(BInst->hasDbgRecords());
   EXPECT_EQ(BInst->DbgMarker->StoredDbgRecords.size(), 2u);
-  SmallVector<DPValue *, 2> DPValues;
-  for (DbgRecord &DPV : BInst->getDbgRecordRange())
-    DPValues.push_back(cast<DPValue>(&DPV));
+  SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
+  for (DbgRecord &DVR : BInst->getDbgRecordRange())
+    DbgVariableRecords.push_back(cast<DbgVariableRecord>(&DVR));
 
-  EXPECT_EQ(DPValues[0]->getVariableLocationOp(0), F.getArg(0));
-  Value *SecondDPVValue = DPValues[1]->getVariableLocationOp(0);
-  ASSERT_TRUE(isa<ConstantInt>(SecondDPVValue));
-  EXPECT_EQ(cast<ConstantInt>(SecondDPVValue)->getZExtValue(), 0ull);
+  EXPECT_EQ(DbgVariableRecords[0]->getVariableLocationOp(0), F.getArg(0));
+  Value *SecondDVRValue = DbgVariableRecords[1]->getVariableLocationOp(0);
+  ASSERT_TRUE(isa<ConstantInt>(SecondDVRValue));
+  EXPECT_EQ(cast<ConstantInt>(SecondDVRValue)->getZExtValue(), 0ull);
 
-  // No trailing DPValues in the entry block now.
+  // No trailing DbgVariableRecords in the entry block now.
   EXPECT_EQ(Entry.getTrailingDbgRecords(), nullptr);
 
   UseNewDbgInfoFormat = false;
@@ -1444,31 +1449,31 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty2) {
   BasicBlock &Exit = *Entry.getNextNode();
   M->convertToNewDbgValues();
 
-  // Begin by forcing entry block to have dangling DPValue.
+  // Begin by forcing entry block to have dangling DbgVariableRecord.
   Entry.getTerminator()->eraseFromParent();
   ASSERT_NE(Entry.getTrailingDbgRecords(), nullptr);
   EXPECT_TRUE(Entry.empty());
 
   // Now transfer into the entry block -- fetching the first instruction with
   // begin and then calling getIterator clears the "head" bit, meaning that the
-  // range to move will not include any leading DPValues.
+  // range to move will not include any leading DbgVariableRecords.
   Entry.splice(Entry.end(), &Exit, Exit.begin()->getIterator(), Exit.end());
 
   // We should now have one dbg.values on the first instruction, %a.
   Instruction *BInst = &*Entry.begin();
   ASSERT_TRUE(BInst->hasDbgRecords());
   EXPECT_EQ(BInst->DbgMarker->StoredDbgRecords.size(), 1u);
-  SmallVector<DPValue *, 2> DPValues;
-  for (DbgRecord &DPV : BInst->getDbgRecordRange())
-    DPValues.push_back(cast<DPValue>(&DPV));
+  SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
+  for (DbgRecord &DVR : BInst->getDbgRecordRange())
+    DbgVariableRecords.push_back(cast<DbgVariableRecord>(&DVR));
 
-  EXPECT_EQ(DPValues[0]->getVariableLocationOp(0), F.getArg(0));
-  // No trailing DPValues in the entry block now.
+  EXPECT_EQ(DbgVariableRecords[0]->getVariableLocationOp(0), F.getArg(0));
+  // No trailing DbgVariableRecords in the entry block now.
   EXPECT_EQ(Entry.getTrailingDbgRecords(), nullptr);
 
   // We should have nothing left in the exit block...
   EXPECT_TRUE(Exit.empty());
-  // ... except for some dangling DPValues.
+  // ... except for some dangling DbgVariableRecords.
   EXPECT_NE(Exit.getTrailingDbgRecords(), nullptr);
   EXPECT_FALSE(Exit.getTrailingDbgRecords()->empty());
   Exit.getTrailingDbgRecords()->eraseFromParent();

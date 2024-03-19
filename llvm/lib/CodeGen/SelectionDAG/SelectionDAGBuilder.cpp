@@ -1245,14 +1245,14 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
     }
   }
 
-  // We must skip DPValues if they've already been processed above as we
-  // have just emitted the debug values resulting from assignment tracking
-  // analysis, making any existing DPValues redundant (and probably less
-  // correct). We still need to process DPLabels. This does sink DPLabels
+  // We must skip DbgVariableRecords if they've already been processed above as
+  // we have just emitted the debug values resulting from assignment tracking
+  // analysis, making any existing DbgVariableRecords redundant (and probably
+  // less correct). We still need to process DPLabels. This does sink DPLabels
   // to the bottom of the group of debug records. That sholdn't be important
-  // as it does so deterministcally and ordering between DPLabels and DPValues
-  // is immaterial (other than for MIR/IR printing).
-  bool SkipDPValues = DAG.getFunctionVarLocs();
+  // as it does so deterministcally and ordering between DPLabels and
+  // DbgVariableRecords is immaterial (other than for MIR/IR printing).
+  bool SkipDbgVariableRecords = DAG.getFunctionVarLocs();
   // Is there is any debug-info attached to this instruction, in the form of
   // DbgRecord non-instruction debug-info records.
   for (DbgRecord &DR : I.getDbgRecordRange()) {
@@ -1264,44 +1264,45 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
       continue;
     }
 
-    if (SkipDPValues)
+    if (SkipDbgVariableRecords)
       continue;
-    DPValue &DPV = cast<DPValue>(DR);
-    DILocalVariable *Variable = DPV.getVariable();
-    DIExpression *Expression = DPV.getExpression();
+    DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
+    DILocalVariable *Variable = DVR.getVariable();
+    DIExpression *Expression = DVR.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
 
-    if (DPV.getType() == DPValue::LocationType::Declare) {
-      if (FuncInfo.PreprocessedDPVDeclares.contains(&DPV))
+    if (DVR.getType() == DbgVariableRecord::LocationType::Declare) {
+      if (FuncInfo.PreprocessedDVRDeclares.contains(&DVR))
         continue;
-      LLVM_DEBUG(dbgs() << "SelectionDAG visiting dbg_declare: " << DPV
+      LLVM_DEBUG(dbgs() << "SelectionDAG visiting dbg_declare: " << DVR
                         << "\n");
-      handleDebugDeclare(DPV.getVariableLocationOp(0), Variable, Expression,
-                         DPV.getDebugLoc());
+      handleDebugDeclare(DVR.getVariableLocationOp(0), Variable, Expression,
+                         DVR.getDebugLoc());
       continue;
     }
 
-    // A DPValue with no locations is a kill location.
-    SmallVector<Value *, 4> Values(DPV.location_ops());
+    // A DbgVariableRecord with no locations is a kill location.
+    SmallVector<Value *, 4> Values(DVR.location_ops());
     if (Values.empty()) {
-      handleKillDebugValue(Variable, Expression, DPV.getDebugLoc(),
+      handleKillDebugValue(Variable, Expression, DVR.getDebugLoc(),
                            SDNodeOrder);
       continue;
     }
 
-    // A DPValue with an undef or absent location is also a kill location.
+    // A DbgVariableRecord with an undef or absent location is also a kill
+    // location.
     if (llvm::any_of(Values,
                      [](Value *V) { return !V || isa<UndefValue>(V); })) {
-      handleKillDebugValue(Variable, Expression, DPV.getDebugLoc(),
+      handleKillDebugValue(Variable, Expression, DVR.getDebugLoc(),
                            SDNodeOrder);
       continue;
     }
 
-    bool IsVariadic = DPV.hasArgList();
-    if (!handleDebugValue(Values, Variable, Expression, DPV.getDebugLoc(),
+    bool IsVariadic = DVR.hasArgList();
+    if (!handleDebugValue(Values, Variable, Expression, DVR.getDebugLoc(),
                           SDNodeOrder, IsVariadic)) {
       addDanglingDebugInfo(Values, Variable, Expression, IsVariadic,
-                           DPV.getDebugLoc(), SDNodeOrder);
+                           DVR.getDebugLoc(), SDNodeOrder);
     }
   }
 }

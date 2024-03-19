@@ -27,12 +27,13 @@
 //    %bar = void call @ext(%foo)
 //       ; bar->DbgMarker = {
 //       ;   StoredDbgRecords = {
-//       ;     DPValue(metadata i32 %foo, ...)
+//       ;     DbgVariableRecord(metadata i32 %foo, ...)
 //       ;   }
 //       ; }
 //       ;; There is a debug-info record in front of the %bar instruction,
 //       ;; thus it points at a DPMarker object. That DPMarker contains a
-//       ;; DPValue in it's ilist, storing the equivalent information to the
+//       ;; DbgVariableRecord in it's ilist, storing the equivalent information
+//       to the
 //       ;; dbg.value above: the Value, DILocalVariable, etc.
 //
 // This structure separates the two concerns of the position of the debug-info
@@ -66,7 +67,7 @@ class DbgInfoIntrinsic;
 class DbgLabelInst;
 class DIAssignID;
 class DPMarker;
-class DPValue;
+class DbgVariableRecord;
 class raw_ostream;
 
 /// A typed tracking MDNode reference that does not require a definition for its
@@ -219,7 +220,8 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DbgRecord &R) {
 
 /// Records a position in IR for a source label (DILabel). Corresponds to the
 /// llvm.dbg.label intrinsic.
-/// FIXME: Rename DbgLabelRecord when DPValue is renamed to DbgVariableRecord.
+/// FIXME: Rename DbgLabelRecord when DbgVariableRecord is renamed to
+/// DbgVariableRecord.
 class DPLabel : public DbgRecord {
   DbgRecordParamRef<DILabel> Label;
 
@@ -257,7 +259,7 @@ public:
 ///
 /// This class inherits from DebugValueUser to allow LLVM's metadata facilities
 /// to update our references to metadata beneath our feet.
-class DPValue : public DbgRecord, protected DebugValueUser {
+class DbgVariableRecord : public DbgRecord, protected DebugValueUser {
   friend class DebugValueUser;
 
 public:
@@ -269,9 +271,10 @@ public:
     End, ///< Marks the end of the concrete types.
     Any, ///< To indicate all LocationTypes in searches.
   };
-  /// Classification of the debug-info record that this DPValue represents.
-  /// Essentially, "is this a dbg.value or dbg.declare?". dbg.declares are not
-  /// currently supported, but it would be trivial to do so.
+  /// Classification of the debug-info record that this DbgVariableRecord
+  /// represents. Essentially, "is this a dbg.value or dbg.declare?".
+  /// dbg.declares are not currently supported, but it would be trivial to do
+  /// so.
   /// FIXME: We could use spare padding bits from DbgRecord for this.
   LocationType Type;
 
@@ -284,63 +287,69 @@ public:
   DbgRecordParamRef<DIExpression> AddressExpression;
 
 public:
-  /// Create a new DPValue representing the intrinsic \p DVI, for example the
-  /// assignment represented by a dbg.value.
-  DPValue(const DbgVariableIntrinsic *DVI);
-  DPValue(const DPValue &DPV);
-  /// Directly construct a new DPValue representing a dbg.value intrinsic
-  /// assigning \p Location to the DV / Expr / DI variable.
-  DPValue(Metadata *Location, DILocalVariable *DV, DIExpression *Expr,
-          const DILocation *DI, LocationType Type = LocationType::Value);
-  DPValue(Metadata *Value, DILocalVariable *Variable, DIExpression *Expression,
-          DIAssignID *AssignID, Metadata *Address,
-          DIExpression *AddressExpression, const DILocation *DI);
+  /// Create a new DbgVariableRecord representing the intrinsic \p DVI, for
+  /// example the assignment represented by a dbg.value.
+  DbgVariableRecord(const DbgVariableIntrinsic *DVI);
+  DbgVariableRecord(const DbgVariableRecord &DVR);
+  /// Directly construct a new DbgVariableRecord representing a dbg.value
+  /// intrinsic assigning \p Location to the DV / Expr / DI variable.
+  DbgVariableRecord(Metadata *Location, DILocalVariable *DV, DIExpression *Expr,
+                    const DILocation *DI,
+                    LocationType Type = LocationType::Value);
+  DbgVariableRecord(Metadata *Value, DILocalVariable *Variable,
+                    DIExpression *Expression, DIAssignID *AssignID,
+                    Metadata *Address, DIExpression *AddressExpression,
+                    const DILocation *DI);
 
 private:
   /// Private constructor for creating new instances during parsing only. Only
-  /// called through `createUnresolvedDPValue` below, which makes clear that
-  /// this is used for parsing only, and will later return a subclass depending
-  /// on which Type is passed.
-  DPValue(LocationType Type, Metadata *Val, MDNode *Variable,
-          MDNode *Expression, MDNode *AssignID, Metadata *Address,
-          MDNode *AddressExpression, MDNode *DI);
+  /// called through `createUnresolvedDbgVariableRecord` below, which makes
+  /// clear that this is used for parsing only, and will later return a subclass
+  /// depending on which Type is passed.
+  DbgVariableRecord(LocationType Type, Metadata *Val, MDNode *Variable,
+                    MDNode *Expression, MDNode *AssignID, Metadata *Address,
+                    MDNode *AddressExpression, MDNode *DI);
 
 public:
-  /// Used to create DPValues during parsing, where some metadata references may
-  /// still be unresolved. Although for some fields a generic `Metadata*`
-  /// argument is accepted for forward type-references, the verifier and
-  /// accessors will reject incorrect types later on. The function is used for
-  /// all types of DPValues for simplicity while parsing, but asserts if any
-  /// necessary fields are empty or unused fields are not empty, i.e. if the
-  /// #dbg_assign fields are used for a non-dbg-assign type.
-  static DPValue *createUnresolvedDPValue(LocationType Type, Metadata *Val,
-                                          MDNode *Variable, MDNode *Expression,
-                                          MDNode *AssignID, Metadata *Address,
-                                          MDNode *AddressExpression,
-                                          MDNode *DI);
+  /// Used to create DbgVariableRecords during parsing, where some metadata
+  /// references may still be unresolved. Although for some fields a generic
+  /// `Metadata*` argument is accepted for forward type-references, the verifier
+  /// and accessors will reject incorrect types later on. The function is used
+  /// for all types of DbgVariableRecords for simplicity while parsing, but
+  /// asserts if any necessary fields are empty or unused fields are not empty,
+  /// i.e. if the #dbg_assign fields are used for a non-dbg-assign type.
+  static DbgVariableRecord *
+  createUnresolvedDbgVariableRecord(LocationType Type, Metadata *Val,
+                                    MDNode *Variable, MDNode *Expression,
+                                    MDNode *AssignID, Metadata *Address,
+                                    MDNode *AddressExpression, MDNode *DI);
 
-  static DPValue *createDPVAssign(Value *Val, DILocalVariable *Variable,
-                                  DIExpression *Expression,
-                                  DIAssignID *AssignID, Value *Address,
-                                  DIExpression *AddressExpression,
-                                  const DILocation *DI);
-  static DPValue *createLinkedDPVAssign(Instruction *LinkedInstr, Value *Val,
-                                        DILocalVariable *Variable,
-                                        DIExpression *Expression,
-                                        Value *Address,
-                                        DIExpression *AddressExpression,
-                                        const DILocation *DI);
+  static DbgVariableRecord *
+  createDVRAssign(Value *Val, DILocalVariable *Variable,
+                  DIExpression *Expression, DIAssignID *AssignID,
+                  Value *Address, DIExpression *AddressExpression,
+                  const DILocation *DI);
+  static DbgVariableRecord *
+  createLinkedDVRAssign(Instruction *LinkedInstr, Value *Val,
+                        DILocalVariable *Variable, DIExpression *Expression,
+                        Value *Address, DIExpression *AddressExpression,
+                        const DILocation *DI);
 
-  static DPValue *createDPValue(Value *Location, DILocalVariable *DV,
-                                DIExpression *Expr, const DILocation *DI);
-  static DPValue *createDPValue(Value *Location, DILocalVariable *DV,
-                                DIExpression *Expr, const DILocation *DI,
-                                DPValue &InsertBefore);
-  static DPValue *createDPVDeclare(Value *Address, DILocalVariable *DV,
-                                   DIExpression *Expr, const DILocation *DI);
-  static DPValue *createDPVDeclare(Value *Address, DILocalVariable *DV,
-                                   DIExpression *Expr, const DILocation *DI,
-                                   DPValue &InsertBefore);
+  static DbgVariableRecord *createDbgVariableRecord(Value *Location,
+                                                    DILocalVariable *DV,
+                                                    DIExpression *Expr,
+                                                    const DILocation *DI);
+  static DbgVariableRecord *
+  createDbgVariableRecord(Value *Location, DILocalVariable *DV,
+                          DIExpression *Expr, const DILocation *DI,
+                          DbgVariableRecord &InsertBefore);
+  static DbgVariableRecord *createDVRDeclare(Value *Address,
+                                             DILocalVariable *DV,
+                                             DIExpression *Expr,
+                                             const DILocation *DI);
+  static DbgVariableRecord *
+  createDVRDeclare(Value *Address, DILocalVariable *DV, DIExpression *Expr,
+                   const DILocation *DI, DbgVariableRecord &InsertBefore);
 
   /// Iterator for ValueAsMetadata that internally uses direct pointer iteration
   /// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the
@@ -412,7 +421,8 @@ public:
   unsigned getNumVariableLocationOps() const;
 
   bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
-  /// Returns true if this DPValue has no empty MDNodes in its location list.
+  /// Returns true if this DbgVariableRecord has no empty MDNodes in its
+  /// location list.
   bool hasValidLocation() const { return getVariableLocationOp(0) != nullptr; }
 
   /// Does this describe the address of a local variable. True for dbg.addr
@@ -445,10 +455,10 @@ public:
   /// replaceVariableLocationOp and addVariableLocationOps should be used where
   /// possible to avoid creating invalid state.
   void setRawLocation(Metadata *NewLocation) {
-    assert(
-        (isa<ValueAsMetadata>(NewLocation) || isa<DIArgList>(NewLocation) ||
-         isa<MDNode>(NewLocation)) &&
-        "Location for a DPValue must be either ValueAsMetadata or DIArgList");
+    assert((isa<ValueAsMetadata>(NewLocation) || isa<DIArgList>(NewLocation) ||
+            isa<MDNode>(NewLocation)) &&
+           "Location for a DbgVariableRecord must be either ValueAsMetadata or "
+           "DIArgList");
     resetDebugValue(0, NewLocation);
   }
 
@@ -456,12 +466,12 @@ public:
   /// is described.
   std::optional<uint64_t> getFragmentSizeInBits() const;
 
-  bool isEquivalentTo(const DPValue &Other) const {
+  bool isEquivalentTo(const DbgVariableRecord &Other) const {
     return DbgLoc == Other.DbgLoc && isIdenticalToWhenDefined(Other);
   }
   // Matches the definition of the Instruction version, equivalent to above but
   // without checking DbgLoc.
-  bool isIdenticalToWhenDefined(const DPValue &Other) const {
+  bool isIdenticalToWhenDefined(const DbgVariableRecord &Other) const {
     return std::tie(Type, DebugValues, Variable, Expression,
                     AddressExpression) ==
            std::tie(Other.Type, Other.DebugValues, Other.Variable,
@@ -497,10 +507,10 @@ public:
 
   /// @}
 
-  DPValue *clone() const;
-  /// Convert this DPValue back into a dbg.value intrinsic.
+  DbgVariableRecord *clone() const;
+  /// Convert this DbgVariableRecord back into a dbg.value intrinsic.
   /// \p InsertBefore Optional position to insert this intrinsic.
-  /// \returns A new dbg.value intrinsic representiung this DPValue.
+  /// \returns A new dbg.value intrinsic representiung this DbgVariableRecord.
   DbgVariableIntrinsic *createDebugIntrinsic(Module *M,
                                              Instruction *InsertBefore) const;
 
@@ -517,12 +527,13 @@ public:
   }
 };
 
-/// Filter the DbgRecord range to DPValue types only and downcast.
+/// Filter the DbgRecord range to DbgVariableRecord types only and downcast.
 static inline auto
 filterDbgVars(iterator_range<simple_ilist<DbgRecord>::iterator> R) {
   return map_range(
-      make_filter_range(R, [](DbgRecord &E) { return isa<DPValue>(E); }),
-      [](DbgRecord &E) { return std::ref(cast<DPValue>(E)); });
+      make_filter_range(R,
+                        [](DbgRecord &E) { return isa<DbgVariableRecord>(E); }),
+      [](DbgRecord &E) { return std::ref(cast<DbgVariableRecord>(E)); });
 }
 
 /// Per-instruction record of debug-info. If an Instruction is the position of
