@@ -3142,7 +3142,7 @@ def fir_CUDAKernelOp : fir_Op<"cuda_kernel", [AttrSizedOperandSegments,
   }];
 
   let arguments = (ins
-    Variadic<I32>:$grid, // empty means `*`. 
+    Variadic<I32>:$grid, // empty means `*`
     Variadic<I32>:$block, // empty means `*`
     Optional<I32>:$stream,
     Variadic<Index>:$lowerbound,
