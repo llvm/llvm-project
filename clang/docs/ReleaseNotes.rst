@@ -258,7 +258,7 @@ Improvements to Clang's diagnostics
 - Clang now provides improved warnings for the ``cleanup`` attribute to detect misuse scenarios,
   such as attempting to call ``free`` on an unallocated object. Fixes
   `#79443 <https://github.com/llvm/llvm-project/issues/79443>`_.
-  
+
 - Clang will now print ``static_assert`` failure details for binary operators on
   structs, vectors, or arrays. The diagnostic is limited in size (the limit may
   be adjusted with `-fconstexpr-print-value-size-limit=N`), and is not emitted
