@@ -5076,71 +5076,6 @@ MutableFunctionEffectSet::operator|=(FunctionEffectSet RHS) {
   return *this;
 }
 
-using FunctionEffectSpan = llvm::ArrayRef<const FunctionEffect>;
-
-llvm::hash_code hash_value(const FunctionEffect &Effect) {
-  return Effect.opaqueRepr();
-}
-
-namespace llvm {
-template <> struct DenseMapInfo<FunctionEffectSpan> {
-  static FunctionEffectSpan getEmptyKey() {
-    return {static_cast<const FunctionEffect *>(nullptr), size_t(0)};
-  }
-  static FunctionEffectSpan getTombstoneKey() {
-    return {reinterpret_cast<const FunctionEffect *>(intptr_t(-1)), size_t(0)};
-  }
-  static unsigned getHashValue(const FunctionEffectSpan &Val) {
-    hash_code hash1 = hash_value(Val.size());
-    // Treat the FunctionEffects as a span of integers
-    const FunctionEffect *Begin = Val.begin();
-    const FunctionEffect *End = Val.end();
-    hash_code hash2 =
-        hash_combine_range(reinterpret_cast<const uint32_t *>(Begin),
-                           reinterpret_cast<const uint32_t *>(End));
-    return hash_combine(hash1, hash2);
-  }
-  static bool isEqual(const FunctionEffectSpan &LHS,
-                      const FunctionEffectSpan &RHS) {
-    if (LHS.size() != RHS.size()) {
-      return false;
-    }
-    // distinguish empty from tombstone
-    if (LHS.size() == 0) {
-      return LHS.data() == RHS.data();
-    }
-    return std::equal(LHS.begin(), LHS.end(), RHS.begin());
-  }
-};
-} // namespace llvm
-
-// The ASTContext
-FunctionEffectSet
-FunctionEffectSet::create(ASTContext &C, const MutableFunctionEffectSet &FX) {
-  if (FX.empty()) {
-    return {};
-  }
-
-  // TODO: Put this in the ASTContext
-  // TODO: And destroy the memory
-  static llvm::DenseSet<FunctionEffectSpan> UniquedFXSets;
-
-  // Do we already have the incoming set?
-  const auto Iter = UniquedFXSets.find_as(FX);
-  if (Iter != UniquedFXSets.end()) {
-    return FunctionEffectSet(*Iter);
-  }
-
-  // Copy the incoming array to permanent storage.
-  FunctionEffect *Storage = new FunctionEffect[FX.size()];
-  std::copy(FX.begin(), FX.end(), Storage);
-
-  // Make a new wrapper and insert it into the set.
-  auto [InsIter, _] =
-      UniquedFXSets.insert(FunctionEffectSpan(Storage, FX.size()));
-  return FunctionEffectSet(*InsIter);
-}
-
 FunctionEffectSet FunctionEffectSet::getUnion(ASTContext &C,
                                               const FunctionEffectSet &LHS,
                                               const FunctionEffectSet &RHS) {
@@ -5159,7 +5094,7 @@ FunctionEffectSet FunctionEffectSet::getUnion(ASTContext &C,
   std::set_union(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
                  std::back_inserter(Vec));
   // The result of a set operation is an ordered/unique set.
-  return FunctionEffectSet::create(C, Vec);
+  return C.getUniquedFunctionEffectSet(Vec);
 }
 
 MutableFunctionEffectSet

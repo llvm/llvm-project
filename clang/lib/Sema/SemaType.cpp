@@ -8041,7 +8041,7 @@ static bool handleNoLockNoAllocTypeAttr(TypeProcessingState &state,
   }
 
   EPI.FunctionEffects =
-      FunctionEffectSet::create(state.getSema().getASTContext(), NewFX);
+      state.getSema().getASTContext().getUniquedFunctionEffectSet(NewFX);
   QualType newtype = S.Context.getFunctionType(FPT->getReturnType(),
                                                FPT->getParamTypes(), EPI);
   type = unwrapped.wrap(S, newtype->getAs<FunctionType>());

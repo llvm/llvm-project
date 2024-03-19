@@ -69,6 +69,8 @@ class DiagnosticsEngine;
 class DynTypedNodeList;
 class Expr;
 enum class FloatModeKind;
+class FunctionEffect;
+class FunctionEffectSet;
 class GlobalDecl;
 class IdentifierTable;
 class LangOptions;
@@ -458,6 +460,16 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   /// This is the top-level (C++20) Named module we are building.
   Module *CurrentCXXNamedModule = nullptr;
+
+  class FunctionEffectSetUniquing {
+    llvm::DenseSet<llvm::ArrayRef<const FunctionEffect>> Set;
+
+  public:
+    FunctionEffectSet getUniqued(llvm::ArrayRef<const FunctionEffect> FX);
+
+    ~FunctionEffectSetUniquing();
+  };
+  FunctionEffectSetUniquing UniquedFunctionEffectSet;
 
   static constexpr unsigned ConstantArrayTypesLog2InitSize = 8;
   static constexpr unsigned GeneralTypesLog2InitSize = 9;
@@ -1064,6 +1076,12 @@ public:
 
   /// Get module under construction, nullptr if this is not a C++20 module.
   Module *getCurrentNamedModule() const { return CurrentCXXNamedModule; }
+
+  /// Get or create a uniqued, immutable FunctionEffectSet.
+  FunctionEffectSet
+  getUniquedFunctionEffectSet(llvm::ArrayRef<const FunctionEffect> FX) {
+    return UniquedFunctionEffectSet.getUniqued(FX);
+  }
 
   TranslationUnitDecl *getTranslationUnitDecl() const {
     return TUDecl->getMostRecentDecl();

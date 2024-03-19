@@ -4333,6 +4333,8 @@ public:
 // sorted spans, which are compatible with the STL set algorithms.
 class FunctionEffectSet {
 private:
+  friend class ASTContext; // so it can call the private constructor
+
   explicit FunctionEffectSet(llvm::ArrayRef<const FunctionEffect> Array)
       : Impl(Array) {}
 
@@ -4367,10 +4369,6 @@ public:
   bool operator<(const FunctionEffectSet &RHS) const;
 
   void dump(llvm::raw_ostream &OS) const;
-
-  /// Factory function: returns instances with uniqued implementations.
-  static FunctionEffectSet create(ASTContext &C,
-                                  const MutableFunctionEffectSet &FX);
 
   /// Intersection.
   MutableFunctionEffectSet operator&(const FunctionEffectSet &RHS) const;

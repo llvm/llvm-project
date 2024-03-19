@@ -4511,7 +4511,7 @@ FunctionEffectSet FunctionDecl::getFunctionEffects() const {
       FX |= FPT->getFunctionEffects();
     }
   }
-  return FunctionEffectSet::create(getASTContext(), FX);
+  return getASTContext().getUniquedFunctionEffectSet(FX);
 }
 
 //===----------------------------------------------------------------------===//

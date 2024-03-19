@@ -13702,3 +13702,71 @@ StringRef ASTContext::getCUIDHash() const {
   CUIDHash = llvm::utohexstr(llvm::MD5Hash(LangOpts.CUID), /*LowerCase=*/true);
   return CUIDHash;
 }
+
+using FunctionEffectSpan = llvm::ArrayRef<const FunctionEffect>;
+
+llvm::hash_code hash_value(const FunctionEffect &Effect) {
+  return Effect.opaqueRepr();
+}
+
+namespace llvm {
+template <> struct DenseMapInfo<FunctionEffectSpan> {
+  static FunctionEffectSpan getEmptyKey() {
+    return {static_cast<const FunctionEffect *>(nullptr), size_t(0)};
+  }
+  static FunctionEffectSpan getTombstoneKey() {
+    return {reinterpret_cast<const FunctionEffect *>(intptr_t(-1)), size_t(0)};
+  }
+  static unsigned getHashValue(const FunctionEffectSpan &Val) {
+    hash_code hash1 = hash_value(Val.size());
+    // Treat the FunctionEffects as a span of integers
+    const FunctionEffect *Begin = Val.begin();
+    const FunctionEffect *End = Val.end();
+    hash_code hash2 =
+        hash_combine_range(reinterpret_cast<const uint32_t *>(Begin),
+                           reinterpret_cast<const uint32_t *>(End));
+    return hash_combine(hash1, hash2);
+  }
+  static bool isEqual(const FunctionEffectSpan &LHS,
+                      const FunctionEffectSpan &RHS) {
+    if (LHS.size() != RHS.size()) {
+      return false;
+    }
+    // distinguish empty from tombstone
+    if (LHS.size() == 0) {
+      return LHS.data() == RHS.data();
+    }
+    return std::equal(LHS.begin(), LHS.end(), RHS.begin());
+  }
+};
+} // namespace llvm
+
+FunctionEffectSet ASTContext::FunctionEffectSetUniquing::getUniqued(
+    llvm::ArrayRef<const FunctionEffect> FX) {
+  if (FX.empty()) {
+    return {};
+  }
+
+  // Do we already have the incoming set?
+  const auto Iter = Set.find_as(FX);
+  if (Iter != Set.end()) {
+    return FunctionEffectSet(*Iter);
+  }
+
+  // Copy the incoming array to permanent storage.
+  FunctionEffect *Storage = new FunctionEffect[FX.size()];
+  std::copy(FX.begin(), FX.end(), Storage);
+
+  // Make a new wrapper and insert it into the set.
+  llvm::ArrayRef<const FunctionEffect> Arr(Storage, FX.size());
+  auto [InsIter, _] = Set.insert(Arr);
+  return FunctionEffectSet(*InsIter);
+}
+
+ASTContext::FunctionEffectSetUniquing::~FunctionEffectSetUniquing() {
+  for (const auto &ArrRef : Set) {
+    const FunctionEffect *ptrToFX = ArrRef.data();
+    delete[] ptrToFX;
+  }
+  Set.clear();
+}

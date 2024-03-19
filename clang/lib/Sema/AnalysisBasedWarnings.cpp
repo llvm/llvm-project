@@ -2612,7 +2612,7 @@ public:
         FX.insert(Effect);
       }
     }
-    DeclaredVerifiableEffects = FunctionEffectSet::create(Ctx, FX);
+    DeclaredVerifiableEffects = Ctx.getUniquedFunctionEffectSet(FX);
 
     // Check for effects we are not allowed to infer
     FX.clear();
@@ -2639,8 +2639,8 @@ public:
       }
     }
     // FX is now the set of inferrable effects which are not prohibited
-    FXToInfer = FunctionEffectSet::create(
-        Ctx, FunctionEffectSet::create(Ctx, FX) - DeclaredVerifiableEffects);
+    FXToInfer = Ctx.getUniquedFunctionEffectSet(
+        Ctx.getUniquedFunctionEffectSet(FX) - DeclaredVerifiableEffects);
   }
 
   // Hide the way that diagnostics for explicitly required effects vs. inferred
@@ -2722,7 +2722,7 @@ public:
         verified.insert(effect);
       }
     }
-    VerifiedEffects = FunctionEffectSet::create(Ctx, verified);
+    VerifiedEffects = Ctx.getUniquedFunctionEffectSet(verified);
 
     InferrableEffectToFirstDiagnostic =
         std::move(pending.InferrableEffectToFirstDiagnostic);
@@ -2829,7 +2829,7 @@ public:
         }
       }
       AllInferrableEffectsToVerify =
-          FunctionEffectSet::create(Sem.getASTContext(), inferrableEffects);
+          Sem.getASTContext().getUniquedFunctionEffectSet(inferrableEffects);
       if constexpr (DebugLogLevel > 0) {
         llvm::outs() << "AllInferrableEffectsToVerify: ";
         AllInferrableEffectsToVerify.dump(llvm::outs());
