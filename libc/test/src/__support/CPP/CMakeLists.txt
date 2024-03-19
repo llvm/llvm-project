@@ -1,6 +1,16 @@
 add_custom_target(libc-cpp-utils-tests)
 
 add_libc_test(
+  array_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    array_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.array
+  )
+
+add_libc_test(
   bit_test
   SUITE
     libc-cpp-utils-tests
