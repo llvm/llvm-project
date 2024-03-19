@@ -29,6 +29,12 @@
 #define O_NOFOLLOW 00400000
 #endif
 
+#ifdef __aarch64__
+#define O_DIRECT 0200000
+#else
+#define O_DIRECT 00040000
+#endif
+
 #define O_TRUNC 00001000
 #define O_TMPFILE (020000000 | O_DIRECTORY)
 

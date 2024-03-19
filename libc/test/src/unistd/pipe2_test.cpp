@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/linux/fcntl-macros.h"
+#include "include/llvm-libc-macros/linux/watch-queue-macros.h"
 #include "src/errno/libc_errno.h"
 #include "src/unistd/close.h"
 #include "src/unistd/pipe2.h"
@@ -16,6 +18,38 @@
 #include "test/UnitTest/Test.h"
 
 #include <fcntl.h>
+
+TEST(LlvmLibcPipe2Test, Pipe2CreationTest) {
+  int pipefd[2];
+  int flags;
+
+  LIBC_NAMESPACE::libc_errno = 0;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+
+  // Create pipe(2) with all valid flags set
+  #ifdef CONFIG_WATCH_QUEUE
+  flags = O_CLOEXEC | O_NONBLOCK | O_DIRECT | O_NOTIFICATION_PIPE;
+  #else
+  flags = O_CLOEXEC | O_NONBLOCK | O_DIRECT;
+  #endif
+  ASSERT_NE(LIBC_NAMESPACE::pipe2(pipefd, flags), -1);
+  ASSERT_ERRNO_SUCCESS();
+
+  // Check if file descriptors are distinct and valid
+  ASSERT_GE(pipefd[0], 0);
+  ASSERT_GE(pipefd[1], 0);
+  ASSERT_NE(pipefd[0], pipefd[1]);
+
+  // Check file status flags associated with pipe file descriptors
+  ASSERT_TRUE((fcntl(pipefd[0], F_GETFL) & flags) != 0);
+  ASSERT_TRUE((fcntl(pipefd[1], F_GETFL) & flags) != 0);
+
+  // Close the pipe file descriptors
+  ASSERT_NE(LIBC_NAMESPACE::close(pipefd[0]), -1);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_NE(LIBC_NAMESPACE::close(pipefd[1]), -1);
+  ASSERT_ERRNO_SUCCESS();
+}
 
 TEST(LlvmLibcPipe2Test, ReadAndWriteViaPipe2) {
   int pipefd[2];
@@ -46,8 +80,8 @@ TEST(LlvmLibcPipe2Test, ReadAndWriteViaPipe2) {
   ASSERT_ERRNO_SUCCESS();
 }
 
-TEST(LlvmLibcPipe2Test,Pipe2InvalidFlags) {
-  int invalidflags = O_CREAT | O_PATH | O_SYNC;
+TEST(LlvmLibcPipe2Test, Pipe2InvalidFlags) {
+  int invalidflags = 0xDEADBEEF;
   int pipefd[2];
 
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
@@ -55,9 +89,6 @@ TEST(LlvmLibcPipe2Test,Pipe2InvalidFlags) {
 }
 
 TEST(LlvmLibcPipe2Test, Pipe2InvalidPipeFD) {
-  int flags = 0;
-  int invalidpipefd[1];
-
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  ASSERT_THAT(LIBC_NAMESPACE::pipe2(invalidpipefd, flags), Fails(EFAULT));
+  ASSERT_THAT(LIBC_NAMESPACE::pipe2(NULL, 0), Fails(EFAULT));
 }
