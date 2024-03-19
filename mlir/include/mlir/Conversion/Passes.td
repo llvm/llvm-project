@@ -918,7 +918,11 @@ def ConvertSCFToOpenMPPass : Pass<"convert-scf-to-openmp", "ModuleOp"> {
   let options = [
     Option<"numThreads", "num-threads", "unsigned",
            /*default=kUseOpenMPDefaultNumThreads*/"0",
-           "Number of threads to use">
+           "Number of threads to use">,
+    Option<"automaticNumThreads", "automatic-num-threads", "bool",
+           /*default=*/"false",
+           "Automatically set the number of threads inferred from the iteration"
+           "space of the SCF parallel loop">
   ];
 
   let dependentDialects = ["omp::OpenMPDialect", "LLVM::LLVMDialect",

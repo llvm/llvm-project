@@ -356,10 +356,13 @@ namespace {
 struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
   static constexpr unsigned kUseOpenMPDefaultNumThreads = 0;
   unsigned numThreads;
+  bool automaticNumThreads;
 
   ParallelOpLowering(MLIRContext *context,
-                     unsigned numThreads = kUseOpenMPDefaultNumThreads)
-      : OpRewritePattern<scf::ParallelOp>(context), numThreads(numThreads) {}
+                     unsigned numThreads = kUseOpenMPDefaultNumThreads,
+                     bool automaticNumThreads = false)
+      : OpRewritePattern<scf::ParallelOp>(context), numThreads(numThreads),
+        automaticNumThreads(automaticNumThreads) {}
 
   LogicalResult matchAndRewrite(scf::ParallelOp parallelOp,
                                 PatternRewriter &rewriter) const override {
@@ -437,7 +440,37 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
     rewriter.eraseOp(reduce);
 
     Value numThreadsVar;
-    if (numThreads > 0) {
+    if (automaticNumThreads) {
+      unsigned inferredNumThreads = 1;
+      for (auto [lb, ub, step] :
+           llvm::zip_equal(parallelOp.getLowerBound(),
+                           parallelOp.getUpperBound(), parallelOp.getStep())) {
+        std::optional<int64_t> cstLb = getConstantIntValue(lb);
+        std::optional<int64_t> cstUb = getConstantIntValue(ub);
+        std::optional<int64_t> cstStep = getConstantIntValue(step);
+
+        if (!cstLb.has_value())
+          return emitError(loc)
+                 << "Expected a parallel loop with constant lower bounds when "
+                    "trying to automatically infer number of threads";
+
+        if (!cstUb.has_value())
+          return emitError(loc)
+                 << "Expected a parallel loop with constant upper bounds when "
+                    "trying to automatically infer number of threads\n";
+
+        if (!cstStep.has_value())
+          return emitError(loc)
+                 << "Expected a forall with constant steps when trying to "
+                    "automatically infer number of threads\n";
+
+        inferredNumThreads =
+            inferredNumThreads *
+            ((cstUb.value() - cstLb.value()) / cstStep.value());
+      }
+      numThreadsVar = rewriter.create<LLVM::ConstantOp>(
+          loc, rewriter.getI32IntegerAttr(inferredNumThreads));
+    } else if (numThreads > 0) {
       numThreadsVar = rewriter.create<LLVM::ConstantOp>(
           loc, rewriter.getI32IntegerAttr(numThreads));
     }
@@ -504,14 +537,16 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 };
 
 /// Applies the conversion patterns in the given function.
-static LogicalResult applyPatterns(ModuleOp module, unsigned numThreads) {
+static LogicalResult applyPatterns(ModuleOp module, unsigned numThreads,
+                                   bool automaticNumThreads) {
   ConversionTarget target(*module.getContext());
   target.addIllegalOp<scf::ReduceOp, scf::ReduceReturnOp, scf::ParallelOp>();
   target.addLegalDialect<omp::OpenMPDialect, LLVM::LLVMDialect,
                          memref::MemRefDialect>();
 
   RewritePatternSet patterns(module.getContext());
-  patterns.add<ParallelOpLowering>(module.getContext(), numThreads);
+  patterns.add<ParallelOpLowering>(module.getContext(), numThreads,
+                                   automaticNumThreads);
   FrozenRewritePatternSet frozen(std::move(patterns));
   return applyPartialConversion(module, target, frozen);
 }
@@ -524,7 +559,7 @@ struct SCFToOpenMPPass
 
   /// Pass entry point.
   void runOnOperation() override {
-    if (failed(applyPatterns(getOperation(), numThreads)))
+    if (failed(applyPatterns(getOperation(), numThreads, automaticNumThreads)))
       signalPassFailure();
   }
 };
