@@ -649,7 +649,8 @@ class ARMAsmParser : public MCTargetAsmParser {
   ParseStatus parseProcIFlagsOperand(OperandVector &);
   ParseStatus parseMSRMaskOperand(OperandVector &);
   ParseStatus parseBankedRegOperand(OperandVector &);
-  ParseStatus parsePKHImm(OperandVector &O, ARM_AM::ShiftOpc, int Low, int High);
+  ParseStatus parsePKHImm(OperandVector &O, ARM_AM::ShiftOpc, int Low,
+                          int High);
   ParseStatus parsePKHLSLImm(OperandVector &O) {
     return parsePKHImm(O, ARM_AM::lsl, 0, 31);
   }
@@ -5295,8 +5296,8 @@ ParseStatus ARMAsmParser::parseBankedRegOperand(OperandVector &Operands) {
 // FIXME: Unify the different methods for handling shift operators
 // and use TableGen matching mechanisms to do the validation rather than
 // separate parsing paths.
-ParseStatus ARMAsmParser::parsePKHImm(OperandVector &Operands, ARM_AM::ShiftOpc Op,
-                                      int Low, int High) {
+ParseStatus ARMAsmParser::parsePKHImm(OperandVector &Operands,
+                                      ARM_AM::ShiftOpc Op, int Low, int High) {
   MCAsmParser &Parser = getParser();
   auto ShiftCodeOpt = tryParseShiftToken();
 
@@ -5304,9 +5305,11 @@ ParseStatus ARMAsmParser::parsePKHImm(OperandVector &Operands, ARM_AM::ShiftOpc 
     return ParseStatus::NoMatch;
   auto ShiftCode = ShiftCodeOpt.value();
 
-  // The wrong shift code has been provided. Can error here as has matched the correct operand in this case.
+  // The wrong shift code has been provided. Can error here as has matched the
+  // correct operand in this case.
   if (ShiftCode != Op)
-    return Error(Parser.getTok().getLoc(),  ARM_AM::getShiftOpcStr(Op) + " operand expected.");
+    return Error(Parser.getTok().getLoc(),
+                 ARM_AM::getShiftOpcStr(Op) + " operand expected.");
 
   Parser.Lex(); // Eat shift type token.
 
