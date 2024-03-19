@@ -42,9 +42,9 @@ __attribute__((visibility(
 #include <sys/types.h>
 
 typedef struct {
-  void *tcb;        /* Pointer to the TCB.  Not necessarily the
-                       thread descriptor used by libpthread.  */
-  uint64_t *stack_guard;  /* Stack guard value for the thread.  */
+  void *tcb; /* Pointer to the TCB. Not necessarily the
+                thread descriptor used by libpthread. */
+  uint64_t *stack_guard; /* Stack guard value for the thread. */
   void *unsafe_stack_ptr; /* Unsafe stack pointer for the thread. */
 } tcbhead_t;
 
