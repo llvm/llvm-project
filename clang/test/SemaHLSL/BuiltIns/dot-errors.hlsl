@@ -108,3 +108,12 @@ int test_builtin_dot_bool_type_promotion(bool p0, bool p1) {
   return __builtin_hlsl_dot(p0, p1);
   // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was 'bool')}}
 }
+
+double test_dot_double(double2 p0, double2 p1) {
+  return dot(p0, p1);
+  // expected-error@-1 {{call to 'dot' is ambiguous}}
+}
+double test_dot_double_builtin(double2 p0, double2 p1) {
+  return __builtin_hlsl_dot(p0, p1);
+  // expected-error@-1 {{passing 'double2' (aka 'vector<double, 2>') to parameter of incompatible type '__attribute__((__vector_size__(2 * sizeof(float)))) float' (vector of 2 'float' values)}}
+}
