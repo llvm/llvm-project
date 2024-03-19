@@ -3333,8 +3333,8 @@ Instruction *ConstantExpr::getAsInstruction() const {
   case Instruction::GetElementPtr: {
     const auto *GO = cast<GEPOperator>(this);
     if (GO->isInBounds())
-      return GetElementPtrInst::CreateInBounds(
-          GO->getSourceElementType(), Ops[0], Ops.slice(1), "");
+      return GetElementPtrInst::CreateInBounds(GO->getSourceElementType(),
+                                               Ops[0], Ops.slice(1), "");
     return GetElementPtrInst::Create(GO->getSourceElementType(), Ops[0],
                                      Ops.slice(1), "");
   }

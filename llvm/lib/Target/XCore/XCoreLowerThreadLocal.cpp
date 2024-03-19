@@ -88,7 +88,8 @@ static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
               BasicBlock *PredBB = PN->getIncomingBlock(I);
               if (PredBB->getTerminator()->getNumSuccessors() > 1)
                 PredBB = SplitEdge(PredBB, PN->getParent());
-              BasicBlock::iterator InsertPos = PredBB->getTerminator()->getIterator();
+              BasicBlock::iterator InsertPos =
+                  PredBB->getTerminator()->getIterator();
               Instruction *NewInst = CE->getAsInstruction();
               NewInst->insertBefore(*PredBB, InsertPos);
               PN->setOperand(I, NewInst);
