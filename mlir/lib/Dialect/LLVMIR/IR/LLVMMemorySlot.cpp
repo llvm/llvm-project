@@ -344,6 +344,10 @@ LogicalResult LLVM::GEPOp::ensureOnlySafeAccesses(
     return failure();
   if (!isFirstIndexZero(*this))
     return failure();
+  // Dynamic indices can be out-of-bounds (even negative), so an access with
+  // dynamic indices can never be considered safe.
+  if (!getDynamicIndices().empty())
+    return failure();
   Type reachedType = getResultPtrElementType();
   if (!reachedType)
     return failure();
@@ -361,6 +365,10 @@ bool LLVM::GEPOp::canRewire(const DestructurableMemorySlot &slot,
   if (getBase() != slot.ptr || slot.elemType != getElemType())
     return false;
   if (!isFirstIndexZero(*this))
+    return false;
+  // Dynamic indices can be out-of-bounds (even negative), so an access with
+  // dynamic indices can never be properly rewired.
+  if (!getDynamicIndices().empty())
     return false;
   Type reachedType = getResultPtrElementType();
   if (!reachedType || getIndices().size() < 2)

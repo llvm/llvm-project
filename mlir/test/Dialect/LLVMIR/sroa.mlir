@@ -197,3 +197,21 @@ llvm.func @no_dynamic_indexing(%arg: i32) -> i32 {
   // CHECK: llvm.return %[[RES]] : i32
   llvm.return %3 : i32
 }
+
+// -----
+
+// CHECK-LABEL: llvm.func @no_nested_dynamic_indexing
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+llvm.func @no_nested_dynamic_indexing(%arg: i32) -> i32 {
+  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(1 : i32)
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %[[SIZE]] x !llvm.struct<(array<10 x i32>, i32)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  %1 = llvm.alloca %0 x !llvm.struct<(array<10 x i32>, i32)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  // CHECK-NOT: = llvm.alloca
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 0, %[[ARG]]]
+  %2 = llvm.getelementptr %1[0, 0, %arg] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.struct<(array<10 x i32>, i32)>
+  // CHECK: %[[RES:.*]] = llvm.load %[[GEP]]
+  %3 = llvm.load %2 : !llvm.ptr -> i32
+  // CHECK: llvm.return %[[RES]] : i32
+  llvm.return %3 : i32
+}
