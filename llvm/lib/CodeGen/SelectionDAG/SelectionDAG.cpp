@@ -9595,6 +9595,10 @@ SDValue SelectionDAG::simplifyShift(SDValue X, SDValue Y) {
   if (ISD::matchUnaryPredicate(Y, isShiftTooBig, true))
     return getUNDEF(X.getValueType());
 
+  // shift i1/vXi1 X, Y --> X (any non-zero shift amount is undefined).
+  if (X.getValueType().getScalarType() == MVT::i1)
+    return X;
+
   return SDValue();
 }
 
