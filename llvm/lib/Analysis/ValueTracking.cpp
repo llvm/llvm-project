@@ -2759,27 +2759,33 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     auto *LI = cast<LoadInst>(I);
     // A Load tagged with nonnull or dereferenceable with null pointer undefined
     // is never null.
-    if (auto *PtrT = dyn_cast<PointerType>(I->getType()))
+    if (auto *PtrT = dyn_cast<PointerType>(I->getType())) {
       if (Q.IIQ.getMetadata(LI, LLVMContext::MD_nonnull) ||
           (Q.IIQ.getMetadata(LI, LLVMContext::MD_dereferenceable) &&
            !NullPointerIsDefined(LI->getFunction(), PtrT->getAddressSpace())))
         return true;
+    } else if (MDNode *Ranges = Q.IIQ.getMetadata(LI, LLVMContext::MD_range)) {
+      return rangeMetadataExcludesValue(Ranges, APInt::getZero(BitWidth));
+    }
 
     // No need to fall through to computeKnownBits as range metadata is already
     // handled in isKnownNonZero.
     return false;
   }
   case Instruction::Call:
-  case Instruction::Invoke:
+  case Instruction::Invoke: {
+    const auto *Call = cast<CallBase>(I);
     if (I->getType()->isPointerTy()) {
-      const auto *Call = cast<CallBase>(I);
       if (Call->isReturnNonNull())
         return true;
       if (const auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
         return isKnownNonZero(RP, Depth, Q);
-    } else if (const Value *RV = cast<CallBase>(I)->getReturnedArgOperand()) {
-      if (RV->getType() == I->getType() && isKnownNonZero(RV, Depth, Q))
-        return true;
+    } else {
+      if (MDNode *Ranges = Q.IIQ.getMetadata(Call, LLVMContext::MD_range))
+        return rangeMetadataExcludesValue(Ranges, APInt::getZero(BitWidth));
+      if (const Value *RV = Call->getReturnedArgOperand())
+        if (RV->getType() == I->getType() && isKnownNonZero(RV, Depth, Q))
+          return true;
     }
 
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
@@ -2849,6 +2855,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
 
     return false;
   }
+  }
 
   KnownBits Known(BitWidth);
   computeKnownBits(I, DemandedElts, Known, Depth, Q);
@@ -2912,17 +2919,6 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     // For constant expressions, fall through to the Operator code below.
     if (!isa<ConstantExpr>(V))
       return false;
-  }
-
-  if (auto *I = dyn_cast<Instruction>(V)) {
-    if (MDNode *Ranges = Q.IIQ.getMetadata(I, LLVMContext::MD_range)) {
-      // If the possible ranges don't contain zero, then the value is
-      // definitely non-zero.
-      assert(Ty->isIntOrIntVectorTy() && "Range on non-integer?");
-      const APInt ZeroValue(Ty->getScalarSizeInBits(), 0);
-      if (rangeMetadataExcludesValue(Ranges, ZeroValue))
-        return true;
-    }
   }
 
   if (!isa<Constant>(V) && isKnownNonZeroFromAssume(V, Q))
