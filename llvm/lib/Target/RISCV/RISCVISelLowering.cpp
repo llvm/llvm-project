@@ -15323,62 +15323,13 @@ static SDValue performINSERT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);
 }
 
-// Recursively split up concat_vectors with more than 2 operands:
-//
-// concat_vector op1, op2, op3, op4
-// ->
-// concat_vector (concat_vector op1, op2), (concat_vector op3, op4)
-//
-// This reduces the length of the chain of vslideups and allows us to perform
-// the vslideups at a smaller LMUL, limited to MF2.
-//
-// We do this as a DAG combine rather than during lowering so that any undef
-// operands can get combined away.
-static SDValue
-performCONCAT_VECTORSSplitCombine(SDNode *N, SelectionDAG &DAG,
-                                  const RISCVTargetLowering &TLI) {
-  SDLoc DL(N);
-
-  if (N->getNumOperands() <= 2)
-    return SDValue();
-
-  if (!TLI.isTypeLegal(N->getValueType(0)))
-    return SDValue();
-  MVT VT = N->getSimpleValueType(0);
-
-  // Don't split any further than MF2.
-  MVT ContainerVT = VT;
-  if (VT.isFixedLengthVector())
-    ContainerVT = getContainerForFixedLengthVector(DAG, VT, TLI.getSubtarget());
-  if (ContainerVT.bitsLT(getLMUL1VT(ContainerVT)))
-    return SDValue();
-
-  MVT HalfVT = VT.getHalfNumVectorElementsVT();
-  assert(isPowerOf2_32(N->getNumOperands()));
-  size_t HalfNumOps = N->getNumOperands() / 2;
-  SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
-                           N->ops().take_front(HalfNumOps));
-  SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
-                           N->ops().drop_front(HalfNumOps));
-
-  // Lower to an insert_subvector directly so the concat_vectors don't get
-  // recombined.
-  SDValue Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), Lo,
-                            DAG.getVectorIdxConstant(0, DL));
-  Vec = DAG.getNode(
-      ISD::INSERT_SUBVECTOR, DL, VT, Vec, Hi,
-      DAG.getVectorIdxConstant(HalfVT.getVectorMinNumElements(), DL));
-  return Vec;
-}
-
 // If we're concatenating a series of vector loads like
 // concat_vectors (load v4i8, p+0), (load v4i8, p+n), (load v4i8, p+n*2) ...
 // Then we can turn this into a strided load by widening the vector elements
 // vlse32 p, stride=n
-static SDValue
-performCONCAT_VECTORSStridedLoadCombine(SDNode *N, SelectionDAG &DAG,
-                                        const RISCVSubtarget &Subtarget,
-                                        const RISCVTargetLowering &TLI) {
+static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
+                                            const RISCVSubtarget &Subtarget,
+                                            const RISCVTargetLowering &TLI) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
@@ -16483,10 +16434,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     break;
   case ISD::CONCAT_VECTORS:
-    if (SDValue V =
-            performCONCAT_VECTORSStridedLoadCombine(N, DAG, Subtarget, *this))
-      return V;
-    if (SDValue V = performCONCAT_VECTORSSplitCombine(N, DAG, *this))
+    if (SDValue V = performCONCAT_VECTORSCombine(N, DAG, Subtarget, *this))
       return V;
     break;
   case ISD::INSERT_VECTOR_ELT:
