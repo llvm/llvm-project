@@ -133,7 +133,7 @@ struct BuiltinTypeDeclBuilder {
     LookupResult R(S, NameInfo, Sema::LookupOrdinaryName);
     S.LookupParsedName(R, S.getCurScope(), &SS,
                        /*ObjectType=*/QualType(),
-                       /*AllowBuiltinCreation*/false);
+                       /*AllowBuiltinCreation*/ false);
     assert(R.isSingleResult() &&
            "Since this is a builtin it should always resolve!");
     auto *VD = cast<ValueDecl>(R.getFoundDecl());

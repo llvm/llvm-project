@@ -2717,11 +2717,8 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
 /// context of the scope-specifier SS (if present).
 ///
 /// @returns True if any decls were found (but possibly ambiguous)
-bool Sema::LookupParsedName(LookupResult &R,
-                            Scope *S,
-                            CXXScopeSpec *SS,
-                            QualType ObjectType,
-                            bool AllowBuiltinCreation,
+bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
+                            QualType ObjectType, bool AllowBuiltinCreation,
                             bool EnteringContext) {
   // When the scope specifier is invalid, don't even look for anything.
   if (SS && SS->isInvalid())
@@ -2733,12 +2730,12 @@ bool Sema::LookupParsedName(LookupResult &R,
   if (!ObjectType.isNull()) {
     // This nested-name-specifier occurs in a member access expression, e.g.,
     // x->B::f, and we are looking into the type of the object.
-    assert((!SS || SS->isEmpty()) && "ObjectType and scope specifier cannot coexist");
+    assert((!SS || SS->isEmpty()) &&
+           "ObjectType and scope specifier cannot coexist");
     DC = computeDeclContext(ObjectType);
     IsDependent = !DC && ObjectType->isDependentType();
     assert(((!DC && ObjectType->isDependentType()) ||
-            !ObjectType->isIncompleteType() ||
-            !ObjectType->getAs<TagType>() ||
+            !ObjectType->isIncompleteType() || !ObjectType->getAs<TagType>() ||
             ObjectType->castAs<TagType>()->isBeingDefined()) &&
            "Caller should have completed object type");
   } else if (SS && SS->isNotEmpty()) {
@@ -5039,8 +5036,7 @@ static void LookupPotentialTypoResult(Sema &SemaRef,
 
   SemaRef.LookupParsedName(Res, S, SS,
                            /*ObjectType=*/QualType(),
-                           /*AllowBuiltinCreation=*/false,
-                           EnteringContext);
+                           /*AllowBuiltinCreation=*/false, EnteringContext);
 
   // Fake ivar lookup; this should really be part of
   // LookupParsedName.

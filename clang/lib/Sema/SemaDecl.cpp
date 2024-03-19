@@ -896,7 +896,8 @@ Sema::NameClassification Sema::ClassifyName(Scope *S, CXXScopeSpec &SS,
   }
 
   LookupResult Result(*this, Name, NameLoc, LookupOrdinaryName);
-  LookupParsedName(Result, S, &SS, /*ObjectType=*/QualType(), /*AllowBuiltinCreation*/!CurMethod);
+  LookupParsedName(Result, S, &SS, /*ObjectType=*/QualType(),
+                   /*AllowBuiltinCreation*/ !CurMethod);
 
   if (SS.isInvalid())
     return NameClassification::Error();

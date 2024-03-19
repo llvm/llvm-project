@@ -733,16 +733,14 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
           OpLoc, RTy, diag::err_typecheck_incomplete_tag, BaseRange))
     return true;
 
-  // LookupTemplateName/LookupParsedName don't expect these both to exist simultaneously.
+  // LookupTemplateName/LookupParsedName don't expect these both to exist
+  // simultaneously.
   QualType ObjectType = SS.isSet() ? QualType() : RTy;
   if (HasTemplateArgs || TemplateKWLoc.isValid()) {
     bool MOUS;
     return SemaRef.LookupTemplateName(R,
-                                      /*S=*/nullptr,
-                                      SS,
-                                      ObjectType,
-                                      /*EnteringContext=*/false,
-                                      MOUS,
+                                      /*S=*/nullptr, SS, ObjectType,
+                                      /*EnteringContext=*/false, MOUS,
                                       TemplateKWLoc);
   }
 
@@ -754,9 +752,8 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
   DeclarationName Typo = R.getLookupName();
   SourceLocation TypoLoc = R.getNameLoc();
   // Recompute the lookup context.
-  DeclContext *DC = SS.isSet()
-      ? SemaRef.computeDeclContext(SS)
-      : SemaRef.computeDeclContext(RTy);
+  DeclContext *DC = SS.isSet() ? SemaRef.computeDeclContext(SS)
+                               : SemaRef.computeDeclContext(RTy);
 
   struct QueryState {
     Sema &SemaRef;
@@ -1018,11 +1015,11 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                                ActOnMemberAccessExtraArgs *ExtraArgs) {
   assert(!SS.isInvalid() && "nested-name-specifier cannot be invalid");
   if (R.wasNotFoundInCurrentInstantiation() ||
-  #if 0
+#if 0
       (SS.isValid() && !computeDeclContext(SS, false))) {
-  #else
+#else
       false) {
-  #endif
+#endif
     return ActOnDependentMemberExpr(BaseExpr, BaseExprType, IsArrow, OpLoc, SS,
                                     TemplateKWLoc, FirstQualifierInScope,
                                     R.getLookupNameInfo(), TemplateArgs);
@@ -1093,7 +1090,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
 
     if (SS.isNotEmpty() && !DC) {
       Diag(R.getNameLoc(), diag::err_undeclared_use)
-            << MemberName << SS.getRange();
+          << MemberName << SS.getRange();
     } else if (DC) {
       Diag(R.getNameLoc(), diag::err_no_member)
           << MemberName << DC
