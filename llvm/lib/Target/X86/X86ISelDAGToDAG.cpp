@@ -1151,10 +1151,19 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     case ISD::SHL:
     case ISD::SRA:
     case ISD::SRL: {
+      auto Ty = N->getValueType(0);
       // Replace vector shifts with their X86 specific equivalent so we don't
       // need 2 sets of patterns.
-      if (!N->getValueType(0).isVector())
+      if (!Ty.isVector())
         break;
+
+      // Per discussion in #85681, `%c = shl <X x i1> %a, %b -> %c = %a`,
+      // aka, replace all `%c` with `%a` and erase this instruction.
+      if (Ty.getVectorElementType().getFixedSizeInBits() == 1) {
+        CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), N->getOperand(0));
+        CurDAG->DeleteNode(N);
+        break;
+      }
 
       unsigned NewOpc;
       switch (N->getOpcode()) {
