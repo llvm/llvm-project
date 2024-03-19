@@ -185,6 +185,18 @@ TEST(StdlibTest, RecognizerForC99) {
             stdlib::Symbol::named("", "uint8_t", stdlib::Lang::C));
 }
 
+TEST(StdlibTest, SpecialCMappings) {
+  TestInputs Input("typedef char size_t;");
+  Input.Language = TestLanguage::Lang_C99;
+  TestAST AST(Input);
+
+  auto &SizeT = lookup(AST, "size_t");
+  stdlib::Recognizer Recognizer;
+  auto ActualSym = Recognizer(&SizeT);
+  EXPECT_EQ(ActualSym, stdlib::Symbol::named("", "size_t", stdlib::Lang::C));
+  EXPECT_EQ(ActualSym->header()->name(), "<stddef.h>");
+}
+
 } // namespace
 } // namespace tooling
 } // namespace clang
