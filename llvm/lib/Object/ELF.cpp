@@ -251,7 +251,10 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     }
     break;
   case ELF::EM_HEXAGON:
-    switch (Type) { STRINGIFY_ENUM_CASE(ELF, SHT_HEX_ORDERED); }
+    switch (Type) {
+      STRINGIFY_ENUM_CASE(ELF, SHT_HEX_ORDERED);
+      STRINGIFY_ENUM_CASE(ELF, SHT_HEXAGON_ATTRIBUTES);
+    }
     break;
   case ELF::EM_X86_64:
     switch (Type) { STRINGIFY_ENUM_CASE(ELF, SHT_X86_64_UNWIND); }
