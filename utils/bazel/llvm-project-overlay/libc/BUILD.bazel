@@ -162,9 +162,19 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_cpp_iterator",
+    hdrs = ["src/__support/CPP/iterator.h"],
+    deps = [
+        ":__support_cpp_type_traits",
+        ":__support_macros_attributes",
+    ],
+)
+
+libc_support_library(
     name = "__support_cpp_array",
     hdrs = ["src/__support/CPP/array.h"],
     deps = [
+        ":__support_cpp_iterator",
         ":__support_macros_attributes",
     ],
 )
