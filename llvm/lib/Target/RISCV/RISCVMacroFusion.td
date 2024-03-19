@@ -96,31 +96,21 @@ def TuneLDADDFusion
 // slliw r1, r0, 16
 // srliw r1, r1, 16
 def GetLower16BitsFusion
-  : SimpleFusion<"get-lower-16bits-fusion", "HasGetLower16BitsFusion",
+  : SingleFusion<"get-lower-16bits-fusion", "HasGetLower16BitsFusion",
                  "Enable SLLIW+SRLIW to be fused to get lower 16 bits",
-                 CheckAll<[
-                   CheckOpcode<[SLLIW]>,
-                   CheckImmOperand<2, 16>
-                 ]>,
-                 CheckAll<[
-                   CheckOpcode<[SRLIW]>,
-                   CheckImmOperand<2, 16>
-                 ]>>;
+                 SLLIW, SRLIW,
+                 CheckImmOperand<2, 16>,
+                 CheckImmOperand<2, 16>>;
 
 // Sign-extend a 16-bit number:
 // slliw r1, r0, 16
 // sraiw r1, r1, 16
 def SExtHFusion
-  : SimpleFusion<"sign-extend-16bits-fusion","HasSExtHFusion",
+  : SingleFusion<"sign-extend-16bits-fusion","HasSExtHFusion",
                  "Enable SLLIW+SRAIW to be fused to sign-extend a 16-bit number",
-                 CheckAll<[
-                   CheckOpcode<[SLLIW]>,
-                   CheckImmOperand<2, 16>
-                 ]>,
-                 CheckAll<[
-                   CheckOpcode<[SRAIW]>,
-                   CheckImmOperand<2, 16>
-                 ]>>;
+                 SLLIW, SRAIW,
+                 CheckImmOperand<2, 16>,
+                 CheckImmOperand<2, 16>>;
 
 // These should be covered by Zba extension.
 // * shift left by one and add:
@@ -132,17 +122,13 @@ def SExtHFusion
 // * shift left by three and add:
 //   slli r1, r0, 3
 //   add r1, r1, r2
-let IsCommutable = 1 in
 def ShiftNAddFusion
-  : SimpleFusion<"shift-n-add-fusion", "HasShiftNAddFusion",
+  : SingleFusion<"shift-n-add-fusion", "HasShiftNAddFusion",
                  "Enable SLLI+ADD to be fused to shift left by 1/2/3 and add",
-                 CheckAll<[
-                   CheckOpcode<[SLLI]>,
-                   CheckAny<[CheckImmOperand<2, 1>,
-                             CheckImmOperand<2, 2>,
-                             CheckImmOperand<2, 3>]>
-                 ]>,
-                 CheckOpcode<[ADD]>>;
+                 SLLI, ADD,
+                 CheckAny<[CheckImmOperand<2, 1>,
+                           CheckImmOperand<2, 2>,
+                           CheckImmOperand<2, 3>]>>;
 
 // * Shift zero-extended word left by 1:
 //   slli r1, r0, 32
@@ -154,46 +140,32 @@ def ShiftNAddFusion
 //   slli r1, r0, 32
 //   srli r1, r0, 29
 def ShiftZExtByNFusion
-  : SimpleFusion<"shift-zext-by-n-fusion", "HasShiftZExtByNFusion",
+  : SingleFusion<"shift-zext-by-n-fusion", "HasShiftZExtByNFusion",
                  "Enable SLLI+SRLI to be fused to shift zero-extended word left by 1/2/3",
-                 CheckAll<[
-                   CheckOpcode<[SLLI]>,
-                   CheckImmOperand<2, 32>
-                 ]>,
-                 CheckAll<[
-                   CheckOpcode<[SRLI]>,
-                   CheckAny<[CheckImmOperand<2, 29>,
-                             CheckImmOperand<2, 30>,
-                             CheckImmOperand<2, 31>]>
-                 ]>>;
+                 SLLI, SRLI,
+                 CheckImmOperand<2, 32>,
+                 CheckAny<[CheckImmOperand<2, 29>,
+                           CheckImmOperand<2, 30>,
+                           CheckImmOperand<2, 31>]>>;
 
 // Get the second byte:
 // srli r1, r0, 8
 // andi r1, r1, 255
 def GetSecondByteFusion
-  : SimpleFusion<"get-second-byte-fusion", "HasGetSecondByteFusion",
+  : SingleFusion<"get-second-byte-fusion", "HasGetSecondByteFusion",
                  "Enable SRLI+ANDI to be fused to get the second byte",
-                 CheckAll<[
-                   CheckOpcode<[SRLI]>,
-                   CheckImmOperand<2, 8>
-                 ]>,
-                 CheckAll<[
-                   CheckOpcode<[ANDI]>,
-                   CheckImmOperand<2, 255>
-                 ]>>;
+                 SRLI, ANDI,
+                 CheckImmOperand<2, 8>,
+                 CheckImmOperand<2, 255>>;
 
 // Shift left by four and add:
 // slli r1, r0, 4
 // add r1, r1, r2
-let IsCommutable = 1 in
 def ShiftLeft4AddFusion
-  : SimpleFusion<"shift-left-four-add-fusion", "HasShiftLeft4AddFusion",
+  : SingleFusion<"shift-left-four-add-fusion", "HasShiftLeft4AddFusion",
                  "Enable SLLI+ADD to be fused to shift left by four and add",
-                 CheckAll<[
-                   CheckOpcode<[SLLI]>,
-                   CheckImmOperand<2, 4>
-                 ]>,
-                 CheckOpcode<[ADD]>>;
+                 SLLI, ADD,
+                 CheckImmOperand<2, 4>>;
 
 // * Shift right by 29 and add:
 //   srli r1, r0, 29
@@ -207,18 +179,14 @@ def ShiftLeft4AddFusion
 // * Shift right by 32 and add:
 //   srli r1, r0, 32
 //   add r1, r1, r2
-let IsCommutable = 1 in
 def ShiftRightNAddFusion
-  : SimpleFusion<"shift-right-n-add-fusion", "HasShiftRightNAddFusion",
+  : SingleFusion<"shift-right-n-add-fusion", "HasShiftRightNAddFusion",
                  "Enable SRLI+add to be fused to shift right by 29/30/31/32 and add",
-                 CheckAll<[
-                   CheckOpcode<[SRLI]>,
-                   CheckAny<[CheckImmOperand<2, 29>,
-                             CheckImmOperand<2, 30>,
-                             CheckImmOperand<2, 31>,
-                             CheckImmOperand<2, 32>]>
-                 ]>,
-                 CheckOpcode<[ADD]>>;
+                 SRLI, ADD,
+                 CheckAny<[CheckImmOperand<2, 29>,
+                           CheckImmOperand<2, 30>,
+                           CheckImmOperand<2, 31>,
+                           CheckImmOperand<2, 32>]>>;
 
 // Add one if odd, otherwise unchanged:
 // andi r1, r0, 1
@@ -243,14 +211,11 @@ def AddOneIfOddFusion
 //   andw r1, r1, r0
 //   andi r1, r1, 255
 def AddAndExtractNBitsFusion
-  : SimpleFusion<"add-and-extract-n-bits-fusion", "HasAddAndExtractNBitsFusion",
+  : SingleFusion<"add-and-extract-n-bits-fusion", "HasAddAndExtractNBitsFusion",
                  "Enable ADDW+ANDI to be fused to get lower 16 bits",
-                 CheckOpcode<[ADDW]>,
-                 CheckAll<[
-                   CheckOpcode<[ANDI]>,
-                   CheckAny<[CheckImmOperand<2, 1>,
-                             CheckImmOperand<2, 255>]>
-                 ]>>;
+                 ADDW, ANDI,
+                 secondInstPred = CheckAny<[CheckImmOperand<2, 1>,
+                                            CheckImmOperand<2, 255>]>>;
 
 // * Add word and zext.h:
 //   andw r1, r1, r0
@@ -288,25 +253,17 @@ def LogicOpAndExtractLow16BitsFusion
 // OR(Cat(src1(63, 8), 0.U(8.W)), src2):
 // andi r1, r0, -256
 // or r1, r1, r2
-let IsCommutable = 1 in
 def OrCatFusion
-  : SimpleFusion<"or-cat-fusion", "HasOrCatFusion",
+  : SingleFusion<"or-cat-fusion", "HasOrCatFusion",
                  "Enable SLLIW+SRLIW to be fused to get lower 16 bits",
-                 CheckAll<[
-                   CheckOpcode<[ANDI]>,
-                   CheckImmOperand<2, -256>
-                 ]>,
-                 CheckOpcode<[OR]>>;
+                 ANDI, OR, 
+                 CheckImmOperand<2, -256>>;
 
 // Multiply 7-bit data with 32-bit data:
 // andi r1, r0, 127
 // mulw r1, r1, r2
-let IsCommutable = 1 in
 def Mul7BitsWith32BitsFusion
-  : SimpleFusion<"mul-7bits-with-32bit-fusion", "HasMul7BitsWith32BitsFusion",
+  : SingleFusion<"mul-7bits-with-32bit-fusion", "HasMul7BitsWith32BitsFusion",
                  "Enable ANDI+MULW to be fused to multiply 7-bit data with 32-bit data",
-                 CheckAll<[
-                   CheckOpcode<[ANDI]>,
-                   CheckImmOperand<2, 127>
-                 ]>,
-                 CheckOpcode<[MULW]>>;
+                 ANDI, MULW,
+                 CheckImmOperand<2, 127>>;
