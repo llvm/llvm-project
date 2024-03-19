@@ -214,24 +214,6 @@ static void threadPrivatizeVars(Fortran::lower::AbstractConverter &converter,
   firOpBuilder.restoreInsertionPoint(insPt);
 }
 
-static mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
-                                 std::size_t loopVarTypeSize) {
-  // OpenMP runtime requires 32-bit or 64-bit loop variables.
-  loopVarTypeSize = loopVarTypeSize * 8;
-  if (loopVarTypeSize < 32) {
-    loopVarTypeSize = 32;
-  } else if (loopVarTypeSize > 64) {
-    loopVarTypeSize = 64;
-    mlir::emitWarning(converter.getCurrentLocation(),
-                      "OpenMP loop iteration variable cannot have more than 64 "
-                      "bits size and will be narrowed into 64 bits.");
-  }
-  assert((loopVarTypeSize == 32 || loopVarTypeSize == 64) &&
-         "OpenMP loop iteration variable size must be transformed into 32-bit "
-         "or 64-bit");
-  return converter.getFirOpBuilder().getIntegerType(loopVarTypeSize);
-}
-
 static mlir::Operation *
 createAndSetPrivatizedLoopVar(Fortran::lower::AbstractConverter &converter,
                               mlir::Location loc, mlir::Value indexVal,
@@ -287,9 +269,9 @@ struct OpWithBodyGenInfo {
     return *this;
   }
 
-  OpWithBodyGenInfo &
-  setReductions(llvm::SmallVector<const Fortran::semantics::Symbol *> *value1,
-                llvm::SmallVector<mlir::Type> *value2) {
+  OpWithBodyGenInfo &setReductions(
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *value1,
+      llvm::SmallVectorImpl<mlir::Type> *value2) {
     reductionSymbols = value1;
     reductionTypes = value2;
     return *this;
@@ -317,10 +299,10 @@ struct OpWithBodyGenInfo {
   /// [in] if provided, processes the construct's data-sharing attributes.
   DataSharingProcessor *dsp = nullptr;
   /// [in] if provided, list of reduction symbols
-  llvm::SmallVector<const Fortran::semantics::Symbol *> *reductionSymbols =
+  llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *reductionSymbols =
       nullptr;
   /// [in] if provided, list of reduction types
-  llvm::SmallVector<mlir::Type> *reductionTypes = nullptr;
+  llvm::SmallVectorImpl<mlir::Type> *reductionTypes = nullptr;
   /// [in] if provided, emits the op's region entry. Otherwise, an emtpy block
   /// is created in the region.
   GenOMPRegionEntryCBFn genRegionEntryCB = nullptr;
@@ -465,11 +447,9 @@ static void genBodyOfTargetDataOp(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval, bool genNested,
-    mlir::omp::DataOp &dataOp,
-    const llvm::SmallVector<mlir::Type> &useDeviceTypes,
-    const llvm::SmallVector<mlir::Location> &useDeviceLocs,
-    const llvm::SmallVector<const Fortran::semantics::Symbol *>
-        &useDeviceSymbols,
+    mlir::omp::DataOp &dataOp, llvm::ArrayRef<mlir::Type> useDeviceTypes,
+    llvm::ArrayRef<mlir::Location> useDeviceLocs,
+    llvm::ArrayRef<const Fortran::semantics::Symbol *> useDeviceSymbols,
     const mlir::Location &currentLocation) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Region &region = dataOp.getRegion();
@@ -570,6 +550,7 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   mlir::omp::ClauseProcBindKindAttr procBindKindAttr;
   llvm::SmallVector<mlir::Value> allocateOperands, allocatorOperands,
       reductionVars;
+  llvm::SmallVector<mlir::Type> reductionTypes;
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
   llvm::SmallVector<const Fortran::semantics::Symbol *> reductionSymbols;
 
@@ -580,13 +561,8 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   cp.processDefault();
   cp.processAllocate(allocatorOperands, allocateOperands);
   if (!outerCombined)
-    cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols,
-                        &reductionSymbols);
-
-  llvm::SmallVector<mlir::Type> reductionTypes;
-  reductionTypes.reserve(reductionVars.size());
-  llvm::transform(reductionVars, std::back_inserter(reductionTypes),
-                  [](mlir::Value v) { return v.getType(); });
+    cp.processReduction(currentLocation, reductionVars, reductionTypes,
+                        reductionDeclSymbols, &reductionSymbols);
 
   auto reductionCallback = [&](mlir::Operation *op) {
     llvm::SmallVector<mlir::Location> locs(reductionVars.size(),
@@ -814,11 +790,12 @@ genTaskGroupOp(Fortran::lower::AbstractConverter &converter,
 //  clause. Support for such list items in a use_device_ptr clause
 //  is deprecated."
 static void promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(
-    llvm::SmallVector<mlir::Value> &devicePtrOperands,
-    llvm::SmallVector<mlir::Value> &deviceAddrOperands,
-    llvm::SmallVector<mlir::Type> &useDeviceTypes,
-    llvm::SmallVector<mlir::Location> &useDeviceLocs,
-    llvm::SmallVector<const Fortran::semantics::Symbol *> &useDeviceSymbols) {
+    llvm::SmallVectorImpl<mlir::Value> &devicePtrOperands,
+    llvm::SmallVectorImpl<mlir::Value> &deviceAddrOperands,
+    llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
+    llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+        &useDeviceSymbols) {
   auto moveElementToBack = [](size_t idx, auto &vector) {
     auto *iter = std::next(vector.begin(), idx);
     vector.push_back(*iter);
@@ -951,15 +928,15 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
 
 // This functions creates a block for the body of the targetOp's region. It adds
 // all the symbols present in mapSymbols as block arguments to this block.
-static void genBodyOfTargetOp(
-    Fortran::lower::AbstractConverter &converter,
-    Fortran::semantics::SemanticsContext &semaCtx,
-    Fortran::lower::pft::Evaluation &eval, bool genNested,
-    mlir::omp::TargetOp &targetOp,
-    const llvm::SmallVector<mlir::Type> &mapSymTypes,
-    const llvm::SmallVector<mlir::Location> &mapSymLocs,
-    const llvm::SmallVector<const Fortran::semantics::Symbol *> &mapSymbols,
-    const mlir::Location &currentLocation) {
+static void
+genBodyOfTargetOp(Fortran::lower::AbstractConverter &converter,
+                  Fortran::semantics::SemanticsContext &semaCtx,
+                  Fortran::lower::pft::Evaluation &eval, bool genNested,
+                  mlir::omp::TargetOp &targetOp,
+                  llvm::ArrayRef<mlir::Type> mapSymTypes,
+                  llvm::ArrayRef<mlir::Location> mapSymLocs,
+                  llvm::ArrayRef<const Fortran::semantics::Symbol *> mapSymbols,
+                  const mlir::Location &currentLocation) {
   assert(mapSymTypes.size() == mapSymLocs.size());
 
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -1469,29 +1446,10 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       standaloneConstruct.u);
 }
 
-static void convertLoopBounds(Fortran::lower::AbstractConverter &converter,
-                              mlir::Location loc,
-                              llvm::SmallVectorImpl<mlir::Value> &lowerBound,
-                              llvm::SmallVectorImpl<mlir::Value> &upperBound,
-                              llvm::SmallVectorImpl<mlir::Value> &step,
-                              std::size_t loopVarTypeSize) {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  // The types of lower bound, upper bound, and step are converted into the
-  // type of the loop variable if necessary.
-  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
-  for (unsigned it = 0; it < (unsigned)lowerBound.size(); it++) {
-    lowerBound[it] =
-        firOpBuilder.createConvert(loc, loopVarType, lowerBound[it]);
-    upperBound[it] =
-        firOpBuilder.createConvert(loc, loopVarType, upperBound[it]);
-    step[it] = firOpBuilder.createConvert(loc, loopVarType, step[it]);
-  }
-}
-
 static llvm::SmallVector<const Fortran::semantics::Symbol *>
 genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
             mlir::Location &loc,
-            const llvm::SmallVector<const Fortran::semantics::Symbol *> &args) {
+            llvm::ArrayRef<const Fortran::semantics::Symbol *> args) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto &region = op->getRegion(0);
 
@@ -1512,16 +1470,16 @@ genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
   }
   firOpBuilder.setInsertionPointAfter(storeOp);
 
-  return args;
+  return llvm::SmallVector<const Fortran::semantics::Symbol *>(args);
 }
 
 static llvm::SmallVector<const Fortran::semantics::Symbol *>
 genLoopAndReductionVars(
     mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
     mlir::Location &loc,
-    const llvm::SmallVector<const Fortran::semantics::Symbol *> &loopArgs,
-    const llvm::SmallVector<const Fortran::semantics::Symbol *> &reductionArgs,
-    llvm::SmallVector<mlir::Type> &reductionTypes) {
+    llvm::ArrayRef<const Fortran::semantics::Symbol *> loopArgs,
+    llvm::ArrayRef<const Fortran::semantics::Symbol *> reductionArgs,
+    llvm::SmallVectorImpl<mlir::Type> &reductionTypes) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   llvm::SmallVector<mlir::Type> blockArgTypes;
@@ -1564,7 +1522,7 @@ genLoopAndReductionVars(
     converter.bindSymbol(*arg, prv);
   }
 
-  return loopArgs;
+  return llvm::SmallVector<const Fortran::semantics::Symbol *>(loopArgs);
 }
 
 static void
@@ -1583,16 +1541,15 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, reductionVars;
   llvm::SmallVector<mlir::Value> alignedVars, nontemporalVars;
   llvm::SmallVector<const Fortran::semantics::Symbol *> iv;
+  llvm::SmallVector<mlir::Type> reductionTypes;
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
   mlir::omp::ClauseOrderKindAttr orderClauseOperand;
   mlir::IntegerAttr simdlenClauseOperand, safelenClauseOperand;
-  std::size_t loopVarTypeSize;
 
   ClauseProcessor cp(converter, semaCtx, loopOpClauseList);
-  cp.processCollapse(loc, eval, lowerBound, upperBound, step, iv,
-                     loopVarTypeSize);
+  cp.processCollapse(loc, eval, lowerBound, upperBound, step, iv);
   cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
-  cp.processReduction(loc, reductionVars, reductionDeclSymbols);
+  cp.processReduction(loc, reductionVars, reductionTypes, reductionDeclSymbols);
   cp.processIf(clause::If::DirectiveNameModifier::Simd, ifClauseOperand);
   cp.processSimdlen(simdlenClauseOperand);
   cp.processSafelen(safelenClauseOperand);
@@ -1601,9 +1558,6 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
                  Fortran::parser::OmpClause::Linear,
                  Fortran::parser::OmpClause::Nontemporal,
                  Fortran::parser::OmpClause::Order>(loc, ompDirective);
-
-  convertLoopBounds(converter, loc, lowerBound, upperBound, step,
-                    loopVarTypeSize);
 
   mlir::TypeRange resultType;
   auto simdLoopOp = firOpBuilder.create<mlir::omp::SimdLoopOp>(
@@ -1642,6 +1596,7 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, reductionVars;
   llvm::SmallVector<mlir::Value> linearVars, linearStepVars;
   llvm::SmallVector<const Fortran::semantics::Symbol *> iv;
+  llvm::SmallVector<mlir::Type> reductionTypes;
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
   llvm::SmallVector<const Fortran::semantics::Symbol *> reductionSymbols;
   mlir::omp::ClauseOrderKindAttr orderClauseOperand;
@@ -1649,19 +1604,14 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   mlir::UnitAttr nowaitClauseOperand, byrefOperand, scheduleSimdClauseOperand;
   mlir::IntegerAttr orderedClauseOperand;
   mlir::omp::ScheduleModifierAttr scheduleModClauseOperand;
-  std::size_t loopVarTypeSize;
 
   ClauseProcessor cp(converter, semaCtx, beginClauseList);
-  cp.processCollapse(loc, eval, lowerBound, upperBound, step, iv,
-                     loopVarTypeSize);
+  cp.processCollapse(loc, eval, lowerBound, upperBound, step, iv);
   cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
-  cp.processReduction(loc, reductionVars, reductionDeclSymbols,
+  cp.processReduction(loc, reductionVars, reductionTypes, reductionDeclSymbols,
                       &reductionSymbols);
   cp.processTODO<Fortran::parser::OmpClause::Linear,
                  Fortran::parser::OmpClause::Order>(loc, ompDirective);
-
-  convertLoopBounds(converter, loc, lowerBound, upperBound, step,
-                    loopVarTypeSize);
 
   if (ReductionProcessor::doReductionByRef(reductionVars))
     byrefOperand = firOpBuilder.getUnitAttr();
@@ -1702,11 +1652,6 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
 
   auto *nestedEval = getCollapsedLoopEval(
       eval, Fortran::lower::getCollapseValue(beginClauseList));
-
-  llvm::SmallVector<mlir::Type> reductionTypes;
-  reductionTypes.reserve(reductionVars.size());
-  llvm::transform(reductionVars, std::back_inserter(reductionTypes),
-                  [](mlir::Value v) { return v.getType(); });
 
   auto ivCallback = [&](mlir::Operation *op) {
     return genLoopAndReductionVars(op, converter, loc, iv, reductionSymbols,
