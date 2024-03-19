@@ -117,6 +117,7 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
     for (const HeaderType Type :
          {HeaderType::Public, HeaderType::Private, HeaderType::Project}) {
       Ctx.Slice = std::make_shared<FrontendRecordsSlice>(Trip);
+      Ctx.Verifier->setTarget(Targ);
       Ctx.Type = Type;
       if (!runFrontend(ProgName, Opts.DriverOpts.Verbose, Ctx,
                        InMemoryFileSystem.get(), Opts.getClangFrontendArgs()))
@@ -137,13 +138,7 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   }
 
   // Assign attributes for serialization.
-  auto Symbols = std::make_unique<SymbolSet>();
-  for (const auto &FR : FrontendResults) {
-    SymbolConverter Converter(Symbols.get(), FR->getTarget());
-    FR->visit(Converter);
-  }
-
-  InterfaceFile IF(std::move(Symbols));
+  InterfaceFile IF(Ctx.Verifier->getExports());
   for (const auto &TargetInfo : Opts.DriverOpts.Targets) {
     IF.addTarget(TargetInfo.first);
     IF.setFromBinaryAttrs(Ctx.BA, TargetInfo.first);
