@@ -153,7 +153,8 @@ private:
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(
       _Parent* __parent, iterator_t<_Base> __current, range_difference_t<_Base> __missing = 0)
       : __current_(std::move(__current)),
-        __end_(ranges::end(__parent->__base_), __n_(__parent->__n_)),
+        __end_(ranges::end(__parent->__base_)),
+        __n_(__parent->__n_),
         __missing_(__missing) {}
 
 public:
