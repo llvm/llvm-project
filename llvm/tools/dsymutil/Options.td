@@ -128,6 +128,12 @@ def object_prefix_map: Separate<["--", "-"], "object-prefix-map">,
     Group<grp_general>;
 def: Joined<["--", "-"], "object-prefix-map=">, Alias<object_prefix_map>;
 
+def symbolmap: Separate<["--", "-"], "symbol-map">,
+  MetaVarName<"<bcsymbolmap>">,
+  HelpText<"Updates the existing dSYMs inplace using symbol map specified.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "symbol-map=">, Alias<symbolmap>;
+
 def arch: Separate<["--", "-"], "arch">,
   MetaVarName<"<arch>">,
   HelpText<"Link DWARF debug information only for specified CPU architecture"

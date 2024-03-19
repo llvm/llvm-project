@@ -32,6 +32,7 @@ add_llvm_tool(dsymutil
   MachOUtils.cpp
   Reproducer.cpp
   RelocationMap.cpp
+  SymbolMap.cpp
 
   DEPENDS
   intrinsics_gen
