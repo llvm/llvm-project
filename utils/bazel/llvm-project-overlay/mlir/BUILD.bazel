@@ -12067,12 +12067,14 @@ gentbl_cc_library(
 cc_library(
     name = "TransformDialectInterfaces",
     # FIXME: Change this once https://github.com/llvm/llvm-project/pull/85221 lands
-    hdrs = glob(["include/mlir/Dialect/Transform/IR/*.h"]),
+    hdrs = [
+        "include/mlir/Dialect/Transform/IR/TransformInterfaces.h",
+        "include/mlir/Dialect/Transform/IR/TransformTypes.h",
+    ],
     deps = [
         ":CastInterfaces",
         ":IR",
         ":Rewrite",
-        ":SideEffectInterfaces",
         ":Support",
         ":TransformDialectInterfacesIncGen",
         ":TransformDialectUtils",
