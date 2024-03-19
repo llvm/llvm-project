@@ -405,13 +405,12 @@ llvm.func @class_method() {
 
 // -----
 
-// Test recursive composite type with recursion via its scope is translated.
+// Ensures composite types with a recursive scope work.
 
 #di_composite_type_self = #llvm.di_composite_type<tag = DW_TAG_null, recId = distinct[0]<>>
 #di_file = #llvm.di_file<"test.mlir" in "/">
 #di_subroutine_type = #llvm.di_subroutine_type<types = #di_composite_type_self>
 #di_subprogram = #llvm.di_subprogram<scope = #di_file, name = "my_func", file = #di_file, line = 182, scopeLine = 182, subprogramFlags = Optimized, type = #di_subroutine_type>
-// The composite type whose scope leads to a self-recursive cycle.
 #di_composite_type = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = distinct[0]<>, name = "id", file = #di_file, line = 204, scope = #di_subprogram, flags = "Public|TypePassByReference|NonTrivial", sizeInBits = 128>
 #di_global_variable = #llvm.di_global_variable<scope = #di_file, name = "my_global", file = #di_file, line = 4641, type = #di_composite_type, isDefined = true>
 #di_global_variable_expression = #llvm.di_global_variable_expression<var = #di_global_variable, expr = <>>
