@@ -281,7 +281,7 @@ if (
 
 # Add the RT libdir to PATH directly so that we can successfully run the gtest
 # binary to list its tests.
-if config.host_os == "Windows" and config.asan_dynamic:
+if config.host_os == "Windows":
     os.environ["PATH"] = os.path.pathsep.join(
         [config.compiler_rt_libdir, os.environ.get("PATH", "")]
     )
