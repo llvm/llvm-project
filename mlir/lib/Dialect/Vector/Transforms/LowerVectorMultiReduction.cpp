@@ -438,7 +438,9 @@ struct OneDimMultiReductionToTwoDim
     auto srcVectorType = multiReductionOp.getSourceVectorType();
     auto srcShape = srcVectorType.getShape();
     auto castedType = VectorType::get(ArrayRef<int64_t>{1, srcShape.back()},
-                                      srcVectorType.getElementType());
+                                      srcVectorType.getElementType(),
+        ArrayRef<bool>{false, srcVectorType.getScalableDims().back()});
+
     auto accType =
         VectorType::get(ArrayRef<int64_t>{1}, srcVectorType.getElementType());
     assert(!llvm::isa<VectorType>(multiReductionOp.getDestType()) &&
@@ -455,10 +457,11 @@ struct OneDimMultiReductionToTwoDim
         loc, accType, multiReductionOp.getAcc());
     Value castMask;
     if (maskableOp.isMasked()) {
-      auto maskType = llvm::cast<ShapedType>(mask.getType());
+      auto maskType = llvm::cast<VectorType>(mask.getType());
       auto castMaskType =
           VectorType::get(ArrayRef<int64_t>{1, maskType.getShape().back()},
-                          maskType.getElementType());
+                          maskType.getElementType(),
+          ArrayRef<bool>{false, maskType.getScalableDims().back()});
       castMask = rewriter.create<vector::BroadcastOp>(loc, castMaskType, mask);
     }
 
