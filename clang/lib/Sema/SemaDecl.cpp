@@ -10319,8 +10319,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // Handle attributes.
   ProcessDeclAttributes(S, NewFD, D);
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
-  if (NewTVA && !NewTVA->isDefaultVersion() &&
-      !Context.getTargetInfo().hasFeature("fmv")) {
+  if (Context.getTargetInfo().getTriple().isRISCV()) {
+    // Go thought anyway.
+  } else if (NewTVA && !NewTVA->isDefaultVersion() &&
+             !Context.getTargetInfo().hasFeature("fmv")) {
     // Don't add to scope fmv functions declarations if fmv disabled
     AddToScope = false;
     return NewFD;
@@ -11027,13 +11029,27 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
   }
 
   if (TVA) {
-    llvm::SmallVector<StringRef, 8> Feats;
-    TVA->getFeatures(Feats);
-    for (const auto &Feat : Feats) {
-      if (!TargetInfo.validateCpuSupports(Feat)) {
-        S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
-            << Feature << Feat;
-        return true;
+    if (S.getASTContext().getTargetInfo().getTriple().isRISCV()) {
+      ParsedTargetAttr ParseInfo =
+          S.getASTContext().getTargetInfo().parseTargetAttr(TVA->getName());
+      for (const auto &Feat : ParseInfo.Features) {
+        StringRef BareFeat = StringRef{Feat}.substr(1);
+
+        if (!TargetInfo.isValidFeatureName(BareFeat)) {
+          S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
+              << Feature << BareFeat;
+          return true;
+        }
+      }
+    } else {
+      llvm::SmallVector<StringRef, 8> Feats;
+      TVA->getFeatures(Feats);
+      for (const auto &Feat : Feats) {
+        if (!TargetInfo.validateCpuSupports(Feat)) {
+          S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
+              << Feature << Feat;
+          return true;
+        }
       }
     }
   }
@@ -11314,7 +11330,8 @@ static bool PreviousDeclsHaveMultiVersionAttribute(const FunctionDecl *FD) {
 }
 
 static void patchDefaultTargetVersion(FunctionDecl *From, FunctionDecl *To) {
-  if (!From->getASTContext().getTargetInfo().getTriple().isAArch64())
+  if (!From->getASTContext().getTargetInfo().getTriple().isAArch64() &&
+      !From->getASTContext().getTargetInfo().getTriple().isRISCV())
     return;
 
   MultiVersionKind MVKindFrom = From->getMultiVersionKind();
@@ -15501,8 +15518,10 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     FD->setInvalidDecl();
   }
   if (const auto *Attr = FD->getAttr<TargetVersionAttr>()) {
-    if (!Context.getTargetInfo().hasFeature("fmv") &&
-        !Attr->isDefaultVersion()) {
+    if (Context.getTargetInfo().getTriple().isRISCV()) {
+      // pass thought anyway.
+    } else if (!Context.getTargetInfo().hasFeature("fmv") &&
+               !Attr->isDefaultVersion()) {
       // If function multi versioning disabled skip parsing function body
       // defined with non-default target_version attribute
       if (SkipBody)

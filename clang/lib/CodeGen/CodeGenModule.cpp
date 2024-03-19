@@ -4268,8 +4268,12 @@ void CodeGenModule::emitMultiVersionFunctions() {
           } else if (const auto *TVA = CurFD->getAttr<TargetVersionAttr>()) {
             if (TVA->isDefaultVersion() && IsDefined)
               ShouldEmitResolver = true;
-            TVA->getFeatures(Feats);
             llvm::Function *Func = createFunction(CurFD);
+            if (getTarget().getTriple().isRISCV()) {
+              Feats.push_back(TVA->getName());
+            } else {
+              TVA->getFeatures(Feats);
+            }
             Options.emplace_back(Func, /*Architecture*/ "", Feats);
           } else if (const auto *TC = CurFD->getAttr<TargetClonesAttr>()) {
             if (IsDefined)
