@@ -609,17 +609,25 @@ class MetadataLoader::MetadataLoaderImpl {
     if (!NeedDeclareExpressionUpgrade)
       return;
 
+    auto UpdateDeclareIfNeeded = [&](auto *Declare) {
+      auto *DIExpr = Declare->getExpression();
+      if (!DIExpr || !DIExpr->startsWithDeref() ||
+          !isa_and_nonnull<Argument>(Declare->getAddress()))
+        return;
+      SmallVector<uint64_t, 8> Ops;
+      Ops.append(std::next(DIExpr->elements_begin()), DIExpr->elements_end());
+      Declare->setExpression(DIExpression::get(Context, Ops));
+    };
+
     for (auto &BB : F)
-      for (auto &I : BB)
+      for (auto &I : BB) {
+        for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
+          if (DPV.isDbgDeclare())
+            UpdateDeclareIfNeeded(&DPV);
+        }
         if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
-          if (auto *DIExpr = DDI->getExpression())
-            if (DIExpr->startsWithDeref() &&
-                isa_and_nonnull<Argument>(DDI->getAddress())) {
-              SmallVector<uint64_t, 8> Ops;
-              Ops.append(std::next(DIExpr->elements_begin()),
-                         DIExpr->elements_end());
-              DDI->setExpression(DIExpression::get(Context, Ops));
-            }
+          UpdateDeclareIfNeeded(DDI);
+      }
   }
 
   /// Upgrade the expression from previous versions.
