@@ -895,11 +895,11 @@ genTargetDataOp(Fortran::lower::AbstractConverter &converter,
 }
 
 template <typename OpTy>
-static OpTy
-genTargetEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
-                         Fortran::semantics::SemanticsContext &semaCtx,
-                         mlir::Location currentLocation,
-                         const Fortran::parser::OmpClauseList &clauseList) {
+static OpTy genTargetEnterExitDataUpdateOp(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semaCtx,
+    mlir::Location currentLocation,
+    const Fortran::parser::OmpClauseList &clauseList) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   Fortran::lower::StatementContext stmtCtx;
   mlir::Value ifClauseOperand, deviceOperand;
@@ -1405,15 +1405,15 @@ genOmpSimpleStandalone(Fortran::lower::AbstractConverter &converter,
                     opClauseList);
     break;
   case llvm::omp::Directive::OMPD_target_enter_data:
-    genTargetEnterExitUpdateDataOp<mlir::omp::TargetEnterDataOp>(
+    genTargetEnterExitDataUpdateOp<mlir::omp::TargetEnterDataOp>(
         converter, semaCtx, currentLocation, opClauseList);
     break;
   case llvm::omp::Directive::OMPD_target_exit_data:
-    genTargetEnterExitUpdateDataOp<mlir::omp::TargetExitDataOp>(
+    genTargetEnterExitDataUpdateOp<mlir::omp::TargetExitDataOp>(
         converter, semaCtx, currentLocation, opClauseList);
     break;
   case llvm::omp::Directive::OMPD_target_update:
-    genTargetEnterExitUpdateDataOp<mlir::omp::TargetUpdateOp>(
+    genTargetEnterExitDataUpdateOp<mlir::omp::TargetUpdateOp>(
         converter, semaCtx, currentLocation, opClauseList);
     break;
   case llvm::omp::Directive::OMPD_ordered:

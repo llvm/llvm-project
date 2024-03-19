@@ -221,7 +221,7 @@ llvm.func @_QPomp_target_data(%a : !llvm.ptr, %b : !llvm.ptr, %c : !llvm.ptr, %d
 // CHECK-LABEL: @_QPomp_target_data_region
 // CHECK: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr) {
 // CHECK: %[[MAP_0:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, !llvm.array<1024 x i32>)  map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-// CHECK: omp.target.data map_entries(%[[MAP_0]] : !llvm.ptr) {
+// CHECK: omp.target_data map_entries(%[[MAP_0]] : !llvm.ptr) {
 // CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(10 : i32) : i32
 // CHECK:           llvm.store %[[VAL_1]], %[[ARG1]] : i32, !llvm.ptr
 // CHECK:           omp.terminator
@@ -230,7 +230,7 @@ llvm.func @_QPomp_target_data(%a : !llvm.ptr, %b : !llvm.ptr, %c : !llvm.ptr, %d
 
 llvm.func @_QPomp_target_data_region(%a : !llvm.ptr, %i : !llvm.ptr) {
   %1 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target.data map_entries(%1 : !llvm.ptr) {
+  omp.target_data map_entries(%1 : !llvm.ptr) {
     %2 = llvm.mlir.constant(10 : i32) : i32
     llvm.store %2, %i : i32, !llvm.ptr
     omp.terminator

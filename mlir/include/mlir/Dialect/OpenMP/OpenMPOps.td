@@ -625,9 +625,9 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
           |`byref` $byref
           |`ordered` `(` $ordered_val `)`
           |`order` `(` custom<ClauseAttr>($order_val) `)`
-    ) custom<Wsloop>($region, $lowerBound, $upperBound, $step,
-                                  type($step), $reduction_vars, type($reduction_vars), $reductions,
-                                  $inclusive) attr-dict
+    ) custom<Wsloop>($region, $lowerBound, $upperBound, $step, type($step),
+                     $reduction_vars, type($reduction_vars), $reductions,
+                     $inclusive) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -1391,7 +1391,7 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
 // 2.14.2 target data Construct
 //===---------------------------------------------------------------------===//
 
-def TargetDataOp: OpenMP_Op<"target.data", [AttrSizedOperandSegments,
+def TargetDataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments,
                                             MapClauseOwningOpInterface]>{
   let summary = "target data construct";
   let description = [{

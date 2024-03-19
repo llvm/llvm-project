@@ -1655,7 +1655,7 @@ func.func @omp_target(%map1: memref<?xi32>) {
 func.func @omp_target_data(%map1: memref<?xi32>) {
   %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)  map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
-  omp.target.data map_entries(%mapv : memref<?xi32>){}
+  omp.target_data map_entries(%mapv : memref<?xi32>){}
   return
 }
 
@@ -1663,7 +1663,7 @@ func.func @omp_target_data(%map1: memref<?xi32>) {
 
 func.func @omp_target_data() {
   // expected-error @below {{At least one of map, useDevicePtr, or useDeviceAddr operand must be present}}
-  omp.target.data {}
+  omp.target_data {}
   return
 }
 

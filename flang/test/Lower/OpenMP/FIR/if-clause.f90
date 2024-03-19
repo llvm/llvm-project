@@ -191,18 +191,18 @@ program main
   ! ----------------------------------------------------------------------------
   ! TARGET DATA
   ! ----------------------------------------------------------------------------
-  ! CHECK:      omp.target.data
+  ! CHECK:      omp.target_data
   ! CHECK-NOT:  if({{.*}})
   ! CHECK-SAME: {
   !$omp target data map(tofrom: i)
   !$omp end target data
 
-  ! CHECK:      omp.target.data
+  ! CHECK:      omp.target_data
   ! CHECK-SAME: if({{.*}})
   !$omp target data map(tofrom: i) if(.true.)
   !$omp end target data
 
-  ! CHECK:      omp.target.data
+  ! CHECK:      omp.target_data
   ! CHECK-SAME: if({{.*}})
   !$omp target data map(tofrom: i) if(target data: .true.)
   !$omp end target data

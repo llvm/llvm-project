@@ -332,7 +332,7 @@ func.func @_QPopenmp_target_data_region() {
   %c2 = arith.subi %c1024, %c3 : index
   %bound = omp.map.bounds   lower_bound(%c0 : index) upper_bound(%c2 : index) extent(%c1024 : index) stride(%c3 : index) start_idx(%c3 : index)
   %entry = omp.map.info var_ptr(%0 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%bound) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-  omp.target.data   map_entries(%entry : !fir.ref<!fir.array<1024xi32>>) {
+  omp.target_data   map_entries(%entry : !fir.ref<!fir.array<1024xi32>>) {
     %c1_i32 = arith.constant 1 : i32
     %2 = fir.convert %c1_i32 : (i32) -> index
     %c1024_i32 = arith.constant 1024 : i32
@@ -371,7 +371,7 @@ func.func @_QPopenmp_target_data_region() {
 // CHECK:           %[[VAL_UPPER:.*]] = llvm.mlir.constant(1023 : index) : i64
 // CHECK:           %[[VAL_BOUNDS:.*]] = omp.map.bounds   lower_bound(%[[VAL_ZERO]] : i64) upper_bound(%[[VAL_UPPER]] : i64) extent(%[[VAL_MAX]] : i64) stride(%[[VAL_ONE]] : i64) start_idx(%[[VAL_ONE]] : i64)
 // CHECK:           %[[VAL_MAP:.*]] = omp.map.info var_ptr(%[[VAL_1]] : !llvm.ptr, !llvm.array<1024 x i32>)  map_clauses(tofrom) capture(ByRef) bounds(%[[VAL_BOUNDS]]) -> !llvm.ptr {name = "a"}
-// CHECK:           omp.target.data   map_entries(%[[VAL_MAP]] : !llvm.ptr) {
+// CHECK:           omp.target_data   map_entries(%[[VAL_MAP]] : !llvm.ptr) {
 // CHECK:             %[[VAL_4:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:             %[[VAL_5:.*]] = llvm.sext %[[VAL_4]] : i32 to i64
 // CHECK:             %[[VAL_6:.*]] = llvm.mlir.constant(1024 : i32) : i32
@@ -413,13 +413,13 @@ func.func @_QPopenmp_target_data_region() {
 
 func.func @_QPomp_target_data_empty() {
   %0 = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_data_emptyEa"}
-  omp.target.data use_device_addr(%0 : !fir.ref<!fir.array<1024xi32>>) {
+  omp.target_data use_device_addr(%0 : !fir.ref<!fir.array<1024xi32>>) {
   }
   return
 }
 
 // CHECK-LABEL:   llvm.func @_QPomp_target_data_empty
-// CHECK: omp.target.data   use_device_addr(%1 : !llvm.ptr) {
+// CHECK: omp.target_data   use_device_addr(%1 : !llvm.ptr) {
 // CHECK: }
 
 // -----
