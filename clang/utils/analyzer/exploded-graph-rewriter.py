@@ -480,14 +480,19 @@ class ExplodedGraph:
 # syntax highlighing.
 class DotDumpVisitor:
     def __init__(
-        self, do_diffs, dark_mode, gray_mode, topo_mode, dump_dot_only, dump_html_only
+        self, do_diffs, dark_mode, gray_mode, topo_mode, dump_html_only, dump_dot_only
     ):
+        assert not (dump_html_only and dump_dot_only), (
+            "Option dump_html_only and dump_dot_only are conflict, "
+            "they cannot be true at the same time."
+        )
+
         self._do_diffs = do_diffs
         self._dark_mode = dark_mode
         self._gray_mode = gray_mode
         self._topo_mode = topo_mode
-        self._dump_dot_only = dump_dot_only
         self._dump_html_only = dump_html_only
+        self._dump_dot_only = dump_dot_only
         self._output = []
 
     def _dump_raw(self, s):
@@ -1183,6 +1188,15 @@ def main():
     )
     dump_conflict = parser.add_mutually_exclusive_group()
     dump_conflict.add_argument(
+        "--dump-html-only",
+        action="store_const",
+        dest="dump_html_only",
+        const=True,
+        default=False,
+        help="dump the rewritten egraph to a temporary HTML file, "
+        "but do not open it immediately as by default",
+    )
+    dump_conflict.add_argument(
         "--dump-dot-only",
         action="store_const",
         dest="dump_dot_only",
@@ -1191,14 +1205,6 @@ def main():
         help="instead of writing an HTML file and immediately "
         "displaying it, dump the rewritten dot file "
         "to stdout",
-    )
-    dump_conflict.add_argument(
-        "--dump-html-only",
-        action="store_const",
-        dest="dump_html_only",
-        const=True,
-        default=False,
-        help="do not open the generated HTML immediately",
     )
     args = parser.parse_args()
     logging.basicConfig(level=args.loglevel)
@@ -1224,8 +1230,8 @@ def main():
         args.dark,
         args.gray,
         args.topology,
-        args.dump_dot_only,
         args.dump_html_only,
+        args.dump_dot_only,
     )
 
     for trimmer in trimmers:
