@@ -4397,8 +4397,6 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
       module_spec.GetUUID() = m_objfile_sp->GetUUID();
       dwp_filespec =
           PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
-      // Set it back so it's not outliving the m_objfile_sp shared pointer.
-      module_spec.GetUUID() = {};
     }
     if (FileSystem::Instance().Exists(dwp_filespec)) {
       LLDB_LOG(log, "Found DWP file: \"{0}\"", dwp_filespec);

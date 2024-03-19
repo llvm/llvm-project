@@ -59,10 +59,8 @@ static bool IsDwpSymbolFile(const lldb::ModuleSP &module_sp,
   // a DWP file. Make sure we don't fill in the section list on dwp_obj_file
   // (by calling GetSectionList(false)) as this is invoked before we may have
   // all the symbol files collected and available.
-  if (!dwp_obj_file || !dwp_obj_file->GetSectionList(false)->FindSectionByType(
-                           eSectionTypeDWARFDebugCuIndex, false))
-    return false;
-  return true;
+  return dwp_obj_file && dwp_obj_file->GetSectionList(false)->FindSectionByType(
+                             eSectionTypeDWARFDebugCuIndex, false);
 }
 
 // CreateInstance
