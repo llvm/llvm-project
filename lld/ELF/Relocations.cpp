@@ -1280,7 +1280,6 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   if (config->emachine == EM_MIPS)
     return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
   bool isRISCV = config->emachine == EM_RISCV;
-
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT>(expr) &&
       config->shared) {
@@ -1480,7 +1479,13 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
 
   // Process TLS relocations, including TLS optimizations. Note that
   // R_TPREL and R_TPREL_NEG relocations are resolved in processAux.
-  if (sym.isTls()) {
+  if (sym.isTls() ||
+      // These RISCV TLSDESC relocations reference a local symbol that won't be
+      // a TLS symbol, but we need to process them in handleTlsRelocation the
+      // same as other TLS relocations.
+      (config->emachine == EM_RISCV &&
+       (type == R_RISCV_TLSDESC_CALL || type == R_RISCV_TLSDESC_LOAD_LO12 ||
+        type == R_RISCV_TLSDESC_ADD_LO12))) {
     if (unsigned processed =
             handleTlsRelocation(type, sym, *sec, offset, addend, expr)) {
       i += processed - 1;

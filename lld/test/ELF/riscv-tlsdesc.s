@@ -29,6 +29,12 @@
 # RUN: ld.lld -e 0 -z now a.32.o c.32.so -o a.32.ie
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d a.32.ie | FileCheck %s --check-prefix=IE32
 
+# RUN: llvm-mc -triple=riscv64 --position-independent -filetype=obj d.s -o d.64.o
+# RUN: ld.lld -shared -soname=libd.64.so -o libd.64.so d.64.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL --allow-empty
+
+# RUN: llvm-mc -triple=riscv32 --position-independent -filetype=obj d.s -o d.32.o
+# RUN: ld.lld -shared -soname=libd.32.so -o libd.32.so d.32.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL --allow-empty
+
 # GD64-RELA:      .rela.dyn {
 # GD64-RELA-NEXT:   0x2408 R_RISCV_TLSDESC - 0x7FF
 # GD64-RELA-NEXT:   0x23E8 R_RISCV_TLSDESC a 0x0
@@ -68,14 +74,14 @@
 # GD64-NEXT:         add     a0, a0, tp
 
 ## &.got[b]-. = 0x23e0+40 - 0x12f4 = 0x1114
-# GD64-NEXT:   12f4: auipc   a2, 0x1
+# GD64:        12f4: auipc   a2, 0x1
 # GD64-NEXT:         ld      a3, 0x114(a2)
 # GD64-NEXT:         addi    a0, a2, 0x114
 # GD64-NEXT:         jalr    t0, 0x0(a3)
 # GD64-NEXT:         add     a0, a0, tp
 
 ## &.got[c]-. = 0x23e0+24 - 0x1308 = 0x10f0
-# GD64-NEXT:   1308: auipc   a4, 0x1
+# GD64:        1308: auipc   a4, 0x1
 # GD64-NEXT:         ld      a5, 0xf0(a4)
 # GD64-NEXT:         addi    a0, a4, 0xf0
 # GD64-NEXT:         jalr    t0, 0x0(a5)
@@ -83,7 +89,7 @@
 
 # NOREL: no relocations
 
-# LE64-LABEL: <.text>:
+# LE64-LABEL: <.Ltlsdesc_hi0>:
 ## st_value(a) = 8
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    zero, zero, 0x0
@@ -91,12 +97,14 @@
 # LE64-NEXT:         addi    a0, zero, 0x8
 # LE64-NEXT:         add     a0, a0, tp
 ## st_value(b) = 2047
+# LE64-LABEL: <.Ltlsdesc_hi1>:
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    a0, zero, 0x7ff
 # LE64-NEXT:         add     a0, a0, tp
 ## st_value(c) = 2048
+# LE64-LABEL: <.Ltlsdesc_hi2>:
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         lui     a0, 0x1
@@ -110,18 +118,20 @@
 # IE64:       .got     00000010 00000000000123a8
 
 ## a and b are optimized to use LE. c is optimized to IE.
-# IE64-LABEL: <.text>:
+# IE64-LABEL: <.Ltlsdesc_hi0>:
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    a0, zero, 0x8
 # IE64-NEXT:         add     a0, a0, tp
+# IE64-LABEL: <.Ltlsdesc_hi1>:
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    a0, zero, 0x7ff
 # IE64-NEXT:         add     a0, a0, tp
 ## &.got[c]-. = 0x123a8+8 - 0x112b8 = 0x10f8
+# IE64-LABEL: <.Ltlsdesc_hi2>:
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:  112b8: auipc   a0, 0x1
@@ -130,7 +140,7 @@
 
 # IE32:       .got     00000008 00012248
 
-# IE32-LABEL: <.text>:
+# IE32-LABEL: <.Ltlsdesc_hi0>:
 ## st_value(a) = 8
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    zero, zero, 0x0
@@ -138,17 +148,22 @@
 # IE32-NEXT:         addi    a0, zero, 0x8
 # IE32-NEXT:         add     a0, a0, tp
 ## st_value(b) = 2047
+# IE32-LABEL: <.Ltlsdesc_hi1>:
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    a0, zero, 0x7ff
 # IE32-NEXT:         add     a0, a0, tp
 ## &.got[c]-. = 0x12248+4 - 0x111cc = 0x1080
+# IE32-LABEL: <.Ltlsdesc_hi2>:
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:  111cc: auipc   a0, 0x1
 # IE32-NEXT:         lw      a0, 0x80(a0)
 # IE32-NEXT:         add     a0, a0, tp
+
+# At one point the local TLSDESC labels would be marked STT_TLS, so make sure we don't regress
+# BADTLSLABEL-NOT: error: d.{{.*}}.o has an STT_TLS symbol but doesn't have an SHF_TLS section
 
 #--- a.s
 .macro load dst, src
@@ -192,3 +207,31 @@ b:
 .tbss
 .globl c
 c: .zero 4
+
+#--- d.s
+  .text
+  .attribute	4, 16
+  .attribute	5, "rv64i2p1_m2p0_a2p1_c2p0"
+  .globl	bar
+  .p2align	1
+  .type	bar,@function
+bar:
+  addi	sp, sp, -16
+.Lpcrel_hi0:
+  auipc	a0, %got_pcrel_hi(_ZTH3foo)
+  ld	a0, %pcrel_lo(.Lpcrel_hi0)(a0)
+  beqz	a0, .Ltlsdesc_hi0
+  call	_ZTH3foo
+.Ltlsdesc_hi0:
+  auipc	a0, %tlsdesc_hi(foo)
+  ld	a1, %tlsdesc_load_lo(.Ltlsdesc_hi0)(a0)
+  addi	a0, a0, %tlsdesc_add_lo(.Ltlsdesc_hi0)
+  jalr	t0, 0(a1), %tlsdesc_call(.Ltlsdesc_hi0)
+  add	a1, a0, tp
+  lw	a0, 0(a1)
+  addiw	a0, a0, 1
+  sw	a0, 0(a1)
+  addi	sp, sp, 16
+  ret
+
+.weak _ZTH3foo
