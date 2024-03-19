@@ -105,7 +105,9 @@ static cl::opt<bool> ExpandConstantExprs(
 /// is to do nothing. Individual tools can override this to incrementally add
 /// support for the RemoveDIs format.
 cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInforFormat(
-    "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden);
+    "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden,
+    cl::desc("Load bitcode directly into the new debug info format (regardless "
+             "of input format)"));
 
 namespace {
 
