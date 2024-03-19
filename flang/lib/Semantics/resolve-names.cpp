@@ -4646,23 +4646,23 @@ bool DeclarationVisitor::Pre(const parser::OldParameterStmt &x) {
 bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
   auto &name{std::get<parser::NamedConstant>(x.t).v};
   auto &symbol{HandleAttributeStmt(Attr::PARAMETER, name)};
-  if (!ConvertToObjectEntity(symbol) ||
-      symbol.test(Symbol::Flag::CrayPointer) ||
+  ConvertToObjectEntity(symbol);
+  auto *details{symbol.detailsIf<ObjectEntityDetails>()};
+  if (!details || symbol.test(Symbol::Flag::CrayPointer) ||
       symbol.test(Symbol::Flag::CrayPointee)) {
     SayWithDecl(
         name, symbol, "PARAMETER attribute not allowed on '%s'"_err_en_US);
     return false;
   }
   const auto &expr{std::get<parser::ConstantExpr>(x.t)};
-  auto &details{symbol.get<ObjectEntityDetails>()};
-  if (details.init() || symbol.test(Symbol::Flag::InDataStmt)) {
+  if (details->init() || symbol.test(Symbol::Flag::InDataStmt)) {
     Say(name, "Named constant '%s' already has a value"_err_en_US);
   }
   if (inOldStyleParameterStmt_) {
     // non-standard extension PARAMETER statement (no parentheses)
     Walk(expr);
     auto folded{EvaluateExpr(expr)};
-    if (details.type()) {
+    if (details->type()) {
       SayWithDecl(name, symbol,
           "Alternative style PARAMETER '%s' must not already have an explicit type"_err_en_US);
     } else if (folded) {
@@ -4674,9 +4674,9 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
           } else if (auto shape{ToArraySpec(
                          GetFoldingContext(), evaluate::GetShape(*folded))}) {
             // The type of the named constant is assumed from the expression.
-            details.set_type(*type);
-            details.set_init(std::move(*folded));
-            details.set_shape(std::move(*shape));
+            details->set_type(*type);
+            details->set_init(std::move(*folded));
+            details->set_shape(std::move(*shape));
           } else {
             Say(at, "The expression must have constant shape"_err_en_US);
           }
@@ -4693,7 +4693,7 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
     Walk(expr);
     if (auto converted{EvaluateNonPointerInitializer(
             symbol, expr, expr.thing.value().source)}) {
-      details.set_init(std::move(*converted));
+      details->set_init(std::move(*converted));
     }
   }
   return false;
