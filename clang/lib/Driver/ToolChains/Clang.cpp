@@ -586,6 +586,8 @@ static void addPGOFlagsGPU(const ToolChain &TC, const ArgList &Args,
   auto *ProfileLLVMArg =
       Args.getLastArg(options::OPT_fprofile_instr_generate_gpu,
                       options::OPT_fno_profile_generate);
+  auto *ProfileUseArg = Args.getLastArg(options::OPT_fprofile_use_gpu_EQ,
+                                        options::OPT_fno_profile_instr_use);
   if (ProfileClangArg &&
       ProfileClangArg->getOption().matches(options::OPT_fno_profile_generate))
     ProfileClangArg = nullptr;
@@ -594,9 +596,25 @@ static void addPGOFlagsGPU(const ToolChain &TC, const ArgList &Args,
       ProfileLLVMArg->getOption().matches(options::OPT_fno_profile_generate))
     ProfileLLVMArg = nullptr;
 
+  if (ProfileUseArg &&
+      ProfileUseArg->getOption().matches(options::OPT_fno_profile_generate))
+    ProfileUseArg = nullptr;
+
   if (ProfileClangArg && ProfileLLVMArg) {
     D.Diag(diag::err_drv_argument_not_allowed_with)
         << ProfileClangArg->getSpelling() << ProfileLLVMArg->getSpelling();
+    return;
+  }
+
+  if (ProfileUseArg && ProfileClangArg) {
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << ProfileClangArg->getSpelling() << ProfileUseArg->getSpelling();
+    return;
+  }
+
+  if (ProfileUseArg && ProfileLLVMArg) {
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << ProfileLLVMArg->getSpelling() << ProfileUseArg->getSpelling();
     return;
   }
 
@@ -605,6 +623,10 @@ static void addPGOFlagsGPU(const ToolChain &TC, const ArgList &Args,
 
   if (ProfileLLVMArg)
     CmdArgs.push_back("-fprofile-instrument=llvm");
+
+  if (ProfileUseArg)
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("-fprofile-instrument-use-path=") + ProfileUseArg->getValue()));
 }
 
 static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,

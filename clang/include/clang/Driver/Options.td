@@ -1768,6 +1768,11 @@ def fprofile_use_EQ : Joined<["-"], "fprofile-use=">,
     Visibility<[ClangOption, CLOption]>,
     MetaVarName<"<pathname>">,
     HelpText<"Use instrumentation data for profile-guided optimization. If pathname is a directory, it reads from <pathname>/default.profdata. Otherwise, it reads from file <pathname>.">;
+def fprofile_use_gpu_EQ : Joined<["-"], "fprofile-use-gpu=">,
+    Group<f_Group>,
+    Visibility<[ClangOption, CLOption]>,
+    MetaVarName<"<pathname>">,
+    HelpText<"Use instrumentation data for profile-guided optimization targeting GPU">;
 def fno_profile_instr_generate : Flag<["-"], "fno-profile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Disable generation of profile instrumentation.">;
