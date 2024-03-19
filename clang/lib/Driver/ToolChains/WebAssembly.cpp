@@ -44,8 +44,15 @@ std::string wasm::Linker::getLinkerPath(const ArgList &Args) const {
           llvm::sys::fs::can_execute(UseLinker))
         return std::string(UseLinker);
 
-      // Accept 'lld', and 'ld' as aliases for the default linker
-      if (UseLinker != "lld" && UseLinker != "ld")
+      // Interpret 'lld' as explicitly requesting `wasm-ld`, so look for that
+      // linker. Note that for `wasm32-wasip2` this overrides the default linker
+      // of `wasm-component-ld`.
+      if (UseLinker == "lld") {
+        return ToolChain.GetProgramPath("wasm-ld");
+      }
+
+      // Allow 'ld' as an alias for the default linker
+      if (UseLinker != "ld")
         ToolChain.getDriver().Diag(diag::err_drv_invalid_linker_name)
             << A->getAsString(Args);
     }
@@ -72,6 +79,16 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("--strip-all");
+
+  // On `wasip2` the default linker is `wasm-component-ld` which wraps the
+  // execution of `wasm-ld`. Find `wasm-ld` and pass it as an argument of where
+  // to find it to avoid it needing to hunt and rediscover or search `PATH` for
+  // where it is.
+  if (llvm::sys::path::stem(Linker).ends_with_insensitive(
+          "wasm-component-ld")) {
+    CmdArgs.push_back("--wasm-ld-path");
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetProgramPath("wasm-ld")));
+  }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
 
@@ -219,6 +236,12 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
     }
     getFilePaths().push_back(SysRoot + "/lib/" + MultiarchTriple);
   }
+}
+
+const char *WebAssembly::getDefaultLinker() const {
+  if (getOS() == "wasip2")
+    return "wasm-component-ld";
+  return "wasm-ld";
 }
 
 bool WebAssembly::IsMathErrnoDefault() const { return false; }
