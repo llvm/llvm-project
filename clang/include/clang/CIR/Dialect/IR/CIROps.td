@@ -1148,6 +1148,55 @@ def BitPopcountOp : CIR_BitOp<"bit.popcount", UIntOfWidths<[16, 32, 64]>> {
 }
 
 //===----------------------------------------------------------------------===//
+// CmpThreeWayOp
+//===----------------------------------------------------------------------===//
+
+def CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
+  let summary = "Compare two values with C++ three-way comparison semantics";
+  let description = [{
+    The `cir.cmp3way` operation models the `<=>` operator in C++20. It takes two
+    operands with the same type and produces a result indicating the ordering
+    between the two input operands.
+
+    The result of the operation is a signed integer that indicates the ordering
+    between the two input operands.
+
+    There are two kinds of ordering: strong ordering and partial ordering.
+    Comparing different types of values yields different kinds of orderings.
+    The `info` parameter gives the ordering kind and other necessary information
+    about the comparison.
+
+    Example:
+
+    ```mlir
+    !s32i = !cir.int<s, 32>
+
+    #cmp3way_strong = #cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
+    #cmp3way_partial = #cmp3way_info<strong, lt = -1, eq = 0, gt = 1, unordered = 2>
+
+    %0 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %1 = cir.const(#cir.int<1> : !s32i) : !s32i
+    %2 = cir.cmp3way(%0 : !s32i, %1, #cmp3way_strong) : !s8i
+
+    %3 = cir.const(#cir.fp<0.0> : !cir.float) : !cir.float
+    %4 = cir.const(#cir.fp<1.0> : !cir.float) : !cir.float
+    %5 = cir.cmp3way(%3 : !cir.float, %4, #cmp3way_partial) : !s8i
+    ```
+  }];
+
+  let results = (outs CIR_IntType:$result);
+  let arguments = (ins CIR_AnyType:$lhs, CIR_AnyType:$rhs,
+                       CmpThreeWayInfoAttr:$info);
+
+  let assemblyFormat = [{
+    `(` $lhs `:` type($lhs) `,` $rhs `,` qualified($info) `)`
+    `:` type($result) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // SwitchOp
 //===----------------------------------------------------------------------===//
 

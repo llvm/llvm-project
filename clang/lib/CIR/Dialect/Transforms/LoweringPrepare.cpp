@@ -66,6 +66,7 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void runOnOperation() override;
 
   void runOnOp(Operation *op);
+  void lowerThreeWayCmpOp(CmpThreeWayOp op);
   void lowerGlobalOp(GlobalOp op);
   void lowerStdFindOp(StdFindOp op);
   void lowerIterBeginOp(IterBeginOp op);
@@ -234,6 +235,63 @@ FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
   assert(isa<YieldOp>(yieldOp));
   builder.create<ReturnOp>(yieldOp.getLoc());
   return f;
+}
+
+void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op);
+
+  auto loc = op->getLoc();
+  auto cmpInfo = op.getInfo();
+
+  auto buildCmpRes = [&](int64_t value) -> mlir::Value {
+    return builder.create<mlir::cir::ConstantOp>(
+        loc, op.getType(), mlir::cir::IntAttr::get(op.getType(), value));
+  };
+  auto ltRes = buildCmpRes(cmpInfo.getLt());
+  auto eqRes = buildCmpRes(cmpInfo.getEq());
+  auto gtRes = buildCmpRes(cmpInfo.getGt());
+
+  auto buildCmp = [&](CmpOpKind kind) -> mlir::Value {
+    auto ty = BoolType::get(&getContext());
+    return builder.create<mlir::cir::CmpOp>(loc, ty, kind, op.getLhs(),
+                                            op.getRhs());
+  };
+  auto buildSelect = [&](mlir::Value condition, mlir::Value trueResult,
+                         mlir::Value falseResult) -> mlir::Value {
+    return builder
+        .create<mlir::cir::TernaryOp>(
+            loc, condition,
+            [&](OpBuilder &, Location) {
+              builder.create<mlir::cir::YieldOp>(loc, trueResult);
+            },
+            [&](OpBuilder &, Location) {
+              builder.create<mlir::cir::YieldOp>(loc, falseResult);
+            })
+        .getResult();
+  };
+
+  mlir::Value transformedResult;
+  if (cmpInfo.getOrdering() == CmpOrdering::Strong) {
+    // Strong ordering.
+    auto lt = buildCmp(CmpOpKind::lt);
+    auto eq = buildCmp(CmpOpKind::eq);
+    auto selectOnEq = buildSelect(eq, eqRes, gtRes);
+    transformedResult = buildSelect(lt, ltRes, selectOnEq);
+  } else {
+    // Partial ordering.
+    auto unorderedRes = buildCmpRes(cmpInfo.getUnordered().value());
+
+    auto lt = buildCmp(CmpOpKind::lt);
+    auto eq = buildCmp(CmpOpKind::eq);
+    auto gt = buildCmp(CmpOpKind::gt);
+    auto selectOnEq = buildSelect(eq, eqRes, unorderedRes);
+    auto selectOnGt = buildSelect(gt, gtRes, selectOnEq);
+    transformedResult = buildSelect(lt, ltRes, selectOnGt);
+  }
+
+  op.replaceAllUsesWith(transformedResult);
+  op.erase();
 }
 
 void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
@@ -428,7 +486,9 @@ void LoweringPreparePass::lowerIterEndOp(IterEndOp op) {
 }
 
 void LoweringPreparePass::runOnOp(Operation *op) {
-  if (auto getGlobal = dyn_cast<GlobalOp>(op)) {
+  if (auto threeWayCmp = dyn_cast<CmpThreeWayOp>(op)) {
+    lowerThreeWayCmpOp(threeWayCmp);
+  } else if (auto getGlobal = dyn_cast<GlobalOp>(op)) {
     lowerGlobalOp(getGlobal);
   } else if (auto stdFind = dyn_cast<StdFindOp>(op)) {
     lowerStdFindOp(stdFind);
@@ -452,8 +512,8 @@ void LoweringPreparePass::runOnOperation() {
 
   SmallVector<Operation *> opsToTransform;
   op->walk([&](Operation *op) {
-    if (isa<GlobalOp, StdFindOp, IterBeginOp, IterEndOp, ArrayCtor, ArrayDtor>(
-            op))
+    if (isa<CmpThreeWayOp, GlobalOp, StdFindOp, IterBeginOp, IterEndOp,
+            ArrayCtor, ArrayDtor>(op))
       opsToTransform.push_back(op);
   });
 

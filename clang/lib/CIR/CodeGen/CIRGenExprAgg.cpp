@@ -18,6 +18,7 @@
 #include "mlir/IR/Attributes.h"
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
@@ -261,7 +262,7 @@ public:
   }
 
   void VisitBinComma(const BinaryOperator *E) { llvm_unreachable("NYI"); }
-  void VisitBinCmp(const BinaryOperator *E) { llvm_unreachable("NYI"); }
+  void VisitBinCmp(const BinaryOperator *E);
   void VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *E) {
     llvm_unreachable("NYI");
   }
@@ -1025,6 +1026,63 @@ void AggExprEmitter::withReturnValueSlot(
     // eagerly.
     assert(!UnimplementedFeature::shouldEmitLifetimeMarkers() && "NYI");
   }
+}
+
+void AggExprEmitter::VisitBinCmp(const BinaryOperator *E) {
+  assert(CGF.getContext().hasSameType(E->getLHS()->getType(),
+                                      E->getRHS()->getType()));
+  const ComparisonCategoryInfo &CmpInfo =
+      CGF.getContext().CompCategories.getInfoForType(E->getType());
+  assert(CmpInfo.Record->isTriviallyCopyable() &&
+         "cannot copy non-trivially copyable aggregate");
+
+  QualType ArgTy = E->getLHS()->getType();
+
+  if (!ArgTy->isIntegralOrEnumerationType() && !ArgTy->isRealFloatingType() &&
+      !ArgTy->isNullPtrType() && !ArgTy->isPointerType() &&
+      !ArgTy->isMemberPointerType() && !ArgTy->isAnyComplexType())
+    llvm_unreachable("aggregate three-way comparison");
+
+  auto Loc = CGF.getLoc(E->getSourceRange());
+
+  if (E->getType()->isAnyComplexType())
+    llvm_unreachable("NYI");
+
+  auto LHS = CGF.buildAnyExpr(E->getLHS()).getScalarVal();
+  auto RHS = CGF.buildAnyExpr(E->getRHS()).getScalarVal();
+
+  mlir::Value ResultScalar;
+  if (ArgTy->isNullPtrType()) {
+    ResultScalar =
+        CGF.builder.getConstInt(Loc, CmpInfo.getEqualOrEquiv()->getIntValue());
+  } else {
+    auto LtRes = CmpInfo.getLess()->getIntValue();
+    auto EqRes = CmpInfo.getEqualOrEquiv()->getIntValue();
+    auto GtRes = CmpInfo.getGreater()->getIntValue();
+    if (!CmpInfo.isPartial()) {
+      // Strong ordering.
+      ResultScalar = CGF.builder.createThreeWayCmpStrong(Loc, LHS, RHS, LtRes,
+                                                         EqRes, GtRes);
+    } else {
+      // Partial ordering.
+      auto UnorderedRes = CmpInfo.getUnordered()->getIntValue();
+      ResultScalar = CGF.builder.createThreeWayCmpPartial(
+          Loc, LHS, RHS, LtRes, EqRes, GtRes, UnorderedRes);
+    }
+  }
+
+  // Create the return value in the destination slot.
+  EnsureDest(Loc, E->getType());
+  LValue DestLV = CGF.makeAddrLValue(Dest.getAddress(), E->getType());
+
+  // Emit the address of the first (and only) field in the comparison category
+  // type, and initialize it from the constant integer value produced above.
+  const FieldDecl *ResultField = *CmpInfo.Record->field_begin();
+  LValue FieldLV = CGF.buildLValueForFieldInitialization(
+      DestLV, ResultField, ResultField->getName());
+  CGF.buildStoreThroughLValue(RValue::get(ResultScalar), FieldLV);
+
+  // All done! The result is in the Dest slot.
 }
 
 void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
