@@ -4613,8 +4613,7 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   mergeDeclAttributes(New, Old);
   // Warn if an already-declared variable is made a weak_import in a subsequent
   // declaration
-  if (New->hasAttr<WeakImportAttr>() &&
-      Old->getStorageClass() == SC_None &&
+  if (New->hasAttr<WeakImportAttr>() && Old->isThisDeclarationADefinition() &&
       !Old->hasAttr<WeakImportAttr>()) {
     Diag(New->getLocation(), diag::warn_weak_import) << New->getDeclName();
     Diag(Old->getLocation(), diag::note_previous_declaration);
