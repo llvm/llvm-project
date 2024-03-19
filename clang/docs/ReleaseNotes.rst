@@ -454,6 +454,26 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
+- Clang-cl now supports function targets with intrinsic headers. This allows
+  for runtime feature detection of intrinsics. Previously under clang-cl
+  ``immintrin.h`` and similar intrinsic headers would only include the intrinsics
+  if building with that feature enabled at compile time, e.g. ``avxintrin.h``
+  would only be included if AVX was enabled at compile time. This was done to work
+  around include times from MSVC STL including ``intrin.h`` under clang-cl.
+  Clang-cl now provides ``intrin0.h`` for MSVC STL and therefore all intrinsic
+  features without requiring enablement at compile time.
+  Fixes: (`#53520 <https://github.com/llvm/llvm-project/issues/53520>`_)
+
+- Improved compile times with MSVC STL. MSVC provides ``intrin0.h`` which is a
+  header that only includes intrinsics that are used by MSVC STL to avoid the
+  use of ``intrin.h``. MSVC STL when compiled under clang uses ``intrin.h``
+  instead. Clang-cl now provides ``intrin0.h`` for the same compiler throughput
+  purposes as MSVC. Clang-cl also provides ``yvals_core.h`` to redefine
+  ``_STL_INTRIN_HEADER`` to expand to ``intrin0.h`` instead of ``intrin.h``.
+  This also means that if all intrinsic features are enabled at compile time
+  including STL headers will no longer slow down compile times since ``intrin.h``
+  is not included from MSVC STL.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
