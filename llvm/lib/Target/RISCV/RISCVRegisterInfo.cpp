@@ -738,12 +738,11 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   // Add any two address hints after any copy hints.
   SmallSet<Register, 4> TwoAddrHints;
 
-  auto tryAddHint = [&](const MachineOperand &VRRegMO, const MachineOperand &MO,
-                        bool NeedGPRC) -> void {
+  auto tryAddHint = [&](const MachineOperand &MO, bool NeedGPRC) -> void {
     Register Reg = MO.getReg();
     Register PhysReg = Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
     if (PhysReg && (!NeedGPRC || RISCV::GPRCRegClass.contains(PhysReg))) {
-      assert(!MO.getSubReg() && !VRRegMO.getSubReg() && "Unexpected subreg!");
+      assert(!MO.getSubReg() && "Unexpected subreg!");
       if (!MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
         TwoAddrHints.insert(PhysReg);
     }
@@ -826,16 +825,16 @@ bool RISCVRegisterInfo::getRegAllocationHints(
         if (!NeedGPRC || MI.getNumExplicitOperands() < 3 ||
             MI.getOpcode() == RISCV::ADD_UW ||
             isCompressibleOpnd(MI.getOperand(2)))
-          tryAddHint(MO, MI.getOperand(1), NeedGPRC);
+          tryAddHint(MI.getOperand(1), NeedGPRC);
         if (MI.isCommutable() && MI.getOperand(2).isReg() &&
             (!NeedGPRC || isCompressibleOpnd(MI.getOperand(1))))
-          tryAddHint(MO, MI.getOperand(2), NeedGPRC);
+          tryAddHint(MI.getOperand(2), NeedGPRC);
       } else if (OpIdx == 1 && (!NeedGPRC || MI.getNumExplicitOperands() < 3 ||
                                 isCompressibleOpnd(MI.getOperand(2)))) {
-        tryAddHint(MO, MI.getOperand(0), NeedGPRC);
+        tryAddHint(MI.getOperand(0), NeedGPRC);
       } else if (MI.isCommutable() && OpIdx == 2 &&
                  (!NeedGPRC || isCompressibleOpnd(MI.getOperand(1)))) {
-        tryAddHint(MO, MI.getOperand(0), NeedGPRC);
+        tryAddHint(MI.getOperand(0), NeedGPRC);
       }
     }
   }
