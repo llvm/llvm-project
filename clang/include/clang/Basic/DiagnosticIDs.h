@@ -278,6 +278,9 @@ public:
   /// category.
   static bool isARCDiagnostic(unsigned DiagID);
 
+  /// Return true if a given diagnostic is a codegen-time ABI check.
+  static bool isCodegenABICheckDiagnostic(unsigned DiagID);
+
   /// Enumeration describing how the emission of a diagnostic should
   /// be treated when it occurs during C++ template argument deduction.
   enum SFINAEResponse {
