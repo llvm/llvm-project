@@ -2761,7 +2761,7 @@ class Analyzer {
   Sema &Sem;
 
   // used from Sema:
-  //  SmallVector<const Decl *> DeclsWithUnverifiedEffects
+  //  SmallVector<const Decl *> DeclsWithEffectsToVerify
 
   // Subset of Sema.AllEffectsToVerify
   FunctionEffectSet AllInferrableEffectsToVerify;
@@ -2837,9 +2837,9 @@ public:
       }
     }
 
-    SmallVector<const Decl *> &verifyQueue = Sem.DeclsWithUnverifiedEffects;
+    SmallVector<const Decl *> &verifyQueue = Sem.DeclsWithEffectsToVerify;
 
-    // It's helpful to use DeclsWithUnverifiedEffects as a stack for a
+    // It's helpful to use DeclsWithEffectsToVerify as a stack for a
     // depth-first traversal rather than have a secondary container. But first,
     // reverse it, so Decls are verified in the order they are declared.
     std::reverse(verifyQueue.begin(), verifyQueue.end());
@@ -3545,7 +3545,7 @@ private:
   };
 
 #if FX_ANALYZER_VERIFY_DECL_LIST
-  // Sema has accumulated DeclsWithUnverifiedEffects. As a debug check, do our
+  // Sema has accumulated DeclsWithEffectsToVerify. As a debug check, do our
   // own AST traversal and see what we find.
 
   using MatchFinder = ast_matchers::MatchFinder;
@@ -3603,15 +3603,15 @@ private:
   void verifyRootDecls(const TranslationUnitDecl &TU) const {
     // If this weren't debug code, it would be good to find a way to move/swap
     // instead of copying.
-    SmallVector<const Decl *> decls = Sem.DeclsWithUnverifiedEffects;
-    Sem.DeclsWithUnverifiedEffects.clear();
+    SmallVector<const Decl *> decls = Sem.DeclsWithEffectsToVerify;
+    Sem.DeclsWithEffectsToVerify.clear();
 
     CallableFinderCallback::get(Sem, TU);
 
     if constexpr (DebugLogLevel > 0) {
       llvm::errs() << "\nFXAnalysis: Sema gathered " << decls.size()
                    << " Decls; second AST pass found "
-                   << Sem.DeclsWithUnverifiedEffects.size() << "\n";
+                   << Sem.DeclsWithEffectsToVerify.size() << "\n";
     }
   }
 #endif

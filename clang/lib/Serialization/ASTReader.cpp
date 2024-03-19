@@ -3838,6 +3838,11 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       FPPragmaOptions.swap(Record);
       break;
 
+    case DECLS_WITH_EFFECTS_TO_VERIFY:
+      for (unsigned I = 0, N = Record.size(); I != N; ++I)
+        DeclsWithEffectsToVerify.push_back(getGlobalDeclID(F, Record[I]));
+      break;
+
     case OPENCL_EXTENSIONS:
       for (unsigned I = 0, E = Record.size(); I != E; ) {
         auto Name = ReadString(Record, I);
@@ -8206,6 +8211,24 @@ void ASTReader::InitializeSema(Sema &S) {
         FPOptionsOverride::getFromOpaqueInt(FPPragmaOptions[0]);
     SemaObj->CurFPFeatures =
         NewOverrides.applyOverrides(SemaObj->getLangOpts());
+  }
+
+  if (!DeclsWithEffectsToVerify.empty()) {
+    for (uint64_t ID : DeclsWithEffectsToVerify) {
+      Decl *D = GetDecl(ID);
+      SemaObj->DeclsWithEffectsToVerify.push_back(D);
+
+      FunctionEffectSet FX;
+      if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+        FX = FD->getFunctionEffects();
+      } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
+        FX = BD->getFunctionEffects();
+      }
+      if (FX) {
+        SemaObj->AllEffectsToVerify |= FX;
+      }
+    }
+    DeclsWithEffectsToVerify.clear();
   }
 
   SemaObj->OpenCLFeatures = OpenCLExtensions;

@@ -723,8 +723,8 @@ public:
 
   /// All functions/lambdas/blocks which have bodies and which have a non-empty
   /// FunctionEffectSet to be verified.
-  SmallVector<const Decl *> DeclsWithUnverifiedEffects;
-  /// The union of all effects present on DeclsWithUnverifiedEffects.
+  SmallVector<const Decl *> DeclsWithEffectsToVerify;
+  /// The union of all effects present on DeclsWithEffectsToVerify.
   MutableFunctionEffectSet AllEffectsToVerify;
 
   /// Determine if VD, which must be a variable or function, is an external
@@ -3142,7 +3142,7 @@ public:
                               QualType T, TypeSourceInfo *TSInfo,
                               StorageClass SC);
 
-  /// Potentially add a FunctionDecl or BlockDecl to DeclsWithUnverifiedEffects.
+  /// Potentially add a FunctionDecl or BlockDecl to DeclsWithEffectsToVerify.
   void CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX);
 
   // Contexts where using non-trivial C union types can be disallowed. This is

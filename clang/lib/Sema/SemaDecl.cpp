@@ -11179,7 +11179,7 @@ void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX) {
   }
 
   // Record the declaration for later analysis.
-  DeclsWithUnverifiedEffects.push_back(D);
+  DeclsWithEffectsToVerify.push_back(D);
 }
 
 /// Determines if we can perform a correct type check for \p D as a

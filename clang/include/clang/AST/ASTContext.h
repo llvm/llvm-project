@@ -1083,6 +1083,10 @@ public:
     return UniquedFunctionEffectSet.getUniqued(FX);
   }
 
+  /// Get or create a uniqued, immutable FunctionEffectSet from a serialized
+  /// span of uint32_t's.
+  FunctionEffectSet getUniquedFunctionEffectSet(llvm::ArrayRef<uint32_t> FX);
+
   TranslationUnitDecl *getTranslationUnitDecl() const {
     return TUDecl->getMostRecentDecl();
   }

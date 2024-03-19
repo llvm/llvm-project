@@ -7977,7 +7977,7 @@ requirement:
 def NoLockNoAllocDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
-The ``nolock`` and ``noalloc`` attributes can be attached to functions, blocks, 
+The ``nolock`` and ``noalloc`` attributes can be attached to functions, blocks,
 function pointers, lambdas, and member functions. The attributes identify code
 which must not allocate memory or lock, and the compiler uses the attributes to
 verify these requirements.

@@ -4347,6 +4347,11 @@ public:
   FunctionEffectSet() = default;
 
   const void *getOpaqueValue() const { return Impl.data(); }
+  llvm::ArrayRef<uint32_t> serializable() const {
+    static_assert(sizeof(FunctionEffect) == sizeof(uint32_t));
+    const uint32_t *ptr = reinterpret_cast<const uint32_t *>(Impl.data());
+    return {const_cast<uint32_t *>(ptr), Impl.size()};
+  }
 
   explicit operator bool() const { return !empty(); }
   bool empty() const { return Impl.empty(); }

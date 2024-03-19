@@ -326,10 +326,9 @@ let Class = FunctionProtoType in {
   def : Property<"AArch64SMEAttributes", UInt32> {
     let Read = [{ node->getAArch64SMEAttributes() }];
   }
-  /* TODO: How to serialize FunctionEffect / FunctionEffectSet?
-  def : Property<"functionEffects", FunctionEffectSet> {
-    let Read = [{ node->getFunctionEffects() }];
-  }*/
+  def : Property<"functionEffects", Array<UInt32>> {
+    let Read = [{ node->getFunctionEffects().serializable() }];
+  }
 
   def : Creator<[{
     auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
@@ -346,7 +345,7 @@ let Class = FunctionProtoType in {
     epi.ExtParameterInfos =
       extParameterInfo.empty() ? nullptr : extParameterInfo.data();
     epi.AArch64SMEAttributes = AArch64SMEAttributes;
-    //epi.FunctionEffects = functionEffects;
+    epi.FunctionEffects = ctx.getUniquedFunctionEffectSet(functionEffects);
     return ctx.getFunctionType(returnType, parameters, epi);
   }]>;
 }

@@ -4502,16 +4502,13 @@ unsigned FunctionDecl::getODRHash() {
   return ODRHash;
 }
 
-// Effects may differ between redeclarations, so collect all effects from
-// all redeclarations.
+// Effects may differ between declarations, but they should be propagated from old
+// to new on any redeclaration, so it suffices to look at getMostRecentDecl().
 FunctionEffectSet FunctionDecl::getFunctionEffects() const {
-  MutableFunctionEffectSet FX;
-  for (FunctionDecl *FD : redecls()) {
-    if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>()) {
-      FX |= FPT->getFunctionEffects();
-    }
+  if (const auto *FPT = getMostRecentDecl()->getType()->getAs<FunctionProtoType>()) {
+    return FPT->getFunctionEffects();
   }
-  return getASTContext().getUniquedFunctionEffectSet(FX);
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

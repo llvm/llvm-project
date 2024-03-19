@@ -13706,7 +13706,7 @@ StringRef ASTContext::getCUIDHash() const {
 using FunctionEffectSpan = llvm::ArrayRef<const FunctionEffect>;
 
 llvm::hash_code hash_value(const FunctionEffect &Effect) {
-  return Effect.opaqueRepr();
+  return llvm::hash_value(Effect.opaqueRepr());
 }
 
 namespace llvm {
@@ -13740,6 +13740,13 @@ template <> struct DenseMapInfo<FunctionEffectSpan> {
   }
 };
 } // namespace llvm
+
+FunctionEffectSet
+ASTContext::getUniquedFunctionEffectSet(llvm::ArrayRef<uint32_t> FX) {
+  static_assert(sizeof(FunctionEffect) == sizeof(uint32_t));
+  const auto *ptr = reinterpret_cast<const FunctionEffect *>(FX.data());
+  return UniquedFunctionEffectSet.getUniqued({ptr, FX.size()});
+}
 
 FunctionEffectSet ASTContext::FunctionEffectSetUniquing::getUniqued(
     llvm::ArrayRef<const FunctionEffect> FX) {

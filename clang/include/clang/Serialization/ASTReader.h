@@ -942,6 +942,9 @@ private:
   /// Sema tracks these to emit deferred diags.
   llvm::SmallSetVector<serialization::DeclID, 4> DeclsToCheckForDeferredDiags;
 
+  /// The IDs of all decls with function effects to be checked.
+  SmallVector<serialization::DeclID> DeclsWithEffectsToVerify;
+
 private:
   struct ImportedSubmodule {
     serialization::SubmoduleID ID;

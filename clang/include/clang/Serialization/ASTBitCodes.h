@@ -698,6 +698,10 @@ enum ASTRecordTypes {
   /// Record code for an unterminated \#pragma clang assume_nonnull begin
   /// recorded in a preamble.
   PP_ASSUME_NONNULL_LOC = 67,
+
+  /// Record code for Sema's vector of functions/blocks with effects to
+  /// be verified.
+  DECLS_WITH_EFFECTS_TO_VERIFY = 68
 };
 
 /// Record types used within a source manager block.
