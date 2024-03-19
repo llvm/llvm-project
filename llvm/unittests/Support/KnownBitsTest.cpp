@@ -412,9 +412,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       },
       checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::urem(Known1, Known2);
-      },
+      KnownBits::urem,
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         if (N2.isZero())
           return std::nullopt;
@@ -422,9 +420,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       },
       checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::srem(Known1, Known2);
-      },
+      KnownBits::srem,
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         if (N2.isZero())
           return std::nullopt;
@@ -556,18 +552,14 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       [](const APInt &N1, const APInt &N2) { return N1 * N2; },
       checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::mulhs(Known1, Known2);
-      },
+      KnownBits::mulhs,
       [](const APInt &N1, const APInt &N2) {
         unsigned Bits = N1.getBitWidth();
         return (N1.sext(2 * Bits) * N2.sext(2 * Bits)).extractBits(Bits, Bits);
       },
       checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::mulhu(Known1, Known2);
-      },
+      KnownBits::mulhu,
       [](const APInt &N1, const APInt &N2) {
         unsigned Bits = N1.getBitWidth();
         return (N1.zext(2 * Bits) * N2.zext(2 * Bits)).extractBits(Bits, Bits);
