@@ -442,9 +442,8 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   // Step 1.b. In the linear case, compute the max mapping to avoid needlessly
   // mapping all dimensions. In the 3-D mapping case we need to map all
   // dimensions.
-  DeviceMappingAttrInterface maxMapping =
-      cast<DeviceMappingAttrInterface>(*std::max_element(
-          forallMappingAttrs.begin(), forallMappingAttrs.end(), comparator));
+  DeviceMappingAttrInterface maxMapping = cast<DeviceMappingAttrInterface>(
+      *llvm::max_element(forallMappingAttrs, comparator));
   DeviceMappingAttrInterface maxLinearMapping;
   if (maxMapping.isLinearMapping())
     maxLinearMapping = maxMapping;

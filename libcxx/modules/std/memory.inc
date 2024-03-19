@@ -43,8 +43,6 @@ export namespace std {
 
 #if _LIBCPP_STD_VER >= 23
   using std::allocation_result;
-
-  using std::allocate_at_least;
 #endif
 
   // [default.allocator], the default allocator

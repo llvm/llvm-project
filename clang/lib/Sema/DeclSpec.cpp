@@ -1102,18 +1102,13 @@ bool DeclSpec::setFunctionSpecNoreturn(SourceLocation Loc,
 
 bool DeclSpec::SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                              unsigned &DiagID) {
-  if (Friend_specified) {
+  if (isFriendSpecified()) {
     PrevSpec = "friend";
-    // Keep the later location, so that we can later diagnose ill-formed
-    // declarations like 'friend class X friend;'. Per [class.friend]p3,
-    // 'friend' must be the first token in a friend declaration that is
-    // not a function declaration.
-    FriendLoc = Loc;
     DiagID = diag::warn_duplicate_declspec;
     return true;
   }
 
-  Friend_specified = true;
+  FriendSpecifiedFirst = isEmpty();
   FriendLoc = Loc;
   return false;
 }
@@ -1382,6 +1377,20 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       ThreadStorageClassSpec = TSCS_unspecified;
       ThreadStorageClassSpecLoc = SourceLocation();
     }
+    if (S.getLangOpts().C23 &&
+        getConstexprSpecifier() == ConstexprSpecKind::Constexpr) {
+      S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
+          << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
+          << SourceRange(getThreadStorageClassSpecLoc());
+    }
+  }
+
+  if (S.getLangOpts().C23 &&
+      getConstexprSpecifier() == ConstexprSpecKind::Constexpr &&
+      StorageClassSpec == SCS_extern) {
+    S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
+        << DeclSpec::getSpecifierName(getStorageClassSpec())
+        << SourceRange(getStorageClassSpecLoc());
   }
 
   // If no type specifier was provided and we're parsing a language where

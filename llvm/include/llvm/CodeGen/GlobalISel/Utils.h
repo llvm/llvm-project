@@ -343,10 +343,13 @@ Register getFunctionLiveInPhysReg(MachineFunction &MF,
                                   const TargetRegisterClass &RC,
                                   const DebugLoc &DL, LLT RegTy = LLT());
 
-/// Return the least common multiple type of \p OrigTy and \p TargetTy, by changing the
-/// number of vector elements or scalar bitwidth. The intent is a
+/// Return the least common multiple type of \p OrigTy and \p TargetTy, by
+/// changing the number of vector elements or scalar bitwidth. The intent is a
 /// G_MERGE_VALUES, G_BUILD_VECTOR, or G_CONCAT_VECTORS can be constructed from
-/// \p OrigTy elements, and unmerged into \p TargetTy
+/// \p OrigTy elements, and unmerged into \p TargetTy. It is an error to call
+/// this function where one argument is a fixed vector and the other is a
+/// scalable vector, since it is illegal to build a G_{MERGE|UNMERGE}_VALUES
+/// between fixed and scalable vectors.
 LLVM_READNONE
 LLT getLCMType(LLT OrigTy, LLT TargetTy);
 
@@ -365,7 +368,10 @@ LLT getCoverTy(LLT OrigTy, LLT TargetTy);
 /// If these are vectors with different element types, this will try to produce
 /// a vector with a compatible total size, but the element type of \p OrigTy. If
 /// this can't be satisfied, this will produce a scalar smaller than the
-/// original vector elements.
+/// original vector elements. It is an error to call this function where
+/// one argument is a fixed vector and the other is a scalable vector, since it
+/// is illegal to build a G_{MERGE|UNMERGE}_VALUES between fixed and scalable
+/// vectors.
 ///
 /// In the worst case, this returns LLT::scalar(1)
 LLVM_READNONE

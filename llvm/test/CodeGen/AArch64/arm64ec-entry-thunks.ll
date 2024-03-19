@@ -147,8 +147,8 @@ define void @has_varargs(...) nounwind {
 ; CHECK-NEXT:     add     x29, sp, #160
 ; CHECK-NEXT:     .seh_add_fp     160
 ; CHECK-NEXT:     .seh_endprologue
-; CHECK-NEXT:     ldp     x8, x5, [x4, #32]
-; CHECK-NEXT:     mov     x4, x8
+; CHECK-NEXT:     add     x4, x4, #32
+; CHECK-NEXT:     mov     x5, xzr
 ; CHECK-NEXT:     blr     x9
 ; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_ret
 ; CHECK-NEXT:     ldr     x0, [x8, :lo12:__os_arm64x_dispatch_ret]

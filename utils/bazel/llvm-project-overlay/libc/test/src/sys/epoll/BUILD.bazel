@@ -26,10 +26,12 @@ libc_test(
     ],
 )
 
-libc_test(
-    name = "epoll_pwait2_test",
-    srcs = ["linux/epoll_pwait2_test.cpp"],
-    libc_function_deps = [
-        "//libc:epoll_pwait2",
-    ],
-)
+#TODO: Enable once epoll_pwait2 availablilty can be checked first.
+# https://github.com/llvm/llvm-project/issues/80060
+# libc_test(
+#     name = "epoll_pwait2_test",
+#     srcs = ["linux/epoll_pwait2_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:epoll_pwait2",
+#     ],
+# )

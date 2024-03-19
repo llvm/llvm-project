@@ -1067,6 +1067,9 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_M68kRTD:
       OS << " __attribute__((m68k_rtd))";
       break;
+    case CC_PreserveNone:
+      OS << " __attribute__((preserve_none))";
+      break;
     }
   }
 
@@ -1195,10 +1198,10 @@ void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
 
 void TypePrinter::printPackIndexingBefore(const PackIndexingType *T,
                                           raw_ostream &OS) {
-  if (T->isInstantiationDependentType())
-    OS << T->getPattern() << "...[" << T->getIndexExpr() << "]";
-  else
+  if (T->hasSelectedType())
     OS << T->getSelectedType();
+  else
+    OS << T->getPattern() << "...[" << T->getIndexExpr() << "]";
   spaceBeforePlaceHolder(OS);
 }
 
@@ -1632,6 +1635,17 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     if (T->getKeyword() != ElaboratedTypeKeyword::None)
       OS << " ";
     NestedNameSpecifier *Qualifier = T->getQualifier();
+    if (!Policy.SuppressTagKeyword && Policy.SuppressScope &&
+        !Policy.SuppressUnwrittenScope) {
+      bool OldTagKeyword = Policy.SuppressTagKeyword;
+      bool OldSupressScope = Policy.SuppressScope;
+      Policy.SuppressTagKeyword = true;
+      Policy.SuppressScope = false;
+      printBefore(T->getNamedType(), OS);
+      Policy.SuppressTagKeyword = OldTagKeyword;
+      Policy.SuppressScope = OldSupressScope;
+      return;
+    }
     if (Qualifier)
       Qualifier->print(OS, Policy);
   }
@@ -1910,6 +1924,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::M68kRTD:
     OS << "m68k_rtd";
+    break;
+  case attr::PreserveNone:
+    OS << "preserve_none";
     break;
   case attr::NoDeref:
     OS << "noderef";
@@ -2254,17 +2271,22 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-      // Tries to print the argument with location info if exists.
-      printArgument(Arg, Policy, ArgOS,
-                    TemplateParameterList::shouldIncludeTypeForArgument(
-                        Policy, TPL, ParmIndex));
+      if (!Policy.SuppressTagKeyword &&
+          Argument.getKind() == TemplateArgument::Type &&
+          isa<TagType>(Argument.getAsType()))
+        OS << Argument.getAsType().getAsString();
+      else
+        // Tries to print the argument with location info if exists.
+        printArgument(Arg, Policy, ArgOS,
+                      TemplateParameterList::shouldIncludeTypeForArgument(
+                          Policy, TPL, ParmIndex));
     }
     StringRef ArgString = ArgOS.str();
 
     // If this is the first argument and its string representation
     // begins with the global scope specifier ('::foo'), add a space
     // to avoid printing the diagraph '<:'.
-    if (FirstArg && !ArgString.empty() && ArgString[0] == ':')
+    if (FirstArg && ArgString.starts_with(":"))
       OS << ' ';
 
     OS << ArgString;

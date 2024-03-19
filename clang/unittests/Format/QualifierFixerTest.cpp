@@ -1055,6 +1055,7 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
 
   auto Tokens = annotate(
       "const static inline auto restrict int double long constexpr friend");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
 
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       Tokens[0], ConfiguredTokens));
@@ -1089,6 +1090,7 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[9]));
 
   auto NotTokens = annotate("for while do Foo Bar ");
+  ASSERT_EQ(NotTokens.size(), 6u) << Tokens;
 
   EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       NotTokens[0], ConfiguredTokens));
@@ -1120,6 +1122,7 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
 TEST_F(QualifierFixerTest, IsMacro) {
 
   auto Tokens = annotate("INT INTPR Foo int");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
 
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[0]));
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[1]));
@@ -1172,6 +1175,19 @@ TEST_F(QualifierFixerTest, DontPushQualifierThroughNonSpecifiedTypes) {
   // Don't move qualifiers to the right for aestethics only.
   verifyFormat("inline const static Foo;", Style);
   verifyFormat("const inline static Foo;", Style);
+}
+
+TEST_F(QualifierFixerTest, QualifiersBrokenUpByPPDirectives) {
+  auto Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"constexpr", "inline", "type"};
+
+  verifyFormat("inline\n"
+               "#if FOO\n"
+               "    constexpr\n"
+               "#endif\n"
+               "    int i = 0;",
+               Style);
 }
 
 TEST_F(QualifierFixerTest, UnsignedQualifier) {

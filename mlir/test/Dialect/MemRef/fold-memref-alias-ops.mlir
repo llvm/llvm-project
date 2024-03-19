@@ -613,9 +613,9 @@ func.func @subview_of_subview_rank_reducing(%m: memref<?x?x?xf32>,
 {
   %0 = memref.subview %m[3, 1, 8] [1, %sz, 1] [1, 1, 1]
       : memref<?x?x?xf32>
-        to memref<?xf32, strided<[1], offset: ?>>
+        to memref<?xf32, strided<[?], offset: ?>>
   %1 = memref.subview %0[6] [1] [1]
-      : memref<?xf32, strided<[1], offset: ?>>
+      : memref<?xf32, strided<[?], offset: ?>>
         to memref<f32, strided<[], offset: ?>>
   return %1 : memref<f32, strided<[], offset: ?>>
 }

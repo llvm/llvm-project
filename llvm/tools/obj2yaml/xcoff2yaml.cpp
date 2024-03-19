@@ -95,6 +95,13 @@ Error XCOFFDumper::dumpSections(ArrayRef<Shdr> Sections) {
     YamlSec.FileOffsetToRelocations = S.FileOffsetToRelocationInfo;
     YamlSec.FileOffsetToLineNumbers = S.FileOffsetToLineNumberInfo;
     YamlSec.Flags = S.Flags;
+    if (YamlSec.Flags & XCOFF::STYP_DWARF) {
+      unsigned Mask = Obj.is64Bit()
+                          ? XCOFFSectionHeader64::SectionFlagsTypeMask
+                          : XCOFFSectionHeader32::SectionFlagsTypeMask;
+      YamlSec.SectionSubtype =
+          static_cast<XCOFF::DwarfSectionSubtypeFlags>(S.Flags & ~Mask);
+    }
 
     // Dump section data.
     if (S.FileOffsetToRawData) {
@@ -209,7 +216,9 @@ void XCOFFDumper::dumpCsectAuxSym(XCOFFYAML::Symbol &Sym,
   XCOFFYAML::CsectAuxEnt CsectAuxSym;
   CsectAuxSym.ParameterHashIndex = AuxEntPtr.getParameterHashIndex();
   CsectAuxSym.TypeChkSectNum = AuxEntPtr.getTypeChkSectNum();
-  CsectAuxSym.SymbolAlignmentAndType = AuxEntPtr.getSymbolAlignmentAndType();
+  CsectAuxSym.SymbolAlignment = AuxEntPtr.getAlignmentLog2();
+  CsectAuxSym.SymbolType =
+      static_cast<XCOFF::SymbolType>(AuxEntPtr.getSymbolType());
   CsectAuxSym.StorageMappingClass = AuxEntPtr.getStorageMappingClass();
 
   if (Obj.is64Bit()) {

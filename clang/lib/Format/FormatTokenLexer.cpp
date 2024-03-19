@@ -13,11 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FormatTokenLexer.h"
-#include "FormatToken.h"
-#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Format/Format.h"
-#include "llvm/Support/Regex.h"
 
 namespace clang {
 namespace format {
@@ -34,6 +30,7 @@ FormatTokenLexer::FormatTokenLexer(
       Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
       FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
       MacroBlockEndRegex(Style.MacroBlockEnd) {
+  assert(IsCpp == Style.isCpp());
   Lex.reset(new Lexer(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts));
   Lex->SetKeepWhitespaceMode(true);
 
@@ -114,7 +111,7 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     return;
   if (tryMergeForEach())
     return;
-  if (Style.isCpp() && tryTransformTryUsageForC())
+  if (IsCpp && tryTransformTryUsageForC())
     return;
 
   if (Style.isJavaScript() || Style.isCSharp()) {
@@ -816,7 +813,7 @@ void FormatTokenLexer::handleTableGenMultilineString() {
   auto CloseOffset = Lex->getBuffer().find("}]", OpenOffset);
   if (CloseOffset == StringRef::npos)
     return;
-  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset + 2);
+  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset - OpenOffset + 2);
   MultiLineString->TokenText = Text;
   resetLexer(SourceMgr.getFileOffset(
       Lex->getSourceLocation(Lex->getBufferLocation() - 2 + Text.size())));
@@ -1341,7 +1338,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
     Column = FormatTok->LastLineColumnWidth;
   }
 
-  if (Style.isCpp()) {
+  if (IsCpp) {
     auto *Identifier = FormatTok->Tok.getIdentifierInfo();
     auto it = Macros.find(Identifier);
     if (!(Tokens.size() > 0 && Tokens.back()->Tok.getIdentifierInfo() &&
@@ -1420,7 +1417,7 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
   // For formatting, treat unterminated string literals like normal string
   // literals.
   if (Tok.is(tok::unknown)) {
-    if (!Tok.TokenText.empty() && Tok.TokenText[0] == '"') {
+    if (Tok.TokenText.starts_with("\"")) {
       Tok.Tok.setKind(tok::string_literal);
       Tok.IsUnterminatedLiteral = true;
     } else if (Style.isJavaScript() && Tok.TokenText == "''") {

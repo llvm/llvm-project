@@ -78,12 +78,19 @@ public:
 /// Class for constant integers.
 class ConstantInt final : public ConstantData {
   friend class Constant;
+  friend class ConstantVector;
 
   APInt Val;
 
-  ConstantInt(IntegerType *Ty, const APInt &V);
+  ConstantInt(Type *Ty, const APInt &V);
 
   void destroyConstantImpl();
+
+  /// Return a ConstantInt with the specified value and an implied Type. The
+  /// type is the vector type whose integer element type corresponds to the bit
+  /// width of the value.
+  static ConstantInt *get(LLVMContext &Context, ElementCount EC,
+                          const APInt &V);
 
 public:
   ConstantInt(const ConstantInt &) = delete;
@@ -136,7 +143,7 @@ public:
   /// Return the constant's value.
   inline const APInt &getValue() const { return Val; }
 
-  /// getBitWidth - Return the bitwidth of this constant.
+  /// getBitWidth - Return the scalar bitwidth of this constant.
   unsigned getBitWidth() const { return Val.getBitWidth(); }
 
   /// Return the constant as a 64-bit unsigned integer value after it
@@ -259,12 +266,19 @@ public:
 ///
 class ConstantFP final : public ConstantData {
   friend class Constant;
+  friend class ConstantVector;
 
   APFloat Val;
 
   ConstantFP(Type *Ty, const APFloat &V);
 
   void destroyConstantImpl();
+
+  /// Return a ConstantFP with the specified value and an implied Type. The
+  /// type is the vector type whose element type has the same floating point
+  /// semantics as the value.
+  static ConstantFP *get(LLVMContext &Context, ElementCount EC,
+                         const APFloat &V);
 
 public:
   ConstantFP(const ConstantFP &) = delete;
@@ -1275,14 +1289,13 @@ public:
                             Type *SrcTy = nullptr) const;
 
   /// Returns an Instruction which implements the same operation as this
-  /// ConstantExpr. If \p InsertBefore is not null, the new instruction is
-  /// inserted before it, otherwise it is not inserted into any basic block.
+  /// ConstantExpr. It is not inserted into any basic block.
   ///
   /// A better approach to this could be to have a constructor for Instruction
   /// which would take a ConstantExpr parameter, but that would have spread
   /// implementation details of ConstantExpr outside of Constants.cpp, which
   /// would make it harder to remove ConstantExprs altogether.
-  Instruction *getAsInstruction(Instruction *InsertBefore = nullptr) const;
+  Instruction *getAsInstruction() const;
 
   /// Whether creating a constant expression for this binary operator is
   /// desirable.

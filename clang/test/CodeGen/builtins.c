@@ -496,6 +496,12 @@ long long test_builtin_readcyclecounter(void) {
   return __builtin_readcyclecounter();
 }
 
+// CHECK-LABEL: define{{.*}} i64 @test_builtin_readsteadycounter
+long long test_builtin_readsteadycounter(void) {
+  // CHECK: call i64 @llvm.readsteadycounter()
+  return __builtin_readsteadycounter();
+}
+
 /// __builtin_launder should be a NOP in C since there are no vtables.
 // CHECK-LABEL: define{{.*}} void @test_builtin_launder
 void test_builtin_launder(int *p) {
@@ -933,5 +939,48 @@ void test_builtin_os_log_long_double(void *buf, long double ld) {
 // CHECK: %[[ARGDATA:.*]] = getelementptr i8, ptr %[[BUF]], i64 4
 // CHECK: %[[V3:.*]] = load i128, ptr %[[ARG0_ADDR]], align 16
 // CHECK: store i128 %[[V3]], ptr %[[ARGDATA]], align 1
+
+// CHECK-LABEL: define{{.*}} void @test_builtin_popcountg
+void test_builtin_popcountg(unsigned char uc, unsigned short us,
+                            unsigned int ui, unsigned long ul,
+                            unsigned long long ull, unsigned __int128 ui128,
+                            unsigned _BitInt(128) ubi128) {
+  volatile int pop;
+  pop = __builtin_popcountg(uc);
+  // CHECK: %1 = load i8, ptr %uc.addr, align 1
+  // CHECK-NEXT: %2 = call i8 @llvm.ctpop.i8(i8 %1)
+  // CHECK-NEXT: %cast = sext i8 %2 to i32
+  // CHECK-NEXT: store volatile i32 %cast, ptr %pop, align 4
+  pop = __builtin_popcountg(us);
+  // CHECK-NEXT: %3 = load i16, ptr %us.addr, align 2
+  // CHECK-NEXT: %4 = call i16 @llvm.ctpop.i16(i16 %3)
+  // CHECK-NEXT: %cast1 = sext i16 %4 to i32
+  // CHECK-NEXT: store volatile i32 %cast1, ptr %pop, align 4
+  pop = __builtin_popcountg(ui);
+  // CHECK-NEXT: %5 = load i32, ptr %ui.addr, align 4
+  // CHECK-NEXT: %6 = call i32 @llvm.ctpop.i32(i32 %5)
+  // CHECK-NEXT: store volatile i32 %6, ptr %pop, align 4
+  pop = __builtin_popcountg(ul);
+  // CHECK-NEXT: %7 = load i64, ptr %ul.addr, align 8
+  // CHECK-NEXT: %8 = call i64 @llvm.ctpop.i64(i64 %7)
+  // CHECK-NEXT: %cast2 = trunc i64 %8 to i32
+  // CHECK-NEXT: store volatile i32 %cast2, ptr %pop, align 4
+  pop = __builtin_popcountg(ull);
+  // CHECK-NEXT: %9 = load i64, ptr %ull.addr, align 8
+  // CHECK-NEXT: %10 = call i64 @llvm.ctpop.i64(i64 %9)
+  // CHECK-NEXT: %cast3 = trunc i64 %10 to i32
+  // CHECK-NEXT: store volatile i32 %cast3, ptr %pop, align 4
+  pop = __builtin_popcountg(ui128);
+  // CHECK-NEXT: %11 = load i128, ptr %ui128.addr, align 16
+  // CHECK-NEXT: %12 = call i128 @llvm.ctpop.i128(i128 %11)
+  // CHECK-NEXT: %cast4 = trunc i128 %12 to i32
+  // CHECK-NEXT: store volatile i32 %cast4, ptr %pop, align 4
+  pop = __builtin_popcountg(ubi128);
+  // CHECK-NEXT: %13 = load i128, ptr %ubi128.addr, align 8
+  // CHECK-NEXT: %14 = call i128 @llvm.ctpop.i128(i128 %13)
+  // CHECK-NEXT: %cast5 = trunc i128 %14 to i32
+  // CHECK-NEXT: store volatile i32 %cast5, ptr %pop, align 4
+  // CHECK-NEXT: ret void
+}
 
 #endif

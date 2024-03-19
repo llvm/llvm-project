@@ -27,7 +27,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 // because the macro generates a call to the actual internal function
 // (__llvm_libc_syscall) which is inside the namespace.
 TEST(LlvmLibcSyscallTest, TrivialCall) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_gettid), 0l);
   ASSERT_ERRNO_SUCCESS();

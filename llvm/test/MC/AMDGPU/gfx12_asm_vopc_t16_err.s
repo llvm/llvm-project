@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12 --implicit-check-not=error %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12 --implicit-check-not=error %s
 
 v_cmp_class_f16_e32 vcc, v1, v255
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode

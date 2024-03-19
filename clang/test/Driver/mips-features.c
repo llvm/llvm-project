@@ -400,12 +400,12 @@
 // LONG-CALLS-DEF-NOT: "long-calls"
 //
 // -mbranch-likely
-// RUN: %clang -target -mips-mti-linux-gnu -### -c %s -mbranch-likely 2>&1 \
+// RUN: %clang --target=mips-mti-linux-gnu -### -c %s -mbranch-likely 2>&1 \
 // RUN:   | FileCheck --check-prefix=BRANCH-LIKELY %s
 // BRANCH-LIKELY: argument unused during compilation: '-mbranch-likely'
 //
 // -mno-branch-likely
-// RUN: %clang -target -mips-mti-linux-gnu -### -c %s -mno-branch-likely 2>&1 \
+// RUN: %clang --target=mips-mti-linux-gnu -### -c %s -mno-branch-likely 2>&1 \
 // RUN:   | FileCheck --check-prefix=NO-BRANCH-LIKELY %s
 // NO-BRANCH-LIKELY: argument unused during compilation: '-mno-branch-likely'
 

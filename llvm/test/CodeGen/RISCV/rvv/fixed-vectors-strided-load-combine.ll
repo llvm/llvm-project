@@ -566,3 +566,28 @@ define void @reverse_strided_runtime_4xv2f32(ptr %x, ptr %z, i64 %s) {
   store <8 x float> %e.2, ptr %z
   ret void
 }
+
+; The middle end sometimes produces this pattern of shuffles, where the
+; intermediate shuffles are the full result vector size padded with poison
+; elements.
+define <16 x i8> @widen_4xv4i8_immediate_expand(ptr %p, i64 %s) {
+; CHECK-LABEL: widen_4xv4i8_immediate_expand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a1
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %p
+  %b.ptr = getelementptr i8, ptr %p, i64 %s
+  %b = load <4 x i8>, ptr %b.ptr
+  %c.ptr = getelementptr i8, ptr %b.ptr, i64 %s
+  %c = load <4 x i8>, ptr %c.ptr
+  %d.ptr = getelementptr i8, ptr %c.ptr, i64 %s
+  %d = load <4 x i8>, ptr %d.ptr
+
+  %ab = shufflevector <4 x i8> %a, <4 x i8> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %cx = shufflevector <4 x i8> %c, <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %dx = shufflevector <4 x i8> %d, <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %abcx = shufflevector <16 x i8> %ab, <16 x i8> %cx, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 poison, i32 poison, i32 poison, i32 poison>
+  %abcd = shufflevector <16 x i8> %abcx, <16 x i8> %dx, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
+  ret <16 x i8> %abcd
+}

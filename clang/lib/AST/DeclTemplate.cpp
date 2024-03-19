@@ -871,8 +871,7 @@ void TemplateTemplateParmDecl::setDefaultArgument(
 // TemplateArgumentList Implementation
 //===----------------------------------------------------------------------===//
 TemplateArgumentList::TemplateArgumentList(ArrayRef<TemplateArgument> Args)
-    : Arguments(getTrailingObjects<TemplateArgument>()),
-      NumArguments(Args.size()) {
+    : NumArguments(Args.size()) {
   std::uninitialized_copy(Args.begin(), Args.end(),
                           getTrailingObjects<TemplateArgument>());
 }

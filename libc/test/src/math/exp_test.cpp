@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/exp.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
 #include <errno.h>
 #include <stdint.h>
@@ -79,7 +79,7 @@ TEST_F(LlvmLibcExpTest, InDoubleRange) {
       double x = FPBits(v).get_val();
       if (isnan(x) || isinf(x) || x < 0.0)
         continue;
-      libc_errno = 0;
+      LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::exp(x);
       ++cc;
       if (isnan(result) || isinf(result))

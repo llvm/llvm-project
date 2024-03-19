@@ -602,21 +602,28 @@ protected:
 
   /// Whether the external AST source has provided a layout for this
   /// record.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseExternalLayout : 1;
 
   /// Whether we need to infer alignment, even when we have an
   /// externally-provided layout.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned InferAlignment : 1;
 
   /// Packed - Whether the record is packed or not.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Packed : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsUnion : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsMac68kAlign : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsNaturalAlign : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsMsStruct : 1;
 
   /// UnfilledBitsInLastUnit - If the last field laid out was a bitfield,

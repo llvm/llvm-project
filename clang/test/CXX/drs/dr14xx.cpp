@@ -153,16 +153,16 @@ namespace dr1460 { // dr1460: 3.5
   namespace Defaulted {
     union A { constexpr A() = default; };
     union B { int n; constexpr B() = default; };
-    // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
+    // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
     union C { int n = 0; constexpr C() = default; };
     struct D { union {}; constexpr D() = default; };
     // expected-error@-1 {{declaration does not declare anything}}
     struct E { union { int n; }; constexpr E() = default; };
-    // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
+    // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
     struct F { union { int n = 0; }; constexpr F() = default; };
 
     struct G { union { int n = 0; }; union { int m; }; constexpr G() = default; };
-    // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
+    // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
     struct H {
       union {
         int n = 0;
@@ -613,6 +613,30 @@ enum E2 : S<E2>::I { e };
 // since-cxx11-error@-1 {{use of undeclared identifier 'E2'}}
 #endif
 } // namespace dr1482
+
+namespace dr1487 { // dr1487: 3.3
+#if __cplusplus >= 201103L
+struct A { // #dr1482-A
+  struct B {
+    using A::A;
+    // since-cxx11-error@-1 {{using declaration refers into 'A::', which is not a base class of 'B'}}
+  };
+
+  struct C : A {
+  // since-cxx11-error@-1 {{base class has incomplete type}}
+  //   since-cxx11-note@#dr1482-A {{definition of 'dr1487::A' is not complete until the closing '}'}}
+    using A::A;
+    // since-cxx11-error@-1 {{using declaration refers into 'A::', which is not a base class of 'C'}}
+  };
+
+  struct D;
+};
+
+struct D : A {
+  using A::A;
+};
+#endif
+} // namespace dr1487
 
 namespace dr1490 {  // dr1490: 3.7 c++11
 #if __cplusplus >= 201103L

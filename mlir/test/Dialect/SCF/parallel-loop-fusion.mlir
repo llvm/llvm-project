@@ -24,6 +24,32 @@ func.func @fuse_empty_loops() {
 
 // -----
 
+func.func @fuse_ops_between(%A: f32, %B: f32) -> f32 {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.reduce
+  }
+  %res = arith.addf %A, %B : f32
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.reduce
+  }
+  return %res : f32
+}
+// CHECK-LABEL: func @fuse_ops_between
+// CHECK-DAG:    [[C0:%.*]] = arith.constant 0 : index
+// CHECK-DAG:    [[C1:%.*]] = arith.constant 1 : index
+// CHECK-DAG:    [[C2:%.*]] = arith.constant 2 : index
+// CHECK:        %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
+// CHECK:        scf.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]])
+// CHECK-SAME:       to ([[C2]], [[C2]]) step ([[C1]], [[C1]]) {
+// CHECK:          scf.reduce
+// CHECK:        }
+// CHECK-NOT:    scf.parallel
+
+// -----
+
 func.func @fuse_two(%A: memref<2x2xf32>, %B: memref<2x2xf32>) {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
@@ -89,7 +115,7 @@ func.func @fuse_three(%A: memref<2x2xf32>, %B: memref<2x2xf32>) {
     memref.store %product_elem, %prod[%i, %j] : memref<2x2xf32>
     scf.reduce
   }
-  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) { 
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     %A_elem = memref.load %A[%i, %j] : memref<2x2xf32>
     %res_elem = arith.addf %A_elem, %c2fp : f32
     memref.store %res_elem, %B[%i, %j] : memref<2x2xf32>
@@ -480,3 +506,310 @@ func.func @do_not_fuse_multiple_stores_on_diff_indices(
 // CHECK:        scf.reduce
 // CHECK:      }
 // CHECK:      memref.dealloc [[SUM]]
+
+// -----
+
+func.func @fuse_same_indices_by_affine_apply(
+  %A: memref<2x2xf32>, %B: memref<2x2xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %sum = memref.alloc()  : memref<2x3xf32>
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    %B_elem = memref.load %B[%i, %j] : memref<2x2xf32>
+    %1 = affine.apply affine_map<(d0, d1) -> (d0 + d1)>(%i, %j)
+    memref.store %B_elem, %sum[%i, %1] : memref<2x3xf32>
+    scf.reduce
+  }
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    %1 = affine.apply affine_map<(d0, d1) -> (d0 + d1)>(%i, %j)
+    %sum_elem = memref.load %sum[%i, %1] : memref<2x3xf32>
+    %A_elem = memref.load %A[%i, %j] : memref<2x2xf32>
+    %product = arith.mulf %sum_elem, %A_elem : f32
+    memref.store %product, %B[%i, %j] : memref<2x2xf32>
+    scf.reduce
+  }
+  memref.dealloc %sum : memref<2x3xf32>
+  return
+}
+// CHECK:      #[[$MAP:.*]] = affine_map<(d0, d1) -> (d0 + d1)>
+// CHECK-LABEL: fuse_same_indices_by_affine_apply
+// CHECK-SAME:  (%[[ARG0:.*]]: memref<2x2xf32>, %[[ARG1:.*]]: memref<2x2xf32>) {
+// CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+// CHECK:       %[[ALLOC:.*]] = memref.alloc() : memref<2x3xf32>
+// CHECK-NEXT:  scf.parallel (%[[ARG2:.*]], %[[ARG3:.*]]) = (%[[C0]], %[[C0]]) to (%[[C2]], %[[C2]]) step (%[[C1]], %[[C1]]) {
+// CHECK-NEXT:    %[[S0:.*]] = memref.load %[[ARG1]][%[[ARG2]], %[[ARG3]]] : memref<2x2xf32>
+// CHECK-NEXT:    %[[S1:.*]] = affine.apply #[[$MAP]](%[[ARG2]], %[[ARG3]])
+// CHECK-NEXT:    memref.store %[[S0]], %[[ALLOC]][%[[ARG2]], %[[S1]]] : memref<2x3xf32>
+// CHECK-NEXT:    %[[S2:.*]] = affine.apply #[[$MAP]](%[[ARG2]], %[[ARG3]])
+// CHECK-NEXT:    %[[S3:.*]] = memref.load %[[ALLOC]][%[[ARG2]], %[[S2]]] : memref<2x3xf32>
+// CHECK-NEXT:    %[[S4:.*]] = memref.load %[[ARG0]][%[[ARG2]], %[[ARG3]]] : memref<2x2xf32>
+// CHECK-NEXT:    %[[S5:.*]] = arith.mulf %[[S3]], %[[S4]] : f32
+// CHECK-NEXT:    memref.store %[[S5]], %[[ARG1]][%[[ARG2]], %[[ARG3]]] : memref<2x2xf32>
+// CHECK-NEXT:    scf.reduce
+// CHECK-NEXT:  }
+// CHECK-NEXT:  memref.dealloc %[[ALLOC]] : memref<2x3xf32>
+// CHECK-NEXT:  return
+
+// -----
+
+func.func @do_not_fuse_affine_apply_to_non_ind_var(
+  %A: memref<2x2xf32>, %B: memref<2x2xf32>, %OffsetA: index, %OffsetB: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %sum = memref.alloc()  : memref<2x3xf32>
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    %B_elem = memref.load %B[%i, %j] : memref<2x2xf32>
+    %1 = affine.apply affine_map<(d0, d1) -> (d0 + d1)>(%i, %OffsetA)
+    memref.store %B_elem, %sum[%i, %1] : memref<2x3xf32>
+    scf.reduce
+  }
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    %1 = affine.apply affine_map<(d0, d1) -> (d0 + d1)>(%i, %OffsetB)
+    %sum_elem = memref.load %sum[%i, %1] : memref<2x3xf32>
+    %A_elem = memref.load %A[%i, %j] : memref<2x2xf32>
+    %product = arith.mulf %sum_elem, %A_elem : f32
+    memref.store %product, %B[%i, %j] : memref<2x2xf32>
+    scf.reduce
+  }
+  memref.dealloc %sum : memref<2x3xf32>
+  return
+}
+// CHECK:       #[[$MAP:.*]] = affine_map<(d0, d1) -> (d0 + d1)>
+// CHECK-LABEL: do_not_fuse_affine_apply_to_non_ind_var
+// CHECK-SAME:  (%[[ARG0:.*]]: memref<2x2xf32>, %[[ARG1:.*]]: memref<2x2xf32>, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index) {
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
+// CHECK:         %[[ALLOC:.*]] = memref.alloc() : memref<2x3xf32>
+// CHECK-NEXT:    scf.parallel (%[[ARG4:.*]], %[[ARG5:.*]]) = (%[[C0]], %[[C0]]) to (%[[C2]], %[[C2]]) step (%[[C1]], %[[C1]]) {
+// CHECK-NEXT:      %[[S0:.*]] = memref.load %[[ARG1]][%[[ARG4]], %[[ARG5]]] : memref<2x2xf32>
+// CHECK-NEXT:      %[[S1:.*]] = affine.apply #[[$MAP]](%[[ARG4]], %[[ARG2]])
+// CHECK-NEXT:      memref.store %[[S0]], %[[ALLOC]][%[[ARG4]], %[[S1]]] : memref<2x3xf32>
+// CHECK-NEXT:      scf.reduce
+// CHECK-NEXT:    }
+// CHECK-NEXT:    scf.parallel (%[[ARG4:.*]], %[[ARG5:.*]]) = (%[[C0]], %[[C0]]) to (%[[C2]], %[[C2]]) step (%[[C1]], %[[C1]]) {
+// CHECK-NEXT:      %[[S0:.*]] = affine.apply #[[$MAP]](%[[ARG4]], %[[ARG3]])
+// CHECK-NEXT:      %[[S1:.*]] = memref.load %[[ALLOC]][%[[ARG4]], %[[S0]]] : memref<2x3xf32>
+// CHECK-NEXT:      %[[S2:.*]] = memref.load %[[ARG0]][%[[ARG4]], %[[ARG5]]] : memref<2x2xf32>
+// CHECK-NEXT:      %[[S3:.*]] = arith.mulf %[[S1]], %[[S2]] : f32
+// CHECK-NEXT:      memref.store %[[S3]], %[[ARG1]][%[[ARG4]], %[[ARG5]]] : memref<2x2xf32>
+// CHECK-NEXT:      scf.reduce
+// CHECK-NEXT:    }
+// CHECK-NEXT:    memref.dealloc %[[ALLOC]] : memref<2x3xf32>
+// CHECK-NEXT:    return
+
+// -----
+
+func.func @fuse_reductions_two(%A: memref<2x2xf32>, %B: memref<2x2xf32>) -> (f32, f32) {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %init1 = arith.constant 1.0 : f32
+  %init2 = arith.constant 2.0 : f32
+  %res1 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) init(%init1) -> f32 {
+    %A_elem = memref.load %A[%i, %j] : memref<2x2xf32>
+    scf.reduce(%A_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.addf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  %res2 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) init(%init2) -> f32 {
+    %B_elem = memref.load %B[%i, %j] : memref<2x2xf32>
+    scf.reduce(%B_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.mulf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  return %res1, %res2 : f32, f32
+}
+
+// CHECK-LABEL: func @fuse_reductions_two
+//  CHECK-SAME:  (%[[A:.*]]: memref<2x2xf32>, %[[B:.*]]: memref<2x2xf32>) -> (f32, f32)
+//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+//   CHECK-DAG:   %[[INIT1:.*]] = arith.constant 1.000000e+00 : f32
+//   CHECK-DAG:   %[[INIT2:.*]] = arith.constant 2.000000e+00 : f32
+//       CHECK:   %[[RES:.*]]:2 = scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[C0]], %[[C0]])
+//  CHECK-SAME:   to (%[[C2]], %[[C2]]) step (%[[C1]], %[[C1]])
+//  CHECK-SAME:   init (%[[INIT1]], %[[INIT2]]) -> (f32, f32)
+//       CHECK:   %[[VAL_A:.*]] = memref.load %[[A]][%[[I]], %[[J]]]
+//       CHECK:   %[[VAL_B:.*]] = memref.load %[[B]][%[[I]], %[[J]]]
+//       CHECK:   scf.reduce(%[[VAL_A]], %[[VAL_B]] : f32, f32) {
+//       CHECK:   ^bb0(%[[LHS:.*]]: f32, %[[RHS:.*]]: f32):
+//       CHECK:     %[[R:.*]] = arith.addf %[[LHS]], %[[RHS]] : f32
+//       CHECK:     scf.reduce.return %[[R]] : f32
+//       CHECK:   }
+//       CHECK:   ^bb0(%[[LHS:.*]]: f32, %[[RHS:.*]]: f32):
+//       CHECK:     %[[R:.*]] = arith.mulf %[[LHS]], %[[RHS]] : f32
+//       CHECK:     scf.reduce.return %[[R]] : f32
+//       CHECK:   }
+//       CHECK:   return %[[RES]]#0, %[[RES]]#1 : f32, f32
+
+// -----
+
+func.func @fuse_reductions_three(%A: memref<2x2xf32>, %B: memref<2x2xf32>, %C: memref<2x2xf32>) -> (f32, f32, f32) {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %init1 = arith.constant 1.0 : f32
+  %init2 = arith.constant 2.0 : f32
+  %init3 = arith.constant 3.0 : f32
+  %res1 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) init(%init1) -> f32 {
+    %A_elem = memref.load %A[%i, %j] : memref<2x2xf32>
+    scf.reduce(%A_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.addf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  %res2 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) init(%init2) -> f32 {
+    %B_elem = memref.load %B[%i, %j] : memref<2x2xf32>
+    scf.reduce(%B_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.mulf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  %res3 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) init(%init3) -> f32 {
+    %A_elem = memref.load %C[%i, %j] : memref<2x2xf32>
+    scf.reduce(%A_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.addf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  return %res1, %res2, %res3 : f32, f32, f32
+}
+
+// CHECK-LABEL: func @fuse_reductions_three
+//  CHECK-SAME:  (%[[A:.*]]: memref<2x2xf32>, %[[B:.*]]: memref<2x2xf32>, %[[C:.*]]: memref<2x2xf32>) -> (f32, f32, f32)
+//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+//   CHECK-DAG:   %[[INIT1:.*]] = arith.constant 1.000000e+00 : f32
+//   CHECK-DAG:   %[[INIT2:.*]] = arith.constant 2.000000e+00 : f32
+//   CHECK-DAG:   %[[INIT3:.*]] = arith.constant 3.000000e+00 : f32
+//       CHECK:   %[[RES:.*]]:3 = scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[C0]], %[[C0]])
+//  CHECK-SAME:   to (%[[C2]], %[[C2]]) step (%[[C1]], %[[C1]])
+//  CHECK-SAME:   init (%[[INIT1]], %[[INIT2]], %[[INIT3]]) -> (f32, f32, f32)
+//       CHECK:   %[[VAL_A:.*]] = memref.load %[[A]][%[[I]], %[[J]]]
+//       CHECK:   %[[VAL_B:.*]] = memref.load %[[B]][%[[I]], %[[J]]]
+//       CHECK:   %[[VAL_C:.*]] = memref.load %[[C]][%[[I]], %[[J]]]
+//       CHECK:   scf.reduce(%[[VAL_A]], %[[VAL_B]], %[[VAL_C]] : f32, f32, f32) {
+//       CHECK:   ^bb0(%[[LHS:.*]]: f32, %[[RHS:.*]]: f32):
+//       CHECK:     %[[R:.*]] = arith.addf %[[LHS]], %[[RHS]] : f32
+//       CHECK:     scf.reduce.return %[[R]] : f32
+//       CHECK:   }
+//       CHECK:   ^bb0(%[[LHS:.*]]: f32, %[[RHS:.*]]: f32):
+//       CHECK:     %[[R:.*]] = arith.mulf %[[LHS]], %[[RHS]] : f32
+//       CHECK:     scf.reduce.return %[[R]] : f32
+//       CHECK:   }
+//       CHECK:   ^bb0(%[[LHS:.*]]: f32, %[[RHS:.*]]: f32):
+//       CHECK:     %[[R:.*]] = arith.addf %[[LHS]], %[[RHS]] : f32
+//       CHECK:     scf.reduce.return %[[R]] : f32
+//       CHECK:   }
+//       CHECK:   return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2 : f32, f32, f32
+
+// -----
+
+func.func @reductions_use_res(%A: memref<2x2xf32>, %B: memref<2x2xf32>) -> (f32, f32) {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %init1 = arith.constant 1.0 : f32
+  %res1 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) init(%init1) -> f32 {
+    %A_elem = memref.load %A[%i, %j] : memref<2x2xf32>
+    scf.reduce(%A_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.addf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  %res2 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) init(%res1) -> f32 {
+    %B_elem = memref.load %B[%i, %j] : memref<2x2xf32>
+    scf.reduce(%B_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.mulf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  return %res1, %res2 : f32, f32
+}
+
+// %res1 is used as second scf.parallel arg, cannot fuse
+// CHECK-LABEL: func @reductions_use_res
+// CHECK:      scf.parallel
+// CHECK:      scf.parallel
+
+// -----
+
+func.func @reductions_use_res_inside(%A: memref<2x2xf32>, %B: memref<2x2xf32>) -> (f32, f32) {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %init1 = arith.constant 1.0 : f32
+  %init2 = arith.constant 2.0 : f32
+  %res1 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) init(%init1) -> f32 {
+    %A_elem = memref.load %A[%i, %j] : memref<2x2xf32>
+    scf.reduce(%A_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.addf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  %res2 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) init(%init2) -> f32 {
+    %B_elem = memref.load %B[%i, %j] : memref<2x2xf32>
+    %sum = arith.addf %B_elem, %res1 : f32
+    scf.reduce(%sum : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.mulf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  return %res1, %res2 : f32, f32
+}
+
+// %res1 is used inside second scf.parallel, cannot fuse
+// CHECK-LABEL: func @reductions_use_res_inside
+// CHECK:      scf.parallel
+// CHECK:      scf.parallel
+
+// -----
+
+func.func @reductions_use_res_between(%A: memref<2x2xf32>, %B: memref<2x2xf32>) -> (f32, f32, f32) {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %init1 = arith.constant 1.0 : f32
+  %init2 = arith.constant 2.0 : f32
+  %res1 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) init(%init1) -> f32 {
+    %A_elem = memref.load %A[%i, %j] : memref<2x2xf32>
+    scf.reduce(%A_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.addf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  %res3 = arith.addf %res1, %init2 : f32
+  %res2 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) init(%init2) -> f32 {
+    %B_elem = memref.load %B[%i, %j] : memref<2x2xf32>
+    scf.reduce(%B_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.mulf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  return %res1, %res2, %res3 : f32, f32, f32
+}
+
+// instruction in between the loops uses the first loop result
+// CHECK-LABEL: func @reductions_use_res_between
+// CHECK:      scf.parallel
+// CHECK:      scf.parallel

@@ -10,6 +10,12 @@
 // RUN: %clang_cc1 -std=c++20 %t/mod4.cppm -fmodule-file=mod3=%t/mod3.pcm \
 // RUN:     -fsyntax-only -verify
 
+// Testing the behavior of `-fskip-odr-check-in-gmf`
+// RUN: %clang_cc1 -std=c++20 %t/mod3.cppm -fskip-odr-check-in-gmf \
+// RUN:     -emit-module-interface -o %t/mod3.pcm
+// RUN: %clang_cc1 -std=c++20 %t/mod4.cppm -fmodule-file=mod3=%t/mod3.pcm \
+// RUN:     -fskip-odr-check-in-gmf -DSKIP_ODR_CHECK_IN_GMF -fsyntax-only -verify
+
 //--- size_t.h
 
 extern "C" {
@@ -57,9 +63,6 @@ export module mod3;
 export using std::align_val_t;
 
 //--- mod4.cppm
-// This is actually an ODR violation. But given https://github.com/llvm/llvm-project/issues/79240,
-// we don't count it as an ODR violation now.
-// expected-no-diagnostics
 module;
 #include "signed_size_t.h"
 #include "csize_t"
@@ -67,3 +70,10 @@ module;
 export module mod4;
 import mod3;
 export using std::align_val_t;
+
+#ifdef SKIP_ODR_CHECK_IN_GMF
+// expected-no-diagnostics
+#else
+// expected-error@align.h:* {{'std::align_val_t' has different definitions in different modules; defined here first difference is enum with specified type 'size_t' (aka 'int')}}
+// expected-note@align.h:* {{but in 'mod3.<global>' found enum with specified type 'size_t' (aka 'unsigned int')}}
+#endif

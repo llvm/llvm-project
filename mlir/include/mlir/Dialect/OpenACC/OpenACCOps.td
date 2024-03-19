@@ -218,6 +218,24 @@ def GangArgTypeArrayAttr :
   let constBuilderCall = ?;
 }
 
+// Combined constructs enumerations
+def OpenACC_KernelsLoop    : I32EnumAttrCase<"KernelsLoop", 1, "kernels_loop">;
+def OpenACC_ParallelLoop   : I32EnumAttrCase<"ParallelLoop", 2, "parallel_loop">;
+def OpenACC_SerialLoop     : I32EnumAttrCase<"SerialLoop", 3, "serial_loop">;
+
+def OpenACC_CombinedConstructsType : I32EnumAttr<"CombinedConstructsType",
+    "Differentiate between combined constructs",
+    [OpenACC_KernelsLoop, OpenACC_ParallelLoop, OpenACC_SerialLoop]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::acc";
+}
+
+def OpenACC_CombinedConstructsAttr : EnumAttr<OpenACC_Dialect,
+                                       OpenACC_CombinedConstructsType,
+                                       "combined_constructs"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
+}
+
 // Define a resource for the OpenACC runtime counters.
 def OpenACC_RuntimeCounters : Resource<"::mlir::acc::RuntimeCounters">;
 
@@ -900,6 +918,11 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
       // parallel region
     }
     ```
+
+    `async`, `wait`, `num_gangs`, `num_workers` and `vector_length` operands are
+    supported with `device_type` information. They should only be accessed by
+    the extra provided getters. If modified, the corresponding `device_type`
+    attributes must be modified as well.
   }];
 
   let arguments = (ins
@@ -928,7 +951,8 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
       Variadic<OpenACC_PointerLikeTypeInterface>:$gangFirstPrivateOperands,
       OptionalAttr<SymbolRefArrayAttr>:$firstprivatizations,
       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
-      OptionalAttr<DefaultValueAttr>:$defaultAttr);
+      OptionalAttr<DefaultValueAttr>:$defaultAttr,
+      UnitAttr:$combined);
 
   let regions = (region AnyRegion:$region);
 
@@ -988,6 +1012,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
   }];
 
   let assemblyFormat = [{
+    ( `combined` `(` `loop` `)` $combined^)?
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
@@ -1038,6 +1063,10 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       // serial region
     }
     ```
+
+    `async` and `wait` operands are supported with `device_type` information.
+    They should only be accessed by the extra provided getters. If modified,
+    the corresponding `device_type` attributes must be modified as well.
   }];
 
   let arguments = (ins
@@ -1059,7 +1088,8 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       Variadic<OpenACC_PointerLikeTypeInterface>:$gangFirstPrivateOperands,
       OptionalAttr<SymbolRefArrayAttr>:$firstprivatizations,
       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
-      OptionalAttr<DefaultValueAttr>:$defaultAttr);
+      OptionalAttr<DefaultValueAttr>:$defaultAttr,
+      UnitAttr:$combined);
 
   let regions = (region AnyRegion:$region);
 
@@ -1100,6 +1130,7 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
   }];
 
   let assemblyFormat = [{
+    ( `combined` `(` `loop` `)` $combined^)?
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
@@ -1146,6 +1177,11 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
       // kernels region
     }
     ```
+
+    `collapse`, `gang`, `worker`, `vector`, `seq`, `independent`, `auto` and
+    `tile` operands are supported with `device_type` information. They should
+    only be accessed by the extra provided getters. If modified, the
+    corresponding `device_type` attributes must be modified as well.
   }];
 
   let arguments = (ins
@@ -1168,7 +1204,8 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
       Optional<I1>:$selfCond,
       UnitAttr:$selfAttr,
       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
-      OptionalAttr<DefaultValueAttr>:$defaultAttr);
+      OptionalAttr<DefaultValueAttr>:$defaultAttr,
+      UnitAttr:$combined);
 
   let regions = (region AnyRegion:$region);
 
@@ -1228,6 +1265,7 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
   }];
 
   let assemblyFormat = [{
+    ( `combined` `(` `loop` `)` $combined^)?
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
@@ -1274,6 +1312,10 @@ def OpenACC_DataOp : OpenACC_Op<"data",
       // data region
     }
     ```
+
+    `async` and `wait` operands are supported with `device_type` information.
+    They should only be accessed by the extra provided getters. If modified,
+    the corresponding `device_type` attributes must be modified as well.
   }];
 
 
@@ -1520,6 +1562,11 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       acc.yield
     } attributes { collapse = [3] }
     ```
+
+    `collapse`, `gang`, `worker`, `vector`, `seq`, `independent`, `auto` and
+    `tile` operands are supported with `device_type` information. They should
+    only be accessed by the extra provided getters. If modified, the
+    corresponding `device_type` attributes must be modified as well.
   }];
 
   let arguments = (ins
@@ -1550,7 +1597,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       Variadic<OpenACC_PointerLikeTypeInterface>:$privateOperands,
       OptionalAttr<SymbolRefArrayAttr>:$privatizations,
       Variadic<AnyType>:$reductionOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes
+      OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
+      OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined
   );
 
   let results = (outs Variadic<AnyType>:$results);
@@ -1562,6 +1610,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     static StringRef getGangNumKeyword() { return "num"; }
     static StringRef getGangDimKeyword() { return "dim"; }
     static StringRef getGangStaticKeyword() { return "static"; }
+    static StringRef getControlKeyword() { return "control"; }
 
     /// The number of private and reduction operands.
     unsigned getNumDataOperands();
@@ -1641,6 +1690,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
   let hasCustomAssemblyFormat = 1;
   let assemblyFormat = [{
+    custom<CombinedConstructsLoop>($combined)
     oilist(
         `gang` `` custom<GangClause>($gangOperands, type($gangOperands),
             $gangOperandsArgType, $gangOperandsDeviceType,
@@ -2018,11 +2068,17 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
     Example:
 
     ```mlir
-    func.func @acc_func(%a : i64) -> () attributes {acc.routine_info = #acc.routine_info<[@acc_func_rout1]>} {
+    func.func @acc_func(%a : i64) -> () attributes 
+        {acc.routine_info = #acc.routine_info<[@acc_func_rout1]>} {
       return
     }
     acc.routine @acc_func_rout1 func(@acc_func) gang
     ```
+
+    `bind`, `gang`, `worker`, `vector` and `seq` operands are supported with
+    `device_type` information. They should only be accessed by the extra
+    provided getters. If modified, the corresponding `device_type` attributes
+    must be modified as well.
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
@@ -2217,6 +2273,10 @@ def OpenACC_UpdateOp : OpenACC_Op<"update",
     ```mlir
     acc.update device(%d1 : memref<10xf32>) attributes {async}
     ```
+
+    `async` and `wait` operands are supported with `device_type` information.
+    They should only be accessed by the extra provided getters. If modified,
+    the corresponding `device_type` attributes must be modified as well.
   }];
 
   let arguments = (ins Optional<I1>:$ifCond,

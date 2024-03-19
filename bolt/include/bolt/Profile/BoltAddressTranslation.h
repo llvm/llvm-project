@@ -16,6 +16,7 @@
 #include <map>
 #include <optional>
 #include <system_error>
+#include <unordered_map>
 
 namespace llvm {
 class raw_ostream;
@@ -85,7 +86,7 @@ public:
 
   /// Read the serialized address translation tables and load them internally
   /// in memory. Return a parse error if failed.
-  std::error_code parse(StringRef Buf);
+  std::error_code parse(raw_ostream &OS, StringRef Buf);
 
   /// Dump the parsed address translation tables
   void dump(raw_ostream &OS);
@@ -110,6 +111,9 @@ public:
   /// True if the input binary has a translation table we can use to convert
   /// addresses when aggregating profile
   bool enabledFor(llvm::object::ELFObjectFileBase *InputFile) const;
+
+  /// Save function and basic block hashes used for metadata dump.
+  void saveMetadata(BinaryContext &BC);
 
 private:
   /// Helper to update \p Map by inserting one or more BAT entries reflecting
@@ -139,6 +143,9 @@ private:
   size_t getNumEqualOffsets(const MapTy &Map) const;
 
   std::map<uint64_t, MapTy> Maps;
+
+  using BBHashMap = std::unordered_map<uint32_t, size_t>;
+  std::unordered_map<uint64_t, std::pair<size_t, BBHashMap>> FuncHashes;
 
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;

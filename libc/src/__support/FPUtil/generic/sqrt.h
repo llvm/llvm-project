@@ -27,27 +27,28 @@ template <typename T> struct SpecialLongDouble {
   static constexpr bool VALUE = false;
 };
 
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 template <> struct SpecialLongDouble<long double> {
   static constexpr bool VALUE = true;
 };
-#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 template <typename T>
 LIBC_INLINE void normalize(int &exponent,
                            typename FPBits<T>::StorageType &mantissa) {
-  const int shift = cpp::countl_zero(mantissa) -
-                    (8 * sizeof(mantissa) - 1 - FPBits<T>::FRACTION_LEN);
+  const int shift =
+      cpp::countl_zero(mantissa) -
+      (8 * static_cast<int>(sizeof(mantissa)) - 1 - FPBits<T>::FRACTION_LEN);
   exponent -= shift;
   mantissa <<= shift;
 }
 
-#ifdef LIBC_LONG_DOUBLE_IS_FLOAT64
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 template <>
 LIBC_INLINE void normalize<long double>(int &exponent, uint64_t &mantissa) {
   normalize<double>(exponent, mantissa);
 }
-#elif !defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#elif !defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 template <>
 LIBC_INLINE void normalize<long double>(int &exponent, UInt128 &mantissa) {
   const uint64_t hi_bits = static_cast<uint64_t>(mantissa >> 64);
@@ -78,21 +79,16 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
 
     FPBits_t bits(x);
 
-    if (bits.is_inf_or_nan()) {
-      if (bits.is_neg() && (bits.get_mantissa() == 0)) {
-        // sqrt(-Inf) = NaN
-        return FLT_NAN;
-      } else {
-        // sqrt(NaN) = NaN
-        // sqrt(+Inf) = +Inf
-        return x;
-      }
-    } else if (bits.is_zero()) {
+    if (bits == FPBits_t::inf(Sign::POS) || bits.is_zero() || bits.is_nan()) {
+      // sqrt(+Inf) = +Inf
       // sqrt(+0) = +0
       // sqrt(-0) = -0
+      // sqrt(NaN) = NaN
+      // sqrt(-NaN) = -NaN
       return x;
     } else if (bits.is_neg()) {
-      // sqrt( negative numbers ) = NaN
+      // sqrt(-Inf) = NaN
+      // sqrt(-x) = NaN
       return FLT_NAN;
     } else {
       int x_exp = bits.get_exponent();

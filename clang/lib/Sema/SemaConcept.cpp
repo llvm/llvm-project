@@ -586,7 +586,8 @@ bool Sema::addInstantiatedCapturesToScope(
 
 bool Sema::SetupConstraintScope(
     FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
-    MultiLevelTemplateArgumentList MLTAL, LocalInstantiationScope &Scope) {
+    const MultiLevelTemplateArgumentList &MLTAL,
+    LocalInstantiationScope &Scope) {
   if (FD->isTemplateInstantiation() && FD->getPrimaryTemplate()) {
     FunctionTemplateDecl *PrimaryTemplate = FD->getPrimaryTemplate();
     InstantiatingTemplate Inst(
@@ -661,11 +662,12 @@ Sema::SetupConstraintCheckingTemplateArgumentsAndScope(
   // Collect the list of template arguments relative to the 'primary' template.
   // We need the entire list, since the constraint is completely uninstantiated
   // at this point.
-  MLTAL = getTemplateInstantiationArgs(FD, FD->getLexicalDeclContext(),
-                                       /*Final=*/false, /*Innermost=*/nullptr,
-                                       /*RelativeToPrimary=*/true,
-                                       /*Pattern=*/nullptr,
-                                       /*ForConstraintInstantiation=*/true);
+  MLTAL =
+      getTemplateInstantiationArgs(FD, FD->getLexicalDeclContext(),
+                                   /*Final=*/false, /*Innermost=*/std::nullopt,
+                                   /*RelativeToPrimary=*/true,
+                                   /*Pattern=*/nullptr,
+                                   /*ForConstraintInstantiation=*/true);
   if (SetupConstraintScope(FD, TemplateArgs, MLTAL, Scope))
     return std::nullopt;
 
@@ -690,11 +692,15 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
   // A lambda conversion operator has the same constraints as the call operator
   // and constraints checking relies on whether we are in a lambda call operator
   // (and may refer to its parameters), so check the call operator instead.
+  // Note that the declarations outside of the lambda should also be
+  // considered. Turning on the 'ForOverloadResolution' flag results in the
+  // LocalInstantiationScope not looking into its parents, but we can still
+  // access Decls from the parents while building a lambda RAII scope later.
   if (const auto *MD = dyn_cast<CXXConversionDecl>(FD);
       MD && isLambdaConversionOperator(const_cast<CXXConversionDecl *>(MD)))
     return CheckFunctionConstraints(MD->getParent()->getLambdaCallOperator(),
                                     Satisfaction, UsageLoc,
-                                    ForOverloadResolution);
+                                    /*ShouldAddDeclsFromParentScope=*/true);
 
   DeclContext *CtxToSave = const_cast<FunctionDecl *>(FD);
 
@@ -740,7 +746,8 @@ static unsigned
 CalculateTemplateDepthForConstraints(Sema &S, const NamedDecl *ND,
                                      bool SkipForSpecialization = false) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      ND, ND->getLexicalDeclContext(), /*Final=*/false, /*Innermost=*/nullptr,
+      ND, ND->getLexicalDeclContext(), /*Final=*/false,
+      /*Innermost=*/std::nullopt,
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr,
       /*ForConstraintInstantiation=*/true, SkipForSpecialization);
@@ -780,7 +787,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
     const Expr *ConstrExpr) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
       DeclInfo.getDecl(), DeclInfo.getLexicalDeclContext(), /*Final=*/false,
-      /*Innermost=*/nullptr,
+      /*Innermost=*/std::nullopt,
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true,
       /*SkipForSpecialization*/ false);
@@ -1279,11 +1286,9 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
 
 static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
                                         const ConceptSpecializationExpr *CSE) {
-  TemplateArgumentList TAL{TemplateArgumentList::OnStack,
-                           CSE->getTemplateArguments()};
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
       CSE->getNamedConcept(), CSE->getNamedConcept()->getLexicalDeclContext(),
-      /*Final=*/false, &TAL,
+      /*Final=*/false, CSE->getTemplateArguments(),
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr,
       /*ForConstraintInstantiation=*/true);

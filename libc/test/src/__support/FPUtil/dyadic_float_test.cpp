@@ -56,3 +56,37 @@ TEST(LlvmLibcDyadicFloatTest, QuickMul) {
   Float256 z = quick_mul(x, y);
   EXPECT_FP_EQ_ALL_ROUNDING(double(x) * double(y), double(z));
 }
+
+#define TEST_EDGE_RANGES(Name, Type)                                           \
+  TEST(LlvmLibcDyadicFloatTest, EdgeRanges##Name) {                            \
+    using Bits = LIBC_NAMESPACE::fputil::FPBits<Type>;                         \
+    using DFType = LIBC_NAMESPACE::fputil::DyadicFloat<Bits::STORAGE_LEN>;     \
+    Type max_normal = Bits::max_normal().get_val();                            \
+    Type min_normal = Bits::min_normal().get_val();                            \
+    Type min_subnormal = Bits::min_subnormal().get_val();                      \
+    Type two(2);                                                               \
+                                                                               \
+    DFType x(min_normal);                                                      \
+    EXPECT_FP_EQ_ALL_ROUNDING(min_normal, static_cast<Type>(x));               \
+    --x.exponent;                                                              \
+    EXPECT_FP_EQ(min_normal / two, static_cast<Type>(x));                      \
+                                                                               \
+    DFType y(two *min_normal - min_subnormal);                                 \
+    --y.exponent;                                                              \
+    EXPECT_FP_EQ(min_normal, static_cast<Type>(y));                            \
+                                                                               \
+    DFType z(min_subnormal);                                                   \
+    EXPECT_FP_EQ_ALL_ROUNDING(min_subnormal, static_cast<Type>(z));            \
+    --z.exponent;                                                              \
+    EXPECT_FP_EQ(Bits::zero().get_val(), static_cast<Type>(z));                \
+                                                                               \
+    DFType t(max_normal);                                                      \
+    EXPECT_FP_EQ_ALL_ROUNDING(max_normal, static_cast<Type>(t));               \
+    ++t.exponent;                                                              \
+    EXPECT_FP_EQ(Bits::inf().get_val(), static_cast<Type>(t));                 \
+  }                                                                            \
+  static_assert(true, "Require semicolon.")
+
+TEST_EDGE_RANGES(Float, float);
+TEST_EDGE_RANGES(Double, double);
+TEST_EDGE_RANGES(LongDouble, long double);

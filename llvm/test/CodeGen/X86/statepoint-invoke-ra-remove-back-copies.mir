@@ -367,7 +367,6 @@ body:             |
   ; CHECK-NEXT: bb.14.bb39:
   ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.15.bb40:
   ; CHECK-NEXT:   successors: %bb.16(0x80000000)
   ; CHECK-NEXT: {{  $}}

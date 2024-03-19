@@ -40,6 +40,10 @@ struct CatchTypeInfo {
 
 /// A protected scope for zero-cost EH handling.
 class EHScope {
+public:
+  enum Kind { Cleanup, Catch, Terminate, Filter };
+
+private:
   llvm::BasicBlock *CachedLandingPad;
   llvm::BasicBlock *CachedEHDispatchBlock;
 
@@ -47,6 +51,7 @@ class EHScope {
 
   class CommonBitFields {
     friend class EHScope;
+    LLVM_PREFERRED_TYPE(Kind)
     unsigned Kind : 3;
   };
   enum { NumCommonBits = 3 };
@@ -64,21 +69,27 @@ protected:
     unsigned : NumCommonBits;
 
     /// Whether this cleanup needs to be run along normal edges.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsNormalCleanup : 1;
 
     /// Whether this cleanup needs to be run along exception edges.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsEHCleanup : 1;
 
     /// Whether this cleanup is currently active.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsActive : 1;
 
     /// Whether this cleanup is a lifetime marker
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsLifetimeMarker : 1;
 
     /// Whether the normal cleanup should test the activation flag.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned TestFlagInNormalCleanup : 1;
 
     /// Whether the EH cleanup should test the activation flag.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned TestFlagInEHCleanup : 1;
 
     /// The amount of extra storage needed by the Cleanup.
@@ -101,8 +112,6 @@ protected:
   };
 
 public:
-  enum Kind { Cleanup, Catch, Terminate, Filter };
-
   EHScope(Kind kind, EHScopeStack::stable_iterator enclosingEHScope)
     : CachedLandingPad(nullptr), CachedEHDispatchBlock(nullptr),
       EnclosingEHScope(enclosingEHScope) {

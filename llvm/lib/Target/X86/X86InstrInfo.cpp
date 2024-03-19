@@ -685,13 +685,13 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   return false;
 }
 
-unsigned X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   unsigned Dummy;
   return X86InstrInfo::isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
-unsigned X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex,
                                            unsigned &MemBytes) const {
   if (isFrameLoadOpcode(MI.getOpcode(), MemBytes))
@@ -700,7 +700,7 @@ unsigned X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
+Register X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                                  int &FrameIndex) const {
   unsigned Dummy;
   if (isFrameLoadOpcode(MI.getOpcode(), Dummy)) {
@@ -719,13 +719,13 @@ unsigned X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
   return 0;
 }
 
-unsigned X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   unsigned Dummy;
   return X86InstrInfo::isStoreToStackSlot(MI, FrameIndex, Dummy);
 }
 
-unsigned X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex,
                                           unsigned &MemBytes) const {
   if (isFrameStoreOpcode(MI.getOpcode(), MemBytes))
@@ -735,7 +735,7 @@ unsigned X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
+Register X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
                                                 int &FrameIndex) const {
   unsigned Dummy;
   if (isFrameStoreOpcode(MI.getOpcode(), Dummy)) {
@@ -2491,12 +2491,12 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI->removeOperand(3);
     break;
   }
-  case X86::PCLMULQDQrr:
-  case X86::VPCLMULQDQrr:
-  case X86::VPCLMULQDQYrr:
-  case X86::VPCLMULQDQZrr:
-  case X86::VPCLMULQDQZ128rr:
-  case X86::VPCLMULQDQZ256rr: {
+  case X86::PCLMULQDQrri:
+  case X86::VPCLMULQDQrri:
+  case X86::VPCLMULQDQYrri:
+  case X86::VPCLMULQDQZrri:
+  case X86::VPCLMULQDQZ128rri:
+  case X86::VPCLMULQDQZ256rri: {
     // SRC1 64bits = Imm[0] ? SRC1[127:64] : SRC1[63:0]
     // SRC2 64bits = Imm[4] ? SRC2[127:64] : SRC2[63:0]
     unsigned Imm = MI.getOperand(3).getImm();
@@ -2573,11 +2573,11 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI->getOperand(3).setImm(
         X86::getSwappedVPCOMImm(MI.getOperand(3).getImm() & 0x7));
     break;
-  case X86::VCMPSDZrr:
-  case X86::VCMPSSZrr:
+  case X86::VCMPSDZrri:
+  case X86::VCMPSSZrri:
   case X86::VCMPPDZrri:
   case X86::VCMPPSZrri:
-  case X86::VCMPSHZrr:
+  case X86::VCMPSHZrri:
   case X86::VCMPPHZrri:
   case X86::VCMPPHZ128rri:
   case X86::VCMPPHZ256rri:
@@ -2637,9 +2637,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI = CloneIfNew(MI);
     WorkingMI->setDesc(get(Opc));
     break;
-  case X86::CMOV16rr:
-  case X86::CMOV32rr:
-  case X86::CMOV64rr: {
+  CASE_ND(CMOV16rr)
+  CASE_ND(CMOV32rr)
+  CASE_ND(CMOV64rr) {
     WorkingMI = CloneIfNew(MI);
     unsigned OpNo = MI.getDesc().getNumOperands() - 1;
     X86::CondCode CC = static_cast<X86::CondCode>(MI.getOperand(OpNo).getImm());
@@ -2820,21 +2820,21 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
     return false;
 
   switch (MI.getOpcode()) {
-  case X86::CMPSDrr:
-  case X86::CMPSSrr:
+  case X86::CMPSDrri:
+  case X86::CMPSSrri:
   case X86::CMPPDrri:
   case X86::CMPPSrri:
-  case X86::VCMPSDrr:
-  case X86::VCMPSSrr:
+  case X86::VCMPSDrri:
+  case X86::VCMPSSrri:
   case X86::VCMPPDrri:
   case X86::VCMPPSrri:
   case X86::VCMPPDYrri:
   case X86::VCMPPSYrri:
-  case X86::VCMPSDZrr:
-  case X86::VCMPSSZrr:
+  case X86::VCMPSDZrri:
+  case X86::VCMPSSZrri:
   case X86::VCMPPDZrri:
   case X86::VCMPPSZrri:
-  case X86::VCMPSHZrr:
+  case X86::VCMPSHZrri:
   case X86::VCMPPHZrri:
   case X86::VCMPPHZ128rri:
   case X86::VCMPPHZ256rri:
@@ -3120,7 +3120,8 @@ bool X86InstrInfo::hasCommutePreference(MachineInstr &MI, bool &Commute) const {
 
 int X86::getCondSrcNoFromDesc(const MCInstrDesc &MCID) {
   unsigned Opcode = MCID.getOpcode();
-  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode)))
+  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode) ||
+        X86::isCFCMOVCC(Opcode)))
     return -1;
   // Assume that condition code is always the last use operand.
   unsigned NumUses = MCID.getNumOperands() - MCID.getNumDefs();
@@ -3149,6 +3150,11 @@ X86::CondCode X86::getCondFromSETCC(const MachineInstr &MI) {
 X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
   return X86::isCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
                                        : X86::COND_INVALID;
+}
+
+X86::CondCode X86::getCondFromCFCMov(const MachineInstr &MI) {
+  return X86::isCFCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
+                                         : X86::COND_INVALID;
 }
 
 /// Return the inverse of the specified condition,
@@ -3312,16 +3318,21 @@ X86::getX86ConditionCode(CmpInst::Predicate Predicate) {
 }
 
 /// Return a cmov opcode for the given register size in bytes, and operand type.
-unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand) {
+unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand,
+                            bool HasNDD) {
   switch (RegBytes) {
   default:
     llvm_unreachable("Illegal register size!");
+#define GET_ND_IF_ENABLED(OPC) (HasNDD ? OPC##_ND : OPC)
   case 2:
-    return HasMemoryOperand ? X86::CMOV16rm : X86::CMOV16rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV16rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV16rr);
   case 4:
-    return HasMemoryOperand ? X86::CMOV32rm : X86::CMOV32rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV32rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV32rr);
   case 8:
-    return HasMemoryOperand ? X86::CMOV64rm : X86::CMOV64rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV64rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV64rr);
   }
 }
 
@@ -3423,6 +3434,18 @@ unsigned X86::getSwappedVCMPImm(unsigned Imm) {
   return Imm;
 }
 
+unsigned X86::getVectorRegisterWidth(const MCOperandInfo &Info) {
+  if (Info.RegClass == X86::VR128RegClassID ||
+      Info.RegClass == X86::VR128XRegClassID)
+    return 128;
+  if (Info.RegClass == X86::VR256RegClassID ||
+      Info.RegClass == X86::VR256XRegClassID)
+    return 256;
+  if (Info.RegClass == X86::VR512RegClassID)
+    return 512;
+  llvm_unreachable("Unknown register class!");
+}
+
 /// Return true if the Reg is X87 register.
 static bool isX87Reg(unsigned Reg) {
   return (Reg == X86::FPCW || Reg == X86::FPSW ||
@@ -3431,6 +3454,11 @@ static bool isX87Reg(unsigned Reg) {
 
 /// check if the instruction is X87 instruction
 bool X86::isX87Instruction(MachineInstr &MI) {
+  // Call defs X87 register, so we special case it here because
+  // otherwise calls are incorrectly flagged as x87 instructions
+  // as a result.
+  if (MI.isCall())
+    return false;
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
@@ -4030,8 +4058,9 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   const TargetRegisterClass &RC = *MRI.getRegClass(DstReg);
   assert(Cond.size() == 1 && "Invalid Cond array");
-  unsigned Opc = X86::getCMovOpcode(TRI.getRegSizeInBits(RC) / 8,
-                                    false /*HasMemoryOperand*/);
+  unsigned Opc =
+      X86::getCMovOpcode(TRI.getRegSizeInBits(RC) / 8,
+                         false /*HasMemoryOperand*/, Subtarget.hasNDD());
   BuildMI(MBB, I, DL, get(Opc), DstReg)
       .addReg(FalseReg)
       .addReg(TrueReg)
@@ -4502,7 +4531,7 @@ bool X86InstrInfo::preservesZeroValueInReg(
 
 bool X86InstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &MemOp, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   const MCInstrDesc &Desc = MemOp.getDesc();
   int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
@@ -7205,27 +7234,7 @@ unsigned X86InstrInfo::commuteOperandsForFold(MachineInstr &MI,
   if ((HasDef && Reg0 == Reg1 && Tied1) || (HasDef && Reg0 == Reg2 && Tied2))
     return Idx1;
 
-  MachineInstr *CommutedMI = commuteInstruction(MI, false, Idx1, Idx2);
-  if (!CommutedMI) {
-    // Unable to commute.
-    return Idx1;
-  }
-  if (CommutedMI != &MI) {
-    // New instruction. We can't fold from this.
-    CommutedMI->eraseFromParent();
-    return Idx1;
-  }
-
-  return Idx2;
-}
-
-void X86InstrInfo::UndoCommuteForFold(MachineInstr &MI, unsigned Idx1,
-                                      unsigned Idx2) const {
-  // Folding failed again - undo the commute before returning.
-  MachineInstr *UncommutedMI = commuteInstruction(MI, false, Idx1, Idx2);
-  // New instruction. It doesn't need to be kept.
-  if (UncommutedMI && UncommutedMI != &MI)
-    UncommutedMI->eraseFromParent();
+  return commuteInstruction(MI, false, Idx1, Idx2) ? Idx2 : Idx1;
 }
 
 static void printFailMsgforFold(const MachineInstr &MI, unsigned Idx) {
@@ -7309,10 +7318,6 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
   if (I != nullptr) {
     unsigned Opcode = I->DstOp;
-    bool FoldedLoad =
-        isTwoAddrFold || (OpNum == 0 && I->Flags & TB_FOLDED_LOAD) || OpNum > 0;
-    bool FoldedStore =
-        isTwoAddrFold || (OpNum == 0 && I->Flags & TB_FOLDED_STORE);
     if (Alignment <
         Align(1ULL << ((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT)))
       return nullptr;
@@ -7324,7 +7329,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       // Check if it's safe to fold the load. If the size of the object is
       // narrower than the load width, then it's not.
       // FIXME: Allow scalar intrinsic instructions like ADDSSrm_Int.
-      if (FoldedLoad && Size < RCSize) {
+      if ((I->Flags & TB_FOLDED_LOAD) && Size < RCSize) {
         // If this is a 64-bit load, but the spill slot is 32, then we can do
         // a 32-bit load which is implicitly zero-extended. This likely is
         // due to live interval analysis remat'ing a load from stack slot.
@@ -7338,7 +7343,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       // For stores, make sure the size of the object is equal to the size of
       // the store. If the object is larger, the extra bits would be garbage. If
       // the object is smaller we might overwrite another object or fault.
-      if (FoldedStore && Size != RCSize)
+      if ((I->Flags & TB_FOLDED_STORE) && Size != RCSize)
         return nullptr;
     }
 
@@ -7373,7 +7378,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
                                   Alignment, /*AllowCommute=*/false);
     if (NewMI)
       return NewMI;
-    UndoCommuteForFold(MI, OpNum, CommuteOpIdx2);
+    // Folding failed again - undo the commute before returning.
+    commuteInstruction(MI, false, OpNum, CommuteOpIdx2);
   }
 
   printFailMsgforFold(MI, OpNum);
@@ -7516,9 +7522,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::ADDSSrr_Int:
     case X86::VADDSSrr_Int:
     case X86::VADDSSZrr_Int:
-    case X86::CMPSSrr_Int:
-    case X86::VCMPSSrr_Int:
-    case X86::VCMPSSZrr_Int:
+    case X86::CMPSSrri_Int:
+    case X86::VCMPSSrri_Int:
+    case X86::VCMPSSZrri_Int:
     case X86::DIVSSrr_Int:
     case X86::VDIVSSrr_Int:
     case X86::VDIVSSZrr_Int:
@@ -7539,7 +7545,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VSUBSSZrr_Int:
     case X86::VADDSSZrr_Intk:
     case X86::VADDSSZrr_Intkz:
-    case X86::VCMPSSZrr_Intk:
+    case X86::VCMPSSZrri_Intk:
     case X86::VDIVSSZrr_Intk:
     case X86::VDIVSSZrr_Intkz:
     case X86::VMAXSSZrr_Intk:
@@ -7685,9 +7691,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::ADDSDrr_Int:
     case X86::VADDSDrr_Int:
     case X86::VADDSDZrr_Int:
-    case X86::CMPSDrr_Int:
-    case X86::VCMPSDrr_Int:
-    case X86::VCMPSDZrr_Int:
+    case X86::CMPSDrri_Int:
+    case X86::VCMPSDrri_Int:
+    case X86::VCMPSDZrri_Int:
     case X86::DIVSDrr_Int:
     case X86::VDIVSDrr_Int:
     case X86::VDIVSDZrr_Int:
@@ -7708,7 +7714,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VSUBSDZrr_Int:
     case X86::VADDSDZrr_Intk:
     case X86::VADDSDZrr_Intkz:
-    case X86::VCMPSDZrr_Intk:
+    case X86::VCMPSDZrri_Intk:
     case X86::VDIVSDZrr_Intk:
     case X86::VDIVSDZrr_Intkz:
     case X86::VMAXSDZrr_Intk:
@@ -7820,7 +7826,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     // instruction isn't scalar (SH).
     switch (UserOpc) {
     case X86::VADDSHZrr_Int:
-    case X86::VCMPSHZrr_Int:
+    case X86::VCMPSHZrri_Int:
     case X86::VDIVSHZrr_Int:
     case X86::VMAXSHZrr_Int:
     case X86::VMINSHZrr_Int:
@@ -7828,7 +7834,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VSUBSHZrr_Int:
     case X86::VADDSHZrr_Intk:
     case X86::VADDSHZrr_Intkz:
-    case X86::VCMPSHZrr_Intk:
+    case X86::VCMPSHZrri_Intk:
     case X86::VDIVSHZrr_Intk:
     case X86::VDIVSHZrr_Intkz:
     case X86::VMAXSHZrr_Intk:
@@ -8160,7 +8166,8 @@ X86InstrInfo::foldMemoryBroadcast(MachineFunction &MF, MachineInstr &MI,
                             /*AllowCommute=*/false);
     if (NewMI)
       return NewMI;
-    UndoCommuteForFold(MI, OpNum, CommuteOpIdx2);
+    // Folding failed again - undo the commute before returning.
+    commuteInstruction(MI, false, OpNum, CommuteOpIdx2);
   }
 
   printFailMsgforFold(MI, OpNum);
@@ -10570,15 +10577,15 @@ bool X86InstrInfo::getMachineCombinerPatterns(
     bool DoRegPressureReduce) const {
   unsigned Opc = Root.getOpcode();
   switch (Opc) {
-  default:
-    return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
-                                                       DoRegPressureReduce);
   case X86::VPDPWSSDrr:
   case X86::VPDPWSSDrm:
   case X86::VPDPWSSDYrr:
   case X86::VPDPWSSDYrm: {
-    Patterns.push_back(MachineCombinerPattern::DPWSSD);
-    return true;
+    if (!Subtarget.hasFastDPWSSD()) {
+      Patterns.push_back(MachineCombinerPattern::DPWSSD);
+      return true;
+    }
+    break;
   }
   case X86::VPDPWSSDZ128r:
   case X86::VPDPWSSDZ128m:
@@ -10586,11 +10593,15 @@ bool X86InstrInfo::getMachineCombinerPatterns(
   case X86::VPDPWSSDZ256m:
   case X86::VPDPWSSDZr:
   case X86::VPDPWSSDZm: {
-    if (Subtarget.hasBWI())
+   if (Subtarget.hasBWI() && !Subtarget.hasFastDPWSSD()) {
       Patterns.push_back(MachineCombinerPattern::DPWSSD);
-    return true;
+      return true;
+    }
+    break;
   }
   }
+  return TargetInstrInfo::getMachineCombinerPatterns(Root,
+                                                     Patterns, DoRegPressureReduce);
 }
 
 static void

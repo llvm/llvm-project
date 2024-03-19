@@ -94,14 +94,14 @@ entry:
 ; CHECK:      %Z = alloca [3 x i32], align 4, !DIAssignID ![[ID_0:[0-9]+]]
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_0:[0-9]+]], metadata !DIExpression(), metadata ![[ID_0]], metadata ptr %Z, metadata !DIExpression())
   %0 = bitcast ptr %Z to ptr, !dbg !39
-  call void @llvm.lifetime.start.p0i8(i64 12, ptr %0) #5, !dbg !39
+  call void @llvm.lifetime.start.p0(i64 12, ptr %0) #5, !dbg !39
   call void @llvm.dbg.declare(metadata ptr %Z, metadata !35, metadata !DIExpression()), !dbg !40
   %1 = bitcast ptr %Z to ptr, !dbg !40
-  call void @llvm.memset.p0i8.i64(ptr align 4 %1, i8 0, i64 12, i1 false), !dbg !40
+  call void @llvm.memset.p0.i64(ptr align 4 %1, i8 0, i64 12, i1 false), !dbg !40
 ; CHECK:       @llvm.memset{{.*}}, !DIAssignID ![[ID_1:[0-9]+]]
 ; CHECK-NEXT:  call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR_0]], metadata !DIExpression(), metadata ![[ID_1]], metadata ptr %1, metadata !DIExpression())
   %2 = bitcast ptr %Z to ptr, !dbg !41
-  call void @llvm.lifetime.end.p0i8(i64 12, ptr %2) #5, !dbg !41
+  call void @llvm.lifetime.end.p0(i64 12, ptr %2) #5, !dbg !41
   ret void, !dbg !41
 }
 
@@ -119,14 +119,14 @@ entry:
 ; CHECK:      %A = alloca [4 x i32], align 16, !DIAssignID ![[ID_2:[0-9]+]]
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_1:[0-9]+]], metadata !DIExpression(), metadata ![[ID_2]], metadata ptr %A, metadata !DIExpression())
   %0 = bitcast ptr %A to ptr, !dbg !48
-  call void @llvm.lifetime.start.p0i8(i64 16, ptr %0) #5, !dbg !48
+  call void @llvm.lifetime.start.p0(i64 16, ptr %0) #5, !dbg !48
   call void @llvm.dbg.declare(metadata ptr %A, metadata !44, metadata !DIExpression()), !dbg !49
   %1 = bitcast ptr %A to ptr, !dbg !49
-  call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 16 %1, ptr align 16 bitcast (ptr @__const._Z10memcpyInitv.A to ptr), i64 16, i1 false), !dbg !49
+  call void @llvm.memcpy.p0.p0.i64(ptr align 16 %1, ptr align 16 @__const._Z10memcpyInitv.A, i64 16, i1 false), !dbg !49
 ; CHECK:       @llvm.memcpy{{.*}}, !DIAssignID ![[ID_3:[0-9]+]]
 ; CHECK-NEXT:  call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_1]], metadata !DIExpression(), metadata ![[ID_3]], metadata ptr %1, metadata !DIExpression())
   %2 = bitcast ptr %A to ptr, !dbg !50
-  call void @llvm.lifetime.end.p0i8(i64 16, ptr %2) #5, !dbg !50
+  call void @llvm.lifetime.end.p0(i64 16, ptr %2) #5, !dbg !50
   ret void, !dbg !50
 }
 
@@ -148,7 +148,7 @@ entry:
 ; CHECK:      %O = alloca %struct.Outer, align 4, !DIAssignID ![[ID_4:[0-9]+]]
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_2:[0-9]+]], metadata !DIExpression(), metadata ![[ID_4]], metadata ptr %O, metadata !DIExpression())
   %0 = bitcast ptr %O to ptr, !dbg !58
-  call void @llvm.lifetime.start.p0i8(i64 16, ptr %0) #5, !dbg !58
+  call void @llvm.lifetime.start.p0(i64 16, ptr %0) #5, !dbg !58
   call void @llvm.dbg.declare(metadata ptr %O, metadata !53, metadata !DIExpression()), !dbg !59
   %1 = load i32, ptr @Value, align 4, !dbg !60, !tbaa !61
   %A = getelementptr inbounds %struct.Outer, ptr %O, i32 0, i32 0, !dbg !65
@@ -157,7 +157,7 @@ entry:
 ; CHECK:      store i32 %1, ptr %B, align 4,{{.*}}!DIAssignID ![[ID_5:[0-9]+]]
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %1, metadata ![[VAR_2]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[ID_5]], metadata ptr %B, metadata !DIExpression())
   %2 = bitcast ptr %O to ptr, !dbg !71
-  call void @llvm.lifetime.end.p0i8(i64 16, ptr %2) #5, !dbg !71
+  call void @llvm.lifetime.end.p0(i64 16, ptr %2) #5, !dbg !71
   ret void, !dbg !71
 }
 
@@ -180,7 +180,7 @@ entry:
 ; CHECK:      %A = alloca [2 x i32], align 4, !DIAssignID ![[ID_6:[0-9]+]]
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_3:[0-9]+]], metadata !DIExpression(), metadata ![[ID_6]], metadata ptr %A, metadata !DIExpression())
   %0 = bitcast ptr %A to ptr, !dbg !78
-  call void @llvm.lifetime.start.p0i8(i64 8, ptr %0) #5, !dbg !78
+  call void @llvm.lifetime.start.p0(i64 8, ptr %0) #5, !dbg !78
   call void @llvm.dbg.declare(metadata ptr %A, metadata !74, metadata !DIExpression()), !dbg !79
   %1 = load i32, ptr @Value, align 4, !dbg !80, !tbaa !61
   %2 = load i32, ptr @Index, align 4, !dbg !81, !tbaa !61
@@ -188,7 +188,7 @@ entry:
   %arrayidx = getelementptr inbounds [2 x i32], ptr %A, i64 0, i64 %idxprom, !dbg !82
   store i32 %1, ptr %arrayidx, align 4, !dbg !83, !tbaa !61
   %3 = bitcast ptr %A to ptr, !dbg !84
-  call void @llvm.lifetime.end.p0i8(i64 8, ptr %3) #5, !dbg !84
+  call void @llvm.lifetime.end.p0(i64 8, ptr %3) #5, !dbg !84
   ret void, !dbg !84
 }
 
@@ -219,7 +219,7 @@ if.then:                                          ; preds = %entry
 ; CHECK:      if.then:
   call void @llvm.dbg.declare(metadata ptr %retval, metadata !89, metadata !DIExpression()), !dbg !96
   %1 = bitcast ptr %retval to ptr, !dbg !97
-  call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 4 %1, ptr align 4 bitcast (ptr @InnerA to ptr), i64 8, i1 false), !dbg !97, !tbaa.struct !98
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %1, ptr align 4 @InnerA, i64 8, i1 false), !dbg !97, !tbaa.struct !98
 ; CHECK:      call void @llvm.memcpy{{.*}}, !DIAssignID ![[ID_8:[0-9]+]]
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_4]], metadata !DIExpression(), metadata ![[ID_8]], metadata ptr %1, metadata !DIExpression())
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_5]], metadata !DIExpression(), metadata ![[ID_8]], metadata ptr %1, metadata !DIExpression())
@@ -229,7 +229,7 @@ if.else:                                          ; preds = %entry
 ; CHECK:      if.else:
   call void @llvm.dbg.declare(metadata ptr %retval, metadata !92, metadata !DIExpression()), !dbg !100
   %2 = bitcast ptr %retval to ptr, !dbg !101
-  call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 4 %2, ptr align 4 bitcast (ptr @InnerB to ptr), i64 8, i1 false), !dbg !101, !tbaa.struct !98
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %2, ptr align 4 @InnerB, i64 8, i1 false), !dbg !101, !tbaa.struct !98
 ; CHECK:      call void @llvm.memcpy{{.*}}, !DIAssignID ![[ID_9:[0-9]+]]
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_4]], metadata !DIExpression(), metadata ![[ID_9]], metadata ptr %2, metadata !DIExpression())
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_5]], metadata !DIExpression(), metadata ![[ID_9]], metadata ptr %2, metadata !DIExpression())
@@ -258,7 +258,7 @@ entry:
 ; CHECK: call void @llvm.dbg.declare
   call void @llvm.dbg.declare(metadata ptr %agg.result, metadata !108, metadata !DIExpression()), !dbg !109
   %0 = bitcast ptr %agg.result to ptr, !dbg !110
-  call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 4 %0, ptr align 4 bitcast (ptr @L to ptr), i64 40, i1 false), !dbg !110, !tbaa.struct !111
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %0, ptr align 4 @L, i64 40, i1 false), !dbg !110, !tbaa.struct !111
   ret void, !dbg !113
 }
 
@@ -331,11 +331,11 @@ entry:
   ret i32 %mul.i, !dbg !148
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
-declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #3
-declare void @llvm.memcpy.p0i8.p0i8.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #4
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #3
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #4
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 declare dso_local void @_ZN9LCopyCtorC1Ev(ptr noundef nonnull align 4 dereferenceable(16)) unnamed_addr
 
 !llvm.dbg.cu = !{!2}

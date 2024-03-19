@@ -14,6 +14,7 @@
 #include <__chrono/duration.h>
 #include <__config>
 #include <ctime>
+#include <errno.h>
 #include <threads.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER

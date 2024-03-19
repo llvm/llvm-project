@@ -334,6 +334,12 @@ bool isAllocatableOrPointerArray(mlir::Type ty) {
   return false;
 }
 
+bool isTypeWithDescriptor(mlir::Type ty) {
+  if (mlir::isa<fir::BaseBoxType>(unwrapRefType(ty)))
+    return true;
+  return false;
+}
+
 bool isPolymorphicType(mlir::Type ty) {
   // CLASS(T) or CLASS(*)
   if (mlir::isa<fir::ClassType>(fir::unwrapRefType(ty)))

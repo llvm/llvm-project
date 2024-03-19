@@ -42,6 +42,43 @@ public:
   virtual VarGrpRef getGroupOfParms() const =0;
 };
 
+// FixitStrategy is a map from variables to the way we plan to emit fixes for
+// these variables. It is figured out gradually by trying different fixes
+// for different variables depending on gadgets in which these variables
+// participate.
+class FixitStrategy {
+public:
+  enum class Kind {
+    Wontfix,  // We don't plan to emit a fixit for this variable.
+    Span,     // We recommend replacing the variable with std::span.
+    Iterator, // We recommend replacing the variable with std::span::iterator.
+    Array,    // We recommend replacing the variable with std::array.
+    Vector    // We recommend replacing the variable with std::vector.
+  };
+
+private:
+  using MapTy = llvm::DenseMap<const VarDecl *, Kind>;
+
+  MapTy Map;
+
+public:
+  FixitStrategy() = default;
+  FixitStrategy(const FixitStrategy &) = delete; // Let's avoid copies.
+  FixitStrategy &operator=(const FixitStrategy &) = delete;
+  FixitStrategy(FixitStrategy &&) = default;
+  FixitStrategy &operator=(FixitStrategy &&) = default;
+
+  void set(const VarDecl *VD, Kind K) { Map[VD] = K; }
+
+  Kind lookup(const VarDecl *VD) const {
+    auto I = Map.find(VD);
+    if (I == Map.end())
+      return Kind::Wontfix;
+
+    return I->second;
+  }
+};
+
 /// The interface that lets the caller handle unsafe buffer usage analysis
 /// results by overriding this class's handle... methods.
 class UnsafeBufferUsageHandler {
@@ -75,9 +112,11 @@ public:
   ///
   /// `D` is the declaration of the callable under analysis that owns `Variable`
   /// and all of its group mates.
-  virtual void handleUnsafeVariableGroup(const VarDecl *Variable,
-                                         const VariableGroupsManager &VarGrpMgr,
-                                         FixItList &&Fixes, const Decl *D) = 0;
+  virtual void
+  handleUnsafeVariableGroup(const VarDecl *Variable,
+                            const VariableGroupsManager &VarGrpMgr,
+                            FixItList &&Fixes, const Decl *D,
+                            const FixitStrategy &VarTargetTypes) = 0;
 
 #ifndef NDEBUG
 public:

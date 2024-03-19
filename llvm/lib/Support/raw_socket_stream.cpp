@@ -52,7 +52,7 @@ static std::error_code getLastSocketErrorCode() {
 #ifdef _WIN32
   return std::error_code(::WSAGetLastError(), std::system_category());
 #else
-  return std::error_code(errno, std::system_category());
+  return errnoAsErrorCode();
 #endif
 }
 

@@ -1,6 +1,5 @@
 #include <TargetConditionals.h>
 #if TARGET_OS_OSX || TARGET_OS_IPHONE
-#include <dispatch/dispatch.h>
 #include <sys/sysctl.h>
 
 static bool isKnownAndSupported(const char *name) {

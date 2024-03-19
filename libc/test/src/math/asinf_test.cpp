@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/asinf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
 #include <errno.h>
 #include <stdint.h>
@@ -23,7 +23,7 @@ using LlvmLibcAsinfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcAsinfTest, SpecialNumbers) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asinf(aNaN));
   EXPECT_MATH_ERRNO(0);

@@ -52,8 +52,6 @@
 ! CHECK-NEXT:                         Do not use HLFIR lowering (deprecated)
 ! CHECK-NEXT: -flang-experimental-hlfir
 ! CHECK-NEXT:                         Use HLFIR lowering (experimental)
-! CHECK-NEXT: -flang-experimental-polymorphism
-! CHECK-NEXT:                         Enable Fortran 2003 polymorphism (experimental)
 ! CHECK-NEXT: -flarge-sizes           Use INTEGER(KIND=8) for the result type in size-related intrinsics
 ! CHECK-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! CHECK-NEXT: -flto=auto              Enable LTO in 'full' mode
@@ -122,7 +120,9 @@
 ! CHECK-NEXT: -mllvm=<arg>            Alias for -mllvm
 ! CHECK-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! CHECK-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
+! CHECK-NEXT: -mno-outline-atomics    Don't generate local calls to out-of-line atomic operations
 ! CHECK-NEXT: -module-dir <dir>       Put MODULE files in <dir>
+! CHECK-NEXT: -moutline-atomics       Generate local calls to out-of-line atomic operations
 ! CHECK-NEXT: -mrvv-vector-bits=<value>
 ! CHECK-NEXT:                         Specify the size in bits of an RVV vector register
 ! CHECK-NEXT: -msve-vector-bits=<value>
@@ -146,7 +146,7 @@
 ! CHECK-NEXT: -Rpass=<value>          Report transformations performed by optimization passes whose name matches the given POSIX regular expression
 ! CHECK-NEXT: -R<remark>              Enable the specified remark
 ! CHECK-NEXT: -save-temps=<value>     Save intermediate compilation results.
-! CHECK-NEXT: -save-temps             Save intermediate compilation results
+! CHECK-NEXT: -save-temps             Alias for --save-temps=cwd
 ! CHECK-NEXT: -std=<value>            Language standard to compile for
 ! CHECK-NEXT: -S                      Only run preprocess and compilation steps
 ! CHECK-NEXT: --target=<value>        Generate code for the given target

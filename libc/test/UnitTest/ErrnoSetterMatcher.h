@@ -109,8 +109,8 @@ public:
 
   bool match(T got) {
     actual_return = got;
-    actual_errno = libc_errno;
-    libc_errno = 0;
+    actual_errno = LIBC_NAMESPACE::libc_errno;
+    LIBC_NAMESPACE::libc_errno = 0;
     if constexpr (ignore_errno())
       return return_cmp.compare(actual_return);
     else

@@ -625,10 +625,8 @@ cc_binary(
 
 cc_library(
     name = "TableGenGlobalISel",
-    srcs = glob([
-        "utils/TableGen/GlobalISel/*.cpp",
-    ]) + [
-        "utils/TableGen/CodeGenInstruction.h",
+    srcs = [
+        "utils/TableGen/GlobalISel/CodeExpander.cpp",
     ],
     hdrs = glob([
         # We have to include these headers here as well as in the `hdrs` below
@@ -636,7 +634,8 @@ cc_library(
         # them, even though consumers of this library use inclusion relative to
         # `utils/TableGen` with the `strip_includes_prefix` of this library.
         # This mixture appears to be incompatible with header modules.
-        "utils/TableGen/GlobalISel/*.h",
+        "utils/TableGen/GlobalISel/CodeExpander.h",
+        "utils/TableGen/GlobalISel/CodeExpansions.h",
     ]),
     copts = llvm_copts,
     features = ["-header_modules"],
@@ -656,17 +655,22 @@ cc_library(
 
 cc_binary(
     name = "llvm-tblgen",
-    srcs = glob([
-        "utils/TableGen/*.cpp",
-        "utils/TableGen/*.inc",
-        "utils/TableGen/*.h",
+    srcs = glob(
+        [
+            "utils/TableGen/*.cpp",
+            "utils/TableGen/*.inc",
+            "utils/TableGen/*.h",
+            "utils/TableGen/GlobalISel/*.cpp",
+            "utils/TableGen/GlobalISel/*.h",
 
-        # Some tablegen sources include headers from MC, so these have to be
-        # listed here. MC uses headers produced by tablegen, so it cannot be a
-        # regular dependency.
-        "include/llvm/MC/*.h",
-        "include/llvm/TargetParser/SubtargetFeature.h",
-    ]),
+            # Some tablegen sources include headers from MC, so these have to be
+            # listed here. MC uses headers produced by tablegen, so it cannot be a
+            # regular dependency.
+            "include/llvm/MC/*.h",
+            "include/llvm/TargetParser/SubtargetFeature.h",
+        ],
+        exclude = ["utils/TableGen/GlobalISel/CodeExpander.cpp"],
+    ),
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -766,6 +770,10 @@ llvm_target_intrinsics_list = [
     {
         "name": "S390",
         "intrinsic_prefix": "s390",
+    },
+    {
+        "name": "SPIRV",
+        "intrinsic_prefix": "spv",
     },
     {
         "name": "VE",
@@ -4852,7 +4860,7 @@ cc_library(
 cc_binary(
     name = "opt",
     stamp = 0,
-    deps = [":opt-driver"]
+    deps = [":opt-driver"],
 )
 
 gentbl(
@@ -4971,9 +4979,9 @@ py_binary(
     srcs = [
         "utils/mlgo-utils/mlgo/__init__.py",
         "utils/mlgo-utils/mlgo/corpus/extract_ir.py",
-        "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py"
+        "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py",
     ],
-    imports = ["utils/mlgo-utils"]
+    imports = ["utils/mlgo-utils"],
 )
 
 py_binary(
@@ -4981,9 +4989,9 @@ py_binary(
     srcs = [
         "utils/mlgo-utils/mlgo/__init__.py",
         "utils/mlgo-utils/mlgo/corpus/combine_training_corpus.py",
-        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py"
+        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py",
     ],
-    imports = ["utils/mlgo-utils"]
+    imports = ["utils/mlgo-utils"],
 )
 
 py_binary(
@@ -4991,9 +4999,9 @@ py_binary(
     srcs = [
         "utils/mlgo-utils/mlgo/__init__.py",
         "utils/mlgo-utils/mlgo/corpus/make_corpus.py",
-        "utils/mlgo-utils/mlgo/corpus/make_corpus_lib.py"
+        "utils/mlgo-utils/mlgo/corpus/make_corpus_lib.py",
     ],
-    imports = ["utils/mlgo-utils"]
+    imports = ["utils/mlgo-utils"],
 )
 
 cc_library(

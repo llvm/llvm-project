@@ -186,9 +186,8 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   case RISCV::C_BNEZ:
   case RISCV::C_J:
   case RISCV::C_JAL: {
-    bool Success = RISCVRVC::uncompress(Res, Inst, STI);
+    [[maybe_unused]] bool Success = RISCVRVC::uncompress(Res, Inst, STI);
     assert(Success && "Can't uncompress instruction");
-    (void)Success;
     break;
   }
   case RISCV::BEQ:
@@ -218,9 +217,9 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
   size_t OldSize = Data.size();
 
   int64_t Value;
-  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
+  [[maybe_unused]] bool IsAbsolute =
+      AddrDelta.evaluateKnownAbsolute(Value, Layout);
   assert(IsAbsolute && "CFA with invalid expression");
-  (void)IsAbsolute;
 
   Data.clear();
   Fixups.clear();
@@ -283,9 +282,9 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, Layout.getAssembler()))
     return false;
-  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
+  [[maybe_unused]] bool IsAbsolute =
+      AddrDelta.evaluateKnownAbsolute(Value, Layout);
   assert(IsAbsolute && "CFA with invalid expression");
-  (void)IsAbsolute;
 
   Data.clear();
   Fixups.clear();

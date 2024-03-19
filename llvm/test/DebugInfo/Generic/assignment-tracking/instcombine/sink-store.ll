@@ -38,7 +38,7 @@ define dso_local void @_Z3funv() local_unnamed_addr !dbg !11 {
 entry:
   %local = alloca i32, align 4
   %0 = bitcast ptr %local to ptr, !dbg !16
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr %0), !dbg !16
+  call void @llvm.lifetime.start.p0(i64 4, ptr %0), !dbg !16
   %1 = load i32, ptr @c, align 4, !dbg !17
   %tobool = icmp ne i32 %1, 0, !dbg !17
   br i1 %tobool, label %if.then, label %if.else, !dbg !23
@@ -56,14 +56,14 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   call void @_Z3escPi(ptr %local), !dbg !32
-  call void @llvm.lifetime.end.p0i8(i64 4, ptr %0), !dbg !33
+  call void @llvm.lifetime.end.p0(i64 4, ptr %0), !dbg !33
   ret void, !dbg !33
 }
 
 declare !dbg !34 dso_local i32 @_Z3getv() local_unnamed_addr
 declare !dbg !37 dso_local void @_Z3escPi(ptr) local_unnamed_addr
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!2}

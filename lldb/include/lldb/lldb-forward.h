@@ -298,6 +298,7 @@ struct CompilerContext;
 struct LineEntry;
 struct PropertyDefinition;
 struct ScriptSummaryFormat;
+struct StatisticsOptions;
 struct StringSummaryFormat;
 template <unsigned N> class StreamBuffer;
 

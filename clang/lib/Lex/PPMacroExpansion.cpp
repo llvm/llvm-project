@@ -1672,6 +1672,12 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
           return false;
         else if (II->getBuiltinID() != 0) {
           switch (II->getBuiltinID()) {
+          case Builtin::BI__builtin_cpu_is:
+            return getTargetInfo().supportsCpuIs();
+          case Builtin::BI__builtin_cpu_init:
+            return getTargetInfo().supportsCpuInit();
+          case Builtin::BI__builtin_cpu_supports:
+            return getTargetInfo().supportsCpuSupports();
           case Builtin::BI__builtin_operator_new:
           case Builtin::BI__builtin_operator_delete:
             // denotes date of behavior change to support calling arbitrary

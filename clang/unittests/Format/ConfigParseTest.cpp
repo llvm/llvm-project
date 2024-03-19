@@ -231,6 +231,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
                           AfterFunctionDefinitionName);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterIfMacros);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterOverloadedOperator);
+  CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterPlacementOperator);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, BeforeNonEmptyParentheses);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InCStyleCasts);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InConditionalStatements);
@@ -609,24 +610,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatementsExceptControlMacros);
 
-  Style.SpaceBeforeParens = FormatStyle::SBPO_Custom;
-  Style.SpaceBeforeParensOptions.AfterPlacementOperator =
-      FormatStyle::SpaceBeforeParensCustom::APO_Always;
-  CHECK_PARSE("SpaceBeforeParensOptions:\n"
-              "  AfterPlacementOperator: Never",
-              SpaceBeforeParensOptions.AfterPlacementOperator,
-              FormatStyle::SpaceBeforeParensCustom::APO_Never);
-
-  CHECK_PARSE("SpaceBeforeParensOptions:\n"
-              "  AfterPlacementOperator: Always",
-              SpaceBeforeParensOptions.AfterPlacementOperator,
-              FormatStyle::SpaceBeforeParensCustom::APO_Always);
-
-  CHECK_PARSE("SpaceBeforeParensOptions:\n"
-              "  AfterPlacementOperator: Leave",
-              SpaceBeforeParensOptions.AfterPlacementOperator,
-              FormatStyle::SpaceBeforeParensCustom::APO_Leave);
-
   // For backward compatibility:
   Style.SpacesInParens = FormatStyle::SIPO_Never;
   Style.SpacesInParensOptions = {};
@@ -694,30 +677,63 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               "  AfterControlStatement: false",
               BraceWrapping.AfterControlStatement, FormatStyle::BWACS_Never);
 
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_All;
-  CHECK_PARSE("AlwaysBreakAfterReturnType: None", AlwaysBreakAfterReturnType,
+  Style.BreakAfterReturnType = FormatStyle::RTBS_All;
+  CHECK_PARSE("BreakAfterReturnType: None", BreakAfterReturnType,
               FormatStyle::RTBS_None);
-  CHECK_PARSE("AlwaysBreakAfterReturnType: All", AlwaysBreakAfterReturnType,
+  CHECK_PARSE("BreakAfterReturnType: Automatic", BreakAfterReturnType,
+              FormatStyle::RTBS_Automatic);
+  CHECK_PARSE("BreakAfterReturnType: ExceptShortType", BreakAfterReturnType,
+              FormatStyle::RTBS_ExceptShortType);
+  CHECK_PARSE("BreakAfterReturnType: All", BreakAfterReturnType,
               FormatStyle::RTBS_All);
-  CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevel",
-              AlwaysBreakAfterReturnType, FormatStyle::RTBS_TopLevel);
-  CHECK_PARSE("AlwaysBreakAfterReturnType: AllDefinitions",
-              AlwaysBreakAfterReturnType, FormatStyle::RTBS_AllDefinitions);
-  CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevelDefinitions",
-              AlwaysBreakAfterReturnType,
+  CHECK_PARSE("BreakAfterReturnType: TopLevel", BreakAfterReturnType,
+              FormatStyle::RTBS_TopLevel);
+  CHECK_PARSE("BreakAfterReturnType: AllDefinitions", BreakAfterReturnType,
+              FormatStyle::RTBS_AllDefinitions);
+  CHECK_PARSE("BreakAfterReturnType: TopLevelDefinitions", BreakAfterReturnType,
               FormatStyle::RTBS_TopLevelDefinitions);
+  // For backward compatibility:
+  CHECK_PARSE("AlwaysBreakAfterReturnType: None", BreakAfterReturnType,
+              FormatStyle::RTBS_None);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: Automatic", BreakAfterReturnType,
+              FormatStyle::RTBS_Automatic);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: ExceptShortType",
+              BreakAfterReturnType, FormatStyle::RTBS_ExceptShortType);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: All", BreakAfterReturnType,
+              FormatStyle::RTBS_All);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevel", BreakAfterReturnType,
+              FormatStyle::RTBS_TopLevel);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: AllDefinitions",
+              BreakAfterReturnType, FormatStyle::RTBS_AllDefinitions);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevelDefinitions",
+              BreakAfterReturnType, FormatStyle::RTBS_TopLevelDefinitions);
 
-  Style.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
-  CHECK_PARSE("AlwaysBreakTemplateDeclarations: No",
-              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_No);
+  Style.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
+  CHECK_PARSE("BreakTemplateDeclarations: Leave", BreakTemplateDeclarations,
+              FormatStyle::BTDS_Leave);
+  CHECK_PARSE("BreakTemplateDeclarations: No", BreakTemplateDeclarations,
+              FormatStyle::BTDS_No);
+  CHECK_PARSE("BreakTemplateDeclarations: MultiLine", BreakTemplateDeclarations,
+              FormatStyle::BTDS_MultiLine);
+  CHECK_PARSE("BreakTemplateDeclarations: Yes", BreakTemplateDeclarations,
+              FormatStyle::BTDS_Yes);
+  CHECK_PARSE("BreakTemplateDeclarations: false", BreakTemplateDeclarations,
+              FormatStyle::BTDS_MultiLine);
+  CHECK_PARSE("BreakTemplateDeclarations: true", BreakTemplateDeclarations,
+              FormatStyle::BTDS_Yes);
+  // For backward compatibility:
+  CHECK_PARSE("AlwaysBreakTemplateDeclarations: Leave",
+              BreakTemplateDeclarations, FormatStyle::BTDS_Leave);
+  CHECK_PARSE("AlwaysBreakTemplateDeclarations: No", BreakTemplateDeclarations,
+              FormatStyle::BTDS_No);
   CHECK_PARSE("AlwaysBreakTemplateDeclarations: MultiLine",
-              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_MultiLine);
-  CHECK_PARSE("AlwaysBreakTemplateDeclarations: Yes",
-              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_Yes);
+              BreakTemplateDeclarations, FormatStyle::BTDS_MultiLine);
+  CHECK_PARSE("AlwaysBreakTemplateDeclarations: Yes", BreakTemplateDeclarations,
+              FormatStyle::BTDS_Yes);
   CHECK_PARSE("AlwaysBreakTemplateDeclarations: false",
-              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_MultiLine);
+              BreakTemplateDeclarations, FormatStyle::BTDS_MultiLine);
   CHECK_PARSE("AlwaysBreakTemplateDeclarations: true",
-              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_Yes);
+              BreakTemplateDeclarations, FormatStyle::BTDS_Yes);
 
   Style.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_All;
   CHECK_PARSE("AlwaysBreakAfterDefinitionReturnType: None",

@@ -144,7 +144,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_BARRIER)(void) {
 
 // Mutual exclusion
 
-// The symbol that icc/ifort generates for unnamed for unnamed critical sections
+// The symbol that icc/ifort generates for unnamed critical sections
 // - .gomp_critical_user_ - is defined using .comm in any objects reference it.
 // We can't reference it directly here in C code, as the symbol contains a ".".
 //

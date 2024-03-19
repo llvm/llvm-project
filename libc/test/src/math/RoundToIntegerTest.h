@@ -15,8 +15,8 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include <errno.h>
-#include <math.h>
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
@@ -51,7 +51,7 @@ private:
 
   void test_one_input(RoundToIntegerFunc func, F input, I expected,
                       bool expectError) {
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
     ASSERT_EQ(func(input), expected);

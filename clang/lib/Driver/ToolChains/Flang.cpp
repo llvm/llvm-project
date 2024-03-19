@@ -148,7 +148,6 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
-                            options::OPT_flang_experimental_polymorphism,
                             options::OPT_fno_ppc_native_vec_elem_order,
                             options::OPT_fppc_native_vec_elem_order});
 }
@@ -245,6 +244,20 @@ void Flang::AddRISCVTargetArgs(const ArgList &Args,
       // Handle the unsupported values passed to mrvv-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
+    }
+  }
+}
+
+void Flang::AddX86_64TargetArgs(const ArgList &Args,
+                                ArgStringList &CmdArgs) const {
+  if (Arg *A = Args.getLastArg(options::OPT_masm_EQ)) {
+    StringRef Value = A->getValue();
+    if (Value == "intel" || Value == "att") {
+      CmdArgs.push_back(Args.MakeArgString("-mllvm"));
+      CmdArgs.push_back(Args.MakeArgString("-x86-asm-syntax=" + Value));
+    } else {
+      getToolChain().getDriver().Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Value;
     }
   }
 }
@@ -352,6 +365,8 @@ void Flang::addTargetOptions(const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(CPU));
   }
 
+  addOutlineAtomicsArgs(D, getToolChain(), Args, CmdArgs, Triple);
+
   // Add the target features.
   switch (TC.getArch()) {
   default:
@@ -372,6 +387,7 @@ void Flang::addTargetOptions(const ArgList &Args,
     break;
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddX86_64TargetArgs(Args, CmdArgs);
     break;
   }
 

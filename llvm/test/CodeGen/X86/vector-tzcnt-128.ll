@@ -150,7 +150,7 @@ define <2 x i64> @testv2i64(<2 x i64> %in) nounwind {
 ; AVX512CD-NEXT:    vpaddq %xmm1, %xmm0, %xmm1
 ; AVX512CD-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX512CD-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512CD-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [64,64]
+; AVX512CD-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [64,64]
 ; AVX512CD-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
 ; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq
@@ -351,7 +351,7 @@ define <2 x i64> @testv2i64u(<2 x i64> %in) nounwind {
 ; AVX512CD-NEXT:    vpaddq %xmm1, %xmm0, %xmm1
 ; AVX512CD-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX512CD-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512CD-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [64,64]
+; AVX512CD-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [64,64]
 ; AVX512CD-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
 ; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq

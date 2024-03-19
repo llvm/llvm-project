@@ -26,7 +26,7 @@
 template <typename T>
 static Fortran::semantics::Scope *GetScope(
     Fortran::semantics::SemanticsContext &context, const T &x) {
-  std::optional<Fortran::parser::CharBlock> source{GetSource(x)};
+  std::optional<Fortran::parser::CharBlock> source{GetLastSource(x)};
   return source ? &context.FindScope(*source) : nullptr;
 }
 
@@ -487,6 +487,9 @@ public:
       const auto namePair{
           currScope().try_emplace(name->source, Attrs{}, ProcEntityDetails{})};
       auto &newSymbol{*namePair.first->second};
+      if (context_.intrinsics().IsIntrinsic(name->ToString())) {
+        newSymbol.attrs().set(Attr::INTRINSIC);
+      }
       name->symbol = &newSymbol;
     };
     if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
@@ -1982,6 +1985,12 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
 void OmpAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
   if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
+    // Exclude construct-names
+    if (auto *details{symbol->detailsIf<semantics::MiscDetails>()}) {
+      if (details->kind() == semantics::MiscDetails::Kind::ConstructName) {
+        return;
+      }
+    }
     if (!symbol->owner().IsDerivedType() && !IsProcedure(*symbol) &&
         !IsObjectWithDSA(*symbol) && !IsNamedConstant(*symbol)) {
       // TODO: create a separate function to go through the rules for
@@ -2467,7 +2476,8 @@ void OmpAttributeVisitor::CheckDataCopyingClause(
       // either 'private' or 'threadprivate' in enclosing context.
       if (!checkSymbol->test(Symbol::Flag::OmpThreadprivate) &&
           !(HasSymbolInEnclosingScope(symbol, currScope()) &&
-              symbol.test(Symbol::Flag::OmpPrivate))) {
+              (symbol.test(Symbol::Flag::OmpPrivate) ||
+                  symbol.test(Symbol::Flag::OmpFirstPrivate)))) {
         context_.Say(name.source,
             "COPYPRIVATE variable '%s' is not PRIVATE or THREADPRIVATE in "
             "outer context"_err_en_US,

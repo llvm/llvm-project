@@ -507,7 +507,7 @@ for.end19:                                        ; preds = %for.end16
 ;      for (int k = 0; k < N; ++k)
 ;        f(&A[i + N * (j + N * k)]);
 ;
-define void @d3_1(i32* %A, i32 %N) {
+define void @d3_1(ptr %A, i32 %N) {
 entry:
   %cmp35 = icmp sgt i32 %N, 0
   br i1 %cmp35, label %for.cond1.preheader.lr.ph, label %for.cond.cleanup
@@ -577,7 +577,7 @@ for.cond.cleanup:
 ;         g();
 ;     }
 ;
-define void @d3_3(i32* nocapture %A, i32 %N, i32 %M) {
+define void @d3_3(ptr nocapture %A, i32 %N, i32 %M) {
 entry:
   %cmp29 = icmp sgt i32 %N, 0
   br i1 %cmp29, label %for.cond1.preheader.lr.ph, label %for.cond.cleanup

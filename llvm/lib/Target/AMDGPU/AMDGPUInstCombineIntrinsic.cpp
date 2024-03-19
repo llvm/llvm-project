@@ -343,13 +343,9 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
     return true;
   }
 
-  auto *TLI = &IC.getTargetLibraryInfo();
-  if (isKnownNeverInfOrNaN(Op0, IC.getDataLayout(), TLI, 0,
-                           &IC.getAssumptionCache(), &I,
-                           &IC.getDominatorTree()) &&
-      isKnownNeverInfOrNaN(Op1, IC.getDataLayout(), TLI, 0,
-                           &IC.getAssumptionCache(), &I,
-                           &IC.getDominatorTree())) {
+  SimplifyQuery SQ = IC.getSimplifyQuery().getWithInstruction(&I);
+  if (isKnownNeverInfOrNaN(Op0, /*Depth=*/0, SQ) &&
+      isKnownNeverInfOrNaN(Op1, /*Depth=*/0, SQ)) {
     // Neither operand is infinity or NaN.
     return true;
   }
@@ -771,19 +767,21 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // Checking for NaN before canonicalization provides better fidelity when
     // mapping other operations onto fmed3 since the order of operands is
     // unchanged.
-    CallInst *NewCall = nullptr;
+    Value *V = nullptr;
     if (match(Src0, PatternMatch::m_NaN()) || isa<UndefValue>(Src0)) {
-      NewCall = IC.Builder.CreateMinNum(Src1, Src2);
+      V = IC.Builder.CreateMinNum(Src1, Src2);
     } else if (match(Src1, PatternMatch::m_NaN()) || isa<UndefValue>(Src1)) {
-      NewCall = IC.Builder.CreateMinNum(Src0, Src2);
+      V = IC.Builder.CreateMinNum(Src0, Src2);
     } else if (match(Src2, PatternMatch::m_NaN()) || isa<UndefValue>(Src2)) {
-      NewCall = IC.Builder.CreateMaxNum(Src0, Src1);
+      V = IC.Builder.CreateMaxNum(Src0, Src1);
     }
 
-    if (NewCall) {
-      NewCall->copyFastMathFlags(&II);
-      NewCall->takeName(&II);
-      return IC.replaceInstUsesWith(II, NewCall);
+    if (V) {
+      if (auto *CI = dyn_cast<CallInst>(V)) {
+        CI->copyFastMathFlags(&II);
+        CI->takeName(&II);
+      }
+      return IC.replaceInstUsesWith(II, V);
     }
 
     bool Swap = false;
@@ -989,6 +987,19 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         // amdgcn.ballot(i1 0) is zero.
         return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
       }
+    }
+    if (ST->isWave32() && II.getType()->getIntegerBitWidth() == 64) {
+      // %b64 = call i64 ballot.i64(...)
+      // =>
+      // %b32 = call i32 ballot.i32(...)
+      // %b64 = zext i32 %b32 to i64
+      Value *Call = IC.Builder.CreateZExt(
+          IC.Builder.CreateIntrinsic(Intrinsic::amdgcn_ballot,
+                                     {IC.Builder.getInt32Ty()},
+                                     {II.getArgOperand(0)}),
+          II.getType());
+      Call->takeName(&II);
+      return IC.replaceInstUsesWith(II, Call);
     }
     break;
   }

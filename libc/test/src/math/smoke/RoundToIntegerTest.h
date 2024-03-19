@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
-#define LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
+#ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include <errno.h>
-#include <math.h>
 
 static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
@@ -46,7 +46,7 @@ private:
 
   void test_one_input(RoundToIntegerFunc func, F input, I expected,
                       bool expectError) {
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
     ASSERT_EQ(func(input), expected);
@@ -169,4 +169,4 @@ public:
 #define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(F, I, func)                     \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, true)
 
-#endif // LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
+#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H

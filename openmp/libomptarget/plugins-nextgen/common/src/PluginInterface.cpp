@@ -1560,7 +1560,7 @@ Expected<bool> GenericPluginTy::checkELFImage(StringRef Image) const {
   return isELFCompatible(Image);
 }
 
-const bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
+bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
 #ifdef LIBOMPTARGET_RPC_SUPPORT
   return true;
 #else
@@ -1618,10 +1618,6 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
   default:
     return false;
   }
-}
-
-int32_t __tgt_rtl_supports_empty_images() {
-  return Plugin::get().supportsEmptyImages();
 }
 
 int32_t __tgt_rtl_init_device(int32_t DeviceId) {

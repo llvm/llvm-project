@@ -947,8 +947,6 @@ class AsmOperandClass {
   /// instruction if it hasn't matched all the operands yet.  However, this
   /// error will be suppressed if all of the remaining unmatched operands are
   /// marked as IsOptional.
-  ///
-  /// Optional arguments must be at the end of the operand list.
   bit IsOptional = false;
 
   /// The name of the method on the target specific asm parser that returns the
@@ -1483,6 +1481,25 @@ def JUMP_TABLE_DEBUG_INFO : StandardPseudoInstruction {
   let isMeta = true;
 }
 
+let hasSideEffects = false, isMeta = true, isConvergent = true in {
+def CONVERGENCECTRL_ANCHOR : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins);
+}
+def CONVERGENCECTRL_ENTRY : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins);
+}
+def CONVERGENCECTRL_LOOP : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src);
+}
+def CONVERGENCECTRL_GLUE : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$src);
+}
+}
+
 // Generic opcodes used in GlobalISel.
 include "llvm/Target/GenericOpcodes.td"
 
@@ -1545,6 +1562,20 @@ class AsmParser {
   // method shall be called for all operands as opposed to only those
   // that have their own specified custom parsers.
   bit CallCustomParserForAllOperands = false;
+
+  // PreferSmallerInstructions - Should the assembly matcher prefer the smaller
+  // instructions.
+  // 
+  // This is useful for the ARM instructions set where smaller encodings must
+  // be preferentially selected.
+  //
+  // The preference order is: 
+  //    Instrution size (if this option is enabled, smallest first)
+  //    Number of Operands (least first), 
+  //    Operand Classes (lexicographically by operand), 
+  //    (Optional) Instruction id (see AsmMatcherEmitter.cpp for details), 
+  //    Number of required features (least first)
+  bit PreferSmallerInstructions = false;
 }
 def DefaultAsmParser : AsmParser;
 
@@ -1846,3 +1877,8 @@ include "llvm/Target/GlobalISel/SelectionDAGCompat.td"
 // Pull in the common support for Pfm Counters generation.
 //
 include "llvm/Target/TargetPfmCounters.td"
+
+//===----------------------------------------------------------------------===//
+// Pull in the common support for macro fusion.
+//
+include "llvm/Target/TargetMacroFusion.td"

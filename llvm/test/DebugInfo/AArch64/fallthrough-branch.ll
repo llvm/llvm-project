@@ -7,9 +7,9 @@ target triple = "arm64-apple-macosx11.0.0"
 
 define swiftcc void @"$s1t1f1bySb_tF"(i1 %0) !dbg !35 {
   %2 = alloca i1, align 8
-  %3 = bitcast i1* %2 to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 8 %3, i8 0, i64 1, i1 false)
-  store i1 %0, i1* %2, align 8, !dbg !37
+  %3 = bitcast ptr %2 to ptr
+  call void @llvm.memset.p0.i64(ptr align 8 %3, i8 0, i64 1, i1 false)
+  store i1 %0, ptr %2, align 8, !dbg !37
 ; CHECK:   B %[[BB4:bb\.[0-9]+]], debug-location !{{[0-9]+}}
   br i1 %0, label %4, label %5, !dbg !38
 
@@ -28,7 +28,7 @@ define swiftcc void @"$s1t1f1bySb_tF"(i1 %0) !dbg !35 {
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #1
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #1
 attributes #1 = { argmemonly nofree nosync nounwind willreturn writeonly }
 
 !llvm.module.flags = !{!6, !7, !14}

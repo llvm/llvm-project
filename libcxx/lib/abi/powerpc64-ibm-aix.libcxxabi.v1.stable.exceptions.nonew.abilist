@@ -534,6 +534,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118shared_timed_mutex8try_lockEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118shared_timed_mutexC1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118shared_timed_mutexC2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__is_posix_terminalEP4FILE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_base11lock_sharedEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_base13unlock_sharedEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_base15try_lock_sharedEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}

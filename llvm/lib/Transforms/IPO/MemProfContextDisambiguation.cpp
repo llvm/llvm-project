@@ -122,6 +122,10 @@ static cl::opt<unsigned>
                                  "frames through tail calls."));
 
 namespace llvm {
+cl::opt<bool> EnableMemProfContextDisambiguation(
+    "enable-memprof-context-disambiguation", cl::init(false), cl::Hidden,
+    cl::ZeroOrMore, cl::desc("Enable MemProf context disambiguation"));
+
 // Indicate we are linking with an allocator that supports hot/cold operator
 // new interfaces.
 cl::opt<bool> SupportsHotColdNew(
@@ -1381,7 +1385,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // not fully matching stack contexts. To do this, subtract any context ids
       // found in caller nodes of the last node found above.
       if (Ids.back() != getLastStackId(Call)) {
-        for (const auto &PE : CurNode->CallerEdges) {
+        for (const auto &PE : LastNode->CallerEdges) {
           set_subtract(StackSequenceContextIds, PE->getContextIds());
           if (StackSequenceContextIds.empty())
             break;
@@ -3375,10 +3379,22 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
 
     auto *GVSummary =
         ImportSummary->findSummaryInModule(TheFnVI, M.getModuleIdentifier());
-    if (!GVSummary)
-      // Must have been imported, use the first summary (might be multiple if
-      // this was a linkonce_odr).
-      GVSummary = TheFnVI.getSummaryList().front().get();
+    if (!GVSummary) {
+      // Must have been imported, use the summary which matches the definition。
+      // (might be multiple if this was a linkonce_odr).
+      auto SrcModuleMD = F.getMetadata("thinlto_src_module");
+      assert(SrcModuleMD &&
+             "enable-import-metadata is needed to emit thinlto_src_module");
+      StringRef SrcModule =
+          dyn_cast<MDString>(SrcModuleMD->getOperand(0))->getString();
+      for (auto &GVS : TheFnVI.getSummaryList()) {
+        if (GVS->modulePath() == SrcModule) {
+          GVSummary = GVS.get();
+          break;
+        }
+      }
+      assert(GVSummary && GVSummary->modulePath() == SrcModule);
+    }
 
     // If this was an imported alias skip it as we won't have the function
     // summary, and it should be cloned in the original module.
@@ -3475,7 +3491,11 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             auto ContextIterBegin =
                 StackContext.beginAfterSharedPrefix(CallsiteContext);
             // Skip the checking on the first iteration.
-            uint64_t LastStackContextId = *ContextIterBegin == 0 ? 1 : 0;
+            uint64_t LastStackContextId =
+                (ContextIterBegin != StackContext.end() &&
+                 *ContextIterBegin == 0)
+                    ? 1
+                    : 0;
             for (auto ContextIter = ContextIterBegin;
                  ContextIter != StackContext.end(); ++ContextIter) {
               // If this is a direct recursion, simply skip the duplicate
