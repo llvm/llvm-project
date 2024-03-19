@@ -445,6 +445,8 @@ Arm and AArch64 Support
   like ``target_version`` or ``target_clones``.
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
     * Arm Cortex-A78AE (cortex-a78ae).
+    * Arm Cortex-A520AE (cortex-a520ae).
+    * Arm Cortex-A720AE (cortex-a720ae).
 
 Android Support
 ^^^^^^^^^^^^^^^
