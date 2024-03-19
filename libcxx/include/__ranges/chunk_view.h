@@ -10,15 +10,18 @@
 #define _LIBCPP___RANGES_CHUNK_VIEW_H
 
 #include <__concepts/constructible.h>
+#include <__concepts/convertible_to.h>
 #include <__config>
 #include <__functional/bind_back.h>
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
+#include <__ranges/enable_borrowed_range.h>
 #include <__ranges/subrange.h>
 #include <__ranges/take_view.h>
 #include <__ranges/view_interface.h>
@@ -324,17 +327,16 @@ namespace views {
 namespace __chunk {
 struct __fn {
   template <class _Range, convertible_to<range_difference_t<_Range>> _Np>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto
-  operator()(_Range&& __range,
-             _Np&& __n) const noexcept(noexcept(chunk_view(std::forward<_Range>(__range), std::forward<_Np>(__n))))
-      -> decltype(chunk_view(std::forward<_Range>(__range), std::forward<_Np>(__n))) {
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
+      noexcept(noexcept(chunk_view(std::forward<_Range>(__range), std::forward<_Np>(__n))))
+          -> decltype(chunk_view(std::forward<_Range>(__range), std::forward<_Np>(__n))) {
     return chunk_view(std::forward<_Range>(__range), std::forward<_Np>(__n));
   }
 
   template <class _Np>
     requires constructible_from<decay_t<_Np>, _Np>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto
-  operator()(_Np&& __n) const noexcept(is_nothrow_constructible_v<decay_t<_Np>, _Np>) {
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Np&& __n) const
+      noexcept(is_nothrow_constructible_v<decay_t<_Np>, _Np>) {
     return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Np>(__n)));
   }
 };
