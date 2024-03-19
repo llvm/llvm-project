@@ -189,10 +189,10 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
         // FIXME: Enums without a fixed underlying type have unknown signedness
         // here, leading to incorrectly emitted constants.
         return false;
-    }
-    // (Pieces of) aggregate types that get hacked apart by SROA may be
-    // represented by a constant. Encode them as unsigned bytes.
-    return true;
+    } else
+      // (Pieces of) aggregate types that get hacked apart by SROA may be
+      // represented by a constant. Encode them as unsigned bytes.
+      return true;
   }
 
   if (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
