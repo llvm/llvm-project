@@ -967,14 +967,14 @@ DbgInstPtr DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
   assert(Link && "Linked instruction must have DIAssign metadata attached");
 
   if (M.IsNewDbgInfoFormat) {
-    DPValue *DPV = DPValue::createDPVAssign(Val, SrcVar, ValExpr, Link, Addr,
-                                            AddrExpr, DL);
+    DbgVariableRecord *DVR = DbgVariableRecord::createDVRAssign(
+        Val, SrcVar, ValExpr, Link, Addr, AddrExpr, DL);
     BasicBlock *InsertBB = LinkedInstr->getParent();
     // Insert after LinkedInstr.
     BasicBlock::iterator NextIt = std::next(LinkedInstr->getIterator());
     Instruction *InsertBefore = NextIt == InsertBB->end() ? nullptr : &*NextIt;
-    insertDPValue(DPV, InsertBB, InsertBefore, true);
-    return DPV;
+    insertDbgVariableRecord(DVR, InsertBB, InsertBefore, true);
+    return DVR;
   }
 
   LLVMContext &Ctx = LinkedInstr->getContext();
@@ -1056,9 +1056,10 @@ DbgInstPtr DIBuilder::insertDbgValueIntrinsic(
     llvm::Value *Val, DILocalVariable *VarInfo, DIExpression *Expr,
     const DILocation *DL, BasicBlock *InsertBB, Instruction *InsertBefore) {
   if (M.IsNewDbgInfoFormat) {
-    DPValue *DPV = DPValue::createDPValue(Val, VarInfo, Expr, DL);
-    insertDPValue(DPV, InsertBB, InsertBefore);
-    return DPV;
+    DbgVariableRecord *DVR =
+        DbgVariableRecord::createDbgVariableRecord(Val, VarInfo, Expr, DL);
+    insertDbgVariableRecord(DVR, InsertBB, InsertBefore);
+    return DVR;
   }
 
   if (!ValueFn)
@@ -1078,9 +1079,10 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
          "Expected matching subprograms");
 
   if (M.IsNewDbgInfoFormat) {
-    DPValue *DPV = DPValue::createDPVDeclare(Storage, VarInfo, Expr, DL);
-    insertDPValue(DPV, InsertBB, InsertBefore);
-    return DPV;
+    DbgVariableRecord *DVR =
+        DbgVariableRecord::createDVRDeclare(Storage, VarInfo, Expr, DL);
+    insertDbgVariableRecord(DVR, InsertBB, InsertBefore);
+    return DVR;
   }
 
   if (!DeclareFn)
@@ -1097,13 +1099,15 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
   return B.CreateCall(DeclareFn, Args);
 }
 
-void DIBuilder::insertDPValue(DPValue *DPV, BasicBlock *InsertBB,
-                              Instruction *InsertBefore, bool InsertAtHead) {
+void DIBuilder::insertDbgVariableRecord(DbgVariableRecord *DVR,
+                                        BasicBlock *InsertBB,
+                                        Instruction *InsertBefore,
+                                        bool InsertAtHead) {
   assert(InsertBefore || InsertBB);
-  trackIfUnresolved(DPV->getVariable());
-  trackIfUnresolved(DPV->getExpression());
-  if (DPV->isDbgAssign())
-    trackIfUnresolved(DPV->getAddressExpression());
+  trackIfUnresolved(DVR->getVariable());
+  trackIfUnresolved(DVR->getExpression());
+  if (DVR->isDbgAssign())
+    trackIfUnresolved(DVR->getAddressExpression());
 
   BasicBlock::iterator InsertPt;
   if (InsertBB && InsertBefore)
@@ -1111,7 +1115,7 @@ void DIBuilder::insertDPValue(DPValue *DPV, BasicBlock *InsertBB,
   else if (InsertBB)
     InsertPt = InsertBB->end();
   InsertPt.setHeadBit(InsertAtHead);
-  InsertBB->insertDbgRecordBefore(DPV, InsertPt);
+  InsertBB->insertDbgRecordBefore(DVR, InsertPt);
 }
 
 Instruction *DIBuilder::insertDbgIntrinsic(llvm::Function *IntrinsicFn,

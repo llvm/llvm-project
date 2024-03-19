@@ -1381,8 +1381,8 @@ static DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
   return dyn_cast<DbgAssignIntrinsic>(DVI);
 }
 
-static DPValue *DynCastToDbgAssign(DPValue *DPV) {
-  return DPV->isDbgAssign() ? DPV : nullptr;
+static DbgVariableRecord *DynCastToDbgAssign(DbgVariableRecord *DVR) {
+  return DVR->isDbgAssign() ? DVR : nullptr;
 }
 
 bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
@@ -1441,7 +1441,8 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     });
 
     // Helper utility for adding DW_OP_LLVM_tag_offset to debug-info records,
-    // abstracted over whether they're intrinsic-stored or DPValue stored.
+    // abstracted over whether they're intrinsic-stored or DbgVariableRecord
+    // stored.
     auto AnnotateDbgRecord = [&](auto *DPtr) {
       // Prepend "tag_offset, N" to the dwarf expression.
       // Tag offset logically applies to the alloca pointer, and it makes sense

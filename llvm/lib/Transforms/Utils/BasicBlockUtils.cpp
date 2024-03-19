@@ -382,8 +382,9 @@ bool llvm::MergeBlockSuccessorsIntoGivenBlocks(
 /// - Check fully overlapping fragments and not only identical fragments.
 /// - Support dbg.declare. dbg.label, and possibly other meta instructions being
 ///   part of the sequence of consecutive instructions.
-static bool DPValuesRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
-  SmallVector<DPValue *, 8> ToBeRemoved;
+static bool
+DbgVariableRecordsRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
+  SmallVector<DbgVariableRecord *, 8> ToBeRemoved;
   SmallDenseSet<DebugVariable> VariableSet;
   for (auto &I : reverse(*BB)) {
     for (DbgRecord &DR : reverse(I.getDbgRecordRange())) {
@@ -394,10 +395,10 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
         continue;
       }
 
-      DPValue &DPV = cast<DPValue>(DR);
+      DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
       // Skip declare-type records, as the debug intrinsic method only works
       // on dbg.value intrinsics.
-      if (DPV.getType() == DPValue::LocationType::Declare) {
+      if (DVR.getType() == DbgVariableRecord::LocationType::Declare) {
         // The debug intrinsic method treats dbg.declares are "non-debug"
         // instructions (i.e., a break in a consecutive range of debug
         // intrinsics). Emulate that to create identical outputs. See
@@ -407,8 +408,8 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
         continue;
       }
 
-      DebugVariable Key(DPV.getVariable(), DPV.getExpression(),
-                        DPV.getDebugLoc()->getInlinedAt());
+      DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
+                        DVR.getDebugLoc()->getInlinedAt());
       auto R = VariableSet.insert(Key);
       // If the same variable fragment is described more than once it is enough
       // to keep the last one (i.e. the first found since we for reverse
@@ -416,14 +417,14 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
       if (R.second)
         continue;
 
-      if (DPV.isDbgAssign()) {
+      if (DVR.isDbgAssign()) {
         // Don't delete dbg.assign intrinsics that are linked to instructions.
-        if (!at::getAssignmentInsts(&DPV).empty())
+        if (!at::getAssignmentInsts(&DVR).empty())
           continue;
         // Unlinked dbg.assign intrinsics can be treated like dbg.values.
       }
 
-      ToBeRemoved.push_back(&DPV);
+      ToBeRemoved.push_back(&DVR);
       continue;
     }
     // Sequence with consecutive dbg.value instrs ended. Clear the map to
@@ -432,15 +433,15 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
     VariableSet.clear();
   }
 
-  for (auto &DPV : ToBeRemoved)
-    DPV->eraseFromParent();
+  for (auto &DVR : ToBeRemoved)
+    DVR->eraseFromParent();
 
   return !ToBeRemoved.empty();
 }
 
 static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
   if (BB->IsNewDbgInfoFormat)
-    return DPValuesRemoveRedundantDbgInstrsUsingBackwardScan(BB);
+    return DbgVariableRecordsRemoveRedundantDbgInstrsUsingBackwardScan(BB);
 
   SmallVector<DbgValueInst *, 8> ToBeRemoved;
   SmallDenseSet<DebugVariable> VariableSet;
@@ -499,29 +500,30 @@ static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
 ///
 /// Possible improvements:
 /// - Keep track of non-overlapping fragments.
-static bool DPValuesRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
-  SmallVector<DPValue *, 8> ToBeRemoved;
+static bool
+DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
+  SmallVector<DbgVariableRecord *, 8> ToBeRemoved;
   DenseMap<DebugVariable, std::pair<SmallVector<Value *, 4>, DIExpression *>>
       VariableMap;
   for (auto &I : *BB) {
-    for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
-      if (DPV.getType() == DPValue::LocationType::Declare)
+    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+      if (DVR.getType() == DbgVariableRecord::LocationType::Declare)
         continue;
-      DebugVariable Key(DPV.getVariable(), std::nullopt,
-                        DPV.getDebugLoc()->getInlinedAt());
+      DebugVariable Key(DVR.getVariable(), std::nullopt,
+                        DVR.getDebugLoc()->getInlinedAt());
       auto VMI = VariableMap.find(Key);
       // A dbg.assign with no linked instructions can be treated like a
       // dbg.value (i.e. can be deleted).
       bool IsDbgValueKind =
-          (!DPV.isDbgAssign() || at::getAssignmentInsts(&DPV).empty());
+          (!DVR.isDbgAssign() || at::getAssignmentInsts(&DVR).empty());
 
       // Update the map if we found a new value/expression describing the
       // variable, or if the variable wasn't mapped already.
-      SmallVector<Value *, 4> Values(DPV.location_ops());
+      SmallVector<Value *, 4> Values(DVR.location_ops());
       if (VMI == VariableMap.end() || VMI->second.first != Values ||
-          VMI->second.second != DPV.getExpression()) {
+          VMI->second.second != DVR.getExpression()) {
         if (IsDbgValueKind)
-          VariableMap[Key] = {Values, DPV.getExpression()};
+          VariableMap[Key] = {Values, DVR.getExpression()};
         else
           VariableMap[Key] = {Values, nullptr};
         continue;
@@ -530,55 +532,56 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       if (!IsDbgValueKind)
         continue;
       // Found an identical mapping. Remember the instruction for later removal.
-      ToBeRemoved.push_back(&DPV);
+      ToBeRemoved.push_back(&DVR);
     }
   }
 
-  for (auto *DPV : ToBeRemoved)
-    DPV->eraseFromParent();
+  for (auto *DVR : ToBeRemoved)
+    DVR->eraseFromParent();
 
   return !ToBeRemoved.empty();
 }
 
-static bool DPValuesRemoveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
+static bool
+DbgVariableRecordsRemoveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
   assert(BB->isEntryBlock() && "expected entry block");
-  SmallVector<DPValue *, 8> ToBeRemoved;
+  SmallVector<DbgVariableRecord *, 8> ToBeRemoved;
   DenseSet<DebugVariable> SeenDefForAggregate;
   // Returns the DebugVariable for DVI with no fragment info.
-  auto GetAggregateVariable = [](const DPValue &DPV) {
-    return DebugVariable(DPV.getVariable(), std::nullopt,
-                         DPV.getDebugLoc().getInlinedAt());
+  auto GetAggregateVariable = [](const DbgVariableRecord &DVR) {
+    return DebugVariable(DVR.getVariable(), std::nullopt,
+                         DVR.getDebugLoc().getInlinedAt());
   };
 
   // Remove undef dbg.assign intrinsics that are encountered before
   // any non-undef intrinsics from the entry block.
   for (auto &I : *BB) {
-    for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
-      if (!DPV.isDbgValue() && !DPV.isDbgAssign())
+    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+      if (!DVR.isDbgValue() && !DVR.isDbgAssign())
         continue;
       bool IsDbgValueKind =
-          (DPV.isDbgValue() || at::getAssignmentInsts(&DPV).empty());
-      DebugVariable Aggregate = GetAggregateVariable(DPV);
+          (DVR.isDbgValue() || at::getAssignmentInsts(&DVR).empty());
+      DebugVariable Aggregate = GetAggregateVariable(DVR);
       if (!SeenDefForAggregate.contains(Aggregate)) {
-        bool IsKill = DPV.isKillLocation() && IsDbgValueKind;
+        bool IsKill = DVR.isKillLocation() && IsDbgValueKind;
         if (!IsKill) {
           SeenDefForAggregate.insert(Aggregate);
-        } else if (DPV.isDbgAssign()) {
-          ToBeRemoved.push_back(&DPV);
+        } else if (DVR.isDbgAssign()) {
+          ToBeRemoved.push_back(&DVR);
         }
       }
     }
   }
 
-  for (DPValue *DPV : ToBeRemoved)
-    DPV->eraseFromParent();
+  for (DbgVariableRecord *DVR : ToBeRemoved)
+    DVR->eraseFromParent();
 
   return !ToBeRemoved.empty();
 }
 
 static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
   if (BB->IsNewDbgInfoFormat)
-    return DPValuesRemoveRedundantDbgInstrsUsingForwardScan(BB);
+    return DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BB);
 
   SmallVector<DbgValueInst *, 8> ToBeRemoved;
   DenseMap<DebugVariable, std::pair<SmallVector<Value *, 4>, DIExpression *>>
@@ -642,7 +645,7 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
 /// - Keep track of non-overlapping fragments.
 static bool removeUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
   if (BB->IsNewDbgInfoFormat)
-    return DPValuesRemoveUndefDbgAssignsFromEntryBlock(BB);
+    return DbgVariableRecordsRemoveUndefDbgAssignsFromEntryBlock(BB);
 
   assert(BB->isEntryBlock() && "expected entry block");
   SmallVector<DbgAssignIntrinsic *, 8> ToBeRemoved;

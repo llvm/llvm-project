@@ -28,7 +28,7 @@ template class DbgRecordParamRef<DIExpression>;
 template class DbgRecordParamRef<DILabel>;
 template class DbgRecordParamRef<DILocalVariable>;
 
-DPValue::DPValue(const DbgVariableIntrinsic *DVI)
+DbgVariableRecord::DbgVariableRecord(const DbgVariableIntrinsic *DVI)
     : DbgRecord(ValueKind, DVI->getDebugLoc()),
       DebugValueUser({DVI->getRawLocation(), nullptr, nullptr}),
       Variable(DVI->getVariable()), Expression(DVI->getExpression()),
@@ -51,25 +51,27 @@ DPValue::DPValue(const DbgVariableIntrinsic *DVI)
   }
   default:
     llvm_unreachable(
-        "Trying to create a DPValue with an invalid intrinsic type!");
+        "Trying to create a DbgVariableRecord with an invalid intrinsic type!");
   }
 }
 
-DPValue::DPValue(const DPValue &DPV)
-    : DbgRecord(ValueKind, DPV.getDebugLoc()), DebugValueUser(DPV.DebugValues),
-      Type(DPV.getType()), Variable(DPV.getVariable()),
-      Expression(DPV.getExpression()),
-      AddressExpression(DPV.AddressExpression) {}
+DbgVariableRecord::DbgVariableRecord(const DbgVariableRecord &DVR)
+    : DbgRecord(ValueKind, DVR.getDebugLoc()), DebugValueUser(DVR.DebugValues),
+      Type(DVR.getType()), Variable(DVR.getVariable()),
+      Expression(DVR.getExpression()),
+      AddressExpression(DVR.AddressExpression) {}
 
-DPValue::DPValue(Metadata *Location, DILocalVariable *DV, DIExpression *Expr,
-                 const DILocation *DI, LocationType Type)
+DbgVariableRecord::DbgVariableRecord(Metadata *Location, DILocalVariable *DV,
+                                     DIExpression *Expr, const DILocation *DI,
+                                     LocationType Type)
     : DbgRecord(ValueKind, DI), DebugValueUser({Location, nullptr, nullptr}),
       Type(Type), Variable(DV), Expression(Expr) {}
 
-DPValue::DPValue(Metadata *Value, DILocalVariable *Variable,
-                 DIExpression *Expression, DIAssignID *AssignID,
-                 Metadata *Address, DIExpression *AddressExpression,
-                 const DILocation *DI)
+DbgVariableRecord::DbgVariableRecord(Metadata *Value, DILocalVariable *Variable,
+                                     DIExpression *Expression,
+                                     DIAssignID *AssignID, Metadata *Address,
+                                     DIExpression *AddressExpression,
+                                     const DILocation *DI)
     : DbgRecord(ValueKind, DI), DebugValueUser({Value, Address, AssignID}),
       Type(LocationType::Assign), Variable(Variable), Expression(Expression),
       AddressExpression(AddressExpression) {}
@@ -77,7 +79,7 @@ DPValue::DPValue(Metadata *Value, DILocalVariable *Variable,
 void DbgRecord::deleteRecord() {
   switch (RecordKind) {
   case ValueKind:
-    delete cast<DPValue>(this);
+    delete cast<DbgVariableRecord>(this);
     return;
   case LabelKind:
     delete cast<DPLabel>(this);
@@ -89,7 +91,7 @@ void DbgRecord::deleteRecord() {
 void DbgRecord::print(raw_ostream &O, bool IsForDebug) const {
   switch (RecordKind) {
   case ValueKind:
-    cast<DPValue>(this)->print(O, IsForDebug);
+    cast<DbgVariableRecord>(this)->print(O, IsForDebug);
     return;
   case LabelKind:
     cast<DPLabel>(this)->print(O, IsForDebug);
@@ -102,7 +104,7 @@ void DbgRecord::print(raw_ostream &O, ModuleSlotTracker &MST,
                       bool IsForDebug) const {
   switch (RecordKind) {
   case ValueKind:
-    cast<DPValue>(this)->print(O, MST, IsForDebug);
+    cast<DbgVariableRecord>(this)->print(O, MST, IsForDebug);
     return;
   case LabelKind:
     cast<DPLabel>(this)->print(O, MST, IsForDebug);
@@ -116,7 +118,8 @@ bool DbgRecord::isIdenticalToWhenDefined(const DbgRecord &R) const {
     return false;
   switch (RecordKind) {
   case ValueKind:
-    return cast<DPValue>(this)->isIdenticalToWhenDefined(*cast<DPValue>(&R));
+    return cast<DbgVariableRecord>(this)->isIdenticalToWhenDefined(
+        *cast<DbgVariableRecord>(&R));
   case LabelKind:
     return cast<DPLabel>(this)->getLabel() == cast<DPLabel>(R).getLabel();
   };
@@ -131,7 +134,7 @@ DbgInfoIntrinsic *
 DbgRecord::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
   switch (RecordKind) {
   case ValueKind:
-    return cast<DPValue>(this)->createDebugIntrinsic(M, InsertBefore);
+    return cast<DbgVariableRecord>(this)->createDebugIntrinsic(M, InsertBefore);
   case LabelKind:
     return cast<DPLabel>(this)->createDebugIntrinsic(M, InsertBefore);
   };
@@ -153,79 +156,83 @@ DPLabel *DPLabel::createUnresolvedDPLabel(MDNode *Label, MDNode *DL) {
   return new DPLabel(Label, DL);
 }
 
-DPValue::DPValue(DPValue::LocationType Type, Metadata *Val, MDNode *Variable,
-                 MDNode *Expression, MDNode *AssignID, Metadata *Address,
-                 MDNode *AddressExpression, MDNode *DI)
+DbgVariableRecord::DbgVariableRecord(DbgVariableRecord::LocationType Type,
+                                     Metadata *Val, MDNode *Variable,
+                                     MDNode *Expression, MDNode *AssignID,
+                                     Metadata *Address,
+                                     MDNode *AddressExpression, MDNode *DI)
     : DbgRecord(ValueKind, DebugLoc(DI)),
       DebugValueUser({Val, Address, AssignID}), Type(Type), Variable(Variable),
       Expression(Expression), AddressExpression(AddressExpression) {}
 
-DPValue *DPValue::createUnresolvedDPValue(DPValue::LocationType Type,
-                                          Metadata *Val, MDNode *Variable,
-                                          MDNode *Expression, MDNode *AssignID,
-                                          Metadata *Address,
-                                          MDNode *AddressExpression,
-                                          MDNode *DI) {
-  return new DPValue(Type, Val, Variable, Expression, AssignID, Address,
-                     AddressExpression, DI);
+DbgVariableRecord *DbgVariableRecord::createUnresolvedDbgVariableRecord(
+    DbgVariableRecord::LocationType Type, Metadata *Val, MDNode *Variable,
+    MDNode *Expression, MDNode *AssignID, Metadata *Address,
+    MDNode *AddressExpression, MDNode *DI) {
+  return new DbgVariableRecord(Type, Val, Variable, Expression, AssignID,
+                               Address, AddressExpression, DI);
 }
 
-DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
-                                DIExpression *Expr, const DILocation *DI) {
-  return new DPValue(ValueAsMetadata::get(Location), DV, Expr, DI,
-                     LocationType::Value);
+DbgVariableRecord *
+DbgVariableRecord::createDbgVariableRecord(Value *Location, DILocalVariable *DV,
+                                           DIExpression *Expr,
+                                           const DILocation *DI) {
+  return new DbgVariableRecord(ValueAsMetadata::get(Location), DV, Expr, DI,
+                               LocationType::Value);
 }
 
-DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
-                                DIExpression *Expr, const DILocation *DI,
-                                DPValue &InsertBefore) {
-  auto *NewDPValue = createDPValue(Location, DV, Expr, DI);
-  NewDPValue->insertBefore(&InsertBefore);
-  return NewDPValue;
+DbgVariableRecord *DbgVariableRecord::createDbgVariableRecord(
+    Value *Location, DILocalVariable *DV, DIExpression *Expr,
+    const DILocation *DI, DbgVariableRecord &InsertBefore) {
+  auto *NewDbgVariableRecord = createDbgVariableRecord(Location, DV, Expr, DI);
+  NewDbgVariableRecord->insertBefore(&InsertBefore);
+  return NewDbgVariableRecord;
 }
 
-DPValue *DPValue::createDPVDeclare(Value *Address, DILocalVariable *DV,
-                                   DIExpression *Expr, const DILocation *DI) {
-  return new DPValue(ValueAsMetadata::get(Address), DV, Expr, DI,
-                     LocationType::Declare);
+DbgVariableRecord *DbgVariableRecord::createDVRDeclare(Value *Address,
+                                                       DILocalVariable *DV,
+                                                       DIExpression *Expr,
+                                                       const DILocation *DI) {
+  return new DbgVariableRecord(ValueAsMetadata::get(Address), DV, Expr, DI,
+                               LocationType::Declare);
 }
 
-DPValue *DPValue::createDPVDeclare(Value *Address, DILocalVariable *DV,
-                                   DIExpression *Expr, const DILocation *DI,
-                                   DPValue &InsertBefore) {
-  auto *NewDPVDeclare = createDPVDeclare(Address, DV, Expr, DI);
-  NewDPVDeclare->insertBefore(&InsertBefore);
-  return NewDPVDeclare;
+DbgVariableRecord *
+DbgVariableRecord::createDVRDeclare(Value *Address, DILocalVariable *DV,
+                                    DIExpression *Expr, const DILocation *DI,
+                                    DbgVariableRecord &InsertBefore) {
+  auto *NewDVRDeclare = createDVRDeclare(Address, DV, Expr, DI);
+  NewDVRDeclare->insertBefore(&InsertBefore);
+  return NewDVRDeclare;
 }
 
-DPValue *DPValue::createDPVAssign(Value *Val, DILocalVariable *Variable,
-                                  DIExpression *Expression,
-                                  DIAssignID *AssignID, Value *Address,
-                                  DIExpression *AddressExpression,
-                                  const DILocation *DI) {
-  return new DPValue(ValueAsMetadata::get(Val), Variable, Expression, AssignID,
-                     ValueAsMetadata::get(Address), AddressExpression, DI);
+DbgVariableRecord *DbgVariableRecord::createDVRAssign(
+    Value *Val, DILocalVariable *Variable, DIExpression *Expression,
+    DIAssignID *AssignID, Value *Address, DIExpression *AddressExpression,
+    const DILocation *DI) {
+  return new DbgVariableRecord(ValueAsMetadata::get(Val), Variable, Expression,
+                               AssignID, ValueAsMetadata::get(Address),
+                               AddressExpression, DI);
 }
 
-DPValue *DPValue::createLinkedDPVAssign(Instruction *LinkedInstr, Value *Val,
-                                        DILocalVariable *Variable,
-                                        DIExpression *Expression,
-                                        Value *Address,
-                                        DIExpression *AddressExpression,
-                                        const DILocation *DI) {
+DbgVariableRecord *DbgVariableRecord::createLinkedDVRAssign(
+    Instruction *LinkedInstr, Value *Val, DILocalVariable *Variable,
+    DIExpression *Expression, Value *Address, DIExpression *AddressExpression,
+    const DILocation *DI) {
   auto *Link = LinkedInstr->getMetadata(LLVMContext::MD_DIAssignID);
   assert(Link && "Linked instruction must have DIAssign metadata attached");
-  auto *NewDPVAssign = DPValue::createDPVAssign(Val, Variable, Expression,
-                                                cast<DIAssignID>(Link), Address,
-                                                AddressExpression, DI);
-  LinkedInstr->getParent()->insertDbgRecordAfter(NewDPVAssign, LinkedInstr);
-  return NewDPVAssign;
+  auto *NewDVRAssign = DbgVariableRecord::createDVRAssign(
+      Val, Variable, Expression, cast<DIAssignID>(Link), Address,
+      AddressExpression, DI);
+  LinkedInstr->getParent()->insertDbgRecordAfter(NewDVRAssign, LinkedInstr);
+  return NewDVRAssign;
 }
 
-iterator_range<DPValue::location_op_iterator> DPValue::location_ops() const {
+iterator_range<DbgVariableRecord::location_op_iterator>
+DbgVariableRecord::location_ops() const {
   auto *MD = getRawLocation();
-  // If a Value has been deleted, the "location" for this DPValue will be
-  // replaced by nullptr. Return an empty range.
+  // If a Value has been deleted, the "location" for this DbgVariableRecord will
+  // be replaced by nullptr. Return an empty range.
   if (!MD)
     return {location_op_iterator(static_cast<ValueAsMetadata *>(nullptr)),
             location_op_iterator(static_cast<ValueAsMetadata *>(nullptr))};
@@ -245,13 +252,13 @@ iterator_range<DPValue::location_op_iterator> DPValue::location_ops() const {
           location_op_iterator(static_cast<ValueAsMetadata *>(nullptr))};
 }
 
-unsigned DPValue::getNumVariableLocationOps() const {
+unsigned DbgVariableRecord::getNumVariableLocationOps() const {
   if (hasArgList())
     return cast<DIArgList>(getRawLocation())->getArgs().size();
   return 1;
 }
 
-Value *DPValue::getVariableLocationOp(unsigned OpIdx) const {
+Value *DbgVariableRecord::getVariableLocationOp(unsigned OpIdx) const {
   auto *MD = getRawLocation();
   if (!MD)
     return nullptr;
@@ -261,7 +268,7 @@ Value *DPValue::getVariableLocationOp(unsigned OpIdx) const {
   if (isa<MDNode>(MD))
     return nullptr;
   assert(isa<ValueAsMetadata>(MD) &&
-         "Attempted to get location operand from DPValue with none.");
+         "Attempted to get location operand from DbgVariableRecord with none.");
   auto *V = cast<ValueAsMetadata>(MD);
   assert(OpIdx == 0 && "Operand Index must be 0 for a debug intrinsic with a "
                        "single location operand.");
@@ -274,8 +281,9 @@ static ValueAsMetadata *getAsMetadata(Value *V) {
                                  : ValueAsMetadata::get(V);
 }
 
-void DPValue::replaceVariableLocationOp(Value *OldValue, Value *NewValue,
-                                        bool AllowEmpty) {
+void DbgVariableRecord::replaceVariableLocationOp(Value *OldValue,
+                                                  Value *NewValue,
+                                                  bool AllowEmpty) {
   assert(NewValue && "Values must be non-null");
 
   bool DbgAssignAddrReplaced = isDbgAssign() && OldValue == getAddress();
@@ -307,7 +315,8 @@ void DPValue::replaceVariableLocationOp(Value *OldValue, Value *NewValue,
   setRawLocation(DIArgList::get(getVariableLocationOp(0)->getContext(), MDs));
 }
 
-void DPValue::replaceVariableLocationOp(unsigned OpIdx, Value *NewValue) {
+void DbgVariableRecord::replaceVariableLocationOp(unsigned OpIdx,
+                                                  Value *NewValue) {
   assert(OpIdx < getNumVariableLocationOps() && "Invalid Operand Index");
 
   if (!hasArgList()) {
@@ -326,8 +335,8 @@ void DPValue::replaceVariableLocationOp(unsigned OpIdx, Value *NewValue) {
   setRawLocation(DIArgList::get(getVariableLocationOp(0)->getContext(), MDs));
 }
 
-void DPValue::addVariableLocationOps(ArrayRef<Value *> NewValues,
-                                     DIExpression *NewExpr) {
+void DbgVariableRecord::addVariableLocationOps(ArrayRef<Value *> NewValues,
+                                               DIExpression *NewExpr) {
   assert(NewExpr->hasAllLocationOps(getNumVariableLocationOps() +
                                     NewValues.size()) &&
          "NewExpr for debug variable intrinsic does not reference every "
@@ -342,7 +351,7 @@ void DPValue::addVariableLocationOps(ArrayRef<Value *> NewValues,
   setRawLocation(DIArgList::get(getVariableLocationOp(0)->getContext(), MDs));
 }
 
-void DPValue::setKillLocation() {
+void DbgVariableRecord::setKillLocation() {
   // TODO: When/if we remove duplicate values from DIArgLists, we don't need
   // this set anymore.
   SmallPtrSet<Value *, 4> RemovedValues;
@@ -354,13 +363,13 @@ void DPValue::setKillLocation() {
   }
 }
 
-bool DPValue::isKillLocation() const {
+bool DbgVariableRecord::isKillLocation() const {
   return (getNumVariableLocationOps() == 0 &&
           !getExpression()->isComplex()) ||
          any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
 }
 
-std::optional<uint64_t> DPValue::getFragmentSizeInBits() const {
+std::optional<uint64_t> DbgVariableRecord::getFragmentSizeInBits() const {
   if (auto Fragment = getExpression()->getFragmentInfo())
     return Fragment->SizeInBits;
   return getVariable()->getSizeInBits();
@@ -369,21 +378,24 @@ std::optional<uint64_t> DPValue::getFragmentSizeInBits() const {
 DbgRecord *DbgRecord::clone() const {
   switch (RecordKind) {
   case ValueKind:
-    return cast<DPValue>(this)->clone();
+    return cast<DbgVariableRecord>(this)->clone();
   case LabelKind:
     return cast<DPLabel>(this)->clone();
   };
   llvm_unreachable("unsupported DbgRecord kind");
 }
 
-DPValue *DPValue::clone() const { return new DPValue(*this); }
+DbgVariableRecord *DbgVariableRecord::clone() const {
+  return new DbgVariableRecord(*this);
+}
 
 DPLabel *DPLabel::clone() const {
   return new DPLabel(getLabel(), getDebugLoc());
 }
 
 DbgVariableIntrinsic *
-DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
+DbgVariableRecord::createDebugIntrinsic(Module *M,
+                                        Instruction *InsertBefore) const {
   [[maybe_unused]] DICompileUnit *Unit =
       getDebugLoc().get()->getScope()->getSubprogram()->getUnit();
   assert(M && Unit &&
@@ -394,24 +406,25 @@ DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
 
   // Work out what sort of intrinsic we're going to produce.
   switch (getType()) {
-  case DPValue::LocationType::Declare:
+  case DbgVariableRecord::LocationType::Declare:
     IntrinsicFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_declare);
     break;
-  case DPValue::LocationType::Value:
+  case DbgVariableRecord::LocationType::Value:
     IntrinsicFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_value);
     break;
-  case DPValue::LocationType::Assign:
+  case DbgVariableRecord::LocationType::Assign:
     IntrinsicFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_assign);
     break;
-  case DPValue::LocationType::End:
-  case DPValue::LocationType::Any:
+  case DbgVariableRecord::LocationType::End:
+  case DbgVariableRecord::LocationType::Any:
     llvm_unreachable("Invalid LocationType");
   }
 
-  // Create the intrinsic from this DPValue's information, optionally insert
-  // into the target location.
+  // Create the intrinsic from this DbgVariableRecord's information, optionally
+  // insert into the target location.
   DbgVariableIntrinsic *DVI;
-  assert(getRawLocation() && "DPValue's RawLocation should be non-null.");
+  assert(getRawLocation() &&
+         "DbgVariableRecord's RawLocation should be non-null.");
   if (isDbgAssign()) {
     Value *AssignArgs[] = {
         MetadataAsValue::get(Context, getRawLocation()),
@@ -451,7 +464,7 @@ DbgLabelInst *DPLabel::createDebugIntrinsic(Module *M,
   return DbgLabel;
 }
 
-Value *DPValue::getAddress() const {
+Value *DbgVariableRecord::getAddress() const {
   auto *MD = getRawAddress();
   if (auto *V = dyn_cast<ValueAsMetadata>(MD))
     return V->getValue();
@@ -461,18 +474,20 @@ Value *DPValue::getAddress() const {
   return nullptr;
 }
 
-DIAssignID *DPValue::getAssignID() const {
+DIAssignID *DbgVariableRecord::getAssignID() const {
   return cast<DIAssignID>(DebugValues[2]);
 }
 
-void DPValue::setAssignId(DIAssignID *New) { resetDebugValue(2, New); }
+void DbgVariableRecord::setAssignId(DIAssignID *New) {
+  resetDebugValue(2, New);
+}
 
-void DPValue::setKillAddress() {
+void DbgVariableRecord::setKillAddress() {
   resetDebugValue(
       1, ValueAsMetadata::get(UndefValue::get(getAddress()->getType())));
 }
 
-bool DPValue::isKillAddress() const {
+bool DbgVariableRecord::isKillAddress() const {
   Value *Addr = getAddress();
   return !Addr || isa<UndefValue>(Addr);
 }
@@ -647,8 +662,8 @@ void DPMarker::insertDbgRecordAfter(DbgRecord *New, DbgRecord *InsertAfter) {
 
 void DPMarker::absorbDebugValues(DPMarker &Src, bool InsertAtHead) {
   auto It = InsertAtHead ? StoredDbgRecords.begin() : StoredDbgRecords.end();
-  for (DbgRecord &DPV : Src.StoredDbgRecords)
-    DPV.setMarker(this);
+  for (DbgRecord &DVR : Src.StoredDbgRecords)
+    DVR.setMarker(this);
 
   StoredDbgRecords.splice(It, Src.StoredDbgRecords);
 }
@@ -677,8 +692,8 @@ iterator_range<simple_ilist<DbgRecord>::iterator> DPMarker::cloneDebugInfoFrom(
   if (from_here.has_value())
     Range = make_range(*from_here, From->StoredDbgRecords.end());
 
-  // Clone each DPValue and insert into StoreDPValues; optionally place them at
-  // the start or the end of the list.
+  // Clone each DbgVariableRecord and insert into StoreDbgVariableRecords;
+  // optionally place them at the start or the end of the list.
   auto Pos = (InsertAtHead) ? StoredDbgRecords.begin() : StoredDbgRecords.end();
   for (DbgRecord &DR : Range) {
     DbgRecord *New = DR.clone();
