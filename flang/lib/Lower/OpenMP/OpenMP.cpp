@@ -365,7 +365,7 @@ static void createBodyOfOp(Op &op, OpWithBodyGenInfo &info) {
 
   // Start with privatization, so that the lowering of the nested
   // code will use the right symbols.
-  constexpr bool isLoop = std::is_same_v<Op, mlir::omp::WsLoopOp> ||
+  constexpr bool isLoop = std::is_same_v<Op, mlir::omp::WsloopOp> ||
                           std::is_same_v<Op, mlir::omp::SimdLoopOp>;
   bool privatize = info.clauses && !info.outerCombined;
 
@@ -1162,15 +1162,15 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
                                    converter.getCurrentLocation());
         if (fir::unwrapRefType(info.addr.getType()).isa<fir::BaseBoxType>())
           bounds =
-              Fortran::lower::genBoundsOpsFromBox<mlir::omp::DataBoundsOp,
-                                                  mlir::omp::DataBoundsType>(
+              Fortran::lower::genBoundsOpsFromBox<mlir::omp::MapBoundsOp,
+                                                  mlir::omp::MapBoundsType>(
                   converter.getFirOpBuilder(), converter.getCurrentLocation(),
                   converter, dataExv, info);
         if (fir::unwrapRefType(info.addr.getType()).isa<fir::SequenceType>()) {
           bool dataExvIsAssumedSize =
               Fortran::semantics::IsAssumedSizeArray(sym.GetUltimate());
-          bounds = Fortran::lower::genBaseBoundsOps<mlir::omp::DataBoundsOp,
-                                                    mlir::omp::DataBoundsType>(
+          bounds = Fortran::lower::genBaseBoundsOps<mlir::omp::MapBoundsOp,
+                                                    mlir::omp::MapBoundsType>(
               converter.getFirOpBuilder(), converter.getCurrentLocation(),
               converter, dataExv, dataExvIsAssumedSize);
         }
@@ -1625,7 +1625,7 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
                       .setGenRegionEntryCb(ivCallback));
 }
 
-static void createWsLoop(Fortran::lower::AbstractConverter &converter,
+static void createWsloop(Fortran::lower::AbstractConverter &converter,
                          Fortran::semantics::SemanticsContext &semaCtx,
                          Fortran::lower::pft::Evaluation &eval,
                          llvm::omp::Directive ompDirective,
@@ -1665,7 +1665,7 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   if (ReductionProcessor::doReductionByRef(reductionVars))
     byrefOperand = firOpBuilder.getUnitAttr();
 
-  auto wsLoopOp = firOpBuilder.create<mlir::omp::WsLoopOp>(
+  auto wsLoopOp = firOpBuilder.create<mlir::omp::WsloopOp>(
       loc, lowerBound, upperBound, step, linearVars, linearStepVars,
       reductionVars,
       reductionDeclSymbols.empty()
@@ -1712,7 +1712,7 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
                                    reductionTypes);
   };
 
-  createBodyOfOp<mlir::omp::WsLoopOp>(
+  createBodyOfOp<mlir::omp::WsloopOp>(
       wsLoopOp, OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval)
                     .setClauses(&beginClauseList)
                     .setDataSharingProcessor(&dsp)
@@ -1720,7 +1720,7 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
                     .setGenRegionEntryCb(ivCallback));
 }
 
-static void createSimdWsLoop(
+static void createSimdWsloop(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval, llvm::omp::Directive ompDirective,
@@ -1740,7 +1740,7 @@ static void createSimdWsLoop(
   // When support for vectorization is enabled, then we need to add handling of
   // if clause. Currently if clause can be skipped because we always assume
   // SIMD length = 1.
-  createWsLoop(converter, semaCtx, eval, ompDirective, beginClauseList,
+  createWsloop(converter, semaCtx, eval, ompDirective, beginClauseList,
                endClauseList, loc);
 }
 
@@ -1812,7 +1812,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
   if (llvm::omp::allDoSimdSet.test(ompDirective)) {
     // 2.9.3.2 Workshare SIMD construct
-    createSimdWsLoop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
+    createSimdWsloop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
                      endClauseList, currentLocation);
 
   } else if (llvm::omp::allSimdSet.test(ompDirective)) {
@@ -1821,7 +1821,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                    currentLocation);
     genOpenMPReduction(converter, semaCtx, loopOpClauseList);
   } else {
-    createWsLoop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
+    createWsloop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
                  endClauseList, currentLocation);
   }
 }
@@ -2260,7 +2260,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 mlir::Operation *Fortran::lower::genOpenMPTerminator(fir::FirOpBuilder &builder,
                                                      mlir::Operation *op,
                                                      mlir::Location loc) {
-  if (mlir::isa<mlir::omp::WsLoopOp, mlir::omp::ReductionDeclareOp,
+  if (mlir::isa<mlir::omp::WsloopOp, mlir::omp::DeclareReductionOp,
                 mlir::omp::AtomicUpdateOp, mlir::omp::SimdLoopOp>(op))
     return builder.create<mlir::omp::YieldOp>(loc);
   else

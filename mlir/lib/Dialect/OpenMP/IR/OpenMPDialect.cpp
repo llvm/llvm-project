@@ -592,7 +592,7 @@ static LogicalResult verifyReductionVarList(Operation *op,
     Type varType = accum.getType();
     auto symbolRef = llvm::cast<SymbolRefAttr>(std::get<1>(args));
     auto decl =
-        SymbolTable::lookupNearestSymbolFrom<ReductionDeclareOp>(op, symbolRef);
+        SymbolTable::lookupNearestSymbolFrom<DeclareReductionOp>(op, symbolRef);
     if (!decl)
       return op->emitOpError() << "expected symbol reference " << symbolRef
                                << " to point to a reduction declaration";
@@ -1345,14 +1345,14 @@ LogicalResult SingleOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// WsLoopOp
+// WsloopOp
 //===----------------------------------------------------------------------===//
 
 /// loop-control ::= `(` ssa-id-list `)` `:` type `=`  loop-bounds
 /// loop-bounds := `(` ssa-id-list `)` to `(` ssa-id-list `)` inclusive? steps
 /// steps := `step` `(`ssa-id-list`)`
 ParseResult
-parseWsLoop(OpAsmParser &parser, Region &region,
+parseWsloop(OpAsmParser &parser, Region &region,
             SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lowerBound,
             SmallVectorImpl<OpAsmParser::UnresolvedOperand> &upperBound,
             SmallVectorImpl<OpAsmParser::UnresolvedOperand> &steps,
@@ -1405,7 +1405,7 @@ parseWsLoop(OpAsmParser &parser, Region &region,
   return parser.parseRegion(region, regionArgs);
 }
 
-void printWsLoop(OpAsmPrinter &p, Operation *op, Region &region,
+void printWsloop(OpAsmPrinter &p, Operation *op, Region &region,
                  ValueRange lowerBound, ValueRange upperBound, ValueRange steps,
                  TypeRange loopVarTypes, ValueRange reductionOperands,
                  TypeRange reductionTypes, ArrayAttr reductionSymbols,
@@ -1531,14 +1531,14 @@ static ParseResult parseAtomicReductionRegion(OpAsmParser &parser,
 }
 
 static void printAtomicReductionRegion(OpAsmPrinter &printer,
-                                       ReductionDeclareOp op, Region &region) {
+                                       DeclareReductionOp op, Region &region) {
   if (region.empty())
     return;
   printer << "atomic ";
   printer.printRegion(region);
 }
 
-LogicalResult ReductionDeclareOp::verifyRegions() {
+LogicalResult DeclareReductionOp::verifyRegions() {
   if (getInitializerRegion().empty())
     return emitOpError() << "expects non-empty initializer region";
   Block &initializerEntryBlock = getInitializerRegion().front();
@@ -1663,10 +1663,10 @@ LogicalResult TaskloopOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// WsLoopOp
+// WsloopOp
 //===----------------------------------------------------------------------===//
 
-void WsLoopOp::build(OpBuilder &builder, OperationState &state,
+void WsloopOp::build(OpBuilder &builder, OperationState &state,
                      ValueRange lowerBound, ValueRange upperBound,
                      ValueRange step, ArrayRef<NamedAttribute> attributes) {
   build(builder, state, lowerBound, upperBound, step,
@@ -1680,7 +1680,7 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &state,
   state.addAttributes(attributes);
 }
 
-LogicalResult WsLoopOp::verify() {
+LogicalResult WsloopOp::verify() {
   return verifyReductionVarList(*this, getReductions(), getReductionVars());
 }
 
@@ -1711,7 +1711,7 @@ LogicalResult CriticalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult OrderedOp::verify() {
-  auto container = (*this)->getParentOfType<WsLoopOp>();
+  auto container = (*this)->getParentOfType<WsloopOp>();
   if (!container || !container.getOrderedValAttr() ||
       container.getOrderedValAttr().getInt() == 0)
     return emitOpError() << "ordered depend directive must be closely "
@@ -1731,7 +1731,7 @@ LogicalResult OrderedRegionOp::verify() {
   if (getSimd())
     return failure();
 
-  if (auto container = (*this)->getParentOfType<WsLoopOp>()) {
+  if (auto container = (*this)->getParentOfType<WsloopOp>()) {
     if (!container.getOrderedValAttr() ||
         container.getOrderedValAttr().getInt() != 0)
       return emitOpError() << "ordered region must be closely nested inside "
@@ -1874,15 +1874,15 @@ LogicalResult CancelOp::verify() {
                          << "inside a parallel region";
   }
   if (cct == ClauseCancellationConstructType::Loop) {
-    if (!isa<WsLoopOp>(parentOp)) {
+    if (!isa<WsloopOp>(parentOp)) {
       return emitOpError() << "cancel loop must appear "
                            << "inside a worksharing-loop region";
     }
-    if (cast<WsLoopOp>(parentOp).getNowaitAttr()) {
+    if (cast<WsloopOp>(parentOp).getNowaitAttr()) {
       return emitError() << "A worksharing construct that is canceled "
                          << "must not have a nowait clause";
     }
-    if (cast<WsLoopOp>(parentOp).getOrderedValAttr()) {
+    if (cast<WsloopOp>(parentOp).getOrderedValAttr()) {
       return emitError() << "A worksharing construct that is canceled "
                          << "must not have an ordered clause";
     }
@@ -1920,7 +1920,7 @@ LogicalResult CancellationPointOp::verify() {
                          << "inside a parallel region";
   }
   if ((cct == ClauseCancellationConstructType::Loop) &&
-      !isa<WsLoopOp>(parentOp)) {
+      !isa<WsloopOp>(parentOp)) {
     return emitOpError() << "cancellation point loop must appear "
                          << "inside a worksharing-loop region";
   }
@@ -1934,10 +1934,10 @@ LogicalResult CancellationPointOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// DataBoundsOp
+// MapBoundsOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult DataBoundsOp::verify() {
+LogicalResult MapBoundsOp::verify() {
   auto extent = getExtent();
   auto upperbound = getUpperBound();
   if (!extent && !upperbound)

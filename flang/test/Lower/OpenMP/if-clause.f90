@@ -210,32 +210,32 @@ program main
   ! ----------------------------------------------------------------------------
   ! TARGET ENTER DATA
   ! ----------------------------------------------------------------------------
-  ! CHECK:      omp.target.enterdata
+  ! CHECK:      omp.target_enter_data
   ! CHECK-NOT:  if({{.*}})
   ! CHECK-SAME: map
   !$omp target enter data map(to: i)
 
-  ! CHECK:      omp.target.enterdata
+  ! CHECK:      omp.target_enter_data
   ! CHECK-SAME: if({{.*}})
   !$omp target enter data map(to: i) if(.true.)
 
-  ! CHECK:      omp.target.enterdata
+  ! CHECK:      omp.target_enter_data
   ! CHECK-SAME: if({{.*}})
   !$omp target enter data map(to: i) if(target enter data: .true.)
 
   ! ----------------------------------------------------------------------------
   ! TARGET EXIT DATA
   ! ----------------------------------------------------------------------------
-  ! CHECK:      omp.target.exitdata
+  ! CHECK:      omp.target_exit_data
   ! CHECK-NOT:  if({{.*}})
   ! CHECK-SAME: map
   !$omp target exit data map(from: i)
 
-  ! CHECK:      omp.target.exitdata
+  ! CHECK:      omp.target_exit_data
   ! CHECK-SAME: if({{.*}})
   !$omp target exit data map(from: i) if(.true.)
 
-  ! CHECK:      omp.target.exitdata
+  ! CHECK:      omp.target_exit_data
   ! CHECK-SAME: if({{.*}})
   !$omp target exit data map(from: i) if(target exit data: .true.)
 

@@ -6,7 +6,7 @@ llvm.func @_QPopenmp_target_data_update() {
   %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
 
   // CHECK: error: `nowait` is not supported yet
-  omp.target.update motion_entries(%2 : !llvm.ptr) nowait
+  omp.target_update motion_entries(%2 : !llvm.ptr) nowait
 
   llvm.return
 }
@@ -19,7 +19,7 @@ llvm.func @_QPopenmp_target_data_enter() {
   %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
 
   // CHECK: error: `nowait` is not supported yet
-  omp.target.enterdata map_entries(%2 : !llvm.ptr) nowait
+  omp.target_enter_data map_entries(%2 : !llvm.ptr) nowait
 
   llvm.return
 }
@@ -33,7 +33,7 @@ llvm.func @_QPopenmp_target_data_exit() {
   %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
 
   // CHECK: error: `nowait` is not supported yet
-  omp.target.exitdata map_entries(%2 : !llvm.ptr) nowait
+  omp.target_exit_data map_entries(%2 : !llvm.ptr) nowait
 
   llvm.return
 }
