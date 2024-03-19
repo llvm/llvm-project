@@ -51,6 +51,7 @@ define signext i32 @stc1(ptr noundef byval(%struct.SST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    extsh 3, 3
 ; CHECK-NEXT:    srawi 3, 3, 8
+; CHECK-NEXT:    extsw 3, 3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i16, ptr %s, align 8

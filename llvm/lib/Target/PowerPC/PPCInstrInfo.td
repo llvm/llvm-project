@@ -2423,8 +2423,7 @@ let PPC970_Unit = 1 in {  // FXU Operations.
 let hasSideEffects = 0 in {
 defm SRAWI : XForm_10rc<31, 824, (outs gprc:$RA), (ins gprc:$RST, u5imm:$RB),
                         "srawi", "$RA, $RST, $RB", IIC_IntShift,
-                        [(set i32:$RA, (sra i32:$RST, (i32 imm:$RB)))]>,
-                        SExt32To64;
+                        [(set i32:$RA, (sra i32:$RST, (i32 imm:$RB)))]>;
 defm CNTLZW : XForm_11r<31,  26, (outs gprc:$RA), (ins gprc:$RST),
                         "cntlzw", "$RA, $RST", IIC_IntGeneral,
                         [(set i32:$RA, (ctlz i32:$RST))]>, ZExt32To64;

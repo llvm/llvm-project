@@ -5234,6 +5234,218 @@ bool PPCInstrInfo::isTOCSaveMI(const MachineInstr &MI) const {
 // We limit the max depth to track incoming values of PHIs or binary ops
 // (e.g. AND) to avoid excessive cost.
 const unsigned MAX_BINOP_DEPTH = 1;
+
+void PPCInstrInfo::replaceInstrAfterElimExt32To64(const Register &Reg,
+                                                  MachineRegisterInfo *MRI,
+                                                  unsigned BinOpDepth,
+                                                  LiveVariables *LV) const {
+  MachineInstr *MI = MRI->getVRegDef(Reg);
+  if (!MI)
+    return;
+
+  unsigned Opcode = MI->getOpcode();
+  bool IsReplaceInstr = false;
+  int NewOpcode = -1;
+
+  auto SetNewOpcode = [&](int NewOpc) {
+    if (!IsReplaceInstr) {
+      NewOpcode = NewOpc;
+      IsReplaceInstr = true;
+    }
+  };
+
+  switch (Opcode) {
+  case PPC::OR:
+    SetNewOpcode(PPC::OR8);
+    [[fallthrough]];
+  case PPC::ISEL:
+    SetNewOpcode(PPC::ISEL8);
+    [[fallthrough]];
+  case PPC::OR8:
+  case PPC::PHI:
+    if (BinOpDepth < MAX_BINOP_DEPTH) {
+      unsigned OperandEnd = 3, OperandStride = 1;
+      if (Opcode == PPC::PHI) {
+        OperandEnd = MI->getNumOperands();
+        OperandStride = 2;
+      }
+
+      for (unsigned I = 1; I != OperandEnd; I += OperandStride) {
+        assert(MI->getOperand(I).isReg() && "Operand must be register");
+        Register SrcReg = MI->getOperand(I).getReg();
+        replaceInstrAfterElimExt32To64(SrcReg, MRI, BinOpDepth + 1, LV);
+      }
+
+      if (!IsReplaceInstr)
+        return;
+    }
+    break;
+  case PPC::COPY: {
+    Register SrcReg = MI->getOperand(1).getReg();
+    const MachineFunction *MF = MI->getMF();
+    if (!MF->getSubtarget<PPCSubtarget>().isSVR4ABI()) {
+      replaceInstrAfterElimExt32To64(SrcReg, MRI, BinOpDepth, LV);
+      return;
+    }
+    // From here on everything is SVR4ABI
+    if (MI->getParent()->getBasicBlock() == &MF->getFunction().getEntryBlock())
+      return;
+
+    if (SrcReg != PPC::X3) {
+      replaceInstrAfterElimExt32To64(SrcReg, MRI, BinOpDepth, LV);
+      return;
+    }
+  }
+    return;
+  case PPC::ORI:
+    SetNewOpcode(PPC::ORI8);
+    [[fallthrough]];
+  case PPC::XORI:
+    SetNewOpcode(PPC::XORI8);
+    [[fallthrough]];
+  case PPC::ORIS:
+    SetNewOpcode(PPC::ORIS8);
+    [[fallthrough]];
+  case PPC::XORIS:
+    SetNewOpcode(PPC::XORIS8);
+    [[fallthrough]];
+  case PPC::ORI8:
+  case PPC::XORI8:
+  case PPC::ORIS8:
+  case PPC::XORIS8: {
+    Register SrcReg = MI->getOperand(1).getReg();
+    replaceInstrAfterElimExt32To64(SrcReg, MRI, BinOpDepth, LV);
+
+    if (!IsReplaceInstr)
+      return;
+    break;
+  }
+  case PPC::AND:
+    SetNewOpcode(PPC::AND8);
+    [[fallthrough]];
+  case PPC::AND8: {
+    if (BinOpDepth < MAX_BINOP_DEPTH) {
+      Register SrcReg1 = MI->getOperand(1).getReg();
+      replaceInstrAfterElimExt32To64(SrcReg1, MRI, BinOpDepth, LV);
+      Register SrcReg2 = MI->getOperand(2).getReg();
+      replaceInstrAfterElimExt32To64(SrcReg2, MRI, BinOpDepth, LV);
+      if (!IsReplaceInstr)
+        return;
+    }
+    break;
+  }
+  case PPC::RLWINM:
+    SetNewOpcode(PPC::RLWINM8);
+    break;
+  case PPC::RLWINM_rec:
+    SetNewOpcode(PPC::RLWINM8_rec);
+    break;
+  case PPC::RLWNM:
+    SetNewOpcode(PPC ::RLWNM8);
+    break;
+  case PPC::RLWNM_rec:
+    SetNewOpcode(PPC::RLWNM8_rec);
+    break;
+  case PPC::ANDC_rec:
+    SetNewOpcode(PPC::ANDC8_rec);
+    break;
+  case PPC::ANDIS_rec:
+    SetNewOpcode(PPC::ANDIS8_rec);
+    break;
+  default:
+    break;
+  }
+
+  const PPCInstrInfo *TII =
+      MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
+  if ((definedBySignExtendingOp(Reg, MRI) && !TII->isZExt32To64(Opcode) &&
+       !isOpZeroOfSubwordPreincLoad(Opcode)) ||
+      IsReplaceInstr) {
+
+    const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+
+    if (RC == &PPC::G8RCRegClass || RC == &PPC::G8RC_and_G8RC_NOX0RegClass)
+      return;
+
+    if (!IsReplaceInstr)
+      NewOpcode = PPC::get64BitInstrFromSignedExt32BitInstr(Opcode);
+
+    assert(NewOpcode != -1 &&
+           "Must have a 64-bit opcode to map the 32-bit opcode!");
+
+    const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+    const MCInstrDesc &MCID = TII->get(NewOpcode);
+
+    Register SrcReg = MI->getOperand(0).getReg();
+    const TargetRegisterClass *NewRC =
+        TRI->getRegClass(MCID.operands()[0].RegClass);
+    const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
+
+    if (NewRC == SrcRC)
+      return;
+
+    DebugLoc DL = MI->getDebugLoc();
+    auto MBB = MI->getParent();
+
+    // Since the pseudo-opcode of the instruction is promoted from 32-bit to
+    // 64-bit, if the operand of the original instruction belongs to
+    // PPC::GRCRegClass or PPC::GPRC_and_GPRC_NOR0RegClass, we need to promote
+    // the operand to PPC::G8CRegClass or PPC::G8RC_and_G8RC_NOR0RegClass,
+    // respectively.
+    DenseMap<unsigned, Register> PromoteRegs;
+    DenseMap<unsigned, Register> ReCalRegs;
+    for (unsigned i = 1; i < MI->getNumOperands(); i++) {
+      MachineOperand &Operand = MI->getOperand(i);
+      if (Operand.isReg()) {
+        Register OperandReg = Operand.getReg();
+        if (!OperandReg.isVirtual())
+          continue;
+
+        const TargetRegisterClass *RC =
+            TRI->getRegClass(MCID.operands()[i].RegClass);
+        const TargetRegisterClass *OrgRC = MRI->getRegClass(OperandReg);
+        if (RC != MRI->getRegClass(OperandReg) &&
+            (OrgRC == &PPC::GPRCRegClass ||
+             OrgRC == &PPC::GPRC_and_GPRC_NOR0RegClass)) {
+          Register TmpReg = MRI->createVirtualRegister(RC);
+          Register DstTmpReg = MRI->createVirtualRegister(RC);
+          BuildMI(*MBB, MI, DL, TII->get(PPC::IMPLICIT_DEF), TmpReg);
+          BuildMI(*MBB, MI, DL, TII->get(PPC::INSERT_SUBREG), DstTmpReg)
+              .addReg(TmpReg)
+              .addReg(OperandReg)
+              .addImm(PPC::sub_32);
+          PromoteRegs[i] = DstTmpReg;
+          ReCalRegs[i] = DstTmpReg;
+        } else {
+          ReCalRegs[i] = OperandReg;
+        }
+      }
+    }
+
+    Register NewReg = MRI->createVirtualRegister(NewRC);
+
+    BuildMI(*MBB, MI, DL, TII->get(NewOpcode), NewReg);
+    MachineBasicBlock::instr_iterator Iter(MI);
+    --Iter;
+    for (unsigned i = 1; i < MI->getNumOperands(); i++)
+      if (PromoteRegs.find(i) != PromoteRegs.end())
+        MachineInstrBuilder(*Iter->getMF(), Iter)
+            .addReg(PromoteRegs[i], RegState::Kill);
+      else
+        Iter->addOperand(MI->getOperand(i));
+
+    for (auto Iter = ReCalRegs.begin(); Iter != ReCalRegs.end(); Iter++)
+      LV->recomputeForSingleDefVirtReg(Iter->second);
+    MI->eraseFromParent();
+
+    BuildMI(*MBB, ++Iter, DL, TII->get(PPC::COPY), SrcReg)
+        .addReg(NewReg, RegState::Kill, PPC::sub_32);
+    LV->recomputeForSingleDefVirtReg(NewReg);
+    return;
+  }
+  return;
+}
+
 // The isSignOrZeroExtended function is recursive. The parameter BinOpDepth
 // does not count all of the recursions. The parameter BinOpDepth is incremented
 // only when isSignOrZeroExtended calls itself more than once. This is done to
