@@ -32,7 +32,6 @@ using namespace llvm::dxil;
 
 static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
   IRBuilder<> B(M.getContext());
-  Value *DXILOpArg = B.getInt32(static_cast<unsigned>(DXILOp));
   DXILOpBuilder DXILB(M, B);
   Type *OverloadTy = DXILB.getOverloadTy(DXILOp, F.getFunctionType());
   for (User *U : make_early_inc_range(F.users())) {
@@ -40,9 +39,6 @@ static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
     if (!CI)
       continue;
 
-    SmallVector<Value *> Args;
-    Args.emplace_back(DXILOpArg);
-    Args.append(CI->arg_begin(), CI->arg_end());
     B.SetInsertPoint(CI);
     CallInst *DXILCI = DXILB.createDXILOpCall(DXILOp, F.getReturnType(),
                                               OverloadTy, CI->args());
