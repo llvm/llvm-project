@@ -71,34 +71,34 @@ void BasicBlock::convertToNewDbgValues() {
   // Iterate over all instructions in the instruction list, collecting debug
   // info intrinsics and converting them to DbgRecords. Once we find a "real"
   // instruction, attach all those DbgRecords to a DPMarker in that instruction.
-  SmallVector<DbgRecord *, 4> DPVals;
+  SmallVector<DbgRecord *, 4> DbgVarRecs;
   for (Instruction &I : make_early_inc_range(InstList)) {
     assert(!I.DbgMarker && "DbgMarker already set on old-format instrs?");
     if (DbgVariableIntrinsic *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
-      // Convert this dbg.value to a DPValue.
-      DPValue *Value = new DPValue(DVI);
-      DPVals.push_back(Value);
+      // Convert this dbg.value to a DbgVariableRecord.
+      DbgVariableRecord *Value = new DbgVariableRecord(DVI);
+      DbgVarRecs.push_back(Value);
       DVI->eraseFromParent();
       continue;
     }
 
     if (DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(&I)) {
-      DPVals.push_back(new DPLabel(DLI->getLabel(), DLI->getDebugLoc()));
+      DbgVarRecs.push_back(new DPLabel(DLI->getLabel(), DLI->getDebugLoc()));
       DLI->eraseFromParent();
       continue;
     }
 
-    if (DPVals.empty())
+    if (DbgVarRecs.empty())
       continue;
 
     // Create a marker to store DbgRecords in.
     createMarker(&I);
     DPMarker *Marker = I.DbgMarker;
 
-    for (DbgRecord *DPV : DPVals)
-      Marker->insertDbgRecord(DPV, false);
+    for (DbgRecord *DVR : DbgVarRecs)
+      Marker->insertDbgRecord(DVR, false);
 
-    DPVals.clear();
+    DbgVarRecs.clear();
   }
 }
 
@@ -1034,21 +1034,21 @@ void BasicBlock::splice(iterator Dest, BasicBlock *Src, iterator First,
   flushTerminatorDbgRecords();
 }
 
-void BasicBlock::insertDbgRecordAfter(DbgRecord *DPV, Instruction *I) {
+void BasicBlock::insertDbgRecordAfter(DbgRecord *DR, Instruction *I) {
   assert(IsNewDbgInfoFormat);
   assert(I->getParent() == this);
 
   iterator NextIt = std::next(I->getIterator());
   DPMarker *NextMarker = createMarker(NextIt);
-  NextMarker->insertDbgRecord(DPV, true);
+  NextMarker->insertDbgRecord(DR, true);
 }
 
-void BasicBlock::insertDbgRecordBefore(DbgRecord *DPV,
+void BasicBlock::insertDbgRecordBefore(DbgRecord *DR,
                                        InstListType::iterator Where) {
   assert(Where == end() || Where->getParent() == this);
   bool InsertAtHead = Where.getHeadBit();
   DPMarker *M = createMarker(Where);
-  M->insertDbgRecord(DPV, InsertAtHead);
+  M->insertDbgRecord(DR, InsertAtHead);
 }
 
 DPMarker *BasicBlock::getNextMarker(Instruction *I) {

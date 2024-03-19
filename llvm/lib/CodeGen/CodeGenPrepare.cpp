@@ -445,8 +445,8 @@ private:
   bool optimizeExtractElementInst(Instruction *Inst);
   bool dupRetToEnableTailCallOpts(BasicBlock *BB, ModifyDT &ModifiedDT);
   bool fixupDbgValue(Instruction *I);
-  bool fixupDPValue(DPValue &I);
-  bool fixupDPValuesOnInst(Instruction &I);
+  bool fixupDbgVariableRecord(DbgVariableRecord &I);
+  bool fixupDbgVariableRecordsOnInst(Instruction &I);
   bool placeDbgValues(Function &F);
   bool placePseudoProbes(Function &F);
   bool canFormExtLd(const SmallVectorImpl<Instruction *> &MovedExts,
@@ -3223,7 +3223,7 @@ class TypePromotionTransaction {
     /// Keep track of the debug users.
     SmallVector<DbgValueInst *, 1> DbgValues;
     /// And non-instruction debug-users too.
-    SmallVector<DPValue *, 1> DPValues;
+    SmallVector<DbgVariableRecord *, 1> DbgVariableRecords;
 
     /// Keep track of the new value so that we can undo it by replacing
     /// instances of the new value with the original value.
@@ -3244,7 +3244,7 @@ class TypePromotionTransaction {
       }
       // Record the debug uses separately. They are not in the instruction's
       // use list, but they are replaced by RAUW.
-      findDbgValues(DbgValues, Inst, &DPValues);
+      findDbgValues(DbgValues, Inst, &DbgVariableRecords);
 
       // Now, we can replace the uses.
       Inst->replaceAllUsesWith(New);
@@ -3261,10 +3261,10 @@ class TypePromotionTransaction {
       // correctness and utility of debug value instructions.
       for (auto *DVI : DbgValues)
         DVI->replaceVariableLocationOp(New, Inst);
-      // Similar story with DPValues, the non-instruction representation of
-      // dbg.values.
-      for (DPValue *DPV : DPValues) // tested by transaction-test I'm adding
-        DPV->replaceVariableLocationOp(New, Inst);
+      // Similar story with DbgVariableRecords, the non-instruction
+      // representation of dbg.values.
+      for (DbgVariableRecord *DVR : DbgVariableRecords)
+        DVR->replaceVariableLocationOp(New, Inst);
     }
   };
 
@@ -7117,9 +7117,9 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   CurInstIterator = std::next(LastSI->getIterator());
   // Examine debug-info attached to the consecutive select instructions. They
   // won't be individually optimised by optimizeInst, so we need to perform
-  // DPValue maintenence here instead.
+  // DbgVariableRecord maintenence here instead.
   for (SelectInst *SI : ArrayRef(ASI).drop_front())
-    fixupDPValuesOnInst(*SI);
+    fixupDbgVariableRecordsOnInst(*SI);
 
   bool VectorCond = !SI->getCondition()->getType()->isIntegerTy(1);
 
@@ -8275,7 +8275,7 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
 
 bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   bool AnyChange = false;
-  AnyChange = fixupDPValuesOnInst(*I);
+  AnyChange = fixupDbgVariableRecordsOnInst(*I);
 
   // Bail out if we inserted the instruction to prevent optimizations from
   // stepping on each other's toes.
@@ -8541,24 +8541,24 @@ bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
   return AnyChange;
 }
 
-bool CodeGenPrepare::fixupDPValuesOnInst(Instruction &I) {
+bool CodeGenPrepare::fixupDbgVariableRecordsOnInst(Instruction &I) {
   bool AnyChange = false;
-  for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange()))
-    AnyChange |= fixupDPValue(DPV);
+  for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
+    AnyChange |= fixupDbgVariableRecord(DVR);
   return AnyChange;
 }
 
 // FIXME: should updating debug-info really cause the "changed" flag to fire,
 // which can cause a function to be reprocessed?
-bool CodeGenPrepare::fixupDPValue(DPValue &DPV) {
-  if (DPV.Type != DPValue::LocationType::Value &&
-      DPV.Type != DPValue::LocationType::Assign)
+bool CodeGenPrepare::fixupDbgVariableRecord(DbgVariableRecord &DVR) {
+  if (DVR.Type != DbgVariableRecord::LocationType::Value &&
+      DVR.Type != DbgVariableRecord::LocationType::Assign)
     return false;
 
-  // Does this DPValue refer to a sunk address calculation?
+  // Does this DbgVariableRecord refer to a sunk address calculation?
   bool AnyChange = false;
-  SmallDenseSet<Value *> LocationOps(DPV.location_ops().begin(),
-                                     DPV.location_ops().end());
+  SmallDenseSet<Value *> LocationOps(DVR.location_ops().begin(),
+                                     DVR.location_ops().end());
   for (Value *Location : LocationOps) {
     WeakTrackingVH SunkAddrVH = SunkAddrs[Location];
     Value *SunkAddr = SunkAddrVH.pointsToAliveValue() ? SunkAddrVH : nullptr;
@@ -8568,7 +8568,7 @@ bool CodeGenPrepare::fixupDPValue(DPValue &DPV) {
       // of pointer being referred to; however this makes no difference to
       // debugging information, and we can't generate bitcasts that may affect
       // codegen.
-      DPV.replaceVariableLocationOp(Location, SunkAddr);
+      DVR.replaceVariableLocationOp(Location, SunkAddr);
       AnyChange = true;
     }
   }
@@ -8583,13 +8583,13 @@ static void DbgInserterHelper(DbgValueInst *DVI, Instruction *VI) {
     DVI->insertAfter(VI);
 }
 
-static void DbgInserterHelper(DPValue *DPV, Instruction *VI) {
-  DPV->removeFromParent();
+static void DbgInserterHelper(DbgVariableRecord *DVR, Instruction *VI) {
+  DVR->removeFromParent();
   BasicBlock *VIBB = VI->getParent();
   if (isa<PHINode>(VI))
-    VIBB->insertDbgRecordBefore(DPV, VIBB->getFirstInsertionPt());
+    VIBB->insertDbgRecordBefore(DVR, VIBB->getFirstInsertionPt());
   else
-    VIBB->insertDbgRecordAfter(DPV, VI);
+    VIBB->insertDbgRecordAfter(DVR, VI);
 }
 
 // A llvm.dbg.value may be using a value before its definition, due to
@@ -8654,13 +8654,13 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
         continue;
       }
 
-      // If this isn't a dbg.value, process any attached DPValue records
-      // attached to this instruction.
-      for (DPValue &DPV : llvm::make_early_inc_range(
+      // If this isn't a dbg.value, process any attached DbgVariableRecord
+      // records attached to this instruction.
+      for (DbgVariableRecord &DVR : llvm::make_early_inc_range(
                filterDbgVars(Insn.getDbgRecordRange()))) {
-        if (DPV.Type != DPValue::LocationType::Value)
+        if (DVR.Type != DbgVariableRecord::LocationType::Value)
           continue;
-        DbgProcessor(&DPV, &Insn);
+        DbgProcessor(&DVR, &Insn);
       }
     }
   }

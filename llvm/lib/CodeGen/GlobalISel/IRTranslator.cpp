@@ -3386,16 +3386,16 @@ void IRTranslator::translateDbgInfo(const Instruction &Inst,
       MIRBuilder.buildDbgLabel(DPL->getLabel());
       continue;
     }
-    DPValue &DPV = cast<DPValue>(DR);
-    const DILocalVariable *Variable = DPV.getVariable();
-    const DIExpression *Expression = DPV.getExpression();
-    Value *V = DPV.getVariableLocationOp(0);
-    if (DPV.isDbgDeclare())
-      translateDbgDeclareRecord(V, DPV.hasArgList(), Variable,
-                         Expression, DPV.getDebugLoc(), MIRBuilder);
+    DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
+    const DILocalVariable *Variable = DVR.getVariable();
+    const DIExpression *Expression = DVR.getExpression();
+    Value *V = DVR.getVariableLocationOp(0);
+    if (DVR.isDbgDeclare())
+      translateDbgDeclareRecord(V, DVR.hasArgList(), Variable, Expression,
+                                DVR.getDebugLoc(), MIRBuilder);
     else
-      translateDbgValueRecord(V, DPV.hasArgList(), Variable,
-                         Expression, DPV.getDebugLoc(), MIRBuilder);
+      translateDbgValueRecord(V, DVR.hasArgList(), Variable, Expression,
+                              DVR.getDebugLoc(), MIRBuilder);
   }
 }
 

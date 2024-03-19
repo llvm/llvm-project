@@ -581,8 +581,8 @@ llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
-  // RemoveDIs: there's no bitcode representation of the DPValue debug-info,
-  // convert to dbg.values before writing out.
+  // RemoveDIs: there's no bitcode representation of the DbgVariableRecord
+  // debug-info, convert to dbg.values before writing out.
   bool ConvertToOldDbgFormatForWrite =
       M.IsNewDbgInfoFormat && !WriteNewDbgInfoFormatToBitcode;
   if (ConvertToOldDbgFormatForWrite)

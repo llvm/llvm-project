@@ -624,8 +624,8 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // With RemoveDIs turned off, SplitPt can be a dbg.* intrinsic. With
     // RemoveDIs turned on, SplitPt would instead point to the next
     // instruction. To match existing dbg.* intrinsic behaviour with RemoveDIs,
-    // tell splitBasicBlock that we want to include any DPValues attached to
-    // SplitPt in the splice.
+    // tell splitBasicBlock that we want to include any DbgVariableRecords
+    // attached to SplitPt in the splice.
     SplitPt.setHeadBit(true);
     BasicBlock *EndBlock = StartBlock->splitBasicBlock(SplitPt, "select.end");
     BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock));

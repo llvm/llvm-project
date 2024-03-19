@@ -528,8 +528,9 @@ bool PassManagerImpl::run(Module &M) {
   dumpArguments();
   dumpPasses();
 
-  // RemoveDIs: if a command line flag is given, convert to the DPValue
-  // representation of debug-info for the duration of these passes.
+  // RemoveDIs: if a command line flag is given, convert to the
+  // DbgVariableRecord representation of debug-info for the duration of these
+  // passes.
   bool shouldConvertDbgInfo = UseNewDbgInfoFormat && !M.IsNewDbgInfoFormat;
   if (shouldConvertDbgInfo)
     M.convertToNewDbgValues();

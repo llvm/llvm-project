@@ -621,9 +621,9 @@ class MetadataLoader::MetadataLoaderImpl {
 
     for (auto &BB : F)
       for (auto &I : BB) {
-        for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
-          if (DPV.isDbgDeclare())
-            UpdateDeclareIfNeeded(&DPV);
+        for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+          if (DVR.isDbgDeclare())
+            UpdateDeclareIfNeeded(&DVR);
         }
         if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
           UpdateDeclareIfNeeded(DDI);

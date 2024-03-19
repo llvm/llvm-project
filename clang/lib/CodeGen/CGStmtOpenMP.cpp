@@ -4770,9 +4770,9 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
           assert(!Last.isTerminator() && "unexpected terminator");
           if (auto *Marker =
                   CGF.Builder.GetInsertBlock()->getTrailingDbgRecords()) {
-            for (llvm::DPValue &DPV : llvm::reverse(
+            for (llvm::DbgVariableRecord &DVR : llvm::reverse(
                      llvm::filterDbgVars(Marker->getDbgRecordRange()))) {
-              UpdateExpr(Last.getContext(), &DPV, Offset);
+              UpdateExpr(Last.getContext(), &DVR, Offset);
               break;
             }
           }

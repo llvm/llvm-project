@@ -6425,7 +6425,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     case bitc::FUNC_CODE_DEBUG_RECORD_VALUE:
     case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE:
     case bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN: {
-      // DPValues are placed after the Instructions that they are attached to.
+      // DbgVariableRecords are placed after the Instructions that they are
+      // attached to.
       Instruction *Inst = getLastInstruction();
       if (!Inst)
         return error("Invalid dbg record: missing instruction");
@@ -6468,29 +6469,30 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         RawLocation = getFnMetadataByID(Record[Slot++]);
       }
 
-      DPValue *DPV = nullptr;
+      DbgVariableRecord *DVR = nullptr;
       switch (BitCode) {
       case bitc::FUNC_CODE_DEBUG_RECORD_VALUE:
       case bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE:
-        DPV = new DPValue(RawLocation, Var, Expr, DIL,
-                          DPValue::LocationType::Value);
+        DVR = new DbgVariableRecord(RawLocation, Var, Expr, DIL,
+                                    DbgVariableRecord::LocationType::Value);
         break;
       case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE:
-        DPV = new DPValue(RawLocation, Var, Expr, DIL,
-                          DPValue::LocationType::Declare);
+        DVR = new DbgVariableRecord(RawLocation, Var, Expr, DIL,
+                                    DbgVariableRecord::LocationType::Declare);
         break;
       case bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN: {
         DIAssignID *ID = cast<DIAssignID>(getFnMetadataByID(Record[Slot++]));
         DIExpression *AddrExpr =
             cast<DIExpression>(getFnMetadataByID(Record[Slot++]));
         Metadata *Addr = getFnMetadataByID(Record[Slot++]);
-        DPV = new DPValue(RawLocation, Var, Expr, ID, Addr, AddrExpr, DIL);
+        DVR = new DbgVariableRecord(RawLocation, Var, Expr, ID, Addr, AddrExpr,
+                                    DIL);
         break;
       }
       default:
-        llvm_unreachable("Unknown DPValue bitcode");
+        llvm_unreachable("Unknown DbgVariableRecord bitcode");
       }
-      Inst->getParent()->insertDbgRecordBefore(DPV, Inst->getIterator());
+      Inst->getParent()->insertDbgRecordBefore(DVR, Inst->getIterator());
       continue; // This isn't an instruction.
     }
     case bitc::FUNC_CODE_INST_CALL: {
