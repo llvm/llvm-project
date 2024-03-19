@@ -15,6 +15,8 @@ using namespace dwarf_linker::parallel;
 
 std::unique_ptr<DWARFLinker>
 DWARFLinker::createLinker(MessageHandlerTy ErrorHandler,
-                          MessageHandlerTy WarningHandler) {
-  return std::make_unique<DWARFLinkerImpl>(ErrorHandler, WarningHandler);
+                          MessageHandlerTy WarningHandler,
+                          TranslatorFuncTy StringsTranslator) {
+  return std::make_unique<DWARFLinkerImpl>(ErrorHandler, WarningHandler,
+                                           StringsTranslator);
 }

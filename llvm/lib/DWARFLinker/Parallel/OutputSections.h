@@ -253,7 +253,7 @@ struct SectionDescriptor : SectionDescriptorBase {
 
   /// Emit specified inplace string value into the current section contents.
   void emitInplaceString(StringRef String) {
-    OS << String;
+    OS << GlobalData.translateString(String);
     emitIntVal(0, 1);
   }
 

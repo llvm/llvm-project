@@ -8,6 +8,8 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_MACHOUTILS_H
 #define LLVM_TOOLS_DSYMUTIL_MACHOUTILS_H
 
+#include "SymbolMap.h"
+
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -57,7 +59,7 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
                              StringRef SDKPath, bool Fat64 = false);
 bool generateDsymCompanion(
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const DebugMap &DM,
-    MCStreamer &MS, raw_fd_ostream &OutFile,
+    SymbolMapTranslator &Translator, MCStreamer &MS, raw_fd_ostream &OutFile,
     const std::vector<MachOUtils::DwarfRelocationApplicationInfo>
         &RelocationsToApply);
 
