@@ -329,9 +329,17 @@ define <8 x i16> @hadds_i_undef(<8 x i16> %t, <8 x i16> %src1) {
   ret <8 x i16> %result
 }
 
-
-
-
+define <8 x i16> @sub_fixedwidth_v4i32(<8 x i16> %a0, <8 x i16> %a1)  {
+; CHECK-LABEL: sub_fixedwidth_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    urhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %or = or <8 x i16> %a0, %a1
+  %xor = xor <8 x i16> %a0, %a1
+  %srl = lshr <8 x i16> %xor, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %res = sub <8 x i16> %or, %srl
+  ret <8 x i16> %res
+}
 
 define <8 x i16> @rhaddu_base(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: rhaddu_base:
