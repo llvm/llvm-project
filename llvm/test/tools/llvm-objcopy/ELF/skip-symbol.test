@@ -1,3 +1,4 @@
+## This test checks the functionality of options --skip-symbol and --skip-symbols.
 # RUN: yaml2obj %s -o %t.o
 # RUN: echo 'foo[2-3]' > %t.skip.regex
 
@@ -36,12 +37,12 @@
 # RUN: llvm-objcopy %t.o %t5.o --set-symbol-visibility='foo*'=internal --wildcard \
 # RUN:   --skip-symbol=foo1 --skip-symbol=foo2 --skip-symbols=%t.symbol.list
 # RUN: llvm-readelf -s %t5.o | FileCheck %s --check-prefix=BOTH
-## All the symbols are skipped
+## All the symbols are skipped.
 # BOTH-DAG: GLOBAL HIDDEN      1 foo1
 # BOTH-DAG: GLOBAL HIDDEN      1 foo2
 # BOTH-DAG: GLOBAL HIDDEN      1 foo3
 
-## Check that using an invalid symbol pattern generates an error.
+## Check that using an invalid symbol name regex generates an error.
 # RUN: echo '*.' > %t.symbols.regex
 # RUN: not llvm-objcopy %t.o --skip-symbols=%t.symbols.regex --regex 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=SYMBOL
@@ -61,18 +62,18 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
 Sections:
-  - Name:  .text
-    Type:  SHT_PROGBITS
+  - Name: .text
+    Type: SHT_PROGBITS
 Symbols:
   - Name:    foo1
     Section: .text
-    Binding:  STB_GLOBAL
-    Other:    [ STV_HIDDEN ]
+    Binding: STB_GLOBAL
+    Other:   [ STV_HIDDEN ]
   - Name:    foo2
     Section: .text
-    Binding:  STB_GLOBAL
-    Other:    [ STV_HIDDEN ]
+    Binding: STB_GLOBAL
+    Other:   [ STV_HIDDEN ]
   - Name:    foo3
     Section: .text
-    Binding:  STB_GLOBAL
-    Other:    [ STV_HIDDEN ]
+    Binding: STB_GLOBAL
+    Other:   [ STV_HIDDEN ]
