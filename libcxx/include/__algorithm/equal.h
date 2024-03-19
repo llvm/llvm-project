@@ -96,6 +96,11 @@ __equal_impl(_Tp* __first1, _Tp* __last1, _Up* __first2, _Up*, _Pred&, _Proj1&, 
   return std::__constexpr_memcmp_equal(__first1, __first2, __element_count(__last1 - __first1));
 }
 
+_LIBCPP_DIAGNOSTIC_PUSH
+// Allow use of if constexpr extension.
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++17-extensions")
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++17-extensions")
+
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 equal(_InputIterator1 __first1,
@@ -118,6 +123,8 @@ equal(_InputIterator1 __first1,
       __proj,
       __proj);
 }
+
+_LIBCPP_DIAGNOSTIC_POP
 
 template <class _InputIterator1, class _InputIterator2>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
