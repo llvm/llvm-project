@@ -126,16 +126,16 @@ QualType getPublicType(const Expr *E) {
 
   // Find the least-derived type in the path (i.e. the last entry in the list)
   // that we can access.
-  QualType Ty;
+  const CXXBaseSpecifier *PublicBase = nullptr;
   for (const CXXBaseSpecifier *Base : Cast->path()) {
     if (Base->getAccessSpecifier() != AS_public && !CastingFromThis)
       break;
-    Ty = Base->getType();
+    PublicBase = Base;
     CastingFromThis = false;
   }
 
-  if (!Ty.isNull())
-    return Ty;
+  if (PublicBase != nullptr)
+    return PublicBase->getType();
 
   // We didn't find any public type that we could cast to. There may be more
   // casts in `getSubExpr()`, so recurse. (If there aren't any more casts, this
@@ -215,22 +215,22 @@ auto inPlaceClass() {
 
 auto isOptionalNulloptConstructor() {
   return cxxConstructExpr(
-      hasOptionalOrDerivedType(),
       hasDeclaration(cxxConstructorDecl(parameterCountIs(1),
-                                        hasParameter(0, hasNulloptType()))));
+                                        hasParameter(0, hasNulloptType()))),
+      hasOptionalOrDerivedType());
 }
 
 auto isOptionalInPlaceConstructor() {
-  return cxxConstructExpr(hasOptionalOrDerivedType(),
-                          hasArgument(0, hasType(inPlaceClass())));
+  return cxxConstructExpr(hasArgument(0, hasType(inPlaceClass())),
+                          hasOptionalOrDerivedType());
 }
 
 auto isOptionalValueOrConversionConstructor() {
   return cxxConstructExpr(
-      hasOptionalOrDerivedType(),
       unless(hasDeclaration(
           cxxConstructorDecl(anyOf(isCopyConstructor(), isMoveConstructor())))),
-      argumentCountIs(1), hasArgument(0, unless(hasNulloptType())));
+      argumentCountIs(1), hasArgument(0, unless(hasNulloptType())),
+      hasOptionalOrDerivedType());
 }
 
 auto isOptionalValueOrConversionAssignment() {
