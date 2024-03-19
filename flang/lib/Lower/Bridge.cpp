@@ -3692,6 +3692,11 @@ private:
       const Fortran::evaluate::ProcedureRef *userDefinedAssignment) {
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
+
+    if (Fortran::evaluate::HasCUDAAttrs(assign.lhs) ||
+        Fortran::evaluate::HasCUDAAttrs(assign.rhs))
+      TODO(loc, "Assignement with CUDA Fortran variables");
+
     // Gather some information about the assignment that will impact how it is
     // lowered.
     const bool isWholeAllocatableAssignment =
