@@ -24,6 +24,58 @@ F:              ; preds = %0
   ret void
 }
 
+define void @test_unordered(ptr noalias %b, ptr noalias %c, ptr noalias  %Q, ptr noalias  %R, i32 %i ) {
+; CHECK-LABEL: @test_unordered(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ldR1:%.*]] = load i32, ptr [[R:%.*]], align 8
+; CHECK-NEXT:    switch i32 %i, label %bb0 [
+; CHECK-NEXT:      i32 2, label %bb1
+; CHECK-NEXT:      i32 3, label %bb2
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:         
+; CHECK-NEXT:    ret void
+; CHECK:       bb0:
+; CHECK-NEXT:    [[ldQ:%.*]] = load i32, ptr [[Q:%.*]], align 8
+; CHECK-NEXT:    [[mul:%.*]] = mul i32 [[ldQ:%.*]], 2
+; CHECK-NEXT:    [[add:%.*]] = add i32 [[ldR1:%.*]], [[mul:%.*]]
+; CHECK-NEXT:    store i32 [[add:%.*]], ptr [[c:%.*]], align 8
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    store i32 [[ldR1:%.*]], ptr [[c:%.*]], align 4
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[ldQ2:%.*]] = load i32, ptr [[Q:%.*]], align 8
+; CHECK-NEXT:    [[sub:%.*]] = sub i32 [[ldR1:%.*]], [[ldQ2:%.*]]
+; CHECK-NEXT:    store i32 [[sub:%.*]], ptr [[c:%.*]], align 8
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+
+entry:
+  switch i32 %i, label %bb0 [
+    i32 2, label %bb1
+    i32 3, label %bb2
+  ]
+                                     
+bb0:                                          ; preds = %entry
+  %ldQ1 = load i32, ptr %Q, align 8
+  %mul = mul i32 %ldQ1, 2
+  %ldR1 = load i32, ptr %R, align 8
+  %add = add i32 %ldR1, %mul
+  store i32 %add, ptr %c, align 8
+  ret void
+
+bb1:                                          ; preds = entry
+  %ldR2 = load i32, ptr %R, align 8
+  store i32 %ldR2, ptr %c
+  ret void
+
+bb2:                                          ; preds = entry
+  %ldQ2 = load i32, ptr %Q, align 8
+  %ldR3 = load i32, ptr %R, align 8
+  %sub = sub i32 %ldR3, %ldQ2
+  store i32 %sub, ptr %c, align 8
+  ret void
+}
+
 define void @test_switch(i64 %i, ptr %Q) {
 ; CHECK-LABEL: @test_switch(
 ; CHECK-NEXT:  common.ret:
