@@ -18036,6 +18036,17 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
   return Arg;
 }
 
+Intrinsic::ID getDotProductIntrinsic(QualType QT) {
+  if (QT->hasSignedIntegerRepresentation())
+    return Intrinsic::dx_sdot;
+  if (QT->hasUnsignedIntegerRepresentation())
+    return Intrinsic::dx_udot;
+
+  assert(QT->hasFloatingRepresentation());
+  return Intrinsic::dx_dot;
+  ;
+}
+
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                             const CallExpr *E) {
   if (!getLangOpts().HLSL)
@@ -18096,7 +18107,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
            "Dot product requires vectors to be of the same size.");
 
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/T0->getScalarType(), Intrinsic::dx_dot,
+        /*ReturnType=*/T0->getScalarType(),
+        getDotProductIntrinsic(E->getArg(0)->getType()),
         ArrayRef<Value *>{Op0, Op1}, nullptr, "dx.dot");
   } break;
   case Builtin::BI__builtin_hlsl_lerp: {
