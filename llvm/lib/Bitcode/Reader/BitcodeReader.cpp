@@ -100,6 +100,15 @@ static cl::opt<bool> ExpandConstantExprs(
     cl::desc(
         "Expand constant expressions to instructions for testing purposes"));
 
+/// Load bitcode directly into RemoveDIs format (use debug records instead
+/// of debug intrinsics). UNSET is treated as FALSE, so the default action
+/// is to do nothing. Individual tools can override this to incrementally add
+/// support for the RemoveDIs format.
+cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInforFormat(
+    "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden,
+    cl::desc("Load bitcode directly into the new debug info format (regardless "
+             "of input format)"));
+
 namespace {
 
 enum {
@@ -4276,9 +4285,11 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
                                  ParserCallbacks Callbacks) {
-  // Force the debug-info mode into the old format for now.
-  // FIXME: Remove this once all tools support RemoveDIs.
-  TheModule->IsNewDbgInfoFormat = false;
+  // Load directly into RemoveDIs format if LoadBitcodeIntoNewDbgInforFormat
+  // has been set to true (default action: load into the old debug format).
+  TheModule->IsNewDbgInfoFormat =
+      UseNewDbgInfoFormat &&
+      LoadBitcodeIntoNewDbgInforFormat == cl::boolOrDefault::BOU_TRUE;
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
   if (ResumeBit) {
@@ -6762,9 +6773,9 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (Error JumpFailed = Stream.JumpToBit(DFII->second))
     return JumpFailed;
 
-  // Set the debug info mode to "new", forcing a mismatch between
+  // Set the debug info mode to "new", possibly creating a mismatch between
   // module and function debug modes. This is okay because we'll convert
-  // everything back to the old mode after parsing.
+  // everything back to the old mode after parsing if needed.
   // FIXME: Remove this once all tools support RemoveDIs.
   F->IsNewDbgInfoFormat = true;
 
@@ -6774,7 +6785,8 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
 
   // Convert new debug info records into intrinsics.
   // FIXME: Remove this once all tools support RemoveDIs.
-  F->convertFromNewDbgValues();
+  if (!F->getParent()->IsNewDbgInfoFormat)
+    F->convertFromNewDbgValues();
 
   if (StripDebugInfo)
     stripDebugInfo(*F);
