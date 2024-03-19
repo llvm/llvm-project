@@ -354,6 +354,11 @@ public:
 
       DelayType Type = getDelayType(MI.getDesc().TSFlags);
 
+      // WMMA XDL ops are treated as TRANS in s_delay_alu insertion.
+      if ((SIInstrInfo::isWMMA(MI) || SIInstrInfo::isSWMMAC(MI)) &&
+          AMDGPU::getWMMAIsXDL(MI.getOpcode()))
+        Type = TRANS;
+
       if (instructionWaitsForVALU(MI)) {
         // Forget about all outstanding VALU delays.
         // TODO: This is overkill since it also forgets about SALU delays.

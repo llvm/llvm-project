@@ -35228,6 +35228,7 @@ X86TargetLowering::EmitLoweredTLSAddr(MachineInstr &MI,
   MachineFunction &MF = *BB->getParent();
 
   // Emit CALLSEQ_START right before the instruction.
+  BB->getParent()->getFrameInfo().setAdjustsStack(true);
   unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
   MachineInstrBuilder CallseqStart =
       BuildMI(MF, MIMD, TII.get(AdjStackDown)).addImm(0).addImm(0).addImm(0);
@@ -47386,6 +47387,16 @@ static SDValue combineShiftRightArithmetic(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue V = combineShiftToPMULH(N, DAG, Subtarget))
     return V;
+
+  APInt ShiftAmt;
+  if (supportedVectorVarShift(VT, Subtarget, ISD::SRA) &&
+      N1.getOpcode() == ISD::UMIN &&
+      ISD::isConstantSplatVector(N1.getOperand(1).getNode(), ShiftAmt) &&
+      ShiftAmt == VT.getScalarSizeInBits() - 1) {
+    SDValue ShrAmtVal = N1.getOperand(0);
+    SDLoc DL(N);
+    return DAG.getNode(X86ISD::VSRAV, DL, N->getVTList(), N0, ShrAmtVal);
+  }
 
   // fold (ashr (shl, a, [56,48,32,24,16]), SarConst)
   // into (shl, (sext (a), [56,48,32,24,16] - SarConst)) or

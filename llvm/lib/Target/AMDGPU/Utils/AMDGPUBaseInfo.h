@@ -96,6 +96,11 @@ struct MAIInstInfo {
   bool is_gfx940_xdl;
 };
 
+struct WMMAInstInfo {
+  uint16_t Opcode;
+  bool is_wmma_xdl;
+};
+
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
@@ -103,6 +108,7 @@ struct MAIInstInfo {
 #define GET_MIMGMIPMapping_DECL
 #define GET_MIMGBiASMapping_DECL
 #define GET_MAIInstInfoTable_DECL
+#define GET_WMMAInstInfoTable_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
 namespace IsaInfo {
@@ -549,6 +555,9 @@ bool getMAIIsDGEMM(unsigned Opc);
 
 LLVM_READONLY
 bool getMAIIsGFX940XDL(unsigned Opc);
+
+LLVM_READONLY
+bool getWMMAIsXDL(unsigned Opc);
 
 // Get an equivalent BitOp3 for a binary logical \p Opc.
 // \returns BitOp3 modifier for the logical operation or zero.

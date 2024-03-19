@@ -2924,6 +2924,36 @@ TEST(TransferTest, ResultObjectLocation) {
       });
 }
 
+TEST(TransferTest, ResultObjectLocationForDefaultArgExpr) {
+  std::string Code = R"(
+    struct S {};
+    void funcWithDefaultArg(S s = S());
+    void target() {
+      funcWithDefaultArg();
+      // [[p]]
+    }
+  )";
+
+  using ast_matchers::cxxDefaultArgExpr;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *DefaultArg = selectFirst<CXXDefaultArgExpr>(
+            "default_arg",
+            match(cxxDefaultArgExpr().bind("default_arg"), ASTCtx));
+        ASSERT_NE(DefaultArg, nullptr);
+
+        // The values for default arguments aren't modeled; we merely verify
+        // that we can get a result object location for a default arg.
+        Env.getResultObjectLocation(*DefaultArg);
+      });
+}
+
 TEST(TransferTest, ResultObjectLocationForDefaultInitExpr) {
   std::string Code = R"(
     struct S {};

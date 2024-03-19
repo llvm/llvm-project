@@ -1074,6 +1074,7 @@ class WMMAOpcodeMapping<Instruction TwoAddr, Instruction ThreeAddr> {
   Instruction Opcode3Addr = ThreeAddr;
   Predicate WaveSizePredicate;
   Predicate SubtargetPredicate;
+  field bit is_wmma_xdl;
 }
 
 def WMMAOpcode : GenericEnum {
@@ -1378,6 +1379,20 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, MatrixScaleOutSrcPat, MatrixFMTOutPat, MatrixScaleOutModPat, ClampPat);
 }
 
+def WMMAInstInfoTable : GenericTable {
+  let FilterClass = "WMMAInstInfo";
+  let CppTypeName = "WMMAInstInfo";
+  let Fields = ["Opcode", "is_wmma_xdl"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getWMMAInstInfoHelper";
+}
+
+class WMMAInstInfo {
+  Instruction Opcode = !cast<Instruction>(NAME);
+  bit is_wmma_xdl = 0;
+}
+
 multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string PseudoInstrSuffix, bit DiffVdstSrc2 = 0> {
 
   defvar WMMAConstraints2Addr = !if(DiffVdstSrc2, "@earlyclobber $vdst", "@earlyclobber $vdst,$vdst = $src2");
@@ -1385,14 +1400,14 @@ multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string Pse
 
   let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
     let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = 1 in
-      def _twoaddr : VOP3P_Pseudo<Instr, WMMAProfile>{
+      def _twoaddr : VOP3P_Pseudo<Instr, WMMAProfile>, WMMAInstInfo {
         let PseudoInstr = Instr#PseudoInstrSuffix;
         let FixedSize = WMMAProfile.HasMatrixScale;
         let Size = !if(WMMAProfile.HasMatrixScale, 16, 8);
       }
 
     let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in
-      def _threeaddr : VOP3P_Pseudo<Instr, WMMAProfile>{
+      def _threeaddr : VOP3P_Pseudo<Instr, WMMAProfile>, WMMAInstInfo {
         let PseudoInstr = Instr#PseudoInstrSuffix;
         let FixedSize = WMMAProfile.HasMatrixScale;
         let Size = !if(WMMAProfile.HasMatrixScale, 16, 8);
@@ -1404,7 +1419,7 @@ multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string Pse
 }
 
 multiclass SWMMACInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string PseudoInstrSuffix> {
-  def _twoaddr : VOP3P_Pseudo<Instr, WMMAProfile>{
+  def _twoaddr : VOP3P_Pseudo<Instr, WMMAProfile>, WMMAInstInfo {
     let Mnemonic = Instr;
     let PseudoInstr = Instr#PseudoInstrSuffix;
     let mayRaiseFPException = 0;
@@ -1514,6 +1529,8 @@ defm V_WMMA_F64_16X16X4_F64_w32       : WMMAInstGFX12<"v_wmma_f64_16x16x4_f64", 
 defm V_WMMA_F64_16X16X8_F64_w32       : WMMAInstGFX12<"v_wmma_f64_16x16x8_f64",       F64_F64X8_WMMA_w32, "_w32">;
 defm V_WMMA_F32_16X16X4_F32_w32       : WMMAInstGFX12<"v_wmma_f32_16x16x4_f32",       F32_F32_WMMA_w32, "_w32">;
 defm V_WMMA_F32_16X16X16_XF32_w32     : WMMAInstGFX12<"v_wmma_f32_16x16x16_xf32",     F32_XF32_WMMA_w32, "_w32">;
+
+let is_wmma_xdl = 1 in {
 defm V_WMMA_F32_16X16X32_BF16_w32     : WMMAInstGFX12<"v_wmma_f32_16x16x32_bf16",     F32_BF16X32_WMMA_w32, "_w32">;
 defm V_WMMA_F32_16X16X32_F16_w32      : WMMAInstGFX12<"v_wmma_f32_16x16x32_f16",      F32_F16X32_WMMA_w32, "_w32">;
 defm V_WMMA_F16_16X16X32_F16_w32      : WMMAInstGFX12<"v_wmma_f16_16x16x32_f16",      F16_F16X32_WMMA_w32, "_w32">;
@@ -1548,9 +1565,11 @@ defm V_SWMMAC_F16_16X16X128_BF8_BF8_w32 : SWMMACInstGFX12<"v_swmmac_f16_16x16x12
 defm V_SWMMAC_I32_16X16X128_IU8_w32     : SWMMACInstGFX12<"v_swmmac_i32_16x16x128_iu8",     I32_IU8X128_SWMMAC_w32, "_w32">;
 defm V_SWMMAC_I32_16X16X256_IU4_w32     : SWMMACInstGFX12<"v_swmmac_i32_16x16x256_iu4",     I32_IU4X256_SWMMAC_w32, "_w32">;
 
-defm V_WMMA_LD_SCALE_PAIRED_B32 : VOP3PInst<"v_wmma_ld_scale_paired_b32", VOP_WMMA_LD_SCALE>;
 defm V_WMMA_SCALE_F32_16x16x128_F8F6F4_w32  : WMMAInstGFX12<"v_wmma_scale_f32_16x16x128_f8f6f4",  F32_16x16x128_F8F6F4_SCALE_w32,  "_w32">;
 defm V_WMMA_SCALE_BF16_16x16x128_F8F6F4_w32 : WMMAInstGFX12<"v_wmma_scale_bf16_16x16x128_f8f6f4", BF16_16x16x128_F8F6F4_SCALE_w32, "_w32">;
+} // End is_wmma_xdl = 1.
+
+defm V_WMMA_LD_SCALE_PAIRED_B32 : VOP3PInst<"v_wmma_ld_scale_paired_b32", VOP_WMMA_LD_SCALE>;
 }
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12PlusNot12_10 in {

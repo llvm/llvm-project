@@ -16,7 +16,6 @@
 #define LLVM_CLANG_LIB_FORMAT_TOKENANNOTATOR_H
 
 #include "UnwrappedLineParser.h"
-#include "clang/Format/Format.h"
 
 namespace clang {
 namespace format {

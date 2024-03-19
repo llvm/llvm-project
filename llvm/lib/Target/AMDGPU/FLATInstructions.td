@@ -117,8 +117,7 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   bits<1> lds = ps.lds; // LDS DMA for global and scratch
 
   // Segment, 00=flat, 01=scratch, 10=global, 11=reserved
-  bits<2> seg = !if(ps.is_flat_global, 0b10,
-                  !if(ps.is_flat_scratch, 0b01, 0));
+  bits<2> seg = {ps.is_flat_global, ps.is_flat_scratch};
 
   // Signed offset. Highest bit ignored for flat and treated as 12-bit
   // unsigned for flat accesses.
@@ -243,7 +242,7 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
 }
 
 multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
-  let is_flat_global = 1, SubtargetPredicate = HasFlatGlobalInsts in {
+  let is_flat_global = 1 in {
     def "" : FLAT_Load_Pseudo<opName, regClass, HasTiedInput, 1>,
       GlobalSaddrTable<0, opName>;
     def _SADDR : FLAT_Load_Pseudo<opName, regClass, HasTiedInput, 1, 1>,
@@ -280,7 +279,7 @@ multiclass FLAT_Global_Load_AddTid_Pseudo<string opName, RegisterClass regClass,
 }
 
 multiclass FLAT_Global_Store_Pseudo<string opName, RegisterClass regClass> {
-  let is_flat_global = 1, SubtargetPredicate = HasFlatGlobalInsts in {
+  let is_flat_global = 1 in {
     def "" : FLAT_Store_Pseudo<opName, regClass, 1>,
       GlobalSaddrTable<0, opName>;
     def _SADDR : FLAT_Store_Pseudo<opName, regClass, 1, 1>,
@@ -469,6 +468,7 @@ class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
      !if(HasTiedOutput, (ins CPol:$cpol, getLdStRegisterOperand<regClass>.ret:$vdst_in),
                         (ins CPol_0:$cpol))),
   " $vdst, "#!if(EnableVaddr, "$vaddr, ", "off, ")#!if(EnableSaddr, "$saddr", "off")#"$offset$cpol"> {
+  let is_flat_scratch = 1;
   let has_data = 0;
   let mayLoad = 1;
   let has_saddr = 1;
@@ -496,6 +496,7 @@ class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit En
         (ins vdata_op:$vdata, VGPR_32:$vaddr, flat_offset:$offset, CPol_0:$cpol),
         (ins vdata_op:$vdata, flat_offset:$offset, CPol_0:$cpol)))),
   " "#!if(EnableVaddr, "$vaddr", "off")#", $vdata, "#!if(EnableSaddr, "$saddr", "off")#"$offset$cpol"> {
+  let is_flat_scratch = 1;
   let mayLoad  = 0;
   let mayStore = 1;
   let has_vdst = 0;
@@ -508,37 +509,33 @@ class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit En
 }
 
 multiclass FLAT_Scratch_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedOutput = 0> {
-  let is_flat_scratch = 1 in {
-    def "" : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput>,
-             FlatScratchInst<opName, "SV">;
-    def _SADDR : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 1>,
-                 FlatScratchInst<opName, "SS">;
+  def "" : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput>,
+           FlatScratchInst<opName, "SV">;
+  def _SADDR : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 1>,
+               FlatScratchInst<opName, "SS">;
 
-    let SubtargetPredicate = HasFlatScratchSVSMode in
-    def _SVS : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 1, 1>,
-               FlatScratchInst<opName, "SVS">;
+  let SubtargetPredicate = HasFlatScratchSVSMode in
+  def _SVS : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 1, 1>,
+             FlatScratchInst<opName, "SVS">;
 
-    let SubtargetPredicate = HasFlatScratchSTMode in
-    def _ST  : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 0, 0, 0>,
-               FlatScratchInst<opName, "ST">;
-  }
+  let SubtargetPredicate = HasFlatScratchSTMode in
+  def _ST  : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 0, 0, 0>,
+             FlatScratchInst<opName, "ST">;
 }
 
 multiclass FLAT_Scratch_Store_Pseudo<string opName, RegisterClass regClass> {
-  let is_flat_scratch = 1 in {
-    def "" : FLAT_Scratch_Store_Pseudo<opName, regClass>,
-             FlatScratchInst<opName, "SV">;
-    def _SADDR : FLAT_Scratch_Store_Pseudo<opName, regClass, 1>,
-                 FlatScratchInst<opName, "SS">;
+  def "" : FLAT_Scratch_Store_Pseudo<opName, regClass>,
+           FlatScratchInst<opName, "SV">;
+  def _SADDR : FLAT_Scratch_Store_Pseudo<opName, regClass, 1>,
+               FlatScratchInst<opName, "SS">;
 
-    let SubtargetPredicate = HasFlatScratchSVSMode in
-    def _SVS : FLAT_Scratch_Store_Pseudo<opName, regClass, 1, 1>,
-               FlatScratchInst<opName, "SVS">;
+  let SubtargetPredicate = HasFlatScratchSVSMode in
+  def _SVS : FLAT_Scratch_Store_Pseudo<opName, regClass, 1, 1>,
+             FlatScratchInst<opName, "SVS">;
 
-    let SubtargetPredicate = HasFlatScratchSTMode in
-    def _ST  : FLAT_Scratch_Store_Pseudo<opName, regClass, 0, 0, 0>,
-               FlatScratchInst<opName, "ST">;
-  }
+  let SubtargetPredicate = HasFlatScratchSTMode in
+  def _ST  : FLAT_Scratch_Store_Pseudo<opName, regClass, 0, 0, 0>,
+             FlatScratchInst<opName, "ST">;
 }
 
 class FLAT_Scratch_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0,
@@ -663,25 +660,27 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
   RegisterClass data_rc = vdst_rc,
   RegisterOperand data_op = getLdStRegisterOperand<data_rc>.ret> {
 
-  def "" : FLAT_AtomicNoRet_Pseudo <opName,
-    (outs),
-    (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_0:$cpol),
-    " $vaddr, $vdata, off$offset$cpol">,
-    GlobalSaddrTable<0, opName> {
-    let has_saddr = 1;
-    let PseudoInstr = NAME;
-    let FPAtomic = data_vt.isFP;
-  }
+  let is_flat_global = 1 in {
+    def "" : FLAT_AtomicNoRet_Pseudo <opName,
+      (outs),
+      (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_0:$cpol),
+      " $vaddr, $vdata, off$offset$cpol">,
+      GlobalSaddrTable<0, opName> {
+      let has_saddr = 1;
+      let PseudoInstr = NAME;
+      let FPAtomic = data_vt.isFP;
+    }
 
-  def _SADDR : FLAT_AtomicNoRet_Pseudo <opName,
-    (outs),
-    (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_0:$cpol),
-    " $vaddr, $vdata, $saddr$offset$cpol">,
-    GlobalSaddrTable<1, opName> {
-    let has_saddr = 1;
-    let enabled_saddr = 1;
-    let PseudoInstr = NAME#"_SADDR";
-    let FPAtomic = data_vt.isFP;
+    def _SADDR : FLAT_AtomicNoRet_Pseudo <opName,
+      (outs),
+      (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_0:$cpol),
+      " $vaddr, $vdata, $saddr$offset$cpol">,
+      GlobalSaddrTable<1, opName> {
+      let has_saddr = 1;
+      let enabled_saddr = 1;
+      let PseudoInstr = NAME#"_SADDR";
+      let FPAtomic = data_vt.isFP;
+    }
   }
 }
 
@@ -694,24 +693,26 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
   RegisterOperand data_op = getLdStRegisterOperand<data_rc>.ret,
   RegisterOperand vdst_op = getLdStRegisterOperand<vdst_rc>.ret> {
 
-  def _RTN : FLAT_AtomicRet_Pseudo <opName,
-    (outs vdst_op:$vdst),
-      (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
-    " $vdst, $vaddr, $vdata, off$offset$cpol">,
-    GlobalSaddrTable<0, opName#"_rtn"> {
-    let has_saddr = 1;
-    let FPAtomic = data_vt.isFP;
-  }
+  let is_flat_global = 1 in {
+    def _RTN : FLAT_AtomicRet_Pseudo <opName,
+      (outs vdst_op:$vdst),
+        (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
+      " $vdst, $vaddr, $vdata, off$offset$cpol">,
+      GlobalSaddrTable<0, opName#"_rtn"> {
+      let has_saddr = 1;
+      let FPAtomic = data_vt.isFP;
+    }
 
-  def _SADDR_RTN : FLAT_AtomicRet_Pseudo <opName,
-    (outs vdst_op:$vdst),
-      (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
-    " $vdst, $vaddr, $vdata, $saddr$offset$cpol">,
-    GlobalSaddrTable<1, opName#"_rtn"> {
-     let has_saddr = 1;
-     let enabled_saddr = 1;
-     let PseudoInstr = NAME#"_SADDR_RTN";
-     let FPAtomic = data_vt.isFP;
+    def _SADDR_RTN : FLAT_AtomicRet_Pseudo <opName,
+      (outs vdst_op:$vdst),
+        (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
+      " $vdst, $vaddr, $vdata, $saddr$offset$cpol">,
+      GlobalSaddrTable<1, opName#"_rtn"> {
+       let has_saddr = 1;
+       let enabled_saddr = 1;
+       let PseudoInstr = NAME#"_SADDR_RTN";
+       let FPAtomic = data_vt.isFP;
+    }
   }
 }
 
@@ -721,10 +722,8 @@ multiclass FLAT_Global_Atomic_Pseudo<
   ValueType vt,
   ValueType data_vt = vt,
   RegisterClass data_rc = vdst_rc> {
-  let is_flat_global = 1, SubtargetPredicate = HasFlatGlobalInsts in {
-    defm "" : FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
-    defm "" : FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
-  }
+  defm "" : FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
+  defm "" : FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -928,7 +927,6 @@ defm GLOBAL_STORE_DWORD_ADDTID : FLAT_Global_Store_AddTid_Pseudo <"global_store_
 defm GLOBAL_STORE_BYTE_D16_HI  : FLAT_Global_Store_Pseudo <"global_store_byte_d16_hi", VGPR_32>;
 defm GLOBAL_STORE_SHORT_D16_HI : FLAT_Global_Store_Pseudo <"global_store_short_d16_hi", VGPR_32>;
 
-let is_flat_global = 1 in {
 defm GLOBAL_ATOMIC_CMPSWAP : FLAT_Global_Atomic_Pseudo <"global_atomic_cmpswap",
                                VGPR_32, i32, v2i32, VReg_64>;
 
@@ -1053,9 +1051,6 @@ def TENSOR_SAVE : FLAT_Global_Tensor_Pseudo<"tensor_save", 1>;
 def TENSOR_STOP : FLAT_Global_Tensor_Pseudo<"tensor_stop">;
 } // End SubtargetPredicate = isGFX12_10Plus
 
-} // End is_flat_global = 1
-
-let SubtargetPredicate = HasFlatScratchInsts in {
 defm SCRATCH_LOAD_UBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte", VGPR_32>;
 defm SCRATCH_LOAD_SBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_sbyte", VGPR_32>;
 defm SCRATCH_LOAD_USHORT   : FLAT_Scratch_Load_Pseudo <"scratch_load_ushort", VGPR_32>;
@@ -1090,7 +1085,6 @@ defm SCRATCH_LOAD_LDS_USHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_u
 defm SCRATCH_LOAD_LDS_SSHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_sshort">;
 defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_dword">;
 
-} // End SubtargetPredicate = HasFlatScratchInsts
 
 let SubtargetPredicate = isGFX12_10Plus in {
 def FLAT_LOAD_MONITOR_B32    : FLAT_Load_Pseudo <"flat_load_monitor_b32",  VGPR_32>;
@@ -1134,7 +1128,7 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus in {
   defm GLOBAL_LOAD_TR4_B64 : FLAT_Global_Load_Pseudo <"global_load_tr4_b64", VReg_64>;
 }
 
-let SubtargetPredicate = isGFX10Plus, is_flat_global = 1 in {
+let SubtargetPredicate = isGFX10Plus in {
   defm GLOBAL_ATOMIC_FCMPSWAP :
     FLAT_Global_Atomic_Pseudo<"global_atomic_fcmpswap", VGPR_32, f32, v2f32, VReg_64>;
   defm GLOBAL_ATOMIC_FMIN :
@@ -1147,9 +1141,8 @@ let SubtargetPredicate = isGFX10Plus, is_flat_global = 1 in {
     FLAT_Global_Atomic_Pseudo<"global_atomic_fmin_x2", VReg_64, f64>;
   defm GLOBAL_ATOMIC_FMAX_X2 :
     FLAT_Global_Atomic_Pseudo<"global_atomic_fmax_x2", VReg_64, f64>;
-} // End SubtargetPredicate = isGFX10Plus, is_flat_global = 1
+} // End SubtargetPredicate = isGFX10Plus
 
-let is_flat_global = 1 in {
 let OtherPredicates = [HasAtomicFaddNoRtnInsts] in
   defm GLOBAL_ATOMIC_ADD_F32 : FLAT_Global_Atomic_Pseudo_NO_RTN <
     "global_atomic_add_f32", VGPR_32, f32
@@ -1166,7 +1159,6 @@ let OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts] in
   defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Atomic_Pseudo_RTN <
     "global_atomic_pk_add_f16", VGPR_32, v2f16
   >;
-} // End is_flat_global = 1
 
 let SubtargetPredicate = HasVectorPrefetch in {
   def FLAT_PREFETCH_B8    : FLAT_Prefetch_Pseudo<"flat_prefetch_b8">;
@@ -2470,7 +2462,9 @@ class FLAT_Real_gfx10<bits<7> op, FLAT_Pseudo ps> :
 
   let Inst{11-0}  = offset{11-0};
   let Inst{12}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, ps.dlcValue);
-  let Inst{54-48} = !if(ps.enabled_saddr, saddr, 0x7d);
+  let Inst{54-48} = !cond(ps.enabled_saddr : saddr,
+                          !and(ps.is_flat_scratch, !not(ps.has_vaddr)) : EXEC_HI.Index{6-0}, // ST mode
+                          true : SGPR_NULL_gfxpre11.Index{6-0});
   let Inst{55}    = 0;
 }
 
@@ -2497,10 +2491,7 @@ multiclass FLAT_Real_SADDR_RTN_gfx10<bits<7> op> {
 
 multiclass FLAT_Real_ST_gfx10<bits<7> op> {
   def _ST_gfx10 :
-    FLAT_Real_gfx10<op, !cast<FLAT_Pseudo>(NAME#"_ST")> {
-      let Inst{54-48} = EXEC_HI.Index;
-      let OtherPredicates = [HasFlatScratchSTMode];
-    }
+    FLAT_Real_gfx10<op, !cast<FLAT_Pseudo>(NAME#"_ST")>;
 }
 
 multiclass FLAT_Real_AllAddr_gfx10<bits<7> op> :
@@ -2735,15 +2726,11 @@ multiclass FLAT_Real_SADDR_RTN_gfx11<bits<7> op, string ps, string opName> {
 }
 
 multiclass FLAT_Real_ST_gfx11<bits<7> op, string ps, string opName> {
-  def _ST_gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps#"_ST"), opName> {
-    let OtherPredicates = [HasFlatScratchSTMode];
-  }
+  def _ST_gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps#"_ST"), opName>;
 }
 
 multiclass FLAT_Real_SVS_gfx11<bits<7> op, string ps, string opName> {
-  def _SVS_gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps#"_SVS"), opName> {
-    let OtherPredicates = [HasFlatScratchSVSMode];
-  }
+  def _SVS_gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps#"_SVS"), opName>;
 }
 
 multiclass FLAT_Real_AllAddr_gfx11<bits<7> op, string ps, string opName, int renamed = false> :
@@ -2916,8 +2903,7 @@ class VFLAT_Real_gfx12 <bits<8> op, FLAT_Pseudo ps,
   let AssemblerPredicate = isGFX12Plus;
   let DecoderNamespace = "GFX12";
 
-  let Inst{25-24} = !if(ps.is_flat_scratch, 0b01,
-                        !if(ps.is_flat_global, 0b10, 0b00));
+  let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
   let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
 }
 
@@ -2947,15 +2933,11 @@ multiclass VFLAT_Real_SADDR_RTN_gfx12<bits<8> op, string ps, string opName> {
 }
 
 multiclass VFLAT_Real_ST_gfx12<bits<8> op, string ps, string opName> {
-  def _ST_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_ST"), opName> {
-    let OtherPredicates = [HasFlatScratchSTMode];
-  }
+  def _ST_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_ST"), opName>;
 }
 
 multiclass VFLAT_Real_SVS_gfx12<bits<8> op, string ps, string opName> {
-  def _SVS_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_SVS"), opName> {
-    let OtherPredicates = [HasFlatScratchSVSMode];
-  }
+  def _SVS_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_SVS"), opName>;
 }
 
 multiclass VFLAT_Real_Atomics_gfx12<bits<8> op, string ps = NAME, string opName = !tolower(NAME),

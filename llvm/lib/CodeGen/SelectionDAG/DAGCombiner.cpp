@@ -2703,11 +2703,11 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   SDValue A, B, C;
 
   // fold ((0-A) + B) -> B-A
-  if (sd_match(N0, m_Sub(m_Zero(), m_Value(A))))
+  if (sd_match(N0, m_Neg(m_Value(A))))
     return DAG.getNode(ISD::SUB, DL, VT, N1, A);
 
   // fold (A + (0-B)) -> A-B
-  if (sd_match(N1, m_Sub(m_Zero(), m_Value(B))))
+  if (sd_match(N1, m_Neg(m_Value(B))))
     return DAG.getNode(ISD::SUB, DL, VT, N0, B);
 
   // fold (A+(B-A)) -> B
@@ -3812,7 +3812,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return DAG.getNode(ISD::AND, DL, VT, N0, DAG.getNOT(DL, B, VT));
 
   // fold (A - (-B * C)) -> (A + (B * C))
-  if (sd_match(N1, m_OneUse(m_Mul(m_Sub(m_Zero(), m_Value(B)), m_Value(C)))))
+  if (sd_match(N1, m_OneUse(m_Mul(m_Neg(m_Value(B)), m_Value(C)))))
     return DAG.getNode(ISD::ADD, DL, VT, N0,
                        DAG.getNode(ISD::MUL, DL, VT, B, C));
 
@@ -24160,7 +24160,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   // TODO: Use "BaseIndexOffset" to make this more effective.
   SDValue NewAddr = DAG.getMemBasePlusOffset(Ld->getBasePtr(), Offset, DL);
 
-  uint64_t StoreSize = MemoryLocation::getSizeOrUnknown(VT.getStoreSize());
+  LocationSize StoreSize = MemoryLocation::getSizeOrUnknown(VT.getStoreSize());
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO;
   if (Offset.isScalable()) {
@@ -27805,14 +27805,13 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
                  : (LSN->getAddressingMode() == ISD::PRE_DEC)
                      ? -1 * C->getSExtValue()
                      : 0;
-      uint64_t Size =
+      LocationSize Size =
           MemoryLocation::getSizeOrUnknown(LSN->getMemoryVT().getStoreSize());
       return {LSN->isVolatile(),
               LSN->isAtomic(),
               LSN->getBasePtr(),
               Offset /*base offset*/,
-              Size != ~UINT64_C(0) ? LocationSize::precise(Size)
-                                   : LocationSize::beforeOrAfterPointer(),
+              Size,
               LSN->getMemOperand()};
     }
     if (const auto *LN = cast<LifetimeSDNode>(N))

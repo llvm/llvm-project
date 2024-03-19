@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/atanf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
 #include <errno.h>
 #include <stdint.h>
@@ -53,8 +53,15 @@ TEST_F(LlvmLibcAtanfTest, InFloatRange) {
 
 // For small values, tanh(x) is x.
 TEST_F(LlvmLibcAtanfTest, SpecialValues) {
-  uint32_t val_arr[] = {0x3d8d6b23U, 0x3feefcfbU, 0xbd8d6b23U,
-                        0xbfeefcfbU, 0x7F800000U, 0xFF800000U};
+  uint32_t val_arr[] = {
+      0x3d8d6b23U, // x = 0x1.1ad646p-4f
+      0x3feefcfbU, // x = 0x1.ddf9f6p+0f
+      0xbd8d6b23U, // x = -0x1.1ad646p-4f
+      0xbfeefcfbU, // x = -0x1.ddf9f6p+0f
+      0x7F800000U, // x = +Inf
+      0xFF800000U, // x = -Inf
+      0xbffe2ec1U, // x = -0x1.fc5d82p+0f
+  };
   for (uint32_t v : val_arr) {
     float x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan, x,

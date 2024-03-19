@@ -1210,7 +1210,7 @@ def tMOVi8 : T1sI<(outs tGPR:$Rd), (ins imm0_255_expr:$imm8), IIC_iMOVi,
 // Because we have an explicit tMOVSr below, we need an alias to handle
 // the immediate "movs" form here. Blech.
 def : tInstAlias <"movs $Rdn, $imm8",
-                 (tMOVi8 tGPR:$Rdn, CPSR, imm0_255_expr:$imm8, 14, 0)>;
+                 (tMOVi8 tGPR:$Rdn, CPSR, imm0_255_expr:$imm8, 14, zero_reg)>;
 
 // A7-73: MOV(2) - mov setting flag.
 
@@ -1768,7 +1768,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 
 // In Thumb1, "nop" is encoded as a "mov r8, r8". Technically, the bf00
 // encoding is available on ARMv6K, but we don't differentiate that finely.
-def : InstAlias<"nop", (tMOVr R8, R8, 14, 0), 0>, Requires<[IsThumb, IsThumb1Only]>;
+def : InstAlias<"nop", (tMOVr R8, R8, 14, zero_reg), 0>, Requires<[IsThumb, IsThumb1Only]>;
 
 
 // "neg" is and alias for "rsb rd, rn, #0"
