@@ -30,6 +30,10 @@
 namespace mlir {
 namespace emitc {
 void buildTerminatedBody(OpBuilder &builder, Location loc);
+/// Determines whether \p type is a valid integer type in EmitC.
+bool isValidEmitCIntegerType(mlir::Type type);
+/// Determines whether \p type is a valid floating-point type in EmitC.
+bool isValidEmitCFloatType(mlir::Type type);
 } // namespace emitc
 } // namespace mlir
 
