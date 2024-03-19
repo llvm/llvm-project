@@ -220,7 +220,7 @@ static_assert(!can_make_from_tuple<int*, std::tuple<A*>>::value);
 static_assert(!can_make_from_tuple<char*, std::tuple<const char*>>::value);
 
 // static_cast
-static_assert(!can_make_from_tuple<const B&, std::tuple<const A&>>::value);
+static_assert(!can_make_from_tuple<const B*, std::tuple<const A*>>::value);
 } // namespace LWG3528
 
 int main(int, char**)
