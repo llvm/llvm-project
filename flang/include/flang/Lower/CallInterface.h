@@ -328,7 +328,7 @@ public:
   void placeAddressAndLengthInput(const PassedEntity &passedEntity,
                                   mlir::Value addr, mlir::Value len);
 
-  /// Get lowered argument FIR argument given the Fortran argument.
+  /// Get lowered FIR argument given the Fortran argument.
   mlir::Value getInput(const PassedEntity &passedEntity);
 
   /// If this is a call to a procedure pointer or dummy, returns the related
@@ -347,7 +347,7 @@ public:
   /// this mapping must be done after argument lowering, and before the call
   /// itself.
   bool mustMapInterfaceSymbolsForResult() const;
-  /// Does the caller must map function interface symbols in order to evaluate
+  /// Must the caller map function interface symbols in order to evaluate
   /// the specification expressions of a given dummy argument?
   bool mustMapInterfaceSymbolsForDummyArgument(const PassedEntity &) const;
 
