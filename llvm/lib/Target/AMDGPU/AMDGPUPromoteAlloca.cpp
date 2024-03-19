@@ -724,14 +724,6 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       continue;
     }
 
-    if (isa<BitCastInst>(Inst)) {
-      // Look through bitcasts.
-      for (Use &U : Inst->uses())
-        Uses.push_back(&U);
-      UsersToRemove.push_back(Inst);
-      continue;
-    }
-
     if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
       // If we can't compute a vector index from this GEP, then we can't
       // promote this alloca to vector.
