@@ -718,16 +718,6 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
                                      CXXScopeSpec &SS, bool HasTemplateArgs,
                                      SourceLocation TemplateKWLoc,
                                      TypoExpr *&TE) {
-  #if 0
-  DeclContext *DC = SemaRef.computeDeclContext(RTy);
-  // If the object expression is dependent and isn't the current instantiation,
-  // lookup will not find anything and we must defer until instantiation.
-  if (!DC) {
-    R.setNotFoundInCurrentInstantiation();
-    return false;
-  }
-  #endif
-
   // FIXME: Should this use Name.isDependentName()?
   if (DeclarationName Name = R.getLookupName();
       Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
@@ -755,49 +745,18 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
                                       MOUS,
                                       TemplateKWLoc);
   }
-  #if 1
+
   SemaRef.LookupParsedName(R, /*S=*/nullptr, &SS, ObjectType);
-  #else
-  if (SS.isSet()) {
-    // If the member name was a qualified-id, look into the
-    // nested-name-specifier.
-    DC = SemaRef.computeDeclContext(SS, false);
-    // We tried to look into a dependent context that is not the current
-    // instantiation. Defer lookup until instantiation.
-    if (!DC) {
-      R.setNotFoundInCurrentInstantiation();
-      return false;
-    }
-
-    if (SemaRef.RequireCompleteDeclContext(SS, DC)) {
-      SemaRef.Diag(SS.getRange().getEnd(), diag::err_typecheck_incomplete_tag)
-          << SS.getRange() << DC;
-      return true;
-    }
-
-    assert(DC && "Cannot handle non-computable dependent contexts in lookup");
-
-    if (!isa<TypeDecl>(DC)) {
-      SemaRef.Diag(R.getNameLoc(), diag::err_qualified_member_nonclass)
-          << DC << SS.getRange();
-      return true;
-    }
-  }
-
-  // The record definition is complete, now look up the member.
-  SemaRef.LookupQualifiedName(R, DC, SS);
-  #endif
 
   if (!R.empty() || R.wasNotFoundInCurrentInstantiation())
     return false;
 
   DeclarationName Typo = R.getLookupName();
   SourceLocation TypoLoc = R.getNameLoc();
-  #if 1
+  // Recompute the lookup context.
   DeclContext *DC = SS.isSet()
       ? SemaRef.computeDeclContext(SS)
       : SemaRef.computeDeclContext(RTy);
-  #endif
 
   struct QueryState {
     Sema &SemaRef;
@@ -1059,7 +1018,11 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                                ActOnMemberAccessExtraArgs *ExtraArgs) {
   assert(!SS.isInvalid() && "nested-name-specifier cannot be invalid");
   if (R.wasNotFoundInCurrentInstantiation() ||
+  #if 0
       (SS.isValid() && !computeDeclContext(SS, false))) {
+  #else
+      false) {
+  #endif
     return ActOnDependentMemberExpr(BaseExpr, BaseExprType, IsArrow, OpLoc, SS,
                                     TemplateKWLoc, FirstQualifierInScope,
                                     R.getLookupNameInfo(), TemplateArgs);
@@ -1103,8 +1066,6 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     // Rederive where we looked up.
     DeclContext *DC = (SS.isSet() ? computeDeclContext(SS, false)
                                   : computeDeclContext(BaseType));
-                                  // : BaseType->getAsRecordDecl());
-
     if (ExtraArgs) {
       ExprResult RetryExpr;
       if (!IsArrow && BaseExpr && !BaseExpr->isTypeDependent()) {
@@ -1130,7 +1091,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       }
     }
 
-    if (SS.isInvalid() || (SS.isNotEmpty() && !DC)) {
+    if (SS.isNotEmpty() && !DC) {
       Diag(R.getNameLoc(), diag::err_undeclared_use)
             << MemberName << SS.getRange();
     } else if (DC) {
@@ -1142,16 +1103,6 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       Diag(R.getNameLoc(), diag::err_no_member)
           << MemberName << BaseExprType
           << (BaseExpr ? BaseExpr->getSourceRange() : SourceRange());
-    }
-
-    if (DC) {
-    } else {
-      #if 0
-      // FIXME: Is this needed?
-      Diag(R.getNameLoc(), diag::err_no_member)
-          << MemberName << BaseExprType
-          << (BaseExpr ? BaseExpr->getSourceRange() : SourceRange());
-      #endif
     }
     return ExprError();
   }
