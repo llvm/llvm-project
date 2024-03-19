@@ -648,9 +648,9 @@ void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
     replaceSymbol<LazyArchive>(s, f, sym);
     return;
   }
-  if (auto *n = lazyNode(s)) {
-    assert(!s->pendingArchiveLoad);
-    chainLazy<LazyArchive>(n, f, sym);
+  if (auto *node = lazyNode(s)) {
+    if (!s->pendingArchiveLoad)
+      chainLazy<LazyArchive>(node, f, sym);
     return;
   }
   auto *u = dyn_cast<Undefined>(s);
@@ -668,8 +668,8 @@ void SymbolTable::addLazyObject(InputFile *f, StringRef n) {
     return;
   }
   if (auto *node = lazyNode(s)) {
-    assert(!s->pendingArchiveLoad);
-    chainLazy<LazyObject>(node, f, n);
+    if (!s->pendingArchiveLoad)
+      chainLazy<LazyObject>(node, f, n);
     return;
   }
   auto *u = dyn_cast<Undefined>(s);
