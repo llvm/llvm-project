@@ -578,6 +578,35 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
   }
 }
 
+static void addPGOFlagsGPU(const ToolChain &TC, const ArgList &Args,
+                           ArgStringList &CmdArgs) {
+  const Driver &D = TC.getDriver();
+  auto *ProfileClangArg = Args.getLastArg(options::OPT_fprofile_generate_gpu,
+                                          options::OPT_fno_profile_generate);
+  auto *ProfileLLVMArg =
+      Args.getLastArg(options::OPT_fprofile_instr_generate_gpu,
+                      options::OPT_fno_profile_generate);
+  if (ProfileClangArg &&
+      ProfileClangArg->getOption().matches(options::OPT_fno_profile_generate))
+    ProfileClangArg = nullptr;
+
+  if (ProfileLLVMArg &&
+      ProfileLLVMArg->getOption().matches(options::OPT_fno_profile_generate))
+    ProfileLLVMArg = nullptr;
+
+  if (ProfileClangArg && ProfileLLVMArg) {
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << ProfileClangArg->getSpelling() << ProfileLLVMArg->getSpelling();
+    return;
+  }
+
+  if (ProfileClangArg)
+    CmdArgs.push_back("-fprofile-instrument=clang");
+
+  if (ProfileLLVMArg)
+    CmdArgs.push_back("-fprofile-instrument=llvm");
+}
+
 static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
                                    const JobAction &JA, const InputInfo &Output,
                                    const ArgList &Args, SanitizerArgs &SanArgs,
@@ -6049,10 +6078,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                   options::OPT_finstrument_functions_after_inlining,
                   options::OPT_finstrument_function_entry_bare);
 
-  // NVPTX/AMDGCN doesn't support PGO or coverage. There's no runtime support
-  // for sampling, overhead of call arc collection is way too high and there's
-  // no way to collect the output.
-  if (!Triple.isNVPTX() && !Triple.isAMDGCN())
+  // NVPTX/AMDGCN PGO is handled separately
+  // GPU targets don't have their own profiling libraries and are
+  // collected/handled by the host's profiling library
+  if (Triple.isNVPTX() || Triple.isAMDGCN())
+    addPGOFlagsGPU(TC, Args, CmdArgs);
+  else
     addPGOAndCoverageFlags(TC, C, JA, Output, Args, SanitizeArgs, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);
