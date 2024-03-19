@@ -19,30 +19,30 @@ end:
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-42-1.s -o gnu-42-1.o
 # RUN: llvm-readelf --notes gnu-42-1.o | \
-# RUN:   FileCheck --check-prefix=ELF-GNU -DPLATFORM="0x2a (unknown)" -DVERSION=0x1 %s
+# RUN:   FileCheck --check-prefix=ELF -DPLATFORM="0x2a (unknown)" -DVERSION=0x1 %s
 # RUN: llvm-readobj --notes gnu-42-1.o | \
-# RUN:   FileCheck --check-prefix=OBJ-GNU -DPLATFORM="0x2a (unknown)" -DVERSION=0x1 %s
+# RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x2a (unknown)" -DVERSION=0x1 %s
 
-# ELF-GNU: Displaying notes found in: .note.gnu.property
-# ELF-GNU-NEXT:   Owner                 Data size	Description
-# ELF-GNU-NEXT:   GNU                   0x00000018	NT_GNU_PROPERTY_TYPE_0 (property note)
-# ELF-GNU-NEXT:   AArch64 PAuth ABI core info: platform [[PLATFORM]], version [[VERSION]]
+# ELF: Displaying notes found in: .note.gnu.property
+# ELF-NEXT:   Owner                 Data size	Description
+# ELF-NEXT:   GNU                   0x00000018	NT_GNU_PROPERTY_TYPE_0 (property note)
+# ELF-NEXT:   AArch64 PAuth ABI core info: platform [[PLATFORM]], version [[VERSION]]
 
-# OBJ-GNU:      Notes [
-# OBJ-GNU-NEXT:   NoteSection {
-# OBJ-GNU-NEXT:     Name: .note.gnu.property
-# OBJ-GNU-NEXT:     Offset: 0x40
-# OBJ-GNU-NEXT:     Size: 0x28
-# OBJ-GNU-NEXT:     Note {
-# OBJ-GNU-NEXT:       Owner: GNU
-# OBJ-GNU-NEXT:       Data size: 0x18
-# OBJ-GNU-NEXT:       Type: NT_GNU_PROPERTY_TYPE_0 (property note)
-# OBJ-GNU-NEXT:       Property [
-# OBJ-GNU-NEXT:         AArch64 PAuth ABI core info: platform [[PLATFORM]], version [[VERSION]]
-# OBJ-GNU-NEXT:       ]
-# OBJ-GNU-NEXT:     }
-# OBJ-GNU-NEXT:   }
-# OBJ-GNU-NEXT: ]
+# OBJ:      Notes [
+# OBJ-NEXT:   NoteSection {
+# OBJ-NEXT:     Name: .note.gnu.property
+# OBJ-NEXT:     Offset: 0x40
+# OBJ-NEXT:     Size: 0x28
+# OBJ-NEXT:     Note {
+# OBJ-NEXT:       Owner: GNU
+# OBJ-NEXT:       Data size: 0x18
+# OBJ-NEXT:       Type: NT_GNU_PROPERTY_TYPE_0 (property note)
+# OBJ-NEXT:       Property [
+# OBJ-NEXT:         AArch64 PAuth ABI core info: platform [[PLATFORM]], version [[VERSION]]
+# OBJ-NEXT:       ]
+# OBJ-NEXT:     }
+# OBJ-NEXT:   }
+# OBJ-NEXT: ]
 
 #--- gnu-0-0.s
 
@@ -63,9 +63,9 @@ end:
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-0-0.s -o gnu-0-0.o
 # RUN: llvm-readelf --notes gnu-0-0.o | \
-# RUN:   FileCheck --check-prefix=ELF-GNU -DPLATFORM="0x0 (invalid)" -DVERSION=0x0 %s
+# RUN:   FileCheck --check-prefix=ELF -DPLATFORM="0x0 (invalid)" -DVERSION=0x0 %s
 # RUN: llvm-readobj --notes gnu-0-0.o | \
-# RUN:   FileCheck --check-prefix=OBJ-GNU -DPLATFORM="0x0 (invalid)" -DVERSION=0x0 %s
+# RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x0 (invalid)" -DVERSION=0x0 %s
 
 #--- gnu-1-0.s
 
@@ -86,9 +86,9 @@ end:
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-1-0.s -o gnu-1-0.o
 # RUN: llvm-readelf --notes gnu-1-0.o | \
-# RUN:   FileCheck --check-prefix=ELF-GNU -DPLATFORM="0x1 (baremetal)" -DVERSION=0x0 %s
+# RUN:   FileCheck --check-prefix=ELF -DPLATFORM="0x1 (baremetal)" -DVERSION=0x0 %s
 # RUN: llvm-readobj --notes gnu-1-0.o | \
-# RUN:   FileCheck --check-prefix=OBJ-GNU -DPLATFORM="0x1 (baremetal)" -DVERSION=0x0 %s
+# RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x1 (baremetal)" -DVERSION=0x0 %s
 
 #--- gnu-0x10000002-85.s
 
@@ -109,10 +109,10 @@ end:
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-0x10000002-85.s -o gnu-0x10000002-85.o
 # RUN: llvm-readelf --notes gnu-0x10000002-85.o | \
-# RUN:   FileCheck --check-prefix=ELF-GNU -DPLATFORM="0x10000002 (llvm_linux)" \
+# RUN:   FileCheck --check-prefix=ELF -DPLATFORM="0x10000002 (llvm_linux)" \
 # RUN:   -DVERSION="0x55 (PointerAuthIntrinsics, !PointerAuthCalls, PointerAuthReturns, !PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, !PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini)" %s
 # RUN: llvm-readobj --notes gnu-0x10000002-85.o | \
-# RUN:   FileCheck --check-prefix=OBJ-GNU -DPLATFORM="0x10000002 (llvm_linux)" \
+# RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x10000002 (llvm_linux)" \
 # RUN:   -DVERSION="0x55 (PointerAuthIntrinsics, !PointerAuthCalls, PointerAuthReturns, !PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, !PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini)" %s
 
 #--- gnu-short.s
@@ -134,32 +134,32 @@ end:
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-short.s -o gnu-short.o
 # RUN: llvm-readelf --notes gnu-short.o | \
-# RUN:   FileCheck --check-prefix=ELF-GNU-ERR -DSIZE=28 -DDATASIZE=18 \
+# RUN:   FileCheck --check-prefix=ELF-ERR -DSIZE=28 -DDATASIZE=18 \
 # RUN:   -DERR="<corrupted size: expected 16, got 12>" %s
 # RUN: llvm-readobj --notes gnu-short.o | \
-# RUN:   FileCheck --check-prefix=OBJ-GNU-ERR -DSIZE=28 -DDATASIZE=18 \
+# RUN:   FileCheck --check-prefix=OBJ-ERR -DSIZE=28 -DDATASIZE=18 \
 # RUN:   -DERR="<corrupted size: expected 16, got 12>" %s
 
-# ELF-GNU-ERR: Displaying notes found in: .note.gnu.property
-# ELF-GNU-ERR-NEXT:   Owner                 Data size	Description
-# ELF-GNU-ERR-NEXT:   GNU                   0x000000[[DATASIZE]]	NT_GNU_PROPERTY_TYPE_0 (property note)
-# ELF-GNU-ERR-NEXT:   AArch64 PAuth ABI core info: [[ERR]]
+# ELF-ERR: Displaying notes found in: .note.gnu.property
+# ELF-ERR-NEXT:   Owner                 Data size	Description
+# ELF-ERR-NEXT:   GNU                   0x000000[[DATASIZE]]	NT_GNU_PROPERTY_TYPE_0 (property note)
+# ELF-ERR-NEXT:   AArch64 PAuth ABI core info: [[ERR]]
 
-# OBJ-GNU-ERR:      Notes [
-# OBJ-GNU-ERR-NEXT:   NoteSection {
-# OBJ-GNU-ERR-NEXT:     Name: .note.gnu.property
-# OBJ-GNU-ERR-NEXT:     Offset: 0x40
-# OBJ-GNU-ERR-NEXT:     Size: 0x[[SIZE]]
-# OBJ-GNU-ERR-NEXT:     Note {
-# OBJ-GNU-ERR-NEXT:       Owner: GNU
-# OBJ-GNU-ERR-NEXT:       Data size: 0x[[DATASIZE]]
-# OBJ-GNU-ERR-NEXT:       Type: NT_GNU_PROPERTY_TYPE_0 (property note)
-# OBJ-GNU-ERR-NEXT:       Property [
-# OBJ-GNU-ERR-NEXT:         AArch64 PAuth ABI core info: [[ERR]]
-# OBJ-GNU-ERR-NEXT:       ]
-# OBJ-GNU-ERR-NEXT:     }
-# OBJ-GNU-ERR-NEXT:   }
-# OBJ-GNU-ERR-NEXT: ]
+# OBJ-ERR:      Notes [
+# OBJ-ERR-NEXT:   NoteSection {
+# OBJ-ERR-NEXT:     Name: .note.gnu.property
+# OBJ-ERR-NEXT:     Offset: 0x40
+# OBJ-ERR-NEXT:     Size: 0x[[SIZE]]
+# OBJ-ERR-NEXT:     Note {
+# OBJ-ERR-NEXT:       Owner: GNU
+# OBJ-ERR-NEXT:       Data size: 0x[[DATASIZE]]
+# OBJ-ERR-NEXT:       Type: NT_GNU_PROPERTY_TYPE_0 (property note)
+# OBJ-ERR-NEXT:       Property [
+# OBJ-ERR-NEXT:         AArch64 PAuth ABI core info: [[ERR]]
+# OBJ-ERR-NEXT:       ]
+# OBJ-ERR-NEXT:     }
+# OBJ-ERR-NEXT:   }
+# OBJ-ERR-NEXT: ]
 
 #--- gnu-long.s
 
@@ -181,8 +181,8 @@ end:
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-long.s -o gnu-long.o
 # RUN: llvm-readelf --notes gnu-long.o | \
-# RUN:   FileCheck --check-prefix=ELF-GNU-ERR -DSIZE=30 -DDATASIZE=20 \
+# RUN:   FileCheck --check-prefix=ELF-ERR -DSIZE=30 -DDATASIZE=20 \
 # RUN:   -DERR="<corrupted size: expected 16, got 24>" %s
 # RUN: llvm-readobj --notes gnu-long.o | \
-# RUN:   FileCheck --check-prefix=OBJ-GNU-ERR -DSIZE=30 -DDATASIZE=20 \
+# RUN:   FileCheck --check-prefix=OBJ-ERR -DSIZE=30 -DDATASIZE=20 \
 # RUN:   -DERR="<corrupted size: expected 16, got 24>" %s
