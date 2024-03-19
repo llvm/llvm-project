@@ -284,8 +284,8 @@ public:
               DWARFLinkerBase::OutputFileType OutFileType,
               raw_pwrite_stream &OutFile,
               DWARFLinkerBase::MessageHandlerTy Warning)
-      : DwarfStreamer(OutFileType, OutFile, Warning),
-        DIEBldr(DIEBldr), Rewriter(Rewriter){};
+      : DwarfStreamer(OutFileType, OutFile, Warning), DIEBldr(DIEBldr),
+        Rewriter(Rewriter){};
 
   using DwarfStreamer::emitCompileUnitHeader;
 
