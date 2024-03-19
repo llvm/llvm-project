@@ -9,14 +9,9 @@
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_INV_TRIGF_UTILS_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_INV_TRIGF_UTILS_H
 
-#include "math_utils.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
-#include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
-
-#include <errno.h>
 
 namespace LIBC_NAMESPACE {
 
@@ -24,70 +19,22 @@ namespace LIBC_NAMESPACE {
 constexpr double M_MATH_PI = 0x1.921fb54442d18p+1;
 constexpr double M_MATH_PI_2 = 0x1.921fb54442d18p+0;
 
-// atan table size
-constexpr int ATAN_T_BITS = 4;
-constexpr int ATAN_T_SIZE = 1 << ATAN_T_BITS;
+extern double ATAN_COEFFS[17][8];
 
-// N[Table[ArcTan[x], {x, 1/8, 8/8, 1/8}], 40]
-extern const double ATAN_T[ATAN_T_SIZE];
-extern const double ATAN_K[5];
+// For |x| <= 1/32 and 1 <= i <= 16, return Q(x) such that:
+//   Q(x) ~ (atan(x + i/16) - atan(i/16)) / x.
+LIBC_INLINE constexpr double atan_eval(double x, int i) {
+  double x2 = x * x;
 
-// The main idea of the function is to use formula
-// atan(u) + atan(v) = atan((u+v)/(1-uv))
+  double c0 = fputil::multiply_add(x, ATAN_COEFFS[i][2], ATAN_COEFFS[i][1]);
+  double c1 = fputil::multiply_add(x, ATAN_COEFFS[i][4], ATAN_COEFFS[i][3]);
+  double c2 = fputil::multiply_add(x, ATAN_COEFFS[i][6], ATAN_COEFFS[i][5]);
 
-// x should be positive, normal finite value
-LIBC_INLINE double atan_eval(double x) {
-  using FPB = fputil::FPBits<double>;
-  using Sign = fputil::Sign;
-  // Added some small value to umin and umax mantissa to avoid possible rounding
-  // errors.
-  FPB::StorageType umin =
-      FPB::create_value(Sign::POS, FPB::EXP_BIAS - ATAN_T_BITS - 1,
-                        0x100000000000UL)
-          .uintval();
-  FPB::StorageType umax =
-      FPB::create_value(Sign::POS, FPB::EXP_BIAS + ATAN_T_BITS,
-                        0xF000000000000UL)
-          .uintval();
-
-  FPB bs(x);
-  auto x_abs = bs.abs().uintval();
-
-  if (x_abs <= umin) {
-    double pe = LIBC_NAMESPACE::fputil::polyeval(
-        x * x, 0.0, ATAN_K[1], ATAN_K[2], ATAN_K[3], ATAN_K[4]);
-    return fputil::multiply_add(pe, x, x);
-  }
-
-  if (x_abs >= umax) {
-    double one_over_x_m = -1.0 / x;
-    double one_over_x2 = one_over_x_m * one_over_x_m;
-    double pe = LIBC_NAMESPACE::fputil::polyeval(
-        one_over_x2, ATAN_K[0], ATAN_K[1], ATAN_K[2], ATAN_K[3]);
-    return fputil::multiply_add(pe, one_over_x_m,
-                                bs.is_neg() ? (-M_MATH_PI_2) : (M_MATH_PI_2));
-  }
-
-  double pos_x = FPB(x_abs).get_val();
-  bool one_over_x = pos_x > 1.0;
-  if (one_over_x) {
-    pos_x = 1.0 / pos_x;
-  }
-
-  double near_x = fputil::nearest_integer(pos_x * ATAN_T_SIZE);
-  int val = static_cast<int>(near_x);
-  near_x *= 1.0 / ATAN_T_SIZE;
-
-  double v = (pos_x - near_x) / fputil::multiply_add(near_x, pos_x, 1.0);
-  double v2 = v * v;
-  double pe = LIBC_NAMESPACE::fputil::polyeval(v2, ATAN_K[0], ATAN_K[1],
-                                               ATAN_K[2], ATAN_K[3], ATAN_K[4]);
-  double result;
-  if (one_over_x)
-    result = M_MATH_PI_2 - fputil::multiply_add(pe, v, ATAN_T[val - 1]);
-  else
-    result = fputil::multiply_add(pe, v, ATAN_T[val - 1]);
-  return bs.is_neg() ? -result : result;
+  double x4 = x2 * x2;
+  double d1 = fputil::multiply_add(x2, c1, c0);
+  double d2 = fputil::multiply_add(x2, ATAN_COEFFS[i][7], c2);
+  double p = fputil::multiply_add(x4, d2, d1);
+  return p;
 }
 
 // > Q = fpminimax(asin(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20|],
@@ -99,7 +46,7 @@ constexpr double ASIN_COEFFS[10] = {0x1.5555555540fa1p-3, 0x1.333333512edc2p-4,
                                     -0x1.df946fa875ddp-8, 0x1.02311ecf99c28p-5};
 
 // Evaluate P(x^2) - 1, where P(x^2) ~ asin(x)/x
-LIBC_INLINE double asin_eval(double xsq) {
+LIBC_INLINE constexpr double asin_eval(double xsq) {
   double x4 = xsq * xsq;
   double r1 = fputil::polyeval(x4, ASIN_COEFFS[0], ASIN_COEFFS[2],
                                ASIN_COEFFS[4], ASIN_COEFFS[6], ASIN_COEFFS[8]);
