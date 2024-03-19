@@ -51,9 +51,6 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool isVal = false);
 
-mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
-                          std::size_t loopVarTypeSize);
-
 void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause);
