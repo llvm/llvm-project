@@ -5486,10 +5486,8 @@ bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
 
 bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
   auto checkDoubleVector = [](clang::QualType PassedType) -> bool {
-    if (const auto *VecTy = dyn_cast<VectorType>(PassedType)) {
-      clang::QualType BaseType = VecTy->getElementType();
-      return !BaseType->isHalfType() && !BaseType->isFloat32Type();
-    }
+    if (const auto *VecTy = PassedType->getAs<VectorType>())
+      return VecTy->getElementType()->isDoubleType();
     return false;
   };
   return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy,
