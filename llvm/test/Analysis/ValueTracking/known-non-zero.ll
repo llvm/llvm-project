@@ -1292,4 +1292,18 @@ true:
 false:
   ret i1 %ne
 }
+
+define <2 x i1> @range_metadata_vec(ptr %p, <2 x i32> %x) {
+; CHECK-LABEL: @range_metadata_vec(
+; CHECK-NEXT:    [[Z:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 8, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne <2 x i32> [[OR]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP0]]
+;
+  %v = load <2 x i32>, ptr %p, !range !{i32 1, i32 100}
+  %or = or <2 x i32> %v, %x
+  %cmp = icmp ne <2 x i32> %or, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
 declare i32 @llvm.experimental.get.vector.length.i32(i32, i32, i1)
