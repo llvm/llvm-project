@@ -37,6 +37,24 @@ __attribute__((visibility(
     "default"))) __thread void *__safestack_unsafe_stack_ptr = nullptr;
 }
 
+#if defined(__linux__) && defined(__x86_64__)
+#include <stdint.h>
+#include <sys/types.h>
+
+typedef struct {
+  void *tcb;        /* Pointer to the TCB.  Not necessarily the
+                       thread descriptor used by libpthread.  */
+  uint64_t *stack_guard;  /* Stack guard value for the thread.  */
+  void *unsafe_stack_ptr; /* Unsafe stack pointer for the thread. */
+} tcbhead_t;
+
+extern "C" {
+static __thread tcbhead_t tcb __attribute__((tls_model("initial-exec")));
+}
+#elif defined(__FreeBSD__)
+// TODO: Add TCB structure modification for FreeBSD
+#endif
+
 namespace {
 
 // TODO: The runtime library does not currently protect the safe stack beyond
@@ -103,7 +121,14 @@ inline void unsafe_stack_setup(void *start, size_t size, size_t guard) {
   void *stack_ptr = (char *)start + size;
   SFS_CHECK((((size_t)stack_ptr) & (kStackAlign - 1)) == 0);
 
+#if defined(__linux__) && defined(__x86_64__)
+  tcb.unsafe_stack_ptr = stack_ptr;
+#elif defined(__FreeBSD__)
+  // TODO: Store unsafe_stack_ptr in TCB for FreeBSD
+#else
   __safestack_unsafe_stack_ptr = stack_ptr;
+#endif
+
   unsafe_stack_start = start;
   unsafe_stack_size = size;
   unsafe_stack_guard = guard;
@@ -306,5 +331,11 @@ extern "C"
 
 extern "C"
     __attribute__((visibility("default"))) void *__get_unsafe_stack_ptr() {
+#if defined(__linux__) && defined(__x86_64__)
+  return tcb.unsafe_stack_ptr;
+#elif defined(__FreeBSD__)
+  // TODO: Retrieve unsafe_stack_ptr from TCB for FreeBSD
+#else
   return __safestack_unsafe_stack_ptr;
+#endif
 }
