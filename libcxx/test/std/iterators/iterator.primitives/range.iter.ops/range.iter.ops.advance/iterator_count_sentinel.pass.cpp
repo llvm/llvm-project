@@ -45,7 +45,6 @@ constexpr void check_forward(int* first, int* last, std::iter_difference_t<It> n
     if (n == 0) {
       assert(it.equals_count() == 0);
     } else {
-      assert(it.equals_count() > 0);
       assert(it.equals_count() == M || it.equals_count() == M + 1);
       assert(it.equals_count() <= n);
     }
