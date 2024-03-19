@@ -144,10 +144,10 @@ static OrderMap orderModule(const Module &M) {
           }
         };
 
-        for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
-          OrderConstantFromMetadata(DPV.getRawLocation());
-          if (DPV.isDbgAssign())
-            OrderConstantFromMetadata(DPV.getRawAddress());
+        for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+          OrderConstantFromMetadata(DVR.getRawLocation());
+          if (DVR.isDbgAssign())
+            OrderConstantFromMetadata(DVR.getRawAddress());
         }
 
         for (const Value *V : I.operands()) {
@@ -285,10 +285,10 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
       predictValueUseListOrder(&A, &F, OM, Stack);
     for (const BasicBlock &BB : F) {
       for (const Instruction &I : BB) {
-        for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
-          PredictValueOrderFromMetadata(DPV.getRawLocation());
-          if (DPV.isDbgAssign())
-            PredictValueOrderFromMetadata(DPV.getRawAddress());
+        for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+          PredictValueOrderFromMetadata(DVR.getRawLocation());
+          if (DVR.isDbgAssign())
+            PredictValueOrderFromMetadata(DVR.getRawAddress());
         }
         for (const Value *Op : I.operands()) {
           if (isa<Constant>(*Op) || isa<InlineAsm>(*Op)) // Visit GlobalValues.
@@ -447,15 +447,15 @@ ValueEnumerator::ValueEnumerator(const Module &M,
             continue;
           }
           // Enumerate non-local location metadata.
-          DPValue &DPV = cast<DPValue>(DR);
-          EnumerateNonLocalValuesFromMetadata(DPV.getRawLocation());
-          EnumerateMetadata(&F, DPV.getExpression());
-          EnumerateMetadata(&F, DPV.getVariable());
-          EnumerateMetadata(&F, &*DPV.getDebugLoc());
-          if (DPV.isDbgAssign()) {
-            EnumerateNonLocalValuesFromMetadata(DPV.getRawAddress());
-            EnumerateMetadata(&F, DPV.getAssignID());
-            EnumerateMetadata(&F, DPV.getAddressExpression());
+          DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
+          EnumerateNonLocalValuesFromMetadata(DVR.getRawLocation());
+          EnumerateMetadata(&F, DVR.getExpression());
+          EnumerateMetadata(&F, DVR.getVariable());
+          EnumerateMetadata(&F, &*DVR.getDebugLoc());
+          if (DVR.isDbgAssign()) {
+            EnumerateNonLocalValuesFromMetadata(DVR.getRawAddress());
+            EnumerateMetadata(&F, DVR.getAssignID());
+            EnumerateMetadata(&F, DVR.getAddressExpression());
           }
         }
         for (const Use &Op : I.operands()) {
@@ -1128,12 +1128,14 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
           AddFnLocalMetadata(MD->getMetadata());
       }
       /// RemoveDIs: Add non-instruction function-local metadata uses.
-      for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
-        assert(DPV.getRawLocation() && "DPValue location unexpectedly null");
-        AddFnLocalMetadata(DPV.getRawLocation());
-        if (DPV.isDbgAssign()) {
-          assert(DPV.getRawAddress() && "DPValue location unexpectedly null");
-          AddFnLocalMetadata(DPV.getRawAddress());
+      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+        assert(DVR.getRawLocation() &&
+               "DbgVariableRecord location unexpectedly null");
+        AddFnLocalMetadata(DVR.getRawLocation());
+        if (DVR.isDbgAssign()) {
+          assert(DVR.getRawAddress() &&
+                 "DbgVariableRecord location unexpectedly null");
+          AddFnLocalMetadata(DVR.getRawAddress());
         }
       }
       if (!I.getType()->isVoidTy())
