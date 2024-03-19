@@ -68,6 +68,11 @@ template <class _Iter, class _Sent, ranges::subrange_kind _Kind>
 struct __is_specialization_of_subrange<ranges::subrange<_Iter, _Sent, _Kind>> : true_type {};
 #endif
 
+_LIBCPP_DIAGNOSTIC_PUSH
+// Allow use of explicit(bool) extension.
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")_LIBCPP_DIAGNOSTIC_POP
+
 template <class _T1, class _T2>
 struct _LIBCPP_TEMPLATE_VIS pair
 #if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
@@ -443,6 +448,8 @@ private:
        __tuple_indices<_I2...>);
 #endif
 };
+
+_LIBCPP_DIAGNOSTIC_POP
 
 #if _LIBCPP_STD_VER >= 17
 template <class _T1, class _T2>
