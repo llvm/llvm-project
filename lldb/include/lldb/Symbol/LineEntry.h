@@ -130,18 +130,28 @@ struct LineEntry {
   ///     Shared pointer to the target this LineEntry belongs to.
   void ApplyFileMappings(lldb::TargetSP target_sp);
 
-  // Member variables.
-  AddressRange range; ///< The section offset address range for this line entry.
-  FileSpec file; ///< The source file, possibly mapped by the target.source-map
-                 ///setting
-  lldb::SupportFileSP
-      original_file_sp; ///< The original source file, from debug info.
-  uint32_t line = LLDB_INVALID_LINE_NUMBER; ///< The source line number, or zero
-                                            ///< if there is no line number
-                                            /// information.
-  uint16_t column =
-      0; ///< The column number of the source line, or zero if there
-         /// is no column information.
+  const FileSpec &GetFile() const {
+    assert(file_sp);
+    return file_sp->GetSpecOnly();
+  }
+
+  /// The section offset address range for this line entry.
+  AddressRange range;
+
+  /// The source file, possibly mapped by the target.source-map setting.
+  lldb::SupportFileSP file_sp;
+
+  /// The original source file, from debug info.
+  lldb::SupportFileSP original_file_sp;
+
+  /// The source line number, or LLDB_INVALID_LINE_NUMBER if there is no line
+  /// number information.
+  uint32_t line = LLDB_INVALID_LINE_NUMBER;
+
+  /// The column number of the source line, or zero if there is no column
+  /// information.
+  uint16_t column = 0;
+
   uint16_t is_start_of_statement : 1, ///< Indicates this entry is the beginning
                                       ///of a statement.
       is_start_of_basic_block : 1, ///< Indicates this entry is the beginning of

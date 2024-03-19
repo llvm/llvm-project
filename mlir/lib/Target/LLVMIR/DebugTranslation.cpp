@@ -163,7 +163,8 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
       /*File=*/nullptr, /*Line=*/0,
       /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
-      /*DWARFAddressSpace=*/std::nullopt, /*Flags=*/llvm::DINode::FlagZero);
+      /*DWARFAddressSpace=*/std::nullopt, /*PtrAuthData=*/std::nullopt,
+      /*Flags=*/llvm::DINode::FlagZero);
 }
 
 llvm::DIFile *DebugTranslation::translateImpl(DIFileAttr attr) {
@@ -223,8 +224,10 @@ DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
   }
 
   auto setRecursivePlaceholder = [&](llvm::DIType *placeholder) {
-    auto [iter, inserted] =
+    [[maybe_unused]] auto [iter, inserted] =
         recursiveTypeMap.try_emplace(recursiveId, placeholder);
+    (void)iter;
+    (void)inserted;
     assert(inserted && "illegal reuse of recursive id");
   };
 

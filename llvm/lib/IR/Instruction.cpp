@@ -143,8 +143,8 @@ void Instruction::insertBefore(BasicBlock &BB,
     return;
 
   // We've inserted "this": if InsertAtHead is set then it comes before any
-  // DPValues attached to InsertPos. But if it's not set, then any DbgRecords
-  // should now come before "this".
+  // DbgVariableRecords attached to InsertPos. But if it's not set, then any
+  // DbgRecords should now come before "this".
   bool InsertAtHead = InsertPos.getHeadBit();
   if (!InsertAtHead) {
     DPMarker *SrcMarker = BB.getMarker(InsertPos);
@@ -217,7 +217,7 @@ void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
   if (BB.IsNewDbgInfoFormat && DbgMarker && !Preserve) {
     if (I != this->getIterator() || InsertAtHead) {
       // "this" is definitely moving in the list, or it's moving ahead of its
-      // attached DPValues. Detach any existing DbgRecords.
+      // attached DbgVariableRecords. Detach any existing DbgRecords.
       handleMarkerRemoval();
     }
   }
@@ -320,8 +320,8 @@ void Instruction::dropDbgRecords() {
     DbgMarker->dropDbgRecords();
 }
 
-void Instruction::dropOneDbgRecord(DbgRecord *DPV) {
-  DbgMarker->dropOneDbgRecord(DPV);
+void Instruction::dropOneDbgRecord(DbgRecord *DVR) {
+  DbgMarker->dropOneDbgRecord(DVR);
 }
 
 bool Instruction::comesBefore(const Instruction *Other) const {

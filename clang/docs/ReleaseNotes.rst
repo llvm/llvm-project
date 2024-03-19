@@ -47,6 +47,12 @@ C++ Specific Potentially Breaking Changes
 
 ABI Changes in This Version
 ---------------------------
+- Fixed Microsoft name mangling of implicitly defined variables used for thread
+  safe static initialization of static local variables. This change resolves
+  incompatibilities with code compiled by MSVC but might introduce
+  incompatibilities with code compiled by earlier versions of Clang when an
+  inline member function that contains a static local variable with a dynamic
+  initializer is declared with ``__declspec(dllimport)``. (#GH83616).
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -204,21 +210,6 @@ Attribute Changes in Clang
   and each must be a positive integer when provided. The parameter ``x`` is required, while ``y`` and
   ``z`` are optional with default value of 1.
 
-- The ``_Nullable`` and ``_Nonnull`` family of type attributes can now apply
-  to certain C++ class types, such as smart pointers:
-  ``void useObject(std::unique_ptr<Object> _Nonnull obj);``.
-
-  This works for standard library types including ``unique_ptr``, ``shared_ptr``,
-  and ``function``. See
-  `the attribute reference documentation <https://llvm.org/docs/AttributeReference.html#nullability-attributes>`_
-  for the full list.
-
-- The ``_Nullable`` attribute can be applied to C++ class declarations:
-  ``template <class T> class _Nullable MySmartPointer {};``.
-
-  This allows the ``_Nullable`` and ``_Nonnull`` family of type attributes to
-  apply to this class.
-
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
@@ -259,6 +250,10 @@ Improvements to Clang's diagnostics
   such as attempting to call ``free`` on an unallocated object. Fixes
   `#79443 <https://github.com/llvm/llvm-project/issues/79443>`_.
 
+- Clang no longer warns when the ``bitand`` operator is used with boolean
+  operands, distinguishing it from potential typographical errors or unintended
+  bitwise operations. Fixes #GH77601.
+
 - Clang will now print ``static_assert`` failure details for binary operators on
   structs, vectors, or arrays. The diagnostic is limited in size (the limit may
   be adjusted with `-fconstexpr-print-value-size-limit=N`), and is not emitted
@@ -290,7 +285,6 @@ Improvements to Clang's diagnostics
        87 | static_assert(S{1, 2} == f());
           |               ~~~~~~~~^~~~~~
 
-
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -321,6 +315,9 @@ Bug Fixes in This Version
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
 
+- Fix value of predefined macro ``__FUNCTION__`` in MSVC compatibility mode.
+  Fixes (#GH66114).
+
 - Clang now emits errors for explicit specializations/instatiations of lambda call
   operator.
   Fixes (#GH83267).
@@ -334,6 +331,9 @@ Bug Fixes in This Version
   as ``_Complex float / float`` rather than ``_Complex float / _Complex float``), as mandated
   by the C standard. This significantly improves codegen of `*` and `/` especially.
   Fixes (`#31205 <https://github.com/llvm/llvm-project/issues/31205>`_).
+
+- Fixes an assertion failure on invalid code when trying to define member
+  functions in lambdas.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -428,6 +428,10 @@ Bug Fixes to C++ Support
   Fixes (#GH80997)
 - Fix an issue where missing set friend declaration in template class instantiation.
   Fixes (#GH84368).
+- Fixed a crash while checking constraints of a trailing requires-expression of a lambda, that the
+  expression references to an entity declared outside of the lambda. (#GH64808)
+- Clang's __builtin_bit_cast will now produce a constant value for records with empty bases. See:
+  (#GH82383)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -475,12 +479,34 @@ Arm and AArch64 Support
   like ``target_version`` or ``target_clones``.
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
     * Arm Cortex-A78AE (cortex-a78ae).
+    * Arm Cortex-A520AE (cortex-a520ae).
+    * Arm Cortex-A720AE (cortex-a720ae).
 
 Android Support
 ^^^^^^^^^^^^^^^
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- Clang-cl now supports function targets with intrinsic headers. This allows
+  for runtime feature detection of intrinsics. Previously under clang-cl
+  ``immintrin.h`` and similar intrinsic headers would only include the intrinsics
+  if building with that feature enabled at compile time, e.g. ``avxintrin.h``
+  would only be included if AVX was enabled at compile time. This was done to work
+  around include times from MSVC STL including ``intrin.h`` under clang-cl.
+  Clang-cl now provides ``intrin0.h`` for MSVC STL and therefore all intrinsic
+  features without requiring enablement at compile time.
+  Fixes: (`#53520 <https://github.com/llvm/llvm-project/issues/53520>`_)
+
+- Improved compile times with MSVC STL. MSVC provides ``intrin0.h`` which is a
+  header that only includes intrinsics that are used by MSVC STL to avoid the
+  use of ``intrin.h``. MSVC STL when compiled under clang uses ``intrin.h``
+  instead. Clang-cl now provides ``intrin0.h`` for the same compiler throughput
+  purposes as MSVC. Clang-cl also provides ``yvals_core.h`` to redefine
+  ``_STL_INTRIN_HEADER`` to expand to ``intrin0.h`` instead of ``intrin.h``.
+  This also means that if all intrinsic features are enabled at compile time
+  including STL headers will no longer slow down compile times since ``intrin.h``
+  is not included from MSVC STL.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -580,6 +606,8 @@ Python Binding Changes
 ----------------------
 
 - Exposed `CXRewriter` API as `class Rewriter`.
+- Add some missing kinds from Index.h (CursorKind: 149-156, 272-320, 420-437.
+  TemplateArgumentKind: 5-9. TypeKind: 161-175 and 178).
 
 OpenMP Support
 --------------

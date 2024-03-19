@@ -14,12 +14,11 @@
 
 #include "FormatToken.h"
 #include "ContinuationIndenter.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Debug.h"
-#include <climits>
 
 namespace clang {
 namespace format {
+
+bool IsCpp = false;
 
 const char *getTokenTypeName(TokenType Type) {
   static const char *const TokNames[] = {

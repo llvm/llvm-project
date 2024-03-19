@@ -399,6 +399,7 @@ cc_library(
         "//mlir:IR",
         "//mlir:InferIntRangeInterface",
         "//mlir:InferTypeOpInterface",
+        "//mlir:InliningUtils",
         "//mlir:LLVMDialect",
         "//mlir:LinalgDialect",
         "//mlir:LoopLikeInterface",
@@ -407,7 +408,6 @@ cc_library(
         "//mlir:SideEffectInterfaces",
         "//mlir:Support",
         "//mlir:TensorDialect",
-        "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:ViewLikeInterface",
     ],
@@ -532,7 +532,7 @@ cc_library(
         "//mlir:PDLInterpDialect",
         "//mlir:Pass",
         "//mlir:Support",
-        "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
 
@@ -570,7 +570,7 @@ cc_library(
         "//mlir:SCFDialect",
         "//mlir:SPIRVDialect",
         "//mlir:Support",
-        "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
 
@@ -600,7 +600,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:SCFTransforms",
-        "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
 
@@ -695,7 +695,6 @@ cc_library(
         "//mlir:SCFToControlFlow",
         "//mlir:SPIRVDialect",
         "//mlir:ToLLVMIRTranslation",
-        "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
         "//mlir:VectorToLLVM",
@@ -728,7 +727,6 @@ cc_library(
         "//mlir:SCFTransforms",
         "//mlir:TensorDialect",
         "//mlir:TensorTransforms",
-        "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
         "//mlir:VectorToSCF",
@@ -770,7 +768,7 @@ cc_library(
         "//mlir:MathTransforms",
         "//mlir:Pass",
         "//mlir:SCFDialect",
-        "//mlir:TransformUtils",
+        "//mlir:Transforms",
         "//mlir:VectorDialect",
         "//mlir:X86VectorDialect",
     ],
@@ -786,7 +784,7 @@ cc_library(
         "//mlir:IR",
         "//mlir:MathDialect",
         "//mlir:Pass",
-        "//mlir:TransformUtils",
+        "//mlir:Transforms",
         "//mlir:VCIXDialect",
         "//mlir:VectorDialect",
     ],
@@ -850,7 +848,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:Support",
-        "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
 
@@ -869,7 +867,7 @@ cc_library(
         "//mlir:SCFDialect",
         "//mlir:SCFTransforms",
         "//mlir:SCFUtils",
-        "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
 
@@ -994,7 +992,7 @@ cc_library(
         "//mlir:FuncTransforms",
         "//mlir:IR",
         "//mlir:Pass",
-        "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
 
@@ -1033,7 +1031,7 @@ cc_library(
         "//mlir:SCFDialect",
         "//mlir:Support",
         "//mlir:TensorDialect",
-        "//mlir:TransformUtils",
+        "//mlir:Transforms",
         "//mlir:VectorDialect",
         "//mlir:VectorToSCF",
         "//mlir:VectorTransforms",
@@ -1119,6 +1117,6 @@ cc_library(
         "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:Support",
-        "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
