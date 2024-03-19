@@ -93,9 +93,16 @@ void mapSymbolAttributes(AbstractConverter &, const semantics::SymbolRef &,
 /// Instantiate the variables that appear in the specification expressions
 /// of the result of a function call. The instantiated variables are added
 /// to \p symMap.
-void mapCallInterfaceSymbols(AbstractConverter &,
-                             const Fortran::lower::CallerInterface &caller,
-                             SymMap &symMap);
+void mapCallInterfaceSymbolsForResult(
+    AbstractConverter &, const Fortran::lower::CallerInterface &caller,
+    SymMap &symMap);
+
+/// Instantiate the variables that appear in the specification expressions
+/// of a dummy argument of a procedure call. The instantiated variables are
+/// added to \p symMap.
+void mapCallInterfaceSymbolsForDummyArgument(
+    AbstractConverter &, const Fortran::lower::CallerInterface &caller,
+    SymMap &symMap, const Fortran::semantics::Symbol &dummySymbol);
 
 // TODO: consider saving the initial expression symbol dependence analysis in
 // in the PFT variable and dealing with the dependent symbols instantiation in
