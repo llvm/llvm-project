@@ -14271,26 +14271,23 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         continue;
       }
 
-      unsigned Sz = 1 + Log2_32(MaxVF) - Log2_32(MinVF);
-      SmallVector<unsigned> CandidateVFs(Sz);
-      auto VFsToFill = make_range(CandidateVFs.begin(), CandidateVFs.end());
+      std::optional<unsigned> NonPowerOf2VF;
       if (VectorizeNonPowerOf2) {
         // First try vectorizing with a non-power-of-2 VF. At the moment, only
         // consider cases where VF + 1 is a power-of-2, i.e. almost all vector
         // lanes are used.
         unsigned CandVF = Operands.size();
         if (isPowerOf2_32(CandVF + 1) && CandVF <= MaxVF) {
-          CandidateVFs[0] = CandVF;
-          CandidateVFs.push_back(0);
-          VFsToFill = make_range(CandidateVFs.begin() + 1, CandidateVFs.end());
+          NonPowerOf2VF = CandVF;
         }
       }
-      // FIXME: Is division-by-2 the correct step? Should we assert that the
-      // register size is a power-of-2?
-      unsigned Size = MaxVF;
-      for_each(VFsToFill, [&](unsigned &VF) {
-        VF = Size;
-        Size /= 2;
+
+      unsigned Sz = 1 + Log2_32(MaxVF) - Log2_32(MinVF);
+      SmallVector<unsigned> CandidateVFs(Sz + bool(NonPowerOf2VF));
+      unsigned Size = MinVF;
+      for_each(reverse(CandidateVFs), [&](unsigned &VF) {
+        VF = Size > MaxVF ? *NonPowerOf2VF : Size;
+        Size *= 2;
       });
       unsigned StartIdx = 0;
       for (unsigned Size : CandidateVFs) {
