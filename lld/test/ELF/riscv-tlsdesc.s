@@ -30,10 +30,10 @@
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d a.32.ie | FileCheck %s --check-prefix=IE32
 
 # RUN: llvm-mc -triple=riscv64 --position-independent -filetype=obj d.s -o d.64.o
-# RUN: not ld.lld -shared -soname=libd.64.so -o libd.64.so d.64.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL
+# RUN: not ld.lld -shared -soname=d.64.so -o d.64.so d.64.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL
 
-# RUN: llvm-mc -triple=riscv32 --position-independent -filetype=obj d.s -o d.32.o
-# RUN: not ld.lld -shared -soname=libd.32.so -o libd.32.so d.32.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL
+# RUN: llvm-mc -triple=riscv32 --position-independent -filetype=obj d.s -o d.32.o --defsym ELF32=1
+# RUN: not ld.lld -shared -soname=d.32.so -o d.32.so d.32.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL
 
 # GD64-RELA:      .rela.dyn {
 # GD64-RELA-NEXT:   0x2408 R_RISCV_TLSDESC - 0x7FF
@@ -203,29 +203,17 @@ b:
 c: .zero 4
 
 #--- d.s
-  .text
-  .attribute	4, 16
-  .attribute	5, "rv64i2p1_m2p0_a2p1_c2p0"
-  .globl	bar
-  .p2align	1
-  .type	bar,@function
-bar:
-  addi	sp, sp, -16
-.Lpcrel_hi0:
-  auipc	a0, %got_pcrel_hi(_ZTH3foo)
-  ld	a0, %pcrel_lo(.Lpcrel_hi0)(a0)
-  beqz	a0, .Ltlsdesc_hi0
-  call	_ZTH3foo
+.macro load dst, src
+.ifdef ELF32
+lw \dst, \src
+.else
+ld \dst, \src
+.endif
+.endm
+
 .Ltlsdesc_hi0:
   auipc	a0, %tlsdesc_hi(foo)
-  ld	a1, %tlsdesc_load_lo(.Ltlsdesc_hi0)(a0)
+  load	a1, %tlsdesc_load_lo(.Ltlsdesc_hi0)(a0)
   addi	a0, a0, %tlsdesc_add_lo(.Ltlsdesc_hi0)
   jalr	t0, 0(a1), %tlsdesc_call(.Ltlsdesc_hi0)
   add	a1, a0, tp
-  lw	a0, 0(a1)
-  addiw	a0, a0, 1
-  sw	a0, 0(a1)
-  addi	sp, sp, 16
-  ret
-
-.weak _ZTH3foo
