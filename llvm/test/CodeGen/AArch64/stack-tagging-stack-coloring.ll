@@ -3,7 +3,7 @@
 
 ; RUN: llc --mattr=+mte -no-stack-coloring=false -stack-tagging-use-stack-safety=0 -o - %s | \
 ; RUN:   FileCheck %s --check-prefix=COLOR
-; RUN:  llc --mattr=+mte -no-stack-coloring=true -stack-tagging-use-stack-safety=0 -o - %s | \
+; RUN: llc --mattr=+mte -no-stack-coloring=true -stack-tagging-use-stack-safety=0 -o - %s | \
 ; RUN:   FileCheck %s --check-prefix=NOCOLOR
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
