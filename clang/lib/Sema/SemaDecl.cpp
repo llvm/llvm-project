@@ -3924,6 +3924,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
   const auto OldFX = Old->getFunctionEffects();
   const auto NewFX = New->getFunctionEffects();
+  QualType OldQTypeForComparison = OldQType;
   if (OldFX != NewFX) {
     const auto Diffs = FunctionEffectSet::differences(OldFX, NewFX);
     for (const auto &Item : Diffs) {
@@ -3936,29 +3937,29 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         Diag(Old->getLocation(), diag::note_previous_declaration);
       }
     }
+    // Following a warning, we could skip merging effects from the previous
+    // declaration, but that would trigger an additional "conflicting types"
+    // error.
+    if (const auto *NewFPT = NewQType->getAs<FunctionProtoType>()) {
+      auto MergedFX = FunctionEffectSet::getUnion(Context, OldFX, NewFX);
 
-    const auto MergedFX = FunctionEffectSet::getUnion(Context, OldFX, NewFX);
-
-    // Having diagnosed any problems, prevent further errors by applying the
-    // merged set of effects to both declarations.
-    auto applyMergedFX = [&](FunctionDecl *FD) {
-      const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
-      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      FunctionProtoType::ExtProtoInfo EPI = NewFPT->getExtProtoInfo();
       EPI.FunctionEffects = MergedFX;
-      QualType ModQT = Context.getFunctionType(FD->getReturnType(),
-                                               FPT->getParamTypes(), EPI);
+      QualType ModQT = Context.getFunctionType(NewFPT->getReturnType(),
+                                               NewFPT->getParamTypes(), EPI);
 
-      FD->setType(ModQT);
-    };
+      New->setType(ModQT);
+      NewQType = New->getType();
 
-    // TODO: We used to apply the merged set of effects to the old decl.
-    // Now we don't.
-
-    // applyMergedFX(Old);
-    applyMergedFX(New);
-
-    // OldQType = Old->getType();
-    NewQType = New->getType();
+      // Revise OldQTForComparison to include the merged effects,
+      // so as not to fail due to differences later.
+      if (const auto *OldFPT = OldQType->getAs<FunctionProtoType>()) {
+        EPI = OldFPT->getExtProtoInfo();
+        EPI.FunctionEffects = MergedFX;
+        OldQTypeForComparison = Context.getFunctionType(
+            OldFPT->getReturnType(), OldFPT->getParamTypes(), EPI);
+      }
+    }
   }
 
   if (getLangOpts().CPlusPlus) {
@@ -4125,9 +4126,8 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     // We also want to respect all the extended bits except noreturn.
 
     // noreturn should now match unless the old type info didn't have it.
-    QualType OldQTypeForComparison = OldQType;
     if (!OldTypeInfo.getNoReturn() && NewTypeInfo.getNoReturn()) {
-      auto *OldType = OldQType->castAs<FunctionProtoType>();
+      auto *OldType = OldQTypeForComparison->castAs<FunctionProtoType>();
       const FunctionType *OldTypeForComparison
         = Context.adjustFunctionType(OldType, OldTypeInfo.withNoReturn(true));
       OldQTypeForComparison = QualType(OldTypeForComparison, 0);

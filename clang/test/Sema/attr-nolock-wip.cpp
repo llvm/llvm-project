@@ -6,6 +6,10 @@
 
 // ============================================================================
 
+void f2(int);
+void f2(int) [[clang::nolock]]; // expected-note {{previous declaration is here}}
+void f2(int); // expected-warning {{attribute 'nolock' on function does not match previous declaration}}
+
 // ============================================================================
 
 #if 0

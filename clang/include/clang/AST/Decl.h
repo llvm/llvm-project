@@ -3008,12 +3008,7 @@ public:
   /// computed and stored.
   unsigned getODRHash() const;
 
-  FunctionEffectSet getFunctionEffects() const {
-    const auto *FPT = getType()->getAs<FunctionProtoType>();
-    if (FPT)
-      return FPT->getFunctionEffects();
-    return {};
-  }
+  FunctionEffectSet getFunctionEffects() const;
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

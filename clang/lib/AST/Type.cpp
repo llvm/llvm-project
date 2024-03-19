@@ -5011,7 +5011,8 @@ bool FunctionEffect::diagnoseMethodOverride(bool Adding,
   return false;
 }
 
-bool FunctionEffect::canInferOnFunction(QualType QT, const TypeSourceInfo *FType) const {
+bool FunctionEffect::canInferOnFunction(QualType QT,
+                                        const TypeSourceInfo *FType) const {
   switch (type()) {
   case Type::NoAllocTrue:
   case Type::NoLockTrue: {

@@ -75,13 +75,31 @@ struct Derived : public Base {
 #endif // __cplusplus
 
 // --- REDECLARATIONS ---
-// TODO: These are now errors in C++, but not in C
 
 #ifdef __cplusplus
-int f2(int); // expected-note {{previous declaration is here}}
-int f2(int) [[clang::nolock]]; // expected-error {{conflicting types for 'f2'}}
-#endif // __cplusplus
+// In C++, the third declaration gets seen as a redeclaration of the second.
+void f2();
+void f2() [[clang::nolock]]; // expected-note {{previous declaration is here}}
+void f2(); // expected-warning {{attribute 'nolock' on function does not match previous declaration}}
+#else
+// In C, the third declaration is redeclaration of the first (?).
+void f2();
+void f2() [[clang::nolock]];
+void f2();
+#endif
+// Note: we verify that the attribute is actually seen during the constraints tests.
 
+
+// Ensure that the redeclaration's attribute is seen and diagnosed correctly.
+
+// void f2() {
+// 	static int x;
+// }
+// void f2() [[clang::nolock]];
+// 
+// void f3() [[clang::nolock]] {
+// 	f2();
+// }
 
 #if 0
 int f2();

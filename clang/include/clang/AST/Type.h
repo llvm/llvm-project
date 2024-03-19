@@ -4285,7 +4285,7 @@ public:
   /// provided so any AttributedType sugar can be examined). TSI can be null
   /// on an implicit function like a default constructor.
   ///
-  /// This is only used if the effect has FE_InferrableOnCallees flag set. 
+  /// This is only used if the effect has FE_InferrableOnCallees flag set.
   /// Example: This allows nolock(false) to prevent inference for the function.
   bool canInferOnFunction(QualType QT, const TypeSourceInfo *FType) const;
 

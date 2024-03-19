@@ -2458,10 +2458,13 @@ struct CallableInfo {
     // llvm::errs() << "CallableInfo " << name() << "\n";
 
     if (auto *FD = dyn_cast<FunctionDecl>(CDecl)) {
-      assert(FD->getCanonicalDecl() == FD);
       // Use the function's definition, if any.
       if (auto *Def = FD->getDefinition()) {
         CDecl = FD = Def;
+        // is the definition always canonical?
+        assert(FD->getCanonicalDecl() == FD);
+      } else {
+        FD = FD->getCanonicalDecl();
       }
       CType = CallType::Function;
       if (auto *Method = dyn_cast<CXXMethodDecl>(FD)) {
@@ -2902,8 +2905,7 @@ private:
     // Build a PendingFunctionAnalysis on the stack. If it turns out to be
     // complete, we'll have avoided a heap allocation; if it's incomplete, it's
     // a fairly trivial move to a heap-allocated object.
-    PendingFunctionAnalysis FAnalysis(Sem, CInfo,
-                                      AllInferrableEffectsToVerify);
+    PendingFunctionAnalysis FAnalysis(Sem, CInfo, AllInferrableEffectsToVerify);
 
     if constexpr (DebugLogLevel > 0) {
       llvm::outs() << "\nVerifying " << CInfo.name(Sem) << " ";
@@ -2981,8 +2983,8 @@ private:
     }
     if constexpr (DebugLogLevel > 0) {
       llvm::outs() << "followCall from " << Caller.name(Sem) << " to "
-                  << Callee.name(Sem)
-                  << "; verifiable: " << Callee.isVerifiable() << "; callee ";
+                   << Callee.name(Sem)
+                   << "; verifiable: " << Callee.isVerifiable() << "; callee ";
       CalleeEffects.dump(llvm::outs());
       llvm::outs() << "\n";
     }
@@ -3161,7 +3163,7 @@ private:
           case DiagnosticID::HasStaticLocal:
             S.Diag(Diag2.Loc, diag::note_func_effect_has_static_local)
                 << effectName << CalleeName;
-            UNTESTED
+            TESTED
             break;
           case DiagnosticID::AccessesThreadLocal:
             S.Diag(Diag2.Loc, diag::note_func_effect_uses_thread_local)

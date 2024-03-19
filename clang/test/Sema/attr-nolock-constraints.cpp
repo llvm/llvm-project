@@ -139,3 +139,10 @@ void nl11() [[clang::nolock]]
 {
 	nl11_no_inference(); // expected-warning {{'nolock' function 'nl11' must not call non-'nolock' function 'nl11_no_inference'}}
 }
+
+// Verify that when attached to a redeclaration, the attribute successfully attaches.
+void nl12() {
+	static int x; // expected-warning {{'nolock' function 'nl12' must not have static locals}}
+}
+void nl12() [[clang::nolock]];
+void nl13() [[clang::nolock]] { nl12(); }
