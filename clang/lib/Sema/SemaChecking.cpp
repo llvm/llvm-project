@@ -7480,7 +7480,7 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // For variadic functions, we may have more args than parameters.
     // For some K&R functions, we may have less args than parameters.
     const auto N = std::min<unsigned>(Proto->getNumParams(), Args.size());
-    bool AnyScalableArgsOrRet = false;
+    bool AnyScalableArgsOrRet = Proto->getReturnType()->isSizelessVectorType();
     for (unsigned ArgIdx = 0; ArgIdx < N; ++ArgIdx) {
       // Args[ArgIdx] can be null in malformed code.
       if (const Expr *Arg = Args[ArgIdx]) {
@@ -7516,28 +7516,23 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       }
     }
 
-    auto *CallerFD = dyn_cast<FunctionDecl>(CurContext);
-    bool IsCalleeStreaming =
-        (ExtInfo.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask);
-    bool IsCalleeStreamingCompatible =
-        (ExtInfo.AArch64SMEAttributes &
-         FunctionType::SME_PStateSMCompatibleMask);
-    bool IsBuiltin = (FD && FD->getBuiltinID());
-    AnyScalableArgsOrRet |= Proto->getReturnType()->isSizelessVectorType();
-
-    // If the caller is a function and the callee has a different
-    // non-compitable streaming attribute. If it passed any VL-based arguments
-    // or return VL-based value, then warn that the streaming and non-streaming
-    // vector lengths may be different.
-    if (CallerFD && !IsBuiltin && AnyScalableArgsOrRet) {
-      ArmStreamingType CallerFnType = getArmStreamingFnType(CallerFD);
-      if ((CallerFnType != ArmStreaming &&
-           CallerFnType != ArmStreamingCompatible && IsCalleeStreaming) ||
-          (CallerFnType == ArmStreaming && !IsCalleeStreaming &&
-           !IsCalleeStreamingCompatible) ||
-          (CallerFnType == ArmStreamingCompatible &&
-           (IsCalleeStreaming || !IsCalleeStreamingCompatible)))
-        Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
+    // If the call requires a streaming-mode change and has scalable vector
+    // arguments or return values, then warn the user that the streaming and
+    // non-streaming vector lengths may be different.
+    bool IsBuiltin = FD && FD->getBuiltinID();
+    if (auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
+      if (!IsBuiltin && AnyScalableArgsOrRet) {
+        bool IsCalleeStreaming = ExtInfo.AArch64SMEAttributes &
+                                 FunctionType::SME_PStateSMEnabledMask;
+        bool IsCalleeStreamingCompatible =
+            ExtInfo.AArch64SMEAttributes &
+            FunctionType::SME_PStateSMCompatibleMask;
+        ArmStreamingType CallerFnType = getArmStreamingFnType(CallerFD);
+        if (!IsCalleeStreamingCompatible &&
+            (CallerFnType == ArmStreamingCompatible ||
+             ((CallerFnType == ArmStreaming) ^ IsCalleeStreaming)))
+          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
+      }
     }
 
     // If the callee uses AArch64 SME ZA state but the caller doesn't define
