@@ -26,12 +26,12 @@ TEST(LlvmLibcPipe2Test, Pipe2CreationTest) {
   LIBC_NAMESPACE::libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
-  // Create pipe(2) with all valid flags set
-  #ifdef CONFIG_WATCH_QUEUE
+// Create pipe(2) with all valid flags set
+#ifdef CONFIG_WATCH_QUEUE
   flags = O_CLOEXEC | O_NONBLOCK | O_DIRECT | O_NOTIFICATION_PIPE;
-  #else
+#else
   flags = O_CLOEXEC | O_NONBLOCK | O_DIRECT;
-  #endif
+#endif
   ASSERT_NE(LIBC_NAMESPACE::pipe2(pipefd, flags), -1);
   ASSERT_ERRNO_SUCCESS();
 

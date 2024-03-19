@@ -1,4 +1,5 @@
-//===-- Definition of macros from watch-queue.h ---------------------------------===//
+//===-- Definition of macros from watch-queue.h
+//---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,6 +15,7 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_WATCH_QUEUE_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_WATCH_QUEUE_MACROS_H
 
-#define O_NOTIFICATION_PIPE	O_EXCL	/* Parameter to pipe2() selecting notification pipe */
+#define O_NOTIFICATION_PIPE                                                    \
+  O_EXCL /* Parameter to pipe2() selecting notification pipe */
 
 #endif // LLVM_LIBC_MACROS_LINUX_WATCH_QUEUE_MACROS_H
