@@ -1,7 +1,7 @@
 ! Test lowering of sequence associated arguments (F'2023 15.5.2.12) passed
 ! by descriptor. The descriptor on the caller side is prepared according to
 ! the dummy argument shape.
-! RUN: bbc -emit-hlfir -polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 module bindc_seq_assoc
   interface
