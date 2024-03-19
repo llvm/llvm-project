@@ -108,6 +108,7 @@ static void printDiagnosticOptions(raw_ostream &OS,
 
 void TextDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
                                              const Diagnostic &Info) {
+  abort();
   // Default implementation (Warnings/errors count).
   DiagnosticConsumer::HandleDiagnostic(Level, Info);
 
