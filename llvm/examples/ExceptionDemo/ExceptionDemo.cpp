@@ -1189,9 +1189,8 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   llvm::Function *deleteOurException = module.getFunction("deleteOurException");
 
   // Note: function handles NULL exceptions
-  builder.CreateCall(
-      deleteOurException,
-      builder.CreateLoad(builder.getPtrTy(), exceptionStorage));
+  builder.CreateCall(deleteOurException,
+                     builder.CreateLoad(builder.getPtrTy(), exceptionStorage));
   builder.CreateRetVoid();
 
   // Normal Block
