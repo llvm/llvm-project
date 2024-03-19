@@ -401,8 +401,8 @@ static bool replaceFoldableUses(Instruction *Cond, Value *ToVal,
     Changed |= replaceNonLocalUsesWith(Cond, ToVal);
   for (Instruction &I : reverse(*KnownAtEndOfBB)) {
     // Replace any debug-info record users of Cond with ToVal.
-    for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange()))
-      DPV.replaceVariableLocationOp(Cond, ToVal, true);
+    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
+      DVR.replaceVariableLocationOp(Cond, ToVal, true);
 
     // Reached the Cond whose uses we are trying to replace, so there are no
     // more uses.
@@ -1955,7 +1955,7 @@ void JumpThreadingPass::updateSSA(
   SSAUpdater SSAUpdate;
   SmallVector<Use *, 16> UsesToRename;
   SmallVector<DbgValueInst *, 4> DbgValues;
-  SmallVector<DPValue *, 4> DPValues;
+  SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
 
   for (Instruction &I : *BB) {
     // Scan all uses of this instruction to see if it is used outside of its
@@ -1972,16 +1972,16 @@ void JumpThreadingPass::updateSSA(
     }
 
     // Find debug values outside of the block
-    findDbgValues(DbgValues, &I, &DPValues);
+    findDbgValues(DbgValues, &I, &DbgVariableRecords);
     llvm::erase_if(DbgValues, [&](const DbgValueInst *DbgVal) {
       return DbgVal->getParent() == BB;
     });
-    llvm::erase_if(DPValues, [&](const DPValue *DPVal) {
-      return DPVal->getParent() == BB;
+    llvm::erase_if(DbgVariableRecords, [&](const DbgVariableRecord *DbgVarRec) {
+      return DbgVarRec->getParent() == BB;
     });
 
     // If there are no uses outside the block, we're done with this instruction.
-    if (UsesToRename.empty() && DbgValues.empty() && DPValues.empty())
+    if (UsesToRename.empty() && DbgValues.empty() && DbgVariableRecords.empty())
       continue;
     LLVM_DEBUG(dbgs() << "JT: Renaming non-local uses of: " << I << "\n");
 
@@ -1994,11 +1994,11 @@ void JumpThreadingPass::updateSSA(
 
     while (!UsesToRename.empty())
       SSAUpdate.RewriteUse(*UsesToRename.pop_back_val());
-    if (!DbgValues.empty() || !DPValues.empty()) {
+    if (!DbgValues.empty() || !DbgVariableRecords.empty()) {
       SSAUpdate.UpdateDebugValues(&I, DbgValues);
-      SSAUpdate.UpdateDebugValues(&I, DPValues);
+      SSAUpdate.UpdateDebugValues(&I, DbgVariableRecords);
       DbgValues.clear();
-      DPValues.clear();
+      DbgVariableRecords.clear();
     }
 
     LLVM_DEBUG(dbgs() << "\n");
@@ -2041,11 +2041,11 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
     return true;
   };
 
-  // Duplicate implementation of the above dbg.value code, using DPValues
-  // instead.
-  auto RetargetDPValueIfPossible = [&](DPValue *DPV) {
+  // Duplicate implementation of the above dbg.value code, using
+  // DbgVariableRecords instead.
+  auto RetargetDbgVariableRecordIfPossible = [&](DbgVariableRecord *DVR) {
     SmallSet<std::pair<Value *, Value *>, 16> OperandsToRemap;
-    for (auto *Op : DPV->location_ops()) {
+    for (auto *Op : DVR->location_ops()) {
       Instruction *OpInst = dyn_cast<Instruction>(Op);
       if (!OpInst)
         continue;
@@ -2056,7 +2056,7 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
     }
 
     for (auto &[OldOp, MappedOp] : OperandsToRemap)
-      DPV->replaceVariableLocationOp(OldOp, MappedOp);
+      DVR->replaceVariableLocationOp(OldOp, MappedOp);
   };
 
   BasicBlock *RangeBB = BI->getParent();
@@ -2080,9 +2080,9 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
   cloneNoAliasScopes(NoAliasScopes, ClonedScopes, "thread", Context);
 
   auto CloneAndRemapDbgInfo = [&](Instruction *NewInst, Instruction *From) {
-    auto DPVRange = NewInst->cloneDebugInfoFrom(From);
-    for (DPValue &DPV : filterDbgVars(DPVRange))
-      RetargetDPValueIfPossible(&DPV);
+    auto DVRRange = NewInst->cloneDebugInfoFrom(From);
+    for (DbgVariableRecord &DVR : filterDbgVars(DVRRange))
+      RetargetDbgVariableRecordIfPossible(&DVR);
   };
 
   // Clone the non-phi instructions of the source basic block into NewBB,
@@ -2109,15 +2109,15 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
       }
   }
 
-  // There may be DPValues on the terminator, clone directly from marker
-  // to marker as there isn't an instruction there.
+  // There may be DbgVariableRecords on the terminator, clone directly from
+  // marker to marker as there isn't an instruction there.
   if (BE != RangeBB->end() && BE->hasDbgRecords()) {
     // Dump them at the end.
     DPMarker *Marker = RangeBB->getMarker(BE);
     DPMarker *EndMarker = NewBB->createMarker(NewBB->end());
-    auto DPVRange = EndMarker->cloneDebugInfoFrom(Marker, std::nullopt);
-    for (DPValue &DPV : filterDbgVars(DPVRange))
-      RetargetDPValueIfPossible(&DPV);
+    auto DVRRange = EndMarker->cloneDebugInfoFrom(Marker, std::nullopt);
+    for (DbgVariableRecord &DVR : filterDbgVars(DVRRange))
+      RetargetDbgVariableRecordIfPossible(&DVR);
   }
 
   return ValueMapping;
