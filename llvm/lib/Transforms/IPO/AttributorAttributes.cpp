@@ -2425,6 +2425,8 @@ bool AANonNull::isImpliedByIR(Attributor &A, const IRPosition &IRP,
     AttrKinds.push_back(Attribute::Dereferenceable);
   if (A.hasAttr(IRP, AttrKinds, IgnoreSubsumingPositions, Attribute::NonNull))
     return true;
+  if (IRP.getPositionKind() == IRP_RETURNED)
+    return false;
 
   DominatorTree *DT = nullptr;
   AssumptionCache *AC = nullptr;
@@ -2436,25 +2438,8 @@ bool AANonNull::isImpliedByIR(Attributor &A, const IRPosition &IRP,
     }
   }
 
-  SmallVector<AA::ValueAndContext> Worklist;
-  if (IRP.getPositionKind() != IRP_RETURNED) {
-    Worklist.push_back({IRP.getAssociatedValue(), IRP.getCtxI()});
-  } else {
-    bool UsedAssumedInformation = false;
-    if (!A.checkForAllInstructions(
-            [&](Instruction &I) {
-              Worklist.push_back({*cast<ReturnInst>(I).getReturnValue(), &I});
-              return true;
-            },
-            IRP.getAssociatedFunction(), nullptr, {Instruction::Ret},
-            UsedAssumedInformation))
-      return false;
-  }
-
-  if (llvm::any_of(Worklist, [&](AA::ValueAndContext VAC) {
-        return !isKnownNonZero(VAC.getValue(), A.getDataLayout(), 0, AC,
-                               VAC.getCtxI(), DT);
-      }))
+  if (!isKnownNonZero(&IRP.getAssociatedValue(), A.getDataLayout(), 0, AC,
+                      IRP.getCtxI(), DT))
     return false;
 
   A.manifestAttrs(IRP, {Attribute::get(IRP.getAnchorValue().getContext(),
