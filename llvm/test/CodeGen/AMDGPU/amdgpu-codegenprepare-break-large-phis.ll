@@ -1198,7 +1198,7 @@ reallyfinally:
   ret void
 }
 
-define void @test(i1 %Bool, ptr %Ptr, <4 x float> %Vec1, <4 x float> %Vec2) {
+define amdgpu_kernel void @zext_i1_as_index(i1 %Bool, ptr %Ptr, <4 x float> %Vec1, <4 x float> %Vec2) {
 ; OPT-LABEL: @test(
 ; OPT-NEXT:  BB0:
 ; OPT-NEXT:    [[I:%.*]] = insertelement <4 x float> [[VEC1:%.*]], float 4.200000e+01, i1 true
