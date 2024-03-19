@@ -405,6 +405,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (Ty.isVector()) {
       GSelect *Sel = cast<GSelect>(&MI);
       LLT TestTy = MRI.getType(Sel->getCondReg());
+      assert(TestTy.isVector() && "Unexpected condition argument type");
       OpdsMapping[0] = OpdsMapping[2] = OpdsMapping[3] =
           getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue());
       OpdsMapping[1] =
