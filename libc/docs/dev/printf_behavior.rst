@@ -1,3 +1,5 @@
+.. _printf_behavior:
+
 ====================================
 Printf Behavior Under All Conditions
 ====================================
