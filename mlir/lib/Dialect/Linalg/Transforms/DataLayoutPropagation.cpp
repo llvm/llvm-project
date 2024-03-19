@@ -553,17 +553,26 @@ private:
   ControlPropagationFn controlFn;
 };
 
+/// Project dimsPos to the inner-most non-unit dim pos with reassocIndices.
+///
+/// For example, given dimsPos [0, 2], reassocIndices [[0, 1], [2, 3]], and
+/// targetShape [16, 16, 32, 1], it returns [1, 2]. Because for pos 0, the
+/// inner-most projected dim in pos [0, 1] is 1. And for pos 2, the inner-most
+/// non-unit projected dims in pos [2, 3] is 2.
+///
+/// If all candidates in a reassociation are unit dims, it chooses the
+/// inner-most dim pos.
 static SmallVector<int64_t>
 projectToInnerMostNonUnitDimsPos(ArrayRef<int64_t> dimsPos,
                                  ArrayRef<ReassociationIndices> reassocIndices,
-                                 ArrayRef<int64_t> baseShape) {
+                                 ArrayRef<int64_t> targetShape) {
   SmallVector<int64_t> projectedDimsPos;
   for (auto pos : dimsPos) {
     // In the case all dims are unit, this will return the inner-most one.
     int64_t projectedPos = reassocIndices[pos].back();
     for (auto it = reassocIndices[pos].rbegin();
          it != reassocIndices[pos].rend(); ++it) {
-      int64_t dim = baseShape[*it];
+      int64_t dim = targetShape[*it];
       if (dim > 1 || ShapedType::isDynamic(dim)) {
         projectedPos = *it;
         break;
@@ -574,32 +583,36 @@ projectToInnerMostNonUnitDimsPos(ArrayRef<int64_t> dimsPos,
   return projectedDimsPos;
 }
 
-static bool
-isProjectedDimsDivisibleByTileSizes(ArrayRef<int64_t> projectedDimsPos,
-                                    ArrayRef<int64_t> targetShape,
-                                    ArrayRef<int64_t> tileSizes) {
-  for (auto [projectedPos, tileSize] :
-       llvm::zip_equal(projectedDimsPos, tileSizes)) {
-    int64_t dim = targetShape[projectedPos];
+/// Check if all dims in dimsPos are divisible by the corresponding tile sizes.
+static bool isDimsDivisibleByTileSizes(ArrayRef<int64_t> dimsPos,
+                                       ArrayRef<int64_t> shape,
+                                       ArrayRef<int64_t> tileSizes) {
+  for (auto [pos, tileSize] : llvm::zip_equal(dimsPos, tileSizes)) {
+    int64_t dim = shape[pos];
     if (ShapedType::isDynamic(dim) || (dim % tileSize) != 0)
       return false;
   }
   return true;
 }
 
+/// Permutate the reassociation indices and reindex them in the sequence order.
+/// Returns the next dim pos in the sequence.
+///
+/// For example, given reassocIndices [[0, 1], [2]] and permutation [1, 0], it
+/// applies the permutation to get [[2], [0, 1]] and reindexes the indices into
+/// [[0], [1, 2]].
 static int64_t applyPermutationAndReindexReassoc(
-    SmallVector<ReassociationIndices> &reassociationIndices,
-    ArrayRef<int64_t> dimsPerm) {
-  applyPermutationToVector<ReassociationIndices>(reassociationIndices,
-                                                 dimsPerm);
-  int64_t lastPos = 0;
-  for (ReassociationIndices &indices : reassociationIndices) {
+    SmallVector<ReassociationIndices> &reassocIndices,
+    ArrayRef<int64_t> permutation) {
+  applyPermutationToVector<ReassociationIndices>(reassocIndices, permutation);
+  int64_t nextPos = 0;
+  for (ReassociationIndices &indices : reassocIndices) {
     for (auto &index : indices) {
-      index = lastPos;
-      lastPos += 1;
+      index = nextPos;
+      nextPos += 1;
     }
   }
-  return lastPos;
+  return nextPos;
 }
 
 /// Bubble up pack op through collapse shape op when the packed dims can be
@@ -614,7 +627,7 @@ static int64_t applyPermutationAndReindexReassoc(
 ///     inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %empty
 ///     : tensor<?x4xf32> -> tensor<?x4x8x1xf32>
 ///
-/// Can be transformed into:
+/// can be transformed into:
 ///
 /// %pack = tensor.pack %in outer_dims_perm = [1, 2]
 ///     inner_dims_pos = [1, 2] inner_tiles = [8, 1] into %empty
@@ -632,11 +645,18 @@ bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
   ArrayRef<int64_t> srcShape = collapseOp.getSrcType().getShape();
   SmallVector<ReassociationIndices> reassocIndices =
       collapseOp.getReassociationIndices();
+  // Project inner tile pos to the dim pos before collapsing. For example, if
+  // dims [x, y] is collapsed into [z], packing on dim z can be projected back
+  // to pack on dim y.
+  //
+  // Project to inner-most non-unit dims to increase the chance that they can be
+  // divided by the inner tile sizes. This is correct because for [..., x, 1],
+  // packing on dim 1 is equivalent to packing on dim x.
   SmallVector<int64_t> projectedInnerDimsPos =
       projectToInnerMostNonUnitDimsPos(innerDimsPos, reassocIndices, srcShape);
 
-  if (!isProjectedDimsDivisibleByTileSizes(projectedInnerDimsPos, srcShape,
-                                           innerTileSizes)) {
+  if (!isDimsDivisibleByTileSizes(projectedInnerDimsPos, srcShape,
+                                  innerTileSizes)) {
     return failure();
   }
   // Expand the outer dims permutation with the associated source dims for the
@@ -658,14 +678,14 @@ bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
 
   SmallVector<ReassociationIndices> newReassocIndices = reassocIndices;
   // First apply the permutation on the reassociations of the outer dims.
-  // For example given the permutation [1, 0], the reassociations: [[0, 1], [2]]
+  // For example given the permutation [1, 0], the reassociations [[0, 1], [2]]
   // -> [[0], [1, 2]]
-  int64_t lastPos =
+  int64_t nextPos =
       applyPermutationAndReindexReassoc(newReassocIndices, outerDimsPerm);
   // Then add direct mapping for the inner tile dims.
   for (size_t i = 0; i < innerDimsPos.size(); ++i) {
-    newReassocIndices.push_back({lastPos});
-    lastPos += 1;
+    newReassocIndices.push_back({nextPos});
+    nextPos += 1;
   }
 
   auto newCollapseOp = rewriter.create<tensor::CollapseShapeOp>(
@@ -723,7 +743,7 @@ private:
 /// %expanded = tensor.expand_shape %unpack [[0, 1], [2]]
 ///     : tensor<?x256xf32> into tensor<?x256x256xf32>
 ///
-/// Can be transformed into:
+/// can be transformed into:
 ///
 /// %expanded = tensor.expand_shape %ain [[0, 1], [2], [3], [4]]
 ///     : tensor<?x32x8x8xf32> into tensor<?x32x32x8x8xf32>
@@ -741,11 +761,18 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
   ArrayRef<int64_t> dstShape = expandOp.getType().getShape();
   SmallVector<ReassociationIndices> reassocIndices =
       expandOp.getReassociationIndices();
+  // Project inner tile pos to the dim pos after expanding. For example, if dims
+  // [z] is expanded into [x, y], unpacking on dim z can be projected to unpack
+  // on dim y.
+  //
+  // Project to inner-most non-unit dims to increase the chance that they can be
+  // divided by the inner tile sizes. This is correct because for [..., x, 1],
+  // unpacking on dim 1 is equivalent to unpacking on dim x.
   SmallVector<int64_t> projectedInnerDimsPos =
       projectToInnerMostNonUnitDimsPos(innerDimsPos, reassocIndices, dstShape);
 
-  if (!isProjectedDimsDivisibleByTileSizes(projectedInnerDimsPos, dstShape,
-                                           innerTileSizes)) {
+  if (!isDimsDivisibleByTileSizes(projectedInnerDimsPos, dstShape,
+                                  innerTileSizes)) {
     return failure();
   }
   // Expand the outer dims permutation with the associated expanded dims for the
@@ -760,14 +787,14 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
 
   SmallVector<ReassociationIndices> newReassocIndices = reassocIndices;
   // First apply the permutation on the reassociations of the outer dims.
-  // For example given the permutation [1, 0], the reassociations: [[0, 1], [2]]
+  // For example given the permutation [1, 0], the reassociations [[0, 1], [2]]
   // -> [[0], [1, 2]]
-  int64_t lastPos =
+  int64_t nextPos =
       applyPermutationAndReindexReassoc(newReassocIndices, outerDimsPerm);
   // Then add direct mapping for the inner tile dims.
   for (size_t i = 0; i < innerDimsPos.size(); ++i) {
-    newReassocIndices.push_back({lastPos});
-    lastPos += 1;
+    newReassocIndices.push_back({nextPos});
+    nextPos += 1;
   }
 
   RankedTensorType newExpandType =
