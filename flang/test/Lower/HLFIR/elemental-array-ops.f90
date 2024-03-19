@@ -1,5 +1,5 @@
 ! Test lowering of elemental intrinsic operations with array arguments to HLFIR
-! RUN: bbc -emit-hlfir --polymorphic-type -I nowhere -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -I nowhere -o - %s 2>&1 | FileCheck %s
 
 subroutine binary(x, y)
   integer :: x(100), y(100)

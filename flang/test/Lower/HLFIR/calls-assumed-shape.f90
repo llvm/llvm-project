@@ -1,6 +1,6 @@
 ! Test lowering of calls involving assumed shape arrays or arrays with
 ! VALUE attribute.
-! RUN: bbc -emit-hlfir -polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test_assumed_to_assumed(x)
   interface

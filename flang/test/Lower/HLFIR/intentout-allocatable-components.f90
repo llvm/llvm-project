@@ -1,6 +1,6 @@
 ! Test that allocatable components of non pointer/non allocatable INTENT(OUT)
 ! dummy arguments are deallocated.
-! RUN: bbc -emit-hlfir -polymorphic-type %s -o - -I nowhere | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - -I nowhere | FileCheck %s
 
 subroutine test_intentout_component_deallocate(a)
   type :: t

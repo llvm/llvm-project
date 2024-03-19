@@ -1,5 +1,5 @@
 ! Test conversion of MutableBoxValue to value.
-! RUN: bbc -emit-hlfir -polymorphic-type -I nowhere %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -I nowhere %s -o - | FileCheck %s
 
 subroutine test_int_allocatable(a)
   integer, allocatable :: a
