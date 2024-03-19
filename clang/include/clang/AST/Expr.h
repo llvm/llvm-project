@@ -2045,7 +2045,8 @@ public:
   }
 
   static std::string ComputeName(PredefinedIdentKind IK,
-                                 const Decl *CurrentDecl);
+                                 const Decl *CurrentDecl,
+                                 bool ForceElaboratedPrinting = false);
 
   SourceLocation getBeginLoc() const { return getLocation(); }
   SourceLocation getEndLoc() const { return getLocation(); }
