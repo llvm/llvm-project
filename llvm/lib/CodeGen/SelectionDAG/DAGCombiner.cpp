@@ -2820,6 +2820,23 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   return SDValue();
 }
 
+// Attempt to form avgflooru(A, B) from (A & B) + ((A ^ B) >> 1)
+static SDValue combineFixedwidthToAVGFLOORU(SDNode *N, SelectionDAG &DAG) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N0.getValueType();
+  SDLoc DL(N);
+  if (TLI.isOperationLegal(ISD::AVGFLOORU, VT)) {
+    SDValue A, B;
+    if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
+                          m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
+                                m_SpecificInt(1))))) {
+      return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
+    }
+  }
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitADD(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -2833,6 +2850,10 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
     return V;
 
   if (SDValue V = foldAddSubOfSignBit(N, DAG))
+    return V;
+
+  // Try to match AVGFLOORU fixedwidth pattern
+  if (SDValue V = combineFixedwidthToAVGFLOORU(N, DAG))
     return V;
 
   // fold (a+b) -> (a|b) iff a and b share no bits.
