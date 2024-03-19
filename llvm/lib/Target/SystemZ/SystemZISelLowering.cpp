@@ -6584,27 +6584,6 @@ SDValue SystemZTargetLowering::combineTruncateExtract(
       }
     }
   }
-  // Convert (zext (xor (trunc X), C)) into (xor (trunc X), C') if the size
-  // of the result is smaller than the size of X and all the truncated bits
-  // of X are already zero.
-  if (N0.getOpcode() == ISD::XOR &&
-      N0.hasOneUse() && N0.getOperand(0).hasOneUse() &&
-      N0.getOperand(0).getOpcode() == ISD::TRUNCATE &&
-      N0.getOperand(1).getOpcode() == ISD::Constant) {
-    SDValue X = N0.getOperand(0).getOperand(0);
-    if (VT.isScalarInteger() && VT.getSizeInBits() < X.getValueSizeInBits()) {
-      KnownBits Known = DAG.computeKnownBits(X);
-      APInt TruncatedBits = APInt::getBitsSet(X.getValueSizeInBits(),
-                                              N0.getValueSizeInBits(),
-                                              VT.getSizeInBits());
-      if (TruncatedBits.isSubsetOf(Known.Zero)) {
-        X = DAG.getNode(ISD::TRUNCATE, SDLoc(X), VT, X);
-        APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
-        return DAG.getNode(ISD::XOR, SDLoc(N0), VT,
-                           X, DAG.getConstant(Mask, SDLoc(N0), VT));
-      }
-    }
-  }
   return SDValue();
 }
 
@@ -6651,6 +6630,27 @@ SDValue SystemZTargetLowering::combineZERO_EXTEND(
         DCI.CombineTo(N0.getNode(), TruncSelect);
       }
       return NewSelect;
+    }
+  }
+  // Convert (zext (xor (trunc X), C)) into (xor (trunc X), C') if the size
+  // of the result is smaller than the size of X and all the truncated bits
+  // of X are already zero.
+  if (N0.getOpcode() == ISD::XOR &&
+      N0.hasOneUse() && N0.getOperand(0).hasOneUse() &&
+      N0.getOperand(0).getOpcode() == ISD::TRUNCATE &&
+      N0.getOperand(1).getOpcode() == ISD::Constant) {
+    SDValue X = N0.getOperand(0).getOperand(0);
+    if (VT.isScalarInteger() && VT.getSizeInBits() < X.getValueSizeInBits()) {
+      KnownBits Known = DAG.computeKnownBits(X);
+      APInt TruncatedBits = APInt::getBitsSet(X.getValueSizeInBits(),
+                                              N0.getValueSizeInBits(),
+                                              VT.getSizeInBits());
+      if (TruncatedBits.isSubsetOf(Known.Zero)) {
+        X = DAG.getNode(ISD::TRUNCATE, SDLoc(X), VT, X);
+        APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
+        return DAG.getNode(ISD::XOR, SDLoc(N0), VT,
+                           X, DAG.getConstant(Mask, SDLoc(N0), VT));
+      }
     }
   }
 
