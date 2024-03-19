@@ -8,6 +8,8 @@
 # LH-SYMS-DAG: LOCAL  HIDDEN      1 foo1
 # LH-SYMS-DAG: GLOBAL HIDDEN      1 foo2
 # LH-SYMS-DAG: GLOBAL HIDDEN      1 foo3
+# LH-SYMS-DAG: LOCAL  HIDDEN      1 foo4
+# LH-SYMS-DAG: LOCAL  HIDDEN      1 foo5
 
 ## Check --skip-symbol functionality when changing symbol bindings.
 # RUN: llvm-objcopy %t.o %t2.o --localize-hidden --skip-symbol=foo3
@@ -15,6 +17,8 @@
 # LH-SYM-DAG: LOCAL  HIDDEN      1 foo1
 # LH-SYM-DAG: LOCAL  HIDDEN      1 foo2
 # LH-SYM-DAG: GLOBAL HIDDEN      1 foo3
+# LH-SYM-DAG: LOCAL  HIDDEN      1 foo4
+# LH-SYM-DAG: LOCAL  HIDDEN      1 foo5
 
 ## Check --skip-symbols functionality when changing symbol names.
 # RUN: echo -e "foo1 bar1\nfoo2 bar2" > %t.renames.list
@@ -24,23 +28,32 @@
 # RS-SYMS-DAG: bar1
 # RS-SYMS-DAG: foo2
 # RS-SYMS-DAG: foo3
+# RS-SYMS-DAG: foo4
+# RS-SYMS-DAG: foo5
 
 ## Check --skip-symbol functionality when changing symbol names.
-# RUN: llvm-objcopy %t.o %t4.o --redefine-sym=foo1=bar1 --skip-symbol='fo*' --wildcard
+# RUN: llvm-objcopy %t.o %t4.o --redefine-syms=%t.renames.list \
+# RUN:   --skip-symbol='fo*' --wildcard
 # RUN: llvm-readelf -s %t4.o | FileCheck %s --check-prefix=RS-SYM
 # RS-SYM-DAG: foo1
 # RS-SYM-DAG: foo2
 # RS-SYM-DAG: foo3
+# RS-SYM-DAG: foo4
+# RS-SYM-DAG: foo5
 
 ## Check the functionality when using skip options multiple times.
-# RUN: echo "foo3" > %t.symbol.list
+# RUN: echo "foo3" > %t.symbol0.list
+# RUN: echo "foo4" > %t.symbol1.list
 # RUN: llvm-objcopy %t.o %t5.o --set-symbol-visibility='foo*'=internal --wildcard \
-# RUN:   --skip-symbol=foo1 --skip-symbol=foo2 --skip-symbols=%t.symbol.list
+# RUN:   --skip-symbol=foo1 --skip-symbol=foo2 \
+# RUN:   --skip-symbols=%t.symbol0.list --skip-symbols=%t.symbol1.list
 # RUN: llvm-readelf -s %t5.o | FileCheck %s --check-prefix=BOTH
-## All the symbols are skipped.
 # BOTH-DAG: GLOBAL HIDDEN      1 foo1
 # BOTH-DAG: GLOBAL HIDDEN      1 foo2
 # BOTH-DAG: GLOBAL HIDDEN      1 foo3
+# BOTH-DAG: GLOBAL HIDDEN      1 foo4
+## Only foo5 is not skipped.
+# BOTH-DAG: GLOBAL INTERNAL    1 foo5
 
 ## Check that using an invalid symbol name regex generates an error.
 # RUN: echo '*.' > %t.symbols.regex
@@ -74,6 +87,14 @@ Symbols:
     Binding: STB_GLOBAL
     Other:   [ STV_HIDDEN ]
   - Name:    foo3
+    Section: .text
+    Binding: STB_GLOBAL
+    Other:   [ STV_HIDDEN ]
+  - Name:    foo4
+    Section: .text
+    Binding: STB_GLOBAL
+    Other:   [ STV_HIDDEN ]
+  - Name:    foo5
     Section: .text
     Binding: STB_GLOBAL
     Other:   [ STV_HIDDEN ]
