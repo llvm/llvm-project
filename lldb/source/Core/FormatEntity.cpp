@@ -658,27 +658,31 @@ static char ConvertValueObjectStyleToChar(
   return '\0';
 }
 
-static bool DumpValueWithPrintf(Stream &s, llvm::StringRef format,
-                                ValueObject &target) {
+static bool DumpValueWithLLVMFormat(Stream &s, llvm::StringRef options,
+                                    ValueObject &target) {
+  std::string formatted;
+  std::string llvm_format = ("{0:" + options + "}").str();
+
   auto type_info = target.GetTypeInfo();
   if (type_info & eTypeIsInteger) {
     if (type_info & eTypeIsSigned) {
       bool success = false;
       auto integer = target.GetValueAsSigned(0, &success);
-      if (success) {
-        s.Printf(format.data(), integer);
-        return true;
-      }
+      if (success)
+        formatted = llvm::formatv(llvm_format.data(), integer);
     } else {
       bool success = false;
       auto integer = target.GetValueAsUnsigned(0, &success);
-      if (success) {
-        s.Printf(format.data(), integer);
-        return true;
-      }
+      if (success)
+        formatted = llvm::formatv(llvm_format.data(), integer);
     }
   }
-  return false;
+
+  if (formatted.empty())
+    return false;
+
+  s.Write(formatted.data(), formatted.size());
+  return true;
 }
 
 static bool DumpValue(Stream &s, const SymbolContext *sc,
@@ -751,9 +755,12 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     return RunScriptFormatKeyword(s, sc, exe_ctx, valobj, entry.string.c_str());
   }
 
-  llvm::StringRef subpath(entry.string);
+  auto split = llvm::StringRef(entry.string).split(':');
+  auto subpath = split.first;
+  auto llvm_format = split.second;
+
   // simplest case ${var}, just print valobj's value
-  if (entry.string.empty()) {
+  if (subpath.empty()) {
     if (entry.printf_format.empty() && entry.fmt == eFormatDefault &&
         entry.number == ValueObject::eValueObjectRepresentationStyleValue)
       was_plain_var = true;
@@ -762,7 +769,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     target = valobj;
   } else // this is ${var.something} or multiple .something nested
   {
-    if (entry.string[0] == '[')
+    if (subpath[0] == '[')
       was_var_indexed = true;
     ScanBracketedRange(subpath, close_bracket_index,
                        var_name_final_if_array_range, index_lower,
@@ -770,14 +777,11 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
 
     Status error;
 
-    const std::string &expr_path = entry.string;
-
-    LLDB_LOGF(log, "[Debugger::FormatPrompt] symbol to expand: %s",
-              expr_path.c_str());
+    LLDB_LOG(log, "[Debugger::FormatPrompt] symbol to expand: {0}", subpath);
 
     target =
         valobj
-            ->GetValueForExpressionPath(expr_path.c_str(), &reason_to_stop,
+            ->GetValueForExpressionPath(subpath, &reason_to_stop,
                                         &final_value_type, options, &what_next)
             .get();
 
@@ -906,8 +910,8 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
   }
 
   if (!is_array_range) {
-    if (!entry.printf_format.empty()) {
-      if (DumpValueWithPrintf(s, entry.printf_format, *target)) {
+    if (!llvm_format.empty()) {
+      if (DumpValueWithLLVMFormat(s, llvm_format, *target)) {
         LLDB_LOGF(log, "dumping using printf format");
         return true;
       } else {
