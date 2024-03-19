@@ -189,6 +189,7 @@ public:
 
 private:
   bool doPeepholeSExtW(SDNode *Node);
+  bool doPeepholeSHXADD(SDNode *Node);
   bool doPeepholeMaskedRVV(MachineSDNode *Node);
   bool doPeepholeMergeVVMFold();
   bool doPeepholeNoRegPassThru();

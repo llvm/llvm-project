@@ -155,6 +155,8 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
     // know how to handle masked true inputs.  Once that has been moved
     // to post-ISEL, this can be deleted as well.
     MadeChange |= doPeepholeMaskedRVV(cast<MachineSDNode>(N));
+
+    MadeChange |= doPeepholeSHXADD(N);
   }
 
   CurDAG->setRoot(Dummy.getValue());
@@ -3318,6 +3320,44 @@ bool RISCVDAGToDAGISel::selectRVVSimm5(SDValue N, unsigned Width,
   }
 
   return false;
+}
+
+// Fold (sh3add Z, (add X, (slli Y, 6))) -> (sh3add (sh3add Y, Z), X).
+// TODO: There is a more general form of this.
+// TODO: There also .uw forms of this.
+// TODO: Not sure a post-isel peephole makes sense.
+bool RISCVDAGToDAGISel::doPeepholeSHXADD(SDNode *N) {
+  if (N->getMachineOpcode() != RISCV::SH3ADD)
+    return false;
+
+  SDValue N1 = N->getOperand(1);
+  if (!N1.isMachineOpcode() || N1.getMachineOpcode() != RISCV::ADD ||
+      !N1.hasOneUse())
+    return false;
+
+  SDValue N10 = N1.getOperand(0);
+  SDValue N11 = N1.getOperand(1);
+
+  if (!N11.isMachineOpcode() || N11.getMachineOpcode() != RISCV::SLLI)
+    std::swap(N10, N11);
+  if (!N11.isMachineOpcode() || N11.getMachineOpcode() != RISCV::SLLI ||
+      !N11.hasOneUse())
+    return false;
+
+  if (!isa<ConstantSDNode>(N11.getOperand(1)) ||
+      cast<ConstantSDNode>(N11.getOperand(1))->getZExtValue() != 6)
+    return false;
+
+  SDValue X = N1.getOperand(0);
+  SDValue Y = N11.getOperand(0);
+  SDValue Z = N->getOperand(0);
+
+  SDNode *SH3ADD1 = CurDAG->getMachineNode(RISCV::SH3ADD, SDLoc(N), N->getValueType(0),
+                                          Y, Z);
+  SDNode *SH3ADD2 = CurDAG->getMachineNode(RISCV::SH3ADD, SDLoc(N), N->getValueType(0),
+                                           SDValue(SH3ADD1, 0), X);
+  ReplaceUses(N, SH3ADD2);
+  return true;
 }
 
 // Try to remove sext.w if the input is a W instruction or can be made into
