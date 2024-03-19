@@ -1444,9 +1444,19 @@ def SparseTensor_HasRuntimeLibraryOp
     : SparseTensor_Op<"has_runtime_library", []>, Results<(outs I1:$result)> {
   string summary = "Indicates whether running in runtime/codegen mode";
   string description = [{
-    Returns a boolean value that indicates whether the sparse compiler runs in
-    runtime library mode or not. For testing only: This op is useful for writing
-    test cases that require different IR depending on runtime/codegen mode.
+    Returns a boolean value that indicates whether the sparsifier runs in
+    runtime library mode or not. For testing only! This operation is useful
+    for writing test cases that require different code depending on
+    runtime/codegen mode.
+
+    Example:
+
+    ```mlir
+    %has_runtime = sparse_tensor.has_runtime_library
+    scf.if %has_runtime {
+      ...
+    }
+    ```
   }];
   let assemblyFormat = "attr-dict";
 }
