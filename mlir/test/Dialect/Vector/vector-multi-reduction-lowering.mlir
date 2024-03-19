@@ -253,7 +253,6 @@ func.func private @scalable_dims(%A : vector<8x[4]x2xf32>, %B: vector<8x[4]xf32>
   %0 = vector.multi_reduction <add>, %A, %B [2] : vector<8x[4]x2xf32> to vector<8x[4]xf32>
   return %0 : vector<8x[4]xf32>
 }
-
 // CHECK-LABEL:   func.func private @scalable_dims(
 // CHECK-SAME:                                     %[[VAL_0:.*]]: vector<8x[4]x2xf32>,
 // CHECK-SAME:                                     %[[VAL_1:.*]]: vector<8x[4]xf32>) -> vector<8x[4]xf32> {
@@ -283,12 +282,12 @@ func.func private @scalable_dims(%A : vector<8x[4]x2xf32>, %B: vector<8x[4]xf32>
 // CHECK:           return %[[VAL_163]] : vector<8x[4]xf32>
 
 // Check that OneDimMultiReductionToTwoDim handles scalable dim
-func.func private @scalable_dim_1d(%A: vector<[4]xf32>, %B: f32, %C: vector<[4]xi1>) -> f32 {
+func.func @scalable_dim_1d(%A: vector<[4]xf32>, %B: f32, %C: vector<[4]xi1>) -> f32 {
     %0 = vector.mask %C { vector.multi_reduction <add>, %A, %B [0] : vector<[4]xf32> to f32 } : vector<[4]xi1> -> f32
     return %0 : f32
 }
 
-// CHECK-LABEL:  func.func private @scalable_dim_1d(
+// CHECK-LABEL:  func.func @scalable_dim_1d(
 // CHECK-SAME:                                      %[[ARG_0:.*]]: vector<[4]xf32>,
 // CHECK-SAME:                                      %[[ARG_1:.*]]: f32,
 // CHECK-SAME:                                      %[[ARG_2:.*]]: vector<[4]xi1>) -> f32 {
