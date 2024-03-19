@@ -195,6 +195,34 @@ void test_noexcept() {
     }
 }
 
+namespace LWG3528 {
+template <class _Tp, class _Tuple, class = std::void_t<>>
+struct can_make_from_tuple : std::false_type {};
+template <class _Tp, class _Tuple>
+struct can_make_from_tuple<
+    _Tp,
+    _Tuple,
+    std::void_t<decltype(std::__make_from_tuple_impl<_Tp>(
+        std::declval<_Tuple>(),
+        std::declval<
+            typename std::__make_tuple_indices< std::tuple_size_v<std::remove_reference_t<_Tuple>>>::type>()))>>
+    : std::true_type {};
+
+struct A {
+    int a;
+};
+struct B : public A {};
+
+// reinterpret_cast
+static_assert(!can_make_from_tuple<int*, std::tuple<A*>>::value);
+
+// const_cast
+static_assert(!can_make_from_tuple<char*, std::tuple<const char*>>::value);
+
+// static_cast
+static_assert(!can_make_from_tuple<const B&, std::tuple<const A&>>::value);
+} // namespace LWG3528
+
 int main(int, char**)
 {
     test_constexpr_construction();
