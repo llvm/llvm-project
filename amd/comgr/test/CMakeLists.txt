@@ -2,6 +2,8 @@ set(TEST_INPUT_BINARIES)
 set(TEST_INPUT_BITCODES)
 set(TEST_INPUT_BUNDLES)
 set(TEST_INPUT_ARCHIVES)
+set(TEST_INPUT_LINKED_OBJS)
+
 # Create target ${name} which depends on a clang command to compile ${input} to
 # ${output}, with any additional arguments from ${ARGN}, and add it to the
 # TEST_INPUT_BINARIES target list.
@@ -86,6 +88,23 @@ macro(add_test_archive name target input output)
   list(APPEND TEST_INPUT_ARCHIVES "${name}")
 endmacro()
 
+# Creates target ${name} which depends on 2 clang commands to compile
+# ${input0} and ${input1} and then links them to create ${output}
+#  with any additional arguments from ${ARGN}, and add it to the
+# TEST_INPUT_LINKED_OBJS target list.
+macro(add_test_input_linked name input0 input1 output)
+  add_custom_command(
+    OUTPUT "${output}"
+    COMMAND "$<TARGET_FILE:lld>" -flavor gnu ${ARGN} "${input0}"
+    "${input1}" -o "${output}"
+    VERBATIM
+    DEPENDS lld "${input0}" "${input1}")
+  add_custom_target("${name}"
+    DEPENDS "${output}"
+    SOURCES "${input0}" "${input1}")
+  list(APPEND TEST_INPUT_LINKED_OBJS "${name}")
+endmacro()
+
 add_test_input_binary(reloc1 source/reloc1.cl source/reloc1.o -c -mcode-object-version=4)
 add_test_input_binary(reloc2 source/reloc2.cl source/reloc2.o -c -mcode-object-version=4)
 add_test_input_binary(reloc-asm source/reloc-asm.s source/reloc-asm.o -c -mcode-object-version=4)
@@ -93,6 +112,16 @@ add_test_input_binary(shared source/shared.cl source/shared.so -mcode-object-ver
 add_test_input_binary(shared-debug source/shared.cl source/shared-debug.so -g -mcode-object-version=4)
 add_test_input_bitcode(source1 source/source1.cl source/source1.bc)
 
+add_test_input_binary(linking-kernel0 source/linking/kernel0.cl source/linking/kernel0.o -c -mcode-object-version=4)
+add_test_input_binary(linking-kernel1 source/linking/kernel1.cl source/linking/kernel1.o -c -mcode-object-version=4)
+add_test_input_binary(linking-empty   source/linking/empty.cl   source/linking/empty.o   -c -mcode-object-version=4)
+
+add_test_input_linked(multiple-note-records source/linking/kernel0.o source/linking/kernel1.o source/multiple-note-records.out)
+add_test_input_linked(multiple-note-records-one-kernel source/linking/kernel0.o source/linking/empty.o source/multiple-note-records-one-kernel.out)
+
+configure_file("source/linking/kernel0.cl" "source/linking/kernel0.cl" COPYONLY)
+configure_file("source/linking/kernel1.cl" "source/linking/kernel1.cl" COPYONLY)
+configure_file("source/linking/empty.cl" "source/linking/empty.cl" COPYONLY)
 configure_file("source/source1.cl" "source/source1.cl" COPYONLY)
 configure_file("source/source2.cl" "source/source2.cl" COPYONLY)
 configure_file("source/nested-kernel1.cl" "source/nested-kernel1.cl" COPYONLY)
@@ -156,7 +185,7 @@ endif()
     amd_comgr)
   add_dependencies("${name}"
     ${TEST_INPUT_BINARIES};${TEST_INPUT_BITCODES};${TEST_INPUT_BUNDLES};
-    ${TEST_INPUT_ARCHIVES})
+    ${TEST_INPUT_ARCHIVES};${TEST_INPUT_LINKED_OBJS})
   add_test(NAME ${test_name}
     COMMAND "${name}")
   add_dependencies(check-comgr ${name})
@@ -178,6 +207,7 @@ add_comgr_test(disasm_options_test c)
 add_comgr_test(metadata_tp_test c)
 add_comgr_test(metadata_yaml_test c)
 add_comgr_test(metadata_msgpack_test c)
+add_comgr_test(metadata_multiple_msgpacks_test c)
 add_comgr_test(metadata_merge_test c)
 add_comgr_test(symbols_test c)
 add_comgr_test(symbols_iterate_test c)

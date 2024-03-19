@@ -152,6 +152,7 @@ where reporters provide Comgr logs.
 - Update default arch for test binaries from gfx830 to gfx900
 - Refactor nested kernel behavior into new test, as this behavior is less common
 and shouldn't be featured in the baseline tests
+- Add metadata parsing tests for code objects with multiple AMDGPU metadata note entries.
 
 New Targets
 -----------
