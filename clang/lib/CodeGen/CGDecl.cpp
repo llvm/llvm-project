@@ -2531,48 +2531,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
         (IPD->getParameterKind() == ImplicitParamKind::ThreadPrivateVar);
   }
 
-  Address DeclPtr = Address::invalid();
-  Address AllocaPtr = Address::invalid();
-  bool DoStore = false;
-  bool IsScalar = hasScalarEvaluationKind(Ty);
-  bool UseIndirectDebugAddress = false;
-
-  // If we already have a pointer to the argument, reuse the input pointer.
-  if (Arg.isIndirect()) {
-    DeclPtr = Arg.getIndirectAddress();
-    DeclPtr = DeclPtr.withElementType(ConvertTypeForMem(Ty));
-    // Indirect argument is in alloca address space, which may be different
-    // from the default address space.
-    auto AllocaAS = CGM.getASTAllocaAddressSpace();
-    auto *V = DeclPtr.getPointer();
-    AllocaPtr = DeclPtr;
-
-    // For truly ABI indirect arguments -- those that are not `byval` -- store
-    // the address of the argument on the stack to preserve debug information.
-    ABIArgInfo ArgInfo = CurFnInfo->arguments()[ArgNo - 1].info;
-    if (ArgInfo.isIndirect())
-      UseIndirectDebugAddress = !ArgInfo.getIndirectByVal();
-    if (UseIndirectDebugAddress) {
-      auto PtrTy = getContext().getPointerType(Ty);
-      AllocaPtr = CreateMemTemp(PtrTy, getContext().getTypeAlignInChars(PtrTy),
-                                D.getName() + ".indirect_addr");
-      EmitStoreOfScalar(V, AllocaPtr, /* Volatile */ false, PtrTy);
-    }
-
-    auto SrcLangAS = getLangOpts().OpenCL ? LangAS::opencl_private : AllocaAS;
-    auto DestLangAS =
-        getLangOpts().OpenCL ? LangAS::opencl_private : LangAS::Default;
-    if (SrcLangAS != DestLangAS) {
-      assert(getContext().getTargetAddressSpace(SrcLangAS) ==
-             CGM.getDataLayout().getAllocaAddrSpace());
-      auto DestAS = getContext().getTargetAddressSpace(DestLangAS);
-      auto *T = llvm::PointerType::get(getLLVMContext(), DestAS);
-      DeclPtr =
-          DeclPtr.withPointer(getTargetHooks().performAddrSpaceCast(
-                                  *this, V, SrcLangAS, DestLangAS, T, true),
-                              DeclPtr.isKnownNonNull());
-    }
-
+  auto PushCleanupIfNeeded = [this, Ty, &D](Address DeclPtr) {
     // Push a destructor cleanup for this parameter if the ABI requires it.
     // Don't push a cleanup in a thunk for a method that will also emit a
     // cleanup.
@@ -2588,87 +2547,126 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
             EHStack.stable_begin();
       }
     }
-  } else {
-    // Check if the parameter address is controlled by OpenMP runtime.
-    Address OpenMPLocalAddr =
-        getLangOpts().OpenMP
-            ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
-            : Address::invalid();
-    if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {
-      DeclPtr = OpenMPLocalAddr;
-      AllocaPtr = DeclPtr;
+  };
+
+  Address DeclPtr = Address::invalid();
+  Address AllocaPtr = Address::invalid();
+  Address OpenMPLocalAddr =
+      getLangOpts().OpenMP
+          ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
+          : Address::invalid();
+  bool DoStore = false;
+  bool IsScalar = hasScalarEvaluationKind(Ty);
+  bool UseIndirectDebugAddress = false;
+  if (OpenMPLocalAddr.isValid()) {
+    DeclPtr = OpenMPLocalAddr;
+    AllocaPtr = DeclPtr;
+    LValue Dst = MakeAddrLValue(DeclPtr, Ty);
+    if (Arg.isIndirect()) {
+      LValue Src = MakeAddrLValue(Arg.getIndirectAddress(), Ty);
+      callCStructCopyConstructor(Dst, Src);
+      PushCleanupIfNeeded(Arg.getIndirectAddress());
     } else {
-      // Otherwise, create a temporary to hold the value.
+      EmitStoreOfScalar(Arg.getDirectValue(), Dst, /* isInitialization */ true);
+    }
+  } else {
+    // If we already have a pointer to the argument, reuse the input pointer.
+    if (Arg.isIndirect()) {
+      // If we have a prettier pointer type at this point, bitcast to that.
+      DeclPtr = Arg.getIndirectAddress();
+      DeclPtr = Builder.CreateElementBitCast(DeclPtr, ConvertTypeForMem(Ty),
+                                             D.getName());
+      // Indirect argument is in alloca address space, which may be different
+      // from the default address space.
+      auto AllocaAS = CGM.getASTAllocaAddressSpace();
+      auto *V = DeclPtr.getPointer();
+      AllocaPtr = DeclPtr;
+      auto SrcLangAS = getLangOpts().OpenCL ? LangAS::opencl_private : AllocaAS;
+      auto DestLangAS =
+          getLangOpts().OpenCL ? LangAS::opencl_private : LangAS::Default;
+      if (SrcLangAS != DestLangAS) {
+        assert(getContext().getTargetAddressSpace(SrcLangAS) ==
+               CGM.getDataLayout().getAllocaAddrSpace());
+        auto DestAS = getContext().getTargetAddressSpace(DestLangAS);
+        auto *T = DeclPtr.getElementType()->getPointerTo(DestAS);
+        DeclPtr =
+            DeclPtr.withPointer(getTargetHooks().performAddrSpaceCast(
+                                    *this, V, SrcLangAS, DestLangAS, T, true),
+                                DeclPtr.isKnownNonNull());
+      }
+      PushCleanupIfNeeded(DeclPtr);
+    } else {
+      // Create a temporary to hold the value.
       DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
                               D.getName() + ".addr", &AllocaPtr);
+      DoStore = true;
     }
-    DoStore = true;
-  }
 
-  llvm::Value *ArgVal = (DoStore ? Arg.getDirectValue() : nullptr);
+    llvm::Value *ArgVal = (DoStore ? Arg.getDirectValue() : nullptr);
 
-  LValue lv = MakeAddrLValue(DeclPtr, Ty);
-  if (IsScalar) {
-    Qualifiers qs = Ty.getQualifiers();
-    if (Qualifiers::ObjCLifetime lt = qs.getObjCLifetime()) {
-      // We honor __attribute__((ns_consumed)) for types with lifetime.
-      // For __strong, it's handled by just skipping the initial retain;
-      // otherwise we have to balance out the initial +1 with an extra
-      // cleanup to do the release at the end of the function.
-      bool isConsumed = D.hasAttr<NSConsumedAttr>();
+    LValue lv = MakeAddrLValue(DeclPtr, Ty);
+    if (IsScalar) {
+      Qualifiers qs = Ty.getQualifiers();
+      if (Qualifiers::ObjCLifetime lt = qs.getObjCLifetime()) {
+        // We honor __attribute__((ns_consumed)) for types with lifetime.
+        // For __strong, it's handled by just skipping the initial retain;
+        // otherwise we have to balance out the initial +1 with an extra
+        // cleanup to do the release at the end of the function.
+        bool isConsumed = D.hasAttr<NSConsumedAttr>();
 
-      // If a parameter is pseudo-strong then we can omit the implicit retain.
-      if (D.isARCPseudoStrong()) {
-        assert(lt == Qualifiers::OCL_Strong &&
-               "pseudo-strong variable isn't strong?");
-        assert(qs.hasConst() && "pseudo-strong variable should be const!");
-        lt = Qualifiers::OCL_ExplicitNone;
-      }
+        // If a parameter is pseudo-strong then we can omit the implicit retain.
+        if (D.isARCPseudoStrong()) {
+          assert(lt == Qualifiers::OCL_Strong &&
+                 "pseudo-strong variable isn't strong?");
+          assert(qs.hasConst() && "pseudo-strong variable should be const!");
+          lt = Qualifiers::OCL_ExplicitNone;
+        }
 
-      // Load objects passed indirectly.
-      if (Arg.isIndirect() && !ArgVal)
-        ArgVal = Builder.CreateLoad(DeclPtr);
+        // Load objects passed indirectly.
+        if (Arg.isIndirect() && !ArgVal)
+          ArgVal = Builder.CreateLoad(DeclPtr);
 
-      if (lt == Qualifiers::OCL_Strong) {
-        if (!isConsumed) {
-          if (CGM.getCodeGenOpts().OptimizationLevel == 0) {
-            // use objc_storeStrong(&dest, value) for retaining the
-            // object. But first, store a null into 'dest' because
-            // objc_storeStrong attempts to release its old value.
-            llvm::Value *Null = CGM.EmitNullConstant(D.getType());
-            EmitStoreOfScalar(Null, lv, /* isInitialization */ true);
-            EmitARCStoreStrongCall(lv.getAddress(*this), ArgVal, true);
-            DoStore = false;
+        if (lt == Qualifiers::OCL_Strong) {
+          if (!isConsumed) {
+            if (CGM.getCodeGenOpts().OptimizationLevel == 0) {
+              // use objc_storeStrong(&dest, value) for retaining the
+              // object. But first, store a null into 'dest' because
+              // objc_storeStrong attempts to release its old value.
+              llvm::Value *Null = CGM.EmitNullConstant(D.getType());
+              EmitStoreOfScalar(Null, lv, /* isInitialization */ true);
+              EmitARCStoreStrongCall(lv.getAddress(*this), ArgVal, true);
+              DoStore = false;
+            } else
+              // Don't use objc_retainBlock for block pointers, because we
+              // don't want to Block_copy something just because we got it
+              // as a parameter.
+              ArgVal = EmitARCRetainNonBlock(ArgVal);
           }
-          else
-          // Don't use objc_retainBlock for block pointers, because we
-          // don't want to Block_copy something just because we got it
-          // as a parameter.
-            ArgVal = EmitARCRetainNonBlock(ArgVal);
-        }
-      } else {
-        // Push the cleanup for a consumed parameter.
-        if (isConsumed) {
-          ARCPreciseLifetime_t precise = (D.hasAttr<ObjCPreciseLifetimeAttr>()
-                                ? ARCPreciseLifetime : ARCImpreciseLifetime);
-          EHStack.pushCleanup<ConsumeARCParameter>(getARCCleanupKind(), ArgVal,
-                                                   precise);
+        } else {
+          // Push the cleanup for a consumed parameter.
+          if (isConsumed) {
+            ARCPreciseLifetime_t precise =
+                (D.hasAttr<ObjCPreciseLifetimeAttr>() ? ARCPreciseLifetime
+                                                      : ARCImpreciseLifetime);
+            EHStack.pushCleanup<ConsumeARCParameter>(getARCCleanupKind(),
+                                                     ArgVal, precise);
+          }
+
+          if (lt == Qualifiers::OCL_Weak) {
+            EmitARCInitWeak(DeclPtr, ArgVal);
+            DoStore = false; // The weak init is a store, no need to do two.
+          }
         }
 
-        if (lt == Qualifiers::OCL_Weak) {
-          EmitARCInitWeak(DeclPtr, ArgVal);
-          DoStore = false; // The weak init is a store, no need to do two.
-        }
+        // Enter the cleanup scope.
+        EmitAutoVarWithLifetime(*this, D, DeclPtr, lt);
       }
-
-      // Enter the cleanup scope.
-      EmitAutoVarWithLifetime(*this, D, DeclPtr, lt);
     }
-  }
 
-  // Store the initial value into the alloca.
-  if (DoStore)
-    EmitStoreOfScalar(ArgVal, lv, /* isInitialization */ true);
+    // Store the initial value into the alloca.
+    if (DoStore)
+      EmitStoreOfScalar(ArgVal, lv, /* isInitialization */ true);
+  }
 
   setAddrOfLocalVar(&D, DeclPtr);
 
