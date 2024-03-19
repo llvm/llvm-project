@@ -143,7 +143,7 @@ bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
       if (auto unreachableInst = dyn_cast<UnreachableInst>(&I)) {
         if (isLoweredToTrap(*unreachableInst))
           continue; // trap is emitted as `trap; exit;`.
-        CallInst::Create(ExitFTy, Exit, "", unreachableInst);
+        CallInst::Create(ExitFTy, Exit, "", unreachableInst->getIterator());
         Changed = true;
       }
     }

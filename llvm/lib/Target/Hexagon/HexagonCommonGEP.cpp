@@ -1109,7 +1109,7 @@ Value *HexagonCommonGEP::fabricateGEP(NodeVect &NA, BasicBlock::iterator At,
           break;
       }
     }
-    NewInst = GetElementPtrInst::Create(InpTy, Input, IdxList, "cgep", &*At);
+    NewInst = GetElementPtrInst::Create(InpTy, Input, IdxList, "cgep", At);
     NewInst->setIsInBounds(RN->Flags & GepNode::InBounds);
     LLVM_DEBUG(dbgs() << "new GEP: " << *NewInst << '\n');
     if (Idx < Num) {
