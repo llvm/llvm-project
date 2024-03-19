@@ -287,9 +287,9 @@ struct OpWithBodyGenInfo {
     return *this;
   }
 
-  OpWithBodyGenInfo &
-  setReductions(llvm::SmallVector<const Fortran::semantics::Symbol *> *value1,
-                llvm::SmallVector<mlir::Type> *value2) {
+  OpWithBodyGenInfo &setReductions(
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *value1,
+      llvm::SmallVectorImpl<mlir::Type> *value2) {
     reductionSymbols = value1;
     reductionTypes = value2;
     return *this;
@@ -317,10 +317,10 @@ struct OpWithBodyGenInfo {
   /// [in] if provided, processes the construct's data-sharing attributes.
   DataSharingProcessor *dsp = nullptr;
   /// [in] if provided, list of reduction symbols
-  llvm::SmallVector<const Fortran::semantics::Symbol *> *reductionSymbols =
+  llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *reductionSymbols =
       nullptr;
   /// [in] if provided, list of reduction types
-  llvm::SmallVector<mlir::Type> *reductionTypes = nullptr;
+  llvm::SmallVectorImpl<mlir::Type> *reductionTypes = nullptr;
   /// [in] if provided, emits the op's region entry. Otherwise, an emtpy block
   /// is created in the region.
   GenOMPRegionEntryCBFn genRegionEntryCB = nullptr;
@@ -465,11 +465,9 @@ static void genBodyOfTargetDataOp(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval, bool genNested,
-    mlir::omp::DataOp &dataOp,
-    const llvm::SmallVector<mlir::Type> &useDeviceTypes,
-    const llvm::SmallVector<mlir::Location> &useDeviceLocs,
-    const llvm::SmallVector<const Fortran::semantics::Symbol *>
-        &useDeviceSymbols,
+    mlir::omp::DataOp &dataOp, llvm::ArrayRef<mlir::Type> useDeviceTypes,
+    llvm::ArrayRef<mlir::Location> useDeviceLocs,
+    llvm::ArrayRef<const Fortran::semantics::Symbol *> useDeviceSymbols,
     const mlir::Location &currentLocation) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Region &region = dataOp.getRegion();
@@ -814,11 +812,12 @@ genTaskGroupOp(Fortran::lower::AbstractConverter &converter,
 //  clause. Support for such list items in a use_device_ptr clause
 //  is deprecated."
 static void promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(
-    llvm::SmallVector<mlir::Value> &devicePtrOperands,
-    llvm::SmallVector<mlir::Value> &deviceAddrOperands,
-    llvm::SmallVector<mlir::Type> &useDeviceTypes,
-    llvm::SmallVector<mlir::Location> &useDeviceLocs,
-    llvm::SmallVector<const Fortran::semantics::Symbol *> &useDeviceSymbols) {
+    llvm::SmallVectorImpl<mlir::Value> &devicePtrOperands,
+    llvm::SmallVectorImpl<mlir::Value> &deviceAddrOperands,
+    llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
+    llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+        &useDeviceSymbols) {
   auto moveElementToBack = [](size_t idx, auto &vector) {
     auto *iter = std::next(vector.begin(), idx);
     vector.push_back(*iter);
@@ -951,15 +950,15 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
 
 // This functions creates a block for the body of the targetOp's region. It adds
 // all the symbols present in mapSymbols as block arguments to this block.
-static void genBodyOfTargetOp(
-    Fortran::lower::AbstractConverter &converter,
-    Fortran::semantics::SemanticsContext &semaCtx,
-    Fortran::lower::pft::Evaluation &eval, bool genNested,
-    mlir::omp::TargetOp &targetOp,
-    const llvm::SmallVector<mlir::Type> &mapSymTypes,
-    const llvm::SmallVector<mlir::Location> &mapSymLocs,
-    const llvm::SmallVector<const Fortran::semantics::Symbol *> &mapSymbols,
-    const mlir::Location &currentLocation) {
+static void
+genBodyOfTargetOp(Fortran::lower::AbstractConverter &converter,
+                  Fortran::semantics::SemanticsContext &semaCtx,
+                  Fortran::lower::pft::Evaluation &eval, bool genNested,
+                  mlir::omp::TargetOp &targetOp,
+                  llvm::ArrayRef<mlir::Type> mapSymTypes,
+                  llvm::ArrayRef<mlir::Location> mapSymLocs,
+                  llvm::ArrayRef<const Fortran::semantics::Symbol *> mapSymbols,
+                  const mlir::Location &currentLocation) {
   assert(mapSymTypes.size() == mapSymLocs.size());
 
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -1491,7 +1490,7 @@ static void convertLoopBounds(Fortran::lower::AbstractConverter &converter,
 static llvm::SmallVector<const Fortran::semantics::Symbol *>
 genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
             mlir::Location &loc,
-            const llvm::SmallVector<const Fortran::semantics::Symbol *> &args) {
+            llvm::ArrayRef<const Fortran::semantics::Symbol *> args) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto &region = op->getRegion(0);
 
@@ -1512,16 +1511,16 @@ genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
   }
   firOpBuilder.setInsertionPointAfter(storeOp);
 
-  return args;
+  return llvm::SmallVector<const Fortran::semantics::Symbol *>(args);
 }
 
 static llvm::SmallVector<const Fortran::semantics::Symbol *>
 genLoopAndReductionVars(
     mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
     mlir::Location &loc,
-    const llvm::SmallVector<const Fortran::semantics::Symbol *> &loopArgs,
-    const llvm::SmallVector<const Fortran::semantics::Symbol *> &reductionArgs,
-    llvm::SmallVector<mlir::Type> &reductionTypes) {
+    llvm::ArrayRef<const Fortran::semantics::Symbol *> loopArgs,
+    llvm::ArrayRef<const Fortran::semantics::Symbol *> reductionArgs,
+    llvm::SmallVectorImpl<mlir::Type> &reductionTypes) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   llvm::SmallVector<mlir::Type> blockArgTypes;
@@ -1564,7 +1563,7 @@ genLoopAndReductionVars(
     converter.bindSymbol(*arg, prv);
   }
 
-  return loopArgs;
+  return llvm::SmallVector<const Fortran::semantics::Symbol *>(loopArgs);
 }
 
 static void
