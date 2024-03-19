@@ -2141,6 +2141,16 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
     Printer.printInt("dwarfAddressSpace", *DWARFAddressSpace,
                      /* ShouldSkipZero */ false);
   Printer.printMetadata("annotations", N->getRawAnnotations());
+  if (auto PtrAuthData = N->getPtrAuthData()) {
+    Printer.printInt("ptrAuthKey", PtrAuthData->key());
+    Printer.printBool("ptrAuthIsAddressDiscriminated",
+                      PtrAuthData->isAddressDiscriminated());
+    Printer.printInt("ptrAuthExtraDiscriminator",
+                     PtrAuthData->extraDiscriminator());
+    Printer.printBool("ptrAuthIsaPointer", PtrAuthData->isaPointer());
+    Printer.printBool("ptrAuthAuthenticatesNullValues",
+                      PtrAuthData->authenticatesNullValues());
+  }
   Out << ")";
 }
 
