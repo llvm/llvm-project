@@ -3761,7 +3761,7 @@ def warn_sme_streaming_pass_return_vl_to_non_streaming : Warning<
   " different">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def warn_sme_locally_streaming_has_vl_args_returns : Warning<
-  "passing/returning a VL-dependent argument from a arm_locally_streaming"
+  "passing/returning a VL-dependent argument from a __arm_locally_streaming"
   " function. The streaming and non-streaming vector"
   " lengths may be different">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
