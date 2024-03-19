@@ -11677,7 +11677,7 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
 }
 
 Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
-  IRBuilder<>::InsertPointGuard Guard(Builder);
+  IRBuilderBase::InsertPointGuard Guard(Builder);
 
   if (E->VectorizedValue &&
       (E->State != TreeEntry::Vectorize || E->getOpcode() != Instruction::PHI ||
@@ -12700,7 +12700,7 @@ Value *BoUpSLP::vectorizeTree(
             auto Key = std::make_pair(Vec, ScalarTy);
             auto VecIt = VectorCasts.find(Key);
             if (VecIt == VectorCasts.end()) {
-              IRBuilder<>::InsertPointGuard Guard(Builder);
+              IRBuilderBase::InsertPointGuard Guard(Builder);
               if (auto *IVec = dyn_cast<Instruction>(Vec))
                 Builder.SetInsertPoint(IVec->getNextNonDebugInstruction());
               Vec = Builder.CreateIntCast(
@@ -14689,7 +14689,7 @@ class HorizontalReduction {
   }
 
   /// Creates reduction operation with the current opcode.
-  static Value *createOp(IRBuilder<> &Builder, RecurKind Kind, Value *LHS,
+  static Value *createOp(IRBuilderBase &Builder, RecurKind Kind, Value *LHS,
                          Value *RHS, const Twine &Name, bool UseSelect) {
     unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
     bool IsConstant = isConstant(LHS) && isConstant(RHS);
@@ -14768,7 +14768,7 @@ class HorizontalReduction {
 
   /// Creates reduction operation with the current opcode with the IR flags
   /// from \p ReductionOps, dropping nuw/nsw flags.
-  static Value *createOp(IRBuilder<> &Builder, RecurKind RdxKind, Value *LHS,
+  static Value *createOp(IRBuilderBase &Builder, RecurKind RdxKind, Value *LHS,
                          Value *RHS, const Twine &Name,
                          const ReductionOpsListType &ReductionOps) {
     bool UseSelect =
@@ -15857,7 +15857,7 @@ private:
   }
 
   /// Emit a horizontal reduction of the vectorized value.
-  Value *emitReduction(Value *VectorizedValue, IRBuilder<> &Builder,
+  Value *emitReduction(Value *VectorizedValue, IRBuilderBase &Builder,
                        unsigned ReduxWidth, const TargetTransformInfo *TTI) {
     assert(VectorizedValue && "Need to have a vectorized tree node");
     assert(isPowerOf2_32(ReduxWidth) &&
