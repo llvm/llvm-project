@@ -427,9 +427,9 @@ struct ResourceBindInfo : public v0::ResourceBindInfo {
 
 namespace v3 {
 struct RuntimeInfo : public v2::RuntimeInfo {
-  uint32_t EntryFunctionName;
+  uint32_t EntryNameOffset;
 
-  void swapBytes() { sys::swapByteOrder(EntryFunctionName); }
+  void swapBytes() { sys::swapByteOrder(EntryNameOffset); }
 
   void swapBytes(Triple::EnvironmentType Stage) {
     v2::RuntimeInfo::swapBytes(Stage);

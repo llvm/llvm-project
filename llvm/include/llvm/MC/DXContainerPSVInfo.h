@@ -73,7 +73,7 @@ struct PSVRuntimeInfo {
   SmallVector<llvm::dxbc::PSV::v0::SignatureElement, 32> SignatureElements;
   SmallVector<StringRef, 32> SemanticNames;
 
-  llvm::StringRef EntryFunctionName;
+  llvm::StringRef EntryName;
 
   // Serialize PSVInfo into the provided raw_ostream. The version field
   // specifies the data version to encode, the default value specifies encoding
@@ -145,7 +145,7 @@ struct PSVRuntimeInfo {
     ProcessElementList(DXConStrTabBuilder, IndexBuffer, SignatureElements,
                        SemanticNames, PatchOrPrimElements);
 
-    DXConStrTabBuilder.add(EntryFunctionName);
+    DXConStrTabBuilder.add(EntryName);
 
     DXConStrTabBuilder.finalize();
     for (auto ElAndName : zip(SignatureElements, SemanticNames)) {
@@ -156,8 +156,8 @@ struct PSVRuntimeInfo {
         El.swapBytes();
     }
 
-    BaseData.EntryFunctionName =
-        static_cast<uint32_t>(DXConStrTabBuilder.getOffset(EntryFunctionName));
+    BaseData.EntryNameOffset =
+        static_cast<uint32_t>(DXConStrTabBuilder.getOffset(EntryName));
 
     if (!sys::IsBigEndianHost)
       return;

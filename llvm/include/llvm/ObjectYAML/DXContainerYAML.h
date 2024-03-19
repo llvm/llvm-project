@@ -121,7 +121,7 @@ struct PSVInfo {
   MaskVector InputPatchMap;
   MaskVector PatchOutputMap;
 
-  StringRef EntryFunctionName;
+  StringRef EntryName;
 
   void mapInfoForVersion(yaml::IO &IO);
 
