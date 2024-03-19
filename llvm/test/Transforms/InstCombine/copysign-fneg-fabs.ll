@@ -289,7 +289,7 @@ entry:
 define half @copysign_neg(half %a) {
 ; CHECK-LABEL: @copysign_neg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RET:%.*]] = call half @llvm.copysign.f16(half 0xHBC00, half [[A:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call half @llvm.copysign.f16(half 0xH3C00, half [[A:%.*]])
 ; CHECK-NEXT:    ret half [[RET]]
 ;
 entry:
@@ -300,7 +300,7 @@ entry:
 define <4 x half> @copysign_splat(<4 x half> %a) {
 ; CHECK-LABEL: @copysign_splat(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RET:%.*]] = call <4 x half> @llvm.copysign.v4f16(<4 x half> <half 0xHBC00, half 0xHBC00, half 0xHBC00, half 0xHBC00>, <4 x half> [[A:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call <4 x half> @llvm.copysign.v4f16(<4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, <4 x half> [[A:%.*]])
 ; CHECK-NEXT:    ret <4 x half> [[RET]]
 ;
 entry:
