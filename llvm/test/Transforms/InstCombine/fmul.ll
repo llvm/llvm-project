@@ -1278,3 +1278,93 @@ define half @mul_negzero_nnan(half %x) {
   %r = fmul nnan half %x, -0.0
   ret half %r
 }
+
+define float @mul_pos_zero_nnan_ninf(float nofpclass(inf nan) %a) {
+; CHECK-LABEL: @mul_pos_zero_nnan_ninf(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RET:%.*]] = fmul float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret float [[RET]]
+;
+entry:
+  %ret = fmul float %a, 0.000000e+00
+  ret float %ret
+}
+
+define float @mul_pos_zero_nnan(float nofpclass(nan) %a) {
+; CHECK-LABEL: @mul_pos_zero_nnan(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RET:%.*]] = fmul float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret float [[RET]]
+;
+entry:
+  %ret = fmul float %a, 0.000000e+00
+  ret float %ret
+}
+
+define float @mul_pos_zero_nnan_ninf_fmf(float nofpclass(nan) %a) {
+; CHECK-LABEL: @mul_pos_zero_nnan_ninf_fmf(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RET:%.*]] = fmul ninf float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret float [[RET]]
+;
+entry:
+  %ret = fmul ninf float %a, 0.000000e+00
+  ret float %ret
+}
+
+define float @mul_neg_zero_nnan_ninf(float nofpclass(inf nan) %a) {
+; CHECK-LABEL: @mul_neg_zero_nnan_ninf(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RET:%.*]] = fmul float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[RET]]
+;
+entry:
+  %ret = fmul float %a, -0.000000e+00
+  ret float %ret
+}
+
+define float @mul_neg_zero_nnan_fmf(float %a) {
+; CHECK-LABEL: @mul_neg_zero_nnan_fmf(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RET:%.*]] = fmul nnan float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[RET]]
+;
+entry:
+  %ret = fmul nnan float %a, -0.000000e+00
+  ret float %ret
+}
+
+define float @mul_neg_zero_nnan_ninf_fmf(float nofpclass(inf nan) %a) {
+; CHECK-LABEL: @mul_neg_zero_nnan_ninf_fmf(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RET:%.*]] = fmul nnan ninf float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[RET]]
+;
+entry:
+  %ret = fmul nnan ninf float %a, -0.000000e+00
+  ret float %ret
+}
+
+; poison propagates through vector elements
+
+define <3 x float> @mul_neg_zero_nnan_ninf_vec(<3 x float> nofpclass(inf nan) %a) {
+; CHECK-LABEL: @mul_neg_zero_nnan_ninf_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RET:%.*]] = fmul <3 x float> [[A:%.*]], <float -0.000000e+00, float undef, float poison>
+; CHECK-NEXT:    ret <3 x float> [[RET]]
+;
+entry:
+  %ret = fmul <3 x float> %a, <float -0.0, float undef, float poison>
+  ret <3 x float> %ret
+}
+
+define <3 x float> @mul_mixed_zero_nnan_ninf_vec(<3 x float> nofpclass(inf nan) %a) {
+; CHECK-LABEL: @mul_mixed_zero_nnan_ninf_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RET:%.*]] = fmul <3 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00, float poison>
+; CHECK-NEXT:    ret <3 x float> [[RET]]
+;
+entry:
+  %ret = fmul <3 x float> %a, <float -0.0, float 0.0, float poison>
+  ret <3 x float> %ret
+}
