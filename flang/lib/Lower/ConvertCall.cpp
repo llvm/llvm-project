@@ -164,6 +164,125 @@ static mlir::Value readDim3Value(fir::FirOpBuilder &builder, mlir::Location loc,
   return hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{designate});
 }
 
+static mlir::Value remapActualToDummyDescriptor(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::SymMap &symMap,
+    const Fortran::lower::CallerInterface::PassedEntity &arg,
+    Fortran::lower::CallerInterface &caller, bool isBindcCall) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::IndexType idxTy = builder.getIndexType();
+  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+  Fortran::lower::StatementContext localStmtCtx;
+  auto lowerSpecExpr = [&](const auto &expr,
+                           bool isAssumedSizeExtent) -> mlir::Value {
+    mlir::Value convertExpr = builder.createConvert(
+        loc, idxTy, fir::getBase(converter.genExprValue(expr, localStmtCtx)));
+    if (isAssumedSizeExtent)
+      return convertExpr;
+    return fir::factory::genMaxWithZero(builder, loc, convertExpr);
+  };
+  bool mapSymbols = caller.mustMapInterfaceSymbolsForDummyArgument(arg);
+  if (mapSymbols) {
+    symMap.pushScope();
+    const Fortran::semantics::Symbol *sym = caller.getDummySymbol(arg);
+    assert(sym && "call must have explicit interface to map interface symbols");
+    Fortran::lower::mapCallInterfaceSymbolsForDummyArgument(converter, caller,
+                                                            symMap, *sym);
+  }
+  llvm::SmallVector<mlir::Value> extents;
+  llvm::SmallVector<mlir::Value> lengths;
+  mlir::Type dummyBoxType = caller.getDummyArgumentType(arg);
+  mlir::Type dummyBaseType = fir::unwrapPassByRefType(dummyBoxType);
+  if (dummyBaseType.isa<fir::SequenceType>())
+    caller.walkDummyArgumentExtents(
+        arg, [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
+          extents.emplace_back(lowerSpecExpr(e, isAssumedSizeExtent));
+        });
+  mlir::Value shape;
+  if (!extents.empty()) {
+    if (isBindcCall) {
+      // Preserve zero lower bounds (see F'2023 18.5.3).
+      llvm::SmallVector<mlir::Value> lowerBounds(extents.size(), zero);
+      shape = builder.genShape(loc, lowerBounds, extents);
+    } else {
+      shape = builder.genShape(loc, extents);
+    }
+  }
+
+  hlfir::Entity explicitArgument = hlfir::Entity{caller.getInput(arg)};
+  mlir::Type dummyElementType = fir::unwrapSequenceType(dummyBaseType);
+  if (auto recType = llvm::dyn_cast<fir::RecordType>(dummyElementType))
+    if (recType.getNumLenParams() > 0)
+      TODO(loc, "sequence association of length parameterized derived type "
+                "dummy arguments");
+  if (fir::isa_char(dummyElementType))
+    lengths.emplace_back(hlfir::genCharLength(loc, builder, explicitArgument));
+  mlir::Value baseAddr =
+      hlfir::genVariableRawAddress(loc, builder, explicitArgument);
+  baseAddr = builder.createConvert(loc, fir::ReferenceType::get(dummyBaseType),
+                                   baseAddr);
+  mlir::Value mold;
+  if (fir::isPolymorphicType(dummyBoxType))
+    mold = explicitArgument;
+  mlir::Value remapped =
+      builder.create<fir::EmboxOp>(loc, dummyBoxType, baseAddr, shape,
+                                   /*slice=*/mlir::Value{}, lengths, mold);
+  if (mapSymbols)
+    symMap.popScope();
+  return remapped;
+}
+
+/// Create a descriptor for sequenced associated descriptor that are passed
+/// by descriptor. Sequence association (F'2023 15.5.2.12) implies that the
+/// dummy shape and rank need to not be the same as the actual argument. This
+/// helper creates a descriptor based on the dummy shape and rank (sequence
+/// association can only happen with explicit and assumed-size array) so that it
+/// is safe to assume the rank of the incoming descriptor inside the callee.
+/// This helper must be called once all the actual arguments have been lowered
+/// and placed inside "caller". Copy-in/copy-out must already have been
+/// generated if needed using the actual argument shape (the dummy shape may be
+/// assumed-size).
+static void remapActualToDummyDescriptors(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::SymMap &symMap,
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    Fortran::lower::CallerInterface &caller, bool isBindcCall) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  for (auto [preparedActual, arg] :
+       llvm::zip(loweredActuals, caller.getPassedArguments())) {
+    if (arg.isSequenceAssociatedDescriptor()) {
+      if (!preparedActual.value().handleDynamicOptional()) {
+        mlir::Value remapped = remapActualToDummyDescriptor(
+            loc, converter, symMap, arg, caller, isBindcCall);
+        caller.placeInput(arg, remapped);
+      } else {
+        // Absent optional actual argument descriptor cannot be read and
+        // remapped unconditionally.
+        mlir::Type dummyType = caller.getDummyArgumentType(arg);
+        mlir::Value isPresent = preparedActual.value().getIsPresent();
+        auto &argLambdaCapture = arg;
+        mlir::Value remapped =
+            builder
+                .genIfOp(loc, {dummyType}, isPresent,
+                         /*withElseRegion=*/true)
+                .genThen([&]() {
+                  mlir::Value newBox = remapActualToDummyDescriptor(
+                      loc, converter, symMap, argLambdaCapture, caller,
+                      isBindcCall);
+                  builder.create<fir::ResultOp>(loc, newBox);
+                })
+                .genElse([&]() {
+                  mlir::Value absent =
+                      builder.create<fir::AbsentOp>(loc, dummyType);
+                  builder.create<fir::ResultOp>(loc, absent);
+                })
+                .getResults()[0];
+        caller.placeInput(arg, remapped);
+      }
+    }
+  }
+}
+
 std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
@@ -171,12 +290,11 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     std::optional<mlir::Type> resultType, bool isElemental) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
-  // Handle cases where caller must allocate the result or a fir.box for it.
   bool mustPopSymMap = false;
-  if (caller.mustMapInterfaceSymbols()) {
+  if (caller.mustMapInterfaceSymbolsForResult()) {
     symMap.pushScope();
     mustPopSymMap = true;
-    Fortran::lower::mapCallInterfaceSymbols(converter, caller, symMap);
+    Fortran::lower::mapCallInterfaceSymbolsForResult(converter, caller, symMap);
   }
   // If this is an indirect call, retrieve the function address. Also retrieve
   // the result length if this is a character function (note that this length
@@ -221,12 +339,16 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
       return {};
     mlir::Type type = caller.getResultStorageType();
     if (type.isa<fir::SequenceType>())
-      caller.walkResultExtents([&](const Fortran::lower::SomeExpr &e) {
-        extents.emplace_back(lowerSpecExpr(e));
-      });
-    caller.walkResultLengths([&](const Fortran::lower::SomeExpr &e) {
-      lengths.emplace_back(lowerSpecExpr(e));
-    });
+      caller.walkResultExtents(
+          [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
+            assert(!isAssumedSizeExtent && "result cannot be assumed-size");
+            extents.emplace_back(lowerSpecExpr(e));
+          });
+    caller.walkResultLengths(
+        [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
+          assert(!isAssumedSizeExtent && "result cannot be assumed-size");
+          lengths.emplace_back(lowerSpecExpr(e));
+        });
 
     // Result length parameters should not be provided to box storage
     // allocation and save_results, but they are still useful information to
@@ -1056,10 +1178,16 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // Create dummy type with actual argument rank when the dummy is an assumed
   // rank. That way, all the operation to create dummy descriptors are ranked if
   // the actual argument is ranked, which allows simple code generation.
+  // Also do the same when the dummy is a sequence associated descriptor
+  // because the actual shape/rank may mismatch with the dummy, and the dummy
+  // may be an assumed-size array, so any descriptor manipulation should use the
+  // actual argument shape information. A descriptor with the dummy shape
+  // information will be created later when all actual arguments are ready.
   mlir::Type dummyTypeWithActualRank = dummyType;
   if (auto baseBoxDummy = mlir::dyn_cast<fir::BaseBoxType>(dummyType))
     if (baseBoxDummy.isAssumedRank() ||
-        arg.testTKR(Fortran::common::IgnoreTKR::Rank))
+        arg.testTKR(Fortran::common::IgnoreTKR::Rank) ||
+        arg.isSequenceAssociatedDescriptor())
       dummyTypeWithActualRank =
           baseBoxDummy.getBoxTypeWithNewShape(actual.getType());
   // Preserve the actual type in the argument preparation in case IgnoreTKR(t)
@@ -1342,6 +1470,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
             mlir::FunctionType callSiteType, CallContext &callContext) {
   using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
   mlir::Location loc = callContext.loc;
+  bool mustRemapActualToDummyDescriptors = false;
   fir::FirOpBuilder &builder = callContext.getBuilder();
   llvm::SmallVector<CallCleanUp> callCleanUps;
   for (auto [preparedActual, arg] :
@@ -1398,6 +1527,9 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       callCleanUps.append(preparedDummy.cleanups.rbegin(),
                           preparedDummy.cleanups.rend());
       caller.placeInput(arg, preparedDummy.dummy);
+      if (arg.passBy == PassBy::Box)
+        mustRemapActualToDummyDescriptors |=
+            arg.isSequenceAssociatedDescriptor();
     } break;
     case PassBy::BoxProcRef: {
       PreparedDummyArgument preparedDummy =
@@ -1490,6 +1622,12 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
     } break;
     }
   }
+  // Handle cases where caller must allocate the result or a fir.box for it.
+  if (mustRemapActualToDummyDescriptors)
+    remapActualToDummyDescriptors(loc, callContext.converter,
+                                  callContext.symMap, loweredActuals, caller,
+                                  callContext.isBindcCall());
+
   // Prepare lowered arguments according to the interface
   // and map the lowered values to the dummy
   // arguments.
