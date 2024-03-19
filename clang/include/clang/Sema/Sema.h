@@ -3060,6 +3060,8 @@ public:
                                     TemplateIdAnnotation *TemplateId,
                                     bool IsMemberSpecialization);
 
+  bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
+
   void DiagnoseFunctionSpecifiers(const DeclSpec &DS);
   NamedDecl *getShadowedDeclaration(const TypedefNameDecl *D,
                                     const LookupResult &R);
@@ -9215,7 +9217,7 @@ public:
 
   bool AttachTypeConstraint(NestedNameSpecifierLoc NS,
                             DeclarationNameInfo NameInfo,
-                            ConceptDecl *NamedConcept,
+                            ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
                             const TemplateArgumentListInfo *TemplateArgs,
                             TemplateTypeParmDecl *ConstrainedParameter,
                             SourceLocation EllipsisLoc);

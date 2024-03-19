@@ -194,11 +194,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::UADDO_CARRY, VT, Custom);
       setOperationAction(ISD::USUBO_CARRY, VT, Custom);
 
-      // Lower ATOMIC_LOAD and ATOMIC_STORE into normal volatile loads and
-      // stores, putting a serialization instruction after the stores.
-      setOperationAction(ISD::ATOMIC_LOAD,  VT, Custom);
-      setOperationAction(ISD::ATOMIC_STORE, VT, Custom);
-
       // Lower ATOMIC_LOAD_SUB into ATOMIC_LOAD_ADD if LAA and LAAG are
       // available, or if the operand is constant.
       setOperationAction(ISD::ATOMIC_LOAD_SUB, VT, Custom);
@@ -918,6 +913,22 @@ bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const
     return MF.getFunction().getFnAttribute("probe-stack").getValueAsString() ==
            "inline-asm";
   return false;
+}
+
+TargetLowering::AtomicExpansionKind
+SystemZTargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
+  // Lower fp128 the same way as i128.
+  if (LI->getType()->isFP128Ty())
+    return AtomicExpansionKind::CastToInteger;
+  return AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SystemZTargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
+  // Lower fp128 the same way as i128.
+  if (SI->getValueOperand()->getType()->isFP128Ty())
+    return AtomicExpansionKind::CastToInteger;
+  return AtomicExpansionKind::None;
 }
 
 TargetLowering::AtomicExpansionKind
@@ -4503,40 +4514,14 @@ SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
   return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 }
 
-// Op is an atomic load.  Lower it into a normal volatile load.
-SDValue SystemZTargetLowering::lowerATOMIC_LOAD(SDValue Op,
-                                                SelectionDAG &DAG) const {
+SDValue SystemZTargetLowering::lowerATOMIC_LDST_I128(SDValue Op,
+                                                     SelectionDAG &DAG) const {
   auto *Node = cast<AtomicSDNode>(Op.getNode());
-  if (Node->getMemoryVT() == MVT::i128) {
-    // Use same code to handle both legal and non-legal i128 types.
-    SmallVector<SDValue, 2> Results;
-    LowerOperationWrapper(Node, Results, DAG);
-    return DAG.getMergeValues(Results, SDLoc(Op));
-  }
-  return DAG.getExtLoad(ISD::EXTLOAD, SDLoc(Op), Op.getValueType(),
-                        Node->getChain(), Node->getBasePtr(),
-                        Node->getMemoryVT(), Node->getMemOperand());
-}
-
-// Op is an atomic store.  Lower it into a normal volatile store.
-SDValue SystemZTargetLowering::lowerATOMIC_STORE(SDValue Op,
-                                                 SelectionDAG &DAG) const {
-  auto *Node = cast<AtomicSDNode>(Op.getNode());
-  if (Node->getMemoryVT() == MVT::i128) {
-    // Use same code to handle both legal and non-legal i128 types.
-    SmallVector<SDValue, 1> Results;
-    LowerOperationWrapper(Node, Results, DAG);
-    return DAG.getMergeValues(Results, SDLoc(Op));
-  }
-  SDValue Chain = DAG.getTruncStore(Node->getChain(), SDLoc(Op), Node->getVal(),
-                                    Node->getBasePtr(), Node->getMemoryVT(),
-                                    Node->getMemOperand());
-  // We have to enforce sequential consistency by performing a
-  // serialization operation after the store.
-  if (Node->getSuccessOrdering() == AtomicOrdering::SequentiallyConsistent)
-    Chain = SDValue(DAG.getMachineNode(SystemZ::Serialize, SDLoc(Op),
-                                       MVT::Other, Chain), 0);
-  return Chain;
+  assert(Node->getMemoryVT() == MVT::i128 && "Only custom lowering i128.");
+  // Use same code to handle both legal and non-legal i128 types.
+  SmallVector<SDValue, 2> Results;
+  LowerOperationWrapper(Node, Results, DAG);
+  return DAG.getMergeValues(Results, SDLoc(Op));
 }
 
 // Prepare for a Compare And Swap for a subword operation. This needs to be
@@ -5662,6 +5647,9 @@ static SDValue tryBuildVectorShuffle(SelectionDAG &DAG,
 bool SystemZTargetLowering::isVectorElementLoad(SDValue Op) const {
   if (Op.getOpcode() == ISD::LOAD && cast<LoadSDNode>(Op)->isUnindexed())
     return true;
+  if (auto *AL = dyn_cast<AtomicSDNode>(Op))
+    if (AL->getOpcode() == ISD::ATOMIC_LOAD)
+      return true;
   if (Subtarget.hasVectorEnhancements2() && Op.getOpcode() == SystemZISD::LRV)
     return true;
   return false;
@@ -6138,9 +6126,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
   case ISD::ATOMIC_SWAP:
     return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_SWAPW);
   case ISD::ATOMIC_STORE:
-    return lowerATOMIC_STORE(Op, DAG);
   case ISD::ATOMIC_LOAD:
-    return lowerATOMIC_LOAD(Op, DAG);
+    return lowerATOMIC_LDST_I128(Op, DAG);
   case ISD::ATOMIC_LOAD_ADD:
     return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_ADD);
   case ISD::ATOMIC_LOAD_SUB:
@@ -6587,6 +6574,27 @@ SDValue SystemZTargetLowering::combineTruncateExtract(
   return SDValue();
 }
 
+// Replace ALoad with a new ATOMIC_LOAD with a result that is extended to VT
+// per ETy.
+static SDValue extendAtomicLoad(AtomicSDNode *ALoad, EVT VT, SelectionDAG &DAG,
+                                ISD::LoadExtType ETy) {
+  if (VT.getSizeInBits() > 64)
+    return SDValue();
+  EVT OrigVT = ALoad->getValueType(0);
+  assert(OrigVT.getSizeInBits() < VT.getSizeInBits() && "VT should be wider.");
+  EVT MemoryVT = ALoad->getMemoryVT();
+  auto *NewALoad = dyn_cast<AtomicSDNode>(DAG.getAtomic(
+      ISD::ATOMIC_LOAD, SDLoc(ALoad), MemoryVT, VT, ALoad->getChain(),
+      ALoad->getBasePtr(), ALoad->getMemOperand()));
+  NewALoad->setExtensionType(ETy);
+  DAG.ReplaceAllUsesOfValueWith(
+      SDValue(ALoad, 0),
+      DAG.getNode(ISD::TRUNCATE, SDLoc(ALoad), OrigVT, SDValue(NewALoad, 0)));
+  // Update the chain uses.
+  DAG.ReplaceAllUsesOfValueWith(SDValue(ALoad, 1), SDValue(NewALoad, 1));
+  return SDValue(NewALoad, 0);
+}
+
 SDValue SystemZTargetLowering::combineZERO_EXTEND(
     SDNode *N, DAGCombinerInfo &DCI) const {
   // Convert (zext (select_ccmask C1, C2)) into (select_ccmask C1', C2')
@@ -6611,6 +6619,13 @@ SDValue SystemZTargetLowering::combineZERO_EXTEND(
       return NewSelect;
     }
   }
+
+  // Fold into ATOMIC_LOAD unless it is already sign extending.
+  if (auto *ALoad = dyn_cast<AtomicSDNode>(N0))
+    if (ALoad->getOpcode() == ISD::ATOMIC_LOAD &&
+        ALoad->getExtensionType() != ISD::SEXTLOAD)
+      return extendAtomicLoad(ALoad, VT, DAG, ISD::ZEXTLOAD);
+
   return SDValue();
 }
 
@@ -6662,6 +6677,13 @@ SDValue SystemZTargetLowering::combineSIGN_EXTEND(
       }
     }
   }
+
+  // Fold into ATOMIC_LOAD unless it is already zero extending.
+  if (auto *ALoad = dyn_cast<AtomicSDNode>(N0))
+    if (ALoad->getOpcode() == ISD::ATOMIC_LOAD &&
+        ALoad->getExtensionType() != ISD::ZEXTLOAD)
+      return extendAtomicLoad(ALoad, VT, DAG, ISD::SEXTLOAD);
+
   return SDValue();
 }
 

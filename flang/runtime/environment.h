@@ -9,9 +9,8 @@
 #ifndef FORTRAN_RUNTIME_ENVIRONMENT_H_
 #define FORTRAN_RUNTIME_ENVIRONMENT_H_
 
+#include "flang/Common/optional.h"
 #include "flang/Decimal/decimal.h"
-#include "flang/Runtime/api-attrs.h"
-#include <optional>
 
 struct EnvironmentDefaultList;
 
@@ -30,7 +29,8 @@ constexpr bool isHostLittleEndian{true};
 // External unformatted I/O data conversions
 enum class Convert { Unknown, Native, LittleEndian, BigEndian, Swap };
 
-std::optional<Convert> GetConvertFromString(const char *, std::size_t);
+Fortran::common::optional<Convert> GetConvertFromString(
+    const char *, std::size_t);
 
 struct ExecutionEnvironment {
 #if !defined(_OPENMP)

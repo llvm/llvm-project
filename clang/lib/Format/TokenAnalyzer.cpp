@@ -14,21 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "TokenAnalyzer.h"
-#include "AffectedRangeManager.h"
-#include "Encoding.h"
-#include "FormatToken.h"
-#include "FormatTokenLexer.h"
-#include "TokenAnnotator.h"
-#include "UnwrappedLineParser.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Format/Format.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Debug.h"
-#include <type_traits>
 
 #define DEBUG_TYPE "format-formatter"
 

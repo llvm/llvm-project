@@ -363,6 +363,9 @@ SetVector<Instruction *> ConstantHoistingPass::findConstantInsertionPoint(
 void ConstantHoistingPass::collectConstantCandidates(
     ConstCandMapType &ConstCandMap, Instruction *Inst, unsigned Idx,
     ConstantInt *ConstInt) {
+  if (ConstInt->getType()->isVectorTy())
+    return;
+
   InstructionCost Cost;
   // Ask the target about the cost of materializing the constant for the given
   // instruction and operand index.
