@@ -938,8 +938,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
 
       Fortran::semantics::MaybeExpr lower;
       if (triplet) {
-        if ((lower = Fortran::evaluate::AsGenericExpr(triplet->lower())))
-          lower = detail::peelOuterConvert(*lower);
+        lower = Fortran::evaluate::AsGenericExpr(triplet->lower());
       } else {
         // Case of IndirectSubscriptIntegerExpr
         using IndirectSubscriptIntegerExpr =
@@ -969,7 +968,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
               fir::getBase(converter.genExprValue(loc, *lower, stmtCtx));
           lb = builder.createConvert(loc, baseLb.getType(), lb);
           lbound = builder.create<mlir::arith::SubIOp>(loc, lb, baseLb);
-          asFortran << lower->AsFortran();
+          asFortran << detail::peelOuterConvert(*lower).AsFortran();
         }
       } else {
         // If the lower bound is not specified, then the section
@@ -989,7 +988,6 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
             Fortran::evaluate::AsGenericExpr(triplet->upper());
 
         if (upper) {
-          upper = detail::peelOuterConvert(*upper);
           uval = Fortran::evaluate::ToInt64(*upper);
           if (uval) {
             if (defaultLb) {
@@ -1004,7 +1002,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
                 fir::getBase(converter.genExprValue(loc, *upper, stmtCtx));
             ub = builder.createConvert(loc, baseLb.getType(), ub);
             ubound = builder.create<mlir::arith::SubIOp>(loc, ub, baseLb);
-            asFortran << upper->AsFortran();
+            asFortran << detail::peelOuterConvert(*upper).AsFortran();
           }
         }
         if (lower && upper) {
