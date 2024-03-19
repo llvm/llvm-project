@@ -1117,8 +1117,8 @@ public:
   ///
   /// This function is used by Sema in order to diagnose conflicts between
   /// the clobber list and the input/output lists.
-  /// The constraint should already by validated in validateHardRegisterAsmConstraint
-  /// so just do some basic checking
+  /// The constraint should already by validated in
+  /// validateHardRegisterAsmConstraint so just do some basic checking
   virtual StringRef getConstraintRegister(StringRef Constraint,
                                           StringRef Expression) const {
     StringRef Reg = Expression;
