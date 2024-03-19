@@ -458,6 +458,61 @@ Some common matchers are:
 
 See the header for the full list of available matchers.
 
+### InstCombine APIs
+
+InstCombine transforms are handled by `visitXYZ()` methods, where XYZ
+corresponds to the root instruction of your transform. If the outermost
+instruction of the pattern you are matching is an icmp, the fold will be
+located somewhere inside `visitICmpInst()`.
+
+The return value of the visit method is an instruction. You can either return
+a new instruction, in which case it will be inserted before the old one, and
+uses of the old one will be replaced by it. Or you can return the original
+instruction to indicate that *some* kind of change has been made. Finally, a
+nullptr return value indicates that no change occurred.
+
+For example, if your transform produces a single new icmp instruction, you could
+write the following:
+
+```
+if (...)
+  return new ICmpInst(Pred, X, Y);
+```
+
+In this case the main InstCombine loop takes care of inserting the instruction
+and replacing uses of the old instruction.
+
+Alternatively, you can also write it like this:
+
+```
+if (...)
+  return replaceInstUsesWith(OrigI, Builder.CreateICmp(Pred, X, Y));
+```
+
+In this case `IRBuilder` will insert the instruction and `replaceInstUsesWith()`
+will replace the uses of the old instruction, and return it to indicate that
+a change occurred.
+
+Both forms are equivalent, and you can use whichever is more convenient in
+context. For example, it's common that folds are inside helper functions that
+return `Value *` and then `replaceInstUsesWith()` is invoked on the result of
+that helper.
+
+InstCombine makes use of a worklist, which needs to be correctly updated during
+transforms. This usually happens automatically, but there are some things to
+keep in mind:
+
+  * Don't use the `Value::replaceAllUsesWith()` API. Use InstCombine's
+    `replaceInstUsesWith()` helper instead.
+  * Don't use the `Instruction::eraseFromParent()` API. Use InstCombine's
+    `eraseInstFromFunction()` helper instead. (Explicitly erasing instruction
+    is usually not necessary, as side-effect free instructions without users
+    are automatically removed.)
+  * Apart from the "directly return an instruction" pattern above, use IRBUilder
+    to create all instruction. Do not manually create and insert them.
+  * When replacing operands or uses of instructions, use `replaceOperand()`
+    and `replaceUse()` instead of `setOperand()`.
+
 ### Multi-use handling
 
 Transforms should usually not increase the total number of instructions. This
