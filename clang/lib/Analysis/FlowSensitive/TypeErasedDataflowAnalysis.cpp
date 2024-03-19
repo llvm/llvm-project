@@ -103,9 +103,12 @@ public:
     return {nullptr, false};
   }
 
-  TerminatorVisitorRetTy VisitCXXForRangeStmt(const CXXForRangeStmt *) {
-    // Don't do anything special for CXXForRangeStmt, because the condition
-    // (being implicitly generated) isn't visible from the loop body.
+  TerminatorVisitorRetTy VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
+    // Even though the condition isn't visible from the loop body, analysis
+    // might depend on the implicit implicit statements implied by the loop.
+    auto *Cond = S->getCond();
+    if (Cond != nullptr)
+      return extendFlowCondition(*Cond);
     return {nullptr, false};
   }
 
