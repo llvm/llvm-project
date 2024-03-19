@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=riscv64 -relocation-model=pic -enable-tlsdesc < %s \
-; RUN:     | llvm-mc -triple=riscv64 -filetype=obj -o %t.o --position-independent \
-; RUN:     | llvm-readelf --symbols %t.o \
+; RUN:     | llvm-mc -triple=riscv64 -filetype=obj -o - --position-independent \
+; RUN:     | llvm-readelf --symbols - \
 ; RUN:     | FileCheck %s
 
 ; RUN: llc -mtriple=riscv32 -relocation-model=pic -enable-tlsdesc < %s \
-; RUN:     | llvm-mc -triple=riscv32 -filetype=obj -o %t.o --position-independent \
-; RUN:     | llvm-readelf --symbols %t.o \
+; RUN:     | llvm-mc -triple=riscv32 -filetype=obj -o - --position-independent \
+; RUN:     | llvm-readelf --symbols - \
 ; RUN:     | FileCheck %s
 
 ; Check that TLS symbols are lowered correctly based on the specified
