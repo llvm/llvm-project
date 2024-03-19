@@ -496,10 +496,12 @@ private:
   // Need this to be 'static' so the data survives past the ObjcCategoryMerger
   // object, as the data will be read by the Writer when the final binary is
   // generated.
-  static SmallVector<SmallVector<uint8_t>> generatedSectionData;
+  static SmallVector<std::unique_ptr<SmallVector<uint8_t>>>
+      generatedSectionData;
 };
 
-SmallVector<SmallVector<uint8_t>> ObjcCategoryMerger::generatedSectionData;
+SmallVector<std::unique_ptr<SmallVector<uint8_t>>>
+    ObjcCategoryMerger::generatedSectionData;
 
 ObjcCategoryMerger::ObjcCategoryMerger(
     std::vector<ConcatInputSection *> &_allInputSections)
@@ -1220,8 +1222,9 @@ StringRef ObjcCategoryMerger::newStringData(const char *str) {
 }
 
 SmallVector<uint8_t> &ObjcCategoryMerger::newSectionData(uint32_t size) {
-  generatedSectionData.push_back(SmallVector<uint8_t>(size, 0));
-  return generatedSectionData.back();
+  generatedSectionData.push_back(
+      std::make_unique<SmallVector<uint8_t>>(size, 0));
+  return *generatedSectionData.back();
 }
 
 } // namespace
