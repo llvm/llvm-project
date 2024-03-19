@@ -77,7 +77,15 @@ void test_gcc_registers(void) {
 
 void test_tied_earlyclobber(void) {
   register int a asm("x1");
-  asm("" : "+&r"(a));
+  asm(""
+      : "+&r"(a));
+  // CHECK: call i32 asm "", "=&{x1},0"(i32 %0)
+}
+
+void test_tied_earlyclobber2(void) {
+  int a;
+  asm(""
+      : "+&{x1}"(a));
   // CHECK: call i32 asm "", "=&{x1},0"(i32 %0)
 }
 

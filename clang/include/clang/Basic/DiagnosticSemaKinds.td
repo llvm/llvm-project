@@ -9941,6 +9941,8 @@ let CategoryName = "Inline Assembly Issue" in {
     "more than one input constraint matches the same output '%0'">;
   def err_store_value_to_reg : Error<
     "impossible constraint in asm: cannot store value into a register">;
+  def err_asm_hard_reg_variable_duplicate : Error<
+    "hard register operand already defined as register variable">;
 
   def warn_asm_label_on_auto_decl : Warning<
     "ignored asm label '%0' on automatic variable">;

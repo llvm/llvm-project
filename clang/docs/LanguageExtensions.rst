@@ -2256,6 +2256,48 @@ Query for this feature with ``__has_extension(gnu_asm_constexpr_strings)``.
       asm((std::string_view("nop")) ::: (std::string_view("memory")));
    }
 
+Hard Register Operands for ASM Constraints
+==========================================
+
+Clang supports the ability to specify specific hardware registers in inline
+assembly constraints via the use of curly braces ``{}``.
+
+Prior to clang-19, the only way to associate an inline assembly constraint
+with a specific register is via the local register variable feature (`GCC
+Specifying Registers for Local Variables <https://gcc.gnu.org/onlinedocs/gcc-6.5.0/gcc/Local-Register-Variables.html>`_).
+However, the local register variable association lasts for the entire
+scope of the variable.
+
+Hard register operands will instead only apply to the specific inline ASM
+statement which improves readability and solves a few other issues experienced
+by local register variables, such as:
+
+* function calls might clobber register variables
+* the constraints for the register operands are superfluous
+* one register variable cannot be used for 2 different inline
+  assemblies if the value is expected in different hard regs
+
+The code below is an example of an inline assembly statement using local
+register variables.
+
+.. code-block:: c++
+
+  void foo() {
+    register int *p1 asm ("r0") = bar();
+    register int *p2 asm ("r1") = bar();
+    register int *result asm ("r0");
+    asm ("sysint" : "=r" (result) : "0" (p1), "r" (p2));
+  }
+Below is the same code but using hard register operands.
+
+.. code-block:: c++
+
+  void foo() {
+    int *p1 = bar();
+    int *p2 = bar();
+    int *result;
+    asm ("sysint" : "={r0}" (result) : "0" (p1), "{r1}" (p2));
+  }
 
 Objective-C Features
 ====================

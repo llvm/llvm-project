@@ -1117,9 +1117,17 @@ public:
   ///
   /// This function is used by Sema in order to diagnose conflicts between
   /// the clobber list and the input/output lists.
+  /// The constraint should already by validated in validateHardRegisterAsmConstraint
+  /// so just do some basic checking
   virtual StringRef getConstraintRegister(StringRef Constraint,
                                           StringRef Expression) const {
-    return "";
+    StringRef Reg = Expression;
+    size_t Start = Constraint.find('{');
+    size_t End = Constraint.find('}');
+    if (Start != StringRef::npos && End != StringRef::npos && End > Start)
+      Reg = Constraint.substr(Start + 1, End - Start - 1);
+
+    return Reg;
   }
 
   struct ConstraintInfo {
@@ -1278,6 +1286,14 @@ public:
   virtual bool
   validateAsmConstraint(const char *&Name,
                         TargetInfo::ConstraintInfo &info) const = 0;
+
+  // Validate the "hard register" inline asm constraint. This constraint is
+  // of the form {<reg-name>}. This constraint is meant to be used
+  // as an alternative for the "register asm" construct to put inline
+  // asm operands into specific registers.
+  bool
+  validateHardRegisterAsmConstraint(const char *&Name,
+                                    TargetInfo::ConstraintInfo &info) const;
 
   bool resolveSymbolicName(const char *&Name,
                            ArrayRef<ConstraintInfo> OutputConstraints,
