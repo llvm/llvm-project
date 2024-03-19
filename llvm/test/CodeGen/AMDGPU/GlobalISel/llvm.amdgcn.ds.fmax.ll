@@ -366,6 +366,4 @@ define float @ds_fmax_f32_vv_volatile(ptr addrspace(3) %ptr, float %val) {
   ret float %ret
 }
 
-declare float @llvm.amdgcn.ds.fmax(ptr addrspace(3) nocapture, float, i32 immarg, i32 immarg, i1 immarg) #0
-
 attributes #0 = { argmemonly nounwind willreturn }

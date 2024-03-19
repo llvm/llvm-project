@@ -12,8 +12,5 @@ define amdgpu_kernel void @gws_barrier_offset0(i32 %val) #0 {
   ret void
 }
 
-
-declare void @llvm.amdgcn.ds.gws.barrier(i32, i32) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { convergent inaccessiblememonly nounwind }

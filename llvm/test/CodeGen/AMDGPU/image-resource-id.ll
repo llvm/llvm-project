@@ -324,9 +324,6 @@ entry:
 %opencl.image2d_t = type opaque
 %opencl.image3d_t = type opaque
 
-declare i32 @llvm.OpenCL.image.get.resource.id.2d(ptr addrspace(1)) #0
-declare i32 @llvm.OpenCL.image.get.resource.id.3d(ptr addrspace(1)) #0
-
 attributes #0 = { readnone }
 
 !opencl.kernels = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13,

@@ -4,15 +4,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX12 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX12 %s
 
-declare float @llvm.amdgcn.cvt.f32.bf8(i32, i32)
-declare float @llvm.amdgcn.cvt.f32.fp8(i32, i32)
-declare <2 x float> @llvm.amdgcn.cvt.pk.f32.bf8(i32, i1)
-declare <2 x float> @llvm.amdgcn.cvt.pk.f32.fp8(i32, i1)
-declare i32 @llvm.amdgcn.cvt.pk.bf8.f32(float, float, i32, i1)
-declare i32 @llvm.amdgcn.cvt.pk.fp8.f32(float, float, i32, i1)
-declare i32 @llvm.amdgcn.cvt.sr.bf8.f32(float, i32, i32, i32)
-declare i32 @llvm.amdgcn.cvt.sr.fp8.f32(float, i32, i32, i32)
-
 define float @test_cvt_f32_bf8_byte0(i32 %a) {
 ; GFX940-LABEL: test_cvt_f32_bf8_byte0:
 ; GFX940:       ; %bb.0:

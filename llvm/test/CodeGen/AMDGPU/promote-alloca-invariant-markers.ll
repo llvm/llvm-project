@@ -1,10 +1,6 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn-- -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 target datalayout = "A5"
 
-declare ptr @llvm.invariant.start.p5(i64, ptr addrspace(5) nocapture) #0
-declare void @llvm.invariant.end.p5(ptr, i64, ptr addrspace(5) nocapture) #0
-declare ptr addrspace(5) @llvm.launder.invariant.group.p5(ptr addrspace(5)) #1
-
 ; GCN-LABEL: {{^}}use_invariant_promotable_lds:
 ; GCN: buffer_load_dword
 ; GCN: ds_write_b32

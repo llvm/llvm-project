@@ -5,9 +5,6 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx908 -start-before=amdgpu-isel -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX9
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX11
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
-
 define float @v_uitofp_i32_to_f32_mask255(i32 %arg0) nounwind {
 ; GCN-LABEL: v_uitofp_i32_to_f32_mask255:
 ; GCN:       ; %bb.0:

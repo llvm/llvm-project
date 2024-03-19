@@ -210,13 +210,5 @@ define <3 x float> @test_func_fmax_v3f32(<3 x float> %a, <3 x float> %b) #0 {
   ret <3 x float> %val
 }
 
-declare float @llvm.maxnum.f32(float, float) #1
-declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>) #1
-declare <3 x float> @llvm.maxnum.v3f32(<3 x float>, <3 x float>) #1
-declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>) #1
-declare <8 x float> @llvm.maxnum.v8f32(<8 x float>, <8 x float>) #1
-declare <16 x float> @llvm.maxnum.v16f32(<16 x float>, <16 x float>) #1
-declare double @llvm.maxnum.f64(double, double)
-
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }

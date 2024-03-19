@@ -47,5 +47,3 @@ endif:
   store i1 %3, ptr addrspace(1) %out
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

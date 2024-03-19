@@ -21,8 +21,5 @@ define amdgpu_kernel void @v_fneg_rcp_legacy_f32(ptr addrspace(1) %out, ptr addr
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.amdgcn.rcp.legacy(float) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

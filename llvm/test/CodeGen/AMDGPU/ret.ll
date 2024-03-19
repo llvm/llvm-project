@@ -247,8 +247,6 @@ define amdgpu_ps float @ret_return_to_epilog_pseudo_size() #0 {
   ret float undef
 }
 
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "InitialPSInputAddr"="0" }
 attributes #2 = { nounwind "InitialPSInputAddr"="1" }

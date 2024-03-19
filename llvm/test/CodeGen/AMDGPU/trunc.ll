@@ -2,8 +2,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI  %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=r600 -mcpu=cypress < %s | FileCheck -enable-var-scope -check-prefix=EG %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
 define amdgpu_kernel void @trunc_i64_to_i32_store(ptr addrspace(1) %out, [8 x i32], i64 %in) {
 ; GCN-LABEL: {{^}}trunc_i64_to_i32_store:
 ; GCN: s_load_dword [[SLOAD:s[0-9]+]], s[0:1],

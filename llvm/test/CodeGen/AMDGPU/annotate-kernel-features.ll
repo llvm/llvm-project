@@ -2,18 +2,6 @@
 ; RUN: opt -S -mtriple=amdgcn-unknown-unknown -amdgpu-annotate-kernel-features < %s | FileCheck -check-prefixes=CHECK,AKF_CHECK %s
 ; RUN: opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-attributor < %s | FileCheck -check-prefixes=CHECK,ATTRIBUTOR_CHECK %s
 
-declare i32 @llvm.r600.read.tgid.x() #0
-declare i32 @llvm.r600.read.tgid.y() #0
-declare i32 @llvm.r600.read.tgid.z() #0
-
-declare i32 @llvm.r600.read.tidig.x() #0
-declare i32 @llvm.r600.read.tidig.y() #0
-declare i32 @llvm.r600.read.tidig.z() #0
-
-declare i32 @llvm.r600.read.local.size.x() #0
-declare i32 @llvm.r600.read.local.size.y() #0
-declare i32 @llvm.r600.read.local.size.z() #0
-
 define amdgpu_kernel void @use_tgid_x(ptr addrspace(1) %ptr) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@use_tgid_x
 ; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {

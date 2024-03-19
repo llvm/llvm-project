@@ -87,9 +87,5 @@ define i32 @mbcnt_hi_known_bits_4(i32 %x) #0 {
   ret i32 %mask
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
-declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #0
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

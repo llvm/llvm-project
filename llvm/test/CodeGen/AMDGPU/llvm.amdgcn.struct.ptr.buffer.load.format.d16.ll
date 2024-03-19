@@ -57,9 +57,3 @@ main_body:
   %fdata = bitcast i16 %data to half
   ret half %fdata
 }
-
-declare half @llvm.amdgcn.struct.ptr.buffer.load.format.f16(ptr addrspace(8), i32, i32, i32, i32)
-declare <2 x half> @llvm.amdgcn.struct.ptr.buffer.load.format.v2f16(ptr addrspace(8), i32, i32, i32, i32)
-declare <3 x half> @llvm.amdgcn.struct.ptr.buffer.load.format.v3f16(ptr addrspace(8), i32, i32, i32, i32)
-declare <4 x half> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f16(ptr addrspace(8), i32, i32, i32, i32)
-declare i16 @llvm.amdgcn.struct.ptr.buffer.load.format.i16(ptr addrspace(8), i32, i32, i32, i32)

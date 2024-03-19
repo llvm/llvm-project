@@ -122,13 +122,10 @@ endloop:                                          ; preds = %if1, %Flow2
 }
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare float @llvm.sqrt.f32(float) #0
 
 ; Function Attrs: nounwind readnone speculatable
-declare float @llvm.amdgcn.interp.p1(float, i32 immarg, i32 immarg, i32) #1
 
 ; Function Attrs: inaccessiblememonly nounwind writeonly
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #2
 
 attributes #0 = { nounwind readnone speculatable willreturn }
 attributes #1 = { nounwind readnone speculatable }

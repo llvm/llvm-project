@@ -36,8 +36,4 @@ main_body:
   ret <4 x float> %r
 }
 
-declare <4 x float> @llvm.amdgcn.image.getlod.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.image.getlod.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #0
-declare <2 x float> @llvm.amdgcn.image.getlod.2d.v2f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #0
-
 attributes #0 = { nounwind readnone }

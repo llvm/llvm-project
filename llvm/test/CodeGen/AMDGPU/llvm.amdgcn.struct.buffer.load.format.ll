@@ -1041,17 +1041,4 @@ define amdgpu_cs float @buffer_load_f32_tfe(<4 x i32> inreg %rsrc, ptr addrspace
   %fstatus = bitcast i32 %status to float
   ret float %fstatus
 }
-
-declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i32, i32) #0
-declare <2 x float> @llvm.amdgcn.struct.buffer.load.format.v2f32(<4 x i32>, i32, i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.struct.buffer.load.format.i32(<4 x i32>, i32, i32, i32, i32) #0
-declare { <4 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4i32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare { <4 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4f32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare { <3 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v3i32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare { <3 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v3f32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare { <2 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v2i32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare { <2 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v2f32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare { i32, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_i32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare { float, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_f32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
 attributes #0 = { nounwind readonly }

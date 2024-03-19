@@ -131,5 +131,3 @@ define amdgpu_kernel void @v_ashr_i64(ptr addrspace(1) %out, ptr addrspace(1) %i
   store i64 %result, ptr addrspace(1) %out
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

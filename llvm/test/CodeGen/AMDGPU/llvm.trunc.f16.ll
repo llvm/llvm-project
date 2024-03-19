@@ -3,9 +3,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=VI %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 
-declare half @llvm.trunc.f16(half %a)
-declare <2 x half> @llvm.trunc.v2f16(<2 x half> %a)
-
 define amdgpu_kernel void @trunc_f16(
 ; SI-LABEL: trunc_f16:
 ; SI:       ; %bb.0: ; %entry

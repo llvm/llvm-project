@@ -327,11 +327,6 @@ define amdgpu_vs void @reorder_local_load_tbuffer_store_local_load(ptr addrspace
   ret void
 }
 
-declare void @llvm.memcpy.p3.p0(ptr addrspace(3), ptr, i64, i1)
-declare void @llvm.amdgcn.s.barrier() #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-declare void @llvm.amdgcn.struct.ptr.tbuffer.store.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg) #3
-
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind willreturn }
 attributes #2 = { nounwind readnone speculatable willreturn }

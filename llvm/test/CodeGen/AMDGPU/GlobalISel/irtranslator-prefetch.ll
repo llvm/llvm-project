@@ -28,5 +28,3 @@ define void @prefetch_write(ptr %ptr) {
   call void @llvm.prefetch.p0(ptr %ptr, i32 1, i32 1, i32 1)
   ret void
 }
-
-declare void @llvm.prefetch.p0(ptr, i32, i32, i32)

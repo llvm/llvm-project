@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 ; GCN-LABEL: {{^}}v_test_umed3_r_i_i_i32:
 ; GCN: v_med3_u32 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17
 define amdgpu_kernel void @v_test_umed3_r_i_i_i32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {

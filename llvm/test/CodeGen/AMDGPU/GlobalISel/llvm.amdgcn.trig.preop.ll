@@ -171,6 +171,4 @@ define amdgpu_kernel void @s_trig_preop_f64_imm(double %a, i32 %b) {
   ret void
 }
 
-declare double @llvm.amdgcn.trig.preop.f64(double, i32) #0
-
 attributes #0 = { nounwind readnone speculatable }

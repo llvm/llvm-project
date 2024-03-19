@@ -989,13 +989,5 @@ define amdgpu_kernel void @mul_select_negk_0_negfabs_f32(i32 %c) #0 {
   ret void
 }
 
-
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.fma.f32(float, float, float) #1
-declare float @llvm.fmuladd.f32(float, float, float) #1
-declare float @llvm.amdgcn.rcp.f32(float) #1
-declare float @llvm.amdgcn.rcp.legacy(float) #1
-declare float @llvm.amdgcn.fmul.legacy(float, float) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

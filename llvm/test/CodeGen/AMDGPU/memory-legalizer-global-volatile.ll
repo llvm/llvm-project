@@ -742,5 +742,3 @@ entry:
   store atomic volatile i32 %in, ptr addrspace(1) %out syncscope("workgroup") release, align 4
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

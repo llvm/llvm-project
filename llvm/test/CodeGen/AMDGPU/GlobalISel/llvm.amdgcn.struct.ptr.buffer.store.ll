@@ -272,16 +272,3 @@ define amdgpu_ps void @struct_ptr_buffer_store_v4f16_sgpr_rsrc__vgpr_val__vgpr_v
   call void @llvm.amdgcn.struct.ptr.buffer.store.v4f16(<4 x half> %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.struct.ptr.buffer.store.i8(i8, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.i16(i16, ptr addrspace(8), i32, i32, i32, i32 immarg)
-
-declare void @llvm.amdgcn.struct.ptr.buffer.store.f16(half, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.v2f16(<2 x half>, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.v3f16(<3 x half>, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.v4f16(<4 x half>, ptr addrspace(8), i32, i32, i32, i32 immarg)
-
-declare void @llvm.amdgcn.struct.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.v3f32(<3 x float>, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32 immarg)

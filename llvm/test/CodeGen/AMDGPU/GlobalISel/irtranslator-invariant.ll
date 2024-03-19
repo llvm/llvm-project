@@ -108,8 +108,4 @@ define void @test_memmove_p1_constaddr_i64(ptr addrspace(1) %dst, ptr addrspace(
   ret void
 }
 
-declare void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(4) noalias nocapture readonly, i64, i1 immarg) #0
-declare void @llvm.memcpy.inline.p1.p4.i64(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(4) noalias nocapture readonly, i64, i1 immarg) #0
-declare void @llvm.memmove.p1.p4.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(4) nocapture readonly, i64, i1 immarg) #0
-
 attributes #0 = { argmemonly nofree nounwind willreturn }

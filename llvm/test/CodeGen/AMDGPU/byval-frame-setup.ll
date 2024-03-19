@@ -42,9 +42,6 @@ bb1:
 }
 declare hidden void @external_void_func_void() #0
 
-declare void @llvm.lifetime.start.p5(i64, ptr addrspace(5) nocapture) #3
-declare void @llvm.lifetime.end.p5(i64, ptr addrspace(5) nocapture) #3
-
 attributes #0 = { nounwind }
 attributes #1 = { noinline norecurse nounwind }
 attributes #2 = { nounwind norecurse "frame-pointer"="all" }

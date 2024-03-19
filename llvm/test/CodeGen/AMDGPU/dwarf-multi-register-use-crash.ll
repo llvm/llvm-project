@@ -4,7 +4,6 @@
 ; Don't crash.
 
 ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
 declare ptr @__kmpc_alloc_shared()
 

@@ -5361,52 +5361,6 @@ main_body:
   ret <4 x float> %data
 }
 
-declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i16(i32 immarg, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.load.3d.v4f32.i16(i32 immarg, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.load.cube.v4f32.i16(i32 immarg, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.load.1darray.v4f32.i16(i32 immarg, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.load.2darray.v4f32.i16(i32 immarg, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.load.2dmsaa.v4f32.i16(i32 immarg, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.load.2darraymsaa.v4f32.i16(i32 immarg, i16, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i16(i32 immarg, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i16(i32 immarg, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.load.mip.3d.v4f32.i16(i32 immarg, i16, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.load.mip.cube.v4f32.i16(i32 immarg, i16, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.load.mip.1darray.v4f32.i16(i32 immarg, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.load.mip.2darray.v4f32.i16(i32 immarg, i16, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare void @llvm.amdgcn.image.store.1d.v4f32.i16(<4 x float>, i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.2d.v4f32.i16(<4 x float>, i32 immarg, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.3d.v4f32.i16(<4 x float>, i32 immarg, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.cube.v4f32.i16(<4 x float>, i32 immarg, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.1darray.v4f32.i16(<4 x float>, i32 immarg, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.2darray.v4f32.i16(<4 x float>, i32 immarg, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.2dmsaa.v4f32.i16(<4 x float>, i32 immarg, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.2darraymsaa.v4f32.i16(<4 x float>, i32 immarg, i16, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.mip.1d.v4f32.i16(<4 x float>, i32 immarg, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.mip.2d.v4f32.i16(<4 x float>, i32 immarg, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.mip.3d.v4f32.i16(<4 x float>, i32 immarg, i16, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.mip.cube.v4f32.i16(<4 x float>, i32 immarg, i16, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.mip.1darray.v4f32.i16(<4 x float>, i32 immarg, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.mip.2darray.v4f32.i16(<4 x float>, i32 immarg, i16, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare <4 x float> @llvm.amdgcn.image.getresinfo.1d.v4f32.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #3
-declare <4 x float> @llvm.amdgcn.image.getresinfo.2d.v4f32.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #3
-declare <4 x float> @llvm.amdgcn.image.getresinfo.3d.v4f32.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #3
-declare <4 x float> @llvm.amdgcn.image.getresinfo.cube.v4f32.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #3
-declare <4 x float> @llvm.amdgcn.image.getresinfo.1darray.v4f32.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #3
-declare <4 x float> @llvm.amdgcn.image.getresinfo.2darray.v4f32.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #3
-declare <4 x float> @llvm.amdgcn.image.getresinfo.2dmsaa.v4f32.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #3
-declare <4 x float> @llvm.amdgcn.image.getresinfo.2darraymsaa.v4f32.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #3
-declare float @llvm.amdgcn.image.load.1d.f32.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare float @llvm.amdgcn.image.load.2d.f32.i16(i32 immarg, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare void @llvm.amdgcn.image.store.1d.f32.i16(float, i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.image.store.1d.v2f32.i16(<2 x float>, i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #2
-declare { <4 x float>, i32 } @llvm.amdgcn.image.load.1d.sl_v4f32i32s.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare { <4 x float>, i32 } @llvm.amdgcn.image.load.2d.sl_v4f32i32s.i16(i32 immarg, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare { <4 x float>, i32 } @llvm.amdgcn.image.load.3d.sl_v4f32i32s.i16(i32 immarg, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-declare { <4 x float>, i32 } @llvm.amdgcn.image.load.2darraymsaa.sl_v4f32i32s.i16(i32 immarg, i16, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }
 attributes #2 = { nounwind writeonly }

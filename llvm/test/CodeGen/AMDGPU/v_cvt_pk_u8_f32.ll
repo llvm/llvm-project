@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare i32 @llvm.amdgcn.cvt.pk.u8.f32(float, i32, i32) #0
-
 ; GCN-LABEL: {{^}}v_cvt_pk_u8_f32_idx_0:
 ; GCN: v_cvt_pk_u8_f32 v{{[0-9]+}}, s{{[0-9]+}}, 0, v{{[0-9]+}}
 define amdgpu_kernel void @v_cvt_pk_u8_f32_idx_0(ptr addrspace(1) %out, float %src, i32 %reg) {

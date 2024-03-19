@@ -4,14 +4,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 
-declare half @llvm.nearbyint.f16(half) #0
-declare float @llvm.nearbyint.f32(float) #0
-declare <2 x float> @llvm.nearbyint.v2f32(<2 x float>) #0
-declare <4 x float> @llvm.nearbyint.v4f32(<4 x float>) #0
-declare double @llvm.nearbyint.f64(double) #0
-declare <2 x double> @llvm.nearbyint.v2f64(<2 x double>) #0
-declare <4 x double> @llvm.nearbyint.v4f64(<4 x double>) #0
-
 define amdgpu_kernel void @fnearbyint_f16(ptr addrspace(1) %out, half %in) #1 {
 ; SI-LABEL: fnearbyint_f16:
 ; SI:       ; %bb.0:

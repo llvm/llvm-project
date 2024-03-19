@@ -1,8 +1,6 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare i32 @llvm.amdgcn.sffbh.i32(i32) #1
-
 ; GCN-LABEL: {{^}}s_flbit:
 ; GCN: s_load_dword [[VAL:s[0-9]+]],
 ; GCN: s_flbit_i32 [[SRESULT:s[0-9]+]], [[VAL]]

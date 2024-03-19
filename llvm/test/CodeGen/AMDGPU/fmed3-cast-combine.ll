@@ -11,11 +11,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9-SDAG %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9-GISEL %s
 
-
-declare float @llvm.amdgcn.fmed3.f32(float, float, float) #0
-declare float @llvm.fabs.f32(float) #0
-declare half @llvm.fabs.f16(half) #0
-
 define half @fmed3_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #1 {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16:
 ; GFX7-SDAG:       ; %bb.0:

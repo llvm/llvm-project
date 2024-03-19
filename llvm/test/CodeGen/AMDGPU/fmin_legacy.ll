@@ -6,8 +6,6 @@
 
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope --check-prefixes=EG,FUNC %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 ; The two inputs to the instruction are different SGPRs from the same
 ; super register, so we can't fold both SGPR operands even though they
 ; are both the same register.

@@ -47,8 +47,3 @@ main_body:
   %elt = extractelement <4 x half> %data, i32 3
   ret half %elt
 }
-
-declare half @llvm.amdgcn.raw.ptr.buffer.load.format.f16(ptr addrspace(8), i32, i32, i32)
-declare <2 x half> @llvm.amdgcn.raw.ptr.buffer.load.format.v2f16(ptr addrspace(8), i32, i32, i32)
-declare <3 x half> @llvm.amdgcn.raw.ptr.buffer.load.format.v3f16(ptr addrspace(8), i32, i32, i32)
-declare <4 x half> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f16(ptr addrspace(8), i32, i32, i32)

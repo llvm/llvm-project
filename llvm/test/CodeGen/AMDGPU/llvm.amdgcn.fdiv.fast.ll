@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck %s
 
-declare float @llvm.amdgcn.fdiv.fast(float, float) #0
-
 ; CHECK-LABEL: {{^}}test_fdiv_fast:
 ; CHECK: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}, vcc
 ; CHECK: v_mul_f32_e32

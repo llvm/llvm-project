@@ -5,8 +5,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX12
 
-declare float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float %c, i1 %clamp)
-
 ; GCN-LABEL: {{^}}test_llvm_amdgcn_fdot2_clamp
 ; GFX9:   v_dot2_f32_f16 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
 ; GFX10:  v_dot2_f32_f16 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}

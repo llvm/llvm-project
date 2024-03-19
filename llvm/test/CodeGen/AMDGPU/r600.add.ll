@@ -161,7 +161,5 @@ endif:
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }

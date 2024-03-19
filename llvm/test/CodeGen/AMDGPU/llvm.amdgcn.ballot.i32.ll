@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=+wavefrontsize32,-wavefrontsize64 < %s | FileCheck %s
 
-declare i32 @llvm.amdgcn.ballot.i32(i1)
-declare i32 @llvm.ctpop.i32(i32)
-
 ; Test ballot(0)
 
 define amdgpu_cs i32 @constant_false() {
@@ -396,8 +393,6 @@ true:
 false:
   ret i32 33
 }
-
-declare i32 @llvm.amdgcn.icmp.i32(i1, i1, i32)
 
 define amdgpu_cs i32 @branch_divergent_simulated_negated_ballot_ne_zero_and(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: branch_divergent_simulated_negated_ballot_ne_zero_and:

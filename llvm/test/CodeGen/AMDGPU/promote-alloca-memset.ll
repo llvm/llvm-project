@@ -137,5 +137,3 @@ define amdgpu_kernel void @memset_array_of_vec_ptr_alloca(ptr %out) {
   store i64 %load, ptr %out
   ret void
 }
-
-declare void @llvm.memset.p5.i64(ptr addrspace(5) nocapture writeonly, i8, i64, i1 immarg)

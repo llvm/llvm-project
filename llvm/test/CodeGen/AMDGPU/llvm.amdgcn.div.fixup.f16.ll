@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
-declare half @llvm.amdgcn.div.fixup.f16(half %a, half %b, half %c)
-
 ; GCN-LABEL: {{^}}div_fixup_f16
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; GCN: buffer_load_ushort v[[B_F16:[0-9]+]]

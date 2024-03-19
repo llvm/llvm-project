@@ -116,7 +116,5 @@ define amdgpu_kernel void @v_sint_to_fp_i1_f32_load(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

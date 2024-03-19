@@ -1864,12 +1864,6 @@ define <3 x double> @v_sqrt_v3f64(<3 x double> %x) {
   ret <3 x double> %result
 }
 
-declare double @llvm.fabs.f64(double) #0
-declare double @llvm.sqrt.f64(double) #0
-declare <2 x double> @llvm.sqrt.v2f64(<2 x double>) #0
-declare <3 x double> @llvm.sqrt.v3f64(<3 x double>) #0
-declare i32 @llvm.amdgcn.readfirstlane(i32) #1
-
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #1 = { convergent nounwind willreturn memory(none) }
 attributes #2 = { "approx-func-fp-math"="true" }

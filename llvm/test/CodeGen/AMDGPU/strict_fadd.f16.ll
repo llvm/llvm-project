@@ -248,10 +248,5 @@ define amdgpu_ps <2 x half> @s_constained_fadd_v2f16_fpexcept_strict(<2 x half> 
   ret <2 x half> %val
 }
 
-declare half @llvm.experimental.constrained.fadd.f16(half, half, metadata, metadata) #1
-declare <2 x half> @llvm.experimental.constrained.fadd.v2f16(<2 x half>, <2 x half>, metadata, metadata) #1
-declare <3 x half> @llvm.experimental.constrained.fadd.v3f16(<3 x half>, <3 x half>, metadata, metadata) #1
-declare <4 x half> @llvm.experimental.constrained.fadd.v4f16(<4 x half>, <4 x half>, metadata, metadata) #1
-
 attributes #0 = { strictfp }
 attributes #1 = { inaccessiblememonly nounwind willreturn }

@@ -111,6 +111,4 @@ define amdgpu_ps float @flat_atomic_fadd_f32_rtn_atomicrmw(ptr %ptr, float %data
   ret float %ret
 }
 
-declare float @llvm.amdgcn.flat.atomic.fadd.f32.p1.f32(ptr, float)
-
 attributes #0 = {"amdgpu-unsafe-fp-atomics"="true" }

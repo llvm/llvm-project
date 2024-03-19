@@ -51,8 +51,6 @@ for.end:                                          ; preds = %for.end.loopexit, %
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare float @llvm.fmuladd.f32(float, float, float) #1
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { readnone }

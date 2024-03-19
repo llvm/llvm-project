@@ -42,9 +42,6 @@ define void @caller(ptr %out) {
   ret void
 }
 
-declare i32 @llvm.read_register.i32(metadata)
-declare i32 @llvm.ctpop.i32(i32)
-
 !0 = !{!"exec_lo"}
 
 attributes #0 = { "target-features"="+wavefrontsize32" }

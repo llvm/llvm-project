@@ -56,9 +56,6 @@ end:
   ret float %r
 }
 
-declare i1 @llvm.amdgcn.ps.live() #1
-declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind readonly }

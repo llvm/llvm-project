@@ -318,9 +318,4 @@ bb35:                                             ; preds = %bb33, %.entry
   ret void
 }
 
-declare void @llvm.amdgcn.kill(i1) #0
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare void @llvm.amdgcn.s.sendmsg(i32, i32) #0
-declare i1 @llvm.amdgcn.wqm.vote(i1)
-
 attributes #0 = { nounwind }

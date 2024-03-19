@@ -37,7 +37,3 @@ define amdgpu_kernel void @divergent_bitreverse_i64(i64 %val, ptr addrspace(1) %
   store i64 %res, ptr addrspace(1) %out
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare i32 @llvm.bitreverse.i32(i32)
-declare i64 @llvm.bitreverse.i64(i64)

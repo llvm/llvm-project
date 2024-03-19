@@ -46,6 +46,5 @@ define i32 @f(i32 %x, i32 %y) {
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare i32 @llvm.amdgcn.workitem.id.x() #20
 
 !4 = !{i32 0, i32 1024}

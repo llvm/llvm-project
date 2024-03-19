@@ -61,6 +61,4 @@ done1:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #1 = { nounwind readonly }

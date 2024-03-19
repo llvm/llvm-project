@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -global-isel=1 -verify-machineinstrs < %s | FileCheck  -check-prefixes=GFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -global-isel=0 -verify-machineinstrs < %s | FileCheck  -check-prefixes=GFX11 %s
 
-declare i64 @llvm.amdgcn.s.bitreplicate(i32)
-
 define i64 @test_s_bitreplicate_constant() {
 ; GFX11-LABEL: test_s_bitreplicate_constant:
 ; GFX11:       ; %bb.0: ; %entry

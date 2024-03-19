@@ -62,9 +62,6 @@ done:
   ret void
 }
 
-declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) #0
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { nounwind readnone willreturn }
 attributes #2 = { argmemonly nounwind willreturn }

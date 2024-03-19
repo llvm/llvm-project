@@ -393,14 +393,5 @@ define void @test_med3_f16(ptr addrspace(1) %arg, half %x, half %y, half %z) #0 
   store half %tmp3, ptr addrspace(1) %arg
   ret void
 }
-
-declare i32 @llvm.smin.i32(i32, i32)
-declare i32 @llvm.smax.i32(i32, i32)
-declare i32 @llvm.umin.i32(i32, i32)
-declare i32 @llvm.umax.i32(i32, i32)
-declare half @llvm.minnum.f16(half, half)
-declare half @llvm.maxnum.f16(half, half)
-declare float @llvm.minnum.f32(float, float)
-declare float @llvm.maxnum.f32(float, float)
 attributes #0 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" }
 

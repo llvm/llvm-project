@@ -445,7 +445,6 @@ define amdgpu_kernel void @v_select_v4f16(ptr addrspace(1) %out, ptr addrspace(1
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

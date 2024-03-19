@@ -73,10 +73,6 @@ main_body:
   ret void
 }
 
-declare void @llvm.amdgcn.s.barrier() #1
-declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32, i32 immarg) #2
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }
 attributes #2 = { nounwind readonly }

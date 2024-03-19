@@ -13,11 +13,6 @@
 
 ; ERR: warning: Instruction selection used fallback path for v_icmp_i1_ne0
 
-declare i32 @llvm.amdgcn.icmp.i32(i32, i32, i32) #0
-declare i32 @llvm.amdgcn.icmp.i64(i64, i64, i32) #0
-declare i32 @llvm.amdgcn.icmp.i16(i16, i16, i32) #0
-declare i32 @llvm.amdgcn.icmp.i1(i1, i1, i32) #0
-
 define amdgpu_kernel void @v_icmp_i32_eq(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_eq:
 ; SDAG-GFX11:       ; %bb.0:

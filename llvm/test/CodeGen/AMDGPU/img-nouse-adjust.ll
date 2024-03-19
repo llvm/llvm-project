@@ -16,7 +16,6 @@ define amdgpu_cs void @_amdgpu_cs_main(i32 %dummy) local_unnamed_addr #0 {
 }
 
 ; Function Attrs: nounwind readonly
-declare <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32, i32, i32, <8 x i32>, i32, i32) #1
   
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly  }

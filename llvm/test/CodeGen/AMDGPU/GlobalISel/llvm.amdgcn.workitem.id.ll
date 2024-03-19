@@ -8,10 +8,6 @@
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel -mtriple=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 | FileCheck -check-prefixes=ALL,PACKED-TID %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -global-isel -mtriple=amdgcn -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=6 -mcpu=gfx11-generic -verify-machineinstrs -amdgpu-enable-vopd=0 | FileCheck -check-prefixes=ALL,PACKED-TID %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.workitem.id.y() #0
-declare i32 @llvm.amdgcn.workitem.id.z() #0
-
 ; MESA: .section .AMDGPU.config
 ; MESA: .long 47180
 ; MESA-NEXT: .long 132{{$}}

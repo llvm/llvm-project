@@ -73,6 +73,4 @@ bb6:
   unreachable
 }
 
-declare float @llvm.fabs.f32(float) #0
-
 attributes #0 = { nounwind readnone speculatable willreturn }

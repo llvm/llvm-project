@@ -11,8 +11,6 @@
 @lds0 = internal addrspace(3) global [512 x i32] undef, align 4
 @lds1 = internal addrspace(3) global [512 x i64] undef, align 8
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) #1 {
 ; CI-LABEL: lds_atomic_inc_ret_i32:
 ; CI:       ; %bb.0:

@@ -36,9 +36,6 @@ entry:
   ret void
 }
 
-
-declare i32 @llvm.OpenCL.sampler.get.resource.id(i32) #0
-
 attributes #0 = { readnone }
 
 !opencl.kernels = !{!0, !1, !2}

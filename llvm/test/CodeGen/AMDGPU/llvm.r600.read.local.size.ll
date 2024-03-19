@@ -171,8 +171,4 @@ entry:
   ret void
 }
 
-declare i32 @llvm.r600.read.local.size.x() #0
-declare i32 @llvm.r600.read.local.size.y() #0
-declare i32 @llvm.r600.read.local.size.z() #0
-
 attributes #0 = { nounwind readnone }

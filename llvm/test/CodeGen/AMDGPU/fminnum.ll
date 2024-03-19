@@ -218,12 +218,5 @@ define <3 x float> @test_func_fmin_v3f32(<3 x float> %a, <3 x float> %b) nounwin
   ret <3 x float> %val
 }
 
-declare float @llvm.minnum.f32(float, float) #1
-declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>) #1
-declare <3 x float> @llvm.minnum.v3f32(<3 x float>, <3 x float>) #1
-declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>) #1
-declare <8 x float> @llvm.minnum.v8f32(<8 x float>, <8 x float>) #1
-declare <16 x float> @llvm.minnum.v16f32(<16 x float>, <16 x float>) #1
-
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }

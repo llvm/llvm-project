@@ -409,28 +409,20 @@ define amdgpu_ps float @fma_vs_output_modifier_2(float %x) #0 {
 }
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
-declare float @llvm.maxnum.f32(float, float) #1
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare float @llvm.amdgcn.fmed3.f32(float, float, float) #2
 
 ; Function Attrs: nounwind readonly willreturn
-declare <2 x float> @llvm.amdgcn.image.sample.2d.v2f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #3
 
 ; Function Attrs: nounwind readonly willreturn
-declare float @llvm.amdgcn.image.sample.2d.f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #3
 
 ; Function Attrs: nounwind readonly willreturn
-declare <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #3
 
 ; Function Attrs: nounwind readonly willreturn
-declare <3 x float> @llvm.amdgcn.image.load.mip.2d.v3f32.i32(i32 immarg, i32, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #3
 
 ; Function Attrs: nounwind readnone willreturn
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg) #3
 
 ; Function Attrs: nounwind readnone willreturn
-declare <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32>, i32, i32 immarg) #3
 
 attributes #0 = { "denormal-fp-math-f32"="preserve-sign" }
 attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }

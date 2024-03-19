@@ -33,5 +33,3 @@ entry:
   store <8 x i16> %vecinit471, ptr addrspace(1) undef, align 16
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

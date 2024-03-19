@@ -10,10 +10,6 @@
 ; RUN: llc -mtriple=amdgcn -amdgpu-enable-delay-alu=0 -global-isel=0 -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11-SDAG %s
 ; RUN: llc -mtriple=amdgcn -amdgpu-enable-delay-alu=0 -global-isel=1 -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11-ISEL %s
 
-declare i64 @llvm.get.fpenv.i64()
-
-declare void @llvm.set.fpenv.i64(i64)
-
 define i64 @get_fpenv() {
 ; GFX6-SDAG-LABEL: get_fpenv:
 ; GFX6-SDAG:       ; %bb.0: ; %entry

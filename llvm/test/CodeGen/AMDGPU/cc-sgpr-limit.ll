@@ -134,5 +134,3 @@ define amdgpu_gs void @_amdgpu_gs_sgpr_limit_i64(i64 inreg, i64 inreg, i64 inreg
   call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> %36, ptr addrspace(8) %addr, i32 4, i32 0, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32, i32)

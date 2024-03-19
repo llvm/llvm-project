@@ -2,10 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX10,PREGFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
 
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
-declare void @llvm.amdgcn.exp.i32(i32, i32, i32, i32, i32, i32, i1, i1) #1
-declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32) #2
-
 ; GCN-LABEL: {{^}}test_export_zeroes_f32:
 ; GCN: exp mrt0 off, off, off, off{{$}}
 ; GCN: exp mrt0 off, off, off, off done{{$}}

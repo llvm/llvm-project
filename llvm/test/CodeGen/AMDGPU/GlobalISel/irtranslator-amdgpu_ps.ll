@@ -152,7 +152,5 @@ define amdgpu_ps <2 x i16> @sgpr_return_v2i16(<2 x i16> %vgpr) {
   ret <2 x i16> %vgpr
 }
 
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg)  #0
-
 attributes #0 = { nounwind }
 attributes #1 = { "InitialPSInputAddr"="0x00002" }

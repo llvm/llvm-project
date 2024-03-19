@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -denormal-fp-math-f32=ieee -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
-declare half @llvm.amdgcn.fmad.ftz.f16(half %a, half %b, half %c)
-
 ; GCN-LABEL: {{^}}mad_f16:
 ; GCN: v_mac_f16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+$}}
 define amdgpu_kernel void @mad_f16(
@@ -109,5 +107,3 @@ define amdgpu_kernel void @mad_f16_neg_abs_b(
   store half %r.val, ptr addrspace(1) %r
   ret void
 }
-
-declare half @llvm.fabs.f16(half)

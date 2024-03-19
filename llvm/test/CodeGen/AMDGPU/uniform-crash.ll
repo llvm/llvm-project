@@ -52,6 +52,5 @@ bb12:                                             ; preds = %bb11, %bb5
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.y() #1
 
 attributes #1 = { nounwind readnone }

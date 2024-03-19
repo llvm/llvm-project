@@ -23,8 +23,5 @@ define dllexport amdgpu_vs void @_amdgpu_vs_main(i32 inreg %arg, i32 inreg %arg1
   ret void
 }
 
-declare i64 @llvm.amdgcn.s.getpc() #0
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
-
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind }

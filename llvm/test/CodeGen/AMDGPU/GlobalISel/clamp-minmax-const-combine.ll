@@ -402,15 +402,6 @@ define float @test_max_min_maybe_NaN_input_ieee_false(float %a) #1 {
   %fmed = call float @llvm.maxnum.f32(float %minnum, float 0.0)
   ret float %fmed
 }
-
-declare half @llvm.minnum.f16(half, half)
-declare half @llvm.maxnum.f16(half, half)
-declare float @llvm.minnum.f32(float, float)
-declare float @llvm.maxnum.f32(float, float)
-declare double @llvm.minnum.f64(double, double)
-declare double @llvm.maxnum.f64(double, double)
-declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>)
-declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>)
 attributes #0 = {"amdgpu-ieee"="true"}
 attributes #1 = {"amdgpu-ieee"="false"}
 attributes #2 = {"amdgpu-ieee"="true" "amdgpu-dx10-clamp"="true"}

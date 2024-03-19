@@ -1,14 +1,8 @@
 ; RUN: llc -mtriple=amdgcn -disable-promote-alloca-to-vector -verify-machineinstrs < %s | FileCheck %s
 
-declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #1
-
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 ; CI+ intrinsic
-declare void @llvm.amdgcn.s.dcache.inv.vol() #0
 
 ; VI+ intrinsic
-declare void @llvm.amdgcn.s.dcache.wb() #0
 
 ; CHECK-LABEL: {{^}}target_none:
 ; CHECK: s_movk_i32 [[OFFSETREG:s[0-9]+]], 0x400

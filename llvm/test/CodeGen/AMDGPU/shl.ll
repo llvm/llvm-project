@@ -3,10 +3,6 @@
 ; RUN: llc < %s -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s -check-prefixes=VI
 ; RUN: llc < %s -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mtriple=r600-- -mcpu=redwood -verify-machineinstrs | FileCheck %s --check-prefixes=EG
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-
 define amdgpu_kernel void @shl_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: shl_v2i32:
 ; SI:       ; %bb.0:

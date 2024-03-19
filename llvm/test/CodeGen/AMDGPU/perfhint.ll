@@ -167,5 +167,3 @@ bb1:                                              ; preds = %bb1, %bb
 bb2:                                              ; preds = %bb1
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

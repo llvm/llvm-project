@@ -9,9 +9,6 @@
 @lds.missing.align.0 = internal unnamed_addr addrspace(3) global [39 x i32] undef
 @lds.missing.align.1 = internal unnamed_addr addrspace(3) global [7 x i64] undef
 
-declare void @llvm.memcpy.p3.p1.i32(ptr addrspace(3) nocapture, ptr addrspace(1) nocapture readonly, i32, i1) #0
-declare void @llvm.memcpy.p1.p3.i32(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i32, i1) #0
-
 
 ; HSA-LABEL: {{^}}test_no_round_size_1:
 ; HSA: .amdhsa_group_segment_fixed_size 38

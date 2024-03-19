@@ -1363,8 +1363,5 @@ bb2:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32, i32 immarg) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

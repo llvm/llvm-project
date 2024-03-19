@@ -2,13 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
-declare float @llvm.ceil.f32(float) nounwind readnone
-declare <2 x float> @llvm.ceil.v2f32(<2 x float>) nounwind readnone
-declare <3 x float> @llvm.ceil.v3f32(<3 x float>) nounwind readnone
-declare <4 x float> @llvm.ceil.v4f32(<4 x float>) nounwind readnone
-declare <8 x float> @llvm.ceil.v8f32(<8 x float>) nounwind readnone
-declare <16 x float> @llvm.ceil.v16f32(<16 x float>) nounwind readnone
-
 ; FUNC-LABEL: {{^}}fceil_f32:
 ; SI: v_ceil_f32_e32
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[RESULT:T[0-9]+\.[XYZW]]]

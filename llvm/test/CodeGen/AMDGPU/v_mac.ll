@@ -307,8 +307,6 @@ define float @v_mac_f32_dynamic_ftz(float %a, float %b, float %c) "denormal-fp-m
   ret float %mad
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
 attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" }
 attributes #1 = { nounwind "no-signed-zeros-fp-math"="true" }
 attributes #2 = { nounwind readnone }

@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -filetype=obj < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=gfx1200 -d - | FileCheck -check-prefix=OBJ %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -show-mc-encoding < %s | FileCheck -check-prefix=ASM %s
 
-declare i32 @llvm.amdgcn.permlane16.var(i32, i32, i32, i1, i1)
-
 ; OBJ-LABEL: <permlane_op_sel>:
 ; OBJ: v_permlane16_var_b32 v0, v0, v1 op_sel:[1,0]
 

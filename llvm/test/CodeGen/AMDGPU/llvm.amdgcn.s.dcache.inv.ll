@@ -1,9 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
-declare void @llvm.amdgcn.s.dcache.inv() #0
-declare void @llvm.amdgcn.s.waitcnt(i32) #0
-
 ; GCN-LABEL: {{^}}test_s_dcache_inv:
 ; GCN-NEXT: ; %bb.0:
 ; SI-NEXT: s_dcache_inv ; encoding: [0x00,0x00,0xc0,0xc7]

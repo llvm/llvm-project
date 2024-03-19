@@ -205,14 +205,3 @@ define amdgpu_kernel void @sqrt_f16(ptr addrspace(1) %ptr) {
   store half %res, ptr addrspace(1) %ptr
   ret void
 }
-
-declare float @llvm.amdgcn.exp2.f32(float)
-declare half @llvm.amdgcn.exp2.f16(half)
-declare float @llvm.amdgcn.log.f32(float)
-declare half @llvm.amdgcn.log.f16(half)
-declare float @llvm.amdgcn.rcp.f32(float)
-declare half @llvm.amdgcn.rcp.f16(half)
-declare float @llvm.amdgcn.rsq.f32(float)
-declare half @llvm.amdgcn.rsq.f16(half)
-declare float @llvm.amdgcn.sqrt.f32(float)
-declare half @llvm.amdgcn.sqrt.f16(half)

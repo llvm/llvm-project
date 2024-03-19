@@ -132,5 +132,3 @@ define amdgpu_gs float @ds_ordered_add_gs(ptr addrspace(2) inreg %gds) {
   %r = bitcast i32 %val to float
   ret float %r
 }
-
-declare i32 @llvm.amdgcn.ds.ordered.add(ptr addrspace(2) nocapture, i32, i32, i32, i1, i32, i1, i1)

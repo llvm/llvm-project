@@ -1024,13 +1024,3 @@ define amdgpu_ps float @v_pow_f32_sgpr_sgpr(float inreg %x, float inreg %y) {
   %pow = call float @llvm.pow.f32(float %x, float %y)
   ret float %pow
 }
-
-declare half @llvm.pow.f16(half, half)
-declare float @llvm.pow.f32(float, float)
-declare double @llvm.pow.f64(double, double)
-
-declare half @llvm.fabs.f16(half)
-declare float @llvm.fabs.f32(float)
-
-declare <2 x half> @llvm.pow.v2f16(<2 x half>, <2 x half>)
-declare <2 x float> @llvm.pow.v2f32(<2 x float>, <2 x float>)

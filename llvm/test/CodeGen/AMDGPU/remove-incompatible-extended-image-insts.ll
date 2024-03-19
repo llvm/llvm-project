@@ -42,6 +42,4 @@ define void @caller(float noundef %0, float noundef %1, <8 x i32> noundef %2, <4
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg)
-
 attributes #0 = { "target-features"="+extended-image-insts" }

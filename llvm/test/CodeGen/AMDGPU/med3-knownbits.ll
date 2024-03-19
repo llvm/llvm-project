@@ -2,11 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tahiti -amdgpu-codegenprepare-mul24=0 -amdgpu-codegenprepare-disable-idiv-expansion < %s | FileCheck -check-prefixes=SI,SI-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tahiti -amdgpu-codegenprepare-mul24=0 -amdgpu-codegenprepare-disable-idiv-expansion < %s | FileCheck -check-prefixes=SI,SI-GISEL %s
 
-declare i32 @llvm.smin.i32(i32, i32)
-declare i32 @llvm.smax.i32(i32, i32)
-declare i32 @llvm.umin.i32(i32, i32)
-declare i32 @llvm.umax.i32(i32, i32)
-
 ; Test computeKnownBits for umed3 node. We know the base address has a
 ; 0 sign bit only after umed3 is formed. The DS instruction offset can
 ; only be folded on SI with a positive base address.

@@ -142,6 +142,3 @@ define amdgpu_cs void @test2_ptr(i32 %arg1, ptr addrspace(8) inreg %arg2) {
 
   ret void
 }
-
-declare void @llvm.amdgcn.raw.buffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8), i32, i32, i32 immarg)

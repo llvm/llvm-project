@@ -24,5 +24,3 @@ define amdgpu_kernel void @test_s_sethalt() {
   call void @llvm.amdgcn.s.sethalt(i32 7)
   ret void
 }
-
-declare void @llvm.amdgcn.s.sethalt(i32)

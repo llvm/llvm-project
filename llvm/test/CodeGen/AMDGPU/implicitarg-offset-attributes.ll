@@ -3,23 +3,6 @@
 ; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-attributor | FileCheck -check-prefixes=CHECK,V5 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-attributor | FileCheck -check-prefixes=CHECK,V6 %s
 
-declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #0
-
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-declare i32 @llvm.amdgcn.workgroup.id.y() #0
-declare i32 @llvm.amdgcn.workgroup.id.z() #0
-
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.workitem.id.y() #0
-declare i32 @llvm.amdgcn.workitem.id.z() #0
-declare i32 @llvm.amdgcn.lds.kernel.id() #0
-declare i64 @llvm.amdgcn.dispatch.id() #0
-
-
-declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #0
-
 ; Avoid adding all of these to the output attribute sets
 define void @use_everything_else() {
 ; CHECK-LABEL: define {{[^@]+}}@use_everything_else

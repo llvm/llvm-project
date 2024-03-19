@@ -555,8 +555,6 @@ define amdgpu_kernel void @v_pack_v2i16_inline_imm_hi(ptr addrspace(1) %in0) #0 
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 

@@ -558,11 +558,6 @@ for.cond.cleanup26:                               ; preds = %for.cond28.preheade
   ret void
 }
 
-declare float @llvm.fmuladd.f32(float, float, float) #0
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare i32 @llvm.amdgcn.workgroup.id.x() #1
-declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #1
-
 attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }
 attributes #1 = { nounwind readnone speculatable willreturn }
 

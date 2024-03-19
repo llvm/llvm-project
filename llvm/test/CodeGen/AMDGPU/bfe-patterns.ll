@@ -534,7 +534,5 @@ define amdgpu_kernel void @s_sbfe_or_shl_shl_toosmall_i32(ptr addrspace(1) %out,
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

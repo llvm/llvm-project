@@ -22,5 +22,3 @@ for.inc:
 for.end:
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

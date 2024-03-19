@@ -167,13 +167,5 @@ main_body:
   ret half %res
 }
 
-declare float @llvm.amdgcn.lds.param.load(i32, i32, i32) #1
-declare float @llvm.amdgcn.interp.inreg.p10(float, float, float) #0
-declare float @llvm.amdgcn.interp.inreg.p2(float, float, float) #0
-declare float @llvm.amdgcn.interp.inreg.p10.f16(float, float, float, i1) #0
-declare half @llvm.amdgcn.interp.inreg.p2.f16(float, float, float, i1) #0
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare void @llvm.amdgcn.exp.f16(i32, i32, float, float, float, float, i1, i1) #0
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

@@ -15,5 +15,3 @@ define amdgpu_kernel void @foobar() {
   store <2 x i32> %v15, ptr addrspace(1) undef, align 8
   ret void
 }
-
-declare double @llvm.fma.f64(double, double, double)

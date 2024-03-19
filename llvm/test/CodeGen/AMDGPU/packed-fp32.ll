@@ -603,8 +603,3 @@ define amdgpu_kernel void @fneg_v2f32_scalar(ptr addrspace(1) %a, <2 x float> %x
   store <2 x float> %fneg, ptr addrspace(1) %a, align 8
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)
-declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
-declare <32 x float> @llvm.fma.v32f32(<32 x float>, <32 x float>, <32 x float>)

@@ -56,9 +56,3 @@ define amdgpu_kernel void @v_flbit(ptr addrspace(1) noalias %out, ptr addrspace(
   ret void
 }
 
-
-declare i32 @llvm.ctlz.i32(i32, i1) nounwind readnone
-declare i32 @llvm.cttz.i32(i32, i1) nounwind readnone
-declare i32 @llvm.amdgcn.sffbh.i32(i32)
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-

@@ -23,6 +23,4 @@ define void @func_dynamic_stackalloc_vgpr_align4(i32 %n) {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 attributes #0 = { nounwind readnone speculatable }

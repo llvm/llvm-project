@@ -45,9 +45,3 @@ define amdgpu_kernel void @v_ctpop_i64(ptr addrspace(1) noalias %out, ptr addrsp
   store i32 %truncctpop, ptr addrspace(1) %out, align 4
   ret void
 }
-
-declare i64 @llvm.ctpop.i64(i64) nounwind readnone
-
-declare i32 @llvm.ctpop.i32(i32) nounwind readnone
-
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

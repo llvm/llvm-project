@@ -2,13 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=CI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=CI -check-prefix=FUNC %s
 
-declare double @llvm.ceil.f64(double) nounwind readnone
-declare <2 x double> @llvm.ceil.v2f64(<2 x double>) nounwind readnone
-declare <3 x double> @llvm.ceil.v3f64(<3 x double>) nounwind readnone
-declare <4 x double> @llvm.ceil.v4f64(<4 x double>) nounwind readnone
-declare <8 x double> @llvm.ceil.v8f64(<8 x double>) nounwind readnone
-declare <16 x double> @llvm.ceil.v16f64(<16 x double>) nounwind readnone
-
 ; FUNC-LABEL: {{^}}fceil_f64:
 ; CI: v_ceil_f64_e32
 ; SI: s_bfe_u32 [[SEXP:s[0-9]+]], {{s[0-9]+}}, 0xb0014

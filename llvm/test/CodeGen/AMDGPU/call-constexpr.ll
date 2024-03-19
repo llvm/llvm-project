@@ -107,8 +107,6 @@ define hidden i32 @ident_i32(i32 %i) #0 {
   ret i32 %i
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
 attributes #0 = { nounwind noinline }
 attributes #1 = { alwaysinline nounwind }
 attributes #2 = { nounwind readnone speculatable }

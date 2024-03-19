@@ -6,18 +6,6 @@
 ; RUN: llc < %s -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=GFX11-FLAT
 ; RUN: llc < %s -mtriple=amdgcn-- -mcpu=gfx1100 -global-isel -verify-machineinstrs | FileCheck %s --check-prefix=GFX11-GISEL
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-declare i16 @llvm.bitreverse.i16(i16) #1
-declare i32 @llvm.bitreverse.i32(i32) #1
-declare i64 @llvm.bitreverse.i64(i64) #1
-
-declare <2 x i32> @llvm.bitreverse.v2i32(<2 x i32>) #1
-declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>) #1
-
-declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>) #1
-declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>) #1
-
 define amdgpu_kernel void @s_brev_i16(ptr addrspace(1) noalias %out, i16 %val) #0 {
 ; SI-LABEL: s_brev_i16:
 ; SI:       ; %bb.0:

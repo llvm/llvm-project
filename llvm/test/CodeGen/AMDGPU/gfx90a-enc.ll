@@ -18,11 +18,6 @@ define amdgpu_kernel void @test(<4 x i32> %x) #0 {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32, i32 immarg) #1
-declare <4 x half> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f16(ptr addrspace(8), i32, i32, i32, i32 immarg) #1
-declare <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32, i32, <4 x i32>, i32 immarg, i32 immarg, i32 immarg) #2
-
 attributes #0 = { nounwind readnone speculatable willreturn "amdgpu-flat-work-group-size"="1,256" }
 attributes #1 = { nounwind memory(argmem: read) willreturn }
 attributes #2 = { convergent nounwind readnone willreturn }

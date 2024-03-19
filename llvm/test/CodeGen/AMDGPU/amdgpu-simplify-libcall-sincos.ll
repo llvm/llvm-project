@@ -1275,8 +1275,6 @@ entry:
   ret float %sin2
 }
 
-declare void @llvm.dbg.value(metadata, metadata, metadata) #0
-
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #1 = { argmemonly nounwind willreturn }
 

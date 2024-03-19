@@ -12,11 +12,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=hawaii -denormal-fp-math-f32=preserve-sign < %s | FileCheck -check-prefixes=GCN-DAZ,GCN-DAZ-SAFE,CI-DAZ-SAFE %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=hawaii -denormal-fp-math-f32=ieee < %s          | FileCheck -check-prefixes=GCN-IEEE,GCN-IEEE-SAFE,CI-IEEE-SAFE %s
 
-
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-declare float @llvm.sqrt.f32(float) nounwind readnone
-declare <2 x float> @llvm.sqrt.v2f32(<2 x float>) nounwind readnone
-
 define amdgpu_kernel void @rsq_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) {
 ; GCN-DAZ-UNSAFE-LABEL: rsq_f32:
 ; GCN-DAZ-UNSAFE:       ; %bb.0:

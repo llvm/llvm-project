@@ -7682,18 +7682,6 @@ define <4 x half> @v_log10_v4f16_fast(<4 x half> %in) {
   ret <4 x half> %result
 }
 
-declare float @llvm.fabs.f32(float) #2
-declare float @llvm.log10.f32(float) #2
-declare <2 x float> @llvm.log10.v2f32(<2 x float>) #2
-declare <3 x float> @llvm.log10.v3f32(<3 x float>) #2
-declare <4 x float> @llvm.log10.v4f32(<4 x float>) #2
-declare half @llvm.fabs.f16(half) #2
-declare half @llvm.log10.f16(half) #2
-declare <2 x half> @llvm.log10.v2f16(<2 x half>) #2
-declare <3 x half> @llvm.log10.v3f16(<3 x half>) #2
-declare <4 x half> @llvm.log10.v4f16(<4 x half>) #2
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #2
-
 attributes #0 = { "denormal-fp-math-f32"="ieee,preserve-sign" }
 attributes #1 = { "denormal-fp-math-f32"="dynamic,dynamic" }
 attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

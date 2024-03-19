@@ -42,5 +42,3 @@ entry:
   store volatile i32 %break, ptr addrspace(1) undef
   ret void
 }
-
-declare i32 @llvm.amdgcn.if.break.i32(i1, i32)

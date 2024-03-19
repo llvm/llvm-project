@@ -455,12 +455,4 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb8(ptr addrspace(1) %out, <2 x 
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare void @llvm.amdgcn.s.barrier()
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1) #0
-declare <2 x i16> @llvm.amdgcn.update.dpp.v2i16(<2 x i16>, <2 x i16>, i32, i32, i32, i1) #0
-declare <2 x half> @llvm.amdgcn.update.dpp.v2f16(<2 x half>, <2 x half>, i32, i32, i32, i1) #0
-declare float @llvm.amdgcn.update.dpp.f32(float, float, i32, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.update.dpp.i64(i64, i64, i32, i32, i32, i1) #0
-
 attributes #0 = { nounwind readnone convergent }

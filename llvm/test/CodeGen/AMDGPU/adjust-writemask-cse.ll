@@ -27,6 +27,3 @@ bb:
   %a1 = fadd float %a0, %e2
   ret float %a1
 }
-
-declare <3 x float> @llvm.amdgcn.image.load.2d.v3f32.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg)
-declare <2 x float> @llvm.amdgcn.image.load.2d.v2f32.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg)

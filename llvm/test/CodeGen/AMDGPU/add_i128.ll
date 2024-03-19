@@ -52,5 +52,3 @@ define amdgpu_kernel void @test_sreg(ptr addrspace(1) noalias %out, i128 %a, i12
   store i128 %result, ptr addrspace(1) %out
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x() readnone

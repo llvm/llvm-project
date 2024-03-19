@@ -25,5 +25,3 @@ main_body:
   %tmp43 = select i1 %tmp42, float 1.000000e+00, float 0.000000e+00
   ret float %tmp43
 }
-
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32)

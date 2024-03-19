@@ -21,14 +21,6 @@ declare <3 x half> @_Z3powDv3_DhS_(<3 x half>, <3 x half>)
 declare <4 x half> @_Z3powDv4_DhS_(<4 x half>, <4 x half>)
 declare <8 x half> @_Z3powDv8_DhS_(<8 x half>, <8 x half>)
 declare <16 x half> @_Z3powDv16_DhS_(<16 x half>, <16 x half>)
-declare void @llvm.assume(i1 noundef)
-declare float @llvm.floor.f32(float)
-declare float @llvm.ceil.f32(float)
-declare float @llvm.trunc.f32(float)
-declare float @llvm.rint.f32(float)
-declare float @llvm.nearbyint.f32(float)
-declare float @llvm.round.f32(float)
-declare float @llvm.roundeven.f32(float)
 
 define float @test_pow_fast_f32(float %x, float %y) {
 ; CHECK-LABEL: define float @test_pow_fast_f32

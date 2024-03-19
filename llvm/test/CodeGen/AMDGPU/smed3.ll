@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 ; GCN-LABEL: {{^}}v_test_smed3_r_i_i_i32:
 ; GCN: v_med3_i32 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17
 define amdgpu_kernel void @v_test_smed3_r_i_i_i32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
@@ -90,8 +88,6 @@ define i64 @test_intMed3ImmCombine_no_32bit_extend(i64 %x) {
   %smin = call i64 @llvm.smin.i64(i64 %smax, i64 2)
   ret i64 %smin
 }
-declare i64 @llvm.smax.i64(i64, i64)
-declare i64 @llvm.smin.i64(i64, i64)
 
 ; GCN-LABEL: {{^}}v_test_smed3_r_i_i_i16:
 ; SI: v_med3_i32 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17

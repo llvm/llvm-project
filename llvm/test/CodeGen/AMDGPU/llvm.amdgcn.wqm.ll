@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -global-isel=1 -verify-machineinstrs < %s | FileCheck  -check-prefixes=GFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -global-isel=0 -verify-machineinstrs < %s | FileCheck  -check-prefixes=GFX11 %s
 
-declare i32 @llvm.amdgcn.s.wqm.i32(i32)
-declare i64 @llvm.amdgcn.s.wqm.i64(i64)
-
 define i32 @test_s_wqm_constant_i32() {
 ; GFX11-LABEL: test_s_wqm_constant_i32:
 ; GFX11:       ; %bb.0:

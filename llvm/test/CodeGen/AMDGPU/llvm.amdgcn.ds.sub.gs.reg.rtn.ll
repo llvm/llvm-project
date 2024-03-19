@@ -2,9 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s
 
-declare i32 @llvm.amdgcn.ds.sub.gs.reg.rtn.i32(i32, i32 immarg)
-declare i64 @llvm.amdgcn.ds.sub.gs.reg.rtn.i64(i32, i32 immarg)
-
 define amdgpu_gs void @test_sub_32(i32 %arg) {
 ; CHECK-LABEL: test_sub_32:
 ; CHECK:       ; %bb.0:

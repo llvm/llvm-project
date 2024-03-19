@@ -36,40 +36,28 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tgid.x() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tgid.y() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tgid.z() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.local.size.x() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.local.size.y() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.local.size.z() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tidig.x() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tidig.y() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tidig.z() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.global.size.x() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.global.size.y() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.global.size.z() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

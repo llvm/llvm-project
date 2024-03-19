@@ -14,4 +14,3 @@ entry:
 }
 
 declare float @fabsf(float ) readnone
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

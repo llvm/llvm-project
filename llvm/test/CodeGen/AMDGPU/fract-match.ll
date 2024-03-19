@@ -2325,25 +2325,4 @@ entry:
   ret <2 x double> %cond6
 }
 
-declare half @llvm.floor.f16(half) #0
-declare float @llvm.floor.f32(float) #0
-declare double @llvm.floor.f64(double) #0
-declare <2 x double> @llvm.floor.v2f64(<2 x double>) #0
-declare <2 x float> @llvm.floor.v2f32(<2 x float>) #0
-declare <2 x half> @llvm.floor.v2f16(<2 x half>) #0
-declare float @llvm.trunc.f32(float) #0
-declare float @llvm.minnum.f32(float, float) #0
-declare half @llvm.minnum.f16(half, half) #0
-declare double @llvm.minnum.f64(double, double) #0
-declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>) #0
-declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) #0
-declare <2 x double> @llvm.minnum.v2f64(<2 x double>, <2 x double>) #0
-declare float @llvm.maxnum.f32(float, float) #0
-declare float @llvm.fabs.f32(float) #0
-declare double @llvm.fabs.f64(double) #0
-declare <2 x float> @llvm.fabs.v2f32(<2 x float>) #0
-declare half @llvm.fabs.f16(half) #0
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #0
-declare <2 x double> @llvm.fabs.v2f64(<2 x double>) #0
-
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

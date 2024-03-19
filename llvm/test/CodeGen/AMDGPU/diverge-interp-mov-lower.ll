@@ -25,10 +25,6 @@ define dllexport amdgpu_ps void @_amdgpu_ps_main(i32 inreg %arg) local_unnamed_a
   ret void
 }
 
-declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #1
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
-declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #2
-
 attributes #0 = { nounwind "InitialPSInputAddr"="0" }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { nounwind }

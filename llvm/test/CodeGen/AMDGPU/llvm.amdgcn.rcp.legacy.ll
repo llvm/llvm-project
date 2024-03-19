@@ -3,8 +3,6 @@
 
 ; ERROR: error: <unknown>:0:0: in function rcp_legacy_f32 void (ptr addrspace(1), float): intrinsic not supported on subtarget
 
-declare float @llvm.amdgcn.rcp.legacy(float) #0
-
 ; GCN-LABEL: {{^}}rcp_legacy_f32:
 ; GCN: v_rcp_legacy_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}
 define amdgpu_kernel void @rcp_legacy_f32(ptr addrspace(1) %out, float %src) #1 {

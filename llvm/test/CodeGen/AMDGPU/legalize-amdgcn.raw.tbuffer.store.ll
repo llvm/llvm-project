@@ -1370,8 +1370,3 @@ define void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_voffse
   call void @llvm.amdgcn.raw.tbuffer.store.f32(float %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 94, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.raw.tbuffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg, i32 immarg)
-declare void @llvm.amdgcn.raw.tbuffer.store.v2f32(<2 x float>, <4 x i32>, i32, i32, i32 immarg, i32 immarg)
-declare void @llvm.amdgcn.raw.tbuffer.store.v3f32(<3 x float>, <4 x i32>, i32, i32, i32 immarg, i32 immarg)
-declare void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32 immarg, i32 immarg)

@@ -136,9 +136,5 @@ define amdgpu_kernel void @fold_mi_and_neg1(ptr addrspace(1) %out) {
   ret void
 }
 
-declare i64 @llvm.ctpop.i64(i64) #1
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-declare i32 @llvm.amdgcn.groupstaticsize() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

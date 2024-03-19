@@ -2885,5 +2885,3 @@ entry:
   store i32 %add6, ptr addrspace(1) %dst, align 4
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

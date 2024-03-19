@@ -3,11 +3,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx90a -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,GFX90A %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,SIGFX11 %s
 
-declare double @llvm.fma.f64(double, double, double) nounwind readnone
-declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>) nounwind readnone
-declare <4 x double> @llvm.fma.v4f64(<4 x double>, <4 x double>, <4 x double>) nounwind readnone
-declare double @llvm.fabs.f64(double) nounwind readnone
-
 ; FUNC-LABEL: {{^}}fma_f64:
 ; SIGFX11: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 ; GFX90A: v_fmac_f64_e32 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}

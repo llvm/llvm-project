@@ -4,9 +4,6 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck --check-prefix=GCN %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck --check-prefix=GCN %s
 
-declare float @llvm.fabs.f32(float) #0
-declare float @llvm.floor.f32(float) #0
-
 ; GCN-LABEL: {{^}}fract_f32:
 ; GCN: v_floor_f32_e32 [[FLR:v[0-9]+]], [[INPUT:v[0-9]+]]
 ; GCN: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[INPUT]], [[FLR]]

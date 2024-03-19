@@ -1,17 +1,5 @@
 ; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -passes=amdgpu-promote-alloca < %s | FileCheck --enable-var-scope %s
 
-declare void @llvm.memcpy.p5.p1.i32(ptr addrspace(5) nocapture, ptr addrspace(1) nocapture, i32, i1) #0
-declare void @llvm.memcpy.p1.p5.i32(ptr addrspace(1) nocapture, ptr addrspace(5) nocapture, i32, i1) #0
-declare void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) nocapture, ptr addrspace(5) nocapture, i64, i1) #0
-
-declare void @llvm.memmove.p5.p1.i32(ptr addrspace(5) nocapture, ptr addrspace(1) nocapture, i32, i1) #0
-declare void @llvm.memmove.p1.p5.i32(ptr addrspace(1) nocapture, ptr addrspace(5) nocapture, i32, i1) #0
-declare void @llvm.memmove.p5.p5.i64(ptr addrspace(5) nocapture, ptr addrspace(5) nocapture, i64, i1) #0
-
-declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture, i8, i32, i1) #0
-
-declare i32 @llvm.objectsize.i32.p5(ptr addrspace(5), i1, i1, i1) #1
-
 ; CHECK-LABEL: @promote_with_memcpy(
 ; CHECK: [[GEP:%[0-9]+]] = getelementptr inbounds [64 x [17 x i32]], ptr addrspace(3) @promote_with_memcpy.alloca, i32 0, i32 %{{[0-9]+}}
 ; CHECK: call void @llvm.memcpy.p3.p1.i32(ptr addrspace(3) align 4 [[GEP]], ptr addrspace(1) align 4 %in, i32 68, i1 false)

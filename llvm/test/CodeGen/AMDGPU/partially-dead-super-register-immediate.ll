@@ -8,8 +8,6 @@
 ; During live interval construction, the first sub register def is
 ; incorrectly marked as dead.
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 define amdgpu_kernel void @dead_def_subregister(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr i64, ptr addrspace(1) %in, i32 %tid

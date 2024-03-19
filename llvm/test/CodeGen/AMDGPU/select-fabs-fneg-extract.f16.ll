@@ -1771,8 +1771,4 @@ define half @select_fneg_posk_src_fmad_f16(i32 %c, half %x, half %z) {
   ret half %select
 }
 
-declare half @llvm.fabs.f16(half) #0
-declare half @llvm.fma.f16(half, half, half) #0
-declare half @llvm.fmuladd.f16(half, half, half) #0
-
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

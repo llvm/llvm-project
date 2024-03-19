@@ -951,16 +951,3 @@ define amdgpu_ps float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_s
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret float %val
 }
-
-declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32 immarg)
-declare <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.v2f32(ptr addrspace(8), i32, i32, i32 immarg)
-declare <3 x float> @llvm.amdgcn.raw.ptr.buffer.load.v3f32(ptr addrspace(8), i32, i32, i32 immarg)
-declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8), i32, i32, i32 immarg)
-
-declare half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8), i32, i32, i32 immarg)
-declare <2 x half> @llvm.amdgcn.raw.ptr.buffer.load.v2f16(ptr addrspace(8), i32, i32, i32 immarg)
-declare <3 x half> @llvm.amdgcn.raw.ptr.buffer.load.v3f16(ptr addrspace(8), i32, i32, i32 immarg)
-declare <4 x half> @llvm.amdgcn.raw.ptr.buffer.load.v4f16(ptr addrspace(8), i32, i32, i32 immarg)
-
-declare i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8), i32, i32, i32 immarg)
-declare i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8), i32, i32, i32 immarg)

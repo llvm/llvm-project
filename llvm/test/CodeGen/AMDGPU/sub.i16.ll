@@ -162,8 +162,5 @@ define amdgpu_kernel void @v_test_sub_i16_constant_commute(ptr addrspace(1) %out
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.groupstaticsize() #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

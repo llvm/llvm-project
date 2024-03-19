@@ -1,8 +1,6 @@
 ; RUN: not llc -mtriple=amdgcn-- < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 ; RUN: not llc -mtriple=amdgcn-- < %s | FileCheck -check-prefix=GCN %s
 
-declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture, i8, i32, i32, i1) #1
-
 ; ERROR: error: <unknown>:0:0: stack frame size (131064) exceeds limit (131056) in function 'stack_size_limit_wave64'
 ; GCN: ; ScratchSize: 131064
 define amdgpu_kernel void @stack_size_limit_wave64() #0 {

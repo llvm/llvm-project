@@ -449,6 +449,3 @@ define amdgpu_ps double @struct_ptr_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cm
   %cast = bitcast i64 %ret to double
   ret double %cast
 }
-
-declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32, i32, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare i64 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i64(i64, i64, ptr addrspace(8), i32, i32, i32, i32 immarg)

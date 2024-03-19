@@ -190,8 +190,5 @@ entry:
   ret void
 }
 
-declare void @llvm.lifetime.start.p5(i64, ptr addrspace(5) nocapture) #1
-declare void @llvm.lifetime.end.p5(i64, ptr addrspace(5) nocapture) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }

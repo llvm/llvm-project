@@ -20,6 +20,3 @@ entry:
   call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> zeroinitializer, ptr addrspace(8) zeroinitializer, i32 0, i32 0, i32 0, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32 immarg)

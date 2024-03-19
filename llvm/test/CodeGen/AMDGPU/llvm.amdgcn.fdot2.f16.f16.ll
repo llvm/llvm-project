@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GFX11,SDAG-GFX11
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GFX11,GISEL-GFX11
 
-declare half @llvm.amdgcn.fdot2.f16.f16(<2 x half> %a, <2 x half> %b, half %c)
-
 define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16(
 ; GFX11-LABEL: test_llvm_amdgcn_fdot2_f16_f16:
 ; GFX11:       ; %bb.0: ; %entry
@@ -71,5 +69,3 @@ entry:
   store half %r.val, ptr addrspace(5) %r
   ret void
 }
-
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1)

@@ -95,8 +95,6 @@ endif:
   ret void
 }
 
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #2
-
 attributes #0 = { nounwind "InitialPSInputAddr"="2" "target-features"="+wavefrontsize64" }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { nounwind "target-features"="+wavefrontsize32" }

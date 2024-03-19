@@ -6,8 +6,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefixes=GCN,GFX1011,GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GCN,GFX1011,GFX11 %s
 
-declare i32 @llvm.get.rounding()
-
 define i32 @func_rounding() {
 ; GFX678-LABEL: func_rounding:
 ; GFX678:       ; %bb.0:

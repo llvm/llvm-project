@@ -3,9 +3,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX8 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9 %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
-
 define amdgpu_kernel void @anyext_i1_i32(ptr addrspace(1) %out, i32 %cond) #0 {
 ; GCN-LABEL: anyext_i1_i32:
 ; GCN:       ; %bb.0: ; %entry

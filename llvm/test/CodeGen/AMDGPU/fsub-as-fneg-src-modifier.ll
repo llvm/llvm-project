@@ -1302,17 +1302,6 @@ define amdgpu_gfx float @fold_f16_fsub_into_fneg_modifier_interp_daz(float %v0, 
   ret float %p1_0
 }
 
-declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
-declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)
-declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
-declare i1 @llvm.amdgcn.class.f32(float, i32)
-declare i1 @llvm.is.fpclass.f64(double, i32 immarg)
-declare i1 @llvm.amdgcn.class.f64(double, i32)
-declare i1 @llvm.is.fpclass.f16(half, i32 immarg)
-declare i1 @llvm.amdgcn.class.f16(half, i32)
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32)
-declare float @llvm.amdgcn.interp.p1.f16(float, i32, i32, i1, i32)
-
 attributes #0 = { "denormal-fp-math"="ieee,ieee" }
 attributes #1 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
 attributes #2 = { "denormal-fp-math"="dynamic,dynamic" }

@@ -32,7 +32,3 @@ define amdgpu_ps void @test2(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
    call void @llvm.r600.store.swizzle(<4 x float> %vec, i32 0, i32 0)
    ret void
 }
-
-declare float @llvm.pow.f32(float ,float ) readonly
-declare <4 x float> @llvm.pow.v4f32(<4 x float> ,<4 x float> ) readonly
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

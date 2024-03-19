@@ -129,16 +129,12 @@ bb18:                                             ; preds = %bb18, %bb
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #1
 
 ; Function Attrs: nounwind readnone speculatable
-declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; Function Attrs: nounwind readnone speculatable
-declare i32 @llvm.amdgcn.workgroup.id.x() #1
 
 ; Function Attrs: nounwind readnone speculatable
-declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #1
 
 attributes #0 = { "target-cpu"="fiji" "target-features"="-flat-for-global" }
 attributes #1 = { nounwind readnone speculatable }

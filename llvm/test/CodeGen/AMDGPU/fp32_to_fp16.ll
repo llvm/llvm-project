@@ -4,8 +4,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefixes=CYPRESS %s
 
-declare i16 @llvm.convert.to.fp16.f32(float) nounwind readnone
-
 define amdgpu_kernel void @test_convert_fp32_to_fp16(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; GFX6-LABEL: test_convert_fp32_to_fp16:
 ; GFX6:       ; %bb.0:

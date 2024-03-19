@@ -36,9 +36,6 @@ entry:
   ret void
 }
 
-
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #0 = { norecurse nounwind "amdgpu-flat-work-group-size"="1,256" }
 attributes #1 = { nounwind readnone }
 

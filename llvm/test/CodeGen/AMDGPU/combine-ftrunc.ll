@@ -80,13 +80,3 @@ define amdgpu_kernel void @combine_ftrunc_ftrunc_f32(ptr addrspace(1) %p) {
   store float %trunc, ptr addrspace(1) %p, align 4
   ret void
 }
-
-declare double @llvm.trunc.f64(double)
-declare float @llvm.trunc.f32(float)
-declare <2 x float> @llvm.trunc.v2f32(<2 x float>)
-declare double @llvm.rint.f64(double)
-declare float @llvm.rint.f32(float)
-declare <2 x float> @llvm.rint.v2f32(<2 x float>)
-declare float @llvm.ceil.f32(float)
-declare float @llvm.floor.f32(float)
-declare float @llvm.nearbyint.f32(float)

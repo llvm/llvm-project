@@ -128,11 +128,6 @@ define amdgpu_cs void @if_else_vgpr_opt(ptr addrspace(8) inreg %input, ptr addrs
   ret void
 }
 
-declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #0
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1) #0
-declare i32 @llvm.amdgcn.strict.wwm.i32(i32) #1
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8), i32, i32 immarg, i32 immarg) #2
-
 attributes #0 = { convergent nounwind readnone willreturn }
 attributes #1 = { convergent nounwind readnone speculatable willreturn }
 attributes #2 = { nounwind willreturn writeonly }

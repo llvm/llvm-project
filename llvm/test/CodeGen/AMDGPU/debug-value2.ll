@@ -2,10 +2,6 @@
 
 %struct.ShapeData = type { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, i32, i32, i64, <4 x float>, i32, i8, i8, i16, i32, i32 }
 
-declare float @llvm.fmuladd.f32(float, float, float)
-
-declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>)
-
 declare ptr addrspace(1) @Scene_getSubShapeData(i32, ptr addrspace(1), ptr addrspace(1)) local_unnamed_addr
 
 define <4 x float> @Scene_transformT(i32 %subshapeIdx, <4 x float> %v, float %time, ptr addrspace(1) %gScene, ptr addrspace(1) %gSceneOffsets) local_unnamed_addr !dbg !110 {
@@ -267,14 +263,6 @@ qtSet.exit:                                       ; preds = %bb141, %entry
   %tmp162 = insertelement <4 x float> %mul2, float 0.000000e+00, i64 3
   ret <4 x float> %tmp162
 }
-
-declare float @llvm.copysign.f32(float, float)
-
-declare i1 @llvm.amdgcn.class.f32(float, i32)
-
-declare float @llvm.amdgcn.rsq.f32(float)
-
-declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!104, !105, !106}

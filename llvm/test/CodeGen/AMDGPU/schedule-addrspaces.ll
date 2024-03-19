@@ -21,5 +21,3 @@ define amdgpu_gfx void @example(<4 x i32> inreg %rsrc, ptr addrspace(5) %src, i3
   call void @llvm.amdgcn.raw.buffer.store.i32(i32 %x1, <4 x i32> %rsrc, i32 %dst1, i32 0, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.raw.buffer.store.i32(i32, <4 x i32>, i32, i32, i32)

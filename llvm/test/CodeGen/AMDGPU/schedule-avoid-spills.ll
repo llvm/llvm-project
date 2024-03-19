@@ -291,5 +291,3 @@ bb2:
   call void asm sideeffect "; use $0","{v[0:31]}"(<32 x i32> %vgpr3)
   ret void
 }
-
-declare float @llvm.fmuladd.f32(float, float, float)

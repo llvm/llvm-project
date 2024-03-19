@@ -1058,17 +1058,3 @@ define amdgpu_ps i16 @saddo_i16_sv(i16 inreg %a, i16 %b) {
   %ret = add i16 %add, %of.zext
   ret i16 %ret
 }
-
-declare {i7, i1} @llvm.uadd.with.overflow.i7(i7 %a, i7 %b)
-declare {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
-declare {i16, i1} @llvm.uadd.with.overflow.i16(i16 %a, i16 %b)
-declare {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
-declare {i64, i1} @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
-declare {<2 x i32>, <2 x i1>} @llvm.uadd.with.overflow.v2i32(<2 x i32> %a, <2 x i32> %b)
-
-declare {i7, i1} @llvm.sadd.with.overflow.i7(i7 %a, i7 %b)
-declare {i8, i1} @llvm.sadd.with.overflow.i8(i8 %a, i8 %b)
-declare {i16, i1} @llvm.sadd.with.overflow.i16(i16 %a, i16 %b)
-declare {i32, i1} @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
-declare {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a, i64 %b)
-declare {<2 x i32>, <2 x i1>} @llvm.sadd.with.overflow.v2i32(<2 x i32> %a, <2 x i32> %b)

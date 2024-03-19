@@ -78,8 +78,6 @@ entry:
 
 attributes #0 = { nounwind "amdgpu-git-ptr-high"="0x1234" }
 
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg)
-
 
 ; PAL:         .amdgpu_pal_metadata
 ; PAL-NEXT: ---

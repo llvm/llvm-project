@@ -47,6 +47,4 @@ entry:
   ret void
 }
 
-declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-
 !0 = !{!0}

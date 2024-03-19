@@ -2,10 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12-GISEL %s
 
-declare i32 @llvm.amdgcn.atomic.cond.sub.u32.p3(ptr addrspace(3), i32)
-declare i32 @llvm.amdgcn.atomic.cond.sub.u32.p1(ptr addrspace(1), i32)
-declare i32 @llvm.amdgcn.atomic.cond.sub.u32.p0(ptr, i32)
-
 define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32(ptr %addr, i32 %in) {
 ; GFX12-SDAG-LABEL: flat_atomic_cond_sub_no_rtn_u32:
 ; GFX12-SDAG:       ; %bb.0: ; %entry

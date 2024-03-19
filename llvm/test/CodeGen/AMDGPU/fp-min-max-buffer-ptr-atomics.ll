@@ -11,9 +11,6 @@
 ; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs | FileCheck %s -check-prefix=G_GFX1030
 ; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck %s -check-prefix=G_GFX1100
 
-declare float @llvm.amdgcn.raw.ptr.buffer.atomic.fmin.f32(float, ptr addrspace(8), i32, i32, i32 immarg)
-declare float @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f32(float, ptr addrspace(8), i32, i32, i32 immarg)
-
 
 define amdgpu_kernel void @raw_ptr_buffer_atomic_min_noret_f32(ptr addrspace(8) inreg %rsrc, float %data, i32 %vindex) {
 ; SI-LABEL: raw_ptr_buffer_atomic_min_noret_f32:

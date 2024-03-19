@@ -281,11 +281,6 @@ define double @v_rsq_clamp_f64_non_ieee(double %src) #2 {
   ret double %rsq_clamp
 }
 
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.amdgcn.rsq.clamp.f32(float) #1
-declare double @llvm.fabs.f64(double) #1
-declare double @llvm.amdgcn.rsq.clamp.f64(double) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "amdgpu-ieee"="false" }

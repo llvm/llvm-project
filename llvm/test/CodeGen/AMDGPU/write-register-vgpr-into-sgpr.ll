@@ -6,10 +6,6 @@
 ; vgpr value into a scalar register, but I don't think there's much we
 ; can do to avoid this.
 
-declare void @llvm.write_register.i32(metadata, i32) #0
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare void @llvm.amdgcn.wave.barrier() #2
-
 define amdgpu_kernel void @write_vgpr_into_sgpr() {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   call void @llvm.write_register.i32(metadata !0, i32 %tid)

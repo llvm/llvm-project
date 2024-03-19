@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -enable-no-nans-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=SI-NONAN -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
 
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.floor.f32(float) #1
-
 ; FUNC-LABEL: {{^}}cvt_rpi_i32_f32:
 ; SI-SAFE-NOT: v_cvt_rpi_i32_f32
 ; SI-NONAN: v_cvt_rpi_i32_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}

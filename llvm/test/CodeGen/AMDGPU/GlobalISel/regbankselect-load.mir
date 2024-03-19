@@ -102,8 +102,6 @@
   define amdgpu_kernel void @load_constant_i96_align4() { ret void }
   define amdgpu_kernel void @load_constant_i96_align8() { ret void }
   define amdgpu_kernel void @load_constant_i96_align16() { ret void }
-
-  declare i32 @llvm.amdgcn.workitem.id.x() #0
   attributes #0 = { nounwind readnone }
 ...
 

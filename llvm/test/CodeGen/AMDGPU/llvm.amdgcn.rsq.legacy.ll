@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
-declare float @llvm.amdgcn.rsq.legacy(float) #0
-
 ; FUNC-LABEL: {{^}}rsq_legacy_f32:
 ; SI: v_rsq_legacy_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}
 define amdgpu_kernel void @rsq_legacy_f32(ptr addrspace(1) %out, float %src) #1 {

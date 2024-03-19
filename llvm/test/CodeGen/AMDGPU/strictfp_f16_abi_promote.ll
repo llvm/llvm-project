@@ -545,14 +545,4 @@ bb1:
   ret half %extract
 }
 
-declare float @llvm.experimental.constrained.fpext.f32.f16(half, metadata) #0
-declare <2 x float> @llvm.experimental.constrained.fpext.v2f32.v2f16(<2 x half>, metadata) #0
-declare <3 x float> @llvm.experimental.constrained.fpext.v3f32.v3f16(<3 x half>, metadata) #0
-declare <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half>, metadata) #0
-
-declare half @llvm.experimental.constrained.fptrunc.f16.f32(float, metadata, metadata) #0
-declare <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(<2 x float>, metadata, metadata) #0
-declare <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f32(<3 x float>, metadata, metadata) #0
-declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float>, metadata, metadata) #0
-
 attributes #0 = { strictfp }

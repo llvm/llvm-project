@@ -48,8 +48,3 @@ main_body:
   %elt = extractelement <4 x half> %data, i32 3
   ret half %elt
 }
-
-declare half @llvm.amdgcn.tbuffer.load.f16(<4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
-declare <2 x half> @llvm.amdgcn.tbuffer.load.v2f16(<4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
-declare <3 x half> @llvm.amdgcn.tbuffer.load.v3f16(<4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
-declare <4 x half> @llvm.amdgcn.tbuffer.load.v4f16(<4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)

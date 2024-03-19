@@ -45,10 +45,6 @@ main_body:
   ret void
 }
 
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32 immarg) #1
-declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32 immarg) #2
-declare void @llvm.amdgcn.raw.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg, i32 immarg) #3
-
 attributes #0 = { nounwind "target-cpu"="tonga" }
 attributes #1 = { nounwind readnone willreturn }
 attributes #2 = { nounwind readonly willreturn }

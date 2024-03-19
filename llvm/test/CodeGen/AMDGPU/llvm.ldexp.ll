@@ -565,20 +565,4 @@ define <2 x half> @test_ldexp_v2f16_v2i16(<2 x half> %a, <2 x i16> %b) {
   ret <2 x half> %result
 }
 
-declare float @llvm.ldexp.f32.i32(float, i32) #0
-declare float @llvm.ldexp.f32.i16(float, i16) #0
-declare float @llvm.ldexp.f32.i64(float, i64) #0
-declare half @llvm.ldexp.f16.i8(half, i8) #0
-declare half @llvm.ldexp.f16.i16(half, i16) #0
-declare half @llvm.ldexp.f16.i32(half, i32) #0
-declare <2 x half> @llvm.ldexp.v2f16.v2i16(<2 x half>, <2 x i16>) #0
-declare <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half>, <2 x i32>) #0
-declare <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float>, <2 x i32>) #0
-declare <2 x float> @llvm.ldexp.v2f32.v2i16(<2 x float>, <2 x i16>) #0
-declare <2 x float> @llvm.ldexp.v2f32.v2i64(<2 x float>, <2 x i64>) #0
-declare <3 x float> @llvm.ldexp.v3f32.v3i32(<3 x float>, <3 x i32>) #0
-declare <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float>, <4 x i32>) #0
-declare double @llvm.ldexp.f64.i32(double, i32) #0
-declare <2 x double> @llvm.ldexp.v2f64.v2i32(<2 x double>, <2 x i32>) #0
-
 attributes #0 = { nounwind readnone }

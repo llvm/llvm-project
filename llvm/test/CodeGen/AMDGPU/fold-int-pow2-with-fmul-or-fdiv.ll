@@ -3,11 +3,6 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10 %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 
-declare i16 @llvm.umax.i16(i16, i16)
-declare i64 @llvm.umin.i64(i64, i64)
-
-declare <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float>, <4 x i32>)
-
 define <4 x float> @fmul_pow2_4xfloat(<4 x i32> %i) {
 ; VI-LABEL: fmul_pow2_4xfloat:
 ; VI:       ; %bb.0:
@@ -144,8 +139,6 @@ define <4 x float> @fdiv_pow2_4xfloat(<4 x i32> %i) {
   %r = fdiv <4 x float> <float 9.000000e+00, float 9.000000e+00, float 9.000000e+00, float 9.000000e+00>, %p2_f
   ret <4 x float> %r
 }
-
-declare <8 x half> @llvm.ldexp.v8f16.v8i16(<8 x half>, <8 x i16>)
 
 define <8 x half> @fmul_pow2_8xhalf(<8 x i16> %i) {
 ; VI-LABEL: fmul_pow2_8xhalf:

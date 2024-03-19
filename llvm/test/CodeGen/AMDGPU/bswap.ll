@@ -3,19 +3,6 @@
 ; RUN: llc < %s -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI
 ; RUN: llc < %s -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=GFX11
 
-declare i16 @llvm.bswap.i16(i16) nounwind readnone
-declare <2 x i16> @llvm.bswap.v2i16(<2 x i16>) nounwind readnone
-declare <3 x i16> @llvm.bswap.v3i16(<3 x i16>) nounwind readnone
-declare <4 x i16> @llvm.bswap.v4i16(<4 x i16>) nounwind readnone
-declare i32 @llvm.bswap.i32(i32) nounwind readnone
-declare <2 x i32> @llvm.bswap.v2i32(<2 x i32>) nounwind readnone
-declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>) nounwind readnone
-declare <8 x i32> @llvm.bswap.v8i32(<8 x i32>) nounwind readnone
-declare i64 @llvm.bswap.i64(i64) nounwind readnone
-declare <2 x i64> @llvm.bswap.v2i64(<2 x i64>) nounwind readnone
-declare <4 x i64> @llvm.bswap.v4i64(<4 x i64>) nounwind readnone
-declare i48 @llvm.bswap.i48(i48) #1
-
 define amdgpu_kernel void @test_bswap_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_i32:
 ; SI:       ; %bb.0:

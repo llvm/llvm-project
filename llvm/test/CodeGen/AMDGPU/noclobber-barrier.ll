@@ -601,6 +601,3 @@ entry:
   store i32 %ld, ptr addrspace(1) %out, align 4
   ret void
 }
-
-declare void @llvm.amdgcn.s.barrier()
-declare void @llvm.amdgcn.wave.barrier()

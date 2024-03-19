@@ -22,10 +22,8 @@ define amdgpu_ps void @ps_main(i32 %arg, i32 inreg %arg1, i32 inreg %arg2) local
 }
 
 ; Function Attrs: inaccessiblememonly nounwind
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #1
 
 ; Function Attrs: nounwind readnone speculatable
-declare i32 @llvm.amdgcn.reloc.constant(metadata) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { inaccessiblememonly nounwind }

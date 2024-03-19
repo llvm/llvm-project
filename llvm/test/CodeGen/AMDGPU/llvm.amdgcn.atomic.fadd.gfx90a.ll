@@ -1,11 +1,6 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs | FileCheck %s -check-prefix=GFX90A
 ; RUN: not --crash llc < %s -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs 2>&1 | FileCheck %s -check-prefix=GFX908
 
-declare float @llvm.amdgcn.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i1)
-declare <2 x half> @llvm.amdgcn.buffer.atomic.fadd.v2f16(<2 x half>, <4 x i32>, i32, i32, i1)
-declare float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1), float)
-declare <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1), <2 x half>)
-
 ; GFX908:  LLVM ERROR: Cannot select: {{.+}}: f32,ch = BUFFER_ATOMIC_FADD
 
 ; GFX90A-LABEL: {{^}}buffer_atomic_add_f32:

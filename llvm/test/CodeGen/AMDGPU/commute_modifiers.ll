@@ -1,9 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.fma.f32(float, float, float) nounwind readnone
-
 ; FUNC-LABEL: @commute_add_imm_fabs_f32
 ; SI: buffer_load_dword [[X:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI: v_add_f32_e64 [[REG:v[0-9]+]], |[[X]]|, 2.0

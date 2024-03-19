@@ -1747,21 +1747,5 @@ define amdgpu_cs void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %ind
   ret void
 }
 
-declare i32 @llvm.amdgcn.strict.wwm.i32(i32)
-declare i64 @llvm.amdgcn.strict.wwm.i64(i64)
-declare i32 @llvm.amdgcn.wwm.i32(i32)
-declare i64 @llvm.amdgcn.wwm.i64(i64)
-declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32)
-declare i64 @llvm.amdgcn.set.inactive.i64(i64, i64)
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1)
-declare <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.v2f32(ptr addrspace(8), i32, i32, i32)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32, i32)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32)
-declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32)
-declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i32)
-
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

@@ -9,9 +9,6 @@
 ; Make sure (fmul (fadd x, x), c) -> (fmul x, (fmul 2.0, c)) doesn't
 ; make add an instruction if the fadd has more than one use.
 
-declare half @llvm.fabs.f16(half) #1
-declare float @llvm.fabs.f32(float) #1
-
 define amdgpu_kernel void @multiple_fadd_use_test_f32(ptr addrspace(1) %out, float %x, float %y, float %z) #0 {
 ; VI-LABEL: multiple_fadd_use_test_f32:
 ; VI:       ; %bb.0:

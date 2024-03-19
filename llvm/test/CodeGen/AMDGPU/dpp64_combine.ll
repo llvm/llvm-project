@@ -69,9 +69,4 @@ define amdgpu_kernel void @dpp64_div(ptr addrspace(1) %arg, i64 %in1) {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare i64 @llvm.amdgcn.update.dpp.i64(i64, i64, i32, i32, i32, i1) #0
-declare double @llvm.ceil.f64(double)
-declare double @llvm.amdgcn.rcp.f64(double)
-
 attributes #0 = { nounwind readnone convergent }

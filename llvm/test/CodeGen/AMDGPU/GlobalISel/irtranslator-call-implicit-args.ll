@@ -1214,10 +1214,6 @@ define amdgpu_kernel void @test_only_workitem_id_xz() #0 !reqd_work_group_size !
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare i32 @llvm.amdgcn.workitem.id.y() #1
-declare i32 @llvm.amdgcn.workitem.id.z() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable willreturn }
 

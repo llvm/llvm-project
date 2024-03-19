@@ -4,9 +4,6 @@
 ; RUN: llc -mtriple=amdgcn -global-isel -mcpu=gfx1010 < %s | FileCheck %s --check-prefixes=CHECK,GISEL
 ; RUN: llc -mtriple=amdgcn -global-isel -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck %s --check-prefixes=CHECK,GISEL
 
-declare i64 @llvm.amdgcn.ballot.i64(i1)
-declare i64 @llvm.ctpop.i64(i64)
-
 ; Test ballot(0)
 
 define amdgpu_cs i64 @constant_false() {

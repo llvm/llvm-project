@@ -84,11 +84,3 @@ define amdgpu_ps void @test_storecnt_dscnt() {
   call void @llvm.amdgcn.s.wait.dscnt(i16 0)
   ret void
 }
-
-declare void @llvm.amdgcn.s.wait.bvhcnt(i16)
-declare void @llvm.amdgcn.s.wait.dscnt(i16)
-declare void @llvm.amdgcn.s.wait.expcnt(i16)
-declare void @llvm.amdgcn.s.wait.kmcnt(i16)
-declare void @llvm.amdgcn.s.wait.loadcnt(i16)
-declare void @llvm.amdgcn.s.wait.samplecnt(i16)
-declare void @llvm.amdgcn.s.wait.storecnt(i16)

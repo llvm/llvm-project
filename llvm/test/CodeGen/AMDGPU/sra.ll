@@ -3,8 +3,6 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s -check-prefixes=VI
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mtriple=r600-- -mcpu=redwood -verify-machineinstrs < %s | FileCheck %s -check-prefixes=EG
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 define amdgpu_kernel void @ashr_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: ashr_v2i32:
 ; SI:       ; %bb.0:

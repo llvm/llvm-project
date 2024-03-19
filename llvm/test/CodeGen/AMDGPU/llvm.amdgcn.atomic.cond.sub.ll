@@ -211,9 +211,6 @@ main_body:
   ret void
 }
 
-declare i32 @llvm.amdgcn.raw.buffer.atomic.cond.sub.u32.i32(i32, <4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.struct.buffer.atomic.cond.sub.u32.i32(i32, <4 x i32>, i32, i32, i32, i32) #0
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "target-features"="+atomic-csub-no-rtn-insts" }
 

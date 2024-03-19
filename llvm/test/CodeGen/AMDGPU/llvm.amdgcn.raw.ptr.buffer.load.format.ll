@@ -80,8 +80,4 @@ main_body:
   ret <2 x float> %data
 }
 
-declare float @llvm.amdgcn.raw.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32) #0
-declare <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v2f32(ptr addrspace(8), i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32) #0
-
 attributes #0 = { nounwind readonly }

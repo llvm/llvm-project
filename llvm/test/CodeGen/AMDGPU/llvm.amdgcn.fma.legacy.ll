@@ -103,6 +103,3 @@ define float @v_fma_const_const(float %a)  {
   %fma = call float @llvm.amdgcn.fma.legacy(float %a, float 2.0, float -1.0)
   ret float %fma
 }
-
-declare float @llvm.amdgcn.fma.legacy(float, float, float)
-declare float @llvm.fabs.f32(float)

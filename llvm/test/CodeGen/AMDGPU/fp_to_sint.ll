@@ -3,8 +3,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s --check-prefixes=VI
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck %s --check-prefixes=EG
 
-declare float @llvm.fabs.f32(float) #1
-
 define amdgpu_kernel void @fp_to_sint_i32(ptr addrspace(1) %out, float %in) {
 ; SI-LABEL: fp_to_sint_i32:
 ; SI:       ; %bb.0:

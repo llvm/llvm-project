@@ -148,7 +148,5 @@ if.else:
   unreachable
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

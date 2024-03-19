@@ -439,14 +439,6 @@ define amdgpu_kernel void @no_use_dispatch_ptr() {
   ret void
 }
 
-declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #1
-declare i32 @llvm.amdgcn.workgroup.id.x() #1
-declare i32 @llvm.amdgcn.workgroup.id.y() #1
-declare i32 @llvm.amdgcn.workgroup.id.z() #1
-declare i32 @llvm.umin.i32(i32, i32) #1
-declare i32 @llvm.smin.i32(i32, i32) #1
-declare i32 @llvm.umax.i32(i32, i32) #1
-
 attributes #0 = { nounwind "uniform-work-group-size"="true" }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { nounwind "uniform-work-group-size"="true" }

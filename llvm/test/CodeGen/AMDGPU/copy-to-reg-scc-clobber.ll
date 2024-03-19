@@ -60,5 +60,3 @@ entry:
   store i32 %cond14.1, ptr addrspace(1) %pout.coerce, align 4
   ret void
 }
-
-declare i32 @llvm.smin.i32(i32, i32)

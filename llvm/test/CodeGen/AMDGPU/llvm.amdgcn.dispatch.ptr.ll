@@ -28,8 +28,6 @@ define amdgpu_kernel void @test2(ptr addrspace(1) %out) {
   ret void
 }
 
-declare noalias ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
-
 attributes #0 = { readnone }
 
 !llvm.module.flags = !{!0}

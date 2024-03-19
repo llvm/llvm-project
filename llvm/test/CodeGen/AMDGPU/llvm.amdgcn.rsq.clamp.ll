@@ -1,9 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=FUNC %s
 
-declare float @llvm.amdgcn.rsq.clamp.f32(float) #1
-declare double @llvm.amdgcn.rsq.clamp.f64(double) #1
-
 ; FUNC-LABEL: {{^}}rsq_clamp_f32:
 ; SI: v_rsq_clamp_f32_e32
 

@@ -5,13 +5,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,SDAG,VI-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,GISEL,VI-GISEL %s
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare i32 @llvm.amdgcn.readfirstlane(i32)
-declare double @llvm.sqrt.f64(double)
-declare <2 x double> @llvm.sqrt.v2f64(<2 x double>)
-declare double @llvm.amdgcn.sqrt.f64(double)
-declare double @llvm.fabs.f64(double)
-
 define amdgpu_ps <2 x i32> @s_rsq_f64(double inreg %x) {
 ; SI-SDAG-LABEL: s_rsq_f64:
 ; SI-SDAG:       ; %bb.0:

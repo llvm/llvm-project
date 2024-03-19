@@ -18,13 +18,10 @@ entry:
 }
 
 ; Function Attrs: convergent nounwind
-declare void @llvm.r600.group.barrier() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tidig.x() #2
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.local.size.x() #2
 
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }

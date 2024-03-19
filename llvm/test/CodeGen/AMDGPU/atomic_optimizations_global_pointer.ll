@@ -9,8 +9,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX1264 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX1232 %s
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 ; Show what the atomic optimization pass will do for global pointers.
 
 define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace(1) %inout) {

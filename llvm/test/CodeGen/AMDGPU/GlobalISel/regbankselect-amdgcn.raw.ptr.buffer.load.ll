@@ -208,5 +208,3 @@ define amdgpu_ps float @raw_ptr_buffer_load__vgpr_rsrc__vgpr_val__vgpr_voffset__
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret float %val
 }
-
-declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32 immarg)

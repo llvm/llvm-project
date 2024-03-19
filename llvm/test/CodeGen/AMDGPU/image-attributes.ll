@@ -161,11 +161,6 @@ entry:
 %opencl.image2d_t = type opaque
 %opencl.image3d_t = type opaque
 
-declare [3 x i32] @llvm.OpenCL.image.get.size.2d(ptr addrspace(1)) #0
-declare [3 x i32] @llvm.OpenCL.image.get.size.3d(ptr addrspace(1)) #0
-declare [2 x i32] @llvm.OpenCL.image.get.format.2d(ptr addrspace(1)) #0
-declare [2 x i32] @llvm.OpenCL.image.get.format.3d(ptr addrspace(1)) #0
-
 attributes #0 = { readnone }
 
 !opencl.kernels = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9}

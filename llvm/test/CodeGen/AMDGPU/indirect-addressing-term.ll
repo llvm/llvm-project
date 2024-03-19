@@ -4,8 +4,6 @@
 ; Verify that we consider the xor at the end of the waterfall loop emitted for
 ; divergent indirect addressing as a terminator.
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 ; There should be no spill code inserted between the xor and the real terminator
 define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-LABEL: name: extract_w_offset_vgpr

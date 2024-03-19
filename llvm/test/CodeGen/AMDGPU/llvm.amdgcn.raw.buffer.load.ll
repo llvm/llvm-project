@@ -1378,19 +1378,4 @@ main_body:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
   ret void
 }
-
-declare float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32>, i32, i32, i32) #0
-declare <2 x float> @llvm.amdgcn.raw.buffer.load.v2f32(<4 x i32>, i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32) #0
-declare <2 x i32> @llvm.amdgcn.raw.buffer.load.v2i32(<4 x i32>, i32, i32, i32) #0
-declare <4 x i32> @llvm.amdgcn.raw.buffer.load.v4i32(<4 x i32>, i32, i32, i32) #0
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare i8 @llvm.amdgcn.raw.buffer.load.i8(<4 x i32>, i32, i32, i32) #0
-declare i16 @llvm.amdgcn.raw.buffer.load.i16(<4 x i32>, i32, i32, i32) #0
-declare <2 x i16> @llvm.amdgcn.raw.buffer.load.v2i16(<4 x i32>, i32, i32, i32) #0
-declare <4 x i16> @llvm.amdgcn.raw.buffer.load.v4i16(<4 x i32>, i32, i32, i32) #0
-declare half @llvm.amdgcn.raw.buffer.load.f16(<4 x i32>, i32, i32, i32) #0
-declare <2 x half> @llvm.amdgcn.raw.buffer.load.v2f16(<4 x i32>, i32, i32, i32) #0
-declare <4 x half> @llvm.amdgcn.raw.buffer.load.v4f16(<4 x i32>, i32, i32, i32) #0
 attributes #0 = { nounwind readonly }

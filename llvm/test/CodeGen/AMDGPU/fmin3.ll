@@ -902,12 +902,6 @@ define amdgpu_kernel void @test_fmin3_olt_1_f64(ptr addrspace(1) %out, ptr addrs
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare double @llvm.minnum.f64(double, double) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare half @llvm.minnum.f16(half, half) #1
-declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>)
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { nounwind "no-nans-fp-math"="true" }

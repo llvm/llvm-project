@@ -18,6 +18,4 @@ define half @select_fneg_posk_src_rcp_f16(i32 %c, half %x, half %y) {
   ret half %select
 }
 
-declare half @llvm.amdgcn.rcp.f16(half) #0
-
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

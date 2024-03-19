@@ -40,6 +40,3 @@ bb3:                                              ; preds = %bb3, %bb
   %i23 = icmp eq i32 %i22, 1024
   br i1 %i23, label %bb2, label %bb3
 }
-
-declare double @llvm.fma.f64(double, double, double)
-declare i32 @llvm.amdgcn.workitem.id.x()

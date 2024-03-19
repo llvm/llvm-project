@@ -6,13 +6,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=VI-SDAG %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=VI-GISEL %s
 
-declare i64 @llvm.amdgcn.fcmp.f32(float, float, i32) #0
-declare i64 @llvm.amdgcn.fcmp.f64(double, double, i32) #0
-declare float @llvm.fabs.f32(float) #0
-
-declare i64 @llvm.amdgcn.fcmp.f16(half, half, i32) #0
-declare half @llvm.fabs.f16(half) #0
-
 define amdgpu_kernel void @v_fcmp_f32_oeq_with_fabs(ptr addrspace(1) %out, float %src, float %a) {
 ; GFX11-LABEL: v_fcmp_f32_oeq_with_fabs:
 ; GFX11:       ; %bb.0:

@@ -32,8 +32,5 @@ define amdgpu_kernel void @test_fmed3_srcmods_f16(ptr addrspace(1) %out, i32 %sr
   ret void
 }
 
-declare half @llvm.amdgcn.fmed3.f16(half, half, half) #0
-declare half @llvm.fabs.f16(half) #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

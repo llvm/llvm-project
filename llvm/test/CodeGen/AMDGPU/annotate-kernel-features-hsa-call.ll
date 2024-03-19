@@ -4,20 +4,6 @@
 
 ; TODO: The test contains UB which is refined by the Attributor and should be removed.
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-declare i32 @llvm.amdgcn.workgroup.id.y() #0
-declare i32 @llvm.amdgcn.workgroup.id.z() #0
-
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.workitem.id.y() #0
-declare i32 @llvm.amdgcn.workitem.id.z() #0
-
-declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #0
-declare i64 @llvm.amdgcn.dispatch.id() #0
-
 define void @use_workitem_id_x() #1 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_workitem_id_x
 ; AKF_HSA-SAME: () #[[ATTR1:[0-9]+]] {
@@ -815,8 +801,6 @@ define float @func_null_call(ptr %fptr) #3 {
   %fadd = fadd float %f, 1.0
   ret float %fadd
 }
-
-declare float @llvm.amdgcn.rcp.f32(float) #0
 
 ; Calls some other recognized intrinsic
 define float @func_other_intrinsic_call(float %arg) #3 {

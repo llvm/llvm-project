@@ -2,11 +2,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs< %s | FileCheck -check-prefixes=GCN,VI,FUNC %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs< %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
 
-
-declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32) nounwind readnone
-declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone
-declare { <2 x i32>, <2 x i1> } @llvm.ssub.with.overflow.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
-
 ; FUNC-LABEL: {{^}}ssubo_i64_zext:
 define amdgpu_kernel void @ssubo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %b) nounwind {
   %ssub = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 %a, i64 %b) nounwind

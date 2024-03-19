@@ -79,9 +79,6 @@ entry:
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #1
-declare void @llvm.r600.group.barrier() #2
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { convergent nounwind }

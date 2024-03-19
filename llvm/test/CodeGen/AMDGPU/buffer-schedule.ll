@@ -83,19 +83,6 @@ define amdgpu_cs void @test1_ptrs_reorderable(ptr addrspace(8) inreg %buf, i32 %
   ret void
 }
 
-
-declare float @llvm.amdgcn.buffer.load.f32(<4 x i32>, i32, i32, i1, i1) #2
-
-declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) #3
-
-declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32) #2
-
-declare void @llvm.amdgcn.raw.buffer.store.i32(i32, <4 x i32>, i32, i32, i32) #3
-
-declare i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) nocapture, i32, i32, i32) #4
-
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8) nocapture, i32, i32, i32) #5
-
 attributes #2 = { nounwind readonly }
 attributes #3 = { nounwind writeonly }
 attributes #4 = { nounwind memory(argmem: read) }

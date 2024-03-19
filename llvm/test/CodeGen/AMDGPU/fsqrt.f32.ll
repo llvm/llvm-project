@@ -4780,15 +4780,6 @@ entry:
   ret void
 }
 
-declare float @llvm.fabs.f32(float) #0
-declare float @llvm.sqrt.f32(float) #0
-declare <2 x float> @llvm.fabs.v2f32(<2 x float>) #0
-declare <2 x float> @llvm.sqrt.v2f32(<2 x float>) #0
-declare <3 x float> @llvm.sqrt.v3f32(<3 x float>) #0
-declare i32 @llvm.amdgcn.readfirstlane(i32) #1
-
-declare { float, i32 } @llvm.frexp.f32.i32(float) #0
-
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #1 = { convergent nounwind willreturn memory(none) }
 attributes #2 = { "approx-func-fp-math"="true" }

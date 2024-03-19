@@ -1,8 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 
-
-declare <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
-
 ; GCN-LABEL: {{^}}water_loop_rsrc:
 
 ; GCN: [[RSRC_LOOP:.L[a-zA-Z0-9_]+]]:                                  ; =>This Inner Loop Header: Depth=1

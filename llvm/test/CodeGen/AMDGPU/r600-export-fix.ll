@@ -167,5 +167,3 @@ main_body:
   call void @llvm.r600.store.swizzle(<4 x float> %113, i32 6, i32 2)
   ret void
 }
-
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

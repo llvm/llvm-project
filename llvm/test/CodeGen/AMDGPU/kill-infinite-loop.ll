@@ -165,8 +165,4 @@ end:
   ret float 0.
 }
 
-declare void @llvm.amdgcn.kill(i1) #0
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #0
-declare void @llvm.amdgcn.exp.compr.v2i16(i32 immarg, i32 immarg, <2 x i16>, <2 x i16>, i1 immarg, i1 immarg) #0
-
 attributes #0 = { nounwind }

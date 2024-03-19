@@ -233,6 +233,3 @@ exit:
   %ret.2 = fmul reassoc nnan nsz arcp contract afn float %2, %ret
   ret float %ret.2
 }
-
-declare float @llvm.fabs.f32(float)
-declare float @llvm.fmuladd.f32(float, float, float) #0

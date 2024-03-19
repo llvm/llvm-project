@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
 
-declare i64 @llvm.ctlz.i64(i64, i1) nounwind readnone
-declare i64 @llvm.cttz.i64(i64, i1) nounwind readnone
-
 define amdgpu_kernel void @ctlz_i64_poison(ptr addrspace(1) noalias %out, ptr addrspace(1) nocapture readonly %arrayidx) nounwind {
 ; GFX9-LABEL: ctlz_i64_poison:
 ; GFX9:       ; %bb.0:

@@ -98,9 +98,5 @@ define amdgpu_kernel void @update_dpp64_test(ptr addrspace(1) %arg, i64 %in1, i6
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg) #1
-declare i64 @llvm.amdgcn.update.dpp.i64(i64, i64, i32 immarg, i32 immarg, i32 immarg, i1 immarg) #1
-
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { convergent nounwind readnone }

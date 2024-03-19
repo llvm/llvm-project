@@ -257,12 +257,5 @@ main_body:
   ret void
 }
 
-declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) #0
-declare void @llvm.amdgcn.buffer.store.v2f32(<2 x float>, <4 x i32>, i32, i32, i1, i1) #0
-declare void @llvm.amdgcn.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #0
-declare void @llvm.amdgcn.buffer.store.i8(i8, <4 x i32>, i32, i32, i1, i1) #0
-declare void @llvm.amdgcn.buffer.store.i16(i16, <4 x i32>, i32, i32, i1, i1) #0
-declare <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32>, i32, i32, i1, i1) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

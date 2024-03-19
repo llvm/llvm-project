@@ -2348,7 +2348,5 @@ define amdgpu_kernel void @dynamic_insertelement_v8f64(ptr addrspace(1) %out, <8
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

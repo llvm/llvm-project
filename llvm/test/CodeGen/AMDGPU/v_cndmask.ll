@@ -4,11 +4,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare half @llvm.fabs.f16(half)
-declare float @llvm.fabs.f32(float)
-declare double @llvm.fabs.f64(double)
-
 ; All nan values are converted to 0xffffffff
 define amdgpu_kernel void @v_cnd_nan_nosgpr(ptr addrspace(1) %out, i32 %c, ptr addrspace(1) %fptr) #0 {
 ; SI-LABEL: v_cnd_nan_nosgpr:

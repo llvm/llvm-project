@@ -2,7 +2,6 @@
 
 
 ; Restrict maximum branch to between +31 and -32 dwords
-declare void @llvm.amdgcn.s.sleep(i32) #0
 
 @name1 = external addrspace(1) global i32
 @name2 = external addrspace(1) global i32

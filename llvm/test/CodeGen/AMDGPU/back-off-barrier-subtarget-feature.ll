@@ -130,6 +130,4 @@ define void @back_off_barrier_with_fence(ptr %in, ptr %out) #0 {
   ret void
 }
 
-declare void @llvm.amdgcn.s.barrier()
-
 attributes #0 = { nounwind }

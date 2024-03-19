@@ -39,8 +39,3 @@ entry:
   store <4 x double> %0, ptr addrspace(1) %out
   ret void
 }
-
-
-declare double @llvm.rint.f64(double) #0
-declare <2 x double> @llvm.rint.v2f64(<2 x double>) #0
-declare <4 x double> @llvm.rint.v4f64(<4 x double>) #0

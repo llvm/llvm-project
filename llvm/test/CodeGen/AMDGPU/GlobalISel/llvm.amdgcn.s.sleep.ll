@@ -1,8 +1,6 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare void @llvm.amdgcn.s.sleep(i32) #0
-
 ; GCN-LABEL: {{^}}test_s_sleep:
 ; GCN: s_sleep 0{{$}}
 ; GCN: s_sleep 1{{$}}

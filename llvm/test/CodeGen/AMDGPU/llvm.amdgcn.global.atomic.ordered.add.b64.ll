@@ -2,8 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12-GISEL %s
 
-declare i64 @llvm.amdgcn.global.atomic.ordered.add.b64(ptr addrspace(1), i64)
-
 define amdgpu_kernel void @global_atomic_ordered_add_b64_no_rtn(ptr addrspace(1) %addr, i64 %in) {
 ; GFX12-SDAG-LABEL: global_atomic_ordered_add_b64_no_rtn:
 ; GFX12-SDAG:       ; %bb.0: ; %entry

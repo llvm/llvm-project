@@ -22,7 +22,5 @@ entry:
   unreachable
 }
 
-declare void @llvm.amdgcn.wave.barrier() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }

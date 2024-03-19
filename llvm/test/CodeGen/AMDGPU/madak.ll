@@ -9,9 +9,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GFX10-FMA %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GFX11-FMA %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-declare float @llvm.fabs.f32(float) nounwind readnone
-
 define amdgpu_kernel void @madak_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in.a, ptr addrspace(1) noalias %in.b) #0 {
 ; GFX6-LABEL: madak_f32:
 ; GFX6:       ; %bb.0:

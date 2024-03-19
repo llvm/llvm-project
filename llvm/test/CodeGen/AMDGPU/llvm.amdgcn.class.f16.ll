@@ -1,8 +1,5 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 
-declare half @llvm.fabs.f16(half %a)
-declare i1 @llvm.amdgcn.class.f16(half %a, i32 %b)
-
 ; GCN-LABEL: {{^}}class_f16:
 ; GCN-DAG: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; GCN-DAG: buffer_load_dword v[[B_I32:[0-9]+]]

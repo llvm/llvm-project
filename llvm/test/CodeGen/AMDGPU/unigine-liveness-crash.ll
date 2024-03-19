@@ -97,13 +97,6 @@ ENDIF28:                                          ; preds = %LOOP
   br label %LOOP
 }
 
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-
 attributes #0 = { nounwind "InitialPSInputAddr"="36983" "target-cpu"="tonga" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind readonly }

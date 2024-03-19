@@ -8250,16 +8250,6 @@ define amdgpu_kernel void @two_non_inline_constant_multi_use(ptr addrspace(1) %o
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare float @llvm.fabs.f32(float) #0
-declare float @llvm.minnum.f32(float, float) #0
-declare float @llvm.maxnum.f32(float, float) #0
-declare double @llvm.minnum.f64(double, double) #0
-declare double @llvm.maxnum.f64(double, double) #0
-declare half @llvm.fabs.f16(half) #0
-declare half @llvm.minnum.f16(half, half) #0
-declare half @llvm.maxnum.f16(half, half) #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" }
 attributes #2 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" }

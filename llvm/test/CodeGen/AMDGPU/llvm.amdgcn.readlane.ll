@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope %s
 
-declare i32 @llvm.amdgcn.readlane(i32, i32) #0
-
 ; CHECK-LABEL: {{^}}test_readlane_sreg_sreg:
 ; CHECK-NOT: v_readlane_b32
 define amdgpu_kernel void @test_readlane_sreg_sreg(i32 %src0, i32 %src1) #1 {
@@ -76,8 +74,6 @@ define amdgpu_kernel void @test_readlane_copy_from_sgpr(ptr addrspace(1) %out) #
   store i32 %readfirstlane, ptr addrspace(1) %out, align 4
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x() #2
 
 attributes #0 = { nounwind readnone convergent }
 attributes #1 = { nounwind }

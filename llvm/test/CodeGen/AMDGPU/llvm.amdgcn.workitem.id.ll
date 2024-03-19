@@ -5,10 +5,6 @@
 ; RUN: llc -mtriple=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,PACKED-TID %s
 ; RUN: llc -mtriple=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=ALL,PACKED-TID %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.workitem.id.y() #0
-declare i32 @llvm.amdgcn.workitem.id.z() #0
-
 ; MESA: .section .AMDGPU.config
 ; MESA: .long 47180
 ; MESA-NEXT: .long 132{{$}}

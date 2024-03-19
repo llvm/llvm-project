@@ -1225,16 +1225,4 @@ main_body:
   ret [4 x float] %i7
 }
 
-declare float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-
-declare float @llvm.amdgcn.image.load.2darraymsaa.f32.i32(i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32(i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare <3 x float> @llvm.amdgcn.image.load.2darraymsaa.v3f32.i32(i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-
-declare half @llvm.amdgcn.image.load.2dmsaa.f16.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-
-declare void @llvm.amdgcn.image.store.2dmsaa.f32.i32(float, i32, i32, i32, i32, <8 x i32>, i32, i32)
-
 attributes #0 = { nounwind readonly willreturn }

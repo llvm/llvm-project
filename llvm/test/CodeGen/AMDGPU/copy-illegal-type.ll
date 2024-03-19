@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-sdwa-peephole=0 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=VI %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
-
 define amdgpu_kernel void @test_copy_v4i8(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_copy_v4i8:
 ; SI:       ; %bb.0:

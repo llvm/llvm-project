@@ -10,5 +10,3 @@ body:
   ret float %res
 }
 
-declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32 immarg)
-

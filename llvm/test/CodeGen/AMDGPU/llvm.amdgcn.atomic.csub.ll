@@ -2,9 +2,6 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1031 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN,PREGFX12
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN,GFX12PLUS
 
-declare i32 @llvm.amdgcn.buffer.atomic.csub(i32, <4 x i32>, i32, i32, i1)
-declare i32 @llvm.amdgcn.global.atomic.csub(ptr addrspace(1), i32)
-
 ; GCN-LABEL: {{^}}buffer_atomic_csub_rtn:
 ; PREGFX12: buffer_atomic_csub v0, v1, s[0:3], 0 idxen glc
 ; GFX12PLUS: buffer_atomic_sub_clamp_u32 v0, v1, s[0:3], null idxen th:TH_ATOMIC_RETURN

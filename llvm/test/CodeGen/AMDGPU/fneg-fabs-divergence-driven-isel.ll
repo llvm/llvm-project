@@ -494,11 +494,3 @@ define amdgpu_kernel void @uniform_fneg_fabs_f64(ptr addrspace(1) %out, ptr addr
   store double %fneg, ptr addrspace(1) %out.gep
   ret void
 }
-
-declare float @llvm.fabs.f32(float)
-declare half @llvm.fabs.f16(half)
-declare double @llvm.fabs.f64(double)
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>)
-declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
-
-declare i32 @llvm.amdgcn.workitem.id.x()

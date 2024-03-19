@@ -3,8 +3,6 @@
 ; Tests for a bug in SelectionDAG::UpdateNodeOperands exposed by VectorLegalizer
 ; where divergence information is not updated.
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 define amdgpu_kernel void @spam(ptr addrspace(1) noalias %arg) {
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = zext i32 %tmp to i64

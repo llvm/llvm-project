@@ -156,8 +156,3 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i3
   %value = call float @llvm.amdgcn.struct.ptr.buffer.load(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0, i32 0)
   ret float %value
 }
-
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr nocapture readnone, i16, i32, i32)
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) nocapture readnone, i16, i32, i32)
-declare float @llvm.amdgcn.raw.ptr.buffer.load(ptr addrspace(8) nocapture readonly, i32, i32, i32 immarg)
-declare float @llvm.amdgcn.struct.ptr.buffer.load(ptr addrspace(8) nocapture readonly, i32, i32, i32, i32 immarg)

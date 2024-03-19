@@ -137,5 +137,3 @@ define amdgpu_kernel void @bfe_combine16(ptr addrspace(1) nocapture %arg, i32 %x
   store i32 %val, ptr addrspace(1) %arg, align 4
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x() #1

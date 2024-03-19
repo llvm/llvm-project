@@ -5,9 +5,6 @@
  ; possible, but requires the correct registers to be used which is
  ; hard to trigger.
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-declare float @llvm.fabs.f32(float) nounwind readnone
-
 ; GCN-LABEL: {{^}}madmk_f32:
 ; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
@@ -211,8 +208,6 @@ bb6:                                              ; preds = %bb2
   %tmp8 = fadd float %tmp7, %tmp
   br label %bb2
 }
-
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }

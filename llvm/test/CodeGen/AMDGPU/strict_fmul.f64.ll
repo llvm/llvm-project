@@ -145,9 +145,5 @@ define amdgpu_ps <2 x float> @s_constained_fmul_f64_fpexcept_strict(double inreg
   ret <2 x float> %cast
 }
 
-declare double @llvm.experimental.constrained.fmul.f64(double, double, metadata, metadata) #1
-declare <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double>, <2 x double>, metadata, metadata) #1
-declare <3 x double> @llvm.experimental.constrained.fmul.v3f64(<3 x double>, <3 x double>, metadata, metadata) #1
-
 attributes #0 = { strictfp }
 attributes #1 = { inaccessiblememonly nounwind willreturn }

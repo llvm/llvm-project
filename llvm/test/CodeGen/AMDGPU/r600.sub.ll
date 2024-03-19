@@ -1,7 +1,5 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=EG,FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() readnone
-
 ; FUNC-LABEL: {{^}}s_sub_i32:
 define amdgpu_kernel void @s_sub_i32(ptr addrspace(1) %out, i32 %a, i32 %b) {
   %result = sub i32 %a, %b

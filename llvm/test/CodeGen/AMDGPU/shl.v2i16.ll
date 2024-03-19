@@ -725,7 +725,5 @@ define amdgpu_kernel void @shl_v_imm_v4i16(ptr addrspace(1) %out, ptr addrspace(
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

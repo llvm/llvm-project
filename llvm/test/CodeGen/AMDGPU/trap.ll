@@ -25,10 +25,6 @@
 
 ; GCN-WARNING: warning: <unknown>:0:0: in function hsa_debugtrap void (ptr addrspace(1)): debugtrap handler not supported
 
-
-declare void @llvm.trap() #0
-declare void @llvm.debugtrap() #1
-
 ; MESA-TRAP: .section .AMDGPU.config
 ; MESA-TRAP:  .long   47180
 ; MESA-TRAP-NEXT: .long   208

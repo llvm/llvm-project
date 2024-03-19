@@ -17,6 +17,4 @@ define i32 @shl_base_atomicrmw_global_atomic_csub_ptr(ptr addrspace(1) %out, ptr
   ret i32 %val
 }
 
-declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) #0
-
 attributes #0 = { argmemonly nounwind }

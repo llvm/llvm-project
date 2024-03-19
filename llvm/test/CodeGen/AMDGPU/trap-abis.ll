@@ -4,9 +4,6 @@
 ; RUN: llc %s -o - -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs | FileCheck --check-prefix=HSA-TRAP-GFX900 %s
 ; RUN: llc %s -o - -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-trap-handler -verify-machineinstrs | FileCheck --check-prefix=HSA-NOTRAP-GFX900 %s
 
-declare void @llvm.trap() #0
-declare void @llvm.debugtrap() #1
-
 define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; NOHSA-TRAP-GFX900-LABEL: trap:
 ; NOHSA-TRAP-GFX900:       ; %bb.0:

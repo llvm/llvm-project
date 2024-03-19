@@ -168,8 +168,6 @@ entry:
   ret float %tmp1
 }
 
-declare void @llvm.amdgcn.kill(i1)
-
 attributes #0 = { nounwind "target-cpu"="tahiti" }
 attributes #1 = { nounwind "target-cpu"="fiji" }
 attributes #2 = { nounwind "denormal-fp-math"="ieee,ieee" }

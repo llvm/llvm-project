@@ -27,6 +27,4 @@ define amdgpu_kernel void @test_spill_av_class(<4 x i32> %arg) #0 {
   ret void
 }
 
-declare <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32, i32, <4 x i32>, i32, i32, i32)
-
 attributes #0 = { nounwind "amdgpu-num-vgpr"="5" }

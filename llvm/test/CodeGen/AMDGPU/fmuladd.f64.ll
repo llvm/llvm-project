@@ -189,8 +189,5 @@ define amdgpu_kernel void @fadd_a_a_b_f64_fast(ptr addrspace(1) %out,
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare double @llvm.fmuladd.f64(double, double, double) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

@@ -480,8 +480,3 @@ entry:
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %val, i32 15, i32 %x, i32 %y, <8 x i32> %dst, i32 0, i32 0)
   ret void
 }
-
-declare <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg)
-declare <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32(i32 immarg, i32, i32, i32, <8 x i32>, i32 immarg, i32 immarg)
-declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32(i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
-declare void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float>, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg)

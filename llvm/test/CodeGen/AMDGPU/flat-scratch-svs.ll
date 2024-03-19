@@ -9,8 +9,6 @@
 ; Test flat scratch SVS addressing mode with various combinations of alignment
 ; of soffset, voffset and inst_offset.
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 define amdgpu_kernel void @soff1_voff1(i32 %soff) {
 ; GFX940-SDAG-LABEL: soff1_voff1:
 ; GFX940-SDAG:       ; %bb.0: ; %bb

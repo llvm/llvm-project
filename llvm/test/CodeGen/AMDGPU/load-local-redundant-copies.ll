@@ -117,7 +117,3 @@ define amdgpu_vs void @test_3(i32 inreg %arg1, i32 inreg %arg2, ptr addrspace(8)
 
   ret void
 }
-
-declare void @llvm.amdgcn.struct.ptr.tbuffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.tbuffer.store.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg)
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg)

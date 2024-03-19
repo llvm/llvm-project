@@ -1,8 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
-
-declare i32 @llvm.amdgcn.workitem.id.x() readnone
-
 ; SI-LABEL: {{^}}test_i64_vreg:
 ; SI: v_add_i32
 ; SI: v_addc_u32

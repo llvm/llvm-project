@@ -104,8 +104,5 @@ entry:
   ret void
 }
 
-declare void @llvm.amdgcn.sched.barrier(i32) #1
-declare void @llvm.amdcn.s.nop(i16) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }

@@ -1,9 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
 
-declare float @llvm.amdgcn.div.fixup.f32(float, float, float) nounwind readnone
-declare double @llvm.amdgcn.div.fixup.f64(double, double, double) nounwind readnone
-
 ; GCN-LABEL: {{^}}test_div_fixup_f32:
 ; SI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x13
 ; SI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x1c

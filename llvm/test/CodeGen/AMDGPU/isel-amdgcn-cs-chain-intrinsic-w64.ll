@@ -6,7 +6,6 @@
 
 declare amdgpu_cs_chain void @callee(<3 x i32> inreg, { i32, ptr addrspace(5), i32, i32 })
 declare amdgpu_cs_chain_preserve void @callee_preserve(<3 x i32> inreg, { i32, ptr addrspace(5), i32, i32 })
-declare void @llvm.amdgcn.cs.chain(ptr, i64, <3 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32, ...) noreturn
 
 define amdgpu_cs_chain void @chain_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr) {
   ; GISEL-GFX11-LABEL: name: chain_to_chain

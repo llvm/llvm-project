@@ -1,11 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare float @llvm.amdgcn.cubeid(float, float, float) #0
-declare float @llvm.amdgcn.cubesc(float, float, float) #0
-declare float @llvm.amdgcn.cubetc(float, float, float) #0
-declare float @llvm.amdgcn.cubema(float, float, float) #0
-
 ; GCN-LABEL: {{^}}cube:
 ; GCN-DAG: v_cubeid_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-DAG: v_cubesc_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}

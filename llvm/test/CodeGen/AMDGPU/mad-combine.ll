@@ -10,11 +10,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=SI-DENORM -check-prefix=SI-DENORM-FASTFMAF -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgcn -mcpu=verde -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=SI-DENORM -check-prefix=SI-DENORM-SLOWFMAF -check-prefix=FUNC %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare float @llvm.fabs.f32(float) #0
-declare float @llvm.fma.f32(float, float, float) #0
-declare float @llvm.fmuladd.f32(float, float, float) #0
-
 ; (fadd (fmul x, y), z) -> (fma x, y, z)
 ; FUNC-LABEL: {{^}}combine_to_mad_f32_0:
 ; SI-DAG: buffer_load_dword [[A:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}

@@ -821,8 +821,3 @@ define void @raw_ptr_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffset__sgp
   call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> %val, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.raw.ptr.buffer.store.format.f32(float, ptr addrspace(8), i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v3f32(<3 x float>, ptr addrspace(8), i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32 immarg)

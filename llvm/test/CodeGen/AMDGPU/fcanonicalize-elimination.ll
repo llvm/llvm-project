@@ -859,33 +859,6 @@ define float @v_test_canonicalize_amdgcn_exp2(float %a) {
 ; in the .amd_amdgpu_isa "amdgcn-unknown-freebsd11.0--gfx802" directive
 ; GCN: .amd_amdgpu_isa
 
-declare float @llvm.canonicalize.f32(float) #0
-declare float @llvm.copysign.f32(float, float) #0
-declare float @llvm.amdgcn.fmul.legacy(float, float) #0
-declare float @llvm.amdgcn.fmad.ftz.f32(float, float, float) #0
-declare double @llvm.canonicalize.f64(double) #0
-declare half @llvm.canonicalize.f16(half) #0
-declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) #0
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare float @llvm.sqrt.f32(float) #0
-declare float @llvm.ceil.f32(float) #0
-declare float @llvm.floor.f32(float) #0
-declare float @llvm.fma.f32(float, float, float) #0
-declare float @llvm.fmuladd.f32(float, float, float) #0
-declare float @llvm.fabs.f32(float) #0
-declare float @llvm.sin.f32(float) #0
-declare float @llvm.cos.f32(float) #0
-declare half @llvm.sin.f16(half) #0
-declare half @llvm.cos.f16(half) #0
-declare float @llvm.minnum.f32(float, float) #0
-declare float @llvm.maxnum.f32(float, float) #0
-declare double @llvm.maxnum.f64(double, double) #0
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #0
-declare float @llvm.amdgcn.cubeid(float, float, float) #0
-declare float @llvm.amdgcn.frexp.mant.f32(float) #0
-declare float @llvm.amdgcn.log.f32(float) #0
-declare float @llvm.amdgcn.exp2.f32(float) #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { "no-nans-fp-math"="true" }
 attributes #2 = { "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" }

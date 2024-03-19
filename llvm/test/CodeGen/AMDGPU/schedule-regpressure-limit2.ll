@@ -286,5 +286,4 @@ bb:
   store float %res.29, ptr addrspace(1) %adr.res.29, align 4
   ret void
 }
-declare float @llvm.fmuladd.f32(float, float, float) #0
 attributes #0 = { nounwind readnone }

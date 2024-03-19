@@ -33,6 +33,3 @@ main_body:
   call void @llvm.amdgcn.init.exec.from.input(i32 %count, i32 8)
   ret float %s
 }
-
-declare void @llvm.amdgcn.init.exec(i64)
-declare void @llvm.amdgcn.init.exec.from.input(i32, i32)

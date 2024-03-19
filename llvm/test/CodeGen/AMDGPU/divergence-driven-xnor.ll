@@ -40,5 +40,3 @@ define i32 @divergent_xnor_i32(ptr addrspace(1) %out, i32 %a, i32 %b) {
   %res = xor i32 %xor, -1
   ret i32 %res
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x() #0

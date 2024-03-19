@@ -2,10 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX11,GFX11-SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX11,GFX11-GISEL
 
-declare void @llvm.amdgcn.exp.row.i32(i32, i32, i32, i32, i32, i32, i1, i32)
-declare void @llvm.amdgcn.exp.row.f32(i32, i32, float, float, float, float, i1, i32)
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 define amdgpu_kernel void @undef_i32() #0 {
 ; GFX11-LABEL: undef_i32:
 ; GFX11:       ; %bb.0:

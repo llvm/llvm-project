@@ -425,8 +425,6 @@ define <4 x ptr addrspace(7)> @shufflenvector(<2 x ptr addrspace(7)> %a, <2 x pt
   ret <4 x ptr addrspace(7)> %ret
 }
 
-declare ptr addrspace(7) @llvm.ptrmask.p7.i32(ptr addrspace(7), i32)
-
 define ptr addrspace(7) @ptrmask(ptr addrspace(7) %p, i32 %mask) {
 ; CHECK-LABEL: define { ptr addrspace(8), i32 } @ptrmask
 ; CHECK-SAME: ({ ptr addrspace(8), i32 } [[P:%.*]], i32 [[MASK:%.*]]) #[[ATTR0]] {
@@ -440,9 +438,6 @@ define ptr addrspace(7) @ptrmask(ptr addrspace(7) %p, i32 %mask) {
   %ret = call ptr addrspace(7) @llvm.ptrmask.p7.i32(ptr addrspace(7) %p, i32 %mask)
   ret ptr addrspace(7) %ret
 }
-
-declare ptr @llvm.invariant.start.p7(i64, ptr addrspace(7) nocapture)
-declare void @llvm.invariant.end.p7(ptr, i64, ptr addrspace(7) nocapture)
 
 define i32 @invariant_start_end(ptr addrspace(7) %p) {
 ; CHECK-LABEL: define i32 @invariant_start_end
@@ -459,9 +454,6 @@ define i32 @invariant_start_end(ptr addrspace(7) %p) {
   call void @llvm.invariant.end.p7(ptr %inv, i64 256, ptr addrspace(7) %p)
   ret i32 %v
 }
-
-declare ptr addrspace(7) @llvm.launder.invariant.group.p7(ptr addrspace(7) nocapture)
-declare ptr addrspace(7) @llvm.strip.invariant.group.p7(ptr addrspace(7) nocapture)
 
 define ptr addrspace(7) @invariant_group(ptr addrspace(7) %p) {
 ; CHECK-LABEL: define { ptr addrspace(8), i32 } @invariant_group

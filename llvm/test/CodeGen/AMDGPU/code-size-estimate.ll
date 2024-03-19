@@ -3,9 +3,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX11,GFX1100 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX11,GFX1150 %s
 
-declare float @llvm.fabs.f32(float)
-declare float @llvm.fma.f32(float, float, float)
-
 define float @v_mul_f32_vop2(float %x, float %y) {
 ; GFX9-LABEL: v_mul_f32_vop2:
 ; GFX9:       ; %bb.0:

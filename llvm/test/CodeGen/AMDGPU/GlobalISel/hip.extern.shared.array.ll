@@ -131,5 +131,3 @@ define amdgpu_kernel void @dynamic_shared_array_6(i32 %idx) {
   store double %val2, ptr addrspace(3) %arrayidx2, align 4
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

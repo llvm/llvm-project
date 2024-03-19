@@ -26,5 +26,3 @@ define amdgpu_kernel void @test_s_nop() {
   call void @llvm.amdgcn.s.nop(i16 63)
   ret void
 }
-
-declare void @llvm.amdgcn.s.nop(i16)

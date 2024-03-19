@@ -149,8 +149,6 @@ define hidden ptr addrspace(1) @split_ptr_arg(ptr addrspace(1) readnone returned
   ret ptr addrspace(1) %arg, !dbg !78
 }
 
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
 attributes #0 = { norecurse nounwind readnone }
 attributes #1 = { nounwind readnone speculatable }
 

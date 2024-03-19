@@ -154,10 +154,6 @@ define amdgpu_kernel void @v_cvt_pknorm_i16_f32_fneg_fabs_lo_fneg_hi(ptr addrspa
   ret void
 }
 
-declare <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float, float) #1
-declare float @llvm.fabs.f32(float) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

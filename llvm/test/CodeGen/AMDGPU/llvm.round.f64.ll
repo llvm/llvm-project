@@ -661,12 +661,5 @@ define amdgpu_kernel void @round_v8f64(ptr addrspace(1) %out, <8 x double> %in) 
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-declare double @llvm.round.f64(double) #1
-declare <2 x double> @llvm.round.v2f64(<2 x double>) #1
-declare <4 x double> @llvm.round.v4f64(<4 x double>) #1
-declare <8 x double> @llvm.round.v8f64(<8 x double>) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

@@ -1287,20 +1287,6 @@ define amdgpu_ps void @v_omod_mac_to_mad(float %b, float %a) #0 {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.floor.f32(float) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare float @llvm.amdgcn.fmed3.f32(float, float, float) #1
-declare double @llvm.fabs.f64(double) #1
-declare double @llvm.minnum.f64(double, double) #1
-declare double @llvm.maxnum.f64(double, double) #1
-declare half @llvm.fabs.f16(half) #1
-declare half @llvm.minnum.f16(half, half) #1
-declare half @llvm.maxnum.f16(half, half) #1
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
-
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "no-signed-zeros-fp-math"="true" }

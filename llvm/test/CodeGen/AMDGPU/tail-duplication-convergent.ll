@@ -5,10 +5,6 @@
 
 declare void @nonconvergent_func() #0
 declare void @convergent_func() #1
-declare void @llvm.amdgcn.s.barrier() #1
-declare void @llvm.amdgcn.ds.gws.init(i32, i32) #2
-declare void @llvm.amdgcn.ds.gws.barrier(i32, i32) #2
-declare void @llvm.amdgcn.ds.gws.sema.release.all(i32 %offset) #2
 
 ; barrier shouldn't be duplicated.
 

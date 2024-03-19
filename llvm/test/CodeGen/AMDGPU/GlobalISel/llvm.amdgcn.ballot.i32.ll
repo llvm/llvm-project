@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -global-isel -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=+wavefrontsize32,-wavefrontsize64 -global-isel -verify-machineinstrs < %s | FileCheck %s
 
-declare i32 @llvm.amdgcn.ballot.i32(i1)
-declare i32 @llvm.ctpop.i32(i32)
-
 ; Test ballot(0)
 
 define amdgpu_cs i32 @constant_false() {

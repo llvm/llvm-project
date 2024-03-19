@@ -602,11 +602,6 @@ define amdgpu_kernel void @sqrt_fpmath_f32_assume_nosub(ptr addrspace(1) %out, f
   ret void
 }
 
-declare float @llvm.sqrt.f32(float)
-declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)
-declare float @llvm.fabs.f32(float)
-declare void @llvm.assume(i1 noundef)
-
 attributes #0 = { optnone noinline }
 
 !0 = !{float 2.500000e+00}

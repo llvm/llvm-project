@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() readnone
-
 ; This is broken because the low half of the 64-bit add remains on the
 ; SALU, but the upper half does not. The addc expects the carry bit
 ; set in vcc, which is undefined since the low scalar half add sets

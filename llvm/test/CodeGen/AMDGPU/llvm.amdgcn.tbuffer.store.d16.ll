@@ -69,8 +69,3 @@ main_body:
   call void @llvm.amdgcn.tbuffer.store.v4f16(<4 x half> %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0, i32 1, i32 2, i1 0, i1 0)
   ret void
 }
-
-declare void @llvm.amdgcn.tbuffer.store.f16(half, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
-declare void @llvm.amdgcn.tbuffer.store.v2f16(<2 x half>, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
-declare void @llvm.amdgcn.tbuffer.store.v3f16(<3 x half>, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
-declare void @llvm.amdgcn.tbuffer.store.v4f16(<4 x half>, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)

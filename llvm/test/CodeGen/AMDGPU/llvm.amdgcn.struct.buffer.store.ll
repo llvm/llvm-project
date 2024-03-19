@@ -385,20 +385,5 @@ define amdgpu_ps void @struct_buffer_store_v4i16(<4 x i32> inreg %rsrc, <4 x i16
   ret void
 }
 
-declare void @llvm.amdgcn.struct.buffer.store.f32(float, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.buffer.store.v2f32(<2 x float>, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.buffer.store.i32(i32, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.buffer.store.v2i32(<2 x i32>, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.buffer.store.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32>, i32, i32, i32, i32) #1
-declare void @llvm.amdgcn.struct.buffer.store.i8(i8, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.buffer.store.i16(i16, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.buffer.store.v2i16(<2 x i16>, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.buffer.store.v4i16(<4 x i16>, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.buffer.store.f16(half, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.buffer.store.v2f16(<2 x half>, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.buffer.store.v4f16(<4 x half>, <4 x i32>, i32, i32, i32, i32) #0
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

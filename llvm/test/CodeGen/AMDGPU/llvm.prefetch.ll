@@ -251,10 +251,3 @@ entry:
   tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 0)
   ret void
 }
-
-declare void @llvm.prefetch.pf(ptr nocapture readonly, i32, i32, i32)
-declare void @llvm.prefetch.p1(ptr addrspace(1) nocapture readonly, i32, i32, i32)
-declare void @llvm.prefetch.p3(ptr addrspace(3) nocapture readonly, i32, i32, i32)
-declare void @llvm.prefetch.p4(ptr addrspace(4) nocapture readonly, i32, i32, i32)
-declare void @llvm.prefetch.p5(ptr addrspace(5) nocapture readonly, i32, i32, i32)
-declare void @llvm.prefetch.p6(ptr addrspace(6) nocapture readonly, i32, i32, i32)

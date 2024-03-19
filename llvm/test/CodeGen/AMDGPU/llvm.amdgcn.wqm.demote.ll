@@ -1217,17 +1217,6 @@ define amdgpu_ps void @static_exact_nop(float %arg0, float %arg1) {
   ret void
 }
 
-
-declare void @llvm.amdgcn.wqm.demote(i1) #0
-declare i1 @llvm.amdgcn.live.mask() #0
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare float @llvm.amdgcn.wqm.f32(float) #1
-declare float @llvm.amdgcn.interp.p1(float, i32 immarg, i32 immarg, i32) #2
-declare float @llvm.amdgcn.interp.p2(float, float, i32 immarg, i32 immarg, i32) #2
-declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg) #3
-declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg) #4
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind readnone speculatable }

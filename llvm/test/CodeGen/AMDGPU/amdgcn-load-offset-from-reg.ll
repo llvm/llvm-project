@@ -205,18 +205,11 @@ define amdgpu_cs void @test_buffer_load_sgpr_or_imm_offset(<4 x i32> inreg %base
   ret void
 }
 
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32>, ptr addrspace(8) nocapture, i32, i32, i32 immarg) #1
-
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg) nounwind readnone willreturn
+; Function Attrs: nounwind readnone speculatable
 
 ; Function Attrs: nounwind readnone speculatable
-declare i32 @llvm.amdgcn.reloc.constant(metadata) #3
-
-; Function Attrs: nounwind readnone speculatable
-declare i64 @llvm.amdgcn.s.getpc() #3
 
 ; Function Attrs: nounwind readnone
-declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i32 immarg) #1
 
 attributes #0 = { argmemonly nounwind willreturn }
 attributes #1 = { nounwind memory(argmem: write) }

@@ -507,7 +507,3 @@ define amdgpu_kernel void @flat_scratch_load_clause(float %a, float %b, <8 x i32
   call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 1, float %valadd, float undef, float undef, float undef, i1 immarg true, i1 immarg true)
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg)
-declare <2 x float> @llvm.amdgcn.image.sample.2d.v2f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg)

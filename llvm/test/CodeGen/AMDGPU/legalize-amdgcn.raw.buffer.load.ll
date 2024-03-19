@@ -1910,16 +1910,3 @@ define float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_voffset
   %val = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret float %val
 }
-
-declare float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32>, i32, i32, i32 immarg)
-declare <2 x float> @llvm.amdgcn.raw.buffer.load.v2f32(<4 x i32>, i32, i32, i32 immarg)
-declare <3 x float> @llvm.amdgcn.raw.buffer.load.v3f32(<4 x i32>, i32, i32, i32 immarg)
-declare <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32>, i32, i32, i32 immarg)
-
-declare half @llvm.amdgcn.raw.buffer.load.f16(<4 x i32>, i32, i32, i32 immarg)
-declare <2 x half> @llvm.amdgcn.raw.buffer.load.v2f16(<4 x i32>, i32, i32, i32 immarg)
-declare <3 x half> @llvm.amdgcn.raw.buffer.load.v3f16(<4 x i32>, i32, i32, i32 immarg)
-declare <4 x half> @llvm.amdgcn.raw.buffer.load.v4f16(<4 x i32>, i32, i32, i32 immarg)
-
-declare i8 @llvm.amdgcn.raw.buffer.load.i8(<4 x i32>, i32, i32, i32 immarg)
-declare i16 @llvm.amdgcn.raw.buffer.load.i16(<4 x i32>, i32, i32, i32 immarg)

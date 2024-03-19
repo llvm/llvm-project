@@ -2,9 +2,6 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI %s
 ; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
-
 define float @v_uitofp_i32_to_f32_mask255(i32 %arg0) nounwind {
 ; SI-LABEL: v_uitofp_i32_to_f32_mask255:
 ; SI:       ; %bb.0:

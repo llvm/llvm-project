@@ -91,8 +91,5 @@ define amdgpu_kernel void @mov_dpp64_imm_test(ptr addrspace(1) %out) {
   ret void
 }
 
-declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.mov.dpp.i64(i64, i32, i32, i32, i1) #0
-
 attributes #0 = { nounwind readnone convergent }
 

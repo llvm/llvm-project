@@ -52,8 +52,3 @@ bb:
   call void @llvm.amdgcn.ds.gws.init(i32 %agpr.1, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.ds.gws.init(i32, i32)
-declare void @llvm.amdgcn.ds.gws.sema.br(i32, i32)
-declare void @llvm.amdgcn.ds.gws.barrier(i32, i32)
-declare <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32, i32, <4 x i32>, i32, i32, i32)

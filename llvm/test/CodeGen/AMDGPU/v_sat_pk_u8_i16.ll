@@ -9,12 +9,6 @@
 
 ; <GFX9 has no V_SAT_PK, GFX9+ has V_SAT_PK, GFX11 has V_SAT_PK with t16
 
-declare i16 @llvm.smin.i16(i16, i16)
-declare i16 @llvm.smax.i16(i16, i16)
-
-declare <2 x i16> @llvm.smin.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.smax.v2i16(<2 x i16>, <2 x i16>)
-
 define <2 x i16> @basic_smax_smin(i16 %src0, i16 %src1) {
 ; SDAG-VI-LABEL: basic_smax_smin:
 ; SDAG-VI:       ; %bb.0:

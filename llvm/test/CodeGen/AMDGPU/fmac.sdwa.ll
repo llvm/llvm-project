@@ -93,7 +93,5 @@ bb:
   ret <4 x half> %tmp11
 }
 
-declare half @llvm.fmuladd.f16(half, half, half)
-
 attributes #0 = { convergent nounwind readonly}
 attributes #1 = { norecurse nounwind readnone }

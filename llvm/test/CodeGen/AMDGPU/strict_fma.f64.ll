@@ -152,10 +152,4 @@ define <2 x double> @v_constained_fma_v2f64_fpexcept_strict_fneg_fneg(<2 x doubl
   ret <2 x double> %val
 }
 
-declare double @llvm.fabs.f64(double)
-declare double @llvm.experimental.constrained.fma.f64(double, double, double, metadata, metadata)
-declare <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double>, <2 x double>, <2 x double>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.fma.v3f64(<3 x double>, <3 x double>, <3 x double>, metadata, metadata)
-declare <4 x double> @llvm.experimental.constrained.fma.v4f64(<4 x double>, <4 x double>, <4 x double>, metadata, metadata)
-
 attributes #0 = { strictfp }

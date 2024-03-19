@@ -23,5 +23,3 @@ entry:
   store float %sum, ptr addrspace(1) %pk
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

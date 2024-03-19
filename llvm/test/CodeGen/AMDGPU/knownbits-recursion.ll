@@ -65,5 +65,3 @@ bb4:                                              ; preds = %bb4, %bb
   %tmp88 = icmp eq i32 %tmp87, 1000
   br i1 %tmp88, label %bb1, label %bb4
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

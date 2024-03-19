@@ -65,9 +65,6 @@ done:
   ret void
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-declare float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) nocapture, float) #2
-
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { nounwind readnone willreturn }
 attributes #2 = { argmemonly nounwind willreturn }

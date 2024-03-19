@@ -2,8 +2,6 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-- -verify-machineinstrs -mem-intrinsic-expand-size=19 %s -o - | FileCheck -check-prefix=LOOP %s
 ; RUN: llc -global-isel -mtriple=amdgcn-- -verify-machineinstrs -mem-intrinsic-expand-size=21 %s -o - | FileCheck -check-prefix=UNROLL %s
 
-declare void @llvm.memcpy.p1.p1.i32(ptr addrspace(1), ptr addrspace(1), i32, i1 immarg)
-
 define amdgpu_cs void @memcpy_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src) {
 ; LOOP-LABEL: memcpy_p1i8:
 ; LOOP:       ; %bb.0:

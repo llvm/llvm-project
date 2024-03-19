@@ -216,9 +216,6 @@ st:
   ret void
 }
 
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 attributes #0 = { nounwind "amdgpu-num-vgpr"="10" }
 attributes #1 = { "amdgpu-flat-work-group-size"="1,256" }
 attributes #2 = { nounwind "amdgpu-num-vgpr"="11" }

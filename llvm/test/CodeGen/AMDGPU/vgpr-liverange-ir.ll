@@ -668,10 +668,6 @@ if.then:                                          ; preds = %entry
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-declare float @llvm.amdgcn.image.sample.2d.f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #2
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable willreturn }
 attributes #2 = { nounwind readonly willreturn }

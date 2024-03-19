@@ -111,7 +111,3 @@ ENDIF48:                                          ; preds = %LOOP47
   %70 = bitcast i32 %69 to float
   br label %LOOP47
 }
-
-declare void @llvm.r600.store.stream.output(<4 x float>, i32, i32, i32)
-
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

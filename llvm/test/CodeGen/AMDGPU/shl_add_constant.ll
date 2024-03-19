@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=SI %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 ; Test with inline immediate
 
 ; SI-LABEL: {{^}}shl_2_add_9_i32:

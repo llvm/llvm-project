@@ -202,5 +202,3 @@ b:
   %sub = fsub <2 x float> %add2, %v2
   ret <2 x float> %sub
 }
-
-declare <2 x float> @llvm.amdgcn.struct.ptr.buffer.load.v2f32(ptr addrspace(8), i32, i32, i32, i32) nounwind

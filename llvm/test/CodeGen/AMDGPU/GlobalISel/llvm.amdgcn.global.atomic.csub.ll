@@ -209,7 +209,5 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset_nortn(ptr addrspa
   ret void
 }
 
-declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) #1
-
 attributes #0 = { nounwind willreturn }
 attributes #1 = { argmemonly nounwind }

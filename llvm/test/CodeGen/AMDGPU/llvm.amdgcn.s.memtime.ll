@@ -3,8 +3,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare i64 @llvm.amdgcn.s.memtime() #0
-
 ; GCN-LABEL: {{^}}test_s_memtime:
 ; GCN-DAG: s_memtime s{{\[[0-9]+:[0-9]+\]}}
 ; GCN-DAG: s_load_dwordx2

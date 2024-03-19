@@ -331,8 +331,3 @@ define amdgpu_vs float @buffer_load_x(ptr addrspace(8) inreg %rsrc) {
     %vdata.f = bitcast i32 %vdata to float
     ret float %vdata.f
 }
-
-declare i32 @llvm.amdgcn.raw.ptr.tbuffer.load.i32(ptr addrspace(8), i32, i32, i32, i32)
-declare <2 x i32> @llvm.amdgcn.raw.ptr.tbuffer.load.v2i32(ptr addrspace(8), i32, i32, i32, i32)
-declare <4 x i32> @llvm.amdgcn.raw.ptr.tbuffer.load.v4i32(ptr addrspace(8), i32, i32, i32, i32)
-declare <4 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f32(ptr addrspace(8), i32, i32, i32, i32)

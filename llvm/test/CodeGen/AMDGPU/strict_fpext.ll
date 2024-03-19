@@ -481,17 +481,5 @@ define <2 x float> @v_constrained_fpext_v2f16_to_v2f32_noabi(ptr addrspace(1) %p
   ret <2 x float> %result
 }
 
-declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata) #1
-declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(<2 x float>, metadata) #1
-declare <3 x double> @llvm.experimental.constrained.fpext.v3f64.v3f32(<3 x float>, metadata) #1
-
-declare double @llvm.experimental.constrained.fpext.f64.f16(half, metadata) #1
-declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f16(<2 x half>, metadata) #1
-declare <3 x double> @llvm.experimental.constrained.fpext.v3f64.v3f16(<3 x half>, metadata) #1
-
-declare float @llvm.experimental.constrained.fpext.f32.f16(half, metadata) #1
-declare <2 x float> @llvm.experimental.constrained.fpext.v2f32.v2f16(<2 x half>, metadata) #1
-declare <3 x float> @llvm.experimental.constrained.fpext.v3f32.v3f16(<3 x half>, metadata) #1
-
 attributes #0 = { strictfp }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }

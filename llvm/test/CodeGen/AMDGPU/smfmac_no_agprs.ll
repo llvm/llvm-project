@@ -50,4 +50,3 @@ entry:
   store i32 %vecext.3, ptr addrspace(1) %arrayidx4
   ret void
 }
-declare <4 x i32> @llvm.amdgcn.smfmac.i32.16x16x64.i8(<2 x i32>, <4 x i32>, <4 x i32>, i32, i32 immarg, i32 immarg)

@@ -161,8 +161,6 @@ sw.epilog:
   ret void
 }
 
-declare float @llvm.fabs.f32(float) nounwind readnone
-
 define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 %c3, i32 %x, i32 %y, i1 %arg) nounwind {
 ; SI-LABEL: loop_land_info_assert:
 ; SI:       ; %bb.0: ; %entry
@@ -245,7 +243,5 @@ self.loop:
 return:
   ret void
 }
-
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
 
 attributes #0 = { nounwind readnone }

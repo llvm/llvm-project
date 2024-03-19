@@ -1408,9 +1408,6 @@ define amdgpu_kernel void @s_div_arcp_neg_k_x_pat_f32_daz(ptr addrspace(1) %out)
   ret void
 }
 
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.sqrt.f32(float) #1
-
 attributes #0 = { nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

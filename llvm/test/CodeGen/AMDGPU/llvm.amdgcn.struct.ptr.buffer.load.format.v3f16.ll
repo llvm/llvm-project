@@ -129,8 +129,6 @@ bb:
   unreachable
 }
 ; Function Attrs: nounwind readnone willreturn
-declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #0
 ; Function Attrs: nounwind readonly willreturn
-declare <3 x half> @llvm.amdgcn.struct.ptr.buffer.load.format.v3f16(ptr addrspace(8), i32, i32, i32, i32 immarg) #1
 attributes #0 = { nounwind readnone willreturn }
 attributes #1 = { nounwind readonly willreturn }

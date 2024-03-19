@@ -9,10 +9,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12W64 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12W32 %s
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add(i32, ptr addrspace(8), i32, i32, i32, i32)
-declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.sub(i32, ptr addrspace(8), i32, i32, i32, i32)
-
 ; Show what the atomic optimization pass will do for struct buffers.
 
 define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace(8) %inout) {

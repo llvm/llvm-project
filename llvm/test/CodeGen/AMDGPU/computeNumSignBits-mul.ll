@@ -168,5 +168,3 @@ define i32 @known_bits_mul24() {
   %r1 = shl i32 %r0, 2
   ret i32 %r1
 }
-
-declare i32 @llvm.amdgcn.mul.i24(i32, i32)

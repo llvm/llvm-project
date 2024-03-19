@@ -58,5 +58,3 @@ main_body:
 }
 
 attributes #1 = { nounwind readnone speculatable willreturn }
-declare float @llvm.amdgcn.lds.param.load(i32 immarg, i32 immarg, i32) #1
-declare float @llvm.amdgcn.lds.direct.load(i32) #1

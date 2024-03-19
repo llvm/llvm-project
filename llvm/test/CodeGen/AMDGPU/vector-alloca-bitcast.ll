@@ -419,9 +419,3 @@ define amdgpu_kernel void @vector_bitcast_to_struct_from_alloca_array(ptr addrsp
   store %struct.v4 %load, ptr addrspace(1) %out
   ret void
 }
-
-declare void @llvm.lifetime.start.p5(i64 immarg, ptr addrspace(5) nocapture)
-
-declare void @llvm.lifetime.end.p5(i64 immarg, ptr addrspace(5) nocapture)
-
-declare void @llvm.assume(i1)

@@ -43,8 +43,4 @@ entry:
   ret void
 }
 
-declare float @llvm.rint.f32(float) #0
-declare <2 x float> @llvm.rint.v2f32(<2 x float>) #0
-declare <4 x float> @llvm.rint.v4f32(<4 x float>) #0
-
 attributes #0 = { nounwind readnone }

@@ -3890,13 +3890,6 @@ entry:
   ret i64 %f
 }
 
-declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #2
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-declare align 4 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #2
-declare i32 @llvm.amdgcn.workgroup.id.x() #2
-declare i64 @llvm.amdgcn.mul.u24(i32, i32)
-declare i64 @llvm.amdgcn.mul.i24(i32, i32)
-
 attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 attributes #1 = { mustprogress nofree nosync nounwind willreturn memory(read, argmem: readwrite, inaccessiblemem: none) }
 attributes #2 = { mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none) }

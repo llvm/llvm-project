@@ -84,14 +84,4 @@ define amdgpu_kernel void @test_implicit_dyn(ptr addrspace(1) %out, i32 %in) #1 
   ret void
 }
 
-declare ptr addrspace(7) @llvm.r600.implicitarg.ptr() #0
-
-declare i32 @llvm.r600.read.tgid.x() #0
-declare i32 @llvm.r600.read.tgid.y() #0
-declare i32 @llvm.r600.read.tgid.z() #0
-
-declare i32 @llvm.r600.read.tidig.x() #0
-declare i32 @llvm.r600.read.tidig.y() #0
-declare i32 @llvm.r600.read.tidig.z() #0
-
 attributes #0 = { readnone }

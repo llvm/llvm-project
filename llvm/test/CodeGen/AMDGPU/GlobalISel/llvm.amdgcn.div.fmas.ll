@@ -1572,8 +1572,4 @@ exit:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare float @llvm.amdgcn.div.fmas.f32(float, float, float, i1) #0
-declare double @llvm.amdgcn.div.fmas.f64(double, double, double, i1) #0
-
 attributes #0 = { nounwind readnone speculatable }

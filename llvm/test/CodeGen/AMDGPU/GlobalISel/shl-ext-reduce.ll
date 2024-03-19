@@ -721,6 +721,4 @@ define <2 x i32> @v_shl_v2i32_zext_v2i16(<2 x i16> %x) {
   ret <2 x i32> %shl
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 attributes #0 = { nounwind readnone speculatable willreturn }

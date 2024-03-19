@@ -383,6 +383,3 @@ main_body:
   %v = call float @llvm.amdgcn.image.sample.1d.f32.f32(i32 1, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret float %v
 }
-
-declare float @llvm.amdgcn.image.load.2d.f32.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg)
-declare float @llvm.amdgcn.image.sample.1d.f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32)

@@ -254,6 +254,3 @@ define void @store_vscnt_flat(ptr %p) {
 define void @function_prologue() {
   ret void
 }
-
-declare void @llvm.amdgcn.s.barrier()
-declare i32 @llvm.amdgcn.workitem.id.x()

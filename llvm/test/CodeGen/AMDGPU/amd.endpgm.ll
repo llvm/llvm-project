@@ -99,5 +99,3 @@ else:
   store i32 %x, ptr %p
   ret void
 }
-
-declare void @llvm.amdgcn.endpgm()

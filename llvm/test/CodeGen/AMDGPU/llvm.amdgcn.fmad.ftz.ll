@@ -3,8 +3,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -denormal-fp-math-f32=ieee -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
-declare float @llvm.amdgcn.fmad.ftz.f32(float %a, float %b, float %c)
-
 ; GCN-LABEL: {{^}}mad_f32:
 ; GCN:  v_ma{{[dc]}}_f32
 define amdgpu_kernel void @mad_f32(
@@ -112,5 +110,3 @@ define amdgpu_kernel void @mad_f32_neg_abs_b(
   store float %r.val, ptr addrspace(1) %r
   ret void
 }
-
-declare float @llvm.fabs.f32(float)

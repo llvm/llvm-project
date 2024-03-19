@@ -26,5 +26,3 @@ define amdgpu_kernel void @image_sample_test(ptr addrspace(1) %out, float %arg1,
   store <4 x float> %result, ptr addrspace(1) %out
   ret void
 }
-
-declare <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg)

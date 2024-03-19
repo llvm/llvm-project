@@ -189,6 +189,4 @@ end:                                              ; preds = %kill0, %kill1, %flo
   ret { <4 x float> } undef
 }
 
-declare void @llvm.amdgcn.kill(i1) #0
-
 attributes #0 = { nounwind }

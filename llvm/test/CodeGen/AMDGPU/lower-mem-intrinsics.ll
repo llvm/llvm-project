@@ -6,29 +6,6 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -pre-isel-intrinsic-lowering -mem-intrinsic-expand-size=1024 %s | FileCheck -check-prefixes=OPT,MAX1024 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -pre-isel-intrinsic-lowering -mem-intrinsic-expand-size=0 %s | FileCheck -check-prefixes=OPT,ALL %s
 
-declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) nocapture, ptr addrspace(1) nocapture readonly, i64, i1) #1
-declare void @llvm.memcpy.p1.p3.i32(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i32, i1) #1
-declare void @llvm.memcpy.p3.p1.i32(ptr addrspace(3) nocapture, ptr addrspace(1) nocapture readonly, i32, i1) #1
-declare void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) nocapture, ptr addrspace(5) nocapture readonly, i32, i1) #1
-declare void @llvm.memcpy.p3.p3.i32(ptr addrspace(3) nocapture, ptr addrspace(3) nocapture readonly, i32, i1) #1
-
-declare void @llvm.memmove.p1.p1.i64(ptr addrspace(1) nocapture, ptr addrspace(1) nocapture readonly, i64, i1) #1
-declare void @llvm.memmove.p1.p3.i32(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i32, i1) #1
-declare void @llvm.memmove.p5.p5.i32(ptr addrspace(5) nocapture, ptr addrspace(5) nocapture readonly, i32, i1) #1
-declare void @llvm.memmove.p3.p5.i32(ptr addrspace(3) nocapture, ptr addrspace(5) nocapture readonly, i32, i1) #1
-declare void @llvm.memmove.p5.p3.i32(ptr addrspace(5) nocapture, ptr addrspace(3) nocapture readonly, i32, i1) #1
-declare void @llvm.memmove.p0.p1.i64(ptr nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p1.p0.i64(ptr addrspace(1) nocapture writeonly, ptr nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p5.p1.i64(ptr addrspace(5) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p1.p5.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p0.p5.i64(ptr nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p5.p0.i64(ptr addrspace(5) nocapture writeonly, ptr nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p1.p999.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(999) nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p999.p1.i64(ptr addrspace(999) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p999.p998.i64(ptr addrspace(999) nocapture writeonly, ptr addrspace(998) nocapture readonly, i64, i1 immarg) #1
-
-declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture, i8, i64, i1) #1
-
 ; Test the upper bound for sizes to leave
 define amdgpu_kernel void @max_size_small_static_memcpy_caller0(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; MAX1024-LABEL: @max_size_small_static_memcpy_caller0(
@@ -1772,8 +1749,6 @@ entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr %arrayidx, ptr %x, i64 %spec.select, i1 false)
   ret void
 }
-
-declare i64 @llvm.umin.i64(i64, i64)
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }

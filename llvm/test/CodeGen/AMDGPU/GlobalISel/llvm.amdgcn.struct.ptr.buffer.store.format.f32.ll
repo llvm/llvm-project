@@ -173,9 +173,3 @@ define amdgpu_ps void @struct_ptr_buffer_store_format_i32__vgpr_val__sgpr_rsrc__
   call void @llvm.amdgcn.struct.ptr.buffer.store.format.i32(i32 %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.struct.ptr.buffer.store.format.f32(float, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.format.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.format.v3f32(<3 x float>, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.format.i32(i32, ptr addrspace(8), i32, i32, i32, i32 immarg)

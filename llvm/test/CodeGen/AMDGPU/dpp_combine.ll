@@ -47,9 +47,4 @@ define amdgpu_kernel void @dpp_fadd(ptr addrspace(1) %arg) {
   ret void
 }
 
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1) #0
-declare float @llvm.ceil.f32(float)
-
 attributes #0 = { nounwind readnone convergent }

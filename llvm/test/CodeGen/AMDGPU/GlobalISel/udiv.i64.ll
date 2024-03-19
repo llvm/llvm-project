@@ -181,7 +181,6 @@ define i64 @v_udiv_i64(i64 %num, i64 %den) {
 }
 
 ; FIXME: This is a workaround for not handling uniform VGPR case.
-declare i32 @llvm.amdgcn.readfirstlane(i32)
 
 define amdgpu_ps i64 @s_udiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-LABEL: s_udiv_i64:

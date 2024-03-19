@@ -28,13 +28,10 @@ exit:                                             ; preds = %endif1, %if1
   ret float %i24
 }
 ; Function Attrs: nounwind readonly willreturn
-declare <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #3
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
-declare float @llvm.fma.f32(float, float, float) #2
 
 ; Function Attrs: nounwind
-declare void @llvm.amdgcn.kill(i1) #4
 
 attributes #1 = { nounwind readnone }
 attributes #2 = { nofree nosync nounwind readnone speculatable willreturn }

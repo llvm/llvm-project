@@ -759,8 +759,3 @@ main_body:
   store i32 %zext, ptr addrspace(1) %out
   ret void
 }
-
-declare i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32>, i32, i32)
-declare i8 @llvm.amdgcn.s.buffer.load.u8(<4 x i32>, i32, i32)
-declare i16 @llvm.amdgcn.s.buffer.load.i16(<4 x i32>, i32, i32)
-declare i16 @llvm.amdgcn.s.buffer.load.u16(<4 x i32>, i32, i32)

@@ -3,8 +3,6 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,GFX10 %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=CHECK,GFX10 %s
 
-declare i32 @llvm.amdgcn.writelane(i32, i32, i32) #0
-
 ; CHECK-LABEL: {{^}}test_writelane_sreg:
 ; CIGFX9: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, m0
 ; GFX10: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
@@ -79,8 +77,6 @@ define amdgpu_kernel void @test_writelane_imm_oldval(ptr addrspace(1) %out, i32 
   store i32 %writelane, ptr addrspace(1) %out, align 4
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x() #2
 
 attributes #0 = { nounwind readnone convergent }
 attributes #1 = { nounwind }

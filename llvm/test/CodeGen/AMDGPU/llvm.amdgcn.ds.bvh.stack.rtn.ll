@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s
 
-declare { i32, i32 } @llvm.amdgcn.ds.bvh.stack.rtn(i32, i32, <4 x i32>, i32 immarg)
-
 define amdgpu_gs void @test_ds_bvh_stack(i32 %addr, i32 %data0, <4 x i32> %data1, ptr addrspace(1) %out) {
 ; CHECK-LABEL: test_ds_bvh_stack:
 ; CHECK:       ; %bb.0:

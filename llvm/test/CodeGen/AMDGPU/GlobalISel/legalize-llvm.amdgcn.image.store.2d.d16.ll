@@ -480,9 +480,4 @@ define amdgpu_ps void @image_store_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ret void
 }
 
-declare void @llvm.amdgcn.image.store.2d.f16.i32(half, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare void @llvm.amdgcn.image.store.2d.v2f16.i32(<2 x half>, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare void @llvm.amdgcn.image.store.2d.v3f16.i32(<3 x half>, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare void @llvm.amdgcn.image.store.2d.v4f16.i32(<4 x half>, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-
 attributes #0 = { nounwind writeonly }

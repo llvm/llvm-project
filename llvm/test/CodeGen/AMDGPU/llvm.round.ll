@@ -951,15 +951,5 @@ define amdgpu_kernel void @round_v2f16(ptr addrspace(1) %out, i32 %in.arg) #0 {
   ret void
 }
 
-declare float @llvm.round.f32(float) #1
-declare <2 x float> @llvm.round.v2f32(<2 x float>) #1
-declare <4 x float> @llvm.round.v4f32(<4 x float>) #1
-declare <8 x float> @llvm.round.v8f32(<8 x float>) #1
-
-declare half @llvm.round.f16(half) #1
-declare <2 x half> @llvm.round.v2f16(<2 x half>) #1
-declare <4 x half> @llvm.round.v4f16(<4 x half>) #1
-declare <8 x half> @llvm.round.v8f16(<8 x half>) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

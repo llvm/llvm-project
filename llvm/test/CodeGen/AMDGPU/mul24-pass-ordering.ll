@@ -261,7 +261,6 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 }
 
 declare void @foo(i32) #2
-declare float @llvm.fmuladd.f32(float, float, float) #1
 
 attributes #0 = { nounwind willreturn "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone speculatable }

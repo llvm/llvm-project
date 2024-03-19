@@ -119,9 +119,6 @@ define ptr addrspace(4) @func_kernarg_segment_ptr() {
   ret ptr addrspace(4) %ptr
 }
 
-declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind "amdgpu-implicitarg-num-bytes"="0" }
 attributes #2 = { nounwind "amdgpu-implicitarg-num-bytes"="48" }

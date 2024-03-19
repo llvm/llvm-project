@@ -1437,7 +1437,5 @@ entry:
   ret void
 }
 
-declare float @llvm.fabs.f32(float) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

@@ -2,8 +2,6 @@
 ; RUN: opt -mtriple=amdgcn-unknown-amdhsa -S -amdgpu-annotate-kernel-features < %s | FileCheck -check-prefixes=HSA,AKF_HSA %s
 ; RUN: opt -mtriple=amdgcn-unknown-amdhsa -S -passes=amdgpu-attributor < %s | FileCheck -check-prefixes=HSA,ATTRIBUTOR_HSA %s
 
-declare void @llvm.memcpy.p1.p4.i32(ptr addrspace(1) nocapture, ptr addrspace(4) nocapture, i32, i1) #0
-
 @lds.i32 = unnamed_addr addrspace(3) global i32 undef, align 4
 @lds.arr = unnamed_addr addrspace(3) global [256 x i32] undef, align 4
 

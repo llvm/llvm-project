@@ -12,6 +12,3 @@ entry:
   store <16 x i16> %i1, ptr addrspace(1) null, align 32
   ret void
 }
-
-declare <2 x i16> @llvm.vector.extract.v2i16.v16i16(<16 x i16>, i64 immarg)
-declare <16 x i16> @llvm.vector.insert.v16i16.v2i16(<16 x i16>, <2 x i16>, i64 immarg)

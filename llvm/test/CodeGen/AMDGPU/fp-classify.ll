@@ -3,9 +3,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
-declare float @llvm.fabs.f32(float) #1
-declare double @llvm.fabs.f64(double) #1
-
 define amdgpu_kernel void @test_isinf_pattern(ptr addrspace(1) nocapture %out, float %x) #0 {
 ; SI-LABEL: test_isinf_pattern:
 ; SI:       ; %bb.0:
@@ -771,8 +768,6 @@ define amdgpu_kernel void @test_isfinite_pattern_4_f16(ptr addrspace(1) nocaptur
   store i32 %ext, ptr addrspace(1) %out, align 4
   ret void
 }
-
-declare half @llvm.fabs.f16(half) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

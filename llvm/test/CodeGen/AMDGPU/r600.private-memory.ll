@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
 
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
-
 
 ; Make sure we don't overwrite workitem information with private memory
 

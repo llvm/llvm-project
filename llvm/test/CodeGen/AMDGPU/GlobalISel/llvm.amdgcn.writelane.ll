@@ -314,9 +314,6 @@ define amdgpu_ps float @test_writelane_s_m0_v(i32 inreg %data, i32 %vdst.in) #0 
   ret float %writelane.cast
 }
 
-declare i32 @llvm.amdgcn.writelane(i32, i32, i32) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind readnone willreturn }
 attributes #2 = { nounwind readnone speculatable willreturn }

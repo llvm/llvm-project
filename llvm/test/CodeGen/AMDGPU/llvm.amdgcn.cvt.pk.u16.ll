@@ -75,9 +75,6 @@ define amdgpu_kernel void @v_cvt_pk_u16_u32_imm_reg(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-declare <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32, i32) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

@@ -1685,10 +1685,5 @@ define amdgpu_kernel void @test_div_scale_f64_val_undef_val(ptr addrspace(1) %ou
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare { float, i1 } @llvm.amdgcn.div.scale.f32(float, float, i1) #1
-declare { double, i1 } @llvm.amdgcn.div.scale.f64(double, double, i1) #1
-declare float @llvm.fabs.f32(float) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }

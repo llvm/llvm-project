@@ -29,5 +29,3 @@ entry:
   %ret = fadd float %sadd, %vector
   ret float %ret
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

@@ -1457,15 +1457,3 @@ define i1 @iszero_f32(float %x) nounwind {
   %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 96)  ; 0x60 = "zero"
   ret i1 %1
 }
-
-declare i1 @llvm.is.fpclass.f32(float, i32)
-declare i1 @llvm.is.fpclass.f64(double, i32)
-declare <2 x i1> @llvm.is.fpclass.v2f32(<2 x float>, i32)
-declare <3 x i1> @llvm.is.fpclass.v3f32(<3 x float>, i32)
-declare <4 x i1> @llvm.is.fpclass.v4f32(<4 x float>, i32)
-declare <5 x i1> @llvm.is.fpclass.v5f32(<5 x float>, i32)
-declare <6 x i1> @llvm.is.fpclass.v6f32(<6 x float>, i32)
-declare <7 x i1> @llvm.is.fpclass.v7f32(<7 x float>, i32)
-declare <8 x i1> @llvm.is.fpclass.v8f32(<8 x float>, i32)
-declare <16 x i1> @llvm.is.fpclass.v16f32(<16 x float>, i32)
-declare <2 x i1> @llvm.is.fpclass.v2f64(<2 x double>, i32)

@@ -71,14 +71,3 @@ main_body:
   call void @llvm.amdgcn.struct.ptr.buffer.store.v3f32(<3 x float> %1, ptr addrspace(8) %0, i32 0, i32 42, i32 0, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.buffer.store.v3f32(<3 x float>, <4 x i32>, i32, i32, i1, i1) #0
-declare void @llvm.amdgcn.buffer.store.format.v3f32(<3 x float>, <4 x i32>, i32, i32, i1, i1) #0
-declare void @llvm.amdgcn.raw.buffer.store.format.v3f32(<3 x float>, <4 x i32>, i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.buffer.store.v3f32(<3 x float>, <4 x i32>, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.buffer.store.format.v3f32(<3 x float>, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.buffer.store.v3f32(<3 x float>, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v3f32(<3 x float>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v3f32(<3 x float>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.ptr.buffer.store.format.v3f32(<3 x float>, ptr addrspace(8), i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.ptr.buffer.store.v3f32(<3 x float>, ptr addrspace(8), i32, i32, i32, i32) #0

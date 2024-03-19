@@ -1,10 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
-declare void @llvm.memcpy.p3.p3.i32(ptr addrspace(3) nocapture, ptr addrspace(3) nocapture, i32, i1) nounwind
-declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) nocapture, ptr addrspace(1) nocapture, i64, i1) nounwind
-declare void @llvm.memcpy.p1.p2.i64(ptr addrspace(1) nocapture, ptr addrspace(4) nocapture, i64, i1) nounwind
-
 
 ; FUNC-LABEL: {{^}}test_small_memcpy_i64_lds_to_lds_align1:
 ; SI-DAG: ds_read_u8

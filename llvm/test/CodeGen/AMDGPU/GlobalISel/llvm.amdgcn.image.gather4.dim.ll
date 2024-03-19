@@ -1214,20 +1214,4 @@ main_body:
   ret <4 x float> %v
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare { <4 x float>, i32 } @llvm.amdgcn.image.gather4.2d.sl_v4f32i32s.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.cube.v4f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.2darray.v4f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.2d.v4f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.cl.2d.v4f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.cl.2d.v4f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.b.2d.v4f32.f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.b.2d.v4f32.f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.b.cl.2d.v4f32.f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f32.f32(i32 immarg, float, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.l.2d.v4f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.l.2d.v4f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.lz.2d.v4f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-
 attributes #0 = { nounwind readonly }

@@ -91,8 +91,3 @@ define amdgpu_kernel void @no_fmaximum3_olt_0_f64(ptr addrspace(1) %out, ptr add
   store double %f1, ptr addrspace(1) %out, align 4
   ret void
 }
-
-declare double @llvm.maximum.f64(double, double)
-declare float @llvm.maximum.f32(float, float)
-declare half @llvm.maximum.f16(half, half)
-declare <2 x half> @llvm.maximum.v2f16(<2 x half>, <2 x half>)

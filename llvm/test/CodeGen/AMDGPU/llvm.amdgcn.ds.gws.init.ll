@@ -165,9 +165,6 @@ define amdgpu_kernel void @gws_init_wait_before(i32 %val, ptr addrspace(1) %ptr)
   ret void
 }
 
-declare void @llvm.amdgcn.ds.gws.init(i32, i32) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
 attributes #0 = { nounwind }
 attributes #1 = { convergent inaccessiblememonly nounwind writeonly }
 attributes #2 = { nounwind readnone speculatable }

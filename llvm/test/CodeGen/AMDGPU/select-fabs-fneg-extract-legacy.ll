@@ -37,8 +37,5 @@ define amdgpu_kernel void @select_fneg_posk_src_mul_legacy_f32(i32 %c) #2 {
   ret void
 }
 
-declare float @llvm.amdgcn.rcp.legacy(float) #1
-declare float @llvm.amdgcn.fmul.legacy(float, float) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

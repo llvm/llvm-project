@@ -91,12 +91,6 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
-declare i32 @llvm.amdgcn.workitem.id.y() #2
-
-declare i32 @llvm.amdgcn.workitem.id.z() #2
-
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,128" }
 attributes #1 = { nounwind "amdgpu-flat-work-group-size"="512,512" }
 attributes #2 = { nounwind readnone speculatable }

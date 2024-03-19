@@ -14,9 +14,6 @@
 
 ; Used to emit an always 4 byte instruction. Inline asm always assumes
 ; each instruction is the maximum size.
-declare void @llvm.amdgcn.s.sleep(i32) #0
-
-declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 
 define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addrspace(1) %arg, i32 %cnd) #0 {

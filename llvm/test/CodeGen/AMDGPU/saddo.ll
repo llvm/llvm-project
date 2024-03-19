@@ -5,13 +5,6 @@
 ; RUN: llc < %s -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s --check-prefix=GFX10
 ; RUN: llc < %s -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck %s --check-prefix=GFX11
 
-
-declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone
-declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone
-
-
-declare { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
-
 define amdgpu_kernel void @saddo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %b) nounwind {
 ; SI-LABEL: saddo_i64_zext:
 ; SI:       ; %bb.0:

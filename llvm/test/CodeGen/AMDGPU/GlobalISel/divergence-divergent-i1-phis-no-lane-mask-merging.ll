@@ -325,18 +325,13 @@ define amdgpu_cs void @single_lane_execution_attribute(i32 inreg %.userdata0, <3
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32)
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
-declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32)
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare i64 @llvm.amdgcn.s.getpc()
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(read)
-declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32 immarg)
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(write)
-declare void @llvm.amdgcn.raw.buffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg)
 
 attributes #0 = { nounwind memory(readwrite) "amdgpu-flat-work-group-size"="1,1" }

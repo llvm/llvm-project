@@ -804,10 +804,6 @@ define amdgpu_kernel void @kern_callsite_workitem_id_hints() #2 {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.workitem.id.y() #0
-declare i32 @llvm.amdgcn.workitem.id.z() #0
-
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind noinline }
 attributes #2 = { nounwind "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

@@ -1834,6 +1834,4 @@ define float @v_recip_sqrt_f32_afn_ulp25_contract(float %x) {
   ret float %fdiv
 }
 
-declare float @llvm.sqrt.f32(float)
-
 !0 = !{float 2.500000e+00}

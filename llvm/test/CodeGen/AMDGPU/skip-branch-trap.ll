@@ -48,10 +48,6 @@ end:
   ret void
 }
 
-declare void @llvm.trap() #0
-declare void @llvm.debugtrap() #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
 attributes #0 = { nounwind noreturn }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readnone speculatable }

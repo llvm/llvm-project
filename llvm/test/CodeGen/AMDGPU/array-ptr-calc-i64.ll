@@ -1,8 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
-declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #0
-
 ; SI-LABEL: {{^}}test_array_ptr_calc:
 ; SI-DAG: v_mul_u32_u24
 ; SI-DAG: v_mul_hi_u32_u24

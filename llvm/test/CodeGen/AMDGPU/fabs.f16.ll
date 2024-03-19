@@ -747,11 +747,6 @@ define amdgpu_kernel void @v_extract_fabs_no_fold_v2f16(ptr addrspace(1) %in) #0
   ret void
 }
 
-declare half @llvm.fabs.f16(half) #1
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #1
-declare <4 x half> @llvm.fabs.v4f16(<4 x half>) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 

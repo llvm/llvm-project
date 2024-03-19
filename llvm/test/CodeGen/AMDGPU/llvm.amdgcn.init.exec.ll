@@ -199,7 +199,4 @@ endif:
   ret float %v
 }
 
-declare void @llvm.amdgcn.init.exec(i64) #1
-declare void @llvm.amdgcn.init.exec.from.input(i32, i32) #1
-
 attributes #1 = { convergent }

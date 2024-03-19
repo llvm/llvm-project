@@ -89,7 +89,5 @@ define amdgpu_kernel void @divergent_sext_in_reg_i16_to_i32(ptr addrspace(1) %ou
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }

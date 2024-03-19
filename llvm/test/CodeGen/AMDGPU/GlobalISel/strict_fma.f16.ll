@@ -149,10 +149,4 @@ define <2 x half> @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg(<2 x half> %
   ret <2 x half> %val
 }
 
-declare half @llvm.fabs.f16(half)
-declare half @llvm.experimental.constrained.fma.f16(half, half, half, metadata, metadata)
-declare <2 x half> @llvm.experimental.constrained.fma.v2f16(<2 x half>, <2 x half>, <2 x half>, metadata, metadata)
-declare <3 x half> @llvm.experimental.constrained.fma.v3f16(<3 x half>, <3 x half>, <3 x half>, metadata, metadata)
-declare <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half>, <4 x half>, <4 x half>, metadata, metadata)
-
 attributes #0 = { strictfp }

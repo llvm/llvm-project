@@ -11,5 +11,3 @@ define amdgpu_ps void @test(<4 x float> inreg %reg0) {
    call void @llvm.r600.store.swizzle(<4 x float> %vec, i32 0, i32 0)
    ret void
 }
-
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

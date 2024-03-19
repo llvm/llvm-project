@@ -346,5 +346,3 @@ define amdgpu_ps void @raw_tbuffer_store_i8__vgpr_rsrc__sgpr_voffset__vgpr_soffs
   call void @llvm.amdgcn.raw.ptr.tbuffer.store.i8(i8 %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 94, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.raw.ptr.tbuffer.store.i8(i8, ptr addrspace(8), i32, i32, i32 immarg, i32 immarg)

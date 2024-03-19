@@ -4,8 +4,6 @@
 ; Test that when extracting the same unknown vector index from an
 ; insertelement the dynamic indexing is folded away.
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 ; No dynamic indexing required
 define amdgpu_kernel void @extract_insert_same_dynelt_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val, i32 %idx) #1 {
 ; GCN-LABEL: extract_insert_same_dynelt_v4i32:

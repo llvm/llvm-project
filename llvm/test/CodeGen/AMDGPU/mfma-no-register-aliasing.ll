@@ -8,10 +8,6 @@
 ; Check that Dst and SrcC of MFMA instructions reading more than 4 registers as SrcC
 ; is either completely disjoint or exactly the same, but does not alias.
 
-declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
-declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>, i32, i32, i32)
-declare <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float, float, <4 x float>, i32, i32, i32)
-
 ; GCN-LABEL: {{^}}test_mfma_f32_32x32x1f32:
 ; GREEDY: v_mfma_f32_32x32x1{{.*}} a[0:31], v{{[0-9]+}}, v{{[0-9]+}}, a[0:31]
 ; GREEDY: v_mfma_f32_32x32x1{{.*}} a[32:63], v{{[0-9]+}}, v{{[0-9]+}}, a[0:31]

@@ -5,9 +5,6 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,SI,FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,CI,FUNC %s
 
-declare double @llvm.fabs.f64(double) #0
-declare double @llvm.floor.f64(double) #0
-
 ; FUNC-LABEL: {{^}}fract_f64:
 ; SI-DAG: v_fract_f64_e32 [[FRC:v\[[0-9]+:[0-9]+\]]], v[[[LO:[0-9]+]]:[[HI:[0-9]+]]]
 ; SI-DAG: v_mov_b32_e32 v[[UPLO:[0-9]+]], -1

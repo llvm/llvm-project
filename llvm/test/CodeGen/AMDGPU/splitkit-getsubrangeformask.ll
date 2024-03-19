@@ -759,11 +759,3 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %381, i32 15, i32 undef, i32 undef, <8 x i32> %380, i32 0, i32 0)
   ret void
 }
-
-declare i32 @llvm.amdgcn.readfirstlane(i32)
-declare void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float>, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg)
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg)
-declare i32 @llvm.amdgcn.struct.buffer.load.format.i32(<4 x i32>, i32, i32, i32, i32 immarg)
-declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32 immarg)
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg)
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32)

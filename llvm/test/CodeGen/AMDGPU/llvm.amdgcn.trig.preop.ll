@@ -1,8 +1,6 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
-declare double @llvm.amdgcn.trig.preop.f64(double, i32) nounwind readnone
-
 ; SI-LABEL: {{^}}test_trig_preop_f64:
 ; SI-DAG: buffer_load_dword [[SEG:v[0-9]+]]
 ; SI-DAG: buffer_load_dwordx2 [[SRC:v\[[0-9]+:[0-9]+\]]],

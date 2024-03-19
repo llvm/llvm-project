@@ -37,7 +37,4 @@ bb:
   ret void
 }
 
-declare void @llvm.assume(i1)
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 !0 = !{i32 0, i32 1024}

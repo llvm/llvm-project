@@ -110,6 +110,3 @@ define amdgpu_ps void @global_atomic_fadd_v2f16_saddr_no_rtn_flat_intrinsic(ptr 
   %ret = call <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1) %ptr, <2 x half> %data)
   ret void
 }
-
-declare <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1), <2 x half>)
-declare <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1), <2 x half>)

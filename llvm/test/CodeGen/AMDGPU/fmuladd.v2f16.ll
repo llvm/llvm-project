@@ -8,10 +8,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9-DENORM-CONTRACT,GFX9-DENORM %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9-DENORM-CONTRACT,GFX9-DENORM %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare <2 x half> @llvm.fmuladd.v2f16(<2 x half>, <2 x half>, <2 x half>) #1
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #1
-
 ; GCN-LABEL: {{^}}fmuladd_v2f16:
 ; GFX9-FLUSH: v_pk_mul_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 ; GFX9-FLUSH: v_pk_add_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}

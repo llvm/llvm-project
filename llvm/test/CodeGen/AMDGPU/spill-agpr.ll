@@ -116,11 +116,6 @@ define amdgpu_kernel void @max_6regs_used_8a(ptr addrspace(1) %arg) #4 {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>, i32, i32, i32)
-declare <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float, float, <4 x float>, i32, i32, i32)
-declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
-
 attributes #1 = { nounwind "amdgpu-num-vgpr"="10" }
 attributes #2 = { nounwind "amdgpu-num-vgpr"="12" }
 attributes #3 = { nounwind "amdgpu-num-vgpr"="32" }

@@ -119,8 +119,4 @@ define amdgpu_kernel void @workgroup_id_xz() {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-declare i32 @llvm.amdgcn.workgroup.id.y() #0
-declare i32 @llvm.amdgcn.workgroup.id.z() #0
-
 attributes #0 = { nounwind readnone speculatable }

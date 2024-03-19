@@ -151,12 +151,6 @@ define half @v_fneg_arithmetic_fence_fmul_f16(half %a, half %b) #0 {
   ret half %fneg
 }
 
-declare half @llvm.amdgcn.rcp.f16(half) #1
-declare half @llvm.amdgcn.sin.f16(half) #1
-declare half @llvm.arithmetic.fence.f16(half) #1
-declare float @llvm.amdgcn.interp.p1.f16(float, i32, i32, i1, i32) #0
-declare half @llvm.amdgcn.interp.p2.f16(float, float, i32, i32, i1, i32) #0
-
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "unsafe-fp-math"="true" }

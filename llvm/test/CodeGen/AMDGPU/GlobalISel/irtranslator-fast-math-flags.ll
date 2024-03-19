@@ -26,6 +26,3 @@ define amdgpu_kernel void @rcp_nsz(float %arg0) {
   store float %res, ptr addrspace(1) undef
   ret void
 }
-
-declare float @llvm.fma.f32(float, float, float)
-declare float @llvm.amdgcn.rcp.f32(float)

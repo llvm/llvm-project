@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-SDAG %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL %s
 
-declare i32 @llvm.amdgcn.permlane64(i32)
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 define amdgpu_kernel void @test_s(ptr addrspace(1) %out, i32 %src0) {
 ; GFX11-LABEL: test_s:
 ; GFX11:       ; %bb.0:

@@ -6,11 +6,6 @@
 ; RUN: llc -global-isel=0 -amdgpu-load-store-vectorizer=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
 ; RUN: llc -global-isel=1 -amdgpu-load-store-vectorizer=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 
-declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1)
-declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1, i1)
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare i32 @llvm.amdgcn.workitem.id.y()
-
 define amdgpu_kernel void @v_permlane16_b32_vss(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; GFX10-LABEL: v_permlane16_b32_vss:
 ; GFX10:       ; %bb.0:

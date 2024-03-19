@@ -3,16 +3,6 @@
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-atomic-optimizer %s | FileCheck -check-prefix=IR %s
 ; RUN: llc -global-isel -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i32, i32 immarg)
-declare i32 @llvm.amdgcn.struct.buffer.atomic.sub.i32(i32, <4 x i32>, i32, i32, i32, i32 immarg)
-declare i32 @llvm.amdgcn.struct.buffer.atomic.xor.i32(i32, <4 x i32>, i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.buffer.store.format.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32, i32 immarg)
-
-declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.sub.i32(i32, ptr addrspace (8), i32, i32, i32, i32 immarg)
-declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.xor.i32(i32, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32, i32 immarg)
-
 
 define amdgpu_cs void @atomic_add(<4 x i32> inreg %arg)  {
 ; IR-LABEL: define amdgpu_cs void @atomic_add(

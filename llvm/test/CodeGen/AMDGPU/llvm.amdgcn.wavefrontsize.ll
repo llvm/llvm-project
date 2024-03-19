@@ -79,6 +79,4 @@ bb3:                                              ; preds = %bb2, %bb
   ret void
 }
 
-declare i32 @llvm.amdgcn.wavefrontsize() #0
-
 attributes #0 = { nounwind readnone speculatable }

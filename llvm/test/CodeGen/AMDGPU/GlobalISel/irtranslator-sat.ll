@@ -17,7 +17,6 @@ define i16 @uaddsat_i16(i16 %lhs, i16 %rhs) {
   %res = call i16 @llvm.uadd.sat.i16(i16 %lhs, i16 %rhs)
   ret i16 %res
 }
-declare i16 @llvm.uadd.sat.i16(i16, i16)
 
 define i32 @uaddsat_i32(i32 %lhs, i32 %rhs) {
   ; CHECK-LABEL: name: uaddsat_i32
@@ -32,7 +31,6 @@ define i32 @uaddsat_i32(i32 %lhs, i32 %rhs) {
   %res = call i32 @llvm.uadd.sat.i32(i32 %lhs, i32 %rhs)
   ret i32 %res
 }
-declare i32 @llvm.uadd.sat.i32(i32, i32)
 
 define i64 @uaddsat_i64(i64 %lhs, i64 %rhs) {
   ; CHECK-LABEL: name: uaddsat_i64
@@ -53,7 +51,6 @@ define i64 @uaddsat_i64(i64 %lhs, i64 %rhs) {
   %res = call i64 @llvm.uadd.sat.i64(i64 %lhs, i64 %rhs)
   ret i64 %res
 }
-declare i64 @llvm.uadd.sat.i64(i64, i64)
 
 define <2 x i32> @uaddsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   ; CHECK-LABEL: name: uaddsat_v2i32
@@ -74,7 +71,6 @@ define <2 x i32> @uaddsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   %res = call <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32> %lhs, <2 x i32> %rhs)
   ret <2 x i32> %res
 }
-declare <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32>, <2 x i32>)
 
 define i16 @saddsat_i16(i16 %lhs, i16 %rhs) {
   ; CHECK-LABEL: name: saddsat_i16
@@ -92,7 +88,6 @@ define i16 @saddsat_i16(i16 %lhs, i16 %rhs) {
   %res = call i16 @llvm.sadd.sat.i16(i16 %lhs, i16 %rhs)
   ret i16 %res
 }
-declare i16 @llvm.sadd.sat.i16(i16, i16)
 
 define i32 @saddsat_i32(i32 %lhs, i32 %rhs) {
   ; CHECK-LABEL: name: saddsat_i32
@@ -107,7 +102,6 @@ define i32 @saddsat_i32(i32 %lhs, i32 %rhs) {
   %res = call i32 @llvm.sadd.sat.i32(i32 %lhs, i32 %rhs)
   ret i32 %res
 }
-declare i32 @llvm.sadd.sat.i32(i32, i32)
 
 define i64 @saddsat_i64(i64 %lhs, i64 %rhs) {
   ; CHECK-LABEL: name: saddsat_i64
@@ -128,7 +122,6 @@ define i64 @saddsat_i64(i64 %lhs, i64 %rhs) {
   %res = call i64 @llvm.sadd.sat.i64(i64 %lhs, i64 %rhs)
   ret i64 %res
 }
-declare i64 @llvm.sadd.sat.i64(i64, i64)
 
 define <2 x i32> @saddsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   ; CHECK-LABEL: name: saddsat_v2i32
@@ -149,7 +142,6 @@ define <2 x i32> @saddsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   %res = call <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32> %lhs, <2 x i32> %rhs)
   ret <2 x i32> %res
 }
-declare <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32>, <2 x i32>)
 
 define i16 @usubsat_i16(i16 %lhs, i16 %rhs) {
   ; CHECK-LABEL: name: usubsat_i16
@@ -167,7 +159,6 @@ define i16 @usubsat_i16(i16 %lhs, i16 %rhs) {
   %res = call i16 @llvm.usub.sat.i16(i16 %lhs, i16 %rhs)
   ret i16 %res
 }
-declare i16 @llvm.usub.sat.i16(i16, i16)
 
 define i32 @usubsat_i32(i32 %lhs, i32 %rhs) {
   ; CHECK-LABEL: name: usubsat_i32
@@ -182,7 +173,6 @@ define i32 @usubsat_i32(i32 %lhs, i32 %rhs) {
   %res = call i32 @llvm.usub.sat.i32(i32 %lhs, i32 %rhs)
   ret i32 %res
 }
-declare i32 @llvm.usub.sat.i32(i32, i32)
 
 define i64 @usubsat_i64(i64 %lhs, i64 %rhs) {
   ; CHECK-LABEL: name: usubsat_i64
@@ -203,7 +193,6 @@ define i64 @usubsat_i64(i64 %lhs, i64 %rhs) {
   %res = call i64 @llvm.usub.sat.i64(i64 %lhs, i64 %rhs)
   ret i64 %res
 }
-declare i64 @llvm.usub.sat.i64(i64, i64)
 
 define <2 x i32> @usubsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   ; CHECK-LABEL: name: usubsat_v2i32
@@ -224,7 +213,6 @@ define <2 x i32> @usubsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   %res = call <2 x i32> @llvm.usub.sat.v2i32(<2 x i32> %lhs, <2 x i32> %rhs)
   ret <2 x i32> %res
 }
-declare <2 x i32> @llvm.usub.sat.v2i32(<2 x i32>, <2 x i32>)
 
 define i16 @ssubsat_i16(i16 %lhs, i16 %rhs) {
   ; CHECK-LABEL: name: ssubsat_i16
@@ -242,7 +230,6 @@ define i16 @ssubsat_i16(i16 %lhs, i16 %rhs) {
   %res = call i16 @llvm.ssub.sat.i16(i16 %lhs, i16 %rhs)
   ret i16 %res
 }
-declare i16 @llvm.ssub.sat.i16(i16, i16)
 
 define i32 @ssubsat_i32(i32 %lhs, i32 %rhs) {
   ; CHECK-LABEL: name: ssubsat_i32
@@ -257,7 +244,6 @@ define i32 @ssubsat_i32(i32 %lhs, i32 %rhs) {
   %res = call i32 @llvm.ssub.sat.i32(i32 %lhs, i32 %rhs)
   ret i32 %res
 }
-declare i32 @llvm.ssub.sat.i32(i32, i32)
 
 define i64 @ssubsat_i64(i64 %lhs, i64 %rhs) {
   ; CHECK-LABEL: name: ssubsat_i64
@@ -278,7 +264,6 @@ define i64 @ssubsat_i64(i64 %lhs, i64 %rhs) {
   %res = call i64 @llvm.ssub.sat.i64(i64 %lhs, i64 %rhs)
   ret i64 %res
 }
-declare i64 @llvm.ssub.sat.i64(i64, i64)
 
 define <2 x i32> @ssubsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   ; CHECK-LABEL: name: ssubsat_v2i32
@@ -299,7 +284,6 @@ define <2 x i32> @ssubsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   %res = call <2 x i32> @llvm.ssub.sat.v2i32(<2 x i32> %lhs, <2 x i32> %rhs)
   ret <2 x i32> %res
 }
-declare <2 x i32> @llvm.ssub.sat.v2i32(<2 x i32>, <2 x i32>)
 
 define i16 @ushlsat_i16(i16 %lhs, i16 %rhs) {
   ; CHECK-LABEL: name: ushlsat_i16
@@ -317,7 +301,6 @@ define i16 @ushlsat_i16(i16 %lhs, i16 %rhs) {
   %res = call i16 @llvm.ushl.sat.i16(i16 %lhs, i16 %rhs)
   ret i16 %res
 }
-declare i16 @llvm.ushl.sat.i16(i16, i16)
 
 define i32 @ushlsat_i32(i32 %lhs, i32 %rhs) {
   ; CHECK-LABEL: name: ushlsat_i32
@@ -332,7 +315,6 @@ define i32 @ushlsat_i32(i32 %lhs, i32 %rhs) {
   %res = call i32 @llvm.ushl.sat.i32(i32 %lhs, i32 %rhs)
   ret i32 %res
 }
-declare i32 @llvm.ushl.sat.i32(i32, i32)
 
 define i64 @ushlsat_i64(i64 %lhs, i64 %rhs) {
   ; CHECK-LABEL: name: ushlsat_i64
@@ -353,7 +335,6 @@ define i64 @ushlsat_i64(i64 %lhs, i64 %rhs) {
   %res = call i64 @llvm.ushl.sat.i64(i64 %lhs, i64 %rhs)
   ret i64 %res
 }
-declare i64 @llvm.ushl.sat.i64(i64, i64)
 
 define <2 x i32> @ushlsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   ; CHECK-LABEL: name: ushlsat_v2i32
@@ -374,7 +355,6 @@ define <2 x i32> @ushlsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   %res = call <2 x i32> @llvm.ushl.sat.v2i32(<2 x i32> %lhs, <2 x i32> %rhs)
   ret <2 x i32> %res
 }
-declare <2 x i32> @llvm.ushl.sat.v2i32(<2 x i32>, <2 x i32>)
 
 define i16 @sshlsat_i16(i16 %lhs, i16 %rhs) {
   ; CHECK-LABEL: name: sshlsat_i16
@@ -392,7 +372,6 @@ define i16 @sshlsat_i16(i16 %lhs, i16 %rhs) {
   %res = call i16 @llvm.sshl.sat.i16(i16 %lhs, i16 %rhs)
   ret i16 %res
 }
-declare i16 @llvm.sshl.sat.i16(i16, i16)
 
 define i32 @sshlsat_i32(i32 %lhs, i32 %rhs) {
   ; CHECK-LABEL: name: sshlsat_i32
@@ -407,7 +386,6 @@ define i32 @sshlsat_i32(i32 %lhs, i32 %rhs) {
   %res = call i32 @llvm.sshl.sat.i32(i32 %lhs, i32 %rhs)
   ret i32 %res
 }
-declare i32 @llvm.sshl.sat.i32(i32, i32)
 
 define i64 @sshlsat_i64(i64 %lhs, i64 %rhs) {
   ; CHECK-LABEL: name: sshlsat_i64
@@ -428,7 +406,6 @@ define i64 @sshlsat_i64(i64 %lhs, i64 %rhs) {
   %res = call i64 @llvm.sshl.sat.i64(i64 %lhs, i64 %rhs)
   ret i64 %res
 }
-declare i64 @llvm.sshl.sat.i64(i64, i64)
 
 define <2 x i32> @sshlsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   ; CHECK-LABEL: name: sshlsat_v2i32
@@ -449,4 +426,3 @@ define <2 x i32> @sshlsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   %res = call <2 x i32> @llvm.sshl.sat.v2i32(<2 x i32> %lhs, <2 x i32> %rhs)
   ret <2 x i32> %res
 }
-declare <2 x i32> @llvm.sshl.sat.v2i32(<2 x i32>, <2 x i32>)

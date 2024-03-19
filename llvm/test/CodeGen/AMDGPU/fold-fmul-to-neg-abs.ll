@@ -32,6 +32,4 @@ define amdgpu_kernel void @fold_mul_abs(ptr addrspace(1) %arg) {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 attributes #0 = { nounwind readnone speculatable }

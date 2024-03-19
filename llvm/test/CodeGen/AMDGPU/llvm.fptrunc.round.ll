@@ -48,5 +48,3 @@ define amdgpu_gs void @test_fptrunc_round_upward_multiple_calls(float %a, float 
   store half %res5, ptr addrspace(1) %out, align 4
   ret void
 }
-
-declare half @llvm.fptrunc.round(float, metadata)
