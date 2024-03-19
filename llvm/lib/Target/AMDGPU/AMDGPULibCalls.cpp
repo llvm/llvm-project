@@ -470,9 +470,11 @@ bool AMDGPULibCalls::sincosUseNative(CallInst *aCI, const FuncInfo &FInfo) {
     nf.setId(AMDGPULibFunc::EI_COS);
     FunctionCallee cosExpr = getFunction(M, nf);
     if (sinExpr && cosExpr) {
-      Value *sinval = CallInst::Create(sinExpr, opr0, "splitsin", aCI);
-      Value *cosval = CallInst::Create(cosExpr, opr0, "splitcos", aCI);
-      new StoreInst(cosval, aCI->getArgOperand(1), aCI);
+      Value *sinval =
+          CallInst::Create(sinExpr, opr0, "splitsin", aCI->getIterator());
+      Value *cosval =
+          CallInst::Create(cosExpr, opr0, "splitcos", aCI->getIterator());
+      new StoreInst(cosval, aCI->getArgOperand(1), aCI->getIterator());
 
       DEBUG_WITH_TYPE("usenative", dbgs() << "<useNative> replace " << *aCI
                                           << " with native version of sin/cos");
@@ -1655,7 +1657,7 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     // sincos
     assert(FInfo.getId() == AMDGPULibFunc::EI_SINCOS &&
            "math function with ptr arg not supported yet");
-    new StoreInst(nval1, aCI->getArgOperand(1), aCI);
+    new StoreInst(nval1, aCI->getArgOperand(1), aCI->getIterator());
   }
 
   replaceCall(aCI, nval0);
