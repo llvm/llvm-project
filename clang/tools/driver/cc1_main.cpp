@@ -191,6 +191,12 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
                                                     Argv, Diags, Argv0);
+   // Check if the '-fdump-type-auto-reference' flag is present
+  if (Success && Clang->getFrontendOpts().DumpAutoTypeInference) {
+    llvm::outs() << "Dumping type auto reference...✔\n";
+    // Add your logic to handle the flag here
+    // For example, you can traverse the AST and print information about 'auto' references
+  }
 
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(

@@ -100,6 +100,7 @@ LANGOPT(CPlusPlus20       , 1, 0, "C++20")
 LANGOPT(CPlusPlus23       , 1, 0, "C++23")
 LANGOPT(CPlusPlus26       , 1, 0, "C++26")
 LANGOPT(ObjC              , 1, 0, "Objective-C")
+LANGOPT(DumpAutoTypeInference , 1, 0, "Dump auto type inference information")
 BENIGN_LANGOPT(ObjCDefaultSynthProperties , 1, 0,
                "Objective-C auto-synthesized properties")
 BENIGN_LANGOPT(EncodeExtendedBlockSig , 1, 0,

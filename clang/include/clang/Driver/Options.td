@@ -7474,6 +7474,12 @@ def stats_file : Joined<["-"], "stats-file=">,
 def stats_file_append : Flag<["-"], "stats-file-append">,
   HelpText<"If stats should be appended to stats-file instead of overwriting it">,
   MarshallingInfoFlag<FrontendOpts<"AppendStats">>;
+
+def fdump_auto_type_inference : Flag<["-"], "fdump-auto-type-inference">, Group<f_Group>,
+    HelpText<"Enable dumping of auto type inference information">;
+def fno_dump_auto_type_inference : Flag<["-"], "fno-dump-auto-type-inference">,Group<f_Group>,
+    HelpText<"Disable dumping of auto type inference information">;
+
 def fdump_record_layouts_simple : Flag<["-"], "fdump-record-layouts-simple">,
   HelpText<"Dump record layout information in a simple form used for testing">,
   MarshallingInfoFlag<LangOpts<"DumpRecordLayoutsSimple">>;

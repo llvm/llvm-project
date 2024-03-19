@@ -134,6 +134,9 @@ enum ActionKind {
   /// Run one or more source code analyses.
   RunAnalysis,
 
+  /// for dumping auto type inference
+  DumpAutoTypeInference,
+
   /// Dump template instantiations
   TemplightDump,
 
@@ -274,6 +277,9 @@ public:
 /// FrontendOptions - Options for controlling the behavior of the frontend.
 class FrontendOptions {
 public:
+bool DumpAutoTypeInference=false;
+bool shouldDumpAutoTypeInference() const { return DumpAutoTypeInference; }
+void setDumpAutoTypeInference(bool Value) { DumpAutoTypeInference = Value; }
   /// Disable memory freeing on exit.
   LLVM_PREFERRED_TYPE(bool)
   unsigned DisableFree : 1;
