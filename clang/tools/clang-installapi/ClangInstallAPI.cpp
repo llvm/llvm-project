@@ -126,6 +126,10 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
     }
   }
 
+  if (Ctx.Verifier->getState() == DylibVerifier::Result::Invalid)
+    return EXIT_FAILURE;
+
+  // After symbols have been collected, prepare to write output.
   llvm::vfs::OnDiskOutputBackend Backend;
   std::optional<llvm::vfs::OutputFile> Out = llvm::expectedToOptional(
       Backend.createFile(Ctx.OutputLoc, llvm::vfs::OutputConfig()
@@ -146,14 +150,15 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
 
   // Write output file and perform CI cleanup.
   if (auto Err = TextAPIWriter::writeToStream(Out->getOS(), IF, Ctx.FT)) {
-    Diag->Report(diag::err_cannot_open_file) << Ctx.OutputLoc;
-    CI->clearOutputFiles(/*EraseFiles=*/true);
+    Diag->Report(diag::err_cannot_write_file)
+        << Ctx.OutputLoc << std::move(Err);
     if (auto Err = Out->discard())
       llvm::consumeError(std::move(Err));
     return EXIT_FAILURE;
   }
   if (auto Err = Out->keep()) {
-    Diag->Report(diag::err_cannot_open_file) << Ctx.OutputLoc << std::move(Err);
+    Diag->Report(diag::err_cannot_write_file)
+        << Ctx.OutputLoc << std::move(Err);
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;
