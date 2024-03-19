@@ -3303,7 +3303,7 @@ Value *ConstantExpr::handleOperandChangeImpl(Value *From, Value *ToV) {
       NewOps, this, From, To, NumUpdated, OperandNo);
 }
 
-Instruction *ConstantExpr::getAsInstruction() const {
+Instruction *ConstantExpr::getAsInstruction(Instruction *InsertBefore) const {
   SmallVector<Value *, 4> ValueOperands(operands());
   ArrayRef<Value*> Ops(ValueOperands);
 
@@ -3322,31 +3322,32 @@ Instruction *ConstantExpr::getAsInstruction() const {
   case Instruction::BitCast:
   case Instruction::AddrSpaceCast:
     return CastInst::Create((Instruction::CastOps)getOpcode(), Ops[0],
-                            getType(), "");
+                            getType(), "", InsertBefore);
   case Instruction::InsertElement:
-    return InsertElementInst::Create(Ops[0], Ops[1], Ops[2], "");
+    return InsertElementInst::Create(Ops[0], Ops[1], Ops[2], "", InsertBefore);
   case Instruction::ExtractElement:
-    return ExtractElementInst::Create(Ops[0], Ops[1], "");
+    return ExtractElementInst::Create(Ops[0], Ops[1], "", InsertBefore);
   case Instruction::ShuffleVector:
-    return new ShuffleVectorInst(Ops[0], Ops[1], getShuffleMask(), "");
+    return new ShuffleVectorInst(Ops[0], Ops[1], getShuffleMask(), "",
+                                 InsertBefore);
 
   case Instruction::GetElementPtr: {
     const auto *GO = cast<GEPOperator>(this);
     if (GO->isInBounds())
-      return GetElementPtrInst::CreateInBounds(GO->getSourceElementType(),
-                                               Ops[0], Ops.slice(1), "");
+      return GetElementPtrInst::CreateInBounds(
+          GO->getSourceElementType(), Ops[0], Ops.slice(1), "", InsertBefore);
     return GetElementPtrInst::Create(GO->getSourceElementType(), Ops[0],
-                                     Ops.slice(1), "");
+                                     Ops.slice(1), "", InsertBefore);
   }
   case Instruction::ICmp:
   case Instruction::FCmp:
     return CmpInst::Create((Instruction::OtherOps)getOpcode(),
                            (CmpInst::Predicate)getPredicate(), Ops[0], Ops[1],
-                           "");
+                           "", InsertBefore);
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
     BinaryOperator *BO = BinaryOperator::Create(
-        (Instruction::BinaryOps)getOpcode(), Ops[0], Ops[1], "");
+        (Instruction::BinaryOps)getOpcode(), Ops[0], Ops[1], "", InsertBefore);
     if (isa<OverflowingBinaryOperator>(BO)) {
       BO->setHasNoUnsignedWrap(SubclassOptionalData &
                                OverflowingBinaryOperator::NoUnsignedWrap);
