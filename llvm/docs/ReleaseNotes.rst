@@ -67,6 +67,8 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
+* Added support for Cortex-A78AE, Cortex-A520AE and Cortex-A720AE CPUs.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -130,6 +132,18 @@ Changes to the C API
 
 * Added ``LLVMConstStringInContext2`` function, which better matches the C++
   API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``. 
+
+* Added the following functions for accessing a function's prefix data:
+
+  * ``LLVMHasPrefixData``
+  * ``LLVMGetPrefixData``
+  * ``LLVMSetPrefixData``
+
+* Added the following functions for accessing a function's prologue data:
+
+  * ``LLVMHasPrologueData``
+  * ``LLVMGetPrologueData``
+  * ``LLVMSetPrologueData``
 
 Changes to the CodeGen infrastructure
 -------------------------------------

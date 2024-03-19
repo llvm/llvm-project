@@ -645,7 +645,7 @@ public:
   size_t getSize() const override { return getNumSymbols() * entsize; }
   void addSymbol(Symbol *sym);
   unsigned getNumSymbols() const { return symbols.size() + 1; }
-  size_t getSymbolIndex(Symbol *sym);
+  size_t getSymbolIndex(const Symbol &sym);
   ArrayRef<SymbolTableEntry> getSymbols() const { return symbols; }
 
 protected:
