@@ -216,6 +216,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.munlockall
     libc.src.sys.mman.msync
+    libc.src.sys.mman.shm_open
+    libc.src.sys.mman.shm_unlink
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
