@@ -35,14 +35,14 @@ _LIBCPP_EXPORTED_FROM_ABI void __breakpoint() noexcept;
 
 _LIBCPP_EXPORTED_FROM_ABI bool __is_debugger_present() noexcept;
 
-_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_HIDE_FROM_ABI void breakpoint() noexcept { __breakpoint(); }
+_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_HIDE_FROM_ABI inline void breakpoint() noexcept { __breakpoint(); }
 
-_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_HIDE_FROM_ABI void breakpoint_if_debugging() noexcept {
+_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_HIDE_FROM_ABI inline void breakpoint_if_debugging() noexcept {
   if (__is_debugger_present())
     __breakpoint();
 }
 
-_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_HIDE_FROM_ABI bool is_debugger_present() noexcept {
+_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_HIDE_FROM_ABI inline bool is_debugger_present() noexcept {
   return __is_debugger_present();
 }
 
