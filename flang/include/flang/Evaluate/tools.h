@@ -1218,6 +1218,20 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
+/// Check if any of the symbols part of the expression has a cuda data
+/// attribute.
+inline bool HasCUDAAttrs(const Expr<SomeType> &expr) {
+  for (const Symbol &sym : CollectSymbols(expr)) {
+    if (const auto *details =
+            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+      if (details->cudaDataAttr()) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
