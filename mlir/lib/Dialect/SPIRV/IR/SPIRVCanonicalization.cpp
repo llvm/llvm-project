@@ -801,31 +801,6 @@ OpFoldResult spirv::LogicalOrOp::fold(FoldAdaptor adaptor) {
 // spirv.SelectOp
 //===----------------------------------------------------------------------===//
 
-static Attribute foldSelectOp(ArrayRef<Attribute> operands) {
-  auto condAttrs = dyn_cast<DenseElementsAttr>(operands[0]);
-  auto trueAttrs = dyn_cast<DenseElementsAttr>(operands[1]);
-  auto falseAttrs = dyn_cast<DenseElementsAttr>(operands[2]);
-  if (!condAttrs || !trueAttrs || !falseAttrs)
-    return Attribute();
-
-  auto condsIt = condAttrs.value_begin<BoolAttr>();
-  auto trueAttrsIt = trueAttrs.value_begin<Attribute>();
-  auto falseAttrsIt = falseAttrs.value_begin<Attribute>();
-
-  SmallVector<Attribute, 4> elementResults;
-  elementResults.reserve(condAttrs.getNumElements());
-  for (size_t i = 0, e = condAttrs.getNumElements(); i < e;
-       ++i, ++condsIt, ++trueAttrsIt, ++falseAttrsIt) {
-    if ((*condsIt).getValue()) // If Condition then take Object 1
-      elementResults.push_back(*trueAttrsIt);
-    else // Else take Object 2
-      elementResults.push_back(*falseAttrsIt);
-  }
-
-  auto resultType = trueAttrs.getType();
-  return DenseElementsAttr::get(cast<ShapedType>(resultType), elementResults);
-}
-
 OpFoldResult spirv::SelectOp::fold(FoldAdaptor adaptor) {
   // spirv.Select _ x x -> x
   Value trueVals = getTrueValue();
@@ -847,7 +822,22 @@ OpFoldResult spirv::SelectOp::fold(FoldAdaptor adaptor) {
   // Note: getScalarOrSplatBoolAttr will always return a boolAttr if we are in
   // the scalar case. Hence, we are only required to consider the case of
   // DenseElementsAttr in foldSelectOp.
-  return foldSelectOp(operands);
+  auto condAttrs = dyn_cast<DenseElementsAttr>(operands[0]);
+  auto trueAttrs = dyn_cast<DenseElementsAttr>(operands[1]);
+  auto falseAttrs = dyn_cast<DenseElementsAttr>(operands[2]);
+  if (!condAttrs || !trueAttrs || !falseAttrs)
+    return Attribute();
+
+  auto elementResults = llvm::to_vector<4>(trueAttrs.getValues<Attribute>());
+  auto iters = llvm::zip_equal(elementResults, condAttrs.getValues<BoolAttr>(),
+                               falseAttrs.getValues<Attribute>());
+  for (auto [result, cond, falseRes] : iters) {
+    if (!cond.getValue())
+      result = falseRes;
+  }
+
+  auto resultType = trueAttrs.getType();
+  return DenseElementsAttr::get(cast<ShapedType>(resultType), elementResults);
 }
 
 //===----------------------------------------------------------------------===//
