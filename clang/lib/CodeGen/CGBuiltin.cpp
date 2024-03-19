@@ -16602,7 +16602,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       FieldValue =
           Builder.CreateCall(Func, {ConstantInt::get(Int32Ty, FieldIdx)});
     }
-    assert((FieldValue != nullptr) &&
+    assert(FieldValue &&
            "SupportMethod value is not defined in PPCTargetParser.def.");
 
     if (Mask)
