@@ -281,6 +281,8 @@ def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
 def err_function_needs_feature : Error<
   "always_inline function %1 requires target feature '%2', but would "
   "be inlined into function %0 that is compiled without support for '%2'">;
+
+let CategoryName = "Codegen ABI Check" in {
 def err_function_always_inline_attribute_mismatch : Error<
   "always_inline function %1 and its caller %0 have mismatching %2 attributes">;
 def err_function_always_inline_new_za : Error<
@@ -291,6 +293,10 @@ def warn_avx_calling_convention
               "enabled changes the ABI">,
       InGroup<DiagGroup<"psabi">>;
 def err_avx_calling_convention : Error<warn_avx_calling_convention.Summary>;
+
+def err_target_unsupported_type_for_abi
+    : Error<"%0 requires %1 type support, but ABI '%2' does not support it">;
+}
 
 def err_alias_to_undefined : Error<
   "%select{alias|ifunc}0 must point to a defined "

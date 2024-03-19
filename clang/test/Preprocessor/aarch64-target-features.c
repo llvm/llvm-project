@@ -342,15 +342,15 @@
 
 // RUN: %clang -target aarch64 -march=armv8-a+fp+simd+crc+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MARCH-1 %s
 // RUN: %clang -target aarch64 -march=armv8-a+nofp+nosimd+nocrc+nocrypto+fp+simd+crc+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MARCH-1 %s
-// RUN: %clang -target aarch64 -march=armv8-a+nofp+nosimd+nocrc+nocrypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MARCH-2 %s
-// RUN: %clang -target aarch64 -march=armv8-a+fp+simd+crc+crypto+nofp+nosimd+nocrc+nocrypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MARCH-2 %s
+// RUN: %clang -target aarch64 -march=armv8-a+nofp+nosimd+nocrc+nocrypto -mabi=aapcs-soft -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MARCH-2 %s
+// RUN: %clang -target aarch64 -march=armv8-a+fp+simd+crc+crypto+nofp+nosimd+nocrc+nocrypto -mabi=aapcs-soft -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MARCH-2 %s
 // RUN: %clang -target aarch64 -march=armv8-a+nosimd -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MARCH-3 %s
 // CHECK-MARCH-1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+v8a" "-target-feature" "+aes" "-target-feature" "+crc" "-target-feature" "+crypto" "-target-feature" "+fp-armv8" "-target-feature" "+sha2" "-target-feature" "+neon"
 // CHECK-MARCH-2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "-fp-armv8"{{.*}} "-target-feature" "-neon"
 // CHECK-MARCH-3: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "-neon"
 
 // While we're checking +nofp, also make sure it stops defining __ARM_FP
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-r+nofp -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-NOFP %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-r+nofp -mabi=aapcs-soft -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-NOFP %s
 // CHECK-NOFP-NOT: #define __ARM_FP{{ }}
 
 // Check +sm4:
