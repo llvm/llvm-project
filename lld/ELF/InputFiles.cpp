@@ -967,7 +967,7 @@ void readGnuProperty(const InputSection &sec, ObjFile<ELFT> &f) {
         f.andFeatures |= read32<ELFT::TargetEndianness>(desc.data());
       } else if (config->emachine == EM_AARCH64 &&
                  type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
-        if (!f.aarch64PauthAbiTag.empty())
+        if (!f.aarch64PauthAbiCoreInfo.empty())
           reportFatal(data.data(),
                       "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
                       "not supported");
@@ -977,7 +977,7 @@ void readGnuProperty(const InputSection &sec, ObjFile<ELFT> &f) {
               Twine("GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry is too ") +
                   (size < 16 ? "short" : "long") +
                   ": expected 16 bytes, but got " + Twine(size));
-        f.aarch64PauthAbiTag = desc;
+        f.aarch64PauthAbiCoreInfo = desc;
       }
 
       // Padding is present in the note descriptor, if necessary.

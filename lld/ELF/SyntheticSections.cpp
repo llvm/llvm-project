@@ -334,11 +334,11 @@ void GnuPropertySection::writeTo(uint8_t *buf) {
     offset += 16;
   }
 
-  if (!ctx.aarch64PauthAbiTag.empty()) {
+  if (!ctx.aarch64PauthAbiCoreInfo.empty()) {
     write32(buf + offset + 0, GNU_PROPERTY_AARCH64_FEATURE_PAUTH);
-    write32(buf + offset + 4, ctx.aarch64PauthAbiTag.size());
-    memcpy(buf + offset + 8, ctx.aarch64PauthAbiTag.data(),
-           ctx.aarch64PauthAbiTag.size());
+    write32(buf + offset + 4, ctx.aarch64PauthAbiCoreInfo.size());
+    memcpy(buf + offset + 8, ctx.aarch64PauthAbiCoreInfo.data(),
+           ctx.aarch64PauthAbiCoreInfo.size());
   }
 }
 
@@ -346,8 +346,8 @@ size_t GnuPropertySection::getSize() const {
   uint32_t contentSize = 0;
   if (config->andFeatures != 0)
     contentSize += config->is64 ? 16 : 12;
-  if (!ctx.aarch64PauthAbiTag.empty())
-    contentSize += 4 + 4 + ctx.aarch64PauthAbiTag.size();
+  if (!ctx.aarch64PauthAbiCoreInfo.empty())
+    contentSize += 4 + 4 + ctx.aarch64PauthAbiCoreInfo.size();
   assert(contentSize != 0);
   return contentSize + 16;
 }

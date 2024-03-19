@@ -7,7 +7,7 @@
 # RUN: ld.lld -shared tag1.o tag1a.o -o tagok.so
 # RUN: llvm-readelf -n tagok.so | FileCheck --check-prefix OK %s
 
-# OK: AArch64 PAuth ABI tag: platform 0x2a (unknown), version 0x1
+# OK: AArch64 PAuth ABI core info: platform 0x2a (unknown), version 0x1
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag2.s -o tag2.o
 # RUN: not ld.lld tag1.o tag1a.o tag2.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR1 %s
