@@ -27,6 +27,24 @@
 
 using namespace Fortran::runtime;
 
+namespace {
+/// Placeholder for real*16 version of RandomNumber Intrinsic
+struct ForcedRandomNumberReal16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(RandomNumber16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::runtime::getModel<const char *>()(ctx);
+      auto intTy = fir::runtime::getModel<int>()(ctx);
+      ;
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy},
+                                     mlir::NoneType::get(ctx));
+    };
+  }
+};
+} // namespace
+
 mlir::Value fir::runtime::genAssociated(fir::FirOpBuilder &builder,
                                         mlir::Location loc, mlir::Value pointer,
                                         mlir::Value target) {
@@ -100,8 +118,15 @@ void fir::runtime::genRandomInit(fir::FirOpBuilder &builder, mlir::Location loc,
 
 void fir::runtime::genRandomNumber(fir::FirOpBuilder &builder,
                                    mlir::Location loc, mlir::Value harvest) {
-  mlir::func::FuncOp func =
-      fir::runtime::getRuntimeFunc<mkRTKey(RandomNumber)>(loc, builder);
+  mlir::func::FuncOp func;
+  auto boxEleTy = fir::dyn_cast_ptrOrBoxEleTy(harvest.getType());
+  auto eleTy = fir::unwrapSequenceType(boxEleTy);
+  if (eleTy.isF128()) {
+    func = fir::runtime::getRuntimeFunc<ForcedRandomNumberReal16>(loc, builder);
+  } else {
+    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomNumber)>(loc, builder);
+  }
+
   mlir::FunctionType funcTy = func.getFunctionType();
   mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
   mlir::Value sourceLine =

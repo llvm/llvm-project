@@ -53,7 +53,7 @@ struct AllocaInfo {
   SmallVector<IntrinsicInst *, 2> LifetimeEnd;
   SmallVector<DbgVariableIntrinsic *, 2> DbgVariableIntrinsics;
   // Non-intrinsic records of variable locations.
-  SmallVector<DPValue *, 2> DbgVariableRecords;
+  SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
 };
 
 struct StackInfo {
@@ -78,6 +78,7 @@ private:
 
 uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
 void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
+bool isLifetimeIntrinsic(Value *V);
 
 } // namespace memtag
 } // namespace llvm

@@ -260,6 +260,10 @@ static cl::opt<bool> ClUsePageAliases("hwasan-experimental-use-page-aliases",
 
 namespace {
 
+template <typename T> T optOr(cl::opt<T> &Opt, T Other) {
+  return Opt.getNumOccurrences() ? Opt : Other;
+}
+
 bool shouldUsePageAliases(const Triple &TargetTriple) {
   return ClUsePageAliases && TargetTriple.getArch() == Triple::x86_64;
 }
@@ -269,14 +273,11 @@ bool shouldInstrumentStack(const Triple &TargetTriple) {
 }
 
 bool shouldInstrumentWithCalls(const Triple &TargetTriple) {
-  return ClInstrumentWithCalls.getNumOccurrences()
-             ? ClInstrumentWithCalls
-             : TargetTriple.getArch() == Triple::x86_64;
+  return optOr(ClInstrumentWithCalls, TargetTriple.getArch() == Triple::x86_64);
 }
 
 bool mightUseStackSafetyAnalysis(bool DisableOptimization) {
-  return ClUseStackSafety.getNumOccurrences() ? ClUseStackSafety
-                                              : !DisableOptimization;
+  return optOr(ClUseStackSafety, !DisableOptimization);
 }
 
 bool shouldUseStackSafetyAnalysis(const Triple &TargetTriple,
@@ -296,10 +297,8 @@ public:
   HWAddressSanitizer(Module &M, bool CompileKernel, bool Recover,
                      const StackSafetyGlobalInfo *SSI)
       : M(M), SSI(SSI) {
-    this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
-    this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0
-                              ? ClEnableKhwasan
-                              : CompileKernel;
+    this->Recover = optOr(ClRecover, Recover);
+    this->CompileKernel = optOr(ClEnableKhwasan, CompileKernel);
     this->Rng =
         ClRandomSkipRate.getNumOccurrences() ? M.createRNG("hwasan") : nullptr;
 
@@ -411,8 +410,8 @@ private:
   ShadowMapping Mapping;
 
   Type *VoidTy = Type::getVoidTy(M.getContext());
-  Type *IntptrTy;
-  PointerType *PtrTy;
+  Type *IntptrTy = M.getDataLayout().getIntPtrType(M.getContext());
+  PointerType *PtrTy = PointerType::getUnqual(M.getContext());
   Type *Int8Ty = Type::getInt8Ty(M.getContext());
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
@@ -595,8 +594,6 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
 /// inserts a call to __hwasan_init to the module's constructor list.
 void HWAddressSanitizer::initializeModule() {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
-  auto &DL = M.getDataLayout();
-
   TargetTriple = Triple(M.getTargetTriple());
 
   // x86_64 currently has two modes:
@@ -614,8 +611,6 @@ void HWAddressSanitizer::initializeModule() {
 
   C = &(M.getContext());
   IRBuilder<> IRB(*C);
-  IntptrTy = IRB.getIntPtrTy(DL);
-  PtrTy = IRB.getPtrTy();
 
   HwasanCtorFunction = nullptr;
 
@@ -625,19 +620,14 @@ void HWAddressSanitizer::initializeModule() {
   bool NewRuntime =
       !TargetTriple.isAndroid() || !TargetTriple.isAndroidVersionLT(30);
 
-  UseShortGranules =
-      ClUseShortGranules.getNumOccurrences() ? ClUseShortGranules : NewRuntime;
-  OutlinedChecks =
-      (TargetTriple.isAArch64() || TargetTriple.isRISCV64()) &&
-      TargetTriple.isOSBinFormatELF() &&
-      (ClInlineAllChecks.getNumOccurrences() ? !ClInlineAllChecks : !Recover);
+  UseShortGranules = optOr(ClUseShortGranules, NewRuntime);
+  OutlinedChecks = (TargetTriple.isAArch64() || TargetTriple.isRISCV64()) &&
+                   TargetTriple.isOSBinFormatELF() &&
+                   !optOr(ClInlineAllChecks, Recover);
 
-  InlineFastPath =
-      (ClInlineFastPathChecks.getNumOccurrences()
-           ? ClInlineFastPathChecks
-           : !(TargetTriple.isAndroid() ||
-               TargetTriple.isOSFuchsia())); // These platforms may prefer less
-                                             // inlining to reduce binary size.
+  // These platforms may prefer less inlining to reduce binary size.
+  InlineFastPath = optOr(ClInlineFastPathChecks, !(TargetTriple.isAndroid() ||
+                                                   TargetTriple.isOSFuchsia()));
 
   if (ClMatchAllTag.getNumOccurrences()) {
     if (ClMatchAllTag != -1) {
@@ -649,22 +639,17 @@ void HWAddressSanitizer::initializeModule() {
   UseMatchAllCallback = !CompileKernel && MatchAllTag.has_value();
 
   // If we don't have personality function support, fall back to landing pads.
-  InstrumentLandingPads = ClInstrumentLandingPads.getNumOccurrences()
-                              ? ClInstrumentLandingPads
-                              : !NewRuntime;
+  InstrumentLandingPads = optOr(ClInstrumentLandingPads, !NewRuntime);
 
   if (!CompileKernel) {
     createHwasanCtorComdat();
-    bool InstrumentGlobals =
-        ClGlobals.getNumOccurrences() ? ClGlobals : NewRuntime;
+    bool InstrumentGlobals = optOr(ClGlobals, NewRuntime);
 
     if (InstrumentGlobals && !UsePageAliases)
       instrumentGlobals();
 
     bool InstrumentPersonalityFunctions =
-        ClInstrumentPersonalityFunctions.getNumOccurrences()
-            ? ClInstrumentPersonalityFunctions
-            : NewRuntime;
+        optOr(ClInstrumentPersonalityFunctions, NewRuntime);
     if (InstrumentPersonalityFunctions)
       instrumentPersonalityFunctions();
   }
@@ -1392,17 +1377,12 @@ bool HWAddressSanitizer::instrumentLandingPads(
   return true;
 }
 
-static bool isLifetimeIntrinsic(Value *V) {
-  auto *II = dyn_cast<IntrinsicInst>(V);
-  return II && II->isLifetimeStartOrEnd();
-}
-
 static DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
   return dyn_cast<DbgAssignIntrinsic>(DVI);
 }
 
-static DPValue *DynCastToDbgAssign(DPValue *DPV) {
-  return DPV->isDbgAssign() ? DPV : nullptr;
+static DbgVariableRecord *DynCastToDbgAssign(DbgVariableRecord *DVR) {
+  return DVR->isDbgAssign() ? DVR : nullptr;
 }
 
 bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
@@ -1456,11 +1436,13 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
 
     AI->replaceUsesWithIf(Replacement, [AICast, AILong](const Use &U) {
       auto *User = U.getUser();
-      return User != AILong && User != AICast && !isLifetimeIntrinsic(User);
+      return User != AILong && User != AICast &&
+             !memtag::isLifetimeIntrinsic(User);
     });
 
     // Helper utility for adding DW_OP_LLVM_tag_offset to debug-info records,
-    // abstracted over whether they're intrinsic-stored or DPValue stored.
+    // abstracted over whether they're intrinsic-stored or DbgVariableRecord
+    // stored.
     auto AnnotateDbgRecord = [&](auto *DPtr) {
       // Prepend "tag_offset, N" to the dwarf expression.
       // Tag offset logically applies to the alloca pointer, and it makes sense
