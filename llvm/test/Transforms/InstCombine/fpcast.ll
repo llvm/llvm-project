@@ -350,8 +350,7 @@ define double @masked_uint_to_fpext3(i32 %x) {
 
 define i32 @fptosi_nonnorm(float nofpclass(norm) %x) {
 ; CHECK-LABEL: @fptosi_nonnorm(
-; CHECK-NEXT:    [[RET:%.*]] = fptosi float [[X:%.*]] to i32
-; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK-NEXT:    ret i32 0
 ;
   %ret = fptosi float %x to i32
   ret i32 %ret
@@ -359,8 +358,7 @@ define i32 @fptosi_nonnorm(float nofpclass(norm) %x) {
 
 define i32 @fptoui_nonnorm(float nofpclass(pnorm) %x) {
 ; CHECK-LABEL: @fptoui_nonnorm(
-; CHECK-NEXT:    [[RET:%.*]] = fptoui float [[X:%.*]] to i32
-; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK-NEXT:    ret i32 0
 ;
   %ret = fptoui float %x to i32
   ret i32 %ret
@@ -386,9 +384,7 @@ define i32 @fptoui_nonnnorm(float nofpclass(nnorm) %x) {
 
 define i32 @fptosi_nonnorm_copysign(float %x) {
 ; CHECK-LABEL: @fptosi_nonnorm_copysign(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[X:%.*]])
-; CHECK-NEXT:    [[RET:%.*]] = fptosi float [[VAL]] to i32
-; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK-NEXT:    ret i32 0
 ;
   %val = call float @llvm.copysign.f32(float 0.0, float %x)
   %ret = fptosi float %val to i32
@@ -397,9 +393,7 @@ define i32 @fptosi_nonnorm_copysign(float %x) {
 
 define <2 x i32> @fptosi_nonnorm_copysign_vec(<2 x float> %x) {
 ; CHECK-LABEL: @fptosi_nonnorm_copysign_vec(
-; CHECK-NEXT:    [[VAL:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> zeroinitializer, <2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[RET:%.*]] = fptosi <2 x float> [[VAL]] to <2 x i32>
-; CHECK-NEXT:    ret <2 x i32> [[RET]]
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   %val = call <2 x float> @llvm.copysign.v2f32(<2 x float> zeroinitializer, <2 x float> %x)
   %ret = fptosi <2 x float> %val to <2 x i32>
