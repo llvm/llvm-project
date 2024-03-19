@@ -2918,11 +2918,10 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     if (MDNode *Ranges = Q.IIQ.getMetadata(I, LLVMContext::MD_range)) {
       // If the possible ranges don't contain zero, then the value is
       // definitely non-zero.
-      if (auto *Ty = dyn_cast<IntegerType>(V->getType())) {
-        const APInt ZeroValue(Ty->getBitWidth(), 0);
-        if (rangeMetadataExcludesValue(Ranges, ZeroValue))
-          return true;
-      }
+      assert(V->getType()->isIntOrIntVectorTy() && "Range on non-integer?");
+      const APInt ZeroValue(Ty->getScalarSizeInBits(), 0);
+      if (rangeMetadataExcludesValue(Ranges, ZeroValue))
+        return true;
     }
   }
 
