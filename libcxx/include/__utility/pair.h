@@ -71,7 +71,7 @@ struct __is_specialization_of_subrange<ranges::subrange<_Iter, _Sent, _Kind>> : 
 _LIBCPP_DIAGNOSTIC_PUSH
 // Allow use of explicit(bool) extension.
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")
-_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")_LIBCPP_DIAGNOSTIC_POP
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")
 
 template <class _T1, class _T2>
 struct _LIBCPP_TEMPLATE_VIS pair
