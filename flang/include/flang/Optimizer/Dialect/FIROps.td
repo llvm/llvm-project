@@ -2466,7 +2466,7 @@ def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
   let assemblyFormat = [{
     $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
         $block_y `,` $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
-        `` `(` ( $args^ `:` type($args) )? `)` attr-dict
+        `` `(` $args `)` `:` `(` type($args) `)` attr-dict
   }];
 
   let extraClassDeclaration = [{
