@@ -23,7 +23,7 @@ extern double ATAN_COEFFS[17][8];
 
 // For |x| <= 1/32 and 1 <= i <= 16, return Q(x) such that:
 //   Q(x) ~ (atan(x + i/16) - atan(i/16)) / x.
-LIBC_INLINE constexpr double atan_eval(double x, int i) {
+LIBC_INLINE double atan_eval(double x, int i) {
   double x2 = x * x;
 
   double c0 = fputil::multiply_add(x, ATAN_COEFFS[i][2], ATAN_COEFFS[i][1]);
@@ -46,7 +46,7 @@ constexpr double ASIN_COEFFS[10] = {0x1.5555555540fa1p-3, 0x1.333333512edc2p-4,
                                     -0x1.df946fa875ddp-8, 0x1.02311ecf99c28p-5};
 
 // Evaluate P(x^2) - 1, where P(x^2) ~ asin(x)/x
-LIBC_INLINE constexpr double asin_eval(double xsq) {
+LIBC_INLINE double asin_eval(double xsq) {
   double x4 = xsq * xsq;
   double r1 = fputil::polyeval(x4, ASIN_COEFFS[0], ASIN_COEFFS[2],
                                ASIN_COEFFS[4], ASIN_COEFFS[6], ASIN_COEFFS[8]);
