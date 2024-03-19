@@ -468,11 +468,13 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
 
 Expected<KernelLaunchEnvironmentTy *>
 GenericKernelTy::getKernelLaunchEnvironment(
-    GenericDeviceTy &GenericDevice,
+    GenericDeviceTy &GenericDevice, uint32_t Version,
     AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
-  // environment.
-  if (isCtorOrDtor() || RecordReplay.isReplaying())
+  // environment. Older versions of the compiler do not generate a kernel
+  // launch environment.
+  if (isCtorOrDtor() || RecordReplay.isReplaying() ||
+      Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
     return nullptr;
 
   if (!KernelEnvironment.Configuration.ReductionDataSize ||
@@ -544,8 +546,8 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   llvm::SmallVector<void *, 16> Args;
   llvm::SmallVector<void *, 16> Ptrs;
 
-  auto KernelLaunchEnvOrErr =
-      getKernelLaunchEnvironment(GenericDevice, AsyncInfoWrapper);
+  auto KernelLaunchEnvOrErr = getKernelLaunchEnvironment(
+      GenericDevice, KernelArgs.Version, AsyncInfoWrapper);
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 
@@ -585,6 +587,9 @@ void *GenericKernelTy::prepareArgs(
 
   uint32_t KLEOffset = !!KernelLaunchEnvironment;
   NumArgs += KLEOffset;
+
+  if (NumArgs == 0)
+    return nullptr;
 
   Args.resize(NumArgs);
   Ptrs.resize(NumArgs);
