@@ -1191,11 +1191,6 @@ bool CompilerInvocation::createFromArgs(
     invoc.loweringOpts.setLowerToHighLevelFIR(false);
   }
 
-  if (args.hasArg(
-          clang::driver::options::OPT_flang_experimental_polymorphism)) {
-    invoc.loweringOpts.setPolymorphicTypeImpl(true);
-  }
-
   // -fno-ppc-native-vector-element-order
   if (args.hasArg(clang::driver::options::OPT_fno_ppc_native_vec_elem_order)) {
     invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
