@@ -39,7 +39,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if defined(_LIBCPP_HAS_DEBUGGING)
 
-// breakpoint()
+// `breakpoint()` implementation
 
 #  if defined(_LIBCPP_WIN32API)
 
@@ -61,7 +61,7 @@ _LIBCPP_EXPORTED_FROM_ABI void __breakpoint() {
 
 #  endif // defined(_LIBCPP_WIN32API)
 
-// is_debugger_present()
+// `is_debugger_present()` implementation
 
 #  if defined(_LIBCPP_WIN32API)
 
