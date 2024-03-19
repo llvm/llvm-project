@@ -12,7 +12,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag2.s -o tag2.o
 # RUN: not ld.lld tag1.o tag1a.o tag2.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR1 %s
 
-# ERR1:      error: incompatible values of AArch64 PAuth compatibility info found
+# ERR1:      error: incompatible values of AArch64 PAuth core info found
 # ERR1-NEXT: >>> tag1.o: 0x2a000000000000000{{1|2}}00000000000000
 # ERR1-NEXT: >>> tag2.o: 0x2a000000000000000{{1|2}}00000000000000
 
@@ -36,10 +36,10 @@
 # RUN: ld.lld -z pauth-report=warning tag1.o noinfo1.o noinfo2.o -o /dev/null 2>&1 | FileCheck --check-prefix WARN %s
 # RUN: ld.lld -z pauth-report=none tag1.o noinfo1.o noinfo2.o --fatal-warnings -o /dev/null
 
-# ERR5:      error: noinfo1.o: -z pauth-report: file does not have AArch64 PAuth compatibility info while tag1.o has one
-# ERR5-NEXT: error: noinfo2.o: -z pauth-report: file does not have AArch64 PAuth compatibility info while tag1.o has one
-# WARN:      warning: noinfo1.o: -z pauth-report: file does not have AArch64 PAuth compatibility info while tag1.o has one
-# WARN-NEXT: warning: noinfo2.o: -z pauth-report: file does not have AArch64 PAuth compatibility info while tag1.o has one
+# ERR5:      error: noinfo1.o: -z pauth-report: file does not have AArch64 PAuth core info while tag1.o has one
+# ERR5-NEXT: error: noinfo2.o: -z pauth-report: file does not have AArch64 PAuth core info while tag1.o has one
+# WARN:      warning: noinfo1.o: -z pauth-report: file does not have AArch64 PAuth core info while tag1.o has one
+# WARN-NEXT: warning: noinfo2.o: -z pauth-report: file does not have AArch64 PAuth core info while tag1.o has one
 
 #--- abi-tag-short.s
 

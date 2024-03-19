@@ -918,7 +918,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
 // the corresponding fields in `ObjFile`:
 // - Feature flags (32 bits) representing x86 or AArch64 features for
 //   hardware-assisted call flow control;
-// - AArch64 PAuth ABI compatibility info (16 bytes).
+// - AArch64 PAuth ABI core info (16 bytes).
 template <class ELFT>
 void readGnuProperty(const InputSection &sec, ObjFile<ELFT> &f) {
   using Elf_Nhdr = typename ELFT::Nhdr;

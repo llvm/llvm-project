@@ -2597,9 +2597,9 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
 // This is also the case with AARCH64's BTI and PAC which use the similar
 // GNU_PROPERTY_AARCH64_FEATURE_1_AND mechanism.
 //
-// For AArch64 PAuth-enabled object files, the compatibility info of all of them
-// must match. Missing info for some object files with matching info for
-// remaining ones can be allowed (see -z pauth-report).
+// For AArch64 PAuth-enabled object files, the core info of all of them must
+// match. Missing info for some object files with matching info for remaining
+// ones can be allowed (see -z pauth-report).
 static void readSecurityNotes() {
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
       config->emachine != EM_AARCH64)
@@ -2662,19 +2662,17 @@ static void readSecurityNotes() {
       reportMissingFeature(config->zPauthReport,
                            toString(f) +
                                ": -z pauth-report: file does not have AArch64 "
-                               "PAuth compatibility info while " +
+                               "PAuth core info while " +
                                referenceFileName + " has one");
       continue;
     }
 
     if (ctx.aarch64PauthAbiCoreInfo != f->aarch64PauthAbiCoreInfo)
-      errorOrWarn(
-          "incompatible values of AArch64 PAuth compatibility info found"
-          "\n>>> " +
-          referenceFileName + ": 0x" +
-          toHex(ctx.aarch64PauthAbiCoreInfo, /*LowerCase=*/true) + "\n>>> " +
-          toString(f) + ": 0x" +
-          toHex(f->aarch64PauthAbiCoreInfo, /*LowerCase=*/true));
+      errorOrWarn("incompatible values of AArch64 PAuth core info found\n>>> " +
+                  referenceFileName + ": 0x" +
+                  toHex(ctx.aarch64PauthAbiCoreInfo, /*LowerCase=*/true) +
+                  "\n>>> " + toString(f) + ": 0x" +
+                  toHex(f->aarch64PauthAbiCoreInfo, /*LowerCase=*/true));
   }
 
   // Force enable Shadow Stack.
