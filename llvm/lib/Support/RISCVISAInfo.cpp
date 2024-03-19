@@ -249,7 +249,7 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
 };
 // clang-format on
 
-static const RISCVProfile SupportedProfiles[] = {
+static constexpr RISCVProfile SupportedProfiles[] = {
     {"rvi20u32", "rv32i"},
     {"rvi20u64", "rv64i"},
     {"rva20u64", "rv64imafdc_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_za128rs"},
