@@ -2283,10 +2283,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_CheckField: {
       // Decode the start value.
-      unsigned Len;
-      unsigned Start = decodeULEB128(++Ptr, &Len);
-      Ptr += Len;
-      Len = *Ptr;)";
+      unsigned Start = decodeULEB128AndInc(++Ptr);
+      unsigned Len = *Ptr;)";
   if (IsVarLenInst)
     OS << "\n      makeUp(insn, Start + Len);";
   OS << R"(
@@ -2311,10 +2309,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       break;
     }
     case MCD::OPC_CheckPredicate: {
-      unsigned Len;
       // Decode the Predicate Index value.
-      unsigned PIdx = decodeULEB128(++Ptr, &Len);
-      Ptr += Len;
+      unsigned PIdx = decodeULEB128AndInc(++Ptr);
       // NumToSkip is a plain 24-bit integer.
       unsigned NumToSkip = *Ptr++;
       NumToSkip |= (*Ptr++) << 8;
@@ -2330,18 +2326,15 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       break;
     }
     case MCD::OPC_Decode: {
-      unsigned Len;
       // Decode the Opcode value.
-      unsigned Opc = decodeULEB128(++Ptr, &Len);
-      Ptr += Len;
-      unsigned DecodeIdx = decodeULEB128(Ptr, &Len);
-      Ptr += Len;
+      unsigned Opc = decodeULEB128AndInc(++Ptr);
+      unsigned DecodeIdx = decodeULEB128AndInc(Ptr);
 
       MI.clear();
       MI.setOpcode(Opc);
       bool DecodeComplete;)";
   if (IsVarLenInst) {
-    OS << "\n      Len = InstrLenTable[Opc];\n"
+    OS << "\n      unsigned Len = InstrLenTable[Opc];\n"
        << "      makeUp(insn, Len);";
   }
   OS << R"(
@@ -2354,12 +2347,9 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       return S;
     }
     case MCD::OPC_TryDecode: {
-      unsigned Len;
       // Decode the Opcode value.
-      unsigned Opc = decodeULEB128(++Ptr, &Len);
-      Ptr += Len;
-      unsigned DecodeIdx = decodeULEB128(Ptr, &Len);
-      Ptr += Len;
+      unsigned Opc = decodeULEB128AndInc(++Ptr);
+      unsigned DecodeIdx = decodeULEB128AndInc(Ptr);
       // NumToSkip is a plain 24-bit integer.
       unsigned NumToSkip = *Ptr++;
       NumToSkip |= (*Ptr++) << 8;
@@ -2391,11 +2381,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_SoftFail: {
       // Decode the mask values.
-      unsigned Len;
-      uint64_t PositiveMask = decodeULEB128(++Ptr, &Len);
-      Ptr += Len;
-      uint64_t NegativeMask = decodeULEB128(Ptr, &Len);
-      Ptr += Len;
+      uint64_t PositiveMask = decodeULEB128AndInc(++Ptr);
+      uint64_t NegativeMask = decodeULEB128AndInc(Ptr);
       bool Fail = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
       if (Fail)
         S = MCDisassembler::SoftFail;
