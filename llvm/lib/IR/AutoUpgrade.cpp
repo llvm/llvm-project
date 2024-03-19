@@ -2366,17 +2366,17 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
         unwrapMAVOp<Metadata>(CI, 4), unwrapMAVOp<DIExpression>(CI, 5),
         CI->getDebugLoc());
   } else if (Name == "declare") {
-    DR = new DbgVariableRecord(unwrapMAVOp<Metadata>(CI, 0),
-                     unwrapMAVOp<DILocalVariable>(CI, 1),
-                     unwrapMAVOp<DIExpression>(CI, 2), CI->getDebugLoc(),
-                     DbgVariableRecord::LocationType::Declare);
+    DR = new DbgVariableRecord(
+        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, 1),
+        unwrapMAVOp<DIExpression>(CI, 2), CI->getDebugLoc(),
+        DbgVariableRecord::LocationType::Declare);
   } else if (Name == "addr") {
     // Upgrade dbg.addr to dbg.value with DW_OP_deref.
     DIExpression *Expr = unwrapMAVOp<DIExpression>(CI, 2);
     Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
     DR = new DbgVariableRecord(unwrapMAVOp<Metadata>(CI, 0),
-                     unwrapMAVOp<DILocalVariable>(CI, 1), Expr,
-                     CI->getDebugLoc());
+                               unwrapMAVOp<DILocalVariable>(CI, 1), Expr,
+                               CI->getDebugLoc());
   } else if (Name == "value") {
     // An old version of dbg.value had an extra offset argument.
     unsigned VarOp = 1;
@@ -2389,9 +2389,9 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
       VarOp = 2;
       ExprOp = 3;
     }
-    DR = new DbgVariableRecord(unwrapMAVOp<Metadata>(CI, 0),
-                     unwrapMAVOp<DILocalVariable>(CI, VarOp),
-                     unwrapMAVOp<DIExpression>(CI, ExprOp), CI->getDebugLoc());
+    DR = new DbgVariableRecord(
+        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, VarOp),
+        unwrapMAVOp<DIExpression>(CI, ExprOp), CI->getDebugLoc());
   }
   assert(DR && "Unhandled intrinsic kind in upgrade to DbgRecord");
   CI->getParent()->insertDbgRecordBefore(DR, CI->getIterator());
