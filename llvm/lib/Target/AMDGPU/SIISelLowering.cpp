@@ -15039,7 +15039,8 @@ void SITargetLowering::AddMemOpInit(MachineInstr &MI) const {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   MachineBasicBlock &MBB = *MI.getParent();
 
-  int DstIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata);
+  int DstIdx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata);
   unsigned InitIdx = 0;
 
   if (TII->isImage(MI)) {
@@ -15079,11 +15080,13 @@ void SITargetLowering::AddMemOpInit(MachineInstr &MI) const {
     // Abandon attempt if the dst size isn't large enough
     // - this is in fact an error but this is picked up elsewhere and
     // reported correctly.
-    uint32_t DstSize = TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
+    uint32_t DstSize =
+        TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
     if (DstSize < InitIdx)
       return;
   } else if (TII->isMUBUF(MI) && AMDGPU::getMUBUFHasTFE(MI.getOpcode())) {
-    uint32_t DstSize = TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
+    uint32_t DstSize =
+        TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
     InitIdx = DstSize;
   } else {
     return;
