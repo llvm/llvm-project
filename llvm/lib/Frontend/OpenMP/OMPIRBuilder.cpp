@@ -4883,8 +4883,11 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
     return InsertPointTy();
 
   // Disable TargetData CodeGen on Device pass.
-  if (Config.IsTargetDevice.value_or(false))
+  if (Config.IsTargetDevice.value_or(false)) {
+    if (BodyGenCB)
+      Builder.restoreIP(BodyGenCB(Builder.saveIP(), BodyGenTy::NoPriv));
     return Builder.saveIP();
+  }
 
   Builder.restoreIP(CodeGenIP);
   bool IsStandAlone = !BodyGenCB;
