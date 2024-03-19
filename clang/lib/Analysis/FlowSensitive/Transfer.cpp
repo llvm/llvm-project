@@ -544,15 +544,6 @@ public:
       if (LocSrc == nullptr || LocDst == nullptr)
         return;
 
-      // The assignment operators are different from the type of the destination
-      // in this model (i.e. in one of their base classes). This must be very
-      // rare and we just bail.
-      if (Method->getFunctionObjectParameterType()
-              .getCanonicalType()
-              .getUnqualifiedType() !=
-          LocDst->getType().getCanonicalType().getUnqualifiedType())
-        return;
-
       copyRecord(*LocSrc, *LocDst, Env);
 
       // If the expr is a glvalue, we can reasonably assume the operator is
