@@ -263,7 +263,8 @@ static InstructionCost ComputeSpeculationCost(const Instruction *I,
 bool SpeculativeExecutionPass::considerHoistingFromTo(
     BasicBlock &FromBlock, BasicBlock &ToBlock) {
   SmallPtrSet<const Instruction *, 8> NotHoisted;
-  SmallDenseMap<const Instruction *, SmallVector<DPValue *>> DPValuesToHoist;
+  SmallDenseMap<const Instruction *, SmallVector<DbgVariableRecord *>>
+      DbgVariableRecordsToHoist;
   auto HasNoUnhoistedInstr = [&NotHoisted](auto Values) {
     for (const Value *V : Values) {
       if (const auto *I = dyn_cast_or_null<Instruction>(V))
@@ -291,11 +292,11 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   InstructionCost TotalSpeculationCost = 0;
   unsigned NotHoistedInstCount = 0;
   for (const auto &I : FromBlock) {
-    // Make note of any DPValues that need hoisting. DPLabels
+    // Make note of any DbgVariableRecords that need hoisting. DPLabels
     // get left behind just like llvm.dbg.labels.
-    for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
-      if (HasNoUnhoistedInstr(DPV.location_ops()))
-        DPValuesToHoist[DPV.getInstruction()].push_back(&DPV);
+    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+      if (HasNoUnhoistedInstr(DVR.location_ops()))
+        DbgVariableRecordsToHoist[DVR.getInstruction()].push_back(&DVR);
     }
     const InstructionCost Cost = ComputeSpeculationCost(&I, *TTI);
     if (Cost.isValid() && isSafeToSpeculativelyExecute(&I) &&
@@ -314,13 +315,13 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   }
 
   for (auto I = FromBlock.begin(); I != FromBlock.end();) {
-    // If any DPValues attached to this instruction should be hoisted, hoist
-    // them now - they will end up attached to either the next hoisted
+    // If any DbgVariableRecords attached to this instruction should be hoisted,
+    // hoist them now - they will end up attached to either the next hoisted
     // instruction or the ToBlock terminator.
-    if (DPValuesToHoist.contains(&*I)) {
-      for (auto *DPV : DPValuesToHoist[&*I]) {
-        DPV->removeFromParent();
-        ToBlock.insertDbgRecordBefore(DPV,
+    if (DbgVariableRecordsToHoist.contains(&*I)) {
+      for (auto *DVR : DbgVariableRecordsToHoist[&*I]) {
+        DVR->removeFromParent();
+        ToBlock.insertDbgRecordBefore(DVR,
                                       ToBlock.getTerminator()->getIterator());
       }
     }

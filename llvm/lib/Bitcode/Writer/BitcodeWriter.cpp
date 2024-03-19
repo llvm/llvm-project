@@ -3547,7 +3547,8 @@ void ModuleBitcodeWriter::writeFunction(
         /// without the ValueAsMetadata wrapper.
         auto PushValueOrMetadata = [&Vals, InstID,
                                     this](Metadata *RawLocation) {
-          assert(RawLocation && "RawLocation unexpectedly null in DPValue");
+          assert(RawLocation &&
+                 "RawLocation unexpectedly null in DbgVariableRecord");
           if (ValueAsMetadata *VAM = dyn_cast<ValueAsMetadata>(RawLocation)) {
             SmallVector<unsigned, 2> ValAndType;
             // If the value is a fwd-ref the type is also pushed. We don't
@@ -3586,25 +3587,25 @@ void ModuleBitcodeWriter::writeFunction(
           //   ..., LocationMetadata
           // dbg_assign (FUNC_CODE_DEBUG_RECORD_ASSIGN)
           //   ..., LocationMetadata, DIAssignID, DIExpression, LocationMetadata
-          DPValue &DPV = cast<DPValue>(DR);
-          Vals.push_back(VE.getMetadataID(&*DPV.getDebugLoc()));
-          Vals.push_back(VE.getMetadataID(DPV.getVariable()));
-          Vals.push_back(VE.getMetadataID(DPV.getExpression()));
-          if (DPV.isDbgValue()) {
-            if (PushValueOrMetadata(DPV.getRawLocation()))
+          DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
+          Vals.push_back(VE.getMetadataID(&*DVR.getDebugLoc()));
+          Vals.push_back(VE.getMetadataID(DVR.getVariable()));
+          Vals.push_back(VE.getMetadataID(DVR.getExpression()));
+          if (DVR.isDbgValue()) {
+            if (PushValueOrMetadata(DVR.getRawLocation()))
               Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE, Vals,
                                 FUNCTION_DEBUG_RECORD_VALUE_ABBREV);
             else
               Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_VALUE, Vals);
-          } else if (DPV.isDbgDeclare()) {
-            Vals.push_back(VE.getMetadataID(DPV.getRawLocation()));
+          } else if (DVR.isDbgDeclare()) {
+            Vals.push_back(VE.getMetadataID(DVR.getRawLocation()));
             Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_DECLARE, Vals);
           } else {
-            assert(DPV.isDbgAssign() && "Unexpected DbgRecord kind");
-            Vals.push_back(VE.getMetadataID(DPV.getRawLocation()));
-            Vals.push_back(VE.getMetadataID(DPV.getAssignID()));
-            Vals.push_back(VE.getMetadataID(DPV.getAddressExpression()));
-            Vals.push_back(VE.getMetadataID(DPV.getRawAddress()));
+            assert(DVR.isDbgAssign() && "Unexpected DbgRecord kind");
+            Vals.push_back(VE.getMetadataID(DVR.getRawLocation()));
+            Vals.push_back(VE.getMetadataID(DVR.getAssignID()));
+            Vals.push_back(VE.getMetadataID(DVR.getAddressExpression()));
+            Vals.push_back(VE.getMetadataID(DVR.getRawAddress()));
             Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN, Vals);
           }
           Vals.clear();

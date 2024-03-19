@@ -1524,14 +1524,14 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
 static void eraseDebugIntrinsicsWithNonLocalRefs(Function &F) {
   for (Instruction &I : instructions(F)) {
     SmallVector<DbgVariableIntrinsic *, 4> DbgUsers;
-    SmallVector<DPValue *, 4> DPValues;
-    findDbgUsers(DbgUsers, &I, &DPValues);
+    SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
+    findDbgUsers(DbgUsers, &I, &DbgVariableRecords);
     for (DbgVariableIntrinsic *DVI : DbgUsers)
       if (DVI->getFunction() != &F)
         DVI->eraseFromParent();
-    for (DPValue *DPV : DPValues)
-      if (DPV->getFunction() != &F)
-        DPV->eraseFromParent();
+    for (DbgVariableRecord *DVR : DbgVariableRecords)
+      if (DVR->getFunction() != &F)
+        DVR->eraseFromParent();
   }
 }
 
@@ -1585,7 +1585,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   //     point to a variable in the wrong scope.
   SmallDenseMap<DINode *, DINode *> RemappedMetadata;
   SmallVector<Instruction *, 4> DebugIntrinsicsToDelete;
-  SmallVector<DPValue *, 4> DPVsToDelete;
+  SmallVector<DbgVariableRecord *, 4> DVRsToDelete;
   DenseMap<const MDNode *, MDNode *> Cache;
 
   auto GetUpdatedDIVariable = [&](DILocalVariable *OldVar) {
@@ -1624,19 +1624,19 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
         continue;
       }
 
-      DPValue &DPV = cast<DPValue>(DR);
+      DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
       // Apply the two updates that dbg.values get: invalid operands, and
       // variable metadata fixup.
-      if (any_of(DPV.location_ops(), IsInvalidLocation)) {
-        DPVsToDelete.push_back(&DPV);
+      if (any_of(DVR.location_ops(), IsInvalidLocation)) {
+        DVRsToDelete.push_back(&DVR);
         continue;
       }
-      if (DPV.isDbgAssign() && IsInvalidLocation(DPV.getAddress())) {
-        DPVsToDelete.push_back(&DPV);
+      if (DVR.isDbgAssign() && IsInvalidLocation(DVR.getAddress())) {
+        DVRsToDelete.push_back(&DVR);
         continue;
       }
-      if (!DPV.getDebugLoc().getInlinedAt())
-        DPV.setVariable(GetUpdatedDIVariable(DPV.getVariable()));
+      if (!DVR.getDebugLoc().getInlinedAt())
+        DVR.setVariable(GetUpdatedDIVariable(DVR.getVariable()));
     }
   };
 
@@ -1674,8 +1674,8 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
 
   for (auto *DII : DebugIntrinsicsToDelete)
     DII->eraseFromParent();
-  for (auto *DPV : DPVsToDelete)
-    DPV->getMarker()->MarkedInstr->dropOneDbgRecord(DPV);
+  for (auto *DVR : DVRsToDelete)
+    DVR->getMarker()->MarkedInstr->dropOneDbgRecord(DVR);
   DIB.finalizeSubprogram(NewSP);
 
   // Fix up the scope information attached to the line locations in the new
