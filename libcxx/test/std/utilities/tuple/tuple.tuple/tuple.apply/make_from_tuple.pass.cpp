@@ -209,7 +209,7 @@ struct can_make_from_tuple<
     : std::true_type {};
 
 struct A {
-    int a;
+  int a;
 };
 struct B : public A {};
 
