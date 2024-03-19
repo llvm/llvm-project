@@ -38,7 +38,7 @@ class LLVMContext;
 class Module;
 class PHINode;
 class ValueSymbolTable;
-class DPValue;
+class DbgVariableRecord;
 class DPMarker;
 
 /// LLVM Basic Block Representation
@@ -121,10 +121,10 @@ public:
   DPMarker *getNextMarker(Instruction *I);
 
   /// Insert a DbgRecord into a block at the position given by \p I.
-  void insertDbgRecordAfter(DbgRecord *DPV, Instruction *I);
+  void insertDbgRecordAfter(DbgRecord *DR, Instruction *I);
 
   /// Insert a DbgRecord into a block at the position given by \p Here.
-  void insertDbgRecordBefore(DbgRecord *DPV, InstListType::iterator Here);
+  void insertDbgRecordBefore(DbgRecord *DR, InstListType::iterator Here);
 
   /// Eject any debug-info trailing at the end of a block. DbgRecords can
   /// transiently be located "off the end" of a block if the blocks terminator
