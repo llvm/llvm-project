@@ -1406,27 +1406,14 @@ Value *InstCombinerImpl::dyn_castNegVal(Value *V) const {
 //        -> ({s|u}itofp (int_binop x, y))
 //    2) (fp_binop ({s|u}itofp x), FpC)
 //        -> ({s|u}itofp (int_binop x, (fpto{s|u}i FpC)))
-Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
-  Value *IntOps[2] = {nullptr, nullptr};
-  Constant *Op1FpC = nullptr;
-
-  // Check for:
-  //    1) (binop ({s|u}itofp x), ({s|u}itofp y))
-  //    2) (binop ({s|u}itofp x), FpC)
-  if (!match(BO.getOperand(0), m_SIToFP(m_Value(IntOps[0]))) &&
-      !match(BO.getOperand(0), m_UIToFP(m_Value(IntOps[0]))))
-    return nullptr;
-
-  if (!match(BO.getOperand(1), m_Constant(Op1FpC)) &&
-      !match(BO.getOperand(1), m_SIToFP(m_Value(IntOps[1]))) &&
-      !match(BO.getOperand(1), m_UIToFP(m_Value(IntOps[1]))))
-    return nullptr;
+//
+// Assuming the sign of the cast for x/y is `OpsFromSigned`.
+Instruction *InstCombinerImpl::foldFBinOpOfIntCastsFromSign(
+    BinaryOperator &BO, bool OpsFromSigned, std::array<Value *, 2> IntOps,
+    Constant *Op1FpC, SmallVectorImpl<WithCache<const Value *>> &OpsKnown) {
 
   Type *FPTy = BO.getType();
   Type *IntTy = IntOps[0]->getType();
-
-  // Do we have signed casts?
-  bool OpsFromSigned = isa<SIToFPInst>(BO.getOperand(0));
 
   unsigned IntSz = IntTy->getScalarSizeInBits();
   // This is the maximum number of inuse bits by the integer where the int -> fp
@@ -1434,13 +1421,12 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
   unsigned MaxRepresentableBits =
       APFloat::semanticsPrecision(FPTy->getScalarType()->getFltSemantics());
 
-  // Cache KnownBits a bit to potentially save some analysis.
-  WithCache<const Value *> OpsKnown[2] = {IntOps[0], IntOps[1]};
-
   // Preserve known number of leading bits. This can allow us to trivial nsw/nuw
   // checks later on.
   unsigned NumUsedLeadingBits[2] = {IntSz, IntSz};
 
+  // NB: This only comes up if OpsFromSigned is true, so there is no need to
+  // cache if between calls to `foldFBinOpOfIntCastsFromSign`.
   auto IsNonZero = [&](unsigned OpNo) -> bool {
     if (OpsKnown[OpNo].hasKnownBits() &&
         OpsKnown[OpNo].getKnownBits(SQ).isNonZero())
@@ -1449,14 +1435,19 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
   };
 
   auto IsNonNeg = [&](unsigned OpNo) -> bool {
-    if (OpsKnown[OpNo].hasKnownBits() &&
-        OpsKnown[OpNo].getKnownBits(SQ).isNonNegative())
-      return true;
-    return isKnownNonNegative(IntOps[OpNo], SQ);
+    // NB: This matches the impl in ValueTracking, we just try to use cached
+    // knownbits here. If we ever start supporting WithCache for
+    // `isKnownNonNegative`, change this to an explicit call.
+    return OpsKnown[OpNo].getKnownBits(SQ).isNonNegative();
   };
 
   // Check if we know for certain that ({s|u}itofp op) is exact.
   auto IsValidPromotion = [&](unsigned OpNo) -> bool {
+    // Can we treat this operand as the desired sign?
+    if (OpsFromSigned != isa<SIToFPInst>(BO.getOperand(OpNo)) &&
+        !IsNonNeg(OpNo))
+      return false;
+
     // If fp precision >= bitwidth(op) then its exact.
     // NB: This is slightly conservative for `sitofp`. For signed conversion, we
     // can handle `MaxRepresentableBits == IntSz - 1` as the sign bit will be
@@ -1490,6 +1481,11 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
 
   // If we have a constant rhs, see if we can losslessly convert it to an int.
   if (Op1FpC != nullptr) {
+    // Signed + Mul req non-zero
+    if (OpsFromSigned && BO.getOpcode() == Instruction::FMul &&
+        !match(Op1FpC, m_NonZeroFP()))
+      return nullptr;
+
     Constant *Op1IntC = ConstantFoldCastOperand(
         OpsFromSigned ? Instruction::FPToSI : Instruction::FPToUI, Op1FpC,
         IntTy, DL);
@@ -1509,13 +1505,6 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
     return nullptr;
 
   if (Op1FpC == nullptr) {
-    if (OpsFromSigned != isa<SIToFPInst>(BO.getOperand(1))) {
-      // If we have a signed + unsigned, see if we can treat both as signed
-      // (uitofp nneg x) == (sitofp nneg x).
-      if (OpsFromSigned ? !IsNonNeg(1) : !IsNonNeg(0))
-        return nullptr;
-      OpsFromSigned = true;
-    }
     if (!IsValidPromotion(1))
       return nullptr;
   }
@@ -1574,6 +1563,39 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
   return new UIToFPInst(IntBinOp, FPTy);
 }
 
+// Try to fold:
+//    1) (fp_binop ({s|u}itofp x), ({s|u}itofp y))
+//        -> ({s|u}itofp (int_binop x, y))
+//    2) (fp_binop ({s|u}itofp x), FpC)
+//        -> ({s|u}itofp (int_binop x, (fpto{s|u}i FpC)))
+Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
+  std::array<Value *, 2> IntOps = {nullptr, nullptr};
+  Constant *Op1FpC = nullptr;
+  // Check for:
+  //    1) (binop ({s|u}itofp x), ({s|u}itofp y))
+  //    2) (binop ({s|u}itofp x), FpC)
+  if (!match(BO.getOperand(0), m_SIToFP(m_Value(IntOps[0]))) &&
+      !match(BO.getOperand(0), m_UIToFP(m_Value(IntOps[0]))))
+    return nullptr;
+
+  if (!match(BO.getOperand(1), m_Constant(Op1FpC)) &&
+      !match(BO.getOperand(1), m_SIToFP(m_Value(IntOps[1]))) &&
+      !match(BO.getOperand(1), m_UIToFP(m_Value(IntOps[1]))))
+    return nullptr;
+
+  // Cache KnownBits a bit to potentially save some analysis.
+  SmallVector<WithCache<const Value *>, 2> OpsKnown = {IntOps[0], IntOps[1]};
+
+  // Try treating x/y as coming from both `uitofp` and `sitofp`. There are
+  // different constraints depending on the sign of the cast.
+  // NB: `(uitofp nneg X)` == `(sitofp nneg X)`.
+  if (Instruction *R = foldFBinOpOfIntCastsFromSign(BO, /*OpsFromSigned=*/false,
+                                                    IntOps, Op1FpC, OpsKnown))
+    return R;
+  return foldFBinOpOfIntCastsFromSign(BO, /*OpsFromSigned=*/true, IntOps,
+                                      Op1FpC, OpsKnown);
+}
+
 /// A binop with a constant operand and a sign-extended boolean operand may be
 /// converted into a select of constants by applying the binary operation to
 /// the constant with the two possible values of the extended boolean (0 or -1).
@@ -1628,6 +1650,7 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
                                              Value *NewOp, InstCombiner &IC) {
   Instruction *Clone = I.clone();
   Clone->replaceUsesOfWith(SI, NewOp);
+  Clone->dropUBImplyingAttrsAndMetadata();
   IC.InsertNewInstBefore(Clone, SI->getIterator());
   return Clone;
 }
@@ -2579,6 +2602,45 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
     return nullptr;
   }
 
+  // De Morgan's Laws:
+  // (~(A | B)) -> (~A & ~B)
+  // (~(A & B)) -> (~A | ~B)
+  auto TryInvertAndOrUsingDeMorgan = [&](Instruction::BinaryOps Opcode,
+                                         bool IsLogical, Value *A,
+                                         Value *B) -> Value * {
+    bool LocalDoesConsume = DoesConsume;
+    if (!getFreelyInvertedImpl(B, B->hasOneUse(), /*Builder=*/nullptr,
+                               LocalDoesConsume, Depth))
+      return nullptr;
+    if (auto *NotA = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                           LocalDoesConsume, Depth)) {
+      auto *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
+                                         LocalDoesConsume, Depth);
+      DoesConsume = LocalDoesConsume;
+      if (IsLogical)
+        return Builder ? Builder->CreateLogicalOp(Opcode, NotA, NotB) : NonNull;
+      return Builder ? Builder->CreateBinOp(Opcode, NotA, NotB) : NonNull;
+    }
+
+    return nullptr;
+  };
+
+  if (match(V, m_Or(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::And, /*IsLogical=*/false, A,
+                                       B);
+
+  if (match(V, m_And(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::Or, /*IsLogical=*/false, A,
+                                       B);
+
+  if (match(V, m_LogicalOr(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::And, /*IsLogical=*/true, A,
+                                       B);
+
+  if (match(V, m_LogicalAnd(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::Or, /*IsLogical=*/true, A,
+                                       B);
+
   return nullptr;
 }
 
@@ -3409,7 +3471,7 @@ void InstCombinerImpl::handleUnreachableFrom(
     if (Inst.isEHPad() || Inst.getType()->isTokenTy())
       continue;
     // RemoveDIs: erase debug-info on this instruction manually.
-    Inst.dropDbgValues();
+    Inst.dropDbgRecords();
     eraseInstFromFunction(Inst);
     MadeIRChange = true;
   }
@@ -3816,6 +3878,12 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   if (auto *PN = dyn_cast<PHINode>(Agg))
     if (Instruction *Res = foldOpIntoPhi(EV, PN))
       return Res;
+
+  // Canonicalize extract (select Cond, TV, FV)
+  // -> select cond, (extract TV), (extract FV)
+  if (auto *SI = dyn_cast<SelectInst>(Agg))
+    if (Instruction *R = FoldOpIntoSelect(EV, SI, /*FoldWithMultiUse=*/true))
+      return R;
 
   // We could simplify extracts from other values. Note that nested extracts may
   // already be simplified implicitly by the above: extract (extract (insert) )
@@ -4680,7 +4748,7 @@ void InstCombinerImpl::tryToSinkInstructionDPValues(
     // latest assignment.
     for (const Instruction *Inst : DupSet) {
       for (DPValue &DPV :
-           llvm::reverse(DPValue::filter(Inst->getDbgValueRange()))) {
+           llvm::reverse(filterDbgVars(Inst->getDbgRecordRange()))) {
         DebugVariable DbgUserVariable =
             DebugVariable(DPV.getVariable(), DPV.getExpression(),
                           DPV.getDebugLoc()->getInlinedAt());
@@ -4745,7 +4813,7 @@ void InstCombinerImpl::tryToSinkInstructionDPValues(
   //   InsertPtInst
   assert(InsertPos.getHeadBit());
   for (DPValue *DPVClone : DPVClones) {
-    InsertPos->getParent()->insertDPValueBefore(DPVClone, InsertPos);
+    InsertPos->getParent()->insertDbgRecordBefore(DPVClone, InsertPos);
     LLVM_DEBUG(dbgs() << "SINK: " << *DPVClone << '\n');
   }
 }
@@ -5185,7 +5253,8 @@ static bool combineInstructionsOverFunction(
     if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
           "Instruction Combining did not reach a fixpoint after " +
-          Twine(Opts.MaxIterations) + " iterations");
+              Twine(Opts.MaxIterations) + " iterations",
+          /*GenCrashDiag=*/false);
     }
   }
 

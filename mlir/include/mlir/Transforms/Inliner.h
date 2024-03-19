@@ -69,19 +69,6 @@ private:
 /// of inlining decisions from the leafs to the roots of the callgraph.
 class Inliner {
 public:
-  using RunPipelineHelperTy = std::function<LogicalResult(
-      Pass &pass, OpPassManager &pipeline, Operation *op)>;
-
-  Inliner(Operation *op, CallGraph &cg, Pass &pass, AnalysisManager am,
-          RunPipelineHelperTy runPipelineHelper, const InlinerConfig &config)
-      : op(op), cg(cg), pass(pass), am(am),
-        runPipelineHelper(std::move(runPipelineHelper)), config(config) {}
-  Inliner(Inliner &) = delete;
-  void operator=(const Inliner &) = delete;
-
-  /// Perform inlining on a OpTrait::SymbolTable operation.
-  LogicalResult doInlining();
-
   /// This struct represents a resolved call to a given callgraph node. Given
   /// that the call does not actually contain a direct reference to the
   /// Region(CallGraphNode) that it is dispatching to, we need to resolve them
@@ -94,7 +81,29 @@ public:
     CallGraphNode *sourceNode, *targetNode;
   };
 
-protected:
+  using RunPipelineHelperTy = std::function<LogicalResult(
+      Pass &pass, OpPassManager &pipeline, Operation *op)>;
+
+  /// Type of the callback answering if it is profitable
+  /// to inline a callable operation at a call site.
+  /// It might be the case that the ResolvedCall does not provide
+  /// enough context to make the profitability decision, so
+  /// this hook's interface might need to be extended in future.
+  using ProfitabilityCallbackTy = std::function<bool(const ResolvedCall &)>;
+
+  Inliner(Operation *op, CallGraph &cg, Pass &pass, AnalysisManager am,
+          RunPipelineHelperTy runPipelineHelper, const InlinerConfig &config,
+          ProfitabilityCallbackTy isProfitableToInline)
+      : op(op), cg(cg), pass(pass), am(am),
+        runPipelineHelper(std::move(runPipelineHelper)), config(config),
+        isProfitableToInline(std::move(isProfitableToInline)) {}
+  Inliner(Inliner &) = delete;
+  void operator=(const Inliner &) = delete;
+
+  /// Perform inlining on a OpTrait::SymbolTable operation.
+  LogicalResult doInlining();
+
+private:
   /// An OpTrait::SymbolTable operation to run the inlining on.
   Operation *op;
   /// A CallGraph analysis for the given operation.
@@ -108,12 +117,12 @@ protected:
   const RunPipelineHelperTy runPipelineHelper;
   /// The inliner configuration parameters.
   const InlinerConfig &config;
+  /// Returns true, if it is profitable to inline the callable operation
+  /// at the call site.
+  ProfitabilityCallbackTy isProfitableToInline;
 
-private:
   /// Forward declaration of the class providing the actual implementation.
   class Impl;
-
-public:
 };
 } // namespace mlir
 

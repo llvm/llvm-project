@@ -81,6 +81,9 @@ public:
 
 PreservedAnalyses GCLoweringPass::run(Function &F,
                                       FunctionAnalysisManager &FAM) {
+  if (!F.hasGC())
+    return PreservedAnalyses::all();
+
   auto &Info = FAM.getResult<GCFunctionAnalysis>(F);
 
   bool Changed = DoLowering(F, Info.getStrategy());

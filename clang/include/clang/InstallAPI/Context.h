@@ -11,9 +11,10 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/InstallAPI/DylibVerifier.h"
 #include "clang/InstallAPI/HeaderFile.h"
+#include "clang/InstallAPI/MachO.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/TextAPI/InterfaceFile.h"
 
 namespace clang {
 namespace installapi {
@@ -25,7 +26,7 @@ class FrontendRecordsSlice;
 struct InstallAPIContext {
 
   /// Library attributes that are typically passed as linker inputs.
-  llvm::MachO::RecordsSlice::BinaryAttrs BA;
+  BinaryAttrs BA;
 
   /// All headers that represent a library.
   HeaderSeq InputHeaders;
@@ -45,11 +46,14 @@ struct InstallAPIContext {
   /// DiagnosticsEngine for all error reporting.
   DiagnosticsEngine *Diags = nullptr;
 
+  /// Verifier when binary dylib is passed as input.
+  std::unique_ptr<DylibVerifier> Verifier = nullptr;
+
   /// File Path of output location.
   llvm::StringRef OutputLoc{};
 
   /// What encoding to write output as.
-  llvm::MachO::FileType FT = llvm::MachO::FileType::TBD_V5;
+  FileType FT = FileType::TBD_V5;
 
   /// Populate entries of headers that should be included for TextAPI
   /// generation.

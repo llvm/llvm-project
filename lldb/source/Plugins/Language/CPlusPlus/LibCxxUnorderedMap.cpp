@@ -33,7 +33,7 @@ public:
 
   ~LibcxxStdUnorderedMapSyntheticFrontEnd() override = default;
 
-  uint32_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
@@ -62,8 +62,8 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     Update();
 }
 
-uint32_t lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibcxxStdUnorderedMapSyntheticFrontEnd::CalculateNumChildren() {
   return m_num_elements;
 }
 
@@ -94,7 +94,7 @@ static bool isUnorderedMap(ConstString type_name) {
 
 lldb::ValueObjectSP lldb_private::formatters::
     LibcxxStdUnorderedMapSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
-  if (idx >= CalculateNumChildren())
+  if (idx >= CalculateNumChildrenIgnoringErrors())
     return lldb::ValueObjectSP();
   if (m_tree == nullptr)
     return lldb::ValueObjectSP();

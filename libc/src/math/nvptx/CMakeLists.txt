@@ -178,26 +178,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  modf
-  SRCS
-    modf.cpp
-  HDRS
-    ../modf.h
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
-  modff
-  SRCS
-    modff.cpp
-  HDRS
-    ../modff.h
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
   nearbyint
   SRCS
     nearbyint.cpp
