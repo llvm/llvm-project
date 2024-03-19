@@ -41,4 +41,5 @@
 "`4001 <https://wg21.link/LWG4001>`__","``iota_view`` should provide ``empty``","Kona November 2023","","","|ranges|"
 "","","","","",""
 "`3343 <https://wg21.link/LWG3343>`__","Ordering of calls to ``unlock()`` and ``notify_all()`` in Effects element of ``notify_all_at_thread_exit()`` should be reversed","Not Yet Adopted","|Complete|","16.0",""
+"XXXX","","The sys_info range should be affected by save","Not Yet Adopted","|Complete|","19.0"
 "","","","","",""

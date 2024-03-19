@@ -33,7 +33,17 @@ namespace chrono::__tz {
 // Sun>=8   first Sunday on or after the eighth
 // Sun<=25  last Sunday on or before the 25th
 struct __constrained_weekday {
-  /*  year_month_day operator()(year __year, month __month);*/ // needed but not implemented
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI year_month_day operator()(year __year, month __month) const {
+    auto __result = static_cast<sys_days>(year_month_day{__year, __month, __day});
+    weekday __wd{static_cast<sys_days>(__result)};
+
+    if (__comparison == __le)
+      __result -= __wd - __weekday;
+    else
+      __result += __weekday - __wd;
+
+    return __result;
+  }
 
   weekday __weekday;
   enum __comparison_t { __le, __ge } __comparison;
@@ -85,7 +95,8 @@ struct __continuation {
   // used.
   // If this field contains - then standard time always
   // applies. This is indicated by the monostate.
-  using __rules_t = variant<monostate, __tz::__save, string, size_t>;
+  // TODO TZDB Investigate implemention the size_t based caching.
+  using __rules_t = variant<monostate, __tz::__save, string /*, size_t*/>;
 
   __rules_t __rules;
 

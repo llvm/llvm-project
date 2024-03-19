@@ -290,6 +290,7 @@ set(files
   __chrono/parser_std_format_spec.h
   __chrono/statically_widen.h
   __chrono/steady_clock.h
+  __chrono/sys_info.h
   __chrono/system_clock.h
   __chrono/time_point.h
   __chrono/time_zone.h

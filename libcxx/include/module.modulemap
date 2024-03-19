@@ -1163,6 +1163,9 @@ module std_private_chrono_time_zone              [system] {
 module std_private_chrono_time_zone_link         [system] {
   header "__chrono/time_zone_link.h"
 }
+module std_private_chrono_sys_info               [system] {
+  header "__chrono/sys_info.h"
+}
 module std_private_chrono_system_clock           [system] {
   header "__chrono/system_clock.h"
   export std_private_chrono_time_point

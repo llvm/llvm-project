@@ -84,6 +84,13 @@ public:
   const_iterator cbegin() const noexcept { return begin(); }
   const_iterator cend() const noexcept { return end(); }
 
+  const __tz::__rules_storage_type& __rules() const noexcept {
+#ifndef _LIBCPP_HAS_NO_THREADS
+    shared_lock __lock{__mutex_};
+#endif
+    return __rules_.front();
+  }
+
 private:
   // Loads the tzdbs
   // pre: The caller ensures the locking, if needed, is done.
