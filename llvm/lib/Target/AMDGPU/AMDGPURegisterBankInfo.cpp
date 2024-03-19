@@ -449,7 +449,7 @@ bool AMDGPURegisterBankInfo::isScalarLoadLegal(const MachineInstr &MI) const {
   const unsigned AS = MMO->getAddrSpace();
   const bool IsConst = AS == AMDGPUAS::CONSTANT_ADDRESS ||
                        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
-  const unsigned MemSize = 8 * MMO->getSize();
+  const unsigned MemSize = 8 * MMO->getSize().getValue();
 
   // Require 4-byte alignment.
   return (MMO->getAlign() >= Align(4) ||
@@ -1070,7 +1070,7 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(
       return false;
 
     MachineMemOperand *MMO = *MI.memoperands_begin();
-    const unsigned MemSize = 8 * MMO->getSize();
+    const unsigned MemSize = 8 * MMO->getSize().getValue();
     // Scalar loads of size 8 or 16 bit with proper alignment may be widened to
     // 32 bit. Check to see if we need to widen the memory access, 8 or 16 bit
     // scalar loads should have a load size of 32 but memory access size of less

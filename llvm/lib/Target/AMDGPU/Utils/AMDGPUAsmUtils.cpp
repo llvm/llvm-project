@@ -60,6 +60,7 @@ const CustomOperand<const MCSubtargetInfo &> Msg[] = {
   {{"MSG_RTN_GET_REALTIME"},    ID_RTN_GET_REALTIME,        isGFX11Plus},
   {{"MSG_RTN_SAVE_WAVE"},       ID_RTN_SAVE_WAVE,           isGFX11Plus},
   {{"MSG_RTN_GET_TBA"},         ID_RTN_GET_TBA,             isGFX11Plus},
+  {{"MSG_RTN_GET_TBA_TO_PC"},   ID_RTN_GET_TBA_TO_PC,       isGFX11Plus},
   {{"MSG_RTN_GET_SE_AID_ID"},   ID_RTN_GET_SE_AID_ID,       isGFX12Plus},
 };
 // clang-format on
