@@ -9,6 +9,7 @@ int main() {
   int *a = new __int32_t[N];     // mapped and released from device 0
   int *b = new __int32_t[2 * N]; // mapped to device 0
 
+
   // clang-format off
   // CHECK: Mapping tables after target enter data:
   // CHECK-NEXT: omptarget device 0 info: OpenMP Host-Device pointer mappings after block

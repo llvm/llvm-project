@@ -15,6 +15,7 @@
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/TypedPointerType.h"
 #include <string>
 
 namespace llvm {
@@ -100,5 +101,35 @@ bool isEntryPoint(const Function &F);
 
 // Parse basic scalar type name, substring TypeName, and return LLVM type.
 Type *parseBasicTypeName(StringRef TypeName, LLVMContext &Ctx);
+
+// True if this is an instance of TypedPointerType.
+inline bool isTypedPointerTy(const Type *T) {
+  return T->getTypeID() == Type::TypedPointerTyID;
+}
+
+// True if this is an instance of PointerType.
+inline bool isUntypedPointerTy(const Type *T) {
+  return T->getTypeID() == Type::PointerTyID;
+}
+
+// True if this is an instance of PointerType or TypedPointerType.
+inline bool isPointerTy(const Type *T) {
+  return isUntypedPointerTy(T) || isTypedPointerTy(T);
+}
+
+// Get the address space of this pointer or pointer vector type for instances of
+// PointerType or TypedPointerType.
+inline unsigned getPointerAddressSpace(const Type *T) {
+  Type *SubT = T->getScalarType();
+  return SubT->getTypeID() == Type::PointerTyID
+             ? cast<PointerType>(SubT)->getAddressSpace()
+             : cast<TypedPointerType>(SubT)->getAddressSpace();
+}
+
+// Return true if the Argument is decorated with a pointee type
+inline bool HasPointeeTypeAttr(Argument *Arg) {
+  return Arg->hasByValAttr() || Arg->hasByRefAttr();
+}
+
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

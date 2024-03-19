@@ -19,6 +19,7 @@ target_link_libraries(ClangReplInterpreterTests PUBLIC
   clangInterpreter
   clangFrontend
   clangSema
+  LLVMTestingSupport
   )
 
 # Exceptions on Windows are not yet supported.

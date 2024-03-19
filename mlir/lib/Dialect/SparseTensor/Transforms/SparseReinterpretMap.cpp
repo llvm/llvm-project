@@ -573,6 +573,12 @@ private:
       rewriter.modifyOpInPlace(linalgOp, [&]() {
         linalgOp->setOperand(t->getOperandNumber(), dst);
       });
+
+      // Release the transposed form afterwards.
+      // TODO: CSE when used in more than one following op?
+      rewriter.setInsertionPointAfter(linalgOp);
+      rewriter.create<bufferization::DeallocTensorOp>(dst.getLoc(), dst);
+
       return success();
     }
     // Cannot be resolved with a single conversion.
@@ -640,14 +646,14 @@ struct TensorInsertDemapper
   using DemapInsRewriter::DemapInsRewriter;
   LogicalResult rewriteOp(tensor::InsertOp op, OpAdaptor adaptor,
                           PatternRewriter &rewriter) const {
-    if (!hasAnySparseResult(op))
+    if (!hasAnySparseResult(op) || !hasAnyNonIdentityOperandsOrResults(op))
       return failure();
 
     Location loc = op.getLoc();
     auto stt = getSparseTensorType(op.getResult());
     ValueRange lvlCrd = stt.translateCrds(rewriter, loc, op.getIndices(),
                                           CrdTransDirectionKind::dim2lvl);
-    auto insertOp = rewriter.create<sparse_tensor::InsertOp>(
+    auto insertOp = rewriter.create<tensor::InsertOp>(
         loc, op.getScalar(), adaptor.getDest(), lvlCrd);
 
     Value out = genRemap(rewriter, stt.getEncoding(), insertOp.getResult());

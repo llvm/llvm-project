@@ -63,7 +63,7 @@ if (NOT CMAKE_CROSSCOMPILING)
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
       COMMAND flang-new -cpp -fsyntax-only ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
         ${FLANG_SOURCE_DIR}/module/${filename}.f90
-      DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
+      DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )
     add_custom_command(OUTPUT ${base}.f18.mod
       DEPENDS ${base}.mod
