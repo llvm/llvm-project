@@ -4302,9 +4302,11 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
                                  ParserCallbacks Callbacks) {
-  // Force the debug-info mode into the old format for now.
-  // FIXME: Remove this once all tools support RemoveDIs.
-  TheModule->IsNewDbgInfoFormat = false;
+  // Load directly into RemoveDIs format if LoadBitcodeIntoNewDbgInforFormat
+  // has been set to true (default action: load into the old debug format).
+  TheModule->IsNewDbgInfoFormat =
+      UseNewDbgInfoFormat &&
+      LoadBitcodeIntoNewDbgInforFormat == cl::boolOrDefault::BOU_TRUE;
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
   if (ResumeBit) {
