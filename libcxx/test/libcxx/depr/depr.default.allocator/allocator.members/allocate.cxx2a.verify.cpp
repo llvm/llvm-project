@@ -13,16 +13,11 @@
 // allocator:
 // T* allocate(size_t n, const void* hint);
 
-//  In C++20, parts of std::allocator<T> have been removed.
-//  However, for backwards compatibility, if _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
-//  is defined before including <memory>, then removed members will be restored.
-
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// Removed in C++20.
 
 #include <memory>
 
 void f() {
     std::allocator<int> a;
-    a.allocate(3, nullptr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    a.allocate(3, nullptr); // expected-error {{too many arguments to function call}}
 }

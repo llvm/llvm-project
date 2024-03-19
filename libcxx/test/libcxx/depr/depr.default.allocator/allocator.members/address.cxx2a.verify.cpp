@@ -12,12 +12,8 @@
 // pointer address(reference x) const;
 // const_pointer address(const_reference x) const;
 
-//  In C++20, parts of std::allocator<T> have been removed.
-//  However, for backwards compatibility, if _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
-//  is defined before including <memory>, then removed members will be restored.
-
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// In C++20, parts of std::allocator<T> have been removed.
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <memory>
 #include <cassert>
@@ -30,8 +26,8 @@ void test_address()
     T* tp = new T();
     const T* ctp = tp;
     const std::allocator<T> a;
-    assert(a.address(*tp) == tp);
-    assert(a.address(*ctp) == tp);
+    assert(a.address(*tp) == tp);  // expected-error 2 {{no member}}
+    assert(a.address(*ctp) == tp); // expected-error 2 {{no member}}
     delete tp;
 }
 
