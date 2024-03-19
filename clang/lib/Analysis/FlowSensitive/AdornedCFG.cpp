@@ -1,4 +1,4 @@
-//===- ControlFlowContext.cpp ---------------------------------------------===//
+//===- AdornedCFG.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines a ControlFlowContext class that is used by dataflow
-//  analyses that run over Control-Flow Graphs (CFGs).
+//  This file defines an `AdornedCFG` class that is used by dataflow analyses
+//  that run over Control-Flow Graphs (CFGs).
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
@@ -126,8 +126,7 @@ buildContainsExprConsumedInDifferentBlock(
   return Result;
 }
 
-llvm::Expected<ControlFlowContext>
-ControlFlowContext::build(const FunctionDecl &Func) {
+llvm::Expected<AdornedCFG> AdornedCFG::build(const FunctionDecl &Func) {
   if (!Func.doesThisDeclarationHaveABody())
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
@@ -136,8 +135,8 @@ ControlFlowContext::build(const FunctionDecl &Func) {
   return build(Func, *Func.getBody(), Func.getASTContext());
 }
 
-llvm::Expected<ControlFlowContext>
-ControlFlowContext::build(const Decl &D, Stmt &S, ASTContext &C) {
+llvm::Expected<AdornedCFG> AdornedCFG::build(const Decl &D, Stmt &S,
+                                             ASTContext &C) {
   if (D.isTemplated())
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
@@ -175,9 +174,9 @@ ControlFlowContext::build(const Decl &D, Stmt &S, ASTContext &C) {
   llvm::DenseSet<const CFGBlock *> ContainsExprConsumedInDifferentBlock =
       buildContainsExprConsumedInDifferentBlock(*Cfg, StmtToBlock);
 
-  return ControlFlowContext(D, std::move(Cfg), std::move(StmtToBlock),
-                            std::move(BlockReachable),
-                            std::move(ContainsExprConsumedInDifferentBlock));
+  return AdornedCFG(D, std::move(Cfg), std::move(StmtToBlock),
+                    std::move(BlockReachable),
+                    std::move(ContainsExprConsumedInDifferentBlock));
 }
 
 } // namespace dataflow
