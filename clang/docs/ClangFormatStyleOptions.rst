@@ -6204,7 +6204,7 @@ the configuration (without a prefix: ``Auto``).
 
   For example the configuration,
 
-  .. code-block:: c++
+  .. code-block:: yaml
 
     TableGenBreakInsideDAGArg: BreakAll
     TableGenBreakingDAGArgOperators: ['ins', 'outs']
