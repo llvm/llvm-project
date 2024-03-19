@@ -861,10 +861,18 @@ bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
   if (isARCDiagnostic(DiagID))
     return false;
 
+  if (isCodegenABICheckDiagnostic(DiagID))
+    return false;
+
   return true;
 }
 
 bool DiagnosticIDs::isARCDiagnostic(unsigned DiagID) {
   unsigned cat = getCategoryNumberForDiag(DiagID);
   return DiagnosticIDs::getCategoryNameFromID(cat).starts_with("ARC ");
+}
+
+bool DiagnosticIDs::isCodegenABICheckDiagnostic(unsigned DiagID) {
+  unsigned cat = getCategoryNumberForDiag(DiagID);
+  return DiagnosticIDs::getCategoryNameFromID(cat) == "Codegen ABI Check";
 }
