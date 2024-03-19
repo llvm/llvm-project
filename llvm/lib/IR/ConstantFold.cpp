@@ -1154,10 +1154,9 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2) {
                                 GV->getType()->getAddressSpace()))
         return ICmpInst::ICMP_UGT;
     }
-  } else {
+  } else if (auto *CE1 = dyn_cast<ConstantExpr>(V1)) {
     // Ok, the LHS is known to be a constantexpr.  The RHS can be any of a
     // constantexpr, a global, block address, or a simple constant.
-    ConstantExpr *CE1 = cast<ConstantExpr>(V1);
     Constant *CE1Op0 = CE1->getOperand(0);
 
     switch (CE1->getOpcode()) {

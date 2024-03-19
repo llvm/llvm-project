@@ -725,6 +725,18 @@ inline auto m_False() {
       },
       m_Value()};
 }
+
+/// Match a negate as a sub(0, v)
+template <typename ValTy>
+inline BinaryOpc_match<SpecificInt_match, ValTy> m_Neg(const ValTy &V) {
+  return m_Sub(m_Zero(), V);
+}
+
+/// Match a Not as a xor(v, -1) or xor(-1, v)
+template <typename ValTy>
+inline BinaryOpc_match<ValTy, SpecificInt_match, true> m_Not(const ValTy &V) {
+  return m_Xor(V, m_AllOnes());
+}
 } // namespace SDPatternMatch
 } // namespace llvm
 #endif

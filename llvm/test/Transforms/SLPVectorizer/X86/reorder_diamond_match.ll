@@ -17,7 +17,7 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <4 x i16> zeroinitializer, [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub nsw <4 x i16> zeroinitializer, [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i16> [[TMP12]], <4 x i16> [[TMP13]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP15:%.*]] = zext <4 x i16> [[TMP14]] to <4 x i32>
+; CHECK-NEXT:    [[TMP15:%.*]] = sext <4 x i16> [[TMP14]] to <4 x i32>
 ; CHECK-NEXT:    store <4 x i32> [[TMP15]], ptr [[TMP2]], align 16
 ; CHECK-NEXT:    ret void
 ;

@@ -5208,6 +5208,73 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__iso_volatile_store64:
     return RValue::get(EmitISOVolatileStore(*this, E));
 
+  case Builtin::BI__builtin_ptrauth_auth:
+  case Builtin::BI__builtin_ptrauth_auth_and_resign:
+  case Builtin::BI__builtin_ptrauth_blend_discriminator:
+  case Builtin::BI__builtin_ptrauth_sign_generic_data:
+  case Builtin::BI__builtin_ptrauth_sign_unauthenticated:
+  case Builtin::BI__builtin_ptrauth_strip: {
+    // Emit the arguments.
+    SmallVector<llvm::Value *, 5> Args;
+    for (auto argExpr : E->arguments())
+      Args.push_back(EmitScalarExpr(argExpr));
+
+    // Cast the value to intptr_t, saving its original type.
+    llvm::Type *OrigValueType = Args[0]->getType();
+    if (OrigValueType->isPointerTy())
+      Args[0] = Builder.CreatePtrToInt(Args[0], IntPtrTy);
+
+    switch (BuiltinID) {
+    case Builtin::BI__builtin_ptrauth_auth_and_resign:
+      if (Args[4]->getType()->isPointerTy())
+        Args[4] = Builder.CreatePtrToInt(Args[4], IntPtrTy);
+      LLVM_FALLTHROUGH;
+
+    case Builtin::BI__builtin_ptrauth_auth:
+    case Builtin::BI__builtin_ptrauth_sign_unauthenticated:
+      if (Args[2]->getType()->isPointerTy())
+        Args[2] = Builder.CreatePtrToInt(Args[2], IntPtrTy);
+      break;
+
+    case Builtin::BI__builtin_ptrauth_sign_generic_data:
+      if (Args[1]->getType()->isPointerTy())
+        Args[1] = Builder.CreatePtrToInt(Args[1], IntPtrTy);
+      break;
+
+    case Builtin::BI__builtin_ptrauth_blend_discriminator:
+    case Builtin::BI__builtin_ptrauth_strip:
+      break;
+    }
+
+    // Call the intrinsic.
+    auto IntrinsicID = [&]() -> unsigned {
+      switch (BuiltinID) {
+      case Builtin::BI__builtin_ptrauth_auth:
+        return llvm::Intrinsic::ptrauth_auth;
+      case Builtin::BI__builtin_ptrauth_auth_and_resign:
+        return llvm::Intrinsic::ptrauth_resign;
+      case Builtin::BI__builtin_ptrauth_blend_discriminator:
+        return llvm::Intrinsic::ptrauth_blend;
+      case Builtin::BI__builtin_ptrauth_sign_generic_data:
+        return llvm::Intrinsic::ptrauth_sign_generic;
+      case Builtin::BI__builtin_ptrauth_sign_unauthenticated:
+        return llvm::Intrinsic::ptrauth_sign;
+      case Builtin::BI__builtin_ptrauth_strip:
+        return llvm::Intrinsic::ptrauth_strip;
+      }
+      llvm_unreachable("bad ptrauth intrinsic");
+    }();
+    auto Intrinsic = CGM.getIntrinsic(IntrinsicID);
+    llvm::Value *Result = EmitRuntimeCall(Intrinsic, Args);
+
+    if (BuiltinID != Builtin::BI__builtin_ptrauth_sign_generic_data &&
+        BuiltinID != Builtin::BI__builtin_ptrauth_blend_discriminator &&
+        OrigValueType->isPointerTy()) {
+      Result = Builder.CreateIntToPtr(Result, OrigValueType);
+    }
+    return RValue::get(Result);
+  }
+
   case Builtin::BI__exception_code:
   case Builtin::BI_exception_code:
     return RValue::get(EmitSEHExceptionCode());
@@ -17969,6 +18036,17 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
   return Arg;
 }
 
+Intrinsic::ID getDotProductIntrinsic(QualType QT) {
+  if (QT->hasSignedIntegerRepresentation())
+    return Intrinsic::dx_sdot;
+  if (QT->hasUnsignedIntegerRepresentation())
+    return Intrinsic::dx_udot;
+
+  assert(QT->hasFloatingRepresentation());
+  return Intrinsic::dx_dot;
+  ;
+}
+
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                             const CallExpr *E) {
   if (!getLangOpts().HLSL)
@@ -17980,6 +18058,21 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
         Intrinsic::dx_any, ArrayRef<Value *>{Op0}, nullptr, "dx.any");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_clamp: {
+    Value *OpX = EmitScalarExpr(E->getArg(0));
+    Value *OpMin = EmitScalarExpr(E->getArg(1));
+    Value *OpMax = EmitScalarExpr(E->getArg(2));
+
+    QualType Ty = E->getArg(0)->getType();
+    bool IsUnsigned = false;
+    if (auto *VecTy = Ty->getAs<VectorType>())
+      Ty = VecTy->getElementType();
+    IsUnsigned = Ty->isUnsignedIntegerType();
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/OpX->getType(),
+        IsUnsigned ? Intrinsic::dx_uclamp : Intrinsic::dx_clamp,
+        ArrayRef<Value *>{OpX, OpMin, OpMax}, nullptr, "dx.clamp");
   }
   case Builtin::BI__builtin_hlsl_dot: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -18014,45 +18107,19 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
            "Dot product requires vectors to be of the same size.");
 
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/T0->getScalarType(), Intrinsic::dx_dot,
+        /*ReturnType=*/T0->getScalarType(),
+        getDotProductIntrinsic(E->getArg(0)->getType()),
         ArrayRef<Value *>{Op0, Op1}, nullptr, "dx.dot");
   } break;
   case Builtin::BI__builtin_hlsl_lerp: {
     Value *X = EmitScalarExpr(E->getArg(0));
     Value *Y = EmitScalarExpr(E->getArg(1));
     Value *S = EmitScalarExpr(E->getArg(2));
-    llvm::Type *Xty = X->getType();
-    llvm::Type *Yty = Y->getType();
-    llvm::Type *Sty = S->getType();
-    if (!Xty->isVectorTy() && !Yty->isVectorTy() && !Sty->isVectorTy()) {
-      if (Xty->isFloatingPointTy()) {
-        auto V = Builder.CreateFSub(Y, X);
-        V = Builder.CreateFMul(S, V);
-        return Builder.CreateFAdd(X, V, "dx.lerp");
-      }
-      llvm_unreachable("Scalar Lerp is only supported on floats.");
-    }
-    // A VectorSplat should have happened
-    assert(Xty->isVectorTy() && Yty->isVectorTy() && Sty->isVectorTy() &&
-           "Lerp of vector and scalar is not supported.");
-
-    [[maybe_unused]] auto *XVecTy =
-        E->getArg(0)->getType()->getAs<VectorType>();
-    [[maybe_unused]] auto *YVecTy =
-        E->getArg(1)->getType()->getAs<VectorType>();
-    [[maybe_unused]] auto *SVecTy =
-        E->getArg(2)->getType()->getAs<VectorType>();
-    // A HLSLVectorTruncation should have happend
-    assert(XVecTy->getNumElements() == YVecTy->getNumElements() &&
-           XVecTy->getNumElements() == SVecTy->getNumElements() &&
-           "Lerp requires vectors to be of the same size.");
-    assert(XVecTy->getElementType()->isRealFloatingType() &&
-           XVecTy->getElementType() == YVecTy->getElementType() &&
-           XVecTy->getElementType() == SVecTy->getElementType() &&
-           "Lerp requires float vectors to be of the same type.");
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("lerp operand must have a float representation");
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/Xty, Intrinsic::dx_lerp, ArrayRef<Value *>{X, Y, S},
-        nullptr, "dx.lerp");
+        /*ReturnType=*/X->getType(), Intrinsic::dx_lerp,
+        ArrayRef<Value *>{X, Y, S}, nullptr, "dx.lerp");
   }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

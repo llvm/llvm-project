@@ -4328,9 +4328,12 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
               llvm_unreachable(
                   "Expected only consecutive, strided or masked gather loads.");
             }
+            SmallVector<int> ShuffleMask(VL.size());
+            for (int Idx : seq<int>(0, VL.size()))
+              ShuffleMask[Idx] = Idx / VF == I ? VL.size() + Idx % VF : Idx;
             VecLdCost +=
                 TTI.getShuffleCost(TTI ::SK_InsertSubvector, VecTy,
-                                   std::nullopt, CostKind, I * VF, SubVecTy);
+                                   ShuffleMask, CostKind, I * VF, SubVecTy);
           }
           // If masked gather cost is higher - better to vectorize, so
           // consider it as a gather node. It will be better estimated
@@ -6595,7 +6598,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       }
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndicies);
-
       LLVM_DEBUG(dbgs() << "SLP: added a vector of casts.\n");
 
       TE->setOperandsInOrder();
@@ -7455,7 +7457,7 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
         Index + NumSrcElts <= static_cast<int>(Mask.size()))
       return TTI.getShuffleCost(
           TTI::SK_InsertSubvector,
-          FixedVectorType::get(Tp->getElementType(), Mask.size()), std::nullopt,
+          FixedVectorType::get(Tp->getElementType(), Mask.size()), Mask,
           TTI::TCK_RecipThroughput, Index, Tp);
   }
   return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
@@ -7728,9 +7730,13 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         }
         if (NeedInsertSubvectorAnalysis) {
           // Add the cost for the subvectors insert.
-          for (int I = VF, E = VL.size(); I < E; I += VF)
+          SmallVector<int> ShuffleMask(VL.size());
+          for (unsigned I = VF, E = VL.size(); I < E; I += VF) {
+            for (unsigned Idx : seq<unsigned>(0, E))
+              ShuffleMask[Idx] = Idx / VF == I ? E + Idx % VF : Idx;
             GatherCost += TTI.getShuffleCost(TTI::SK_InsertSubvector, VecTy,
-                                             std::nullopt, CostKind, I, LoadTy);
+                                             ShuffleMask, CostKind, I, LoadTy);
+          }
         }
         GatherCost -= ScalarsCost;
       }
@@ -7745,16 +7751,22 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       bool NeedShuffle =
           count(VL, *It) > 1 &&
           (VL.front() != *It || !all_of(VL.drop_front(), UndefValue::classof));
+      if (!NeedShuffle)
+        return TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
+                                      CostKind, std::distance(VL.begin(), It),
+                                      PoisonValue::get(VecTy), *It);
+
+      SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
+      transform(VL, ShuffleMask.begin(), [](Value *V) {
+        return isa<PoisonValue>(V) ? PoisonMaskElem : 0;   
+      });
       InstructionCost InsertCost = TTI.getVectorInstrCost(
-          Instruction::InsertElement, VecTy, CostKind,
-          NeedShuffle ? 0 : std::distance(VL.begin(), It),
+          Instruction::InsertElement, VecTy, CostKind, 0,
           PoisonValue::get(VecTy), *It);
       return InsertCost +
-             (NeedShuffle ? TTI.getShuffleCost(
-                                TargetTransformInfo::SK_Broadcast, VecTy,
-                                /*Mask=*/std::nullopt, CostKind, /*Index=*/0,
-                                /*SubTp=*/nullptr, /*Args=*/*It)
-                          : TTI::TCC_Free);
+             TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
+                                ShuffleMask, CostKind, /*Index=*/0,
+                                /*SubTp=*/nullptr, /*Args=*/*It);
     }
     return GatherCost +
            (all_of(Gathers, UndefValue::classof)
@@ -10131,7 +10143,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
             continue;
           VTE = *It->getSecond().begin();
           // Iterate through all vectorized nodes.
-          auto *MIt = find_if(It->getSecond(), [&](const TreeEntry *MTE) {
+          auto *MIt = find_if(It->getSecond(), [](const TreeEntry *MTE) {
             return MTE->State == TreeEntry::Vectorize;
           });
           if (MIt == It->getSecond().end())
@@ -10187,71 +10199,6 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   if (UsedTEs.empty()) {
     Entries.clear();
     return std::nullopt;
-  }
-
-  // Filter out entries with larger bitwidth of elements.
-  Type *ScalarTy = VL.front()->getType();
-  unsigned BitWidth = 0;
-  if (ScalarTy->isIntegerTy()) {
-    // Check if the used TEs supposed to be resized and choose the best
-    // candidates.
-    BitWidth = DL->getTypeStoreSize(ScalarTy);
-    if (TEUseEI.UserTE->getOpcode() != Instruction::Select ||
-        TEUseEI.EdgeIdx != 0) {
-      auto UserIt = MinBWs.find(TEUseEI.UserTE);
-      if (UserIt != MinBWs.end())
-        BitWidth = UserIt->second.second;
-    }
-    // Check if the used TEs supposed to be resized and choose the best
-    // candidates.
-    DenseSet<Value *> Scalars(TE->Scalars.begin(), TE->Scalars.end());
-    auto CheckBitwidth = [&](const TreeEntry &E) {
-      unsigned EBitWidth = BitWidth;
-      auto UserIt = MinBWs.find(&E);
-      if (UserIt != MinBWs.end())
-        EBitWidth = UserIt->second.second;
-      return BitWidth == EBitWidth;
-    };
-    for (auto [Idx, Set] : enumerate(UsedTEs)) {
-      DenseSet<const TreeEntry *> ForRemoval;
-      for (const TreeEntry *TE : Set) {
-        if (!CheckBitwidth(*TE))
-          ForRemoval.insert(TE);
-      }
-      // All elements must be removed - remove the whole container.
-      if (ForRemoval.size() == Set.size()) {
-        Set.clear();
-        continue;
-      }
-      for (const TreeEntry *TE : ForRemoval)
-        Set.erase(TE);
-    }
-    bool NeedToRemapValues = false;
-    for (auto *It = UsedTEs.begin(); It != UsedTEs.end();) {
-      if (It->empty()) {
-        UsedTEs.erase(It);
-        NeedToRemapValues = true;
-        continue;
-      }
-      std::advance(It, 1);
-    }
-    if (UsedTEs.empty()) {
-      Entries.clear();
-      return std::nullopt;
-    }
-    // Recalculate the mapping between the values and entries sets.
-    if (NeedToRemapValues) {
-      DenseMap<Value *, int> PrevUsedValuesEntry;
-      PrevUsedValuesEntry.swap(UsedValuesEntry);
-      for (auto [Idx, Set] : enumerate(UsedTEs)) {
-        DenseSet<Value *> Values;
-        for (const TreeEntry *E : Set)
-          Values.insert(E->Scalars.begin(), E->Scalars.end());
-        for (const auto &P : PrevUsedValuesEntry)
-          if (Values.contains(P.first))
-            UsedValuesEntry.try_emplace(P.first, Idx);
-      }
-    }
   }
 
   unsigned VF = 0;
@@ -10523,7 +10470,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
   // Check if the same elements are inserted several times and count them as
   // shuffle candidates.
   APInt ShuffledElements = APInt::getZero(VL.size());
-  DenseSet<Value *> UniqueElements;
+  DenseMap<Value *, unsigned> UniqueElements;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost;
   auto EstimateInsertCost = [&](unsigned I, Value *V) {
@@ -10532,27 +10479,34 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
           TTI->getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
                                   I, Constant::getNullValue(VecTy), V);
   };
+  SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
   for (unsigned I = 0, E = VL.size(); I < E; ++I) {
     Value *V = VL[I];
     // No need to shuffle duplicates for constants.
     if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V)) {
       ShuffledElements.setBit(I);
+      ShuffleMask[I] = isa<PoisonValue>(V) ? PoisonMaskElem : I;
       continue;
     }
-    if (!UniqueElements.insert(V).second) {
-      DuplicateNonConst = true;
-      ShuffledElements.setBit(I);
+
+    auto Res = UniqueElements.try_emplace(V, I);
+    if (Res.second) {
+      EstimateInsertCost(I, V);
+      ShuffleMask[I] = I;
       continue;
     }
-    EstimateInsertCost(I, V);
+
+    DuplicateNonConst = true;
+    ShuffledElements.setBit(I);
+    ShuffleMask[I] = Res.first->second;
   }
   if (ForPoisonSrc)
     Cost =
         TTI->getScalarizationOverhead(VecTy, ~ShuffledElements, /*Insert*/ true,
                                       /*Extract*/ false, CostKind);
   if (DuplicateNonConst)
-    Cost +=
-        TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
+    Cost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                VecTy, ShuffleMask);
   return Cost;
 }
 
@@ -10766,11 +10720,14 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root) {
   auto &&CreateInsertElement = [this](Value *Vec, Value *V, unsigned Pos,
                                       Type *Ty) {
     Value *Scalar = V;
-    if (V->getType() != Ty) {
+    if (cast<VectorType>(Vec->getType())->getElementType() != Ty) {
       assert(V->getType()->isIntegerTy() && Ty->isIntegerTy() &&
-             Ty->getIntegerBitWidth() < V->getType()->getIntegerBitWidth() &&
-             "Scalar expected to be less than vector element type.");
-      Scalar = Builder.CreateTrunc(V, Ty);
+             "Expected integer types only.");
+      Vec = Builder.CreateIntCast(
+          Vec,
+          VectorType::get(Ty,
+                          cast<VectorType>(Vec->getType())->getElementCount()),
+          !isKnownNonNegative(Vec, SimplifyQuery(*DL)));
     }
 
     Vec = Builder.CreateInsertElement(Vec, Scalar, Builder.getInt32(Pos));
@@ -10800,8 +10757,7 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root) {
   };
   Value *Val0 =
       isa<StoreInst>(VL[0]) ? cast<StoreInst>(VL[0])->getValueOperand() : VL[0];
-  Type *ScalarTy = Root ? cast<VectorType>(Root->getType())->getElementType()
-                        : Val0->getType();
+  Type *ScalarTy = Val0->getType();
   FixedVectorType *VecTy = FixedVectorType::get(ScalarTy, VL.size());
   Value *Vec = Root ? Root : PoisonValue::get(VecTy);
   SmallVector<int> NonConsts;
@@ -10890,13 +10846,15 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
     SetVector<Instruction *> &GatherShuffleExtractSeq;
     /// A list of blocks that we are going to CSE.
     DenseSet<BasicBlock *> &CSEBlocks;
+    /// Data layout.
+    const DataLayout &DL;
 
   public:
     ShuffleIRBuilder(IRBuilderBase &Builder,
                      SetVector<Instruction *> &GatherShuffleExtractSeq,
-                     DenseSet<BasicBlock *> &CSEBlocks)
+                     DenseSet<BasicBlock *> &CSEBlocks, const DataLayout &DL)
         : Builder(Builder), GatherShuffleExtractSeq(GatherShuffleExtractSeq),
-          CSEBlocks(CSEBlocks) {}
+          CSEBlocks(CSEBlocks), DL(DL) {}
     ~ShuffleIRBuilder() = default;
     /// Creates shufflevector for the 2 operands with the given mask.
     Value *createShuffleVector(Value *V1, Value *V2, ArrayRef<int> Mask) {
@@ -10904,14 +10862,18 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
         assert(V1->getType()->isIntOrIntVectorTy() &&
                V1->getType()->isIntOrIntVectorTy() &&
                "Expected integer vector types only.");
-        if (cast<VectorType>(V2->getType())
-                ->getElementType()
-                ->getIntegerBitWidth() < cast<VectorType>(V1->getType())
-                                             ->getElementType()
-                                             ->getIntegerBitWidth())
-          V1 = Builder.CreateTrunc(V1, V2->getType());
-        else
-          V2 = Builder.CreateTrunc(V2, V1->getType());
+        if (V1->getType() != V2->getType()) {
+          if (cast<VectorType>(V2->getType())
+                  ->getElementType()
+                  ->getIntegerBitWidth() < cast<VectorType>(V1->getType())
+                                               ->getElementType()
+                                               ->getIntegerBitWidth())
+            V2 = Builder.CreateIntCast(
+                V2, V1->getType(), !isKnownNonNegative(V2, SimplifyQuery(DL)));
+          else
+            V1 = Builder.CreateIntCast(
+                V1, V2->getType(), !isKnownNonNegative(V1, SimplifyQuery(DL)));
+        }
       }
       Value *Vec = Builder.CreateShuffleVector(V1, V2, Mask);
       if (auto *I = dyn_cast<Instruction>(Vec)) {
@@ -10971,7 +10933,7 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
   Value *createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask) {
     assert(V1 && "Expected at least one vector value.");
     ShuffleIRBuilder ShuffleBuilder(Builder, R.GatherShuffleExtractSeq,
-                                    R.CSEBlocks);
+                                    R.CSEBlocks, *R.DL);
     return BaseShuffleAnalysis::createShuffle<Value *>(V1, V2, Mask,
                                                        ShuffleBuilder);
   }
@@ -11838,7 +11800,7 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
 }
 
 Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
-  IRBuilder<>::InsertPointGuard Guard(Builder);
+  IRBuilderBase::InsertPointGuard Guard(Builder);
 
   if (E->VectorizedValue &&
       (E->State != TreeEntry::Vectorize || E->getOpcode() != Instruction::PHI ||
@@ -11857,10 +11819,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
   }
 
   bool IsReverseOrder = isReverseOrder(E->ReorderIndices);
-  auto FinalShuffle = [&](Value *V, const TreeEntry *E, VectorType *VecTy,
-                          bool IsSigned) {
-    if (V->getType() != VecTy)
-      V = Builder.CreateIntCast(V, VecTy, IsSigned);
+  auto FinalShuffle = [&](Value *V, const TreeEntry *E, VectorType *VecTy) {
     ShuffleInstructionBuilder ShuffleBuilder(Builder, *this);
     if (E->getOpcode() == Instruction::Store) {
       ArrayRef<int> Mask =
@@ -11887,12 +11846,21 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     ScalarTy = Store->getValueOperand()->getType();
   else if (auto *IE = dyn_cast<InsertElementInst>(VL0))
     ScalarTy = IE->getOperand(1)->getType();
-  bool IsSigned = false;
   auto It = MinBWs.find(E);
-  if (It != MinBWs.end()) {
+  if (It != MinBWs.end())
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
-    IsSigned = It->second.second;
-  }
+  auto GetOperandSignedness = [&](unsigned Idx) {
+    const TreeEntry *OpE = getOperandEntry(E, Idx);
+    bool IsSigned = false;
+    auto It = MinBWs.find(OpE);
+    if (It != MinBWs.end())
+      IsSigned = It->second.second;
+    else
+      IsSigned = any_of(OpE->Scalars, [&](Value *R) {
+        return !isKnownNonNegative(R, SimplifyQuery(*DL));
+      });
+    return IsSigned;
+  };
   auto *VecTy = FixedVectorType::get(ScalarTy, E->Scalars.size());
   switch (ShuffleOrOp) {
     case Instruction::PHI: {
@@ -11916,7 +11884,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
                                PH->getParent()->getFirstInsertionPt());
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
 
-        V = FinalShuffle(V, E, VecTy, IsSigned);
+        V = FinalShuffle(V, E, VecTy);
 
         E->VectorizedValue = V;
         if (PostponedPHIs)
@@ -11950,11 +11918,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
         Value *Vec = vectorizeOperand(E, I, /*PostponedPHIs=*/true);
         if (VecTy != Vec->getType()) {
-          assert((It != MinBWs.end() ||
-                  getOperandEntry(E, I)->State == TreeEntry::NeedToGather ||
+          assert((getOperandEntry(E, I)->State == TreeEntry::NeedToGather ||
                   MinBWs.contains(getOperandEntry(E, I))) &&
                  "Expected item in MinBWs.");
-          Vec = Builder.CreateIntCast(Vec, VecTy, It->second.second);
+          Vec = Builder.CreateIntCast(Vec, VecTy, GetOperandSignedness(I));
         }
         NewPhi->addIncoming(Vec, IBB);
       }
@@ -11969,7 +11936,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (const TreeEntry *TE = getTreeEntry(V))
         V = TE->VectorizedValue;
       setInsertPointAfterBundle(E);
-      V = FinalShuffle(V, E, VecTy, IsSigned);
+      V = FinalShuffle(V, E, VecTy);
       E->VectorizedValue = V;
       return V;
     }
@@ -11979,7 +11946,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Value *Ptr = LI->getPointerOperand();
       LoadInst *V = Builder.CreateAlignedLoad(VecTy, Ptr, LI->getAlign());
       Value *NewV = propagateMetadata(V, E->Scalars);
-      NewV = FinalShuffle(NewV, E, VecTy, IsSigned);
+      NewV = FinalShuffle(NewV, E, VecTy);
       E->VectorizedValue = NewV;
       return NewV;
     }
@@ -12188,7 +12155,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Value *V = (VecOpcode != ShuffleOrOp && VecOpcode == Instruction::BitCast)
                      ? InVec
                      : Builder.CreateCast(VecOpcode, InVec, VecTy);
-      V = FinalShuffle(V, E, VecTy, IsSigned);
+      V = FinalShuffle(V, E, VecTy);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -12209,14 +12176,22 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         return E->VectorizedValue;
       }
       if (L->getType() != R->getType()) {
-        assert((It != MinBWs.end() ||
-                getOperandEntry(E, 0)->State == TreeEntry::NeedToGather ||
+        assert((getOperandEntry(E, 0)->State == TreeEntry::NeedToGather ||
                 getOperandEntry(E, 1)->State == TreeEntry::NeedToGather ||
                 MinBWs.contains(getOperandEntry(E, 0)) ||
                 MinBWs.contains(getOperandEntry(E, 1))) &&
                "Expected item in MinBWs.");
-        L = Builder.CreateIntCast(L, VecTy, IsSigned);
-        R = Builder.CreateIntCast(R, VecTy, IsSigned);
+        if (cast<VectorType>(L->getType())
+                ->getElementType()
+                ->getIntegerBitWidth() < cast<VectorType>(R->getType())
+                                             ->getElementType()
+                                             ->getIntegerBitWidth()) {
+          Type *CastTy = R->getType();
+          L = Builder.CreateIntCast(L, CastTy, GetOperandSignedness(0));
+        } else {
+          Type *CastTy = L->getType();
+          R = Builder.CreateIntCast(R, CastTy, GetOperandSignedness(1));
+        }
       }
 
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
@@ -12224,7 +12199,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       propagateIRFlags(V, E->Scalars, VL0);
       // Do not cast for cmps.
       VecTy = cast<FixedVectorType>(V->getType());
-      V = FinalShuffle(V, E, VecTy, IsSigned);
+      V = FinalShuffle(V, E, VecTy);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -12248,19 +12223,20 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
         return E->VectorizedValue;
       }
-      if (True->getType() != False->getType()) {
-        assert((It != MinBWs.end() ||
-                getOperandEntry(E, 1)->State == TreeEntry::NeedToGather ||
+      if (True->getType() != VecTy || False->getType() != VecTy) {
+        assert((getOperandEntry(E, 1)->State == TreeEntry::NeedToGather ||
                 getOperandEntry(E, 2)->State == TreeEntry::NeedToGather ||
                 MinBWs.contains(getOperandEntry(E, 1)) ||
                 MinBWs.contains(getOperandEntry(E, 2))) &&
                "Expected item in MinBWs.");
-        True = Builder.CreateIntCast(True, VecTy, IsSigned);
-        False = Builder.CreateIntCast(False, VecTy, IsSigned);
+        if (True->getType() != VecTy)
+          True = Builder.CreateIntCast(True, VecTy, GetOperandSignedness(1));
+        if (False->getType() != VecTy)
+          False = Builder.CreateIntCast(False, VecTy, GetOperandSignedness(2));
       }
 
       Value *V = Builder.CreateSelect(Cond, True, False);
-      V = FinalShuffle(V, E, VecTy, IsSigned);
+      V = FinalShuffle(V, E, VecTy);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -12282,7 +12258,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (auto *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
 
-      V = FinalShuffle(V, E, VecTy, IsSigned);
+      V = FinalShuffle(V, E, VecTy);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -12319,15 +12295,16 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
         return E->VectorizedValue;
       }
-      if (LHS->getType() != RHS->getType()) {
-        assert((It != MinBWs.end() ||
-                getOperandEntry(E, 0)->State == TreeEntry::NeedToGather ||
+      if (LHS->getType() != VecTy || RHS->getType() != VecTy) {
+        assert((getOperandEntry(E, 0)->State == TreeEntry::NeedToGather ||
                 getOperandEntry(E, 1)->State == TreeEntry::NeedToGather ||
                 MinBWs.contains(getOperandEntry(E, 0)) ||
                 MinBWs.contains(getOperandEntry(E, 1))) &&
                "Expected item in MinBWs.");
-        LHS = Builder.CreateIntCast(LHS, VecTy, IsSigned);
-        RHS = Builder.CreateIntCast(RHS, VecTy, IsSigned);
+        if (LHS->getType() != VecTy)
+          LHS = Builder.CreateIntCast(LHS, VecTy, GetOperandSignedness(0));
+        if (RHS->getType() != VecTy)
+          RHS = Builder.CreateIntCast(RHS, VecTy, GetOperandSignedness(1));
       }
 
       Value *V = Builder.CreateBinOp(
@@ -12337,7 +12314,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (auto *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
 
-      V = FinalShuffle(V, E, VecTy, IsSigned);
+      V = FinalShuffle(V, E, VecTy);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -12408,7 +12385,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       }
       Value *V = propagateMetadata(NewLI, E->Scalars);
 
-      V = FinalShuffle(V, E, VecTy, IsSigned);
+      V = FinalShuffle(V, E, VecTy);
       E->VectorizedValue = V;
       ++NumVectorInstructions;
       return V;
@@ -12419,7 +12396,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       setInsertPointAfterBundle(E);
 
       Value *VecValue = vectorizeOperand(E, 0, PostponedPHIs);
-      VecValue = FinalShuffle(VecValue, E, VecTy, IsSigned);
+      if (VecValue->getType() != VecTy)
+        VecValue =
+            Builder.CreateIntCast(VecValue, VecTy, GetOperandSignedness(0));
+      VecValue = FinalShuffle(VecValue, E, VecTy);
 
       Value *Ptr = SI->getPointerOperand();
       StoreInst *ST =
@@ -12461,7 +12441,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         V = propagateMetadata(I, GEPs);
       }
 
-      V = FinalShuffle(V, E, VecTy, IsSigned);
+      V = FinalShuffle(V, E, VecTy);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -12526,7 +12506,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Value *V = Builder.CreateCall(CF, OpVecs, OpBundles);
 
       propagateIRFlags(V, E->Scalars, VL0);
-      V = FinalShuffle(V, E, VecTy, IsSigned);
+      V = FinalShuffle(V, E, VecTy);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -12558,15 +12538,30 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
         return E->VectorizedValue;
       }
-      if (LHS && RHS && LHS->getType() != RHS->getType()) {
-        assert((It != MinBWs.end() ||
-                getOperandEntry(E, 0)->State == TreeEntry::NeedToGather ||
+      if (LHS && RHS &&
+          ((Instruction::isBinaryOp(E->getOpcode()) &&
+            (LHS->getType() != VecTy || RHS->getType() != VecTy)) ||
+           (isa<CmpInst>(VL0) && LHS->getType() != RHS->getType()))) {
+        assert((getOperandEntry(E, 0)->State == TreeEntry::NeedToGather ||
                 getOperandEntry(E, 1)->State == TreeEntry::NeedToGather ||
                 MinBWs.contains(getOperandEntry(E, 0)) ||
                 MinBWs.contains(getOperandEntry(E, 1))) &&
                "Expected item in MinBWs.");
-        LHS = Builder.CreateIntCast(LHS, VecTy, IsSigned);
-        RHS = Builder.CreateIntCast(RHS, VecTy, IsSigned);
+        Type *CastTy = VecTy;
+        if (isa<CmpInst>(VL0) && LHS->getType() != RHS->getType()) {
+          if (cast<VectorType>(LHS->getType())
+                  ->getElementType()
+                  ->getIntegerBitWidth() < cast<VectorType>(RHS->getType())
+                                               ->getElementType()
+                                               ->getIntegerBitWidth())
+            CastTy = RHS->getType();
+          else
+            CastTy = LHS->getType();
+        }
+        if (LHS->getType() != VecTy)
+          LHS = Builder.CreateIntCast(LHS, CastTy, GetOperandSignedness(0));
+        if (RHS->getType() != VecTy)
+          RHS = Builder.CreateIntCast(RHS, CastTy, GetOperandSignedness(1));
       }
 
       Value *V0, *V1;
@@ -12618,9 +12613,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         CSEBlocks.insert(I->getParent());
       }
 
-      if (V->getType() != VecTy && !isa<CmpInst>(VL0))
-        V = Builder.CreateIntCast(
-            V, FixedVectorType::get(ScalarTy, E->getVectorFactor()), IsSigned);
       E->VectorizedValue = V;
       ++NumVectorInstructions;
 
@@ -12885,7 +12877,7 @@ Value *BoUpSLP::vectorizeTree(
             auto Key = std::make_pair(Vec, ScalarTy);
             auto VecIt = VectorCasts.find(Key);
             if (VecIt == VectorCasts.end()) {
-              IRBuilder<>::InsertPointGuard Guard(Builder);
+              IRBuilderBase::InsertPointGuard Guard(Builder);
               if (auto *IVec = dyn_cast<Instruction>(Vec))
                 Builder.SetInsertPoint(IVec->getNextNonDebugInstruction());
               Vec = Builder.CreateIntCast(
@@ -13984,10 +13976,8 @@ bool BoUpSLP::collectValuesToDemote(
     DenseSet<Value *> &Visited, unsigned &MaxDepthLevel,
     bool &IsProfitableToDemote, bool IsTruncRoot) const {
   // We can always demote constants.
-  if (isa<Constant>(V)) {
-    MaxDepthLevel = 1;
+  if (isa<Constant>(V))
     return true;
-  }
 
   if (DL->getTypeSizeInBits(V->getType()) == BitWidth) {
     MaxDepthLevel = 1;
@@ -13997,15 +13987,6 @@ bool BoUpSLP::collectValuesToDemote(
   // If the value is not a vectorized instruction in the expression and not used
   // by the insertelement instruction and not used in multiple vector nodes, it
   // cannot be demoted.
-  // TODO: improve handling of gathered values and others.
-  auto *I = dyn_cast<Instruction>(V);
-  const TreeEntry *ITE = I ? getTreeEntry(I) : nullptr;
-  if (!ITE || !Visited.insert(I).second || MultiNodeScalars.contains(I) ||
-      all_of(I->users(), [&](User *U) {
-        return isa<InsertElementInst>(U) && !getTreeEntry(U);
-      }))
-    return false;
-
   auto IsPotentiallyTruncated = [&](Value *V, unsigned &BitWidth) -> bool {
     if (MultiNodeScalars.contains(V))
       return false;
@@ -14022,15 +14003,24 @@ bool BoUpSLP::collectValuesToDemote(
     BitWidth = std::max(BitWidth, BitWidth1);
     return BitWidth > 0 && OrigBitWidth >= (BitWidth * 2);
   };
-  unsigned Start = 0;
-  unsigned End = I->getNumOperands();
-
   auto FinalAnalysis = [&](const TreeEntry *ITE = nullptr) {
     if (!IsProfitableToDemote)
       return false;
     return (ITE && ITE->UserTreeIndices.size() > 1) ||
-           IsPotentiallyTruncated(I, BitWidth);
+           IsPotentiallyTruncated(V, BitWidth);
   };
+  // TODO: improve handling of gathered values and others.
+  auto *I = dyn_cast<Instruction>(V);
+  const TreeEntry *ITE = I ? getTreeEntry(I) : nullptr;
+  if (!ITE || !Visited.insert(I).second || MultiNodeScalars.contains(I) ||
+      all_of(I->users(), [&](User *U) {
+        return isa<InsertElementInst>(U) && !getTreeEntry(U);
+      }))
+    return FinalAnalysis();
+
+  unsigned Start = 0;
+  unsigned End = I->getNumOperands();
+
   auto ProcessOperands = [&](ArrayRef<Value *> Operands, bool &NeedToExit) {
     NeedToExit = false;
     unsigned InitLevel = MaxDepthLevel;
@@ -14187,7 +14177,6 @@ bool BoUpSLP::collectValuesToDemote(
   // we don't need to worry about cycles since we ensure single use above.
   case Instruction::PHI: {
     PHINode *PN = cast<PHINode>(I);
-    MaxDepthLevel = 0;
     if (ITE->UserTreeIndices.size() > 1 && !IsPotentiallyTruncated(I, BitWidth))
       return false;
     SmallVector<Value *> Ops(PN->incoming_values().begin(),
@@ -14340,7 +14329,7 @@ void BoUpSLP::computeMinimumValueSizes() {
     // additional roots that require investigating in Roots.
     for (auto *Root : TreeRoot) {
       DenseSet<Value *> Visited;
-      unsigned MaxDepthLevel = IsTruncRoot ? Limit : 0;
+      unsigned MaxDepthLevel = IsTruncRoot ? Limit : 1;
       bool NeedToDemote = IsProfitableToDemote;
 
       if (!collectValuesToDemote(Root, IsProfitableToDemoteRoot, MaxBitWidth,
@@ -14430,9 +14419,10 @@ void BoUpSLP::computeMinimumValueSizes() {
       assert(TE && "Expected vectorized scalar.");
       if (MinBWs.contains(TE))
         continue;
-      bool IsSigned = any_of(TE->Scalars, [&](Value *R) {
-        return !isKnownNonNegative(R, SimplifyQuery(*DL));
-      });
+      bool IsSigned = TE->getOpcode() == Instruction::SExt ||
+                      any_of(TE->Scalars, [&](Value *R) {
+                        return !isKnownNonNegative(R, SimplifyQuery(*DL));
+                      });
       MinBWs.try_emplace(TE, MaxBitWidth, IsSigned);
       const auto *I = cast<Instruction>(Scalar);
       auto DCIt = DemotedConsts.find(I);
@@ -15129,7 +15119,7 @@ class HorizontalReduction {
   }
 
   /// Creates reduction operation with the current opcode.
-  static Value *createOp(IRBuilder<> &Builder, RecurKind Kind, Value *LHS,
+  static Value *createOp(IRBuilderBase &Builder, RecurKind Kind, Value *LHS,
                          Value *RHS, const Twine &Name, bool UseSelect) {
     unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
     bool IsConstant = isConstant(LHS) && isConstant(RHS);
@@ -15169,13 +15159,13 @@ class HorizontalReduction {
       if (IsConstant)
         return ConstantFP::get(LHS->getType(),
                                maximum(cast<ConstantFP>(LHS)->getValueAPF(),
-                                      cast<ConstantFP>(RHS)->getValueAPF()));
+                                       cast<ConstantFP>(RHS)->getValueAPF()));
       return Builder.CreateBinaryIntrinsic(Intrinsic::maximum, LHS, RHS);
     case RecurKind::FMinimum:
       if (IsConstant)
         return ConstantFP::get(LHS->getType(),
                                minimum(cast<ConstantFP>(LHS)->getValueAPF(),
-                                      cast<ConstantFP>(RHS)->getValueAPF()));
+                                       cast<ConstantFP>(RHS)->getValueAPF()));
       return Builder.CreateBinaryIntrinsic(Intrinsic::minimum, LHS, RHS);
     case RecurKind::SMax:
       if (IsConstant || UseSelect) {
@@ -15208,7 +15198,7 @@ class HorizontalReduction {
 
   /// Creates reduction operation with the current opcode with the IR flags
   /// from \p ReductionOps, dropping nuw/nsw flags.
-  static Value *createOp(IRBuilder<> &Builder, RecurKind RdxKind, Value *LHS,
+  static Value *createOp(IRBuilderBase &Builder, RecurKind RdxKind, Value *LHS,
                          Value *RHS, const Twine &Name,
                          const ReductionOpsListType &ReductionOps) {
     bool UseSelect =
@@ -16297,7 +16287,7 @@ private:
   }
 
   /// Emit a horizontal reduction of the vectorized value.
-  Value *emitReduction(Value *VectorizedValue, IRBuilder<> &Builder,
+  Value *emitReduction(Value *VectorizedValue, IRBuilderBase &Builder,
                        unsigned ReduxWidth, const TargetTransformInfo *TTI) {
     assert(VectorizedValue && "Need to have a vectorized tree node");
     assert(isPowerOf2_32(ReduxWidth) &&
