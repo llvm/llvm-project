@@ -66,7 +66,7 @@ config_setting(
 
 libc_support_library(
     name = "internal_includes",
-    hdrs = glob([
+    textual_hdrs = glob([
         "include/llvm-libc-macros/*.h",
         "include/llvm-libc-types/*",
     ]),
