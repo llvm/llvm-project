@@ -78,7 +78,8 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
 
 void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
   typeConverter.addConversion([](MemRefType memRefType) -> std::optional<Type> {
-    if (memRefType.hasStaticShape() && memRefType.getLayout().isIdentity()) {
+    if (memRefType.hasStaticShape() && memRefType.getLayout().isIdentity() &&
+        memRefType.getRank() > 0) {
       return emitc::ArrayType::get(memRefType.getShape(),
                                    memRefType.getElementType());
     }
@@ -86,8 +87,8 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
   });
 }
 
-void mlir::populateMemRefToEmitCConversionPatterns(
-    TypeConverter &converter, RewritePatternSet &patterns) {
+void mlir::populateMemRefToEmitCConversionPatterns(RewritePatternSet &patterns,
+                                                   TypeConverter &converter) {
   patterns.add<ConvertAlloca, ConvertLoad, ConvertStore>(converter,
                                                          patterns.getContext());
 }

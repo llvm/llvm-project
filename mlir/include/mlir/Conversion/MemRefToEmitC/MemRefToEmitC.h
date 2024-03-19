@@ -14,8 +14,8 @@ class TypeConverter;
 
 void populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter);
 
-void populateMemRefToEmitCConversionPatterns(TypeConverter &converter,
-                                             RewritePatternSet &patterns);
+void populateMemRefToEmitCConversionPatterns(RewritePatternSet &patterns,
+                                             TypeConverter &converter);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MEMREFTOEMITC_MEMREFTOEMITC_H
