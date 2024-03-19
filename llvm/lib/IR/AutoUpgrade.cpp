@@ -1067,7 +1067,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         }
       }
       // Update llvm.dbg.addr intrinsics even in "new debug mode"; they'll get
-      // converted to DPValues later.
+      // converted to DbgVariableRecords later.
       if (Name == "addr" || (Name == "value" && F->arg_size() == 4)) {
         rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::dbg_value);
@@ -2360,21 +2360,21 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
   if (Name == "label") {
     DR = new DPLabel(unwrapMAVOp<DILabel>(CI, 0), CI->getDebugLoc());
   } else if (Name == "assign") {
-    DR = new DPValue(
+    DR = new DbgVariableRecord(
         unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, 1),
         unwrapMAVOp<DIExpression>(CI, 2), unwrapMAVOp<DIAssignID>(CI, 3),
         unwrapMAVOp<Metadata>(CI, 4), unwrapMAVOp<DIExpression>(CI, 5),
         CI->getDebugLoc());
   } else if (Name == "declare") {
-    DR = new DPValue(unwrapMAVOp<Metadata>(CI, 0),
+    DR = new DbgVariableRecord(unwrapMAVOp<Metadata>(CI, 0),
                      unwrapMAVOp<DILocalVariable>(CI, 1),
                      unwrapMAVOp<DIExpression>(CI, 2), CI->getDebugLoc(),
-                     DPValue::LocationType::Declare);
+                     DbgVariableRecord::LocationType::Declare);
   } else if (Name == "addr") {
     // Upgrade dbg.addr to dbg.value with DW_OP_deref.
     DIExpression *Expr = unwrapMAVOp<DIExpression>(CI, 2);
     Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
-    DR = new DPValue(unwrapMAVOp<Metadata>(CI, 0),
+    DR = new DbgVariableRecord(unwrapMAVOp<Metadata>(CI, 0),
                      unwrapMAVOp<DILocalVariable>(CI, 1), Expr,
                      CI->getDebugLoc());
   } else if (Name == "value") {
@@ -2389,7 +2389,7 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
       VarOp = 2;
       ExprOp = 3;
     }
-    DR = new DPValue(unwrapMAVOp<Metadata>(CI, 0),
+    DR = new DbgVariableRecord(unwrapMAVOp<Metadata>(CI, 0),
                      unwrapMAVOp<DILocalVariable>(CI, VarOp),
                      unwrapMAVOp<DIExpression>(CI, ExprOp), CI->getDebugLoc());
   }
