@@ -1755,10 +1755,11 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
 
     for (Partition &part : partitions) {
       // The R_AARCH64_AUTH_RELATIVE has a smaller addend field as bits [63:32]
-      // encode the signing schema. We've put relocations in relrAuthDyn during
-      // RelocationScanner::processAux, but the target VA for some of them might
-      // be wider than 32 bits. We can only know the final VA at this point, so
-      // move relocations with large values from relr to rela.
+      // encode the signing schema. We've put relocations in .relr.auth.dyn
+      // during RelocationScanner::processAux, but the target VA for some of
+      // them might be wider than 32 bits. We can only know the final VA at this
+      // point, so move relocations with large values from .relr.auth.dyn to
+      // .rela.dyn.
       if (part.relrAuthDyn) {
         auto it = llvm::remove_if(
             part.relrAuthDyn->relocs, [&part](const RelativeReloc &elem) {

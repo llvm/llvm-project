@@ -1156,8 +1156,8 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
           part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
         } else if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0) {
           // When symbol values are determined in
-          // finalizeAddressDependentContent, some relrAuthDyn relocations may
-          // be moved to relaDyn.
+          // finalizeAddressDependentContent, some .relr.auth.dyn relocations
+          // may be moved to .rela.dyn.
           sec->addReloc({expr, type, offset, addend, &sym});
           part.relrAuthDyn->relocs.push_back({sec, sec->relocs().size() - 1});
         } else {

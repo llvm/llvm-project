@@ -3017,11 +3017,8 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // partition.
   mainPart = &partitions[0];
 
-  // Read:
-  // - .note.gnu.property sections from input object files which
-  //   contain a hint to tweak linker's and loader's behaviors;
-  // - .note.AARCH64-PAUTH-ABI-tag sections contents from input object files
-  //   which contain AArch64 PAuth compatibility info.
+  // Read .note.gnu.property sections from input object files which
+  // contain a hint to tweak linker's and loader's behaviors.
   readSecurityNotes();
 
   // The Target instance handles target-specific stuff, such as applying
