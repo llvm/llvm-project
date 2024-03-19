@@ -29,10 +29,10 @@
 # RUN: ld.lld -e 0 -z now a.32.o c.32.so -o a.32.ie
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d a.32.ie | FileCheck %s --check-prefix=IE32
 
-# RUN: llvm-mc -triple=riscv64 --position-independent -filetype=obj d.s -o d.64.o
+# RUN: llvm-mc -triple=riscv64 -filetype=obj d.s -o d.64.o
 # RUN: not ld.lld -shared -soname=d.64.so -o d.64.so d.64.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL
 
-# RUN: llvm-mc -triple=riscv32 --position-independent -filetype=obj d.s -o d.32.o --defsym ELF32=1
+# RUN: llvm-mc -triple=riscv32 -filetype=obj d.s -o d.32.o --defsym ELF32=1
 # RUN: not ld.lld -shared -soname=d.32.so -o d.32.so d.32.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL
 
 # GD64-RELA:      .rela.dyn {
