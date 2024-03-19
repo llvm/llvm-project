@@ -427,13 +427,15 @@ void MachODumper::dumpBindOpcodes(
         static_cast<MachO::BindOpcode>(*OpCode & MachO::BIND_OPCODE_MASK);
     BindOp.Imm = *OpCode & MachO::BIND_IMMEDIATE_MASK;
 
+    unsigned Count;
     uint64_t ULEB = 0;
     int64_t SLEB = 0;
 
     switch (BindOp.Opcode) {
     case MachO::BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB:
-      ULEB = decodeULEB128AndInc(++OpCode);
+      ULEB = decodeULEB128(OpCode + 1, &Count);
       BindOp.ULEBExtraData.push_back(ULEB);
+      OpCode += Count;
       [[fallthrough]];
     // Intentionally no break here -- this opcode has two ULEB values
 
@@ -441,13 +443,15 @@ void MachODumper::dumpBindOpcodes(
     case MachO::BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB:
     case MachO::BIND_OPCODE_ADD_ADDR_ULEB:
     case MachO::BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB:
-      ULEB = decodeULEB128AndInc(++OpCode);
+      ULEB = decodeULEB128(OpCode + 1, &Count);
       BindOp.ULEBExtraData.push_back(ULEB);
+      OpCode += Count;
       break;
 
     case MachO::BIND_OPCODE_SET_ADDEND_SLEB:
-      SLEB = decodeSLEB128AndInc(++OpCode);
+      SLEB = decodeSLEB128(OpCode + 1, &Count);
       BindOp.SLEBExtraData.push_back(SLEB);
+      OpCode += Count;
       break;
 
     case MachO::BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM:
