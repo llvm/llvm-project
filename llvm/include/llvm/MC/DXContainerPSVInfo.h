@@ -80,7 +80,7 @@ struct PSVRuntimeInfo {
   // the highest supported version.
   void write(raw_ostream &OS,
              uint32_t Version = std::numeric_limits<uint32_t>::max()) const;
- 
+
   void finalize(Triple::EnvironmentType Stage);
 };
 

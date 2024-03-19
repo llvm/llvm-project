@@ -77,9 +77,9 @@ DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P)
 DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v3::RuntimeInfo *P,
                                   StringRef StringTable)
     : Version(3),
-      EntryName(StringTable.substr(
-          P->EntryNameOffset, StringTable.find('\0', P->EntryNameOffset) -
-                                    P->EntryNameOffset)) {
+      EntryName(StringTable.substr(P->EntryNameOffset,
+                                   StringTable.find('\0', P->EntryNameOffset) -
+                                       P->EntryNameOffset)) {
   memset(&Info, 0, sizeof(Info));
   memcpy(&Info, P, sizeof(dxbc::PSV::v3::RuntimeInfo));
 }
