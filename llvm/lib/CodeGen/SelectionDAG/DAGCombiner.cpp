@@ -22443,17 +22443,16 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     //      -> extract_vector_elt b, 0
     // extract_vector_elt (concat_vectors v2i16:a, v2i16:b), 3
     //      -> extract_vector_elt b, 1
-    SDLoc SL(N);
     EVT ConcatVT = VecOp.getOperand(0).getValueType();
     unsigned ConcatNumElts = ConcatVT.getVectorNumElements();
-    SDValue NewIdx = DAG.getConstant(Elt % ConcatNumElts, SL,
+    SDValue NewIdx = DAG.getConstant(Elt % ConcatNumElts, DL,
                                      Index.getValueType());
 
     SDValue ConcatOp = VecOp.getOperand(Elt / ConcatNumElts);
-    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL,
+    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
                               ConcatVT.getVectorElementType(),
                               ConcatOp, NewIdx);
-    return DAG.getNode(ISD::BITCAST, SL, ScalarVT, Elt);
+    return DAG.getNode(ISD::BITCAST, DL, ScalarVT, Elt);
   }
 
   // Make sure we found a non-volatile load and the extractelement is
