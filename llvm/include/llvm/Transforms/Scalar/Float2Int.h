@@ -44,7 +44,7 @@ private:
   std::optional<ConstantRange> calcRange(Instruction *I);
   void walkBackwards();
   void walkForwards();
-  bool validateAndTransform(const DataLayout &DL);
+  bool validateAndTransform();
   Value *convert(Instruction *I, Type *ToTy);
   void cleanup();
 
