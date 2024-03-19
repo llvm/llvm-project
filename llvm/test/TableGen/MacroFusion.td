@@ -44,8 +44,8 @@ def TestBothFusionPredicate: Fusion<"test-both-fusion-predicate", "HasBothFusion
 def TestFusion: SimpleFusion<"test-fusion", "HasTestFusion", "Test Fusion",
                              CheckOpcode<[Inst0]>,
                              CheckAll<[
-                              CheckOpcode<[Inst1]>,
-                              CheckRegOperand<0, X0>
+                               CheckOpcode<[Inst1]>,
+                               CheckRegOperand<0, X0>
                              ]>>;
 
 let IsCommutable = 1 in

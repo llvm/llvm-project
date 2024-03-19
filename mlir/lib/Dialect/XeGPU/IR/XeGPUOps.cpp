@@ -12,6 +12,7 @@
 
 namespace mlir {
 namespace xegpu {
+
 // this file is for position occupation,
 // we will add functions in following PRs.
 

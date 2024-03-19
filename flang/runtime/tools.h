@@ -430,7 +430,7 @@ template <>
 inline RT_API_ATTRS const char *FindCharacter(
     const char *data, char ch, std::size_t chars) {
   return reinterpret_cast<const char *>(
-      std::memchr(data, static_cast<int>(ch), chars));
+      runtime::memchr(data, static_cast<int>(ch), chars));
 }
 
 // Copy payload data from one allocated descriptor to another.
