@@ -491,7 +491,8 @@ static void replaceManagedVar(llvm::GlobalVariable *Var,
       // variable with instructions.
       for (auto &&Op : WorkItem) {
         auto *CE = cast<llvm::ConstantExpr>(Op);
-        auto *NewInst = CE->getAsInstruction(I);
+        auto *NewInst = CE->getAsInstruction();
+        NewInst->insertBefore(*I->getParent(), I->getIterator());
         NewInst->replaceUsesOfWith(OldV, NewV);
         OldV = CE;
         NewV = NewInst;
