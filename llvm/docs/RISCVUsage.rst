@@ -101,6 +101,7 @@ on support follow.
      ``Smepmp``        Supported
      ``Ssaia``         Supported
      ``Ssccptr``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sscofpmf``      Assembly Support
      ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Ssstateen``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Ssstrict``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
@@ -331,6 +332,15 @@ The current vendor extensions supported are:
 ``XSfvcp``
   LLVM implements `version 1.0.0 of the SiFive Vector Coprocessor Interface (VCIX) Software Specification <https://sifive.cdn.prismic.io/sifive/c3829e36-8552-41f0-a841-79945784241b_vcix-spec-software.pdf>`__ by SiFive.  All instructions are prefixed with `sf.vc.` as described in the specification, and the riscv-toolchain-convention document linked above.
 
+``XSfvqmaccdod``, ``XSfvqmaccqoq``
+  LLVM implements `version 1.1.0 of the SiFive Int8 Matrix Multiplication Extensions Specification <https://sifive.cdn.prismic.io/sifive/1a2ad85b-d818-49f7-ba83-f51f1731edbe_int8-matmul-spec.pdf>`__ by SiFive.  All instructions are prefixed with `sf.` as described in the specification linked above.
+
+``Xsfvfnrclipxfqf``
+  LLVM implements `version 1.0.0 of the FP32-to-int8 Ranged Clip Instructions Extension Specification <https://sifive.cdn.prismic.io/sifive/0aacff47-f530-43dc-8446-5caa2260ece0_xsfvfnrclipxfqf-spec.pdf>`__ by SiFive.  All instructions are prefixed with `sf.` as described in the specification linked above.
+
+``Xsfvfwmaccqqq``
+  LLVM implements `version 1.0.0 of the Matrix Multiply Accumulate Instruction Extension Specification <https://sifive.cdn.prismic.io/sifive/c391d53e-ffcf-4091-82f6-c37bf3e883ed_xsfvfwmaccqqq-spec.pdf>`__ by SiFive.  All instructions are prefixed with `sf.` as described in the specification linked above.
+
 ``XCVbitmanip``
   LLVM implements `version 1.0.0 of the CORE-V Bit Manipulation custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/62bec66b36182215e18c9cf10f723567e23878e9/docs/source/instruction_set_extensions.rst>`__ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification.
 
@@ -351,6 +361,15 @@ The current vendor extensions supported are:
 
 ``XCVbi``
   LLVM implements `version 1.0.0 of the CORE-V immediate branching custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/cv32e40p_v1.3.2/docs/source/instruction_set_extensions.rst>`__ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
+
+``XSiFivecdiscarddlone``
+  LLVM implements `the SiFive sf.cdiscard.d.l1 instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
+
+``XSiFivecflushdlone``
+  LLVM implements `the SiFive sf.cflush.d.l1 instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
+
+``XSfcease``
+  LLVM implements `the SiFive sf.cease instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
 
 Experimental C Intrinsics
 =========================

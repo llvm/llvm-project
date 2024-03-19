@@ -31,7 +31,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -109,7 +109,7 @@ namespace {
     const ARMSubtarget *STI;
     const TargetLowering *TL;
     ARMFunctionInfo *AFI;
-    LivePhysRegs LiveRegs;
+    LiveRegUnits LiveRegs;
     RegisterClassInfo RegClassInfo;
     MachineBasicBlock::const_iterator LiveRegPos;
     bool LiveRegsValid;
@@ -589,7 +589,7 @@ unsigned ARMLoadStoreOpt::findFreeReg(const TargetRegisterClass &RegClass) {
   }
 
   for (unsigned Reg : RegClassInfo.getOrder(&RegClass))
-    if (LiveRegs.available(MF->getRegInfo(), Reg))
+    if (LiveRegs.available(Reg) && !MF->getRegInfo().isReserved(Reg))
       return Reg;
   return 0;
 }

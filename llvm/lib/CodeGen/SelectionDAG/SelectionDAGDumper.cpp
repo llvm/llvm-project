@@ -165,6 +165,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     if (cast<ConstantSDNode>(this)->isOpaque())
       return "OpaqueTargetConstant";
     return "TargetConstant";
+
+    // clang-format off
+
   case ISD::TargetConstantFP:           return "TargetConstantFP";
   case ISD::TargetGlobalAddress:        return "TargetGlobalAddress";
   case ISD::TargetGlobalTLSAddress:     return "TargetGlobalTLSAddress";
@@ -449,6 +452,11 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SET_FPMODE:                 return "set_fpmode";
   case ISD::RESET_FPMODE:               return "reset_fpmode";
 
+  // Convergence control instructions
+  case ISD::CONVERGENCECTRL_ANCHOR:     return "convergencectrl_anchor";
+  case ISD::CONVERGENCECTRL_ENTRY:      return "convergencectrl_entry";
+  case ISD::CONVERGENCECTRL_LOOP:       return "convergencectrl_loop";
+
   // Bit manipulation
   case ISD::ABS:                        return "abs";
   case ISD::BITREVERSE:                 return "bitreverse";
@@ -463,6 +471,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   // Trampolines
   case ISD::INIT_TRAMPOLINE:            return "init_trampoline";
   case ISD::ADJUST_TRAMPOLINE:          return "adjust_trampoline";
+
+    // clang-format on
 
   case ISD::CONDCODE:
     switch (cast<CondCodeSDNode>(this)->get()) {
@@ -831,6 +841,18 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
   } else if (const MemSDNode *M = dyn_cast<MemSDNode>(this)) {
     OS << "<";
     printMemOperand(OS, *M->getMemOperand(), G);
+    if (auto *A = dyn_cast<AtomicSDNode>(M))
+      if (A->getOpcode() == ISD::ATOMIC_LOAD) {
+        bool doExt = true;
+        switch (A->getExtensionType()) {
+        default: doExt = false; break;
+        case ISD::EXTLOAD:  OS << ", anyext"; break;
+        case ISD::SEXTLOAD: OS << ", sext"; break;
+        case ISD::ZEXTLOAD: OS << ", zext"; break;
+        }
+        if (doExt)
+          OS << " from " << A->getMemoryVT();
+      }
     OS << ">";
   } else if (const BlockAddressSDNode *BA =
                dyn_cast<BlockAddressSDNode>(this)) {

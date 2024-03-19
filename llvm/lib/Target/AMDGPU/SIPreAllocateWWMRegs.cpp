@@ -156,7 +156,7 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
   RegsToRewrite.clear();
 
   // Update the set of reserved registers to include WWM ones.
-  MRI->freezeReservedRegs(MF);
+  MRI->freezeReservedRegs();
 }
 
 #ifndef NDEBUG

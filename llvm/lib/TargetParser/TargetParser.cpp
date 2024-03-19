@@ -318,6 +318,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["dot8-insts"] = true;
       Features["dot9-insts"] = true;
       Features["dot10-insts"] = true;
+      Features["dot11-insts"] = true;
       Features["dl-insts"] = true;
       Features["atomic-ds-pk-add-16-insts"] = true;
       Features["atomic-flat-pk-add-16-insts"] = true;

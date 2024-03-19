@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
+#include "mlir/Dialect/EmitC/IR/EmitCTraits.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -131,15 +132,18 @@ LogicalResult ApplyOp::verify() {
 LogicalResult emitc::AssignOp::verify() {
   Value variable = getVar();
   Operation *variableDef = variable.getDefiningOp();
-  if (!variableDef || !llvm::isa<emitc::VariableOp>(variableDef))
+  if (!variableDef ||
+      !llvm::isa<emitc::VariableOp, emitc::SubscriptOp>(variableDef))
     return emitOpError() << "requires first operand (" << variable
-                         << ") to be a Variable";
+                         << ") to be a Variable or subscript";
 
   Value value = getValue();
   if (variable.getType() != value.getType())
     return emitOpError() << "requires value's type (" << value.getType()
                          << ") to match variable's type (" << variable.getType()
                          << ")";
+  if (isa<ArrayType>(variable.getType()))
+    return emitOpError() << "cannot assign to array type";
   return success();
 }
 
@@ -189,6 +193,11 @@ LogicalResult emitc::CallOpaqueOp::verify() {
       if (!llvm::isa<TypeAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(tArg))
         return emitOpError("template argument has invalid type");
     }
+  }
+
+  if (llvm::any_of(getResultTypes(),
+                   [](Type type) { return isa<ArrayType>(type); })) {
+    return emitOpError() << "cannot return array type";
   }
 
   return success();
@@ -244,7 +253,7 @@ LogicalResult ExpressionOp::verify() {
     return emitOpError("requires yielded type to match return type");
 
   for (Operation &op : region.front().without_terminator()) {
-    if (!isCExpression(op))
+    if (!op.hasTrait<OpTrait::emitc::CExpression>())
       return emitOpError("contains an unsupported operation");
     if (op.getNumResults() != 1)
       return emitOpError("requires exactly one result for each operation");
@@ -454,6 +463,9 @@ LogicalResult FuncOp::verify() {
   if (getNumResults() > 1)
     return emitOpError("requires zero or exactly one result, but has ")
            << getNumResults();
+
+  if (getNumResults() == 1 && isa<ArrayType>(getResultTypes()[0]))
+    return emitOpError("cannot return array type");
 
   return success();
 }
@@ -736,6 +748,20 @@ LogicalResult emitc::YieldOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// SubscriptOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult emitc::SubscriptOp::verify() {
+  if (getIndices().size() != (size_t)getArray().getType().getRank()) {
+    return emitOpError() << "requires number of indices ("
+                         << getIndices().size()
+                         << ") to match the rank of the array type ("
+                         << getArray().getType().getRank() << ")";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
@@ -761,6 +787,69 @@ LogicalResult emitc::YieldOp::verify() {
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitCTypes.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// ArrayType
+//===----------------------------------------------------------------------===//
+
+Type emitc::ArrayType::parse(AsmParser &parser) {
+  if (parser.parseLess())
+    return Type();
+
+  SmallVector<int64_t, 4> dimensions;
+  if (parser.parseDimensionList(dimensions, /*allowDynamic=*/false,
+                                /*withTrailingX=*/true))
+    return Type();
+  // Parse the element type.
+  auto typeLoc = parser.getCurrentLocation();
+  Type elementType;
+  if (parser.parseType(elementType))
+    return Type();
+
+  // Check that array is formed from allowed types.
+  if (!isValidElementType(elementType))
+    return parser.emitError(typeLoc, "invalid array element type"), Type();
+  if (parser.parseGreater())
+    return Type();
+  return parser.getChecked<ArrayType>(dimensions, elementType);
+}
+
+void emitc::ArrayType::print(AsmPrinter &printer) const {
+  printer << "<";
+  for (int64_t dim : getShape()) {
+    printer << dim << 'x';
+  }
+  printer.printType(getElementType());
+  printer << ">";
+}
+
+LogicalResult emitc::ArrayType::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ::llvm::ArrayRef<int64_t> shape, Type elementType) {
+  if (shape.empty())
+    return emitError() << "shape must not be empty";
+
+  for (int64_t dim : shape) {
+    if (dim <= 0)
+      return emitError() << "dimensions must have positive size";
+  }
+
+  if (!elementType)
+    return emitError() << "element type must not be none";
+
+  if (!isValidElementType(elementType))
+    return emitError() << "invalid array element type";
+
+  return success();
+}
+
+emitc::ArrayType
+emitc::ArrayType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                            Type elementType) const {
+  if (!shape)
+    return emitc::ArrayType::get(getShape(), elementType);
+  return emitc::ArrayType::get(*shape, elementType);
+}
 
 //===----------------------------------------------------------------------===//
 // OpaqueType

@@ -75,7 +75,9 @@
 #error Unknown compiler
 #endif
 
-#if (KMP_OS_LINUX || KMP_OS_WINDOWS || KMP_OS_FREEBSD) && !KMP_OS_WASI
+#if (KMP_OS_LINUX || KMP_OS_WINDOWS || KMP_OS_FREEBSD || KMP_OS_NETBSD ||      \
+     KMP_OS_DRAGONFLY) &&                                                      \
+    !KMP_OS_WASI
 #define KMP_AFFINITY_SUPPORTED 1
 #if KMP_OS_WINDOWS && KMP_ARCH_X86_64
 #define KMP_GROUP_AFFINITY 1

@@ -246,7 +246,8 @@ void ReassociatePass::canonicalizeOperands(Instruction *I) {
 }
 
 static BinaryOperator *CreateAdd(Value *S1, Value *S2, const Twine &Name,
-                                 Instruction *InsertBefore, Value *FlagsOp) {
+                                 BasicBlock::iterator InsertBefore,
+                                 Value *FlagsOp) {
   if (S1->getType()->isIntOrIntVectorTy())
     return BinaryOperator::CreateAdd(S1, S2, Name, InsertBefore);
   else {
@@ -258,7 +259,8 @@ static BinaryOperator *CreateAdd(Value *S1, Value *S2, const Twine &Name,
 }
 
 static BinaryOperator *CreateMul(Value *S1, Value *S2, const Twine &Name,
-                                 Instruction *InsertBefore, Value *FlagsOp) {
+                                 BasicBlock::iterator InsertBefore,
+                                 Value *FlagsOp) {
   if (S1->getType()->isIntOrIntVectorTy())
     return BinaryOperator::CreateMul(S1, S2, Name, InsertBefore);
   else {
@@ -291,7 +293,8 @@ static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
   Constant *NegOne = Ty->isIntOrIntVectorTy() ?
     ConstantInt::getAllOnesValue(Ty) : ConstantFP::get(Ty, -1.0);
 
-  BinaryOperator *Res = CreateMul(Neg->getOperand(OpNo), NegOne, "", Neg, Neg);
+  BinaryOperator *Res =
+      CreateMul(Neg->getOperand(OpNo), NegOne, "", Neg->getIterator(), Neg);
   Neg->setOperand(OpNo, Constant::getNullValue(Ty)); // Drop use of op.
   Res->takeName(Neg);
   Neg->replaceAllUsesWith(Res);
@@ -794,8 +797,8 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
     BinaryOperator *NewOp;
     if (NodesToRewrite.empty()) {
       Constant *Undef = UndefValue::get(I->getType());
-      NewOp = BinaryOperator::Create(Instruction::BinaryOps(Opcode),
-                                     Undef, Undef, "", I);
+      NewOp = BinaryOperator::Create(Instruction::BinaryOps(Opcode), Undef,
+                                     Undef, "", I->getIterator());
       if (isa<FPMathOperator>(NewOp))
         NewOp->setFastMathFlags(I->getFastMathFlags());
     } else {
@@ -1046,8 +1049,8 @@ static bool shouldConvertOrWithNoCommonBitsToAdd(Instruction *Or) {
 /// transform this into (X+Y) to allow arithmetics reassociation.
 static BinaryOperator *convertOrWithNoCommonBitsToAdd(Instruction *Or) {
   // Convert an or into an add.
-  BinaryOperator *New =
-      CreateAdd(Or->getOperand(0), Or->getOperand(1), "", Or, Or);
+  BinaryOperator *New = CreateAdd(Or->getOperand(0), Or->getOperand(1), "",
+                                  Or->getIterator(), Or);
   New->setHasNoSignedWrap();
   New->setHasNoUnsignedWrap();
   New->takeName(Or);
@@ -1099,7 +1102,8 @@ static BinaryOperator *BreakUpSubtract(Instruction *Sub,
   // Calculate the negative value of Operand 1 of the sub instruction,
   // and set it as the RHS of the add instruction we just made.
   Value *NegVal = NegateValue(Sub->getOperand(1), Sub, ToRedo);
-  BinaryOperator *New = CreateAdd(Sub->getOperand(0), NegVal, "", Sub, Sub);
+  BinaryOperator *New =
+      CreateAdd(Sub->getOperand(0), NegVal, "", Sub->getIterator(), Sub);
   Sub->setOperand(0, Constant::getNullValue(Sub->getType())); // Drop use of op.
   Sub->setOperand(1, Constant::getNullValue(Sub->getType())); // Drop use of op.
   New->takeName(Sub);
@@ -1119,8 +1123,8 @@ static BinaryOperator *ConvertShiftToMul(Instruction *Shl) {
   auto *SA = cast<ConstantInt>(Shl->getOperand(1));
   MulCst = ConstantExpr::getShl(MulCst, SA);
 
-  BinaryOperator *Mul =
-    BinaryOperator::CreateMul(Shl->getOperand(0), MulCst, "", Shl);
+  BinaryOperator *Mul = BinaryOperator::CreateMul(Shl->getOperand(0), MulCst,
+                                                  "", Shl->getIterator());
   Shl->setOperand(0, PoisonValue::get(Shl->getType())); // Drop use of op.
   Mul->takeName(Shl);
 
@@ -1170,13 +1174,13 @@ static unsigned FindInOperandList(const SmallVectorImpl<ValueEntry> &Ops,
 
 /// Emit a tree of add instructions, summing Ops together
 /// and returning the result.  Insert the tree before I.
-static Value *EmitAddTreeOfValues(Instruction *I,
+static Value *EmitAddTreeOfValues(BasicBlock::iterator It,
                                   SmallVectorImpl<WeakTrackingVH> &Ops) {
   if (Ops.size() == 1) return Ops.back();
 
   Value *V1 = Ops.pop_back_val();
-  Value *V2 = EmitAddTreeOfValues(I, Ops);
-  return CreateAdd(V2, V1, "reass.add", I, I);
+  Value *V2 = EmitAddTreeOfValues(It, Ops);
+  return CreateAdd(V2, V1, "reass.add", It, &*It);
 }
 
 /// If V is an expression tree that is a multiplication sequence,
@@ -1323,7 +1327,7 @@ static Value *OptimizeAndOrXor(unsigned Opcode,
 /// instruction. There are two special cases: 1) if the constant operand is 0,
 /// it will return NULL. 2) if the constant is ~0, the symbolic operand will
 /// be returned.
-static Value *createAndInstr(Instruction *InsertBefore, Value *Opnd,
+static Value *createAndInstr(BasicBlock::iterator InsertBefore, Value *Opnd,
                              const APInt &ConstOpnd) {
   if (ConstOpnd.isZero())
     return nullptr;
@@ -1344,7 +1348,7 @@ static Value *createAndInstr(Instruction *InsertBefore, Value *Opnd,
 // If it was successful, true is returned, and the "R" and "C" is returned
 // via "Res" and "ConstOpnd", respectively; otherwise, false is returned,
 // and both "Res" and "ConstOpnd" remain unchanged.
-bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
+bool ReassociatePass::CombineXorOpnd(BasicBlock::iterator It, XorOpnd *Opnd1,
                                      APInt &ConstOpnd, Value *&Res) {
   // Xor-Rule 1: (x | c1) ^ c2 = (x | c1) ^ (c1 ^ c1) ^ c2
   //                       = ((x | c1) ^ c1) ^ (c1 ^ c2)
@@ -1361,7 +1365,7 @@ bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
     return false;
 
   Value *X = Opnd1->getSymbolicPart();
-  Res = createAndInstr(I, X, ~C1);
+  Res = createAndInstr(It, X, ~C1);
   // ConstOpnd was C2, now C1 ^ C2.
   ConstOpnd ^= C1;
 
@@ -1378,7 +1382,7 @@ bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
 // via "Res" and "ConstOpnd", respectively (If the entire expression is
 // evaluated to a constant, the Res is set to NULL); otherwise, false is
 // returned, and both "Res" and "ConstOpnd" remain unchanged.
-bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
+bool ReassociatePass::CombineXorOpnd(BasicBlock::iterator It, XorOpnd *Opnd1,
                                      XorOpnd *Opnd2, APInt &ConstOpnd,
                                      Value *&Res) {
   Value *X = Opnd1->getSymbolicPart();
@@ -1413,7 +1417,7 @@ bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
         return false;
     }
 
-    Res = createAndInstr(I, X, C3);
+    Res = createAndInstr(It, X, C3);
     ConstOpnd ^= C1;
   } else if (Opnd1->isOrExpr()) {
     // Xor-Rule 3: (x | c1) ^ (x | c2) = (x & c3) ^ c3 where c3 = c1 ^ c2
@@ -1429,7 +1433,7 @@ bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
         return false;
     }
 
-    Res = createAndInstr(I, X, C3);
+    Res = createAndInstr(It, X, C3);
     ConstOpnd ^= C3;
   } else {
     // Xor-Rule 4: (x & c1) ^ (x & c2) = (x & (c1^c2))
@@ -1437,7 +1441,7 @@ bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
     const APInt &C1 = Opnd1->getConstPart();
     const APInt &C2 = Opnd2->getConstPart();
     APInt C3 = C1 ^ C2;
-    Res = createAndInstr(I, X, C3);
+    Res = createAndInstr(It, X, C3);
   }
 
   // Put the original operands in the Redo list; hope they will be deleted
@@ -1514,7 +1518,8 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
     Value *CV;
 
     // Step 3.1: Try simplifying "CurrOpnd ^ ConstOpnd"
-    if (!ConstOpnd.isZero() && CombineXorOpnd(I, CurrOpnd, ConstOpnd, CV)) {
+    if (!ConstOpnd.isZero() &&
+        CombineXorOpnd(I->getIterator(), CurrOpnd, ConstOpnd, CV)) {
       Changed = true;
       if (CV)
         *CurrOpnd = XorOpnd(CV);
@@ -1531,7 +1536,7 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
 
     // step 3.2: When previous and current operands share the same symbolic
     //  value, try to simplify "PrevOpnd ^ CurrOpnd ^ ConstOpnd"
-    if (CombineXorOpnd(I, CurrOpnd, PrevOpnd, ConstOpnd, CV)) {
+    if (CombineXorOpnd(I->getIterator(), CurrOpnd, PrevOpnd, ConstOpnd, CV)) {
       // Remove previous operand
       PrevOpnd->Invalidate();
       if (CV) {
@@ -1602,7 +1607,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       Type *Ty = TheOp->getType();
       Constant *C = Ty->isIntOrIntVectorTy() ?
         ConstantInt::get(Ty, NumFound) : ConstantFP::get(Ty, NumFound);
-      Instruction *Mul = CreateMul(TheOp, C, "factor", I, I);
+      Instruction *Mul = CreateMul(TheOp, C, "factor", I->getIterator(), I);
 
       // Now that we have inserted a multiply, optimize it. This allows us to
       // handle cases that require multiple factoring steps, such as this:
@@ -1766,7 +1771,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
     DummyInst->deleteValue();
 
     unsigned NumAddedValues = NewMulOps.size();
-    Value *V = EmitAddTreeOfValues(I, NewMulOps);
+    Value *V = EmitAddTreeOfValues(I->getIterator(), NewMulOps);
 
     // Now that we have inserted the add tree, optimize it. This allows us to
     // handle cases that require multiple factoring steps, such as this:
@@ -1777,7 +1782,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       RedoInsts.insert(VI);
 
     // Create the multiply.
-    Instruction *V2 = CreateMul(V, MaxOccVal, "reass.mul", I, I);
+    Instruction *V2 = CreateMul(V, MaxOccVal, "reass.mul", I->getIterator(), I);
 
     // Rerun associate on the multiply in case the inner expression turned into
     // a multiply.  We want to make sure that we keep things in canonical form.

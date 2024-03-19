@@ -5682,30 +5682,32 @@ void Process::Flush() {
 
 lldb::addr_t Process::GetCodeAddressMask() {
   if (uint32_t num_bits_setting = GetVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
 
   return m_code_address_mask;
 }
 
 lldb::addr_t Process::GetDataAddressMask() {
   if (uint32_t num_bits_setting = GetVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
 
   return m_data_address_mask;
 }
 
 lldb::addr_t Process::GetHighmemCodeAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
-  if (m_highmem_code_address_mask)
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
+
+  if (m_highmem_code_address_mask != LLDB_INVALID_ADDRESS_MASK)
     return m_highmem_code_address_mask;
   return GetCodeAddressMask();
 }
 
 lldb::addr_t Process::GetHighmemDataAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
-  if (m_highmem_data_address_mask)
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
+
+  if (m_highmem_data_address_mask != LLDB_INVALID_ADDRESS_MASK)
     return m_highmem_data_address_mask;
   return GetDataAddressMask();
 }
