@@ -28099,8 +28099,7 @@ Lowering:
 
 In the most general case call to the '``llvm.memcpy.element.unordered.atomic.*``' is
 lowered to a call to the symbol ``__llvm_memcpy_element_unordered_atomic_*``. Where '*'
-is replaced with an actual element size. See :
-ref:`RewriteStatepointsForGC intrinsic
+is replaced with an actual element size. See :ref:`RewriteStatepointsForGC intrinsic
 lowering <RewriteStatepointsForGC_intrinsic_lowering>` for details on GC specific
 lowering.
 
@@ -28179,8 +28178,7 @@ Lowering:
 In the most general case call to the
 '``llvm.memmove.element.unordered.atomic.*``' is lowered to a call to the symbol
 ``__llvm_memmove_element_unordered_atomic_*``. Where '*' is replaced with an
-actual element size. See :
-ref:`RewriteStatepointsForGC intrinsic lowering
+actual element size. See :ref:`RewriteStatepointsForGC intrinsic lowering
 <RewriteStatepointsForGC_intrinsic_lowering>` for details on GC specific
 lowering.
 
