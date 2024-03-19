@@ -1198,8 +1198,8 @@ reallyfinally:
   ret void
 }
 
-define amdgpu_kernel void @zext_i1_as_index(i1 %Bool, ptr %Ptr, <4 x float> %Vec1, <4 x float> %Vec2) {
-; OPT-LABEL: @test(
+define amdgpu_kernel void @pr85718(i1 %Bool, ptr %Ptr, <4 x float> %Vec1, <4 x float> %Vec2) {
+; OPT-LABEL: @pr85718(
 ; OPT-NEXT:  BB0:
 ; OPT-NEXT:    [[I:%.*]] = insertelement <4 x float> [[VEC1:%.*]], float 4.200000e+01, i1 true
 ; OPT-NEXT:    br label [[BB1:%.*]]
@@ -1225,7 +1225,7 @@ define amdgpu_kernel void @zext_i1_as_index(i1 %Bool, ptr %Ptr, <4 x float> %Vec
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE9]] = extractelement <4 x float> [[I]], i64 3
 ; OPT-NEXT:    br label [[BB1]]
 ;
-; NOOPT-LABEL: @test(
+; NOOPT-LABEL: @pr85718(
 ; NOOPT-NEXT:  BB0:
 ; NOOPT-NEXT:    [[I:%.*]] = insertelement <4 x float> [[VEC1:%.*]], float 4.200000e+01, i1 true
 ; NOOPT-NEXT:    br label [[BB1:%.*]]
