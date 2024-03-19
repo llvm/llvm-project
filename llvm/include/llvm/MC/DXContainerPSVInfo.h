@@ -67,12 +67,6 @@ struct PSVRuntimeInfo {
   std::array<SmallVector<uint32_t>, 4> InputOutputMap;
   SmallVector<uint32_t> InputPatchMap;
   SmallVector<uint32_t> PatchOutputMap;
-
-  StringTableBuilder DXConStrTabBuilder;
-  SmallVector<uint32_t, 64> IndexBuffer;
-  SmallVector<llvm::dxbc::PSV::v0::SignatureElement, 32> SignatureElements;
-  SmallVector<StringRef, 32> SemanticNames;
-
   llvm::StringRef EntryName;
 
   // Serialize PSVInfo into the provided raw_ostream. The version field
@@ -82,6 +76,11 @@ struct PSVRuntimeInfo {
              uint32_t Version = std::numeric_limits<uint32_t>::max()) const;
 
   void finalize(Triple::EnvironmentType Stage);
+
+private:
+  SmallVector<uint32_t, 64> IndexBuffer;
+  SmallVector<llvm::dxbc::PSV::v0::SignatureElement, 32> SignatureElements;
+  StringTableBuilder DXConStrTabBuilder;
 };
 
 class Signature {

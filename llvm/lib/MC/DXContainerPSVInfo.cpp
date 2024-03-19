@@ -152,6 +152,8 @@ void PSVRuntimeInfo::finalize(Triple::EnvironmentType Stage) {
   BaseData.SigPatchOrPrimElements =
       static_cast<uint32_t>(PatchOrPrimElements.size());
 
+  SmallVector<StringRef, 32> SemanticNames;
+
   // Build a string table and set associated offsets to be written when
   // write() is called
   ProcessElementList(DXConStrTabBuilder, IndexBuffer, SignatureElements,
