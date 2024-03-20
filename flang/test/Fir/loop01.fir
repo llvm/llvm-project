@@ -1,4 +1,4 @@
-// RUN: fir-opt --split-input-file --cfg-conversion %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cfg-conversion-on-func-opt %s | FileCheck %s
 
 func.func @x(%lb : index, %ub : index, %step : index, %b : i1, %addr : !fir.ref<index>) {
   fir.do_loop %iv = %lb to %ub step %step unordered {
