@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_LINUX_LSEEKIMPL_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_LINUX_LSEEKIMPL_H
 
+#include "include/llvm-libc-types/off_t.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -16,7 +17,6 @@
 
 #include <stdint.h>      // For uint64_t.
 #include <sys/syscall.h> // For syscall numbers.
-#include <unistd.h>      // For off_t.
 
 namespace LIBC_NAMESPACE {
 namespace internal {
