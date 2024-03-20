@@ -6894,8 +6894,7 @@ public:
           if (context_changed)
             m_selected_line = m_pc_line;
 
-          if (m_file_sp &&
-              m_file_sp->GetFileSpec() == m_sc.line_entry.GetFile()) {
+          if (m_file_sp && m_file_sp->GetFileSpec() == m_sc.line_entry.file) {
             // Same file, nothing to do, we should either have the lines or
             // not (source file missing)
             if (m_selected_line >= static_cast<size_t>(m_first_visible_line)) {
@@ -6910,8 +6909,8 @@ public:
           } else {
             // File changed, set selected line to the line with the PC
             m_selected_line = m_pc_line;
-            m_file_sp = m_debugger.GetSourceManager().GetFile(
-                m_sc.line_entry.GetFile());
+            m_file_sp =
+                m_debugger.GetSourceManager().GetFile(m_sc.line_entry.file);
             if (m_file_sp) {
               const size_t num_lines = m_file_sp->GetNumLines();
               m_line_width = 1;
@@ -7001,7 +7000,7 @@ public:
             LineEntry bp_loc_line_entry;
             if (bp_loc_sp->GetAddress().CalculateSymbolContextLineEntry(
                     bp_loc_line_entry)) {
-              if (m_file_sp->GetFileSpec() == bp_loc_line_entry.GetFile()) {
+              if (m_file_sp->GetFileSpec() == bp_loc_line_entry.file) {
                 bp_lines.insert(bp_loc_line_entry.line);
               }
             }
@@ -7478,7 +7477,7 @@ public:
           LineEntry bp_loc_line_entry;
           if (bp_loc_sp->GetAddress().CalculateSymbolContextLineEntry(
                   bp_loc_line_entry)) {
-            if (m_file_sp->GetFileSpec() == bp_loc_line_entry.GetFile() &&
+            if (m_file_sp->GetFileSpec() == bp_loc_line_entry.file &&
                 m_selected_line + 1 == bp_loc_line_entry.line) {
               bool removed =
                   exe_ctx.GetTargetRef().RemoveBreakpointByID(bp_sp->GetID());
