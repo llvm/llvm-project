@@ -128,6 +128,10 @@ private:
   /// Find matching dylib slice for target triple that is being parsed.
   void assignSlice(const Target &T);
 
+  /// Gather annotations for symbol for error reporting.
+  std::string getAnnotatedName(const Record *R, SymbolContext &SymCtx,
+                               bool ValidSourceLoc = true);
+
   // Symbols in dylib.
   llvm::MachO::Records Dylib;
 
