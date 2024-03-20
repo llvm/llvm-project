@@ -16,6 +16,56 @@ using namespace llvm;
 using namespace llvm::mcdxbc;
 using namespace llvm::dxbc::PSV;
 
+static constexpr size_t npos = StringRef::npos;
+
+static size_t FindSequence(ArrayRef<uint32_t> Buffer,
+                           ArrayRef<uint32_t> Sequence) {
+  if (Buffer.size() < Sequence.size())
+    return npos;
+  for (size_t Idx = 0; Idx <= Buffer.size() - Sequence.size(); ++Idx) {
+    if (0 == memcmp(static_cast<const void *>(&Buffer[Idx]),
+                    static_cast<const void *>(Sequence.begin()),
+                    Sequence.size() * sizeof(uint32_t)))
+      return Idx;
+  }
+  return npos;
+}
+
+static void
+ProcessElementList(StringTableBuilder &StrTabBuilder,
+                   SmallVectorImpl<uint32_t> &IndexBuffer,
+                   SmallVectorImpl<v0::SignatureElement> &FinalElements,
+                   SmallVectorImpl<StringRef> &SemanticNames,
+                   ArrayRef<PSVSignatureElement> Elements) {
+  for (const auto &El : Elements) {
+    // Put the name in the string table and the name list.
+    StrTabBuilder.add(El.Name);
+    SemanticNames.push_back(El.Name);
+
+    v0::SignatureElement FinalElement;
+    memset(&FinalElement, 0, sizeof(v0::SignatureElement));
+    FinalElement.Rows = static_cast<uint8_t>(El.Indices.size());
+    FinalElement.StartRow = El.StartRow;
+    FinalElement.Cols = El.Cols;
+    FinalElement.StartCol = El.StartCol;
+    FinalElement.Allocated = El.Allocated;
+    FinalElement.Kind = El.Kind;
+    FinalElement.Type = El.Type;
+    FinalElement.Mode = El.Mode;
+    FinalElement.DynamicMask = El.DynamicMask;
+    FinalElement.Stream = El.Stream;
+
+    size_t Idx = FindSequence(IndexBuffer, El.Indices);
+    if (Idx == npos) {
+      FinalElement.IndicesOffset = static_cast<uint32_t>(IndexBuffer.size());
+      IndexBuffer.insert(IndexBuffer.end(), El.Indices.begin(),
+                         El.Indices.end());
+    } else
+      FinalElement.IndicesOffset = static_cast<uint32_t>(Idx);
+    FinalElements.push_back(FinalElement);
+  }
+}
+
 void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
   assert(IsFinalized && "finalize must be called before write");
 
