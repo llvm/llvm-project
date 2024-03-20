@@ -178,8 +178,6 @@ public:
     Quarantine.init(
         static_cast<uptr>(getFlags()->quarantine_size_kb << 10),
         static_cast<uptr>(getFlags()->thread_local_quarantine_size_kb << 10));
-
-    mapAndInitializeRingBuffer();
   }
 
   void enableRingBuffer() {
@@ -915,9 +913,11 @@ public:
       DCHECK(!Primary.Options.load().get(OptionBit::TrackAllocationStacks));
       return;
     }
-    if (Track)
+
+    if (Track) {
+      initRingBufferMaybe();
       Primary.Options.set(OptionBit::TrackAllocationStacks);
-    else
+    } else
       Primary.Options.clear(OptionBit::TrackAllocationStacks);
   }
 
@@ -1546,11 +1546,15 @@ private:
         RBEntryStart)[N];
   }
 
-  void mapAndInitializeRingBuffer() {
-    if (getFlags()->allocation_ring_buffer_size <= 0)
+  void initRingBufferMaybe() {
+    if (getRingBuffer() != nullptr)
       return;
-    u32 AllocationRingBufferSize =
-        static_cast<u32>(getFlags()->allocation_ring_buffer_size);
+
+    int ring_buffer_size = getFlags()->allocation_ring_buffer_size;
+    if (ring_buffer_size <= 0)
+      return;
+
+    u32 AllocationRingBufferSize = static_cast<u32>(ring_buffer_size);
 
     // We store alloc and free stacks for each entry.
     constexpr u32 kStacksPerRingBufferEntry = 2;
@@ -1594,14 +1598,19 @@ private:
     RB->StackDepotSize = StackDepotSize;
     RB->RawStackDepotMap = DepotMap;
 
-    atomic_store(&RingBufferAddress, reinterpret_cast<uptr>(RB),
-                 memory_order_release);
+    // If multiple threads try to initialize at the same time, let one thread
+    // win and throw away the work done in the other threads. Since this
+    // path is only meant for debugging, a race that results in work being
+    // discarded should not matter.
+    uptr EmptyPtr = 0;
+    if (!atomic_compare_exchange_strong(&RingBufferAddress, &EmptyPtr,
+                                        reinterpret_cast<uptr>(RB),
+                                        memory_order_acquire)) {
+      unmapRingBuffer(RB);
+    }
   }
 
-  void unmapRingBuffer() {
-    AllocationRingBuffer *RB = getRingBuffer();
-    if (RB == nullptr)
-      return;
+  void unmapRingBuffer(AllocationRingBuffer *RB) {
     // N.B. because RawStackDepotMap is part of RawRingBufferMap, the order
     // is very important.
     RB->RawStackDepotMap.unmap(RB->RawStackDepotMap.getBase(),
@@ -1612,6 +1621,13 @@ private:
     MemMapT RawRingBufferMap = RB->RawRingBufferMap;
     RawRingBufferMap.unmap(RawRingBufferMap.getBase(),
                            RawRingBufferMap.getCapacity());
+  }
+
+  void unmapRingBuffer() {
+    AllocationRingBuffer *RB = getRingBuffer();
+    if (RB == nullptr)
+      return;
+    unmapRingBuffer(RB);
     atomic_store(&RingBufferAddress, 0, memory_order_release);
   }
 
