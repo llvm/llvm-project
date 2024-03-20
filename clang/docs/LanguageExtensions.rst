@@ -3513,7 +3513,7 @@ can be of any unsigned integer type.
 
 If the first argument is 0 and an optional second argument of ``int`` type is
 provided, then the second argument is returned. If the first argument is 0, but
-only one argument is provided, then the returned value is undefined.
+only one argument is provided, then the behavior is undefined.
 
 **Syntax**:
 
