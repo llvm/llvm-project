@@ -2,7 +2,7 @@ SWIFTFLAGS_EXTRAS = -I.
 
 ifneq "$(SWIFT_SOURCES)" "empty.swift"
 
-SWIFTFLAGS_EXTRAS += -load-plugin-library $(BUILDDIR)/libMacroImpl.dylib
+SWIFTFLAGS_EXTRAS += -load-plugin-library $(BUILDDIR)/libMacroImpl.dylib -dwarf-version=5
 LD_EXTRAS = -L$(BUILDDIR) -lMacro
 
 endif
