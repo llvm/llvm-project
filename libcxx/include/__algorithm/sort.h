@@ -161,9 +161,9 @@ template <class _Compare, class _RandomAccessIterator>
 inline _LIBCPP_HIDE_FROM_ABI void __cond_swap(_RandomAccessIterator __x, _RandomAccessIterator __y, _Compare __c) {
   // Note: this function behaves correctly even with proxy iterators (because it relies on `value_type`).
   using value_type = typename iterator_traits<_RandomAccessIterator>::value_type;
-  bool __r         = __c(*__x, *__y);
-  value_type __tmp = __r ? *__x : *__y;
-  *__y             = __r ? *__y : *__x;
+  bool __r         = __c(*__y, *__x);
+  value_type __tmp = __r ? *__y : *__x;
+  *__y             = __r ? *__x : *__y;
   *__x             = __tmp;
 }
 
@@ -174,12 +174,19 @@ inline _LIBCPP_HIDE_FROM_ABI void
 __partially_sorted_swap(_RandomAccessIterator __x, _RandomAccessIterator __y, _RandomAccessIterator __z, _Compare __c) {
   // Note: this function behaves correctly even with proxy iterators (because it relies on `value_type`).
   using value_type = typename iterator_traits<_RandomAccessIterator>::value_type;
-  bool __r         = __c(*__z, *__x);
-  value_type __tmp = __r ? *__z : *__x;
-  *__z             = __r ? *__x : *__z;
-  __r              = __c(__tmp, *__y);
-  *__x             = __r ? *__x : *__y;
-  *__y             = __r ? *__y : __tmp;
+  value_type __t      = *__x;
+  value_type __u      = *__y;
+  value_type __v      = *__z;
+  value_type __orig_t = __t;
+  bool __r            = __c(__u, __t);
+  __t                 = __r ? __u : __t;
+  __u                 = __r ? __orig_t : __u;
+  __r                 = __c(__v, __orig_t);
+  __u                 = __r ? __v : __u;
+  __v                 = __r ? __orig_t : __v;
+  *__x                = __t;
+  *__y                = __u;
+  *__z                = __v;
 }
 
 template <class,
