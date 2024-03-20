@@ -88,7 +88,8 @@ static void maybeRewriteCallWithDifferentBundles(
             });
 
   // Finally actually replace the bundles on the call.
-  CallBase *NewCall = CallBase::Create(OrigCall, NewBundles, OrigCall);
+  CallBase *NewCall =
+      CallBase::Create(OrigCall, NewBundles, OrigCall->getIterator());
   OrigCall->replaceAllUsesWith(NewCall);
   OrigCall->eraseFromParent();
 }

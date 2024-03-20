@@ -99,7 +99,8 @@ void llvm::describeFuzzerVectorOps(std::vector<fuzzerop::OpDescriptor> &Ops) {
 
 OpDescriptor llvm::fuzzerop::selectDescriptor(unsigned Weight) {
   auto buildOp = [](ArrayRef<Value *> Srcs, Instruction *Inst) {
-    return SelectInst::Create(Srcs[0], Srcs[1], Srcs[2], "S", Inst);
+    return SelectInst::Create(Srcs[0], Srcs[1], Srcs[2], "S",
+                              Inst->getIterator());
   };
   return {Weight,
           {boolOrVecBoolType(), matchFirstLengthWAnyType(), matchSecondType()},
@@ -108,7 +109,8 @@ OpDescriptor llvm::fuzzerop::selectDescriptor(unsigned Weight) {
 
 OpDescriptor llvm::fuzzerop::fnegDescriptor(unsigned Weight) {
   auto buildOp = [](ArrayRef<Value *> Srcs, Instruction *Inst) {
-    return UnaryOperator::Create(Instruction::FNeg, Srcs[0], "F", Inst);
+    return UnaryOperator::Create(Instruction::FNeg, Srcs[0], "F",
+                                 Inst->getIterator());
   };
   return {Weight, {anyFloatOrVecFloatType()}, buildOp};
 }
@@ -116,7 +118,8 @@ OpDescriptor llvm::fuzzerop::fnegDescriptor(unsigned Weight) {
 OpDescriptor llvm::fuzzerop::binOpDescriptor(unsigned Weight,
                                              Instruction::BinaryOps Op) {
   auto buildOp = [Op](ArrayRef<Value *> Srcs, Instruction *Inst) {
-    return BinaryOperator::Create(Op, Srcs[0], Srcs[1], "B", Inst);
+    return BinaryOperator::Create(Op, Srcs[0], Srcs[1], "B",
+                                  Inst->getIterator());
   };
   switch (Op) {
   case Instruction::Add:
@@ -149,7 +152,8 @@ OpDescriptor llvm::fuzzerop::cmpOpDescriptor(unsigned Weight,
                                              Instruction::OtherOps CmpOp,
                                              CmpInst::Predicate Pred) {
   auto buildOp = [CmpOp, Pred](ArrayRef<Value *> Srcs, Instruction *Inst) {
-    return CmpInst::Create(CmpOp, Pred, Srcs[0], Srcs[1], "C", Inst);
+    return CmpInst::Create(CmpOp, Pred, Srcs[0], Srcs[1], "C",
+                           Inst->getIterator());
   };
 
   switch (CmpOp) {
@@ -174,7 +178,8 @@ OpDescriptor llvm::fuzzerop::splitBlockDescriptor(unsigned Weight) {
     // Loop back on this block by replacing the unconditional forward branch
     // with a conditional with a backedge.
     if (Block != &Block->getParent()->getEntryBlock()) {
-      BranchInst::Create(Block, Next, Srcs[0], Block->getTerminator());
+      BranchInst::Create(Block, Next, Srcs[0],
+                         Block->getTerminator()->getIterator());
       Block->getTerminator()->eraseFromParent();
 
       // We need values for each phi in the block. Since there isn't a good way
@@ -198,7 +203,8 @@ OpDescriptor llvm::fuzzerop::gepDescriptor(unsigned Weight) {
     // generating a random value and picking its type.
     Type *Ty = Srcs[1]->getType();
     auto Indices = ArrayRef(Srcs).drop_front(2);
-    return GetElementPtrInst::Create(Ty, Srcs[0], Indices, "G", Inst);
+    return GetElementPtrInst::Create(Ty, Srcs[0], Indices, "G",
+                                     Inst->getIterator());
   };
   // TODO: Handle aggregates and vectors
   // TODO: Support multiple indices.
@@ -242,7 +248,7 @@ OpDescriptor llvm::fuzzerop::extractValueDescriptor(unsigned Weight) {
   auto buildExtract = [](ArrayRef<Value *> Srcs, Instruction *Inst) {
     // TODO: It's pretty inefficient to shuffle this all through constants.
     unsigned Idx = cast<ConstantInt>(Srcs[1])->getZExtValue();
-    return ExtractValueInst::Create(Srcs[0], {Idx}, "E", Inst);
+    return ExtractValueInst::Create(Srcs[0], {Idx}, "E", Inst->getIterator());
   };
   // TODO: Should we handle multiple indices?
   return {Weight, {anyAggregateType(), validExtractValueIndex()}, buildExtract};
@@ -301,7 +307,8 @@ OpDescriptor llvm::fuzzerop::insertValueDescriptor(unsigned Weight) {
   auto buildInsert = [](ArrayRef<Value *> Srcs, Instruction *Inst) {
     // TODO: It's pretty inefficient to shuffle this all through constants.
     unsigned Idx = cast<ConstantInt>(Srcs[2])->getZExtValue();
-    return InsertValueInst::Create(Srcs[0], Srcs[1], {Idx}, "I", Inst);
+    return InsertValueInst::Create(Srcs[0], Srcs[1], {Idx}, "I",
+                                   Inst->getIterator());
   };
   return {
       Weight,
@@ -311,7 +318,8 @@ OpDescriptor llvm::fuzzerop::insertValueDescriptor(unsigned Weight) {
 
 OpDescriptor llvm::fuzzerop::extractElementDescriptor(unsigned Weight) {
   auto buildExtract = [](ArrayRef<Value *> Srcs, Instruction *Inst) {
-    return ExtractElementInst::Create(Srcs[0], Srcs[1], "E", Inst);
+    return ExtractElementInst::Create(Srcs[0], Srcs[1], "E",
+                                      Inst->getIterator());
   };
   // TODO: Try to avoid undefined accesses.
   return {Weight, {anyVectorType(), anyIntType()}, buildExtract};
@@ -319,7 +327,8 @@ OpDescriptor llvm::fuzzerop::extractElementDescriptor(unsigned Weight) {
 
 OpDescriptor llvm::fuzzerop::insertElementDescriptor(unsigned Weight) {
   auto buildInsert = [](ArrayRef<Value *> Srcs, Instruction *Inst) {
-    return InsertElementInst::Create(Srcs[0], Srcs[1], Srcs[2], "I", Inst);
+    return InsertElementInst::Create(Srcs[0], Srcs[1], Srcs[2], "I",
+                                     Inst->getIterator());
   };
   // TODO: Try to avoid undefined accesses.
   return {Weight,
@@ -344,7 +353,8 @@ static SourcePred validShuffleVectorIndex() {
 
 OpDescriptor llvm::fuzzerop::shuffleVectorDescriptor(unsigned Weight) {
   auto buildShuffle = [](ArrayRef<Value *> Srcs, Instruction *Inst) {
-    return new ShuffleVectorInst(Srcs[0], Srcs[1], Srcs[2], "S", Inst);
+    return new ShuffleVectorInst(Srcs[0], Srcs[1], Srcs[2], "S",
+                                 Inst->getIterator());
   };
   return {Weight,
           {anyVectorType(), matchFirstType(), validShuffleVectorIndex()},
