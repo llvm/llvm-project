@@ -8,7 +8,7 @@
 
 declare void @fakeresume1(ptr align 8)
 
-define void @g() #0 {
+define i64 @g() #0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
@@ -41,8 +41,9 @@ await.ready:
   call void @llvm.lifetime.end.p0(i64 1, ptr %alloc.var)
   br label %exit
 exit:
+  %result = phi i64 [0, %entry], [0, %entry], [%foo, %await.suspend], [%foo, %await.suspend], [%foo, %await.ready]
   call i1 @llvm.coro.end(ptr null, i1 false, token none)
-  ret void
+  ret i64 %result
 }
 
 ; Verify that in the resume part resume call is marked with musttail.
