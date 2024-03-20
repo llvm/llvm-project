@@ -74,6 +74,7 @@
 #include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
+#include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
@@ -826,16 +827,19 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
             /*UseBlockFrequencyInfo=*/false),
         PTO.EagerlyInvalidateAnalyses));
   }
-
-  // Add the profile lowering pass.
-  InstrProfOptions Options;
-  if (!ProfileFile.empty())
-    Options.InstrProfileOutput = ProfileFile;
-  // Do counter promotion at Level greater than O0.
-  Options.DoCounterPromotion = true;
-  Options.UseBFIInPromotion = IsCS;
-  Options.Atomic = AtomicCounterUpdate;
-  MPM.addPass(InstrProfilingLoweringPass(Options, IsCS));
+  if (PGOCtxProfLoweringPass::isContextualIRPGOEnabled()) {
+    MPM.addPass(PGOCtxProfLoweringPass());
+  } else {
+    // Add the profile lowering pass.
+    InstrProfOptions Options;
+    if (!ProfileFile.empty())
+      Options.InstrProfileOutput = ProfileFile;
+    // Do counter promotion at Level greater than O0.
+    Options.DoCounterPromotion = true;
+    Options.UseBFIInPromotion = IsCS;
+    Options.Atomic = AtomicCounterUpdate;
+    MPM.addPass(InstrProfilingLoweringPass(Options, IsCS));
+  }
 }
 
 void PassBuilder::addPGOInstrPassesForO0(
