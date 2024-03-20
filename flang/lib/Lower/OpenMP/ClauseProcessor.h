@@ -162,9 +162,6 @@ private:
   /// Utility to find a clause within a range in the clause list.
   template <typename T>
   static ClauseIterator findClause(ClauseIterator begin, ClauseIterator end);
-  template <typename T>
-  static ClauseIterator2 findClause2(ClauseIterator2 begin,
-                                     ClauseIterator2 end);
 
   /// Return the first instance of the given clause found in the clause list or
   /// `nullptr` if not present. If more than one instance is expected, use
@@ -178,10 +175,6 @@ private:
   template <typename T>
   bool findRepeatableClause(
       std::function<void(const T &, const Fortran::parser::CharBlock &source)>
-          callbackFn) const;
-  template <typename T>
-  bool findRepeatableClause2(
-      std::function<void(const T *, const Fortran::parser::CharBlock &source)>
           callbackFn) const;
 
   /// Set the `result` to a new `mlir::UnitAttr` if the clause is present.
@@ -198,32 +191,31 @@ template <typename T>
 bool ClauseProcessor::processMotionClauses(
     Fortran::lower::StatementContext &stmtCtx,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands) {
-  return findRepeatableClause2<T>(
-      [&](const T *motionClause, const Fortran::parser::CharBlock &source) {
+  return findRepeatableClause<T>(
+      [&](const T &clause, const Fortran::parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-        static_assert(std::is_same_v<T, ClauseProcessor::ClauseTy::To> ||
-                      std::is_same_v<T, ClauseProcessor::ClauseTy::From>);
+        static_assert(std::is_same_v<T, omp::clause::To> ||
+                      std::is_same_v<T, omp::clause::From>);
 
         // TODO Support motion modifiers: present, mapper, iterator.
         constexpr llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
-            std::is_same_v<T, ClauseProcessor::ClauseTy::To>
+            std::is_same_v<T, omp::clause::To>
                 ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
                 : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
 
-        for (const Fortran::parser::OmpObject &ompObject : motionClause->v.v) {
+        for (const omp::Object &object : clause.v) {
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
           Fortran::lower::AddrAndBoundsInfo info =
               Fortran::lower::gatherDataOperandAddrAndBounds<
-                  Fortran::parser::OmpObject, mlir::omp::MapBoundsOp,
-                  mlir::omp::MapBoundsType>(
-                  converter, firOpBuilder, semaCtx, stmtCtx, ompObject,
-                  clauseLocation, asFortran, bounds, treatIndexAsSection);
+                  mlir::omp::MapBoundsOp, mlir::omp::MapBoundsType>(
+                  converter, firOpBuilder, semaCtx, stmtCtx, *object.id(),
+                  object.ref(), clauseLocation, asFortran, bounds,
+                  treatIndexAsSection);
 
-          auto origSymbol =
-              converter.getSymbolAddress(*getOmpObjectSymbol(ompObject));
+          auto origSymbol = converter.getSymbolAddress(*object.id());
           mlir::Value symAddr = info.addr;
           if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
             symAddr = origSymbol;
@@ -274,17 +266,6 @@ ClauseProcessor::findClause(ClauseIterator begin, ClauseIterator end) {
 }
 
 template <typename T>
-ClauseProcessor::ClauseIterator2
-ClauseProcessor::findClause2(ClauseIterator2 begin, ClauseIterator2 end) {
-  for (ClauseIterator2 it = begin; it != end; ++it) {
-    if (std::get_if<T>(&it->u))
-      return it;
-  }
-
-  return end;
-}
-
-template <typename T>
 const T *ClauseProcessor::findUniqueClause(
     const Fortran::parser::CharBlock **source) const {
   ClauseIterator it = findClause<T>(clauses.begin(), clauses.end());
@@ -307,24 +288,6 @@ bool ClauseProcessor::findRepeatableClause(
 
     if (nextIt != endIt) {
       callbackFn(std::get<T>(nextIt->u), nextIt->source);
-      found = true;
-      ++nextIt;
-    }
-  }
-  return found;
-}
-
-template <typename T>
-bool ClauseProcessor::findRepeatableClause2(
-    std::function<void(const T *, const Fortran::parser::CharBlock &source)>
-        callbackFn) const {
-  bool found = false;
-  ClauseIterator2 nextIt, endIt = clauses2.v.end();
-  for (ClauseIterator2 it = clauses2.v.begin(); it != endIt; it = nextIt) {
-    nextIt = findClause2<T>(it, endIt);
-
-    if (nextIt != endIt) {
-      callbackFn(&std::get<T>(nextIt->u), nextIt->source);
       found = true;
       ++nextIt;
     }
