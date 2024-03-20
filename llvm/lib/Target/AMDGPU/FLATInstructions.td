@@ -3172,19 +3172,15 @@ multiclass VGLOBAL_Real_Atomics_gfx1210<bits<8> op, string name = get_FLAT_ps<NA
   VFLAT_Real_RTN_gfx1210<op, name>,
   VFLAT_Real_SADDR_RTN_gfx1210<op, name>;
 
-multiclass VGLOBAL_Real_Tensor_gfx1210<bits<8> op,
-                                       string name = get_FLAT_ps<NAME>.Mnemonic> :
-  VFLAT_Real_gfx1210<op, name>;
+defm TENSOR_SAVE                      : VFLAT_Real_gfx1210<0x06e>;
+defm TENSOR_STOP                      : VFLAT_Real_gfx1210<0x06f>;
 
-defm TENSOR_SAVE                      : VGLOBAL_Real_Tensor_gfx1210<0x06e>;
-defm TENSOR_STOP                      : VGLOBAL_Real_Tensor_gfx1210<0x06f>;
-
-defm FLAT_PREFETCH_B8                 : VFLAT_Real_Base_gfx1210<0x05d>;
+defm FLAT_PREFETCH_B8                 : VFLAT_Real_gfx1210<0x05d>;
 defm GLOBAL_PREFETCH_B8               : VGLOBAL_Real_AllAddr_gfx1210<0x05d>;
 
-defm FLAT_LOAD_MONITOR_B32            : VFLAT_Real_Base_gfx1210<0x070>;
-defm FLAT_LOAD_MONITOR_B64            : VFLAT_Real_Base_gfx1210<0x071>;
-defm FLAT_LOAD_MONITOR_B128           : VFLAT_Real_Base_gfx1210<0x072>;
+defm FLAT_LOAD_MONITOR_B32            : VFLAT_Real_gfx1210<0x070>;
+defm FLAT_LOAD_MONITOR_B64            : VFLAT_Real_gfx1210<0x071>;
+defm FLAT_LOAD_MONITOR_B128           : VFLAT_Real_gfx1210<0x072>;
 
 defm GLOBAL_LOAD_MONITOR_B32          : VGLOBAL_Real_AllAddr_gfx1210<0x070>;
 defm GLOBAL_LOAD_MONITOR_B64          : VGLOBAL_Real_AllAddr_gfx1210<0x071>;
