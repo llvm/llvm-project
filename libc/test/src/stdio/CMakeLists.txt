@@ -353,9 +353,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.unistd.access
       libc.src.unistd.close
   )
-endif()
-
-if(${LIBC_TARGET_OS} STREQUAL "linux")
+  
   add_libc_test(
     rename_test
     SUITE
