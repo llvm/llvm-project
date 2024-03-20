@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+class MCContext;
 class MCRegisterInfo;
 class Triple;
 
@@ -51,6 +52,10 @@ public:
   /// Whenever state becomes irrelevant (e.g., when starting to disassemble a
   /// new function), clients should call resetState to clear it.
   virtual void updateState(const MCInst &Inst, uint64_t Addr) {}
+
+  /// Let the analysis update disassembled instruction from a recorded internal
+  /// state.
+  virtual void updateInst(MCInst &Inst, const MCContext &Ctx) const {}
 
   virtual bool isBranch(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).isBranch();
