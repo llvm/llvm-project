@@ -515,7 +515,7 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
 // 2.9.2 Workshare Loop Construct
 //===----------------------------------------------------------------------===//
 
-def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
+def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                          AllTypesMatch<["lowerBound", "upperBound", "step"]>,
                          RecursiveMemoryEffects, ReductionClauseInterface]> {
   let summary = "worksharing-loop construct";
@@ -625,9 +625,9 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
           |`byref` $byref
           |`ordered` `(` $ordered_val `)`
           |`order` `(` custom<ClauseAttr>($order_val) `)`
-    ) custom<WsLoop>($region, $lowerBound, $upperBound, $step,
-                                  type($step), $reduction_vars, type($reduction_vars), $reductions,
-                                  $inclusive) attr-dict
+    ) custom<Wsloop>($region, $lowerBound, $upperBound, $step, type($step),
+                     $reduction_vars, type($reduction_vars), $reductions,
+                     $inclusive) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -724,7 +724,7 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
 
 def YieldOp : OpenMP_Op<"yield",
     [Pure, ReturnLike, Terminator,
-     ParentOneOf<["WsLoopOp", "ReductionDeclareOp",
+     ParentOneOf<["WsloopOp", "DeclareReductionOp",
      "AtomicUpdateOp", "SimdLoopOp", "PrivateClauseOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
@@ -914,7 +914,7 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
-def TaskLoopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
+def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
                            AutomaticAllocationScope, RecursiveMemoryEffects,
                            AllTypesMatch<["lowerBound", "upperBound", "step"]>,
                            ReductionClauseInterface]> {
@@ -1072,7 +1072,7 @@ def TaskLoopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
-def TaskGroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
+def TaskgroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
                             ReductionClauseInterface,
                             AutomaticAllocationScope]> {
   let summary = "taskgroup construct";
@@ -1191,24 +1191,24 @@ def VariableCaptureKindAttr : EnumAttr<OpenMP_Dialect, VariableCaptureKind,
   let assemblyFormat = "`(` $value `)`";
 }
 
-def DataBoundsType : OpenMP_Type<"DataBounds", "data_bounds_ty"> {
-  let summary = "Type for representing omp data clause bounds information";
+def MapBoundsType : OpenMP_Type<"MapBounds", "map_bounds_ty"> {
+  let summary = "Type for representing omp map clause bounds information";
 }
 
-def DataBoundsOp : OpenMP_Op<"bounds",
+def MapBoundsOp : OpenMP_Op<"map.bounds",
     [AttrSizedOperandSegments, NoMemoryEffect]> {
   let summary = "Represents normalized bounds information for map clauses.";
 
   let description = [{
     This operation is a variation on the OpenACC dialects DataBoundsOp. Within
     the OpenMP dialect it stores the bounds/range of data to be mapped to a
-    device specified by map clauses on target directives. Within,
-    the OpenMP dialect the DataBoundsOp is associated with MapInfoOp,
+    device specified by map clauses on target directives. Within
+    the OpenMP dialect, the MapBoundsOp is associated with MapInfoOp,
     helping to store bounds information for the mapped variable.
 
     It is used to support OpenMP array sectioning, Fortran pointer and
     allocatable mapping and pointer/allocatable member of derived types.
-    In all cases the DataBoundsOp holds information on the section of
+    In all cases the MapBoundsOp holds information on the section of
     data to be mapped. Such as the upper bound and lower bound of the
     section of data to be mapped. This information is currently
     utilised by the LLVM-IR lowering to help generate instructions to
@@ -1227,7 +1227,7 @@ def DataBoundsOp : OpenMP_Op<"bounds",
     ```
     =>
     ```mlir
-    omp.bounds lower_bound(1) upper_bound(9) extent(9) start_idx(0)
+    omp.map.bounds lower_bound(1) upper_bound(9) extent(9) start_idx(0)
     ```
 
     Fortran:
@@ -1237,7 +1237,7 @@ def DataBoundsOp : OpenMP_Op<"bounds",
     ```
     =>
     ```mlir
-    omp.bounds lower_bound(1) upper_bound(9) extent(9) start_idx(1)
+    omp.map.bounds lower_bound(1) upper_bound(9) extent(9) start_idx(1)
     ```
 
     For Fortran pointers and allocatables (as well as those that are
@@ -1257,7 +1257,7 @@ def DataBoundsOp : OpenMP_Op<"bounds",
     ```
     =>
     ```mlir
-    omp.bounds lower_bound(0) upper_bound(9) extent(10) start_idx(1)
+    omp.map.bounds lower_bound(0) upper_bound(9) extent(10) start_idx(1)
     ```
 
     This operation records the bounds information in a normalized fashion
@@ -1276,7 +1276,7 @@ def DataBoundsOp : OpenMP_Op<"bounds",
                        Optional<IntLikeType>:$stride,
                        DefaultValuedAttr<BoolAttr, "false">:$stride_in_bytes,
                        Optional<IntLikeType>:$start_idx);
-  let results = (outs DataBoundsType:$result);
+  let results = (outs MapBoundsType:$result);
 
   let assemblyFormat = [{
     oilist(
@@ -1303,12 +1303,12 @@ def DataBoundsOp : OpenMP_Op<"bounds",
   let hasVerifier = 1;
 }
 
-def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
+def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
   let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
                        TypeAttr:$var_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<OpenMP_PointerLikeType>:$members,
-                       Variadic<DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
+                       Variadic<MapBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
                        OptionalAttr<UI64Attr>:$map_type,
                        OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
                        OptionalAttr<StrAttr>:$name);
@@ -1338,7 +1338,7 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
     ```
     =>
     ```mlir
-    omp.map_info var_ptr(%index_ssa) map_type(to) map_capture_type(ByRef)
+    omp.map.info var_ptr(%index_ssa) map_type(to) map_capture_type(ByRef)
       name(index)
     ```
 
@@ -1391,8 +1391,8 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
 // 2.14.2 target data Construct
 //===---------------------------------------------------------------------===//
 
-def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments,
-                                             MapClauseOwningOpInterface]>{
+def TargetDataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments,
+                                            MapClauseOwningOpInterface]>{
   let summary = "target data construct";
   let description = [{
     Map variables to a device data environment for the extent of the region.
@@ -1448,7 +1448,7 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments,
 // 2.14.3 target enter data Construct
 //===---------------------------------------------------------------------===//
 
-def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
+def TargetEnterDataOp: OpenMP_Op<"target_enter_data",
                                                  [AttrSizedOperandSegments,
                                                   MapClauseOwningOpInterface]>{
   let  summary = "target enter data construct";
@@ -1502,7 +1502,7 @@ def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
 // 2.14.4 target exit data Construct
 //===---------------------------------------------------------------------===//
 
-def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
+def TargetExitDataOp: OpenMP_Op<"target_exit_data",
                                                  [AttrSizedOperandSegments,
                                                   MapClauseOwningOpInterface]>{
   let  summary = "target exit data construct";
@@ -1553,13 +1553,12 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
 }
 
 //===---------------------------------------------------------------------===//
-// 2.14.6 target update data Construct
+// 2.14.6 target update Construct
 //===---------------------------------------------------------------------===//
 
-def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
-                                                 [AttrSizedOperandSegments,
-                                                  MapClauseOwningOpInterface]>{
-  let  summary = "target update data construct";
+def TargetUpdateOp: OpenMP_Op<"target_update", [AttrSizedOperandSegments,
+                                                MapClauseOwningOpInterface]>{
+  let  summary = "target update construct";
   let description = [{
     The target update directive makes the corresponding list items in the device
     data environment consistent with their original list items, according to the
@@ -1613,7 +1612,7 @@ def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
 // 2.14.5 target construct
 //===----------------------------------------------------------------------===//
 
-def TargetOp : OpenMP_Op<"target",[IsolatedFromAbove, MapClauseOwningOpInterface,
+def TargetOp : OpenMP_Op<"target", [IsolatedFromAbove, MapClauseOwningOpInterface,
                                    OutlineableOpenMPOpInterface, AttrSizedOperandSegments]> {
   let summary = "target construct";
   let description = [{
@@ -1782,7 +1781,7 @@ def OrderedOp : OpenMP_Op<"ordered"> {
   let hasVerifier = 1;
 }
 
-def OrderedRegionOp : OpenMP_Op<"ordered_region"> {
+def OrderedRegionOp : OpenMP_Op<"ordered.region"> {
   let summary = "ordered construct with region";
   let description = [{
     The ordered construct with region specifies a structured block in a
@@ -2113,7 +2112,7 @@ def CancelOp : OpenMP_Op<"cancel"> {
 //===----------------------------------------------------------------------===//
 // 2.18.2 Cancellation Point Construct
 //===----------------------------------------------------------------------===//
-def CancellationPointOp : OpenMP_Op<"cancellationpoint"> {
+def CancellationPointOp : OpenMP_Op<"cancellation_point"> {
   let summary = "cancellation point directive";
   let description = [{
     The cancellation point construct introduces a user-defined cancellation
@@ -2131,7 +2130,7 @@ def CancellationPointOp : OpenMP_Op<"cancellationpoint"> {
 // 2.19.5.7 declare reduction Directive
 //===----------------------------------------------------------------------===//
 
-def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol,
+def DeclareReductionOp : OpenMP_Op<"declare_reduction", [Symbol,
                                                          IsolatedFromAbove]> {
   let summary = "declares a reduction kind";
 

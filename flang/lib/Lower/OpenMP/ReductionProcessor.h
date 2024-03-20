@@ -24,7 +24,7 @@
 
 namespace mlir {
 namespace omp {
-class ReductionDeclareOp;
+class DeclareReductionOp;
 } // namespace omp
 } // namespace mlir
 
@@ -109,22 +109,22 @@ public:
   /// symbol table. The declaration has a constant initializer with the neutral
   /// value `initValue`, and the reduction combiner carried over from `reduce`.
   /// TODO: add atomic region.
-  static mlir::omp::ReductionDeclareOp
-  createReductionDecl(fir::FirOpBuilder &builder,
-                      llvm::StringRef reductionOpName,
-                      const ReductionIdentifier redId, mlir::Type type,
-                      mlir::Location loc, bool isByRef);
+  static mlir::omp::DeclareReductionOp
+  createDeclareReduction(fir::FirOpBuilder &builder,
+                         llvm::StringRef reductionOpName,
+                         const ReductionIdentifier redId, mlir::Type type,
+                         mlir::Location loc, bool isByRef);
 
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
-  static void
-  addReductionDecl(mlir::Location currentLocation,
-                   Fortran::lower::AbstractConverter &converter,
-                   const omp::clause::Reduction &reduction,
-                   llvm::SmallVectorImpl<mlir::Value> &reductionVars,
-                   llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-                   llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-                       *reductionSymbols = nullptr);
+  static void addDeclareReduction(
+      mlir::Location currentLocation,
+      Fortran::lower::AbstractConverter &converter,
+      const omp::clause::Reduction &reduction,
+      llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+      llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+          *reductionSymbols = nullptr);
 };
 
 template <typename FloatOp, typename IntegerOp>
