@@ -1,8 +1,7 @@
 ; RUN: llc -mtriple=riscv32 -data-sections < %s | FileCheck -check-prefix=RV32 %s
 ; RUN: llc -mtriple=riscv64 -data-sections < %s | FileCheck -check-prefix=RV64 %s
 
-; FIXME: Should append an unique name to each sdata/sbss section if -data-sections,
-; otherwise gc-section cannot remove them. This also matches the behavior on gcc.
+; Append an unique name to each sdata/sbss section when -data-section.
 
 @v = dso_local global i32 0, align 4
 @r = dso_local global i64 7, align 8
@@ -12,7 +11,7 @@
 !llvm.module.flags = !{!0}
 !0 = !{i32 8, !"SmallDataLimit", i32 8}
 
-; RV32:    .section        .sbss,"aw"
-; RV32:    .section        .sdata,"aw"
-; RV64:    .section        .sbss,"aw"
-; RV64:    .section        .sdata,"aw"
+; RV32:    .section        .sbss.v,"aw"
+; RV32:    .section        .sdata.r,"aw"
+; RV64:    .section        .sbss.v,"aw"
+; RV64:    .section        .sdata.r,"aw"

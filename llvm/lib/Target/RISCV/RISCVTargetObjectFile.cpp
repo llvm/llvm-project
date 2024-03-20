@@ -104,10 +104,36 @@ bool RISCVELFTargetObjectFile::isGlobalInSmallSection(
 MCSection *RISCVELFTargetObjectFile::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   // Handle Small Section classification here.
-  if (Kind.isBSS() && isGlobalInSmallSection(GO, TM))
-    return SmallBSSSection;
-  if (Kind.isData() && isGlobalInSmallSection(GO, TM))
-    return SmallDataSection;
+  if (isGlobalInSmallSection(GO, TM)) {
+    // Emit a unique section for sdata/sbss when -fdata-section.
+    bool EmitUniquedSection = TM.getDataSections();
+
+    if (Kind.isBSS()) {
+      if (EmitUniquedSection) {
+        StringRef Prefix(".sbss");
+        SmallString<128> Name(Prefix);
+        Name.append(".");
+        Name.append(GO->getName());
+        return getContext().getELFSection(Name.str(), ELF::SHT_NOBITS,
+                                          ELF::SHF_WRITE | ELF::SHF_ALLOC);
+      }
+
+      return SmallBSSSection;
+    }
+
+    if (Kind.isData()) {
+      if (EmitUniquedSection) {
+        StringRef Prefix(".sdata");
+        SmallString<128> Name(Prefix);
+        Name.append(".");
+        Name.append(GO->getName());
+        return getContext().getELFSection(Name.str(), ELF::SHT_PROGBITS,
+                                          ELF::SHF_WRITE | ELF::SHF_ALLOC);
+      }
+
+      return SmallDataSection;
+    }
+  }
 
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
