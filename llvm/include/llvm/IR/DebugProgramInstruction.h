@@ -226,17 +226,19 @@ class DbgLabelRecord : public DbgRecord {
   DbgRecordParamRef<DILabel> Label;
 
   /// This constructor intentionally left private, so that it is only called via
-  /// "createUnresolvedDbgLabelRecord", which clearly expresses that it is for parsing
-  /// only.
+  /// "createUnresolvedDbgLabelRecord", which clearly expresses that it is for
+  /// parsing only.
   DbgLabelRecord(MDNode *Label, MDNode *DL);
 
 public:
   DbgLabelRecord(DILabel *Label, DebugLoc DL);
 
   /// For use during parsing; creates a DbgLabelRecord from as-of-yet unresolved
-  /// MDNodes. Trying to access the resulting DbgLabelRecord's fields before they are
-  /// resolved, or if they resolve to the wrong type, will result in a crash.
-  static DbgLabelRecord *createUnresolvedDbgLabelRecord(MDNode *Label, MDNode *DL);
+  /// MDNodes. Trying to access the resulting DbgLabelRecord's fields before
+  /// they are resolved, or if they resolve to the wrong type, will result in a
+  /// crash.
+  static DbgLabelRecord *createUnresolvedDbgLabelRecord(MDNode *Label,
+                                                        MDNode *DL);
 
   DbgLabelRecord *clone() const;
   void print(raw_ostream &O, bool IsForDebug = false) const;

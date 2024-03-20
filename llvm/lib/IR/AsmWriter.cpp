@@ -4958,7 +4958,7 @@ void DbgVariableRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
 }
 
 void DbgLabelRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
-                    bool IsForDebug) const {
+                           bool IsForDebug) const {
   formatted_raw_ostream OS(ROS);
   SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
   SlotTracker &SlotTable =
