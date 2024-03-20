@@ -2271,12 +2271,6 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
       }
       ShadowingDecls.erase(ShadowI);
     }
-
-    if (!getLangOpts().CPlusPlus && S->isClassScope()) {
-      if (auto *FD = dyn_cast<FieldDecl>(TmpD);
-          FD && FD->hasAttr<CountedByAttr>())
-        CheckCountedByAttr(S, FD);
-    }
   }
 
   llvm::sort(DeclDiags,
