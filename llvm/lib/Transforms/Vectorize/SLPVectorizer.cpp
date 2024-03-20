@@ -2239,7 +2239,7 @@ public:
   /// of the cost, considered to be good enough score.
   std::optional<int>
   findBestRootPair(ArrayRef<std::pair<Value *, Value *>> Candidates,
-                   int Limit = LookAheadHeuristics::ScoreFail) {
+                   int Limit = LookAheadHeuristics::ScoreFail) const {
     LookAheadHeuristics LookAhead(*TLI, *DL, *SE, *this, /*NumLanes=*/2,
                                   RootLookAheadMaxDepth);
     int BestScore = Limit;
