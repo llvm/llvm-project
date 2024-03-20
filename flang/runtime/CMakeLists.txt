@@ -151,6 +151,7 @@ set(sources
   product.cpp
   ragged.cpp
   random.cpp
+  reduce.cpp
   reduction.cpp
   stat.cpp
   stop.cpp
