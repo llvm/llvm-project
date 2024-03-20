@@ -879,8 +879,7 @@ define i1 @clamp_high1_or(i32 noundef %a) {
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp eq i32 [[A]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[A]], 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 5, i32 [[ADD]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 6
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -935,8 +934,7 @@ define i1 @clamp_high2_or_disjoint(i32 noundef %a) {
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ne i32 [[A]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[A]], 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 [[ADD]], i32 5
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 6
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i1 false
 ;
