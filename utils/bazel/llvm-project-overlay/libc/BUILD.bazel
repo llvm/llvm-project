@@ -505,7 +505,7 @@ libc_support_library(
     name = "__support_sign",
     hdrs = ["src/__support/sign.h"],
     deps = [
-        ":__support_macros_properties_types",
+        ":__support_macros_attributes",
     ],
 )
 
