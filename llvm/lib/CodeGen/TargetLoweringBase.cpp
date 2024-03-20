@@ -2011,6 +2011,10 @@ bool TargetLoweringBase::isLegalAddressingMode(const DataLayout &DL,
   // The default implementation of this implements a conservative RISCy, r+r and
   // r+i addr mode.
 
+  // Scalable offsets not supported
+  if (AM.ScalableOffset)
+    return false;
+
   // Allows a sign-extended 16-bit immediate field.
   if (AM.BaseOffs <= -(1LL << 16) || AM.BaseOffs >= (1LL << 16)-1)
     return false;
