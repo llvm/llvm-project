@@ -1198,22 +1198,6 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
   assert(InitialInst->getModule());
   const DataLayout &DL = InitialInst->getModule()->getDataLayout();
 
-  auto GetFirstValidInstruction = [](Instruction *I) {
-    while (I) {
-      // BitCastInst wouldn't generate actual code so that we could skip it.
-      if (isa<BitCastInst>(I) || I->isDebugOrPseudoInst() ||
-          I->isLifetimeStartOrEnd())
-        I = I->getNextNode();
-      else if (isInstructionTriviallyDead(I))
-        // Duing we are in the middle of the transformation, we need to erase
-        // the dead instruction manually.
-        I = &*I->eraseFromParent();
-      else
-        break;
-    }
-    return I;
-  };
-
   auto TryResolveConstant = [&ResolvedValues](Value *V) {
     auto It = ResolvedValues.find(V);
     if (It != ResolvedValues.end())
@@ -1222,8 +1206,9 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
   };
 
   Instruction *I = InitialInst;
-  while (I->isTerminator() || isa<CmpInst>(I)) {
+  while (true) {
     if (isa<ReturnInst>(I)) {
+      assert(!cast<ReturnInst>(I)->getReturnValue());
       ReplaceInstWithInst(InitialInst, I->clone());
       return true;
     }
@@ -1247,40 +1232,26 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
 
       BasicBlock *Succ = BR->getSuccessor(SuccIndex);
       scanPHIsAndUpdateValueMap(I, Succ, ResolvedValues);
-      I = GetFirstValidInstruction(Succ->getFirstNonPHIOrDbgOrLifetime());
-
+      I = Succ->getFirstNonPHIOrDbgOrLifetime();
       continue;
     }
 
-    if (auto *CondCmp = dyn_cast<CmpInst>(I)) {
+    if (auto *Cmp = dyn_cast<CmpInst>(I)) {
       // If the case number of suspended switch instruction is reduced to
       // 1, then it is simplified to CmpInst in llvm::ConstantFoldTerminator.
-      auto *BR = dyn_cast<BranchInst>(
-          GetFirstValidInstruction(CondCmp->getNextNode()));
-      if (!BR || !BR->isConditional() || CondCmp != BR->getCondition())
-        return false;
-
-      // And the comparsion looks like : %cond = icmp eq i8 %V, constant.
-      // So we try to resolve constant for the first operand only since the
-      // second operand should be literal constant by design.
-      ConstantInt *Cond0 = TryResolveConstant(CondCmp->getOperand(0));
-      auto *Cond1 = dyn_cast<ConstantInt>(CondCmp->getOperand(1));
-      if (!Cond0 || !Cond1)
-        return false;
-
-      // Both operands of the CmpInst are Constant. So that we could evaluate
-      // it immediately to get the destination.
-      auto *ConstResult =
-          dyn_cast_or_null<ConstantInt>(ConstantFoldCompareInstOperands(
-              CondCmp->getPredicate(), Cond0, Cond1, DL));
-      if (!ConstResult)
-        return false;
-
-      ResolvedValues[BR->getCondition()] = ConstResult;
-
-      // Handle this branch in next iteration.
-      I = BR;
-      continue;
+      // Try to constant fold it.
+      ConstantInt *Cond0 = TryResolveConstant(Cmp->getOperand(0));
+      ConstantInt *Cond1 = TryResolveConstant(Cmp->getOperand(1));
+      if (Cond0 && Cond1) {
+        ConstantInt *Result =
+            dyn_cast_or_null<ConstantInt>(ConstantFoldCompareInstOperands(
+                Cmp->getPredicate(), Cond0, Cond1, DL));
+        if (Result) {
+          ResolvedValues[Cmp] = Result;
+          I = I->getNextNode();
+          continue;
+        }
+      }
     }
 
     if (auto *SI = dyn_cast<SwitchInst>(I)) {
@@ -1288,13 +1259,21 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
       if (!Cond)
         return false;
 
-      BasicBlock *BB = SI->findCaseValue(Cond)->getCaseSuccessor();
-      scanPHIsAndUpdateValueMap(I, BB, ResolvedValues);
-      I = GetFirstValidInstruction(BB->getFirstNonPHIOrDbgOrLifetime());
+      BasicBlock *Succ = SI->findCaseValue(Cond)->getCaseSuccessor();
+      scanPHIsAndUpdateValueMap(I, Succ, ResolvedValues);
+      I = Succ->getFirstNonPHIOrDbgOrLifetime();
       continue;
     }
 
-    return false;
+    if (I->isDebugOrPseudoInst() || I->isLifetimeStartOrEnd() ||
+        wouldInstructionBeTriviallyDead(I)) {
+      // We can skip instructions without side effects. If their values are
+      // needed, we'll notice later, e.g. when hitting a conditional branch.
+      I = I->getNextNode();
+      continue;
+    }
+
+    break;
   }
 
   return false;

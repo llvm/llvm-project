@@ -1,6 +1,6 @@
 ; Tests that sinked lifetime markers wouldn't provent optimization
 ; to convert a resuming call to a musttail call.
-; The difference between this and coro-split-musttail5.ll and coro-split-musttail5.ll
+; The difference between this and coro-split-musttail5.ll and coro-split-musttail6.ll
 ; is that this contains dead instruction generated during the transformation,
 ; which makes the optimization harder.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
@@ -8,7 +8,7 @@
 
 declare void @fakeresume1(ptr align 8)
 
-define void @g() #0 {
+define i64 @g() #0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
@@ -27,6 +27,11 @@ await.suspend:
   %save2 = call token @llvm.coro.save(ptr null)
   call fastcc void @fakeresume1(ptr align 8 null)
   %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
+
+  ; These (non-trivially) dead instructions are in the way.
+  %gep = getelementptr inbounds i64, ptr %alloc.var, i32 0
+  %foo = ptrtoint ptr %gep to i64
+
   switch i8 %suspend2, label %exit [
     i8 0, label %await.ready
     i8 1, label %exit
@@ -36,8 +41,9 @@ await.ready:
   call void @llvm.lifetime.end.p0(i64 1, ptr %alloc.var)
   br label %exit
 exit:
+  %result = phi i64 [0, %entry], [0, %entry], [%foo, %await.suspend], [%foo, %await.suspend], [%foo, %await.ready]
   call i1 @llvm.coro.end(ptr null, i1 false, token none)
-  ret void
+  ret i64 %result
 }
 
 ; Verify that in the resume part resume call is marked with musttail.
