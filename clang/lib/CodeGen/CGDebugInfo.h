@@ -352,8 +352,8 @@ class CGDebugInfo {
   /// __builtin_verbose_trap to subprograms.
   llvm::StringMap<llvm::DISubprogram *> InlinedTrapFuncMap;
 
-  // A function that returns the subprogram corresponding to the artificial
-  // inlined function for traps.
+  /// A function that returns the subprogram corresponding to the artificial
+  /// inlined function for traps.
   llvm::DISubprogram *createInlinedTrapSubprogram(StringRef FuncName,
                                                   llvm::DIFile *FileScope);
 
