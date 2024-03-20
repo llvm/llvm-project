@@ -77,14 +77,19 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
 } // namespace
 
 void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
-  typeConverter.addConversion([](MemRefType memRefType) -> std::optional<Type> {
-    if (memRefType.hasStaticShape() && memRefType.getLayout().isIdentity() &&
-        memRefType.getRank() > 0) {
-      return emitc::ArrayType::get(memRefType.getShape(),
-                                   memRefType.getElementType());
-    }
-    return {};
-  });
+  typeConverter.addConversion(
+      [&](MemRefType memRefType) -> std::optional<Type> {
+        if (!memRefType.hasStaticShape() ||
+            !memRefType.getLayout().isIdentity() || memRefType.getRank() == 0) {
+          return {};
+        }
+        Type convertedElementType =
+            typeConverter.convertType(memRefType.getElementType());
+        if (!convertedElementType)
+          return {};
+        return emitc::ArrayType::get(memRefType.getShape(),
+                                     convertedElementType);
+      });
 }
 
 void mlir::populateMemRefToEmitCConversionPatterns(RewritePatternSet &patterns,
