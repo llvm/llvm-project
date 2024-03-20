@@ -120,8 +120,8 @@ New checks
 - New :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check.
 
-  Replaces chained ``std::min`` and ``std::max`` calls that can be written as
-  initializer lists.
+  Replaces chained ``std::min`` and ``std::max`` calls with a initializer list
+  where applicable.
 
 - New :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check.

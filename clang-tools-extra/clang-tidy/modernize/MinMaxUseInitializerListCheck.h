@@ -14,15 +14,9 @@
 
 namespace clang::tidy::modernize {
 
-/// Transforms the repeated calls to `std::min` and `std::max` into a single
-/// call using initializer lists.
+/// Replaces chained ``std::min`` and ``std::max`` calls with a initializer list
+/// where applicable.
 ///
-/// It identifies cases where `std::min` or `std::max` is used to find the
-/// minimum or maximum value among more than two items through repeated calls.
-/// The check replaces these calls with a single call to `std::min` or
-/// `std::max` that uses an initializer list. This makes the code slightly more
-/// efficient.
-/// \n\n
 /// For example:
 ///
 /// \code
@@ -38,19 +32,32 @@ class MinMaxUseInitializerListCheck : public ClangTidyCheck {
 public:
   MinMaxUseInitializerListCheck(StringRef Name, ClangTidyContext *Context);
 
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus11;
-  }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
-  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Match) override;
+
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus11;
+  }
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
 
 private:
+  struct FindArgsResult {
+    const Expr *First;
+    const Expr *Last;
+    const Expr *Compare;
+    std::vector<const Expr *> Args;
+  };
   utils::IncludeInserter Inserter;
-  void findArgs(const CallExpr *call, const Expr **first, const Expr **last,
-                std::vector<const Expr *> &args);
+  FindArgsResult findArgs(const ast_matchers::MatchFinder::MatchResult &Match,
+                          const CallExpr *Call);
+  std::string
+  generateReplacement(const ast_matchers::MatchFinder::MatchResult &Match,
+                      const CallExpr *TopCall, const FindArgsResult Result);
 };
 
 } // namespace clang::tidy::modernize

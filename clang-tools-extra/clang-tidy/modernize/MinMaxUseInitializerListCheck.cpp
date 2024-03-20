@@ -31,19 +31,25 @@ void MinMaxUseInitializerListCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(
           callee(functionDecl(hasName("::std::max"))),
-          hasAnyArgument(callExpr(callee(functionDecl(hasName("::std::max"))))),
+          anyOf(hasArgument(
+                    0, callExpr(callee(functionDecl(hasName("::std::max"))))),
+                hasArgument(
+                    1, callExpr(callee(functionDecl(hasName("::std::max")))))),
           unless(
               hasParent(callExpr(callee(functionDecl(hasName("::std::max")))))))
-          .bind("maxCall"),
+          .bind("topCall"),
       this);
 
   Finder->addMatcher(
       callExpr(
           callee(functionDecl(hasName("::std::min"))),
-          hasAnyArgument(callExpr(callee(functionDecl(hasName("::std::min"))))),
+          anyOf(hasArgument(
+                    0, callExpr(callee(functionDecl(hasName("::std::min"))))),
+                hasArgument(
+                    1, callExpr(callee(functionDecl(hasName("::std::min")))))),
           unless(
               hasParent(callExpr(callee(functionDecl(hasName("::std::min")))))))
-          .bind("minCall"),
+          .bind("topCall"),
       this);
 }
 
@@ -53,29 +59,112 @@ void MinMaxUseInitializerListCheck::registerPPCallbacks(
 }
 
 void MinMaxUseInitializerListCheck::check(
-    const MatchFinder::MatchResult &Result) {
-  const auto *MaxCall = Result.Nodes.getNodeAs<CallExpr>("maxCall");
-  const auto *MinCall = Result.Nodes.getNodeAs<CallExpr>("minCall");
+    const MatchFinder::MatchResult &Match) {
+  const CallExpr *TopCall = Match.Nodes.getNodeAs<CallExpr>("topCall");
+  MinMaxUseInitializerListCheck::FindArgsResult Result =
+      findArgs(Match, TopCall);
 
-  const CallExpr *TopCall = MaxCall ? MaxCall : MinCall;
-  if (!TopCall) {
+  if (!Result.First || !Result.Last || Result.Args.size() <= 2) {
     return;
   }
+
+  std::string ReplacementText = generateReplacement(Match, TopCall, Result);
+
+  diag(TopCall->getBeginLoc(),
+       "do not use nested std::%0 calls, use %1 instead")
+      << TopCall->getDirectCallee()->getName() << ReplacementText
+      << FixItHint::CreateReplacement(
+             CharSourceRange::getTokenRange(TopCall->getBeginLoc(),
+                                            TopCall->getEndLoc()),
+             ReplacementText)
+      << Inserter.createMainFileIncludeInsertion("<algorithm>");
+}
+
+MinMaxUseInitializerListCheck::FindArgsResult
+MinMaxUseInitializerListCheck::findArgs(const MatchFinder::MatchResult &Match,
+                                        const CallExpr *Call) {
+  FindArgsResult Result;
+  Result.First = nullptr;
+  Result.Last = nullptr;
+  Result.Compare = nullptr;
+
+  if (Call->getNumArgs() > 2) {
+    auto argIterator = Call->arguments().begin();
+    std::advance(argIterator, 2);
+    Result.Compare = *argIterator;
+  }
+
+  for (const Expr *Arg : Call->arguments()) {
+    if (!Result.First)
+      Result.First = Arg;
+
+    const CallExpr *InnerCall = dyn_cast<CallExpr>(Arg);
+    if (InnerCall && InnerCall->getDirectCallee() &&
+        InnerCall->getDirectCallee()->getNameAsString() ==
+            Call->getDirectCallee()->getNameAsString()) {
+      FindArgsResult InnerResult = findArgs(Match, InnerCall);
+
+      bool processInnerResult = false;
+
+      if (!Result.Compare && !InnerResult.Compare)
+        processInnerResult = true;
+      else if (Result.Compare && InnerResult.Compare &&
+               Lexer::getSourceText(CharSourceRange::getTokenRange(
+                                        Result.Compare->getSourceRange()),
+                                    *Match.SourceManager,
+                                    Match.Context->getLangOpts()) ==
+                   Lexer::getSourceText(
+                       CharSourceRange::getTokenRange(
+                           InnerResult.Compare->getSourceRange()),
+                       *Match.SourceManager, Match.Context->getLangOpts()))
+        processInnerResult = true;
+
+      if (processInnerResult) {
+        Result.Args.insert(Result.Args.end(), InnerResult.Args.begin(),
+                           InnerResult.Args.end());
+        continue;
+      }
+    }
+
+    if (Arg == Result.Compare)
+      continue;
+
+    Result.Args.push_back(Arg);
+    Result.Last = Arg;
+  }
+
+  return Result;
+}
+
+std::string MinMaxUseInitializerListCheck::generateReplacement(
+    const MatchFinder::MatchResult &Match, const CallExpr *TopCall,
+    const FindArgsResult Result) {
+  std::string ReplacementText =
+      Lexer::getSourceText(
+          CharSourceRange::getTokenRange(
+              TopCall->getBeginLoc(),
+              Result.First->getBeginLoc().getLocWithOffset(-1)),
+          *Match.SourceManager, Match.Context->getLangOpts())
+          .str() +
+      "{";
   const QualType ResultType =
       TopCall->getDirectCallee()->getReturnType().getNonReferenceType();
 
-  const Expr *FirstArg = nullptr;
-  const Expr *LastArg = nullptr;
-  std::vector<const Expr *> Args;
-  findArgs(TopCall, &FirstArg, &LastArg, Args);
-
-  if (!FirstArg || !LastArg || Args.size() <= 2) {
-    return;
-  }
-
-  std::string ReplacementText = "{";
-  for (const Expr *Arg : Args) {
+  for (const Expr *Arg : Result.Args) {
     QualType ArgType = Arg->getType();
+
+    // check if expression is std::min or std::max
+    if (const auto *InnerCall = dyn_cast<CallExpr>(Arg)) {
+      if (InnerCall->getDirectCallee() &&
+          InnerCall->getDirectCallee()->getNameAsString() !=
+              TopCall->getDirectCallee()->getNameAsString()) {
+        FindArgsResult innerResult = findArgs(Match, InnerCall);
+        ReplacementText += generateReplacement(Match, InnerCall, innerResult) +=
+            "})";
+        continue;
+      }
+    }
+
     bool CastNeeded =
         ArgType.getCanonicalType() != ResultType.getCanonicalType();
 
@@ -84,55 +173,22 @@ void MinMaxUseInitializerListCheck::check(
 
     ReplacementText += Lexer::getSourceText(
         CharSourceRange::getTokenRange(Arg->getSourceRange()),
-        *Result.SourceManager, Result.Context->getLangOpts());
+        *Match.SourceManager, Match.Context->getLangOpts());
 
     if (CastNeeded)
       ReplacementText += ")";
     ReplacementText += ", ";
   }
   ReplacementText = ReplacementText.substr(0, ReplacementText.size() - 2) + "}";
-
-  diag(TopCall->getBeginLoc(),
-       "do not use nested std::%0 calls, use %1 instead")
-      << TopCall->getDirectCallee()->getName() << ReplacementText
-      << FixItHint::CreateReplacement(
-             CharSourceRange::getTokenRange(
-                 FirstArg->getBeginLoc(),
-                 Lexer::getLocForEndOfToken(TopCall->getEndLoc(), 0,
-                                            Result.Context->getSourceManager(),
-                                            Result.Context->getLangOpts())
-                     .getLocWithOffset(-2)),
-             ReplacementText)
-      << Inserter.createMainFileIncludeInsertion("<algorithm>");
-}
-
-void MinMaxUseInitializerListCheck::findArgs(const CallExpr *Call,
-                                             const Expr **First,
-                                             const Expr **Last,
-                                             std::vector<const Expr *> &Args) {
-  if (!Call) {
-    return;
+  if (Result.Compare) {
+    ReplacementText += ", ";
+    ReplacementText += Lexer::getSourceText(
+        CharSourceRange::getTokenRange(Result.Compare->getSourceRange()),
+        *Match.SourceManager, Match.Context->getLangOpts());
   }
+  ReplacementText += ")";
 
-  const FunctionDecl *Callee = Call->getDirectCallee();
-  if (!Callee) {
-    return;
-  }
-
-  for (const Expr *Arg : Call->arguments()) {
-    if (!*First)
-      *First = Arg;
-
-    const CallExpr *InnerCall = dyn_cast<CallExpr>(Arg);
-    if (InnerCall && InnerCall->getDirectCallee() &&
-        InnerCall->getDirectCallee()->getNameAsString() ==
-            Call->getDirectCallee()->getNameAsString()) {
-      findArgs(InnerCall, First, Last, Args);
-    } else
-      Args.push_back(Arg);
-
-    *Last = Arg;
-  }
+  return ReplacementText;
 }
 
 } // namespace clang::tidy::modernize
