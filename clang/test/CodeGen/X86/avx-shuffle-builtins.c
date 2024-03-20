@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -ffreestanding %s -O3 -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X64
 // RUN: %clang_cc1 -ffreestanding %s -O3 -triple=i386-apple-darwin -target-feature +avx -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X86
 // FIXME: This is testing optimized generation of shuffle instructions and should be fixed.

@@ -48,7 +48,6 @@ liveins:
   - { reg: '$r2d', virtual-reg: '%0' }
 frameInfo:
   maxAlignment:    1
-  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo: {}
 body:             |
@@ -126,7 +125,6 @@ liveins:
   - { reg: '$r2d', virtual-reg: '%0' }
 frameInfo:
   maxAlignment:    1
-  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo: {}
 body:             |
@@ -204,7 +202,6 @@ liveins:
   - { reg: '$r2d', virtual-reg: '%0' }
 frameInfo:
   maxAlignment:    1
-  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo: {}
 body:             |
@@ -282,7 +279,6 @@ liveins:
   - { reg: '$r2d', virtual-reg: '%0' }
 frameInfo:
   maxAlignment:    1
-  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo: {}
 body:             |

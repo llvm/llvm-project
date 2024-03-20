@@ -14236,7 +14236,8 @@ void BoUpSLP::computeMinimumValueSizes() {
   bool IsStoreOrInsertElt =
       VectorizableTree.front()->getOpcode() == Instruction::Store ||
       VectorizableTree.front()->getOpcode() == Instruction::InsertElement;
-  if ((IsStoreOrInsertElt || UserIgnoreList) && ExtraBitWidthNodes.size() <= 1 &&
+  if ((IsStoreOrInsertElt || UserIgnoreList) &&
+      ExtraBitWidthNodes.size() <= 1 &&
       (!CastMaxMinBWSizes || CastMaxMinBWSizes->second == 0 ||
        CastMaxMinBWSizes->first / CastMaxMinBWSizes->second <= 2))
     return;
