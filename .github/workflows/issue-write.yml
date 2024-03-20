@@ -45,6 +45,12 @@ jobs:
 
 
             // Query to find the number of the pull request that triggered this job.
+            // The associated pull requests are based off of the branch name, so if
+            // you create a pull request for a branch, close it, and then create
+            // another pull request with the same branch, then this query will return
+            // two associated pull requests.  This is why we have to fetch all the
+            // associated pull requests and then iterate through them to find the
+            // one that is open.
             const gql_query = `
               query($repo_owner : String!, $repo_name : String!, $branch: String!) {
                 repository(owner: $repo_owner, name: $repo_name) {
