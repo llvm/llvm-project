@@ -1005,8 +1005,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
   const Expr *Init = E->getInitializer();
   Address EndOfInit = Address::invalid();
   QualType::DestructionKind DtorKind = ElementType.isDestructedType();
-  EHScopeStack::stable_iterator Cleanup;
-  llvm::Instruction *CleanupDominator = nullptr;
+  CleanupDeactivationScope deactivation(*this);
+  bool pushedCleanup = false;
 
   CharUnits ElementSize = getContext().getTypeSizeInChars(ElementType);
   CharUnits ElementAlign =
@@ -1103,18 +1103,21 @@ void CodeGenFunction::EmitNewArrayInitializer(
     }
 
     // Enter a partial-destruction Cleanup if necessary.
-    if (needsEHCleanup(DtorKind) || (DtorKind && E->containsControlFlow())) {
+    if (needsEHCleanup(DtorKind) || (DtorKind && E->mayBranchOut())) {
       // In principle we could tell the Cleanup where we are more
       // directly, but the control flow can get so varied here that it
       // would actually be quite complex.  Therefore we go through an
       // alloca.
+      llvm::Instruction *DominatingIP =
+          Builder.CreateFlagLoad(llvm::ConstantInt::getNullValue(Int8PtrTy));
       EndOfInit = CreateTempAlloca(BeginPtr.getType(), getPointerAlign(),
                                    "array.init.end");
-      CleanupDominator = Builder.CreateStore(BeginPtr.getPointer(), EndOfInit);
       pushIrregularPartialArrayCleanup(BeginPtr.getPointer(), EndOfInit,
                                        ElementType, ElementAlign,
                                        getDestroyer(DtorKind));
-      Cleanup = EHStack.stable_begin();
+      DeferredDeactivationCleanupStack.push_back(
+          {EHStack.stable_begin(), DominatingIP});
+      pushedCleanup = true;
     }
 
     CharUnits StartAlign = CurPtr.getAlignment();
@@ -1160,9 +1163,6 @@ void CodeGenFunction::EmitNewArrayInitializer(
   // initialization.
   llvm::ConstantInt *ConstNum = dyn_cast<llvm::ConstantInt>(NumElements);
   if (ConstNum && ConstNum->getZExtValue() <= InitListElements) {
-    // If there was a Cleanup, deactivate it.
-    if (CleanupDominator)
-      DeactivateCleanupBlock(Cleanup, CleanupDominator);
     return;
   }
 
@@ -1277,12 +1277,14 @@ void CodeGenFunction::EmitNewArrayInitializer(
     Builder.CreateStore(CurPtr.getPointer(), EndOfInit);
 
   // Enter a partial-destruction Cleanup if necessary.
-  if (!CleanupDominator && needsEHCleanup(DtorKind)) {
+  if (!pushedCleanup && needsEHCleanup(DtorKind)) {
+    llvm::Instruction *DominatingIP =
+        Builder.CreateFlagLoad(llvm::ConstantInt::getNullValue(Int8PtrTy));
     pushRegularPartialArrayCleanup(BeginPtr.getPointer(), CurPtr.getPointer(),
                                    ElementType, ElementAlign,
                                    getDestroyer(DtorKind));
-    Cleanup = EHStack.stable_begin();
-    CleanupDominator = Builder.CreateUnreachable();
+    DeferredDeactivationCleanupStack.push_back(
+        {EHStack.stable_begin(), DominatingIP});
   }
 
   // Emit the initializer into this element.
@@ -1290,10 +1292,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
                           AggValueSlot::DoesNotOverlap);
 
   // Leave the Cleanup if we entered one.
-  if (CleanupDominator) {
-    DeactivateCleanupBlock(Cleanup, CleanupDominator);
-    CleanupDominator->eraseFromParent();
-  }
+  deactivation.ForceDeactivate();
 
   // Advance to the next element by adjusting the pointer type as necessary.
   llvm::Value *NextPtr =
