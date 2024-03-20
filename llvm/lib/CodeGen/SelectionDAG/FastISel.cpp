@@ -1192,40 +1192,40 @@ void FastISel::handleDbgInfo(const Instruction *II) {
     flushLocalValueMap();
     recomputeInsertPt();
 
-    if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-      assert(DPL->getLabel() && "Missing label");
+    if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+      assert(DLR->getLabel() && "Missing label");
       if (!FuncInfo.MF->getMMI().hasDebugInfo()) {
-        LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DPL << "\n");
+        LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DLR << "\n");
         continue;
       }
 
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DPL->getDebugLoc(),
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DLR->getDebugLoc(),
               TII.get(TargetOpcode::DBG_LABEL))
-          .addMetadata(DPL->getLabel());
+          .addMetadata(DLR->getLabel());
       continue;
     }
 
-    DPValue &DPV = cast<DPValue>(DR);
+    DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
 
     Value *V = nullptr;
-    if (!DPV.hasArgList())
-      V = DPV.getVariableLocationOp(0);
+    if (!DVR.hasArgList())
+      V = DVR.getVariableLocationOp(0);
 
     bool Res = false;
-    if (DPV.getType() == DPValue::LocationType::Value ||
-        DPV.getType() == DPValue::LocationType::Assign) {
-      Res = lowerDbgValue(V, DPV.getExpression(), DPV.getVariable(),
-                          DPV.getDebugLoc());
+    if (DVR.getType() == DbgVariableRecord::LocationType::Value ||
+        DVR.getType() == DbgVariableRecord::LocationType::Assign) {
+      Res = lowerDbgValue(V, DVR.getExpression(), DVR.getVariable(),
+                          DVR.getDebugLoc());
     } else {
-      assert(DPV.getType() == DPValue::LocationType::Declare);
-      if (FuncInfo.PreprocessedDPVDeclares.contains(&DPV))
+      assert(DVR.getType() == DbgVariableRecord::LocationType::Declare);
+      if (FuncInfo.PreprocessedDVRDeclares.contains(&DVR))
         continue;
-      Res = lowerDbgDeclare(V, DPV.getExpression(), DPV.getVariable(),
-                            DPV.getDebugLoc());
+      Res = lowerDbgDeclare(V, DVR.getExpression(), DVR.getVariable(),
+                            DVR.getDebugLoc());
     }
 
     if (!Res)
-      LLVM_DEBUG(dbgs() << "Dropping debug-info for " << DPV << "\n";);
+      LLVM_DEBUG(dbgs() << "Dropping debug-info for " << DVR << "\n";);
   }
 }
 

@@ -681,7 +681,7 @@ bool InstallAPIVisitor::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     std::string Name = getMangledName(M);
     auto [GR, FA] = Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                                         GlobalRecord::Kind::Function, Avail, D,
+                                         GlobalRecord::Kind::Function, Avail, M,
                                          *Access, getFlags(WeakDef));
     Ctx.Verifier->verify(GR, FA);
   }

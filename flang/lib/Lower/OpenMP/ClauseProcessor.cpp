@@ -208,25 +208,6 @@ addUseDeviceClause(Fortran::lower::AbstractConverter &converter,
     useDeviceSymbols.push_back(object.id());
 }
 
-static void convertLoopBounds(Fortran::lower::AbstractConverter &converter,
-                              mlir::Location loc,
-                              llvm::SmallVectorImpl<mlir::Value> &lowerBound,
-                              llvm::SmallVectorImpl<mlir::Value> &upperBound,
-                              llvm::SmallVectorImpl<mlir::Value> &step,
-                              std::size_t loopVarTypeSize) {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  // The types of lower bound, upper bound, and step are converted into the
-  // type of the loop variable if necessary.
-  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
-  for (unsigned it = 0; it < (unsigned)lowerBound.size(); it++) {
-    lowerBound[it] =
-        firOpBuilder.createConvert(loc, loopVarType, lowerBound[it]);
-    upperBound[it] =
-        firOpBuilder.createConvert(loc, loopVarType, upperBound[it]);
-    step[it] = firOpBuilder.createConvert(loc, loopVarType, step[it]);
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
@@ -236,7 +217,8 @@ bool ClauseProcessor::processCollapse(
     llvm::SmallVectorImpl<mlir::Value> &lowerBound,
     llvm::SmallVectorImpl<mlir::Value> &upperBound,
     llvm::SmallVectorImpl<mlir::Value> &step,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv) const {
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv,
+    std::size_t &loopVarTypeSize) const {
   bool found = false;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
@@ -254,7 +236,7 @@ bool ClauseProcessor::processCollapse(
     found = true;
   }
 
-  std::size_t loopVarTypeSize = 0;
+  loopVarTypeSize = 0;
   do {
     Fortran::lower::pft::Evaluation *doLoop =
         &doConstructEval->getFirstNestedEvaluation();
@@ -284,9 +266,6 @@ bool ClauseProcessor::processCollapse(
     doConstructEval =
         &*std::next(doConstructEval->getNestedEvaluations().begin());
   } while (collapseValue > 0);
-
-  convertLoopBounds(converter, currentLocation, lowerBound, upperBound, step,
-                    loopVarTypeSize);
 
   return found;
 }
@@ -891,8 +870,8 @@ bool ClauseProcessor::processMap(
 
           Fortran::lower::AddrAndBoundsInfo info =
               Fortran::lower::gatherDataOperandAddrAndBounds<
-                  Fortran::parser::OmpObject, mlir::omp::DataBoundsOp,
-                  mlir::omp::DataBoundsType>(
+                  Fortran::parser::OmpObject, mlir::omp::MapBoundsOp,
+                  mlir::omp::MapBoundsType>(
                   converter, firOpBuilder, semaCtx, stmtCtx, ompObject,
                   clauseLocation, asFortran, bounds, treatIndexAsSection);
 
@@ -928,7 +907,6 @@ bool ClauseProcessor::processMap(
 bool ClauseProcessor::processReduction(
     mlir::Location currentLocation,
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,
-    llvm::SmallVectorImpl<mlir::Type> &reductionTypes,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *reductionSymbols)
     const {
@@ -936,11 +914,9 @@ bool ClauseProcessor::processReduction(
       [&](const omp::clause::Reduction &clause,
           const Fortran::parser::CharBlock &) {
         ReductionProcessor rp;
-        rp.addReductionDecl(currentLocation, converter, clause, reductionVars,
-                            reductionDeclSymbols, reductionSymbols);
-        reductionTypes.reserve(reductionVars.size());
-        llvm::transform(reductionVars, std::back_inserter(reductionTypes),
-                        [](mlir::Value v) { return v.getType(); });
+        rp.addDeclareReduction(currentLocation, converter, clause,
+                               reductionVars, reductionDeclSymbols,
+                               reductionSymbols);
       });
 }
 
