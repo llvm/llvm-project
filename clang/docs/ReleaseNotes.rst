@@ -164,7 +164,7 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
-* ``-Wextra`` group flag now contains an additional flag i.e, ``-Wcast-function-type``.
+- Added ``-Wcast-function-type`` as a warning enabled by ``-Wextra``. #GH76872
 
 Removed Compiler Flags
 -------------------------
