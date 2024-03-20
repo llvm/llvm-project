@@ -12,7 +12,7 @@
 #include <optional>
 #include <type_traits>
 
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/STLExtras.h"
 

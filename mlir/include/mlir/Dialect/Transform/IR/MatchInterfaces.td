@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 include "mlir/IR/OpBase.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 
 def MatchOpInterface
     : OpInterface<"MatchOpInterface", [TransformOpInterface]> {
