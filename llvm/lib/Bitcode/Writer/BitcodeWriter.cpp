@@ -2751,9 +2751,10 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         Code = bitc::CST_CODE_CE_GEP;
         const auto *GO = cast<GEPOperator>(C);
         Record.push_back(VE.getTypeID(GO->getSourceElementType()));
-        if (std::optional<unsigned> Idx = GO->getInRangeIndex()) {
-          Code = bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX;
-          Record.push_back((*Idx << 1) | GO->isInBounds());
+        if (std::optional<ConstantRange> Range = GO->getInRange()) {
+          Code = bitc::CST_CODE_CE_GEP_WITH_INRANGE;
+          Record.push_back(GO->isInBounds());
+          emitConstantRange(Record, *Range);
         } else if (GO->isInBounds())
           Code = bitc::CST_CODE_CE_INBOUNDS_GEP;
         for (unsigned i = 0, e = CE->getNumOperands(); i != e; ++i) {
