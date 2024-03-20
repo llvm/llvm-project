@@ -1776,7 +1776,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
     break;
   case Instruction::AddrSpaceCast: {
-    auto ASC = cast<AddrSpaceCastOperator>(I);
+    auto *ASC = cast<AddrSpaceCastOperator>(I);
     unsigned SrcAS = ASC->getSrcAddressSpace();
     unsigned DestAS = ASC->getDestAddressSpace();
 
@@ -1784,20 +1784,17 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Q.DL.isNonIntegralAddressSpace(DestAS))
       break;
 
-    auto SrcSize = Q.DL.getPointerSizeInBits(SrcAS);
-    auto DstSize = Q.DL.getPointerSizeInBits(DestAS);
+    unsigned SrcSize = Q.DL.getPointerSizeInBits(SrcAS);
+    unsigned DstSize = Q.DL.getPointerSizeInBits(DestAS);
 
     if (DstSize > SrcSize) {
       KnownBits Known3(SrcSize);
       computeKnownBits(I->getOperand(0), DemandedElts, Known3, Depth + 1, Q);
-      Known3 = Known3.anyext(DstSize);
-      Known = Known.unionWith(Known3);
-    }
-
-    else { // DstSize <= SrcSize
-      Known = Known.anyext(SrcSize);
-      computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
-      Known = Known.trunc(DstSize);
+      Known = Known3.anyext(DstSize);
+    } else { // DstSize <= SrcSize
+      KnownBits Known3 = Known.anyext(SrcSize);
+      computeKnownBits(I->getOperand(0), DemandedElts, Known3, Depth + 1, Q);
+      Known = Known3.trunc(DstSize);
     }
   }
   }

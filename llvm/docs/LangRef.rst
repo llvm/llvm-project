@@ -11756,10 +11756,12 @@ If the source is :ref:`poison <poisonvalues>`, the result is
 :ref:`poison <poisonvalues>`.
 
 If the source is not :ref:`poison <poisonvalues>`, and both source and
-destination are :ref:`integral pointers <nointptrtype>`, the cast
-is assumed to be semantically equivalent to a truncated /
-(zero or sign) extended bitcast, with the narrowing/widening direction dependent
-upon the pointer size of the destination and source address spaces.
+destination are :ref:`integral pointers <nointptrtype>`, and the
+result pointer is dereferenceable, the cast is assumed to be
+reversible (i.e. casting the result back to the original address space
+should yield the original bit pattern). Moreover, for these pointers,
+the cast is assumed to preserve the low bits. That is, any bits
+that are not truncated out by the cast are assumed to be unchanged.
 
 Example:
 """"""""
