@@ -593,8 +593,9 @@ public:
   iterator_range<simple_ilist<DbgRecord>::iterator> getDbgRecordRange();
   iterator_range<simple_ilist<DbgRecord>::const_iterator>
   getDbgRecordRange() const;
-  /// Transfer any DbgRecords from \p Src into this DbgMarker. If \p InsertAtHead
-  /// is true, place them before existing DbgRecords, otherwise afterwards.
+  /// Transfer any DbgRecords from \p Src into this DbgMarker. If \p
+  /// InsertAtHead is true, place them before existing DbgRecords, otherwise
+  /// afterwards.
   void absorbDebugValues(DbgMarker &Src, bool InsertAtHead);
   /// Transfer the DbgRecords in \p Range from \p Src into this DbgMarker. If
   /// \p InsertAtHead is true, place them before existing DbgRecords, otherwise

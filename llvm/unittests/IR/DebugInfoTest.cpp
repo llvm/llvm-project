@@ -964,7 +964,8 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   }
 
   // Clone them onto the second marker -- should allocate new DVRs.
-  RetInst->DebugMarker->cloneDebugInfoFrom(FirstInst->DebugMarker, std::nullopt, false);
+  RetInst->DebugMarker->cloneDebugInfoFrom(FirstInst->DebugMarker, std::nullopt,
+                                           false);
   EXPECT_EQ(RetInst->DebugMarker->StoredDbgRecords.size(), 2u);
   ItCount = 0;
   // Check these things store the same information; but that they're not the same
@@ -1138,7 +1139,8 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   EXPECT_TRUE(BB2->IsNewDbgInfoFormat);
   for (auto &Inst : *BB2)
     // Either there should be no marker, or it should be empty.
-    EXPECT_TRUE(!Inst.DebugMarker || Inst.DebugMarker->StoredDbgRecords.empty());
+    EXPECT_TRUE(!Inst.DebugMarker ||
+                Inst.DebugMarker->StoredDbgRecords.empty());
 
   // Validating the first block should continue to not be a problem,
   Error = verifyModule(*M, &errs(), &BrokenDebugInfo);

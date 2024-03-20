@@ -303,7 +303,8 @@ TEST(BasicBlockDbgInfoTest, HeadBitOperations) {
   // If we move "c" to the start of the block, just normally, then the
   // DbgVariableRecords should fall down to "d".
   CInst->moveBefore(BB, BeginIt2);
-  EXPECT_TRUE(!CInst->DebugMarker || CInst->DebugMarker->StoredDbgRecords.empty());
+  EXPECT_TRUE(!CInst->DebugMarker ||
+              CInst->DebugMarker->StoredDbgRecords.empty());
   ASSERT_TRUE(DInst->DebugMarker);
   EXPECT_FALSE(DInst->DebugMarker->StoredDbgRecords.empty());
 
@@ -325,7 +326,8 @@ TEST(BasicBlockDbgInfoTest, HeadBitOperations) {
   // If we move "C" to the beginning of the block, it should go before the
   // DbgVariableRecords. They'll stay on "D".
   CInst->moveBefore(BB, BB.begin());
-  EXPECT_TRUE(!CInst->DebugMarker || CInst->DebugMarker->StoredDbgRecords.empty());
+  EXPECT_TRUE(!CInst->DebugMarker ||
+              CInst->DebugMarker->StoredDbgRecords.empty());
   EXPECT_FALSE(DInst->DebugMarker->StoredDbgRecords.empty());
   EXPECT_EQ(&*BB.begin(), CInst);
   EXPECT_EQ(CInst->getNextNode(), DInst);
@@ -342,7 +344,8 @@ TEST(BasicBlockDbgInfoTest, HeadBitOperations) {
   // run of dbg.values and the next instruction.
   CInst->moveBefore(BB, DInst->getIterator());
   // CInst gains the DbgVariableRecords.
-  EXPECT_TRUE(!DInst->DebugMarker || DInst->DebugMarker->StoredDbgRecords.empty());
+  EXPECT_TRUE(!DInst->DebugMarker ||
+              DInst->DebugMarker->StoredDbgRecords.empty());
   EXPECT_FALSE(CInst->DebugMarker->StoredDbgRecords.empty());
   EXPECT_EQ(&*BB.begin(), CInst);
 
@@ -534,8 +537,8 @@ protected:
 
     DVRA =
         cast<DbgVariableRecord>(&*BInst->DebugMarker->StoredDbgRecords.begin());
-    DVRB =
-        cast<DbgVariableRecord>(&*Branch->DebugMarker->StoredDbgRecords.begin());
+    DVRB = cast<DbgVariableRecord>(
+        &*Branch->DebugMarker->StoredDbgRecords.begin());
     DVRConst =
         cast<DbgVariableRecord>(&*CInst->DebugMarker->StoredDbgRecords.begin());
   }

@@ -70,7 +70,8 @@ void BasicBlock::convertToNewDbgValues() {
 
   // Iterate over all instructions in the instruction list, collecting debug
   // info intrinsics and converting them to DbgRecords. Once we find a "real"
-  // instruction, attach all those DbgRecords to a DbgMarker in that instruction.
+  // instruction, attach all those DbgRecords to a DbgMarker in that
+  // instruction.
   SmallVector<DbgRecord *, 4> DbgVarRecs;
   for (Instruction &I : make_early_inc_range(InstList)) {
     assert(!I.DebugMarker && "DebugMarker already set on old-format instrs?");

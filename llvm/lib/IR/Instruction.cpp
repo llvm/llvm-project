@@ -253,7 +253,8 @@ iterator_range<DbgRecord::self_iterator> Instruction::cloneDebugInfoFrom(
   if (!DebugMarker)
     getParent()->createMarker(this);
 
-  return DebugMarker->cloneDebugInfoFrom(From->DebugMarker, FromHere, InsertAtHead);
+  return DebugMarker->cloneDebugInfoFrom(From->DebugMarker, FromHere,
+                                         InsertAtHead);
 }
 
 std::optional<DbgRecord::self_iterator>

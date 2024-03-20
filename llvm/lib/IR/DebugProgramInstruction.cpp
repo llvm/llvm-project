@@ -1,4 +1,5 @@
-//=====-- DebugProgramInstruction.cpp - Implement DbgRecords/DbgMarkers --=====//
+//=====-- DebugProgramInstruction.cpp - Implement DbgRecords/DbgMarkers
+//--=====//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -671,8 +672,9 @@ void DbgMarker::absorbDebugValues(DbgMarker &Src, bool InsertAtHead) {
   StoredDbgRecords.splice(It, Src.StoredDbgRecords);
 }
 
-void DbgMarker::absorbDebugValues(iterator_range<DbgRecord::self_iterator> Range,
-                                 DbgMarker &Src, bool InsertAtHead) {
+void DbgMarker::absorbDebugValues(
+    iterator_range<DbgRecord::self_iterator> Range, DbgMarker &Src,
+    bool InsertAtHead) {
   for (DbgRecord &DR : Range)
     DR.setMarker(this);
 
