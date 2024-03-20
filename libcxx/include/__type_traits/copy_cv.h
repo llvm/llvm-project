@@ -10,9 +10,6 @@
 #define _LIBCPP___TYPE_TRAITS_COPY_CV_H
 
 #include <__config>
-#include <__type_traits/add_const.h>
-#include <__type_traits/add_cv.h>
-#include <__type_traits/add_volatile.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -29,17 +26,17 @@ struct __copy_cv {
 
 template <class _From, class _To>
 struct __copy_cv<const _From, _To> {
-  using type = typename add_const<_To>::type;
+  using type = const _To;
 };
 
 template <class _From, class _To>
 struct __copy_cv<volatile _From, _To> {
-  using type = typename add_volatile<_To>::type;
+  using type = volatile _To;
 };
 
 template <class _From, class _To>
 struct __copy_cv<const volatile _From, _To> {
-  using type = typename add_cv<_To>::type;
+  using type = const volatile _To;
 };
 
 template <class _From, class _To>
