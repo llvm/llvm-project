@@ -930,11 +930,8 @@ static OpTy genTargetEnterExitDataUpdateOp(
   cp.processNowait(nowaitAttr);
 
   if constexpr (std::is_same_v<OpTy, mlir::omp::TargetUpdateOp>) {
-    cp.processMotionClauses<Fortran::parser::OmpClause::To>(stmtCtx,
-                                                            mapOperands);
-    cp.processMotionClauses<Fortran::parser::OmpClause::From>(stmtCtx,
-                                                              mapOperands);
-
+    cp.processMotionClauses<clause::To>(stmtCtx, mapOperands);
+    cp.processMotionClauses<clause::From>(stmtCtx, mapOperands);
   } else {
     cp.processMap(currentLocation, directive, stmtCtx, mapOperands);
   }
