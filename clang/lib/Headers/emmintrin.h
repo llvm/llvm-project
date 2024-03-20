@@ -525,7 +525,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpge_pd(__m128d __a,
 ///    128-bit vectors of [2 x double] to determine if the values in the first
 ///    operand are ordered with respect to those in the second operand.
 ///
-///    A pair of double-precision values are "ordered" with respect to each
+///    A pair of double-precision values are ordered with respect to each
 ///    other if neither value is a NaN. Each comparison returns 0x0 for false,
 ///    0xFFFFFFFFFFFFFFFF for true.
 ///
@@ -547,7 +547,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpord_pd(__m128d __a,
 ///    128-bit vectors of [2 x double] to determine if the values in the first
 ///    operand are unordered with respect to those in the second operand.
 ///
-///    A pair of double-precision values are "unordered" with respect to each
+///    A pair of double-precision values are unordered with respect to each
 ///    other if one or both values are NaN. Each comparison returns 0x0 for
 ///    false, 0xFFFFFFFFFFFFFFFF for true.
 ///
@@ -798,11 +798,11 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpge_sd(__m128d __a,
 
 /// Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
-///    the value in the first parameter is "ordered" with respect to the
+///    the value in the first parameter is ordered with respect to the
 ///    corresponding value in the second parameter.
 ///
 ///    The comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true. A pair
-///    of double-precision values are "ordered" with respect to each other if
+///    of double-precision values are ordered with respect to each other if
 ///    neither value is a NaN.
 ///
 /// \headerfile <x86intrin.h>
@@ -824,11 +824,11 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpord_sd(__m128d __a,
 
 /// Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
-///    the value in the first parameter is "unordered" with respect to the
+///    the value in the first parameter is unordered with respect to the
 ///    corresponding value in the second parameter.
 ///
 ///    The comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true. A pair
-///    of double-precision values are "unordered" with respect to each other if
+///    of double-precision values are unordered with respect to each other if
 ///    one or both values are NaN.
 ///
 /// \headerfile <x86intrin.h>
@@ -4772,8 +4772,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castsi128_pd(__m128i __a) {
 ///    immediate integer operand.
 ///
 ///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
-///    If either value in a comparison is NaN, comparisons marked as ordered
-///    return false, and comparisons marked as unordered return true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -4808,8 +4808,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castsi128_pd(__m128i __a) {
 ///    immediate integer operand.
 ///
 ///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
-///    If either value in a comparison is NaN, comparisons marked as ordered
-///    return false, and comparisons marked as unordered return true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///

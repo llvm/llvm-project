@@ -1613,8 +1613,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    immediate integer operand.
 ///
 ///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
-///    If either value in a comparison is NaN, comparisons marked as ordered
-///    return false, and comparisons marked as unordered return true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1672,8 +1672,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    operand.
 ///
 ///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
-///    If either value in a comparison is NaN, comparisons marked as ordered
-///    return false, and comparisons marked as unordered return true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1730,8 +1730,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    immediate integer operand.
 ///
 ///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
-///    If either value in a comparison is NaN, comparisons marked as ordered
-///    return false, and comparisons marked as unordered return true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1790,8 +1790,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    operand.
 ///
 ///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
-///    If either value in a comparison is NaN, comparisons marked as ordered
-///    return false, and comparisons marked as unordered return true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1851,8 +1851,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    immediate integer operand.
 ///
 ///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
-///    If either value in a comparison is NaN, comparisons marked as ordered
-///    return false, and comparisons marked as unordered return true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1910,8 +1910,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    integer operand.
 ///
 ///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
-///    If either value in a comparison is NaN, comparisons marked as ordered
-///    return false, and comparisons marked as unordered return true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///

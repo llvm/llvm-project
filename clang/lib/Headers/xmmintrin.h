@@ -728,7 +728,7 @@ _mm_cmpge_ps(__m128 __a, __m128 __b)
 ///
 ///    The comparison yields 0x0 for false, 0xFFFFFFFF for true, in the
 ///    low-order bits of a vector of [4 x float].
-///    If either value in a comparison is NaN, returns false.
+///    If either value in a comparison is NaN, returns true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -979,7 +979,7 @@ _mm_cmpnge_ps(__m128 __a, __m128 __b)
 ///    operands to determine if the value in the first operand is ordered with
 ///    respect to the corresponding value in the second operand.
 ///
-///    A pair of floating-point values are "ordered" with respect to each
+///    A pair of floating-point values are ordered with respect to each
 ///    other if neither value is a NaN. Each comparison returns 0x0 for false,
 ///    0xFFFFFFFF for true.
 ///
@@ -1006,7 +1006,7 @@ _mm_cmpord_ss(__m128 __a, __m128 __b)
 ///    128-bit vectors of [4 x float] to determine if the values in the first
 ///    operand are ordered with respect to those in the second operand.
 ///
-///    A pair of floating-point values are "ordered" with respect to each
+///    A pair of floating-point values are ordered with respect to each
 ///    other if neither value is a NaN. Each comparison returns 0x0 for false,
 ///    0xFFFFFFFF for true.
 ///
@@ -1030,7 +1030,7 @@ _mm_cmpord_ps(__m128 __a, __m128 __b)
 ///    operands to determine if the value in the first operand is unordered
 ///    with respect to the corresponding value in the second operand.
 ///
-///    A pair of double-precision values are "unordered" with respect to each
+///    A pair of double-precision values are unordered with respect to each
 ///    other if one or both values are NaN. Each comparison returns 0x0 for
 ///    false, 0xFFFFFFFF for true.
 ///
@@ -1057,7 +1057,7 @@ _mm_cmpunord_ss(__m128 __a, __m128 __b)
 ///    128-bit vectors of [4 x float] to determine if the values in the first
 ///    operand are unordered with respect to those in the second operand.
 ///
-///    A pair of double-precision values are "unordered" with respect to each
+///    A pair of double-precision values are unordered with respect to each
 ///    other if one or both values are NaN. Each comparison returns 0x0 for
 ///    false, 0xFFFFFFFFFFFFFFFF for true.
 ///
@@ -1203,7 +1203,7 @@ _mm_comige_ss(__m128 __a, __m128 __b)
 ///    operand.
 ///
 ///    The comparison returns 0 for false, 1 for true. If either value in a
-///    comparison is NaN, returns 0.
+///    comparison is NaN, returns 1.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3025,8 +3025,8 @@ _mm_movemask_ps(__m128 __a)
 ///    operand.
 ///
 ///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
-///    If either value in a comparison is NaN, comparisons marked as ordered
-///    return false, and comparisons marked as unordered return true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3060,8 +3060,8 @@ _mm_movemask_ps(__m128 __a)
 ///    integer operand.
 ///
 ///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
-///    If either value in a comparison is NaN, comparisons marked as ordered
-///    return false, and comparisons marked as unordered return true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
