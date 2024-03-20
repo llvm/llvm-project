@@ -210,6 +210,6 @@ define void @trunc_promoteIntRes(<vscale x 4 x i64> %0, ptr %ptr) {
 ; CHECK-NEXT:    ret
 entry:
   %1 = trunc <vscale x 4 x i64> %0 to <vscale x 4 x i16>
-  store <vscale x 4 x i16> %1, <vscale x 4 x i16>* %ptr, align 2
+  store <vscale x 4 x i16> %1, ptr %ptr, align 2
   ret void
 }

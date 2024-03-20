@@ -178,9 +178,9 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor i32 [[TMP8]], -1
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], [[N]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = sext i32 [[TMP11]] to i64
@@ -212,9 +212,9 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX7]], 0
 ; CHECK-NEXT:    [[OFFSET_IDX8:%.*]] = trunc i64 [[INDEX7]] to i32
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[OFFSET_IDX8]], 0
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX7]], 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor i32 [[TMP20]], -1
 ; CHECK-NEXT:    [[TMP23:%.*]] = add i32 [[TMP22]], [[N]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = sext i32 [[TMP23]] to i64
@@ -662,7 +662,7 @@ outer.latch:
   br label %outer.header
 }
 
-; Check handling of widended/truncated inductions.
+; Check handling of widened/truncated inductions.
 define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-LABEL: @f4(
 ; CHECK-NEXT:  iter.check:

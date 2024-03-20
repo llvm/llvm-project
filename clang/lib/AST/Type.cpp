@@ -385,6 +385,26 @@ void DependentBitIntType::Profile(llvm::FoldingSetNodeID &ID,
   NumBitsExpr->Profile(ID, Context, true);
 }
 
+bool BoundsAttributedType::referencesFieldDecls() const {
+  return llvm::any_of(dependent_decls(),
+                      [](const TypeCoupledDeclRefInfo &Info) {
+                        return isa<FieldDecl>(Info.getDecl());
+                      });
+}
+
+void CountAttributedType::Profile(llvm::FoldingSetNodeID &ID,
+                                  QualType WrappedTy, Expr *CountExpr,
+                                  bool CountInBytes, bool OrNull) {
+  ID.AddPointer(WrappedTy.getAsOpaquePtr());
+  ID.AddBoolean(CountInBytes);
+  ID.AddBoolean(OrNull);
+  // We profile it as a pointer as the StmtProfiler considers parameter
+  // expressions on function declaration and function definition as the
+  // same, resulting in count expression being evaluated with ParamDecl
+  // not in the function scope.
+  ID.AddPointer(CountExpr);
+}
+
 /// getArrayElementTypeNoTypeQual - If this is an array type, return the
 /// element type of the array, potentially with type qualifiers missing.
 /// This method should never be used when type qualifiers are meaningful.
@@ -559,6 +579,14 @@ template <> const AttributedType *Type::getAs() const {
   return getAsSugar<AttributedType>(this);
 }
 
+template <> const BoundsAttributedType *Type::getAs() const {
+  return getAsSugar<BoundsAttributedType>(this);
+}
+
+template <> const CountAttributedType *Type::getAs() const {
+  return getAsSugar<CountAttributedType>(this);
+}
+
 /// getUnqualifiedDesugaredType - Pull any qualifiers and syntactic
 /// sugar off the given type.  This should produce an object of the
 /// same dynamic type as the canonical type.
@@ -639,6 +667,10 @@ bool Type::isScopedEnumeralType() const {
   if (const auto *ET = getAs<EnumType>())
     return ET->getDecl()->isScoped();
   return false;
+}
+
+bool Type::isCountAttributedType() const {
+  return getAs<CountAttributedType>();
 }
 
 const ComplexType *Type::getAsComplexIntegerType() const {
@@ -2479,6 +2511,9 @@ bool Type::isRVVVLSBuiltinType() const {
                         IsFP, IsBF)                                            \
   case BuiltinType::Id:                                                        \
     return NF == 1;
+#define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
+  case BuiltinType::Id:                                                        \
+    return true;
 #include "clang/Basic/RISCVVTypes.def"
     default:
       return false;
@@ -2491,7 +2526,17 @@ QualType Type::getRVVEltType(const ASTContext &Ctx) const {
   assert(isRVVVLSBuiltinType() && "unsupported type!");
 
   const BuiltinType *BTy = castAs<BuiltinType>();
-  return Ctx.getBuiltinVectorTypeInfo(BTy).ElementType;
+
+  switch (BTy->getKind()) {
+#define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
+  case BuiltinType::Id:                                                        \
+    return Ctx.UnsignedCharTy;
+  default:
+    return Ctx.getBuiltinVectorTypeInfo(BTy).ElementType;
+#include "clang/Basic/RISCVVTypes.def"
+  }
+
+  llvm_unreachable("Unhandled type");
 }
 
 bool QualType::isPODType(const ASTContext &Context) const {
@@ -2669,6 +2714,8 @@ bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
     return false;
   } else if (const auto *RD = BaseElementType->getAsRecordDecl()) {
     return RD->canPassInRegisters();
+  } else if (BaseElementType.isTriviallyCopyableType(Context)) {
+    return true;
   } else {
     switch (isNonTrivialToPrimitiveDestructiveMove()) {
     case PCK_Trivial:
@@ -3425,6 +3472,7 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   case CC_PreserveMost: return "preserve_most";
   case CC_PreserveAll: return "preserve_all";
   case CC_M68kRTD: return "m68k_rtd";
+  case CC_PreserveNone: return "preserve_none";
   }
 
   llvm_unreachable("Invalid calling convention.");
@@ -3459,6 +3507,14 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     FunctionTypeBits.HasExtraBitfields = false;
   }
 
+  if (epi.requiresFunctionProtoTypeArmAttributes()) {
+    auto &ArmTypeAttrs = *getTrailingObjects<FunctionTypeArmAttributes>();
+    ArmTypeAttrs = FunctionTypeArmAttributes();
+
+    // Also set the bit in FunctionTypeExtraBitfields
+    auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
+    ExtraBits.HasArmTypeAttributes = true;
+  }
 
   // Fill in the trailing argument array.
   auto *argSlot = getTrailingObjects<QualType>();
@@ -3470,10 +3526,10 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
 
   // Propagate the SME ACLE attributes.
   if (epi.AArch64SMEAttributes != SME_NormalFunction) {
-    auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
+    auto &ArmTypeAttrs = *getTrailingObjects<FunctionTypeArmAttributes>();
     assert(epi.AArch64SMEAttributes <= SME_AttributeMask &&
            "Not enough bits to encode SME attributes");
-    ExtraBits.AArch64SMEAttributes = epi.AArch64SMEAttributes;
+    ArmTypeAttrs.AArch64SMEAttributes = epi.AArch64SMEAttributes;
   }
 
   // Fill in the exception type array if present.
@@ -3685,6 +3741,43 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
           getExtProtoInfo(), Ctx, isCanonicalUnqualified());
 }
 
+TypeCoupledDeclRefInfo::TypeCoupledDeclRefInfo(ValueDecl *D, bool Deref)
+    : Data(D, Deref << DerefShift) {}
+
+bool TypeCoupledDeclRefInfo::isDeref() const {
+  return Data.getInt() & DerefMask;
+}
+ValueDecl *TypeCoupledDeclRefInfo::getDecl() const { return Data.getPointer(); }
+unsigned TypeCoupledDeclRefInfo::getInt() const { return Data.getInt(); }
+void *TypeCoupledDeclRefInfo::getOpaqueValue() const {
+  return Data.getOpaqueValue();
+}
+bool TypeCoupledDeclRefInfo::operator==(
+    const TypeCoupledDeclRefInfo &Other) const {
+  return getOpaqueValue() == Other.getOpaqueValue();
+}
+void TypeCoupledDeclRefInfo::setFromOpaqueValue(void *V) {
+  Data.setFromOpaqueValue(V);
+}
+
+BoundsAttributedType::BoundsAttributedType(TypeClass TC, QualType Wrapped,
+                                           QualType Canon)
+    : Type(TC, Canon, Wrapped->getDependence()), WrappedTy(Wrapped) {}
+
+CountAttributedType::CountAttributedType(
+    QualType Wrapped, QualType Canon, Expr *CountExpr, bool CountInBytes,
+    bool OrNull, ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls)
+    : BoundsAttributedType(CountAttributed, Wrapped, Canon),
+      CountExpr(CountExpr) {
+  CountAttributedTypeBits.NumCoupledDecls = CoupledDecls.size();
+  CountAttributedTypeBits.CountInBytes = CountInBytes;
+  CountAttributedTypeBits.OrNull = OrNull;
+  auto *DeclSlot = getTrailingObjects<TypeCoupledDeclRefInfo>();
+  Decls = llvm::ArrayRef(DeclSlot, CoupledDecls.size());
+  for (unsigned i = 0; i != CoupledDecls.size(); ++i)
+    DeclSlot[i] = CoupledDecls[i];
+}
+
 TypedefType::TypedefType(TypeClass tc, const TypedefNameDecl *D,
                          QualType Underlying, QualType can)
     : Type(tc, can, toSemanticDependence(can->getDependence())),
@@ -3789,6 +3882,63 @@ DependentDecltypeType::DependentDecltypeType(Expr *E, QualType UnderlyingType)
 
 void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
                                     const ASTContext &Context, Expr *E) {
+  E->Profile(ID, Context, true);
+}
+
+PackIndexingType::PackIndexingType(const ASTContext &Context,
+                                   QualType Canonical, QualType Pattern,
+                                   Expr *IndexExpr,
+                                   ArrayRef<QualType> Expansions)
+    : Type(PackIndexing, Canonical,
+           computeDependence(Pattern, IndexExpr, Expansions)),
+      Context(Context), Pattern(Pattern), IndexExpr(IndexExpr),
+      Size(Expansions.size()) {
+
+  std::uninitialized_copy(Expansions.begin(), Expansions.end(),
+                          getTrailingObjects<QualType>());
+}
+
+std::optional<unsigned> PackIndexingType::getSelectedIndex() const {
+  if (isInstantiationDependentType())
+    return std::nullopt;
+  // Should only be not a constant for error recovery.
+  ConstantExpr *CE = dyn_cast<ConstantExpr>(getIndexExpr());
+  if (!CE)
+    return std::nullopt;
+  auto Index = CE->getResultAsAPSInt();
+  assert(Index.isNonNegative() && "Invalid index");
+  return static_cast<unsigned>(Index.getExtValue());
+}
+
+TypeDependence
+PackIndexingType::computeDependence(QualType Pattern, Expr *IndexExpr,
+                                    ArrayRef<QualType> Expansions) {
+  TypeDependence IndexD = toTypeDependence(IndexExpr->getDependence());
+
+  TypeDependence TD = IndexD | (IndexExpr->isInstantiationDependent()
+                                    ? TypeDependence::DependentInstantiation
+                                    : TypeDependence::None);
+  if (Expansions.empty())
+    TD |= Pattern->getDependence() & TypeDependence::DependentInstantiation;
+  else
+    for (const QualType &T : Expansions)
+      TD |= T->getDependence();
+
+  if (!(IndexD & TypeDependence::UnexpandedPack))
+    TD &= ~TypeDependence::UnexpandedPack;
+
+  // If the pattern does not contain an unexpended pack,
+  // the type is still dependent, and invalid
+  if (!Pattern->containsUnexpandedParameterPack())
+    TD |= TypeDependence::Error | TypeDependence::DependentInstantiation;
+
+  return TD;
+}
+
+void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
+                               const ASTContext &Context, QualType Pattern,
+                               Expr *E) {
+  Pattern.Profile(ID);
   E->Profile(ID, Context, true);
 }
 
@@ -3912,6 +4062,7 @@ bool AttributedType::isCallingConv() const {
   case attr::PreserveMost:
   case attr::PreserveAll:
   case attr::M68kRTD:
+  case attr::PreserveNone:
     return true;
   }
   llvm_unreachable("invalid attr kind");
@@ -4467,6 +4618,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::TypeOfExpr:
   case Type::TypeOf:
   case Type::Decltype:
+  case Type::PackIndexing:
   case Type::UnaryTransform:
   case Type::TemplateTypeParm:
   case Type::SubstTemplateTypeParmPack:

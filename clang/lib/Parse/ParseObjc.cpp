@@ -1332,7 +1332,7 @@ ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
                                            DS.getNullabilityLoc(),
                                            addedToDeclSpec);
 
-      TypeResult type = Actions.ActOnTypeName(getCurScope(), declarator);
+      TypeResult type = Actions.ActOnTypeName(declarator);
       if (!type.isInvalid())
         Ty = type.get();
 
@@ -1747,7 +1747,7 @@ void Parser::parseObjCTypeArgsOrProtocolQualifiers(
       // Form a declarator to turn this into a type.
       Declarator D(DS, ParsedAttributesView::none(),
                    DeclaratorContext::TypeName);
-      TypeResult fullTypeArg = Actions.ActOnTypeName(getCurScope(), D);
+      TypeResult fullTypeArg = Actions.ActOnTypeName(D);
       if (fullTypeArg.isUsable()) {
         typeArgs.push_back(fullTypeArg.get());
         if (!foundValidTypeId) {
@@ -2971,7 +2971,7 @@ bool Parser::ParseObjCXXMessageReceiver(bool &IsExpr, void *&TypeOrExpr) {
                   tok::annot_cxxscope))
     TryAnnotateTypeOrScopeToken();
 
-  if (!Actions.isSimpleTypeSpecifier(Tok.getKind())) {
+  if (!Tok.isSimpleTypeSpecifier(getLangOpts())) {
     //   objc-receiver:
     //     expression
     // Make sure any typos in the receiver are corrected or diagnosed, so that
@@ -3024,7 +3024,7 @@ bool Parser::ParseObjCXXMessageReceiver(bool &IsExpr, void *&TypeOrExpr) {
   // remainder of the class message.
   Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
                             DeclaratorContext::TypeName);
-  TypeResult Type = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+  TypeResult Type = Actions.ActOnTypeName(DeclaratorInfo);
   if (Type.isInvalid())
     return true;
 

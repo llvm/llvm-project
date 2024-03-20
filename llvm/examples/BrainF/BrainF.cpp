@@ -440,7 +440,7 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
       LoadInst *tape_0 = new LoadInst(Int8Ty, head_0, tapereg, testbb);
 
       //%test.%d = icmp eq i8 %tape.%d, 0
-      ICmpInst *test_0 = new ICmpInst(*testbb, ICmpInst::ICMP_EQ, tape_0,
+      ICmpInst *test_0 = new ICmpInst(testbb, ICmpInst::ICMP_EQ, tape_0,
                                     ConstantInt::get(C, APInt(8, 0)), testreg);
 
       //br i1 %test.%d, label %main.%d, label %main.%d

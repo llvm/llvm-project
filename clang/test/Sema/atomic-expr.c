@@ -2,6 +2,11 @@
 // RUN: %clang_cc1 %s -std=c2x -verify=expected,access -fsyntax-only
 // RUN: %clang_cc1 %s -std=c2x -pedantic -verify=expected,access -fsyntax-only
 // RUN: %clang_cc1 %s -verify -fsyntax-only -Wno-atomic-access
+// RUN: %clang_cc1 %s -verify=expected,access -fsyntax-only -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -std=c2x -verify=expected,access -fsyntax-only -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -std=c2x -pedantic -verify=expected,access -fsyntax-only -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -verify -fsyntax-only -Wno-atomic-access -fexperimental-new-constant-interpreter
+
 
 _Atomic(unsigned int) data1;
 int _Atomic data2;

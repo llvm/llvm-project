@@ -35,6 +35,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/HexagonAttributes.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -224,12 +225,13 @@ bool isSlot0Only(unsigned units) {
 namespace {
 
 class HexagonTargetAsmStreamer : public HexagonTargetStreamer {
+  formatted_raw_ostream &OS;
+  bool IsVerboseAsm;
+
 public:
-  HexagonTargetAsmStreamer(MCStreamer &S,
-                           formatted_raw_ostream &OS,
-                           bool isVerboseAsm,
-                           MCInstPrinter &IP)
-      : HexagonTargetStreamer(S) {}
+  HexagonTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                           bool IsVerboseAsm, MCInstPrinter &IP)
+      : HexagonTargetStreamer(S), OS(OS), IsVerboseAsm(IsVerboseAsm) {}
 
   void prettyPrintAsm(MCInstPrinter &InstPrinter, uint64_t Address,
                       const MCInst &Inst, const MCSubtargetInfo &STI,
@@ -266,6 +268,21 @@ public:
     else
       OS << "\t}" << PacketBundle.second;
   }
+
+  void finish() override { finishAttributeSection(); }
+
+  void finishAttributeSection() override {}
+
+  void emitAttribute(unsigned Attribute, unsigned Value) override {
+    OS << "\t.attribute\t" << Attribute << ", " << Twine(Value);
+    if (IsVerboseAsm) {
+      StringRef Name = ELFAttrs::attrTypeAsString(
+          Attribute, HexagonAttrs::getHexagonAttributeTags());
+      if (!Name.empty())
+        OS << "\t// " << Name;
+    }
+    OS << "\n";
+  }
 };
 
 class HexagonTargetELFStreamer : public HexagonTargetStreamer {
@@ -278,7 +295,6 @@ public:
     MCAssembler &MCA = getStreamer().getAssembler();
     MCA.setELFHeaderEFlags(Hexagon_MC::GetELFFlags(STI));
   }
-
 
   void emitCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,
                               unsigned ByteAlignment,
@@ -296,6 +312,27 @@ public:
         static_cast<HexagonMCELFStreamer &>(getStreamer());
     HexagonELFStreamer.HexagonMCEmitLocalCommonSymbol(
         Symbol, Size, Align(ByteAlignment), AccessSize);
+  }
+
+  void finish() override { finishAttributeSection(); }
+
+  void reset() override { AttributeSection = nullptr; }
+
+private:
+  MCSection *AttributeSection = nullptr;
+
+  void finishAttributeSection() override {
+    MCELFStreamer &S = getStreamer();
+    if (S.Contents.empty())
+      return;
+
+    S.emitAttributesSection("hexagon", ".hexagon.attributes",
+                            ELF::SHT_HEXAGON_ATTRIBUTES, AttributeSection);
+  }
+
+  void emitAttribute(uint32_t Attribute, uint32_t Value) override {
+    getStreamer().setAttributeItem(Attribute, Value,
+                                   /*OverwriteExisting=*/true);
   }
 };
 
@@ -589,6 +626,29 @@ void Hexagon_MC::addArchSubtarget(MCSubtargetInfo const *STI, StringRef FS) {
     ArchSubtarget[std::string(STI->getCPU())] =
         std::unique_ptr<MCSubtargetInfo const>(ArchSTI);
   }
+}
+
+std::optional<unsigned>
+Hexagon_MC::getHVXVersion(const FeatureBitset &Features) {
+  for (auto Arch : {Hexagon::ExtensionHVXV73, Hexagon::ExtensionHVXV71,
+                    Hexagon::ExtensionHVXV69, Hexagon::ExtensionHVXV68,
+                    Hexagon::ExtensionHVXV67, Hexagon::ExtensionHVXV66,
+                    Hexagon::ExtensionHVXV65, Hexagon::ExtensionHVXV62,
+                    Hexagon::ExtensionHVXV60})
+    if (Features.test(Arch))
+      return Arch;
+  return {};
+}
+
+unsigned Hexagon_MC::getArchVersion(const FeatureBitset &Features) {
+  for (auto Arch :
+       {Hexagon::ArchV73, Hexagon::ArchV71, Hexagon::ArchV69, Hexagon::ArchV68,
+        Hexagon::ArchV67, Hexagon::ArchV66, Hexagon::ArchV65, Hexagon::ArchV62,
+        Hexagon::ArchV60, Hexagon::ArchV55, Hexagon::ArchV5})
+    if (Features.test(Arch))
+      return Arch;
+  llvm_unreachable("Expected arch v5-v73");
+  return 0;
 }
 
 unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {

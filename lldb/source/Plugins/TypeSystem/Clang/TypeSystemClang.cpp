@@ -1,4 +1,4 @@
-//===-- TypeSystemClang.cpp -----------------------------------------------==='//
+//===-- TypeSystemClang.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -4074,6 +4074,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   switch (qual_type->getTypeClass()) {
   case clang::Type::Atomic:
   case clang::Type::Auto:
+  case clang::Type::CountAttributed:
   case clang::Type::Decltype:
   case clang::Type::Elaborated:
   case clang::Type::Paren:
@@ -4188,6 +4189,10 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   // Matrix types that we're not sure how to display at the moment.
   case clang::Type::ConstantMatrix:
   case clang::Type::DependentSizedMatrix:
+    break;
+
+  // We don't handle pack indexing yet
+  case clang::Type::PackIndexing:
     break;
   }
   // We don't know hot to display this type...
@@ -4751,6 +4756,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   switch (qual_type->getTypeClass()) {
   case clang::Type::Atomic:
   case clang::Type::Auto:
+  case clang::Type::CountAttributed:
   case clang::Type::Decltype:
   case clang::Type::Elaborated:
   case clang::Type::Paren:
@@ -5066,6 +5072,10 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::ConstantMatrix:
   case clang::Type::DependentSizedMatrix:
     break;
+
+  // We don't handle pack indexing yet
+  case clang::Type::PackIndexing:
+    break;
   }
   count = 0;
   return lldb::eEncodingInvalid;
@@ -5080,6 +5090,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   switch (qual_type->getTypeClass()) {
   case clang::Type::Atomic:
   case clang::Type::Auto:
+  case clang::Type::CountAttributed:
   case clang::Type::Decltype:
   case clang::Type::Elaborated:
   case clang::Type::Paren:
@@ -5221,6 +5232,10 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::ConstantMatrix:
   case clang::Type::DependentSizedMatrix:
     break;
+
+  // We don't handle pack indexing yet
+  case clang::Type::PackIndexing:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eFormatBytes;
@@ -5251,11 +5266,13 @@ GetDynamicArrayInfo(TypeSystemClang &ast, SymbolFile *sym_file,
   return std::nullopt;
 }
 
-uint32_t TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
-                                         bool omit_empty_base_classes,
-                                         const ExecutionContext *exe_ctx) {
+llvm::Expected<uint32_t>
+TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
+                                bool omit_empty_base_classes,
+                                const ExecutionContext *exe_ctx) {
   if (!type)
-    return 0;
+    return llvm::make_error<llvm::StringError>("invalid clang type",
+                                               llvm::inconvertibleErrorCode());
 
   uint32_t num_children = 0;
   clang::QualType qual_type(RemoveWrappingTypes(GetQualType(type)));
@@ -5312,9 +5329,11 @@ uint32_t TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
       }
       num_children += std::distance(record_decl->field_begin(),
                                record_decl->field_end());
-    }
+    } else
+      return llvm::make_error<llvm::StringError>(
+          "incomplete type \"" + GetDisplayTypeName(type).GetString() + "\"",
+          llvm::inconvertibleErrorCode());
     break;
-
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface:
     if (GetCompleteQualType(&getASTContext(), qual_type)) {
@@ -5349,9 +5368,13 @@ uint32_t TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
     CompilerType pointee_clang_type(GetPointeeType(type));
 
     uint32_t num_pointee_children = 0;
-    if (pointee_clang_type.IsAggregateType())
-      num_pointee_children =
+    if (pointee_clang_type.IsAggregateType()) {
+      auto num_children_or_err =
           pointee_clang_type.GetNumChildren(omit_empty_base_classes, exe_ctx);
+      if (!num_children_or_err)
+        return num_children_or_err;
+      num_pointee_children = *num_children_or_err;
+    }
     // If this type points to a simple type, then it has 1 child
     if (num_pointee_children == 0)
       num_children = 1;
@@ -5385,9 +5408,13 @@ uint32_t TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
     clang::QualType pointee_type(pointer_type->getPointeeType());
     CompilerType pointee_clang_type(GetType(pointee_type));
     uint32_t num_pointee_children = 0;
-    if (pointee_clang_type.IsAggregateType())
-      num_pointee_children =
+    if (pointee_clang_type.IsAggregateType()) {
+      auto num_children_or_err =
           pointee_clang_type.GetNumChildren(omit_empty_base_classes, exe_ctx);
+      if (!num_children_or_err)
+        return num_children_or_err;
+      num_pointee_children = *num_children_or_err;
+    }
     if (num_pointee_children == 0) {
       // We have a pointer to a pointee type that claims it has no children. We
       // will want to look at
@@ -6096,8 +6123,15 @@ CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
   child_is_base_class = false;
   language_flags = 0;
 
-  const bool idx_is_valid =
-      idx < GetNumChildren(type, omit_empty_base_classes, exe_ctx);
+  auto num_children_or_err =
+      GetNumChildren(type, omit_empty_base_classes, exe_ctx);
+  if (!num_children_or_err) {
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), num_children_or_err.takeError(),
+                    "{0}");
+    return {};
+  }
+
+  const bool idx_is_valid = idx < *num_children_or_err;
   int32_t bit_offset;
   switch (parent_type_class) {
   case clang::Type::Builtin:
@@ -6253,8 +6287,10 @@ CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
               CompilerType base_class_clang_type =
                   GetType(getASTContext().getObjCInterfaceType(
                       superclass_interface_decl));
-              if (base_class_clang_type.GetNumChildren(omit_empty_base_classes,
-                                                       exe_ctx) > 0) {
+              if (llvm::expectedToStdOptional(
+                      base_class_clang_type.GetNumChildren(
+                          omit_empty_base_classes, exe_ctx))
+                      .value_or(0) > 0) {
                 if (idx == 0) {
                   clang::QualType ivar_qual_type(
                       getASTContext().getObjCInterfaceType(
@@ -7168,6 +7204,9 @@ TypeSystemClang::GetTemplateArgumentKind(lldb::opaque_compiler_type_t type,
 
   case clang::TemplateArgument::Pack:
     return eTemplateArgumentKindPack;
+
+  case clang::TemplateArgument::StructuralValue:
+    return eTemplateArgumentKindStructuralValue;
   }
   llvm_unreachable("Unhandled clang::TemplateArgument::ArgKind");
 }
@@ -8353,7 +8392,7 @@ clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
   if (name && name[0])
     enumerator_decl->setDeclName(&getASTContext().Idents.get(name));
   enumerator_decl->setType(clang::QualType(enutype, 0));
-  enumerator_decl->setInitVal(value);
+  enumerator_decl->setInitVal(getASTContext(), value);
   SetMemberOwningModule(enumerator_decl, enutype->getDecl());
 
   if (!enumerator_decl)
@@ -9250,8 +9289,14 @@ ConstString TypeSystemClang::DeclContextGetName(void *opaque_decl_ctx) {
   if (opaque_decl_ctx) {
     clang::NamedDecl *named_decl =
         llvm::dyn_cast<clang::NamedDecl>((clang::DeclContext *)opaque_decl_ctx);
-    if (named_decl)
-      return ConstString(named_decl->getName());
+    if (named_decl) {
+      std::string name;
+      llvm::raw_string_ostream stream{name};
+      auto policy = GetTypePrintingPolicy();
+      policy.AlwaysIncludeTypeForTemplateArgument = true;
+      named_decl->getNameForDiagnostic(stream, policy, /*qualified=*/false);
+      return ConstString(name);
+    }
   }
   return ConstString();
 }

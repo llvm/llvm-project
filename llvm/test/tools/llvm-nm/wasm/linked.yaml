@@ -1,9 +1,14 @@
 # RUN: yaml2obj %s -o %t.wasm
 # RUN: llvm-nm %t.wasm | FileCheck %s
+# RUN: llvm-nm -P %t.wasm | FileCheck %s --check-prefix=POSIX
 
 # CHECK: 0000009f T my_func_export
 # CHECK-NEXT: 0000002a D my_global_export
 # CHECK-NEXT: 00000000 D my_table_export
+
+# POSIX: my_func_export T 9f 3
+# POSIX-NEXT: my_global_export D 2a 0
+# POSIX-NEXT: my_table_export D 0 0
 
 --- !WASM
 FileHeader:

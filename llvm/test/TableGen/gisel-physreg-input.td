@@ -43,8 +43,8 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::ADD_PHYS),
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src0
-// GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // GISEL-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 def ADD_PHYS : I<(outs GPR32:$dst), (ins GPR32:$src0),
     [(set GPR32:$dst, (add GPR32:$src0, SPECIAL))]> {
   let Uses = [SPECIAL];
@@ -71,8 +71,8 @@ def ADD_PHYS : I<(outs GPR32:$dst), (ins GPR32:$src0),
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MUL_PHYS),
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // SPECIAL
-// GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // GISEL-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 def MUL_PHYS : I<(outs GPR32:$dst), (ins GPR32:$SPECIAL),
     [(set GPR32:$dst, (mul GPR32:$SPECIAL, SPECIAL))]> {
   let Uses = [SPECIAL];

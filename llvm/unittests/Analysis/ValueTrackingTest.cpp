@@ -824,42 +824,7 @@ TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle_Pointers) {
 TEST(ValueTracking, propagatesPoison) {
   std::string AsmHead =
       "declare i32 @g(i32)\n"
-      "declare {i32, i1} @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)\n"
-      "declare {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 %b)\n"
-      "declare {i32, i1} @llvm.smul.with.overflow.i32(i32 %a, i32 %b)\n"
-      "declare {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)\n"
-      "declare {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)\n"
-      "declare {i32, i1} @llvm.umul.with.overflow.i32(i32 %a, i32 %b)\n"
-      "declare float @llvm.sqrt.f32(float)\n"
-      "declare float @llvm.powi.f32.i32(float, i32)\n"
-      "declare float @llvm.sin.f32(float)\n"
-      "declare float @llvm.cos.f32(float)\n"
-      "declare float @llvm.pow.f32(float, float)\n"
-      "declare float @llvm.exp.f32(float)\n"
-      "declare float @llvm.exp2.f32(float)\n"
-      "declare float @llvm.log.f32(float)\n"
-      "declare float @llvm.log10.f32(float)\n"
-      "declare float @llvm.log2.f32(float)\n"
-      "declare float @llvm.fma.f32(float, float, float)\n"
-      "declare float @llvm.fabs.f32(float)\n"
-      "declare float @llvm.minnum.f32(float, float)\n"
-      "declare float @llvm.maxnum.f32(float, float)\n"
-      "declare float @llvm.minimum.f32(float, float)\n"
-      "declare float @llvm.maximum.f32(float, float)\n"
-      "declare float @llvm.copysign.f32(float, float)\n"
-      "declare float @llvm.floor.f32(float)\n"
-      "declare float @llvm.ceil.f32(float)\n"
-      "declare float @llvm.trunc.f32(float)\n"
-      "declare float @llvm.rint.f32(float)\n"
-      "declare float @llvm.nearbyint.f32(float)\n"
-      "declare float @llvm.round.f32(float)\n"
-      "declare float @llvm.roundeven.f32(float)\n"
-      "declare i32 @llvm.lround.f32(float)\n"
-      "declare i64 @llvm.llround.f32(float)\n"
-      "declare i32 @llvm.lrint.f32(float)\n"
-      "declare i64 @llvm.llrint.f32(float)\n"
-      "declare float @llvm.fmuladd.f32(float, float, float)\n"
-      "define void @f(i32 %x, i32 %y, float %fx, float %fy, "
+      "define void @f(i32 %x, i32 %y, i32 %shamt, float %fx, float %fy, "
       "i1 %cond, ptr %p) {\n";
   std::string AsmTail = "  ret void\n}";
   // (propagates poison?, IR instruction)
@@ -912,6 +877,28 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)", 0},
       {true, "call {i32, i1} @llvm.usub.with.overflow.i32(i32 %x, i32 %y)", 0},
       {true, "call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.sadd.sat.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.ssub.sat.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.sshl.sat.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.uadd.sat.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.usub.sat.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.ushl.sat.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.ctpop.i32(i32 %x)", 0},
+      {true, "call i32 @llvm.ctlz.i32(i32 %x, i1 true)", 0},
+      {true, "call i32 @llvm.cttz.i32(i32 %x, i1 true)", 0},
+      {true, "call i32 @llvm.abs.i32(i32 %x, i1 true)", 0},
+      {true, "call i32 @llvm.smax.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.smin.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.umax.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.umin.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.bitreverse.i32(i32 %x)", 0},
+      {true, "call i32 @llvm.bswap.i32(i32 %x)", 0},
+      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 0},
+      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 1},
+      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 2},
+      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 0},
+      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 1},
+      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 2},
       {false, "call float @llvm.sqrt.f32(float %fx)", 0},
       {false, "call float @llvm.powi.f32.i32(float %fx, i32 %x)", 0},
       {false, "call float @llvm.sin.f32(float %fx)", 0},
@@ -1945,14 +1932,14 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
   auto [OleVal, OleClass] =
       fcmpToClassTest(CmpInst::FCMP_OLE, *A3->getFunction(), A3->getOperand(0),
                       A3->getOperand(1));
-  EXPECT_EQ(nullptr, OleVal);
-  EXPECT_EQ(fcAllFlags, OleClass);
+  EXPECT_EQ(A->getOperand(0), OleVal);
+  EXPECT_EQ(~fcNan, OleClass);
 
   auto [UgtVal, UgtClass] =
       fcmpToClassTest(CmpInst::FCMP_UGT, *A4->getFunction(), A4->getOperand(0),
                       A4->getOperand(1));
-  EXPECT_EQ(nullptr, UgtVal);
-  EXPECT_EQ(fcAllFlags, UgtClass);
+  EXPECT_EQ(A4->getOperand(0), UgtVal);
+  EXPECT_EQ(fcNan, UgtClass);
 }
 
 TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
@@ -2370,6 +2357,20 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFreeze) {
                                      F->front().getTerminator());
   EXPECT_EQ(Known.Zero.getZExtValue(), 31u);
   EXPECT_EQ(Known.One.getZExtValue(), 0u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsReturnedRangeConflict) {
+  parseAssembly(
+      "declare i16 @foo(i16 returned)\n"
+      "\n"
+      "define i16 @test() {\n"
+      "  %A = call i16 @foo(i16 4095), !range !{i16 32, i16 33}\n"
+      "  ret i16 %A\n"
+      "}\n");
+  // The call returns 32 according to range metadata, but 4095 according to the
+  // returned arg operand. Given the conflicting information we expect that the
+  // known bits information simply is cleared.
+  expectKnownBits(/*zero*/ 0u, /*one*/ 0u);
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRange) {

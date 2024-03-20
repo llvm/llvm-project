@@ -115,7 +115,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Unevaluated strings</td>
   <td><a href="https://wg21.link/P2361R6">P2361R6</a></td>
-  <td class="unreleased" align="center">Clang 18</td>
+  <td class="full" align="center">Clang 18</td>
  </tr>
  <tr>
   <td>Add @, $, and ` to the basic character set</td>
@@ -145,23 +145,23 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Placeholder variables with no name</td>
   <td><a href="https://wg21.link/P2169R4">P2169R4</a></td>
-  <td class="unreleased" align="center">Clang 18</td>
+  <td class="full" align="center">Clang 18</td>
  </tr>
  <!-- Fall 2023 papers (Kona) -->
  <tr>
   <td>Template parameter initialization</td>
   <td><a href="https://wg21.link/P2308R1">P2308R1</a> (<a href="#dr">DR</a>)</td>
-  <td class="unreleased" align="center">Clang 18</td>
+  <td class="full" align="center">Clang 18</td>
  </tr>
  <tr>
   <td>Pack Indexing</td>
   <td><a href="https://wg21.link/P2662R3">P2662R3</a></td>
-  <td class="none" align="center">No</td>
+  <td class="unreleased" align="center">Clang 19</td>
  </tr>
  <tr>
   <td>Remove Deprecated Arithmetic Conversion on Enumerations</td>
   <td><a href="https://wg21.link/P2864R2">P2864R2</a></td>
-  <td class="unreleased" align="center">Clang 18</td>
+  <td class="full" align="center">Clang 18</td>
  </tr>
 
 </table>
@@ -197,7 +197,7 @@ C++23, informally referred to as C++26.</p>
     </tr>
     <tr>
       <td>Simpler implicit move</td>
-      <td><a href="https://wg21.link/p2266r1">P2266R1</a></td>
+      <td><a href="https://wg21.link/p2266R3">P2266R3</a></td>
       <td class="full" align="center">Clang 13</td>
     </tr>
     <tr>
@@ -239,7 +239,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td rowspan=2>Deducing this</td>
       <td><a href="https://wg21.link/P0847R7">P0847R7</a></td>
-      <td class="unreleased" align="center">Clang 18</td>
+      <td class="full" align="center">Clang 18</td>
     </tr>
     <tr>
       <td><a href="https://wg21.link/P2797R0">P2797R0</a></td>
@@ -356,14 +356,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Relaxing some constexpr restrictions</td>
       <td><a href="https://wg21.link/P2448R2">P2448R2</a></td>
-      <td class="partial" align="center">
-        <details><summary>Clang 17 (Partial)</summary>
-	  We do not support outside of defaulted special memeber functions the change that constexpr functions no
-          longer have to be constexpr compatible but rather support a less restricted requirements for constexpr
-          functions. Which include allowing non-literal types as return values and parameters, allow calling of
-          non-constexpr functions and constructors.
-        </details></td>
-      </td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
     <tr>
       <td>Using unknown pointers and references in constant expressions</td>
@@ -388,7 +381,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Portable assumptions</td>
       <td><a href="https://wg21.link/P1774R8">P1774R8</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
     <tr>
       <td>Support for UTF-8 as a portable source file encoding</td>
@@ -429,7 +422,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Lifetime extension in range-based for loops</td>
       <td><a href="https://wg21.link/P2718R0">P2718R0</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
     <!--Issaquah 2023 papers-->
     <tr>
@@ -637,13 +630,21 @@ C++23, informally referred to as C++26.</p>
     </tr>
     <!-- Rapperswil papers -->
     <tr>
-      <td rowspan="2">Class types as non-type template parameters</td>
+      <td>Class types as non-type template parameters</td>
       <td><a href="https://wg21.link/p0732r2">P0732R2</a></td>
-      <td rowspan="2" class="partial" align="center">Partial</td>
+      <td class="full" align="center">Clang 12</td>
     </tr>
-      <tr> <!-- from Belfast -->
-        <td><a href="https://wg21.link/p1907r1">P1907R1</a></td>
-      </tr>
+    <tr> <!-- from Belfast -->
+      <td>Generalized non-type template parameters of scalar type</td>
+      <td><a href="https://wg21.link/p1907r1">P1907R1</a></td>
+      <td class="partial" align="center">
+        <details>
+          <summary>Clang 18 (Partial)</summary>
+          Reference type template arguments referring to instantiation-dependent objects and subobjects
+          (i.e. declared inside a template but neither type- nor value-dependent) aren't fully supported.
+        </details>
+      </td>
+    </tr>
     <tr>
       <td>Destroying operator delete</td>
       <td><a href="https://wg21.link/p0722r3">P0722R3</a></td>
@@ -835,7 +836,13 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Class template argument deduction for alias templates</td>
       <td><a href="https://wg21.link/p1814r0">P1814R0</a></td>
-      <td class="none" align="center">No</td>
+      <td class="partial" align="center">
+        <details>
+          <summary>Clang 19 (Partial)</summary>
+          The associated constraints (over.match.class.deduct#3.3) for the
+          synthesized deduction guides are not yet implemented.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>Permit conversions to arrays of unknown bound</td>

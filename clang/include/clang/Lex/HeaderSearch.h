@@ -576,6 +576,13 @@ public:
   /// Note: implicit module maps don't contribute to entry usage.
   std::vector<bool> computeUserEntryUsage() const;
 
+  /// Collect which HeaderSearchOptions::VFSOverlayFiles have been meaningfully
+  /// used so far and mark their index with 'true' in the resulting bit vector.
+  ///
+  /// Note: this ignores VFSs that redirect non-affecting files such as unused
+  /// modulemaps.
+  std::vector<bool> collectVFSUsageAndClear() const;
+
   /// This method returns a HeaderMap for the specified
   /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
   const HeaderMap *CreateHeaderMap(FileEntryRef FE);

@@ -34,9 +34,13 @@ public:
   class Policy {
     friend class AnalysisBasedWarnings;
     // The warnings to run.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned enableCheckFallThrough : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned enableCheckUnreachable : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned enableThreadSafetyAnalysis : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned enableConsumedAnalysis : 1;
   public:
     Policy();

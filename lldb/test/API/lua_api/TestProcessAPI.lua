@@ -13,7 +13,7 @@ function _T:TestProcessLaunchSimple()
     )
     assertTrue(process:IsValid())
     local stdout = process:GetSTDOUT(1000)
-    assertEquals(split_lines(stdout), {self.exe, table.unpack(args)})
+    assertEqual(split_lines(stdout), {self.exe, table.unpack(args)})
 end
 
 function _T:TestProcessLaunch()
@@ -52,7 +52,7 @@ function _T:TestProcessLaunch()
     local continue = process:Continue()
     assertTrue(continue:Success())
     local f = io.open(self.output, 'r')
-    assertEquals(read_file_non_empty_lines(f), {self.exe, table.unpack(args)})
+    assertEqual(read_file_non_empty_lines(f), {self.exe, table.unpack(args)})
     f:close()
 end
 

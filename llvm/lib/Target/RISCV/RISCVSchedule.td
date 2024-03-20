@@ -13,8 +13,10 @@ def WriteShiftImm   : SchedWrite;    // 32 or 64-bit shift by immediate operatio
 def WriteShiftImm32 : SchedWrite;    // 32-bit shift by immediate operations on RV64Ix
 def WriteShiftReg   : SchedWrite;    // 32 or 64-bit shift by immediate operations
 def WriteShiftReg32 : SchedWrite;    // 32-bit shift by immediate operations on RV64Ix
-def WriteIDiv       : SchedWrite;    // 32-bit or 64-bit divide and remainder
-def WriteIDiv32     : SchedWrite;    // 32-bit divide and remainder on RV64I
+def WriteIDiv       : SchedWrite;    // 32-bit or 64-bit divide
+def WriteIDiv32     : SchedWrite;    // 32-bit divide on RV64I
+def WriteIRem       : SchedWrite;    // 32-bit or 64-bit remainder
+def WriteIRem32     : SchedWrite;    // 32-bit remainder on RV64I
 def WriteIMul       : SchedWrite;    // 32-bit or 64-bit multiply
 def WriteIMul32     : SchedWrite;    // 32-bit multiply on RV64I
 def WriteJmp        : SchedWrite;    // Jump
@@ -30,6 +32,8 @@ def WriteSTB        : SchedWrite;    // Store byte
 def WriteSTH        : SchedWrite;    // Store half-word
 def WriteSTW        : SchedWrite;    // Store word
 def WriteSTD        : SchedWrite;    // Store double-word
+def WriteAtomicB    : SchedWrite;    //Atomic memory operation byte size
+def WriteAtomicH    : SchedWrite;    //Atomic memory operation halfword size
 def WriteAtomicW    : SchedWrite;    //Atomic memory operation word size
 def WriteAtomicD    : SchedWrite;    //Atomic memory operation double word size
 def WriteAtomicLDW  : SchedWrite;    // Atomic load word
@@ -133,8 +137,14 @@ def ReadShiftReg    : SchedRead;
 def ReadShiftReg32  : SchedRead;    // 32-bit shift by register operations on RV64Ix
 def ReadIDiv        : SchedRead;
 def ReadIDiv32      : SchedRead;
+def ReadIRem        : SchedRead;
+def ReadIRem32      : SchedRead;
 def ReadIMul        : SchedRead;
 def ReadIMul32      : SchedRead;
+def ReadAtomicBA    : SchedRead;
+def ReadAtomicBD    : SchedRead;
+def ReadAtomicHA    : SchedRead;
+def ReadAtomicHD    : SchedRead;
 def ReadAtomicWA    : SchedRead;
 def ReadAtomicWD    : SchedRead;
 def ReadAtomicDA    : SchedRead;
@@ -268,6 +278,18 @@ def : WriteRes<WriteFLI64, []>;
 def : ReadAdvance<ReadFRoundF32, 0>;
 def : ReadAdvance<ReadFRoundF64, 0>;
 def : ReadAdvance<ReadFRoundF16, 0>;
+} // Unsupported = true
+}
+
+multiclass UnsupportedSchedZabha {
+let Unsupported = true in {
+def : WriteRes<WriteAtomicB, []>;
+def : WriteRes<WriteAtomicH, []>;
+
+def : ReadAdvance<ReadAtomicBA, 0>;
+def : ReadAdvance<ReadAtomicBD, 0>;
+def : ReadAdvance<ReadAtomicHA, 0>;
+def : ReadAdvance<ReadAtomicHD, 0>;
 } // Unsupported = true
 }
 

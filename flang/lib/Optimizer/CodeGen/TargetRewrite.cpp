@@ -90,6 +90,12 @@ public:
     if (!forcedTargetTriple.empty())
       fir::setTargetTriple(mod, forcedTargetTriple);
 
+    if (!forcedTargetCPU.empty())
+      fir::setTargetCPU(mod, forcedTargetCPU);
+
+    if (!forcedTargetFeatures.empty())
+      fir::setTargetFeatures(mod, forcedTargetFeatures);
+
     // TargetRewrite will require querying the type storage sizes, if it was
     // not set already, create a DataLayoutSpec for the ModuleOp now.
     std::optional<mlir::DataLayout> dl =
@@ -102,9 +108,9 @@ public:
       return;
     }
 
-    auto specifics =
-        fir::CodeGenSpecifics::get(mod.getContext(), fir::getTargetTriple(mod),
-                                   fir::getKindMapping(mod), *dl);
+    auto specifics = fir::CodeGenSpecifics::get(
+        mod.getContext(), fir::getTargetTriple(mod), fir::getKindMapping(mod),
+        fir::getTargetCPU(mod), fir::getTargetFeatures(mod), *dl);
 
     setMembers(specifics.get(), &rewriter, &*dl);
 
@@ -180,11 +186,8 @@ public:
       // We are going to generate an alloca, so save the stack pointer.
       if (!savedStackPtr)
         savedStackPtr = genStackSave(loc);
-      auto mem = rewriter->create<fir::AllocaOp>(loc, resTy);
-      rewriter->create<fir::StoreOp>(loc, call->getResult(0), mem);
-      auto memTy = fir::ReferenceType::get(ty);
-      auto cast = rewriter->create<fir::ConvertOp>(loc, memTy, mem);
-      return rewriter->create<fir::LoadOp>(loc, cast);
+      return this->convertValueInMemory(loc, call->getResult(0), ty,
+                                        /*inputMayBeBigger=*/true);
     };
   }
 
@@ -195,7 +198,6 @@ public:
       mlir::Value &savedStackPtr) {
     auto resTy = std::get<mlir::Type>(newTypeAndAttr);
     auto attr = std::get<fir::CodeGenSpecifics::Attributes>(newTypeAndAttr);
-    auto oldRefTy = fir::ReferenceType::get(oldType);
     // We are going to generate an alloca, so save the stack pointer.
     if (!savedStackPtr)
       savedStackPtr = genStackSave(loc);
@@ -206,11 +208,83 @@ public:
         mem = rewriter->create<fir::ConvertOp>(loc, resTy, mem);
       newOpers.push_back(mem);
     } else {
-      auto mem = rewriter->create<fir::AllocaOp>(loc, resTy);
-      auto cast = rewriter->create<fir::ConvertOp>(loc, oldRefTy, mem);
-      rewriter->create<fir::StoreOp>(loc, oper, cast);
-      newOpers.push_back(rewriter->create<fir::LoadOp>(loc, mem));
+      mlir::Value bitcast =
+          convertValueInMemory(loc, oper, resTy, /*inputMayBeBigger=*/false);
+      newOpers.push_back(bitcast);
     }
+  }
+
+  // Do a bitcast (convert a value via its memory representation).
+  // The input and output types may have different storage sizes,
+  // "inputMayBeBigger" should be set to indicate which of the input or
+  // output type may be bigger in order for the load/store to be safe.
+  // The mismatch comes from the fact that the LLVM register used for passing
+  // may be bigger than the value being passed (e.g., passing
+  // a `!fir.type<t{fir.array<3xi8>}>` into an i32 LLVM register).
+  mlir::Value convertValueInMemory(mlir::Location loc, mlir::Value value,
+                                   mlir::Type newType, bool inputMayBeBigger) {
+    if (inputMayBeBigger) {
+      auto newRefTy = fir::ReferenceType::get(newType);
+      auto mem = rewriter->create<fir::AllocaOp>(loc, value.getType());
+      rewriter->create<fir::StoreOp>(loc, value, mem);
+      auto cast = rewriter->create<fir::ConvertOp>(loc, newRefTy, mem);
+      return rewriter->create<fir::LoadOp>(loc, cast);
+    } else {
+      auto oldRefTy = fir::ReferenceType::get(value.getType());
+      auto mem = rewriter->create<fir::AllocaOp>(loc, newType);
+      auto cast = rewriter->create<fir::ConvertOp>(loc, oldRefTy, mem);
+      rewriter->create<fir::StoreOp>(loc, value, cast);
+      return rewriter->create<fir::LoadOp>(loc, mem);
+    }
+  }
+
+  void passSplitArgument(mlir::Location loc,
+                         fir::CodeGenSpecifics::Marshalling splitArgs,
+                         mlir::Type oldType, mlir::Value oper,
+                         llvm::SmallVectorImpl<mlir::Value> &newOpers,
+                         mlir::Value &savedStackPtr) {
+    // COMPLEX or struct argument split into separate arguments
+    if (!fir::isa_complex(oldType)) {
+      // Cast original operand to a tuple of the new arguments
+      // via memory.
+      llvm::SmallVector<mlir::Type> partTypes;
+      for (auto argPart : splitArgs)
+        partTypes.push_back(std::get<mlir::Type>(argPart));
+      mlir::Type tupleType =
+          mlir::TupleType::get(oldType.getContext(), partTypes);
+      if (!savedStackPtr)
+        savedStackPtr = genStackSave(loc);
+      oper = convertValueInMemory(loc, oper, tupleType,
+                                  /*inputMayBeBigger=*/false);
+    }
+    auto iTy = rewriter->getIntegerType(32);
+    for (auto e : llvm::enumerate(splitArgs)) {
+      auto &tup = e.value();
+      auto ty = std::get<mlir::Type>(tup);
+      auto index = e.index();
+      auto idx = rewriter->getIntegerAttr(iTy, index);
+      auto val = rewriter->create<fir::ExtractValueOp>(
+          loc, ty, oper, rewriter->getArrayAttr(idx));
+      newOpers.push_back(val);
+    }
+  }
+
+  void rewriteCallOperands(
+      mlir::Location loc, fir::CodeGenSpecifics::Marshalling passArgAs,
+      mlir::Type originalArgTy, mlir::Value oper,
+      llvm::SmallVectorImpl<mlir::Value> &newOpers, mlir::Value &savedStackPtr,
+      fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs) {
+    if (passArgAs.size() == 1) {
+      // COMPLEX or derived type is passed as a single argument.
+      passArgumentOnStackOrWithNewType(loc, passArgAs[0], originalArgTy, oper,
+                                       newOpers, savedStackPtr);
+    } else {
+      // COMPLEX or derived type is split into separate arguments
+      passSplitArgument(loc, passArgAs, originalArgTy, oper, newOpers,
+                        savedStackPtr);
+    }
+    newInTyAndAttrs.insert(newInTyAndAttrs.end(), passArgAs.begin(),
+                           passArgAs.end());
   }
 
   template <typename CPLX>
@@ -224,28 +298,9 @@ public:
       newOpers.push_back(oper);
       return;
     }
-
     auto m = specifics->complexArgumentType(loc, ty.getElementType());
-    if (m.size() == 1) {
-      // COMPLEX is a single aggregate
-      passArgumentOnStackOrWithNewType(loc, m[0], ty, oper, newOpers,
-                                       savedStackPtr);
-      newInTyAndAttrs.push_back(m[0]);
-    } else {
-      assert(m.size() == 2);
-      // COMPLEX is split into 2 separate arguments
-      auto iTy = rewriter->getIntegerType(32);
-      for (auto e : llvm::enumerate(m)) {
-        auto &tup = e.value();
-        auto ty = std::get<mlir::Type>(tup);
-        auto index = e.index();
-        auto idx = rewriter->getIntegerAttr(iTy, index);
-        auto val = rewriter->create<fir::ExtractValueOp>(
-            loc, ty, oper, rewriter->getArrayAttr(idx));
-        newInTyAndAttrs.push_back(tup);
-        newOpers.push_back(val);
-      }
-    }
+    rewriteCallOperands(loc, m, ty, oper, newOpers, savedStackPtr,
+                        newInTyAndAttrs);
   }
 
   void rewriteCallStructInputType(
@@ -260,11 +315,8 @@ public:
     }
     auto structArgs =
         specifics->structArgumentType(loc, recTy, newInTyAndAttrs);
-    if (structArgs.size() != 1)
-      TODO(loc, "splitting BIND(C), VALUE derived type into several arguments");
-    passArgumentOnStackOrWithNewType(loc, structArgs[0], recTy, oper, newOpers,
-                                     savedStackPtr);
-    structArgs.push_back(structArgs[0]);
+    rewriteCallOperands(loc, structArgs, recTy, oper, newOpers, savedStackPtr,
+                        newInTyAndAttrs);
   }
 
   static bool hasByValOrSRetArgs(
@@ -620,8 +672,21 @@ public:
   /// As the type signature is being changed, this must also update the
   /// function itself to use any new arguments, etc.
   mlir::LogicalResult convertTypes(mlir::ModuleOp mod) {
-    for (auto fn : mod.getOps<mlir::func::FuncOp>())
+    mlir::MLIRContext *ctx = mod->getContext();
+    auto targetCPU = specifics->getTargetCPU();
+    mlir::StringAttr targetCPUAttr =
+        targetCPU.empty() ? nullptr : mlir::StringAttr::get(ctx, targetCPU);
+    auto targetFeaturesAttr = specifics->getTargetFeatures();
+
+    for (auto fn : mod.getOps<mlir::func::FuncOp>()) {
+      if (targetCPUAttr)
+        fn->setAttr("target_cpu", targetCPUAttr);
+
+      if (targetFeaturesAttr)
+        fn->setAttr("target_features", targetFeaturesAttr);
+
       convertSignature(fn);
+    }
     return mlir::success();
   }
 
@@ -849,8 +914,7 @@ public:
         case FixupTy::Codes::ArgumentType: {
           // Argument is pass-by-value, but its type has likely been modified to
           // suit the target ABI convention.
-          auto oldArgTy =
-              fir::ReferenceType::get(oldArgTys[fixup.index - offset]);
+          auto oldArgTy = oldArgTys[fixup.index - offset];
           // If type did not change, keep the original argument.
           if (fixupType == oldArgTy)
             break;
@@ -858,15 +922,13 @@ public:
           auto newArg =
               func.front().insertArgument(fixup.index, fixupType, loc);
           rewriter->setInsertionPointToStart(&func.front());
-          auto mem = rewriter->create<fir::AllocaOp>(loc, fixupType);
-          rewriter->create<fir::StoreOp>(loc, newArg, mem);
-          auto cast = rewriter->create<fir::ConvertOp>(loc, oldArgTy, mem);
-          mlir::Value load = rewriter->create<fir::LoadOp>(loc, cast);
-          func.getArgument(fixup.index + 1).replaceAllUsesWith(load);
+          mlir::Value bitcast = convertValueInMemory(loc, newArg, oldArgTy,
+                                                     /*inputMayBeBigger=*/true);
+          func.getArgument(fixup.index + 1).replaceAllUsesWith(bitcast);
           func.front().eraseArgument(fixup.index + 1);
           LLVM_DEBUG(llvm::dbgs()
-                     << "old argument: " << oldArgTy.getEleTy()
-                     << ", repl: " << load << ", new argument: "
+                     << "old argument: " << oldArgTy << ", repl: " << bitcast
+                     << ", new argument: "
                      << func.getArgument(fixup.index).getType() << '\n');
         } break;
         case FixupTy::Codes::CharPair: {
@@ -907,34 +969,43 @@ public:
           func.walk([&](mlir::func::ReturnOp ret) {
             rewriter->setInsertionPoint(ret);
             auto oldOper = ret.getOperand(0);
-            auto oldOperTy = fir::ReferenceType::get(oldOper.getType());
-            auto mem =
-                rewriter->create<fir::AllocaOp>(loc, newResTys[fixup.index]);
-            auto cast = rewriter->create<fir::ConvertOp>(loc, oldOperTy, mem);
-            rewriter->create<fir::StoreOp>(loc, oldOper, cast);
-            mlir::Value load = rewriter->create<fir::LoadOp>(loc, mem);
-            rewriter->create<mlir::func::ReturnOp>(loc, load);
+            mlir::Value bitcast =
+                convertValueInMemory(loc, oldOper, newResTys[fixup.index],
+                                     /*inputMayBeBigger=*/false);
+            rewriter->create<mlir::func::ReturnOp>(loc, bitcast);
             ret.erase();
           });
         } break;
         case FixupTy::Codes::Split: {
           // The FIR argument has been split into a pair of distinct arguments
-          // that are in juxtaposition to each other. (For COMPLEX value.)
+          // that are in juxtaposition to each other. (For COMPLEX value or
+          // derived type passed with VALUE in BIND(C) context).
           auto newArg =
               func.front().insertArgument(fixup.index, fixupType, loc);
           if (fixup.second == 1) {
             rewriter->setInsertionPointToStart(&func.front());
-            auto cplxTy = oldArgTys[fixup.index - offset - fixup.second];
-            auto undef = rewriter->create<fir::UndefOp>(loc, cplxTy);
+            mlir::Value firstArg = func.front().getArgument(fixup.index - 1);
+            mlir::Type originalTy =
+                oldArgTys[fixup.index - offset - fixup.second];
+            mlir::Type pairTy = originalTy;
+            if (!fir::isa_complex(originalTy)) {
+              pairTy = mlir::TupleType::get(
+                  originalTy.getContext(),
+                  mlir::TypeRange{firstArg.getType(), newArg.getType()});
+            }
+            auto undef = rewriter->create<fir::UndefOp>(loc, pairTy);
             auto iTy = rewriter->getIntegerType(32);
             auto zero = rewriter->getIntegerAttr(iTy, 0);
             auto one = rewriter->getIntegerAttr(iTy, 1);
-            auto cplx1 = rewriter->create<fir::InsertValueOp>(
-                loc, cplxTy, undef, func.front().getArgument(fixup.index - 1),
-                rewriter->getArrayAttr(zero));
-            auto cplx = rewriter->create<fir::InsertValueOp>(
-                loc, cplxTy, cplx1, newArg, rewriter->getArrayAttr(one));
-            func.getArgument(fixup.index + 1).replaceAllUsesWith(cplx);
+            mlir::Value pair1 = rewriter->create<fir::InsertValueOp>(
+                loc, pairTy, undef, firstArg, rewriter->getArrayAttr(zero));
+            mlir::Value pair = rewriter->create<fir::InsertValueOp>(
+                loc, pairTy, pair1, newArg, rewriter->getArrayAttr(one));
+            // Cast local argument tuple to original type via memory if needed.
+            if (pairTy != originalTy)
+              pair = convertValueInMemory(loc, pair, originalTy,
+                                          /*inputMayBeBigger=*/true);
+            func.getArgument(fixup.index + 1).replaceAllUsesWith(pair);
             func.front().eraseArgument(fixup.index + 1);
             offset++;
           }

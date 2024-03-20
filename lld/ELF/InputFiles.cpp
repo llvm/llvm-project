@@ -41,8 +41,8 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-// This function is explicity instantiated in ARM.cpp, don't do it here to avoid
-// warnings with MSVC.
+// This function is explicitly instantiated in ARM.cpp, don't do it here to
+// avoid warnings with MSVC.
 extern template void ObjFile<ELF32LE>::importCmseSymbols();
 extern template void ObjFile<ELF32BE>::importCmseSymbols();
 extern template void ObjFile<ELF64LE>::importCmseSymbols();
@@ -288,7 +288,7 @@ static bool isCompatible(InputFile *file) {
   return false;
 }
 
-template <class ELFT> static void doParseFile(InputFile *file) {
+template <class ELFT> void elf::doParseFile(InputFile *file) {
   if (!isCompatible(file))
     return;
 
@@ -323,7 +323,7 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 // Add symbols in File to the symbol table.
 void elf::parseFile(InputFile *file) { invokeELFT(doParseFile, file); }
 
-// This function is explicity instantiated in ARM.cpp. Mark it extern here,
+// This function is explicitly instantiated in ARM.cpp. Mark it extern here,
 // to avoid warnings when building with MSVC.
 extern template void ObjFile<ELF32LE>::importCmseSymbols();
 extern template void ObjFile<ELF32BE>::importCmseSymbols();
@@ -741,6 +741,15 @@ template <class ELFT> void ObjFile<ELFT>::initializeJustSymbols() {
   sections.resize(numELFShdrs);
 }
 
+static bool isKnownSpecificSectionType(uint32_t t, uint32_t flags) {
+  if (SHT_LOUSER <= t && t <= SHT_HIUSER && !(flags & SHF_ALLOC))
+    return true;
+  if (SHT_LOOS <= t && t <= SHT_HIOS && !(flags & SHF_OS_NONCONFORMING))
+    return true;
+  // Allow all processor-specific types. This is different from GNU ld.
+  return SHT_LOPROC <= t && t <= SHT_HIPROC;
+}
+
 template <class ELFT>
 void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
                                        const llvm::object::ELFFile<ELFT> &obj) {
@@ -752,14 +761,15 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     if (this->sections[i] == &InputSection::discarded)
       continue;
     const Elf_Shdr &sec = objSections[i];
+    const uint32_t type = sec.sh_type;
 
     // SHF_EXCLUDE'ed sections are discarded by the linker. However,
     // if -r is given, we'll let the final link discard such sections.
     // This is compatible with GNU.
     if ((sec.sh_flags & SHF_EXCLUDE) && !config->relocatable) {
-      if (sec.sh_type == SHT_LLVM_CALL_GRAPH_PROFILE)
+      if (type == SHT_LLVM_CALL_GRAPH_PROFILE)
         cgProfileSectionIndex = i;
-      if (sec.sh_type == SHT_LLVM_ADDRSIG) {
+      if (type == SHT_LLVM_ADDRSIG) {
         // We ignore the address-significance table if we know that the object
         // file was created by objcopy or ld -r. This is because these tools
         // will reorder the symbols in the symbol table, invalidating the data
@@ -778,7 +788,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       continue;
     }
 
-    switch (sec.sh_type) {
+    switch (type) {
     case SHT_GROUP: {
       if (!config->relocatable)
         sections[i] = &InputSection::discarded;
@@ -801,18 +811,31 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     case SHT_RELA:
     case SHT_NULL:
       break;
-    case SHT_LLVM_SYMPART:
-      ctx.hasSympart.store(true, std::memory_order_relaxed);
-      [[fallthrough]];
+    case SHT_PROGBITS:
+    case SHT_NOTE:
+    case SHT_NOBITS:
+    case SHT_INIT_ARRAY:
+    case SHT_FINI_ARRAY:
+    case SHT_PREINIT_ARRAY:
+      this->sections[i] =
+          createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
+      break;
     default:
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
+      if (type == SHT_LLVM_SYMPART)
+        ctx.hasSympart.store(true, std::memory_order_relaxed);
+      else if (config->rejectMismatch &&
+               !isKnownSpecificSectionType(type, sec.sh_flags))
+        errorOrWarn(toString(this->sections[i]) + ": unknown section type 0x" +
+                    Twine::utohexstr(type));
+      break;
     }
   }
 
   // We have a second loop. It is used to:
   // 1) handle SHF_LINK_ORDER sections.
-  // 2) create SHT_REL[A] sections. In some cases the section header index of a
+  // 2) create relocation sections. In some cases the section header index of a
   //    relocation section may be smaller than that of the relocated section. In
   //    such cases, the relocation section would attempt to reference a target
   //    section that has not yet been created. For simplicity, delay creation of
@@ -822,7 +845,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       continue;
     const Elf_Shdr &sec = objSections[i];
 
-    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA) {
+    if (isStaticRelSecType(sec.sh_type)) {
       // Find a relocation target section and associate this section with that.
       // Target may have been discarded if it is in a different section group
       // and the group is discarded, even though it's a violation of the spec.
@@ -1546,6 +1569,7 @@ template <class ELFT> void SharedFile::parse() {
       auto *s = symtab.addSymbol(
           SharedSymbol{*this, name, sym.getBinding(), sym.st_other,
                        sym.getType(), sym.st_value, sym.st_size, alignment});
+      s->dsoDefined = true;
       if (s->file == this)
         s->versionId = ver;
     }
@@ -1563,6 +1587,7 @@ template <class ELFT> void SharedFile::parse() {
     auto *s = symtab.addSymbol(
         SharedSymbol{*this, saver().save(name), sym.getBinding(), sym.st_other,
                      sym.getType(), sym.st_value, sym.st_size, alignment});
+    s->dsoDefined = true;
     if (s->file == this)
       s->versionId = idx;
   }
@@ -1612,6 +1637,8 @@ static uint16_t getBitcodeMachineKind(StringRef path, const Triple &t) {
     return EM_RISCV;
   case Triple::sparcv9:
     return EM_SPARCV9;
+  case Triple::systemz:
+    return EM_S390;
   case Triple::x86:
     return t.isOSIAMCU() ? EM_IAMCU : EM_386;
   case Triple::x86_64:
@@ -1739,7 +1766,7 @@ void BitcodeFile::parseLazy() {
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined()) {
       auto *sym = symtab.insert(saver().save(irSym.getName()));
-      sym->resolve(LazyObject{*this});
+      sym->resolve(LazySymbol{*this});
       symbols[i] = sym;
     }
 }
@@ -1785,6 +1812,15 @@ void BinaryFile::parse() {
                                       nullptr});
 }
 
+InputFile *elf::createInternalFile(StringRef name) {
+  auto *file =
+      make<InputFile>(InputFile::InternalKind, MemoryBufferRef("", name));
+  // References from an internal file do not lead to --warn-backrefs
+  // diagnostics.
+  file->groupId = 0;
+  return file;
+}
+
 ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,
                                 bool lazy) {
   ELFFileBase *f;
@@ -1821,7 +1857,7 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
     if (eSyms[i].st_shndx == SHN_UNDEF)
       continue;
     symbols[i] = symtab.insert(CHECK(eSyms[i].getName(stringTable), this));
-    symbols[i]->resolve(LazyObject{*this});
+    symbols[i]->resolve(LazySymbol{*this});
     if (!lazy)
       break;
   }

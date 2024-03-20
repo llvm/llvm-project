@@ -1,11 +1,13 @@
 include "config/public_api.td"
 
-include "spec/bsd_ext.td"
-include "spec/gnu_ext.td"
-include "spec/linux.td"
-include "spec/llvm_libc_ext.td"
-include "spec/posix.td"
 include "spec/stdc.td"
+include "spec/posix.td"
+include "spec/linux.td"
+include "spec/gnu_ext.td"
+include "spec/bsd_ext.td"
+include "spec/stdc_ext.td"
+include "spec/llvm_libc_ext.td"
+include "spec/llvm_libc_stdfix_ext.td"
 
 def AssertMacro : MacroDef<"assert"> {
   let Defn = [{
@@ -55,7 +57,7 @@ def IntTypesAPI : PublicAPI<"inttypes.h"> {
 }
 
 def MathAPI : PublicAPI<"math.h"> {
-  let Types = ["double_t", "float_t"];
+  let Types = ["double_t", "float_t", "float128"];
 }
 
 def FenvAPI: PublicAPI<"fenv.h"> {
@@ -74,7 +76,6 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
     SimpleMacroDef<"_IOFBF", "0">,
     SimpleMacroDef<"_IOLBF", "1">,
     SimpleMacroDef<"_IONBF", "2">,
-    SimpleMacroDef<"EOF", "-1">,
   ];
   let Types = ["size_t", "FILE", "cookie_io_functions_t"];
 }
@@ -116,7 +117,7 @@ def SchedAPI : PublicAPI<"sched.h"> {
 }
 
 def SysMManAPI : PublicAPI<"sys/mman.h"> {
-  let Types = ["off_t", "size_t"];
+  let Types = ["off_t", "size_t", "mode_t"];
 }
 
 def SignalAPI : PublicAPI<"signal.h"> {
@@ -240,6 +241,10 @@ def SysTypesAPI : PublicAPI<"sys/types.h"> {
 
 def SysUtsNameAPI : PublicAPI<"sys/utsname.h"> {
   let Types = ["struct utsname"];
+}
+
+def SysEpollAPI : PublicAPI<"sys/epoll.h"> {
+  let Types = ["struct epoll_event", "struct epoll_data", "sigset_t", "struct timespec"];
 }
 
 def SpawnAPI : PublicAPI<"spawn.h"> {

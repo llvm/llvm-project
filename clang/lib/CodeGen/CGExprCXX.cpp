@@ -1038,11 +1038,25 @@ void CodeGenFunction::EmitNewArrayInitializer(
     return true;
   };
 
+  const InitListExpr *ILE = dyn_cast<InitListExpr>(Init);
+  const CXXParenListInitExpr *CPLIE = nullptr;
+  const StringLiteral *SL = nullptr;
+  const ObjCEncodeExpr *OCEE = nullptr;
+  const Expr *IgnoreParen = nullptr;
+  if (!ILE) {
+    IgnoreParen = Init->IgnoreParenImpCasts();
+    CPLIE = dyn_cast<CXXParenListInitExpr>(IgnoreParen);
+    SL = dyn_cast<StringLiteral>(IgnoreParen);
+    OCEE = dyn_cast<ObjCEncodeExpr>(IgnoreParen);
+  }
+
   // If the initializer is an initializer list, first do the explicit elements.
-  if (const InitListExpr *ILE = dyn_cast<InitListExpr>(Init)) {
+  if (ILE || CPLIE || SL || OCEE) {
     // Initializing from a (braced) string literal is a special case; the init
     // list element does not initialize a (single) array element.
-    if (ILE->isStringLiteralInit()) {
+    if ((ILE && ILE->isStringLiteralInit()) || SL || OCEE) {
+      if (!ILE)
+        Init = IgnoreParen;
       // Initialize the initial portion of length equal to that of the string
       // literal. The allocation must be for at least this much; we emitted a
       // check for that earlier.
@@ -1054,12 +1068,13 @@ void CodeGenFunction::EmitNewArrayInitializer(
                                 AggValueSlot::DoesNotOverlap,
                                 AggValueSlot::IsNotZeroed,
                                 AggValueSlot::IsSanitizerChecked);
-      EmitAggExpr(ILE->getInit(0), Slot);
+      EmitAggExpr(ILE ? ILE->getInit(0) : Init, Slot);
 
       // Move past these elements.
       InitListElements =
-          cast<ConstantArrayType>(ILE->getType()->getAsArrayTypeUnsafe())
-              ->getSize().getZExtValue();
+          cast<ConstantArrayType>(Init->getType()->getAsArrayTypeUnsafe())
+              ->getSize()
+              .getZExtValue();
       CurPtr = Builder.CreateConstInBoundsGEP(
           CurPtr, InitListElements, "string.init.end");
 
@@ -1073,7 +1088,9 @@ void CodeGenFunction::EmitNewArrayInitializer(
       return;
     }
 
-    InitListElements = ILE->getNumInits();
+    ArrayRef<const Expr *> InitExprs =
+        ILE ? ILE->inits() : CPLIE->getInitExprs();
+    InitListElements = InitExprs.size();
 
     // If this is a multi-dimensional array new, we will initialize multiple
     // elements with each init list element.
@@ -1101,7 +1118,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
     }
 
     CharUnits StartAlign = CurPtr.getAlignment();
-    for (unsigned i = 0, e = ILE->getNumInits(); i != e; ++i) {
+    unsigned i = 0;
+    for (const Expr *IE : InitExprs) {
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
       // observed to be unnecessary.
@@ -1111,18 +1129,17 @@ void CodeGenFunction::EmitNewArrayInitializer(
       // FIXME: If the last initializer is an incomplete initializer list for
       // an array, and we have an array filler, we can fold together the two
       // initialization loops.
-      StoreAnyExprIntoOneUnit(*this, ILE->getInit(i),
-                              ILE->getInit(i)->getType(), CurPtr,
+      StoreAnyExprIntoOneUnit(*this, IE, IE->getType(), CurPtr,
                               AggValueSlot::DoesNotOverlap);
       CurPtr = Address(Builder.CreateInBoundsGEP(
                            CurPtr.getElementType(), CurPtr.getPointer(),
                            Builder.getSize(1), "array.exp.next"),
                        CurPtr.getElementType(),
-                       StartAlign.alignmentAtOffset((i + 1) * ElementSize));
+                       StartAlign.alignmentAtOffset((++i) * ElementSize));
     }
 
     // The remaining elements are filled with the array filler expression.
-    Init = ILE->getArrayFiller();
+    Init = ILE ? ILE->getArrayFiller() : CPLIE->getArrayFiller();
 
     // Extract the initializer for the individual array elements by pulling
     // out the array filler from all the nested initializer lists. This avoids
@@ -1406,6 +1423,7 @@ namespace {
     };
 
     unsigned NumPlacementArgs : 31;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned PassAlignmentToPlacementDelete : 1;
     const FunctionDecl *OperatorDelete;
     ValueTy Ptr;
@@ -1561,16 +1579,23 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // 1. Build a call to the allocation function.
   FunctionDecl *allocator = E->getOperatorNew();
 
-  // If there is a brace-initializer, cannot allocate fewer elements than inits.
+  // If there is a brace-initializer or C++20 parenthesized initializer, cannot
+  // allocate fewer elements than inits.
   unsigned minElements = 0;
   if (E->isArray() && E->hasInitializer()) {
-    const InitListExpr *ILE = dyn_cast<InitListExpr>(E->getInitializer());
-    if (ILE && ILE->isStringLiteralInit())
+    const Expr *Init = E->getInitializer();
+    const InitListExpr *ILE = dyn_cast<InitListExpr>(Init);
+    const CXXParenListInitExpr *CPLIE = dyn_cast<CXXParenListInitExpr>(Init);
+    const Expr *IgnoreParen = Init->IgnoreParenImpCasts();
+    if ((ILE && ILE->isStringLiteralInit()) ||
+        isa<StringLiteral>(IgnoreParen) || isa<ObjCEncodeExpr>(IgnoreParen)) {
       minElements =
-          cast<ConstantArrayType>(ILE->getType()->getAsArrayTypeUnsafe())
-              ->getSize().getZExtValue();
-    else if (ILE)
-      minElements = ILE->getNumInits();
+          cast<ConstantArrayType>(Init->getType()->getAsArrayTypeUnsafe())
+              ->getSize()
+              .getZExtValue();
+    } else if (ILE || CPLIE) {
+      minElements = ILE ? ILE->getNumInits() : CPLIE->getInitExprs().size();
+    }
   }
 
   llvm::Value *numElements = nullptr;

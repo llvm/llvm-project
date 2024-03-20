@@ -24,7 +24,7 @@
   
   define float @f() local_unnamed_addr #0 !dbg !9 {
   entry:
-    %call = tail call <4 x float> bitcast (<4 x float> (...)* @v to <4 x float> ()*)() #0, !dbg !19
+    %call = tail call <4 x float> @v() #0, !dbg !19
     tail call void @llvm.dbg.value(metadata <4 x float> %call, i64 0, metadata !14, metadata !20), !dbg !21
     %vecext = extractelement <4 x float> %call, i32 0, !dbg !22
     %vecext1 = extractelement <4 x float> %call, i32 1, !dbg !23

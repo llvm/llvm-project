@@ -4,8 +4,8 @@ struct __attribute__((packed)) Test2 {
   char a;
 };
 
-void pure_fn() __attribute__((pure));
-void const_fn() __attribute__((const));
+char pure_fn() __attribute__((pure));
+char const_fn() __attribute__((const));
 void noduplicate_fn() __attribute__((noduplicate));
 
 enum __attribute((flag_enum)) FlagEnum {

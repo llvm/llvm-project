@@ -627,6 +627,19 @@ gpu.module @test_module_31 {
   }
 }
 
+gpu.module @test_module_32 {
+  // CHECK: llvm.func @__nv_erff(f32) -> f32
+  // CHECK: llvm.func @__nv_erf(f64) -> f64
+  // CHECK-LABEL: func @gpu_erf
+  func.func @gpu_erf(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.erf %arg_f32 : f32
+    // CHECK: llvm.call @__nv_erff(%{{.*}}) : (f32) -> f32
+    %result64 = math.erf %arg_f64 : f64
+    // CHECK: llvm.call @__nv_erf(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
 gpu.module @gpumodule {
 // CHECK-LABEL: func @kernel_with_block_size()
 // CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 128, 1, 1>, nvvm.kernel, nvvm.maxntid = array<i32: 128, 1, 1>} 

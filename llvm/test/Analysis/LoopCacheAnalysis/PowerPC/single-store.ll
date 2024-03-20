@@ -14,7 +14,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; CHECK-NEXT: Loop 'for.j' has cost = 1000000
 ; CHECK-NEXT: Loop 'for.k' has cost = 60000
 
-define void @foo(i64 %n, i64 %m, i64 %o, i32* %A) {
+define void @foo(i64 %n, i64 %m, i64 %o, ptr %A) {
 entry:
   %cmp32 = icmp sgt i64 %n, 0
   %cmp230 = icmp sgt i64 %m, 0
@@ -51,8 +51,8 @@ for.k:                                            ; preds = %for.k, %for.j.us
   %mul = mul nsw i64 %k, 2
   %arrayidx.sum = add i64 %mul, 7
   %arrayidx10.sum = add i64 %arrayidx.sum, %tmp27
-  %arrayidx11 = getelementptr inbounds i32, i32* %A, i64 %arrayidx10.sum
-  store i32 1, i32* %arrayidx11, align 4
+  %arrayidx11 = getelementptr inbounds i32, ptr %A, i64 %arrayidx10.sum
+  store i32 1, ptr %arrayidx11, align 4
 
   %inck = add nsw i64 %k, 1
   %exitcond.us = icmp eq i64 %inck, %o
@@ -92,7 +92,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK-NEXT: Loop 'for.j' has cost = 1000000
 ; CHECK-NEXT: Loop 'for.k' has cost = 60000
 
-define void @foo2(i64 %n, i64 %m, i64 %o, i32* %A) {
+define void @foo2(i64 %n, i64 %m, i64 %o, ptr %A) {
 entry:
   %cmp32 = icmp sgt i64 %n, 0
   %cmp230 = icmp sgt i64 %m, 0
@@ -129,8 +129,8 @@ for.k:                                            ; preds = %for.k, %for.i
   %mul = mul nsw i64 %k, 2
   %arrayidx.sum = add i64 %mul, 7
   %arrayidx10.sum = add i64 %arrayidx.sum, %tmp27
-  %arrayidx11 = getelementptr inbounds i32, i32* %A, i64 %arrayidx10.sum
-  store i32 1, i32* %arrayidx11, align 4
+  %arrayidx11 = getelementptr inbounds i32, ptr %A, i64 %arrayidx10.sum
+  store i32 1, ptr %arrayidx11, align 4
 
   %inck = add nsw i64 %k, 1
   %exitcond.us = icmp eq i64 %inck, %o

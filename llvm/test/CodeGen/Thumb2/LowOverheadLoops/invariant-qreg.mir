@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -run-pass=arm-low-overhead-loops %s -o - | FileCheck %s
 
 --- |
-  define dso_local <4 x i32> @invariant_use_store(i16* nocapture readonly %a, i32* %c, i32 %N, <4 x i32> %pass) {
+  define dso_local <4 x i32> @invariant_use_store(ptr nocapture readonly %a, ptr %c, i32 %N, <4 x i32> %pass) {
   entry:
     %cmp9 = icmp eq i32 %N, 0
     %tmp = add i32 %N, 3
@@ -19,21 +19,21 @@
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv1 = phi i32 [ %lsr.iv.next, %vector.body ], [ %start, %vector.ph ]
-    %lsr.iv20 = phi i32* [ %scevgep20, %vector.body ], [ %c, %vector.ph ]
-    %lsr.iv = phi i16* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
+    %lsr.iv20 = phi ptr [ %scevgep20, %vector.body ], [ %c, %vector.ph ]
+    %lsr.iv = phi ptr [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %tmp13, %vector.body ]
     %tmp7 = phi i32 [ %N, %vector.ph ], [ %tmp9, %vector.body ]
-    %lsr.iv17 = bitcast i16* %lsr.iv to <4 x i16>*
-    %lsr.store = bitcast i32* %lsr.iv20 to <4 x i32>*
+    %lsr.iv17 = bitcast ptr %lsr.iv to ptr
+    %lsr.store = bitcast ptr %lsr.iv20 to ptr
     %tmp8 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %tmp7)
     %tmp9 = sub i32 %tmp7, 4
-    %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %lsr.iv17, i32 2, <4 x i1> %tmp8, <4 x i16> undef)
+    %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %lsr.iv17, i32 2, <4 x i1> %tmp8, <4 x i16> undef)
     %tmp10 = sext <4 x i16> %wide.masked.load to <4 x i32>
     %tmp12 = mul nsw <4 x i32> %pass, %tmp10
     %tmp13 = add <4 x i32> %tmp12, %vec.phi
-    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %tmp13, <4 x i32>* %lsr.store, i32 4, <4 x i1> %tmp8)
-    %scevgep = getelementptr i16, i16* %lsr.iv, i32 4
-    %scevgep20 = getelementptr i32, i32* %lsr.iv20, i32 4
+    call void @llvm.masked.store.v4i32.p0(<4 x i32> %tmp13, ptr %lsr.store, i32 4, <4 x i1> %tmp8)
+    %scevgep = getelementptr i16, ptr %lsr.iv, i32 4
+    %scevgep20 = getelementptr i32, ptr %lsr.iv20, i32 4
     %tmp14 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %lsr.iv1, i32 1)
     %tmp15 = icmp ne i32 %tmp14, 0
     %lsr.iv.next = add nsw i32 %lsr.iv1, -1
@@ -43,7 +43,7 @@
     ret <4 x i32> %pass
   }
 
-  define dso_local i32 @invariant_mul_use_reduce(i16* nocapture readonly %a, i32* %c, i32 %N, <4 x i32> %pass) {
+  define dso_local i32 @invariant_mul_use_reduce(ptr nocapture readonly %a, ptr %c, i32 %N, <4 x i32> %pass) {
   entry:
     %cmp9 = icmp eq i32 %N, 0
     %tmp = add i32 %N, 3
@@ -60,16 +60,16 @@
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv1 = phi i32 [ %lsr.iv.next, %vector.body ], [ %start, %vector.ph ]
-    %lsr.iv = phi i16* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
+    %lsr.iv = phi ptr [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %tmp7 = phi i32 [ %N, %vector.ph ], [ %tmp9, %vector.body ]
-    %lsr.iv17 = bitcast i16* %lsr.iv to <4 x i16>*
+    %lsr.iv17 = bitcast ptr %lsr.iv to ptr
     %tmp8 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %tmp7)
     %tmp9 = sub i32 %tmp7, 4
-    %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %lsr.iv17, i32 2, <4 x i1> %tmp8, <4 x i16> undef)
+    %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %lsr.iv17, i32 2, <4 x i1> %tmp8, <4 x i16> undef)
     %tmp10 = sext <4 x i16> %wide.masked.load to <4 x i32>
     %tmp12 = mul nsw <4 x i32> %pass, %tmp10
     %tmp13 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %tmp12)
-    %scevgep = getelementptr i16, i16* %lsr.iv, i32 4
+    %scevgep = getelementptr i16, ptr %lsr.iv, i32 4
     %tmp15 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %lsr.iv1, i32 1)
     %tmp16 = icmp ne i32 %tmp15, 0
     %lsr.iv.next = add nsw i32 %lsr.iv1, -1
@@ -80,7 +80,7 @@
     ret i32 %res
   }
 
-  define dso_local i32 @invariant_add_use_reduce(i16* nocapture readonly %a, i32* %c, i32 %N, <4 x i32> %pass) {
+  define dso_local i32 @invariant_add_use_reduce(ptr nocapture readonly %a, ptr %c, i32 %N, <4 x i32> %pass) {
   entry:
     %cmp9 = icmp eq i32 %N, 0
     %tmp = add i32 %N, 3
@@ -97,16 +97,16 @@
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv1 = phi i32 [ %lsr.iv.next, %vector.body ], [ %start, %vector.ph ]
-    %lsr.iv = phi i16* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
+    %lsr.iv = phi ptr [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %tmp7 = phi i32 [ %N, %vector.ph ], [ %tmp9, %vector.body ]
-    %lsr.iv17 = bitcast i16* %lsr.iv to <4 x i16>*
+    %lsr.iv17 = bitcast ptr %lsr.iv to ptr
     %tmp8 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %tmp7)
     %tmp9 = sub i32 %tmp7, 4
-    %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %lsr.iv17, i32 2, <4 x i1> %tmp8, <4 x i16> undef)
+    %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %lsr.iv17, i32 2, <4 x i1> %tmp8, <4 x i16> undef)
     %tmp10 = sext <4 x i16> %wide.masked.load to <4 x i32>
     %tmp12 = add nsw <4 x i32> %pass, %tmp10
     %tmp13 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %tmp12)
-    %scevgep = getelementptr i16, i16* %lsr.iv, i32 4
+    %scevgep = getelementptr i16, ptr %lsr.iv, i32 4
     %tmp15 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %lsr.iv1, i32 1)
     %tmp16 = icmp ne i32 %tmp15, 0
     %lsr.iv.next = add nsw i32 %lsr.iv1, -1
@@ -118,8 +118,8 @@
   }
 
   declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
-  declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32 immarg, <4 x i1>, <4 x i16>)
-  declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
+  declare <4 x i16> @llvm.masked.load.v4i16.p0(ptr, i32 immarg, <4 x i1>, <4 x i16>)
+  declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32 immarg, <4 x i1>)
   declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)

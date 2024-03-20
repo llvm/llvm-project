@@ -167,6 +167,16 @@ void AllSources::AppendSearchPathDirectory(std::string directory) {
   searchPath_.push_back(directory);
 }
 
+const SourceFile *AllSources::OpenPath(
+    std::string path, llvm::raw_ostream &error) {
+  std::unique_ptr<SourceFile> source{std::make_unique<SourceFile>(encoding_)};
+  if (source->Open(path, error)) {
+    return ownedSourceFiles_.emplace_back(std::move(source)).get();
+  } else {
+    return nullptr;
+  }
+}
+
 const SourceFile *AllSources::Open(std::string path, llvm::raw_ostream &error,
     std::optional<std::string> &&prependPath) {
   std::unique_ptr<SourceFile> source{std::make_unique<SourceFile>(encoding_)};
@@ -180,12 +190,10 @@ const SourceFile *AllSources::Open(std::string path, llvm::raw_ostream &error,
   if (prependPath) {
     searchPath_.pop_front();
   }
-  if (!found) {
-    error << "Source file '" << path << "' was not found";
-    return nullptr;
-  } else if (source->Open(*found, error)) {
-    return ownedSourceFiles_.emplace_back(std::move(source)).get();
+  if (found) {
+    return OpenPath(*found, error);
   } else {
+    error << "Source file '" << path << "' was not found";
     return nullptr;
   }
 }
@@ -452,6 +460,14 @@ const AllSources::Origin &AllSources::MapToOrigin(Provenance at) const {
   return origin_[low];
 }
 
+Provenance AllSources::GetReplacedProvenance(Provenance provenance) const {
+  const Origin &origin{MapToOrigin(provenance)};
+  if (std::holds_alternative<Macro>(origin.u)) {
+    return origin.replaces.start();
+  }
+  return provenance;
+}
+
 std::optional<ProvenanceRange> CookedSource::GetProvenanceRange(
     CharBlock cookedRange) const {
   if (!AsCharBlock().Contains(cookedRange)) {
@@ -465,7 +481,16 @@ std::optional<ProvenanceRange> CookedSource::GetProvenanceRange(
   if (first.start() <= last.start()) {
     return {ProvenanceRange{first.start(), last.start() - first.start() + 1}};
   } else {
-    return std::nullopt;
+    // cookedRange may start (resp. end) in a macro expansion while it does not
+    // end (resp. start) in this macro expansion. Attempt to build a range
+    // over the replaced source.
+    Provenance firstStart{allSources_.GetReplacedProvenance(first.start())};
+    Provenance lastStart{allSources_.GetReplacedProvenance(last.start())};
+    if (firstStart <= lastStart) {
+      return {ProvenanceRange{firstStart, lastStart - firstStart + 1}};
+    } else {
+      return std::nullopt;
+    }
   }
 }
 
@@ -578,7 +603,7 @@ AllCookedSources::AllCookedSources(AllSources &s) : allSources_{s} {}
 AllCookedSources::~AllCookedSources() {}
 
 CookedSource &AllCookedSources::NewCookedSource() {
-  return cooked_.emplace_back();
+  return cooked_.emplace_back(allSources_);
 }
 
 const CookedSource *AllCookedSources::Find(CharBlock x) const {

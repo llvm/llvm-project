@@ -34,9 +34,8 @@ struct ARM64_32 : ARM64Common {
   void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
   void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
-                            uint64_t stubOffset, uint64_t selrefsVA,
-                            uint64_t selectorIndex, uint64_t gotAddr,
-                            uint64_t msgSendIndex) const override;
+                            uint64_t &stubOffset, uint64_t selrefVA,
+                            Symbol *objcMsgSend) const override;
 };
 
 } // namespace
@@ -100,10 +99,9 @@ void ARM64_32::writeStubHelperEntry(uint8_t *buf8, const Symbol &sym,
 }
 
 void ARM64_32::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym,
-                                    uint64_t stubsAddr, uint64_t stubOffset,
-                                    uint64_t selrefsVA, uint64_t selectorIndex,
-                                    uint64_t gotAddr,
-                                    uint64_t msgSendIndex) const {
+                                    uint64_t stubsAddr, uint64_t &stubOffset,
+                                    uint64_t selrefVA,
+                                    Symbol *objcMsgSend) const {
   fatal("TODO: implement this");
 }
 

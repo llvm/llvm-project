@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -34,6 +33,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -1302,10 +1302,10 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
   int64_t OffsetB = MMOb->getOffset();
   int64_t MinOffset = std::min(OffsetA, OffsetB);
 
-  uint64_t WidthA = MMOa->getSize();
-  uint64_t WidthB = MMOb->getSize();
-  bool KnownWidthA = WidthA != MemoryLocation::UnknownSize;
-  bool KnownWidthB = WidthB != MemoryLocation::UnknownSize;
+  LocationSize WidthA = MMOa->getSize();
+  LocationSize WidthB = MMOb->getSize();
+  bool KnownWidthA = WidthA.hasValue();
+  bool KnownWidthB = WidthB.hasValue();
 
   const Value *ValA = MMOa->getValue();
   const Value *ValB = MMOb->getValue();
@@ -1325,8 +1325,8 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
     if (!KnownWidthA || !KnownWidthB)
       return true;
     int64_t MaxOffset = std::max(OffsetA, OffsetB);
-    int64_t LowWidth = (MinOffset == OffsetA) ? WidthA : WidthB;
-    return (MinOffset + LowWidth > MaxOffset);
+    LocationSize LowWidth = (MinOffset == OffsetA) ? WidthA : WidthB;
+    return (MinOffset + (int)LowWidth.getValue() > MaxOffset);
   }
 
   if (!AA)
@@ -1338,10 +1338,10 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
   assert((OffsetA >= 0) && "Negative MachineMemOperand offset");
   assert((OffsetB >= 0) && "Negative MachineMemOperand offset");
 
-  int64_t OverlapA =
-      KnownWidthA ? WidthA + OffsetA - MinOffset : MemoryLocation::UnknownSize;
-  int64_t OverlapB =
-      KnownWidthB ? WidthB + OffsetB - MinOffset : MemoryLocation::UnknownSize;
+  int64_t OverlapA = KnownWidthA ? WidthA.getValue() + OffsetA - MinOffset
+                                 : MemoryLocation::UnknownSize;
+  int64_t OverlapB = KnownWidthB ? WidthB.getValue() + OffsetB - MinOffset
+                                 : MemoryLocation::UnknownSize;
 
   return !AA->isNoAlias(
       MemoryLocation(ValA, OverlapA, UseTBAA ? MMOa->getAAInfo() : AAMDNodes()),
@@ -2354,18 +2354,23 @@ void MachineInstr::changeDebugValuesDefReg(Register Reg) {
 
 using MMOList = SmallVector<const MachineMemOperand *, 2>;
 
-static unsigned getSpillSlotSize(const MMOList &Accesses,
-                                 const MachineFrameInfo &MFI) {
-  unsigned Size = 0;
-  for (const auto *A : Accesses)
+static LocationSize getSpillSlotSize(const MMOList &Accesses,
+                                     const MachineFrameInfo &MFI) {
+  uint64_t Size = 0;
+  for (const auto *A : Accesses) {
     if (MFI.isSpillSlotObjectIndex(
             cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
-                ->getFrameIndex()))
-      Size += A->getSize();
+                ->getFrameIndex())) {
+      LocationSize S = A->getSize();
+      if (!S.hasValue())
+        return LocationSize::beforeOrAfterPointer();
+      Size += S.getValue();
+    }
+  }
   return Size;
 }
 
-std::optional<unsigned>
+std::optional<LocationSize>
 MachineInstr::getSpillSize(const TargetInstrInfo *TII) const {
   int FI;
   if (TII->isStoreToStackSlotPostFE(*this, FI)) {
@@ -2376,7 +2381,7 @@ MachineInstr::getSpillSize(const TargetInstrInfo *TII) const {
   return std::nullopt;
 }
 
-std::optional<unsigned>
+std::optional<LocationSize>
 MachineInstr::getFoldedSpillSize(const TargetInstrInfo *TII) const {
   MMOList Accesses;
   if (TII->hasStoreToStackSlot(*this, Accesses))
@@ -2384,7 +2389,7 @@ MachineInstr::getFoldedSpillSize(const TargetInstrInfo *TII) const {
   return std::nullopt;
 }
 
-std::optional<unsigned>
+std::optional<LocationSize>
 MachineInstr::getRestoreSize(const TargetInstrInfo *TII) const {
   int FI;
   if (TII->isLoadFromStackSlotPostFE(*this, FI)) {
@@ -2395,7 +2400,7 @@ MachineInstr::getRestoreSize(const TargetInstrInfo *TII) const {
   return std::nullopt;
 }
 
-std::optional<unsigned>
+std::optional<LocationSize>
 MachineInstr::getFoldedRestoreSize(const TargetInstrInfo *TII) const {
   MMOList Accesses;
   if (TII->hasLoadFromStackSlot(*this, Accesses))

@@ -6,7 +6,7 @@
 ; CHECK-NEXT: call float @llvm.fma.f32(float %coef_0, float %coef_1, float 0.000000e+00){{$}}
 ; CHECK-NEXT: br label %loop.header
 ;
-define float @foo(float* %A, float %coef_0, float %coef_1, i32 %n) !dbg !2 {
+define float @foo(ptr %A, float %coef_0, float %coef_1, i32 %n) !dbg !2 {
 entry:
   br label %loop.header
 
@@ -18,8 +18,8 @@ loop.header:
 
 loop.backedge:
   %i.cast = zext i32 %i to i64
-  %A.ptr = getelementptr inbounds float, float* %A, i64 %i.cast
-  %A.load = load float, float* %A.ptr
+  %A.ptr = getelementptr inbounds float, ptr %A, i64 %i.cast
+  %A.load = load float, ptr %A.ptr
   %fma = call float @llvm.fma.f32(float %coef_0, float %coef_1, float 0.000000e+00), !dbg !3
   %mul = fmul float %fma, %A.load
   %a.inc = fadd float %mul, %a

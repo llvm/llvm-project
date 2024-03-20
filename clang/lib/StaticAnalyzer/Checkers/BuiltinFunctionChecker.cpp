@@ -44,7 +44,8 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
   default:
     return false;
 
-  case Builtin::BI__builtin_assume: {
+  case Builtin::BI__builtin_assume:
+  case Builtin::BI__assume: {
     assert (Call.getNumArgs() > 0);
     SVal Arg = Call.getArgSVal(0);
     if (Arg.isUndef())

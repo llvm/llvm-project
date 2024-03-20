@@ -12,7 +12,7 @@
 define i32 @_Z18read_response_sizev() #0 !dbg !9 {
 entry:
   tail call void @llvm.dbg.value(metadata !22, i64 0, metadata !23, metadata !DIExpression()), !dbg !39
-  %0 = load i64, ptr getelementptr inbounds ({ i64, [56 x i8] }, ptr @a, i32 0, i32 0), align 8, !dbg !40
+  %0 = load i64, ptr @a, align 8, !dbg !40
   tail call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !64, metadata !DIExpression()), !dbg !71
   %1 = trunc i64 %0 to i32
   ret i32 %1
@@ -60,7 +60,7 @@ attributes #0 = { sspreq }
 !19 = !DILocalVariable(name: "c", line: 29, scope: !9, file: !10, type: !13)
 !20 = !{}
 !21 = !{i32 2, !"Dwarf Version", i32 2}
-!22 = !{ptr getelementptr inbounds ({ i64, [56 x i8] }, ptr @a, i32 0, i32 0)}
+!22 = !{ptr @a}
 !23 = !DILocalVariable(name: "p2", line: 12, arg: 2, scope: !24, file: !10, type: !32)
 !24 = distinct !DISubprogram(name: "min<unsigned long long>", linkageName: "_ZN3__13minIyEERKT_S3_RS1_", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 12, file: !1, scope: !25, type: !27, templateParams: !33, retainedNodes: !35)
 !25 = !DINamespace(name: "__1", scope: null)

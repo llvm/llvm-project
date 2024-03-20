@@ -68,7 +68,7 @@ bool isAheadOfRange(ProgramStateRef State, const IteratorPosition &Pos);
 bool isBehindPastTheEnd(ProgramStateRef State, const IteratorPosition &Pos);
 bool isZero(ProgramStateRef State, NonLoc Val);
 
-} //namespace
+} // namespace
 
 void IteratorRangeChecker::checkPreCall(const CallEvent &Call,
                                         CheckerContext &C) const {

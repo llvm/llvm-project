@@ -73,7 +73,7 @@ class TestFirmwareCorefiles(TestBase):
         if self.TraceOn():
             self.runCmd("script print('loading corefile %s')" % verstr_corefile)
         process = target.LoadCore(verstr_corefile)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
             self.runCmd("target mod dump sections")
@@ -91,7 +91,7 @@ class TestFirmwareCorefiles(TestBase):
                 "script print('loading corefile %s')" % verstr_corefile_invalid_ident
             )
         process = target.LoadCore(verstr_corefile_invalid_ident)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
 
         # Third, try the "kern ver str" corefile where it loads at an address
         target = self.dbg.CreateTarget("")
@@ -99,7 +99,7 @@ class TestFirmwareCorefiles(TestBase):
         if self.TraceOn():
             self.runCmd("script print('loading corefile %s')" % verstr_corefile_addr)
         process = target.LoadCore(verstr_corefile_addr)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
             self.runCmd("target mod dump sections")
@@ -178,7 +178,7 @@ class TestFirmwareCorefiles(TestBase):
         if self.TraceOn():
             self.runCmd("script print('loading corefile %s')" % binspec_corefile)
         process = target.LoadCore(binspec_corefile)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
             self.runCmd("target mod dump sections")
@@ -192,7 +192,7 @@ class TestFirmwareCorefiles(TestBase):
         if self.TraceOn():
             self.runCmd("script print('loading corefile %s')" % binspec_corefile_addr)
         process = target.LoadCore(binspec_corefile_addr)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
             self.runCmd("target mod dump sections")
@@ -212,7 +212,7 @@ class TestFirmwareCorefiles(TestBase):
                 "script print('loading corefile %s')" % binspec_corefile_slideonly
             )
         process = target.LoadCore(binspec_corefile_slideonly)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
             self.runCmd("target mod dump sections")
@@ -352,7 +352,7 @@ class TestFirmwareCorefiles(TestBase):
             )
 
         process = target.LoadCore(binspec_corefile_addr)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
             self.runCmd("target mod dump sections")

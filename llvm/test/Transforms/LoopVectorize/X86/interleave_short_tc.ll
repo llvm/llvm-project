@@ -1,18 +1,15 @@
 ; Check that we won't interleave by more than half the "best known" estimated trip count.
 
-; The loop is expected to be vectorized by 4 and interleaving suppresed due to
-; short trip count which is controled by "tiny-trip-count-interleave-threshold".
-; RUN: opt -passes=loop-vectorize -force-vector-width=4 -vectorizer-min-trip-count=4 -S < %s |  FileCheck %s
 ;
 ; The loop is expected to be vectorized by 4 and computed interleaving factor is 1.
 ; Thus the resulting step is 4.
-; RUN: opt -passes=loop-vectorize -force-vector-width=4 -vectorizer-min-trip-count=4 -tiny-trip-count-interleave-threshold=4 -S < %s |  FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -vectorizer-min-trip-count=4 -S < %s |  FileCheck %s
 
 ; The loop is expected to be vectorized by 2 and computed interleaving factor is 2.
 ; Thus the resulting step is 4.
-; RUN: opt -passes=loop-vectorize -force-vector-width=2 -vectorizer-min-trip-count=4 -tiny-trip-count-interleave-threshold=4 -S < %s |  FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 -vectorizer-min-trip-count=4 -S < %s |  FileCheck %s
 
-; Check that we won't interleave by more than half the "best known" estimated trip count.
+; Check that we won't interleave by more than "best known" estimated trip count.
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

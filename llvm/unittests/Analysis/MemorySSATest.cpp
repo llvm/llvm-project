@@ -1112,8 +1112,8 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   B.SetInsertPoint(Entry);
   Value *Foo = &*F->arg_begin();
 
-  Value *Bar = B.CreateGEP(B.getInt8Ty(), Foo, B.getInt64(1), "bar");
-  Value *Baz = B.CreateGEP(B.getInt8Ty(), Foo, B.getInt64(2), "baz");
+  Value *Bar = B.CreatePtrAdd(Foo, B.getInt64(1), "bar");
+  Value *Baz = B.CreatePtrAdd(Foo, B.getInt64(2), "baz");
 
   B.CreateStore(B.getInt8(0), Foo);
   B.CreateStore(B.getInt8(0), Bar);
@@ -1486,7 +1486,7 @@ TEST_F(MemorySSATest, TestCallClobber) {
   Value *Pointer1 = &*F->arg_begin();
   BasicBlock *Entry(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
-  Value *Pointer2 = B.CreateGEP(B.getInt8Ty(), Pointer1, B.getInt64(1));
+  Value *Pointer2 = B.CreatePtrAdd(Pointer1, B.getInt64(1));
   Instruction *StorePointer1 = B.CreateStore(B.getInt8(0), Pointer1);
   Instruction *StorePointer2 = B.CreateStore(B.getInt8(0), Pointer2);
   Instruction *MemSet = B.CreateMemSet(Pointer2, B.getInt8(0), 1, Align(1));
@@ -1518,7 +1518,7 @@ TEST_F(MemorySSATest, TestLoadClobber) {
   Value *Pointer1 = &*F->arg_begin();
   BasicBlock *Entry(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
-  Value *Pointer2 = B.CreateGEP(B.getInt8Ty(), Pointer1, B.getInt64(1));
+  Value *Pointer2 = B.CreatePtrAdd(Pointer1, B.getInt64(1));
   Instruction *LoadPointer1 =
       B.CreateLoad(B.getInt8Ty(), Pointer1, /* Volatile */ true);
   Instruction *LoadPointer2 =

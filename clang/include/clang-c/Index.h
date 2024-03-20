@@ -1675,7 +1675,7 @@ enum CXCursorKind {
   CXCursor_ConceptSpecializationExpr = 153,
 
   /**
-   * Expression that references a C++20 concept.
+   * Expression that references a C++20 requires expression.
    */
   CXCursor_RequiresExpr = 154,
 
@@ -1685,7 +1685,12 @@ enum CXCursorKind {
    */
   CXCursor_CXXParenListInitExpr = 155,
 
-  CXCursor_LastExpr = CXCursor_CXXParenListInitExpr,
+  /**
+   *  Represents a C++26 pack indexing expression.
+   */
+  CXCursor_PackIndexingExpr = 156,
+
+  CXCursor_LastExpr = CXCursor_PackIndexingExpr,
 
   /* Statements */
   CXCursor_FirstStmt = 200,
@@ -2140,7 +2145,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPScopeDirective = 306,
 
-  CXCursor_LastStmt = CXCursor_OMPScopeDirective,
+  /** OpenACC Compute Construct.
+   */
+  CXCursor_OpenACCComputeConstruct = 320,
+
+  CXCursor_LastStmt = CXCursor_OpenACCComputeConstruct,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -2981,6 +2990,7 @@ enum CXCallingConv {
   CXCallingConv_SwiftAsync = 17,
   CXCallingConv_AArch64SVEPCS = 18,
   CXCallingConv_M68kRTD = 19,
+  CXCallingConv_PreserveNone = 20,
 
   CXCallingConv_Invalid = 100,
   CXCallingConv_Unexposed = 200

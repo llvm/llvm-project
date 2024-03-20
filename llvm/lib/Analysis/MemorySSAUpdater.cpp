@@ -692,25 +692,9 @@ void MemorySSAUpdater::updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
         continue;
 
       // Determine incoming value and add it as incoming from IncBB.
-      if (MemoryUseOrDef *IncMUD = dyn_cast<MemoryUseOrDef>(IncomingAccess)) {
-        if (!MSSA->isLiveOnEntryDef(IncMUD)) {
-          Instruction *IncI = IncMUD->getMemoryInst();
-          assert(IncI && "Found MemoryUseOrDef with no Instruction.");
-          if (Instruction *NewIncI =
-                  cast_or_null<Instruction>(VMap.lookup(IncI))) {
-            IncMUD = MSSA->getMemoryAccess(NewIncI);
-            assert(IncMUD &&
-                   "MemoryUseOrDef cannot be null, all preds processed.");
-          }
-        }
-        NewPhi->addIncoming(IncMUD, IncBB);
-      } else {
-        MemoryPhi *IncPhi = cast<MemoryPhi>(IncomingAccess);
-        if (MemoryAccess *NewDefPhi = MPhiMap.lookup(IncPhi))
-          NewPhi->addIncoming(NewDefPhi, IncBB);
-        else
-          NewPhi->addIncoming(IncPhi, IncBB);
-      }
+      NewPhi->addIncoming(
+          getNewDefiningAccessForClone(IncomingAccess, VMap, MPhiMap, MSSA),
+          IncBB);
     }
     if (auto *SingleAccess = onlySingleValue(NewPhi)) {
       MPhiMap[Phi] = SingleAccess;

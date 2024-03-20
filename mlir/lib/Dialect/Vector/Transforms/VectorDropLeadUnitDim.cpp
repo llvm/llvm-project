@@ -73,7 +73,8 @@ struct CastAwayExtractStridedSliceLeadingOneDim
     VectorType oldDstType = extractOp.getType();
     VectorType newDstType =
         VectorType::get(oldDstType.getShape().drop_front(dropCount),
-                        oldDstType.getElementType());
+                        oldDstType.getElementType(),
+                        oldDstType.getScalableDims().drop_front(dropCount));
 
     Location loc = extractOp.getLoc();
 
@@ -223,6 +224,9 @@ struct CastAwayTransferReadLeadingOneDim
 
   LogicalResult matchAndRewrite(vector::TransferReadOp read,
                                 PatternRewriter &rewriter) const override {
+    // TODO(#78787): Not supported masked op yet.
+    if (cast<MaskableOpInterface>(read.getOperation()).isMasked())
+      return failure();
     // TODO: support 0-d corner case.
     if (read.getTransferRank() == 0)
       return failure();
@@ -274,6 +278,9 @@ struct CastAwayTransferWriteLeadingOneDim
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp write,
                                 PatternRewriter &rewriter) const override {
+    // TODO(#78787): Not supported masked op yet.
+    if (cast<MaskableOpInterface>(write.getOperation()).isMasked())
+      return failure();
     // TODO: support 0-d corner case.
     if (write.getTransferRank() == 0)
       return failure();
@@ -325,6 +332,9 @@ struct CastAwayTransferWriteLeadingOneDim
 LogicalResult
 mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
                                                RewriterBase &rewriter) {
+  // TODO(#78787): Not supported masked op yet.
+  if (cast<MaskableOpInterface>(contractOp.getOperation()).isMasked())
+    return failure();
   VectorType oldAccType = dyn_cast<VectorType>(contractOp.getAccType());
   if (oldAccType == nullptr)
     return failure();
