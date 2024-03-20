@@ -147,9 +147,8 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list) {
     else
       continue;
 
-    if (file != sc.line_entry.GetFile()) {
-      LLDB_LOG(log, "unexpected symbol context file {0}",
-               sc.line_entry.GetFile());
+    if (file != sc.line_entry.file) {
+      LLDB_LOG(log, "unexpected symbol context file {0}", sc.line_entry.file);
       continue;
     }
 
@@ -224,7 +223,7 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
 
   const bool case_sensitive = request_file.IsCaseSensitive();
   for (const SymbolContext &sc : sc_list) {
-    FileSpec sc_file = sc.line_entry.GetFile();
+    FileSpec sc_file = sc.line_entry.file;
 
     if (FileSpec::Equal(sc_file, request_file, /*full*/ true))
       continue;
