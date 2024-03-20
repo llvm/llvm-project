@@ -7431,9 +7431,9 @@ private:
           if (!PartialStruct.Base.isValid()) {
             PartialStruct.LowestElem = {FieldIndex, LowestElem};
             if (IsFinalArraySection) {
-              Address HB = OASE &&
-                  CGF.EmitOMPArraySectionExpr(OASE, /*IsLowerBound=*/false)
-                      .getAddress(CGF);
+              Address HB = OASE && CGF.EmitOMPArraySectionExpr(
+                                          OASE, /*IsLowerBound=*/false)
+                                       .getAddress(CGF);
               PartialStruct.HighestElem = {FieldIndex, HB};
             } else {
               PartialStruct.HighestElem = {FieldIndex, LowestElem};
@@ -7444,9 +7444,9 @@ private:
             PartialStruct.LowestElem = {FieldIndex, LowestElem};
           } else if (FieldIndex > PartialStruct.HighestElem.first) {
             if (IsFinalArraySection) {
-              Address HB = OASE &&
-                  CGF.EmitOMPArraySectionExpr(OASE, /*IsLowerBound=*/false)
-                      .getAddress(CGF);
+              Address HB = OASE && CGF.EmitOMPArraySectionExpr(
+                                          OASE, /*IsLowerBound=*/false)
+                                       .getAddress(CGF);
               PartialStruct.HighestElem = {FieldIndex, HB};
             } else {
               PartialStruct.HighestElem = {FieldIndex, LowestElem};
