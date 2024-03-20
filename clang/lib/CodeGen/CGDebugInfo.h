@@ -348,8 +348,8 @@ class CGDebugInfo {
       const FieldDecl *BitFieldDecl, const llvm::DIDerivedType *BitFieldDI,
       llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
 
-  // A cache that maps artificial inlined function names used for
-  // __builtin_verbose_trap to subprograms.
+  /// A cache that maps artificial inlined function names used for
+  /// __builtin_verbose_trap to subprograms.
   llvm::StringMap<llvm::DISubprogram *> InlinedTrapFuncMap;
 
   // A function that returns the subprogram corresponding to the artificial
@@ -613,15 +613,15 @@ public:
     return CoroutineParameterMappings;
   }
 
-  // Create a debug location from `TrapLocation` that adds an artificial inline
-  // frame where the frame name is
-  //
-  // * `<Prefix>: <FailureMsg>` if `<FailureMsg>` is not empty.
-  // * `<Prefix>` if `<FailureMsg>` is empty.
-  //
-  // Currently `<Prefix>` is always "__llvm_verbose_trap".
-  //
-  // This is used to store failure reasons for traps.
+  /// Create a debug location from `TrapLocation` that adds an artificial inline
+  /// frame where the frame name is
+  ///
+  /// * `<Prefix>: <FailureMsg>` if `<FailureMsg>` is not empty.
+  /// * `<Prefix>` if `<FailureMsg>` is empty.
+  ///
+  /// Currently `<Prefix>` is always "__llvm_verbose_trap".
+  ///
+  /// This is used to store failure reasons for traps.
   llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
                                                 StringRef FailureMsg);
 
