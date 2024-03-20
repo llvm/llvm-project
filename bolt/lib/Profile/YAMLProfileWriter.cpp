@@ -105,20 +105,14 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS) {
           TargetName = Callee->getOneName();
         }
 
+        auto getAnnotationWithDefault = [&](const MCInst &Inst, StringRef Ann) {
+          return BC.MIB->getAnnotationWithDefault(Instr, Ann, 0ull);
+        };
         if (BC.MIB->getConditionalTailCall(Instr)) {
-          auto CTCCount =
-              BC.MIB->tryGetAnnotationAs<uint64_t>(Instr, "CTCTakenCount");
-          if (CTCCount) {
-            CSI.Count = *CTCCount;
-            auto CTCMispreds =
-                BC.MIB->tryGetAnnotationAs<uint64_t>(Instr, "CTCMispredCount");
-            if (CTCMispreds)
-              CSI.Mispreds = *CTCMispreds;
-          }
+          CSI.Count = getAnnotationWithDefault(Instr, "CTCTakenCount");
+          CSI.Mispreds = getAnnotationWithDefault(Instr, "CTCMispredCount");
         } else {
-          auto Count = BC.MIB->tryGetAnnotationAs<uint64_t>(Instr, "Count");
-          if (Count)
-            CSI.Count = *Count;
+          CSI.Count = getAnnotationWithDefault(Instr, "Count");
         }
 
         if (CSI.Count)
