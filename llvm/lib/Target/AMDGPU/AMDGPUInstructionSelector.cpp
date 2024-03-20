@@ -1813,6 +1813,34 @@ static bool parseTexFail(uint64_t TexFailCtrl, bool &TFE, bool &LWE,
   return TexFailCtrl == 0;
 }
 
+void AMDGPUInstructionSelector::zeroTfeResult(Register DataOut,
+                                              MachineBasicBlock *MBB,
+                                              MachineInstrBuilder &MIB) const {
+  const DebugLoc &DL = MIB->getDebugLoc();
+  Register Tied = MRI->cloneVirtualRegister(DataOut);
+  Register Zero = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::V_MOV_B32_e32), Zero).addImm(0);
+  auto Parts = TRI.getRegSplitParts(MRI->getRegClass(Tied), 4);
+  if (STI.usePRTStrictNull()) {
+    // With enable-prt-strict-null enabled, initialize all result registers to
+    // zero.
+    auto RegSeq = BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::REG_SEQUENCE), Tied);
+    for (auto Sub : Parts)
+      RegSeq.addReg(Zero).addImm(Sub);
+  } else {
+    // With enable-prt-strict-null disabled, only initialize the extra TFE/LWE
+    // result register.
+    Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::IMPLICIT_DEF), Undef);
+    auto RegSeq = BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::REG_SEQUENCE), Tied);
+    for (auto Sub : Parts.drop_back(1))
+      RegSeq.addReg(Undef).addImm(Sub);
+    RegSeq.addReg(Zero).addImm(Parts.back());
+  }
+  MIB.addReg(Tied, RegState::Implicit);
+  MIB->tieOperands(0, MIB->getNumOperands() - 1);
+}
+
 bool AMDGPUInstructionSelector::selectImageIntrinsic(
   MachineInstr &MI, const AMDGPU::ImageDimIntrinsicInfo *Intr) const {
   MachineBasicBlock *MBB = MI.getParent();
@@ -2050,31 +2078,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     // result registers. Initialize them to zero so that we always get well
     // defined result values.
     assert(VDataOut && !VDataIn);
-    Register Tied = MRI->cloneVirtualRegister(VDataOut);
-    Register Zero = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::V_MOV_B32_e32), Zero)
-      .addImm(0);
-    auto Parts = TRI.getRegSplitParts(MRI->getRegClass(Tied), 4);
-    if (STI.usePRTStrictNull()) {
-      // With enable-prt-strict-null enabled, initialize all result registers to
-      // zero.
-      auto RegSeq =
-          BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::REG_SEQUENCE), Tied);
-      for (auto Sub : Parts)
-        RegSeq.addReg(Zero).addImm(Sub);
-    } else {
-      // With enable-prt-strict-null disabled, only initialize the extra TFE/LWE
-      // result register.
-      Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::IMPLICIT_DEF), Undef);
-      auto RegSeq =
-          BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::REG_SEQUENCE), Tied);
-      for (auto Sub : Parts.drop_back(1))
-        RegSeq.addReg(Undef).addImm(Sub);
-      RegSeq.addReg(Zero).addImm(Parts.back());
-    }
-    MIB.addReg(Tied, RegState::Implicit);
-    MIB->tieOperands(0, MIB->getNumOperands() - 1);
+    zeroTfeResult(VDataOut, MBB, MIB);
   }
 
   MI.eraseFromParent();
@@ -3321,6 +3325,29 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
+bool AMDGPUInstructionSelector::selectBufferLoadTfe(MachineInstr &MI) const {
+  // Get an iterator for the current MI
+  MachineBasicBlock *MBB = MI.getParent();
+  auto MII = MachineBasicBlock::iterator(MI);
+  MII = std::next(MII);
+
+  // Standard selection works fine, use that to generate the instruction
+  if (!selectImpl(MI, *CoverageInfo))
+    return false;
+
+  // Retrieve the newly created instruction
+  MachineInstr &NewMI = *(std::prev(MII));
+  auto MIB = MachineInstrBuilder(*NewMI.getParent()->getParent(), NewMI);
+
+  // Buffer load instruction with TFE only conditionally writes to its result
+  // registers. Initialize them to zero so that we always get well defined
+  // result register values.
+  auto DstReg = NewMI.getOperand(0).getReg();
+  zeroTfeResult(DstReg, MBB, MIB);
+
+  return true;
+}
+
 /// Match a zero extend from a 32-bit value to 64-bits.
 static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
   Register ZExtSrc;
@@ -3675,6 +3702,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     assert(Intr && "not an image intrinsic with image pseudo");
     return selectImageIntrinsic(I, Intr);
   }
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_TFE:
+    return selectBufferLoadTfe(I);
   case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY:
     return selectBVHIntrinsic(I);
   case AMDGPU::G_SBFX:
