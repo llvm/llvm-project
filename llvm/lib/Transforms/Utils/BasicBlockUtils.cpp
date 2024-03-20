@@ -388,7 +388,7 @@ DbgVariableRecordsRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
   SmallDenseSet<DebugVariable> VariableSet;
   for (auto &I : reverse(*BB)) {
     for (DbgRecord &DR : reverse(I.getDbgRecordRange())) {
-      if (isa<DPLabel>(DR)) {
+      if (isa<DbgLabelRecord>(DR)) {
         // Emulate existing behaviour (see comment below for dbg.declares).
         // FIXME: Don't do this.
         VariableSet.clear();

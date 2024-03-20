@@ -1248,18 +1248,19 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
   // We must skip DbgVariableRecords if they've already been processed above as
   // we have just emitted the debug values resulting from assignment tracking
   // analysis, making any existing DbgVariableRecords redundant (and probably
-  // less correct). We still need to process DPLabels. This does sink DPLabels
-  // to the bottom of the group of debug records. That sholdn't be important
-  // as it does so deterministcally and ordering between DPLabels and
-  // DbgVariableRecords is immaterial (other than for MIR/IR printing).
+  // less correct). We still need to process DbgLabelRecords. This does sink
+  // DbgLabelRecords to the bottom of the group of debug records. That sholdn't
+  // be important as it does so deterministcally and ordering between
+  // DbgLabelRecords and DbgVariableRecords is immaterial (other than for MIR/IR
+  // printing).
   bool SkipDbgVariableRecords = DAG.getFunctionVarLocs();
   // Is there is any debug-info attached to this instruction, in the form of
   // DbgRecord non-instruction debug-info records.
   for (DbgRecord &DR : I.getDbgRecordRange()) {
-    if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-      assert(DPL->getLabel() && "Missing label");
+    if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+      assert(DLR->getLabel() && "Missing label");
       SDDbgLabel *SDV =
-          DAG.getDbgLabel(DPL->getLabel(), DPL->getDebugLoc(), SDNodeOrder);
+          DAG.getDbgLabel(DLR->getLabel(), DLR->getDebugLoc(), SDNodeOrder);
       DAG.AddDbgLabel(SDV);
       continue;
     }
