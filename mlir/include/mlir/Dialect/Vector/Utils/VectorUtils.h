@@ -114,18 +114,21 @@ SmallVector<OpFoldResult> getMixedSizesXfer(bool hasTensorSemantics,
 
 /// A pattern for ops that implement `MaskableOpInterface` and that _might_ be
 /// masked (i.e. inside `vector.mask` Op region). In particular:
-///   1. It matches `SourceOp` operation, Op.
-///   2. If Op is masked, retrieves the mask and updates the insertion point to
-///   avoid inserting new ops into `vector.mask` Op region (which only allows
-///   one Op). If the Op is not masked, this step is a nop.
-///   3. Invokes `matchAndRewriteMaskableOp` on Op that might be nested (not
-///   required) in the matched `vector.mask` operation from step 2.
+///   1. Matches `SourceOp` operation, Op.
+///   2.1. If Op is masked, retrieves the masking Op, maskOp, and updates the
+///     insertion point to avoid inserting new ops into the `vector.mask` Op
+///     region (which only allows one Op).
+///   2.2 If Op is not masked, this step is skipped.
+///   3. Invokes `matchAndRewriteMaskableOp` on Op and optionally maskOp if
+///     found in step 2.1.
 ///
-/// It frees the patterns implementing this class from worrying about the
-/// logic to update the insertion point. However, those patterns are still
-/// responsible for providing an updated version of:
-///   * the source Op when mask _is not_ present,
-///   * the source Op *and* the mask Op when mask _is_ present.
+/// This wrapper frees patterns from re-implementing the logic to update the
+/// insertion point when a maskable Op is masked. Such patterns are still
+/// responsible for providing an updated ("rewritten") version of:
+///   a. the source Op when mask _is not_ present,
+///   b. the source Op and the masking Op when mask _is_ present.
+/// Note that the return value from `matchAndRewriteMaskableOp` depends on the
+/// case above.
 template <class SourceOp>
 struct MaskableOpRewritePattern : OpRewritePattern<SourceOp> {
   using OpRewritePattern<SourceOp>::OpRewritePattern;
@@ -137,13 +140,10 @@ private:
     if (!maskableOp)
       return failure();
 
-    // Op to update
     Operation *rootOp = sourceOp;
 
-    // If this Op is masked:
-    //    * update the insertion point to avoid inserting into the vector.mask
-    //      Op region,
-    //    * update the Op to rewrite so that it's the parent vector.mask Op
+    // If this Op is masked, update the insertion point to avoid inserting into
+    // the vector.mask Op region.
     OpBuilder::InsertionGuard guard(rewriter);
     MaskingOpInterface maskOp;
     if (maskableOp.isMasked()) {
