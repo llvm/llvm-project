@@ -953,17 +953,6 @@ class PNRAsmOperand<string name, string RegClass, int Width>: AsmOperandClass {
   let ParserMethod   = "tryParseSVEPredicateVector<RegKind::SVEPredicateAsCounter>";
 }
 
-let RenderMethod = "addPNRasPPRRegOperands" in {
-  def PNRasPPROpAny : PNRAsmOperand<"PNRasPPRPredicateAny", "PNR",  0>;
-  def PNRasPPROp8   : PNRAsmOperand<"PNRasPPRPredicateB",   "PNR",  8>;
-}
-
-class PNRasPPRRegOp<string Suffix, AsmOperandClass C, ElementSizeEnum Size,
-                RegisterClass RC> : SVERegOp<Suffix, C, Size, RC> {}
-
-def PNRasPPRAny : PNRasPPRRegOp<"",  PNRasPPROpAny, ElementSizeNone, PPR>;
-def PNRasPPR8   : PNRasPPRRegOp<"b", PNRasPPROp8,   ElementSizeB,    PPR>;
-
 def PNRAsmOpAny: PNRAsmOperand<"PNPredicateAny", "PNR", 0>;
 def PNRAsmOp8  : PNRAsmOperand<"PNPredicateB",   "PNR", 8>;
 def PNRAsmOp16 : PNRAsmOperand<"PNPredicateH",   "PNR", 16>;
@@ -1022,8 +1011,10 @@ class PPRorPNRAsmOperand<string name, string RegClass, int Width>: AsmOperandCla
 }
 
 def PPRorPNR         : PPRorPNRClass;
+def PPRorPNRAsmOp8   : PPRorPNRAsmOperand<"PPRorPNRB", "PPRorPNR", 8>;
 def PPRorPNRAsmOpAny : PPRorPNRAsmOperand<"PPRorPNRAny", "PPRorPNR", 0>;
 def PPRorPNRAny      : PPRRegOp<"", PPRorPNRAsmOpAny, ElementSizeNone, PPRorPNR>;
+def PPRorPNR8        : PPRRegOp<"b", PPRorPNRAsmOp8, ElementSizeB, PPRorPNR>;
 
 // Pairs of SVE predicate vector registers.
 def PSeqPairs : RegisterTuples<[psub0, psub1], [(rotl PPR, 0), (rotl PPR, 1)]>;
