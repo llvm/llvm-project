@@ -45,6 +45,7 @@ static const unsigned DirectXAddrSpaceMap[] = {
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
+    21, // dummy value for hip_lane_shared
 };
 
 class LLVM_LIBRARY_VISIBILITY DirectXTargetInfo : public TargetInfo {

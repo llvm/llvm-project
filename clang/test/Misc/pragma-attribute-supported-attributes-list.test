@@ -81,6 +81,7 @@
 // CHECK-NEXT: Flatten (SubjectMatchRule_function)
 // CHECK-NEXT: FunctionReturnThunks (SubjectMatchRule_function)
 // CHECK-NEXT: GNUInline (SubjectMatchRule_function)
+// CHECK-NEXT: HIPLaneShared (SubjectMatchRule_variable)
 // CHECK-NEXT: HIPManaged (SubjectMatchRule_variable)
 // CHECK-NEXT: Hot (SubjectMatchRule_function)
 // CHECK-NEXT: IBAction (SubjectMatchRule_objc_method_is_instance)

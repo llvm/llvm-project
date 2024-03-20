@@ -5119,6 +5119,8 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
 
   if (LangOpts.CUDA && LangOpts.CUDAIsDevice) {
     if (D) {
+      if (LangOpts.HIP && D->hasAttr<HIPLaneSharedAttr>())
+        return LangAS::hip_lane_shared;
       if (D->hasAttr<CUDAConstantAttr>())
         return LangAS::cuda_constant;
       if (D->hasAttr<CUDASharedAttr>())
@@ -5130,7 +5132,6 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
     }
     return LangAS::cuda_device;
   }
-
   if (LangOpts.OpenMP) {
     LangAS AS;
     if (OpenMPRuntime->hasAllocateAttributeForGlobalVar(D, AS))

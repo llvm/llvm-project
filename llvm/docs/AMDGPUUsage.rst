@@ -854,6 +854,7 @@ supported for the ``amdgcn`` target.
      Buffer Fat Pointer (experimental)     7               *TODO*
      Buffer Resource (experimental)        8               *TODO*
      Buffer Strided Pointer (experimental) 9               *TODO*
+     Lane-shared                           10              *TODO*      Shared VGPR      32      0xFFFFFFFF
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
 
@@ -1011,6 +1012,17 @@ supported for the ``amdgcn`` target.
   The bits in the buffer descriptor must meet the following requirements:
   the stride is the size of a structured element, the "add tid" flag must be 0,
   and the swizzle enable bits must be off.
+
+**Lane-shared**
+  Lane-shared is only available when wave-group is enabled. Lane-shared is
+  similar to private, which is supported by hardware scratch memory.
+  Typical private memory is allocated per-wave, and lane-interleaved.
+  The lane-shared memory is allocated per-wave-group, and lane-interleaved.
+  Therefore multiple threads with the same lane-id within a wave-group can
+  access the same scratch-memory location, however, threads with different
+  land-id still access different scratch-memory locations. In order to
+  achieve truly-efficient lane-sharing, compiler needs to promote lane-shared
+  variables into wave-group-shared VGPR.
 
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register

@@ -5168,6 +5168,17 @@ static void handleManagedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     D->addAttr(CUDADeviceAttr::CreateImplicit(S.Context));
 }
 
+static void handleLaneSharedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (VD->hasLocalStorage()) {
+      S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
+      return;
+    }
+  }
+  if (!D->hasAttr<HIPLaneSharedAttr>())
+    D->addAttr(::new (S.Context) HIPLaneSharedAttr(S.Context, AL));
+}
+
 static void handleGNUInlineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const auto *Fn = cast<FunctionDecl>(D);
   if (!Fn->isInlineSpecified()) {
@@ -9494,6 +9505,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HIPManaged:
     handleManagedAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_HIPLaneShared:
+    handleLaneSharedAttr(S, D, AL);
     break;
   case ParsedAttr::AT_GNUInline:
     handleGNUInlineAttr(S, D, AL);

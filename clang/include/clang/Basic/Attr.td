@@ -1347,6 +1347,13 @@ def HIPManaged : InheritableAttr {
   let Documentation = [HIPManagedAttrDocs];
 }
 
+def HIPLaneShared : InheritableAttr {
+  let Spellings = [GNU<"exp_amd_laneshared">, Declspec<"__exp_amd_laneshared__">];
+  let Subjects = SubjectList<[Var]>;
+  let LangOpts = [HIP];
+  let Documentation = [HIPLaneSharedAttrDocs];
+}
+
 def CUDAClusterDims : InheritableAttr {
   let Spellings = [GNU<"cluster_dims">, Declspec<"__cluster_dims__">];
   let Args = [ExprArgument<"X">, ExprArgument<"Y", 1>, ExprArgument<"Z", 1>];
@@ -1380,7 +1387,7 @@ def CUDAShared : InheritableAttr {
   let LangOpts = [CUDA];
   let Documentation = [Undocumented];
 }
-def : MutualExclusions<[CUDAConstant, CUDAShared, HIPManaged]>;
+def : MutualExclusions<[CUDAConstant, CUDAShared, HIPManaged, HIPLaneShared]>;
 
 def SYCLKernel : InheritableAttr {
   let Spellings = [Clang<"sycl_kernel">];
