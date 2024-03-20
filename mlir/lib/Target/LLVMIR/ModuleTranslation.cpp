@@ -274,8 +274,8 @@ translateDataLayout(DataLayoutSpecInterface attribute,
                 layoutStream << ":" << preferred;
               return success();
             })
-            .Case([&](LLVMPointerType ptrType) {
-              layoutStream << "p" << ptrType.getAddressSpace() << ":";
+            .Case([&](LLVMPointerType type) {
+              layoutStream << "p" << type.getAddressSpace() << ":";
               uint64_t size = dataLayout.getTypeSizeInBits(type);
               uint64_t abi = dataLayout.getTypeABIAlignment(type) * 8u;
               uint64_t preferred =

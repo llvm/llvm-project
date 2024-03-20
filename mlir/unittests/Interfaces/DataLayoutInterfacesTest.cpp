@@ -346,7 +346,7 @@ TEST(DataLayout, NullSpec) {
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 128u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 32u);
   EXPECT_EQ(layout.getTypeIndexBitwidth(Float16Type::get(&ctx)), std::nullopt);
-  EXPECT_EQ(*layout.getTypeIndexBitwidth(IndexType::get(&ctx)), 64u);
+  EXPECT_EQ(layout.getTypeIndexBitwidth(IndexType::get(&ctx)), 64u);
 
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
