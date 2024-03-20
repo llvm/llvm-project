@@ -193,6 +193,8 @@ Modified Compiler Flags
   ``-Wreturn-type``, and moved some of the diagnostics previously controlled by
   ``-Wreturn-type`` under this new flag. Fixes #GH72116.
 
+- Added ``-Wcast-function-type`` as a warning enabled by ``-Wextra``. #GH76872
+
 Removed Compiler Flags
 -------------------------
 
