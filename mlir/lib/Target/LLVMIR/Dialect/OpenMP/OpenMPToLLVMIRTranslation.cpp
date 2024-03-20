@@ -3170,7 +3170,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             omp::CriticalDeclareOp>([](auto op) {
         // `yield` and `terminator` can be just omitted. The block structure
         // was created in the region that handles their parent operation.
-        // `reduction.declare` will be used by reductions and is not
+        // `declare_reduction` will be used by reductions and is not
         // converted directly, skip it.
         // `critical.declare` is only used to declare names of critical
         // sections which will be used by `critical` ops and hence can be
