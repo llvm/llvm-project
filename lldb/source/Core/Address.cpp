@@ -407,7 +407,8 @@ bool Address::GetDescription(Stream &s, Target &target,
 
 bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
                    DumpStyle fallback_style, uint32_t addr_size,
-                   bool all_ranges, llvm::StringRef pattern) const {
+                   bool all_ranges,
+                   std::optional<Stream::HighlightSettings> settings) const {
   // If the section was nullptr, only load address is going to work unless we
   // are trying to deref a pointer
   SectionSP section_sp(GetSection());
@@ -516,16 +517,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               if (symbol) {
                 const char *symbol_name = symbol->GetName().AsCString();
                 if (symbol_name) {
-                  llvm::StringRef ansi_prefix;
-                  llvm::StringRef ansi_suffix;
-                  if (target) {
-                    ansi_prefix =
-                        target->GetDebugger().GetRegexMatchAnsiPrefix();
-                    ansi_suffix =
-                        target->GetDebugger().GetRegexMatchAnsiSuffix();
-                  }
-                  s->PutCStringColorHighlighted(symbol_name, pattern,
-                                                ansi_prefix, ansi_suffix);
+                  s->PutCStringColorHighlighted(symbol_name, settings);
                   addr_t delta =
                       file_Addr - symbol->GetAddressRef().GetFileAddress();
                   if (delta)
@@ -653,7 +645,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
                     pointer_sc.symbol != nullptr) {
                   s->PutCString(": ");
                   pointer_sc.DumpStopContext(s, exe_scope, so_addr, true, false,
-                                             false, true, true, pattern);
+                                             false, true, true, settings);
                 }
               }
             }
@@ -693,13 +685,13 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               sc.DumpStopContext(s, exe_scope, *this, show_fullpaths,
                                  show_module, show_inlined_frames,
                                  show_function_arguments, show_function_name,
-                                 pattern);
+                                 settings);
             } else {
               // We found a symbol but it was in a different section so it
               // isn't the symbol we should be showing, just show the section
               // name + offset
               Dump(s, exe_scope, DumpStyleSectionNameOffset, DumpStyleInvalid,
-                   UINT32_MAX, false, pattern);
+                   UINT32_MAX, false, settings);
             }
           }
         }
@@ -707,7 +699,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
     } else {
       if (fallback_style != DumpStyleInvalid)
         return Dump(s, exe_scope, fallback_style, DumpStyleInvalid, addr_size,
-                    false, pattern);
+                    false, settings);
       return false;
     }
     break;
@@ -728,7 +720,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               sc.symbol->GetAddressRef().GetSection() != GetSection())
             sc.symbol = nullptr;
         }
-        sc.GetDescription(s, eDescriptionLevelBrief, target, pattern);
+        sc.GetDescription(s, eDescriptionLevelBrief, target, settings);
 
         if (sc.block) {
           bool can_create = true;
@@ -777,7 +769,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
     } else {
       if (fallback_style != DumpStyleInvalid)
         return Dump(s, exe_scope, fallback_style, DumpStyleInvalid, addr_size,
-                    false, pattern);
+                    false, settings);
       return false;
     }
     break;

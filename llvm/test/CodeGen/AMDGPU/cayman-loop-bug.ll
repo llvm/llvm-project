@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=cayman | FileCheck %s
 
 ; CHECK-LABEL: {{^}}main:
 ; CHECK: LOOP_START_DX10

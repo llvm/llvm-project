@@ -1,6 +1,10 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
+; RUN: | FileCheck %s --implicit-check-not=DBG
+
 ;; Test a variety of block inputs and lattice configurations for the assignment
 ;; tracking analysis (debug-ata). This is similar to nested-loop.ll and
 ;; nested-loop-sroa.ll except that the allocas are 64 bits and the stores are a

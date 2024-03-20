@@ -2,11 +2,11 @@
 ; RUN: llc -mtriple=csky -verify-machineinstrs -csky-no-aliases -mattr=+2e3 < %s \
 ; RUN:   | FileCheck %s
 
-declare void @notdead(i8*)
-declare i8* @llvm.frameaddress(i32)
-declare i8* @llvm.returnaddress(i32)
+declare void @notdead(ptr)
+declare ptr @llvm.frameaddress(i32)
+declare ptr @llvm.returnaddress(i32)
 
-define i8* @test_frameaddress_0() nounwind {
+define ptr @test_frameaddress_0() nounwind {
 ; CHECK-LABEL: test_frameaddress_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subi16 sp, sp, 4
@@ -17,11 +17,11 @@ define i8* @test_frameaddress_0() nounwind {
 ; CHECK-NEXT:    ld32.w l4, (sp, 0) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi16 sp, sp, 4
 ; CHECK-NEXT:    rts16
-  %1 = call i8* @llvm.frameaddress(i32 0)
-  ret i8* %1
+  %1 = call ptr @llvm.frameaddress(i32 0)
+  ret ptr %1
 }
 
-define i8* @test_frameaddress_2() nounwind {
+define ptr @test_frameaddress_2() nounwind {
 ; CHECK-LABEL: test_frameaddress_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subi16 sp, sp, 4
@@ -33,11 +33,11 @@ define i8* @test_frameaddress_2() nounwind {
 ; CHECK-NEXT:    ld32.w l4, (sp, 0) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi16 sp, sp, 4
 ; CHECK-NEXT:    rts16
-  %1 = call i8* @llvm.frameaddress(i32 2)
-  ret i8* %1
+  %1 = call ptr @llvm.frameaddress(i32 2)
+  ret ptr %1
 }
 
-define i8* @test_frameaddress_3_alloca() nounwind {
+define ptr @test_frameaddress_3_alloca() nounwind {
 ; CHECK-LABEL: test_frameaddress_3_alloca:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subi16 sp, sp, 8
@@ -57,22 +57,22 @@ define i8* @test_frameaddress_3_alloca() nounwind {
 ; CHECK-NEXT:    addi16 sp, sp, 8
 ; CHECK-NEXT:    rts16
   %1 = alloca [100 x i8]
-  %2 = bitcast [100 x i8]* %1 to i8*
-  call void @notdead(i8* %2)
-  %3 = call i8* @llvm.frameaddress(i32 3)
-  ret i8* %3
+  %2 = bitcast ptr %1 to ptr
+  call void @notdead(ptr %2)
+  %3 = call ptr @llvm.frameaddress(i32 3)
+  ret ptr %3
 }
 
-define i8* @test_returnaddress_0() nounwind {
+define ptr @test_returnaddress_0() nounwind {
 ; CHECK-LABEL: test_returnaddress_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mov16 a0, lr
 ; CHECK-NEXT:    rts16
-  %1 = call i8* @llvm.returnaddress(i32 0)
-  ret i8* %1
+  %1 = call ptr @llvm.returnaddress(i32 0)
+  ret ptr %1
 }
 
-define i8* @test_returnaddress_2() nounwind {
+define ptr @test_returnaddress_2() nounwind {
 ; CHECK-LABEL: test_returnaddress_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subi16 sp, sp, 4
@@ -85,6 +85,6 @@ define i8* @test_returnaddress_2() nounwind {
 ; CHECK-NEXT:    ld32.w l4, (sp, 0) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi16 sp, sp, 4
 ; CHECK-NEXT:    rts16
-  %1 = call i8* @llvm.returnaddress(i32 2)
-  ret i8* %1
+  %1 = call ptr @llvm.returnaddress(i32 2)
+  ret ptr %1
 }

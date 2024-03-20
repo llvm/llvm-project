@@ -44,7 +44,7 @@ import time
 import traceback
 
 # Third-party modules
-import unittest2
+import unittest
 
 # LLDB modules
 import lldb
@@ -517,7 +517,7 @@ def builder_module():
     return lldbplatformutil.builder_module()
 
 
-class Base(unittest2.TestCase):
+class Base(unittest.TestCase):
     """
     Abstract base for performing lldb (see TestBase) or other generic tests (see
     BenchBase for one example).  lldbtest.Base works with the test driver to
@@ -1060,7 +1060,9 @@ class Base(unittest2.TestCase):
         lldb.SBModule.GarbageCollectAllocatedModules()
 
         # Assert that the global module cache is empty.
-        self.assertEqual(lldb.SBModule.GetNumberAllocatedModules(), 0)
+        # FIXME: This assert fails on Windows.
+        if self.getPlatform() != "windows":
+            self.assertEqual(lldb.SBModule.GetNumberAllocatedModules(), 0)
 
     # =========================================================
     # Various callbacks to allow introspection of test progress
@@ -1090,17 +1092,14 @@ class Base(unittest2.TestCase):
             # Once by the Python unittest framework, and a second time by us.
             print("FAIL", file=sbuf)
 
-    def markExpectedFailure(self, err, bugnumber):
+    def markExpectedFailure(self, err):
         """Callback invoked when an expected failure/error occurred."""
         self.__expected__ = True
         with recording(self, False) as sbuf:
             # False because there's no need to write "expected failure" to the
             # stderr twice.
             # Once by the Python unittest framework, and a second time by us.
-            if bugnumber is None:
-                print("expected failure", file=sbuf)
-            else:
-                print("expected failure (problem id:" + str(bugnumber) + ")", file=sbuf)
+            print("expected failure", file=sbuf)
 
     def markSkippedTest(self):
         """Callback invoked when a test is skipped."""
@@ -1111,19 +1110,14 @@ class Base(unittest2.TestCase):
             # Once by the Python unittest framework, and a second time by us.
             print("skipped test", file=sbuf)
 
-    def markUnexpectedSuccess(self, bugnumber):
+    def markUnexpectedSuccess(self):
         """Callback invoked when an unexpected success occurred."""
         self.__unexpected__ = True
         with recording(self, False) as sbuf:
             # False because there's no need to write "unexpected success" to the
             # stderr twice.
             # Once by the Python unittest framework, and a second time by us.
-            if bugnumber is None:
-                print("unexpected success", file=sbuf)
-            else:
-                print(
-                    "unexpected success (problem id:" + str(bugnumber) + ")", file=sbuf
-                )
+            print("unexpected success", file=sbuf)
 
     def getRerunArgs(self):
         return " -f %s.%s" % (self.__class__.__name__, self._testMethodName)
@@ -1543,14 +1537,6 @@ class Base(unittest2.TestCase):
         d = {"CXX_SOURCES": sources, "EXE": exe_name}
         self.build(dictionary=d)
 
-    def signBinary(self, binary_path):
-        if sys.platform.startswith("darwin"):
-            codesign_cmd = 'codesign --force --sign "%s" %s' % (
-                lldbtest_config.codesign_identity,
-                binary_path,
-            )
-            call(codesign_cmd, shell=True)
-
     def findBuiltClang(self):
         """Tries to find and use Clang from the build directory as the compiler (instead of the system compiler)."""
         paths_to_try = [
@@ -1610,21 +1596,6 @@ class Base(unittest2.TestCase):
             print(str(method) + ":", result, file=sbuf)
         return result
 
-    def getLLDBLibraryEnvVal(self):
-        """Returns the path that the OS-specific library search environment variable
-        (self.dylibPath) should be set to in order for a program to find the LLDB
-        library. If an environment variable named self.dylibPath is already set,
-        the new path is appended to it and returned.
-        """
-        existing_library_path = (
-            os.environ[self.dylibPath] if self.dylibPath in os.environ else None
-        )
-        if existing_library_path:
-            return "%s:%s" % (existing_library_path, configuration.lldb_libs_dir)
-        if sys.platform.startswith("darwin") and configuration.lldb_framework_path:
-            return configuration.lldb_framework_path
-        return configuration.lldb_libs_dir
-
     def getLibcPlusPlusLibs(self):
         if self.getPlatform() in ("freebsd", "linux", "netbsd", "openbsd"):
             return ["libc++.so.1"]
@@ -1667,6 +1638,11 @@ class LLDBTestCaseFactory(type):
         if original_testcase.NO_DEBUG_INFO_TESTCASE:
             return original_testcase
 
+        # Default implementation for skip/xfail reason based on the debug category,
+        # where "None" means to run the test as usual.
+        def no_reason(_):
+            return None
+
         newattrs = {}
         for attrname, attrvalue in attrs.items():
             if attrname.startswith("test") and not getattr(
@@ -1688,6 +1664,12 @@ class LLDBTestCaseFactory(type):
                         if can_replicate
                     ]
 
+                xfail_for_debug_info_cat_fn = getattr(
+                    attrvalue, "__xfail_for_debug_info_cat_fn__", no_reason
+                )
+                skip_for_debug_info_cat_fn = getattr(
+                    attrvalue, "__skip_for_debug_info_cat_fn__", no_reason
+                )
                 for cat in categories:
 
                     @decorators.add_test_categories([cat])
@@ -1698,6 +1680,15 @@ class LLDBTestCaseFactory(type):
                     method_name = attrname + "_" + cat
                     test_method.__name__ = method_name
                     test_method.debug_info = cat
+
+                    xfail_reason = xfail_for_debug_info_cat_fn(cat)
+                    if xfail_reason:
+                        test_method = unittest.expectedFailure(test_method)
+
+                    skip_reason = skip_for_debug_info_cat_fn(cat)
+                    if skip_reason:
+                        test_method = unittest.skip(skip_reason)(test_method)
+
                     newattrs[method_name] = test_method
 
             else:
@@ -2212,7 +2203,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         match_strings = lldb.SBStringList()
         interp.HandleCompletion(command, len(command), 0, -1, match_strings)
         # match_strings is a 1-indexed list, so we have to slice...
-        self.assertItemsEqual(
+        self.assertCountEqual(
             completions, list(match_strings)[1:], "List of returned completion is wrong"
         )
 

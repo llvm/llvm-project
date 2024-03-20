@@ -31,10 +31,10 @@ int fn() {
 
 // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @_ZN1SC2Ev(ptr {{[^,]*}} %this)
 // CHECK:   call x86_thiscallcc void @_ZN1IC2Ev(ptr {{[^,]*}} %{{[.0-9A-Z_a-z]+}})
-// CHECK:   store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1S, i32 0, inrange i32 0, i32 2), ptr %{{[.0-9A-Z_a-z]+}}
+// CHECK:   store ptr getelementptr inbounds inrange(-8, 4) ({ [3 x ptr] }, ptr @_ZTV1S, i32 0, i32 0, i32 2), ptr %{{[.0-9A-Z_a-z]+}}
 
 // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @_ZN1IC2Ev(ptr {{[^,]*}} %this)
-// CHECK:   store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1I, i32 0, inrange i32 0, i32 2), ptr %{{[.0-9A-Z_a-z]+}}
+// CHECK:   store ptr getelementptr inbounds inrange(-8, 4) ({ [3 x ptr] }, ptr @_ZTV1I, i32 0, i32 0, i32 2), ptr %{{[.0-9A-Z_a-z]+}}
 
 // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef i32 @_ZN1I4testEv(ptr {{[^,]*}} %this)
 // CHECK:   ret i32 1

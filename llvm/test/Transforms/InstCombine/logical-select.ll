@@ -480,7 +480,7 @@ define <vscale x 1 x i1> @vec_of_bools_scalable(<vscale x 1 x i1> %a, <vscale x 
 ; CHECK-NEXT:    [[R:%.*]] = select <vscale x 1 x i1> [[A:%.*]], <vscale x 1 x i1> [[C:%.*]], <vscale x 1 x i1> [[D:%.*]]
 ; CHECK-NEXT:    ret <vscale x 1 x i1> [[R]]
 ;
-  %b = xor <vscale x 1 x i1> %a, shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer)
+  %b = xor <vscale x 1 x i1> %a, splat (i1 true)
   %t11 = and <vscale x 1 x i1> %a, %c
   %t12 = and <vscale x 1 x i1> %b, %d
   %r = or <vscale x 1 x i1> %t11, %t12
@@ -513,7 +513,7 @@ define <vscale x 1 x i64> @vec_of_casted_bools_scalable(<vscale x 1 x i64> %a, <
 ; CHECK-NEXT:    ret <vscale x 1 x i64> [[OR]]
 ;
   %scond = sext <vscale x 8 x i1> %cond to <vscale x 8 x i8>
-  %notcond = xor <vscale x 8 x i1> %cond, shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i32 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer)
+  %notcond = xor <vscale x 8 x i1> %cond, splat (i1 true)
   %snotcond = sext <vscale x 8 x i1> %notcond to <vscale x 8 x i8>
   %bc1 = bitcast <vscale x 8 x i8> %scond to <vscale x 1 x i64>
   %bc2 = bitcast <vscale x 8 x i8> %snotcond to <vscale x 1 x i64>
@@ -707,11 +707,8 @@ define <4 x i32> @computesignbits_through_shuffles(<4 x float> %x, <4 x float> %
 
 define <4 x i32> @computesignbits_through_two_input_shuffle(<4 x i32> %x, <4 x i32> %y, <4 x i1> %cond1, <4 x i1> %cond2) {
 ; CHECK-LABEL: @computesignbits_through_two_input_shuffle(
-; CHECK-NEXT:    [[SEXT1:%.*]] = sext <4 x i1> [[COND1:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[SEXT2:%.*]] = sext <4 x i1> [[COND2:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i32> [[SEXT1]], <4 x i32> [[SEXT2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[COND]] to <4 x i1>
-; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[Y:%.*]], <4 x i32> [[X:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i1> [[COND1:%.*]], <4 x i1> [[COND2:%.*]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[COND]], <4 x i32> [[Y:%.*]], <4 x i32> [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
   %sext1 = sext <4 x i1> %cond1 to <4 x i32>
@@ -753,7 +750,7 @@ define <vscale x 2 x i64> @bitcast_vec_cond_scalable(<vscale x 16 x i1> %cond, <
 ;
   %s = sext <vscale x 16 x i1> %cond to <vscale x 16 x i8>
   %t9 = bitcast <vscale x 16 x i8> %s to <vscale x 2 x i64>
-  %nott9 = xor <vscale x 2 x i64> %t9, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %nott9 = xor <vscale x 2 x i64> %t9, splat (i64 -1)
   %t11 = and <vscale x 2 x i64> %nott9, %c
   %t12 = and <vscale x 2 x i64> %t9, %d
   %r = or <vscale x 2 x i64> %t11, %t12

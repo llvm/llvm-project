@@ -346,6 +346,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (args.getLastArgValue(OPT_m) != "thumb2pe" &&
       args.getLastArgValue(OPT_m) != "arm64pe" &&
+      args.getLastArgValue(OPT_m) != "arm64ecpe" &&
       args.hasFlag(OPT_disable_dynamicbase, OPT_dynamicbase, false))
     add("-dynamicbase:no");
   if (args.hasFlag(OPT_disable_high_entropy_va, OPT_high_entropy_va, false))
@@ -409,6 +410,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-machine:arm");
     else if (s == "arm64pe")
       add("-machine:arm64");
+    else if (s == "arm64ecpe")
+      add("-machine:arm64ec");
     else
       error("unknown parameter: -m" + s);
   }
@@ -448,6 +451,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-lto-cs-profile-generate");
   if (auto *arg = args.getLastArg(OPT_lto_cs_profile_file))
     add("-lto-cs-profile-file:" + StringRef(arg->getValue()));
+  if (args.hasArg(OPT_plugin_opt_emit_llvm))
+    add("-lldemit:llvm");
+  if (args.hasArg(OPT_lto_emit_asm))
+    add("-lldemit:asm");
 
   if (auto *a = args.getLastArg(OPT_thinlto_cache_dir))
     add("-lldltocache:" + StringRef(a->getValue()));

@@ -2,7 +2,7 @@
 ; RUN: opt -S < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 | FileCheck %s --check-prefix=FORCE-VEC
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64--linux-gnueabi"
+target triple = "aarch64"
 
 ; Test integer induction variable of step 2:
 ;   for (int i = 0; i < 1024; i+=2) {

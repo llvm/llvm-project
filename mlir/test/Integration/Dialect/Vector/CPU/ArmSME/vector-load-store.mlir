@@ -1,9 +1,5 @@
 // DEFINE: %{entry_point} = za0_d_f64
-// DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
-// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
-// DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
-// DEFINE:   -test-lower-to-llvm
+// DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=i32 \
@@ -259,7 +255,7 @@ func.func @load_store_two_za_s_tiles() -> i32 {
   // CHECK-NEXT: ( 1, 1, 1, 1
   // CHECK-NEXT: ( 1, 1, 1, 1
   // CHECK:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   scf.for %i = %c0 to %size_of_two_tiles step %svl_s {
     %av = vector.load %mem2[%i] : memref<?xi32>, vector<[4]xi32>
     vector.print %av : vector<[4]xi32>
@@ -267,11 +263,11 @@ func.func @load_store_two_za_s_tiles() -> i32 {
     %tileSizeMinusStep = arith.subi %size_of_tile, %svl_s : index
     %isNextTile = arith.cmpi eq, %i, %tileSizeMinusStep : index
     scf.if %isNextTile {
-      vector.print str "TILE END"
-      vector.print str "TILE BEGIN"
+      vector.print str "TILE END\n"
+      vector.print str "TILE BEGIN\n"
     }
   }
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   return %c0_i32 : i32
 }

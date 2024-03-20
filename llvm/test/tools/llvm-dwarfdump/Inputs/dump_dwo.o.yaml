@@ -1,0 +1,251 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         554889E531C05DC30F1F840000000000554889E54883EC10C745FC00000000897DF8488975F0E80000000031C04883C4105DC3
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         014A00101772171B25B442197625111B12067317000000
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         24000000050004080000000036C1C3A75DD36D370100000000000000000001003300000000000000
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         0C000000050000000000000000000000
+  - Name:            .debug_gnu_pubnames
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         21000000020000000000280000001A00000030666F6F002A000000306D61696E0000000000
+  - Name:            .debug_gnu_pubtypes
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         '21000000020000000000280000005000000090696E74006300000090636861720000000000'
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         004170706C6520636C616E672076657273696F6E2031352E302E302028636C616E672D313530302E312E302E322E352900
+  - Name:            .note.GNU-stack
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+  - Name:            .eh_frame
+    Type:            SHT_X86_64_UNWIND
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C0708900100001C0000001C000000000000000800000000410E108602430D06430C07080000001C0000003C000000000000002300000000410E108602430D065E0C0708000000
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         5F0000000500080037000000010101FB0E0D00010101010000000100000101011F010000000003011F020F051E0100000000004000920BB47E0DDA24E8521F209EDB37040000090200000000000000001305020A4B0500BD05030A0859590208000101
+  - Name:            .debug_line_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         2E2F0064756D705F64776F2E63707000
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x27
+        Symbol:          _Z3foov
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+  - Name:            .rela.debug_info
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x8
+        Symbol:          .debug_abbrev
+        Type:            R_X86_64_32
+      - Offset:          0x15
+        Symbol:          .debug_line
+        Type:            R_X86_64_32
+      - Offset:          0x19
+        Symbol:          .debug_str_offsets
+        Type:            R_X86_64_32
+        Addend:          8
+      - Offset:          0x24
+        Symbol:          .debug_addr
+        Type:            R_X86_64_32
+        Addend:          8
+  - Name:            .rela.debug_str_offsets
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_str_offsets
+    Relocations:
+      - Offset:          0x8
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+      - Offset:          0xC
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          3
+  - Name:            .rela.debug_addr
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_addr
+    Relocations:
+      - Offset:          0x8
+        Symbol:          .text
+        Type:            R_X86_64_64
+      - Offset:          0x10
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          16
+  - Name:            .rela.debug_gnu_pubnames
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_gnu_pubnames
+    Relocations:
+      - Offset:          0x6
+        Symbol:          .debug_info
+        Type:            R_X86_64_32
+  - Name:            .rela.debug_gnu_pubtypes
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_gnu_pubtypes
+    Relocations:
+      - Offset:          0x6
+        Symbol:          .debug_info
+        Type:            R_X86_64_32
+  - Name:            .rela.eh_frame
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .eh_frame
+    Relocations:
+      - Offset:          0x20
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+      - Offset:          0x40
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          16
+  - Name:            .rela.debug_line
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_line
+    Relocations:
+      - Offset:          0x22
+        Symbol:          .debug_line_str
+        Type:            R_X86_64_32
+      - Offset:          0x2E
+        Symbol:          .debug_line_str
+        Type:            R_X86_64_32
+        Addend:          3
+      - Offset:          0x48
+        Symbol:          .text
+        Type:            R_X86_64_64
+  - Name:            .llvm_addrsig
+    Type:            SHT_LLVM_ADDRSIG
+    Flags:           [ SHF_EXCLUDE ]
+    Link:            .symtab
+    AddressAlign:    0x1
+    Symbols:         [ _Z3foov ]
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .debug_abbrev
+      - Name:            .debug_info
+      - Name:            .rela.debug_info
+      - Name:            .debug_str_offsets
+      - Name:            .rela.debug_str_offsets
+      - Name:            .debug_str
+      - Name:            .debug_addr
+      - Name:            .rela.debug_addr
+      - Name:            .debug_gnu_pubnames
+      - Name:            .rela.debug_gnu_pubnames
+      - Name:            .debug_gnu_pubtypes
+      - Name:            .rela.debug_gnu_pubtypes
+      - Name:            .comment
+      - Name:            .note.GNU-stack
+      - Name:            .eh_frame
+      - Name:            .rela.eh_frame
+      - Name:            .debug_line
+      - Name:            .rela.debug_line
+      - Name:            .debug_line_str
+      - Name:            .llvm_addrsig
+      - Name:            .symtab
+Symbols:
+  - Name:            dump_dwo.cpp
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_info
+    Type:            STT_SECTION
+    Section:         .debug_info
+  - Name:            .debug_str_offsets
+    Type:            STT_SECTION
+    Section:         .debug_str_offsets
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+  - Name:            .debug_addr
+    Type:            STT_SECTION
+    Section:         .debug_addr
+  - Name:            .debug_line
+    Type:            STT_SECTION
+    Section:         .debug_line
+  - Name:            .debug_line_str
+    Type:            STT_SECTION
+    Section:         .debug_line_str
+  - Name:            _Z3foov
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x8
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10
+    Size:            0x23
+DWARF:
+  debug_str:
+    - './'
+    - './dump_dwo.dwo'
+  debug_addr:
+    - Length:          0x14
+      Version:         0x5
+      AddressSize:     0x8
+      Entries:
+        - {}
+        - Address:         0x10
+...

@@ -25,6 +25,7 @@
 ; DEFAULT-NEXT: SI Lower WWM Copies
 ; DEFAULT-NEXT: GCN NSA Reassign
 ; DEFAULT-NEXT: Virtual Register Rewriter
+; DEFAULT-NEXT: AMDGPU Mark Last Scratch Load
 ; DEFAULT-NEXT: Stack Slot Coloring
 
 ; O0: Fast Register Allocator
@@ -61,6 +62,7 @@
 ; BASIC-DEFAULT-NEXT: SI Lower WWM Copies
 ; BASIC-DEFAULT-NEXT: GCN NSA Reassign
 ; BASIC-DEFAULT-NEXT: Virtual Register Rewriter
+; BASIC-DEFAULT-NEXT: AMDGPU Mark Last Scratch Load
 ; BASIC-DEFAULT-NEXT: Stack Slot Coloring
 
 
@@ -75,6 +77,7 @@
 ; DEFAULT-BASIC-NEXT: SI Lower WWM Copies
 ; DEFAULT-BASIC-NEXT: GCN NSA Reassign
 ; DEFAULT-BASIC-NEXT: Virtual Register Rewriter
+; DEFAULT-BASIC-NEXT: AMDGPU Mark Last Scratch Load
 ; DEFAULT-BASIC-NEXT: Stack Slot Coloring
 
 
@@ -95,6 +98,7 @@
 ; BASIC-BASIC-NEXT: SI Lower WWM Copies
 ; BASIC-BASIC-NEXT: GCN NSA Reassign
 ; BASIC-BASIC-NEXT: Virtual Register Rewriter
+; BASIC-BASIC-NEXT: AMDGPU Mark Last Scratch Load
 ; BASIC-BASIC-NEXT: Stack Slot Coloring
 
 

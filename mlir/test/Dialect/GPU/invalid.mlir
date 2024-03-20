@@ -818,3 +818,10 @@ func.func @main(%arg0 : index) {
   return
 }
 
+// -----
+
+module attributes {gpu.container_module} {
+  // expected-error@+1 {{expected attribute value}}
+  gpu.module @kernel <> {
+  }
+}

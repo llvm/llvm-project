@@ -19,8 +19,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Function.h"
 #include <bitset>
 #include <cstddef>
@@ -378,6 +378,11 @@ enum {
   /// - RegNum(2) - The register to add
   /// - Flags(2) - Register Flags
   GIR_AddRegister,
+
+  /// Adds an intrinsic ID to the specified instruction.
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - IID(2) - Intrinsic ID
+  GIR_AddIntrinsicID,
 
   /// Marks the implicit def of a register as dead.
   /// - InsnID(ULEB128) - Instruction ID to modify

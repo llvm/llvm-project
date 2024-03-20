@@ -765,7 +765,8 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
                     IncludeBriefComments, Capture,
                     CXXIdx->getPCHContainerOperations(), *Results->Diag,
                     Results->LangOpts, *Results->SourceMgr, *Results->FileMgr,
-                    Results->Diagnostics, Results->TemporaryBuffers);
+                    Results->Diagnostics, Results->TemporaryBuffers,
+                    /*SyntaxOnlyAction=*/nullptr);
 
   Results->DiagnosticsWrappers.resize(Results->Diagnostics.size());
 

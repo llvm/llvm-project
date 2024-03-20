@@ -17,7 +17,7 @@ end
 ! CHECK:         return
 ! CHECK:       }
 !
-! CHECK-LABEL: func.func @_QMm2FtestPinternal_test() {
+! CHECK-LABEL: func.func private @_QMm2FtestPinternal_test() {{.*}} {
 ! CHECK:         %[[VAL_0:.*]] = fir.address_of(@_QMmEx) : !fir.ref<i32>
 ! CHECK:         %[[VAL_1:.*]] = omp.threadprivate %[[VAL_0]] : !fir.ref<i32> -> !fir.ref<i32>
 ! CHECK:         fir.call @_QPbar(%[[VAL_1]]) {{.*}}: (!fir.ref<i32>) -> ()

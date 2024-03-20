@@ -32,8 +32,7 @@ struct DelegatingCtor2 {
 
 // CHECK: struct DelegatingCtor3 {
 struct DelegatingCtor3 {
-  // FIXME: template <> should not be output
-  // CHECK: template <> DelegatingCtor3(auto);
+  // CHECK: DelegatingCtor3(auto);
   DelegatingCtor3(auto);
 
   // FIXME: Implicitly specialized method should not be output

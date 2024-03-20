@@ -171,6 +171,38 @@
 
 // RUN: %clang --target=riscv64 %s -emit-llvm -S -o - | FileCheck %s
 
+// Check that "--no-relax" is forwarded to the linker for RISC-V (RISCVToolchain.cpp).
+// RUN: env "PATH=" %clang %s -### 2>&1 -mno-relax \
+// RUN:   --target=riscv64-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
+// RUN:   -march=rv64imac -mabi=lp64\
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-RV64-NORELAX %s
+// CHECK-RV64-NORELAX: "--no-relax"
+
+// Check that "--no-relax" is not forwarded to the linker for RISC-V (RISCVToolchain.cpp).
+// RUN:env "PATH=" %clang %s -### 2>&1 \
+// RUN:   --target=riscv64-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
+// RUN:   -march=rv64imac -mabi=lp64\
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-RV64-RELAX %s
+// CHECK-RV64-RELAX-NOT: "--no-relax"
+
+// Check that "--no-relax" is forwarded to the linker for RISC-V (Gnu.cpp).
+// RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie -mno-relax \
+// RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform --unwindlib=platform -mabi=lp64 \
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
+// RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-RV64-GNU-NORELAX %s
+// CHECK-RV64-GNU-NORELAX: "--no-relax"
+
+// Check that "--no-relax" is not forwarded to the linker for RISC-V (Gnu.cpp).
+// RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie \
+// RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform --unwindlib=platform -mabi=lp64 \
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
+// RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-RV64-GNU-RELAX %s
+// CHECK-RV64-GNU-RELAX-NOT: "--no-relax"
+
 typedef __builtin_va_list va_list;
 typedef __SIZE_TYPE__ size_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;

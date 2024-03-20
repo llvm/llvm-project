@@ -38,22 +38,22 @@ public:
   /// Checks that the specified DWARF expression operand \p Op references live
   /// code section and returns the relocation adjustment value (to get the
   /// linked address this value might be added to the source expression operand
-  /// address).
+  /// address). Print debug output if \p Verbose is true.
   /// \returns relocation adjustment value or std::nullopt if there is no
   /// corresponding live address.
-  virtual std::optional<int64_t>
-  getExprOpAddressRelocAdjustment(DWARFUnit &U,
-                                  const DWARFExpression::Operation &Op,
-                                  uint64_t StartOffset, uint64_t EndOffset) = 0;
+  virtual std::optional<int64_t> getExprOpAddressRelocAdjustment(
+      DWARFUnit &U, const DWARFExpression::Operation &Op, uint64_t StartOffset,
+      uint64_t EndOffset, bool Verbose) = 0;
 
   /// Checks that the specified subprogram \p DIE references the live code
   /// section and returns the relocation adjustment value (to get the linked
   /// address this value might be added to the source subprogram address).
   /// Allowed kinds of input DIE: DW_TAG_subprogram, DW_TAG_label.
+  /// Print debug output if \p Verbose is true.
   /// \returns relocation adjustment value or std::nullopt if there is no
   /// corresponding live address.
   virtual std::optional<int64_t>
-  getSubprogramRelocAdjustment(const DWARFDie &DIE) = 0;
+  getSubprogramRelocAdjustment(const DWARFDie &DIE, bool Verbose) = 0;
 
   // Returns the library install name associated to the AddessesMap.
   virtual std::optional<StringRef> getLibraryInstallName() = 0;
@@ -90,7 +90,7 @@ public:
   ///          second is the relocation adjustment value if the live address is
   ///          referenced.
   std::pair<bool, std::optional<int64_t>>
-  getVariableRelocAdjustment(const DWARFDie &DIE) {
+  getVariableRelocAdjustment(const DWARFDie &DIE, bool Verbose) {
     assert((DIE.getTag() == dwarf::DW_TAG_variable ||
             DIE.getTag() == dwarf::DW_TAG_constant) &&
            "Wrong type of input die");
@@ -149,9 +149,9 @@ public:
         HasLocationAddress = true;
         // Check relocation for the address.
         if (std::optional<int64_t> RelocAdjustment =
-                getExprOpAddressRelocAdjustment(*U, Op,
-                                                AttrOffset + CurExprOffset,
-                                                AttrOffset + Op.getEndOffset()))
+                getExprOpAddressRelocAdjustment(
+                    *U, Op, AttrOffset + CurExprOffset,
+                    AttrOffset + Op.getEndOffset(), Verbose))
           return std::make_pair(HasLocationAddress, *RelocAdjustment);
       } break;
       case dwarf::DW_OP_constx:
@@ -164,8 +164,8 @@ public:
           if (std::optional<int64_t> RelocAdjustment =
                   getExprOpAddressRelocAdjustment(
                       *U, Op, *AddressOffset,
-                      *AddressOffset +
-                          DIE.getDwarfUnit()->getAddressByteSize()))
+                      *AddressOffset + DIE.getDwarfUnit()->getAddressByteSize(),
+                      Verbose))
             return std::make_pair(HasLocationAddress, *RelocAdjustment);
         }
       } break;

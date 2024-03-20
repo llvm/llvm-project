@@ -1137,11 +1137,8 @@ define <4 x i32> @vselect_constant_cond_zero_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_zero_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI85_1
-; CHECK-GI-NEXT:    adrp x9, .LCPI85_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI85_1]
-; CHECK-GI-NEXT:    ldr d2, [x9, :lo12:.LCPI85_0]
-; CHECK-GI-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI85_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI85_0]
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
 ; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -1204,11 +1201,8 @@ define <4 x i32> @vselect_constant_cond_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI88_1
-; CHECK-GI-NEXT:    adrp x9, .LCPI88_0
-; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI88_1]
-; CHECK-GI-NEXT:    ldr d3, [x9, :lo12:.LCPI88_0]
-; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI88_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI88_0]
 ; CHECK-GI-NEXT:    shl v2.4s, v2.4s, #31
 ; CHECK-GI-NEXT:    sshr v2.4s, v2.4s, #31
 ; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b

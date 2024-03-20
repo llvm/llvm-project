@@ -280,8 +280,12 @@ public:
 /// This is not a thread safe VFS. A single instance is meant to be used only in
 /// one thread. Multiple instances are allowed to service multiple threads
 /// running in parallel.
-class DependencyScanningWorkerFilesystem : public llvm::vfs::ProxyFileSystem {
+class DependencyScanningWorkerFilesystem
+    : public llvm::RTTIExtends<DependencyScanningWorkerFilesystem,
+                               llvm::vfs::ProxyFileSystem> {
 public:
+  static const char ID;
+
   DependencyScanningWorkerFilesystem(
       DependencyScanningFilesystemSharedCache &SharedCache,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);

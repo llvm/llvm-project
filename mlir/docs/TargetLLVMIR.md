@@ -336,7 +336,7 @@ func.func @bar() {
 // is transformed into
 
 llvm.func @foo(%arg0: i32, %arg1: i64) -> !llvm.struct<(i32, i64)> {
-  // insert the vales into a structure
+  // insert the values into a structure
   %0 = llvm.mlir.undef : !llvm.struct<(i32, i64)>
   %1 = llvm.insertvalue %arg0, %0[0] : !llvm.struct<(i32, i64)>
   %2 = llvm.insertvalue %arg1, %1[1] : !llvm.struct<(i32, i64)>
@@ -349,8 +349,8 @@ llvm.func @bar() {
   %1 = llvm.mlir.constant(17 : i64) : i64
 
   // call and extract the values from the structure
-  %2 = llvm.call @bar(%0, %1)
-     : (i32, i32) -> !llvm.struct<(i32, i64)>
+  %2 = llvm.call @foo(%0, %1)
+     : (i32, i64) -> !llvm.struct<(i32, i64)>
   %3 = llvm.extractvalue %2[0] : !llvm.struct<(i32, i64)>
   %4 = llvm.extractvalue %2[1] : !llvm.struct<(i32, i64)>
 

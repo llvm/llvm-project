@@ -29,6 +29,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include <numeric>
 #include <queue>
 
@@ -111,6 +112,7 @@ private:
   bool scalarizeLoadExtract(Instruction &I);
   bool foldShuffleOfBinops(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
+  bool foldTruncFromReductions(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
 
   void replaceValue(Value &Old, Value &New) {
@@ -682,10 +684,10 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
 /// destination type followed by shuffle. This can enable further transforms by
 /// moving bitcasts or shuffles together.
 bool VectorCombine::foldBitcastShuffle(Instruction &I) {
-  Value *V;
+  Value *V0, *V1;
   ArrayRef<int> Mask;
-  if (!match(&I, m_BitCast(
-                     m_OneUse(m_Shuffle(m_Value(V), m_Undef(), m_Mask(Mask))))))
+  if (!match(&I, m_BitCast(m_OneUse(
+                     m_Shuffle(m_Value(V0), m_Value(V1), m_Mask(Mask))))))
     return false;
 
   // 1) Do not fold bitcast shuffle for scalable type. First, shuffle cost for
@@ -694,7 +696,7 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   // 2) Disallow non-vector casts.
   // TODO: We could allow any shuffle.
   auto *DestTy = dyn_cast<FixedVectorType>(I.getType());
-  auto *SrcTy = dyn_cast<FixedVectorType>(V->getType());
+  auto *SrcTy = dyn_cast<FixedVectorType>(V0->getType());
   if (!DestTy || !SrcTy)
     return false;
 
@@ -722,21 +724,37 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   // Bitcast the shuffle src - keep its original width but using the destination
   // scalar type.
   unsigned NumSrcElts = SrcTy->getPrimitiveSizeInBits() / DestEltSize;
-  auto *ShuffleTy = FixedVectorType::get(DestTy->getScalarType(), NumSrcElts);
+  auto *NewShuffleTy =
+      FixedVectorType::get(DestTy->getScalarType(), NumSrcElts);
+  auto *OldShuffleTy =
+      FixedVectorType::get(SrcTy->getScalarType(), Mask.size());
+  bool IsUnary = isa<UndefValue>(V1);
+  unsigned NumOps = IsUnary ? 1 : 2;
 
-  // The new shuffle must not cost more than the old shuffle. The bitcast is
-  // moved ahead of the shuffle, so assume that it has the same cost as before.
-  InstructionCost DestCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_PermuteSingleSrc, ShuffleTy, NewMask);
+  // The new shuffle must not cost more than the old shuffle.
+  TargetTransformInfo::TargetCostKind CK =
+      TargetTransformInfo::TCK_RecipThroughput;
+  TargetTransformInfo::ShuffleKind SK =
+      IsUnary ? TargetTransformInfo::SK_PermuteSingleSrc
+              : TargetTransformInfo::SK_PermuteTwoSrc;
+
+  InstructionCost DestCost =
+      TTI.getShuffleCost(SK, NewShuffleTy, NewMask, CK) +
+      (NumOps * TTI.getCastInstrCost(Instruction::BitCast, NewShuffleTy, SrcTy,
+                                     TargetTransformInfo::CastContextHint::None,
+                                     CK));
   InstructionCost SrcCost =
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, SrcTy, Mask);
+      TTI.getShuffleCost(SK, SrcTy, Mask, CK) +
+      TTI.getCastInstrCost(Instruction::BitCast, DestTy, OldShuffleTy,
+                           TargetTransformInfo::CastContextHint::None, CK);
   if (DestCost > SrcCost || !DestCost.isValid())
     return false;
 
-  // bitcast (shuf V, MaskC) --> shuf (bitcast V), MaskC'
+  // bitcast (shuf V0, V1, MaskC) --> shuf (bitcast V0), (bitcast V1), MaskC'
   ++NumShufOfBitcast;
-  Value *CastV = Builder.CreateBitCast(V, ShuffleTy);
-  Value *Shuf = Builder.CreateShuffleVector(CastV, NewMask);
+  Value *CastV0 = Builder.CreateBitCast(V0, NewShuffleTy);
+  Value *CastV1 = Builder.CreateBitCast(V1, NewShuffleTy);
+  Value *Shuf = Builder.CreateShuffleVector(CastV0, CastV1, NewMask);
   replaceValue(I, *Shuf);
   return true;
 }
@@ -784,9 +802,12 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   // intrinsic
   VectorType *VecTy = cast<VectorType>(VPI.getType());
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  SmallVector<int> Mask;
+  if (auto *FVTy = dyn_cast<FixedVectorType>(VecTy))
+    Mask.resize(FVTy->getNumElements(), 0);
   InstructionCost SplatCost =
       TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy);
+      TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy, Mask);
 
   // Calculate the cost of the VP Intrinsic
   SmallVector<Type *, 4> Args;
@@ -1526,6 +1547,60 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
   return foldSelectShuffle(*Shuffle, true);
 }
 
+/// Determine if its more efficient to fold:
+///   reduce(trunc(x)) -> trunc(reduce(x)).
+bool VectorCombine::foldTruncFromReductions(Instruction &I) {
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+
+  Intrinsic::ID IID = II->getIntrinsicID();
+  switch (IID) {
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_mul:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
+    break;
+  default:
+    return false;
+  }
+
+  unsigned ReductionOpc = getArithmeticReductionInstruction(IID);
+  Value *ReductionSrc = I.getOperand(0);
+
+  Value *TruncSrc;
+  if (!match(ReductionSrc, m_OneUse(m_Trunc(m_Value(TruncSrc)))))
+    return false;
+
+  auto *Trunc = cast<CastInst>(ReductionSrc);
+  auto *TruncSrcTy = cast<VectorType>(TruncSrc->getType());
+  auto *ReductionSrcTy = cast<VectorType>(ReductionSrc->getType());
+  Type *ResultTy = I.getType();
+
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost OldCost =
+      TTI.getCastInstrCost(Instruction::Trunc, ReductionSrcTy, TruncSrcTy,
+                           TTI::CastContextHint::None, CostKind, Trunc) +
+      TTI.getArithmeticReductionCost(ReductionOpc, ReductionSrcTy, std::nullopt,
+                                     CostKind);
+  InstructionCost NewCost =
+      TTI.getArithmeticReductionCost(ReductionOpc, TruncSrcTy, std::nullopt,
+                                     CostKind) +
+      TTI.getCastInstrCost(Instruction::Trunc, ResultTy,
+                           ReductionSrcTy->getScalarType(),
+                           TTI::CastContextHint::None, CostKind);
+
+  if (OldCost <= NewCost || !NewCost.isValid())
+    return false;
+
+  Value *NewReduction = Builder.CreateIntrinsic(
+      TruncSrcTy->getScalarType(), II->getIntrinsicID(), {TruncSrc});
+  Value *NewTruncation = Builder.CreateTrunc(NewReduction, ResultTy);
+  replaceValue(I, *NewTruncation);
+  return true;
+}
+
 /// This method looks for groups of shuffles acting on binops, of the form:
 ///  %x = shuffle ...
 ///  %y = shuffle ...
@@ -1917,6 +1992,7 @@ bool VectorCombine::run() {
       switch (Opcode) {
       case Instruction::Call:
         MadeChange |= foldShuffleFromReductions(I);
+        MadeChange |= foldTruncFromReductions(I);
         break;
       case Instruction::ICmp:
       case Instruction::FCmp:

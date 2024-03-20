@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -amdgpu-codegenprepare-break-large-phis=false < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -amdgpu-codegenprepare-break-large-phis=false < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}_amdgpu_ps_main:
 ;

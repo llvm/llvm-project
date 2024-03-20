@@ -72,13 +72,13 @@ void ValidateMemRefs::runOnFunction(BinaryFunction &BF) {
   }
 }
 
-void ValidateMemRefs::runOnFunctions(BinaryContext &BC) {
+Error ValidateMemRefs::runOnFunctions(BinaryContext &BC) {
   if (!BC.isX86())
-    return;
+    return Error::success();
 
   // Skip validation if not moving JT
   if (opts::JumpTables == JTS_NONE || opts::JumpTables == JTS_BASIC)
-    return;
+    return Error::success();
 
   ParallelUtilities::WorkFuncWithAllocTy ProcessFunction =
       [&](BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId) {
@@ -94,10 +94,11 @@ void ValidateMemRefs::runOnFunctions(BinaryContext &BC) {
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: memrefs validation is concluded\n");
 
   if (!ReplacedReferences)
-    return;
+    return Error::success();
 
-  outs() << "BOLT-INFO: validate-mem-refs updated " << ReplacedReferences
-         << " object references\n";
+  BC.outs() << "BOLT-INFO: validate-mem-refs updated " << ReplacedReferences
+            << " object references\n";
+  return Error::success();
 }
 
 } // namespace llvm::bolt

@@ -8,8 +8,12 @@
 
 // ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-bool-compare
 // ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
+// MSVC warning C4245: conversion from 'int' to 'wchar_t', signed/unsigned mismatch
+// MSVC warning C4305: truncation from 'int' to 'bool'
+// MSVC warning C4310: cast truncates constant value
 // MSVC warning C4389: '==': signed/unsigned mismatch
-// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4389
+// MSVC warning C4805: '==': unsafe mix of type 'char' and type 'bool' in operation
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4245 /wd4305 /wd4310 /wd4389 /wd4805
 
 // <algorithm>
 

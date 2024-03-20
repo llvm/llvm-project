@@ -111,21 +111,15 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
 
 std::vector<Diag> generateMissingIncludeDiagnostics(
     ParsedAST &AST, llvm::ArrayRef<MissingIncludeDiagInfo> MissingIncludes,
-    llvm::StringRef Code, HeaderFilter IgnoreHeaders) {
+    llvm::StringRef Code, HeaderFilter IgnoreHeaders, const ThreadsafeFS &TFS) {
   std::vector<Diag> Result;
   const SourceManager &SM = AST.getSourceManager();
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
 
-  auto FileStyle = format::getStyle(
-      format::DefaultFormatStyle, AST.tuPath(), format::DefaultFallbackStyle,
-      Code, &SM.getFileManager().getVirtualFileSystem());
-  if (!FileStyle) {
-    elog("Couldn't infer style", FileStyle.takeError());
-    FileStyle = format::getLLVMStyle();
-  }
+  auto FileStyle = getFormatStyleForFile(AST.tuPath(), Code, TFS, false);
 
   tooling::HeaderIncludes HeaderIncludes(AST.tuPath(), Code,
-                                         FileStyle->IncludeStyle);
+                                         FileStyle.IncludeStyle);
   for (const auto &SymbolWithMissingInclude : MissingIncludes) {
     llvm::StringRef ResolvedPath =
         SymbolWithMissingInclude.Providers.front().resolvedPath();
@@ -459,6 +453,7 @@ bool isPreferredProvider(const Inclusion &Inc,
 std::vector<Diag>
 issueIncludeCleanerDiagnostics(ParsedAST &AST, llvm::StringRef Code,
                                const IncludeCleanerFindings &Findings,
+                               const ThreadsafeFS &TFS,
                                HeaderFilter IgnoreHeaders) {
   trace::Span Tracer("IncludeCleaner::issueIncludeCleanerDiagnostics");
   std::vector<Diag> UnusedIncludes = generateUnusedIncludeDiagnostics(
@@ -466,7 +461,7 @@ issueIncludeCleanerDiagnostics(ParsedAST &AST, llvm::StringRef Code,
   std::optional<Fix> RemoveAllUnused = removeAllUnusedIncludes(UnusedIncludes);
 
   std::vector<Diag> MissingIncludeDiags = generateMissingIncludeDiagnostics(
-      AST, Findings.MissingIncludes, Code, IgnoreHeaders);
+      AST, Findings.MissingIncludes, Code, IgnoreHeaders, TFS);
   std::optional<Fix> AddAllMissing = addAllMissingIncludes(MissingIncludeDiags);
 
   std::optional<Fix> FixAll;

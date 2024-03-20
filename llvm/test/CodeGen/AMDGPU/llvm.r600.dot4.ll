@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=redwood -verify-machineinstrs < %s
+; RUN: llc -mtriple=r600 -mcpu=redwood -verify-machineinstrs < %s
 
 declare float @llvm.r600.dot4(<4 x float>, <4 x float>) nounwind readnone
 
