@@ -22,11 +22,11 @@ include "mlir/IR/BuiltinTypeInterfaces.td"
 // EmitC type definitions
 //===----------------------------------------------------------------------===//
 
-def Valid_EmitC_Integer_Type : Type<CPred<"emitc::isValidEmitCIntegerType($_self)">,
-    "EmitC integer type">;
+def EmitCIntegerType : Type<CPred<"emitc::isSupportedIntegerType($_self)">,
+    "integer type supported by EmitC">;
 
-def Valid_EmitC_Float_Type : Type<CPred<"emitc::isValidEmitCFloatType($_self)">,
-    "EmitC floating-point type">;
+def EmitCFloatType : Type<CPred<"emitc::isSupportedFloatType($_self)">,
+    "floating-point type supported by EmitC">;
 
 class EmitC_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<EmitC_Dialect, name, traits> {
