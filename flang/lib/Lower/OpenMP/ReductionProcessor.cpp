@@ -81,13 +81,15 @@ bool ReductionProcessor::supportedIntrinsicProcReduction(
   return redType;
 }
 
-std::string ReductionProcessor::getReductionName(
-    llvm::StringRef name, const fir::KindMapping& kindMap, mlir::Type ty, bool isByRef) {
+std::string ReductionProcessor::getReductionName(llvm::StringRef name,
+                                                 const fir::KindMapping &kindMap,
+                                                 mlir::Type ty, bool isByRef) {
   ty = fir::unwrapRefType(ty);
   std::string byrefSuffix = isByRef ? "_byref" : "";
   std::string typeString = fir::getTypeAsString(ty, kindMap, "");
   return name.str() + byrefSuffix + typeString;
 }
+
   ty = fir::unwrapRefType(ty);
 
   // extra string to distinguish reduction functions for variables passed by
