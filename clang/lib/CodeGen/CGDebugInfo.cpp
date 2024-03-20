@@ -5644,12 +5644,7 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
       llvm::codegenoptions::DebugLineTablesOnly)
     return;
 
-  // Not supported for invoke instruction.
-  if (Value->isTerminator())
-    return;
-
-  llvm::DebugLoc DL = Builder.getCurrentDebugLocation();
-  llvm::DIFile *Unit = DL->getFile();
+  llvm::DIFile *Unit = Builder.getCurrentDebugLocation()->getFile();
   llvm::DIType *Type = getOrCreateType(Ty, Unit);
 
   // Check if Value is already a declared variable and has debug info, in this
@@ -5680,14 +5675,20 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
     }
   }
 
-  // Insert a sequence of instructions to materialize Value on the stack.
+  // Find the correct location to insert a sequence of instructions to
+  // materialize Value on the stack.
   auto SaveInsertionPoint = Builder.saveIP();
-  llvm::Instruction *Next = Value->getIterator()->getNextNode();
-  if (Next)
+  if (llvm::InvokeInst *Invoke = dyn_cast<llvm::InvokeInst>(Value))
+    Builder.SetInsertPoint(Invoke->getNormalDest()->begin());
+  else if (llvm::Instruction *Next = Value->getIterator()->getNextNode())
     Builder.SetInsertPoint(Next);
   else
     Builder.SetInsertPoint(Value->getParent());
-  Builder.SetCurrentDebugLocation(Value->getDebugLoc());
+  auto SaveDebugLoc = Builder.getCurrentDebugLocation();
+  llvm::DebugLoc DL = Value->getDebugLoc();
+  if (DL.get())
+    Builder.SetCurrentDebugLocation(DL);
+
   llvm::AllocaInst *PseudoVar = Builder.CreateAlloca(Value->getType());
   Address PseudoVarAddr(PseudoVar, Value->getType(),
                         CharUnits::fromQuantity(PseudoVar->getAlign()));
@@ -5697,8 +5698,8 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
   Builder.CreateStore(Value, PseudoVarAddr);
 
   // Emit debug info for materialized Value.
-  unsigned Line = DL.getLine();
-  unsigned Column = DL.getCol();
+  unsigned Line = Builder.getCurrentDebugLocation().getLine();
+  unsigned Column = Builder.getCurrentDebugLocation().getCol();
   llvm::DILocalVariable *D = DBuilder.createAutoVariable(
       LexicalBlockStack.back(), "pseudo_var", Unit, Line, Type);
   llvm::DILocation *DIL =
@@ -5707,7 +5708,9 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
   SmallVector<uint64_t> Expr;
   DBuilder.insertDeclare(PseudoVar, D, DBuilder.createExpression(Expr), DIL,
                          Load);
+
   Builder.restoreIP(SaveInsertionPoint);
+  Builder.SetCurrentDebugLocation(SaveDebugLoc);
 }
 
 void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
