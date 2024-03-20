@@ -158,7 +158,7 @@ protected:
         if (module_list.GetSize() &&
             module_list.GetIndexForModule(module) == LLDB_INVALID_INDEX32)
           continue;
-        if (!FileSpec::Match(file_spec, line_entry.GetFile()))
+        if (!FileSpec::Match(file_spec, line_entry.file))
           continue;
         if (start_line > 0 && line_entry.line < start_line)
           continue;
@@ -239,7 +239,7 @@ protected:
             num_matches++;
             if (num_lines > 0 && num_matches > num_lines)
               break;
-            assert(cu_file_spec == line_entry.GetFile());
+            assert(cu_file_spec == line_entry.file);
             if (!cu_header_printed) {
               if (num_matches > 0)
                 strm << "\n\n";
@@ -760,11 +760,11 @@ protected:
     bool operator<(const SourceInfo &rhs) const {
       if (function.GetCString() < rhs.function.GetCString())
         return true;
-      if (line_entry.GetFile().GetDirectory().GetCString() <
-          rhs.line_entry.GetFile().GetDirectory().GetCString())
+      if (line_entry.file.GetDirectory().GetCString() <
+          rhs.line_entry.file.GetDirectory().GetCString())
         return true;
-      if (line_entry.GetFile().GetFilename().GetCString() <
-          rhs.line_entry.GetFile().GetFilename().GetCString())
+      if (line_entry.file.GetFilename().GetCString() <
+          rhs.line_entry.file.GetFilename().GetCString())
         return true;
       if (line_entry.line < rhs.line_entry.line)
         return true;
@@ -799,7 +799,7 @@ protected:
         sc.function->GetEndLineSourceInfo(end_file, end_line);
       } else {
         // We have an inlined function
-        start_file = source_info.line_entry.GetFile();
+        start_file = source_info.line_entry.file;
         start_line = source_info.line_entry.line;
         end_line = start_line + m_options.num_lines;
       }
