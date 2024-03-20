@@ -60,8 +60,11 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: AddAliasTags
 
+// PASSES-NEXT: Pipeline Collection : ['func.func', 'omp.reduction.declare']
 // PASSES-NEXT: 'func.func' Pipeline
-// PASSES-NEXT:   CFGConversion
+// PASSES-NEXT:   CFGConversionOnFunc
+// PASSES-NEXT: 'omp.reduction.declare' Pipeline
+// PASSES-NEXT:   CFGConversionOnReduction
 
 // PASSES-NEXT: SCFToControlFlow
 // PASSES-NEXT: Canonicalizer
