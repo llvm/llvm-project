@@ -3321,8 +3321,7 @@ Error BitcodeReader::parseConstants() {
       unsigned OpNum = 0;
       Type *PointeeType = nullptr;
       if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX_OLD ||
-          BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE ||
-          Record.size() % 2)
+          BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE || Record.size() % 2)
         PointeeType = getTypeByID(Record[OpNum++]);
 
       bool InBounds = false;
@@ -3333,7 +3332,7 @@ Error BitcodeReader::parseConstants() {
         unsigned InRangeIndex = Op >> 1;
         // "Upgrade" inrange by dropping it. The feature is too niche to
         // bother.
-        (void) InRangeIndex;
+        (void)InRangeIndex;
       } else if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE) {
         uint64_t Op = Record[OpNum++];
         InBounds = Op & 1;
@@ -3373,10 +3372,9 @@ Error BitcodeReader::parseConstants() {
           return error("Missing element type for old-style constant GEP");
       }
 
-      V = BitcodeConstant::create(Alloc, CurTy,
-                                  {Instruction::GetElementPtr, InBounds,
-                                   PointeeType, InRange},
-                                  Elts);
+      V = BitcodeConstant::create(
+          Alloc, CurTy,
+          {Instruction::GetElementPtr, InBounds, PointeeType, InRange}, Elts);
       break;
     }
     case bitc::CST_CODE_CE_SELECT: {  // CE_SELECT: [opval#, opval#, opval#]
