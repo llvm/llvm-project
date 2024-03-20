@@ -76,12 +76,14 @@ public:
   static bool
   doReductionByRef(const llvm::SmallVectorImpl<mlir::Value> &reductionVars);
 
-  static std::string getReductionName(llvm::StringRef name, mlir::Type ty,
-                                      bool isByRef);
+  static std::string getReductionName(llvm::StringRef name,
+                                      const fir::KindMapping &kindMap,
+                                      mlir::Type ty, bool isByRef);
 
   static std::string
   getReductionName(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp,
-                   mlir::Type ty, bool isByRef);
+                   const fir::KindMapping &kindMap, mlir::Type ty,
+                   bool isByRef);
 
   /// This function returns the identity value of the operator \p
   /// reductionOpName. For example:

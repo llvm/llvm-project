@@ -14,7 +14,7 @@ enddo
 print *,r
 end program
 
-! CHECK-LABEL   omp.declare_reduction @add_reduction_i_32_box_2_byref : !fir.ref<!fir.box<!fir.array<2xi32>>> init {
+! CHECK-LABEL   omp.declare_reduction @add_reduction_byref_box_2xi32 : !fir.ref<!fir.box<!fir.array<2xi32>>> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<2xi32>>>):
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<2xi32> {bindc_name = ".tmp"}
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i32
@@ -63,7 +63,7 @@ end program
 ! CHECK:             %[[VAL_11:.*]] = fir.embox %[[VAL_5]]#1(%[[VAL_4]]) : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xi32>>
 ! CHECK:             %[[VAL_12:.*]] = fir.alloca !fir.box<!fir.array<2xi32>>
 ! CHECK:             fir.store %[[VAL_11]] to %[[VAL_12]] : !fir.ref<!fir.box<!fir.array<2xi32>>>
-! CHECK:             omp.wsloop byref reduction(@add_reduction_i_32_box_2_byref %[[VAL_12]] -> %[[VAL_13:.*]] : !fir.ref<!fir.box<!fir.array<2xi32>>>)  for  (%[[VAL_14:.*]]) : i32 = (%[[VAL_8]]) to (%[[VAL_9]]) inclusive step (%[[VAL_10]]) {
+! CHECK:             omp.wsloop byref reduction(@add_reduction_byref_box_2xi32 %[[VAL_12]] -> %[[VAL_13:.*]] : !fir.ref<!fir.box<!fir.array<2xi32>>>)  for  (%[[VAL_14:.*]]) : i32 = (%[[VAL_8]]) to (%[[VAL_9]]) inclusive step (%[[VAL_10]]) {
 ! CHECK:               fir.store %[[VAL_14]] to %[[VAL_7]]#1 : !fir.ref<i32>
 ! CHECK:               %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]] {uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.array<2xi32>>>) -> (!fir.ref<!fir.box<!fir.array<2xi32>>>, !fir.ref<!fir.box<!fir.array<2xi32>>>)
 ! CHECK:               %[[VAL_16:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<i32>
