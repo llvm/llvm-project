@@ -395,7 +395,7 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
   }
 }
 
-// \returns a low 256 vgpr representing a high vgpr \p Reg [v256..v512] or
+// \returns a low 256 vgpr representing a high vgpr \p Reg [v256..v1023] or
 // \p Reg itself otherwise.
 static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCRegisterInfo &MRI) {
   unsigned Enc = MRI.getEncodingValue(Reg);

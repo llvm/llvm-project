@@ -150,9 +150,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
   unsigned NewMode = Mode;
 
   for (unsigned I = 0; I < 4; ++I) {
-    MachineOperand *Op = nullptr;
-
-    Op = TII->getNamedOperand(MI, Ops[I]);
+    MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
 
     MCRegister Reg;
     unsigned MSBits;
