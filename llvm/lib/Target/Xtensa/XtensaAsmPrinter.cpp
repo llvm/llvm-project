@@ -63,15 +63,15 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
   MCSymbol *LblSym = GetCPISymbol(ACPV->getLabelId());
   // TODO find a better way to check whether we emit data to .s file
   if (OutStreamer->hasRawTextSupport()) {
-    std::string SymName("\t.literal ");
-    SymName += LblSym->getName();
-    SymName += ", ";
-    SymName += MCSym->getName();
+    SmallString<60> Str;
+    raw_svector_ostream LiteralStr(Str);
+    LiteralStr << "\t.literal " << LblSym->getName() << ", "
+               << MCSym->getName();
 
     StringRef Modifier = ACPV->getModifierText();
-    SymName += Modifier;
+    LiteralStr << Modifier;
 
-    OutStreamer->emitRawText(StringRef(SymName));
+    OutStreamer->emitRawText(StringRef(LiteralStr.str()));
   } else {
     MCSymbolRefExpr::VariantKind VK =
         getModifierVariantKind(ACPV->getModifier());
@@ -101,21 +101,22 @@ void XtensaAsmPrinter::emitMachineConstantPoolEntry(
     MCSymbol *LblSym = GetCPISymbol(i);
     // TODO find a better way to check whether we emit data to .s file
     if (OutStreamer->hasRawTextSupport()) {
-      std::string str("\t.literal ");
-      str += LblSym->getName();
-      str += ", ";
+      SmallString<60> Str;
+      raw_svector_ostream LiteralStr(Str);
+      LiteralStr << "\t.literal " << LblSym->getName() << ", ";
+
       const Constant *C = CPE.Val.ConstVal;
 
       if (const auto *CFP = dyn_cast<ConstantFP>(C)) {
-        str += toString(CFP->getValueAPF().bitcastToAPInt(), 10, true);
+        LiteralStr << toString(CFP->getValueAPF().bitcastToAPInt(), 10, true);
       } else if (const auto *CI = dyn_cast<ConstantInt>(C)) {
-        str += toString(CI->getValue(), 10, true);
+        LiteralStr << toString(CI->getValue(), 10, true);
       } else {
         report_fatal_error(
             "This constant type is not supported yet in constantpool");
       }
 
-      OutStreamer->emitRawText(StringRef(str));
+      OutStreamer->emitRawText(StringRef(LiteralStr.str()));
     } else {
       OutStreamer->emitCodeAlignment(
           Align(4), OutStreamer->getContext().getSubtargetInfo());
