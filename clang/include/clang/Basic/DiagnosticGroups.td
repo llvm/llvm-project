@@ -1063,6 +1063,7 @@ def Extra : DiagGroup<"extra", [
     EmptyInitStatement,
     StringConcatation,
     FUseLdPath,
+    CastFunctionType,
   ]>;
 
 def Most : DiagGroup<"most", [

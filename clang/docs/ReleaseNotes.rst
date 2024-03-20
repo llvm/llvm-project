@@ -213,6 +213,8 @@ Modified Compiler Flags
   the ``promoted`` algorithm for complex division when possible rather than the
   less basic (limited range) algorithm.
 
+- Added ``-Wcast-function-type`` as a warning enabled by ``-Wextra``. #GH76872
+
 Removed Compiler Flags
 -------------------------
 
