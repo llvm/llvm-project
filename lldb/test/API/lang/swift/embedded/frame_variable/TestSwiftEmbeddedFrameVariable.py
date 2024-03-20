@@ -11,179 +11,161 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
     def test(self):
         self.build()
 
-        target, process, _, _ = lldbutil.run_to_source_breakpoint(
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.swift")
         )
+        frame = thread.frames[0]
+        self.assertTrue(frame, "Frame 0 is valid.")
 
-        self.expect(
-            "frame variable varB",
-            substrs=["varB = ", "a = (field = 4.5)", "b = 123456"],
-        )
-        self.expect(
-            "frame variable tuple",
-            substrs=[
-                "(a.A, a.B) tuple = {",
-                "0 = (field = 4.5)",
-                "1 = {",
-                "a = (field = 4.5)",
-                "b = 123456",
-            ],
-        )
+        varB = frame.FindVariable("varB")
+        field = varB.GetChildMemberWithName("a").GetChildMemberWithName("field")
+        lldbutil.check_variable(self, field, False, value='4.5')
+        b = varB.GetChildMemberWithName("b")
+        lldbutil.check_variable(self, b, False, value='123456')
 
-        self.expect(
-            "frame variable nonPayload1", substrs=["NonPayloadEnum) nonPayload1 = one"]
-        )
-        self.expect(
-            "frame variable nonPayload2", substrs=["NonPayloadEnum) nonPayload2 = two"]
-        )
-        self.expect(
-            "frame variable singlePayload",
-            substrs=[
-                "SinglePayloadEnum) singlePayload = ",
-                "payload {",
-                "a = (field = 4.5)",
-                "b = 123456",
-            ],
-        )
-        self.expect(
-            "frame variable emptySinglePayload",
-            substrs=["SinglePayloadEnum) emptySinglePayload = nonPayloadTwo"],
-        )
+        tuple = frame.FindVariable("tuple")
+        first = tuple.GetChildAtIndex(0)
+        field = first.GetChildMemberWithName("field")
+        lldbutil.check_variable(self, field, False, value='4.5')
+        second = tuple.GetChildAtIndex(1)
+        a = second.GetChildMemberWithName("a")
+        field = a.GetChildMemberWithName("field")
+        lldbutil.check_variable(self, field, False, value='4.5')
+        b = second.GetChildMemberWithName("b")
+        lldbutil.check_variable(self, b, False, value='123456')
 
-        self.expect(
-            "frame variable smallMultipayloadEnum1",
-            substrs=[
-                "SmallMultipayloadEnum) smallMultipayloadEnum1 = one {",
-                "one = two",
-            ],
-        )
-        self.expect(
-            "frame variable smallMultipayloadEnum2",
-            substrs=[
-                "SmallMultipayloadEnum) smallMultipayloadEnum2 = two {",
-                "two = one",
-            ],
-        )
-        self.expect(
-            "frame variable bigMultipayloadEnum1",
-            substrs=[
-                "BigMultipayloadEnum) bigMultipayloadEnum1 = one {",
-                "0 = ",
-                "(supField = 42)",
-                "1 = ",
-                "(supField = 43)",
-                "2 = ",
-                "(supField = 44)",
-            ],
-        )
+        nonPayload1 = frame.FindVariable("nonPayload1")
+        lldbutil.check_variable(self, nonPayload1, False, value='one')
 
-        self.expect(
-            "frame variable fullMultipayloadEnum1",
-            substrs=["FullMultipayloadEnum) fullMultipayloadEnum1 = ", "(one = 120)"],
-        )
-        self.expect(
-            "frame variable fullMultipayloadEnum2",
-            substrs=[
-                "FullMultipayloadEnum) fullMultipayloadEnum2 = ",
-                "(two = 9.5)",
-            ],
-        )
+        nonPayload2 = frame.FindVariable("nonPayload2")
+        lldbutil.check_variable(self, nonPayload2, False, value='two')
 
-        self.expect(
-            "frame variable bigFullMultipayloadEnum1",
-            substrs=[
-                "a.BigFullMultipayloadEnum) bigFullMultipayloadEnum1 = one {",
-                "one = (0 = 209, 1 = 315)",
-            ],
-        )
-        self.expect(
-            "frame variable bigFullMultipayloadEnum2",
-            substrs=[
-                "a.BigFullMultipayloadEnum) bigFullMultipayloadEnum2 = two {",
-                "two = (0 = 452.5, 1 = 753.5)",
-            ],
-        )
+        singlePayload = frame.FindVariable("singlePayload")
+        payload = singlePayload.GetChildMemberWithName('payload')
+        field = payload.GetChildMemberWithName('a').GetChildMemberWithName('field')
+        lldbutil.check_variable(self, field, False, value='4.5')
+        b = payload.GetChildMemberWithName('b')
+        lldbutil.check_variable(self, b, False, value='123456')
 
-        self.expect("frame variable sup", substrs=["Sup) sup = ", "supField = 42"])
-        self.expect(
-            "frame variable sub",
-            substrs=[
-                "Sub) sub = ",
-                "Sup = {",
-                "supField = 42",
-                "subField = {",
-                "a = (field = 4.5",
-                "b = 123456",
-            ],
-        )
-        self.expect(
-            "frame variable subSub",
-            substrs=[
-                "SubSub) subSub =",
-                "a.Sub = {",
-                "a.Sup = {",
-                "supField = 42",
-                "subField = {",
-                "a = (field = 4.5",
-                "b = 123456",
-                "subSubField = (field = 4.5)",
-            ],
-        )
+        emptySinglePayload = frame.FindVariable("emptySinglePayload")
+        lldbutil.check_variable(self, emptySinglePayload, False, value='nonPayloadTwo')
 
-        self.expect(
-            "frame variable gsp",
-            substrs=[
-                "GenericStructPair<Int, Double>) gsp =",
-                "(t = 42, u = 94.5)",
-            ],
-        )
+        smallMultipayloadEnum1 = frame.FindVariable("smallMultipayloadEnum1")
+        one = smallMultipayloadEnum1.GetChildMemberWithName("one")
+        lldbutil.check_variable(self, one, False, value='two')
 
-        self.expect(
-            "frame variable gsp2",
-            substrs=[
-                "a.GenericStructPair<a.Sup, a.B>) gsp2 = {",
-                "t = ",
-                "(supField = 42)",
-                "u = {",
-                "a = (field = 4.5)",
-                "b = 123456",
-            ],
-        )
+        smallMultipayloadEnum2 = frame.FindVariable("smallMultipayloadEnum2")
+        two = smallMultipayloadEnum2.GetChildMemberWithName("two")
+        lldbutil.check_variable(self, two, False, value='one')
 
-        self.expect(
-            "frame variable gsp3",
-            substrs=[
-                "(a.GenericStructPair<a.BigFullMultipayloadEnum,",
-                "a.SmallMultipayloadEnum>) gsp3 = {",
-                "t = one {",
-                "one = (0 = 209, 1 = 315)",
-                "u = two {",
-            ],
-        )
 
-        self.expect(
-            "frame variable gcp",
-            substrs=[
-                "GenericClassPair<Double, Int>) gcp =",
-                "(t = 43.799999999999997, u = 9348)",
-            ],
-        )
+        bigMultipayloadEnum1 = frame.FindVariable("bigMultipayloadEnum1")
+        one = bigMultipayloadEnum1.GetChildMemberWithName("one")
+        first = one.GetChildAtIndex(0).GetChildMemberWithName("supField")
+        second = one.GetChildAtIndex(1).GetChildMemberWithName("supField")
+        third = one.GetChildAtIndex(2).GetChildMemberWithName("supField")
+        lldbutil.check_variable(self, first, False, value='42')
+        lldbutil.check_variable(self, second, False, value='43')
+        lldbutil.check_variable(self, third, False, value='44')
 
-        self.expect(
-            "frame variable either",
-            substrs=["(a.Either<Int, Double>) either =", "left (left = 1234)"],
-        )
 
-        self.expect(
-            "frame variable either2",
-            substrs=[
-                "(a.Either<a.Sup, a.GenericStructPair<a.BigFullMultipayloadEnum,",
-                "a.SmallMultipayloadEnum>>)",
-                "either2 = right {",
-                "right = {",
-                "t = one {",
-                "one = (0 = 209, 1 = 315)",
-                "u = two {",
-                "two = one",
-            ],
-        )
+        fullMultipayloadEnum1 = frame.FindVariable("fullMultipayloadEnum1")
+        one = fullMultipayloadEnum1.GetChildMemberWithName("one")
+        lldbutil.check_variable(self, one, False, value='120')
+
+        fullMultipayloadEnum2 = frame.FindVariable("fullMultipayloadEnum2")
+        two = fullMultipayloadEnum2.GetChildMemberWithName("two")
+        lldbutil.check_variable(self, two, False, value='9.5')
+
+        bigFullMultipayloadEnum1 = frame.FindVariable("bigFullMultipayloadEnum1")
+        one = bigFullMultipayloadEnum1.GetChildMemberWithName("one")
+        first = one.GetChildAtIndex(0)
+        second = one.GetChildAtIndex(1)
+        lldbutil.check_variable(self, first, False, value='209')
+        lldbutil.check_variable(self, second, False, value='315')
+
+        bigFullMultipayloadEnum2 = frame.FindVariable("bigFullMultipayloadEnum2")
+        two = bigFullMultipayloadEnum2.GetChildMemberWithName("two")
+        first = two.GetChildAtIndex(0)
+        second = two.GetChildAtIndex(1)
+        lldbutil.check_variable(self, first, False, value='452.5')
+        lldbutil.check_variable(self, second, False, value='753.5')
+
+
+        sup = frame.FindVariable("sup")
+        supField = sup.GetChildMemberWithName("supField")
+        lldbutil.check_variable(self, supField, False, value='42')
+
+        sub = frame.FindVariable("sub")
+        supField = sub.GetChildMemberWithName("supField")
+        lldbutil.check_variable(self, supField, False, value='42')
+        subField = sub.GetChildMemberWithName("subField")
+        a = subField.GetChildMemberWithName("a")
+        field = a.GetChildMemberWithName("field")
+        lldbutil.check_variable(self, field, False, value='4.5')
+        b = subField.GetChildMemberWithName("b")
+        lldbutil.check_variable(self, b, False, value='123456')
+
+        subSub = frame.FindVariable("subSub")
+        supField = subSub.GetChildMemberWithName("supField")
+        lldbutil.check_variable(self, supField, False, value='42')
+        subField = subSub.GetChildMemberWithName("subField")
+        a = subField.GetChildMemberWithName("a")
+        field = a.GetChildMemberWithName("field")
+        lldbutil.check_variable(self, field, False, value='4.5')
+        b = subField.GetChildMemberWithName("b")
+        lldbutil.check_variable(self, b, False, value='123456')
+
+        subSubField = subSub.GetChildMemberWithName("subSubField").GetChildMemberWithName("field")
+        lldbutil.check_variable(self, subSubField, False, value='4.5')
+
+        gsp = frame.FindVariable("gsp")
+        t = gsp.GetChildMemberWithName("t")
+        lldbutil.check_variable(self, t, False, value='42')
+        u = gsp.GetChildMemberWithName("u")
+        lldbutil.check_variable(self, u, False, value='94.5')
+
+        gsp2 = frame.FindVariable("gsp2")
+        t = gsp2.GetChildMemberWithName("t")
+        supField = t.GetChildMemberWithName("supField")
+        lldbutil.check_variable(self, supField, False, value='42')
+        u = gsp2.GetChildMemberWithName("u")
+        a = u.GetChildMemberWithName("a")
+        field = a.GetChildMemberWithName("field")
+        lldbutil.check_variable(self, field, False, value='4.5')
+        b = u.GetChildMemberWithName("b")
+        lldbutil.check_variable(self, b, False, value='123456')
+
+        gsp3 = frame.FindVariable("gsp3")
+        t = gsp3.GetChildMemberWithName("t")
+        one = t.GetChildMemberWithName("one")
+        first = one.GetChildAtIndex(0)
+        second = one.GetChildAtIndex(1)
+        lldbutil.check_variable(self, first, False, value='209')
+        lldbutil.check_variable(self, second, False, value='315')
+        u = gsp3.GetChildMemberWithName("u")
+        two = u.GetChildMemberWithName("two")
+        lldbutil.check_variable(self, two, False, value='one')
+
+        gcp = frame.FindVariable("gcp")
+        t = gcp.GetChildMemberWithName("t")
+        lldbutil.check_variable(self, t, False, value='55.5')
+        u = gcp.GetChildMemberWithName("u")
+        lldbutil.check_variable(self, u, False, value='9348')
+
+
+        either = frame.FindVariable("either")
+        left = either.GetChildMemberWithName("left")
+        lldbutil.check_variable(self, left, False, value='1234')
+
+        either2 = frame.FindVariable("either2")
+        right = either2.GetChildMemberWithName("right")
+        t = right.GetChildMemberWithName("t")
+        one = t.GetChildMemberWithName("one")
+        first = one.GetChildAtIndex(0)
+        second = one.GetChildAtIndex(1)
+        lldbutil.check_variable(self, first, False, value='209')
+        lldbutil.check_variable(self, second, False, value='315')
+        u = right.GetChildMemberWithName("u")
+        two = u.GetChildMemberWithName("two")
+        lldbutil.check_variable(self, two, False, value='one')
