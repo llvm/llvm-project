@@ -135,7 +135,7 @@ frameInfo:
   stackSize:       0
   offsetAdjustment: 0
   maxAlignment:    0
-  adjustsStack:    true
+  adjustsStack:    false
   hasCalls:        true
   maxCallFrameSize: 0
   hasOpaqueSPAdjustment: false
