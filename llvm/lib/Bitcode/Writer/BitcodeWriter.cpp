@@ -3570,9 +3570,9 @@ void ModuleBitcodeWriter::writeFunction(
         // instruction. Write it after the instruction so that it's easy to
         // re-attach to the instruction reading the records in.
         for (DbgRecord &DR : I.DbgMarker->getDbgRecordRange()) {
-          if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-            Vals.push_back(VE.getMetadataID(&*DPL->getDebugLoc()));
-            Vals.push_back(VE.getMetadataID(DPL->getLabel()));
+          if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+            Vals.push_back(VE.getMetadataID(&*DLR->getDebugLoc()));
+            Vals.push_back(VE.getMetadataID(DLR->getLabel()));
             Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_LABEL, Vals);
             Vals.clear();
             continue;
