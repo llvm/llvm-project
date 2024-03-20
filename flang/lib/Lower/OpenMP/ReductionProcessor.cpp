@@ -457,8 +457,8 @@ mlir::omp::DeclareReductionOp ReductionProcessor::createDeclareReduction(
                       {loc, loc});
 
   builder.setInsertionPointToEnd(&decl.getReductionRegion().back());
-  mlir::Value op1 = decl.getReductionRegion().front().getArgument(0);
-  mlir::Value op2 = decl.getReductionRegion().front().getArgument(1);
+  mlir::Value &op1 = decl.getReductionRegion().front().getArgument(0);
+  mlir::Value &op2 = decl.getReductionRegion().front().getArgument(1);
   genCombiner(builder, loc, redId, type, op1, op2, isByRef);
 
   return decl;
