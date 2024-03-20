@@ -109,8 +109,13 @@ def SparseTensor_Iterator : SparseTensor_Type<"Iterator"> {
      LevelTypeArrayParameter: $lvlTypes
   );
 
-  // let skipDefaultBuilders = 1;
-  // let hasCustomAssemblyFormat = 1;
+  let extraClassDeclaration = [{
+     unsigned getSpaceDim() {
+       return getLvlTypes().size();
+     }
+  }];
+
+
   let assemblyFormat="`<` $lvlTypes `>`";
 }
 
@@ -123,13 +128,15 @@ def SparseTensor_IterSpace : SparseTensor_Type<"IterSpace"> {
   );
 
   let extraClassDeclaration = [{
+     unsigned getSpaceDim() {
+       return getLvlTypes().size();
+     }
+
      ::mlir::sparse_tensor::IteratorType getIteratorType() const {
         return IteratorType::get(getContext(), getLvlTypes());
      }
   }];
 
-  // let skipDefaultBuilders = 1;
-  // let hasCustomAssemblyFormat = 1;
   let assemblyFormat="`<` $lvlTypes `>`";
 }
 
