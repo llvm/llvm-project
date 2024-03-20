@@ -82,7 +82,7 @@ void DbgRecord::deleteRecord() {
     delete cast<DbgVariableRecord>(this);
     return;
   case LabelKind:
-    delete cast<DPLabel>(this);
+    delete cast<DbgLabelRecord>(this);
     return;
   }
   llvm_unreachable("unsupported DbgRecord kind");
@@ -94,7 +94,7 @@ void DbgRecord::print(raw_ostream &O, bool IsForDebug) const {
     cast<DbgVariableRecord>(this)->print(O, IsForDebug);
     return;
   case LabelKind:
-    cast<DPLabel>(this)->print(O, IsForDebug);
+    cast<DbgLabelRecord>(this)->print(O, IsForDebug);
     return;
   };
   llvm_unreachable("unsupported DbgRecord kind");
@@ -107,7 +107,7 @@ void DbgRecord::print(raw_ostream &O, ModuleSlotTracker &MST,
     cast<DbgVariableRecord>(this)->print(O, MST, IsForDebug);
     return;
   case LabelKind:
-    cast<DPLabel>(this)->print(O, MST, IsForDebug);
+    cast<DbgLabelRecord>(this)->print(O, MST, IsForDebug);
     return;
   };
   llvm_unreachable("unsupported DbgRecord kind");
@@ -121,7 +121,8 @@ bool DbgRecord::isIdenticalToWhenDefined(const DbgRecord &R) const {
     return cast<DbgVariableRecord>(this)->isIdenticalToWhenDefined(
         *cast<DbgVariableRecord>(&R));
   case LabelKind:
-    return cast<DPLabel>(this)->getLabel() == cast<DPLabel>(R).getLabel();
+    return cast<DbgLabelRecord>(this)->getLabel() ==
+           cast<DbgLabelRecord>(R).getLabel();
   };
   llvm_unreachable("unsupported DbgRecord kind");
 }
@@ -136,24 +137,25 @@ DbgRecord::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
   case ValueKind:
     return cast<DbgVariableRecord>(this)->createDebugIntrinsic(M, InsertBefore);
   case LabelKind:
-    return cast<DPLabel>(this)->createDebugIntrinsic(M, InsertBefore);
+    return cast<DbgLabelRecord>(this)->createDebugIntrinsic(M, InsertBefore);
   };
   llvm_unreachable("unsupported DbgRecord kind");
 }
 
-DPLabel::DPLabel(MDNode *Label, MDNode *DL)
+DbgLabelRecord::DbgLabelRecord(MDNode *Label, MDNode *DL)
     : DbgRecord(LabelKind, DebugLoc(DL)), Label(Label) {
   assert(Label && "Unexpected nullptr");
   assert((isa<DILabel>(Label) || Label->isTemporary()) &&
          "Label type must be or resolve to a DILabel");
 }
-DPLabel::DPLabel(DILabel *Label, DebugLoc DL)
+DbgLabelRecord::DbgLabelRecord(DILabel *Label, DebugLoc DL)
     : DbgRecord(LabelKind, DL), Label(Label) {
   assert(Label && "Unexpected nullptr");
 }
 
-DPLabel *DPLabel::createUnresolvedDPLabel(MDNode *Label, MDNode *DL) {
-  return new DPLabel(Label, DL);
+DbgLabelRecord *DbgLabelRecord::createUnresolvedDbgLabelRecord(MDNode *Label,
+                                                               MDNode *DL) {
+  return new DbgLabelRecord(Label, DL);
 }
 
 DbgVariableRecord::DbgVariableRecord(DbgVariableRecord::LocationType Type,
@@ -380,7 +382,7 @@ DbgRecord *DbgRecord::clone() const {
   case ValueKind:
     return cast<DbgVariableRecord>(this)->clone();
   case LabelKind:
-    return cast<DPLabel>(this)->clone();
+    return cast<DbgLabelRecord>(this)->clone();
   };
   llvm_unreachable("unsupported DbgRecord kind");
 }
@@ -389,8 +391,8 @@ DbgVariableRecord *DbgVariableRecord::clone() const {
   return new DbgVariableRecord(*this);
 }
 
-DPLabel *DPLabel::clone() const {
-  return new DPLabel(getLabel(), getDebugLoc());
+DbgLabelRecord *DbgLabelRecord::clone() const {
+  return new DbgLabelRecord(getLabel(), getDebugLoc());
 }
 
 DbgVariableIntrinsic *
@@ -450,8 +452,9 @@ DbgVariableRecord::createDebugIntrinsic(Module *M,
   return DVI;
 }
 
-DbgLabelInst *DPLabel::createDebugIntrinsic(Module *M,
-                                            Instruction *InsertBefore) const {
+DbgLabelInst *
+DbgLabelRecord::createDebugIntrinsic(Module *M,
+                                     Instruction *InsertBefore) const {
   auto *LabelFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_label);
   Value *Args[] = {
       MetadataAsValue::get(getDebugLoc()->getContext(), getLabel())};

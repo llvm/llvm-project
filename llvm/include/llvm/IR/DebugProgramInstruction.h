@@ -222,23 +222,25 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DbgRecord &R) {
 /// llvm.dbg.label intrinsic.
 /// FIXME: Rename DbgLabelRecord when DbgVariableRecord is renamed to
 /// DbgVariableRecord.
-class DPLabel : public DbgRecord {
+class DbgLabelRecord : public DbgRecord {
   DbgRecordParamRef<DILabel> Label;
 
   /// This constructor intentionally left private, so that it is only called via
-  /// "createUnresolvedDPLabel", which clearly expresses that it is for parsing
-  /// only.
-  DPLabel(MDNode *Label, MDNode *DL);
+  /// "createUnresolvedDbgLabelRecord", which clearly expresses that it is for
+  /// parsing only.
+  DbgLabelRecord(MDNode *Label, MDNode *DL);
 
 public:
-  DPLabel(DILabel *Label, DebugLoc DL);
+  DbgLabelRecord(DILabel *Label, DebugLoc DL);
 
-  /// For use during parsing; creates a DPLabel from as-of-yet unresolved
-  /// MDNodes. Trying to access the resulting DPLabel's fields before they are
-  /// resolved, or if they resolve to the wrong type, will result in a crash.
-  static DPLabel *createUnresolvedDPLabel(MDNode *Label, MDNode *DL);
+  /// For use during parsing; creates a DbgLabelRecord from as-of-yet unresolved
+  /// MDNodes. Trying to access the resulting DbgLabelRecord's fields before
+  /// they are resolved, or if they resolve to the wrong type, will result in a
+  /// crash.
+  static DbgLabelRecord *createUnresolvedDbgLabelRecord(MDNode *Label,
+                                                        MDNode *DL);
 
-  DPLabel *clone() const;
+  DbgLabelRecord *clone() const;
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
   DbgLabelInst *createDebugIntrinsic(Module *M,
