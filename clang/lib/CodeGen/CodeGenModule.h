@@ -348,6 +348,8 @@ private:
   /// yet.
   llvm::DenseMap<StringRef, GlobalDecl> DeferredDecls;
 
+  llvm::StringSet<llvm::BumpPtrAllocator> DeferredResolversToEmit;
+
   /// This is a list of deferred decls which we have seen that *are* actually
   /// referenced. These get code generated when the module is done.
   std::vector<GlobalDecl> DeferredDeclsToEmit;
@@ -1587,6 +1589,9 @@ private:
       bool DontDefer = false, bool IsThunk = false,
       llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
       ForDefinition_t IsForDefinition = NotForDefinition);
+
+  // Adds a declaration to the list of multi version functions if not present.
+  void AddDeferredMultiVersionResolverToEmit(GlobalDecl GD);
 
   // References to multiversion functions are resolved through an implicitly
   // defined resolver function. This function is responsible for creating
