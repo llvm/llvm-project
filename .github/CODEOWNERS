@@ -106,6 +106,14 @@ clang/test/AST/Interp/ @tbaederr
 # MLIR Sparsifier.
 /mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
 
+# MLIR NVGPU Dialect
+/mlir/**/NVGPU*/ @grypp
+/mlir/test/**/CUDA/ @grypp
+
+# MLIR NVVM Dialect in MLIR
+/mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
+/mlir/**/NVVM*/ @grypp
+
 # BOLT
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
 
