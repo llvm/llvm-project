@@ -58,7 +58,7 @@ class AttributeSetNode;
 class BasicBlock;
 class ConstantRangeAttributeImpl;
 struct DiagnosticHandler;
-class DPMarker;
+class DbgMarker;
 class ElementCount;
 class Function;
 class GlobalObject;
@@ -1689,15 +1689,15 @@ public:
   /// "trail" in such a way. These are stored in LLVMContext because typically
   /// LLVM only edits a small number of blocks at a time, so there's no need to
   /// bloat BasicBlock with such a data structure.
-  SmallDenseMap<BasicBlock *, DPMarker *> TrailingDbgRecords;
+  SmallDenseMap<BasicBlock *, DbgMarker *> TrailingDbgRecords;
 
   // Set, get and delete operations for TrailingDbgRecords.
-  void setTrailingDbgRecords(BasicBlock *B, DPMarker *M) {
+  void setTrailingDbgRecords(BasicBlock *B, DbgMarker *M) {
     assert(!TrailingDbgRecords.count(B));
     TrailingDbgRecords[B] = M;
   }
 
-  DPMarker *getTrailingDbgRecords(BasicBlock *B) {
+  DbgMarker *getTrailingDbgRecords(BasicBlock *B) {
     return TrailingDbgRecords.lookup(B);
   }
 

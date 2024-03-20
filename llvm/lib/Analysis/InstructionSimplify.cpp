@@ -3736,15 +3736,10 @@ static std::optional<ConstantRange> getRange(Value *V,
     if (MDNode *MD = IIQ.getMetadata(I, LLVMContext::MD_range))
       return getConstantRangeFromMetadata(*MD);
 
-  Attribute Range;
-  if (const Argument *A = dyn_cast<Argument>(V)) {
-    Range = A->getAttribute(llvm::Attribute::Range);
-  } else if (const CallBase *CB = dyn_cast<CallBase>(V)) {
-    Range = CB->getRetAttr(llvm::Attribute::Range);
-  }
-
-  if (Range.isValid())
-    return Range.getRange();
+  if (const Argument *A = dyn_cast<Argument>(V))
+    return A->getRange();
+  else if (const CallBase *CB = dyn_cast<CallBase>(V))
+    return CB->getRange();
 
   return std::nullopt;
 }
