@@ -55,6 +55,10 @@ module std_condition_variable [system] {
   header "condition_variable"
   export *
 }
+module std_contracts [system] {
+  header "contracts"
+  export *
+}
 module std_coroutine [system] {
   header "coroutine"
   export *
