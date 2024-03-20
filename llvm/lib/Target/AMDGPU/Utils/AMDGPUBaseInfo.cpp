@@ -3164,7 +3164,7 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
   if (AMDGPU::isGFX10(ST))
     return 12;
 
-  if (AMDGPU::isGFX12(ST))
+  if (AMDGPU::isGFX12Plus(ST))
     return 24;
   return 13;
 }
