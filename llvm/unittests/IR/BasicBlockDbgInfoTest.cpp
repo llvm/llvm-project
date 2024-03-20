@@ -147,10 +147,10 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   // Fetch out our two markers,
   Instruction *Instr1 = &*BB.begin();
   Instruction *Instr2 = Instr1->getNextNode();
-  DPMarker *Marker1 = Instr1->DbgMarker;
-  DPMarker *Marker2 = Instr2->DbgMarker;
+  DbgMarker *Marker1 = Instr1->DebugMarker;
+  DbgMarker *Marker2 = Instr2->DebugMarker;
   // There's no TrailingDbgRecords marker allocated yet.
-  DPMarker *EndMarker = nullptr;
+  DbgMarker *EndMarker = nullptr;
 
   // Check that the "getMarker" utilities operate as expected.
   EXPECT_EQ(BB.getMarker(Instr1->getIterator()), Marker1);
@@ -219,7 +219,7 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   // Inserting at end(): should dislodge the DbgVariableRecords, if they were
   // dbg.values then they would sit "above" the new instruction.
   Instr1->insertBefore(BB, BB.end());
-  EXPECT_EQ(Instr1->DbgMarker->StoredDbgRecords.size(), 2u);
+  EXPECT_EQ(Instr1->DebugMarker->StoredDbgRecords.size(), 2u);
   // We should de-allocate the trailing marker when something is inserted
   // at end().
   EXPECT_EQ(BB.getTrailingDbgRecords(), nullptr);
@@ -234,7 +234,7 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   // this be the final instr in the block, and DbgVariableRecords aren't allowed
   // to live off the end forever.
   Instr2->insertBefore(BB, BB.begin());
-  EXPECT_EQ(Instr2->DbgMarker->StoredDbgRecords.size(), 2u);
+  EXPECT_EQ(Instr2->DebugMarker->StoredDbgRecords.size(), 2u);
   EXPECT_EQ(BB.getTrailingDbgRecords(), nullptr);
 
   // Teardown,
@@ -297,26 +297,27 @@ TEST(BasicBlockDbgInfoTest, HeadBitOperations) {
   Instruction *CInst = BInst->getNextNode();
   Instruction *DInst = CInst->getNextNode();
   // CInst should have debug-info.
-  ASSERT_TRUE(CInst->DbgMarker);
-  EXPECT_FALSE(CInst->DbgMarker->StoredDbgRecords.empty());
+  ASSERT_TRUE(CInst->DebugMarker);
+  EXPECT_FALSE(CInst->DebugMarker->StoredDbgRecords.empty());
 
   // If we move "c" to the start of the block, just normally, then the
   // DbgVariableRecords should fall down to "d".
   CInst->moveBefore(BB, BeginIt2);
-  EXPECT_TRUE(!CInst->DbgMarker || CInst->DbgMarker->StoredDbgRecords.empty());
-  ASSERT_TRUE(DInst->DbgMarker);
-  EXPECT_FALSE(DInst->DbgMarker->StoredDbgRecords.empty());
+  EXPECT_TRUE(!CInst->DebugMarker ||
+              CInst->DebugMarker->StoredDbgRecords.empty());
+  ASSERT_TRUE(DInst->DebugMarker);
+  EXPECT_FALSE(DInst->DebugMarker->StoredDbgRecords.empty());
 
   // Wheras if we move D to the start of the block with moveBeforePreserving,
   // the DbgVariableRecords should move with it.
   DInst->moveBeforePreserving(BB, BB.begin());
-  EXPECT_FALSE(DInst->DbgMarker->StoredDbgRecords.empty());
+  EXPECT_FALSE(DInst->DebugMarker->StoredDbgRecords.empty());
   EXPECT_EQ(&*BB.begin(), DInst);
 
   // Similarly, moveAfterPreserving "D" to "C" should move DbgVariableRecords
   // with "D".
   DInst->moveAfterPreserving(CInst);
-  EXPECT_FALSE(DInst->DbgMarker->StoredDbgRecords.empty());
+  EXPECT_FALSE(DInst->DebugMarker->StoredDbgRecords.empty());
 
   // (move back to the start...)
   DInst->moveBeforePreserving(BB, BB.begin());
@@ -325,8 +326,9 @@ TEST(BasicBlockDbgInfoTest, HeadBitOperations) {
   // If we move "C" to the beginning of the block, it should go before the
   // DbgVariableRecords. They'll stay on "D".
   CInst->moveBefore(BB, BB.begin());
-  EXPECT_TRUE(!CInst->DbgMarker || CInst->DbgMarker->StoredDbgRecords.empty());
-  EXPECT_FALSE(DInst->DbgMarker->StoredDbgRecords.empty());
+  EXPECT_TRUE(!CInst->DebugMarker ||
+              CInst->DebugMarker->StoredDbgRecords.empty());
+  EXPECT_FALSE(DInst->DebugMarker->StoredDbgRecords.empty());
   EXPECT_EQ(&*BB.begin(), CInst);
   EXPECT_EQ(CInst->getNextNode(), DInst);
 
@@ -342,8 +344,9 @@ TEST(BasicBlockDbgInfoTest, HeadBitOperations) {
   // run of dbg.values and the next instruction.
   CInst->moveBefore(BB, DInst->getIterator());
   // CInst gains the DbgVariableRecords.
-  EXPECT_TRUE(!DInst->DbgMarker || DInst->DbgMarker->StoredDbgRecords.empty());
-  EXPECT_FALSE(CInst->DbgMarker->StoredDbgRecords.empty());
+  EXPECT_TRUE(!DInst->DebugMarker ||
+              DInst->DebugMarker->StoredDbgRecords.empty());
+  EXPECT_FALSE(CInst->DebugMarker->StoredDbgRecords.empty());
   EXPECT_EQ(&*BB.begin(), CInst);
 
   UseNewDbgInfoFormat = false;
@@ -380,7 +383,7 @@ TEST(BasicBlockDbgInfoTest, InstrDbgAccess) {
 )");
 
   // Check that DbgVariableRecords can be accessed from Instructions without
-  // digging into the depths of DPMarkers.
+  // digging into the depths of DbgMarkers.
   BasicBlock &BB = M->getFunction("f")->getEntryBlock();
   // Convert the module to "new" form debug-info.
   M->convertToNewDbgValues();
@@ -389,18 +392,18 @@ TEST(BasicBlockDbgInfoTest, InstrDbgAccess) {
   Instruction *CInst = BInst->getNextNode();
   Instruction *DInst = CInst->getNextNode();
 
-  ASSERT_FALSE(BInst->DbgMarker);
-  ASSERT_TRUE(CInst->DbgMarker);
-  ASSERT_EQ(CInst->DbgMarker->StoredDbgRecords.size(), 1u);
-  DbgRecord *DVR1 = &*CInst->DbgMarker->StoredDbgRecords.begin();
+  ASSERT_FALSE(BInst->DebugMarker);
+  ASSERT_TRUE(CInst->DebugMarker);
+  ASSERT_EQ(CInst->DebugMarker->StoredDbgRecords.size(), 1u);
+  DbgRecord *DVR1 = &*CInst->DebugMarker->StoredDbgRecords.begin();
   ASSERT_TRUE(DVR1);
   EXPECT_FALSE(BInst->hasDbgRecords());
 
   // Clone DbgVariableRecords from one inst to another. Other arguments to clone
-  // are tested in DPMarker test.
+  // are tested in DbgMarker test.
   auto Range1 = BInst->cloneDebugInfoFrom(CInst);
-  EXPECT_EQ(BInst->DbgMarker->StoredDbgRecords.size(), 1u);
-  DbgRecord *DVR2 = &*BInst->DbgMarker->StoredDbgRecords.begin();
+  EXPECT_EQ(BInst->DebugMarker->StoredDbgRecords.size(), 1u);
+  DbgRecord *DVR2 = &*BInst->DebugMarker->StoredDbgRecords.begin();
   EXPECT_EQ(std::distance(Range1.begin(), Range1.end()), 1u);
   EXPECT_EQ(&*Range1.begin(), DVR2);
   EXPECT_NE(DVR1, DVR2);
@@ -418,12 +421,12 @@ TEST(BasicBlockDbgInfoTest, InstrDbgAccess) {
   // Dropping should be easy,
   BInst->dropDbgRecords();
   EXPECT_FALSE(BInst->hasDbgRecords());
-  EXPECT_EQ(BInst->DbgMarker->StoredDbgRecords.size(), 0u);
+  EXPECT_EQ(BInst->DebugMarker->StoredDbgRecords.size(), 0u);
 
   // And we should be able to drop individual DbgVariableRecords.
   CInst->dropOneDbgRecord(DVR1);
   EXPECT_FALSE(CInst->hasDbgRecords());
-  EXPECT_EQ(CInst->DbgMarker->StoredDbgRecords.size(), 0u);
+  EXPECT_EQ(CInst->DebugMarker->StoredDbgRecords.size(), 0u);
 
   UseNewDbgInfoFormat = false;
 }
@@ -533,11 +536,11 @@ protected:
     CInst = &*Dest;
 
     DVRA =
-        cast<DbgVariableRecord>(&*BInst->DbgMarker->StoredDbgRecords.begin());
-    DVRB =
-        cast<DbgVariableRecord>(&*Branch->DbgMarker->StoredDbgRecords.begin());
+        cast<DbgVariableRecord>(&*BInst->DebugMarker->StoredDbgRecords.begin());
+    DVRB = cast<DbgVariableRecord>(
+        &*Branch->DebugMarker->StoredDbgRecords.begin());
     DVRConst =
-        cast<DbgVariableRecord>(&*CInst->DbgMarker->StoredDbgRecords.begin());
+        cast<DbgVariableRecord>(&*CInst->DebugMarker->StoredDbgRecords.begin());
   }
 
   void TearDown() override { UseNewDbgInfoFormat = false; }
@@ -546,8 +549,8 @@ protected:
     for (DbgRecord &D : I->getDbgRecordRange()) {
       if (&D == DVR) {
         // Confirm too that the links between the records are correct.
-        EXPECT_EQ(DVR->Marker, I->DbgMarker);
-        EXPECT_EQ(I->DbgMarker->MarkedInstr, I);
+        EXPECT_EQ(DVR->Marker, I->DebugMarker);
+        EXPECT_EQ(I->DebugMarker->MarkedInstr, I);
         return true;
       }
     }
@@ -1173,14 +1176,14 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceTrailing) {
   // The trailing DbgVariableRecord should have been placed at the front of
   // what's been spliced in.
   Instruction *BInst = &*Entry.begin();
-  ASSERT_TRUE(BInst->DbgMarker);
-  EXPECT_EQ(BInst->DbgMarker->StoredDbgRecords.size(), 1u);
+  ASSERT_TRUE(BInst->DebugMarker);
+  EXPECT_EQ(BInst->DebugMarker->StoredDbgRecords.size(), 1u);
 
   UseNewDbgInfoFormat = false;
 }
 
 // When we remove instructions from the program, adjacent DbgVariableRecords
-// coalesce together into one DPMarker. In "old" dbg.value mode you could
+// coalesce together into one DbgMarker. In "old" dbg.value mode you could
 // re-insert the removed instruction back into the middle of a sequence of
 // dbg.values. Test that this can be replicated correctly by DbgVariableRecords
 TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
@@ -1392,7 +1395,7 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty1) {
   // should be in the correct order of %a, then 0.
   Instruction *BInst = &*Entry.begin();
   ASSERT_TRUE(BInst->hasDbgRecords());
-  EXPECT_EQ(BInst->DbgMarker->StoredDbgRecords.size(), 2u);
+  EXPECT_EQ(BInst->DebugMarker->StoredDbgRecords.size(), 2u);
   SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
   for (DbgRecord &DVR : BInst->getDbgRecordRange())
     DbgVariableRecords.push_back(cast<DbgVariableRecord>(&DVR));
@@ -1462,7 +1465,7 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty2) {
   // We should now have one dbg.values on the first instruction, %a.
   Instruction *BInst = &*Entry.begin();
   ASSERT_TRUE(BInst->hasDbgRecords());
-  EXPECT_EQ(BInst->DbgMarker->StoredDbgRecords.size(), 1u);
+  EXPECT_EQ(BInst->DebugMarker->StoredDbgRecords.size(), 1u);
   SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
   for (DbgRecord &DVR : BInst->getDbgRecordRange())
     DbgVariableRecords.push_back(cast<DbgVariableRecord>(&DVR));
