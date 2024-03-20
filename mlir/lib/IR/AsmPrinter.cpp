@@ -206,16 +206,15 @@ OpPrintingFlags::OpPrintingFlags()
     : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
       printGenericOpFormFlag(false), skipRegionsFlag(false),
       assumeVerifiedFlag(false), printLocalScope(false),
-      printValueUsersFlag(false), allowPrintingElementsAttrWithHexFlag(true) {
+      printValueUsersFlag(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
   if (clOptions->elideElementsAttrIfLarger.getNumOccurrences())
     elementsAttrElementLimit = clOptions->elideElementsAttrIfLarger;
   if (clOptions->printElementsAttrWithHexIfLarger.getNumOccurrences()) {
-    // Note: -1 disables the "print with hex string" feature
-    allowPrintingElementsAttrWithHexFlag =
-        (clOptions->printElementsAttrWithHexIfLarger.getValue() != -1);
+    elementsAttrHexElementLimit =
+        clOptions->printElementsAttrWithHexIfLarger.getValue();
   }
   if (clOptions->elideResourceStringsIfLarger.getNumOccurrences())
     resourceStringCharLimit = clOptions->elideResourceStringsIfLarger;
@@ -239,8 +238,8 @@ OpPrintingFlags::elideLargeElementsAttrs(int64_t largeElementLimit) {
 }
 
 OpPrintingFlags &
-OpPrintingFlags::allowPrintingElementsAttrWithHex(bool allowHex) {
-  allowPrintingElementsAttrWithHexFlag = allowHex;
+OpPrintingFlags::printLargeElementsAttrWithHex(int64_t largeElementLimit) {
+  elementsAttrHexElementLimit = largeElementLimit;
   return *this;
 }
 
@@ -298,13 +297,22 @@ bool OpPrintingFlags::shouldElideElementsAttr(ElementsAttr attr) const {
          !llvm::isa<SplatElementsAttr>(attr);
 }
 
-bool OpPrintingFlags::shouldAllowPrintingElementsAttrWithHex() const {
-  return allowPrintingElementsAttrWithHexFlag;
+/// Return if the given ElementsAttr should be printed as hex string.
+bool OpPrintingFlags::shouldPrintElementsAttrWithHex(ElementsAttr attr) const {
+  // -1 is used to disable hex printing.
+  return (elementsAttrHexElementLimit != -1) &&
+         (elementsAttrHexElementLimit < int64_t(attr.getNumElements())) &&
+         !llvm::isa<SplatElementsAttr>(attr);
 }
 
 /// Return the size limit for printing large ElementsAttr.
 std::optional<int64_t> OpPrintingFlags::getLargeElementsAttrLimit() const {
   return elementsAttrElementLimit;
+}
+
+/// Return the size limit for printing large ElementsAttr as hex string.
+int64_t OpPrintingFlags::getLargeElementsAttrHexLimit() const {
+  return elementsAttrHexElementLimit;
 }
 
 /// Return the size limit for printing large ElementsAttr.
@@ -341,23 +349,6 @@ bool OpPrintingFlags::shouldUseLocalScope() const { return printLocalScope; }
 /// Return if the printer should print users of values.
 bool OpPrintingFlags::shouldPrintValueUsers() const {
   return printValueUsersFlag;
-}
-
-/// Returns true if an ElementsAttr with the given number of elements should be
-/// printed with hex.
-static bool shouldPrintElementsAttrWithHex(int64_t numElements) {
-  // Check to see if a command line option was provided for the limit.
-  if (clOptions.isConstructed()) {
-    if (clOptions->printElementsAttrWithHexIfLarger.getNumOccurrences()) {
-      // -1 is used to disable hex printing.
-      if (clOptions->printElementsAttrWithHexIfLarger == -1)
-        return false;
-      return numElements > clOptions->printElementsAttrWithHexIfLarger;
-    }
-  }
-
-  // Otherwise, default to printing with hex if the number of elements is >100.
-  return numElements > 100;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2316,9 +2307,7 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
       printElidedElementsAttr(os);
     } else {
       os << "dense<";
-      printDenseIntOrFPElementsAttr(
-          intOrFpEltAttr,
-          printerFlags.shouldAllowPrintingElementsAttrWithHex());
+      printDenseIntOrFPElementsAttr(intOrFpEltAttr, /*allowHex=*/true);
       os << '>';
     }
 
@@ -2341,9 +2330,7 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
       if (indices.getNumElements() != 0) {
         printDenseIntOrFPElementsAttr(indices, /*allowHex=*/false);
         os << ", ";
-        printDenseElementsAttr(
-            sparseEltAttr.getValues(),
-            printerFlags.shouldAllowPrintingElementsAttrWithHex());
+        printDenseElementsAttr(sparseEltAttr.getValues(), /*allowHex=*/true);
       }
       os << '>';
     }
@@ -2454,9 +2441,7 @@ void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
   auto elementType = type.getElementType();
 
   // Check to see if we should format this attribute as a hex string.
-  auto numElements = type.getNumElements();
-  if (!attr.isSplat() && allowHex &&
-      shouldPrintElementsAttrWithHex(numElements)) {
+  if (allowHex && printerFlags.shouldPrintElementsAttrWithHex(attr)) {
     ArrayRef<char> rawData = attr.getRawData();
     if (llvm::endianness::native == llvm::endianness::big) {
       // Convert endianess in big-endian(BE) machines. `rawData` is BE in BE

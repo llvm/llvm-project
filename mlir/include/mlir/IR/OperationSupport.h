@@ -1131,9 +1131,12 @@ public:
   /// elements.
   OpPrintingFlags &elideLargeElementsAttrs(int64_t largeElementLimit = 16);
 
-  /// Enable or disable printing of large element attributes as a hex string. By
-  /// default, printing as hex is allowed (enabled).
-  OpPrintingFlags &allowPrintingElementsAttrWithHex(bool allowHex = true);
+  /// Enables the printing of large element attributes with a hex string. The
+  /// `largeElementLimit` is used to configure what is considered to be a
+  /// "large" ElementsAttr by providing an upper limit to the number of
+  /// elements. Use -1 to disable the hex printing.
+  OpPrintingFlags &
+  printLargeElementsAttrWithHex(int64_t largeElementLimit = 100);
 
   /// Enables the elision of large resources strings by omitting them from the
   /// `dialect_resources` section. The `largeResourceLimit` is used to configure
@@ -1168,11 +1171,14 @@ public:
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 
-  /// Return if ElementsAttr could be printed in hexadecimal form.
-  bool shouldAllowPrintingElementsAttrWithHex() const;
+  /// Return if the given ElementsAttr should be printed as hex string.
+  bool shouldPrintElementsAttrWithHex(ElementsAttr attr) const;
 
   /// Return the size limit for printing large ElementsAttr.
   std::optional<int64_t> getLargeElementsAttrLimit() const;
+
+  /// Return the size limit for printing large ElementsAttr as hex string.
+  int64_t getLargeElementsAttrHexLimit() const;
 
   /// Return the size limit in chars for printing large resources.
   std::optional<uint64_t> getLargeResourceStringLimit() const;
@@ -1206,6 +1212,10 @@ private:
   /// Elide printing large resources based on size of string.
   std::optional<uint64_t> resourceStringCharLimit;
 
+  /// Print large element attributes with hex strings if the number of elements
+  /// is larger than the upper limit.
+  int64_t elementsAttrHexElementLimit = 100;
+
   /// Print debug information.
   bool printDebugInfoFlag : 1;
   bool printDebugInfoPrettyFormFlag : 1;
@@ -1224,9 +1234,6 @@ private:
 
   /// Print users of values.
   bool printValueUsersFlag : 1;
-
-  /// Print ElementsAttr in hex form.
-  bool allowPrintingElementsAttrWithHexFlag : 1;
 };
 
 //===----------------------------------------------------------------------===//
