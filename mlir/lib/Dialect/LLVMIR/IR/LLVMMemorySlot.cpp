@@ -132,7 +132,8 @@ Value LLVM::StoreOp::getStored(const MemorySlot &slot, RewriterBase &rewriter) {
 
 bool LLVM::LoadOp::canUsesBeRemoved(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   if (blockingUses.size() != 1)
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
@@ -155,7 +156,8 @@ DeletionKind LLVM::LoadOp::removeBlockingUses(
 
 bool LLVM::StoreOp::canUsesBeRemoved(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   if (blockingUses.size() != 1)
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
@@ -181,12 +183,14 @@ DeletionKind LLVM::StoreOp::removeBlockingUses(
 }
 
 LogicalResult LLVM::LoadOp::ensureOnlySafeAccesses(
-    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
   return success(getAddr() != slot.ptr || getType() == slot.elemType);
 }
 
 LogicalResult LLVM::StoreOp::ensureOnlySafeAccesses(
-    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
   return success(getAddr() != slot.ptr ||
                  getValue().getType() == slot.elemType);
 }
@@ -206,7 +210,8 @@ static bool forwardToUsers(Operation *op,
 
 bool LLVM::BitcastOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   return forwardToUsers(*this, newBlockingUses);
 }
 
@@ -217,7 +222,8 @@ DeletionKind LLVM::BitcastOp::removeBlockingUses(
 
 bool LLVM::AddrSpaceCastOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   return forwardToUsers(*this, newBlockingUses);
 }
 
@@ -228,7 +234,8 @@ DeletionKind LLVM::AddrSpaceCastOp::removeBlockingUses(
 
 bool LLVM::LifetimeStartOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   return true;
 }
 
@@ -239,7 +246,8 @@ DeletionKind LLVM::LifetimeStartOp::removeBlockingUses(
 
 bool LLVM::LifetimeEndOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   return true;
 }
 
@@ -250,7 +258,8 @@ DeletionKind LLVM::LifetimeEndOp::removeBlockingUses(
 
 bool LLVM::InvariantStartOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   return true;
 }
 
@@ -261,7 +270,8 @@ DeletionKind LLVM::InvariantStartOp::removeBlockingUses(
 
 bool LLVM::InvariantEndOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   return true;
 }
 
@@ -272,7 +282,8 @@ DeletionKind LLVM::InvariantEndOp::removeBlockingUses(
 
 bool LLVM::DbgDeclareOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   return true;
 }
 
@@ -283,7 +294,8 @@ DeletionKind LLVM::DbgDeclareOp::removeBlockingUses(
 
 bool LLVM::DbgValueOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   // There is only one operand that we can remove the use of.
   if (blockingUses.size() != 1)
     return false;
@@ -318,7 +330,8 @@ static bool hasAllZeroIndices(LLVM::GEPOp gepOp) {
 
 bool LLVM::GEPOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   // GEP can be removed as long as it is a no-op and its users can be removed.
   if (!hasAllZeroIndices(*this))
     return false;
@@ -337,7 +350,8 @@ static bool isFirstIndexZero(LLVM::GEPOp gep) {
 }
 
 LogicalResult LLVM::GEPOp::ensureOnlySafeAccesses(
-    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
   if (getBase() != slot.ptr)
     return success();
   if (slot.elemType != getElemType())
@@ -357,9 +371,9 @@ LogicalResult LLVM::GEPOp::ensureOnlySafeAccesses(
 
 bool LLVM::GEPOp::canRewire(const DestructurableMemorySlot &slot,
                             SmallPtrSetImpl<Attribute> &usedIndices,
-                            SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
-  auto basePtrType = llvm::dyn_cast<LLVM::LLVMPointerType>(getBase().getType());
-  if (!basePtrType)
+                            SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+                            const DataLayout &dataLayout) {
+  if (!isa<LLVM::LLVMPointerType>(getBase().getType()))
     return false;
 
   if (getBase() != slot.ptr || slot.elemType != getElemType())
@@ -386,7 +400,8 @@ bool LLVM::GEPOp::canRewire(const DestructurableMemorySlot &slot,
 
 DeletionKind LLVM::GEPOp::rewire(const DestructurableMemorySlot &slot,
                                  DenseMap<Attribute, MemorySlot> &subslots,
-                                 RewriterBase &rewriter) {
+                                 RewriterBase &rewriter,
+                                 const DataLayout &dataLayout) {
   IntegerAttr firstLevelIndex =
       llvm::dyn_cast_if_present<IntegerAttr>(getIndices()[1]);
   const MemorySlot &newSlot = subslots.at(firstLevelIndex);
@@ -455,7 +470,7 @@ std::optional<uint64_t> getStaticMemIntrLen(LLVM::MemcpyInlineOp op) {
 /// of the bounds of the given slot, on a best-effort basis.
 template <class MemIntr>
 static bool definitelyWritesOnlyWithinSlot(MemIntr op, const MemorySlot &slot,
-                                           DataLayout &dataLayout) {
+                                           const DataLayout &dataLayout) {
   if (!isa<LLVM::LLVMPointerType>(slot.ptr.getType()) ||
       op.getDst() != slot.ptr)
     return false;
@@ -520,7 +535,8 @@ Value LLVM::MemsetOp::getStored(const MemorySlot &slot,
 
 bool LLVM::MemsetOp::canUsesBeRemoved(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   // TODO: Support non-integer types.
   bool canConvertType =
       TypeSwitch<Type, bool>(slot.elemType)
@@ -534,8 +550,7 @@ bool LLVM::MemsetOp::canUsesBeRemoved(
   if (getIsVolatile())
     return false;
 
-  DataLayout layout = DataLayout::closest(*this);
-  return getStaticMemIntrLen(*this) == layout.getTypeSize(slot.elemType);
+  return getStaticMemIntrLen(*this) == dataLayout.getTypeSize(slot.elemType);
 }
 
 DeletionKind LLVM::MemsetOp::removeBlockingUses(
@@ -545,14 +560,15 @@ DeletionKind LLVM::MemsetOp::removeBlockingUses(
 }
 
 LogicalResult LLVM::MemsetOp::ensureOnlySafeAccesses(
-    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
-  DataLayout dataLayout = DataLayout::closest(*this);
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
   return success(definitelyWritesOnlyWithinSlot(*this, slot, dataLayout));
 }
 
 bool LLVM::MemsetOp::canRewire(const DestructurableMemorySlot &slot,
                                SmallPtrSetImpl<Attribute> &usedIndices,
-                               SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+                               SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+                               const DataLayout &dataLayout) {
   if (&slot.elemType.getDialect() != getOperation()->getDialect())
     return false;
 
@@ -566,13 +582,13 @@ bool LLVM::MemsetOp::canRewire(const DestructurableMemorySlot &slot,
   if (!areAllIndicesI32(slot))
     return false;
 
-  DataLayout dataLayout = DataLayout::closest(*this);
   return definitelyWritesOnlyWithinSlot(*this, slot, dataLayout);
 }
 
 DeletionKind LLVM::MemsetOp::rewire(const DestructurableMemorySlot &slot,
                                     DenseMap<Attribute, MemorySlot> &subslots,
-                                    RewriterBase &rewriter) {
+                                    RewriterBase &rewriter,
+                                    const DataLayout &dataLayout) {
   std::optional<DenseMap<Attribute, Type>> types =
       slot.elemType.cast<DestructurableTypeInterface>().getSubelementIndexMap();
 
@@ -587,7 +603,6 @@ DeletionKind LLVM::MemsetOp::rewire(const DestructurableMemorySlot &slot,
     packed = structType.isPacked();
 
   Type i32 = IntegerType::get(getContext(), 32);
-  DataLayout dataLayout = DataLayout::closest(*this);
   uint64_t memsetLen = memsetLenAttr.getValue().getZExtValue();
   uint64_t covered = 0;
   for (size_t i = 0; i < types->size(); i++) {
@@ -650,7 +665,8 @@ template <class MemcpyLike>
 static bool
 memcpyCanUsesBeRemoved(MemcpyLike op, const MemorySlot &slot,
                        const SmallPtrSetImpl<OpOperand *> &blockingUses,
-                       SmallVectorImpl<OpOperand *> &newBlockingUses) {
+                       SmallVectorImpl<OpOperand *> &newBlockingUses,
+                       const DataLayout &dataLayout) {
   // If source and destination are the same, memcpy behavior is undefined and
   // memmove is a no-op. Because there is no memory change happening here,
   // simplifying such operations is left to canonicalization.
@@ -660,8 +676,7 @@ memcpyCanUsesBeRemoved(MemcpyLike op, const MemorySlot &slot,
   if (op.getIsVolatile())
     return false;
 
-  DataLayout layout = DataLayout::closest(op);
-  return getStaticMemIntrLen(op) == layout.getTypeSize(slot.elemType);
+  return getStaticMemIntrLen(op) == dataLayout.getTypeSize(slot.elemType);
 }
 
 template <class MemcpyLike>
@@ -689,7 +704,8 @@ memcpyEnsureOnlySafeAccesses(MemcpyLike op, const MemorySlot &slot,
 template <class MemcpyLike>
 static bool memcpyCanRewire(MemcpyLike op, const DestructurableMemorySlot &slot,
                             SmallPtrSetImpl<Attribute> &usedIndices,
-                            SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+                            SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+                            const DataLayout &dataLayout) {
   if (op.getIsVolatile())
     return false;
 
@@ -701,7 +717,6 @@ static bool memcpyCanRewire(MemcpyLike op, const DestructurableMemorySlot &slot,
     return false;
 
   // Only full copies are supported.
-  DataLayout dataLayout = DataLayout::closest(op);
   if (getStaticMemIntrLen(op) != dataLayout.getTypeSize(slot.elemType))
     return false;
 
@@ -741,14 +756,12 @@ void createMemcpyLikeToReplace(RewriterBase &rewriter, const DataLayout &layout,
 /// Rewires a memcpy-like operation. Only copies to or from the full slot are
 /// supported.
 template <class MemcpyLike>
-static DeletionKind memcpyRewire(MemcpyLike op,
-                                 const DestructurableMemorySlot &slot,
-                                 DenseMap<Attribute, MemorySlot> &subslots,
-                                 RewriterBase &rewriter) {
+static DeletionKind
+memcpyRewire(MemcpyLike op, const DestructurableMemorySlot &slot,
+             DenseMap<Attribute, MemorySlot> &subslots, RewriterBase &rewriter,
+             const DataLayout &dataLayout) {
   if (subslots.empty())
     return DeletionKind::Delete;
-
-  DataLayout layout = DataLayout::closest(op);
 
   assert((slot.ptr == op.getDst()) != (slot.ptr == op.getSrc()));
   bool isDst = slot.ptr == op.getDst();
@@ -780,7 +793,7 @@ static DeletionKind memcpyRewire(MemcpyLike op,
         isDst ? op.getSrc() : op.getDst(), gepIndices);
 
     // Then create a new memcpy out of this source pointer.
-    createMemcpyLikeToReplace(rewriter, layout, op,
+    createMemcpyLikeToReplace(rewriter, dataLayout, op,
                               isDst ? subslot.ptr : subslotPtrInOther,
                               isDst ? subslotPtrInOther : subslot.ptr,
                               subslot.elemType, op.getIsVolatile());
@@ -806,8 +819,10 @@ Value LLVM::MemcpyOp::getStored(const MemorySlot &slot,
 
 bool LLVM::MemcpyOp::canUsesBeRemoved(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
-  return memcpyCanUsesBeRemoved(*this, slot, blockingUses, newBlockingUses);
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return memcpyCanUsesBeRemoved(*this, slot, blockingUses, newBlockingUses,
+                                dataLayout);
 }
 
 DeletionKind LLVM::MemcpyOp::removeBlockingUses(
@@ -818,20 +833,24 @@ DeletionKind LLVM::MemcpyOp::removeBlockingUses(
 }
 
 LogicalResult LLVM::MemcpyOp::ensureOnlySafeAccesses(
-    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
   return memcpyEnsureOnlySafeAccesses(*this, slot, mustBeSafelyUsed);
 }
 
 bool LLVM::MemcpyOp::canRewire(const DestructurableMemorySlot &slot,
                                SmallPtrSetImpl<Attribute> &usedIndices,
-                               SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
-  return memcpyCanRewire(*this, slot, usedIndices, mustBeSafelyUsed);
+                               SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+                               const DataLayout &dataLayout) {
+  return memcpyCanRewire(*this, slot, usedIndices, mustBeSafelyUsed,
+                         dataLayout);
 }
 
 DeletionKind LLVM::MemcpyOp::rewire(const DestructurableMemorySlot &slot,
                                     DenseMap<Attribute, MemorySlot> &subslots,
-                                    RewriterBase &rewriter) {
-  return memcpyRewire(*this, slot, subslots, rewriter);
+                                    RewriterBase &rewriter,
+                                    const DataLayout &dataLayout) {
+  return memcpyRewire(*this, slot, subslots, rewriter, dataLayout);
 }
 
 bool LLVM::MemcpyInlineOp::loadsFrom(const MemorySlot &slot) {
@@ -849,8 +868,10 @@ Value LLVM::MemcpyInlineOp::getStored(const MemorySlot &slot,
 
 bool LLVM::MemcpyInlineOp::canUsesBeRemoved(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
-  return memcpyCanUsesBeRemoved(*this, slot, blockingUses, newBlockingUses);
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return memcpyCanUsesBeRemoved(*this, slot, blockingUses, newBlockingUses,
+                                dataLayout);
 }
 
 DeletionKind LLVM::MemcpyInlineOp::removeBlockingUses(
@@ -861,22 +882,26 @@ DeletionKind LLVM::MemcpyInlineOp::removeBlockingUses(
 }
 
 LogicalResult LLVM::MemcpyInlineOp::ensureOnlySafeAccesses(
-    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
   return memcpyEnsureOnlySafeAccesses(*this, slot, mustBeSafelyUsed);
 }
 
 bool LLVM::MemcpyInlineOp::canRewire(
     const DestructurableMemorySlot &slot,
     SmallPtrSetImpl<Attribute> &usedIndices,
-    SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
-  return memcpyCanRewire(*this, slot, usedIndices, mustBeSafelyUsed);
+    SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
+  return memcpyCanRewire(*this, slot, usedIndices, mustBeSafelyUsed,
+                         dataLayout);
 }
 
 DeletionKind
 LLVM::MemcpyInlineOp::rewire(const DestructurableMemorySlot &slot,
                              DenseMap<Attribute, MemorySlot> &subslots,
-                             RewriterBase &rewriter) {
-  return memcpyRewire(*this, slot, subslots, rewriter);
+                             RewriterBase &rewriter,
+                             const DataLayout &dataLayout) {
+  return memcpyRewire(*this, slot, subslots, rewriter, dataLayout);
 }
 
 bool LLVM::MemmoveOp::loadsFrom(const MemorySlot &slot) {
@@ -894,8 +919,10 @@ Value LLVM::MemmoveOp::getStored(const MemorySlot &slot,
 
 bool LLVM::MemmoveOp::canUsesBeRemoved(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
-  return memcpyCanUsesBeRemoved(*this, slot, blockingUses, newBlockingUses);
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return memcpyCanUsesBeRemoved(*this, slot, blockingUses, newBlockingUses,
+                                dataLayout);
 }
 
 DeletionKind LLVM::MemmoveOp::removeBlockingUses(
@@ -906,20 +933,24 @@ DeletionKind LLVM::MemmoveOp::removeBlockingUses(
 }
 
 LogicalResult LLVM::MemmoveOp::ensureOnlySafeAccesses(
-    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
   return memcpyEnsureOnlySafeAccesses(*this, slot, mustBeSafelyUsed);
 }
 
 bool LLVM::MemmoveOp::canRewire(const DestructurableMemorySlot &slot,
                                 SmallPtrSetImpl<Attribute> &usedIndices,
-                                SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
-  return memcpyCanRewire(*this, slot, usedIndices, mustBeSafelyUsed);
+                                SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+                                const DataLayout &dataLayout) {
+  return memcpyCanRewire(*this, slot, usedIndices, mustBeSafelyUsed,
+                         dataLayout);
 }
 
 DeletionKind LLVM::MemmoveOp::rewire(const DestructurableMemorySlot &slot,
                                      DenseMap<Attribute, MemorySlot> &subslots,
-                                     RewriterBase &rewriter) {
-  return memcpyRewire(*this, slot, subslots, rewriter);
+                                     RewriterBase &rewriter,
+                                     const DataLayout &dataLayout) {
+  return memcpyRewire(*this, slot, subslots, rewriter, dataLayout);
 }
 
 //===----------------------------------------------------------------------===//

@@ -27,7 +27,7 @@ struct Mem2RegStatistics {
 /// at least one memory slot was promoted.
 LogicalResult
 tryToPromoteMemorySlots(ArrayRef<PromotableAllocationOpInterface> allocators,
-                        RewriterBase &rewriter,
+                        RewriterBase &rewriter, const DataLayout &dataLayout,
                         Mem2RegStatistics statistics = {});
 
 } // namespace mlir
