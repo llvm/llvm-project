@@ -268,5 +268,8 @@ void OmptEventReporter::notify(OmptAssertEvent &&AE) {
   if (!isActive() || isSuppressedEventType(AE.getEventType()))
     return;
 
-  OutStream << AE.toString() << std::endl;
+  // Prepare notification, containing the newline to avoid stream interleaving.
+  auto Notification{AE.toString()};
+  Notification.push_back('\n');
+  OutStream << Notification;
 }
