@@ -66,7 +66,7 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
   // * bitcast
   // * undef
 
-  // The MIs def'd on the Index and Vector register;
+  // The MIs def'd on the Index and Vector registers;
   MachineInstr *IndexMI = getDefIgnoringCopies(Index, MRI);
   MachineInstr *VectorMI = getDefIgnoringCopies(Vector, MRI);
 
