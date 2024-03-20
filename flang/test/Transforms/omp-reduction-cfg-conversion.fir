@@ -1,6 +1,6 @@
 // RUN: fir-opt --cfg-conversion-on-reduce-opt %s | FileCheck %s
 
-omp.reduction.declare @add_reduction_i_32_box_3_byref : !fir.ref<!fir.box<!fir.array<3xi32>>> init {
+omp.declare_reduction @add_reduction_i_32_box_3_byref : !fir.ref<!fir.box<!fir.array<3xi32>>> init {
 ^bb0(%arg0: !fir.ref<!fir.box<!fir.array<3xi32>>>):
   %c4_i32 = arith.constant 4 : i32
   %c0_i32 = arith.constant 0 : i32

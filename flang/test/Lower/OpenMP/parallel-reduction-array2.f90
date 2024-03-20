@@ -13,7 +13,7 @@ i(3) = i(3) + 3
 print *,i
 end program
 
-! CHECK-LABEL:   omp.reduction.declare @add_reduction_i_32_box_3_byref : !fir.ref<!fir.box<!fir.array<3xi32>>> init {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_i_32_box_3_byref : !fir.ref<!fir.box<!fir.array<3xi32>>> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3xi32>>>):
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<3xi32> {bindc_name = ".tmp"}
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i32

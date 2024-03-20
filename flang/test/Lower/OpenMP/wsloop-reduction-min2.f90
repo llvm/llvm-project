@@ -17,7 +17,7 @@ print *,r
 
 end program
 
-! CHECK-LABEL:   omp.reduction.declare @min_i_32 : i32 init {
+! CHECK-LABEL:   omp.declare_reduction @min_i_32 : i32 init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: i32):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 2147483647 : i32
 ! CHECK:           omp.yield(%[[VAL_1]] : i32)
