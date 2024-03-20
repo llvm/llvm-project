@@ -35,6 +35,7 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.types
     libc.src.__support.math_extras
+    libc.src.__support.sign
     libc.src.__support.uint128
 )
 

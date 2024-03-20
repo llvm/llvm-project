@@ -31,7 +31,6 @@ public:
 private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<F>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
   const F zero = FPBits::zero().get_val();
   const F neg_zero = FPBits::zero(Sign::NEG).get_val();
