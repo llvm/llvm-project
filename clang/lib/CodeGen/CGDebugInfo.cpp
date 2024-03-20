@@ -5657,7 +5657,8 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
               CGM.getLLVMContext(), MDValue)) {
         for (llvm::User *U : DbgValue->users()) {
           if (llvm::CallInst *DbgDeclare = dyn_cast<llvm::CallInst>(U)) {
-            if (DbgDeclare->getCalledFunction() == DBuilder.GetDeclareFn() &&
+            if (DbgDeclare->getCalledFunction()->getIntrinsicID() ==
+                    llvm::Intrinsic::dbg_declare &&
                 DbgDeclare->getArgOperand(0) == DbgValue) {
               // There can be implicit type cast applied on a variable if it is
               // an opaque ptr, in this case its debug info may not match the
