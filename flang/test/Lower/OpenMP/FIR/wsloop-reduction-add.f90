@@ -7,7 +7,7 @@
 ! about what constitutes a good test! The CHECK should be
 ! minimized and named to reflect the test intent.
 
-! CHECK-LABEL:   omp.reduction.declare @add_reduction_f_64 : f64 init {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_f_64 : f64 init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: f64):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0.000000e+00 : f64
 ! CHECK:           omp.yield(%[[VAL_1]] : f64)
@@ -18,7 +18,7 @@
 ! CHECK:           omp.yield(%[[VAL_2]] : f64)
 ! CHECK:         }
 
-! CHECK-LABEL:   omp.reduction.declare @add_reduction_i_64 : i64 init {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_i_64 : i64 init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: i64):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i64
 ! CHECK:           omp.yield(%[[VAL_1]] : i64)
@@ -29,7 +29,7 @@
 ! CHECK:           omp.yield(%[[VAL_2]] : i64)
 ! CHECK:         }
 
-! CHECK-LABEL:   omp.reduction.declare @add_reduction_f_32 : f32 init {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_f_32 : f32 init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: f32):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:           omp.yield(%[[VAL_1]] : f32)
@@ -40,7 +40,7 @@
 ! CHECK:           omp.yield(%[[VAL_2]] : f32)
 ! CHECK:         }
 
-! CHECK-LABEL:   omp.reduction.declare @add_reduction_i_32 : i32 init {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_i_32 : i32 init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: i32):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i32
 ! CHECK:           omp.yield(%[[VAL_1]] : i32)

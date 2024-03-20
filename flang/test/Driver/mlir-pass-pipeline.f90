@@ -52,11 +52,11 @@ end program
 ! O2-NEXT:    'func.func' Pipeline
 ! O2-NEXT:      PolymorphicOpConversion
 ! O2-NEXT:  AddAliasTags
-! ALL-NEXT: Pipeline Collection : ['func.func', 'omp.reduction.declare']
+! ALL-NEXT: Pipeline Collection : ['func.func', 'omp.declare_reduction']
 ! ALL-NEXT:    'func.func' Pipeline
 ! NOTO2-NEXT:      PolymorphicOpConversion
 ! ALL-NEXT:      CFGConversionOnFunc
-! ALL-NEXT:   'omp.reduction.declare' Pipeline
+! ALL-NEXT:   'omp.declare_reduction' Pipeline
 ! ALL-NEXT:      CFGConversionOnReduction
 
 ! ALL-NEXT: SCFToControlFlow

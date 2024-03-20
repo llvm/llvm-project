@@ -14,7 +14,7 @@ enddo
 print *,r
 end program
 
-! CHECK-LABEL   omp.reduction.declare @add_reduction_i_32_box_2_byref : !fir.ref<!fir.box<!fir.array<2xi32>>> init {
+! CHECK-LABEL   omp.declare_reduction @add_reduction_i_32_box_2_byref : !fir.ref<!fir.box<!fir.array<2xi32>>> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<2xi32>>>):
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<2xi32> {bindc_name = ".tmp"}
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i32
