@@ -1,0 +1,26 @@
+add_custom_target(libc_sys_statfs_unittests)
+add_libc_unittest(
+  statfs_test
+  SUITE
+    libc_sys_statfs_unittests
+  SRCS
+    statfs_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.sys.statfs.statfs
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+add_libc_unittest(
+  fstatfs_test
+  SUITE
+    libc_sys_statfs_unittests
+  SRCS
+    fstatfs_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.sys.statfs.fstatfs
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.__support.CPP.string_view
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

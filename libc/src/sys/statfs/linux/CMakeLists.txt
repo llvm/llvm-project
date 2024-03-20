@@ -1,0 +1,25 @@
+add_entrypoint_object(
+  statfs
+  SRCS
+    statfs.cpp
+  HDRS
+    ../statfs.h
+  DEPENDS
+    libc.include.llvm-libc-types.struct_statfs
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fstatfs
+  SRCS
+    fstatfs.cpp
+  HDRS
+    ../fstatfs.h
+  DEPENDS
+    libc.include.llvm-libc-types.struct_statfs
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)

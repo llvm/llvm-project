@@ -1,0 +1,22 @@
+//===-- Linux header vfs.h ------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_SYS_VFS_H
+#define LLVM_LIBC_SYS_VFS_H
+
+#ifdef __linux__
+// On Linux, sys/vfs.h is just a compat layer for sys/statfs.h
+#include <sys/statfs.h>
+#else
+#include <__llvm-libc-common.h>
+
+%%public_api()
+
+#endif
+
+#endif // LLVM_LIBC_SYS_VFS_H

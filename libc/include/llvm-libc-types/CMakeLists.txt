@@ -106,3 +106,4 @@ add_header(
   DEPENDS
     libc.include.llvm-libc-macros.float_macros
 )
+add_header(struct_statfs HDR struct_statfs.h)

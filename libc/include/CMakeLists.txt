@@ -499,6 +499,24 @@ add_gen_header(
 )
 
 add_gen_header(
+  sys_statfs
+  DEF_FILE sys/statfs.h.def
+  GEN_HDR sys/statfs.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_statfs
+)
+
+add_gen_header(
+  sys_vfs
+  DEF_FILE sys/vfs.h.def
+  GEN_HDR sys/vfs.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_statfs
+)
+
+add_gen_header(
   sys_syscall
   DEF_FILE sys/syscall.h.def
   GEN_HDR sys/syscall.h

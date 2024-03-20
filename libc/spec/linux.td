@@ -2,6 +2,8 @@ def StructEpollEvent : NamedType<"struct epoll_event">;
 def StructEpollEventPtr : PtrType<StructEpollEvent>;
 
 def StructEpollData : NamedType<"struct epoll_data">;
+def StructStatfs : NamedType<"struct statfs">;
+def StructStatfsPtr : PtrType<StructStatfs>;
 
 def Linux : StandardSpec<"Linux"> {
   HeaderSpec Errno = HeaderSpec<
@@ -264,6 +266,56 @@ def Linux : StandardSpec<"Linux"> {
       ]
   >;
 
+  HeaderSpec SysStatfs = HeaderSpec<
+    "sys/statfs.h",
+    [], // Macros
+    [StructStatfs], // Types
+    [], // Enumerations
+    [
+      FunctionSpec<
+        "statfs",
+        RetValSpec<IntType>,
+        [
+          ArgSpec<ConstCharPtr>,
+          ArgSpec<StructStatfsPtr>
+        ]
+      >,
+      FunctionSpec<
+        "fstatfs",
+        RetValSpec<IntType>,
+        [
+          ArgSpec<IntType>,
+          ArgSpec<StructStatfsPtr>
+        ]
+      >,
+    ]  // Functions
+  >;
+
+  HeaderSpec SysVfs = HeaderSpec<
+    "sys/vfs.h",
+    [], // Macros
+    [StructStatfs], // Types
+    [], // Enumerations
+    [
+      FunctionSpec<
+        "statfs",
+        RetValSpec<IntType>,
+        [
+          ArgSpec<ConstCharPtr>,
+          ArgSpec<StructStatfsPtr>
+        ]
+      >,
+      FunctionSpec<
+        "fstatfs",
+        RetValSpec<IntType>,
+        [
+          ArgSpec<IntType>,
+          ArgSpec<StructStatfsPtr>
+        ]
+      >,
+    ]  // Functions
+  >;
+
   let Headers = [
     Errno,
     SysEpoll,
@@ -272,5 +324,7 @@ def Linux : StandardSpec<"Linux"> {
     SysRandom,
     SysTime,
     Signal,
+    SysStatfs,
+    SysVfs,
   ];
 }
