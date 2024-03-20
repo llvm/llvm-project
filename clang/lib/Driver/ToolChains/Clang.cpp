@@ -4632,6 +4632,32 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     }
   }
 
+  // Emit DW_TAG_template_alias for template aliases? True by default for SCE.
+  const auto *DebugTemplateAlias = Args.getLastArg(
+      options::OPT_gtemplate_alias, options::OPT_gno_template_alias);
+  bool UseDebugTemplateAlias =
+      DebuggerTuning == llvm::DebuggerKind::SCE && RequestedDWARFVersion >= 5;
+  if (DebugTemplateAlias &&
+      checkDebugInfoOption(DebugTemplateAlias, Args, D, TC)) {
+    const auto &Opt = DebugTemplateAlias->getOption();
+    UseDebugTemplateAlias = Opt.matches(options::OPT_gtemplate_alias);
+  }
+  if (UseDebugTemplateAlias) {
+    // DW_TAG_template_alias is a DWARFv5 feature. Warn if we can't use it.
+    if (DebugTemplateAlias && RequestedDWARFVersion < 5)
+      D.Diag(diag::warn_drv_dwarf_feature_requires_version)
+          << DebugTemplateAlias->getAsString(Args) << 5
+          << RequestedDWARFVersion;
+    else if (DebugTemplateAlias && EffectiveDWARFVersion < 5)
+      // The toolchain has reduced allowed dwarf version, so we can't enable
+      // -gtemplate-alias.
+      D.Diag(diag::warn_drv_dwarf_version_limited_by_target)
+          << DebugTemplateAlias->getAsString(Args) << TC.getTripleString() << 5
+          << EffectiveDWARFVersion;
+    else
+      CmdArgs.push_back("-gtemplate-alias");
+  }
+
   if (const Arg *A = Args.getLastArg(options::OPT_gsrc_hash_EQ)) {
     StringRef v = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-gsrc-hash=" + v));

@@ -57,8 +57,14 @@
 // CHECK-NEXT: -352 4 ??
 
 // Generated from:
-//
 // struct S;
+//
+// template<typename Y>
+// struct Base {
+//   Y m;
+// };
+// template<typename A>
+// using Alias = Base<A>;
 //
 // void f() {
 //   char a;
@@ -74,10 +80,9 @@
 //   char_typedef j;
 //   char k[12];
 //   char l[12][24];
+//   Alias<int> m;
 // }
-//
 // clang++ --target=i386-linux-gnu frame-types.cpp -g -std=c++11 -S -o frame-types.s 
-
 	.text
 	.file	"frame-types.cpp"
 	.globl	_Z1fv                           # -- Begin function _Z1fv
