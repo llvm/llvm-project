@@ -372,8 +372,6 @@ void PEI::calculateCallFrameInfo(MachineFunction &MF) {
   MFI.computeMaxCallFrameSize(MF, &FrameSDOps);
   assert(MFI.getMaxCallFrameSize() <= MaxCFSIn &&
          "Recomputing MaxCFS gave a larger value.");
-  assert((FrameSDOps.empty() || MF.getFrameInfo().adjustsStack()) &&
-         "AdjustsStack not set in presence of a frame pseudo instruction.");
 
   if (TFI->canSimplifyCallFramePseudos(MF)) {
     // If call frames are not being included as part of the stack frame, and
