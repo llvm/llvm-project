@@ -19,7 +19,7 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_always_bitcastable.h>
 #include <__type_traits/is_constant_evaluated.h>
-#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_constructible.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/is_volatile.h>
@@ -30,6 +30,9 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -131,5 +134,7 @@ __dispatch_copy_or_move(_InIter __first, _Sent __last, _OutIter __out_first) {
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_COPY_MOVE_COMMON_H

@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs < %s | FileCheck %s -check-prefix=RV64I
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs,+xventanacondops < %s | FileCheck %s -check-prefix=RV64XVENTANACONDOPS
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs,+xtheadcondmov < %s | FileCheck %s -check-prefix=RV64XTHEADCONDMOV
-; RUN: llc -mtriple=riscv32 -target-abi=ilp32f -mattr=+f,+zbs,+experimental-zicond < %s | FileCheck %s -check-prefix=RV32ZICOND
-; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs,+experimental-zicond < %s | FileCheck %s -check-prefix=RV64ZICOND
+; RUN: llc -mtriple=riscv32 -target-abi=ilp32f -mattr=+f,+zbs,+zicond < %s | FileCheck %s -check-prefix=RV32ZICOND
+; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs,+zicond < %s | FileCheck %s -check-prefix=RV64ZICOND
 
 define i64 @zero1(i64 %rs1, i1 zeroext %rc) {
 ; RV32I-LABEL: zero1:
@@ -3717,5 +3717,56 @@ entry:
   %and = and i64 %x, 2048
   %tobool.not = icmp eq i64 %and, 0
   %cond = select i1 %tobool.not, i64 0, i64 %x
+  ret i64 %cond
+}
+
+; Test that we don't crash on types larger than 64 bits.
+define i64 @single_bit3(i80 %x, i64 %y) {
+; RV32I-LABEL: single_bit3:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    lw a0, 8(a0)
+; RV32I-NEXT:    slli a0, a0, 31
+; RV32I-NEXT:    srai a3, a0, 31
+; RV32I-NEXT:    and a0, a3, a1
+; RV32I-NEXT:    and a1, a3, a2
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: single_bit3:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    slli a1, a1, 63
+; RV64I-NEXT:    srai a0, a1, 63
+; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    ret
+;
+; RV64XVENTANACONDOPS-LABEL: single_bit3:
+; RV64XVENTANACONDOPS:       # %bb.0: # %entry
+; RV64XVENTANACONDOPS-NEXT:    andi a1, a1, 1
+; RV64XVENTANACONDOPS-NEXT:    vt.maskc a0, a2, a1
+; RV64XVENTANACONDOPS-NEXT:    ret
+;
+; RV64XTHEADCONDMOV-LABEL: single_bit3:
+; RV64XTHEADCONDMOV:       # %bb.0: # %entry
+; RV64XTHEADCONDMOV-NEXT:    slli a1, a1, 63
+; RV64XTHEADCONDMOV-NEXT:    srai a0, a1, 63
+; RV64XTHEADCONDMOV-NEXT:    and a0, a0, a2
+; RV64XTHEADCONDMOV-NEXT:    ret
+;
+; RV32ZICOND-LABEL: single_bit3:
+; RV32ZICOND:       # %bb.0: # %entry
+; RV32ZICOND-NEXT:    lw a0, 8(a0)
+; RV32ZICOND-NEXT:    andi a3, a0, 1
+; RV32ZICOND-NEXT:    czero.eqz a0, a1, a3
+; RV32ZICOND-NEXT:    czero.eqz a1, a2, a3
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: single_bit3:
+; RV64ZICOND:       # %bb.0: # %entry
+; RV64ZICOND-NEXT:    andi a1, a1, 1
+; RV64ZICOND-NEXT:    czero.eqz a0, a2, a1
+; RV64ZICOND-NEXT:    ret
+entry:
+  %and = and i80 %x, 18446744073709551616 ; 1 << 64
+  %tobool.not = icmp eq i80 %and, 0
+  %cond = select i1 %tobool.not, i64 0, i64 %y
   ret i64 %cond
 }

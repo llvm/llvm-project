@@ -1,0 +1,28 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=aarch64-expand-pseudo -o - %s | FileCheck %s
+
+# When expanding a BLR_BTI, we should copy all the operands to the branch in the
+# bundle. Otherwise we could end up using a register after the BL which was
+# clobbered by the function that was called, or overwriting an argument to that
+# function before we take the branch.
+#
+# The arguments to the call must become implicit arguments, because the branch
+# only expects to get 1 explicit operand which is the branch target.
+
+# CHECK:    BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit $sp, implicit $x0, implicit $w1 {
+# CHECK:      BL @_setjmp, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp
+# CHECK:      HINT 36
+# CHECK:    }
+
+--- |
+  define void @a() {
+    ret void
+  }
+
+  declare void @_setjmp(...)
+...
+---
+name: a
+body: |
+  bb.0:
+    BLR_BTI @_setjmp, $x0, $w1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+...

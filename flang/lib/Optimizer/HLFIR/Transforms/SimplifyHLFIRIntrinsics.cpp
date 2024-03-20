@@ -50,7 +50,9 @@ public:
     auto genKernel = [&array](mlir::Location loc, fir::FirOpBuilder &builder,
                               mlir::ValueRange inputIndices) -> hlfir::Entity {
       assert(inputIndices.size() == 2 && "checked in TransposeOp::validate");
-      mlir::ValueRange transposedIndices{{inputIndices[1], inputIndices[0]}};
+      const std::initializer_list<mlir::Value> initList = {inputIndices[1],
+                                                           inputIndices[0]};
+      mlir::ValueRange transposedIndices(initList);
       hlfir::Entity element =
           hlfir::getElementAt(loc, builder, array, transposedIndices);
       hlfir::Entity val = hlfir::loadTrivialScalar(loc, builder, element);

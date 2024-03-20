@@ -71,6 +71,9 @@ public:
   /// Is this an array or an assumed ranked entity?
   bool isArray() const { return getRank() != 0; }
 
+  /// Is this an assumed ranked entity?
+  bool isAssumedRank() const { return getRank() == -1; }
+
   /// Return the rank of this entity or -1 if it is an assumed rank.
   int getRank() const {
     mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getType()));
@@ -227,14 +230,15 @@ translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 /// on the IR.
 fir::ExtendedValue
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         fir::FortranVariableOpInterface fortranVariable);
+                         fir::FortranVariableOpInterface fortranVariable,
+                         bool forceHlfirBase = false);
 
 /// Generate declaration for a fir::ExtendedValue in memory.
-fir::FortranVariableOpInterface genDeclare(mlir::Location loc,
-                                           fir::FirOpBuilder &builder,
-                                           const fir::ExtendedValue &exv,
-                                           llvm::StringRef name,
-                                           fir::FortranVariableFlagsAttr flags);
+fir::FortranVariableOpInterface
+genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
+           const fir::ExtendedValue &exv, llvm::StringRef name,
+           fir::FortranVariableFlagsAttr flags,
+           fir::CUDADataAttributeAttr cudaAttr = {});
 
 /// Generate an hlfir.associate to build a variable from an expression value.
 /// The type of the variable must be provided so that scalar logicals are
@@ -429,6 +433,11 @@ bool elementalOpMustProduceTemp(hlfir::ElementalOp elemental);
 std::pair<hlfir::Entity, mlir::Value>
 createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                    hlfir::Entity mold);
+
+// TODO: this does not support polymorphic molds
+hlfir::Entity createStackTempFromMold(mlir::Location loc,
+                                      fir::FirOpBuilder &builder,
+                                      hlfir::Entity mold);
 
 hlfir::EntityWithAttributes convertCharacterKind(mlir::Location loc,
                                                  fir::FirOpBuilder &builder,

@@ -154,7 +154,7 @@ int expression_tracked_back(void) {
 //===----------------------------------------------------------------------===//
 
 int allow_overflows_and_negative_operands(void) {
-  // These are all legal under C++ 20 and many compilers accept them under
+  // These are all legal under C++20 and many compilers accept them under
   // earlier standards as well.
   int int_min = 1 << 31; // no-warning
   int this_overflows = 1027 << 30; // no-warning

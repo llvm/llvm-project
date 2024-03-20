@@ -513,7 +513,11 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
       });
   }];
   let mlirBuilder = [{
-    $_op = $_builder.create<$_qualCppClassName>($_location, $_label_attr($label));
+    DILabelAttr labelAttr = $_label_attr($label);
+    // Drop the intrinsic if the label translation fails due to cylic metadata.
+    if (!labelAttr)
+      return success();
+    $_op = $_builder.create<$_qualCppClassName>($_location, labelAttr);
   }];
   let assemblyFormat = "$label attr-dict";
 }
@@ -968,6 +972,20 @@ def LLVM_vector_extract
     }
   }];
 }
+
+def LLVM_experimental_vector_interleave2
+    : LLVM_OneResultIntrOp<"experimental.vector.interleave2",
+        /*overloadedResults=*/[0], /*overloadedOperands=*/[],
+        /*traits=*/[
+          Pure, AllTypesMatch<["vec1", "vec2"]>,
+          PredOpTrait<
+            "result has twice as many elements as 'vec1'",
+            And<[CPred<"getVectorNumElements($res.getType()) == "
+                       "getVectorNumElements($vec1.getType()) * 2">,
+                 CPred<"getVectorElementType($vec1.getType()) == "
+                       "getVectorElementType($res.getType())">]>>,
+        ]>,
+        Arguments<(ins LLVM_AnyVector:$vec1, LLVM_AnyVector:$vec2)>;
 
 //
 // LLVM Vector Predication operations.

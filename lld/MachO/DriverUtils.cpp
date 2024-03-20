@@ -180,7 +180,7 @@ std::string macho::createResponseFile(const InputArgList &args) {
       os << toString(*arg) << "\n";
     }
   }
-  return std::string(data.str());
+  return std::string(data);
 }
 
 static void searchedDylib(const Twine &path, bool found) {

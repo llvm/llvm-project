@@ -63,7 +63,7 @@ bool isAvailable();
 
 void compress(ArrayRef<uint8_t> Input,
               SmallVectorImpl<uint8_t> &CompressedBuffer,
-              int Level = DefaultCompression);
+              int Level = DefaultCompression, bool EnableLdm = false);
 
 Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                  size_t &UncompressedSize);
@@ -94,10 +94,13 @@ struct Params {
   constexpr Params(Format F)
       : format(F), level(F == Format::Zlib ? zlib::DefaultCompression
                                            : zstd::DefaultCompression) {}
+  constexpr Params(Format F, int L, bool Ldm = false)
+      : format(F), level(L), zstdEnableLdm(Ldm) {}
   Params(DebugCompressionType Type) : Params(formatFor(Type)) {}
 
   Format format;
   int level;
+  bool zstdEnableLdm = false; // Enable zstd long distance matching
   // This may support multi-threading for zstd in the future. Note that
   // different threads may produce different output, so be careful if certain
   // output determinism is desired.

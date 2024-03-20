@@ -67,6 +67,10 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
          "-DLLVM_EXTERNAL_${name}_SOURCE_DIR=${LLVM_EXTERNAL_${name}_SOURCE_DIR}")
   endforeach()
 
+  if("libc" IN_LIST LLVM_ENABLE_PROJECTS AND NOT LIBC_HDRGEN_EXE)
+    set(libc_flags -DLLVM_LIBC_FULL_BUILD=ON -DLIBC_HDRGEN_ONLY=ON)
+  endif()
+
   add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
         -DCMAKE_MAKE_PROGRAM="${CMAKE_MAKE_PROGRAM}"
@@ -86,7 +90,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
         -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN="${LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN}"
         -DLLVM_INCLUDE_BENCHMARKS=OFF
         -DLLVM_INCLUDE_TESTS=OFF
-        ${build_type_flags} ${linker_flag} ${external_clang_dir}
+        ${build_type_flags} ${linker_flag} ${external_clang_dir} ${libc_flags}
         ${ARGN}
     WORKING_DIRECTORY ${${project_name}_${target_name}_BUILD}
     DEPENDS CREATE_${project_name}_${target_name}

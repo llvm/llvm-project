@@ -101,7 +101,11 @@ FEATURE(memory_sanitizer,
 FEATURE(thread_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Thread))
 FEATURE(dataflow_sanitizer, LangOpts.Sanitize.has(SanitizerKind::DataFlow))
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
-FEATURE(swiftasynccc,
+FEATURE(ptrauth_intrinsics, LangOpts.PointerAuthIntrinsics)
+EXTENSION(swiftcc,
+  PP.getTargetInfo().checkCallingConvention(CC_Swift) ==
+  clang::TargetInfo::CCCR_OK)
+EXTENSION(swiftasynccc,
   PP.getTargetInfo().checkCallingConvention(CC_SwiftAsync) ==
   clang::TargetInfo::CCCR_OK)
 FEATURE(pragma_stdc_cx_limited_range, true)
@@ -269,6 +273,10 @@ EXTENSION(cxx_fixed_enum, true)
 EXTENSION(cxx_binary_literals, true)
 EXTENSION(cxx_init_captures, LangOpts.CPlusPlus11)
 EXTENSION(cxx_variable_templates, LangOpts.CPlusPlus)
+//C++20
+EXTENSION(cxx_generalized_nttp, LangOpts.CPlusPlus20)
+//C++23
+EXTENSION(cxx_explicit_this_parameter, LangOpts.CPlusPlus23)
 // Miscellaneous language extensions
 EXTENSION(overloadable_unmarked, true)
 EXTENSION(pragma_clang_attribute_namespaces, true)

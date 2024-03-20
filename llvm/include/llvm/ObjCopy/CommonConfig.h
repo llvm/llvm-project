@@ -16,23 +16,16 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
-// Necessary for llvm::DebugCompressionType::None
-#include "llvm/Target/TargetOptions.h"
 #include <optional>
-#include <vector>
 
 namespace llvm {
 namespace objcopy {
 
-enum class FileFormat {
-  Unspecified,
-  ELF,
-  Binary,
-  IHex,
-};
+enum class FileFormat { Unspecified, ELF, Binary, IHex, SREC };
 
 // This type keeps track of the machine info for various architectures. This
 // lets us map architecture names to ELF types and the e_machine value of the
@@ -131,8 +124,8 @@ public:
 // provided for that option.
 class NameMatcher {
   DenseSet<CachedHashStringRef> PosNames;
-  std::vector<NameOrPattern> PosPatterns;
-  std::vector<NameOrPattern> NegMatchers;
+  SmallVector<NameOrPattern, 0> PosPatterns;
+  SmallVector<NameOrPattern, 0> NegMatchers;
 
 public:
   Error addMatcher(Expected<NameOrPattern> Matcher) {
@@ -184,8 +177,8 @@ struct NewSymbolInfo {
   StringRef SymbolName;
   StringRef SectionName;
   uint64_t Value = 0;
-  std::vector<SymbolFlag> Flags;
-  std::vector<StringRef> BeforeSyms;
+  SmallVector<SymbolFlag, 0> Flags;
+  SmallVector<StringRef, 0> BeforeSyms;
 };
 
 // Specify section name and section body for newly added or updated section.
@@ -218,13 +211,14 @@ struct CommonConfig {
   uint64_t PadTo = 0;
   StringRef SplitDWO;
   StringRef SymbolsPrefix;
+  StringRef SymbolsPrefixRemove;
   StringRef AllocSectionsPrefix;
   DiscardType DiscardMode = DiscardType::None;
 
   // Repeated options
-  std::vector<NewSectionInfo> AddSection;
-  std::vector<StringRef> DumpSection;
-  std::vector<NewSectionInfo> UpdateSection;
+  SmallVector<NewSectionInfo, 0> AddSection;
+  SmallVector<StringRef, 0> DumpSection;
+  SmallVector<NewSectionInfo, 0> UpdateSection;
 
   // Section matchers
   NameMatcher KeepSection;
@@ -248,7 +242,7 @@ struct CommonConfig {
   StringMap<StringRef> SymbolsToRename;
 
   // Symbol info specified by --add-symbol option.
-  std::vector<NewSymbolInfo> SymbolsToAdd;
+  SmallVector<NewSymbolInfo, 0> SymbolsToAdd;
 
   // Boolean options
   bool DeterministicArchives = true;

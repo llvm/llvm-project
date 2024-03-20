@@ -4,6 +4,12 @@ add_header_library(
     mutex_common.h
 )
 
+add_header_library(
+  sleep
+  HDRS
+    sleep.h
+)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})
 endif()

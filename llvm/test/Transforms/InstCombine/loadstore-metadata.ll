@@ -152,7 +152,7 @@ define void @test_load_cast_combine_nonnull(ptr %ptr) {
 ; CHECK-LABEL: @test_load_cast_combine_nonnull(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !nonnull !6
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[PTR]], i64 42
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 336
 ; CHECK-NEXT:    store ptr [[P]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    ret void
 ;

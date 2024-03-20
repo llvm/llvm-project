@@ -24,7 +24,7 @@ module attributes { fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.dat
 // CHECK: #[[DECL_LOC:.*]] = loc("./simple.f90":10:1)
 // CHECK: #di_compile_unit = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, producer = "Flang", isOptimized = false, emissionKind = LineTablesOnly>
 // CHECK: #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #di_basic_type, #di_basic_type>
-// CHECK: #[[SB_SUBPROGRAM:.*]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "[[SB_NAME]]", linkageName = "[[SB_NAME]]", file = #di_file, line = 1, scopeLine = 1, subprogramFlags = Definition, type = #di_subroutine_type>
-// CHECK: #[[DECL_SUBPROGRAM:.*]] = #llvm.di_subprogram<scope = #di_file, name = "[[DECL_NAME]]", linkageName = "[[DECL_NAME]]", file = #di_file, line = 1, scopeLine = 1, subprogramFlags = Definition, type = #di_subroutine_type>
+// CHECK: #[[SB_SUBPROGRAM:.*]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "[[SB_NAME]]", linkageName = "[[SB_NAME]]", file = #di_file, line = 1, scopeLine = 1, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
+// CHECK: #[[DECL_SUBPROGRAM:.*]] = #llvm.di_subprogram<scope = #di_file, name = "[[DECL_NAME]]", linkageName = "[[DECL_NAME]]", file = #di_file, line = 1, scopeLine = 1, subprogramFlags = Optimized, type = #di_subroutine_type>
 // CHECK: #[[FUSED_SB_LOC]] = loc(fused<#[[SB_SUBPROGRAM]]>[#[[SB_LOC]]])
 // CHECK: #[[FUSED_DECL_LOC]] = loc(fused<#[[DECL_SUBPROGRAM]]>[#[[DECL_LOC]]])

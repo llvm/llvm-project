@@ -21,7 +21,7 @@
 #include <utility>
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGDETENSORIZE
+#define GEN_PASS_DEF_LINALGDETENSORIZEPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -104,7 +104,7 @@ struct FunctionNonEntryBlockConversion
   LogicalResult
   matchAndRewrite(FunctionOpInterface op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.startRootUpdate(op);
+    rewriter.startOpModification(op);
     Region &region = op.getFunctionBody();
     SmallVector<TypeConverter::SignatureConversion, 2> conversions;
 
@@ -125,11 +125,11 @@ struct FunctionNonEntryBlockConversion
 
     if (failed(rewriter.convertNonEntryRegionTypes(&region, *typeConverter,
                                                    conversions))) {
-      rewriter.cancelRootUpdate(op);
+      rewriter.cancelOpModification(op);
       return failure();
     }
 
-    rewriter.finalizeRootUpdate(op);
+    rewriter.finalizeOpModification(op);
     return success();
   }
 
@@ -164,7 +164,9 @@ public:
 
 /// @see LinalgDetensorize in Linalg/Passes.td for more details.
 struct LinalgDetensorize
-    : public impl::LinalgDetensorizeBase<LinalgDetensorize> {
+    : public impl::LinalgDetensorizePassBase<LinalgDetensorize> {
+  using impl::LinalgDetensorizePassBase<
+      LinalgDetensorize>::LinalgDetensorizePassBase;
   LinalgDetensorize() = default;
 
   class CostModel {
@@ -576,7 +578,3 @@ struct LinalgDetensorize
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createLinalgDetensorizePass() {
-  return std::make_unique<LinalgDetensorize>();
-}

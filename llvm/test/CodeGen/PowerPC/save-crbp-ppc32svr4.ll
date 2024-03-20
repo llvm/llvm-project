@@ -13,7 +13,7 @@
 ; CHECK: addic 29, 0, 20
 ; Save CR through R12 using R29 as the stack pointer (aligned base pointer).
 ; CHECK: mfcr 12
-; CHECK: stw 12, -24(29)
+; CHECK: stw 12, -28(29)
 
 target datalayout = "E-m:e-p:32:32-i64:64-n32"
 target triple = "powerpc-unknown-freebsd"

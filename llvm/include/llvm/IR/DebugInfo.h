@@ -34,22 +34,25 @@ namespace llvm {
 class DbgDeclareInst;
 class DbgValueInst;
 class DbgVariableIntrinsic;
-class DPValue;
+class DbgVariableRecord;
 class Instruction;
 class Module;
 
 /// Finds dbg.declare intrinsics declaring local variables as living in the
 /// memory that 'V' points to.
-void findDbgDeclares(SmallVectorImpl<DbgDeclareInst *> &DbgUsers, Value *V,
-                     SmallVectorImpl<DPValue *> *DPValues = nullptr);
+TinyPtrVector<DbgDeclareInst *> findDbgDeclares(Value *V);
+/// As above, for DVRDeclares.
+TinyPtrVector<DbgVariableRecord *> findDVRDeclares(Value *V);
 
 /// Finds the llvm.dbg.value intrinsics describing a value.
-void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues,
-                   Value *V, SmallVectorImpl<DPValue *> *DPValues = nullptr);
+void findDbgValues(
+    SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V,
+    SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords = nullptr);
 
 /// Finds the debug info intrinsics describing a value.
-void findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts,
-                  Value *V, SmallVectorImpl<DPValue *> *DPValues = nullptr);
+void findDbgUsers(
+    SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts, Value *V,
+    SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords = nullptr);
 
 /// Find subprogram that is enclosing this scope.
 DISubprogram *getDISubprogram(const MDNode *Scope);
@@ -57,6 +60,7 @@ DISubprogram *getDISubprogram(const MDNode *Scope);
 /// Produce a DebugLoc to use for each dbg.declare that is promoted to a
 /// dbg.value.
 DebugLoc getDebugValueLoc(DbgVariableIntrinsic *DII);
+DebugLoc getDebugValueLoc(DbgVariableRecord *DVR);
 
 /// Strip debug info in the module if it exists.
 ///
@@ -104,11 +108,12 @@ public:
   void processInstruction(const Module &M, const Instruction &I);
 
   /// Process a DILocalVariable.
-  void processVariable(DILocalVariable *DVI);
+  void processVariable(const Module &M, const DILocalVariable *DVI);
   /// Process debug info location.
   void processLocation(const Module &M, const DILocation *Loc);
-  // Process a DPValue, much like a DbgVariableIntrinsic.
-  void processDPValue(const Module &M, const DPValue &DPV);
+  /// Process a DbgRecord (e.g, treat a DbgVariableRecord like a
+  /// DbgVariableIntrinsic).
+  void processDbgRecord(const Module &M, const DbgRecord &DR);
 
   /// Process subprogram.
   void processSubprogram(DISubprogram *SP);
@@ -120,7 +125,6 @@ private:
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
-  void processLocalVariable(DILocalVariable *DV);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);
   bool addScope(DIScope *Scope);
@@ -135,8 +139,6 @@ public:
       SmallVectorImpl<DIGlobalVariableExpression *>::const_iterator;
   using type_iterator = SmallVectorImpl<DIType *>::const_iterator;
   using scope_iterator = SmallVectorImpl<DIScope *>::const_iterator;
-  using local_variable_iterator =
-      SmallVectorImpl<DILocalVariable *>::const_iterator;
 
   iterator_range<compile_unit_iterator> compile_units() const {
     return make_range(CUs.begin(), CUs.end());
@@ -150,10 +152,6 @@ public:
     return make_range(GVs.begin(), GVs.end());
   }
 
-  iterator_range<local_variable_iterator> local_variables() const {
-    return make_range(LVs.begin(), LVs.end());
-  }
-
   iterator_range<type_iterator> types() const {
     return make_range(TYs.begin(), TYs.end());
   }
@@ -164,7 +162,6 @@ public:
 
   unsigned compile_unit_count() const { return CUs.size(); }
   unsigned global_variable_count() const { return GVs.size(); }
-  unsigned local_variable_count() const { return LVs.size(); }
   unsigned subprogram_count() const { return SPs.size(); }
   unsigned type_count() const { return TYs.size(); }
   unsigned scope_count() const { return Scopes.size(); }
@@ -173,7 +170,6 @@ private:
   SmallVector<DICompileUnit *, 8> CUs;
   SmallVector<DISubprogram *, 8> SPs;
   SmallVector<DIGlobalVariableExpression *, 8> GVs;
-  SmallVector<DILocalVariable *, 8> LVs;
   SmallVector<DIType *, 8> TYs;
   SmallVector<DIScope *, 8> Scopes;
   SmallPtrSet<const MDNode *, 32> NodesSeen;
@@ -198,6 +194,12 @@ AssignmentInstRange getAssignmentInsts(DIAssignID *ID);
 /// instruction (including by deleting or cloning instructions).
 inline AssignmentInstRange getAssignmentInsts(const DbgAssignIntrinsic *DAI) {
   return getAssignmentInsts(DAI->getAssignID());
+}
+
+inline AssignmentInstRange getAssignmentInsts(const DbgVariableRecord *DVR) {
+  assert(DVR->isDbgAssign() &&
+         "Can't get assignment instructions for non-assign DVR!");
+  return getAssignmentInsts(DVR->getAssignID());
 }
 
 //
@@ -232,6 +234,13 @@ inline AssignmentMarkerRange getAssignmentMarkers(const Instruction *Inst) {
     return make_range(Value::user_iterator(), Value::user_iterator());
 }
 
+inline SmallVector<DbgVariableRecord *>
+getDVRAssignmentMarkers(const Instruction *Inst) {
+  if (auto *ID = Inst->getMetadata(LLVMContext::MD_DIAssignID))
+    return cast<DIAssignID>(ID)->getAllDbgVariableRecordUsers();
+  return {};
+}
+
 /// Delete the llvm.dbg.assign intrinsics linked to \p Inst.
 void deleteAssignmentMarkers(const Instruction *Inst);
 
@@ -252,7 +261,11 @@ void deleteAll(Function *F);
 /// Result contains a zero-sized fragment if there's no intersect.
 bool calculateFragmentIntersect(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
-    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DAI,
+    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DbgAssign,
+    std::optional<DIExpression::FragmentInfo> &Result);
+bool calculateFragmentIntersect(
+    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
+    uint64_t SliceSizeInBits, const DbgVariableRecord *DVRAssign,
     std::optional<DIExpression::FragmentInfo> &Result);
 
 /// Helper struct for trackAssignments, below. We don't use the similar
@@ -267,6 +280,8 @@ struct VarRecord {
 
   VarRecord(DbgVariableIntrinsic *DVI)
       : Var(DVI->getVariable()), DL(getDebugValueLoc(DVI)) {}
+  VarRecord(DbgVariableRecord *DVR)
+      : Var(DVR->getVariable()), DL(getDebugValueLoc(DVR)) {}
   VarRecord(DILocalVariable *Var, DILocation *DL) : Var(Var), DL(DL) {}
   friend bool operator<(const VarRecord &LHS, const VarRecord &RHS) {
     return std::tie(LHS.Var, LHS.DL) < std::tie(RHS.Var, RHS.DL);

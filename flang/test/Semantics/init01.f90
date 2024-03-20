@@ -8,6 +8,17 @@ subroutine objectpointers(j)
   real, save :: x3
   real, target :: x4
   real, target, save :: x5(10)
+  real, pointer :: x6
+  type t1
+    real, allocatable :: c1
+    real, allocatable, codimension[:] :: c2
+    real :: c3
+    real :: c4(10)
+    real, pointer :: c5
+  end type
+  type(t1), target, save :: o1
+  type(t1), save :: o2
+  type(t1), target :: o3
 !ERROR: An initial data target may not be a reference to an ALLOCATABLE 'x1'
   real, pointer :: p1 => x1
 !ERROR: An initial data target may not be a reference to a coarray 'x2'
@@ -20,6 +31,52 @@ subroutine objectpointers(j)
   real, pointer :: p5 => x5(j)
 !ERROR: Pointer has rank 0 but target has rank 1
   real, pointer :: p6 => x5
+!ERROR: An initial data target may not be a reference to a POINTER 'x6'
+  real, pointer :: p7 => x6
+!ERROR: An initial data target may not be a reference to an ALLOCATABLE 'c1'
+  real, pointer :: p1o => o1%c1
+!ERROR: An initial data target may not be a reference to a coarray 'c2'
+  real, pointer :: p2o => o1%c2
+!ERROR: An initial data target may not be a reference to an object 'o2' that lacks the TARGET attribute
+  real, pointer :: p3o => o2%c3
+!ERROR: An initial data target may not be a reference to an object 'o3' that lacks the SAVE attribute
+  real, pointer :: p4o => o3%c3
+!ERROR: An initial data target must be a designator with constant subscripts
+  real, pointer :: p5o => o1%c4(j)
+!ERROR: Pointer has rank 0 but target has rank 1
+  real, pointer :: p6o => o1%c4
+!ERROR: An initial data target may not be a reference to a POINTER 'c5'
+  real, pointer :: p7o => o1%c5
+  type t2
+    !ERROR: An initial data target may not be a reference to an ALLOCATABLE 'x1'
+    real, pointer :: p1 => x1
+    !ERROR: An initial data target may not be a reference to a coarray 'x2'
+    real, pointer :: p2 => x2
+    !ERROR: An initial data target may not be a reference to an object 'x3' that lacks the TARGET attribute
+    real, pointer :: p3 => x3
+    !ERROR: An initial data target may not be a reference to an object 'x4' that lacks the SAVE attribute
+    real, pointer :: p4 => x4
+    !ERROR: An initial data target must be a designator with constant subscripts
+    real, pointer :: p5 => x5(j)
+    !ERROR: Pointer has rank 0 but target has rank 1
+    real, pointer :: p6 => x5
+    !ERROR: An initial data target may not be a reference to a POINTER 'x6'
+    real, pointer :: p7 => x6
+    !ERROR: An initial data target may not be a reference to an ALLOCATABLE 'c1'
+    real, pointer :: p1o => o1%c1
+    !ERROR: An initial data target may not be a reference to a coarray 'c2'
+    real, pointer :: p2o => o1%c2
+    !ERROR: An initial data target may not be a reference to an object 'o2' that lacks the TARGET attribute
+    real, pointer :: p3o => o2%c3
+    !ERROR: An initial data target may not be a reference to an object 'o3' that lacks the SAVE attribute
+    real, pointer :: p4o => o3%c3
+    !ERROR: An initial data target must be a designator with constant subscripts
+    real, pointer :: p5o => o1%c4(j)
+    !ERROR: Pointer has rank 0 but target has rank 1
+    real, pointer :: p6o => o1%c4
+    !ERROR: An initial data target may not be a reference to a POINTER 'c5'
+    real, pointer :: p7o => o1%c5
+  end type
 
 !TODO: type incompatibility, non-deferred type parameter values, contiguity
 
@@ -106,3 +163,21 @@ subroutine notObjects
 !ERROR: 'x4' is not a pointer but is initialized like one
   real, intrinsic :: x4 => cos
 end subroutine
+
+subroutine edgeCases
+  integer :: j = 1, m = 2
+  !ERROR: Data statement object must be a variable
+  data k/3/
+  data n/4/
+  !ERROR: Named constant 'j' already has a value
+  parameter(j = 5)
+  !ERROR: Named constant 'k' already has a value
+  parameter(k = 6)
+  parameter(l = 7)
+  !ERROR: 'm' was initialized earlier as a scalar
+  dimension m(1)
+  !ERROR: 'l' was initialized earlier as a scalar
+  dimension l(1)
+  !ERROR: 'n' was initialized earlier as a scalar
+  dimension n(1)
+end

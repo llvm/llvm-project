@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_RISCVINSTRINFO_H
 #define LLVM_LIB_TARGET_RISCV_RISCVINSTRINFO_H
 
+#include "RISCV.h"
 #include "RISCVRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -20,6 +21,7 @@
 #define GET_INSTRINFO_HEADER
 #define GET_INSTRINFO_OPERAND_ENUM
 #include "RISCVGenInstrInfo.inc"
+#include "RISCVGenRegisterInfo.inc"
 
 namespace llvm {
 
@@ -55,13 +57,13 @@ public:
   MCInst getNop() const override;
   const MCInstrDesc &getBrCond(RISCVCC::CondCode CC) const;
 
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
+  Register isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
                                unsigned &MemBytes) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
+  Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               unsigned &MemBytes) const override;
 
   void copyPhysRegVector(MachineBasicBlock &MBB,
@@ -154,7 +156,7 @@ public:
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+      int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
       const TargetRegisterInfo *TRI) const override;
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
@@ -166,7 +168,7 @@ public:
 
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
-                                    int64_t &Offset, unsigned &Width,
+                                    int64_t &Offset, LocationSize &Width,
                                     const TargetRegisterInfo *TRI) const;
 
   bool areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
@@ -261,6 +263,21 @@ public:
 
   ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
   getSerializableMachineMemOperandTargetFlags() const override;
+
+  unsigned getUndefInitOpcode(unsigned RegClassID) const override {
+    switch (RegClassID) {
+    case RISCV::VRRegClassID:
+      return RISCV::PseudoRVVInitUndefM1;
+    case RISCV::VRM2RegClassID:
+      return RISCV::PseudoRVVInitUndefM2;
+    case RISCV::VRM4RegClassID:
+      return RISCV::PseudoRVVInitUndefM4;
+    case RISCV::VRM8RegClassID:
+      return RISCV::PseudoRVVInitUndefM8;
+    default:
+      llvm_unreachable("Unexpected register class.");
+    }
+  }
 
 protected:
   const RISCVSubtarget &STI;

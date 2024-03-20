@@ -22,7 +22,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(NOT LIBC_TARGET_OS_IS_GPU)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 endif()
 
@@ -234,6 +234,16 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.vfprintf_internal
+)
+
+add_stdio_entrypoint_object(
+  fileno
+  SRCS
+    fileno.cpp
+  HDRS
+    fileno.h
+  DEPENDS
+    libc.src.stdio.fileno
 )
 
 add_subdirectory(printf_core)

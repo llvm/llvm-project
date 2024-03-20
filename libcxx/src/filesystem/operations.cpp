@@ -460,8 +460,21 @@ path __current_path(error_code* ec) {
   typedef decltype(&::free) Deleter;
   Deleter deleter = &::free;
 #else
+  errno     = 0; // Note: POSIX mandates that modifying `errno` is thread-safe.
   auto size = ::pathconf(".", _PC_PATH_MAX);
-  _LIBCPP_ASSERT_UNCATEGORIZED(size >= 0, "pathconf returned a 0 as max size");
+  if (size == -1) {
+    if (errno != 0) {
+      return err.report(capture_errno(), "call to pathconf failed");
+
+      // `pathconf` returns `-1` without an error to indicate no limit.
+    } else {
+#  if defined(__MVS__) && !defined(PATH_MAX)
+      size = _XOPEN_PATH_MAX + 1;
+#  else
+      size = PATH_MAX + 1;
+#  endif
+    }
+  }
 
   auto buff             = unique_ptr<path::value_type[]>(new path::value_type[size + 1]);
   path::value_type* ptr = buff.get();
@@ -608,10 +621,9 @@ void __permissions(const path& p, perms prms, perm_options opts, error_code* ec)
   const bool resolve_symlinks = !has_opt(perm_options::nofollow);
   const bool add_perms        = has_opt(perm_options::add);
   const bool remove_perms     = has_opt(perm_options::remove);
-  _LIBCPP_ASSERT_UNCATEGORIZED(
+  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
       (add_perms + remove_perms + has_opt(perm_options::replace)) == 1,
-      "One and only one of the perm_options constants replace, add, or remove "
-      "is present in opts");
+      "One and only one of the perm_options constants 'replace', 'add', or 'remove' must be present in opts");
 
   bool set_sym_perms = false;
   prms &= perms::mask;
@@ -621,7 +633,9 @@ void __permissions(const path& p, perms prms, perm_options opts, error_code* ec)
     set_sym_perms  = is_symlink(st);
     if (m_ec)
       return err.report(m_ec);
-    _LIBCPP_ASSERT_UNCATEGORIZED(st.permissions() != perms::unknown, "Permissions unexpectedly unknown");
+    // TODO(hardening): double-check this assertion -- it might be a valid (if rare) case when the permissions are
+    // unknown.
+    _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(st.permissions() != perms::unknown, "Permissions unexpectedly unknown");
     if (add_perms)
       prms |= st.permissions();
     else if (remove_perms)
@@ -668,7 +682,7 @@ path __read_symlink(const path& p, error_code* ec) {
   detail::SSizeT ret;
   if ((ret = detail::readlink(p.c_str(), buff.get(), size)) == -1)
     return err.report(capture_errno());
-  _LIBCPP_ASSERT_UNCATEGORIZED(ret > 0, "TODO");
+  // Note that `ret` returning `0` would work, resulting in a valid empty string being returned.
   if (static_cast<size_t>(ret) >= size)
     return err.report(errc::value_too_large);
   buff[ret] = 0;
@@ -801,8 +815,9 @@ uintmax_t remove_all_impl(int parent_directory, const path& p, error_code& ec) {
 
   // If opening `p` failed because it wasn't a directory, remove it as
   // a normal file instead. Note that `openat()` can return either ENOTDIR
-  // or ELOOP depending on the exact reason of the failure.
-  if (ec == errc::not_a_directory || ec == errc::too_many_symbolic_link_levels) {
+  // or ELOOP depending on the exact reason of the failure. On FreeBSD it
+  // may return EMLINK instead of ELOOP, contradicting POSIX.
+  if (ec == errc::not_a_directory || ec == errc::too_many_symbolic_link_levels || ec == errc::too_many_links) {
     ec.clear();
     if (::unlinkat(parent_directory, p.c_str(), /* flags = */ 0) == -1) {
       ec = detail::capture_errno();

@@ -15,7 +15,7 @@ body: |
   ; GCN-NEXT:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   successors: {{$}}
+  ; GCN-NEXT:   successors:
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
   ; GCN-NEXT: {{  $}}
@@ -47,7 +47,7 @@ body: |
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   successors: {{$}}
+  ; GCN-NEXT:   successors:
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
   ; GCN-NEXT: {{  $}}

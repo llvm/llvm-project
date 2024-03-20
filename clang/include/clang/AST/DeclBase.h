@@ -548,16 +548,17 @@ public:
     return hasAttrs() ? getAttrs().end() : nullptr;
   }
 
-  template <typename T>
-  void dropAttr() {
+  template <typename... Ts> void dropAttrs() {
     if (!HasAttrs) return;
 
     AttrVec &Vec = getAttrs();
-    llvm::erase_if(Vec, [](Attr *A) { return isa<T>(A); });
+    llvm::erase_if(Vec, [](Attr *A) { return isa<Ts...>(A); });
 
     if (Vec.empty())
       HasAttrs = false;
   }
+
+  template <typename T> void dropAttr() { dropAttrs<T>(); }
 
   template <typename T>
   llvm::iterator_range<specific_attr_iterator<T>> specific_attrs() const {
@@ -671,6 +672,16 @@ public:
   /// FIXME: Implement discarding declarations actually in global module
   /// fragment. See [module.global.frag]p3,4 for details.
   bool isDiscardedInGlobalModuleFragment() const { return false; }
+
+  /// Check if we should skip checking ODRHash for declaration \param D.
+  ///
+  /// The existing ODRHash mechanism seems to be not stable enough and
+  /// the false positive ODR violation reports are annoying and we rarely see
+  /// true ODR violation reports. Also we learned that MSVC disabled ODR checks
+  /// for declarations in GMF. So we try to disable ODR checks in the GMF to
+  /// get better user experiences before we make the ODR violation checks stable
+  /// enough.
+  bool shouldSkipCheckingODR() const;
 
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
@@ -1707,7 +1718,7 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsVirtualAsWritten : 1;
     LLVM_PREFERRED_TYPE(bool)
-    uint64_t IsPure : 1;
+    uint64_t IsPureVirtual : 1;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t HasInheritedPrototype : 1;
     LLVM_PREFERRED_TYPE(bool)
@@ -2119,6 +2130,7 @@ public:
     case Decl::Block:
     case Decl::Captured:
     case Decl::ObjCMethod:
+    case Decl::TopLevelStmt:
       return true;
     default:
       return getDeclKind() >= Decl::firstFunction &&

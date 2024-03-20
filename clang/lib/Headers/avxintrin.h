@@ -1574,14 +1574,6 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
                                      (__v4df)(__m256d)(b), (int)(mask)))
 
 /* Compare */
-#define _CMP_EQ_OQ    0x00 /* Equal (ordered, non-signaling)  */
-#define _CMP_LT_OS    0x01 /* Less-than (ordered, signaling)  */
-#define _CMP_LE_OS    0x02 /* Less-than-or-equal (ordered, signaling)  */
-#define _CMP_UNORD_Q  0x03 /* Unordered (non-signaling)  */
-#define _CMP_NEQ_UQ   0x04 /* Not-equal (unordered, non-signaling)  */
-#define _CMP_NLT_US   0x05 /* Not-less-than (unordered, signaling)  */
-#define _CMP_NLE_US   0x06 /* Not-less-than-or-equal (unordered, signaling)  */
-#define _CMP_ORD_Q    0x07 /* Ordered (non-signaling)   */
 #define _CMP_EQ_UQ    0x08 /* Equal (unordered, non-signaling)  */
 #define _CMP_NGE_US   0x09 /* Not-greater-than-or-equal (unordered, signaling)  */
 #define _CMP_NGT_US   0x0a /* Not-greater-than (unordered, signaling)  */
@@ -1607,6 +1599,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 #define _CMP_GT_OQ    0x1e /* Greater-than (ordered, non-signaling)  */
 #define _CMP_TRUE_US  0x1f /* True (unordered, signaling)  */
 
+/* Below intrinsic defined in emmintrin.h can be used for AVX */
 /// Compares each of the corresponding double-precision values of two
 ///    128-bit vectors of [2 x double], using the operation specified by the
 ///    immediate integer operand.
@@ -1663,10 +1656,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1E: Greater-than (ordered, non-signaling) \n
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [2 x double] containing the comparison results.
-#define _mm_cmp_pd(a, b, c) \
-  ((__m128d)__builtin_ia32_cmppd((__v2df)(__m128d)(a), \
-                                 (__v2df)(__m128d)(b), (c)))
+/// \fn __m128d _mm_cmp_pd(__m128d a, __m128d b, const int c)
 
+/* Below intrinsic defined in xmmintrin.h can be used for AVX */
 /// Compares each of the corresponding values of two 128-bit vectors of
 ///    [4 x float], using the operation specified by the immediate integer
 ///    operand.
@@ -1723,9 +1715,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1E: Greater-than (ordered, non-signaling) \n
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-#define _mm_cmp_ps(a, b, c) \
-  ((__m128)__builtin_ia32_cmpps((__v4sf)(__m128)(a), \
-                                (__v4sf)(__m128)(b), (c)))
+/// \fn __m128 _mm_cmp_ps(__m128 a, __m128 b, const int c)
 
 /// Compares each of the corresponding double-precision values of two
 ///    256-bit vectors of [4 x double], using the operation specified by the
@@ -1847,6 +1837,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
   ((__m256)__builtin_ia32_cmpps256((__v8sf)(__m256)(a), \
                                    (__v8sf)(__m256)(b), (c)))
 
+/* Below intrinsic defined in emmintrin.h can be used for AVX */
 /// Compares each of the corresponding scalar double-precision values of
 ///    two 128-bit vectors of [2 x double], using the operation specified by the
 ///    immediate integer operand.
@@ -1902,10 +1893,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1E: Greater-than (ordered, non-signaling) \n
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [2 x double] containing the comparison results.
-#define _mm_cmp_sd(a, b, c) \
-  ((__m128d)__builtin_ia32_cmpsd((__v2df)(__m128d)(a), \
-                                 (__v2df)(__m128d)(b), (c)))
+/// \fn __m128d _mm_cmp_sd(__m128d a, __m128d b, const int c)
 
+/* Below intrinsic defined in xmmintrin.h can be used for AVX */
 /// Compares each of the corresponding scalar values of two 128-bit
 ///    vectors of [4 x float], using the operation specified by the immediate
 ///    integer operand.
@@ -1961,9 +1951,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1E: Greater-than (ordered, non-signaling) \n
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-#define _mm_cmp_ss(a, b, c) \
-  ((__m128)__builtin_ia32_cmpss((__v4sf)(__m128)(a), \
-                                (__v4sf)(__m128)(b), (c)))
+/// \fn __m128 _mm_cmp_ss(__m128 a, __m128 b, const int c)
 
 /// Takes a [8 x i32] vector and returns the vector element value
 ///    indexed by the immediate constant operand.
@@ -2213,6 +2201,10 @@ _mm256_cvtpd_ps(__m256d __a)
 
 /// Converts a vector of [8 x float] into a vector of [8 x i32].
 ///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VCVTPS2DQ </c> instruction.
@@ -2242,9 +2234,13 @@ _mm256_cvtps_pd(__m128 __a)
   return (__m256d)__builtin_convertvector((__v4sf)__a, __v4df);
 }
 
-/// Converts a 256-bit vector of [4 x double] into a 128-bit vector of [4
-///    x i32], truncating the result by rounding towards zero when it is
-///    inexact.
+/// Converts a 256-bit vector of [4 x double] into four signed truncated
+///    (rounded toward zero) 32-bit integers returned in a 128-bit vector of
+///    [4 x i32].
+///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2259,9 +2255,12 @@ _mm256_cvttpd_epi32(__m256d __a)
   return (__m128i)__builtin_ia32_cvttpd2dq256((__v4df) __a);
 }
 
-/// Converts a 256-bit vector of [4 x double] into a 128-bit vector of [4
-///    x i32]. When a conversion is inexact, the value returned is rounded
-///    according to the rounding control bits in the MXCSR register.
+/// Converts a 256-bit vector of [4 x double] into a 128-bit vector of
+///    [4 x i32].
+///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2276,8 +2275,12 @@ _mm256_cvtpd_epi32(__m256d __a)
   return (__m128i)__builtin_ia32_cvtpd2dq256((__v4df) __a);
 }
 
-/// Converts a vector of [8 x float] into a vector of [8 x i32],
-///    truncating the result by rounding towards zero when it is inexact.
+/// Converts a vector of [8 x float] into eight signed truncated (rounded
+///    toward zero) 32-bit integers returned in a vector of [8 x i32].
+///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///

@@ -532,7 +532,7 @@ template <class Value, class Hash, class Pred, class Alloc>
 // clang-format on
 
 #include <__algorithm/is_permutation.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__availability>
 #include <__config>
 #include <__functional/is_transparent.h>
@@ -569,6 +569,9 @@ template <class Value, class Hash, class Pred, class Alloc>
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -1809,6 +1812,8 @@ using unordered_multiset _LIBCPP_AVAILABILITY_PMR =
 } // namespace pmr
 _LIBCPP_END_NAMESPACE_STD
 #endif
+
+_LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <concepts>

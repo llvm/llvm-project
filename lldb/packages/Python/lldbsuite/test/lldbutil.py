@@ -696,24 +696,24 @@ def check_breakpoint(
     test.assertTrue(bkpt.IsValid(), "Breakpoint is not valid.")
 
     if expected_locations is not None:
-        test.assertEquals(expected_locations, bkpt.GetNumLocations())
+        test.assertEqual(expected_locations, bkpt.GetNumLocations())
 
     if expected_resolved_count is not None:
-        test.assertEquals(expected_resolved_count, bkpt.GetNumResolvedLocations())
+        test.assertEqual(expected_resolved_count, bkpt.GetNumResolvedLocations())
     else:
         expected_resolved_count = bkpt.GetNumLocations()
         if location_id is None:
-            test.assertEquals(expected_resolved_count, bkpt.GetNumResolvedLocations())
+            test.assertEqual(expected_resolved_count, bkpt.GetNumResolvedLocations())
 
     if expected_hit_count is not None:
-        test.assertEquals(expected_hit_count, bkpt.GetHitCount())
+        test.assertEqual(expected_hit_count, bkpt.GetHitCount())
 
     if location_id is not None:
         loc_bkpt = bkpt.FindLocationByID(location_id)
         test.assertTrue(loc_bkpt.IsValid(), "Breakpoint location is not valid.")
-        test.assertEquals(loc_bkpt.IsResolved(), expected_location_resolved)
+        test.assertEqual(loc_bkpt.IsResolved(), expected_location_resolved)
         if expected_location_hit_count is not None:
-            test.assertEquals(expected_location_hit_count, loc_bkpt.GetHitCount())
+            test.assertEqual(expected_location_hit_count, loc_bkpt.GetHitCount())
 
 
 # ==================================================

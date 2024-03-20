@@ -1043,14 +1043,14 @@ value llvm_const_float_of_string(value RealTy, value S) {
 
 /* llcontext -> string -> llvalue */
 value llvm_const_string(value Context, value Str) {
-  return to_val(LLVMConstStringInContext(Context_val(Context), String_val(Str),
-                                         caml_string_length(Str), 1));
+  return to_val(LLVMConstStringInContext2(Context_val(Context), String_val(Str),
+                                          caml_string_length(Str), 1));
 }
 
 /* llcontext -> string -> llvalue */
 value llvm_const_stringz(value Context, value Str) {
-  return to_val(LLVMConstStringInContext(Context_val(Context), String_val(Str),
-                                         caml_string_length(Str), 0));
+  return to_val(LLVMConstStringInContext2(Context_val(Context), String_val(Str),
+                                          caml_string_length(Str), 0));
 }
 
 /* lltype -> llvalue array -> llvalue */

@@ -330,6 +330,19 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       return BinaryOperator::CreateMul(X, X);
   }
 
+  {
+    Value *X, *Y;
+    // abs(X) * abs(Y) -> abs(X * Y)
+    if (I.hasNoSignedWrap() &&
+        match(Op0,
+              m_OneUse(m_Intrinsic<Intrinsic::abs>(m_Value(X), m_One()))) &&
+        match(Op1, m_OneUse(m_Intrinsic<Intrinsic::abs>(m_Value(Y), m_One()))))
+      return replaceInstUsesWith(
+          I, Builder.CreateBinaryIntrinsic(Intrinsic::abs,
+                                           Builder.CreateNSWMul(X, Y),
+                                           Builder.getTrue()));
+  }
+
   // -X * C --> X * -C
   Value *X, *Y;
   Constant *Op1C;
@@ -434,6 +447,14 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     return SelectInst::Create(X, Op1, ConstantInt::getNullValue(Ty));
   if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(X, Op0, ConstantInt::getNullValue(Ty));
+
+  // mul (sext X), Y -> select X, -Y, 0
+  // mul Y, (sext X) -> select X, -Y, 0
+  if (match(&I, m_c_Mul(m_OneUse(m_SExt(m_Value(X))), m_Value(Y))) &&
+      X->getType()->isIntOrIntVectorTy(1))
+    return SelectInst::Create(
+        X, Builder.CreateNeg(Y, "", /*HasNUW=*/false, I.hasNoSignedWrap()),
+        ConstantInt::getNullValue(Op0->getType()));
 
   Constant *ImmC;
   if (match(Op1, m_ImmConstant(ImmC))) {
@@ -558,6 +579,42 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
   return nullptr;
 }
 
+Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
+  auto createPowiExpr = [](BinaryOperator &I, InstCombinerImpl &IC, Value *X,
+                           Value *Y, Value *Z) {
+    InstCombiner::BuilderTy &Builder = IC.Builder;
+    Value *YZ = Builder.CreateAdd(Y, Z);
+    auto *NewPow = Builder.CreateIntrinsic(
+        Intrinsic::powi, {X->getType(), YZ->getType()}, {X, YZ}, &I);
+    return IC.replaceInstUsesWith(I, NewPow);
+  };
+
+  Value *X, *Y, *Z;
+
+  // powi(X, Y) * X --> powi(X, Y+1)
+  // X * powi(X, Y) --> powi(X, Y+1)
+  if (match(&I, m_c_FMul(m_OneUse(m_AllowReassoc(m_Intrinsic<Intrinsic::powi>(
+                             m_Value(X), m_Value(Y)))),
+                         m_Deferred(X)))) {
+    Constant *One = ConstantInt::get(Y->getType(), 1);
+    if (willNotOverflowSignedAdd(Y, One, I))
+      return createPowiExpr(I, *this, X, Y, One);
+  }
+
+  // powi(x, y) * powi(x, z) -> powi(x, y + z)
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  if (I.isOnlyUserOfAnyOperand() &&
+      match(Op0, m_AllowReassoc(
+                     m_Intrinsic<Intrinsic::powi>(m_Value(X), m_Value(Y)))) &&
+      match(Op1, m_AllowReassoc(m_Intrinsic<Intrinsic::powi>(m_Specific(X),
+                                                             m_Value(Z)))) &&
+      Y->getType() == Z->getType())
+    return createPowiExpr(I, *this, X, Y, Z);
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0);
   Value *Op1 = I.getOperand(1);
@@ -670,6 +727,9 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
     return replaceInstUsesWith(I, Pow);
   }
 
+  if (Instruction *FoldedPowi = foldPowiReassoc(I))
+    return FoldedPowi;
+
   if (I.isOnlyUserOfAnyOperand()) {
     // pow(X, Y) * pow(X, Z) -> pow(X, Y + Z)
     if (match(Op0, m_Intrinsic<Intrinsic::pow>(m_Value(X), m_Value(Y))) &&
@@ -683,16 +743,6 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
         match(Op1, m_Intrinsic<Intrinsic::pow>(m_Value(Z), m_Specific(Y)))) {
       auto *XZ = Builder.CreateFMulFMF(X, Z, &I);
       auto *NewPow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, XZ, Y, &I);
-      return replaceInstUsesWith(I, NewPow);
-    }
-
-    // powi(x, y) * powi(x, z) -> powi(x, y + z)
-    if (match(Op0, m_Intrinsic<Intrinsic::powi>(m_Value(X), m_Value(Y))) &&
-        match(Op1, m_Intrinsic<Intrinsic::powi>(m_Specific(X), m_Value(Z))) &&
-        Y->getType() == Z->getType()) {
-      auto *YZ = Builder.CreateAdd(Y, Z);
-      auto *NewPow = Builder.CreateIntrinsic(
-          Intrinsic::powi, {X->getType(), YZ->getType()}, {X, YZ}, &I);
       return replaceInstUsesWith(I, NewPow);
     }
 
@@ -754,6 +804,9 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     return replaceInstUsesWith(I, FoldedMul);
 
   if (Instruction *R = foldFPSignBitOps(I))
+    return R;
+
+  if (Instruction *R = foldFBinOpOfIntCasts(I))
     return R;
 
   // X * -1.0 --> -X
@@ -1286,9 +1339,6 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
   }
 
   // log2(Cond ? X : Y) -> Cond ? log2(X) : log2(Y)
-  // FIXME: missed optimization: if one of the hands of select is/contains
-  //        undef, just directly pick the other one.
-  // FIXME: can both hands contain undef?
   // FIXME: Require one use?
   if (SelectInst *SI = dyn_cast<SelectInst>(Op))
     if (Value *LogX = takeLog2(Builder, SI->getOperand(1), Depth,
@@ -1585,9 +1635,11 @@ Instruction *InstCombinerImpl::foldFDivConstantDivisor(BinaryOperator &I) {
       return BinaryOperator::CreateFDivFMF(X, NegC, &I);
 
   // nnan X / +0.0 -> copysign(inf, X)
-  if (I.hasNoNaNs() && match(I.getOperand(1), m_Zero())) {
+  // nnan nsz X / -0.0 -> copysign(inf, X)
+  if (I.hasNoNaNs() &&
+      (match(I.getOperand(1), m_PosZeroFP()) ||
+       (I.hasNoSignedZeros() && match(I.getOperand(1), m_AnyZeroFP())))) {
     IRBuilder<> B(&I);
-    // TODO: nnan nsz X / -0.0 -> copysign(inf, X)
     CallInst *CopySign = B.CreateIntrinsic(
         Intrinsic::copysign, {C->getType()},
         {ConstantFP::getInfinity(I.getType()), I.getOperand(0)}, &I);
@@ -1692,6 +1744,34 @@ static Instruction *foldFDivPowDivisor(BinaryOperator &I,
   }
   Value *Pow = Builder.CreateIntrinsic(IID, I.getType(), Args, &I);
   return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
+}
+
+/// Convert div to mul if we have an sqrt divisor iff sqrt's operand is a fdiv
+/// instruction.
+static Instruction *foldFDivSqrtDivisor(BinaryOperator &I,
+                                        InstCombiner::BuilderTy &Builder) {
+  // X / sqrt(Y / Z) -->  X * sqrt(Z / Y)
+  if (!I.hasAllowReassoc() || !I.hasAllowReciprocal())
+    return nullptr;
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  auto *II = dyn_cast<IntrinsicInst>(Op1);
+  if (!II || II->getIntrinsicID() != Intrinsic::sqrt || !II->hasOneUse() ||
+      !II->hasAllowReassoc() || !II->hasAllowReciprocal())
+    return nullptr;
+
+  Value *Y, *Z;
+  auto *DivOp = dyn_cast<Instruction>(II->getOperand(0));
+  if (!DivOp)
+    return nullptr;
+  if (!match(DivOp, m_FDiv(m_Value(Y), m_Value(Z))))
+    return nullptr;
+  if (!DivOp->hasAllowReassoc() || !I.hasAllowReciprocal() ||
+      !DivOp->hasOneUse())
+    return nullptr;
+  Value *SwapDiv = Builder.CreateFDivFMF(Z, Y, DivOp);
+  Value *NewSqrt =
+      Builder.CreateUnaryIntrinsic(II->getIntrinsicID(), SwapDiv, II);
+  return BinaryOperator::CreateFMulFMF(Op0, NewSqrt, &I);
 }
 
 Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
@@ -1799,6 +1879,9 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
   }
 
   if (Instruction *Mul = foldFDivPowDivisor(I, Builder))
+    return Mul;
+
+  if (Instruction *Mul = foldFDivSqrtDivisor(I, Builder))
     return Mul;
 
   // pow(X, Y) / X --> pow(X, Y-1)

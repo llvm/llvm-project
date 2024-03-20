@@ -302,9 +302,9 @@ bool ValidateInternalCalls::analyzeFunction(BinaryFunction &Function) const {
   return true;
 }
 
-void ValidateInternalCalls::runOnFunctions(BinaryContext &BC) {
+Error ValidateInternalCalls::runOnFunctions(BinaryContext &BC) {
   if (!BC.isX86())
-    return;
+    return Error::success();
 
   // Look for functions that need validation. This should be pretty rare.
   std::set<BinaryFunction *> NeedsValidation;
@@ -323,7 +323,7 @@ void ValidateInternalCalls::runOnFunctions(BinaryContext &BC) {
 
   // Skip validation for non-relocation mode
   if (!BC.HasRelocations)
-    return;
+    return Error::success();
 
   // Since few functions need validation, we can work with our most expensive
   // algorithms here. Fix the CFG treating internal calls as unconditional
@@ -339,13 +339,15 @@ void ValidateInternalCalls::runOnFunctions(BinaryContext &BC) {
   }
 
   if (!Invalid.empty()) {
-    errs() << "BOLT-WARNING: will skip the following function(s) as unsupported"
-              " internal calls were detected:\n";
+    BC.errs()
+        << "BOLT-WARNING: will skip the following function(s) as unsupported"
+           " internal calls were detected:\n";
     for (BinaryFunction *Function : Invalid) {
-      errs() << "              " << *Function << "\n";
+      BC.errs() << "              " << *Function << "\n";
       Function->setIgnored();
     }
   }
+  return Error::success();
 }
 
 } // namespace bolt

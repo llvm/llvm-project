@@ -120,8 +120,8 @@ bool ThreadPlanStepRange::InRange() {
         frame->GetSymbolContext(eSymbolContextEverything));
     if (m_addr_context.line_entry.IsValid() &&
         new_context.line_entry.IsValid()) {
-      if (m_addr_context.line_entry.original_file ==
-          new_context.line_entry.original_file) {
+      if (*m_addr_context.line_entry.original_file_sp ==
+          *new_context.line_entry.original_file_sp) {
         if (m_addr_context.line_entry.line == new_context.line_entry.line) {
           m_addr_context = new_context;
           const bool include_inlined_functions =
