@@ -1155,12 +1155,12 @@ DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
 
   trackIfUnresolved(LabelInfo);
   if (M.IsNewDbgInfoFormat) {
-    DPLabel *DPL = new DPLabel(LabelInfo, DL);
+    DbgLabelRecord *DLR = new DbgLabelRecord(LabelInfo, DL);
     if (InsertBB && InsertBefore)
-      InsertBB->insertDbgRecordBefore(DPL, InsertBefore->getIterator());
+      InsertBB->insertDbgRecordBefore(DLR, InsertBefore->getIterator());
     else if (InsertBB)
-      InsertBB->insertDbgRecordBefore(DPL, InsertBB->end());
-    return DPL;
+      InsertBB->insertDbgRecordBefore(DLR, InsertBB->end());
+    return DLR;
   }
 
   if (!LabelFn)

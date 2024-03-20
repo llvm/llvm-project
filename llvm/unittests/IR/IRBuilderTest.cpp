@@ -922,7 +922,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
     DILabel *Label =
         DIB.createLabel(BarScope, "badger", File, 1, /*AlwaysPreserve*/ false);
 
-    { /* dbg.label | DPLabel */
+    { /* dbg.label | DbgLabelRecord */
       // Insert before I and check order.
       ExpectOrder(DIB.insertLabel(Label, LabelLoc, I), I->getIterator());
 
@@ -931,7 +931,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
       // inserted into the block untill another instruction is added.
       DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB);
       // Specifically do not insert a terminator, to check this works. `I`
-      // should have absorbed the DPLabel in the new debug info mode.
+      // should have absorbed the DbgLabelRecord in the new debug info mode.
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(LabelRecord, I->getIterator());
     }

@@ -544,7 +544,7 @@ private:
 
   void visitTemplateParams(const MDNode &N, const Metadata &RawParams);
 
-  void visit(DPLabel &DPL);
+  void visit(DbgLabelRecord &DLR);
   void visit(DbgVariableRecord &DVR);
   // InstVisitor overrides...
   using InstVisitor<Verifier>::visit;
@@ -696,8 +696,8 @@ void Verifier::visitDbgRecords(Instruction &I) {
       // intrinsic behaviour.
       verifyFragmentExpression(*DVR);
       verifyNotEntryValue(*DVR);
-    } else if (auto *DPL = dyn_cast<DPLabel>(&DR)) {
-      visit(*DPL);
+    } else if (auto *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+      visit(*DLR);
     }
   }
 }
@@ -6244,22 +6244,22 @@ static DISubprogram *getSubprogram(Metadata *LocalScope) {
   return nullptr;
 }
 
-void Verifier::visit(DPLabel &DPL) {
-  CheckDI(isa<DILabel>(DPL.getRawLabel()),
-          "invalid #dbg_label intrinsic variable", &DPL, DPL.getRawLabel());
+void Verifier::visit(DbgLabelRecord &DLR) {
+  CheckDI(isa<DILabel>(DLR.getRawLabel()),
+          "invalid #dbg_label intrinsic variable", &DLR, DLR.getRawLabel());
 
   // Ignore broken !dbg attachments; they're checked elsewhere.
-  if (MDNode *N = DPL.getDebugLoc().getAsMDNode())
+  if (MDNode *N = DLR.getDebugLoc().getAsMDNode())
     if (!isa<DILocation>(N))
       return;
 
-  BasicBlock *BB = DPL.getParent();
+  BasicBlock *BB = DLR.getParent();
   Function *F = BB ? BB->getParent() : nullptr;
 
   // The scopes for variables and !dbg attachments must agree.
-  DILabel *Label = DPL.getLabel();
-  DILocation *Loc = DPL.getDebugLoc();
-  CheckDI(Loc, "#dbg_label record requires a !dbg attachment", &DPL, BB, F);
+  DILabel *Label = DLR.getLabel();
+  DILocation *Loc = DLR.getDebugLoc();
+  CheckDI(Loc, "#dbg_label record requires a !dbg attachment", &DLR, BB, F);
 
   DISubprogram *LabelSP = getSubprogram(Label->getRawScope());
   DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
@@ -6268,7 +6268,7 @@ void Verifier::visit(DPLabel &DPL) {
 
   CheckDI(LabelSP == LocSP,
           "mismatched subprogram between #dbg_label label and !dbg attachment",
-          &DPL, BB, F, Label, Label->getScope()->getSubprogram(), Loc,
+          &DLR, BB, F, Label, Label->getScope()->getSubprogram(), Loc,
           Loc->getScope()->getSubprogram());
 }
 
