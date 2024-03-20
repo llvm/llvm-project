@@ -3367,12 +3367,12 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   const GlobalValue *GV = GA->getGlobal();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   bool Is64Bit = Subtarget.isPPC64();
-  bool HasAIXSmallLocalExecTLS = Subtarget.hasAIXSmallLocalExecTLS();
-  bool HasAIXSmallTLSGlobalAttr = false;
   TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
   bool IsTLSLocalExecModel = Model == TLSModel::LocalExec;
 
   if (IsTLSLocalExecModel || Model == TLSModel::InitialExec) {
+    bool HasAIXSmallLocalExecTLS = Subtarget.hasAIXSmallLocalExecTLS();
+    bool HasAIXSmallTLSGlobalAttr = false;
     SDValue VariableOffsetTGA =
         DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TPREL_FLAG);
     SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);

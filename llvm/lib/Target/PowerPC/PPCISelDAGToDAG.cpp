@@ -7560,18 +7560,12 @@ static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
 
 // Check if an SDValue has the 'aix-small-tls' global variable attribute.
 static bool hasAIXSmallTLSAttr(SDValue Val) {
-  GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Val);
-  if (!GA)
-    return false;
+  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Val))
+    if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(GA->getGlobal()))
+      if (GV->hasAttribute("aix-small-tls"))
+        return true;
 
-  const GlobalVariable *GV = dyn_cast<GlobalVariable>(GA->getGlobal());
-  if (!GV)
-    return false;
-
-  if (!GV->hasAttribute("aix-small-tls"))
-    return false;
-
-  return true;
+  return false;
 }
 
 // Is an ADDI eligible for folding for non-TOC-based local-exec accesses?
