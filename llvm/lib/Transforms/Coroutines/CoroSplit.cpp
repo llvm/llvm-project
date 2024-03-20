@@ -1265,7 +1265,7 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
     }
 
     if (I->isDebugOrPseudoInst() || I->isLifetimeStartOrEnd() ||
-        !I->mayHaveSideEffects()) {
+        wouldInstructionBeTriviallyDead(I)) {
       // We can skip instructions without side effects. If their values are
       // needed, we'll notice later, e.g. when hitting a conditional branch.
       I = I->getNextNode();
