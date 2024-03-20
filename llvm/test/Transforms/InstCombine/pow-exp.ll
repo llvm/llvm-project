@@ -136,12 +136,11 @@ define fp128 @powl_exp2l_not_fast(fp128 %x, fp128 %y) {
   ret fp128 %pow
 }
 
-; TODO: exp10() is not widely enabled by many targets yet.
-
 define float @powf_exp10f(float %x, float %y) {
-; CHECK-LABEL: @powf_exp10f(
-; CHECK-NEXT:    [[CALL:%.*]] = call fast float @exp10f(float [[X:%.*]]) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    [[POW:%.*]] = call fast float @llvm.pow.f32(float [[CALL]], float [[Y:%.*]])
+; CHECK-LABEL: define float @powf_exp10f(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call fast float @exp10f(float [[X]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[POW:%.*]] = call fast float @llvm.pow.f32(float [[CALL]], float [[Y]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %call = call fast float @exp10f(float %x) nounwind readnone
@@ -150,9 +149,10 @@ define float @powf_exp10f(float %x, float %y) {
 }
 
 define double @pow_exp10(double %x, double %y) {
-; CHECK-LABEL: @pow_exp10(
-; CHECK-NEXT:    [[CALL:%.*]] = call fast double @exp10(double [[X:%.*]]) #[[ATTR1]]
-; CHECK-NEXT:    [[POW:%.*]] = call fast double @llvm.pow.f64(double [[CALL]], double [[Y:%.*]])
+; CHECK-LABEL: define double @pow_exp10(
+; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call fast double @exp10(double [[X]]) #[[ATTR1]]
+; CHECK-NEXT:    [[POW:%.*]] = call fast double @llvm.pow.f64(double [[CALL]], double [[Y]])
 ; CHECK-NEXT:    ret double [[POW]]
 ;
   %call = call fast double @exp10(double %x) nounwind readnone
@@ -161,9 +161,10 @@ define double @pow_exp10(double %x, double %y) {
 }
 
 define fp128 @pow_exp10l(fp128 %x, fp128 %y) {
-; CHECK-LABEL: @pow_exp10l(
-; CHECK-NEXT:    [[CALL:%.*]] = call fast fp128 @exp10l(fp128 [[X:%.*]]) #[[ATTR1]]
-; CHECK-NEXT:    [[POW:%.*]] = call fast fp128 @llvm.pow.f128(fp128 [[CALL]], fp128 [[Y:%.*]])
+; CHECK-LABEL: define fp128 @pow_exp10l(
+; CHECK-SAME: fp128 [[X:%.*]], fp128 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call fast fp128 @exp10l(fp128 [[X]]) #[[ATTR1]]
+; CHECK-NEXT:    [[POW:%.*]] = call fast fp128 @llvm.pow.f128(fp128 [[CALL]], fp128 [[Y]])
 ; CHECK-NEXT:    ret fp128 [[POW]]
 ;
   %call = call fast fp128 @exp10l(fp128 %x) nounwind readnone
@@ -255,10 +256,10 @@ define double @pow_ok_base3(double %e) {
 }
 
 define double @pow_ok_ten_base(double %e) {
-; CHECK-LABEL: @pow_ok_ten_base(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0x400A934F{{.*}}
-; CHECK-NEXT:    [[EXP2:%.*]] = tail call nnan ninf afn double @exp2(double [[MUL]])
-; CHECK-NEXT:    ret double [[EXP2]]
+; CHECK-LABEL: define double @pow_ok_ten_base(
+; CHECK-SAME: double [[E:%.*]]) {
+; CHECK-NEXT:    [[EXP10:%.*]] = tail call nnan ninf afn double @exp10(double [[E]])
+; CHECK-NEXT:    ret double [[EXP10]]
 ;
   %call = tail call afn nnan ninf double @pow(double 1.000000e+01, double %e)
   ret double %call
@@ -305,10 +306,10 @@ define float @powf_ok_base3(float %e) {
 }
 
 define float @powf_ok_ten_base(float %e) {
-; CHECK-LABEL: @powf_ok_ten_base(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0x400A934{{.*}}
-; CHECK-NEXT:    [[EXP2F:%.*]] = tail call nnan ninf afn float @exp2f(float [[MUL]])
-; CHECK-NEXT:    ret float [[EXP2F]]
+; CHECK-LABEL: define float @powf_ok_ten_base(
+; CHECK-SAME: float [[E:%.*]]) {
+; CHECK-NEXT:    [[EXP10F:%.*]] = tail call nnan ninf afn float @exp10f(float [[E]])
+; CHECK-NEXT:    ret float [[EXP10F]]
 ;
   %call = tail call afn nnan ninf float @powf(float 1.000000e+01, float %e)
   ret float %call
