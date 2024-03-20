@@ -5137,10 +5137,11 @@ that does not. A single parameter may not have multiple ABI treatment
 attributes.
 
 Support for this feature is target-dependent, although it should be
-supported on every target that Swift supports. Query for this support
-with ``__has_attribute(swiftcall)``. This implies support for the
-``swift_context``, ``swift_error_result``, and ``swift_indirect_result``
-attributes.
+supported on every target that Swift supports. Query for this attribute
+with ``__has_attribute(swiftcall)``. Query if the target supports the
+calling convention with ``__has_extension(swiftcc)``. This implies
+support for the ``swift_context``, ``swift_error_result``, and
+``swift_indirect_result`` attributes.
   }];
 }
 
@@ -5187,6 +5188,10 @@ the following:
   semantically be performed after a guaranteed tail call, such as the
   non-trivial destruction of a local variable or temporary,
   then the program is ill-formed.
+
+Query for this attribute with ``__has_attribute(swiftasynccall)``. Query if
+the target supports the calling convention with
+``__has_extension(swiftasynccc)``.
   }];
 }
 

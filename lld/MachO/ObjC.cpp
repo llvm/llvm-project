@@ -496,10 +496,12 @@ private:
   // Need this to be 'static' so the data survives past the ObjcCategoryMerger
   // object, as the data will be read by the Writer when the final binary is
   // generated.
-  static SmallVector<SmallVector<uint8_t>> generatedSectionData;
+  static SmallVector<std::unique_ptr<SmallVector<uint8_t>>>
+      generatedSectionData;
 };
 
-SmallVector<SmallVector<uint8_t>> ObjcCategoryMerger::generatedSectionData;
+SmallVector<std::unique_ptr<SmallVector<uint8_t>>>
+    ObjcCategoryMerger::generatedSectionData;
 
 ObjcCategoryMerger::ObjcCategoryMerger(
     std::vector<ConcatInputSection *> &_allInputSections)
@@ -611,8 +613,8 @@ void ObjcCategoryMerger::collectCategoryWriterInfoFromCategory(
 void ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
                                                uint32_t secOffset,
                                                PointerListInfo &ptrList) {
-  if (!isec || (secOffset + target->wordSize > isec->data.size()))
-    assert("Tried to read pointer list beyond protocol section end");
+  assert((isec && (secOffset + target->wordSize <= isec->data.size())) &&
+         "Tried to read pointer list beyond protocol section end");
 
   const Reloc *reloc = isec->getRelocAt(secOffset);
   if (!reloc)
@@ -636,6 +638,8 @@ void ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
       /*extra null value*/ target->wordSize;
   assert(expectedListSize == ptrListSym->isec->data.size() &&
          "Protocol list does not match expected size");
+
+  // Suppress unsuded var warning
   (void)expectedListSize;
 
   uint32_t off = protocolListHeaderLayout.totalSize;
@@ -1034,6 +1038,8 @@ void ObjcCategoryMerger::mergeCategoriesIntoSingleCategory(
 
   Defined *newCatDef = emitCategory(extInfo);
   assert(newCatDef && "Failed to create a new category");
+
+  // Suppress unsuded var warning
   (void)newCatDef;
 
   for (auto &catInfo : categories)
@@ -1222,8 +1228,9 @@ StringRef ObjcCategoryMerger::newStringData(const char *str) {
 }
 
 SmallVector<uint8_t> &ObjcCategoryMerger::newSectionData(uint32_t size) {
-  generatedSectionData.push_back(SmallVector<uint8_t>(size, 0));
-  return generatedSectionData.back();
+  generatedSectionData.push_back(
+      std::make_unique<SmallVector<uint8_t>>(size, 0));
+  return *generatedSectionData.back();
 }
 
 } // namespace

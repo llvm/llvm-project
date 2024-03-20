@@ -17,8 +17,6 @@
 
 
 #if ALL || ZEROARGS
-// expected-warning@+9 {{must specify at least one argument for '...' parameter of variadic macro}}
-// expected-note@+4 {{macro 'efoo' defined here}}
 // expected-warning@+3 {{token pasting of ',' and __VA_ARGS__ is a GNU extension}}
 #endif
 

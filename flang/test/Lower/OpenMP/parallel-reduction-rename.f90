@@ -14,7 +14,7 @@ end program main
 
 ! test that we understood that this should be a max reduction
 
-! CHECK-LABEL:   omp.reduction.declare @max_i_32 : i32 init {
+! CHECK-LABEL:   omp.declare_reduction @max_i32 : i32 init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: i32):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant -2147483648 : i32
 ! CHECK:           omp.yield(%[[VAL_1]] : i32)
@@ -30,7 +30,7 @@ end program main
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i32
 ! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_1]]#0 : i32, !fir.ref<i32>
-! CHECK:           omp.parallel reduction(@max_i_32 %[[VAL_1]]#0 -> %[[VAL_3:.*]] : !fir.ref<i32>) {
+! CHECK:           omp.parallel reduction(@max_i32 %[[VAL_1]]#0 -> %[[VAL_3:.*]] : !fir.ref<i32>) {
 ! ...
 ! CHECK:             omp.terminator
 
