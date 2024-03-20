@@ -28,6 +28,7 @@ CHECK: -remarks-output-format <format>
 CHECK: -remarks-prepend-path <path>
 CHECK: -reproducer <mode>
 CHECK: -statistics
+CHECK: -symbol-map
 CHECK: -symtab
 CHECK: {{-S}}
 CHECK: -toolchain
