@@ -317,14 +317,12 @@ bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
                    .addReg(MBBI->getOperand(1).getReg())
                    .add(MBBI->getOperand(2));
 
-  MachineMemOperand *MMOHi = nullptr;
-  if (MBBI->hasOneMemOperand()) {
-    MachineMemOperand *OldMMO = MBBI->memoperands().front();
-    MachineFunction *MF = MBB.getParent();
-    MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, 4);
-    MMOHi = MF->getMachineMemOperand(OldMMO, 4, 4);
-    MIBLo.setMemRefs(MMOLo);
-  }
+  assert(MBBI->hasOneMemOperand() && "Expected mem operand");
+  MachineMemOperand *OldMMO = MBBI->memoperands().front();
+  MachineFunction *MF = MBB.getParent();
+  MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, 4);
+  MachineMemOperand *MMOHi = MF->getMachineMemOperand(OldMMO, 4, 4);
+  MIBLo.setMemRefs(MMOLo);
 
   if (MBBI->getOperand(2).isGlobal() || MBBI->getOperand(2).isCPI()) {
     // FIXME: Zdinx RV32 can not work on unaligned memory.
@@ -336,16 +334,14 @@ bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
                      .addReg(Hi, getKillRegState(MBBI->getOperand(0).isKill()))
                      .add(MBBI->getOperand(1))
                      .add(MBBI->getOperand(2));
-    if (MMOHi)
-      MIBHi.setMemRefs(MMOHi);
+    MIBHi.setMemRefs(MMOHi);
   } else {
     assert(isInt<12>(MBBI->getOperand(2).getImm() + 4));
     auto MIBHi = BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
                      .addReg(Hi, getKillRegState(MBBI->getOperand(0).isKill()))
                      .add(MBBI->getOperand(1))
                      .addImm(MBBI->getOperand(2).getImm() + 4);
-    if (MMOHi)
-      MIBHi.setMemRefs(MMOHi);
+    MIBHi.setMemRefs(MMOHi);
   }
   MBBI->eraseFromParent();
   return true;
@@ -363,14 +359,11 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
   Register Hi =
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
 
-  MachineMemOperand *MMOLo = nullptr;
-  MachineMemOperand *MMOHi = nullptr;
-  if (MBBI->hasOneMemOperand()) {
-    MachineMemOperand *OldMMO = MBBI->memoperands().front();
-    MachineFunction *MF = MBB.getParent();
-    MMOLo = MF->getMachineMemOperand(OldMMO, 0, 4);
-    MMOHi = MF->getMachineMemOperand(OldMMO, 4, 4);
-  }
+  assert(MBBI->hasOneMemOperand() && "Expected mem operand");
+  MachineMemOperand *OldMMO = MBBI->memoperands().front();
+  MachineFunction *MF = MBB.getParent();
+  MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, 4);
+  MachineMemOperand *MMOHi = MF->getMachineMemOperand(OldMMO, 4, 4);
 
   // If the register of operand 1 is equal to the Lo register, then swap the
   // order of loading the Lo and Hi statements.
@@ -380,8 +373,7 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
     auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Lo)
                      .addReg(MBBI->getOperand(1).getReg())
                      .add(MBBI->getOperand(2));
-    if (MMOLo)
-      MIBLo.setMemRefs(MMOLo);
+    MIBLo.setMemRefs(MMOLo);
   }
 
   if (MBBI->getOperand(2).isGlobal() || MBBI->getOperand(2).isCPI()) {
@@ -392,15 +384,13 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
                      .addReg(MBBI->getOperand(1).getReg())
                      .add(MBBI->getOperand(2));
     MBBI->getOperand(2).setOffset(Offset);
-    if (MMOHi)
-      MIBHi.setMemRefs(MMOHi);
+    MIBHi.setMemRefs(MMOHi);
   } else {
     assert(isInt<12>(MBBI->getOperand(2).getImm() + 4));
     auto MIBHi = BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Hi)
                      .addReg(MBBI->getOperand(1).getReg())
                      .addImm(MBBI->getOperand(2).getImm() + 4);
-    if (MMOHi)
-      MIBHi.setMemRefs(MMOHi);
+    MIBHi.setMemRefs(MMOHi);
   }
 
   // Order: Hi, Lo
@@ -408,8 +398,7 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
     auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Lo)
                      .addReg(MBBI->getOperand(1).getReg())
                      .add(MBBI->getOperand(2));
-    if (MMOLo)
-      MIBLo.setMemRefs(MMOLo);
+    MIBLo.setMemRefs(MMOLo);
   }
 
   MBBI->eraseFromParent();
