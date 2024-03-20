@@ -39,7 +39,7 @@ class Module;
 class PHINode;
 class ValueSymbolTable;
 class DbgVariableRecord;
-class DPMarker;
+class DbgMarker;
 
 /// LLVM Basic Block Representation
 ///
@@ -72,18 +72,18 @@ private:
   Function *Parent;
 
 public:
-  /// Attach a DPMarker to the given instruction. Enables the storage of any
+  /// Attach a DbgMarker to the given instruction. Enables the storage of any
   /// debug-info at this position in the program.
-  DPMarker *createMarker(Instruction *I);
-  DPMarker *createMarker(InstListType::iterator It);
+  DbgMarker *createMarker(Instruction *I);
+  DbgMarker *createMarker(InstListType::iterator It);
 
   /// Convert variable location debugging information stored in dbg.value
-  /// intrinsics into DPMarkers / DbgRecords. Deletes all dbg.values in
+  /// intrinsics into DbgMarkers / DbgRecords. Deletes all dbg.values in
   /// the process and sets IsNewDbgInfoFormat = true. Only takes effect if
   /// the UseNewDbgInfoFormat LLVM command line option is given.
   void convertToNewDbgValues();
 
-  /// Convert variable location debugging information stored in DPMarkers and
+  /// Convert variable location debugging information stored in DbgMarkers and
   /// DbgRecords into the dbg.value intrinsic representation. Sets
   /// IsNewDbgInfoFormat = false.
   void convertFromNewDbgValues();
@@ -97,12 +97,12 @@ public:
   /// instruction of this block. These are equivalent to dbg.value intrinsics
   /// that exist at the end of a basic block with no terminator (a transient
   /// state that occurs regularly).
-  void setTrailingDbgRecords(DPMarker *M);
+  void setTrailingDbgRecords(DbgMarker *M);
 
   /// Fetch the collection of DbgRecords that "trail" after the last instruction
   /// of this block, see \ref setTrailingDbgRecords. If there are none, returns
   /// nullptr.
-  DPMarker *getTrailingDbgRecords();
+  DbgMarker *getTrailingDbgRecords();
 
   /// Delete any trailing DbgRecords at the end of this block, see
   /// \ref setTrailingDbgRecords.
@@ -110,15 +110,15 @@ public:
 
   void dumpDbgValues() const;
 
-  /// Return the DPMarker for the position given by \p It, so that DbgRecords
+  /// Return the DbgMarker for the position given by \p It, so that DbgRecords
   /// can be inserted there. This will either be nullptr if not present, a
-  /// DPMarker, or TrailingDbgRecords if It is end().
-  DPMarker *getMarker(InstListType::iterator It);
+  /// DbgMarker, or TrailingDbgRecords if It is end().
+  DbgMarker *getMarker(InstListType::iterator It);
 
-  /// Return the DPMarker for the position that comes after \p I. \see
-  /// BasicBlock::getMarker, this can be nullptr, a DPMarker, or
+  /// Return the DbgMarker for the position that comes after \p I. \see
+  /// BasicBlock::getMarker, this can be nullptr, a DbgMarker, or
   /// TrailingDbgRecords if there is no next instruction.
-  DPMarker *getNextMarker(Instruction *I);
+  DbgMarker *getNextMarker(Instruction *I);
 
   /// Insert a DbgRecord into a block at the position given by \p I.
   void insertDbgRecordAfter(DbgRecord *DR, Instruction *I);
