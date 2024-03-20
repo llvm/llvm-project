@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_TRANSFORM_IR_TRANSFORMINTERFACES_H
-#define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMINTERFACES_H
+#ifndef MLIR_DIALECT_TRANSFORM_INTERFACES_TRANSFORMINTERFACES_H
+#define MLIR_DIALECT_TRANSFORM_INTERFACES_TRANSFORMINTERFACES_H
 
-#include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Utils/DiagnosedSilenceableFailure.h"
 #include "mlir/Dialect/Transform/Utils/RaggedArray.h"
 #include "mlir/IR/OpDefinition.h"
@@ -17,6 +16,8 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+#include "mlir/Dialect/Transform/Interfaces/TransformTypeInterfaces.h.inc"
 
 namespace mlir {
 namespace transform {
@@ -74,7 +75,7 @@ getConsumedHandleOpOperands(transform::TransformOpInterface transformOp);
 } // namespace transform
 } // namespace mlir
 
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h.inc"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h.inc"
 
 namespace mlir {
 namespace transform {
@@ -1591,4 +1592,4 @@ mlir::transform::TransformEachOpTrait<OpTy>::verifyTrait(Operation *op) {
   return success();
 }
 
-#endif // DIALECT_TRANSFORM_IR_TRANSFORMINTERFACES_H
+#endif // DIALECT_TRANSFORM_INTERFACES_TRANSFORMINTERFACES_H

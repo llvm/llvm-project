@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 
-#include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -951,8 +949,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   DiagnosedSilenceableFailure trackingFailure =
       trackingListener.checkAndResetError();
   if (!transform->hasTrait<ReportTrackingListenerFailuresOpTrait>() ||
-      transform->hasAttr(
-          transform::TransformDialect::kSilenceTrackingFailuresAttrName)) {
+      transform->hasAttr(FindPayloadReplacementOpInterface::
+                             kSilenceTrackingFailuresAttrName)) {
     // Only report failures for ReportTrackingListenerFailuresOpTrait ops. Also
     // do not report failures if the above mentioned attribute is set.
     if (trackingFailure.isSilenceableFailure())
@@ -1649,23 +1647,7 @@ LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
              << " were provided to the interpreter";
     }
 
-    // Top-level transforms can be used for matching. If no concrete operation
-    // type is specified, the block argument is mapped to the top-level op.
-    // Otherwise, it is mapped to all ops of the specified type within the
-    // top-level op (including the top-level op itself). Once an op is added as
-    // a target, its descendants are not explored any further.
-    BlockArgument bbArg = region.front().getArgument(0);
-    if (auto bbArgType = dyn_cast<transform::OperationType>(bbArg.getType())) {
-      state.getTopLevel()->walk<WalkOrder::PreOrder>([&](Operation *op) {
-        if (op->getName().getStringRef() == bbArgType.getOperationName()) {
-          targets.push_back(op);
-          return WalkResult::skip();
-        }
-        return WalkResult::advance();
-      });
-    } else {
-      targets.push_back(state.getTopLevel());
-    }
+    targets.push_back(state.getTopLevel());
 
     for (unsigned i = 0, e = state.getNumTopLevelMappings(); i < e; ++i)
       extraMappings.push_back(llvm::to_vector(state.getTopLevelMapping(i)));
@@ -2003,4 +1985,5 @@ LogicalResult transform::applyTransforms(
 // Generated interface implementation.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.cpp.inc"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.cpp.inc"
+#include "mlir/Dialect/Transform/Interfaces/TransformTypeInterfaces.cpp.inc"
