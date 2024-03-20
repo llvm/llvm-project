@@ -1847,19 +1847,50 @@ floating point semantic models: precise (the default), strict, and fast.
    * ``16`` - Forces ``_Float16`` operations to be emitted without using excess
      precision arithmetic.
 
+.. option:: -fcomplex-arithmetic=<value>:
+
+   This option specifies the implementation for complex multiplication and division.
+
+   Valid values are: ``basic``, ``improved``, ``full`` and ``promoted``.
+
+   * ``basic`` Implementation of complex division and multiplication using
+     algebraic formulas at source precision. No special handling to avoid
+     overflow. NaN and infinite values are not handled.
+   * ``improved`` Implementation of complex division using the Smith algorithm
+     at source precision. Smith's algorithm for complex division.
+     See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8 (1962).
+     This value offers improved handling for overflow in intermediate
+     calculations, but overflow may occur. NaN and infinite values are not
+     handled in some cases.
+   * ``full`` Implementation of complex division and multiplication using a
+     call to runtime library functions (generally the case, but the BE might
+     sometimes replace the library call if it knows enough about the potential
+     range of the inputs). Overflow and non-finite values are handled by the
+     library implementation. For the case of multiplication overflow will occur in
+     accordance with normal floating-point rules. This is the default value.
+   * ``promoted`` Implementation of complex division using algebraic formulas at
+     higher precision. Overflow is handled. Non-finite values are handled in some
+     cases. If the target does not have native support for a higher precision
+     data type, the implementation for the complex operation using the Smith
+     algorithm will be used. Overflow may still occur in some cases. NaN and
+     infinite values are not handled.
+
 .. option:: -fcx-limited-range:
 
-   This option enables the naive mathematical formulas for complex division and
-   multiplication with no NaN checking of results. The default is
-   ``-fno-cx-limited-range``, but this option is enabled by the ``-ffast-math``
+   This option is aliased to ``-fcomplex-arithmetic=basic``. It enables the
+   naive mathematical formulas for complex division and multiplication with no
+   NaN checking of results. The default is ``-fno-cx-limited-range`` aliased to
+   ``-fcomplex-arithmetic=full``. This option is enabled by the ``-ffast-math``
    option.
 
 .. option:: -fcx-fortran-rules:
 
-   This option enables the naive mathematical formulas for complex
-   multiplication and enables application of Smith's algorithm for complex
-   division. See SMITH, R. L. Algorithm 116: Complex division. Commun.
-   ACM 5, 8 (1962). The default is ``-fno-cx-fortran-rules``.
+   This option is aliased to ``-fcomplex-arithmetic=improved``. It enables the
+   naive mathematical formulas for complex multiplication and enables application
+   of Smith's algorithm for complex division. See SMITH, R. L. Algorithm 116:
+   Complex division. Commun. ACM 5, 8 (1962).
+   The default is ``-fno-cx-fortran-rules`` aliased to
+   ``-fcomplex-arithmetic=full``.
 
 .. _floating-point-environment:
 
