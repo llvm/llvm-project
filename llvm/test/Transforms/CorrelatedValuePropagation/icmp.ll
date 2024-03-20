@@ -593,8 +593,7 @@ define i1 @test_assume_cmp_with_offset_or(i64 %idx, i1 %other) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[IDX_OFF1]], 10
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i64 [[IDX]], 2
-; CHECK-NEXT:    ret i1 [[CMP3]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       F:
 ; CHECK-NEXT:    ret i1 [[CMP2:%.*]]
 ;
