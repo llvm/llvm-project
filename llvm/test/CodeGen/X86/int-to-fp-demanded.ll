@@ -7,13 +7,19 @@ declare void @use.i32(i32)
 define i32 @sitofp_signbit_only(i32 %i_in) nounwind {
 ; X86-LABEL: sitofp_signbit_only:
 ; X86:       # %bb.0:
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    fildl (%esp)
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_signbit_only:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %edi, %xmm0
+; X64-NEXT:    cvtsi2ss %edi, %xmm0
 ; X64-NEXT:    movmskps %xmm0, %eax
 ; X64-NEXT:    shll $31, %eax
 ; X64-NEXT:    retq
@@ -38,8 +44,8 @@ define i32 @sitofp_signbit_only_okay_width(i16 %i_in) nounwind {
 ;
 ; X64-LABEL: sitofp_signbit_only_okay_width:
 ; X64:       # %bb.0:
-; X64-NEXT:    shll $16, %edi
-; X64-NEXT:    movd %edi, %xmm0
+; X64-NEXT:    movswl %di, %eax
+; X64-NEXT:    cvtsi2ss %eax, %xmm0
 ; X64-NEXT:    movmskps %xmm0, %eax
 ; X64-NEXT:    shll $31, %eax
 ; X64-NEXT:    retq
@@ -76,14 +82,15 @@ define <2 x i16> @sitofp_signbit_only_fail_bad_width2(i32 %i_in) nounwind {
 ; X86-LABEL: sitofp_signbit_only_fail_bad_width2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, (%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fildl (%esp)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    shrl $16, %edx
+; X86-NEXT:    andl $32768, %eax # imm = 0x8000
 ; X86-NEXT:    andl $32768, %edx # imm = 0x8000
-; X86-NEXT:    movl $32768, %eax # imm = 0x8000
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    # kill: def $dx killed $dx killed $edx
 ; X86-NEXT:    addl $8, %esp
