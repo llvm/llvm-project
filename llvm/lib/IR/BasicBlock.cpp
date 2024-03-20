@@ -57,12 +57,12 @@ DbgMarker *BasicBlock::createMarker(InstListType::iterator It) {
          "Tried to create a marker in a non new debug-info block!");
   if (It != end())
     return createMarker(&*It);
-  DbgMarker *DPM = getTrailingDbgRecords();
-  if (DPM)
-    return DPM;
-  DPM = new DbgMarker();
-  setTrailingDbgRecords(DPM);
-  return DPM;
+  DbgMarker *DM = getTrailingDbgRecords();
+  if (DM)
+    return DM;
+  DM = new DbgMarker();
+  setTrailingDbgRecords(DM);
+  return DM;
 }
 
 void BasicBlock::convertToNewDbgValues() {
@@ -1059,8 +1059,8 @@ DbgMarker *BasicBlock::getNextMarker(Instruction *I) {
 
 DbgMarker *BasicBlock::getMarker(InstListType::iterator It) {
   if (It == end()) {
-    DbgMarker *DPM = getTrailingDbgRecords();
-    return DPM;
+    DbgMarker *DM = getTrailingDbgRecords();
+    return DM;
   }
   return It->DebugMarker;
 }
@@ -1108,15 +1108,15 @@ void BasicBlock::reinsertInstInDbgRecords(
   }
 
   // Is there even a range of DbgRecords to move?
-  DbgMarker *DPM = (*Pos)->getMarker();
-  auto Range = make_range(DPM->StoredDbgRecords.begin(), (*Pos));
+  DbgMarker *DM = (*Pos)->getMarker();
+  auto Range = make_range(DM->StoredDbgRecords.begin(), (*Pos));
   if (Range.begin() == Range.end())
     return;
 
   // Otherwise: splice.
   DbgMarker *ThisMarker = createMarker(I);
   assert(ThisMarker->StoredDbgRecords.empty());
-  ThisMarker->absorbDebugValues(Range, *DPM, true);
+  ThisMarker->absorbDebugValues(Range, *DM, true);
 }
 
 #ifndef NDEBUG
