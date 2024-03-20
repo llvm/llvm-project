@@ -88,6 +88,24 @@ private:
   llvm::DISubroutineType *translateImpl(DISubroutineTypeAttr attr);
   llvm::DIType *translateImpl(DITypeAttr attr);
 
+  /// Attributes that support self recursion need to implement two methods and
+  /// hook into the `translateImpl` overload for `DIRecursiveTypeAttr`.
+  /// - `<llvm type> translateImplGetPlaceholder(<mlir type>)`:
+  ///   Translate the DI attr without translating any potentially recursive
+  ///   nested DI attrs.
+  /// - `void translateImplFillPlaceholder(<mlir type>, <llvm type>)`:
+  ///   Given the placeholder returned by `translateImplGetPlaceholder`, fill
+  ///   any holes by recursively translating nested DI attrs. This method must
+  ///   mutate the placeholder that is passed in, instead of creating a new one.
+  llvm::DIType *translateRecursive(DIRecursiveTypeAttrInterface attr);
+
+  /// Get a placeholder DICompositeType without recursing into the elements.
+  llvm::DICompositeType *translateImplGetPlaceholder(DICompositeTypeAttr attr);
+  /// Completes the DICompositeType `placeholder` by recursively translating the
+  /// elements.
+  void translateImplFillPlaceholder(DICompositeTypeAttr attr,
+                                    llvm::DICompositeType *placeholder);
+
   /// Constructs a string metadata node from the string attribute. Returns
   /// nullptr if `stringAttr` is null or contains and empty string.
   llvm::MDString *getMDStringOrNull(StringAttr stringAttr);
@@ -101,6 +119,15 @@ private:
   /// A mapping between debug attribute and the corresponding llvm debug
   /// metadata.
   DenseMap<Attribute, llvm::DINode *> attrToNode;
+
+  /// A mapping between recursive ID and the translated DIType.
+  /// DIType.
+  llvm::MapVector<DistinctAttr, llvm::DIType *> recursiveTypeMap;
+
+  /// A mapping between a distinct ID and the translated LLVM metadata node.
+  /// This helps identify attrs that should translate into the same LLVM debug
+  /// node.
+  DenseMap<DistinctAttr, llvm::DINode *> distinctAttrToNode;
 
   /// A mapping between filename and llvm debug file.
   /// TODO: Change this to DenseMap<Identifier, ...> when we can

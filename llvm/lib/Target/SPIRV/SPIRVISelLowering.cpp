@@ -104,11 +104,7 @@ static void validatePtrTypes(const SPIRVSubtarget &STI,
   SPIRV::StorageClass::StorageClass SC =
       static_cast<SPIRV::StorageClass::StorageClass>(
           OpType->getOperand(1).getImm());
-  MachineInstr *PrevI = I.getPrevNode();
-  MachineBasicBlock &MBB = *I.getParent();
-  MachineBasicBlock::iterator InsPt =
-      PrevI ? PrevI->getIterator() : MBB.begin();
-  MachineIRBuilder MIB(MBB, InsPt);
+  MachineIRBuilder MIB(I);
   SPIRVType *NewPtrType = GR.getOrCreateSPIRVPointerType(ResType, MIB, SC);
   if (!GR.isBitcastCompatible(NewPtrType, OpType))
     report_fatal_error(

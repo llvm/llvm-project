@@ -110,7 +110,7 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
 
 void StackInfoBuilder::visit(Instruction &Inst) {
   // Visit non-intrinsic debug-info records attached to Inst.
-  for (DPValue &DPV : DPValue::filter(Inst.getDbgValueRange())) {
+  for (DPValue &DPV : filterDbgVars(Inst.getDbgRecordRange())) {
     auto AddIfInteresting = [&](Value *V) {
       if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
         if (!isInterestingAlloca(*AI))
@@ -234,6 +234,11 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   Info.AI->replaceAllUsesWith(NewPtr);
   Info.AI->eraseFromParent();
   Info.AI = NewAI;
+}
+
+bool isLifetimeIntrinsic(Value *V) {
+  auto *II = dyn_cast<IntrinsicInst>(V);
+  return II && II->isLifetimeStartOrEnd();
 }
 
 } // namespace memtag

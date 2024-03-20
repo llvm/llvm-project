@@ -511,14 +511,33 @@ static string __parse_version(istream& __input) {
   return chrono::__parse_string(__input);
 }
 
+[[nodiscard]]
+static __tz::__rule& __create_entry(__tz::__rules_storage_type& __rules, const string& __name) {
+  auto __result = [&]() -> __tz::__rule& {
+    auto& __rule = __rules.emplace_back(__name, vector<__tz::__rule>{});
+    return __rule.second.emplace_back();
+  };
+
+  if (__rules.empty())
+    return __result();
+
+  // Typically rules are in contiguous order in the database.
+  // But there are exceptions, some rules are interleaved.
+  if (__rules.back().first == __name)
+    return __rules.back().second.emplace_back();
+
+  if (auto __it = ranges::find(__rules, __name, [](const auto& __r) { return __r.first; });
+      __it != ranges::end(__rules))
+    return __it->second.emplace_back();
+
+  return __result();
+}
+
 static void __parse_rule(tzdb& __tzdb, __tz::__rules_storage_type& __rules, istream& __input) {
   chrono::__skip_mandatory_whitespace(__input);
   string __name = chrono::__parse_string(__input);
 
-  if (__rules.empty() || __rules.back().first != __name)
-    __rules.emplace_back(__name, vector<__tz::__rule>{});
-
-  __tz::__rule& __rule = __rules.back().second.emplace_back();
+  __tz::__rule& __rule = __create_entry(__rules, __name);
 
   chrono::__skip_mandatory_whitespace(__input);
   __rule.__from = chrono::__parse_year(__input);
