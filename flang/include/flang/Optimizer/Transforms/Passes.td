@@ -169,7 +169,7 @@ def CFGConversionOnFunc : CFGConversionBase<"func", "mlir::func::FuncOp"> {
   let constructor = "::fir::createFirToCfgOnFuncPass()";
 }
 
-def CFGConversionOnReduction : CFGConversionBase<"reduce", "mlir::omp::ReductionDeclareOp"> {
+def CFGConversionOnReduction : CFGConversionBase<"reduce", "mlir::omp::DeclareReductionOp"> {
   let constructor = "::fir::createFirToCfgOnReductionPass()";
 }
 

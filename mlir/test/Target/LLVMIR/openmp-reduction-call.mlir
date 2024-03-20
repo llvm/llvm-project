@@ -2,7 +2,7 @@
 
 // Test that we don't crash when there is a call operation in the combiner
 
-omp.reduction.declare @add_f32 : f32
+omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(0.0 : f32) : f32
