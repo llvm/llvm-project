@@ -19,7 +19,7 @@ struct Sign {
   LIBC_INLINE friend constexpr bool operator==(Sign a, Sign b) {
     return a.is_negative == b.is_negative;
   }
-  
+
   LIBC_INLINE friend constexpr bool operator!=(Sign a, Sign b) {
     return !(a == b);
   }
