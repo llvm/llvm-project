@@ -19,6 +19,10 @@ cc_library(
         ],
         # Will raise error unless supported platforms.
     }),
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 WIN32_ONLY_FILES = [
