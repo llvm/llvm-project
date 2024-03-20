@@ -24,10 +24,11 @@
   sizeInBits = 32, encoding = DW_ATE_signed
 >
 
-// CHECK-DAG: #[[PTR0:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT0]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4>
+// CHECK-DAG: #[[PTR0:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT0]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, extraData = #[[INT1]]>
 #ptr0 = #llvm.di_derived_type<
   tag = DW_TAG_pointer_type, baseType = #int0,
-  sizeInBits = 64, alignInBits = 32, offsetInBits = 4
+  sizeInBits = 64, alignInBits = 32, offsetInBits = 4,
+  extraData = #int1
 >
 
 // CHECK-DAG: #[[PTR1:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "ptr1">
