@@ -17,7 +17,7 @@ print *,r
 
 end program
 
-! CHECK-LABEL:   omp.reduction.declare @min_i_32 : i32 init {
+! CHECK-LABEL:   omp.declare_reduction @min_i32 : i32 init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: i32):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 2147483647 : i32
 ! CHECK:           omp.yield(%[[VAL_1]] : i32)
@@ -39,7 +39,7 @@ end program
 ! CHECK:             %[[VAL_6:.*]] = arith.constant 0 : i32
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 10 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop reduction(@min_i_32 %[[VAL_3]]#0 -> %[[VAL_9:.*]] : !fir.ref<i32>)  for  (%[[VAL_10:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
+! CHECK:             omp.wsloop reduction(@min_i32 %[[VAL_3]]#0 -> %[[VAL_9:.*]] : !fir.ref<i32>)  for  (%[[VAL_10:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
 ! CHECK:               fir.store %[[VAL_10]] to %[[VAL_5]]#1 : !fir.ref<i32>
 ! CHECK:               %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]] {uniq_name = "_QFEr"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:               %[[VAL_12:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
