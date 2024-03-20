@@ -697,7 +697,20 @@ class Instruction : InstructionEncoding {
   // Scheduling information from TargetSchedule.td.
   list<SchedReadWrite> SchedRW;
 
-  string Constraints = "";  // OperandConstraint, e.g. $src = $dst.
+  /// Support for operand constraints. There are currently two kinds:
+  /// "$src = $dst"
+  ///   Ensures that the operands are allocated to the same register.
+  ///
+  /// "@earlyclobber $rd"
+  ///   Ensures that LLVM will not use the same register for any inputs (other
+  ///   than an input tied to this output).
+  ///
+  /// See also:
+  /// - MC/MCInstrDesc.h:OperandConstraint::{TIED_TO, EARLY_CLOBBER}.
+  /// - CodeGen/MachineOperand.h:MachineOperand::{TiedTo, IsEarlyClobber}.
+  /// - The LLVM IR specification: Section `Output constraints` in the
+  ///   discussion of inline assembly constraint strings.
+  string Constraints = "";
 
   /// DisableEncoding - List of operand names (e.g. "$op1,$op2") that should not
   /// be encoded into the output machineinstr.
