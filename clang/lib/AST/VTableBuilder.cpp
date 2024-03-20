@@ -422,7 +422,7 @@ void FinalOverriders::dump(raw_ostream &Out, BaseSubobject Base,
     Out << ", " << Overrider.Offset.getQuantity() << ')';
 
     BaseOffset Offset;
-    if (!Overrider.Method->isPure())
+    if (!Overrider.Method->isPureVirtual())
       Offset = ComputeReturnAdjustmentBaseOffset(Context, Overrider.Method, MD);
 
     if (!Offset.isEmpty()) {
@@ -1261,7 +1261,7 @@ ThisAdjustment ItaniumVTableBuilder::ComputeThisAdjustment(
     const CXXMethodDecl *MD, CharUnits BaseOffsetInLayoutClass,
     FinalOverriders::OverriderInfo Overrider) {
   // Ignore adjustments for pure virtual member functions.
-  if (Overrider.Method->isPure())
+  if (Overrider.Method->isPureVirtual())
     return ThisAdjustment();
 
   BaseSubobject OverriddenBaseSubobject(MD->getParent(),
@@ -1607,7 +1607,7 @@ void ItaniumVTableBuilder::AddMethods(
     // Check if this overrider needs a return adjustment.
     // We don't want to do this for pure virtual member functions.
     BaseOffset ReturnAdjustmentOffset;
-    if (!OverriderMD->isPure()) {
+    if (!OverriderMD->isPureVirtual()) {
       ReturnAdjustmentOffset =
         ComputeReturnAdjustmentBaseOffset(Context, OverriderMD, MD);
     }
@@ -1959,7 +1959,7 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
       std::string Str = PredefinedExpr::ComputeName(
           PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
       Out << Str;
-      if (MD->isPure())
+      if (MD->isPureVirtual())
         Out << " [pure]";
 
       if (MD->isDeleted())
@@ -2010,7 +2010,7 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
       else
         Out << "() [deleting]";
 
-      if (DD->isPure())
+      if (DD->isPureVirtual())
         Out << " [pure]";
 
       ThunkInfo Thunk = VTableThunks.lookup(I);
@@ -2038,7 +2038,7 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
       std::string Str = PredefinedExpr::ComputeName(
           PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
       Out << "[unused] " << Str;
-      if (MD->isPure())
+      if (MD->isPureVirtual())
         Out << " [pure]";
     }
 
@@ -3076,7 +3076,7 @@ void VFTableBuilder::AddMethods(BaseSubobject Base, unsigned BaseDepth,
     // We don't want to do this for pure virtual member functions.
     BaseOffset ReturnAdjustmentOffset;
     ReturnAdjustment ReturnAdjustment;
-    if (!FinalOverriderMD->isPure()) {
+    if (!FinalOverriderMD->isPureVirtual()) {
       ReturnAdjustmentOffset =
           ComputeReturnAdjustmentBaseOffset(Context, FinalOverriderMD, MD);
     }
@@ -3175,7 +3175,7 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
       std::string Str = PredefinedExpr::ComputeName(
           PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
       Out << Str;
-      if (MD->isPure())
+      if (MD->isPureVirtual())
         Out << " [pure]";
 
       if (MD->isDeleted())
@@ -3194,7 +3194,7 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
       DD->printQualifiedName(Out);
       Out << "() [scalar deleting]";
 
-      if (DD->isPure())
+      if (DD->isPureVirtual())
         Out << " [pure]";
 
       ThunkInfo Thunk = VTableThunks.lookup(I);

@@ -138,7 +138,8 @@ using Directives =
     std::tuple<parser::CompilerDirective, parser::OpenACCConstruct,
                parser::OpenACCRoutineConstruct,
                parser::OpenACCDeclarativeConstruct, parser::OpenMPConstruct,
-               parser::OpenMPDeclarativeConstruct, parser::OmpEndLoopDirective>;
+               parser::OpenMPDeclarativeConstruct, parser::OmpEndLoopDirective,
+               parser::CUFKernelDoConstruct>;
 
 using DeclConstructs = std::tuple<parser::OpenMPDeclarativeConstruct,
                                   parser::OpenACCDeclarativeConstruct>;
@@ -178,7 +179,7 @@ static constexpr bool isNopConstructStmt{common::HasMember<
 template <typename A>
 static constexpr bool isExecutableDirective{common::HasMember<
     A, std::tuple<parser::CompilerDirective, parser::OpenACCConstruct,
-                  parser::OpenMPConstruct>>};
+                  parser::OpenMPConstruct, parser::CUFKernelDoConstruct>>};
 
 template <typename A>
 static constexpr bool isFunctionLike{common::HasMember<
@@ -462,6 +463,9 @@ struct Variable {
     assert(hasSymbol() && "variable is not nominal");
     return *std::get<Nominal>(var).symbol;
   }
+
+  /// Is this variable a compiler generated global to describe derived types?
+  bool isRuntimeTypeInfoData() const;
 
   /// Return the aggregate store.
   const AggregateStore &getAggregateStore() const {

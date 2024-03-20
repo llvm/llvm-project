@@ -681,24 +681,7 @@ void Materialize(void *Ctx, LLVMOrcMaterializationResponsibilityRef MR) {
   LLVMOrcDisposeMaterializationResponsibility(OtherMR);
 
   // FIXME: Implement async lookup
-  // A real test of the dependence tracking in the success case would require
-  // async lookups. You could:
-  // 1. Materialize foo, making foo depend on other.
-  // 2. In the caller, verify that the lookup callback for foo has not run (due
-  // to the dependence)
-  // 3. Materialize other by looking it up.
-  // 4. In the caller, verify that the lookup callback for foo has now run.
-
-  LLVMOrcRetainSymbolStringPoolEntry(TargetSym.Name);
   LLVMOrcRetainSymbolStringPoolEntry(DependencySymbol);
-  LLVMOrcCDependenceMapPair Dependency = {JD, {&DependencySymbol, 1}};
-  LLVMOrcMaterializationResponsibilityAddDependencies(MR, TargetSym.Name,
-                                                      &Dependency, 1);
-
-  LLVMOrcRetainSymbolStringPoolEntry(DependencySymbol);
-  LLVMOrcMaterializationResponsibilityAddDependenciesForAll(MR, &Dependency, 1);
-
-  // See FIXME above
   LLVMOrcCSymbolMapPair Pair = {DependencySymbol, Sym};
   LLVMOrcMaterializationResponsibilityNotifyResolved(MR, &Pair, 1);
   // DependencySymbol no longer owned by us
@@ -706,7 +689,14 @@ void Materialize(void *Ctx, LLVMOrcMaterializationResponsibilityRef MR) {
   Pair = {TargetSym.Name, Sym};
   LLVMOrcMaterializationResponsibilityNotifyResolved(MR, &Pair, 1);
 
-  LLVMOrcMaterializationResponsibilityNotifyEmitted(MR);
+  LLVMOrcRetainSymbolStringPoolEntry(TargetSym.Name);
+  LLVMOrcCDependenceMapPair Dependency = {JD, {&DependencySymbol, 1}};
+  LLVMOrcCSymbolDependenceGroup DependenceSet = {
+      /*.Symbols = */ {/*.Symbols = */ &TargetSym.Name, /* .Length = */ 1},
+      /* .Dependencies = */ &Dependency,
+      /* .NumDependencies = */ 1};
+
+  LLVMOrcMaterializationResponsibilityNotifyEmitted(MR, &DependenceSet, 1);
   LLVMOrcDisposeMaterializationResponsibility(MR);
 }
 

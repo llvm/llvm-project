@@ -15,11 +15,9 @@
 #include "llvm/TableGen/Record.h"
 using namespace llvm;
 
-void Matcher::anchor() { }
+void Matcher::anchor() {}
 
-void Matcher::dump() const {
-  print(errs(), 0);
-}
+void Matcher::dump() const { print(errs(), 0); }
 
 void Matcher::print(raw_ostream &OS, unsigned indent) const {
   printImpl(OS, indent);
@@ -27,9 +25,7 @@ void Matcher::print(raw_ostream &OS, unsigned indent) const {
     return Next->print(OS, indent);
 }
 
-void Matcher::printOne(raw_ostream &OS) const {
-  printImpl(OS, 0);
-}
+void Matcher::printOne(raw_ostream &OS) const { printImpl(OS, 0); }
 
 /// unlinkNode - Unlink the specified node from this chain.  If Other == this,
 /// we unlink the next pointer and return it.  Otherwise we unlink Other from
@@ -43,7 +39,8 @@ Matcher *Matcher::unlinkNode(Matcher *Other) {
   for (; Cur && Cur->getNext() != Other; Cur = Cur->getNext())
     /*empty*/;
 
-  if (!Cur) return nullptr;
+  if (!Cur)
+    return nullptr;
   Cur->takeNext();
   Cur->setNext(Other->takeNext());
   return this;
@@ -55,7 +52,8 @@ Matcher *Matcher::unlinkNode(Matcher *Other) {
 bool Matcher::canMoveBefore(const Matcher *Other) const {
   for (;; Other = Other->getNext()) {
     assert(Other && "Other didn't come before 'this'?");
-    if (this == Other) return true;
+    if (this == Other)
+      return true;
 
     // We have to be able to move this node across the Other node.
     if (!canMoveBeforeNode(Other))
@@ -78,7 +76,6 @@ bool Matcher::canMoveBeforeNode(const Matcher *Other) const {
   return false;
 }
 
-
 ScopeMatcher::~ScopeMatcher() {
   for (Matcher *C : Children)
     delete C;
@@ -96,8 +93,8 @@ SwitchTypeMatcher::~SwitchTypeMatcher() {
 
 CheckPredicateMatcher::CheckPredicateMatcher(
     const TreePredicateFn &pred, const SmallVectorImpl<unsigned> &Ops)
-  : Matcher(CheckPredicate), Pred(pred.getOrigPatFragRecord()),
-    Operands(Ops.begin(), Ops.end()) {}
+    : Matcher(CheckPredicate), Pred(pred.getOrigPatFragRecord()),
+      Operands(Ops.begin(), Ops.end()) {}
 
 TreePredicateFn CheckPredicateMatcher::getPredicate() const {
   return TreePredicateFn(Pred);
@@ -112,16 +109,15 @@ unsigned CheckPredicateMatcher::getOperandNo(unsigned i) const {
   return Operands[i];
 }
 
-
 // printImpl methods.
 
 void ScopeMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "Scope\n";
   for (const Matcher *C : Children) {
     if (!C)
-      OS.indent(indent+1) << "NULL POINTER\n";
+      OS.indent(indent + 1) << "NULL POINTER\n";
     else
-      C->print(OS, indent+2);
+      C->print(OS, indent + 2);
   }
 }
 
@@ -137,7 +133,8 @@ void RecordMemRefMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "RecordMemRef\n";
 }
 
-void CaptureGlueInputMatcher::printImpl(raw_ostream &OS, unsigned indent) const{
+void CaptureGlueInputMatcher::printImpl(raw_ostream &OS,
+                                        unsigned indent) const {
   OS.indent(indent) << "CaptureGlueInput\n";
 }
 
@@ -161,8 +158,8 @@ void CheckChildSameMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "CheckChild" << ChildNo << "Same\n";
 }
 
-void CheckPatternPredicateMatcher::
-printImpl(raw_ostream &OS, unsigned indent) const {
+void CheckPatternPredicateMatcher::printImpl(raw_ostream &OS,
+                                             unsigned indent) const {
   OS.indent(indent) << "CheckPatternPredicate " << Predicate << '\n';
 }
 
@@ -178,31 +175,29 @@ void SwitchOpcodeMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "SwitchOpcode: {\n";
   for (const auto &C : Cases) {
     OS.indent(indent) << "case " << C.first->getEnumName() << ":\n";
-    C.second->print(OS, indent+2);
+    C.second->print(OS, indent + 2);
   }
   OS.indent(indent) << "}\n";
 }
 
-
 void CheckTypeMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
-  OS.indent(indent) << "CheckType " << getEnumName(Type) << ", ResNo="
-    << ResNo << '\n';
+  OS.indent(indent) << "CheckType " << getEnumName(Type) << ", ResNo=" << ResNo
+                    << '\n';
 }
 
 void SwitchTypeMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "SwitchType: {\n";
   for (const auto &C : Cases) {
     OS.indent(indent) << "case " << getEnumName(C.first) << ":\n";
-    C.second->print(OS, indent+2);
+    C.second->print(OS, indent + 2);
   }
   OS.indent(indent) << "}\n";
 }
 
 void CheckChildTypeMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
-  OS.indent(indent) << "CheckChildType " << ChildNo << " "
-    << getEnumName(Type) << '\n';
+  OS.indent(indent) << "CheckChildType " << ChildNo << " " << getEnumName(Type)
+                    << '\n';
 }
-
 
 void CheckIntegerMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "CheckInteger " << Value << '\n';
@@ -258,8 +253,8 @@ void EmitIntegerMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
                     << '\n';
 }
 
-void EmitStringIntegerMatcher::
-printImpl(raw_ostream &OS, unsigned indent) const {
+void EmitStringIntegerMatcher::printImpl(raw_ostream &OS,
+                                         unsigned indent) const {
   OS.indent(indent) << "EmitStringInteger " << Val << " VT=" << getEnumName(VT)
                     << '\n';
 }
@@ -273,13 +268,13 @@ void EmitRegisterMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS << " VT=" << getEnumName(VT) << '\n';
 }
 
-void EmitConvertToTargetMatcher::
-printImpl(raw_ostream &OS, unsigned indent) const {
+void EmitConvertToTargetMatcher::printImpl(raw_ostream &OS,
+                                           unsigned indent) const {
   OS.indent(indent) << "EmitConvertToTarget " << Slot << '\n';
 }
 
-void EmitMergeInputChainsMatcher::
-printImpl(raw_ostream &OS, unsigned indent) const {
+void EmitMergeInputChainsMatcher::printImpl(raw_ostream &OS,
+                                            unsigned indent) const {
   OS.indent(indent) << "EmitMergeInputChains <todo: args>\n";
 }
 
@@ -289,9 +284,8 @@ void EmitCopyToRegMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
 
 void EmitNodeXFormMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "EmitNodeXForm " << NodeXForm->getName()
-     << " Slot=" << Slot << '\n';
+                    << " Slot=" << Slot << '\n';
 }
-
 
 void EmitNodeMatcherCommon::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent);
@@ -308,15 +302,15 @@ void EmitNodeMatcherCommon::printImpl(raw_ostream &OS, unsigned indent) const {
 
 void CompleteMatchMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "CompleteMatch <todo args>\n";
-  OS.indent(indent) << "Src = " << *Pattern.getSrcPattern() << "\n";
-  OS.indent(indent) << "Dst = " << *Pattern.getDstPattern() << "\n";
+  OS.indent(indent) << "Src = " << Pattern.getSrcPattern() << "\n";
+  OS.indent(indent) << "Dst = " << Pattern.getDstPattern() << "\n";
 }
 
 bool CheckOpcodeMatcher::isEqualImpl(const Matcher *M) const {
   // Note: pointer equality isn't enough here, we have to check the enum names
   // to ensure that the nodes are for the same opcode.
   return cast<CheckOpcodeMatcher>(M)->Opcode.getEnumName() ==
-          Opcode.getEnumName();
+         Opcode.getEnumName();
 }
 
 bool EmitNodeMatcherCommon::isEqualImpl(const Matcher *m) const {
@@ -327,9 +321,9 @@ bool EmitNodeMatcherCommon::isEqualImpl(const Matcher *m) const {
          M->NumFixedArityOperands == NumFixedArityOperands;
 }
 
-void EmitNodeMatcher::anchor() { }
+void EmitNodeMatcher::anchor() {}
 
-void MorphNodeToMatcher::anchor() { }
+void MorphNodeToMatcher::anchor() {}
 
 // isContradictoryImpl Implementations.
 
@@ -337,7 +331,8 @@ static bool TypesAreContradictory(MVT::SimpleValueType T1,
                                   MVT::SimpleValueType T2) {
   // If the two types are the same, then they are the same, so they don't
   // contradict.
-  if (T1 == T2) return false;
+  if (T1 == T2)
+    return false;
 
   // If either type is about iPtr, then they don't conflict unless the other
   // one is not a scalar integer type.
@@ -400,7 +395,8 @@ bool CheckIntegerMatcher::isContradictoryImpl(const Matcher *M) const {
 }
 
 bool CheckChildIntegerMatcher::isContradictoryImpl(const Matcher *M) const {
-  if (const CheckChildIntegerMatcher *CCIM = dyn_cast<CheckChildIntegerMatcher>(M)) {
+  if (const CheckChildIntegerMatcher *CCIM =
+          dyn_cast<CheckChildIntegerMatcher>(M)) {
     // If the two checks are about different nodes, we don't know if they
     // conflict!
     if (CCIM->getChildNo() != getChildNo())

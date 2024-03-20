@@ -918,7 +918,7 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
           // Open values; Close values are {"DELETE", "KEEP"}.
           {"NEW", "OLD", "REPLACE", "SCRATCH", "UNKNOWN"}},
       {IoSpecKind::Carriagecontrol, {"LIST", "FORTRAN", "NONE"}},
-      {IoSpecKind::Convert, {"BIG_ENDIAN", "LITTLE_ENDIAN", "NATIVE"}},
+      {IoSpecKind::Convert, {"BIG_ENDIAN", "LITTLE_ENDIAN", "NATIVE", "SWAP"}},
       {IoSpecKind::Dispose, {"DELETE", "KEEP"}},
   };
   auto upper{Normalize(value)};

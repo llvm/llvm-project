@@ -10,7 +10,7 @@ define void @timeout(ptr nocapture readonly %cinfo, ptr %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i16, ptr [[CINFO:%.*]], i32 2
+; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i8, ptr [[CINFO:%.*]], i32 4
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[ARRAYIDX15]], align 2
 ; CHECK-NEXT:    [[CMP17:%.*]] = icmp eq i16 [[L]], 0
 ; CHECK-NEXT:    [[EXTRACT_T1:%.*]] = trunc i16 [[L]] to i8

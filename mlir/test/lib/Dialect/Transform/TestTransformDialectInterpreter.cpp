@@ -12,8 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestTransformDialectExtension.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Transforms/TransformInterpreterPassBase.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -101,8 +102,8 @@ public:
         loc, TypeRange(), transform::FailurePropagationMode::Propagate,
         builder.getType<transform::AnyOpType>(),
         [](OpBuilder &b, Location nested, Value rootH) {
-          b.create<mlir::test::TestPrintRemarkAtOperandOp>(
-              nested, rootH, "remark from generated");
+          b.create<transform::DebugEmitRemarkAtOp>(nested, rootH,
+                                                   "remark from generated");
           b.create<transform::YieldOp>(nested, ValueRange());
         });
     return success();

@@ -3,7 +3,7 @@
 
 ; RUN: opt < %s -passes=licm -S   | FileCheck %s
 
-target triple = "aarch64--linux-gnueabi"
+target triple = "aarch64"
 
 define ptr @test1(i32 %j, ptr readonly %P, ptr readnone %Q) {
 ; CHECK-LABEL: @test1(

@@ -2,7 +2,17 @@
 ; RUN:    -experimental-debug-variable-locations=false \
 ; RUN:    -debug-ata-coalesce-frags=true \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-before finalize-isel -o - \
+; RUN:    -experimental-debug-variable-locations=false \
+; RUN:    -debug-ata-coalesce-frags=true \
+; RUN: | FileCheck %s --implicit-check-not=DBG_
 ; RUN: llc %s -stop-before finalize-isel -o - \
+; RUN:    -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --implicit-check-not=DBG_
+
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-before finalize-isel -o - \
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
@@ -62,7 +72,7 @@ entry:
   %nums = alloca %struct.Nums, align 4, !DIAssignID !45
   call void @llvm.dbg.assign(metadata i1 undef, metadata !44, metadata !DIExpression(), metadata !45, metadata ptr %nums, metadata !DIExpression()), !dbg !46
 ; CHECK: DBG_VALUE %stack.0.nums, $noreg, ![[nums]], !DIExpression(DW_OP_deref)
-  call void @llvm.memcpy.p0i8.p0i8.i64(ptr noundef nonnull align 4 dereferenceable(12) %nums, ptr noundef nonnull align 4 dereferenceable(12) %nums, i64 12, i1 false), !dbg !48, !DIAssignID !49
+  call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(12) %nums, ptr noundef nonnull align 4 dereferenceable(12) %nums, i64 12, i1 false), !dbg !48, !DIAssignID !49
   call void @llvm.dbg.assign(metadata i1 undef, metadata !44, metadata !DIExpression(), metadata !49, metadata ptr %nums, metadata !DIExpression()), !dbg !46
   %call = tail call noundef zeroext i1 @_Z4stepv(), !dbg !50
   br i1 %call, label %if.then, label %if.else, !dbg !52
@@ -91,10 +101,10 @@ if.end:                                           ; preds = %if.else, %if.then
   ret i32 0, !dbg !64
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #4
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #4
 declare !dbg !65 dso_local noundef zeroext i1 @_Z4stepv() local_unnamed_addr #5
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #4
-declare void @llvm.memcpy.p0i8.p0i8.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #4
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #2
 
 !llvm.dbg.cu = !{!2}

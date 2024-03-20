@@ -13,7 +13,7 @@ target datalayout = "e-m:m-p:40:64:64:32-i32:32-i16:16-i8:8-n32"
 ; Test that two array indexing geps fold
 define ptr @test1(ptr %I) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[I:%.*]], i32 21
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[I:%.*]], i32 84
 ; CHECK-NEXT:    ret ptr [[B]]
 ;
   %A = getelementptr i32, ptr %I, i8 17
@@ -24,7 +24,7 @@ define ptr @test1(ptr %I) {
 ; Test that two getelementptr insts fold
 define ptr @test2(ptr %I) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[A:%.*]] = getelementptr { i32 }, ptr [[I:%.*]], i32 1
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr [[I:%.*]], i32 4
 ; CHECK-NEXT:    ret ptr [[A]]
 ;
   %A = getelementptr { i32 }, ptr %I, i32 1

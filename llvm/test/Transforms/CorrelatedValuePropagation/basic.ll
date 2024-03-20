@@ -536,7 +536,7 @@ define i1 @arg_attribute(ptr nonnull %a) {
 ; CHECK-LABEL: @arg_attribute(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %cmp = icmp eq i8* %a, null
+  %cmp = icmp eq ptr %a, null
   ret i1 %cmp
 }
 
@@ -546,7 +546,7 @@ define i1 @call_attribute() {
 ; CHECK-NEXT:    [[A:%.*]] = call ptr @return_nonnull()
 ; CHECK-NEXT:    ret i1 false
 ;
-  %a = call i8* @return_nonnull()
+  %a = call ptr @return_nonnull()
   %cmp = icmp eq ptr %a, null
   ret i1 %cmp
 }

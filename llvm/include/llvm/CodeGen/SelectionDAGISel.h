@@ -169,6 +169,14 @@ public:
     OPC_CheckPatternPredicate7,
     OPC_CheckPatternPredicateTwoByte,
     OPC_CheckPredicate,
+    OPC_CheckPredicate0,
+    OPC_CheckPredicate1,
+    OPC_CheckPredicate2,
+    OPC_CheckPredicate3,
+    OPC_CheckPredicate4,
+    OPC_CheckPredicate5,
+    OPC_CheckPredicate6,
+    OPC_CheckPredicate7,
     OPC_CheckPredicateWithOperands,
     OPC_CheckOpcode,
     OPC_SwitchOpcode,
@@ -450,6 +458,10 @@ private:
   void Select_FREEZE(SDNode *N);
   void Select_ARITH_FENCE(SDNode *N);
   void Select_MEMBARRIER(SDNode *N);
+
+  void Select_CONVERGENCECTRL_ANCHOR(SDNode *N);
+  void Select_CONVERGENCECTRL_ENTRY(SDNode *N);
+  void Select_CONVERGENCECTRL_LOOP(SDNode *N);
 
   void pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops, SDValue Operand,
                                 SDLoc DL);

@@ -37,7 +37,7 @@ bool Operator::hasPoisonGeneratingFlags() const {
   case Instruction::GetElementPtr: {
     auto *GEP = cast<GEPOperator>(this);
     // Note: inrange exists on constexpr only
-    return GEP->isInBounds() || GEP->getInRangeIndex() != std::nullopt;
+    return GEP->isInBounds() || GEP->getInRange() != std::nullopt;
   }
   case Instruction::ZExt:
     if (auto *NNI = dyn_cast<PossiblyNonNegInst>(this))
@@ -67,6 +67,12 @@ Type *GEPOperator::getResultElementType() const {
   if (auto *I = dyn_cast<GetElementPtrInst>(this))
     return I->getResultElementType();
   return cast<GetElementPtrConstantExpr>(this)->getResultElementType();
+}
+
+std::optional<ConstantRange> GEPOperator::getInRange() const {
+  if (auto *CE = dyn_cast<GetElementPtrConstantExpr>(this))
+    return CE->getInRange();
+  return std::nullopt;
 }
 
 Align GEPOperator::getMaxPreservedAlignment(const DataLayout &DL) const {
@@ -108,6 +114,15 @@ bool GEPOperator::accumulateConstantOffset(
 bool GEPOperator::accumulateConstantOffset(
     Type *SourceType, ArrayRef<const Value *> Index, const DataLayout &DL,
     APInt &Offset, function_ref<bool(Value &, APInt &)> ExternalAnalysis) {
+  // Fast path for canonical getelementptr i8 form.
+  if (SourceType->isIntegerTy(8) && !ExternalAnalysis) {
+    if (auto *CI = dyn_cast<ConstantInt>(Index.front())) {
+      Offset += CI->getValue().sextOrTrunc(Offset.getBitWidth());
+      return true;
+    }
+    return false;
+  }
+
   bool UsedExternalAnalysis = false;
   auto AccumulateOffset = [&](APInt Index, uint64_t Size) -> bool {
     Index = Index.sextOrTrunc(Offset.getBitWidth());

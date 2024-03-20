@@ -15,6 +15,9 @@
 // RUN: %clang_cc1 -triple powerpc-unknown-aix-xcoff -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-AIX
 // RUN: %clang_cc1 -triple powerpc64-unknown-aix-xcoff -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-AIX
 
+// RUN: %clang_cc1 -triple s390x-unknown-zos -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-ZOS
+// RUN: %clang_cc1 -triple systemz-unknown-zos -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-ZOS
+
 extern void g();
 
 // CHECK-GNU: personality ptr @__gxx_personality_v0
@@ -25,6 +28,8 @@ extern void g();
 // CHECK-WIN: personality ptr @__CxxFrameHandler3
 
 // CHECK-AIX: personality ptr @__xlcxx_personality_v1
+
+// CHECK-ZOS: personality ptr @__zos_cxx_personality_v2
 
 void f() {
   try {

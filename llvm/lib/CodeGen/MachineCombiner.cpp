@@ -155,9 +155,6 @@ MachineCombiner::getOperandDef(const MachineOperand &MO) {
   // We need a virtual register definition.
   if (MO.isReg() && MO.getReg().isVirtual())
     DefInstr = MRI->getUniqueVRegDef(MO.getReg());
-  // PHI's have no depth etc.
-  if (DefInstr && DefInstr->isPHI())
-    DefInstr = nullptr;
   return DefInstr;
 }
 

@@ -181,26 +181,47 @@ def C_SH : CStoreH_rri<0b100011, 0b0, "c.sh">,
 
 // Zcmp
 let DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp],
-    Defs = [X10, X11], hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+    hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+let Defs = [X10, X11] in
 def CM_MVA01S : RVInst16CA<0b101011, 0b11, 0b10, (outs),
-                            (ins SR07:$rs1, SR07:$rs2), "cm.mva01s", "$rs1, $rs2">;
+                            (ins SR07:$rs1, SR07:$rs2), "cm.mva01s", "$rs1, $rs2">,
+                Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 
+let Uses = [X10, X11] in
 def CM_MVSA01 : RVInst16CA<0b101011, 0b01, 0b10, (outs SR07:$rs1, SR07:$rs2),
-                            (ins), "cm.mvsa01", "$rs1, $rs2">;
+                            (ins), "cm.mvsa01", "$rs1, $rs2">,
+                Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 } // DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp]...
 
 let DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp] in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
-def CM_PUSH : RVInstZcCPPP<0b11000, "cm.push">;
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1, Uses = [X2], Defs = [X2] in
+def CM_PUSH : RVInstZcCPPP<0b11000, "cm.push">,
+              Sched<[WriteIALU, ReadIALU, ReadStoreData, ReadStoreData,
+                     ReadStoreData, ReadStoreData, ReadStoreData, ReadStoreData,
+                     ReadStoreData, ReadStoreData, ReadStoreData, ReadStoreData,
+                     ReadStoreData, ReadStoreData, ReadStoreData]>;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def CM_POPRET : RVInstZcCPPP<0b11110, "cm.popret">;
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isReturn = 1,
+    Uses = [X2], Defs = [X2] in
+def CM_POPRET : RVInstZcCPPP<0b11110, "cm.popret">,
+                Sched<[WriteIALU, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
+                       WriteLDW, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
+                       WriteLDW, WriteLDW, WriteLDW, WriteLDW, ReadIALU]>;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def CM_POPRETZ : RVInstZcCPPP<0b11100, "cm.popretz">;
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isReturn = 1,
+    Uses = [X2], Defs = [X2, X10] in
+def CM_POPRETZ : RVInstZcCPPP<0b11100, "cm.popretz">,
+                 Sched<[WriteIALU, WriteIALU, WriteLDW, WriteLDW, WriteLDW,
+                        WriteLDW, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
+                        WriteLDW, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
+                        ReadIALU]>;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def CM_POP : RVInstZcCPPP<0b11010, "cm.pop">;
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0,
+    Uses = [X2], Defs = [X2] in
+def CM_POP : RVInstZcCPPP<0b11010, "cm.pop">,
+             Sched<[WriteIALU, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
+                    WriteLDW, WriteLDW, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
+                    WriteLDW, WriteLDW, WriteLDW, ReadIALU]>;
 } // DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp]...
 
 let DecoderNamespace = "RVZcmt", Predicates = [HasStdExtZcmt],

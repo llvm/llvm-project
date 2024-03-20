@@ -82,12 +82,28 @@ private:
   /// null attribute otherwise.
   StringAttr getStringAttrOrNull(llvm::MDString *stringNode);
 
+  /// Get the DistinctAttr used to represent `node` if one was already created
+  /// for it, or create a new one if not.
+  DistinctAttr getOrCreateDistinctID(llvm::DINode *node);
+
+  /// Get the `getRecSelf` constructor for the translated type of `node` if its
+  /// translated DITypeAttr supports recursion. Otherwise, returns nullptr.
+  function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
+  getRecSelfConstructor(llvm::DINode *node);
+
   /// A mapping between LLVM debug metadata and the corresponding attribute.
   DenseMap<llvm::DINode *, DINodeAttr> nodeToAttr;
+  /// A mapping between distinct LLVM debug metadata nodes and the corresponding
+  /// distinct id attribute.
+  DenseMap<llvm::DINode *, DistinctAttr> nodeToDistinctAttr;
 
   /// A stack that stores the metadata nodes that are being traversed. The stack
   /// is used to detect cyclic dependencies during the metadata translation.
-  SetVector<llvm::DINode *> translationStack;
+  /// A node is pushed with a null value. If it is ever seen twice, it is given
+  /// a recursive id attribute, indicating that it is a recursive node.
+  llvm::MapVector<llvm::DINode *, DistinctAttr> translationStack;
+  /// All the unbound recursive self references in the translation stack.
+  SmallVector<DenseSet<DistinctAttr>> unboundRecursiveSelfRefs;
 
   MLIRContext *context;
   ModuleOp mlirModule;

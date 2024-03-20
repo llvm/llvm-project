@@ -9,7 +9,6 @@ define void @eliminate_restore(i32 %n) nounwind {
 ; NOSHRINKW:       # %bb.0:
 ; NOSHRINKW-NEXT:    addi.d $sp, $sp, -16
 ; NOSHRINKW-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOSHRINKW-NEXT:    # kill: def $r5 killed $r4
 ; NOSHRINKW-NEXT:    addi.w $a1, $a0, 0
 ; NOSHRINKW-NEXT:    ori $a0, $zero, 32
 ; NOSHRINKW-NEXT:    bltu $a0, $a1, .LBB0_2
@@ -52,9 +51,8 @@ define void @conditional_alloca(i32 %n) nounwind {
 ; NOSHRINKW-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
 ; NOSHRINKW-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
 ; NOSHRINKW-NEXT:    addi.d $fp, $sp, 32
-; NOSHRINKW-NEXT:    move $a1, $a0
-; NOSHRINKW-NEXT:    st.d $a1, $fp, -24 # 8-byte Folded Spill
 ; NOSHRINKW-NEXT:    addi.w $a1, $a0, 0
+; NOSHRINKW-NEXT:    st.d $a0, $fp, -24 # 8-byte Folded Spill
 ; NOSHRINKW-NEXT:    ori $a0, $zero, 32
 ; NOSHRINKW-NEXT:    bltu $a0, $a1, .LBB1_2
 ; NOSHRINKW-NEXT:    b .LBB1_1

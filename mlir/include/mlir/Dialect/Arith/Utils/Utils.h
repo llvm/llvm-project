@@ -20,6 +20,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
 
@@ -53,6 +54,17 @@ Value getValueOrCreateCastToIndexLike(OpBuilder &b, Location loc,
 Value convertScalarToDtype(OpBuilder &b, Location loc, Value operand,
                            Type toType, bool isUnsignedCast);
 
+/// Create a constant of type `type` at location `loc` whose value is `value`
+/// (an APInt or APFloat whose type must match the element type of `type`).
+/// If `type` is a shaped type, create a splat constant of the given value.
+/// Constants are folded if possible.
+Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
+                                  const APInt &value);
+Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
+                                  int64_t value);
+Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
+                                  const APFloat &value);
+
 /// Helper struct to build simple arithmetic quantities with minimal type
 /// inference support.
 struct ArithBuilder {
@@ -70,6 +82,22 @@ private:
   OpBuilder &b;
   Location loc;
 };
+
+namespace arith {
+
+// Build the product of a sequence.
+// If values = (v0, v1, ..., vn) than the returned
+// value is v0 * v1 * ... * vn.
+// All values must have the same type.
+//
+// The version without `resultType` must contain at least one element in values.
+// Then the result will have the same type as the elements in `values`.
+// If `values` is empty in the version with `resultType` returns 1 with type
+// `resultType`.
+Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values);
+Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values,
+                    Type resultType);
+} // namespace arith
 } // namespace mlir
 
 #endif // MLIR_DIALECT_ARITH_UTILS_UTILS_H

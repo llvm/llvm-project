@@ -59,8 +59,9 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    flat_store_byte v[8:9], v25 offset:12
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_2
 ; CHECK-NEXT:  ; %bb.3: ; %loop-memcpy-residual-header
-; CHECK-NEXT:    s_and_b32 s4, 32, 15
-; CHECK-NEXT:    s_mov_b32 s5, 0
+; CHECK-NEXT:    s_mov_b32 s4, 0
+; CHECK-NEXT:    s_mov_b32 s5, s4
+; CHECK-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_5
 ; CHECK-NEXT:  ; %bb.4:
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3

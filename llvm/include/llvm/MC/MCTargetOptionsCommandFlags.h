@@ -29,6 +29,8 @@ std::optional<bool> getExplicitRelaxAll();
 
 bool getIncrementalLinkerCompatible();
 
+bool getFDPIC();
+
 int getDwarfVersion();
 
 bool getDwarf64();
@@ -46,6 +48,8 @@ bool getNoWarn();
 bool getNoDeprecatedWarn();
 
 bool getNoTypeCheck();
+
+bool getX86RelaxRelocations();
 
 std::string getABIName();
 

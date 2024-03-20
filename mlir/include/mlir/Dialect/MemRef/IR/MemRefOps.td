@@ -641,7 +641,7 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
   let summary = "non-blocking DMA operation that starts a transfer";
   let description = [{
     Syntax:
-    
+
     ```
     operation ::= `memref.dma_start` ssa-use`[`ssa-use-list`]` `,`
                    ssa-use`[`ssa-use-list`]` `,` ssa-use `,`

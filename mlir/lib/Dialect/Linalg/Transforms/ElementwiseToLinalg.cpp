@@ -15,7 +15,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTELEMENTWISETOLINALG
+#define GEN_PASS_DEF_CONVERTELEMENTWISETOLINALGPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -121,8 +121,10 @@ void mlir::linalg::populateElementwiseToLinalgConversionPatterns(
 
 namespace {
 class ConvertElementwiseToLinalgPass
-    : public impl::ConvertElementwiseToLinalgBase<
+    : public impl::ConvertElementwiseToLinalgPassBase<
           ConvertElementwiseToLinalgPass> {
+  using impl::ConvertElementwiseToLinalgPassBase<
+      ConvertElementwiseToLinalgPass>::ConvertElementwiseToLinalgPassBase;
 
   void runOnOperation() final {
     auto *func = getOperation();
@@ -140,7 +142,3 @@ class ConvertElementwiseToLinalgPass
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createConvertElementwiseToLinalgPass() {
-  return std::make_unique<ConvertElementwiseToLinalgPass>();
-}

@@ -97,7 +97,12 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
         *m_dwo_id, m_first_die.GetOffset()));
     return; // Can't fetch the compile unit from the dwo file.
   }
-  dwo_cu->SetUserData(this);
+  // If the skeleton compile unit gets its unit DIE parsed first, then this
+  // will fill in the DWO file's back pointer to this skeleton compile unit.
+  // If the DWO files get parsed on their own first the skeleton back link
+  // can be done manually in DWARFUnit::GetSkeletonCompileUnit() which will
+  // do a reverse lookup and cache the result.
+  dwo_cu->SetSkeletonUnit(this);
 
   DWARFBaseDIE dwo_cu_die = dwo_cu->GetUnitDIEOnly();
   if (!dwo_cu_die.IsValid()) {
@@ -663,6 +668,30 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
   return DWARFDIE(); // Not found
 }
 
+llvm::StringRef DWARFUnit::PeekDIEName(dw_offset_t die_offset) {
+  DWARFDebugInfoEntry die;
+  if (!die.Extract(GetData(), this, &die_offset))
+    return llvm::StringRef();
+
+  // Does die contain a DW_AT_Name?
+  if (const char *name =
+          die.GetAttributeValueAsString(this, DW_AT_name, nullptr))
+    return name;
+
+  // Does its DW_AT_specification or DW_AT_abstract_origin contain an AT_Name?
+  for (auto attr : {DW_AT_specification, DW_AT_abstract_origin}) {
+    DWARFFormValue form_value;
+    if (!die.GetAttributeValue(this, attr, form_value))
+      continue;
+    auto [unit, offset] = form_value.ReferencedUnitAndOffset();
+    if (unit)
+      if (auto name = unit->PeekDIEName(offset); !name.empty())
+        return name;
+  }
+
+  return llvm::StringRef();
+}
+
 DWARFUnit &DWARFUnit::GetNonSkeletonUnit() {
   ExtractUnitDIEIfNeeded();
   if (m_dwo)
@@ -678,9 +707,25 @@ uint8_t DWARFUnit::GetAddressByteSize(const DWARFUnit *cu) {
 
 uint8_t DWARFUnit::GetDefaultAddressSize() { return 4; }
 
-void *DWARFUnit::GetUserData() const { return m_user_data; }
+DWARFCompileUnit *DWARFUnit::GetSkeletonUnit() {
+  if (m_skeleton_unit == nullptr && IsDWOUnit()) {
+    SymbolFileDWARFDwo *dwo =
+        llvm::dyn_cast_or_null<SymbolFileDWARFDwo>(&GetSymbolFileDWARF());
+    // Do a reverse lookup if the skeleton compile unit wasn't set.
+    if (dwo)
+      m_skeleton_unit = dwo->GetBaseSymbolFile().GetSkeletonUnit(this);
+  }
+  return llvm::dyn_cast_or_null<DWARFCompileUnit>(m_skeleton_unit);
+}
 
-void DWARFUnit::SetUserData(void *d) { m_user_data = d; }
+void DWARFUnit::SetSkeletonUnit(DWARFUnit *skeleton_unit) {
+  // If someone is re-setting the skeleton compile unit backlink, make sure
+  // it is setting it to a valid value when it wasn't valid, or if the
+  // value in m_skeleton_unit was valid, it should be the same value.
+  assert(skeleton_unit);
+  assert(m_skeleton_unit == nullptr || m_skeleton_unit == skeleton_unit);
+  m_skeleton_unit = skeleton_unit;
+}
 
 bool DWARFUnit::Supports_DW_AT_APPLE_objc_complete_type() {
   return GetProducer() != eProducerLLVMGCC;
@@ -851,8 +896,9 @@ void DWARFUnit::ComputeAbsolutePath() {
     m_file_spec->MakeAbsolute(GetCompilationDirectory());
 }
 
-SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile() {
-  ExtractUnitDIEIfNeeded();
+SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile(bool load_all_debug_info) {
+  if (load_all_debug_info)
+    ExtractUnitDIEIfNeeded();
   if (m_dwo)
     return &llvm::cast<SymbolFileDWARFDwo>(m_dwo->GetSymbolFileDWARF());
   return nullptr;

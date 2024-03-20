@@ -33,7 +33,6 @@
 #include "LimitedRandomnessCheck.h"
 #include "MutatingCopyCheck.h"
 #include "NonTrivialTypesLibcMemoryCallsCheck.h"
-#include "PostfixOperatorCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
 #include "SetLongJmpCheck.h"
 #include "StaticObjectExceptionCheck.h"
@@ -239,8 +238,6 @@ public:
     CheckFactories.registerCheck<bugprone::SpuriouslyWakeUpFunctionsCheck>(
         "cert-con54-cpp");
     // DCL
-    CheckFactories.registerCheck<PostfixOperatorCheck>(
-        "cert-dcl21-cpp");
     CheckFactories.registerCheck<VariadicFunctionDefCheck>("cert-dcl50-cpp");
     CheckFactories.registerCheck<bugprone::ReservedIdentifierCheck>(
         "cert-dcl51-cpp");

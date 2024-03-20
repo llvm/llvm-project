@@ -197,6 +197,7 @@ public:
   void Visit(const Type *T);
   void Visit(QualType T);
   void Visit(const Decl *D);
+  void Visit(TypeLoc TL);
 
   void Visit(const comments::Comment *C, const comments::FullComment *FC);
   void Visit(const TemplateArgument &TA, SourceRange R = {},
@@ -207,6 +208,7 @@ public:
   void Visit(const GenericSelectionExpr::ConstAssociation &A);
   void Visit(const concepts::Requirement *R);
   void Visit(const APValue &Value, QualType Ty);
+  void Visit(const ConceptReference *);
 
   void VisitAliasAttr(const AliasAttr *AA);
   void VisitCleanupAttr(const CleanupAttr *CA);

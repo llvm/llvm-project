@@ -493,6 +493,7 @@
 {'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt13exception_ptr31__from_native_exception_pointerEPv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt13exception_ptrC1ERKS_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt13exception_ptrC2ERKS_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt13exception_ptrD1Ev', 'type': 'FUNC'}
@@ -1158,6 +1159,7 @@
 {'is_defined': True, 'name': '_ZNSt3__118shared_timed_mutex8try_lockEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__118shared_timed_mutexC1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__118shared_timed_mutexC2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__119__is_posix_terminalEP8_IO_FILE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_base11lock_sharedEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_base13unlock_sharedEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_base15try_lock_sharedEv', 'type': 'FUNC'}

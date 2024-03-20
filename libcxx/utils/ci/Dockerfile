@@ -65,6 +65,12 @@ RUN <<EOF
   echo "ALL ALL = (ALL) NOPASSWD: ALL" | tee /etc/sudoers || true
 EOF
 
+# Installing tzdata before other packages avoids the time zone prompts.
+# These prompts seem to ignore DEBIAN_FRONTEND=noninteractive.
+RUN sudo apt-get update \
+    && sudo apt-get install -y \
+        tzdata
+
 RUN sudo apt-get update \
     && sudo apt-get install -y \
         python3 \
@@ -151,17 +157,6 @@ RUN <<EOF
     # Install a recent CMake
     wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-x86_64.sh -O /tmp/install-cmake.sh
     sudo bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
-    rm /tmp/install-cmake.sh
-
-    # Install a newer CMake for modules
-    # TODO Remove the duplicated installation when all runtimes can be build with CMake 3.28.
-    wget https://github.com/Kitware/CMake/releases/download/v3.27.1/cmake-3.27.1-linux-x86_64.sh -O /tmp/install-cmake.sh
-    sudo bash /tmp/install-cmake.sh --prefix=/opt --exclude-subdir --skip-license
-    rm /tmp/install-cmake.sh
-
-    wget https://github.com/Kitware/CMake/releases/download/v3.28.0-rc4/cmake-3.28.0-rc4-linux-x86_64.sh -O /tmp/install-cmake.sh
-    sudo mkdir /opt/cmake-3.28
-    sudo bash /tmp/install-cmake.sh --prefix=/opt/cmake-3.28 --exclude-subdir --skip-license
     rm /tmp/install-cmake.sh
 EOF
 

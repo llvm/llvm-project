@@ -271,7 +271,7 @@ spirv.func @baz(%arg: i32) "DontInline" attributes {
 // -----
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
-    // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = outside.func, linkage_type = <Import>>
+    // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = "outside.func", linkage_type = <Import>>
     spirv.func @outside.func.with.linkage(%arg0 : i8) -> () "Pure" attributes {
       linkage_attributes=#spirv.linkage_attributes<
         linkage_name="outside.func",
@@ -396,7 +396,7 @@ module {
 // -----
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
-  // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = outSideGlobalVar1, linkage_type = <Import>>
+  // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = "outSideGlobalVar1", linkage_type = <Import>>
   spirv.GlobalVariable @var1 {
     linkage_attributes=#spirv.linkage_attributes<
       linkage_name="outSideGlobalVar1", 

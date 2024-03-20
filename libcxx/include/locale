@@ -193,7 +193,7 @@ template <class charT> class messages_byname;
 #include <__algorithm/max.h>
 #include <__algorithm/reverse.h>
 #include <__algorithm/unwrap_iter.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__config>
 #include <__iterator/access.h>
 #include <__iterator/back_insert_iterator.h>
@@ -3421,7 +3421,7 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::~wbuffer_convert() {
 template <class _Codecvt, class _Elem, class _Tr>
 typename wbuffer_convert<_Codecvt, _Elem, _Tr>::int_type wbuffer_convert<_Codecvt, _Elem, _Tr>::underflow() {
   _LIBCPP_SUPPRESS_DEPRECATED_POP
-  if (__cv_ == 0 || __bufptr_ == 0)
+  if (__cv_ == 0 || __bufptr_ == nullptr)
     return traits_type::eof();
   bool __initial = __read_mode();
   char_type __1buf;
@@ -3478,7 +3478,7 @@ template <class _Codecvt, class _Elem, class _Tr>
 typename wbuffer_convert<_Codecvt, _Elem, _Tr>::int_type
 wbuffer_convert<_Codecvt, _Elem, _Tr>::pbackfail(int_type __c) {
   _LIBCPP_SUPPRESS_DEPRECATED_POP
-  if (__cv_ != 0 && __bufptr_ != 0 && this->eback() < this->gptr()) {
+  if (__cv_ != 0 && __bufptr_ && this->eback() < this->gptr()) {
     if (traits_type::eq_int_type(__c, traits_type::eof())) {
       this->gbump(-1);
       return traits_type::not_eof(__c);
@@ -3496,7 +3496,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Codecvt, class _Elem, class _Tr>
 typename wbuffer_convert<_Codecvt, _Elem, _Tr>::int_type wbuffer_convert<_Codecvt, _Elem, _Tr>::overflow(int_type __c) {
   _LIBCPP_SUPPRESS_DEPRECATED_POP
-  if (__cv_ == 0 || __bufptr_ == 0)
+  if (__cv_ == 0 || !__bufptr_)
     return traits_type::eof();
   __write_mode();
   char_type __1buf;
@@ -3588,7 +3588,7 @@ template <class _Codecvt, class _Elem, class _Tr>
 typename wbuffer_convert<_Codecvt, _Elem, _Tr>::pos_type
 wbuffer_convert<_Codecvt, _Elem, _Tr>::seekoff(off_type __off, ios_base::seekdir __way, ios_base::openmode __om) {
   int __width = __cv_->encoding();
-  if (__cv_ == 0 || __bufptr_ == 0 || (__width <= 0 && __off != 0) || sync())
+  if (__cv_ == 0 || !__bufptr_ || (__width <= 0 && __off != 0) || sync())
     return pos_type(off_type(-1));
   // __width > 0 || __off == 0, now check __way
   if (__way != ios_base::beg && __way != ios_base::cur && __way != ios_base::end)
@@ -3601,7 +3601,7 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::seekoff(off_type __off, ios_base::seekdir
 template <class _Codecvt, class _Elem, class _Tr>
 typename wbuffer_convert<_Codecvt, _Elem, _Tr>::pos_type
 wbuffer_convert<_Codecvt, _Elem, _Tr>::seekpos(pos_type __sp, ios_base::openmode __wch) {
-  if (__cv_ == 0 || __bufptr_ == 0 || sync())
+  if (__cv_ == 0 || !__bufptr_ || sync())
     return pos_type(off_type(-1));
   if (__bufptr_->pubseekpos(__sp, __wch) == pos_type(off_type(-1)))
     return pos_type(off_type(-1));
@@ -3611,7 +3611,7 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::seekpos(pos_type __sp, ios_base::openmode
 template <class _Codecvt, class _Elem, class _Tr>
 int wbuffer_convert<_Codecvt, _Elem, _Tr>::sync() {
   _LIBCPP_SUPPRESS_DEPRECATED_POP
-  if (__cv_ == 0 || __bufptr_ == 0)
+  if (__cv_ == 0 || !__bufptr_)
     return 0;
   if (__cm_ & ios_base::out) {
     if (this->pptr() != this->pbase())

@@ -106,7 +106,7 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   // Though nothing is known about them, they would only alias with targets or
   // pointers
   bool directSourceToNonTargetOrPointer = false;
-  if (lhsSrc.u != rhsSrc.u) {
+  if (lhsSrc.u != rhsSrc.u || lhsSrc.kind != rhsSrc.kind) {
     if ((lhsSrc.kind == SourceKind::Direct && !rhsSrc.isTargetOrPointer()) ||
         (rhsSrc.kind == SourceKind::Direct && !lhsSrc.isTargetOrPointer()))
       directSourceToNonTargetOrPointer = true;
@@ -333,8 +333,10 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
           else
             type = SourceKind::Global;
 
-          if (fir::valueHasFirAttribute(v,
-                                        fir::GlobalOp::getTargetAttrNameStr()))
+          auto globalOpName = mlir::OperationName(
+              fir::GlobalOp::getOperationName(), defOp->getContext());
+          if (fir::valueHasFirAttribute(
+                  v, fir::GlobalOp::getTargetAttrName(globalOpName)))
             attributes.set(Attribute::Target);
 
           // TODO: Take followBoxAddr into account when setting the pointer

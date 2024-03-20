@@ -98,9 +98,9 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
       FileSystem::Instance().Exists(symbol_file_spec))
     return symbol_file_spec;
 
-  Progress progress(llvm::formatv(
-      "Locating external symbol file for {0}",
-      module_spec.GetFileSpec().GetFilename().AsCString("<Unknown>")));
+  Progress progress(
+      "Locating external symbol file",
+      module_spec.GetFileSpec().GetFilename().AsCString("<Unknown>"));
 
   FileSpecList debug_file_search_paths = default_search_paths;
 

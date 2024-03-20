@@ -5,9 +5,14 @@
 // RUN: | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -DTEST_SME2 -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s \
+// RUN: | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s\
 // RUN: | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -DTEST_SME2 -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s \
+// RUN: | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -DTEST_SME2 -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -20,7 +25,13 @@
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
-// CHECK-LABEL: @test_svcreate4_b8(
+#ifndef TEST_SME2
+#define ATTR
+#else
+#define ATTR __arm_streaming
+#endif
+
+// CHECK-LABEL: @test_svcreate4_b(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> poison, <vscale x 16 x i1> [[X0:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> [[TMP0]], <vscale x 16 x i1> [[X1:%.*]], i64 16)
@@ -28,7 +39,7 @@
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> [[TMP2]], <vscale x 16 x i1> [[X4:%.*]], i64 48)
 // CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP3]]
 //
-// CPP-CHECK-LABEL: @_Z17test_svcreate4_b8u10__SVBool_tS_S_S_(
+// CPP-CHECK-LABEL: @_Z16test_svcreate4_bu10__SVBool_tS_S_S_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> poison, <vscale x 16 x i1> [[X0:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> [[TMP0]], <vscale x 16 x i1> [[X1:%.*]], i64 16)
@@ -36,7 +47,7 @@
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> [[TMP2]], <vscale x 16 x i1> [[X4:%.*]], i64 48)
 // CPP-CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP3]]
 //
-svboolx4_t test_svcreate4_b8(svbool_t x0, svbool_t x1, svbool_t x2, svbool_t x4)
+svboolx4_t test_svcreate4_b(svbool_t x0, svbool_t x1, svbool_t x2, svbool_t x4) ATTR
 {
-  return SVE_ACLE_FUNC(svcreate4,_b8,,)(x0, x1, x2, x4);
+  return SVE_ACLE_FUNC(svcreate4,_b,,)(x0, x1, x2, x4);
 }

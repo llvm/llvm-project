@@ -12,12 +12,18 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Visitors.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/Debug.h"
+#include <cassert>
 #include <optional>
 
 #define DEBUG_TYPE "memref-to-spirv-pattern"
@@ -439,6 +445,69 @@ DeallocOpPattern::matchAndRewrite(memref::DeallocOp operation,
 // LoadOp
 //===----------------------------------------------------------------------===//
 
+struct MemoryRequirements {
+  spirv::MemoryAccessAttr memoryAccess;
+  IntegerAttr alignment;
+};
+
+/// Given an accessed SPIR-V pointer, calculates its alignment requirements, if
+/// any.
+static FailureOr<MemoryRequirements>
+calculateMemoryRequirements(Value accessedPtr, bool isNontemporal) {
+  MLIRContext *ctx = accessedPtr.getContext();
+
+  auto memoryAccess = spirv::MemoryAccess::None;
+  if (isNontemporal) {
+    memoryAccess = spirv::MemoryAccess::Nontemporal;
+  }
+
+  auto ptrType = cast<spirv::PointerType>(accessedPtr.getType());
+  if (ptrType.getStorageClass() != spirv::StorageClass::PhysicalStorageBuffer) {
+    if (memoryAccess == spirv::MemoryAccess::None) {
+      return MemoryRequirements{spirv::MemoryAccessAttr{}, IntegerAttr{}};
+    }
+    return MemoryRequirements{spirv::MemoryAccessAttr::get(ctx, memoryAccess),
+                              IntegerAttr{}};
+  }
+
+  // PhysicalStorageBuffers require the `Aligned` attribute.
+  auto pointeeType = dyn_cast<spirv::ScalarType>(ptrType.getPointeeType());
+  if (!pointeeType)
+    return failure();
+
+  // For scalar types, the alignment is determined by their size.
+  std::optional<int64_t> sizeInBytes = pointeeType.getSizeInBytes();
+  if (!sizeInBytes.has_value())
+    return failure();
+
+  memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
+  auto memAccessAttr = spirv::MemoryAccessAttr::get(ctx, memoryAccess);
+  auto alignment = IntegerAttr::get(IntegerType::get(ctx, 32), *sizeInBytes);
+  return MemoryRequirements{memAccessAttr, alignment};
+}
+
+/// Given an accessed SPIR-V pointer and the original memref load/store
+/// `memAccess` op, calculates the alignment requirements, if any. Takes into
+/// account the alignment attributes applied to the load/store op.
+template <class LoadOrStoreOp>
+static FailureOr<MemoryRequirements>
+calculateMemoryRequirements(Value accessedPtr, LoadOrStoreOp loadOrStoreOp) {
+  static_assert(
+      llvm::is_one_of<LoadOrStoreOp, memref::LoadOp, memref::StoreOp>::value,
+      "Must be called on either memref::LoadOp or memref::StoreOp");
+
+  Operation *memrefAccessOp = loadOrStoreOp.getOperation();
+  auto memrefMemAccess = memrefAccessOp->getAttrOfType<spirv::MemoryAccessAttr>(
+      spirv::attributeName<spirv::MemoryAccess>());
+  auto memrefAlignment =
+      memrefAccessOp->getAttrOfType<IntegerAttr>("alignment");
+  if (memrefMemAccess && memrefAlignment)
+    return MemoryRequirements{memrefMemAccess, memrefAlignment};
+
+  return calculateMemoryRequirements(accessedPtr,
+                                     loadOrStoreOp.getNontemporal());
+}
+
 LogicalResult
 IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                                   ConversionPatternRewriter &rewriter) const {
@@ -486,7 +555,14 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   // If the rewritten load op has the same bit width, use the loading value
   // directly.
   if (srcBits == dstBits) {
-    Value loadVal = rewriter.create<spirv::LoadOp>(loc, accessChain);
+    auto memoryRequirements = calculateMemoryRequirements(accessChain, loadOp);
+    if (failed(memoryRequirements))
+      return rewriter.notifyMatchFailure(
+          loadOp, "failed to determine memory requirements");
+
+    auto [memoryAccess, alignment] = *memoryRequirements;
+    Value loadVal = rewriter.create<spirv::LoadOp>(loc, accessChain,
+                                                   memoryAccess, alignment);
     if (isBool)
       loadVal = castIntNToBool(loc, loadVal, rewriter);
     rewriter.replaceOp(loadOp, loadVal);
@@ -508,11 +584,14 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   assert(accessChainOp.getIndices().size() == 2);
   Value adjustedPtr = adjustAccessChainForBitwidth(typeConverter, accessChainOp,
                                                    srcBits, dstBits, rewriter);
-  Value spvLoadOp = rewriter.create<spirv::LoadOp>(
-      loc, dstType, adjustedPtr,
-      loadOp->getAttrOfType<spirv::MemoryAccessAttr>(
-          spirv::attributeName<spirv::MemoryAccess>()),
-      loadOp->getAttrOfType<IntegerAttr>("alignment"));
+  auto memoryRequirements = calculateMemoryRequirements(adjustedPtr, loadOp);
+  if (failed(memoryRequirements))
+    return rewriter.notifyMatchFailure(
+        loadOp, "failed to determine memory requirements");
+
+  auto [memoryAccess, alignment] = *memoryRequirements;
+  Value spvLoadOp = rewriter.create<spirv::LoadOp>(loc, dstType, adjustedPtr,
+                                                   memoryAccess, alignment);
 
   // Shift the bits to the rightmost.
   // ____XXXX________ -> ____________XXXX
@@ -552,14 +631,21 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   auto memrefType = cast<MemRefType>(loadOp.getMemref().getType());
   if (memrefType.getElementType().isSignlessInteger())
     return failure();
-  auto loadPtr = spirv::getElementPtr(
+  Value loadPtr = spirv::getElementPtr(
       *getTypeConverter<SPIRVTypeConverter>(), memrefType, adaptor.getMemref(),
       adaptor.getIndices(), loadOp.getLoc(), rewriter);
 
   if (!loadPtr)
     return failure();
 
-  rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr);
+  auto memoryRequirements = calculateMemoryRequirements(loadPtr, loadOp);
+  if (failed(memoryRequirements))
+    return rewriter.notifyMatchFailure(
+        loadOp, "failed to determine memory requirements");
+
+  auto [memoryAccess, alignment] = *memoryRequirements;
+  rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr, memoryAccess,
+                                             alignment);
   return success();
 }
 
@@ -618,10 +704,17 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   assert(dstBits % srcBits == 0);
 
   if (srcBits == dstBits) {
+    auto memoryRequirements = calculateMemoryRequirements(accessChain, storeOp);
+    if (failed(memoryRequirements))
+      return rewriter.notifyMatchFailure(
+          storeOp, "failed to determine memory requirements");
+
+    auto [memoryAccess, alignment] = *memoryRequirements;
     Value storeVal = adaptor.getValue();
     if (isBool)
       storeVal = castBoolToIntN(loc, storeVal, dstType, rewriter);
-    rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, accessChain, storeVal);
+    rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, accessChain, storeVal,
+                                                memoryAccess, alignment);
     return success();
   }
 
@@ -768,8 +861,14 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   if (!storePtr)
     return rewriter.notifyMatchFailure(storeOp, "type conversion failed");
 
-  rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, storePtr,
-                                              adaptor.getValue());
+  auto memoryRequirements = calculateMemoryRequirements(storePtr, storeOp);
+  if (failed(memoryRequirements))
+    return rewriter.notifyMatchFailure(
+        storeOp, "failed to determine memory requirements");
+
+  auto [memoryAccess, alignment] = *memoryRequirements;
+  rewriter.replaceOpWithNewOp<spirv::StoreOp>(
+      storeOp, storePtr, adaptor.getValue(), memoryAccess, alignment);
   return success();
 }
 

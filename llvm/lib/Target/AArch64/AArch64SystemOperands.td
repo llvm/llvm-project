@@ -986,8 +986,10 @@ def : RWSysReg<"SPSR_irq",           0b11, 0b100, 0b0100, 0b0011, 0b000>;
 def : RWSysReg<"SPSR_abt",           0b11, 0b100, 0b0100, 0b0011, 0b001>;
 def : RWSysReg<"SPSR_und",           0b11, 0b100, 0b0100, 0b0011, 0b010>;
 def : RWSysReg<"SPSR_fiq",           0b11, 0b100, 0b0100, 0b0011, 0b011>;
+let Requires = [{ {AArch64::FeatureFPARMv8} }] in {
 def : RWSysReg<"FPCR",               0b11, 0b011, 0b0100, 0b0100, 0b000>;
 def : RWSysReg<"FPSR",               0b11, 0b011, 0b0100, 0b0100, 0b001>;
+}
 def : RWSysReg<"DSPSR_EL0",          0b11, 0b011, 0b0100, 0b0101, 0b000>;
 def : RWSysReg<"DLR_EL0",            0b11, 0b011, 0b0100, 0b0101, 0b001>;
 def : RWSysReg<"IFSR32_EL2",         0b11, 0b100, 0b0101, 0b0000, 0b001>;

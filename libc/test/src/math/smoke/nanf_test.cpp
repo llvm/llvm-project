@@ -20,7 +20,7 @@ public:
     float result = LIBC_NAMESPACE::nanf(input_str);
     auto actual_fp = LIBC_NAMESPACE::fputil::FPBits<float>(result);
     auto expected_fp = LIBC_NAMESPACE::fputil::FPBits<float>(bits);
-    EXPECT_EQ(actual_fp.bits, expected_fp.bits);
+    EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
   };
 };
 

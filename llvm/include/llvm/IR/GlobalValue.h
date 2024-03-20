@@ -564,8 +564,7 @@ public:
   /// arbitrary GlobalValue, this is not the function you're looking for; see
   /// Mangler.h.
   static StringRef dropLLVMManglingEscape(StringRef Name) {
-    if (!Name.empty() && Name[0] == '\1')
-      return Name.substr(1);
+    Name.consume_front("\1");
     return Name;
   }
 

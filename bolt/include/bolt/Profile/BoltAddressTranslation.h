@@ -16,6 +16,7 @@
 #include <map>
 #include <optional>
 #include <system_error>
+#include <unordered_map>
 
 namespace llvm {
 class raw_ostream;
@@ -85,7 +86,7 @@ public:
 
   /// Read the serialized address translation tables and load them internally
   /// in memory. Return a parse error if failed.
-  std::error_code parse(StringRef Buf);
+  std::error_code parse(raw_ostream &OS, StringRef Buf);
 
   /// Dump the parsed address translation tables
   void dump(raw_ostream &OS);
