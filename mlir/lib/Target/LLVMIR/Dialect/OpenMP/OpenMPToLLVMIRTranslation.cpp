@@ -2927,14 +2927,14 @@ static bool isInternalTargetDeviceOp(Operation *op) {
   if (op->getParentOfType<omp::TargetOp>())
     return true;
 
-  auto parentFn = op->getParentOfType<LLVM::LLVMFuncOp>();
-  if (auto declareTargetIface =
-          llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(
-              parentFn.getOperation()))
-    if (declareTargetIface.isDeclareTarget() &&
-        declareTargetIface.getDeclareTargetDeviceType() !=
-            mlir::omp::DeclareTargetDeviceType::host)
-      return true;
+  if (auto parentFn = op->getParentOfType<LLVM::LLVMFuncOp>())
+    if (auto declareTargetIface =
+            llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(
+                parentFn.getOperation()))
+      if (declareTargetIface.isDeclareTarget() &&
+          declareTargetIface.getDeclareTargetDeviceType() !=
+              mlir::omp::DeclareTargetDeviceType::host)
+        return true;
 
   return false;
 }
