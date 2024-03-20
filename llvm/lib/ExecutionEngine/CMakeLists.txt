@@ -28,6 +28,11 @@ if(BUILD_SHARED_LIBS)
   target_link_libraries(LLVMExecutionEngine PUBLIC LLVMRuntimeDyld)
 endif()
 
+if( LLVM_USE_INTEL_JITEVENTS )
+  add_subdirectory(IntelJITProfiling)
+  add_subdirectory(IntelJITEvents)
+endif( LLVM_USE_INTEL_JITEVENTS )
+
 add_subdirectory(Interpreter)
 add_subdirectory(JITLink)
 add_subdirectory(MCJIT)
@@ -37,10 +42,6 @@ add_subdirectory(RuntimeDyld)
 if( LLVM_USE_OPROFILE )
   add_subdirectory(OProfileJIT)
 endif( LLVM_USE_OPROFILE )
-
-if( LLVM_USE_INTEL_JITEVENTS )
-  add_subdirectory(IntelJITEvents)
-endif( LLVM_USE_INTEL_JITEVENTS )
 
 if( LLVM_USE_PERF )
   add_subdirectory(PerfJITEvents)

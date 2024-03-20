@@ -9,16 +9,13 @@
 #ifndef _LIBCPP___ATOMIC_CXX_ATOMIC_IMPL_H
 #define _LIBCPP___ATOMIC_CXX_ATOMIC_IMPL_H
 
-#include <__atomic/is_always_lock_free.h>
 #include <__atomic/memory_order.h>
 #include <__config>
 #include <__memory/addressof.h>
-#include <__type_traits/conditional.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/remove_const.h>
 #include <cstddef>
-#include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -26,7 +23,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if defined(_LIBCPP_HAS_GCC_ATOMIC_IMP) || defined(_LIBCPP_ATOMIC_ONLY_USE_BUILTINS)
+#if defined(_LIBCPP_HAS_GCC_ATOMIC_IMP)
 
 // [atomics.types.generic]p1 guarantees _Tp is trivially copyable. Because
 // the default operator= in an object is not volatile, a byte-by-byte copy
@@ -43,10 +40,6 @@ _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_assign_volatile(_Tp volatile& __a_value,
   while (__to != __end)
     *__to++ = *__from++;
 }
-
-#endif
-
-#if defined(_LIBCPP_HAS_GCC_ATOMIC_IMP)
 
 template <typename _Tp>
 struct __cxx_atomic_base_impl {
@@ -529,289 +522,7 @@ __cxx_atomic_fetch_xor(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_o
 
 #endif // _LIBCPP_HAS_GCC_ATOMIC_IMP, _LIBCPP_HAS_C_ATOMIC_IMP
 
-#ifdef _LIBCPP_ATOMIC_ONLY_USE_BUILTINS
-
-template <typename _Tp>
-struct __cxx_atomic_lock_impl {
-  _LIBCPP_HIDE_FROM_ABI __cxx_atomic_lock_impl() _NOEXCEPT : __a_value(), __a_lock(0) {}
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __cxx_atomic_lock_impl(_Tp value) _NOEXCEPT
-      : __a_value(value),
-        __a_lock(0) {}
-
-  _Tp __a_value;
-  mutable __cxx_atomic_base_impl<_LIBCPP_ATOMIC_FLAG_TYPE> __a_lock;
-
-  _LIBCPP_HIDE_FROM_ABI void __lock() const volatile {
-    while (1 == __cxx_atomic_exchange(&__a_lock, _LIBCPP_ATOMIC_FLAG_TYPE(true), memory_order_acquire))
-      /*spin*/;
-  }
-  _LIBCPP_HIDE_FROM_ABI void __lock() const {
-    while (1 == __cxx_atomic_exchange(&__a_lock, _LIBCPP_ATOMIC_FLAG_TYPE(true), memory_order_acquire))
-      /*spin*/;
-  }
-  _LIBCPP_HIDE_FROM_ABI void __unlock() const volatile {
-    __cxx_atomic_store(&__a_lock, _LIBCPP_ATOMIC_FLAG_TYPE(false), memory_order_release);
-  }
-  _LIBCPP_HIDE_FROM_ABI void __unlock() const {
-    __cxx_atomic_store(&__a_lock, _LIBCPP_ATOMIC_FLAG_TYPE(false), memory_order_release);
-  }
-  _LIBCPP_HIDE_FROM_ABI _Tp __read() const volatile {
-    __lock();
-    _Tp __old;
-    __cxx_atomic_assign_volatile(__old, __a_value);
-    __unlock();
-    return __old;
-  }
-  _LIBCPP_HIDE_FROM_ABI _Tp __read() const {
-    __lock();
-    _Tp __old = __a_value;
-    __unlock();
-    return __old;
-  }
-  _LIBCPP_HIDE_FROM_ABI void __read_inplace(_Tp* __dst) const volatile {
-    __lock();
-    __cxx_atomic_assign_volatile(*__dst, __a_value);
-    __unlock();
-  }
-  _LIBCPP_HIDE_FROM_ABI void __read_inplace(_Tp* __dst) const {
-    __lock();
-    *__dst = __a_value;
-    __unlock();
-  }
-};
-
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_init(volatile __cxx_atomic_lock_impl<_Tp>* __a, _Tp __val) {
-  __cxx_atomic_assign_volatile(__a->__a_value, __val);
-}
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_init(__cxx_atomic_lock_impl<_Tp>* __a, _Tp __val) {
-  __a->__a_value = __val;
-}
-
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_store(volatile __cxx_atomic_lock_impl<_Tp>* __a, _Tp __val, memory_order) {
-  __a->__lock();
-  __cxx_atomic_assign_volatile(__a->__a_value, __val);
-  __a->__unlock();
-}
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_store(__cxx_atomic_lock_impl<_Tp>* __a, _Tp __val, memory_order) {
-  __a->__lock();
-  __a->__a_value = __val;
-  __a->__unlock();
-}
-
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_load(const volatile __cxx_atomic_lock_impl<_Tp>* __a, memory_order) {
-  return __a->__read();
-}
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_load(const __cxx_atomic_lock_impl<_Tp>* __a, memory_order) {
-  return __a->__read();
-}
-
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI void
-__cxx_atomic_load(const volatile __cxx_atomic_lock_impl<_Tp>* __a, _Tp* __dst, memory_order) {
-  __a->__read_inplace(__dst);
-}
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_load(const __cxx_atomic_lock_impl<_Tp>* __a, _Tp* __dst, memory_order) {
-  __a->__read_inplace(__dst);
-}
-
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_exchange(volatile __cxx_atomic_lock_impl<_Tp>* __a, _Tp __value, memory_order) {
-  __a->__lock();
-  _Tp __old;
-  __cxx_atomic_assign_volatile(__old, __a->__a_value);
-  __cxx_atomic_assign_volatile(__a->__a_value, __value);
-  __a->__unlock();
-  return __old;
-}
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_exchange(__cxx_atomic_lock_impl<_Tp>* __a, _Tp __value, memory_order) {
-  __a->__lock();
-  _Tp __old      = __a->__a_value;
-  __a->__a_value = __value;
-  __a->__unlock();
-  return __old;
-}
-
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_strong(
-    volatile __cxx_atomic_lock_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order, memory_order) {
-  _Tp __temp;
-  __a->__lock();
-  __cxx_atomic_assign_volatile(__temp, __a->__a_value);
-  bool __ret = (std::memcmp(&__temp, __expected, sizeof(_Tp)) == 0);
-  if (__ret)
-    __cxx_atomic_assign_volatile(__a->__a_value, __value);
-  else
-    __cxx_atomic_assign_volatile(*__expected, __a->__a_value);
-  __a->__unlock();
-  return __ret;
-}
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_strong(
-    __cxx_atomic_lock_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order, memory_order) {
-  __a->__lock();
-  bool __ret = (std::memcmp(&__a->__a_value, __expected, sizeof(_Tp)) == 0);
-  if (__ret)
-    std::memcpy(&__a->__a_value, &__value, sizeof(_Tp));
-  else
-    std::memcpy(__expected, &__a->__a_value, sizeof(_Tp));
-  __a->__unlock();
-  return __ret;
-}
-
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_weak(
-    volatile __cxx_atomic_lock_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order, memory_order) {
-  _Tp __temp;
-  __a->__lock();
-  __cxx_atomic_assign_volatile(__temp, __a->__a_value);
-  bool __ret = (std::memcmp(&__temp, __expected, sizeof(_Tp)) == 0);
-  if (__ret)
-    __cxx_atomic_assign_volatile(__a->__a_value, __value);
-  else
-    __cxx_atomic_assign_volatile(*__expected, __a->__a_value);
-  __a->__unlock();
-  return __ret;
-}
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_weak(
-    __cxx_atomic_lock_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order, memory_order) {
-  __a->__lock();
-  bool __ret = (std::memcmp(&__a->__a_value, __expected, sizeof(_Tp)) == 0);
-  if (__ret)
-    std::memcpy(&__a->__a_value, &__value, sizeof(_Tp));
-  else
-    std::memcpy(__expected, &__a->__a_value, sizeof(_Tp));
-  __a->__unlock();
-  return __ret;
-}
-
-template <typename _Tp, typename _Td>
-_LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_fetch_add(volatile __cxx_atomic_lock_impl<_Tp>* __a, _Td __delta, memory_order) {
-  __a->__lock();
-  _Tp __old;
-  __cxx_atomic_assign_volatile(__old, __a->__a_value);
-  __cxx_atomic_assign_volatile(__a->__a_value, _Tp(__old + __delta));
-  __a->__unlock();
-  return __old;
-}
-template <typename _Tp, typename _Td>
-_LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_fetch_add(__cxx_atomic_lock_impl<_Tp>* __a, _Td __delta, memory_order) {
-  __a->__lock();
-  _Tp __old = __a->__a_value;
-  __a->__a_value += __delta;
-  __a->__unlock();
-  return __old;
-}
-
-template <typename _Tp, typename _Td>
-_LIBCPP_HIDE_FROM_ABI _Tp*
-__cxx_atomic_fetch_add(volatile __cxx_atomic_lock_impl<_Tp*>* __a, ptrdiff_t __delta, memory_order) {
-  __a->__lock();
-  _Tp* __old;
-  __cxx_atomic_assign_volatile(__old, __a->__a_value);
-  __cxx_atomic_assign_volatile(__a->__a_value, __old + __delta);
-  __a->__unlock();
-  return __old;
-}
-template <typename _Tp, typename _Td>
-_LIBCPP_HIDE_FROM_ABI _Tp* __cxx_atomic_fetch_add(__cxx_atomic_lock_impl<_Tp*>* __a, ptrdiff_t __delta, memory_order) {
-  __a->__lock();
-  _Tp* __old = __a->__a_value;
-  __a->__a_value += __delta;
-  __a->__unlock();
-  return __old;
-}
-
-template <typename _Tp, typename _Td>
-_LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_fetch_sub(volatile __cxx_atomic_lock_impl<_Tp>* __a, _Td __delta, memory_order) {
-  __a->__lock();
-  _Tp __old;
-  __cxx_atomic_assign_volatile(__old, __a->__a_value);
-  __cxx_atomic_assign_volatile(__a->__a_value, _Tp(__old - __delta));
-  __a->__unlock();
-  return __old;
-}
-template <typename _Tp, typename _Td>
-_LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_fetch_sub(__cxx_atomic_lock_impl<_Tp>* __a, _Td __delta, memory_order) {
-  __a->__lock();
-  _Tp __old = __a->__a_value;
-  __a->__a_value -= __delta;
-  __a->__unlock();
-  return __old;
-}
-
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__cxx_atomic_fetch_and(volatile __cxx_atomic_lock_impl<_Tp>* __a, _Tp __pattern, memory_order) {
-  __a->__lock();
-  _Tp __old;
-  __cxx_atomic_assign_volatile(__old, __a->__a_value);
-  __cxx_atomic_assign_volatile(__a->__a_value, _Tp(__old & __pattern));
-  __a->__unlock();
-  return __old;
-}
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_fetch_and(__cxx_atomic_lock_impl<_Tp>* __a, _Tp __pattern, memory_order) {
-  __a->__lock();
-  _Tp __old = __a->__a_value;
-  __a->__a_value &= __pattern;
-  __a->__unlock();
-  return __old;
-}
-
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__cxx_atomic_fetch_or(volatile __cxx_atomic_lock_impl<_Tp>* __a, _Tp __pattern, memory_order) {
-  __a->__lock();
-  _Tp __old;
-  __cxx_atomic_assign_volatile(__old, __a->__a_value);
-  __cxx_atomic_assign_volatile(__a->__a_value, _Tp(__old | __pattern));
-  __a->__unlock();
-  return __old;
-}
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_fetch_or(__cxx_atomic_lock_impl<_Tp>* __a, _Tp __pattern, memory_order) {
-  __a->__lock();
-  _Tp __old = __a->__a_value;
-  __a->__a_value |= __pattern;
-  __a->__unlock();
-  return __old;
-}
-
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__cxx_atomic_fetch_xor(volatile __cxx_atomic_lock_impl<_Tp>* __a, _Tp __pattern, memory_order) {
-  __a->__lock();
-  _Tp __old;
-  __cxx_atomic_assign_volatile(__old, __a->__a_value);
-  __cxx_atomic_assign_volatile(__a->__a_value, _Tp(__old ^ __pattern));
-  __a->__unlock();
-  return __old;
-}
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_fetch_xor(__cxx_atomic_lock_impl<_Tp>* __a, _Tp __pattern, memory_order) {
-  __a->__lock();
-  _Tp __old = __a->__a_value;
-  __a->__a_value ^= __pattern;
-  __a->__unlock();
-  return __old;
-}
-
-template <typename _Tp,
-          typename _Base = typename conditional<__libcpp_is_always_lock_free<_Tp>::__value,
-                                                __cxx_atomic_base_impl<_Tp>,
-                                                __cxx_atomic_lock_impl<_Tp> >::type>
-#else
 template <typename _Tp, typename _Base = __cxx_atomic_base_impl<_Tp> >
-#endif //_LIBCPP_ATOMIC_ONLY_USE_BUILTINS
 struct __cxx_atomic_impl : public _Base {
   static_assert(is_trivially_copyable<_Tp>::value, "std::atomic<T> requires that 'T' be a trivially copyable type");
 

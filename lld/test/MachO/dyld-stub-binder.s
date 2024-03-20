@@ -14,27 +14,27 @@
 # RUN: %lld -arch arm64 -lSystem -dylib %t/foo.o -o %t/libfoo.dylib
 # RUN: llvm-nm -m %t/libfoo.dylib | FileCheck --check-prefix=STUB %s
 
+
 ## Dylibs that do lazy dynamic calls do need dyld_stub_binder.
 # RUN: not %no-lsystem-lld -arch arm64 -dylib %t/bar.o %t/libfoo.dylib \
-# RUN:     -o %t/libbar.dylib -no_fixup_chains 2>&1 | \
-# RUN:     FileCheck --check-prefix=MISSINGSTUB %s
+# RUN:     -o %t/libbar.dylib 2>&1 | FileCheck --check-prefix=MISSINGSTUB %s
 # RUN: %lld -arch arm64 -lSystem -dylib %t/bar.o  %t/libfoo.dylib \
-# RUN:     -o %t/libbar.dylib -no_fixup_chains
+# RUN:     -o %t/libbar.dylib
 # RUN: llvm-nm -m %t/libbar.dylib | FileCheck --check-prefix=STUB %s
 
 ## As do executables.
 # RUN: not %no-lsystem-lld -arch arm64 %t/libfoo.dylib %t/libbar.dylib %t/test.o \
-# RUN:     -o %t/test -no_fixup_chains 2>&1 | FileCheck --check-prefix=MISSINGSTUB %s
+# RUN:     -o %t/test 2>&1 | FileCheck --check-prefix=MISSINGSTUB %s
 # RUN: %lld -arch arm64 -lSystem %t/libfoo.dylib %t/libbar.dylib %t/test.o \
-# RUN:     -o %t/test -no_fixup_chains
+# RUN:     -o %t/test
 # RUN: llvm-nm -m %t/test | FileCheck --check-prefix=STUB %s
 
 ## Test dynamic lookup of dyld_stub_binder.
 # RUN: %no-lsystem-lld -arch arm64 %t/libfoo.dylib %t/libbar.dylib %t/test.o \
-# RUN:     -o %t/test -undefined dynamic_lookup -no_fixup_chains
+# RUN:     -o %t/test -undefined dynamic_lookup
 # RUN: llvm-nm -m %t/test | FileCheck --check-prefix=DYNSTUB %s
 # RUN: %no-lsystem-lld -arch arm64 %t/libfoo.dylib %t/libbar.dylib %t/test.o \
-# RUN:     -o %t/test -U dyld_stub_binder -no_fixup_chains
+# RUN:     -o %t/test -U dyld_stub_binder
 # RUN: llvm-nm -m %t/test | FileCheck --check-prefix=DYNSTUB %s
 
 # MISSINGSTUB:      error: undefined symbol: dyld_stub_binder

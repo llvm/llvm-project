@@ -19,9 +19,9 @@ define void @v16i8_icmp_eq_imm(ptr %res, ptr %a0) nounwind {
 define void @v16i8_icmp_eq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v16i8_icmp_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vseq.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vseq.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %a0
@@ -49,9 +49,9 @@ define void @v8i16_icmp_eq_imm(ptr %res, ptr %a0) nounwind {
 define void @v8i16_icmp_eq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v8i16_icmp_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vseq.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vseq.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i16>, ptr %a0
@@ -79,9 +79,9 @@ define void @v4i32_icmp_eq_imm(ptr %res, ptr %a0) nounwind {
 define void @v4i32_icmp_eq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4i32_icmp_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vseq.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vseq.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i32>, ptr %a0
@@ -109,9 +109,9 @@ define void @v2i64_icmp_eq_imm(ptr %res, ptr %a0) nounwind {
 define void @v2i64_icmp_eq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2i64_icmp_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vseq.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vseq.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x i64>, ptr %a0
@@ -140,9 +140,9 @@ define void @v16i8_icmp_sle_imm(ptr %res, ptr %a0) nounwind {
 define void @v16i8_icmp_sle(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v16i8_icmp_sle:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vsle.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vsle.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %a0
@@ -170,9 +170,9 @@ define void @v8i16_icmp_sle_imm(ptr %res, ptr %a0) nounwind {
 define void @v8i16_icmp_sle(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v8i16_icmp_sle:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vsle.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vsle.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i16>, ptr %a0
@@ -200,9 +200,9 @@ define void @v4i32_icmp_sle_imm(ptr %res, ptr %a0) nounwind {
 define void @v4i32_icmp_sle(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4i32_icmp_sle:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vsle.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vsle.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i32>, ptr %a0
@@ -230,9 +230,9 @@ define void @v2i64_icmp_sle_imm(ptr %res, ptr %a0) nounwind {
 define void @v2i64_icmp_sle(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2i64_icmp_sle:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vsle.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vsle.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x i64>, ptr %a0
@@ -261,9 +261,9 @@ define void @v16i8_icmp_ule_imm(ptr %res, ptr %a0) nounwind {
 define void @v16i8_icmp_ule(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v16i8_icmp_ule:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vsle.bu $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vsle.bu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %a0
@@ -291,9 +291,9 @@ define void @v8i16_icmp_ule_imm(ptr %res, ptr %a0) nounwind {
 define void @v8i16_icmp_ule(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v8i16_icmp_ule:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vsle.hu $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vsle.hu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i16>, ptr %a0
@@ -321,9 +321,9 @@ define void @v4i32_icmp_ule_imm(ptr %res, ptr %a0) nounwind {
 define void @v4i32_icmp_ule(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4i32_icmp_ule:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vsle.wu $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vsle.wu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i32>, ptr %a0
@@ -351,9 +351,9 @@ define void @v2i64_icmp_ule_imm(ptr %res, ptr %a0) nounwind {
 define void @v2i64_icmp_ule(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2i64_icmp_ule:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vsle.du $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vsle.du $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x i64>, ptr %a0
@@ -382,9 +382,9 @@ define void @v16i8_icmp_slt_imm(ptr %res, ptr %a0) nounwind {
 define void @v16i8_icmp_slt(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v16i8_icmp_slt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vslt.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %a0
@@ -412,9 +412,9 @@ define void @v8i16_icmp_slt_imm(ptr %res, ptr %a0) nounwind {
 define void @v8i16_icmp_slt(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v8i16_icmp_slt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vslt.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vslt.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i16>, ptr %a0
@@ -442,9 +442,9 @@ define void @v4i32_icmp_slt_imm(ptr %res, ptr %a0) nounwind {
 define void @v4i32_icmp_slt(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4i32_icmp_slt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vslt.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vslt.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i32>, ptr %a0
@@ -472,9 +472,9 @@ define void @v2i64_icmp_slt_imm(ptr %res, ptr %a0) nounwind {
 define void @v2i64_icmp_slt(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2i64_icmp_slt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vslt.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vslt.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x i64>, ptr %a0
@@ -503,9 +503,9 @@ define void @v16i8_icmp_ult_imm(ptr %res, ptr %a0) nounwind {
 define void @v16i8_icmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v16i8_icmp_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vslt.bu $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vslt.bu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %a0
@@ -533,9 +533,9 @@ define void @v8i16_icmp_ult_imm(ptr %res, ptr %a0) nounwind {
 define void @v8i16_icmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v8i16_icmp_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vslt.hu $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vslt.hu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i16>, ptr %a0
@@ -563,9 +563,9 @@ define void @v4i32_icmp_ult_imm(ptr %res, ptr %a0) nounwind {
 define void @v4i32_icmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4i32_icmp_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vslt.wu $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vslt.wu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i32>, ptr %a0
@@ -593,9 +593,9 @@ define void @v2i64_icmp_ult_imm(ptr %res, ptr %a0) nounwind {
 define void @v2i64_icmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2i64_icmp_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vslt.du $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vslt.du $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x i64>, ptr %a0
@@ -610,9 +610,9 @@ define void @v2i64_icmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v16i8_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v16i8_icmp_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vseq.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vseq.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vxori.b $vr0, $vr0, 255
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
@@ -627,9 +627,9 @@ define void @v16i8_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v8i16_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v8i16_icmp_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vseq.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vseq.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vrepli.b $vr1, -1
 ; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
@@ -645,9 +645,9 @@ define void @v8i16_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4i32_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4i32_icmp_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vseq.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vseq.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vrepli.b $vr1, -1
 ; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
@@ -663,9 +663,9 @@ define void @v4i32_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2i64_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2i64_icmp_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vseq.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vseq.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vrepli.b $vr1, -1
 ; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0

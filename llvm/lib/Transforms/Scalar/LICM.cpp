@@ -1217,6 +1217,14 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (CI->isConvergent())
       return false;
 
+    // FIXME: Current LLVM IR semantics don't work well with coroutines and
+    // thread local globals. We currently treat getting the address of a thread
+    // local global as not accessing memory, even though it may not be a
+    // constant throughout a function with coroutines. Remove this check after
+    // we better model semantics of thread local globals.
+    if (CI->getFunction()->isPresplitCoroutine())
+      return false;
+
     using namespace PatternMatch;
     if (match(CI, m_Intrinsic<Intrinsic::assume>()))
       // Assumes don't actually alias anything or throw
@@ -1224,14 +1232,6 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
 
     // Handle simple cases by querying alias analysis.
     MemoryEffects Behavior = AA->getMemoryEffects(CI);
-
-    // FIXME: we don't handle the semantics of thread local well. So that the
-    // address of thread locals are fake constants in coroutines. So We forbid
-    // to treat onlyReadsMemory call in coroutines as constants now. Note that
-    // it is possible to hide a thread local access in a onlyReadsMemory call.
-    // Remove this check after we handle the semantics of thread locals well.
-    if (Behavior.onlyReadsMemory() && CI->getFunction()->isPresplitCoroutine())
-      return false;
 
     if (Behavior.doesNotAccessMemory())
       return true;
@@ -2234,7 +2234,7 @@ bool llvm::promoteLoopAccessesToScalars(
   if (FoundLoadToPromote || !StoreIsGuanteedToExecute) {
     PreheaderLoad =
         new LoadInst(AccessTy, SomePtr, SomePtr->getName() + ".promoted",
-                     Preheader->getTerminator());
+                     Preheader->getTerminator()->getIterator());
     if (SawUnorderedAtomic)
       PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
     PreheaderLoad->setAlignment(Alignment);
@@ -2701,6 +2701,7 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
 
   // First, we need to make sure we should do the transformation.
   SmallVector<Use *> Changes;
+  SmallVector<BinaryOperator *> Adds;
   SmallVector<BinaryOperator *> Worklist;
   if (BinaryOperator *VariantBinOp = dyn_cast<BinaryOperator>(VariantOp))
     Worklist.push_back(VariantBinOp);
@@ -2713,6 +2714,7 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
         isa<BinaryOperator>(BO->getOperand(1))) {
       Worklist.push_back(cast<BinaryOperator>(BO->getOperand(0)));
       Worklist.push_back(cast<BinaryOperator>(BO->getOperand(1)));
+      Adds.push_back(BO);
       continue;
     }
     if (!isReassociableOp(BO, Instruction::Mul, Instruction::FMul) ||
@@ -2735,6 +2737,12 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
   if (Changes.empty())
     return false;
 
+  // Drop the poison flags for any adds we looked through.
+  if (I.getType()->isIntOrIntVectorTy()) {
+    for (auto *Add : Adds)
+      Add->dropPoisonGeneratingFlags();
+  }
+
   // We know we should do it so let's do the transformation.
   auto *Preheader = L.getLoopPreheader();
   assert(Preheader && "Loop is not in simplify form?");
@@ -2743,9 +2751,11 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
     assert(L.isLoopInvariant(U->get()));
     Instruction *Ins = cast<Instruction>(U->getUser());
     Value *Mul;
-    if (I.getType()->isIntOrIntVectorTy())
+    if (I.getType()->isIntOrIntVectorTy()) {
       Mul = Builder.CreateMul(U->get(), Factor, "factor.op.mul");
-    else
+      // Drop the poison flags on the original multiply.
+      Ins->dropPoisonGeneratingFlags();
+    } else
       Mul = Builder.CreateFMulFMF(U->get(), Factor, Ins, "factor.op.fmul");
     U->set(Mul);
   }

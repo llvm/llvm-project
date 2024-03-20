@@ -2,8 +2,9 @@
 
 #include "mock-types.h"
 
-RefCountable* provide() { return nullptr; }
-void consume_refcntbl(RefCountable*) {}
+RefCountable* provide();
+void consume_refcntbl(RefCountable*);
+void some_function();
 
 namespace simple {
   void foo() {
@@ -19,7 +20,7 @@ namespace simple {
 }
 
 namespace multi_arg {
-  void consume_refcntbl(int, RefCountable* foo, bool) {}
+  void consume_refcntbl(int, RefCountable* foo, bool);
   void foo() {
     consume_refcntbl(42, provide(), true);
     // expected-warning@-1{{Call argument for parameter 'foo' is uncounted and unsafe}}
@@ -38,8 +39,8 @@ namespace ref_counted {
 
 namespace methods {
   struct Consumer {
-    void consume_ptr(RefCountable* ptr) {}
-    void consume_ref(const RefCountable& ref) {}
+    void consume_ptr(RefCountable* ptr);
+    void consume_ref(const RefCountable& ref);
   };
 
   void foo() {
@@ -53,7 +54,7 @@ namespace methods {
 
   void foo2() {
     struct Consumer {
-      void consume(RefCountable*) { }
+      void consume(RefCountable*) { some_function(); }
       void whatever() {
         consume(provide());
         // expected-warning@-1{{Call argument is uncounted and unsafe}}
@@ -63,7 +64,7 @@ namespace methods {
 
   void foo3() {
     struct Consumer {
-      void consume(RefCountable*) { }
+      void consume(RefCountable*) { some_function(); }
       void whatever() {
         this->consume(provide());
         // expected-warning@-1{{Call argument is uncounted and unsafe}}
@@ -73,7 +74,7 @@ namespace methods {
 }
 
 namespace casts {
-  RefCountable* downcast(RefCountable*) { return nullptr; }
+  RefCountable* downcast(RefCountable*);
 
   void foo() {
     consume_refcntbl(provide());
@@ -145,8 +146,8 @@ namespace Ref_to_reference_conversion_operator {
 }
 
 namespace param_formarding_function {
-  void consume_ref_countable_ref(RefCountable&) {}
-  void consume_ref_countable_ptr(RefCountable*) {}
+  void consume_ref_countable_ref(RefCountable&);
+  void consume_ref_countable_ptr(RefCountable*);
 
   namespace ptr {
     void foo(RefCountable* param) {
@@ -185,8 +186,8 @@ namespace param_formarding_function {
 }
 
 namespace param_formarding_lambda {
-  auto consume_ref_countable_ref = [](RefCountable&) {};
-  auto consume_ref_countable_ptr = [](RefCountable*) {};
+  auto consume_ref_countable_ref = [](RefCountable&) { some_function(); };
+  auto consume_ref_countable_ptr = [](RefCountable*) { some_function(); };
 
   namespace ptr {
     void foo(RefCountable* param) {
@@ -304,7 +305,7 @@ namespace string_impl {
 namespace default_arg {
   RefCountable* global;
 
-  void function_with_default_arg(RefCountable* param = global) {}
+  void function_with_default_arg(RefCountable* param = global);
   // expected-warning@-1{{Call argument for parameter 'param' is uncounted and unsafe}}
 
   void foo() {
@@ -315,9 +316,9 @@ namespace default_arg {
 namespace cxx_member_operator_call {
   // The hidden this-pointer argument without a corresponding parameter caused couple bugs in parameter <-> argument attribution.
   struct Foo {
-    Foo& operator+(RefCountable* bad) { return *this; }
-    friend Foo& operator-(Foo& lhs, RefCountable* bad) { return lhs; }
-    void operator()(RefCountable* bad) { }
+    Foo& operator+(RefCountable* bad);
+    friend Foo& operator-(Foo& lhs, RefCountable* bad);
+    void operator()(RefCountable* bad);
   };
 
   RefCountable* global;

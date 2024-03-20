@@ -596,10 +596,11 @@ Value *isBytewiseValue(Value *V, const DataLayout &DL);
 /// indexed is already around as a register, for example if it were inserted
 /// directly into the aggregate.
 ///
-/// If InsertBefore is not null, this function will duplicate (modified)
+/// If InsertBefore is not empty, this function will duplicate (modified)
 /// insertvalues when a part of a nested struct is extracted.
-Value *FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
-                         Instruction *InsertBefore = nullptr);
+Value *FindInsertedValue(
+    Value *V, ArrayRef<unsigned> idx_range,
+    std::optional<BasicBlock::iterator> InsertBefore = std::nullopt);
 
 /// Analyze the specified pointer to see if it can be expressed as a base
 /// pointer plus a constant offset. Return the base and offset to the caller.
@@ -792,6 +793,15 @@ bool isSafeToSpeculativelyExecute(const Instruction *I,
                                   AssumptionCache *AC = nullptr,
                                   const DominatorTree *DT = nullptr,
                                   const TargetLibraryInfo *TLI = nullptr);
+
+inline bool
+isSafeToSpeculativelyExecute(const Instruction *I, BasicBlock::iterator CtxI,
+                             AssumptionCache *AC = nullptr,
+                             const DominatorTree *DT = nullptr,
+                             const TargetLibraryInfo *TLI = nullptr) {
+  // Take an iterator, and unwrap it into an Instruction *.
+  return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI);
+}
 
 /// This returns the same result as isSafeToSpeculativelyExecute if Opcode is
 /// the actual opcode of Inst. If the provided and actual opcode differ, the
@@ -1019,6 +1029,15 @@ bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC = nullptr,
                                const DominatorTree *DT = nullptr,
                                unsigned Depth = 0);
 
+inline bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC,
+                                      BasicBlock::iterator CtxI,
+                                      const DominatorTree *DT = nullptr,
+                                      unsigned Depth = 0) {
+  // Takes an iterator as a position, passes down to Instruction *
+  // implementation.
+  return isGuaranteedNotToBePoison(V, AC, &*CtxI, DT, Depth);
+}
+
 /// Returns true if V cannot be undef, but may be poison.
 bool isGuaranteedNotToBeUndef(const Value *V, AssumptionCache *AC = nullptr,
                               const Instruction *CtxI = nullptr,
@@ -1195,6 +1214,13 @@ std::optional<bool> isImpliedByDomCondition(CmpInst::Predicate Pred,
                                             const Value *LHS, const Value *RHS,
                                             const Instruction *ContextI,
                                             const DataLayout &DL);
+
+/// Call \p InsertAffected on all Values whose known bits / value may be
+/// affected by the condition \p Cond. Used by AssumptionCache and
+/// DomConditionCache.
+void findValuesAffectedByCondition(Value *Cond, bool IsAssume,
+                                   function_ref<void(Value *)> InsertAffected);
+
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_VALUETRACKING_H

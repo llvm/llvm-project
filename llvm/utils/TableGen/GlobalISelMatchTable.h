@@ -232,7 +232,7 @@ public:
   unsigned allocateLabelID() { return CurrentLabelID++; }
 
   void defineLabel(unsigned LabelID) {
-    LabelMap.insert(std::make_pair(LabelID, CurrentSize));
+    LabelMap.insert(std::pair(LabelID, CurrentSize));
   }
 
   unsigned getLabelIndex(unsigned LabelID) const {

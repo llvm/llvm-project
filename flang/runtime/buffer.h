@@ -148,10 +148,15 @@ private:
       buffer_ =
           reinterpret_cast<char *>(AllocateMemoryOrCrash(terminator, size_));
       auto chunk{std::min<std::int64_t>(length_, oldSize - start_)};
-      std::memcpy(buffer_, old + start_, chunk);
+      // "memcpy" in glibc has a "nonnull" attribute on the source pointer.
+      // Avoid passing a null pointer, since it would result in an undefined
+      // behavior.
+      if (old != nullptr) {
+        std::memcpy(buffer_, old + start_, chunk);
+        std::memcpy(buffer_ + chunk, old, length_ - chunk);
+        FreeMemory(old);
+      }
       start_ = 0;
-      std::memcpy(buffer_ + chunk, old, length_ - chunk);
-      FreeMemory(old);
     }
   }
 

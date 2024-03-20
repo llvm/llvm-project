@@ -30,6 +30,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Object/ObjectFile.h"
 
 #include <cassert>
@@ -194,7 +195,7 @@ static int initLibrary(DeviceTy &Device) {
                                         Entry.size) != OFFLOAD_SUCCESS)
               REPORT("Failed to write symbol for USM %s\n", Entry.name);
           }
-        } else {
+        } else if (Entry.addr) {
           if (Device.RTL->get_function(Binary, Entry.name, &DeviceEntry.addr) !=
               OFFLOAD_SUCCESS)
             REPORT("Failed to load kernel %s\n", Entry.name);
@@ -1752,7 +1753,7 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
 
   KernelArgsTy KernelArgs = {0};
-  KernelArgs.Version = 2;
+  KernelArgs.Version = OMP_KERNEL_ARG_VERSION;
   KernelArgs.NumArgs = NumArgs;
   KernelArgs.Tripcount = LoopTripCount;
   KernelArgs.NumTeams[0] = NumTeams;

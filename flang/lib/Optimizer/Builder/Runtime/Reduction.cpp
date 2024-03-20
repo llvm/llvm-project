@@ -149,6 +149,22 @@ struct ForcedNorm2Real16 {
   }
 };
 
+/// Placeholder for real*16 version of Norm2Dim Intrinsic
+struct ForcedNorm2DimReal16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Norm2DimReal16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(
+          ctx, {fir::ReferenceType::get(boxTy), boxTy, intTy, strTy, intTy},
+          mlir::NoneType::get(ctx));
+    };
+  }
+};
+
 /// Placeholder for real*10 version of Product Intrinsic
 struct ForcedProductReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ProductReal10));
@@ -876,7 +892,14 @@ mlir::Value fir::runtime::genMinval(fir::FirOpBuilder &builder,
 void fir::runtime::genNorm2Dim(fir::FirOpBuilder &builder, mlir::Location loc,
                                mlir::Value resultBox, mlir::Value arrayBox,
                                mlir::Value dim) {
-  auto func = fir::runtime::getRuntimeFunc<mkRTKey(Norm2Dim)>(loc, builder);
+  mlir::func::FuncOp func;
+  auto ty = arrayBox.getType();
+  auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
+  auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+  if (eleTy.isF128())
+    func = fir::runtime::getRuntimeFunc<ForcedNorm2DimReal16>(loc, builder);
+  else
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Norm2Dim)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =

@@ -2,7 +2,7 @@
 ! that is syntactically present, but may be absent at runtime (is
 ! an optional or a pointer/allocatable).
 !
-! RUN: bbc -emit-hlfir -polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine optional_copy_in_out(x)
   interface

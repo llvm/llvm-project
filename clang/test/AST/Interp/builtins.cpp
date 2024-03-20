@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -verify -fms-extensions
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -fms-extensions -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -Wno-constant-evaluated -verify -fms-extensions
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -Wno-constant-evaluated -fms-extensions -S -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -verify=ref %s -Wno-constant-evaluated -fms-extensions
 // RUN: %clang_cc1 -verify=ref %s -Wno-constant-evaluated %s -fms-extensions -S -emit-llvm -o - | FileCheck %s
 

@@ -221,7 +221,7 @@ Thread::Thread(Process &process, lldb::tid_t tid, bool use_invalid_index_id)
                                       : process.GetNextThreadIndexID(tid)),
       m_reg_context_sp(), m_state(eStateUnloaded), m_state_mutex(),
       m_frame_mutex(), m_curr_frames_sp(), m_prev_frames_sp(),
-      m_resume_signal(LLDB_INVALID_SIGNAL_NUMBER),
+      m_prev_framezero_pc(), m_resume_signal(LLDB_INVALID_SIGNAL_NUMBER),
       m_resume_state(eStateRunning), m_temporary_resume_state(eStateRunning),
       m_unwinder_up(), m_destroy_called(false),
       m_override_should_notify(eLazyBoolCalculate),
@@ -250,6 +250,7 @@ void Thread::DestroyThread() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
+  m_prev_framezero_pc.reset();
 }
 
 void Thread::BroadcastSelectedFrameChange(StackID &new_frame_id) {
@@ -422,6 +423,12 @@ lldb::StopInfoSP Thread::GetPrivateStopInfo(bool calculate) {
       }
     }
   }
+
+  // If we were resuming the process and it was interrupted,
+  // return no stop reason.  This thread would like to resume.
+  if (m_stop_info_sp && m_stop_info_sp->WasContinueInterrupted(*this))
+    return {};
+
   return m_stop_info_sp;
 }
 
@@ -1408,16 +1415,22 @@ StackFrameListSP Thread::GetStackFrameList() {
   return m_curr_frames_sp;
 }
 
+std::optional<addr_t> Thread::GetPreviousFrameZeroPC() {
+  return m_prev_framezero_pc;
+}
+
 void Thread::ClearStackFrames() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
 
   GetUnwinder().Clear();
+  m_prev_framezero_pc.reset();
+  if (RegisterContextSP reg_ctx_sp = GetRegisterContext())
+    m_prev_framezero_pc = reg_ctx_sp->GetPC();
 
   // Only store away the old "reference" StackFrameList if we got all its
   // frames:
   // FIXME: At some point we can try to splice in the frames we have fetched
-  // into
-  // the new frame as we make it, but let's not try that now.
+  // into the new frame as we make it, but let's not try that now.
   if (m_curr_frames_sp && m_curr_frames_sp->GetAllFramesFetched())
     m_prev_frames_sp.swap(m_curr_frames_sp);
   m_curr_frames_sp.reset();

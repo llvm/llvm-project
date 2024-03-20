@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -199,10 +201,20 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
 
 bool AArch64TargetInfo::setABI(const std::string &Name) {
-  if (Name != "aapcs" && Name != "darwinpcs")
+  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs")
     return false;
 
   ABI = Name;
+  return true;
+}
+
+bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
+  if (hasFeature("fp") && ABI == "aapcs-soft") {
+    // aapcs-soft is not allowed for targets with an FPU, to avoid there being
+    // two incomatible ABIs.
+    Diags.Report(diag::err_target_unsupported_abi_with_fpu) << ABI;
+    return false;
+  }
   return true;
 }
 
@@ -367,20 +379,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   // ACLE predefines. Many can only have one possible value on v8 AArch64.
   Builder.defineMacro("__ARM_ACLE", "200");
-
-  // __ARM_ARCH is defined as an integer value indicating the current ARM ISA.
-  // For ISAs up to and including v8, __ARM_ARCH is equal to the major version
-  // number. For ISAs from v8.1 onwards, __ARM_ARCH is scaled up to include the
-  // minor version number, e.g. for ARM architecture ARMvX.Y:
-  // __ARM_ARCH = X * 100 + Y.
-  if (ArchInfo->Version.getMajor() == 8 && ArchInfo->Version.getMinor() == 0)
-    Builder.defineMacro("__ARM_ARCH",
-                        std::to_string(ArchInfo->Version.getMajor()));
-  else
-    Builder.defineMacro("__ARM_ARCH",
-                        std::to_string(ArchInfo->Version.getMajor() * 100 +
-                                       ArchInfo->Version.getMinor().value()));
-
+  Builder.defineMacro("__ARM_ARCH",
+                      std::to_string(ArchInfo->Version.getMajor()));
   Builder.defineMacro("__ARM_ARCH_PROFILE",
                       std::string("'") + (char)ArchInfo->Profile + "'");
 
@@ -679,14 +679,21 @@ StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
-  return llvm::AArch64::parseArchExtension(FeatureStr).has_value();
+  // CPU features might be separated by '+', extract them and check
+  llvm::SmallVector<StringRef, 8> Features;
+  FeatureStr.split(Features, "+");
+  for (auto &Feature : Features)
+    if (!llvm::AArch64::parseArchExtension(Feature.trim()).has_value())
+      return false;
+  return true;
 }
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Cases("aarch64", "arm64", "arm", true)
       .Case("fmv", HasFMV)
-      .Cases("neon", "fp", "simd", FPU & NeonMode)
+      .Case("fp", FPU & FPUMode)
+      .Cases("neon", "simd", FPU & NeonMode)
       .Case("jscvt", HasJSCVT)
       .Case("fcma", HasFCMA)
       .Case("rng", HasRandGen)
@@ -1454,6 +1461,11 @@ int AArch64TargetInfo::getEHDataRegisterNumber(unsigned RegNo) const {
   if (RegNo == 1)
     return 1;
   return -1;
+}
+
+bool AArch64TargetInfo::validatePointerAuthKey(
+    const llvm::APSInt &value) const {
+  return 0 <= value && value <= 3;
 }
 
 bool AArch64TargetInfo::hasInt128Type() const { return true; }

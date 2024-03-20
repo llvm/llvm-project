@@ -115,5 +115,9 @@ Task Outer() {
 // CHECK-NOT: _exit
 // CHECK: musttail call
 // CHECK: musttail call
+// CHECK: musttail call
 // CHECK-NEXT: ret void
+// CHECK-EMPTY:
+// CHECK-NEXT: unreachable:
+// CHECK-NEXT: unreachable
 // CHECK-NEXT: }

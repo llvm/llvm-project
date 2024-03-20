@@ -215,12 +215,15 @@ int64_t SearchableTableEmitter::getNumericKey(const SearchIndex &Index,
                                               Record *Rec) {
   assert(Index.Fields.size() == 1);
 
+  // To be consistent with compareBy and primaryRepresentation elsewhere,
+  // we check for IsInstruction before Enum-- these fields are not exclusive.
+  if (Index.Fields[0].IsInstruction) {
+    Record *TheDef = Rec->getValueAsDef(Index.Fields[0].Name);
+    return Target->getInstrIntValue(TheDef);
+  }
   if (Index.Fields[0].Enum) {
     Record *EnumEntry = Rec->getValueAsDef(Index.Fields[0].Name);
     return Index.Fields[0].Enum->EntryMap[EnumEntry]->second;
-  } else if (Index.Fields[0].IsInstruction) {
-    Record *TheDef = Rec->getValueAsDef(Index.Fields[0].Name);
-    return Target->getInstrIntValue(TheDef);
   }
 
   return getInt(Rec, Index.Fields[0].Name);
@@ -608,7 +611,7 @@ void SearchableTableEmitter::collectEnumEntries(
       Value = getInt(EntryRec, ValueField);
 
     Enum.Entries.push_back(std::make_unique<GenericEnum::Entry>(Name, Value));
-    Enum.EntryMap.insert(std::make_pair(EntryRec, Enum.Entries.back().get()));
+    Enum.EntryMap.insert(std::pair(EntryRec, Enum.Entries.back().get()));
   }
 
   if (ValueField.empty()) {
@@ -708,7 +711,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
 
     collectEnumEntries(*Enum, NameField, ValueField,
                        Records.getAllDerivedDefinitions(FilterClass));
-    EnumMap.insert(std::make_pair(EnumRec, Enum.get()));
+    EnumMap.insert(std::pair(EnumRec, Enum.get()));
     Enums.emplace_back(std::move(Enum));
   }
 
@@ -773,7 +776,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
       });
     }
 
-    TableMap.insert(std::make_pair(TableRec, Table.get()));
+    TableMap.insert(std::pair(TableRec, Table.get()));
     Tables.emplace_back(std::move(Table));
   }
 

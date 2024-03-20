@@ -51,7 +51,7 @@ executable("lldb-dap") {
     "ProgressEvent.cpp",
     "RunInTerminal.cpp",
     "SourceBreakpoint.cpp",
-    "lldb-dap.cpp",
     "Watchpoint.cpp",
+    "lldb-dap.cpp",
   ]
 }

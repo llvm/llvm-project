@@ -317,7 +317,7 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
   // Compute lower and upper bounds for `valueDim`.
   SmallVector<AffineMap> lb(1), ub(1);
   cstr.cstr.getSliceBounds(pos, 1, value.getContext(), &lb, &ub,
-                           /*getClosedUB=*/true);
+                           /*closedUB=*/true);
 
   // Note: There are TODOs in the implementation of `getSliceBounds`. In such a
   // case, no lower/upper bound can be computed at the moment.

@@ -66,9 +66,9 @@ define i64 @f8() unnamed_addr {
 
 define ptr @f10() unnamed_addr {
 ; CHECK-LABEL: define ptr @f10() unnamed_addr {
-; CHECK-NEXT:    ret ptr getelementptr ([4 x i32], ptr @g1, i64 0, inrange i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inrange(0, 4) ([4 x i32], ptr @g1, i64 0, i64 1)
 ;
-  ret ptr getelementptr ([4 x i32], ptr @g1, i64 0, inrange i64 1)
+  ret ptr getelementptr inrange(0, 4) ([4 x i32], ptr @g1, i64 0, i64 1)
 }
 
 define ptr @f11() unnamed_addr {
@@ -80,7 +80,7 @@ define ptr @f11() unnamed_addr {
 
 define ptr @f12() unnamed_addr {
 ; CHECK-LABEL: define ptr @f12() unnamed_addr {
-; CHECK-NEXT:    ret ptr getelementptr ([4 x i32], ptr @g1, inrange i64 0, i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inrange(-4, 12) ([4 x i32], ptr @g1, i64 0, i64 1)
 ;
-  ret ptr getelementptr ([4 x i32], ptr @g1, inrange i64 0, i64 1)
+  ret ptr getelementptr inrange(-4, 12) ([4 x i32], ptr @g1, i64 0, i64 1)
 }

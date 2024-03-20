@@ -355,18 +355,17 @@ std::optional<ValueAndVReg> getConstantVRegValWithLookThrough(
   if (!MaybeVal)
     return std::nullopt;
   APInt &Val = *MaybeVal;
-  while (!SeenOpcodes.empty()) {
-    std::pair<unsigned, unsigned> OpcodeAndSize = SeenOpcodes.pop_back_val();
-    switch (OpcodeAndSize.first) {
+  for (auto [Opcode, Size] : reverse(SeenOpcodes)) {
+    switch (Opcode) {
     case TargetOpcode::G_TRUNC:
-      Val = Val.trunc(OpcodeAndSize.second);
+      Val = Val.trunc(Size);
       break;
     case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_SEXT:
-      Val = Val.sext(OpcodeAndSize.second);
+      Val = Val.sext(Size);
       break;
     case TargetOpcode::G_ZEXT:
-      Val = Val.zext(OpcodeAndSize.second);
+      Val = Val.zext(Size);
       break;
     }
   }
@@ -660,8 +659,11 @@ std::optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode,
   default:
     break;
   case TargetOpcode::G_ADD:
-  case TargetOpcode::G_PTR_ADD:
     return C1 + C2;
+  case TargetOpcode::G_PTR_ADD:
+    // Types can be of different width here.
+    // Result needs to be the same width as C1, so trunc or sext C2.
+    return C1 + C2.sextOrTrunc(C1.getBitWidth());
   case TargetOpcode::G_AND:
     return C1 & C2;
   case TargetOpcode::G_ASHR:

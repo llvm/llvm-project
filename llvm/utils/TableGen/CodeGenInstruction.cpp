@@ -175,7 +175,7 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
         }
 
         OpInfo.SubOpNames[j] = SubArgName;
-        SubOpAliases[SubArgName] = std::make_pair(i, j);
+        SubOpAliases[SubArgName] = std::pair(i, j);
       }
     } else if (!EncoderMethod.empty()) {
       // If we have no explicit sub-op dag, but have an top-level encoder
@@ -276,7 +276,7 @@ CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
                           Op + "'");
 
     // Otherwise, return the operand.
-    return std::make_pair(OpIdx, 0U);
+    return std::pair(OpIdx, 0U);
   }
 
   // Find the suboperand number involved.
@@ -289,13 +289,13 @@ CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
   // Find the operand with the right name.
   for (unsigned i = 0, e = MIOpInfo->getNumArgs(); i != e; ++i)
     if (MIOpInfo->getArgNameStr(i) == SubOpName)
-      return std::make_pair(OpIdx, i);
+      return std::pair(OpIdx, i);
 
   // Otherwise, didn't find it!
   PrintFatalError(TheDef->getLoc(), TheDef->getName() +
                                         ": unknown suboperand name in '" + Op +
                                         "'");
-  return std::make_pair(0U, 0U);
+  return std::pair(0U, 0U);
 }
 
 static void ParseConstraint(StringRef CStr, CGIOperandList &Ops, Record *Rec) {
@@ -325,7 +325,9 @@ static void ParseConstraint(StringRef CStr, CGIOperandList &Ops, Record *Rec) {
 
   // Only other constraint is "TIED_TO" for now.
   StringRef::size_type pos = CStr.find_first_of('=');
-  if (pos == StringRef::npos)
+  if (pos == StringRef::npos || pos == 0 ||
+      CStr.find_first_of(" \t", pos) != (pos + 1) ||
+      CStr.find_last_of(" \t", pos) != (pos - 1))
     PrintFatalError(Rec->getLoc(), "Unrecognized constraint '" + CStr +
                                        "' in '" + Rec->getName() + "'");
   start = CStr.find_first_not_of(" \t");

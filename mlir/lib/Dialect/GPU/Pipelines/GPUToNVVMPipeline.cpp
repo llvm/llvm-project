@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Config/mlir-config.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
@@ -38,7 +39,7 @@
 
 using namespace mlir;
 
-#if MLIR_CUDA_CONVERSIONS_ENABLED
+#if MLIR_ENABLE_CUDA_CONVERSIONS
 namespace {
 
 //===----------------------------------------------------------------------===//
@@ -127,4 +128,4 @@ void mlir::gpu::registerGPUToNVVMPipeline() {
       buildLowerToNVVMPassPipeline);
 }
 
-#endif // MLIR_CUDA_CONVERSIONS_ENABLED
+#endif // MLIR_ENABLE_CUDA_CONVERSIONS
