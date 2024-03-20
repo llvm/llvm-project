@@ -741,7 +741,7 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   if (!tensorType)
     return {};
 
-  // Fold dim to posion if the index is out of bound. Poison represents
+  // Fold dim to poison if the index is out of bound. Poison represents
   // undefined behavior.
   int64_t indexVal = index.getInt();
   if (indexVal < 0 || indexVal >= tensorType.getRank())

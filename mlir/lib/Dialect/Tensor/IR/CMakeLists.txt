@@ -34,6 +34,7 @@ add_mlir_dialect_library(MLIRTensorDialect
   MLIRShapedOpInterfaces
   MLIRSideEffectInterfaces
   MLIRSupport
+  MLIRUBDialect
   MLIRValueBoundsOpInterface
   MLIRViewLikeInterface
   )
