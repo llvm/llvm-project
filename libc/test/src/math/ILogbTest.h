@@ -24,7 +24,7 @@ public:
   template <typename T>
   void test_special_numbers(typename ILogbFunc<T>::Func func) {
     using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-    using Sign = LIBC_NAMESPACE::fputil::Sign;
+
     EXPECT_EQ(FP_ILOGB0, func(FPBits::zero(Sign::POS).get_val()));
     EXPECT_EQ(FP_ILOGB0, func(FPBits::zero(Sign::NEG).get_val()));
     EXPECT_EQ(FP_ILOGBNAN, func(FPBits::quiet_nan().get_val()));
