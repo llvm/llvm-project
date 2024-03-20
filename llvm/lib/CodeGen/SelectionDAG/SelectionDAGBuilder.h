@@ -449,7 +449,7 @@ public:
     ArrayRef<const Use> GCTransitionArgs;
 
     /// The ID that the resulting STATEPOINT instruction has to report.
-    unsigned ID = -1;
+    uint64_t ID = -1;
 
     /// Information regarding the underlying call instruction.
     TargetLowering::CallLoweringInfo CLI;
