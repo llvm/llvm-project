@@ -282,6 +282,8 @@ LegalityPredicate typePairAndMemDescInSet(
 LegalityPredicate isScalar(unsigned TypeIdx);
 /// True iff the specified type index is a vector.
 LegalityPredicate isVector(unsigned TypeIdx);
+/// True iff the specified type index is a scalable vector.
+LegalityPredicate isScalableVector(unsigned TypeIdx);
 /// True iff the specified type index is a pointer (with any address space).
 LegalityPredicate isPointer(unsigned TypeIdx);
 /// True iff the specified type index is a pointer with the specified address

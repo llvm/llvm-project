@@ -76,6 +76,12 @@ LegalityPredicate LegalityPredicates::isVector(unsigned TypeIdx) {
   };
 }
 
+LegalityPredicate LegalityPredicates::isScalableVector(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx].isScalableVector();
+  };
+}
+
 LegalityPredicate LegalityPredicates::isPointer(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     return Query.Types[TypeIdx].isPointer();
