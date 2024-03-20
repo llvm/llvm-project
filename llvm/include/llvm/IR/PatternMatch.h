@@ -68,14 +68,16 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
-template <typename SubPattern_t>
-struct AllowReassoc_match {
+template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename SubPattern_t> struct AllowReassoc_match {
   SubPattern_t SubPattern;
 
   AllowReassoc_match(const SubPattern_t &SP) : SubPattern(SP) {}
 
-  template <typename OpTy>
-  bool match(OpTy *V) {
+  template <typename OpTy> bool match(OpTy *V) {
     auto *I = dyn_cast<FPMathOperator>(V);
     return I && I->hasAllowReassoc() && SubPattern.match(I);
   }
