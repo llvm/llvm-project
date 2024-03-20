@@ -85,6 +85,9 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
     Describes an operation that can load from memory slots and/or store
     to memory slots.
 
+    For a memory operation on a slot to be valid, it must strictly operate
+    within the bounds of the slot.
+
     If the same operation does both loads and stores on the same slot, the
     load must semantically happen first.
   }];
