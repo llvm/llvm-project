@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/rename.h"
 #include "src/unistd/access.h"
 #include "src/unistd/close.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include "src/errno/libc_errno.h"
 
 TEST(LlvmLibcRenameTest, CreateAndRenameFile) {
   // The test strategy is to create a file and rename it, and also verify that
