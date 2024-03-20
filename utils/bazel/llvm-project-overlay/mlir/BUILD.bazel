@@ -760,6 +760,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":TransformDialectTransforms",
     ],
 )
@@ -1464,6 +1465,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":Transforms",
         ":VectorDialect",
     ],
@@ -1572,6 +1574,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":VectorDialect",
     ],
 )
@@ -2922,6 +2925,7 @@ cc_library(
         ":SCFUtils",
         ":SideEffectInterfaces",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":VectorDialect",
         "//llvm:Support",
     ],
@@ -3153,6 +3157,7 @@ cc_library(
         ":SparseTensorTransformOpsIncGen",
         ":Support",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         "//llvm:Support",
     ],
 )
@@ -3580,6 +3585,7 @@ cc_library(
         ":SCFTransforms",
         ":Support",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":VectorDialect",
         "//llvm:Support",
     ],
@@ -4854,6 +4860,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":TransformUtils",
     ],
 )
@@ -4995,6 +5002,7 @@ cc_library(
         ":LLVMDialect",
         ":SideEffectInterfaces",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorEnumsIncGen",
@@ -5785,6 +5793,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorTransforms",
@@ -7538,6 +7547,7 @@ cc_library(
         ":TensorTransforms",
         ":TensorUtils",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":TransformUtils",
     ],
 )
@@ -11070,6 +11080,7 @@ cc_library(
         ":TensorUtils",
         ":TilingInterface",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":TransformDialectUtils",
         ":TransformUtils",
         ":VectorDialect",
@@ -11913,6 +11924,15 @@ cc_library(
 )
 
 td_library(
+    name = "TransformInterfacesTdFiles",
+    srcs = glob(["include/mlir/Dialect/Transform/Interfaces/*.td"]),
+    deps = [
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
+    ],
+)
+
+td_library(
     name = "TransformDialectTdFiles",
     srcs = glob(["include/mlir/Dialect/Transform/IR/*.td"]),
     deps = [
@@ -11921,6 +11941,7 @@ td_library(
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":TransformInterfacesTdFiles",
     ],
 )
 
@@ -11976,29 +11997,29 @@ gentbl_cc_library(
             [
                 "-gen-op-interface-decls",
             ],
-            "include/mlir/Dialect/Transform/IR/TransformInterfaces.h.inc",
+            "include/mlir/Dialect/Transform/Interfaces/TransformInterfaces.h.inc",
         ),
         (
             [
                 "-gen-op-interface-defs",
             ],
-            "include/mlir/Dialect/Transform/IR/TransformInterfaces.cpp.inc",
+            "include/mlir/Dialect/Transform/Interfaces/TransformInterfaces.cpp.inc",
         ),
         (
             [
                 "-gen-type-interface-decls",
             ],
-            "include/mlir/Dialect/Transform/IR/TransformTypeInterfaces.h.inc",
+            "include/mlir/Dialect/Transform/Interfaces/TransformTypeInterfaces.h.inc",
         ),
         (
             [
                 "-gen-type-interface-defs",
             ],
-            "include/mlir/Dialect/Transform/IR/TransformTypeInterfaces.cpp.inc",
+            "include/mlir/Dialect/Transform/Interfaces/TransformTypeInterfaces.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Transform/IR/TransformInterfaces.td",
+    td_file = "include/mlir/Dialect/Transform/Interfaces/TransformInterfaces.td",
     deps = [":TransformDialectTdFiles"],
 )
 
@@ -12063,19 +12084,16 @@ gentbl_cc_library(
 
 cc_library(
     name = "TransformDialectInterfaces",
-    # FIXME: Change this once https://github.com/llvm/llvm-project/pull/85221 lands
-    hdrs = [
-        "include/mlir/Dialect/Transform/IR/TransformInterfaces.h",
-        "include/mlir/Dialect/Transform/IR/TransformTypes.h",
-    ],
+    srcs = glob(["lib/Dialect/Transform/Interfaces/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/Interfaces/*.h"]),
     deps = [
         ":CastInterfaces",
         ":IR",
         ":Rewrite",
+        ":SideEffectInterfaces",
         ":Support",
         ":TransformDialectInterfacesIncGen",
         ":TransformDialectUtils",
-        ":TransformTypesIncGen",
         ":Transforms",
         "//llvm:Support",
     ],
@@ -12102,7 +12120,7 @@ cc_library(
         ":Support",
         ":TransformDialectEnumsIncGen",
         ":TransformDialectIncGen",
-        ":TransformDialectInterfacesIncGen",
+        ":TransformDialectInterfaces",
         ":TransformDialectMatchInterfacesIncGen",
         ":TransformDialectUtils",
         ":TransformOpsIncGen",
@@ -12154,6 +12172,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":TransformPDLExtensionOpsIncGen",
         "//llvm:Support",
     ],
@@ -12197,6 +12216,7 @@ cc_library(
         ":Support",
         ":TransformDebugExtensionOpsIncGen",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         "//llvm:Support",
     ],
 )
@@ -12241,6 +12261,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":TransformLoopExtensionOpsIncGen",
         ":Transforms",
         "//llvm:Support",
@@ -12285,6 +12306,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":TransformDialectTransformsIncGen",
         "//llvm:Support",
     ],
@@ -13124,6 +13146,7 @@ cc_library(
         ":NVGPUDialect",
         ":SCFDialect",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorTransforms",
@@ -13556,6 +13579,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":TensorDialect",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         "//llvm:Support",
     ],
 )

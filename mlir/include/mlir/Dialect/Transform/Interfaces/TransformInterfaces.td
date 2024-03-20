@@ -241,6 +241,14 @@ def FindPayloadReplacementOpInterface
       /*arguments=*/(ins)
     >,
   ];
+
+  let extraSharedClassDeclaration = [{
+    /// Name of the attribute attachable to an operation, indicating that
+    /// TrackingListener failures should be silenced.
+    constexpr const static ::llvm::StringLiteral
+        kSilenceTrackingFailuresAttrName =
+            "transform.silence_tracking_failures";
+  }];
 }
 
 def PatternDescriptorOpInterface : OpInterface<"PatternDescriptorOpInterface"> {
