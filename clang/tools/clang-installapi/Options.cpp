@@ -261,6 +261,9 @@ Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
   if (!processFrontendOptions(ArgList))
     return;
 
+  /// Force cc1 options that should always be on.
+  FrontendArgs = {"-fsyntax-only", "-Wprivate-extern"};
+
   /// Any unclaimed arguments should be handled by invoking the clang frontend.
   for (const Arg *A : ArgList) {
     if (A->isClaimed())
@@ -268,7 +271,6 @@ Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
     FrontendArgs.emplace_back(A->getSpelling());
     llvm::copy(A->getValues(), std::back_inserter(FrontendArgs));
   }
-  FrontendArgs.push_back("-fsyntax-only");
 }
 
 InstallAPIContext Options::createContext() {

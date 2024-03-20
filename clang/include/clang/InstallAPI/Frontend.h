@@ -17,6 +17,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/InstallAPI/Context.h"
+#include "clang/InstallAPI/DylibVerifier.h"
 #include "clang/InstallAPI/Visitor.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -34,6 +35,8 @@ public:
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override {
+    Ctx.Diags->getClient()->BeginSourceFile(CI.getLangOpts());
+    Ctx.Verifier->setSourceManager(CI.getSourceManager());
     return std::make_unique<InstallAPIVisitor>(
         CI.getASTContext(), Ctx, CI.getSourceManager(), CI.getPreprocessor());
   }

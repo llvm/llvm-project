@@ -111,17 +111,15 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   // Execute and gather AST results.
   // An invocation is ran for each unique target triple and for each header
   // access level.
-  Records FrontendResults;
   for (const auto &[Targ, Trip] : Opts.DriverOpts.Targets) {
+    Ctx.Verifier->setTarget(Targ);
+    Ctx.Slice = std::make_shared<FrontendRecordsSlice>(Trip);
     for (const HeaderType Type :
          {HeaderType::Public, HeaderType::Private, HeaderType::Project}) {
-      Ctx.Slice = std::make_shared<FrontendRecordsSlice>(Trip);
-      Ctx.Verifier->setTarget(Targ);
       Ctx.Type = Type;
       if (!runFrontend(ProgName, Opts.DriverOpts.Verbose, Ctx,
                        InMemoryFileSystem.get(), Opts.getClangFrontendArgs()))
         return EXIT_FAILURE;
-      FrontendResults.emplace_back(std::move(Ctx.Slice));
     }
   }
 
