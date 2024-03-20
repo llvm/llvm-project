@@ -8606,6 +8606,10 @@ llvm::isImpliedCondition(const Value *LHS, CmpInst::Predicate RHSPred,
   assert(LHS->getType()->isIntOrIntVectorTy(1) &&
          "Expected integer type only!");
 
+  // Match not
+  if (match(LHS, m_Not(m_Value(LHS))))
+    LHSIsTrue = !LHSIsTrue;
+
   // Both LHS and RHS are icmps.
   const ICmpInst *LHSCmp = dyn_cast<ICmpInst>(LHS);
   if (LHSCmp)
@@ -8632,10 +8636,21 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
   if (LHS == RHS)
     return LHSIsTrue;
 
-  if (const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS))
-    return isImpliedCondition(LHS, RHSCmp->getPredicate(),
-                              RHSCmp->getOperand(0), RHSCmp->getOperand(1), DL,
-                              LHSIsTrue, Depth);
+  // Match not
+  bool InvertRHS = false;
+  if (match(RHS, m_Not(m_Value(RHS)))) {
+    if (LHS == RHS)
+      return !LHSIsTrue;
+    InvertRHS = true;
+  }
+
+  if (const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS)) {
+    if (auto Implied = isImpliedCondition(
+            LHS, RHSCmp->getPredicate(), RHSCmp->getOperand(0),
+            RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
+      return InvertRHS ? !*Implied : *Implied;
+    return std::nullopt;
+  }
 
   if (Depth == MaxAnalysisRecursionDepth)
     return std::nullopt;
@@ -8647,21 +8662,21 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
     if (std::optional<bool> Imp =
             isImpliedCondition(LHS, RHS1, DL, LHSIsTrue, Depth + 1))
       if (*Imp == true)
-        return true;
+        return !InvertRHS;
     if (std::optional<bool> Imp =
             isImpliedCondition(LHS, RHS2, DL, LHSIsTrue, Depth + 1))
       if (*Imp == true)
-        return true;
+        return !InvertRHS;
   }
   if (match(RHS, m_LogicalAnd(m_Value(RHS1), m_Value(RHS2)))) {
     if (std::optional<bool> Imp =
             isImpliedCondition(LHS, RHS1, DL, LHSIsTrue, Depth + 1))
       if (*Imp == false)
-        return false;
+        return InvertRHS;
     if (std::optional<bool> Imp =
             isImpliedCondition(LHS, RHS2, DL, LHSIsTrue, Depth + 1))
       if (*Imp == false)
-        return false;
+        return InvertRHS;
   }
 
   return std::nullopt;
