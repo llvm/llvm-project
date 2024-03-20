@@ -86,10 +86,7 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
   if (node->getBaseType() && !baseType)
     return nullptr;
   DINodeAttr extraData =
-      translate(llvm::dyn_cast_or_null<llvm::DINode>(node->getExtraData()));
-  if (node->getExtraData() && !extraData)
-    mlirModule.emitWarning(
-        "dropped DIDerivedType's extra data due to having an unsupported type");
+      translate(dyn_cast_or_null<llvm::DINode>(node->getExtraData()));
   return DIDerivedTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       baseType, node->getSizeInBits(), node->getAlignInBits(),
