@@ -2365,12 +2365,6 @@ multiclass FLAT_Real_Base_gfx11<bits<7> op,
   FLAT_Aliases_gfx11<name>,
   FLAT_Real_gfx11<op, name>;
 
-multiclass FLAT_Real_AllAddr_gfx11<bits<7> op,
-                                   string name = get_FLAT_ps<NAME>.Mnemonic> :
-  FLAT_Real_Base_gfx11<op, name> {
-  defm _SADDR : FLAT_Real_gfx11<op, name>;
-}
-
 multiclass FLAT_Real_Atomics_gfx11<bits<7> op,
                                    string name = get_FLAT_ps<NAME>.Mnemonic> :
   FLAT_Real_Base_gfx11<op, name> {
@@ -2379,8 +2373,7 @@ multiclass FLAT_Real_Atomics_gfx11<bits<7> op,
 
 multiclass GLOBAL_Real_AllAddr_gfx11<bits<7> op,
                                      string name = get_FLAT_ps<NAME>.Mnemonic> :
-  FLAT_Aliases_gfx11<name>,
-  FLAT_Real_gfx11<op, name> {
+  FLAT_Real_Base_gfx11<op, name> {
   defm _SADDR : FLAT_Real_gfx11<op, name>;
 }
 
@@ -2393,8 +2386,7 @@ multiclass GLOBAL_Real_Atomics_gfx11<bits<7> op,
 
 multiclass SCRATCH_Real_AllAddr_gfx11<bits<7> op,
                                      string name = get_FLAT_ps<NAME>.Mnemonic> :
-  FLAT_Aliases_gfx11<name>,
-  FLAT_Real_gfx11<op, name> {
+  FLAT_Real_Base_gfx11<op, name> {
   defm _SADDR : FLAT_Real_gfx11<op, name>;
   defm _ST : FLAT_Real_gfx11<op, name>;
   defm _SVS : FLAT_Real_gfx11<op, name>;
@@ -2455,30 +2447,30 @@ defm FLAT_ATOMIC_FMAX           : FLAT_Real_Atomics_gfx11<0x052, "flat_atomic_ma
 defm FLAT_ATOMIC_ADD_F32        : FLAT_Real_Atomics_gfx11<0x056>;
 
 // ENC_FLAT_GLBL.
-defm GLOBAL_LOAD_UBYTE          : FLAT_Real_AllAddr_gfx11<0x010, "global_load_u8">;
-defm GLOBAL_LOAD_SBYTE          : FLAT_Real_AllAddr_gfx11<0x011, "global_load_i8">;
-defm GLOBAL_LOAD_USHORT         : FLAT_Real_AllAddr_gfx11<0x012, "global_load_u16">;
-defm GLOBAL_LOAD_SSHORT         : FLAT_Real_AllAddr_gfx11<0x013, "global_load_i16">;
-defm GLOBAL_LOAD_DWORD          : FLAT_Real_AllAddr_gfx11<0x014, "global_load_b32">;
-defm GLOBAL_LOAD_DWORDX2        : FLAT_Real_AllAddr_gfx11<0x015, "global_load_b64">;
-defm GLOBAL_LOAD_DWORDX3        : FLAT_Real_AllAddr_gfx11<0x016, "global_load_b96">;
-defm GLOBAL_LOAD_DWORDX4        : FLAT_Real_AllAddr_gfx11<0x017, "global_load_b128">;
-defm GLOBAL_STORE_BYTE          : FLAT_Real_AllAddr_gfx11<0x018, "global_store_b8">;
-defm GLOBAL_STORE_SHORT         : FLAT_Real_AllAddr_gfx11<0x019, "global_store_b16">;
-defm GLOBAL_STORE_DWORD         : FLAT_Real_AllAddr_gfx11<0x01a, "global_store_b32">;
-defm GLOBAL_STORE_DWORDX2       : FLAT_Real_AllAddr_gfx11<0x01b, "global_store_b64">;
-defm GLOBAL_STORE_DWORDX3       : FLAT_Real_AllAddr_gfx11<0x01c, "global_store_b96">;
-defm GLOBAL_STORE_DWORDX4       : FLAT_Real_AllAddr_gfx11<0x01d, "global_store_b128">;
-defm GLOBAL_LOAD_UBYTE_D16      : FLAT_Real_AllAddr_gfx11<0x01e, "global_load_d16_u8">;
-defm GLOBAL_LOAD_SBYTE_D16      : FLAT_Real_AllAddr_gfx11<0x01f, "global_load_d16_i8">;
-defm GLOBAL_LOAD_SHORT_D16      : FLAT_Real_AllAddr_gfx11<0x020, "global_load_d16_b16">;
-defm GLOBAL_LOAD_UBYTE_D16_HI   : FLAT_Real_AllAddr_gfx11<0x021, "global_load_d16_hi_u8">;
-defm GLOBAL_LOAD_SBYTE_D16_HI   : FLAT_Real_AllAddr_gfx11<0x022, "global_load_d16_hi_i8">;
-defm GLOBAL_LOAD_SHORT_D16_HI   : FLAT_Real_AllAddr_gfx11<0x023, "global_load_d16_hi_b16">;
-defm GLOBAL_STORE_BYTE_D16_HI   : FLAT_Real_AllAddr_gfx11<0x024, "global_store_d16_hi_b8">;
-defm GLOBAL_STORE_SHORT_D16_HI  : FLAT_Real_AllAddr_gfx11<0x025, "global_store_d16_hi_b16">;
-defm GLOBAL_LOAD_DWORD_ADDTID   : FLAT_Real_AllAddr_gfx11<0x028, "global_load_addtid_b32">;
-defm GLOBAL_STORE_DWORD_ADDTID  : FLAT_Real_AllAddr_gfx11<0x029, "global_store_addtid_b32">;
+defm GLOBAL_LOAD_UBYTE          : GLOBAL_Real_AllAddr_gfx11<0x010, "global_load_u8">;
+defm GLOBAL_LOAD_SBYTE          : GLOBAL_Real_AllAddr_gfx11<0x011, "global_load_i8">;
+defm GLOBAL_LOAD_USHORT         : GLOBAL_Real_AllAddr_gfx11<0x012, "global_load_u16">;
+defm GLOBAL_LOAD_SSHORT         : GLOBAL_Real_AllAddr_gfx11<0x013, "global_load_i16">;
+defm GLOBAL_LOAD_DWORD          : GLOBAL_Real_AllAddr_gfx11<0x014, "global_load_b32">;
+defm GLOBAL_LOAD_DWORDX2        : GLOBAL_Real_AllAddr_gfx11<0x015, "global_load_b64">;
+defm GLOBAL_LOAD_DWORDX3        : GLOBAL_Real_AllAddr_gfx11<0x016, "global_load_b96">;
+defm GLOBAL_LOAD_DWORDX4        : GLOBAL_Real_AllAddr_gfx11<0x017, "global_load_b128">;
+defm GLOBAL_STORE_BYTE          : GLOBAL_Real_AllAddr_gfx11<0x018, "global_store_b8">;
+defm GLOBAL_STORE_SHORT         : GLOBAL_Real_AllAddr_gfx11<0x019, "global_store_b16">;
+defm GLOBAL_STORE_DWORD         : GLOBAL_Real_AllAddr_gfx11<0x01a, "global_store_b32">;
+defm GLOBAL_STORE_DWORDX2       : GLOBAL_Real_AllAddr_gfx11<0x01b, "global_store_b64">;
+defm GLOBAL_STORE_DWORDX3       : GLOBAL_Real_AllAddr_gfx11<0x01c, "global_store_b96">;
+defm GLOBAL_STORE_DWORDX4       : GLOBAL_Real_AllAddr_gfx11<0x01d, "global_store_b128">;
+defm GLOBAL_LOAD_UBYTE_D16      : GLOBAL_Real_AllAddr_gfx11<0x01e, "global_load_d16_u8">;
+defm GLOBAL_LOAD_SBYTE_D16      : GLOBAL_Real_AllAddr_gfx11<0x01f, "global_load_d16_i8">;
+defm GLOBAL_LOAD_SHORT_D16      : GLOBAL_Real_AllAddr_gfx11<0x020, "global_load_d16_b16">;
+defm GLOBAL_LOAD_UBYTE_D16_HI   : GLOBAL_Real_AllAddr_gfx11<0x021, "global_load_d16_hi_u8">;
+defm GLOBAL_LOAD_SBYTE_D16_HI   : GLOBAL_Real_AllAddr_gfx11<0x022, "global_load_d16_hi_i8">;
+defm GLOBAL_LOAD_SHORT_D16_HI   : GLOBAL_Real_AllAddr_gfx11<0x023, "global_load_d16_hi_b16">;
+defm GLOBAL_STORE_BYTE_D16_HI   : GLOBAL_Real_AllAddr_gfx11<0x024, "global_store_d16_hi_b8">;
+defm GLOBAL_STORE_SHORT_D16_HI  : GLOBAL_Real_AllAddr_gfx11<0x025, "global_store_d16_hi_b16">;
+defm GLOBAL_LOAD_DWORD_ADDTID   : GLOBAL_Real_AllAddr_gfx11<0x028, "global_load_addtid_b32">;
+defm GLOBAL_STORE_DWORD_ADDTID  : GLOBAL_Real_AllAddr_gfx11<0x029, "global_store_addtid_b32">;
 defm GLOBAL_ATOMIC_SWAP         : GLOBAL_Real_Atomics_gfx11<0x033, "global_atomic_swap_b32">;
 defm GLOBAL_ATOMIC_CMPSWAP      : GLOBAL_Real_Atomics_gfx11<0x034, "global_atomic_cmpswap_b32">;
 defm GLOBAL_ATOMIC_ADD          : GLOBAL_Real_Atomics_gfx11<0x035, "global_atomic_add_u32">;
@@ -2574,8 +2566,7 @@ multiclass VFLAT_Real_Atomics_gfx12<bits<8> op,
 multiclass VGLOBAL_Real_AllAddr_gfx12<bits<8> op,
                                       string name = get_FLAT_ps<NAME>.Mnemonic,
                                       string alias = name> :
-  VFLAT_Aliases_gfx12<name, alias>,
-  VFLAT_Real_gfx12<op, name> {
+  VFLAT_Real_Base_gfx12<op, name, alias> {
   defm _SADDR : VFLAT_Real_gfx12<op, name>;
 }
 
@@ -2598,8 +2589,7 @@ multiclass VGLOBAL_Real_Atomics_gfx12<bits<8> op,
 
 multiclass VSCRATCH_Real_AllAddr_gfx12<bits<8> op,
                                        string name = get_FLAT_ps<NAME>.Mnemonic> :
-  VFLAT_Aliases_gfx12<name>,
-  VFLAT_Real_gfx12<op, name> {
+  VFLAT_Real_Base_gfx12<op, name> {
   defm _SADDR : VFLAT_Real_gfx12<op, name>;
   defm _ST : VFLAT_Real_gfx12<op, name>;
   defm _SVS : VFLAT_Real_gfx12<op, name>;
