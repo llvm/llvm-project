@@ -62,14 +62,18 @@ MismatchOffsetDistribution::MismatchOffsetDistribution(size_t BufferSize,
 }
 
 static size_t getL1DataCacheSize() {
-  const std::vector<CacheInfo> &CacheInfos = HostState::get().Caches;
-  const auto IsL1DataCache = [](const CacheInfo &CI) {
-    return CI.Type == "Data" && CI.Level == 1;
-  };
-  const auto CacheIt = find_if(CacheInfos, IsL1DataCache);
-  if (CacheIt != CacheInfos.end())
-    return CacheIt->Size;
-  report_fatal_error("Unable to read L1 Cache Data Size");
+    const std::vector<CacheInfo> &CacheInfos = HostState::get().Caches;
+
+    const auto IsL1DataCache = [](const CacheInfo &CI) constexpr {
+        return CI.Type == "Data" && CI.Level == 1;
+    };
+
+    const auto CacheIt = std::find_if(CacheInfos.begin(), CacheInfos.end(), IsL1DataCache);
+
+    if (CacheIt != CacheInfos.end())
+        return CacheIt->Size;
+
+    report_fatal_error("Unable to read L1 Cache Data Size");
 }
 
 static constexpr int64_t KiB = 1024;
