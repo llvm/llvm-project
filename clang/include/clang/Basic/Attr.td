@@ -759,6 +759,15 @@ def BuiltinAlias : Attr {
   let Documentation = [BuiltinAliasDocs];
 }
 
+def ElementwiseBuiltinAlias : Attr {
+  let Spellings = [CXX11<"clang", "elementwise_builtin_alias">,
+                   C23<"clang", "elementwise_builtin_alias">,
+                   GNU<"clang_elementwise_builtin_alias">];
+  let Args = [IdentifierArgument<"BuiltinName">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [ElementwiseBuiltinAliasDocs];
+}
+
 def ArmBuiltinAlias : InheritableAttr, TargetSpecificAttr<TargetAnyArm> {
   let Spellings = [Clang<"__clang_arm_builtin_alias">];
   let Args = [IdentifierArgument<"BuiltinName">];

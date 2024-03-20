@@ -5462,6 +5462,28 @@ for clang builtin functions.
   }];
 }
 
+def ElementwiseBuiltinAliasDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "clang::elementwise_builtin_alias, clang_elementwise_builtin_alias";
+  let Content = [{
+This attribute is used in the implementation of the C intrinsics.
+It allows the C intrinsic functions to be declared using the names defined
+in target builtins, and still be recognized as clang builtins equivalent to the
+underlying name. It also declares that the given C intrinsic can accept 
+vector arguments. For example, ``hlsl_intrinsics.h`` declares the function ``abs``
+with ``__attribute__((clang_elementwise_builtin_alias(__builtin_abs)))``.
+This ensures that both functions are recognized as that clang builtin,
+and in the latter case, the choice of which builtin to identify the
+function as can be deferred until after overload resolution. It also enables
+the ``abs`` function to take vector arguments.
+
+This attribute can only be used to set up the aliases for certain ARM/RISC-V
+C intrinsic functions; it is intended for use only inside ``arm_*.h`` and
+``riscv_*.h`` and is not a general mechanism for declaring arbitrary aliases
+for clang builtin functions.
+  }];
+}
+
 def PreferredNameDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{

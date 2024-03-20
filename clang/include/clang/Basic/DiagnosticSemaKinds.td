@@ -4412,7 +4412,8 @@ def err_attribute_preferred_name_arg_invalid : Error<
   "a specialization of %1">;
 def err_attribute_builtin_alias : Error<
   "%0 attribute can only be applied to a ARM, HLSL or RISC-V builtin">;
-
+def err_attribute_elementwise_builtin_alias : Error<
+  "%0 attribute can only be applied to a ARM, HLSL or RISC-V builtin">;
 // called-once attribute diagnostics.
 def err_called_once_attribute_wrong_type : Error<
   "'called_once' attribute only applies to function-like parameters">;

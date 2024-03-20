@@ -18,6 +18,8 @@ namespace hlsl {
 
 #define _HLSL_BUILTIN_ALIAS(builtin)                                           \
   __attribute__((clang_builtin_alias(builtin)))
+#define _HLSL_ELEMENTWISE_BUILTIN_ALIAS(builtin)                                           \
+  __attribute__((clang_elementwise_builtin_alias(builtin)))
 #define _HLSL_AVAILABILITY(environment, version)                               \
   __attribute__((availability(environment, introduced = version)))
 

@@ -3598,6 +3598,8 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
     BuiltinID = ABAA->getBuiltinName()->getBuiltinID();
   } else if (const auto *BAA = getAttr<BuiltinAliasAttr>()) {
     BuiltinID = BAA->getBuiltinName()->getBuiltinID();
+  } else if (const auto *EBAA = getAttr<ElementwiseBuiltinAliasAttr>()) {
+    BuiltinID = EBAA->getBuiltinName()->getBuiltinID();
   } else if (const auto *A = getAttr<BuiltinAttr>()) {
     BuiltinID = A->getID();
   }
