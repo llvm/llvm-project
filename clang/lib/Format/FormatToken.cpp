@@ -18,8 +18,6 @@
 namespace clang {
 namespace format {
 
-bool IsCpp = false;
-
 const char *getTokenTypeName(TokenType Type) {
   static const char *const TokNames[] = {
 #define TYPE(X) #X,
@@ -77,15 +75,15 @@ static SmallVector<StringRef> CppNonKeywordTypes = {
     "uint32_t", "uint64_t",  "uint8_t", "uintptr_t",
 };
 
-bool FormatToken::isTypeName() const {
+bool FormatToken::isTypeName(bool IsCpp) const {
   return is(TT_TypeName) || isSimpleTypeSpecifier() ||
          (IsCpp && is(tok::identifier) &&
           std::binary_search(CppNonKeywordTypes.begin(),
                              CppNonKeywordTypes.end(), TokenText));
 }
 
-bool FormatToken::isTypeOrIdentifier() const {
-  return isTypeName() || isOneOf(tok::kw_auto, tok::identifier);
+bool FormatToken::isTypeOrIdentifier(bool IsCpp) const {
+  return isTypeName(IsCpp) || isOneOf(tok::kw_auto, tok::identifier);
 }
 
 bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {
