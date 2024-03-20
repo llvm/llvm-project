@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/rename.h"
-
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-
+#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/errno/libc_errno.h"
+#include "src/stdio/rename.h"
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE {
