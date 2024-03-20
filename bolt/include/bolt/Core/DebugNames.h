@@ -16,7 +16,6 @@
 
 #include "DebugData.h"
 #include "llvm/CodeGen/AccelTable.h"
-#include <cstdint>
 
 namespace llvm {
 namespace bolt {
@@ -73,7 +72,7 @@ public:
   void addCrossCUDie(const DIE *Die) {
     CrossCUDies.insert({Die->getOffset(), Die});
   }
-  /// Returns true if the DIE will generate an entry for a cross cu reference.
+  /// Returns true if the DIE can generate an entry for a cross cu reference.
   /// This only checks TAGs of a DIE because when this is invoked DIE might not
   /// be fully constructed.
   bool isIncluded(const DWARFUnit &Unit, const DIE &Die,
