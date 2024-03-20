@@ -7,13 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/canonicalizel.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, canonicalizel, (long double *cx, const long double *x)) {
-    // TO DO : IMPLEMENT
+    using FPB = fputil::FPBits<long double>;
+    FPB sx(*x);
+    if (sx.is_signaling_nan())
+        fputil::raise_except_if_required(FE_INVALID);
+    *cx = *x;
     return 0;
 }
 

@@ -7,14 +7,17 @@
 //===---------------------------------------------------------------------------------===//
 
 #include "src/math/canonicalizef128.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, canonicalizef128, (float128 *cx, const float128 *x)) {
-    if (cx == nullptr || x == nullptr || std::isnan(*x) || std::isinf(*x))
-        return 1;
+    using FPB = fputil::FPBits<float128>;
+    FPB sx(*x);
+    if (sx.is_signaling_nan())
+        fputil::raise_except_if_required(FE_INVALID);
     *cx = *x;
     return 0;
 }
