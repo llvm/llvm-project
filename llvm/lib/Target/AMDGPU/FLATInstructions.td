@@ -2542,7 +2542,7 @@ defm SCRATCH_STORE_SHORT_D16_HI : SCRATCH_Real_AllAddr_gfx11<0x25, "scratch_stor
 multiclass VFLAT_Real_gfx12 <bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> {
   defvar ps = !cast<FLAT_Pseudo>(NAME);
   def _gfx12 : VFLAT_Real <op, ps, name>,
-               SIMCInstr <NAME, SIEncodingFamily.GFX12> {
+               SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX12> {
     let AssemblerPredicate = isGFX12Only;
     let DecoderNamespace = "GFX12";
 
