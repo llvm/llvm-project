@@ -4664,7 +4664,7 @@ TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
 
 TEST(TransferTest, DoesNotCrashOnNullChildren) {
   std::string Code = (CoroutineLibrary + R"cc(
-    task foo() noexcept {
+    task target() noexcept {
       co_return;
     }
   )cc")
@@ -4675,7 +4675,7 @@ TEST(TransferTest, DoesNotCrashOnNullChildren) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
          ASTContext &) {},
-      LangStandard::lang_cxx20, /*ApplyBuiltinTransfer=*/true, "foo");
+      LangStandard::lang_cxx20, /*ApplyBuiltinTransfer=*/true);
 }
 
 TEST(TransferTest, StructuredBindingAssignFromStructIntMembersToRefs) {
