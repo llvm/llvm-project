@@ -9,7 +9,7 @@ declare void @use(i32)
 define i32 @test(ptr %p1, ptr %p2, i1 %c) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[P1:%.*]], align 8, !tbaa !0
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[P1:%.*]], align 8, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp slt i32 [[LV]], 1
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[EXIT:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.false:

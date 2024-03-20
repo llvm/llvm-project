@@ -1,5 +1,8 @@
 set_target_properties(MLIRUnitTests PROPERTIES FOLDER "MLIR Tests")
 
+# To silence warning caused by Wundef.
+add_definitions(-DGTEST_NO_LLVM_SUPPORT=0)
+
 function(add_mlir_unittest test_dirname)
   add_unittest(MLIRUnitTests ${test_dirname} ${ARGN})
 endfunction()

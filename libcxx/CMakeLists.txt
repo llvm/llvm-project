@@ -229,8 +229,6 @@ option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 # ABI Library options ---------------------------------------------------------
 if (MSVC)
   set(LIBCXX_DEFAULT_ABI_LIBRARY "vcruntime")
-elseif (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
-  set(LIBCXX_DEFAULT_ABI_LIBRARY "libcxxrt")
 else()
   set(LIBCXX_DEFAULT_ABI_LIBRARY "libcxxabi")
 endif()

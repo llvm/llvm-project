@@ -8,6 +8,16 @@
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/Use.cppm -verify -fsyntax-only
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/Use1.cpp -verify -fsyntax-only
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/Use2.cpp -verify -fsyntax-only
+
+// Test again with reduced BMI.
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+// RUN: split-file %s %t
+//
+// RUN: %clang_cc1 -std=c++20 %t/A.cppm -emit-reduced-module-interface -o %t/A.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/Use.cppm -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/Use1.cpp -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/Use2.cpp -verify -fsyntax-only
 //
 //--- foo.h
 template<class _CharT>

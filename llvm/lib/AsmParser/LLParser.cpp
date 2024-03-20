@@ -62,11 +62,22 @@ static cl::opt<bool> AllowIncompleteIR(
         "Allow incomplete IR on a best effort basis (references to unknown "
         "metadata will be dropped)"));
 
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+
 static std::string getTypeString(Type *T) {
   std::string Result;
   raw_string_ostream Tmp(Result);
   Tmp << *T;
   return Tmp.str();
+}
+
+// Currently, we should always process modules in the old debug info format by
+// default regardless of the module's format in IR; convert it to the old format
+// here.
+bool finalizeDebugInfoFormat(Module *M) {
+  if (M)
+    M->setIsNewDbgInfoFormat(false);
+  return false;
 }
 
 /// Run: module ::= toplevelentity*
@@ -86,7 +97,7 @@ bool LLParser::Run(bool UpgradeDebugInfo,
   }
 
   return parseTopLevelEntities() || validateEndOfModule(UpgradeDebugInfo) ||
-         validateEndOfIndex();
+         validateEndOfIndex() || finalizeDebugInfoFormat(M);
 }
 
 bool LLParser::parseStandaloneConstantValue(Constant *&C,
@@ -1585,6 +1596,8 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
 
     return true;
   }
+  case Attribute::Range:
+    return parseRangeAttr(B);
   default:
     B.addAttribute(Attr);
     Lex.Lex();
@@ -2997,6 +3010,47 @@ bool LLParser::parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
   return false;
 }
 
+/// parseRangeAttr
+///   ::= range(<ty> <n>,<n>)
+bool LLParser::parseRangeAttr(AttrBuilder &B) {
+  Lex.Lex();
+
+  APInt Lower;
+  APInt Upper;
+  Type *Ty = nullptr;
+  LocTy TyLoc;
+
+  auto ParseAPSInt = [&](unsigned BitWidth, APInt &Val) {
+    if (Lex.getKind() != lltok::APSInt)
+      return tokError("expected integer");
+    if (Lex.getAPSIntVal().getBitWidth() > BitWidth)
+      return tokError(
+          "integer is too large for the bit width of specified type");
+    Val = Lex.getAPSIntVal().extend(BitWidth);
+    Lex.Lex();
+    return false;
+  };
+
+  if (parseToken(lltok::lparen, "expected '('") || parseType(Ty, TyLoc))
+    return true;
+  if (!Ty->isIntegerTy())
+    return error(TyLoc, "the range must have integer type!");
+
+  unsigned BitWidth = Ty->getPrimitiveSizeInBits();
+
+  if (ParseAPSInt(BitWidth, Lower) ||
+      parseToken(lltok::comma, "expected ','") || ParseAPSInt(BitWidth, Upper))
+    return true;
+  if (Lower == Upper)
+    return tokError("the range should not represent the full or empty set!");
+
+  if (parseToken(lltok::rparen, "expected ')'"))
+    return true;
+
+  B.addRangeAttr(ConstantRange(Lower, Upper));
+  return false;
+}
+
 /// parseOptionalOperandBundles
 ///    ::= /*empty*/
 ///    ::= '[' OperandBundle [, OperandBundle ]* ']'
@@ -4115,11 +4169,32 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     unsigned Opc = Lex.getUIntVal();
     SmallVector<Constant*, 16> Elts;
     bool InBounds = false;
+    bool HasInRange = false;
+    APSInt InRangeStart;
+    APSInt InRangeEnd;
     Type *Ty;
     Lex.Lex();
 
-    if (Opc == Instruction::GetElementPtr)
+    if (Opc == Instruction::GetElementPtr) {
       InBounds = EatIfPresent(lltok::kw_inbounds);
+      if (EatIfPresent(lltok::kw_inrange)) {
+        if (parseToken(lltok::lparen, "expected '('"))
+          return true;
+        if (Lex.getKind() != lltok::APSInt)
+          return tokError("expected integer");
+        InRangeStart = Lex.getAPSIntVal();
+        Lex.Lex();
+        if (parseToken(lltok::comma, "expected ','"))
+          return true;
+        if (Lex.getKind() != lltok::APSInt)
+          return tokError("expected integer");
+        InRangeEnd = Lex.getAPSIntVal();
+        Lex.Lex();
+        if (parseToken(lltok::rparen, "expected ')'"))
+          return true;
+        HasInRange = true;
+      }
+    }
 
     if (parseToken(lltok::lparen, "expected '(' in constantexpr"))
       return true;
@@ -4130,9 +4205,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
         return true;
     }
 
-    std::optional<unsigned> InRangeOp;
-    if (parseGlobalValueVector(
-            Elts, Opc == Instruction::GetElementPtr ? &InRangeOp : nullptr) ||
+    if (parseGlobalValueVector(Elts) ||
         parseToken(lltok::rparen, "expected ')' in constantexpr"))
       return true;
 
@@ -4142,6 +4215,17 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
         return error(ID.Loc, "base of getelementptr must be a pointer");
 
       Type *BaseType = Elts[0]->getType();
+      std::optional<ConstantRange> InRange;
+      if (HasInRange) {
+        unsigned IndexWidth =
+            M->getDataLayout().getIndexTypeSizeInBits(BaseType);
+        InRangeStart = InRangeStart.extOrTrunc(IndexWidth);
+        InRangeEnd = InRangeEnd.extOrTrunc(IndexWidth);
+        if (InRangeStart.sge(InRangeEnd))
+          return error(ID.Loc, "expected end to be larger than start");
+        InRange = ConstantRange::getNonEmpty(InRangeStart, InRangeEnd);
+      }
+
       unsigned GEPWidth =
           BaseType->isVectorTy()
               ? cast<FixedVectorType>(BaseType)->getNumElements()
@@ -4171,15 +4255,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       if (!GetElementPtrInst::getIndexedType(Ty, Indices))
         return error(ID.Loc, "invalid getelementptr indices");
 
-      if (InRangeOp) {
-        if (*InRangeOp == 0)
-          return error(ID.Loc,
-                       "inrange keyword may not appear on pointer operand");
-        --*InRangeOp;
-      }
-
       ID.ConstantVal = ConstantExpr::getGetElementPtr(Ty, Elts[0], Indices,
-                                                      InBounds, InRangeOp);
+                                                      InBounds, InRange);
     } else if (Opc == Instruction::ShuffleVector) {
       if (Elts.size() != 3)
         return error(ID.Loc, "expected three operands to shufflevector");
@@ -4255,9 +4332,8 @@ bool LLParser::parseOptionalComdat(StringRef GlobalName, Comdat *&C) {
 
 /// parseGlobalValueVector
 ///   ::= /*empty*/
-///   ::= [inrange] TypeAndValue (',' [inrange] TypeAndValue)*
-bool LLParser::parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
-                                      std::optional<unsigned> *InRangeOp) {
+///   ::= TypeAndValue (',' TypeAndValue)*
+bool LLParser::parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts) {
   // Empty list.
   if (Lex.getKind() == lltok::rbrace ||
       Lex.getKind() == lltok::rsquare ||
@@ -4266,8 +4342,9 @@ bool LLParser::parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
     return false;
 
   do {
-    if (InRangeOp && !*InRangeOp && EatIfPresent(lltok::kw_inrange))
-      *InRangeOp = Elts.size();
+    // Let the caller deal with inrange.
+    if (Lex.getKind() == lltok::kw_inrange)
+      return false;
 
     Constant *C;
     if (parseGlobalTypeAndValue(C))
@@ -5130,7 +5207,11 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
 ///   ::= !DIDerivedType(tag: DW_TAG_pointer_type, name: "int", file: !0,
 ///                      line: 7, scope: !1, baseType: !2, size: 32,
 ///                      align: 32, offset: 0, flags: 0, extraData: !3,
-///                      dwarfAddressSpace: 3)
+///                      dwarfAddressSpace: 3, ptrAuthKey: 1,
+///                      ptrAuthIsAddressDiscriminated: true,
+///                      ptrAuthExtraDiscriminator: 0x1234,
+///                      ptrAuthIsaPointer: 1, ptrAuthAuthenticatesNullValues:1
+///                      )
 bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(tag, DwarfTagField, );                                              \
@@ -5145,19 +5226,30 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(extraData, MDField, );                                              \
   OPTIONAL(dwarfAddressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));      \
-  OPTIONAL(annotations, MDField, );
+  OPTIONAL(annotations, MDField, );                                            \
+  OPTIONAL(ptrAuthKey, MDUnsignedField, (0, 7));                               \
+  OPTIONAL(ptrAuthIsAddressDiscriminated, MDBoolField, );                      \
+  OPTIONAL(ptrAuthExtraDiscriminator, MDUnsignedField, (0, 0xffff));           \
+  OPTIONAL(ptrAuthIsaPointer, MDBoolField, );                                  \
+  OPTIONAL(ptrAuthAuthenticatesNullValues, MDBoolField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
   std::optional<unsigned> DWARFAddressSpace;
   if (dwarfAddressSpace.Val != UINT32_MAX)
     DWARFAddressSpace = dwarfAddressSpace.Val;
+  std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
+  if (ptrAuthKey.Val)
+    PtrAuthData.emplace(
+        (unsigned)ptrAuthKey.Val, ptrAuthIsAddressDiscriminated.Val,
+        (unsigned)ptrAuthExtraDiscriminator.Val, ptrAuthIsaPointer.Val,
+        ptrAuthAuthenticatesNullValues.Val);
 
   Result = GET_OR_DISTINCT(DIDerivedType,
                            (Context, tag.Val, name.Val, file.Val, line.Val,
                             scope.Val, baseType.Val, size.Val, align.Val,
-                            offset.Val, DWARFAddressSpace, flags.Val,
-                            extraData.Val, annotations.Val));
+                            offset.Val, DWARFAddressSpace, PtrAuthData,
+                            flags.Val, extraData.Val, annotations.Val));
   return false;
 }
 
@@ -6041,6 +6133,17 @@ bool LLParser::parseTypeAndBasicBlock(BasicBlock *&BB, LocTy &Loc,
   return false;
 }
 
+bool isOldDbgFormatIntrinsic(StringRef Name) {
+  // Exit early for the common (non-debug-intrinsic) case.
+  // We can make this the only check when we begin supporting all "llvm.dbg"
+  // intrinsics in the new debug info format.
+  if (!Name.starts_with("llvm.dbg."))
+    return false;
+  Intrinsic::ID FnID = Function::lookupIntrinsicID(Name);
+  return FnID == Intrinsic::dbg_declare || FnID == Intrinsic::dbg_value ||
+         FnID == Intrinsic::dbg_assign;
+}
+
 /// FunctionHeader
 ///   ::= OptionalLinkage OptionalPreemptionSpecifier OptionalVisibility
 ///       OptionalCallingConv OptRetAttrs OptUnnamedAddr Type GlobalName
@@ -6390,9 +6493,31 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
 
   std::string NameStr;
 
-  // parse the instructions in this block until we get a terminator.
+  // Parse the instructions and debug values in this block until we get a
+  // terminator.
   Instruction *Inst;
+  auto DeleteDbgRecord = [](DbgRecord *DR) { DR->deleteRecord(); };
+  using DbgRecordPtr = std::unique_ptr<DbgRecord, decltype(DeleteDbgRecord)>;
+  SmallVector<DbgRecordPtr> TrailingDbgRecord;
   do {
+    // Handle debug records first - there should always be an instruction
+    // following the debug records, i.e. they cannot appear after the block
+    // terminator.
+    while (Lex.getKind() == lltok::hash) {
+      if (SeenOldDbgInfoFormat)
+        return error(Lex.getLoc(), "debug record should not appear in a module "
+                                   "containing debug info intrinsics");
+      SeenNewDbgInfoFormat = true;
+      Lex.Lex();
+      if (!M->IsNewDbgInfoFormat)
+        M->convertToNewDbgValues();
+
+      DbgRecord *DR;
+      if (parseDebugRecord(DR, PFS))
+        return true;
+      TrailingDbgRecord.emplace_back(DR, DeleteDbgRecord);
+    }
+
     // This instruction may have three possibilities for a name: a) none
     // specified, b) name specified "%foo =", c) number specified: "%4 =".
     LocTy NameLoc = Lex.getLoc();
@@ -6437,11 +6562,121 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
     // Set the name on the instruction.
     if (PFS.setInstName(NameID, NameStr, NameLoc, Inst))
       return true;
+
+    // Attach any preceding debug values to this instruction.
+    for (DbgRecordPtr &DR : TrailingDbgRecord)
+      BB->insertDbgRecordBefore(DR.release(), Inst->getIterator());
+    TrailingDbgRecord.clear();
   } while (!Inst->isTerminator());
+
+  assert(TrailingDbgRecord.empty() &&
+         "All debug values should have been attached to an instruction.");
 
   return false;
 }
 
+/// parseDebugRecord
+///   ::= #dbg_label '(' MDNode ')'
+///   ::= #dbg_type '(' Metadata ',' MDNode ',' Metadata ','
+///                 (MDNode ',' Metadata ',' Metadata ',')? MDNode ')'
+bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
+  using RecordKind = DbgRecord::Kind;
+  using LocType = DbgVariableRecord::LocationType;
+  LocTy DVRLoc = Lex.getLoc();
+  if (Lex.getKind() != lltok::DbgRecordType)
+    return error(DVRLoc, "expected debug record type here");
+  RecordKind RecordType = StringSwitch<RecordKind>(Lex.getStrVal())
+                              .Case("declare", RecordKind::ValueKind)
+                              .Case("value", RecordKind::ValueKind)
+                              .Case("assign", RecordKind::ValueKind)
+                              .Case("label", RecordKind::LabelKind);
+
+  // Parsing labels is trivial; parse here and early exit, otherwise go into the
+  // full DbgVariableRecord processing stage.
+  if (RecordType == RecordKind::LabelKind) {
+    Lex.Lex();
+    if (parseToken(lltok::lparen, "Expected '(' here"))
+      return true;
+    MDNode *Label;
+    if (parseMDNode(Label))
+      return true;
+    if (parseToken(lltok::comma, "Expected ',' here"))
+      return true;
+    MDNode *DbgLoc;
+    if (parseMDNode(DbgLoc))
+      return true;
+    if (parseToken(lltok::rparen, "Expected ')' here"))
+      return true;
+    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(Label, DbgLoc);
+    return false;
+  }
+
+  LocType ValueType = StringSwitch<LocType>(Lex.getStrVal())
+                          .Case("declare", LocType::Declare)
+                          .Case("value", LocType::Value)
+                          .Case("assign", LocType::Assign);
+
+  Lex.Lex();
+  if (parseToken(lltok::lparen, "Expected '(' here"))
+    return true;
+
+  // Parse Value field.
+  Metadata *ValLocMD;
+  if (parseMetadata(ValLocMD, &PFS))
+    return true;
+  if (parseToken(lltok::comma, "Expected ',' here"))
+    return true;
+
+  // Parse Variable field.
+  MDNode *Variable;
+  if (parseMDNode(Variable))
+    return true;
+  if (parseToken(lltok::comma, "Expected ',' here"))
+    return true;
+
+  // Parse Expression field.
+  MDNode *Expression;
+  if (parseMDNode(Expression))
+    return true;
+  if (parseToken(lltok::comma, "Expected ',' here"))
+    return true;
+
+  // Parse additional fields for #dbg_assign.
+  MDNode *AssignID = nullptr;
+  Metadata *AddressLocation = nullptr;
+  MDNode *AddressExpression = nullptr;
+  if (ValueType == LocType::Assign) {
+    // Parse DIAssignID.
+    if (parseMDNode(AssignID))
+      return true;
+    if (parseToken(lltok::comma, "Expected ',' here"))
+      return true;
+
+    // Parse address ValueAsMetadata.
+    if (parseMetadata(AddressLocation, &PFS))
+      return true;
+    if (parseToken(lltok::comma, "Expected ',' here"))
+      return true;
+
+    // Parse address DIExpression.
+    if (parseMDNode(AddressExpression))
+      return true;
+    if (parseToken(lltok::comma, "Expected ',' here"))
+      return true;
+  }
+
+  /// Parse DILocation.
+  MDNode *DebugLoc;
+  if (parseMDNode(DebugLoc))
+    return true;
+
+  if (parseToken(lltok::rparen, "Expected ')' here"))
+    return true;
+  DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
+      ValueType, ValLocMD, Variable, Expression, AssignID, AddressLocation,
+      AddressExpression, DebugLoc);
+  return false;
+}
 //===----------------------------------------------------------------------===//
 // Instruction Parsing.
 //===----------------------------------------------------------------------===//
@@ -7668,6 +7903,16 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
                             "floating-point scalar or vector return type");
     }
     CI->setFastMathFlags(FMF);
+  }
+
+  if (CalleeID.Kind == ValID::t_GlobalName &&
+      isOldDbgFormatIntrinsic(CalleeID.StrVal)) {
+    if (SeenNewDbgInfoFormat) {
+      CI->deleteValue();
+      return error(CallLoc, "llvm.dbg intrinsic should not appear in a module "
+                            "using non-intrinsic debug info");
+    }
+    SeenOldDbgInfoFormat = true;
   }
   CI->setAttributes(PAL);
   ForwardRefAttrGroups[CI] = FwdRefAttrGrps;

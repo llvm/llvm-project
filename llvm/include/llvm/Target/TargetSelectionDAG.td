@@ -318,7 +318,7 @@ def SDTAtomicStore : SDTypeProfile<0, 2, [
   SDTCisInt<0>, SDTCisPtrTy<1>
 ]>;
 def SDTAtomicLoad : SDTypeProfile<1, 1, [
-  SDTCisInt<0>, SDTCisPtrTy<1>
+  SDTCisPtrTy<1>
 ]>;
 
 class SDCallSeqStart<list<SDTypeConstraint> constraints> :
@@ -788,6 +788,16 @@ def SDT_assert : SDTypeProfile<1, 1,
 def assertsext : SDNode<"ISD::AssertSext", SDT_assert>;
 def assertzext : SDNode<"ISD::AssertZext", SDT_assert>;
 def assertalign : SDNode<"ISD::AssertAlign", SDT_assert>;
+
+def convergencectrl_anchor : SDNode<"ISD::CONVERGENCECTRL_ANCHOR",
+                                    SDTypeProfile<1, 0, [SDTCisVT<0,untyped>]>>;
+def convergencectrl_entry  : SDNode<"ISD::CONVERGENCECTRL_ENTRY",
+                                    SDTypeProfile<1, 0, [SDTCisVT<0,untyped>]>>;
+def convergencectrl_loop   : SDNode<"ISD::CONVERGENCECTRL_LOOP",
+                                    SDTypeProfile<1, 1,
+                                      [SDTCisVT<0,untyped>, SDTCisVT<1,untyped>]>>;
+def convergencectrl_glue   : SDNode<"ISD::CONVERGENCECTRL_GLUE",
+                                    SDTypeProfile<0, 1, [SDTCisVT<0, untyped>]>>;
 
 //===----------------------------------------------------------------------===//
 // Selection DAG Condition Codes

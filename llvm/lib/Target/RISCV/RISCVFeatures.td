@@ -807,6 +807,10 @@ def FeatureStdExtSsccptr
     : SubtargetFeature<"ssccptr", "HasStdExtSsccptr", "true",
                        "'Ssccptr' (Main memory supports page table reads)", []>;
 
+def FeatureStdExtSscofpmf
+    : SubtargetFeature<"sscofpmf", "HasStdExtSscofpmf", "true",
+                       "'Sscofpmf' (Count Overflow and Mode-Based Filtering)", []>;
+
 def FeatureStdExtShcounterenw
     : SubtargetFeature<"shcounterenw", "HasStdExtShcounterenw", "true",
                        "'Shcounterenw' (Support writeable hcounteren enable "
@@ -1053,6 +1057,30 @@ def HasVendorXSfvfnrclipxfqf
     : Predicate<"Subtarget->hasVendorXSfvfnrclipxfqf()">,
       AssemblerPredicate<(all_of FeatureVendorXSfvfnrclipxfqf),
                          "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)">;
+
+def FeatureVendorXSiFivecdiscarddlone
+    : SubtargetFeature<"xsifivecdiscarddlone", "HasVendorXSiFivecdiscarddlone", "true",
+                       "'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)", []>;
+def HasVendorXSiFivecdiscarddlone
+    : Predicate<"Subtarget->hasVendorXSiFivecdiscarddlone()">,
+      AssemblerPredicate<(all_of FeatureVendorXSiFivecdiscarddlone),
+                         "'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)">;
+
+def FeatureVendorXSiFivecflushdlone
+    : SubtargetFeature<"xsifivecflushdlone", "HasVendorXSiFivecflushdlone", "true",
+                       "'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)", []>;
+def HasVendorXSiFivecflushdlone
+    : Predicate<"Subtarget->hasVendorXSiFivecflushdlone()">,
+      AssemblerPredicate<(all_of FeatureVendorXSiFivecflushdlone),
+                         "'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)">;
+
+def FeatureVendorXSfcease
+    : SubtargetFeature<"xsfcease", "HasVendorXSfcease", "true",
+                       "'XSfcease' (SiFive sf.cease Instruction)", []>;
+def HasVendorXSfcease
+    : Predicate<"Subtarget->hasVendorXSfcease()">,
+      AssemblerPredicate<(all_of FeatureVendorXSfcease),
+                         "'XSfcease' (SiFive sf.cease Instruction)">;
 
 // Core-V Extensions
 

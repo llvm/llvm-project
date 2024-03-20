@@ -17,11 +17,10 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::jitlink;
 
-namespace {
-
-constexpr StringRef RegisterVTuneImplName = "llvm_orc_registerVTuneImpl";
-constexpr StringRef UnregisterVTuneImplName = "llvm_orc_unregisterVTuneImpl";
-constexpr StringRef RegisterTestVTuneImplName =
+static constexpr StringRef RegisterVTuneImplName = "llvm_orc_registerVTuneImpl";
+static constexpr StringRef UnregisterVTuneImplName =
+    "llvm_orc_unregisterVTuneImpl";
+static constexpr StringRef RegisterTestVTuneImplName =
     "llvm_orc_test_registerVTuneImpl";
 
 static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
@@ -81,8 +80,6 @@ static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
   }
   return Batch;
 }
-
-} // namespace
 
 void VTuneSupportPlugin::modifyPassConfig(MaterializationResponsibility &MR,
                                           LinkGraph &G,
