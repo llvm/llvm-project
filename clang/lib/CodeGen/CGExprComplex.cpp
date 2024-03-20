@@ -1034,7 +1034,6 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     llvm::Value *OrigLHSi = LHSi;
     if (!LHSi)
       LHSi = llvm::Constant::getNullValue(RHSi->getType());
-    QualType ComplexElementTy = Op.Ty->castAs<ComplexType>()->getElementType();
     if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
         (Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted &&
          FPHasBeenPromoted))
