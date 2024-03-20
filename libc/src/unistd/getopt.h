@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_UNISTD_GETOPT_H
 
 #include "include/llvm-libc-types/FILE.h"
-#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
 
