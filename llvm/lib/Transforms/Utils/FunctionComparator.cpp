@@ -426,9 +426,19 @@ int FunctionComparator::cmpConstants(const Constant *L,
         return Res;
       if (int Res = cmpNumbers(GEPL->isInBounds(), GEPR->isInBounds()))
         return Res;
-      if (int Res = cmpNumbers(GEPL->getInRangeIndex().value_or(unsigned(-1)),
-                               GEPR->getInRangeIndex().value_or(unsigned(-1))))
-        return Res;
+
+      std::optional<ConstantRange> InRangeL = GEPL->getInRange();
+      std::optional<ConstantRange> InRangeR = GEPR->getInRange();
+      if (InRangeL) {
+        if (!InRangeR)
+          return 1;
+        if (int Res = cmpAPInts(InRangeL->getLower(), InRangeR->getLower()))
+          return Res;
+        if (int Res = cmpAPInts(InRangeL->getUpper(), InRangeR->getUpper()))
+          return Res;
+      } else if (InRangeR) {
+        return -1;
+      }
     }
     if (auto *OBOL = dyn_cast<OverflowingBinaryOperator>(LE)) {
       auto *OBOR = cast<OverflowingBinaryOperator>(RE);
