@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
+#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineMap.h"
@@ -65,6 +66,16 @@ public:
   LogicalResult matchAndRewrite(tensor::InsertSliceOp insertSliceOp,
                                 PatternRewriter &rewriter) const override;
 };
+
+class InsertSliceOfExtractSliceFolder final
+    : public OpRewritePattern<tensor::InsertSliceOp> {
+public:
+  using OpRewritePattern<tensor::InsertSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::InsertSliceOp insertSliceOp,
+                                PatternRewriter &rewriter) const override;
+};
+
 } // namespace
 
 template <typename XferOp, typename ExtractOrInsertOp>
@@ -147,6 +158,52 @@ LogicalResult InsertSliceOfTransferWriteOpFolder::matchAndRewrite(
   return success();
 }
 
+LogicalResult InsertSliceOfExtractSliceFolder::matchAndRewrite(
+    tensor::InsertSliceOp insertSliceOp, PatternRewriter &rewriter) const {
+  auto extractSliceOp =
+      insertSliceOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
+  if (!extractSliceOp)
+    return failure();
+
+  if (!extractSliceOp->hasOneUse())
+    return failure();
+
+  if (!isCastLikeInsertSliceOp(insertSliceOp))
+    return failure();
+
+  llvm::SmallBitVector extractDroppedDims = extractSliceOp.getDroppedDims();
+  llvm::SmallBitVector insertExpandedDims = insertSliceOp.getDroppedDims();
+  if (extractDroppedDims.size() < insertExpandedDims.size())
+    return failure();
+
+  int64_t insertPos = 0;
+  for (int64_t extractPos = 0; extractPos < extractDroppedDims.size();
+       ++extractPos) {
+    if (insertPos == insertExpandedDims.size())
+      break;
+
+    bool isDropped = extractDroppedDims[extractPos];
+    bool isExpanded = insertExpandedDims[insertPos];
+    if (isDropped == isExpanded) {
+      insertPos += 1;
+    } else {
+      if (!isDropped && isExpanded) {
+        return failure();
+      }
+    }
+  }
+  if (insertPos != insertExpandedDims.size())
+    return failure();
+
+  rewriter.replaceOpWithNewOp<tensor::ExtractSliceOp>(
+      insertSliceOp, insertSliceOp.getType(), extractSliceOp.getSource(),
+      extractSliceOp.getMixedOffsets(), extractSliceOp.getMixedSizes(),
+      extractSliceOp.getMixedStrides());
+  rewriter.eraseOp(extractSliceOp);
+
+  return success();
+}
+
 template <typename OpTy>
 struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
@@ -224,8 +281,8 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
 void tensor::populateFoldTensorSubsetOpPatterns(RewritePatternSet &patterns) {
   populateFoldTensorSubsetIntoVectorTransferPatterns(patterns);
   patterns.add<InsertSliceOfInsertSliceFolder<tensor::InsertSliceOp>,
-               InsertSliceOfInsertSliceFolder<tensor::ParallelInsertSliceOp>>(
-      patterns.getContext());
+               InsertSliceOfInsertSliceFolder<tensor::ParallelInsertSliceOp>,
+               InsertSliceOfExtractSliceFolder>(patterns.getContext());
 }
 
 void tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(
