@@ -29,6 +29,8 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Object/ObjectFile.h"
 
 #include <cassert>
 #include <cstdint>
@@ -1750,7 +1752,7 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
 
   KernelArgsTy KernelArgs = {0};
-  KernelArgs.Version = 3;
+  KernelArgs.Version = OMP_KERNEL_ARG_VERSION;
   KernelArgs.NumArgs = NumArgs;
   KernelArgs.Tripcount = LoopTripCount;
   KernelArgs.NumTeams[0] = NumTeams;

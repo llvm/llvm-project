@@ -528,7 +528,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
   // environment. Older versions of the compiler do not generate a kernel
   // launch environment.
   if (isCtorOrDtor() || RecordReplay.isReplaying() ||
-      Version < OMP_KERNEL_ARG_VERSION)
+      Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
     return nullptr;
 
   // Specialized kernels don't use the kernel launch environment. Check for

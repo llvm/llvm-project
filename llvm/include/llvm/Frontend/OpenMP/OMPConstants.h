@@ -74,6 +74,9 @@ enum class IdentFlag {
 // Version of the kernel argument format used by the omp runtime.
 #define OMP_KERNEL_ARG_VERSION 3
 
+// Minimum version of the compiler that generates a kernel dynamic pointer.
+#define OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR 3
+
 /// \note This needs to be kept in sync with kmp.h enum sched_type.
 /// Todo: Update kmp.h to include this file, and remove the enums in kmp.h
 enum class OMPScheduleType {

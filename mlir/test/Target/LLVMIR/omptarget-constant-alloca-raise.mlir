@@ -14,7 +14,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @_QQmain() attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
     %1 = llvm.mlir.constant(1 : i64) : i64
     %2 = llvm.alloca %1 x !llvm.struct<(ptr)> : (i64) -> !llvm.ptr
-    %3 = omp.map_info var_ptr(%2 : !llvm.ptr, !llvm.struct<(ptr)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    %3 = omp.map.info var_ptr(%2 : !llvm.ptr, !llvm.struct<(ptr)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     omp.target map_entries(%3 -> %arg0 : !llvm.ptr) {
     ^bb0(%arg0: !llvm.ptr):
       %4 = llvm.mlir.constant(1 : i32) : i32

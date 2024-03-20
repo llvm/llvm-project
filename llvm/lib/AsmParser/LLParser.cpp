@@ -4191,11 +4191,32 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     unsigned Opc = Lex.getUIntVal();
     SmallVector<Constant*, 16> Elts;
     bool InBounds = false;
+    bool HasInRange = false;
+    APSInt InRangeStart;
+    APSInt InRangeEnd;
     Type *Ty;
     Lex.Lex();
 
-    if (Opc == Instruction::GetElementPtr)
+    if (Opc == Instruction::GetElementPtr) {
       InBounds = EatIfPresent(lltok::kw_inbounds);
+      if (EatIfPresent(lltok::kw_inrange)) {
+        if (parseToken(lltok::lparen, "expected '('"))
+          return true;
+        if (Lex.getKind() != lltok::APSInt)
+          return tokError("expected integer");
+        InRangeStart = Lex.getAPSIntVal();
+        Lex.Lex();
+        if (parseToken(lltok::comma, "expected ','"))
+          return true;
+        if (Lex.getKind() != lltok::APSInt)
+          return tokError("expected integer");
+        InRangeEnd = Lex.getAPSIntVal();
+        Lex.Lex();
+        if (parseToken(lltok::rparen, "expected ')'"))
+          return true;
+        HasInRange = true;
+      }
+    }
 
     if (parseToken(lltok::lparen, "expected '(' in constantexpr"))
       return true;
@@ -4206,9 +4227,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
         return true;
     }
 
-    std::optional<unsigned> InRangeOp;
-    if (parseGlobalValueVector(
-            Elts, Opc == Instruction::GetElementPtr ? &InRangeOp : nullptr) ||
+    if (parseGlobalValueVector(Elts) ||
         parseToken(lltok::rparen, "expected ')' in constantexpr"))
       return true;
 
@@ -4218,6 +4237,17 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
         return error(ID.Loc, "base of getelementptr must be a pointer");
 
       Type *BaseType = Elts[0]->getType();
+      std::optional<ConstantRange> InRange;
+      if (HasInRange) {
+        unsigned IndexWidth =
+            M->getDataLayout().getIndexTypeSizeInBits(BaseType);
+        InRangeStart = InRangeStart.extOrTrunc(IndexWidth);
+        InRangeEnd = InRangeEnd.extOrTrunc(IndexWidth);
+        if (InRangeStart.sge(InRangeEnd))
+          return error(ID.Loc, "expected end to be larger than start");
+        InRange = ConstantRange::getNonEmpty(InRangeStart, InRangeEnd);
+      }
+
       unsigned GEPWidth =
           BaseType->isVectorTy()
               ? cast<FixedVectorType>(BaseType)->getNumElements()
@@ -4247,15 +4277,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       if (!GetElementPtrInst::getIndexedType(Ty, Indices))
         return error(ID.Loc, "invalid getelementptr indices");
 
-      if (InRangeOp) {
-        if (*InRangeOp == 0)
-          return error(ID.Loc,
-                       "inrange keyword may not appear on pointer operand");
-        --*InRangeOp;
-      }
-
       ID.ConstantVal = ConstantExpr::getGetElementPtr(Ty, Elts[0], Indices,
-                                                      InBounds, InRangeOp);
+                                                      InBounds, InRange);
     } else if (Opc == Instruction::ShuffleVector) {
       if (Elts.size() != 3)
         return error(ID.Loc, "expected three operands to shufflevector");
@@ -4331,9 +4354,8 @@ bool LLParser::parseOptionalComdat(StringRef GlobalName, Comdat *&C) {
 
 /// parseGlobalValueVector
 ///   ::= /*empty*/
-///   ::= [inrange] TypeAndValue (',' [inrange] TypeAndValue)*
-bool LLParser::parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
-                                      std::optional<unsigned> *InRangeOp) {
+///   ::= TypeAndValue (',' TypeAndValue)*
+bool LLParser::parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts) {
   // Empty list.
   if (Lex.getKind() == lltok::rbrace ||
       Lex.getKind() == lltok::rsquare ||
@@ -4342,8 +4364,9 @@ bool LLParser::parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
     return false;
 
   do {
-    if (InRangeOp && !*InRangeOp && EatIfPresent(lltok::kw_inrange))
-      *InRangeOp = Elts.size();
+    // Let the caller deal with inrange.
+    if (Lex.getKind() == lltok::kw_inrange)
+      return false;
 
     Constant *C;
     if (parseGlobalTypeAndValue(C))
@@ -6762,10 +6785,10 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
 ///                 (MDNode ',' Metadata ',' Metadata ',')? MDNode ')'
 bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
   using RecordKind = DbgRecord::Kind;
-  using LocType = DPValue::LocationType;
-  LocTy DPVLoc = Lex.getLoc();
+  using LocType = DbgVariableRecord::LocationType;
+  LocTy DVRLoc = Lex.getLoc();
   if (Lex.getKind() != lltok::DbgRecordType)
-    return error(DPVLoc, "expected debug record type here");
+    return error(DVRLoc, "expected debug record type here");
   RecordKind RecordType = StringSwitch<RecordKind>(Lex.getStrVal())
                               .Case("declare", RecordKind::ValueKind)
                               .Case("value", RecordKind::ValueKind)
@@ -6773,7 +6796,7 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
                               .Case("label", RecordKind::LabelKind);
 
   // Parsing labels is trivial; parse here and early exit, otherwise go into the
-  // full DPValue processing stage.
+  // full DbgVariableRecord processing stage.
   if (RecordType == RecordKind::LabelKind) {
     Lex.Lex();
     if (parseToken(lltok::lparen, "Expected '(' here"))
@@ -6853,9 +6876,9 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
 
   if (parseToken(lltok::rparen, "Expected ')' here"))
     return true;
-  DR = DPValue::createUnresolvedDPValue(ValueType, ValLocMD, Variable,
-                                        Expression, AssignID, AddressLocation,
-                                        AddressExpression, DebugLoc);
+  DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
+      ValueType, ValLocMD, Variable, Expression, AssignID, AddressLocation,
+      AddressExpression, DebugLoc);
   return false;
 }
 //===----------------------------------------------------------------------===//

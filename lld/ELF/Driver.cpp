@@ -650,7 +650,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (errorCount())
       return;
 
-    link(args);
+    invokeELFT(link, args);
   }
 
   if (config->timeTraceEnabled) {
@@ -1800,6 +1800,37 @@ static void setConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, m == EM_PPC64);
   config->pcRelOptimize =
       args.hasFlag(OPT_pcrel_optimize, OPT_no_pcrel_optimize, m == EM_PPC64);
+
+  if (!args.hasArg(OPT_hash_style)) {
+    if (config->emachine == EM_MIPS)
+      config->sysvHash = true;
+    else
+      config->sysvHash = config->gnuHash = true;
+  }
+
+  // Set default entry point and output file if not specified by command line or
+  // linker scripts.
+  config->warnMissingEntry =
+      (!config->entry.empty() || (!config->shared && !config->relocatable));
+  if (config->entry.empty() && !config->relocatable)
+    config->entry = config->emachine == EM_MIPS ? "__start" : "_start";
+  if (config->outputFile.empty())
+    config->outputFile = "a.out";
+
+  // Fail early if the output file or map file is not writable. If a user has a
+  // long link, e.g. due to a large LTO link, they do not wish to run it and
+  // find that it failed because there was a mistake in their command-line.
+  {
+    llvm::TimeTraceScope timeScope("Create output files");
+    if (auto e = tryCreateFile(config->outputFile))
+      error("cannot open output file " + config->outputFile + ": " +
+            e.message());
+    if (auto e = tryCreateFile(config->mapFile))
+      error("cannot open map file " + config->mapFile + ": " + e.message());
+    if (auto e = tryCreateFile(config->whyExtract))
+      error("cannot open --why-extract= file " + config->whyExtract + ": " +
+            e.message());
+  }
 }
 
 static bool isFormatBinary(StringRef s) {
@@ -2680,45 +2711,8 @@ static void postParseObjectFile(ELFFileBase *file) {
 
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
-void LinkerDriver::link(opt::InputArgList &args) {
+template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   llvm::TimeTraceScope timeScope("Link", StringRef("LinkerDriver::Link"));
-  // If a --hash-style option was not given, set to a default value,
-  // which varies depending on the target.
-  if (!args.hasArg(OPT_hash_style)) {
-    if (config->emachine == EM_MIPS)
-      config->sysvHash = true;
-    else
-      config->sysvHash = config->gnuHash = true;
-  }
-
-  // Default output filename is "a.out" by the Unix tradition.
-  if (config->outputFile.empty())
-    config->outputFile = "a.out";
-
-  // Fail early if the output file or map file is not writable. If a user has a
-  // long link, e.g. due to a large LTO link, they do not wish to run it and
-  // find that it failed because there was a mistake in their command-line.
-  {
-    llvm::TimeTraceScope timeScope("Create output files");
-    if (auto e = tryCreateFile(config->outputFile))
-      error("cannot open output file " + config->outputFile + ": " +
-            e.message());
-    if (auto e = tryCreateFile(config->mapFile))
-      error("cannot open map file " + config->mapFile + ": " + e.message());
-    if (auto e = tryCreateFile(config->whyExtract))
-      error("cannot open --why-extract= file " + config->whyExtract + ": " +
-            e.message());
-  }
-  if (errorCount())
-    return;
-
-  // Use default entry point name if no name was given via the command
-  // line nor linker scripts. For some reason, MIPS entry point name is
-  // different from others.
-  config->warnMissingEntry =
-      (!config->entry.empty() || (!config->shared && !config->relocatable));
-  if (config->entry.empty() && !config->relocatable)
-    config->entry = (config->emachine == EM_MIPS) ? "__start" : "_start";
 
   // Handle --trace-symbol.
   for (auto *arg : args.filtered(OPT_trace_symbol))
@@ -2739,7 +2733,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
     llvm::TimeTraceScope timeScope("Parse input files");
     for (size_t i = 0; i < files.size(); ++i) {
       llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
-      parseFile(files[i]);
+      doParseFile<ELFT>(files[i]);
     }
     if (armCmseImpLib)
       parseArmCMSEImportLib(*armCmseImpLib);
@@ -2873,7 +2867,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Handle --lto-validate-all-vtables-have-type-infos.
   if (config->ltoValidateAllVtablesHaveTypeInfos)
-    invokeELFT(ltoValidateAllVtablesHaveTypeInfos, args);
+    ltoValidateAllVtablesHaveTypeInfos<ELFT>(args);
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
@@ -2881,7 +2875,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // With this the symbol table should be complete. After this, no new names
   // except a few linker-synthesized ones will be added to the symbol table.
   const size_t numObjsBeforeLTO = ctx.objectFiles.size();
-  invokeELFT(compileBitcodeFiles, skipLinkedOutput);
+  compileBitcodeFiles<ELFT>(skipLinkedOutput);
 
   // Symbol resolution finished. Report backward reference problems,
   // --print-archive-stats=, and --why-extract=.
@@ -2946,7 +2940,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
       llvm::erase_if(ctx.inputSections, [](InputSectionBase *s) {
         if (s->type != SHT_LLVM_SYMPART)
           return false;
-        invokeELFT(readSymbolPartitionSection, s);
+        readSymbolPartitionSection<ELFT>(s);
         return true;
       });
     }
@@ -3004,10 +2998,10 @@ void LinkerDriver::link(opt::InputArgList &args) {
     ctx.inputSections.push_back(createCommentSection());
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
-  invokeELFT(splitSections,);
+  splitSections<ELFT>();
 
   // Garbage collection and removal of shared symbols from unused shared objects.
-  invokeELFT(markLive,);
+  markLive<ELFT>();
 
   // Make copies of any input sections that need to be copied into each
   // partition.
@@ -3020,7 +3014,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create synthesized sections such as .got and .plt. This is called before
   // processSectionCommands() so that they can be placed by SECTIONS commands.
-  invokeELFT(createSyntheticSections,);
+  createSyntheticSections<ELFT>();
 
   // Some input sections that are used for exception handling need to be moved
   // into synthetic sections. Do that now so that they aren't assigned to
@@ -3060,8 +3054,8 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Two input sections with different output sections should not be folded.
   // ICF runs after processSectionCommands() so that we know the output sections.
   if (config->icf != ICFLevel::None) {
-    invokeELFT(findKeepUniqueSections, args);
-    invokeELFT(doIcf,);
+    findKeepUniqueSections<ELFT>(args);
+    doIcf<ELFT>();
   }
 
   // Read the callgraph now that we know what was gced or icfed
@@ -3069,9 +3063,9 @@ void LinkerDriver::link(opt::InputArgList &args) {
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
       if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
         readCallGraph(*buffer);
-    invokeELFT(readCallGraphsFromObjectFiles,);
+    readCallGraphsFromObjectFiles<ELFT>();
   }
 
   // Write the result to the file.
-  invokeELFT(writeResult,);
+  writeResult<ELFT>();
 }

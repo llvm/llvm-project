@@ -215,6 +215,13 @@ Attribute Changes in Clang
   and each must be a positive integer when provided. The parameter ``x`` is required, while ``y`` and
   ``z`` are optional with default value of 1.
 
+- The ``swiftasynccc`` attribute is now considered to be a Clang extension
+  rather than a language standard feature. Please use
+  ``__has_extension(swiftasynccc)`` to check the availability of this attribute
+  for the target platform instead of ``__has_feature(swiftasynccc)``. Also,
+  added a new extension query ``__has_extension(swiftcc)`` corresponding to the
+  ``__attribute__((swiftcc))`` attribute.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
@@ -288,6 +295,9 @@ Bug Fixes in This Version
 - Clang no longer produces a false-positive `-Wunused-variable` warning
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
+
+- Fix value of predefined macro ``__FUNCTION__`` in MSVC compatibility mode.
+  Fixes (#GH66114).
 
 - Clang now emits errors for explicit specializations/instatiations of lambda call
   operator.
@@ -403,6 +413,7 @@ Bug Fixes to C++ Support
   expression references to an entity declared outside of the lambda. (#GH64808)
 - Clang's __builtin_bit_cast will now produce a constant value for records with empty bases. See:
   (#GH82383)
+- Fix a crash when instantiating a lambda that captures ``this`` outside of its context. Fixes (#GH85343).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -458,6 +469,26 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- Clang-cl now supports function targets with intrinsic headers. This allows
+  for runtime feature detection of intrinsics. Previously under clang-cl
+  ``immintrin.h`` and similar intrinsic headers would only include the intrinsics
+  if building with that feature enabled at compile time, e.g. ``avxintrin.h``
+  would only be included if AVX was enabled at compile time. This was done to work
+  around include times from MSVC STL including ``intrin.h`` under clang-cl.
+  Clang-cl now provides ``intrin0.h`` for MSVC STL and therefore all intrinsic
+  features without requiring enablement at compile time.
+  Fixes: (`#53520 <https://github.com/llvm/llvm-project/issues/53520>`_)
+
+- Improved compile times with MSVC STL. MSVC provides ``intrin0.h`` which is a
+  header that only includes intrinsics that are used by MSVC STL to avoid the
+  use of ``intrin.h``. MSVC STL when compiled under clang uses ``intrin.h``
+  instead. Clang-cl now provides ``intrin0.h`` for the same compiler throughput
+  purposes as MSVC. Clang-cl also provides ``yvals_core.h`` to redefine
+  ``_STL_INTRIN_HEADER`` to expand to ``intrin0.h`` instead of ``intrin.h``.
+  This also means that if all intrinsic features are enabled at compile time
+  including STL headers will no longer slow down compile times since ``intrin.h``
+  is not included from MSVC STL.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
