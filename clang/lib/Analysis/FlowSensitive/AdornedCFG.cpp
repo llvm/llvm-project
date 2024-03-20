@@ -103,7 +103,7 @@ buildContainsExprConsumedInDifferentBlock(
   auto CheckChildExprs = [&Result, &StmtToBlock](const Stmt *S,
                                                  const CFGBlock *Block) {
     for (const Stmt *Child : S->children()) {
-      if (!isa<Expr>(Child))
+      if (!isa_and_nonnull<Expr>(Child))
         continue;
       const CFGBlock *ChildBlock = StmtToBlock.lookup(Child);
       if (ChildBlock != Block)
