@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_GPU_GENERIC_IO_H
-#define LLVM_LIBC_SRC___SUPPORT_GPU_GENERIC_IO_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_GPU_GENERIC_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_GPU_GENERIC_UTILS_H
 
 #include "src/__support/common.h"
 
@@ -67,6 +67,8 @@ LIBC_INLINE void sync_threads() {}
 
 LIBC_INLINE void sync_lane(uint64_t) {}
 
+LIBC_INLINE uint32_t shuffle(uint64_t, uint32_t, uint32_t x) { return x; }
+
 LIBC_INLINE uint64_t processor_clock() { return 0; }
 
 LIBC_INLINE uint64_t fixed_frequency_clock() { return 0; }
@@ -78,4 +80,4 @@ LIBC_INLINE uint32_t get_cluster_id() { return 0; }
 } // namespace gpu
 } // namespace LIBC_NAMESPACE
 
-#endif
+#endif // LLVM_LIBC_SRC___SUPPORT_GPU_GENERIC_UTILS_H

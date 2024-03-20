@@ -6,32 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTILS_H
-#define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTIL_H
+#define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTIL_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
-#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/threads/sleep.h"
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE {
 namespace rpc {
-
-/// Suspend the thread briefly to assist the thread scheduler during busy loops.
-LIBC_INLINE void sleep_briefly() {
-#if defined(LIBC_TARGET_ARCH_IS_NVPTX)
-  if (__nvvm_reflect("__CUDA_ARCH") >= 700)
-    LIBC_INLINE_ASM("nanosleep.u32 64;" ::: "memory");
-#elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
-  __builtin_amdgcn_s_sleep(2);
-#elif defined(LIBC_TARGET_ARCH_IS_X86)
-  __builtin_ia32_pause();
-#else
-  // Simply do nothing if sleeping isn't supported on this platform.
-#endif
-}
 
 /// Conditional to indicate if this process is running on the GPU.
 LIBC_INLINE constexpr bool is_process_gpu() {
@@ -82,4 +69,4 @@ LIBC_INLINE void rpc_memcpy(void *dst, const void *src, size_t count) {
 } // namespace rpc
 } // namespace LIBC_NAMESPACE
 
-#endif
+#endif // LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTIL_H

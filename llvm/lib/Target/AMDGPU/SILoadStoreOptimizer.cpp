@@ -862,7 +862,7 @@ SILoadStoreOptimizer::combineKnownAdjacentMMOs(const CombineInfo &CI,
   const MachineMemOperand *MMOa = *CI.I->memoperands_begin();
   const MachineMemOperand *MMOb = *Paired.I->memoperands_begin();
 
-  unsigned Size = MMOa->getSize() + MMOb->getSize();
+  unsigned Size = MMOa->getSize().getValue() + MMOb->getSize().getValue();
 
   // A base pointer for the combined operation is the same as the leading
   // operation's pointer.

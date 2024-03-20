@@ -339,7 +339,7 @@ return:
 
 define ptr @strcpy_illegal_tailc(ptr %dest, i64 %sz, ptr readonly returned %src) nounwind {
 ; CHECK-LABEL: strcpy_illegal_tailc:
-; CHECK:       ## %bb.0:
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movq %rdx, %rbx
 ; CHECK-NEXT:    testq %rsi, %rsi
@@ -351,6 +351,7 @@ define ptr @strcpy_illegal_tailc(ptr %dest, i64 %sz, ptr readonly returned %src)
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
+entry:
   %cmp = icmp eq i64 %sz, 0
   br i1 %cmp, label %return, label %if.then
 
@@ -362,8 +363,63 @@ return:
   ret ptr %src
 }
 
+@i = global i32 0, align 4
+
+define i32 @undef_tailc() nounwind {
+; CHECK-LABEL: undef_tailc:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    cmpl $0, _i(%rip)
+; CHECK-NEXT:    jne _qux ## TAILCALL
+; CHECK-NEXT:  ## %bb.1: ## %return
+; CHECK-NEXT:    retq
+entry:
+  %val = load i32, ptr @i, align 4
+  %cmp = icmp eq i32 %val, 0
+  br i1 %cmp, label %return, label %if.then
+
+if.then:
+  %rv_unused = tail call i32 @qux()
+  br label %return
+
+return:
+  ret i32 undef
+}
+
+define i32 @undef_and_known_tailc() nounwind {
+; CHECK-LABEL: undef_and_known_tailc:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    movl _i(%rip), %eax
+; CHECK-NEXT:    cmpl $5, %eax
+; CHECK-NEXT:    je _qux ## TAILCALL
+; CHECK-NEXT:  ## %bb.1: ## %entry
+; CHECK-NEXT:    cmpl $2, %eax
+; CHECK-NEXT:    je _quux ## TAILCALL
+; CHECK-NEXT:  ## %bb.2: ## %return
+; CHECK-NEXT:    retq
+entry:
+  %val = load i32, ptr @i, align 4
+  switch i32 %val, label %return [
+    i32 2, label %case_2
+    i32 5, label %case_5
+  ]
+
+case_2:
+  %rv_unused = tail call i32 @quux()
+  br label %return
+
+case_5:
+  %rv = tail call i32 @qux()
+  br label %return
+
+return:
+  %phi = phi i32 [ undef, %case_2 ], [ %rv, %case_5 ], [ undef, %entry ]
+  ret i32 %phi
+}
+
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1)
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1)
 declare noalias ptr @malloc(i64)
 declare ptr @strcpy(ptr noalias returned writeonly, ptr noalias nocapture readonly)
 declare ptr @baz(ptr, ptr)
+declare i32 @qux()
+declare i32 @quux()

@@ -524,3 +524,12 @@ namespace PR71867 {
     // CHECK-FIXES: return (x ? 1 : 0) != 0;
   }
 }
+
+namespace PR71848 {
+  int fun() {
+    bool foo = false;
+    return( foo );
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: implicit conversion 'bool' -> 'int' [readability-implicit-bool-conversion]
+// CHECK-FIXES: return static_cast<int>( foo );
+  }
+}

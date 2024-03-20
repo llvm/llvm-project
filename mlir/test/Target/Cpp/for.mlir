@@ -33,12 +33,12 @@ func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CPP-DECLTOP-NEXT: return;
 
 func.func @test_for_yield() {
-  %start = arith.constant 0 : index
-  %stop = arith.constant 10 : index
-  %step = arith.constant 1 : index
+  %start = "emitc.constant"() <{value = 0 : index}> : () -> index
+  %stop = "emitc.constant"() <{value = 10 : index}> : () -> index
+  %step = "emitc.constant"() <{value = 1 : index}> : () -> index
 
-  %s0 = arith.constant 0 : i32
-  %p0 = arith.constant 1.0 : f32
+  %s0 = "emitc.constant"() <{value = 0 : i32}> : () -> i32
+  %p0 = "emitc.constant"() <{value = 1.0 : f32}> : () -> f32
 
   %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
   %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
@@ -63,7 +63,7 @@ func.func @test_for_yield() {
 // CPP-DEFAULT-NEXT: size_t [[STOP:[^ ]*]] = 10;
 // CPP-DEFAULT-NEXT: size_t [[STEP:[^ ]*]] = 1;
 // CPP-DEFAULT-NEXT: int32_t [[S0:[^ ]*]] = 0;
-// CPP-DEFAULT-NEXT: float [[P0:[^ ]*]] = (float)1.000000000e+00;
+// CPP-DEFAULT-NEXT: float [[P0:[^ ]*]] = 1.000000000e+00f;
 // CPP-DEFAULT-NEXT: int32_t [[SE:[^ ]*]];
 // CPP-DEFAULT-NEXT: float [[PE:[^ ]*]];
 // CPP-DEFAULT-NEXT: int32_t [[SI:[^ ]*]];
@@ -96,7 +96,7 @@ func.func @test_for_yield() {
 // CPP-DECLTOP-NEXT: [[STOP]] = 10;
 // CPP-DECLTOP-NEXT: [[STEP]] = 1;
 // CPP-DECLTOP-NEXT: [[S0]] = 0;
-// CPP-DECLTOP-NEXT: [[P0]] = (float)1.000000000e+00;
+// CPP-DECLTOP-NEXT: [[P0]] = 1.000000000e+00f;
 // CPP-DECLTOP-NEXT: ;
 // CPP-DECLTOP-NEXT: ;
 // CPP-DECLTOP-NEXT: ;

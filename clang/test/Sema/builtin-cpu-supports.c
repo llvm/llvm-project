@@ -7,7 +7,7 @@ extern const char *str;
 
 int main(void) {
 #ifdef __x86_64__
-  if (__builtin_cpu_supports("ss")) // expected-error {{invalid cpu feature string}}
+  if (__builtin_cpu_supports("ss")) // expected-warning {{invalid cpu feature string}}
     a("sse4.2");
 
   if (__builtin_cpu_supports(str)) // expected-error {{expression is not a string literal}}
@@ -25,9 +25,9 @@ int main(void) {
   (void)__builtin_cpu_supports("x86-64-v2");
   (void)__builtin_cpu_supports("x86-64-v3");
   (void)__builtin_cpu_supports("x86-64-v4");
-  (void)__builtin_cpu_supports("x86-64-v5"); // expected-error {{invalid cpu feature string for builtin}}
+  (void)__builtin_cpu_supports("x86-64-v5"); // expected-warning {{invalid cpu feature string for builtin}}
 #else
-  if (__builtin_cpu_supports("aes")) // expected-error {{builtin is not supported on this target}}
+  if (__builtin_cpu_supports("neon")) // expected-warning {{invalid cpu feature string for builtin}}
     a("vsx");
 
   if (__builtin_cpu_is("cortex-x3")) // expected-error {{builtin is not supported on this target}}

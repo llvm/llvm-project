@@ -12,7 +12,7 @@ define <vscale x 8 x i64> @vwadd_wv_mask_v8i32(<vscale x 8 x i32> %x, <vscale x 
 ; CHECK-NEXT:    vwadd.wv v16, v16, v8, v0.t
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
-    %mask = icmp slt <vscale x 8 x i32> %x, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 42, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+    %mask = icmp slt <vscale x 8 x i32> %x, splat (i32 42)
     %a = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %x, <vscale x 8 x i32> zeroinitializer
     %sa = sext <vscale x 8 x i32> %a to <vscale x 8 x i64>
     %ret = add <vscale x 8 x i64> %sa, %y
@@ -29,7 +29,7 @@ define <vscale x 8 x i64> @vwaddu_wv_mask_v8i32(<vscale x 8 x i32> %x, <vscale x
 ; CHECK-NEXT:    vwaddu.wv v16, v16, v8, v0.t
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
-    %mask = icmp slt <vscale x 8 x i32> %x, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 42, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+    %mask = icmp slt <vscale x 8 x i32> %x, splat (i32 42)
     %a = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %x, <vscale x 8 x i32> zeroinitializer
     %sa = zext <vscale x 8 x i32> %a to <vscale x 8 x i64>
     %ret = add <vscale x 8 x i64> %sa, %y
@@ -47,7 +47,7 @@ define <vscale x 8 x i64> @vwaddu_vv_mask_v8i32(<vscale x 8 x i32> %x, <vscale x
 ; CHECK-NEXT:    vwaddu.vv v16, v8, v12
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
-    %mask = icmp slt <vscale x 8 x i32> %x, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 42, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+    %mask = icmp slt <vscale x 8 x i32> %x, splat (i32 42)
     %a = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %x, <vscale x 8 x i32> zeroinitializer
     %sa = zext <vscale x 8 x i32> %a to <vscale x 8 x i64>
     %sy = zext <vscale x 8 x i32> %y to <vscale x 8 x i64>
@@ -65,7 +65,7 @@ define <vscale x 8 x i64> @vwadd_wv_mask_v8i32_commutative(<vscale x 8 x i32> %x
 ; CHECK-NEXT:    vwadd.wv v16, v16, v8, v0.t
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
-    %mask = icmp slt <vscale x 8 x i32> %x, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 42, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+    %mask = icmp slt <vscale x 8 x i32> %x, splat (i32 42)
     %a = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %x, <vscale x 8 x i32> zeroinitializer
     %sa = sext <vscale x 8 x i32> %a to <vscale x 8 x i64>
     %ret = add <vscale x 8 x i64> %y, %sa
@@ -82,8 +82,8 @@ define <vscale x 8 x i64> @vwadd_wv_mask_v8i32_nonzero(<vscale x 8 x i32> %x, <v
 ; CHECK-NEXT:    vmerge.vvm v24, v12, v8, v0
 ; CHECK-NEXT:    vwadd.wv v8, v16, v24
 ; CHECK-NEXT:    ret
-    %mask = icmp slt <vscale x 8 x i32> %x, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 42, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
-    %a = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %x, <vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+    %mask = icmp slt <vscale x 8 x i32> %x, splat (i32 42)
+    %a = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %x, <vscale x 8 x i32> splat (i32 1)
     %sa = sext <vscale x 8 x i32> %a to <vscale x 8 x i64>
     %ret = add <vscale x 8 x i64> %sa, %y
     ret <vscale x 8 x i64> %ret
