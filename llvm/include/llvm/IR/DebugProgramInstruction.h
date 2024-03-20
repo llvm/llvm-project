@@ -220,8 +220,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DbgRecord &R) {
 
 /// Records a position in IR for a source label (DILabel). Corresponds to the
 /// llvm.dbg.label intrinsic.
-/// FIXME: Rename DbgLabelRecord when DbgVariableRecord is renamed to
-/// DbgVariableRecord.
 class DbgLabelRecord : public DbgRecord {
   DbgRecordParamRef<DILabel> Label;
 
