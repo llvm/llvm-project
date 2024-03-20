@@ -269,6 +269,11 @@ getSymbolFromAccObject(const Fortran::parser::AccObject &accObject) {
           Fortran::parser::GetLastName(arrayElement->base);
       return *name.symbol;
     }
+    if (const auto *component =
+            Fortran::parser::Unwrap<Fortran::parser::StructureComponent>(
+                *designator)) {
+      return *component->component.symbol;
+    }
   } else if (const auto *name =
                  std::get_if<Fortran::parser::Name>(&accObject.u)) {
     return *name->symbol;
@@ -286,17 +291,20 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
                          mlir::acc::DataClause dataClause, bool structured,
                          bool implicit, bool setDeclareAttr = false) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   for (const auto &accObject : objectList.v) {
     llvm::SmallVector<mlir::Value> bounds;
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
+    Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
+    Fortran::semantics::MaybeExpr designator =
+        std::visit([&](auto &&s) { return ea.Analyze(s); }, accObject.u);
     Fortran::lower::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
-            Fortran::parser::AccObject, mlir::acc::DataBoundsOp,
-            mlir::acc::DataBoundsType>(converter, builder, semanticsContext,
-                                       stmtCtx, accObject, operandLocation,
-                                       asFortran, bounds,
-                                       /*treatIndexAsSection=*/true);
+            mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
+            converter, builder, semanticsContext, stmtCtx, symbol, designator,
+            operandLocation, asFortran, bounds,
+            /*treatIndexAsSection=*/true);
 
     // If the input value is optional and is not a descriptor, we use the
     // rawInput directly.
@@ -321,16 +329,19 @@ static void genDeclareDataOperandOperations(
     llvm::SmallVectorImpl<mlir::Value> &dataOperands,
     mlir::acc::DataClause dataClause, bool structured, bool implicit) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   for (const auto &accObject : objectList.v) {
     llvm::SmallVector<mlir::Value> bounds;
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
+    Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
+    Fortran::semantics::MaybeExpr designator =
+        std::visit([&](auto &&s) { return ea.Analyze(s); }, accObject.u);
     Fortran::lower::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
-            Fortran::parser::AccObject, mlir::acc::DataBoundsOp,
-            mlir::acc::DataBoundsType>(converter, builder, semanticsContext,
-                                       stmtCtx, accObject, operandLocation,
-                                       asFortran, bounds);
+            mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
+            converter, builder, semanticsContext, stmtCtx, symbol, designator,
+            operandLocation, asFortran, bounds);
     EntryOp op = createDataEntryOp<EntryOp>(
         builder, operandLocation, info.addr, asFortran, bounds, structured,
         implicit, dataClause, info.addr.getType());
@@ -339,8 +350,7 @@ static void genDeclareDataOperandOperations(
     if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(info.addr.getType()))) {
       mlir::OpBuilder modBuilder(builder.getModule().getBodyRegion());
       modBuilder.setInsertionPointAfter(builder.getFunction());
-      std::string prefix =
-          converter.mangleName(getSymbolFromAccObject(accObject));
+      std::string prefix = converter.mangleName(symbol);
       createDeclareAllocFuncWithArg<EntryOp>(
           modBuilder, builder, operandLocation, info.addr.getType(), prefix,
           asFortran, dataClause);
@@ -770,16 +780,19 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
                   llvm::SmallVectorImpl<mlir::Value> &dataOperands,
                   llvm::SmallVector<mlir::Attribute> &privatizations) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   for (const auto &accObject : objectList.v) {
     llvm::SmallVector<mlir::Value> bounds;
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
+    Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
+    Fortran::semantics::MaybeExpr designator =
+        std::visit([&](auto &&s) { return ea.Analyze(s); }, accObject.u);
     Fortran::lower::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
-            Fortran::parser::AccObject, mlir::acc::DataBoundsOp,
-            mlir::acc::DataBoundsType>(converter, builder, semanticsContext,
-                                       stmtCtx, accObject, operandLocation,
-                                       asFortran, bounds);
+            mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
+            converter, builder, semanticsContext, stmtCtx, symbol, designator,
+            operandLocation, asFortran, bounds);
     RecipeOp recipe;
     mlir::Type retTy = getTypeFromBounds(bounds, info.addr.getType());
     if constexpr (std::is_same_v<RecipeOp, mlir::acc::PrivateRecipeOp>) {
@@ -1340,16 +1353,19 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
   const auto &op =
       std::get<Fortran::parser::AccReductionOperator>(objectList.t);
   mlir::acc::ReductionOperator mlirOp = getReductionOperator(op);
+  Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   for (const auto &accObject : objects.v) {
     llvm::SmallVector<mlir::Value> bounds;
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
+    Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
+    Fortran::semantics::MaybeExpr designator =
+        std::visit([&](auto &&s) { return ea.Analyze(s); }, accObject.u);
     Fortran::lower::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
-            Fortran::parser::AccObject, mlir::acc::DataBoundsOp,
-            mlir::acc::DataBoundsType>(converter, builder, semanticsContext,
-                                       stmtCtx, accObject, operandLocation,
-                                       asFortran, bounds);
+            mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
+            converter, builder, semanticsContext, stmtCtx, symbol, designator,
+            operandLocation, asFortran, bounds);
 
     mlir::Type reductionTy = fir::unwrapRefType(info.addr.getType());
     if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(reductionTy))
