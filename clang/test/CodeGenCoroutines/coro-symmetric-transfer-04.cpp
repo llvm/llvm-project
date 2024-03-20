@@ -1,4 +1,5 @@
 // This tests that the symmetric transfer at the final suspend point could happen successfully.
+// Based on https://github.com/llvm/llvm-project/pull/85271#issuecomment-2007554532
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -O2 -emit-llvm %s -o - | FileCheck %s
 
 #include "Inputs/coroutine.h"
