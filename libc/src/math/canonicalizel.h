@@ -1,4 +1,5 @@
-//===-- Implementation header for canonicalizel ------------------------*- C++ -*-===//
+//===-- Implementation header for canonicalizel ------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +12,7 @@
 
 namespace LIBC_NAMESPACE {
 
-int canonicalizel(long double* cx, const long double *x);
+int canonicalizel(long double *cx, const long double *x);
 
 } // namespace LIBC_NAMESPACE
 

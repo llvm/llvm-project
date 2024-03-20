@@ -1,4 +1,5 @@
-//===-- Implementation of canonicalize function ----------------------------------===//
+//===-- Implementation of canonicalize function
+//----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,20 +8,20 @@
 //===-----------------------------------------------------------------------------===//
 
 #include "src/math/canonicalize.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, canonicalize, (double *cx, const double *x)) {
-    using FPB = fputil::FPBits<double>;
-    FPB sx(*x);
-    if (sx.is_signaling_nan())
-        *cx = quiet_nan();
-    else
-        *cx = *x;
-    return 0;
+  using FPB = fputil::FPBits<double>;
+  FPB sx(*x);
+  if (sx.is_signaling_nan())
+    *cx = quiet_nan();
+  else
+    *cx = *x;
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE

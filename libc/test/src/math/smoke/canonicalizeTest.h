@@ -1,6 +1,8 @@
-// //===-- Utility class to test canonicalize[f|l] -------------------------*- C++ -*-===//
+// //===-- Utility class to test canonicalize[f|l] -------------------------*-
+// C++ -*-===//
 // //
-// // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// // Part of the LLVM Project, under the Apache License v2.0 with LLVM
+// Exceptions.
 // // See https://llvm.org/LICENSE.txt for license information.
 // // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 // //
@@ -14,7 +16,8 @@
 
 // #include <math.h>
 
-// template <typename T> class CanonicalizeTest : public LIBC_NAMESPACE::testing::Test {
+// template <typename T> class CanonicalizeTest : public
+// LIBC_NAMESPACE::testing::Test {
 
 //   DECLARE_SPECIAL_CONSTANTS(T)
 

@@ -1,4 +1,5 @@
-//===-- Implementation header for canonicalize ------------------------*- C++ -*-===//
+//===-- Implementation header for canonicalize ------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +12,7 @@
 
 namespace LIBC_NAMESPACE {
 
-int canonicalize(double* cx, const double *x);
+int canonicalize(double *cx, const double *x);
 
 } // namespace LIBC_NAMESPACE
 

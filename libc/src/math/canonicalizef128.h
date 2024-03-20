@@ -1,4 +1,5 @@
-//===-- Implementation header for canonicalizef128 ------------------------*- C++ -*-===//
+//===-- Implementation header for canonicalizef128 ------------------------*-
+//C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +14,7 @@
 
 namespace LIBC_NAMESPACE {
 
-int canonicalizef128(float128* cx, const float128* x);
+int canonicalizef128(float128 *cx, const float128 *x);
 
 } // namespace LIBC_NAMESPACE
 
