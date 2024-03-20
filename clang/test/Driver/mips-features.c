@@ -462,3 +462,29 @@
 // RUN:     -mrelax-pic-calls -mno-relax-pic-calls 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-RELAX-PIC-CALLS %s
 // CHECK-NO-RELAX-PIC-CALLS: "-mllvm" "-mips-jalr-reloc=0"
+//
+// -mno-unaligned-access
+// RUN: %clang -target mips-unknown-linux-gnu -### -c %s \
+// RUN:     -munaligned-access -mno-strict-align \
+// RUN:     -mno-unaligned-access 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-STRICT-ALIGN %s
+// CHECK-STRICT-ALIGN: "-target-feature" "+strict-align"
+//
+// -munaligned-access
+// RUN: %clang -target mips-unknown-linux-gnu -### -c %s \
+// RUN:     -mno-unaligned-access -mstrict-align \
+// RUN:     -munaligned-access 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-STRICT-ALIGN %s
+// CHECK-NO-STRICT-ALIGN: "-target-feature" "-strict-align"
+//
+// -mstrict-align
+// RUN: %clang -target mips-unknown-linux-gnu -### -c %s \
+// RUN:     -munaligned-access -mno-strict-align \
+// RUN:     -mstrict-align 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-STRICT-ALIGN %s
+//
+// -mno-strict-align
+// RUN: %clang -target mips-unknown-linux-gnu -### -c %s \
+// RUN:     -mno-unaligned-access -mstrict-align \
+// RUN:     -mno-strict-align 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-STRICT-ALIGN %s
