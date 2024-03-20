@@ -1110,6 +1110,12 @@ DEF_TRAVERSE_TYPE(InjectedClassNameType, {})
 DEF_TRAVERSE_TYPE(AttributedType,
                   { TRY_TO(TraverseType(T->getModifiedType())); })
 
+DEF_TRAVERSE_TYPE(CountAttributedType, {
+  if (T->getCountExpr())
+    TRY_TO(TraverseStmt(T->getCountExpr()));
+  TRY_TO(TraverseType(T->desugar()));
+})
+
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
@@ -1400,6 +1406,9 @@ DEF_TRAVERSE_TYPELOC(MacroQualifiedType,
 
 DEF_TRAVERSE_TYPELOC(AttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getModifiedLoc())); })
+
+DEF_TRAVERSE_TYPELOC(CountAttributedType,
+                     { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
