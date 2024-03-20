@@ -89,9 +89,9 @@ MinMaxUseInitializerListCheck::findArgs(const MatchFinder::MatchResult &Match,
   Result.Compare = nullptr;
 
   if (Call->getNumArgs() > 2) {
-    auto argIterator = Call->arguments().begin();
-    std::advance(argIterator, 2);
-    Result.Compare = *argIterator;
+    auto ArgIterator = Call->arguments().begin();
+    std::advance(ArgIterator, 2);
+    Result.Compare = *ArgIterator;
   }
 
   for (const Expr *Arg : Call->arguments()) {
@@ -153,15 +153,20 @@ std::string MinMaxUseInitializerListCheck::generateReplacement(
   for (const Expr *Arg : Result.Args) {
     QualType ArgType = Arg->getType();
 
-    // check if expression is std::min or std::max
     if (const auto *InnerCall = dyn_cast<CallExpr>(Arg)) {
-      if (InnerCall->getDirectCallee() &&
-          InnerCall->getDirectCallee()->getNameAsString() !=
-              TopCall->getDirectCallee()->getNameAsString()) {
-        FindArgsResult innerResult = findArgs(Match, InnerCall);
-        ReplacementText += generateReplacement(Match, InnerCall, innerResult) +=
-            "})";
-        continue;
+      if (InnerCall->getDirectCallee()) {
+        std::string InnerCallNameStr =
+            InnerCall->getDirectCallee()->getQualifiedNameAsString();
+
+        if (InnerCallNameStr !=
+                TopCall->getDirectCallee()->getQualifiedNameAsString() &&
+            (InnerCallNameStr == "std::min" ||
+             InnerCallNameStr == "std::max")) {
+          FindArgsResult innerResult = findArgs(Match, InnerCall);
+          ReplacementText +=
+              generateReplacement(Match, InnerCall, innerResult) + ", ";
+          continue;
+        }
       }
     }
 
