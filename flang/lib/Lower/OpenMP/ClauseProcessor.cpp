@@ -94,7 +94,6 @@ genAllocateClause(Fortran::lower::AbstractConverter &converter,
   mlir::Location currentLocation = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
 
-  mlir::Value allocatorOperand;
   const omp::ObjectList &objectList = std::get<omp::ObjectList>(clause.t);
   const auto &modifier =
       std::get<std::optional<omp::clause::Allocate::Modifier>>(clause.t);
@@ -578,7 +577,7 @@ public:
   }
 
   // Returns the shape of array types.
-  const llvm::SmallVector<int64_t> &getShape() const { return shape; }
+  llvm::ArrayRef<int64_t> getShape() const { return shape; }
 
   // Is the type inside a box?
   bool isBox() const { return inBox; }
@@ -789,8 +788,8 @@ bool ClauseProcessor::processLink(
 mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
-                mlir::SmallVector<mlir::Value> bounds,
-                mlir::SmallVector<mlir::Value> members, uint64_t mapType,
+                llvm::ArrayRef<mlir::Value> bounds,
+                llvm::ArrayRef<mlir::Value> members, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool isVal) {
   if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
@@ -868,7 +867,7 @@ bool ClauseProcessor::processMap(
 
           Fortran::lower::AddrAndBoundsInfo info =
               Fortran::lower::gatherDataOperandAddrAndBounds<
-                  mlir::omp::DataBoundsOp, mlir::omp::DataBoundsType>(
+                  mlir::omp::MapBoundsOp, mlir::omp::MapBoundsType>(
                   converter, firOpBuilder, semaCtx, stmtCtx, *object.id(),
                   object.ref(), clauseLocation, asFortran, bounds,
                   treatIndexAsSection);
@@ -911,8 +910,9 @@ bool ClauseProcessor::processReduction(
       [&](const omp::clause::Reduction &clause,
           const Fortran::parser::CharBlock &) {
         ReductionProcessor rp;
-        rp.addReductionDecl(currentLocation, converter, clause, reductionVars,
-                            reductionDeclSymbols, reductionSymbols);
+        rp.addDeclareReduction(currentLocation, converter, clause,
+                               reductionVars, reductionDeclSymbols,
+                               reductionSymbols);
       });
 }
 

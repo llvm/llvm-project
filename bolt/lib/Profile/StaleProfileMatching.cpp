@@ -705,6 +705,9 @@ void assignProfile(BinaryFunction &BF,
 
 bool YAMLProfileReader::inferStaleProfile(
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
+  if (!BF.hasCFG())
+    return false;
+
   LLVM_DEBUG(dbgs() << "BOLT-INFO: applying profile inference for "
                     << "\"" << BF.getPrintName() << "\"\n");
 

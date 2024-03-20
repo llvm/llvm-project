@@ -106,11 +106,13 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   Value negTwo = createFloatConst(loc, floatType, -2.0, rewriter);
 
   // Compute sign(x) = cast<float_type>(x < 0) * (-2) + 1
-  Value sign = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OLT,
-                                              op.getOperand(), zero);
-  sign = rewriter.create<arith::SIToFPOp>(loc, floatType, sign);
-  sign = rewriter.create<arith::MulFOp>(loc, sign, negTwo);
-  sign = rewriter.create<arith::AddFOp>(loc, sign, one);
+  Value isNegative = rewriter.create<arith::CmpFOp>(
+      loc, arith::CmpFPredicate::OLT, op.getOperand(), zero);
+  Value isNegativeFloat =
+      rewriter.create<arith::UIToFPOp>(loc, floatType, isNegative);
+  Value isNegativeTimesNegTwo =
+      rewriter.create<arith::MulFOp>(loc, isNegativeFloat, negTwo);
+  Value sign = rewriter.create<arith::AddFOp>(loc, isNegativeTimesNegTwo, one);
 
   // Normalize input to positive value: y = sign(x) * x
   Value positiveX = rewriter.create<arith::MulFOp>(loc, sign, op.getOperand());

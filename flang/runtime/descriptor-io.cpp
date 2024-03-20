@@ -12,11 +12,12 @@
 namespace Fortran::runtime::io::descr {
 
 // Defined formatted I/O (maybe)
-std::optional<bool> DefinedFormattedIo(IoStatementState &io,
+Fortran::common::optional<bool> DefinedFormattedIo(IoStatementState &io,
     const Descriptor &descriptor, const typeInfo::DerivedType &derived,
     const typeInfo::SpecialBinding &special,
     const SubscriptValue subscripts[]) {
-  std::optional<DataEdit> peek{io.GetNextDataEdit(0 /*to peek at it*/)};
+  Fortran::common::optional<DataEdit> peek{
+      io.GetNextDataEdit(0 /*to peek at it*/)};
   if (peek &&
       (peek->descriptor == DataEdit::DefinedDerivedType ||
           peek->descriptor == DataEdit::ListDirected)) {
@@ -55,7 +56,7 @@ std::optional<bool> DefinedFormattedIo(IoStatementState &io,
     int unit{external->unitNumber()};
     int ioStat{IostatOk};
     char ioMsg[100];
-    std::optional<std::int64_t> startPos;
+    Fortran::common::optional<std::int64_t> startPos;
     if (edit.descriptor == DataEdit::DefinedDerivedType &&
         special.which() == typeInfo::SpecialBinding::Which::ReadFormatted) {
       // DT is an edit descriptor so everything that the child
@@ -96,7 +97,7 @@ std::optional<bool> DefinedFormattedIo(IoStatementState &io,
     // There's a defined I/O subroutine, but there's a FORMAT present and
     // it does not have a DT data edit descriptor, so apply default formatting
     // to the components of the derived type as usual.
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
 }
 
