@@ -3035,7 +3035,6 @@ private:
                 return SM.isBeforeInTranslationUnit(LHS.Loc, RHS.Loc);
               });
 
-    const auto TopFuncName = CInfo.name(S);
 
     // TODO: Can we get better template instantiation notes?
     auto checkAddTemplateNote = [&](const Decl *D) {
@@ -3059,48 +3058,47 @@ private:
         break;
       case DiagnosticID::AllocatesMemory:
         S.Diag(Diag.Loc, diag::warn_func_effect_allocates)
-            << effectName << TopFuncName;
+            << effectName;
         checkAddTemplateNote(CInfo.CDecl);
         TESTED
         break;
       case DiagnosticID::Throws:
       case DiagnosticID::Catches:
         S.Diag(Diag.Loc, diag::warn_func_effect_throws_or_catches)
-            << effectName << TopFuncName;
+            << effectName;
         checkAddTemplateNote(CInfo.CDecl);
         TESTED
         break;
       case DiagnosticID::HasStaticLocal:
         S.Diag(Diag.Loc, diag::warn_func_effect_has_static_local)
-            << effectName << TopFuncName;
+            << effectName;
         checkAddTemplateNote(CInfo.CDecl);
         TESTED
         break;
       case DiagnosticID::AccessesThreadLocal:
         S.Diag(Diag.Loc, diag::warn_func_effect_uses_thread_local)
-            << effectName << TopFuncName;
+            << effectName;
         checkAddTemplateNote(CInfo.CDecl);
         TESTED
         break;
       case DiagnosticID::CallsObjC:
         S.Diag(Diag.Loc, diag::warn_func_effect_calls_objc)
-            << effectName << TopFuncName;
+            << effectName;
         checkAddTemplateNote(CInfo.CDecl);
         TESTED
         break;
       case DiagnosticID::CallsDisallowedExpr:
         S.Diag(Diag.Loc, diag::warn_func_effect_calls_disallowed_expr)
-            << effectName << TopFuncName;
+            << effectName;
         checkAddTemplateNote(CInfo.CDecl);
         UNTESTED
         break;
 
       case DiagnosticID::CallsUnsafeDecl: {
         CallableInfo CalleeInfo{*Diag.Callee};
-        auto CalleeName = CalleeInfo.name(S);
 
         S.Diag(Diag.Loc, diag::warn_func_effect_calls_disallowed_func)
-            << effectName << TopFuncName << CalleeName;
+            << effectName;
         checkAddTemplateNote(CInfo.CDecl);
 
         // Emit notes explaining the transitive chain of inferences: Why isn't
@@ -3115,16 +3113,16 @@ private:
             // - virtual
             if (CalleeInfo.CType == CallType::Virtual) {
               S.Diag(Callee->getLocation(), diag::note_func_effect_call_virtual)
-                  << effectName << CalleeName;
+                  << effectName;
               TESTED
             } else if (CalleeInfo.CType == CallType::Unknown) {
               S.Diag(Callee->getLocation(),
                      diag::note_func_effect_call_func_ptr)
-                  << effectName << CalleeName;
+                  << effectName;
               TESTED
             } else {
               S.Diag(Callee->getLocation(), diag::note_func_effect_call_extern)
-                  << effectName << CalleeName;
+                  << effectName;
               TESTED
             }
             break;
@@ -3141,44 +3139,44 @@ private:
             break;
           case DiagnosticID::DeclWithoutConstraintOrInference:
             S.Diag(Diag2.Loc, diag::note_func_effect_call_not_inferrable)
-                << effectName << CalleeName;
+                << effectName;
             TESTED
             break;
           case DiagnosticID::CallsDisallowedExpr:
             S.Diag(Diag2.Loc, diag::note_func_effect_call_func_ptr)
-                << effectName << CalleeName;
+                << effectName;
             UNTESTED
             break;
           case DiagnosticID::AllocatesMemory:
             S.Diag(Diag2.Loc, diag::note_func_effect_allocates)
-                << effectName << CalleeName;
+                << effectName;
             TESTED
             break;
           case DiagnosticID::Throws:
           case DiagnosticID::Catches:
             S.Diag(Diag2.Loc, diag::note_func_effect_throws_or_catches)
-                << effectName << CalleeName;
+                << effectName;
             TESTED
             break;
           case DiagnosticID::HasStaticLocal:
             S.Diag(Diag2.Loc, diag::note_func_effect_has_static_local)
-                << effectName << CalleeName;
+                << effectName;
             TESTED
             break;
           case DiagnosticID::AccessesThreadLocal:
             S.Diag(Diag2.Loc, diag::note_func_effect_uses_thread_local)
-                << effectName << CalleeName;
+                << effectName;
             UNTESTED
             break;
           case DiagnosticID::CallsObjC:
             S.Diag(Diag2.Loc, diag::note_func_effect_calls_objc)
-                << effectName << CalleeName;
+                << effectName;
             UNTESTED
             break;
           case DiagnosticID::CallsUnsafeDecl:
             MaybeNextCallee.emplace(*Diag2.Callee);
             S.Diag(Diag2.Loc, diag::note_func_effect_calls_disallowed_func)
-                << effectName << CalleeName << MaybeNextCallee->name(S);
+                << effectName;
             TESTED
             break;
           }
@@ -3186,7 +3184,6 @@ private:
           Callee = Diag2.Callee;
           if (MaybeNextCallee) {
             CalleeInfo = *MaybeNextCallee;
-            CalleeName = CalleeInfo.name(S);
           }
         }
       } break;

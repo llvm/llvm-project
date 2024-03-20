@@ -10779,63 +10779,63 @@ def warn_imp_cast_drops_unaligned : Warning<
   InGroup<DiagGroup<"unaligned-qualifier-implicit-cast">>;
 
 def warn_func_effect_allocates : Warning<
-  "'%0' function '%1' must not allocate or deallocate memory">,
+  "'%0' function must not allocate or deallocate memory">,
   InGroup<FunctionEffects>;
 
 def note_func_effect_allocates : Note<
-  "'%1' cannot be inferred '%0' because it allocates/deallocates memory">;
+  "function cannot be inferred '%0' because it allocates/deallocates memory">;
 
 def warn_func_effect_throws_or_catches : Warning<
-  "'%0' function '%1' must not throw or catch exceptions">,
+  "'%0' function must not throw or catch exceptions">,
   InGroup<FunctionEffects>;
 
 def note_func_effect_throws_or_catches : Note<
-  "'%1' cannot be inferred '%0' because it throws or catches exceptions">;
+  "function cannot be inferred '%0' because it throws or catches exceptions">;
 
 def warn_func_effect_has_static_local : Warning<
-  "'%0' function '%1' must not have static locals">,
+  "'%0' function must not have static locals">,
   InGroup<FunctionEffects>;
 
 def note_func_effect_has_static_local : Note<
-  "'%1' cannot be inferred '%0' because it has a static local">;
+  "function cannot be inferred '%0' because it has a static local">;
 
 def warn_func_effect_uses_thread_local : Warning<
-  "'%0' function '%1' must not use thread-local variables">,
+  "'%0' function must not use thread-local variables">,
   InGroup<FunctionEffects>;
 
 def note_func_effect_uses_thread_local : Note<
-  "'%1' cannot be inferred '%0' because it uses a thread-local variable">;
+  "function cannot be inferred '%0' because it uses a thread-local variable">;
 
 def warn_func_effect_calls_objc : Warning<
-  "'%0' function '%1' must not access an ObjC method or property">,
+  "'%0' function must not access an ObjC method or property">,
   InGroup<FunctionEffects>;
 
 def note_func_effect_calls_objc : Note<
-  "'%1' cannot be inferred '%0' because it accesses an ObjC method or property">;
+  "function cannot be inferred '%0' because it accesses an ObjC method or property">;
 
 def warn_func_effect_calls_disallowed_func : Warning<
-  "'%0' function '%1' must not call non-'%0' function '%2'">,
+  "'%0' function must not call non-'%0' function">,
   InGroup<FunctionEffects>;
 
 // UNTESTED
 def warn_func_effect_calls_disallowed_expr : Warning<
-  "'%0' function '%1' must not call non-'%0' expression">,
+  "'%0' function must not call non-'%0' expression">,
   InGroup<FunctionEffects>;
 
 def note_func_effect_calls_disallowed_func : Note<
-  "'%1' cannot be inferred '%0' because it calls non-'%0' function '%2'">;
+  "function cannot be inferred '%0' because it calls non-'%0' function">;
 
 def note_func_effect_call_extern : Note<
-  "'%1' cannot be inferred '%0' because it has no definition in this translation unit">;
+  "function cannot be inferred '%0' because it has no definition in this translation unit">;
 
 def note_func_effect_call_not_inferrable : Note<
-  "'%1' does not permit inference of '%0'">;
+  "function does not permit inference of '%0'">;
 
 def note_func_effect_call_virtual : Note<
-  "'%1' cannot be inferred '%0' because it is virtual">;
+  "virtual method cannot be inferred '%0'">;
 
 def note_func_effect_call_func_ptr : Note<
-  "'%1' cannot be inferred '%0' because it is a function pointer">;
+  "function pointer cannot be inferred '%0'">;
 
 // TODO: Not currently being generated
 // def warn_perf_annotation_implies_noexcept : Warning<
