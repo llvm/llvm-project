@@ -1153,7 +1153,6 @@ public:
   }
 
   bool runOnModule(Module &M) {
-    dbgs() << "LowerModuleLDS: " << M.getName() << " (" << (void *)&M << ")\n";
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
 
