@@ -1,4 +1,5 @@
-//===-- Implementation of fmaximum_magl function ----------------------------------===//
+//===-- Implementation of fmaximum_magl function
+//----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,4 +18,3 @@ LLVM_LIBC_FUNCTION(long double, fmaximum_magl, (long double x, long double y)) {
 }
 
 } // namespace LIBC_NAMESPACE
-

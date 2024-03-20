@@ -1,4 +1,5 @@
-//===-- Implementation of the fminimum_mag_numl function for GPU -----------------------===//
+//===-- Implementation of the fminimum_mag_numl function for GPU
+//-----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +15,8 @@
 
 namespace LIBC_NAMESPACE {
 
-  LLVM_LIBC_FUNCTION(long double, fminimum_mag_numl, (long double x, long double y)) {
+LLVM_LIBC_FUNCTION(long double, fminimum_mag_numl,
+                   (long double x, long double y)) {
   return __builtin_fminimum_mag_num(x, y);
 }
 

@@ -1,4 +1,5 @@
-//===-- Utility class to test fminimum_num[f|l] -------------------------*- C++ -*-===//
+//===-- Utility class to test fminimum_num[f|l] -------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +13,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-template <typename T> class FMinimumNumTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FMinimumNumTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -54,7 +56,7 @@ public:
 
   void testRange(FMinimumNumFunc func) {
     constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP = STORAGE_MAX/ COUNT;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
       FPBits xbits(v), ybits(w);
@@ -76,12 +78,12 @@ public:
   }
 };
 
-#define LIST_FMINIMUM_NUM_TESTS(T, func)                                               \
-  using LlvmLibcFMinimumNumTest = FMinimumNumTest<T>;                                        \
-  TEST_F(LlvmLibcFMinimumNumTest, NaN) { testNaN(&func); }                            \
-  TEST_F(LlvmLibcFMinimumNumTest, InfArg) { testInfArg(&func); }                      \
-  TEST_F(LlvmLibcFMinimumNumTest, NegInfArg) { testNegInfArg(&func); }                \
-  TEST_F(LlvmLibcFMinimumNumTest, BothZero) { testBothZero(&func); }                  \
+#define LIST_FMINIMUM_NUM_TESTS(T, func)                                       \
+  using LlvmLibcFMinimumNumTest = FMinimumNumTest<T>;                          \
+  TEST_F(LlvmLibcFMinimumNumTest, NaN) { testNaN(&func); }                     \
+  TEST_F(LlvmLibcFMinimumNumTest, InfArg) { testInfArg(&func); }               \
+  TEST_F(LlvmLibcFMinimumNumTest, NegInfArg) { testNegInfArg(&func); }         \
+  TEST_F(LlvmLibcFMinimumNumTest, BothZero) { testBothZero(&func); }           \
   TEST_F(LlvmLibcFMinimumNumTest, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINIMUMNUMTEST_H

@@ -1,4 +1,5 @@
-//===-- Utility class to test fmaximum[f|l] -------------------------*- C++ -*-===//
+//===-- Utility class to test fmaximum[f|l] -------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +13,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-template <typename T> class FMaximumTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FMaximumTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -76,12 +78,12 @@ public:
   }
 };
 
-#define LIST_FMAXIMUM_TESTS(T, func)                                               \
-  using LlvmLibcFMaximumTest = FMaximumTest<T>;                                        \
-  TEST_F(LlvmLibcFMaximumTest, NaN) { testNaN(&func); }                            \
-  TEST_F(LlvmLibcFMaximumTest, InfArg) { testInfArg(&func); }                      \
-  TEST_F(LlvmLibcFMaximumTest, NegInfArg) { testNegInfArg(&func); }                \
-  TEST_F(LlvmLibcFMaximumTest, BothZero) { testBothZero(&func); }                  \
+#define LIST_FMAXIMUM_TESTS(T, func)                                           \
+  using LlvmLibcFMaximumTest = FMaximumTest<T>;                                \
+  TEST_F(LlvmLibcFMaximumTest, NaN) { testNaN(&func); }                        \
+  TEST_F(LlvmLibcFMaximumTest, InfArg) { testInfArg(&func); }                  \
+  TEST_F(LlvmLibcFMaximumTest, NegInfArg) { testNegInfArg(&func); }            \
+  TEST_F(LlvmLibcFMaximumTest, BothZero) { testBothZero(&func); }              \
   TEST_F(LlvmLibcFMaximumTest, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXIMUMTEST_H

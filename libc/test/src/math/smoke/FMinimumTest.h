@@ -1,4 +1,5 @@
-//===-- Utility class to test fminimum[f|l] -------------------------*- C++ -*-===//
+//===-- Utility class to test fminimum[f|l] -------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +13,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-template <typename T> class FMinimumTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FMinimumTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -76,12 +78,12 @@ public:
   }
 };
 
-#define LIST_FMINIMUM_TESTS(T, func)                                               \
-  using LlvmLibcFMinimumTest = FMinimumTest<T>;                                        \
-  TEST_F(LlvmLibcFMinimumTest, NaN) { testNaN(&func); }                            \
-  TEST_F(LlvmLibcFMinimumTest, InfArg) { testInfArg(&func); }                      \
-  TEST_F(LlvmLibcFMinimumTest, NegInfArg) { testNegInfArg(&func); }                \
-  TEST_F(LlvmLibcFMinimumTest, BothZero) { testBothZero(&func); }                  \
+#define LIST_FMINIMUM_TESTS(T, func)                                           \
+  using LlvmLibcFMinimumTest = FMinimumTest<T>;                                \
+  TEST_F(LlvmLibcFMinimumTest, NaN) { testNaN(&func); }                        \
+  TEST_F(LlvmLibcFMinimumTest, InfArg) { testInfArg(&func); }                  \
+  TEST_F(LlvmLibcFMinimumTest, NegInfArg) { testNegInfArg(&func); }            \
+  TEST_F(LlvmLibcFMinimumTest, BothZero) { testBothZero(&func); }              \
   TEST_F(LlvmLibcFMinimumTest, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINIMUMTEST_H

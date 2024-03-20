@@ -1,4 +1,5 @@
-//===-- Utility class to test fminimum_mag_num[f|l] -------------------------*- C++ -*-===//
+//===-- Utility class to test fminimum_mag_num[f|l] -------------------------*-
+//C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,11 +10,12 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINIMUMMAG_NUMTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINIMUMMAG_NUMTEST_H
 
+#include "src/__support/FPUtil/BasicOperations.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "src/__support/FPUtil/BasicOperations.h"
 
-template <typename T> class FMinimumMagNumTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FMinimumMagNumTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -77,12 +79,12 @@ public:
   }
 };
 
-#define LIST_FMINIMUM_MAG_NUM_TESTS(T, func)                                               \
-  using LlvmLibcFMinimumMagNumTest = FMinimumMagNumTest<T>;                                        \
-  TEST_F(LlvmLibcFMinimumMagNumTest, NaN) { testNaN(&func); }                            \
-  TEST_F(LlvmLibcFMinimumMagNumTest, InfArg) { testInfArg(&func); }                      \
-  TEST_F(LlvmLibcFMinimumMagNumTest, NegInfArg) { testNegInfArg(&func); }                \
-  TEST_F(LlvmLibcFMinimumMagNumTest, BothZero) { testBothZero(&func); }                  \
+#define LIST_FMINIMUM_MAG_NUM_TESTS(T, func)                                   \
+  using LlvmLibcFMinimumMagNumTest = FMinimumMagNumTest<T>;                    \
+  TEST_F(LlvmLibcFMinimumMagNumTest, NaN) { testNaN(&func); }                  \
+  TEST_F(LlvmLibcFMinimumMagNumTest, InfArg) { testInfArg(&func); }            \
+  TEST_F(LlvmLibcFMinimumMagNumTest, NegInfArg) { testNegInfArg(&func); }      \
+  TEST_F(LlvmLibcFMinimumMagNumTest, BothZero) { testBothZero(&func); }        \
   TEST_F(LlvmLibcFMinimumMagNumTest, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINIMUMMAG_NUMTEST_H

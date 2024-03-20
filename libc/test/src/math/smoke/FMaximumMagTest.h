@@ -1,4 +1,5 @@
-//===-- Utility class to test fmaximum_mag[f|l] -------------------------*- C++ -*-===//
+//===-- Utility class to test fmaximum_mag[f|l] -------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,11 +10,12 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXIMUM_MAGTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXIMUM_MAGTEST_H
 
+#include "src/__support/FPUtil/BasicOperations.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "src/__support/FPUtil/BasicOperations.h"
 
-template <typename T> class FMaximumMagTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FMaximumMagTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -77,12 +79,12 @@ public:
   }
 };
 
-#define LIST_FMAXIMUM_MAG_TESTS(T, func)                                               \
-  using LlvmLibcFMaximumMagTest = FMaximumMagTest<T>;                                        \
-  TEST_F(LlvmLibcFMaximumMagTest, NaN) { testNaN(&func); }                            \
-  TEST_F(LlvmLibcFMaximumMagTest, InfArg) { testInfArg(&func); }                      \
-  TEST_F(LlvmLibcFMaximumMagTest, NegInfArg) { testNegInfArg(&func); }                \
-  TEST_F(LlvmLibcFMaximumMagTest, BothZero) { testBothZero(&func); }                  \
+#define LIST_FMAXIMUM_MAG_TESTS(T, func)                                       \
+  using LlvmLibcFMaximumMagTest = FMaximumMagTest<T>;                          \
+  TEST_F(LlvmLibcFMaximumMagTest, NaN) { testNaN(&func); }                     \
+  TEST_F(LlvmLibcFMaximumMagTest, InfArg) { testInfArg(&func); }               \
+  TEST_F(LlvmLibcFMaximumMagTest, NegInfArg) { testNegInfArg(&func); }         \
+  TEST_F(LlvmLibcFMaximumMagTest, BothZero) { testBothZero(&func); }           \
   TEST_F(LlvmLibcFMaximumMagTest, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXIMUM_MAGTEST_H
