@@ -67,6 +67,7 @@ config_setting(
 libc_support_library(
     name = "llvm_libc_macros_math_macros",
     hdrs = ["include/llvm-libc-macros/math-macros.h"],
+    deps = [":llvm_libc_macros_limits_macros"],
 )
 
 libc_support_library(
