@@ -35,7 +35,12 @@
 
 // The ELF ID should be defined at compile-time by the build system.
 #ifndef TARGET_ELF_ID
-#define TARGET_ELF_ID ELF::EM_NONE
+#define TARGET_ELF_ID EM_NONE
+#endif
+
+// The target triple should be defined at compile-time by the build system.
+#ifndef LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE
+#define LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE ""
 #endif
 
 namespace llvm {
@@ -395,7 +400,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   Error deinitImpl() override { return Plugin::success(); }
 
   /// Get the ELF code to recognize the compatible binary images.
-  uint16_t getMagicElfBits() const override { return TARGET_ELF_ID; }
+  uint16_t getMagicElfBits() const override { return ELF::TARGET_ELF_ID; }
 
   /// This plugin does not support exchanging data between two devices.
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
@@ -406,7 +411,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   Expected<bool> isELFCompatible(StringRef) const override { return true; }
 
   Triple::ArchType getTripleArch() const override {
-    return Triple::LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE;
+    return llvm::Triple(LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE).getArch();
   }
 };
 
