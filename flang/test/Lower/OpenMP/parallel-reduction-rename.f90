@@ -14,7 +14,7 @@ end program main
 
 ! test that we understood that this should be a max reduction
 
-! CHECK-LABEL:   omp.reduction.declare @max_i_32 : i32 init {
+! CHECK-LABEL:   omp.declare_reduction @max_i_32 : i32 init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: i32):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant -2147483648 : i32
 ! CHECK:           omp.yield(%[[VAL_1]] : i32)

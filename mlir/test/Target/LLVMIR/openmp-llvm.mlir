@@ -1191,7 +1191,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
 
   // CHECK: [[OMP_THREAD:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
   // CHECK-NEXT:  call void @__kmpc_ordered(ptr @[[GLOB1]], i32 [[OMP_THREAD]])
-  omp.ordered_region {
+  omp.ordered.region {
     omp.terminator
   // CHECK: call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[OMP_THREAD]])
   }
@@ -1199,7 +1199,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
   omp.wsloop ordered(0)
   for (%arg7) : i32 = (%arg0) to (%arg1) step (%arg2) {
     // CHECK:  call void @__kmpc_ordered(ptr @[[GLOB3:[0-9]+]], i32 [[OMP_THREAD2:%.*]])
-    omp.ordered_region  {
+    omp.ordered.region  {
       omp.terminator
     // CHECK: call void @__kmpc_end_ordered(ptr @[[GLOB3]], i32 [[OMP_THREAD2]])
     }

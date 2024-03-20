@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-hlfir -fopenmp --force-byref-reduction %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --force-byref-reduction %s -o - | FileCheck %s
 
-! CHECK-LABEL:   omp.reduction.declare @add_reduction_f_64_byref : !fir.ref<f64>
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_f_64_byref : !fir.ref<f64>
 ! CHECK-SAME:    init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<f64>):
 ! CHECK:            %[[C0_1:.*]] = arith.constant 0.000000e+00 : f64
@@ -18,7 +18,7 @@
 ! CHECK:           omp.yield(%[[ARG0]] : !fir.ref<f64>)
 ! CHECK:         }
 
-! CHECK-LABEL:   omp.reduction.declare @add_reduction_i_64_byref : !fir.ref<i64>
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_i_64_byref : !fir.ref<i64>
 ! CHECK-SAME:    init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i64>):
 ! CHECK:            %[[C0_1:.*]] = arith.constant 0 : i64
@@ -35,7 +35,7 @@
 ! CHECK:           omp.yield(%[[ARG0]] : !fir.ref<i64>)
 ! CHECK:         }
 
-! CHECK-LABEL:   omp.reduction.declare @add_reduction_f_32_byref : !fir.ref<f32>
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_f_32_byref : !fir.ref<f32>
 ! CHECK-SAME:    init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<f32>):
 ! CHECK:            %[[C0_1:.*]] = arith.constant 0.000000e+00 : f32
@@ -52,7 +52,7 @@
 ! CHECK:           omp.yield(%[[ARG0]] : !fir.ref<f32>)
 ! CHECK:         }
 
-! CHECK-LABEL:   omp.reduction.declare @add_reduction_i_32_byref : !fir.ref<i32>
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_i_32_byref : !fir.ref<i32>
 ! CHECK-SAME:    init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
 ! CHECK:            %[[C0_1:.*]] = arith.constant 0 : i32

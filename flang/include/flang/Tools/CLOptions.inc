@@ -124,7 +124,7 @@ static void addCanonicalizerPassWithoutRegionSimplification(
 inline void addCfgConversionPass(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(
       pm, disableCfgConversion, fir::createFirToCfgOnFuncPass);
-  addNestedPassConditionally<mlir::omp::ReductionDeclareOp>(
+  addNestedPassConditionally<mlir::omp::DeclareReductionOp>(
       pm, disableCfgConversion, fir::createFirToCfgOnReductionPass);
 }
 
