@@ -99,7 +99,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double2 abs(double2);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double3 abs(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+_HLSL_ELEMENTWISE_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double4 abs(double4);
 
 //===----------------------------------------------------------------------===//
