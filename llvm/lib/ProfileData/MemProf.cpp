@@ -3,8 +3,10 @@
 #include "llvm/IR/Function.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/HashBuilder.h"
 
 namespace llvm {
 namespace memprof {
@@ -117,33 +119,27 @@ Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer) {
   return Result;
 }
 
-// Verify that the set of CallStackIds and the set of call stacks have
-// one-to-one correspondence.  This function is intended to help transition from
-// CallStack to CSId in IndexedAllocationInfo.
+CallStackId hashCallStack(ArrayRef<FrameId> CS) {
+  llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
+      HashBuilder;
+  for (FrameId F : CS)
+    HashBuilder.add(F);
+  llvm::BLAKE3Result<8> Hash = HashBuilder.final();
+  CallStackId CSId;
+  std::memcpy(&CSId, Hash.data(), sizeof(Hash));
+  return CSId;
+}
+
 void verifyFunctionProfileData(
     const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>
         &FunctionProfileData) {
-  DenseMap<CallStackId, SmallVector<FrameId>> CSIdToCS;
-  std::map<llvm::SmallVector<FrameId>, CallStackId> CSToCSId;
   for (const auto &[GUID, Record] : FunctionProfileData) {
     (void)GUID;
     for (const auto &AS : Record.AllocSites) {
-      auto Result = CSToCSId.insert({AS.CallStack, AS.CSId});
-      if (!Result.second) {
-        assert(Result.first->second == AS.CSId);
-      }
-      auto Result2 = CSIdToCS.insert({AS.CSId, AS.CallStack});
-      if (!Result2.second) {
-        const auto &Other = Result2.first->second;
-        assert(Other.size() == AS.CallStack.size());
-        (void)Other;
-        for (size_t I = 0, E = AS.CallStack.size(); I != E; ++I) {
-          assert(Other[I] == AS.CallStack[I]);
-        }
-      }
+      assert(AS.CSId == hashCallStack(AS.CallStack));
+      (void)AS;
     }
   }
-  assert(CSIdToCS.size() == CSToCSId.size());
 }
 
 } // namespace memprof

@@ -402,9 +402,6 @@ Error RawMemProfReader::mapRawProfileToRecords() {
   llvm::MapVector<GlobalValue::GUID, llvm::SetVector<LocationPtr>>
       PerFunctionCallSites;
 
-  // Hold a mapping from callstack to its CallStackID.
-  std::map<llvm::SmallVector<FrameId>, CallStackId> CallStackToCallStackId;
-
   // Convert the raw profile callstack data into memprof records. While doing so
   // keep track of related contexts so that we can fill these in later.
   for (const auto &Entry : CallstackProfileData) {
@@ -448,11 +445,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       Callstack.append(Frames.begin(), Frames.end());
     }
 
-    auto InsertResult =
-        CallStackToCallStackId.insert({Callstack, CallStacks.size()});
-    if (InsertResult.second)
-      CallStacks.push_back(Callstack);
-    CallStackId CSId = InsertResult.first->second;
+    CallStackId CSId = hashCallStack(Callstack);
 
     // We attach the memprof record to each function bottom-up including the
     // first non-inline frame.
@@ -479,9 +472,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     }
   }
 
-#ifdef EXPENSIVE_CHECKS
   verifyFunctionProfileData(FunctionProfileData);
-#endif
 
   return Error::success();
 }

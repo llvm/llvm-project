@@ -632,8 +632,12 @@ public:
   }
 };
 
-// Verify that the set of CallStackIds and the set of call stacks have
-// one-to-one correspondence.
+// Compute a CallStackId for a given call stack.
+CallStackId hashCallStack(ArrayRef<FrameId> CS);
+
+// Verify that each CallStackId is computed with hashCallStack.  This function
+// is intended to help transition from CallStack to CSId in
+// IndexedAllocationInfo.
 void verifyFunctionProfileData(
     const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>
         &FunctionProfileData);
