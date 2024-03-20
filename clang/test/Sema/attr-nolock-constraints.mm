@@ -146,3 +146,45 @@ void nl12() {
 }
 void nl12() [[clang::nolock]];
 void nl13() [[clang::nolock]] { nl12(); }
+
+// Objective-C
+@interface OCClass
+- (void)method;
+@end
+
+void nl14(OCClass *oc) [[clang::nolock]] {
+	[oc method]; // expected-warning {{'nolock' function must not access an ObjC method or property}}
+}
+void nl15(OCClass *oc) {
+	[oc method]; // expected-note {{function cannot be inferred 'nolock' because it accesses an ObjC method or property}}
+}
+void nl16(OCClass *oc) [[clang::nolock]] {
+	nl15(oc); // expected-warning {{'nolock' function must not call non-'nolock' function 'nl15'}}
+}
+
+// C++ member function pointers
+struct PTMFTester {
+	typedef void (PTMFTester::*ConvertFunction)() [[clang::nolock]];
+
+	void convert() [[clang::nolock]];
+
+	ConvertFunction mConvertFunc;
+};
+
+void PTMFTester::convert() [[clang::nolock]]
+{
+	(this->*mConvertFunc)();
+}
+
+// Block variables
+void nl17(void (^blk)() [[clang::nolock]]) [[clang::nolock]] {
+	blk();
+}
+
+// References to blocks
+void nl18(void (^block)() [[clang::nolock]]) [[clang::nolock]]
+{
+	auto &ref = block;
+	ref();
+}
+

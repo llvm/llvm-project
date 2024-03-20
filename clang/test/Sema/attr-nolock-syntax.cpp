@@ -53,6 +53,15 @@ void nl2() [[clang::noalloc]] [[clang::nolock]];
 decltype(nl1) nl3;
 // CHECK: FunctionDecl {{.*}} nl3 'decltype(nl1)':'void () __attribute__((clang_nolock))'
 
+// Attribute propagates from base class virtual method to overrides.
+struct Base {
+	virtual void nl_method() [[clang::nolock]];
+};
+struct Derived : public Base {
+	void nl_method() override;
+	// CHECK: CXXMethodDecl {{.*}} nl_method 'void () __attribute__((clang_nolock))'
+};
+
 // --- Blocks ---
 
 // On the type of the VarDecl holding a BlockDecl

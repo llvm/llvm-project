@@ -2389,6 +2389,12 @@ public:
 
 namespace FXAnalysis {
 
+#define tmp_assert(x)                                                          \
+  do {                                                                         \
+    if (!(x))                                                                  \
+      __builtin_trap();                                                        \
+  } while (0)
+
 enum class DiagnosticID : uint8_t {
   None = 0, // sentinel for an empty Diagnostic
   Throws,
@@ -2445,6 +2451,7 @@ static bool functionIsVerifiable(const FunctionDecl *FD) {
 // Transitory, more extended information about a callable, which can be a
 // function, block, function pointer...
 struct CallableInfo {
+  // CDecl holds the function's definition, if any.
   const Decl *CDecl;
   mutable std::optional<std::string>
       MaybeName; // mutable because built on demand in const method
@@ -2461,10 +2468,6 @@ struct CallableInfo {
       // Use the function's definition, if any.
       if (auto *Def = FD->getDefinition()) {
         CDecl = FD = Def;
-        // is the definition always canonical?
-        assert(FD->getCanonicalDecl() == FD);
-      } else {
-        FD = FD->getCanonicalDecl();
       }
       CType = CallType::Function;
       if (auto *Method = dyn_cast<CXXMethodDecl>(FD)) {
@@ -2481,7 +2484,7 @@ struct CallableInfo {
     } else if (auto *VD = dyn_cast<ValueDecl>(CDecl)) {
       // ValueDecl is function, enum, or variable, so just look at the type.
       QT = VD->getType();
-      Effects = FunctionEffectSet::get(*QT);
+      Effects = FunctionEffectSet::get(QT);
     }
   }
 
@@ -2580,8 +2583,19 @@ class PendingFunctionAnalysis {
   friend class CompleteFunctionAnalysis;
 
   struct DirectCall {
-    const Decl *Callee;
+    // Pack a Decl* and a bool indicating whether the call was detected
+    // to be recursive. Not all recursive calls are detected, just enough
+    // to break cycles.
+    llvm::PointerIntPair<const Decl *, 1> CalleeAndRecursed;
     SourceLocation CallLoc;
+
+    DirectCall(const Decl *D, SourceLocation CallLoc)
+        : CalleeAndRecursed(D), CallLoc(CallLoc) {}
+
+    const Decl *callee() const { return CalleeAndRecursed.getPointer(); }
+    bool recursed() const { return CalleeAndRecursed.getInt(); }
+
+    void setRecursed() { CalleeAndRecursed.setInt(1); }
   };
 
 public:
@@ -2664,7 +2678,7 @@ public:
     if (UnverifiedDirectCalls == nullptr) {
       UnverifiedDirectCalls = std::make_unique<SmallVector<DirectCall>>();
     }
-    UnverifiedDirectCalls->emplace_back(DirectCall{D, CallLoc});
+    UnverifiedDirectCalls->emplace_back(D, CallLoc);
   }
 
   // Analysis is complete when there are no unverified direct calls.
@@ -2676,8 +2690,8 @@ public:
     return InferrableEffectToFirstDiagnostic.lookup(effect);
   }
 
-  const SmallVector<DirectCall> &unverifiedCalls() const {
-    assert(!isComplete());
+  SmallVector<DirectCall> &unverifiedCalls() const {
+    tmp_assert(!isComplete());
     return *UnverifiedDirectCalls;
   }
 
@@ -2685,7 +2699,8 @@ public:
     return DiagnosticsForExplicitFX.get();
   }
 
-  void dump(llvm::raw_ostream &OS) const {
+  // If Sema is supplied, prints names of unverified direct calls
+  void dump(llvm::raw_ostream &OS, Sema *SemPtr = nullptr) const {
     OS << "Pending: Declared ";
     DeclaredVerifiableEffects.dump(OS);
     OS << ", "
@@ -2693,7 +2708,15 @@ public:
        << " diags; ";
     OS << " Infer ";
     FXToInfer.dump(OS);
-    OS << ", " << InferrableEffectToFirstDiagnostic.size() << " diags\n";
+    OS << ", " << InferrableEffectToFirstDiagnostic.size() << " diags";
+    if (SemPtr && UnverifiedDirectCalls) {
+      OS << "; Calls: ";
+      for (const auto &Call : *UnverifiedDirectCalls) {
+        CallableInfo CI(*Call.callee());
+        OS << " " << CI.name(*SemPtr);
+      }
+    }
+    OS << "\n";
   }
 };
 
@@ -2753,15 +2776,23 @@ public:
         }
 */
 
+const Decl *CanonicalFunctionDecl(const Decl *D) {
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    FD = FD->getCanonicalDecl();
+    tmp_assert(FD != nullptr);
+    return FD;
+  }
+  return D;
+}
+
 // ==========
 class Analyzer {
   constexpr static int DebugLogLevel = 0;
-
   // --
   Sema &Sem;
 
   // used from Sema:
-  //  SmallVector<const Decl *> DeclsWithEffectsToVerify
+  //  SmallVector<const Decl *> CallablesWithEffectsToVerify
 
   // Subset of Sema.AllEffectsToVerify
   FunctionEffectSet AllInferrableEffectsToVerify;
@@ -2772,11 +2803,22 @@ class Analyzer {
   // Map all Decls analyzed to FuncAnalysisPtr. Pending state is larger
   // than complete state, so use different objects to represent them.
   // The state pointers are owned by the container.
-  struct AnalysisMap : public llvm::DenseMap<const Decl *, FuncAnalysisPtr> {
+  class AnalysisMap : protected llvm::DenseMap<const Decl *, FuncAnalysisPtr> {
+    using Base = llvm::DenseMap<const Decl *, FuncAnalysisPtr>;
 
+  public:
     ~AnalysisMap();
 
-    // use lookup()
+    // Use non-public inheritance in order to maintain the invariant
+    // that lookups and insertions are via the canonical Decls.
+
+    FuncAnalysisPtr lookup(const Decl *Key) const {
+      return Base::lookup(CanonicalFunctionDecl(Key));
+    }
+
+    FuncAnalysisPtr &operator[](const Decl *Key) {
+      return Base::operator[](CanonicalFunctionDecl(Key));
+    }
 
     /// Shortcut for the case where we only care about completed analysis.
     CompleteFunctionAnalysis *completedAnalysisForDecl(const Decl *D) const {
@@ -2789,7 +2831,7 @@ class Analyzer {
     }
 
     void dump(Sema &S, llvm::raw_ostream &OS) {
-      OS << "AnalysisMap:\n";
+      OS << "\nAnalysisMap:\n";
       for (const auto &item : *this) {
         CallableInfo CI(*item.first);
         const auto AP = item.second;
@@ -2807,6 +2849,7 @@ class Analyzer {
         } else
           llvm_unreachable("never");
       }
+      OS << "---\n";
     }
   };
   AnalysisMap DeclAnalysis;
@@ -2839,7 +2882,7 @@ public:
 
     SmallVector<const Decl *> &verifyQueue = Sem.DeclsWithEffectsToVerify;
 
-    // It's helpful to use DeclsWithEffectsToVerify as a stack for a
+    // It's helpful to use CallablesWithEffectsToVerify as a stack for a
     // depth-first traversal rather than have a secondary container. But first,
     // reverse it, so Decls are verified in the order they are declared.
     std::reverse(verifyQueue.begin(), verifyQueue.end());
@@ -2869,19 +2912,21 @@ public:
         continue;
       }
 
-      for (const auto &Call : Pending->unverifiedCalls()) {
+      for (auto &Call : Pending->unverifiedCalls()) {
         // This lookup could be optimized out if the results could have been
         // saved from followCall when we traversed the caller's AST. It would
         // however make the check for recursion more complex.
-        auto AP = DeclAnalysis.lookup(Call.Callee);
+        auto AP = DeclAnalysis.lookup(Call.callee());
         if (AP.isNull()) {
-          verifyQueue.push_back(Call.Callee);
+          verifyQueue.push_back(Call.callee());
           continue;
         }
         if (isa<PendingFunctionAnalysis *>(AP)) {
-          // $$$$$$$$$$$$$$$$$$$$$$$ recursion $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-          // TODO
-          __builtin_trap();
+          // This indicates recursion (not necessarily direct). For the
+          // purposes of effect analysis, we can just ignore it since
+          // no effects forbid recursion.
+          Call.setRecursed();
+          continue;
         }
         llvm_unreachable("unexpected DeclAnalysis item");
       }
@@ -2892,13 +2937,8 @@ private:
   // Verify a single Decl. Return the pending structure if that was the result,
   // else null. This method must not recurse.
   PendingFunctionAnalysis *verifyDecl(const Decl *D) {
-    // TODO: Is this in the right place?
-    const FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
-    if (FD != nullptr) {
-      // Currently, built-in functions are always considered safe.
-      if (FD->getBuiltinID() != 0) {
-        return nullptr;
-      }
+    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+      tmp_assert(FD->getBuiltinID() == 0);
     }
     CallableInfo CInfo(*D);
 
@@ -2951,8 +2991,16 @@ private:
   // the possibility of inference.
   void finishPendingAnalysis(const Decl *D, PendingFunctionAnalysis *Pending) {
     CallableInfo Caller(*D);
+    if constexpr (DebugLogLevel > 0) {
+      llvm::outs() << "finishPendingAnalysis for " << Caller.name(Sem) << " : ";
+      Pending->dump(llvm::outs(), &Sem);
+      llvm::outs() << "\n";
+    }
     for (const auto &Call : Pending->unverifiedCalls()) {
-      CallableInfo Callee(*Call.Callee);
+      if (Call.recursed())
+        continue;
+
+      CallableInfo Callee(*Call.callee());
       followCall(Caller, *Pending, Callee, Call.CallLoc,
                  /*AssertNoFurtherInference=*/true);
     }
@@ -2966,17 +3014,22 @@ private:
                   const CallableInfo &Callee, SourceLocation CallLoc,
                   bool AssertNoFurtherInference) {
     const bool DirectCall = Callee.isDirectCall();
+
+    // These will be its declared effects.
     FunctionEffectSet CalleeEffects = Callee.Effects;
+
     bool IsInferencePossible = DirectCall;
 
     if (DirectCall) {
       if (auto *CFA = DeclAnalysis.completedAnalysisForDecl(Callee.CDecl)) {
-        CalleeEffects = CFA->VerifiedEffects;
+        // Combine declared effects with those which may have been inferred.
+        CalleeEffects = FunctionEffectSet::getUnion(
+            Sem.getASTContext(), CalleeEffects, CFA->VerifiedEffects);
         IsInferencePossible = false; // we've already traversed it
       }
     }
     if (AssertNoFurtherInference) {
-      assert(!IsInferencePossible);
+      tmp_assert(!IsInferencePossible);
     }
     if (!Callee.isVerifiable()) {
       IsInferencePossible = false;
@@ -2986,6 +3039,12 @@ private:
                    << Callee.name(Sem)
                    << "; verifiable: " << Callee.isVerifiable() << "; callee ";
       CalleeEffects.dump(llvm::outs());
+      llvm::outs() << "\n";
+      llvm::outs() << "  callee " << Callee.CDecl << " canonical "
+                   << CanonicalFunctionDecl(Callee.CDecl) << " redecls";
+      for (auto *D : Callee.CDecl->redecls()) {
+        llvm::outs() << " " << D;
+      }
       llvm::outs() << "\n";
     }
 
@@ -3027,14 +3086,11 @@ private:
   // Should only be called when determined to be complete.
   void emitDiagnostics(SmallVector<Diagnostic> &Diags,
                        const CallableInfo &CInfo, Sema &S) {
-#define UNTESTED __builtin_trap();
-#define TESTED
     const SourceManager &SM = S.getSourceManager();
     std::sort(Diags.begin(), Diags.end(),
               [&SM](const Diagnostic &LHS, const Diagnostic &RHS) {
                 return SM.isBeforeInTranslationUnit(LHS.Loc, RHS.Loc);
               });
-
 
     // TODO: Can we get better template instantiation notes?
     auto checkAddTemplateNote = [&](const Decl *D) {
@@ -3057,48 +3113,40 @@ private:
         llvm_unreachable("Unexpected diagnostic kind");
         break;
       case DiagnosticID::AllocatesMemory:
-        S.Diag(Diag.Loc, diag::warn_func_effect_allocates)
-            << effectName;
+        S.Diag(Diag.Loc, diag::warn_func_effect_allocates) << effectName;
         checkAddTemplateNote(CInfo.CDecl);
-        TESTED
         break;
       case DiagnosticID::Throws:
       case DiagnosticID::Catches:
         S.Diag(Diag.Loc, diag::warn_func_effect_throws_or_catches)
             << effectName;
         checkAddTemplateNote(CInfo.CDecl);
-        TESTED
         break;
       case DiagnosticID::HasStaticLocal:
-        S.Diag(Diag.Loc, diag::warn_func_effect_has_static_local)
-            << effectName;
+        S.Diag(Diag.Loc, diag::warn_func_effect_has_static_local) << effectName;
         checkAddTemplateNote(CInfo.CDecl);
-        TESTED
         break;
       case DiagnosticID::AccessesThreadLocal:
         S.Diag(Diag.Loc, diag::warn_func_effect_uses_thread_local)
             << effectName;
         checkAddTemplateNote(CInfo.CDecl);
-        TESTED
         break;
       case DiagnosticID::CallsObjC:
-        S.Diag(Diag.Loc, diag::warn_func_effect_calls_objc)
-            << effectName;
+        S.Diag(Diag.Loc, diag::warn_func_effect_calls_objc) << effectName;
         checkAddTemplateNote(CInfo.CDecl);
-        TESTED
         break;
       case DiagnosticID::CallsDisallowedExpr:
         S.Diag(Diag.Loc, diag::warn_func_effect_calls_disallowed_expr)
             << effectName;
         checkAddTemplateNote(CInfo.CDecl);
-        UNTESTED
         break;
 
       case DiagnosticID::CallsUnsafeDecl: {
         CallableInfo CalleeInfo{*Diag.Callee};
+        auto CalleeName = CalleeInfo.name(S);
 
         S.Diag(Diag.Loc, diag::warn_func_effect_calls_disallowed_func)
-            << effectName;
+            << effectName << CalleeName;
         checkAddTemplateNote(CInfo.CDecl);
 
         // Emit notes explaining the transitive chain of inferences: Why isn't
@@ -3114,16 +3162,13 @@ private:
             if (CalleeInfo.CType == CallType::Virtual) {
               S.Diag(Callee->getLocation(), diag::note_func_effect_call_virtual)
                   << effectName;
-              TESTED
             } else if (CalleeInfo.CType == CallType::Unknown) {
               S.Diag(Callee->getLocation(),
                      diag::note_func_effect_call_func_ptr)
                   << effectName;
-              TESTED
             } else {
               S.Diag(Callee->getLocation(), diag::note_func_effect_call_extern)
                   << effectName;
-              TESTED
             }
             break;
           }
@@ -3140,50 +3185,41 @@ private:
           case DiagnosticID::DeclWithoutConstraintOrInference:
             S.Diag(Diag2.Loc, diag::note_func_effect_call_not_inferrable)
                 << effectName;
-            TESTED
             break;
           case DiagnosticID::CallsDisallowedExpr:
             S.Diag(Diag2.Loc, diag::note_func_effect_call_func_ptr)
                 << effectName;
-            UNTESTED
             break;
           case DiagnosticID::AllocatesMemory:
-            S.Diag(Diag2.Loc, diag::note_func_effect_allocates)
-                << effectName;
-            TESTED
+            S.Diag(Diag2.Loc, diag::note_func_effect_allocates) << effectName;
             break;
           case DiagnosticID::Throws:
           case DiagnosticID::Catches:
             S.Diag(Diag2.Loc, diag::note_func_effect_throws_or_catches)
                 << effectName;
-            TESTED
             break;
           case DiagnosticID::HasStaticLocal:
             S.Diag(Diag2.Loc, diag::note_func_effect_has_static_local)
                 << effectName;
-            TESTED
             break;
           case DiagnosticID::AccessesThreadLocal:
             S.Diag(Diag2.Loc, diag::note_func_effect_uses_thread_local)
                 << effectName;
-            UNTESTED
             break;
           case DiagnosticID::CallsObjC:
-            S.Diag(Diag2.Loc, diag::note_func_effect_calls_objc)
-                << effectName;
-            UNTESTED
+            S.Diag(Diag2.Loc, diag::note_func_effect_calls_objc) << effectName;
             break;
           case DiagnosticID::CallsUnsafeDecl:
             MaybeNextCallee.emplace(*Diag2.Callee);
             S.Diag(Diag2.Loc, diag::note_func_effect_calls_disallowed_func)
-                << effectName;
-            TESTED
+                << effectName << MaybeNextCallee->name(S);
             break;
           }
           checkAddTemplateNote(Callee);
           Callee = Diag2.Callee;
           if (MaybeNextCallee) {
             CalleeInfo = *MaybeNextCallee;
+            CalleeName = CalleeInfo.name(S);
           }
         }
       } break;
@@ -3276,6 +3312,11 @@ private:
     // Here we have a call to a Decl, either explicitly via a CallExpr or some
     // other AST construct. CallableInfo pertains to the callee.
     void followCall(const CallableInfo &CI, SourceLocation CallLoc) {
+      if (const auto *FD = dyn_cast<FunctionDecl>(CI.CDecl)) {
+        // Currently, built-in functions are always considered safe.
+        if (FD->getBuiltinID() != 0)
+          return;
+      }
       Outer.followCall(CurrentCaller, CurrentFunction, CI, CallLoc,
                        /*AssertNoFurtherInference=*/false);
     }
@@ -3542,7 +3583,7 @@ private:
   };
 
 #if FX_ANALYZER_VERIFY_DECL_LIST
-  // Sema has accumulated DeclsWithEffectsToVerify. As a debug check, do our
+  // Sema has accumulated CallablesWithEffectsToVerify. As a debug check, do our
   // own AST traversal and see what we find.
 
   using MatchFinder = ast_matchers::MatchFinder;

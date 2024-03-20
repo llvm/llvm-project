@@ -10814,16 +10814,15 @@ def note_func_effect_calls_objc : Note<
   "function cannot be inferred '%0' because it accesses an ObjC method or property">;
 
 def warn_func_effect_calls_disallowed_func : Warning<
-  "'%0' function must not call non-'%0' function">,
+  "'%0' function must not call non-'%0' function '%1'">,
   InGroup<FunctionEffects>;
 
-// UNTESTED
 def warn_func_effect_calls_disallowed_expr : Warning<
   "'%0' function must not call non-'%0' expression">,
   InGroup<FunctionEffects>;
 
 def note_func_effect_calls_disallowed_func : Note<
-  "function cannot be inferred '%0' because it calls non-'%0' function">;
+  "function cannot be inferred '%0' because it calls non-'%0' function '%1'">;
 
 def note_func_effect_call_extern : Note<
   "function cannot be inferred '%0' because it has no definition in this translation unit">;
@@ -10850,11 +10849,6 @@ def warn_func_effect_false_on_type : Warning<
 // TODO: can the usual template expansion notes be used?
 def note_func_effect_from_template : Note<
   "in template expansion here">;
-
-// TODO: Needs to be tested
-def warn_incompatible_func_effects : Warning<
-  "attributes '%0' and '%1' are incompatible">,
-  InGroup<FunctionEffects>;
 
 // spoofing nolock/noalloc
 def warn_invalid_add_func_effects : Warning<

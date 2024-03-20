@@ -4,34 +4,80 @@
 #error "the 'nolock' attribute is not available"
 #endif
 
-// ============================================================================
 
-void f2(int);
-void f2(int) [[clang::nolock]]; // expected-note {{previous declaration is here}}
-void f2(int); // expected-warning {{attribute 'nolock' on function does not match previous declaration}}
+// The diagnostic for inference not following a non-inline method should override
+// the one for a virtual method.
+
+struct HasVirtual {
+	virtual ~HasVirtual() = default;
+	virtual void method();
+};
+
+void nl999(HasVirtual& x) [[clang::nolock]] {
+	x.method();
+}
+
+
+
+#if 0
+	using nl_sugar = int (*)(int) [[clang::nolock]];
+
+	void receives_fp_nl(nl_sugar fp) {
+	}
+	
+	int callback(int) noexcept [[clang::nolock]];
+
+void type_conversions_2()
+{
+	auto receives_fp = [](void (*fp)()) {
+	};
+	
+	//auto receives_fp_nl = [](void (*fp)() [[clang::nolock]]) {
+	//};
+
+	auto ne = +[]() noexcept {};
+	auto nl = +[]() [[clang::nolock]] {};
+	//auto nl_ne = +[](int x) noexcept [[clang::nolock]] -> int  { return x; };
+	
+	receives_fp(ne);
+	receives_fp(nl);
+// 	receives_fp(nl_ne);
+	
+	receives_fp_nl(callback);
+}
+#endif
+
+#if 0
+struct S {
+	void foo();
+	// void foo() noexcept; // error, redeclaration
+	// void foo() [[clang::nolock]]; // error, redeclaration
+	
+	using FP = void (*)();
+	using FPNE = void (*)() noexcept;
+	using FPNL = void (*)() [[clang::nolock]];
+	
+	void bar(FP x);
+	void bar(FPNE x);	// This is a distinct overload
+	void bar(FPNL x);	// This is a distinct overload
+};
+#endif
 
 // ============================================================================
 
 #if 0
-// https://github.com/llvm/llvm-project/pull/84983#issuecomment-1994978033
+#define RT_UNSAFE_BEGIN(reason)                                   \
+	_Pragma("clang diagnostic push")                                 \
+	_Pragma("clang diagnostic ignored \"-Wunknown-warning-option\"") \
+	_Pragma("clang diagnostic ignored \"-Wfunction-effects\"")
 
-// the bug where AttributedType sugar gets lost on lambdas (when the "inferred" return type gets
-// converted to a concrete one) happens here and the nolock(false) attribute is lost from h.
+#define RT_UNSAFE_END \
+	_Pragma("clang diagnostic pop")
 
-template <class T>
-void f(T a) [[clang::nolock]] { a(); }
-
-void m()
-{
-	auto g = []() [[clang::nolock]] {
-	};
-	
-	auto h = []() [[clang::nolock(false)]] {
-	};
-
-	f(g);
-	f(h);
-}
+#define RT_UNSAFE(...)  \
+	RT_UNSAFE_BEGIN("") \
+	__VA_ARGS__            \
+	RT_UNSAFE_END
 #endif
 
 // ============================================================================

@@ -18332,11 +18332,30 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
     for (const auto &Item : Diffs) {
       const FunctionEffect &Effect = Item.first;
       const bool Adding = Item.second;
-      if (Effect.diagnoseMethodOverride(Adding, *Old, OldFX, *New, NewFX)) {
+      switch (Effect.diagnoseMethodOverride(Adding, *Old, OldFX, *New, NewFX)) {
+      case FunctionEffect::OverrideResult::Ignore:
+        break;
+      case FunctionEffect::OverrideResult::Warn:
         Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
             << Effect.name();
         Diag(Old->getLocation(), diag::note_overridden_virtual_function);
+        // TODO: It would be nice to have a FIXIT here!
         AnyDiags = true;
+        break;
+      case FunctionEffect::OverrideResult::Propagate: {
+        auto MergedFX = FunctionEffectSet::getUnion(Context, OldFX, NewFX);
+
+        FunctionProtoType::ExtProtoInfo EPI = NewFT->getExtProtoInfo();
+        EPI.FunctionEffects = MergedFX;
+        QualType ModQT = Context.getFunctionType(NewFT->getReturnType(),
+                                                 NewFT->getParamTypes(), EPI);
+
+        // TODO: It's ugly to be mutating the incoming const method. It is
+        // mutable in the calling function, though. There is also the
+        // possibility here that we are discarding some other sort of sugar on
+        // the method's type.
+        const_cast<CXXMethodDecl *>(New)->setType(ModQT);
+      } break;
       }
     }
     if (AnyDiags)

@@ -4502,10 +4502,12 @@ unsigned FunctionDecl::getODRHash() {
   return ODRHash;
 }
 
-// Effects may differ between declarations, but they should be propagated from old
-// to new on any redeclaration, so it suffices to look at getMostRecentDecl().
+// Effects may differ between declarations, but they should be propagated from
+// old to new on any redeclaration, so it suffices to look at
+// getMostRecentDecl().
 FunctionEffectSet FunctionDecl::getFunctionEffects() const {
-  if (const auto *FPT = getMostRecentDecl()->getType()->getAs<FunctionProtoType>()) {
+  if (const auto *FPT =
+          getMostRecentDecl()->getType()->getAs<FunctionProtoType>()) {
     return FPT->getFunctionEffects();
   }
   return {};

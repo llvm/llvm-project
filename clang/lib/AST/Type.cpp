@@ -4922,7 +4922,8 @@ void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
           getTypeConstraintConcept(), getTypeConstraintArguments());
 }
 
-FunctionEffect::FunctionEffect(Type T) : Type_(unsigned(T)), Flags_(0) {
+FunctionEffect::FunctionEffect(Type T)
+    : Type_(unsigned(T)), Flags_(0), Padding(0) {
   switch (T) {
   case Type::NoLockTrue:
     Flags_ = FE_RequiresVerification | FE_VerifyCalls | FE_InferrableOnCallees |
@@ -4994,21 +4995,19 @@ bool FunctionEffect::diagnoseRedeclaration(bool Adding,
   return false;
 }
 
-bool FunctionEffect::diagnoseMethodOverride(bool Adding,
-                                            const CXXMethodDecl &OldMethod,
-                                            FunctionEffectSet OldFX,
-                                            const CXXMethodDecl &NewMethod,
-                                            FunctionEffectSet NewFX) const {
+FunctionEffect::OverrideResult FunctionEffect::diagnoseMethodOverride(
+    bool Adding, const CXXMethodDecl &OldMethod, FunctionEffectSet OldFX,
+    const CXXMethodDecl &NewMethod, FunctionEffectSet NewFX) const {
   switch (type()) {
   case Type::NoAllocTrue:
   case Type::NoLockTrue:
     // nolock/noalloc can't be removed from an override
     // adding -> false, removing -> true (diagnose)
-    return !Adding;
+    return Adding ? OverrideResult::Ignore : OverrideResult::Propagate;
   default:
     break;
   }
-  return false;
+  return OverrideResult::Ignore;
 }
 
 bool FunctionEffect::canInferOnFunction(QualType QT,
@@ -5062,7 +5061,7 @@ MutableFunctionEffectSet::MutableFunctionEffectSet(
 
 void MutableFunctionEffectSet::insert(const FunctionEffect &Effect) {
   const auto &Iter = std::lower_bound(begin(), end(), Effect);
-  if (*Iter != Effect) {
+  if (Iter == end() || *Iter != Effect) {
     insert(Iter, Effect);
   }
 }
@@ -5112,12 +5111,23 @@ FunctionEffectSet::operator&(const FunctionEffectSet &RHS) const {
 }
 
 // TODO: inline?
-FunctionEffectSet FunctionEffectSet::get(const Type &TyRef) {
-  const Type *Ty = &TyRef;
-  if (Ty->isPointerType())
-    Ty = Ty->getPointeeType().getTypePtr();
-  if (const auto *FPT = Ty->getAs<FunctionProtoType>())
+FunctionEffectSet FunctionEffectSet::get(QualType QT) {
+  if (QT->isReferenceType())
+    QT = QT.getNonReferenceType();
+  if (QT->isPointerType())
+    QT = QT->getPointeeType();
+
+  if (const auto *BT = QT->getAs<BlockPointerType>()) {
+    QT = BT->getPointeeType();
+  } else if (const auto *MP = QT->getAs<MemberPointerType>()) {
+    if (MP->isMemberFunctionPointer()) {
+      QT = MP->getPointeeType();
+    }
+  }
+
+  if (const auto *FPT = QT->getAs<FunctionProtoType>())
     return FPT->getFunctionEffects();
+
   return {};
 }
 

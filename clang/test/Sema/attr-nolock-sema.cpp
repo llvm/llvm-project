@@ -59,18 +59,37 @@ void type_conversions()
 	fp_noalloc = unannotated; // expected-warning {{attribute 'noalloc' should not be added via type conversion}}
 }
 
+#ifdef __cplusplus
+// There was a bug: noexcept and nolock could be individually removed in conversion, but not both	
+void type_conversions_2()
+{
+	auto receives_fp = [](void (*fp)()) {
+	};
+	
+	auto ne = +[]() noexcept {};
+	auto nl = +[]() [[clang::nolock]] {};
+	auto nl_ne = +[]() noexcept [[clang::nolock]] {};
+	
+	receives_fp(ne);
+	receives_fp(nl);
+	receives_fp(nl_ne);
+}
+#endif
+
 // --- VIRTUAL METHODS ---
+// Attributes propagate to overridden methods, so no diagnostics.
+// Check this in the syntax tests too.
 #ifdef __cplusplus
 struct Base {
 	virtual void f1();
-	virtual void nolock() noexcept [[clang::nolock]]; // expected-note {{overridden virtual function is here}}
-	virtual void noalloc() noexcept [[clang::noalloc]]; // expected-note {{overridden virtual function is here}}
+	virtual void nolock() noexcept [[clang::nolock]];
+	virtual void noalloc() noexcept [[clang::noalloc]];
 };
 
 struct Derived : public Base {
 	void f1() [[clang::nolock]] override;
-	void nolock() noexcept override; // expected-warning {{attribute 'nolock' on overriding function does not match base version}}
-	void noalloc() noexcept override; // expected-warning {{attribute 'noalloc' on overriding function does not match base version}}
+	void nolock() noexcept override;
+	void noalloc() noexcept override;
 };
 #endif // __cplusplus
 
@@ -89,26 +108,10 @@ void f2();
 #endif
 // Note: we verify that the attribute is actually seen during the constraints tests.
 
-
-// Ensure that the redeclaration's attribute is seen and diagnosed correctly.
-
-// void f2() {
-// 	static int x;
-// }
-// void f2() [[clang::nolock]];
-// 
-// void f3() [[clang::nolock]] {
-// 	f2();
-// }
-
-#if 0
-int f2();
-// redeclaration with a stronger constraint is OK.
-int f2() [[clang::nolock]]; // e xpected-note {{previous declaration is here}}
-int f2() { return 42; } // e xpected-warning {{attribute 'nolock' on function does not match previous declaration}}
-
-int f3();
-// redeclaration with a stronger constraint is OK.
-int f3() [[clang::noalloc]]; // e xpected-note {{previous declaration is here}}
-int f3() { return 42; } // e xpected-warning {{attribute 'noalloc' on function does not match previous declaration}}
-#endif
+// --- OVERLOADS ---
+#ifdef __cplusplus
+struct S {
+	void foo(); // expected-note {{previous declaration is here}}
+	void foo(); // expected-error {{class member cannot be redeclared}}
+};
+#endif // __cplusplus

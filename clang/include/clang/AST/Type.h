@@ -4197,6 +4197,7 @@ class TypeSourceInfo;
 /// Represents an abstract function effect.
 class FunctionEffect {
 public:
+  /// Identifies the particular type of effect.
   enum class Type {
     None = 0,
     NoLockTrue,
@@ -4229,6 +4230,14 @@ public:
     FE_ExcludeThreadLocalVars = 0x80
   };
 
+  /// Describes the result of effects differing between a base class's virtual
+  /// method and an overriding method in a subclass.
+  enum class OverrideResult {
+    Ignore,
+    Warn,
+    Propagate // Base method's effects are merged with those of the override.
+  };
+
 private:
   // For uniqueness, currently only Type_ is significant.
 
@@ -4240,11 +4249,15 @@ private:
   // then ~16(?) bits "Subtype" to map to a specific named TCB. Subtype would
   // be considered for uniqueness.
 
+  // Since this struct is serialized as if it were a uint32_t, it's important
+  // to pad and explicitly zero the extra bits.
+  [[maybe_unused]] unsigned Padding : 22;
+
 public:
   using CalleeDeclOrType =
       llvm::PointerUnion<const Decl *, const FunctionProtoType *>;
 
-  FunctionEffect() : Type_(unsigned(Type::None)), Flags_(0) {}
+  FunctionEffect() : Type_(unsigned(Type::None)), Flags_(0), Padding(0) {}
 
   explicit FunctionEffect(Type T);
 
@@ -4257,7 +4270,7 @@ public:
   /// The description printed in diagnostics, e.g. 'nolock'.
   StringRef name() const;
 
-  /// A serializable, hashable representation.
+  /// A hashable representation.
   uint32_t opaqueRepr() const { return Type_ | (Flags_ << 2u); }
 
   /// Return true if adding or removing the effect as part of a type conversion
@@ -4275,10 +4288,11 @@ public:
 
   /// Return true if adding or removing the effect in a C++ virtual method
   /// override should generate a diagnostic.
-  bool diagnoseMethodOverride(bool Adding, const CXXMethodDecl &OldMethod,
-                              FunctionEffectSet OldFX,
-                              const CXXMethodDecl &NewMethod,
-                              FunctionEffectSet NewFX) const;
+  OverrideResult diagnoseMethodOverride(bool Adding,
+                                        const CXXMethodDecl &OldMethod,
+                                        FunctionEffectSet OldFX,
+                                        const CXXMethodDecl &NewMethod,
+                                        FunctionEffectSet NewFX) const;
 
   /// Return true if the effect is allowed to be inferred on a Decl of the
   /// specified type (generally a FunctionProtoType but TypeSourceInfo is
@@ -4387,9 +4401,9 @@ public:
   static Differences differences(const FunctionEffectSet &Old,
                                  const FunctionEffectSet &New);
 
-  /// Extract the effects from a Type if it is a BlockType or FunctionProtoType,
-  /// or pointer to one.
-  static FunctionEffectSet get(const Type &TyRef);
+  /// Extract the effects from a Type if it is a function, block, member
+  /// function pointer, reference or pointer to one.
+  static FunctionEffectSet get(QualType QT);
 };
 
 /// Represents a prototype with parameter type info, e.g.

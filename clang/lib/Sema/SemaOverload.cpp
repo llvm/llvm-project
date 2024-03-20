@@ -1873,6 +1873,8 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
       // For C, when called from checkPointerTypesForAssignment,
       // we need not to change the type, or else even an innocuous cast
       // like dropping effects will fail.
+      FromFPT =
+          dyn_cast<FunctionProtoType>(FromFn); // in case FromFn changed above
 
       // Transparently add/drop effects; here we are concerned with
       // language rules/canonicalization. Adding/dropping effects is a warning.
