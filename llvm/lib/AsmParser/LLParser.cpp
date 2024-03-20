@@ -6570,10 +6570,10 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
 ///                 (MDNode ',' Metadata ',' Metadata ',')? MDNode ')'
 bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
   using RecordKind = DbgRecord::Kind;
-  using LocType = DPValue::LocationType;
-  LocTy DPVLoc = Lex.getLoc();
+  using LocType = DbgVariableRecord::LocationType;
+  LocTy DVRLoc = Lex.getLoc();
   if (Lex.getKind() != lltok::DbgRecordType)
-    return error(DPVLoc, "expected debug record type here");
+    return error(DVRLoc, "expected debug record type here");
   RecordKind RecordType = StringSwitch<RecordKind>(Lex.getStrVal())
                               .Case("declare", RecordKind::ValueKind)
                               .Case("value", RecordKind::ValueKind)
@@ -6581,7 +6581,7 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
                               .Case("label", RecordKind::LabelKind);
 
   // Parsing labels is trivial; parse here and early exit, otherwise go into the
-  // full DPValue processing stage.
+  // full DbgVariableRecord processing stage.
   if (RecordType == RecordKind::LabelKind) {
     Lex.Lex();
     if (parseToken(lltok::lparen, "Expected '(' here"))
@@ -6661,9 +6661,9 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
 
   if (parseToken(lltok::rparen, "Expected ')' here"))
     return true;
-  DR = DPValue::createUnresolvedDPValue(ValueType, ValLocMD, Variable,
-                                        Expression, AssignID, AddressLocation,
-                                        AddressExpression, DebugLoc);
+  DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
+      ValueType, ValLocMD, Variable, Expression, AssignID, AddressLocation,
+      AddressExpression, DebugLoc);
   return false;
 }
 //===----------------------------------------------------------------------===//

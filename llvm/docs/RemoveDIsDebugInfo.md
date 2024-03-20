@@ -64,10 +64,10 @@ This will all happen transparently without needing to think about it!
 We're using a dedicated C++ class called `DbgRecord` to store debug info, with a one-to-one relationship between each instance of a debug intrinsic and each `DbgRecord` object in any LLVM IR program; these `DbgRecord`s are represented in the IR as non-instruction debug records, as described in the [Source Level Debugging](project:SourceLevelDebugging.rst#Debug Records) document. This class has a set of subclasses that store exactly the same information as is stored in debugging intrinsics. Each one also has almost entirely the same set of methods, that behave in the same way:
 
   https://llvm.org/docs/doxygen/classllvm_1_1DbgRecord.html
-  https://llvm.org/docs/doxygen/classllvm_1_1DPValue.html
+  https://llvm.org/docs/doxygen/classllvm_1_1DbgVariableRecord.html
   https://llvm.org/docs/doxygen/classllvm_1_1DPLabel.html
 
-This allows you to treat a `DPValue` as if it's a `dbg.value`/`dbg.declare`/`dbg.assign` intrinsic most of the time, for example in generic (auto-param) lambdas, and the same for `DPLabel` and `dbg.label`s.
+This allows you to treat a `DbgVariableRecord` as if it's a `dbg.value`/`dbg.declare`/`dbg.assign` intrinsic most of the time, for example in generic (auto-param) lambdas, and the same for `DPLabel` and `dbg.label`s.
 
 ## How do these `DbgRecords` fit into the instruction stream?
 
@@ -95,13 +95,13 @@ Like so:
 
 Each instruction has a pointer to a `DPMarker` (which will become optional), that contains a list of `DbgRecord` objects. No debugging records appear in the instruction list at all. `DbgRecord`s have a parent pointer to their owning `DPMarker`, and each `DPMarker` has a pointer back to it's owning instruction.
 
-Not shown are the links from DbgRecord to other parts of the `Value`/`Metadata` hierachy: `DbgRecord` subclasses have tracking pointers to the DIMetadata that they use, and `DPValue` has references to `Value`s that are stored in a `DebugValueUser` base class. This refers to a `ValueAsMetadata` object referring to `Value`s, via the `TrackingMetadata` facility.
+Not shown are the links from DbgRecord to other parts of the `Value`/`Metadata` hierachy: `DbgRecord` subclasses have tracking pointers to the DIMetadata that they use, and `DbgVariableRecord` has references to `Value`s that are stored in a `DebugValueUser` base class. This refers to a `ValueAsMetadata` object referring to `Value`s, via the `TrackingMetadata` facility.
 
-The various kinds of debug intrinsic (value, declare, assign, label) are all stored in `DbgRecord` subclasses, with a "RecordKind" field distinguishing `DPLabel`s from `DPValue`s, and a `LocationType` field in the `DPValue` class further disambiguating the various debug variable intrinsics it can represent.
+The various kinds of debug intrinsic (value, declare, assign, label) are all stored in `DbgRecord` subclasses, with a "RecordKind" field distinguishing `DPLabel`s from `DbgVariableRecord`s, and a `LocationType` field in the `DbgVariableRecord` class further disambiguating the various debug variable intrinsics it can represent.
 
 ## Finding debug info records
 
-Utilities such as `findDbgUsers` and the like now have an optional argument that will return the set of `DPValue` records that refer to a `Value`. You should be able to treat them the same as intrinsics.
+Utilities such as `findDbgUsers` and the like now have an optional argument that will return the set of `DbgVariableRecord` records that refer to a `Value`. You should be able to treat them the same as intrinsics.
 
 ## Examining debug info records at positions
 
