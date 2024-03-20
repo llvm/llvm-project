@@ -297,7 +297,20 @@ DIStringType *DIBuilder::createStringType(StringRef Name,
 
 DIDerivedType *DIBuilder::createQualifiedType(unsigned Tag, DIType *FromTy) {
   return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, FromTy, 0,
-                            0, 0, std::nullopt, dwarf::DW_MSPACE_LLVM_none,
+                            0, 0, std::nullopt, dwarf::DW_MSPACE_LLVM_none, std::nullopt, DINode::FlagZero);
+}
+
+DIDerivedType *DIBuilder::createPtrAuthQualifiedType(
+    DIType *FromTy, unsigned Key, bool IsAddressDiscriminated,
+    unsigned ExtraDiscriminator, bool IsaPointer,
+    bool AuthenticatesNullValues) {
+  return DIDerivedType::get(VMContext, dwarf::DW_TAG_LLVM_ptrauth_type, "",
+                            nullptr, 0, nullptr, FromTy, 0, 0, 0, std::nullopt,
+                            dwarf::DW_MSPACE_LLVM_none, 
+                            std::optional<DIDerivedType::PtrAuthData>(
+                                std::in_place, Key, IsAddressDiscriminated,
+                                ExtraDiscriminator, IsaPointer,
+                                AuthenticatesNullValues),
                             DINode::FlagZero);
 }
 
@@ -310,7 +323,7 @@ DIBuilder::createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
   // FIXME: Why is there a name here?
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_pointer_type, Name,
                             nullptr, 0, nullptr, PointeeTy, SizeInBits,
-                            AlignInBits, 0, DWARFAddressSpace, DWARFMemorySpace,
+                            AlignInBits, 0, DWARFAddressSpace, DWARFMemorySpace, std::nullopt,
                             DINode::FlagZero, nullptr, Annotations);
 }
 
@@ -322,7 +335,7 @@ DIDerivedType *DIBuilder::createMemberPointerType(DIType *PointeeTy,
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_ptr_to_member_type, "",
                             nullptr, 0, nullptr, PointeeTy, SizeInBits,
                             AlignInBits, 0, std::nullopt,
-                            dwarf::DW_MSPACE_LLVM_none, Flags, Base);
+                            dwarf::DW_MSPACE_LLVM_none, std::nullopt, Flags, Base);
 }
 
 DIDerivedType *DIBuilder::createReferenceType(
@@ -331,7 +344,7 @@ DIDerivedType *DIBuilder::createReferenceType(
 
   assert(RTy && "Unable to create reference type");
   return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, RTy,
-                            SizeInBits, AlignInBits, 0, DWARFAddressSpace, MS,
+                            SizeInBits, AlignInBits, 0, DWARFAddressSpace, MS, {},
                             DINode::FlagZero);
 }
 
@@ -342,7 +355,7 @@ DIDerivedType *DIBuilder::createTypedef(DIType *Ty, StringRef Name,
                                         DINodeArray Annotations) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_typedef, Name, File,
                             LineNo, getNonCompileUnitScope(Context), Ty, 0,
-                            AlignInBits, 0, std::nullopt, dwarf::DW_MSPACE_LLVM_none,
+                            AlignInBits, 0, std::nullopt, dwarf::DW_MSPACE_LLVM_none, std::nullopt, 
                             Flags, nullptr, Annotations);
 }
 
@@ -351,7 +364,7 @@ DIDerivedType *DIBuilder::createFriend(DIType *Ty, DIType *FriendTy) {
   assert(FriendTy && "Invalid friend type!");
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_friend, "", nullptr, 0, Ty,
                             FriendTy, 0, 0, 0, std::nullopt,
-                            dwarf::DW_MSPACE_LLVM_none, DINode::FlagZero);
+                            dwarf::DW_MSPACE_LLVM_none, std::nullopt, DINode::FlagZero);
 }
 
 DIDerivedType *DIBuilder::createInheritance(DIType *Ty, DIType *BaseTy,
@@ -363,7 +376,7 @@ DIDerivedType *DIBuilder::createInheritance(DIType *Ty, DIType *BaseTy,
       ConstantInt::get(IntegerType::get(VMContext, 32), VBPtrOffset));
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_inheritance, "", nullptr,
                             0, Ty, BaseTy, 0, 0, BaseOffset, std::nullopt,
-                            dwarf::DW_MSPACE_LLVM_none, Flags, ExtraData);
+                            dwarf::DW_MSPACE_LLVM_none, std::nullopt, Flags, ExtraData);
 }
 
 DIDerivedType *DIBuilder::createMemberType(
@@ -373,7 +386,7 @@ DIDerivedType *DIBuilder::createMemberType(
   return DIDerivedType::get(
       VMContext, dwarf::DW_TAG_member, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), Ty, SizeInBits, AlignInBits, OffsetInBits,
-      std::nullopt, dwarf::DW_MSPACE_LLVM_none, Flags, nullptr, Annotations);
+      std::nullopt, dwarf::DW_MSPACE_LLVM_none, std::nullopt, Flags, nullptr, Annotations);
 }
 
 static ConstantAsMetadata *getConstantOrNull(Constant *C) {
@@ -389,7 +402,7 @@ DIDerivedType *DIBuilder::createVariantMemberType(
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
                             LineNumber, getNonCompileUnitScope(Scope), Ty,
                             SizeInBits, AlignInBits, OffsetInBits, std::nullopt,
-                            dwarf::DW_MSPACE_LLVM_none, Flags,
+                            dwarf::DW_MSPACE_LLVM_none, std::nullopt, Flags,
                             getConstantOrNull(Discriminant));
 }
 
@@ -401,7 +414,7 @@ DIDerivedType *DIBuilder::createBitFieldMemberType(
   return DIDerivedType::get(
       VMContext, dwarf::DW_TAG_member, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), Ty, SizeInBits, /*AlignInBits=*/0,
-      OffsetInBits, std::nullopt, dwarf::DW_MSPACE_LLVM_none, Flags,
+      OffsetInBits, std::nullopt, dwarf::DW_MSPACE_LLVM_none, std::nullopt, Flags,
       ConstantAsMetadata::get(ConstantInt::get(IntegerType::get(VMContext, 64),
                                                StorageOffsetInBits)),
       Annotations);
@@ -415,7 +428,7 @@ DIBuilder::createStaticMemberType(DIScope *Scope, StringRef Name, DIFile *File,
   Flags |= DINode::FlagStaticMember;
   return DIDerivedType::get(VMContext, Tag, Name, File, LineNumber,
                             getNonCompileUnitScope(Scope), Ty, 0, AlignInBits,
-                            0, std::nullopt, dwarf::DW_MSPACE_LLVM_none,
+                            0, std::nullopt, dwarf::DW_MSPACE_LLVM_none, std::nullopt, 
                             Flags, getConstantOrNull(Val));
 }
 
@@ -427,7 +440,7 @@ DIBuilder::createObjCIVar(StringRef Name, DIFile *File, unsigned LineNumber,
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
                             LineNumber, getNonCompileUnitScope(File), Ty,
                             SizeInBits, AlignInBits, OffsetInBits, std::nullopt,
-                            dwarf::DW_MSPACE_LLVM_none, Flags, PropertyNode);
+                            dwarf::DW_MSPACE_LLVM_none, std::nullopt, Flags, PropertyNode);
 }
 
 DIObjCProperty *
@@ -565,7 +578,7 @@ DIDerivedType *DIBuilder::createSetType(DIScope *Scope, StringRef Name,
   auto *R = DIDerivedType::get(VMContext, dwarf::DW_TAG_set_type, Name, File,
                                LineNo, getNonCompileUnitScope(Scope), Ty,
                                SizeInBits, AlignInBits, 0, std::nullopt,
-                               dwarf::DW_MSPACE_LLVM_none, DINode::FlagZero);
+                               dwarf::DW_MSPACE_LLVM_none, std::nullopt, DINode::FlagZero);
   trackIfUnresolved(R);
   return R;
 }
