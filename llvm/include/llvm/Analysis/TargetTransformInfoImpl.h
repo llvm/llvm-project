@@ -216,6 +216,8 @@ public:
 
   bool isLegalAddImmediate(int64_t Imm) const { return false; }
 
+  bool isLegalAddScalableImmediate(int64_t Imm) const { return false; }
+
   bool isLegalICmpImmediate(int64_t Imm) const { return false; }
 
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
