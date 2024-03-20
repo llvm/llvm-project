@@ -2445,6 +2445,15 @@ Error MCCASBuilder::buildFragments() {
         continue;
 
       SmallVector<char, 0> FinalFragmentContents;
+      // Set the RelocationBuffer to be an empty ArrayRef, and the
+      // RelocationBufferIndex to zero if the architecture is 32-bit, because we
+      // do not support relocation partitioning on 32-bit platforms. With this,
+      // partitionFragment will put all the fragment contents in the
+      // FinalFragmentContents, and the Addends buffer will be empty.
+      if (ObjectWriter.getAddressSize() == 4) {
+        RelocationBuffer = ArrayRef<MachO::any_relocation_info>();
+        RelocationBufferIndex = 0;
+      }
       partitionFragment(Layout, Addends, FinalFragmentContents,
                         RelocationBuffer, F, RelocationBufferIndex,
                         ObjectWriter.Target.isLittleEndian());
@@ -2846,25 +2855,32 @@ MCCASReader::reconstructSection(SmallVectorImpl<char> &SectionBuffer,
   /// copied the addend out of the Addends at a particular offset, we should
   /// skip all relocations that matches the same offset.
   int64_t PrevOffset = -1;
-  for (auto Reloc : Relocations.back()) {
-    auto RelocationOffsetInSection = getRelocationOffset(Reloc);
-    if (PrevOffset == RelocationOffsetInSection)
-      continue;
-    auto RelocationSize =
-        getRelocationSize(Reloc, getEndian() == endianness::little);
-    /// NumOfBytesToReloc: This denotes the number of bytes needed to be copied
-    /// into the \p SectionBuffer before we copy the next addend.
-    auto NumOfBytesToReloc = RelocationOffsetInSection - SectionBuffer.size();
-    // Copy the contents of the fragment till the next relocation.
-    SectionBuffer.append(FragmentBuffer.begin() + FragmentIndex,
-                         FragmentBuffer.begin() + FragmentIndex +
-                             NumOfBytesToReloc);
-    FragmentIndex += NumOfBytesToReloc;
-    // Copy the relocation addend.
-    SectionBuffer.append(Addends.begin() + AddendBufferIndex,
-                         Addends.begin() + AddendBufferIndex + RelocationSize);
-    AddendBufferIndex += RelocationSize;
-    PrevOffset = RelocationOffsetInSection;
+  /// If the \p Addends buffer is empty, there was no AddendsRef for this
+  /// section, this is either because no \p Relocations exist in this section,
+  /// or this is 32-bit architecture, where we do not support relocation
+  /// partitioning.
+  if (!Addends.empty()) {
+    for (auto Reloc : Relocations.back()) {
+      auto RelocationOffsetInSection = getRelocationOffset(Reloc);
+      if (PrevOffset == RelocationOffsetInSection)
+        continue;
+      auto RelocationSize =
+          getRelocationSize(Reloc, getEndian() == endianness::little);
+      /// NumOfBytesToReloc: This denotes the number of bytes needed to be
+      /// copied into the \p SectionBuffer before we copy the next addend.
+      auto NumOfBytesToReloc = RelocationOffsetInSection - SectionBuffer.size();
+      // Copy the contents of the fragment till the next relocation.
+      SectionBuffer.append(FragmentBuffer.begin() + FragmentIndex,
+                           FragmentBuffer.begin() + FragmentIndex +
+                               NumOfBytesToReloc);
+      FragmentIndex += NumOfBytesToReloc;
+      // Copy the relocation addend.
+      SectionBuffer.append(Addends.begin() + AddendBufferIndex,
+                           Addends.begin() + AddendBufferIndex +
+                               RelocationSize);
+      AddendBufferIndex += RelocationSize;
+      PrevOffset = RelocationOffsetInSection;
+    }
   }
   // Copy any remaining bytes of the fragment into the SectionBuffer.
   SectionBuffer.append(FragmentBuffer.begin() + FragmentIndex,
