@@ -717,6 +717,13 @@ bool AMDGPUCallLowering::lowerFormalArguments(
     TLI.allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
   }
 
+  if (!IsEntryFunc) {
+    if (!Subtarget.enableFlatScratch())
+      CCInfo.AllocateReg(Info->getScratchRSrcReg());
+    if (!IsGraphics)
+      TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
+  }
+
   IncomingValueAssigner Assigner(AssignFn);
   if (!determineAssignments(Assigner, SplitArgs, CCInfo))
     return false;
@@ -728,14 +735,9 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   uint64_t StackSize = Assigner.StackSize;
 
   // Start adding system SGPRs.
-  if (IsEntryFunc) {
+  if (IsEntryFunc)
     TLI.allocateSystemSGPRs(CCInfo, MF, *Info, CC, IsGraphics);
-  } else {
-    if (!Subtarget.enableFlatScratch())
-      CCInfo.AllocateReg(Info->getScratchRSrcReg());
-    if (!IsGraphics)
-      TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
-  }
+
   // When we tail call, we need to check if the callee's arguments will fit on
   // the caller's stack. So, whenever we lower formal arguments, we should keep
   // track of this information, since we might lower a tail call in this
