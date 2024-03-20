@@ -1127,6 +1127,17 @@ define i32 @freeze_zext_nneg(i8 %x) {
   ret i32 %fr
 }
 
+define float @freeze_uitofp_nneg(i8 %x) {
+; CHECK-LABEL: @freeze_uitofp_nneg(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[UITOFP:%.*]] = uitofp i8 [[X_FR]] to float
+; CHECK-NEXT:    ret float [[UITOFP]]
+;
+  %uitofp = uitofp nneg i8 %x to float
+  %fr = freeze float %uitofp
+  ret float %fr
+}
+
 define i32 @propagate_drop_flags_or(i32 %arg) {
 ; CHECK-LABEL: @propagate_drop_flags_or(
 ; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
