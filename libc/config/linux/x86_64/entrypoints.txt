@@ -180,6 +180,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
     libc.src.stdlib.srand
+    libc.src.stdlib.strfromf
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
     libc.src.stdlib.strtol
