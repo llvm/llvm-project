@@ -25,6 +25,7 @@ config.cc = "@CMAKE_C_COMPILER@"
 config.osx_sysroot = path(r"@CMAKE_OSX_SYSROOT@")
 config.targets_to_build = "@TARGETS_TO_BUILD@"
 config.default_sysroot = "@DEFAULT_SYSROOT@"
+config.have_openmp_rtl = ("@LLVM_TOOL_OPENMP_BUILD@" == "TRUE")
 config.flang_runtime_f128_math_lib = "@FLANG_RUNTIME_F128_MATH_LIB@"
 
 import lit.llvm

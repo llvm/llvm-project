@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 !RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s --check-prefixes="FIRDialect,OMPDialect"
 !RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | fir-opt --fir-to-llvm-ir | FileCheck %s --check-prefixes="LLVMDialect,OMPDialect"
 
@@ -153,8 +155,8 @@ subroutine parallel_allocate()
    use omp_lib
    integer :: x
    !OMPDialect: omp.parallel allocate(
-   !FIRDialect: %{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>
-   !LLVMDialect: %{{.+}} : i32 -> %{{.+}} : !llvm.ptr
+   !FIRDialect: %{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>
+   !LLVMDialect: %{{.+}} : i64 -> %{{.+}} : !llvm.ptr
    !OMPDialect: ) {
    !$omp parallel allocate(omp_high_bw_mem_alloc: x) private(x)
    !FIRDialect: arith.addi
@@ -195,8 +197,8 @@ subroutine parallel_multiple_clauses(alpha, num_threads)
    !$omp end parallel
 
    !OMPDialect: omp.parallel if({{.*}} : i1) num_threads({{.*}} : i32) allocate(
-   !FIRDialect: %{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>
-   !LLVMDialect: %{{.+}} : i32 -> %{{.+}} : !llvm.ptr
+   !FIRDialect: %{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>
+   !LLVMDialect: %{{.+}} : i64 -> %{{.+}} : !llvm.ptr
    !OMPDialect: ) {
    !$omp parallel num_threads(num_threads) if(alpha .le. 0) allocate(omp_high_bw_mem_alloc: alpha) private(alpha)
    !FIRDialect: fir.call
