@@ -273,7 +273,7 @@ def Linux : StandardSpec<"Linux"> {
         FunctionSpec<
           "pipe2",
           RetValSpec<IntType>,
-          [ArgSpec<IntPtr>, ArgSpec<IntType>]
+          [ArgSpec<IntPtr>, ArgSpec<IntType>]  // TODO: use int[2] array for the first ArgSpec when possible
         >,
     ]
   >;
