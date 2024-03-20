@@ -4735,7 +4735,7 @@ struct FormatStyle {
   /// the specified identifiers.
   ///
   /// For example the configuration,
-  /// \code
+  /// \code{.yaml}
   ///   TableGenBreakInsideDAGArg: BreakAll
   ///   TableGenBreakingDAGArgOperators: ['ins', 'outs']
   /// \endcode
