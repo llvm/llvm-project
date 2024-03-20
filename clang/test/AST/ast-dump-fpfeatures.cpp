@@ -1,10 +1,10 @@
 // Test without serialization:
-// RUN: %clang_cc1 -fsyntax-only -triple x86_64-pc-linux -std=c++11 -ast-dump %s \
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64-pc-linux -std=c++11 -fcxx-exceptions -ast-dump %s \
 // RUN: | FileCheck --strict-whitespace %s
 
 // Test with serialization:
-// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-pch -o %t %s
-// RUN: %clang_cc1 -x c++ -triple x86_64-pc-linux -include-pch %t -ast-dump-all /dev/null \
+// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-pch -fcxx-exceptions -o %t %s
+// RUN: %clang_cc1 -x c++ -triple x86_64-pc-linux -include-pch %t -fcxx-exceptions -ast-dump-all /dev/null \
 // RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
 // RUN: | FileCheck --strict-whitespace %s
 
@@ -189,6 +189,7 @@ float func_18(float x, float y) {
 // CHECK:             BinaryOperator {{.*}} ConstRoundingMode=downward
 
 #pragma float_control(precise, off)
+
 __attribute__((optnone))
 float func_19(float x, float y) {
   return x + y;
@@ -198,3 +199,26 @@ float func_19(float x, float y) {
 // CHECK:         CompoundStmt {{.*}} MathErrno=1
 // CHECK:           ReturnStmt
 // CHECK:             BinaryOperator {{.*}} 'float' '+' ConstRoundingMode=downward MathErrno=1
+
+__attribute__((optnone))
+float func_20(float x, float y) try {
+  return x + y;
+} catch (...) {
+  return 1.0;
+}
+
+// CHECK-LABEL: FunctionDecl {{.*}} func_20 'float (float, float)'
+// CHECK:         CompoundStmt {{.*}} ConstRoundingMode=downward MathErrno=1
+// CHECK:           ReturnStmt
+// CHECK:             BinaryOperator {{.*}} 'float' '+' ConstRoundingMode=downward MathErrno=1
+
+struct C21 {
+  C21(float x, float y);
+  float member;
+};
+
+__attribute__((optnone)) C21::C21(float x, float y) : member(x + y) {}
+
+// CHECK-LABEL: CXXConstructorDecl {{.*}} C21 'void (float, float)'
+// CHECK:         CXXCtorInitializer {{.*}} 'member' 'float'
+// CHECK:           BinaryOperator {{.*}} 'float' '+' ConstRoundingMode=downward MathErrno=1
