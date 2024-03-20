@@ -51,12 +51,12 @@ class ComplexExprEmitter
   CGBuilderTy &Builder;
   bool IgnoreReal;
   bool IgnoreImag;
-  LangOptions::ComplexRangeKind FPHasBeenPromoted;
+  bool FPHasBeenPromoted;
 
 public:
   ComplexExprEmitter(CodeGenFunction &cgf, bool ir = false, bool ii = false)
       : CGF(cgf), Builder(CGF.Builder), IgnoreReal(ir), IgnoreImag(ii),
-        FPHasBeenPromoted(LangOptions::ComplexRangeKind::CX_None) {}
+        FPHasBeenPromoted(false) {}
 
   //===--------------------------------------------------------------------===//
   //                               Utilities
@@ -321,7 +321,7 @@ public:
         llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
       return CGF.getContext().getComplexType(HigherElementType);
     } else {
-      FPHasBeenPromoted = LangOptions::ComplexRangeKind::CX_Improved;
+      FPHasBeenPromoted = true;
       DiagnosticsEngine &Diags = CGF.CGM.getDiags();
       Diags.Report(diag::warn_next_larger_fp_type_same_size_than_fp);
       return CGF.getContext().getComplexType(ElementType);
@@ -1037,7 +1037,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     QualType ComplexElementTy = Op.Ty->castAs<ComplexType>()->getElementType();
     if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
         (Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted &&
-         FPHasBeenPromoted == LangOptions::CX_Improved))
+         FPHasBeenPromoted))
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
     else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
              Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)
