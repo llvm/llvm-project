@@ -1893,15 +1893,22 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
   bool Changed = false;
 
   if (FunctionSamples::ProfileIsProbeBased) {
-    if (!ProbeManager->profileIsValid(F, *Samples)) {
+    LLVM_DEBUG({
+      if (!ProbeManager->getDesc(F))
+        dbgs() << "Probe descriptor missing for Function " << F.getName()
+               << "\n";
+    });
+
+    if (ProbeManager->profileIsValid(F, *Samples)) {
+      ++NumMatchedProfile;
+    } else {
+      ++NumMismatchedProfile;
       LLVM_DEBUG(
           dbgs() << "Profile is invalid due to CFG mismatch for Function "
                  << F.getName() << "\n");
-      ++NumMismatchedProfile;
       if (!SalvageStaleProfile)
         return false;
     }
-    ++NumMatchedProfile;
   } else {
     if (getFunctionLoc(F) == 0)
       return false;
@@ -2412,26 +2419,24 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
 
   // Run profile matching for checksum mismatched profile, currently only
   // support for pseudo-probe.
-  if (SalvageStaleProfile && FunctionSamples::ProfileIsProbeBased) {
-    const auto *Desc = ProbeManager->getDesc(F);
+  if (SalvageStaleProfile && FunctionSamples::ProfileIsProbeBased &&
+      !ProbeManager->profileIsValid(F, *FSFlattened)) {
     // For imported functions, the checksum metadata(pseudo_probe_desc) are
     // dropped, so we leverage function attribute(profile-checksum-mismatch) to
     // transfer the info: add the attribute during pre-link phase and check it
-    // during post-link phase.
-    if ((Desc && ProbeManager->profileIsHashMismatched(*Desc, *FSFlattened)) ||
-        F.hasFnAttribute("profile-checksum-mismatch")) {
-      if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink)
-        F.addFnAttr("profile-checksum-mismatch");
-      // The matching result will be saved to IRToProfileLocationMap, create a
-      // new map for each function.
-      auto &IRToProfileLocationMap = getIRToProfileLocationMap(F);
-      runStaleProfileMatching(F, IRAnchors, ProfileAnchors,
-                              IRToProfileLocationMap);
-      // Find and update callsite match states after matching.
-      if (ReportProfileStaleness || PersistProfileStaleness)
-        recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors,
-                                  &IRToProfileLocationMap);
-    }
+    // during post-link phase(see "profileIsValid").
+    if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink)
+      F.addFnAttr("profile-checksum-mismatch");
+
+    // The matching result will be saved to IRToProfileLocationMap, create a
+    // new map for each function.
+    auto &IRToProfileLocationMap = getIRToProfileLocationMap(F);
+    runStaleProfileMatching(F, IRAnchors, ProfileAnchors,
+                            IRToProfileLocationMap);
+    // Find and update callsite match states after matching.
+    if (ReportProfileStaleness || PersistProfileStaleness)
+      recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors,
+                                &IRToProfileLocationMap);
   }
 }
 
