@@ -196,31 +196,54 @@ void test_noexcept() {
 }
 
 namespace LWG3528 {
-template <class _Tp, class _Tuple, class = std::void_t<>>
-struct can_make_from_tuple : std::false_type {};
-template <class _Tp, class _Tuple>
-struct can_make_from_tuple<
-    _Tp,
-    _Tuple,
-    std::void_t<decltype(std::__make_from_tuple_impl<_Tp>(
-        std::declval<_Tuple>(),
-        std::declval<
-            typename std::__make_tuple_indices< std::tuple_size_v<std::remove_reference_t<_Tuple>>>::type>()))>>
-    : std::true_type {};
+template <class T, class Tuple>
+auto test(T&&, Tuple&& t)
+    -> decltype(std::__make_from_tuple_impl<T>(
+                    t, typename std::__make_tuple_indices< std::tuple_size_v<std::remove_reference_t<Tuple>>>::type{}),
+                uint8_t()) {
+  return 0;
+}
+template <class T, class Tuple>
+uint32_t test(...) {
+  return 0;
+}
+
+template <class T, class Tuple>
+static constexpr bool can_make_from_tuple = std::is_same_v<decltype(test<T, Tuple>(T{}, Tuple{})), uint8_t>;
 
 struct A {
   int a;
 };
 struct B : public A {};
 
+struct C {
+  C(const B&) {}
+};
+
+enum class D {
+  ONE,
+  TWO,
+};
+
 // reinterpret_cast
-static_assert(!can_make_from_tuple<int*, std::tuple<A*>>::value);
+static_assert(!can_make_from_tuple<int*, std::tuple<A*>>);
+static_assert(can_make_from_tuple<A*, std::tuple<A*>>);
 
 // const_cast
-static_assert(!can_make_from_tuple<char*, std::tuple<const char*>>::value);
+static_assert(!can_make_from_tuple<char*, std::tuple<const char*>>);
+static_assert(!can_make_from_tuple<volatile char*, std::tuple<const volatile char*>>);
+static_assert(can_make_from_tuple<volatile char*, std::tuple<volatile char*>>);
+static_assert(can_make_from_tuple<char*, std::tuple<char*>>);
+static_assert(can_make_from_tuple<const char*, std::tuple<char*>>);
+static_assert(can_make_from_tuple<const volatile char*, std::tuple<volatile char*>>);
 
 // static_cast
-static_assert(!can_make_from_tuple<const B*, std::tuple<const A*>>::value);
+static_assert(!can_make_from_tuple<int, std::tuple<D>>);
+static_assert(!can_make_from_tuple<D, std::tuple<int>>);
+static_assert(can_make_from_tuple<long, std::tuple<int>>);
+static_assert(can_make_from_tuple<double, std::tuple<float>>);
+static_assert(can_make_from_tuple<float, std::tuple<double>>);
+
 } // namespace LWG3528
 
 int main(int, char**)
