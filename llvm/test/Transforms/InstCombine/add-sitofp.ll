@@ -33,7 +33,7 @@ define double @test(i32 %a) {
 define float @test_neg(i32 %a) {
 ; CHECK-LABEL: @test_neg(
 ; CHECK-NEXT:    [[A_AND:%.*]] = and i32 [[A:%.*]], 1073741823
-; CHECK-NEXT:    [[A_AND_FP:%.*]] = uitofp i32 [[A_AND]] to float
+; CHECK-NEXT:    [[A_AND_FP:%.*]] = sitofp i32 [[A_AND]] to float
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[A_AND_FP]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[RES]]
 ;
@@ -67,8 +67,8 @@ define float @test_2_neg(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_2_neg(
 ; CHECK-NEXT:    [[A_AND:%.*]] = and i32 [[A:%.*]], 1073741823
 ; CHECK-NEXT:    [[B_AND:%.*]] = and i32 [[B:%.*]], 1073741823
-; CHECK-NEXT:    [[A_AND_FP:%.*]] = uitofp i32 [[A_AND]] to float
-; CHECK-NEXT:    [[B_AND_FP:%.*]] = uitofp i32 [[B_AND]] to float
+; CHECK-NEXT:    [[A_AND_FP:%.*]] = sitofp i32 [[A_AND]] to float
+; CHECK-NEXT:    [[B_AND_FP:%.*]] = sitofp i32 [[B_AND]] to float
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[A_AND_FP]], [[B_AND_FP]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
@@ -122,8 +122,8 @@ define <4 x float> @test_4_neg(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @test_4_neg(
 ; CHECK-NEXT:    [[A_AND:%.*]] = and <4 x i32> [[A:%.*]], <i32 1073741823, i32 1073741823, i32 1073741823, i32 1073741823>
 ; CHECK-NEXT:    [[B_AND:%.*]] = and <4 x i32> [[B:%.*]], <i32 1073741823, i32 1073741823, i32 1073741823, i32 1073741823>
-; CHECK-NEXT:    [[A_AND_FP:%.*]] = uitofp <4 x i32> [[A_AND]] to <4 x float>
-; CHECK-NEXT:    [[B_AND_FP:%.*]] = uitofp <4 x i32> [[B_AND]] to <4 x float>
+; CHECK-NEXT:    [[A_AND_FP:%.*]] = sitofp <4 x i32> [[A_AND]] to <4 x float>
+; CHECK-NEXT:    [[B_AND_FP:%.*]] = sitofp <4 x i32> [[B_AND]] to <4 x float>
 ; CHECK-NEXT:    [[RES:%.*]] = fadd <4 x float> [[A_AND_FP]], [[B_AND_FP]]
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
