@@ -68,6 +68,10 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
+template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
+  return SubPattern;
+}
+
 template <typename SubPattern_t> struct AllowReassoc_match {
   SubPattern_t SubPattern;
 
