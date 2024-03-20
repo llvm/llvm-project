@@ -75,8 +75,9 @@ public:
   /// Returns true if the DIE can generate an entry for a cross cu reference.
   /// This only checks TAGs of a DIE because when this is invoked DIE might not
   /// be fully constructed.
-  bool isIncluded(const DWARFUnit &Unit, const DIE &Die,
-                  const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec);
+  bool canGenerateEntryWithCrossCUReference(
+      const DWARFUnit &Unit, const DIE &Die,
+      const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec);
 
 private:
   BinaryContext &BC;

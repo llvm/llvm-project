@@ -183,7 +183,7 @@ bool static canProcess(const DWARFUnit &Unit, const DIE &Die,
   return false;
 }
 
-bool DWARF5AcceleratorTable::isIncluded(
+bool DWARF5AcceleratorTable::canGenerateEntryWithCrossCUReference(
     const DWARFUnit &Unit, const DIE &Die,
     const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec) {
   if (!isCreated())

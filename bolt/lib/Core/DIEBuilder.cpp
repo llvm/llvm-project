@@ -547,7 +547,7 @@ void DIEBuilder::cloneDieReferenceAttribute(
   if (AttrSpec.Form == dwarf::DW_FORM_ref_addr) {
     // Adding referenced DIE to DebugNames to be used when entries are created
     // that contain cross cu references.
-    if (DebugNamesTable.isIncluded(U, Die, AttrSpec))
+    if (DebugNamesTable.canGenerateEntryWithCrossCUReference(U, Die, AttrSpec))
       DebugNamesTable.addCrossCUDie(DieInfo.Die);
     // no matter forward reference or backward reference, we are supposed
     // to calculate them in `finish` due to the possible modification of
