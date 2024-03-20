@@ -9,7 +9,7 @@
 // RUN: -install_name /System/Library/Frameworks/MismatchCpp.framework/Versions/A/MismatchCpp \
 // RUN: -current_version 1 -compatibility_version 1 %t/inputs.json \
 // RUN: --verify-against=%t/System/Library/Frameworks/MismatchCpp.framework/MismatchCpp \
-// RUN: --verify-mode=Pedantic -o output.tbd --demangle 2> %t/errors.log
+// RUN: --verify-mode=Pedantic -o %t/output.tbd --demangle 2> %t/errors.log
 // RUN: FileCheck -input-file %t/errors.log %s 
 
 CHECK: warning: violations found for arm64-apple-macos13
