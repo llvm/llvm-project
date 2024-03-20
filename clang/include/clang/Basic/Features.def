@@ -102,7 +102,10 @@ FEATURE(thread_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Thread))
 FEATURE(dataflow_sanitizer, LangOpts.Sanitize.has(SanitizerKind::DataFlow))
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
 FEATURE(ptrauth_intrinsics, LangOpts.PointerAuthIntrinsics)
-FEATURE(swiftasynccc,
+EXTENSION(swiftcc,
+  PP.getTargetInfo().checkCallingConvention(CC_Swift) ==
+  clang::TargetInfo::CCCR_OK)
+EXTENSION(swiftasynccc,
   PP.getTargetInfo().checkCallingConvention(CC_SwiftAsync) ==
   clang::TargetInfo::CCCR_OK)
 FEATURE(pragma_stdc_cx_limited_range, true)
