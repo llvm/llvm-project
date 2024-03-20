@@ -13,21 +13,17 @@
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+#  if defined(__FreeBSD__)
+#    include <libutil.h>
+#    include <sys/param.h>
+#    include <sys/proc.h>
+#    include <sys/user.h>
+#  endif // defined(__FreeBSD__)
 #  include <array>
 #  include <csignal>
 #  include <sys/sysctl.h>
 #  include <sys/types.h>
-#  include <unistd.h>
-#elif defined(__FreeBSD__)
-#  include <array>
-#  include <csignal>
-#  include <libutil.h>
-#  include <sys/cdefs.h>
-#  include <sys/proc.h>
-#  include <sys/sysctl.h>
-#  include <sys/types.h>
-#  include <sys/user.h>
 #  include <unistd.h>
 #elif defined(__linux__)
 #  include <csignal>
@@ -96,7 +92,13 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_debugger_present() noexcept {
   // If the process is being debugged if the 'P_TRACED' flag is set.
   // https://github.com/freebsd/freebsd-src/blob/7f3184ba797452703904d33377dada5f0f8eae96/sys/sys/proc.h#L822
 
-  return ((info.kp_proc.p_flag & P_TRACED) != 0);
+#    if defined(__FreeBSD__)
+  const auto p_flag = info.ki_flag;
+#    else // __APPLE__
+  const auto p_flag = info.kp_proc.p_flag;
+#    endif
+
+  return ((p_flag & P_TRACED) != 0);
 }
 
 #  elif defined(__linux__)
