@@ -27782,8 +27782,6 @@ Arguments:
 A string identifying the kind of runtime check guarded by the intrinsic. The
 string can be used to control rules to allow checks.
 
-None.
-
 Semantics:
 """"""""""
 
