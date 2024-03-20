@@ -4499,11 +4499,15 @@ static void print_relative_method_list(uint32_t structSizeAndFlags,
         outs() << indent << " (nameRefPtr extends past the end of the section)";
       else {
         if (pointerSize == 64) {
-          name = get_pointer_64(*reinterpret_cast<const uint64_t *>(nameRefPtr),
-                                xoffset, left, xS, info);
+          uint64_t nameOff_64 = *reinterpret_cast<const uint64_t *>(nameRefPtr);
+          if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
+            sys::swapByteOrder(nameOff_64);
+          name = get_pointer_64(nameOff_64, xoffset, left, xS, info);
         } else {
-          name = get_pointer_32(*reinterpret_cast<const uint32_t *>(nameRefPtr),
-                                xoffset, left, xS, info);
+          uint32_t nameOff_32 = *reinterpret_cast<const uint32_t *>(nameRefPtr);
+          if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
+            sys::swapByteOrder(nameOff_32);
+          name = get_pointer_32(nameOff_32, xoffset, left, xS, info);
         }
         if (name != nullptr)
           outs() << format(" %.*s", left, name);

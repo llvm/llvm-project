@@ -1283,9 +1283,9 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   DebugLoc FirstDL = getOrCreateDebugLoc(&*Entry->begin(), F.getSubprogram());
   SplitBlock(Entry, &*Entry->getFirstInsertionPt());
 
-  BinaryOperator *SetjmpTableSize =
-      BinaryOperator::Create(Instruction::Add, IRB.getInt32(4), IRB.getInt32(0),
-                             "setjmpTableSize", Entry->getTerminator());
+  BinaryOperator *SetjmpTableSize = BinaryOperator::Create(
+      Instruction::Add, IRB.getInt32(4), IRB.getInt32(0), "setjmpTableSize",
+      Entry->getTerminator()->getIterator());
   SetjmpTableSize->setDebugLoc(FirstDL);
   // setjmpTable = (int *) malloc(40);
   Type *IntPtrTy = getAddrIntType(&M);

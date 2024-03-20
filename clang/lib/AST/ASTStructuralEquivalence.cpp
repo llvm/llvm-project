@@ -1069,6 +1069,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
 
+  case Type::CountAttributed:
+    if (!IsStructurallyEquivalent(Context,
+                                  cast<CountAttributedType>(T1)->desugar(),
+                                  cast<CountAttributedType>(T2)->desugar()))
+      return false;
+    break;
+
   case Type::BTFTagAttributed:
     if (!IsStructurallyEquivalent(
             Context, cast<BTFTagAttributedType>(T1)->getWrappedType(),
