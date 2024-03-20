@@ -601,7 +601,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // a range because it gives us a natural way of testing whether
     //  there were DbgRecords on the next instruction before we hoisted things).
     iterator_range<DbgRecord::self_iterator> NextDbgInsts =
-        (I != E) ? I->getDbgRecordRange() : DPMarker::getEmptyDbgRecordRange();
+        (I != E) ? I->getDbgRecordRange() : DbgMarker::getEmptyDbgRecordRange();
 
     while (I != E) {
       Instruction *Inst = &*I++;
@@ -659,7 +659,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         RemapDbgVariableRecordRange(M, Range, ValueMap,
                                     RF_NoModuleLevelChanges |
                                         RF_IgnoreMissingLocals);
-        NextDbgInsts = DPMarker::getEmptyDbgRecordRange();
+        NextDbgInsts = DbgMarker::getEmptyDbgRecordRange();
         // Erase anything we've seen before.
         for (DbgVariableRecord &DVR :
              make_early_inc_range(filterDbgVars(Range)))
