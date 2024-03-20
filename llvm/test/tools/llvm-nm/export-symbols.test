@@ -1,5 +1,5 @@
 ## Test the "--export-symbols" option.
-## The option prints out a sorted list of the unique exports from the input files.
+## The option prints out a sorted list of the unique exportable symbols from the input files.
 
 # RUN: rm -rf %t
 # RUN: split-file %s %t
