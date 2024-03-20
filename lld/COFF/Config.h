@@ -263,6 +263,9 @@ struct Configuration {
   // Used for /lto-pgo-warn-mismatch:
   bool ltoPGOWarnMismatch = true;
 
+  // Used for /lto-sample-profile:
+  llvm::StringRef ltoSampleProfileName;
+
   // Used for /call-graph-ordering-file:
   llvm::MapVector<std::pair<const SectionChunk *, const SectionChunk *>,
                   uint64_t>
