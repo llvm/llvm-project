@@ -168,16 +168,15 @@ MlirAttribute mlirLLVMDICompositeTypeAttrGet(
                           [](Attribute a) { return a.cast<DINodeAttr>(); })));
 }
 
-MlirAttribute mlirLLVMDIDerivedTypeAttrGet(MlirContext ctx, unsigned int tag,
-                                           MlirAttribute name,
-                                           MlirAttribute baseType,
-                                           uint64_t sizeInBits,
-                                           uint32_t alignInBits,
-                                           uint64_t offsetInBits) {
-  return wrap(DIDerivedTypeAttr::get(unwrap(ctx), tag,
-                                     cast<StringAttr>(unwrap(name)),
-                                     cast<DITypeAttr>(unwrap(baseType)),
-                                     sizeInBits, alignInBits, offsetInBits));
+MlirAttribute
+mlirLLVMDIDerivedTypeAttrGet(MlirContext ctx, unsigned int tag,
+                             MlirAttribute name, MlirAttribute baseType,
+                             uint64_t sizeInBits, uint32_t alignInBits,
+                             uint64_t offsetInBits, MlirAttribute extraData) {
+  return wrap(DIDerivedTypeAttr::get(
+      unwrap(ctx), tag, cast<StringAttr>(unwrap(name)),
+      cast<DITypeAttr>(unwrap(baseType)), sizeInBits, alignInBits, offsetInBits,
+      cast<DINodeAttr>(unwrap(extraData))));
 }
 
 MlirAttribute
