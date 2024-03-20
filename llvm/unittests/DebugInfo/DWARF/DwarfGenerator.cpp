@@ -568,12 +568,20 @@ StringRef dwarfgen::Generator::generate() {
   for (auto &CU : CompileUnits) {
     // Set the absolute .debug_info offset for this compile unit.
     CU->setOffset(SecOffset);
-    // The DIEs contain compile unit relative offsets.
-    unsigned CUOffset = 11;
+    // The DIEs contain compile unit relative offsets and the offset depends
+    // on the Dwarf version.
+    unsigned CUOffset = 4 + // Length
+                        2 + // Version
+                        4 + // Abbreviation offset
+                        1;  // Address size
+    if (Asm->getDwarfVersion() >= 5)
+      CUOffset += 1; // DW_UT_compile tag.
+
     CUOffset = CU->getUnitDIE().computeSizeAndOffsets(CUOffset);
     // Update our absolute .debug_info offset.
     SecOffset += CUOffset;
-    CU->setLength(CUOffset - 4);
+    unsigned CUOffsetUnitLength = 4;
+    CU->setLength(CUOffset - CUOffsetUnitLength);
   }
   Abbreviations.Emit(Asm.get(), TLOF->getDwarfAbbrevSection());
 
