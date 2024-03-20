@@ -333,6 +333,9 @@ struct FoldDimOfAllocTensorOp : public OpRewritePattern<tensor::DimOp> {
     auto allocTensorOp = dimOp.getSource().getDefiningOp<AllocTensorOp>();
     if (!allocTensorOp || !maybeConstantIndex)
       return failure();
+    if (*maybeConstantIndex < 0 ||
+        *maybeConstantIndex >= allocTensorOp.getType().getRank())
+      return failure();
     if (!allocTensorOp.getType().isDynamicDim(*maybeConstantIndex))
       return failure();
     rewriter.replaceOp(
