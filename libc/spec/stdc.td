@@ -352,6 +352,12 @@ def StdC : StandardSpec<"stdc"> {
           Macro<"INFINITY">,
           Macro<"NAN">,
 
+          Macro<"FP_INT_UPWARD">,
+          Macro<"FP_INT_DOWNWARD">,
+          Macro<"FP_INT_TOWARDZERO">,
+          Macro<"FP_INT_TONEARESTFROMZERO">,
+          Macro<"FP_INT_TONEAREST">,
+
           Macro<"FP_ILOGB0">,
           Macro<"FP_ILOGBNAN">,
 
@@ -413,6 +419,26 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"frexpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntPtr>]>,
           FunctionSpec<"frexpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntPtr>]>,
           GuardedFunctionSpec<"frexpf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<IntPtr>], "LIBC_TYPES_HAS_FLOAT128">,
+
+          FunctionSpec<"fromfp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"fromfpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"fromfpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"fromfpf128", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+
+          FunctionSpec<"fromfpx", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"fromfpxf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"fromfpxl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"fromfpxf128", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+
+          FunctionSpec<"ufromfp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"ufromfpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"ufromfpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"ufromfpf128", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+
+          FunctionSpec<"ufromfpx", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"ufromfpxf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"ufromfpxl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"ufromfpxf128", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
 
           FunctionSpec<"hypot", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"hypotf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
