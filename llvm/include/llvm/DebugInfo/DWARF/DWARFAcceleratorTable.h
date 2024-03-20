@@ -605,6 +605,9 @@ public:
     NameIndex(const DWARFDebugNames &Section, uint64_t Base)
         : Section(Section), Base(Base) {}
 
+    /// Returns Hdr field
+    Header getHeader() const { return Hdr; }
+
     /// Reads offset of compilation unit CU. CU is 0-based.
     uint64_t getCUOffset(uint32_t CU) const;
     uint32_t getCUCount() const { return Hdr.CompUnitCount; }
