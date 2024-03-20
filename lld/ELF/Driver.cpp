@@ -650,7 +650,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (errorCount())
       return;
 
-    link(args);
+    invokeELFT(link, args);
   }
 
   if (config->timeTraceEnabled) {
@@ -2711,7 +2711,7 @@ static void postParseObjectFile(ELFFileBase *file) {
 
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
-void LinkerDriver::link(opt::InputArgList &args) {
+template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   llvm::TimeTraceScope timeScope("Link", StringRef("LinkerDriver::Link"));
 
   // Handle --trace-symbol.
@@ -2733,7 +2733,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
     llvm::TimeTraceScope timeScope("Parse input files");
     for (size_t i = 0; i < files.size(); ++i) {
       llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
-      parseFile(files[i]);
+      doParseFile<ELFT>(files[i]);
     }
     if (armCmseImpLib)
       parseArmCMSEImportLib(*armCmseImpLib);
@@ -2867,7 +2867,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Handle --lto-validate-all-vtables-have-type-infos.
   if (config->ltoValidateAllVtablesHaveTypeInfos)
-    invokeELFT(ltoValidateAllVtablesHaveTypeInfos, args);
+    ltoValidateAllVtablesHaveTypeInfos<ELFT>(args);
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
@@ -2875,7 +2875,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // With this the symbol table should be complete. After this, no new names
   // except a few linker-synthesized ones will be added to the symbol table.
   const size_t numObjsBeforeLTO = ctx.objectFiles.size();
-  invokeELFT(compileBitcodeFiles, skipLinkedOutput);
+  compileBitcodeFiles<ELFT>(skipLinkedOutput);
 
   // Symbol resolution finished. Report backward reference problems,
   // --print-archive-stats=, and --why-extract=.
@@ -2940,7 +2940,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
       llvm::erase_if(ctx.inputSections, [](InputSectionBase *s) {
         if (s->type != SHT_LLVM_SYMPART)
           return false;
-        invokeELFT(readSymbolPartitionSection, s);
+        readSymbolPartitionSection<ELFT>(s);
         return true;
       });
     }
@@ -2998,10 +2998,10 @@ void LinkerDriver::link(opt::InputArgList &args) {
     ctx.inputSections.push_back(createCommentSection());
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
-  invokeELFT(splitSections,);
+  splitSections<ELFT>();
 
   // Garbage collection and removal of shared symbols from unused shared objects.
-  invokeELFT(markLive,);
+  markLive<ELFT>();
 
   // Make copies of any input sections that need to be copied into each
   // partition.
@@ -3014,7 +3014,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create synthesized sections such as .got and .plt. This is called before
   // processSectionCommands() so that they can be placed by SECTIONS commands.
-  invokeELFT(createSyntheticSections,);
+  createSyntheticSections<ELFT>();
 
   // Some input sections that are used for exception handling need to be moved
   // into synthetic sections. Do that now so that they aren't assigned to
@@ -3054,8 +3054,8 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Two input sections with different output sections should not be folded.
   // ICF runs after processSectionCommands() so that we know the output sections.
   if (config->icf != ICFLevel::None) {
-    invokeELFT(findKeepUniqueSections, args);
-    invokeELFT(doIcf,);
+    findKeepUniqueSections<ELFT>(args);
+    doIcf<ELFT>();
   }
 
   // Read the callgraph now that we know what was gced or icfed
@@ -3063,9 +3063,9 @@ void LinkerDriver::link(opt::InputArgList &args) {
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
       if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
         readCallGraph(*buffer);
-    invokeELFT(readCallGraphsFromObjectFiles,);
+    readCallGraphsFromObjectFiles<ELFT>();
   }
 
   // Write the result to the file.
-  invokeELFT(writeResult,);
+  writeResult<ELFT>();
 }

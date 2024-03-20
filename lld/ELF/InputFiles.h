@@ -46,6 +46,7 @@ extern std::unique_ptr<llvm::TarWriter> tar;
 std::optional<MemoryBufferRef> readFile(StringRef path);
 
 // Add symbols in File to the symbol table.
+template <class ELFT> void doParseFile(InputFile *file);
 void parseFile(InputFile *file);
 
 void parseArmCMSEImportLib(InputFile *file);
