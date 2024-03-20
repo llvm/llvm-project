@@ -32,8 +32,8 @@ struct VectorScaleOpInterface
       scalableCstr->bound(value) == cstr.getExpr(vscale);
     } else {
       // We know vscale is confined to [vscaleMin, vscaleMax].
-      cstr.bound(value) >= scalableCstr->getVscaleMin();
-      cstr.bound(value) <= scalableCstr->getVscaleMax();
+      scalableCstr->bound(value) >= scalableCstr->getVscaleMin();
+      scalableCstr->bound(value) <= scalableCstr->getVscaleMax();
       scalableCstr->setVscale(vscaleOp);
     }
   }

@@ -44,7 +44,7 @@ char ScalableValueBoundsConstraintSet::ID = 0;
 FailureOr<ConstantOrScalableBound>
 ScalableValueBoundsConstraintSet::computeScalableBound(
     Value value, std::optional<int64_t> dim, unsigned vscaleMin,
-    unsigned vscaleMax, presburger::BoundType boundType,
+    unsigned vscaleMax, presburger::BoundType boundType, bool closedUB,
     StopConditionFn stopCondition) {
   using namespace presburger;
 
@@ -76,8 +76,7 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
 
   SmallVector<AffineMap, 1> lowerBound(1), upperBound(1);
   scalableCstr.cstr.getSliceBounds(pos, 1, value.getContext(), &lowerBound,
-                                   &upperBound,
-                                   /*closedUB=*/true);
+                                   &upperBound, closedUB);
 
   auto invalidBound = [](auto &bound) {
     return !bound[0] || bound[0].getNumResults() != 1;

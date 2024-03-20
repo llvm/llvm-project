@@ -17,9 +17,9 @@ namespace mlir::vector {
 
 namespace detail {
 
-// Parent class for the value bounds RTTIExtends. Uses protected inheritance to
-// hide all ValueBoundsConstraintSet methods by default (as some do not use the
-// ScalableValueBoundsConstraintSet, so may produce unexpected results).
+/// Parent class for the value bounds RTTIExtends. Uses protected inheritance to
+/// hide all ValueBoundsConstraintSet methods by default (as some do not use the
+/// ScalableValueBoundsConstraintSet, so may produce unexpected results).
 struct ValueBoundsConstraintSet : protected ::mlir::ValueBoundsConstraintSet {
   using ::mlir::ValueBoundsConstraintSet::ValueBoundsConstraintSet;
 };
@@ -67,7 +67,7 @@ struct ScalableValueBoundsConstraintSet
   static FailureOr<ConstantOrScalableBound>
   computeScalableBound(Value value, std::optional<int64_t> dim,
                        unsigned vscaleMin, unsigned vscaleMax,
-                       presburger::BoundType boundType,
+                       presburger::BoundType boundType, bool closedUB = true,
                        StopConditionFn stopCondition = nullptr);
 
   /// Get the value of vscale. Returns `nullptr` vscale as not been encountered.
@@ -90,6 +90,9 @@ struct ScalableValueBoundsConstraintSet
 private:
   const unsigned vscaleMin;
   const unsigned vscaleMax;
+
+  // This will be set when the first `vector.vscale` operation is found within
+  // the `ValueBoundsOpInterface` implementation then reused from there on.
   Value vscale = nullptr;
 };
 
