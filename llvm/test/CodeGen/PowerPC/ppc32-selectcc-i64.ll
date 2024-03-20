@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc -mcpu=pwr7 < %s | FileCheck %s
 
 ; This piece of IR is expanded from memcmp.
-define i1 @cmp(i8* %a, i8* %b) {
+define i1 @cmp(ptr %a, ptr %b) {
 ; CHECK-LABEL: cmp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz 5, 4(3)
@@ -39,18 +39,18 @@ res_block:
   br label %endblock
 
 loadbb:
-  %2 = bitcast i8* %a to i64*
-  %3 = bitcast i8* %b to i64*
-  %4 = load i64, i64* %2, align 1
-  %5 = load i64, i64* %3, align 1
+  %2 = bitcast ptr %a to ptr
+  %3 = bitcast ptr %b to ptr
+  %4 = load i64, ptr %2, align 1
+  %5 = load i64, ptr %3, align 1
   %6 = icmp eq i64 %4, %5
   br i1 %6, label %loadbb1, label %res_block
 
 loadbb1:
-  %7 = getelementptr i8, i8* %a, i64 8
-  %8 = getelementptr i8, i8* %b, i64 8
-  %9 = load i8, i8* %7, align 1
-  %10 = load i8, i8* %8, align 1
+  %7 = getelementptr i8, ptr %a, i64 8
+  %8 = getelementptr i8, ptr %b, i64 8
+  %9 = load i8, ptr %7, align 1
+  %10 = load i8, ptr %8, align 1
   %11 = zext i8 %9 to i32
   %12 = zext i8 %10 to i32
   %13 = sub i32 %11, %12

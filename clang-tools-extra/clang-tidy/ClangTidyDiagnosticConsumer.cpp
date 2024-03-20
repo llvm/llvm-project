@@ -62,8 +62,7 @@ protected:
     // appending the check name to the message in ClangTidyContext::diag and
     // using getCustomDiagID.
     std::string CheckNameInMessage = " [" + Error.DiagnosticName + "]";
-    if (Message.ends_with(CheckNameInMessage))
-      Message = Message.substr(0, Message.size() - CheckNameInMessage.size());
+    Message.consume_back(CheckNameInMessage);
 
     auto TidyMessage =
         Loc.isValid()

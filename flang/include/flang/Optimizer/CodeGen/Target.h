@@ -15,6 +15,7 @@
 
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/TargetParser/Triple.h"
 #include <memory>
@@ -70,17 +71,19 @@ public:
   using TypeAndAttr = std::tuple<mlir::Type, Attributes>;
   using Marshalling = std::vector<TypeAndAttr>;
 
-  static std::unique_ptr<CodeGenSpecifics> get(mlir::MLIRContext *ctx,
-                                               llvm::Triple &&trp,
-                                               KindMapping &&kindMap,
-                                               const mlir::DataLayout &dl);
+  static std::unique_ptr<CodeGenSpecifics>
+  get(mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
+      llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
+      const mlir::DataLayout &dl);
 
   static TypeAndAttr getTypeAndAttr(mlir::Type t) { return TypeAndAttr{t, {}}; }
 
   CodeGenSpecifics(mlir::MLIRContext *ctx, llvm::Triple &&trp,
-                   KindMapping &&kindMap, const mlir::DataLayout &dl)
+                   KindMapping &&kindMap, llvm::StringRef targetCPU,
+                   mlir::LLVM::TargetFeaturesAttr targetFeatures,
+                   const mlir::DataLayout &dl)
       : context{*ctx}, triple{std::move(trp)}, kindMap{std::move(kindMap)},
-        dataLayout{&dl} {}
+        targetCPU{targetCPU}, targetFeatures{targetFeatures}, dataLayout{&dl} {}
   CodeGenSpecifics() = delete;
   virtual ~CodeGenSpecifics() {}
 
@@ -161,6 +164,12 @@ public:
   // Returns width in bits of C/C++ 'int' type size.
   virtual unsigned char getCIntTypeWidth() const = 0;
 
+  llvm::StringRef getTargetCPU() const { return targetCPU; }
+
+  mlir::LLVM::TargetFeaturesAttr getTargetFeatures() const {
+    return targetFeatures;
+  }
+
   const mlir::DataLayout &getDataLayout() const {
     assert(dataLayout && "dataLayout must be set");
     return *dataLayout;
@@ -170,6 +179,8 @@ protected:
   mlir::MLIRContext &context;
   llvm::Triple triple;
   KindMapping kindMap;
+  llvm::StringRef targetCPU;
+  mlir::LLVM::TargetFeaturesAttr targetFeatures;
   const mlir::DataLayout *dataLayout = nullptr;
 };
 

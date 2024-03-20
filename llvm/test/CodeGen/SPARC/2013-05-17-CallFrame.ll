@@ -68,8 +68,8 @@ define void @variable_alloca_with_adj_call_stack(i32 %num) {
 ; SPARC64-NEXT:    restore
 entry:
   %0 = alloca i8, i32 %num, align 8
-  call void @foo(i8* %0, i8* %0, i8* %0, i8* %0, i8* %0, i8* %0, i8* %0, i8* %0, i8* %0, i8* %0)
+  call void @foo(ptr %0, ptr %0, ptr %0, ptr %0, ptr %0, ptr %0, ptr %0, ptr %0, ptr %0, ptr %0)
   ret void
 }
 
-declare void @foo(i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*);
+declare void @foo(ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr);

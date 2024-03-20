@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-17,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx98-17,cxx11-17,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx98-17,cxx11-17,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx98-17,cxx11-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 
 namespace dr600 { // dr600: 2.8
@@ -584,8 +584,8 @@ namespace dr647 { // dr647: 3.1
   struct C {
     constexpr C(NonLiteral);
     constexpr C(NonLiteral, int) {}
-    // since-cxx11-error@-1 {{constexpr constructor's 1st parameter type 'NonLiteral' is not a literal type}}
-    //   since-cxx11-note@#dr647-NonLiteral {{'NonLiteral' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+    // cxx11-20-error@-1 {{constexpr constructor's 1st parameter type 'NonLiteral' is not a literal type}}
+    //   cxx11-20-note@#dr647-NonLiteral {{'NonLiteral' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
     constexpr C() try {} catch (...) {}
     // cxx11-17-error@-1 {{function try block in constexpr constructor is a C++20 extension}}
     // cxx11-error@-2 {{use of this statement in a constexpr constructor is a C++14 extension}}
@@ -609,15 +609,15 @@ namespace dr647 { // dr647: 3.1
           d(0) {}
 
     constexpr E(int)
-    // since-cxx11-error@-1 {{constexpr constructor never produces a constant expression}}
-    //   since-cxx11-note@#dr647-int-d {{non-constexpr constructor 'D' cannot be used in a constant expression}}
-    //   since-cxx11-note@#dr647-D-float-ctor {{declared here}}
+    // cxx11-20-error@-1 {{constexpr constructor never produces a constant expression}}
+    //   cxx11-20-note@#dr647-int-d {{non-constexpr constructor 'D' cannot be used in a constant expression}}
+    //   cxx11-20-note@#dr647-D-float-ctor {{declared here}}
         : n(0),
           d(0.0f) {} // #dr647-int-d
     constexpr E(float f)
-    // since-cxx11-error@-1 {{never produces a constant expression}}
-    //   since-cxx11-note@#dr647-float-d {{non-constexpr constructor}}
-    //   since-cxx11-note@#dr647-D-float-ctor {{declared here}}
+    // cxx11-20-error@-1 {{never produces a constant expression}}
+    //   cxx11-20-note@#dr647-float-d {{non-constexpr constructor}}
+    //   cxx11-20-note@#dr647-D-float-ctor {{declared here}}
         : n(get()),
           d(D(0) + f) {} // #dr647-float-d
   };
@@ -779,7 +779,7 @@ namespace dr657 { // dr657: partial
 
   struct C { C(Abs) {} };
   // expected-error@-1 {{parameter type 'Abs' is an abstract class}}
-  // expected-note@#dr657-Abs {{unimplemented pure virtual method 'x' in 'Abs'}}
+  //   expected-note@#dr657-Abs {{unimplemented pure virtual method 'x' in 'Abs'}}
   struct Q { operator Abs() { __builtin_unreachable(); } } q;
   // expected-error@-1 {{return type 'Abs' is an abstract class}}
 #if __cplusplus >= 201703L
@@ -809,7 +809,7 @@ namespace dr659 { // dr659: 3.0
   struct A; // #dr659-A
   int m = alignof(A&);
   // since-cxx11-error@-1 {{invalid application of 'alignof' to an incomplete type 'A'}}
-  // since-cxx11-note@#dr659-A {{forward declaration of 'dr659::A'}}
+  //   since-cxx11-note@#dr659-A {{forward declaration of 'dr659::A'}}
 }
 #endif
 
@@ -836,7 +836,7 @@ namespace dr662 { // dr662: yes
     T &tr = t;
     T *tp = &t;
     // expected-error@-1 {{'tp' declared as a pointer to a reference of type 'int &'}}
-    // expected-note@#dr662-f-call {{in instantiation of function template specialization 'dr662::f<int &>' requested here}}
+    //   expected-note@#dr662-f-call {{in instantiation of function template specialization 'dr662::f<int &>' requested here}}
 #if __cplusplus >= 201103L
     auto *ap = &t;
 #endif
@@ -1302,12 +1302,12 @@ namespace dr692 { // dr692: 16
       e2(b2);
       f<int>(42);
       // expected-error@-1 {{call to 'f' is ambiguous}}
-      // expected-note@#dr692-f-deleted {{candidate function [with T = int, U = int] has been explicitly deleted}}
-      // expected-note@#dr692-f {{candidate function [with U = int]}}
+      //   expected-note@#dr692-f-deleted {{candidate function [with T = int, U = int] has been explicitly deleted}}
+      //   expected-note@#dr692-f {{candidate function [with U = int]}}
       g(42);
       // expected-error@-1 {{ambiguous}}
-      // expected-note@#dr692-g {{candidate function [with T = int]}}
-      // expected-note@#dr692-g-variadic {{candidate function [with T = int, U = <>]}}
+      //   expected-note@#dr692-g {{candidate function [with T = int]}}
+      //   expected-note@#dr692-g-variadic {{candidate function [with T = int, U = <>]}}
     }
   }
 
@@ -1371,7 +1371,7 @@ namespace dr696 { // dr696: 3.1
         int arr[N]; (void)arr;
         f(&N);
         // expected-error@-1 {{reference to local variable 'N' declared in enclosing function 'dr696::g'}}
-        // expected-note@#dr696-N {{'N' declared here}}
+        //   expected-note@#dr696-N {{'N' declared here}}
       }
     };
 #if __cplusplus >= 201103L

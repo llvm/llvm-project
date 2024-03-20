@@ -54,3 +54,17 @@
 // CHECK: #loc1 = loc(fused<memref<1xi32>
 // CHECK-NOT: #map
 "test.op"() {alias_test = loc(fused<memref<1xi32, affine_map<(d0) -> (d0)>>>["test.mlir":10:8])} : () -> ()
+
+// -----
+
+#unalias_me = "goodbye"
+#keep_aliased = "alias_test:dot_in_name"
+
+// CHECK: #test.conditional_alias<hello>
+"test.op"() {attr = #test.conditional_alias<"hello">} : () -> ()
+// CHECK-NEXT: #test.conditional_alias<#test_encoding>
+"test.op"() {attr = #test.conditional_alias<"alias_test:tensor_encoding">} : () -> ()
+// CHECK: #test.conditional_alias<goodbye>
+"test.op"() {attr = #test.conditional_alias<#unalias_me>} : () -> ()
+// CHECK-NEXT: #test.conditional_alias<#test2Ealias>
+"test.op"() {attr = #test.conditional_alias<#keep_aliased>} : () -> ()

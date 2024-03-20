@@ -258,9 +258,9 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   case Instruction::And: {
     Constant *ShAmt;
     // sub(y,and(lshr(x,C),1)) --> add(ashr(shl(x,(BW-1)-C),BW-1),y)
-    if (match(I, m_c_And(m_OneUse(m_TruncOrSelf(
-                             m_LShr(m_Value(X), m_ImmConstant(ShAmt)))),
-                         m_One()))) {
+    if (match(I, m_And(m_OneUse(m_TruncOrSelf(
+                           m_LShr(m_Value(X), m_ImmConstant(ShAmt)))),
+                       m_One()))) {
       unsigned BW = X->getType()->getScalarSizeInBits();
       Constant *BWMinusOne = ConstantInt::get(X->getType(), BW - 1);
       Value *R = Builder.CreateShl(X, Builder.CreateSub(BWMinusOne, ShAmt));

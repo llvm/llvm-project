@@ -369,7 +369,7 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
 ///     } -> tensor<?x?x8x2xf32>
 static FailureOr<GenericOp>
 bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
-                               ControlPropagationFn controlFn) {
+                               const ControlPropagationFn &controlFn) {
   auto genericOp = packOp.getSource().getDefiningOp<GenericOp>();
   if (!genericOp)
     return failure();
@@ -463,6 +463,88 @@ public:
     if (failed(genericOp))
       return failure();
     rewriter.replaceOp(packOp, genericOp->getResults());
+    return success();
+  }
+
+private:
+  ControlPropagationFn controlFn;
+};
+
+/// Propagate a tensor.pack operation up through a tensor.pad. The idea is to
+/// add as many zero padding dimensions in `high` and `low` based on the number
+/// of point loops.
+class BubbleUpPackThroughPadOp final : public OpRewritePattern<tensor::PackOp> {
+public:
+  BubbleUpPackThroughPadOp(MLIRContext *context, ControlPropagationFn fun)
+      : OpRewritePattern<tensor::PackOp>(context), controlFn(std::move(fun)) {}
+
+  LogicalResult matchAndRewrite(tensor::PackOp packOp,
+                                PatternRewriter &rewriter) const override {
+    auto padOp = packOp.getSource().getDefiningOp<tensor::PadOp>();
+    if (!padOp)
+      return failure();
+
+    // User controlled propagation function.
+    if (!controlFn(padOp))
+      return failure();
+
+    if (!padOp.getResult().hasOneUse())
+      return failure();
+
+    // TODO: Enable padding when the padding values are the same.
+    if (packOp.getPaddingValue())
+      return failure();
+
+    // Fail for non-constant padding values. The body of the pad could
+    // depend on the padding indices and/or properties of the padded
+    // tensor so for now we fail.
+    // TODO: Support non-constant padding values.
+    Value paddingVal = padOp.getConstantPaddingValue();
+    if (!paddingVal)
+      return failure();
+
+    if (!packOp.getDest().getDefiningOp<tensor::EmptyOp>())
+      return failure();
+
+    ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
+    ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
+
+    // Bail out if one of the padded dimension is a tiled one.
+    llvm::SmallBitVector paddedDims = padOp.getPaddedDims();
+    llvm::SmallBitVector innerDims(paddedDims.size());
+    for (int64_t dim : innerDimsPos)
+      innerDims.flip(dim);
+    if (paddedDims.anyCommon(innerDims))
+      return failure();
+
+    Location loc = padOp->getLoc();
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(padOp);
+
+    auto empty = tensor::PackOp::createDestinationTensor(
+        rewriter, loc, padOp.getSource(), packOp.getMixedTiles(), innerDimsPos,
+        outerDimsPerm);
+    Value packedSource = rewriter.create<tensor::PackOp>(
+        loc, padOp.getSource(), empty, innerDimsPos, packOp.getMixedTiles(),
+        /*padding=*/std::nullopt, outerDimsPerm);
+
+    // If we have `outer_dims_perms` we need to adjust the padded dimensions.
+    SmallVector<OpFoldResult> lowPad = padOp.getMixedLowPad();
+    SmallVector<OpFoldResult> highPad = padOp.getMixedHighPad();
+    if (!outerDimsPerm.empty()) {
+      applyPermutationToVector<OpFoldResult>(lowPad, outerDimsPerm);
+      applyPermutationToVector<OpFoldResult>(highPad, outerDimsPerm);
+    }
+    // The tiled dimensions were verified to be unpadded above, so here we
+    // just append 0 for the inner tile dimensions.
+    size_t pointLoopsSize = innerDimsPos.size();
+    lowPad.append(pointLoopsSize, rewriter.getIndexAttr(0));
+    highPad.append(pointLoopsSize, rewriter.getIndexAttr(0));
+
+    auto newPadOp = rewriter.create<tensor::PadOp>(
+        loc, /*result=*/Type(), packedSource, lowPad, highPad, paddingVal,
+        padOp.getNofold());
+    rewriter.replaceOp(packOp, newPadOp.getResult());
     return success();
   }
 
@@ -690,7 +772,8 @@ private:
 void mlir::linalg::populateDataLayoutPropagationPatterns(
     RewritePatternSet &patterns,
     const ControlPropagationFn &controlPackUnPackPropagation) {
-  patterns.insert<BubbleUpPackOpThroughGenericOpPattern,
-                  PushDownUnPackOpThroughGenericOp, PushDownUnPackThroughPadOp>(
-      patterns.getContext(), controlPackUnPackPropagation);
+  patterns
+      .insert<BubbleUpPackOpThroughGenericOpPattern, BubbleUpPackThroughPadOp,
+              PushDownUnPackOpThroughGenericOp, PushDownUnPackThroughPadOp>(
+          patterns.getContext(), controlPackUnPackPropagation);
 }

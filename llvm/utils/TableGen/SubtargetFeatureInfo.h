@@ -18,7 +18,8 @@
 
 namespace llvm {
 struct SubtargetFeatureInfo;
-using SubtargetFeatureInfoMap = std::map<Record *, SubtargetFeatureInfo, LessRecordByID>;
+using SubtargetFeatureInfoMap =
+    std::map<Record *, SubtargetFeatureInfo, LessRecordByID>;
 
 /// Helper class for storing information on a subtarget feature which
 /// participates in instruction matching.

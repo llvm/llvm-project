@@ -10,6 +10,7 @@ include "GlobalISelEmitterCommon.td"
 
 // Verify that patterns with multiple outputs are translated
 
+//-----------------------------------------------------------------------------
 // Test where only the opcode is mutated during ISel
 
 let Constraints = "$ptr_out = $addr" in
@@ -46,6 +47,7 @@ def : Pat<(loadpost (p0 GPR32:$addr), (i32 GPR32:$off)),
 // CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LDPost),
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 
+//-----------------------------------------------------------------------------
 // Test where a whole new MIR instruction is created during ISel
 
 def TWO_INS : I<(outs GPR32:$out1, GPR32:$out2), (ins GPR32:$in1, GPR32:$in2), []>;
@@ -82,5 +84,66 @@ def : Pat<(two_in GPR32:$i1, GPR32:$i2), (TWO_INS GPR32:$i2, GPR32:$i1)>;
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // DstI[out2]
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/3, // i2
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // i1
-// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
+
+//-----------------------------------------------------------------------------
+// Test where implicit defs are added using Defs.
+
+let Defs = [R0] in
+def ImplicitDefInstr : I<(outs GPR32:$dst), (ins GPR32:$src), []>;
+def OtherInstr : I<(outs GPR32:$dst), (ins GPR32:$src), []>;
+
+def : Pat<(i32 (add i32:$src, i32:$src)),
+  (OtherInstr (ImplicitDefInstr GPR32:$src))>;
+
+// CHECK: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_ADD),
+// CHECK-NEXT: // MIs[0] DstI[dst]
+// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// CHECK-NEXT: // MIs[0] src
+// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT: // MIs[0] src
+// CHECK-NEXT: GIM_CheckIsSameOperand, /*MI*/0, /*OpIdx*/2, /*OtherMI*/0, /*OtherOpIdx*/1,
+// CHECK-NEXT: // (add:{ *:[i32] } i32:{ *:[i32] }:$src, i32:{ *:[i32] }:$src)  =>  (OtherInstr:{ *:[i32] } (ImplicitDefInstr:{ *:[i32] }:{ *:[i32] } GPR32:{ *:[i32] }:$src))
+// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(MyTarget::ImplicitDefInstr),
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/1, // src
+// CHECK-NEXT: GIR_SetImplicitDefDead, /*InsnID*/1, /*OpIdx for MyTarget::R0*/0,
+// CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
+// CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::OtherInstr),
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
+// CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
+
+//-----------------------------------------------------------------------------
+// Test when the inner instruction in the output pattern has two outs
+
+// CHECK:      GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_ADD),
+// CHECK-NEXT: // MIs[0] DstI[dst]
+// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// CHECK-NEXT: // MIs[0] src
+// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT: // MIs[0] src
+// CHECK-NEXT: GIM_CheckIsSameOperand, /*MI*/0, /*OpIdx*/2, /*OtherMI*/0, /*OtherOpIdx*/1,
+// CHECK-NEXT: // (add:{ *:[i32] } i32:{ *:[i32] }:$src, i32:{ *:[i32] }:$src)  =>  (OtherInstr:{ *:[i32] } (TwoOutsInstr:{ *:[i32] }:{ *:[i32] } GPR32:{ *:[i32] }:$src))
+// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/GILLT_s32,
+// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(MyTarget::TwoOutsInstr),
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/1, /*TempRegFlags*/GIMT_Encode2(RegState::Define|RegState::Dead),
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/1, // src
+// CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
+// CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::OtherInstr),
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
+// CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
+
+def TwoOutsInstr : I<(outs GPR32:$out1, GPR32:$out2), (ins GPR32:$src), []>;
+
+def : Pat<(i32 (add i32:$src, i32:$src)),
+  (OtherInstr (TwoOutsInstr GPR32:$src))>;

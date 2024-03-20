@@ -14,4 +14,4 @@
 
 %%public_api()
 
-#endif // LLVM_LIBC_SCHED_H 
+#endif // LLVM_LIBC_SCHED_H

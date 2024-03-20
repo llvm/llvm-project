@@ -1,6 +1,6 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs< %s | FileCheck -check-prefixes=GCN,SI,FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -verify-machineinstrs< %s | FileCheck -check-prefixes=GCN,VI,FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -verify-machineinstrs< %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs< %s | FileCheck -check-prefixes=GCN,SI,FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs< %s | FileCheck -check-prefixes=GCN,VI,FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs< %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
 
 
 declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32) nounwind readnone

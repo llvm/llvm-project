@@ -656,8 +656,7 @@ void StraightLineStrengthReduce::rewriteCandidateWithBasis(
   case Candidate::GEP: {
     bool InBounds = cast<GetElementPtrInst>(C.Ins)->isInBounds();
     // C = (char *)Basis + Bump
-    Reduced =
-        Builder.CreateGEP(Builder.getInt8Ty(), Basis.Ins, Bump, "", InBounds);
+    Reduced = Builder.CreatePtrAdd(Basis.Ins, Bump, "", InBounds);
     break;
   }
   default:

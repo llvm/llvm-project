@@ -33,6 +33,17 @@ endif()
 
 option(FLANG_ENABLE_WERROR "Fail and stop building flang if a warning is triggered." OFF)
 
+# The out of tree builds of the compiler and the Fortran runtime
+# must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
+# to be composable. Failure to synchronize this setting may result
+# in linking errors or fatal failures in F128 runtime functions.
+set(FLANG_RUNTIME_F128_MATH_LIB "" CACHE STRING
+  "Specifies the target library used for implementing IEEE-754 128-bit float \
+  math in F18 runtime, e.g. it might be libquadmath for targets where \
+  REAL(16) is mapped to __float128, or libm for targets where REAL(16) \
+  is mapped to long double, etc."
+  )
+
 # Check for a standalone build and configure as appropriate from
 # there.
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -321,6 +332,12 @@ if (FLANG_REPOSITORY_STRING)
   add_definitions(-DFLANG_REPOSITORY_STRING="${FLANG_REPOSITORY_STRING}")
 endif()
 
+if (FLANG_RUNTIME_F128_MATH_LIB)
+  add_compile_definitions(
+    -DFLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}"
+    )
+endif()
+
 include(TestBigEndian)
 test_big_endian(IS_BIGENDIAN)
 if (IS_BIGENDIAN)
@@ -394,6 +411,14 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-semantic-interposition")
   endif()
 
+endif()
+
+# Clang on Darwin enables non-POSIX extensions by default, which allows the
+# macro HUGE to leak out of <math.h> even when it is never directly included,
+# conflicting with Flang's HUGE symbols.
+# Set _POSIX_C_SOURCE to avoid including these extensions.
+if (APPLE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_POSIX_C_SOURCE=200809")
 endif()
 
 list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS)
@@ -474,6 +499,9 @@ if (FLANG_LIBS)
 endif()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  add_llvm_install_targets(install-flang-headers
+    COMPONENT flang-headers)
+
   install(DIRECTORY include/flang
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT flang-headers

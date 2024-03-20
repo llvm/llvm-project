@@ -159,7 +159,7 @@ declare void @print(i32)
 ; CHECK-NEXT:  PostSpill:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @allocate(i32 16)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
-; CHECK-NEXT:    [[VAL_SPILL_ADDR:%.*]] = getelementptr inbounds [[G_FRAME:%.*]], ptr [[TMP0]], i64 0, i32 1
+; CHECK-NEXT:    [[VAL_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 ; CHECK-NEXT:    store i32 [[VAL:%.*]], ptr [[VAL_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    store ptr [[ARRAY:%.*]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[ARRAY]], align 4
@@ -180,7 +180,7 @@ declare void @print(i32)
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAY_RELOAD]], align 4
 ; CHECK-NEXT:    br label [[COROEND]]
 ; CHECK:       CoroEnd:
-; CHECK-NEXT:    [[VAL_RELOAD_ADDR:%.*]] = getelementptr inbounds [[G_FRAME:%.*]], ptr [[TMP2]], i64 0, i32 1
+; CHECK-NEXT:    [[VAL_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    [[VAL_RELOAD:%.*]] = load i32, ptr [[VAL_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    [[NEW_VAL:%.*]] = add i32 [[VAL_RELOAD]], 123
 ; CHECK-NEXT:    tail call void @deallocate(ptr [[TMP2]])
@@ -198,7 +198,7 @@ declare void @print(i32)
 ; CHECK-NEXT:    store i32 10, ptr [[ARRAY_RELOAD]], align 4
 ; CHECK-NEXT:    br label [[COROEND]]
 ; CHECK:       CoroEnd:
-; CHECK-NEXT:    [[VAL_RELOAD_ADDR:%.*]] = getelementptr inbounds [[G_FRAME:%.*]], ptr [[TMP2]], i64 0, i32 1
+; CHECK-NEXT:    [[VAL_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    [[VAL_RELOAD:%.*]] = load i32, ptr [[VAL_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    [[NEW_VAL:%.*]] = add i32 [[VAL_RELOAD]], 123
 ; CHECK-NEXT:    tail call void @deallocate(ptr [[TMP2]])

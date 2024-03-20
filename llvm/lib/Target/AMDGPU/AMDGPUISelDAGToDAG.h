@@ -105,18 +105,11 @@ protected:
 
 private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
+
   bool isInlineImmediate(const SDNode *N) const;
 
-  bool isInlineImmediate16(int64_t Imm) const {
-    return AMDGPU::isInlinableLiteral16(Imm, Subtarget->hasInv2PiInlineImm());
-  }
-
-  bool isInlineImmediate32(int64_t Imm) const {
-    return AMDGPU::isInlinableLiteral32(Imm, Subtarget->hasInv2PiInlineImm());
-  }
-
-  bool isInlineImmediate64(int64_t Imm) const {
-    return AMDGPU::isInlinableLiteral64(Imm, Subtarget->hasInv2PiInlineImm());
+  bool isInlineImmediate(const APInt &Imm) const {
+    return Subtarget->getInstrInfo()->isInlineConstant(Imm);
   }
 
   bool isInlineImmediate(const APFloat &Imm) const {
@@ -237,8 +230,18 @@ private:
                        bool IsDOT = false) const;
   bool SelectVOP3PModsDOT(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
-  bool SelectDotIUVOP3PMods(SDValue In, SDValue &Src) const;
+  bool SelectVOP3PModsNeg(SDValue In, SDValue &Src) const;
   bool SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const;
+
+  bool SelectWMMAModsF32NegAbs(SDValue In, SDValue &Src,
+                               SDValue &SrcMods) const;
+  bool SelectWMMAModsF16Neg(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectWMMAModsF16NegAbs(SDValue In, SDValue &Src,
+                               SDValue &SrcMods) const;
+  bool SelectWMMAVISrc(SDValue In, SDValue &Src) const;
+
+  bool SelectSWMMACIndex8(SDValue In, SDValue &Src, SDValue &IndexKey) const;
+  bool SelectSWMMACIndex16(SDValue In, SDValue &Src, SDValue &IndexKey) const;
 
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 

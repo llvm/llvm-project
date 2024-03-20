@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; The memory operand was dropped from the buffer_load_dword_offset
 ; when replaced with the addr64 during operand legalization, resulting

@@ -25,6 +25,7 @@ static_library("Core") {
     "BinarySection.cpp",
     "DIEBuilder.cpp",
     "DebugData.cpp",
+    "DebugNames.cpp",
     "DynoStats.cpp",
     "Exceptions.cpp",
     "FunctionLayout.cpp",

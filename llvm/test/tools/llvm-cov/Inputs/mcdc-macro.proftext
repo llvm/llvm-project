@@ -1,0 +1,62 @@
+func
+# Func Hash:
+395201011017399473
+# Num Counters:
+22
+# Counter Values:
+1
+1
+0
+0
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+0
+1
+1
+1
+0
+0
+0
+0
+# Num Bitmap Bytes:
+$13
+# Bitmap Byte Values:
+0x0
+0x0
+0x0
+0x20
+0x8
+0x0
+0x20
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+
+
+func1
+# Func Hash:
+24
+# Num Counters:
+1
+# Counter Values:
+3
+
+main
+# Func Hash:
+24
+# Num Counters:
+1
+# Counter Values:
+1
+

@@ -54,14 +54,12 @@ define float @test_v1f32(<1 x float> %a) nounwind {
 ;
 ; CHECK-NOFP-GI-LABEL: test_v1f32:
 ; CHECK-NOFP-GI:       // %bb.0:
-; CHECK-NOFP-GI-NEXT:    fmov x8, d0
-; CHECK-NOFP-GI-NEXT:    fmov s0, w8
+; CHECK-NOFP-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
 ; CHECK-NOFP-GI-NEXT:    ret
 ;
 ; CHECK-FP-GI-LABEL: test_v1f32:
 ; CHECK-FP-GI:       // %bb.0:
-; CHECK-FP-GI-NEXT:    fmov x8, d0
-; CHECK-FP-GI-NEXT:    fmov s0, w8
+; CHECK-FP-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
 ; CHECK-FP-GI-NEXT:    ret
   %b = call float @llvm.vector.reduce.fmaximum.v1f32(<1 x float> %a)
   ret float %b

@@ -352,6 +352,11 @@ public:
   /// ExternalASTSource.
   TypeSystemClang *GetTypeSystem() const { return m_clang_ast_context; }
 
+private:
+  bool FindObjCPropertyAndIvarDeclsWithOrigin(
+      NameSearchContext &context,
+      DeclFromUser<const clang::ObjCInterfaceDecl> &origin_iface_decl);
+
 protected:
   bool FindObjCMethodDeclsWithOrigin(
       NameSearchContext &context,

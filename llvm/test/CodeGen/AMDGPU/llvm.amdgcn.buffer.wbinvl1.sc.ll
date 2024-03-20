@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -show-mc-encoding < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -show-mc-encoding < %s | FileCheck -check-prefix=SI %s
 
 declare void @llvm.amdgcn.buffer.wbinvl1.sc() #0
 

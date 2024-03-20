@@ -6,7 +6,8 @@ define void @kmovkr_1(i1 %cmp23.not) {
 ; AVX512-LABEL: kmovkr_1:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    kmovw %edi, %k1 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x92,0xcf]
-; AVX512-NEXT:    vmovsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0xff,0x89,0x10,0x05,A,A,A,A]
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 {%k1} {z} = [1.0E+0,0.0E+0]
+; AVX512-NEXT:    # encoding: [0x62,0xf1,0xff,0x89,0x10,0x05,A,A,A,A]
 ; AVX512-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; AVX512-NEXT:    vmovsd %xmm0, 0 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x04,0x25,0x00,0x00,0x00,0x00]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
@@ -14,7 +15,8 @@ define void @kmovkr_1(i1 %cmp23.not) {
 ; AVX512BW-LABEL: kmovkr_1:
 ; AVX512BW:       # %bb.0: # %entry
 ; AVX512BW-NEXT:    kmovd %edi, %k1 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x92,0xcf]
-; AVX512BW-NEXT:    vmovsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0xff,0x89,0x10,0x05,A,A,A,A]
+; AVX512BW-NEXT:    vmovsd {{.*#+}} xmm0 {%k1} {z} = [1.0E+0,0.0E+0]
+; AVX512BW-NEXT:    # encoding: [0x62,0xf1,0xff,0x89,0x10,0x05,A,A,A,A]
 ; AVX512BW-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; AVX512BW-NEXT:    vmovsd %xmm0, 0 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x04,0x25,0x00,0x00,0x00,0x00]
 ; AVX512BW-NEXT:    retq # encoding: [0xc3]

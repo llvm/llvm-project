@@ -115,6 +115,7 @@ enum CPUFeatures {
   FEAT_SME_I64,
   FEAT_SME2,
   FEAT_RCPC3,
+  FEAT_MOPS,
   FEAT_MAX,
   FEAT_EXT = 62, // Reserved to indicate presence of additional features field
                  // in __aarch64_cpu_features

@@ -434,6 +434,10 @@ public:
       return rewriter.notifyMatchFailure(
           op, "not using vector shuffle based lowering");
 
+    if (op.getSourceVectorType().isScalable())
+      return rewriter.notifyMatchFailure(
+          op, "vector shuffle lowering not supported for scalable vectors");
+
     auto srcGtOneDims = isTranspose2DSlice(op);
     if (failed(srcGtOneDims))
       return rewriter.notifyMatchFailure(

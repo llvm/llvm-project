@@ -155,7 +155,6 @@ headers_not_available = [
 def is_header(file):
     """Returns whether the given file is a header (i.e. not a directory or the modulemap file)."""
     return not file.is_dir() and not file.name in [
-        "module.modulemap.in",
         "module.modulemap",
         "CMakeLists.txt",
         "libcxx.imp",
@@ -166,6 +165,9 @@ def is_modulemap_header(header):
     """Returns whether a header should be listed in the modulemap"""
     # TODO: Should `__config_site` be in the modulemap?
     if header == "__config_site":
+        return False
+
+    if header == "__assertion_handler":
         return False
 
     # exclude libc++abi files
@@ -189,6 +191,9 @@ include = pathlib.Path(os.path.join(libcxx_root, "include"))
 test = pathlib.Path(os.path.join(libcxx_root, "test"))
 assert libcxx_root.exists()
 
+all_headers = sorted(
+    p.relative_to(include).as_posix() for p in include.rglob("[a-z]*") if is_header(p)
+)
 toplevel_headers = sorted(
     p.relative_to(include).as_posix() for p in include.glob("[a-z]*") if is_header(p)
 )
@@ -208,4 +213,29 @@ module_headers = [
     if not header.endswith(".h")
     # These headers have been removed in C++20 so are never part of a module.
     and not header in ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
+]
+
+# The C headers used in the std and std.compat modules.
+module_c_headers = [
+    "cassert",
+    "cctype",
+    "cerrno",
+    "cfenv",
+    "cfloat",
+    "cinttypes",
+    "climits",
+    "clocale",
+    "cmath",
+    "csetjmp",
+    "csignal",
+    "cstdarg",
+    "cstddef",
+    "cstdint",
+    "cstdio",
+    "cstdlib",
+    "cstring",
+    "ctime",
+    "cuchar",
+    "cwchar",
+    "cwctype",
 ]

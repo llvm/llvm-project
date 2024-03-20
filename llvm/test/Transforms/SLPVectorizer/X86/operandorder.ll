@@ -233,7 +233,7 @@ define void @vecload_vs_broadcast4(ptr noalias %from, ptr noalias %to, double %v
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr double, ptr [[FROM:%.*]], i32 1
+; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr i8, ptr [[FROM:%.*]], i32 8
 ; CHECK-NEXT:    [[V0_1:%.*]] = load double, ptr [[FROM]], align 4
 ; CHECK-NEXT:    [[V0_2:%.*]] = load double, ptr [[FROM_1]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V0_2]], i64 0
@@ -286,7 +286,7 @@ define void @shuffle_nodes_match2(ptr noalias %from, ptr noalias %to, double %v1
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr double, ptr [[FROM:%.*]], i32 1
+; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr i8, ptr [[FROM:%.*]], i32 8
 ; CHECK-NEXT:    [[V0_1:%.*]] = load double, ptr [[FROM]], align 4
 ; CHECK-NEXT:    [[V0_2:%.*]] = load double, ptr [[FROM_1]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V0_1]], i64 0

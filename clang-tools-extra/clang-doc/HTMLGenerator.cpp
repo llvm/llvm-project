@@ -280,7 +280,7 @@ genStylesheetsHTML(StringRef InfoPath, const ClangDocContext &CDCtx) {
                             llvm::sys::path::filename(FilePath));
     // Paths in HTML must be in posix-style
     llvm::sys::path::native(StylesheetPath, llvm::sys::path::Style::posix);
-    LinkNode->Attributes.emplace_back("href", std::string(StylesheetPath.str()));
+    LinkNode->Attributes.emplace_back("href", std::string(StylesheetPath));
     Out.emplace_back(std::move(LinkNode));
   }
   return Out;
@@ -295,7 +295,7 @@ genJsScriptsHTML(StringRef InfoPath, const ClangDocContext &CDCtx) {
     llvm::sys::path::append(ScriptPath, llvm::sys::path::filename(FilePath));
     // Paths in HTML must be in posix-style
     llvm::sys::path::native(ScriptPath, llvm::sys::path::Style::posix);
-    ScriptNode->Attributes.emplace_back("src", std::string(ScriptPath.str()));
+    ScriptNode->Attributes.emplace_back("src", std::string(ScriptPath));
     Out.emplace_back(std::move(ScriptNode));
   }
   return Out;
@@ -457,7 +457,7 @@ writeFileDefinition(const Location &L,
   Node->Children.emplace_back(std::make_unique<TextNode>(" of file "));
   auto LocFileNode = std::make_unique<TagNode>(
       HTMLTag::TAG_A, llvm::sys::path::filename(FileURL));
-  LocFileNode->Attributes.emplace_back("href", std::string(FileURL.str()));
+  LocFileNode->Attributes.emplace_back("href", std::string(FileURL));
   Node->Children.emplace_back(std::move(LocFileNode));
   return Node;
 }
