@@ -613,8 +613,8 @@ void ObjcCategoryMerger::collectCategoryWriterInfoFromCategory(
 void ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
                                                uint32_t secOffset,
                                                PointerListInfo &ptrList) {
-  if (!isec || (secOffset + target->wordSize > isec->data.size()))
-    assert("Tried to read pointer list beyond protocol section end");
+  assert((isec && (secOffset + target->wordSize <= isec->data.size())) &&
+         "Tried to read pointer list beyond protocol section end");
 
   const Reloc *reloc = isec->getRelocAt(secOffset);
   if (!reloc)
