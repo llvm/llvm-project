@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/SROA.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Transforms/Passes.h"
@@ -42,7 +43,8 @@ struct MemorySlotDestructuringInfo {
 /// nothing if the slot cannot be destructured or if there is no useful work to
 /// be done.
 static std::optional<MemorySlotDestructuringInfo>
-computeDestructuringInfo(DestructurableMemorySlot &slot) {
+computeDestructuringInfo(DestructurableMemorySlot &slot,
+                         const DataLayout &dataLayout) {
   assert(isa<DestructurableTypeInterface>(slot.elemType));
 
   if (slot.ptr.use_empty())
@@ -62,7 +64,8 @@ computeDestructuringInfo(DestructurableMemorySlot &slot) {
   for (OpOperand &use : slot.ptr.getUses()) {
     if (auto accessor =
             dyn_cast<DestructurableAccessorOpInterface>(use.getOwner())) {
-      if (accessor.canRewire(slot, info.usedIndices, usedSafelyWorklist)) {
+      if (accessor.canRewire(slot, info.usedIndices, usedSafelyWorklist,
+                             dataLayout)) {
         info.accessors.push_back(accessor);
         continue;
       }
@@ -82,8 +85,8 @@ computeDestructuringInfo(DestructurableMemorySlot &slot) {
       Operation *subslotUser = subslotUse.getOwner();
 
       if (auto memOp = dyn_cast<SafeMemorySlotAccessOpInterface>(subslotUser))
-        if (succeeded(memOp.ensureOnlySafeAccesses(mustBeUsedSafely,
-                                                   usedSafelyWorklist)))
+        if (succeeded(memOp.ensureOnlySafeAccesses(
+                mustBeUsedSafely, usedSafelyWorklist, dataLayout)))
           continue;
 
       // If it cannot be shown that the operation uses the slot safely, maybe it
@@ -110,7 +113,7 @@ computeDestructuringInfo(DestructurableMemorySlot &slot) {
     SmallVector<OpOperand *> newBlockingUses;
     // If the operation decides it cannot deal with removing the blocking uses,
     // destructuring must fail.
-    if (!promotable.canUsesBeRemoved(blockingUses, newBlockingUses))
+    if (!promotable.canUsesBeRemoved(blockingUses, newBlockingUses, dataLayout))
       return {};
 
     // Then, register any new blocking uses for coming operations.
@@ -132,6 +135,7 @@ computeDestructuringInfo(DestructurableMemorySlot &slot) {
 static void destructureSlot(DestructurableMemorySlot &slot,
                             DestructurableAllocationOpInterface allocator,
                             RewriterBase &rewriter,
+                            const DataLayout &dataLayout,
                             MemorySlotDestructuringInfo &info,
                             const SROAStatistics &statistics) {
   RewriterBase::InsertionGuard guard(rewriter);
@@ -158,7 +162,8 @@ static void destructureSlot(DestructurableMemorySlot &slot,
   for (Operation *toRewire : llvm::reverse(usersToRewire)) {
     rewriter.setInsertionPointAfter(toRewire);
     if (auto accessor = dyn_cast<DestructurableAccessorOpInterface>(toRewire)) {
-      if (accessor.rewire(slot, subslots, rewriter) == DeletionKind::Delete)
+      if (accessor.rewire(slot, subslots, rewriter, dataLayout) ==
+          DeletionKind::Delete)
         toErase.push_back(accessor);
       continue;
     }
@@ -186,17 +191,18 @@ static void destructureSlot(DestructurableMemorySlot &slot,
 
 LogicalResult mlir::tryToDestructureMemorySlots(
     ArrayRef<DestructurableAllocationOpInterface> allocators,
-    RewriterBase &rewriter, SROAStatistics statistics) {
+    RewriterBase &rewriter, const DataLayout &dataLayout,
+    SROAStatistics statistics) {
   bool destructuredAny = false;
 
   for (DestructurableAllocationOpInterface allocator : allocators) {
     for (DestructurableMemorySlot slot : allocator.getDestructurableSlots()) {
       std::optional<MemorySlotDestructuringInfo> info =
-          computeDestructuringInfo(slot);
+          computeDestructuringInfo(slot, dataLayout);
       if (!info)
         continue;
 
-      destructureSlot(slot, allocator, rewriter, *info, statistics);
+      destructureSlot(slot, allocator, rewriter, dataLayout, *info, statistics);
       destructuredAny = true;
     }
   }
@@ -215,6 +221,8 @@ struct SROA : public impl::SROABase<SROA> {
     SROAStatistics statistics{&destructuredAmount, &slotsWithMemoryBenefit,
                               &maxSubelementAmount};
 
+    auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
+    const DataLayout &dataLayout = dataLayoutAnalysis.getAtOrAbove(scopeOp);
     bool changed = false;
 
     for (Region &region : scopeOp->getRegions()) {
@@ -235,8 +243,8 @@ struct SROA : public impl::SROABase<SROA> {
           allocators.emplace_back(allocator);
         });
 
-        if (failed(
-                tryToDestructureMemorySlots(allocators, rewriter, statistics)))
+        if (failed(tryToDestructureMemorySlots(allocators, rewriter, dataLayout,
+                                               statistics)))
           break;
 
         changed = true;

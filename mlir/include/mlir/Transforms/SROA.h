@@ -31,7 +31,8 @@ struct SROAStatistics {
 /// failure if no slot was destructured.
 LogicalResult tryToDestructureMemorySlots(
     ArrayRef<DestructurableAllocationOpInterface> allocators,
-    RewriterBase &rewriter, SROAStatistics statistics = {});
+    RewriterBase &rewriter, const DataLayout &dataLayout,
+    SROAStatistics statistics = {});
 
 } // namespace mlir
 
