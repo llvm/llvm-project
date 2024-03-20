@@ -4667,7 +4667,8 @@ TEST(TransferTest, DoesNotCrashOnNullChildren) {
     task foo() noexcept {
       co_return;
     }
-  )cc").str();
+  )cc")
+                         .str();
   // This is a crash regression test when calling `AdornedCFG::build` on a
   // statement (in this case, the `CoroutineBodyStmt`) with null children.
   runDataflow(
