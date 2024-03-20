@@ -3697,9 +3697,6 @@ void MachineVerifier::verifyStackFrame() {
       if (I.getOpcode() == FrameSetupOpcode) {
         if (BBState.ExitIsSetup)
           report("FrameSetup is after another FrameSetup", &I);
-        if (!MRI->isSSA() && !MF->getFrameInfo().adjustsStack())
-          report("AdjustsStack not set in presence of a frame pseudo "
-                 "instruction.", &I);
         BBState.ExitValue -= TII->getFrameTotalSize(I);
         BBState.ExitIsSetup = true;
       }
@@ -3715,9 +3712,6 @@ void MachineVerifier::verifyStackFrame() {
           errs() << "FrameDestroy <" << Size << "> is after FrameSetup <"
               << AbsSPAdj << ">.\n";
         }
-        if (!MRI->isSSA() && !MF->getFrameInfo().adjustsStack())
-          report("AdjustsStack not set in presence of a frame pseudo "
-                 "instruction.", &I);
         BBState.ExitValue += Size;
         BBState.ExitIsSetup = false;
       }

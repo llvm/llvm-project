@@ -5,8 +5,6 @@
 # Tied def/use must be assigned to the same register.
 ---
 name:            test_relocate
-frameInfo:
-  adjustsStack:    true
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
@@ -26,8 +24,6 @@ body:             |
 # These regmasks have no real meaning and chosen to allow only single register to be assignable ($rbp)
 ---
 name:            test_relocate_multi_regmasks
-frameInfo:
-  adjustsStack:    true
 tracksRegLiveness: true
 body:             |
   bb.0.entry:

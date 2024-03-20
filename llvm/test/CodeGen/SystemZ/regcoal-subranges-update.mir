@@ -48,8 +48,6 @@ body:             |
 # represented for the value carried by %7.
 ---
 name:            segfault
-frameInfo:
-  adjustsStack:    true
 tracksRegLiveness: true
 liveins:         []
 body:             |
