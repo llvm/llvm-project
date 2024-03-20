@@ -221,6 +221,8 @@ public:
     return Reader->ReadSelector(*F, Record, Idx);
   }
 
+  TypeCoupledDeclRefInfo readTypeCoupledDeclRefInfo();
+
   /// Read a declaration name, advancing Idx.
   // DeclarationName readDeclarationName(); (inherited)
   DeclarationNameLoc readDeclarationNameLoc(DeclarationName Name);
