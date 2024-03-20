@@ -17,8 +17,9 @@ LLVM_LIBC_FUNCTION(int, canonicalize, (double *cx, const double *x)) {
     using FPB = fputil::FPBits<double>;
     FPB sx(*x);
     if (sx.is_signaling_nan())
-        fputil::raise_except_if_required(FE_INVALID);
-    *cx = *x;
+        *cx = quiet_nan();
+    else
+        *cx = *x;
     return 0;
 }
 
