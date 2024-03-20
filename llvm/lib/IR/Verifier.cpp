@@ -5016,7 +5016,7 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::coro_await_suspend_handle ||
                 F->getIntrinsicID() ==
                     Intrinsic::experimental_patchpoint_void ||
-                F->getIntrinsicID() == Intrinsic::experimental_patchpoint_i64 ||
+                F->getIntrinsicID() == Intrinsic::experimental_patchpoint ||
                 F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint ||
                 F->getIntrinsicID() == Intrinsic::wasm_rethrow ||
                 IsAttachedCallOperand(F, CBI, i),
@@ -5659,6 +5659,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Check(isGCPtr(DerivedType),
             "gc.relocate: relocated value must be a gc pointer", Call);
     }
+    break;
+  }
+  case Intrinsic::experimental_patchpoint: {
+    Check(Call.getType()->isSingleValueType(),
+          "patchpoint result type is not a valid type for a register", Call);
     break;
   }
   case Intrinsic::eh_exceptioncode:

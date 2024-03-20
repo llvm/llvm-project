@@ -752,12 +752,12 @@ FastISel::CallLoweringInfo &FastISel::CallLoweringInfo::setCallee(
 }
 
 bool FastISel::selectPatchpoint(const CallInst *I) {
-  // void|i64 @llvm.experimental.patchpoint.void|i64(i64 <id>,
-  //                                                 i32 <numBytes>,
-  //                                                 i8* <target>,
-  //                                                 i32 <numArgs>,
-  //                                                 [Args...],
-  //                                                 [live variables...])
+  // <ty> @llvm.experimental.patchpoint.<ty>(i64 <id>,
+  //                                         i32 <numBytes>,
+  //                                         i8* <target>,
+  //                                         i32 <numArgs>,
+  //                                         [Args...],
+  //                                         [live variables...])
   CallingConv::ID CC = I->getCallingConv();
   bool IsAnyRegCC = CC == CallingConv::AnyReg;
   bool HasDef = !I->getType()->isVoidTy();
@@ -790,7 +790,9 @@ bool FastISel::selectPatchpoint(const CallInst *I) {
   // Add an explicit result reg if we use the anyreg calling convention.
   if (IsAnyRegCC && HasDef) {
     assert(CLI.NumResultRegs == 0 && "Unexpected result register.");
-    CLI.ResultReg = createResultReg(TLI.getRegClassFor(MVT::i64));
+    assert(I->getType()->isSingleValueType());
+    MVT ValueType = TLI.getSimpleValueType(DL, I->getType());
+    CLI.ResultReg = createResultReg(TLI.getRegClassFor(ValueType));
     CLI.NumResultRegs = 1;
     Ops.push_back(MachineOperand::CreateReg(CLI.ResultReg, /*isDef=*/true));
   }
@@ -1464,7 +1466,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::experimental_stackmap:
     return selectStackmap(II);
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     return selectPatchpoint(II);
 
   case Intrinsic::xray_customevent:
