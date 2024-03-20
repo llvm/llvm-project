@@ -62,6 +62,7 @@ gentbl(
         "CrossTU",
         "Driver",
         "Frontend",
+        "InstallAPI",
         "Lex",
         "Parse",
         "Refactoring",
@@ -2068,6 +2069,7 @@ cc_library(
         ":frontend",
         ":support",
         "//llvm:Core",
+        "//llvm:Demangle",
         "//llvm:Support",
         "//llvm:TextAPI",
     ],
@@ -2405,6 +2407,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":basic",
+        ":diagnostic_defs_gen",
         ":frontend",
         ":lex",
         ":sema",

@@ -39,15 +39,9 @@
 #define CLANG_LIB_FORMAT_MACROS_H
 
 #include <list>
-#include <map>
-#include <string>
-#include <vector>
 
 #include "FormatToken.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 namespace format {

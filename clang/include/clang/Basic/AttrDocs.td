@@ -4151,20 +4151,6 @@ non-underscored keywords. For example:
       @property (assign, nullable) NSView *superview;
       @property (readonly, nonnull) NSArray *subviews;
     @end
-
-As well as built-in pointer types, the nullability attributes can be attached
-to C++ classes marked with the ``_Nullable`` attribute.
-
-The following C++ standard library types are considered nullable:
-``unique_ptr``, ``shared_ptr``, ``auto_ptr``, ``exception_ptr``, ``function``,
-``move_only_function`` and ``coroutine_handle``.
-
-Types should be marked nullable only where the type itself leaves nullability
-ambiguous. For example, ``std::optional`` is not marked ``_Nullable``, because
-``optional<int> _Nullable`` is redundant and ``optional<int> _Nonnull`` is
-not a useful type. ``std::weak_ptr`` is not nullable, because its nullability
-can change with no visible modification, so static annotation is unlikely to be
-unhelpful.
   }];
 }
 
@@ -4199,17 +4185,6 @@ The ``_Nullable`` nullability qualifier indicates that a value of the
     int fetch_or_zero(int * _Nullable ptr);
 
 a caller of ``fetch_or_zero`` can provide null.
-
-The ``_Nullable`` attribute on classes indicates that the given class can
-represent null values, and so the ``_Nullable``, ``_Nonnull`` etc qualifiers
-make sense for this type. For example:
-
-  .. code-block:: c
-
-    class _Nullable ArenaPointer { ... };
-
-    ArenaPointer _Nonnull x = ...;
-    ArenaPointer _Nullable y = nullptr;
   }];
 }
 
@@ -5162,10 +5137,11 @@ that does not. A single parameter may not have multiple ABI treatment
 attributes.
 
 Support for this feature is target-dependent, although it should be
-supported on every target that Swift supports. Query for this support
-with ``__has_attribute(swiftcall)``. This implies support for the
-``swift_context``, ``swift_error_result``, and ``swift_indirect_result``
-attributes.
+supported on every target that Swift supports. Query for this attribute
+with ``__has_attribute(swiftcall)``. Query if the target supports the
+calling convention with ``__has_extension(swiftcc)``. This implies
+support for the ``swift_context``, ``swift_error_result``, and
+``swift_indirect_result`` attributes.
   }];
 }
 
@@ -5212,6 +5188,10 @@ the following:
   semantically be performed after a guaranteed tail call, such as the
   non-trivial destruction of a local variable or temporary,
   then the program is ill-formed.
+
+Query for this attribute with ``__has_attribute(swiftasynccall)``. Query if
+the target supports the calling convention with
+``__has_extension(swiftasynccc)``.
   }];
 }
 
