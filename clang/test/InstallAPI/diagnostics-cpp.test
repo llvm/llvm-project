@@ -12,8 +12,8 @@
 // RUN: --verify-mode=Pedantic -o %t/output.tbd --demangle 2> %t/errors.log
 // RUN: FileCheck -input-file %t/errors.log %s 
 
-CHECK: warning: violations found for arm64-apple-macos13
-CHECK: CPP.h:5:7: error: declaration has external linkage, but symbol has internal linkage in dynamic library 'vtable for Bar'
+CHECK:      warning: violations found for arm64-apple-macos13
+CHECK:      CPP.h:5:7: error: declaration has external linkage, but symbol has internal linkage in dynamic library 'vtable for Bar'
 CHECK-NEXT: class Bar : Foo {
 CHECK-NEXT:       ^
 CHECK-NEXT: CPP.h:5:7: error: declaration has external linkage, but symbol has internal linkage in dynamic library 'typeinfo for Bar'
