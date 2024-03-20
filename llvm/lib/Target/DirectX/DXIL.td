@@ -255,6 +255,9 @@ class DXILOpMapping<int opCode, DXILOpClass opClass,
 }
 
 // Concrete definition of DXIL Operation mapping to corresponding LLVM intrinsic
+def IsInf : DXILOpMapping<9, isSpecialFloat, int_dx_isinf,
+                         "Determines if the specified value is infinite.",
+                         [llvm_i1_ty, llvm_halforfloat_ty]>;
 def Sin  : DXILOpMapping<13, unary, int_sin,
                          "Returns sine(theta) for theta in radians.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
