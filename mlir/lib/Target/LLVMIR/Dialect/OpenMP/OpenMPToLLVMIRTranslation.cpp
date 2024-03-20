@@ -2172,15 +2172,14 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
 // opaque pointers we lose the ability to easily check if something is
 // a pointer whilst maintaining access to the underlying type.
 static bool checkIfPointerMap(mlir::omp::MapInfoOp mapOp) {
+  // If we have a varPtrPtr field assigned then the underlying type is a pointer
+  if (mapOp.getVarPtrPtr())
+    return true;
+
   // If the map data is declare target with a link clause, then it's represented
   // as a pointer when we lower it to LLVM-IR even if at the MLIR level it has
   // no relation to pointers.
-  if (isDeclareTargetLink(mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr()
-                                               : mapOp.getVarPtr()))
-    return true;
-
-  // If we have a varPtrPtr field assigned then the underlying type is a pointer
-  if (mapOp.getVarPtrPtr())
+  if (isDeclareTargetLink(mapOp.getVarPtr()))
     return true;
 
   return false;
