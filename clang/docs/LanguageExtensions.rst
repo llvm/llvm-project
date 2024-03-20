@@ -3510,8 +3510,8 @@ The debugging information would look as if it were produced for the following co
         "__llvm_verbose_trap: Argument must not be null!"();
     }
 
-However, the LLVM IR would not actually contain a call to the artificial
-function — it only exists in the debug metadata.
+However, the generated code would not actually contain a call to the artificial
+function — it only exists in the debugging information.
 
 Query for this feature with ``__has_builtin(__builtin_verbose_trap)``. Note that
 users need to enable debug information to enable this feature. A call to this

@@ -3593,6 +3593,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           TrapLocation, *E->getArg(0)->tryEvaluateString(getContext()));
     }
     ApplyDebugLocation ApplyTrapDI(*this, TrapLocation);
+    // Currently no attempt is made to prevent traps from being merged.
     EmitTrapCall(Intrinsic::trap);
     return RValue::get(nullptr);
   }
