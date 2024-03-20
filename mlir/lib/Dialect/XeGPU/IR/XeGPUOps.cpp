@@ -44,7 +44,7 @@ static std::string makeString(T array, bool breakline = false) {
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<MemRefType> source,
                            llvm::ArrayRef<OpFoldResult> offsets) {
-  auto ty = source.getType();
+  [[maybe_unused]] auto ty = source.getType();
   assert(ty.hasStaticShape() && offsets.size() == (size_t)ty.getRank());
 
   llvm::SmallVector<int64_t> staticOffsets;
