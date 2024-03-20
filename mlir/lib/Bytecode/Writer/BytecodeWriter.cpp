@@ -73,14 +73,14 @@ BytecodeWriterConfig::getAttributeWriterCallbacks() const {
   return impl->attributeWriterCallbacks;
 }
 
-ArrayRef<const std::unique_ptr<AttrTypeBytecodeWriter<Type>>>
-BytecodeWriterConfig::getTypeWriterCallbacks() const {
-  return impl->typeWriterCallbacks;
+ArrayRef<const std::unique_ptr<AttrTypeBytecodeWriter<Attribute>> &>
+BytecodeWriterConfig::getAttributeWriterCallbacks() const {
+  return impl->attributeWriterCallbacks;
 }
 
-void BytecodeWriterConfig::attachAttributeCallback(
-    std::unique_ptr<AttrTypeBytecodeWriter<Attribute>> callback) {
-  impl->attributeWriterCallbacks.emplace_back(std::move(callback));
+ArrayRef<const std::unique_ptr<AttrTypeBytecodeWriter<Type>> &>
+BytecodeWriterConfig::getTypeWriterCallbacks() const {
+  return impl->typeWriterCallbacks;
 }
 
 void BytecodeWriterConfig::attachTypeCallback(
