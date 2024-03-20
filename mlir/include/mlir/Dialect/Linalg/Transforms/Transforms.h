@@ -460,7 +460,8 @@ LogicalResult promoteSubviewsPrecondition(Operation *op,
 LogicalResult vectorizeOpPrecondition(Operation *op,
                                       ArrayRef<int64_t> inputVectorSizes = {},
                                       ArrayRef<bool> inputScalableVecDims = {},
-                                      bool vectorizeNDExtract = false);
+                                      bool vectorizeNDExtract = false,
+                                      bool flatten1DDepthwiseConv = false);
 
 //===----------------------------------------------------------------------===//
 // Transformations exposed as functional-style API calls.
@@ -480,6 +481,10 @@ struct ControlDropUnitDims {
   ControlFnTy controlFn = [](Operation *op) {
     if (auto genericOp = dyn_cast_or_null<GenericOp>(op)) {
       return llvm::to_vector(llvm::seq<unsigned>(0, genericOp.getNumLoops()));
+    }
+    if (auto padOp = dyn_cast_or_null<tensor::PadOp>(op)) {
+      return llvm::to_vector(
+          llvm::seq<unsigned>(0, padOp.getSourceType().getRank()));
     }
     return SmallVector<unsigned>{};
   };

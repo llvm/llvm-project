@@ -1895,9 +1895,6 @@ static OpPrintingFlags verifyOpAndAdjustFlags(Operation *op,
       printerFlags.shouldAssumeVerified())
     return printerFlags;
 
-  LLVM_DEBUG(llvm::dbgs() << DEBUG_TYPE << ": Verifying operation: "
-                          << op->getName() << "\n");
-
   // Ignore errors emitted by the verifier. We check the thread id to avoid
   // consuming other threads' errors.
   auto parentThreadId = llvm::get_threadid();

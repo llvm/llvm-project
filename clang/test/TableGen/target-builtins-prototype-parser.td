@@ -1,11 +1,11 @@
-// RUN: clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins | FileCheck %s
-// RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_LANES 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_LANES
-// RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_COMMA 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_COMMA
-// RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_TYPE 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_TYPE
-// RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_A 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_A
-// RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_B 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_B
-// RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_C 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_C
-// RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_D 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_D
+// RUN: clang-tblgen -I %p/../../include/ %s --gen-clang-builtins | FileCheck %s
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_LANES 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_LANES
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_COMMA 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_COMMA
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_TYPE 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_TYPE
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_A 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_A
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_B 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_B
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_C 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_C
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_D 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_D
 
 include "clang/Basic/BuiltinsBase.td"
 

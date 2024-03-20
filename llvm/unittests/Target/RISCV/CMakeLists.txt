@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   RISCVCodeGen
   RISCVDesc
   RISCVInfo
+  Analysis
   CodeGen
   Core
   MC

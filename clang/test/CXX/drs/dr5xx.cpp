@@ -141,15 +141,7 @@ namespace dr518 { // dr518: yes c++11
   // cxx98-error@-1 {{commas at the end of enumerator lists are a C++11 extension}}
 }
 
-namespace dr519 { // dr519: yes
-// FIXME: Add a codegen test.
-#if __cplusplus >= 201103L
-#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
-  int test[fold((int*)(void*)0) ? -1 : 1];
-#undef fold
-#endif
-}
-
+// dr519 is in dr519.cpp
 // dr520: na
 
 // dr521: no
@@ -800,14 +792,7 @@ namespace dr570 { // dr570: dup 633
   //   expected-note@#dr570-r {{previous definition is here}}
 }
 
-namespace dr571 { // dr571 unknown
-  // FIXME: Add a codegen test.
-  typedef int &ir;
-  int n;
-  // FIXME: Test if this has internal linkage.
-  const ir r = n;
-  // expected-warning@-1 {{'const' qualifier on reference type 'ir' (aka 'int &') has no effect}}
-}
+// dr571 is in dr571.cpp
 
 namespace dr572 { // dr572: yes
   enum E { a = 1, b = 2 };

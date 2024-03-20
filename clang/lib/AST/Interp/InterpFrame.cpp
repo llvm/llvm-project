@@ -190,6 +190,8 @@ SourceRange InterpFrame::getCallRange() const {
 }
 
 const FunctionDecl *InterpFrame::getCallee() const {
+  if (!Func)
+    return nullptr;
   return Func->getDecl();
 }
 

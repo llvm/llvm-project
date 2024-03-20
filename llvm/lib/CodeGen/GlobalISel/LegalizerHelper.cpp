@@ -1317,7 +1317,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     if (DstTy.isVector())
       return UnableToLegalize;
 
-    if (8 * LoadMI.getMemSize() != DstTy.getSizeInBits()) {
+    if (8 * LoadMI.getMemSize().getValue() != DstTy.getSizeInBits()) {
       Register TmpReg = MRI.createGenericVirtualRegister(NarrowTy);
       MIRBuilder.buildLoad(TmpReg, LoadMI.getPointerReg(), LoadMI.getMMO());
       MIRBuilder.buildAnyExt(DstReg, TmpReg);
@@ -1335,7 +1335,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
     Register TmpReg = MRI.createGenericVirtualRegister(NarrowTy);
     auto &MMO = LoadMI.getMMO();
-    unsigned MemSize = MMO.getSizeInBits();
+    unsigned MemSize = MMO.getSizeInBits().getValue();
 
     if (MemSize == NarrowSize) {
       MIRBuilder.buildLoad(TmpReg, PtrReg, MMO);
@@ -1368,7 +1368,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     if (SrcTy.isVector() && LeftoverBits != 0)
       return UnableToLegalize;
 
-    if (8 * StoreMI.getMemSize() != SrcTy.getSizeInBits()) {
+    if (8 * StoreMI.getMemSize().getValue() != SrcTy.getSizeInBits()) {
       Register TmpReg = MRI.createGenericVirtualRegister(NarrowTy);
       MIRBuilder.buildTrunc(TmpReg, SrcReg);
       MIRBuilder.buildStore(TmpReg, StoreMI.getPointerReg(), StoreMI.getMMO());
@@ -4004,7 +4004,14 @@ Register LegalizerHelper::getVectorElementPointer(Register VecPtr, LLT VecTy,
 
   Index = clampVectorIndex(MIRBuilder, Index, VecTy);
 
-  LLT IdxTy = MRI.getType(Index);
+  // Convert index to the correct size for the address space.
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  unsigned AS = MRI.getType(VecPtr).getAddressSpace();
+  unsigned IndexSizeInBits = DL.getIndexSize(AS) * 8;
+  LLT IdxTy = MRI.getType(Index).changeElementSize(IndexSizeInBits);
+  if (IdxTy != MRI.getType(Index))
+    Index = MIRBuilder.buildSExtOrTrunc(IdxTy, Index).getReg(0);
+
   auto Mul = MIRBuilder.buildMul(IdxTy, Index,
                                  MIRBuilder.buildConstant(IdxTy, EltSize));
 
@@ -4449,7 +4456,7 @@ LegalizerHelper::reduceLoadStoreWidth(GLoadStore &LdStMI, unsigned TypeIdx,
   LLT ValTy = MRI.getType(ValReg);
 
   // FIXME: Do we need a distinct NarrowMemory legalize action?
-  if (ValTy.getSizeInBits() != 8 * LdStMI.getMemSize()) {
+  if (ValTy.getSizeInBits() != 8 * LdStMI.getMemSize().getValue()) {
     LLVM_DEBUG(dbgs() << "Can't narrow extload/truncstore\n");
     return UnableToLegalize;
   }
@@ -5404,6 +5411,9 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_TRUNC:
   case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_FPEXT:
@@ -8391,7 +8401,7 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
 
   // For vector types create a G_BUILD_VECTOR.
   if (Ty.isVector())
-    Val = MIB.buildSplatVector(Ty, Val).getReg(0);
+    Val = MIB.buildSplatBuildVector(Ty, Val).getReg(0);
 
   return Val;
 }

@@ -38,4 +38,43 @@ define void @streaming_compatible() #0 {
 
 declare void @non_streaming()
 
+
+; Verify that COALESCER_BARRIER is also supported without +sme.
+
+define void @streaming_compatible_arg(float %f) #0 {
+; CHECK-LABEL: streaming_compatible_arg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #96
+; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
+; CHECK-NEXT:    bl __arm_sme_state
+; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
+; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
+; CHECK-NEXT:    tbz w19, #0, .LBB1_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
+; CHECK-NEXT:    bl non_streaming
+; CHECK-NEXT:    tbz w19, #0, .LBB1_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:  .LBB1_4:
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #96
+; CHECK-NEXT:    ret
+  call void @non_streaming(float %f)
+  ret void
+}
+
+
 attributes #0 = { nounwind "aarch64_pstate_sm_compatible" }

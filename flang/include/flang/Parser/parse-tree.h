@@ -4297,16 +4297,18 @@ struct OpenACCConstruct {
 // CUF-kernel-do-construct ->
 //     !$CUF KERNEL DO [ (scalar-int-constant-expr) ] <<< grid, block [, stream]
 //     >>> do-construct
-// grid -> * | scalar-int-expr | ( scalar-int-expr-list )
-// block -> * | scalar-int-expr | ( scalar-int-expr-list )
+// star-or-expr -> * | scalar-int-expr
+// grid -> * | scalar-int-expr | ( star-or-expr-list )
+// block -> * | scalar-int-expr | ( star-or-expr-list )
 // stream -> 0, scalar-int-expr | STREAM = scalar-int-expr
 struct CUFKernelDoConstruct {
   TUPLE_CLASS_BOILERPLATE(CUFKernelDoConstruct);
+  WRAPPER_CLASS(StarOrExpr, std::optional<ScalarIntExpr>);
   struct Directive {
     TUPLE_CLASS_BOILERPLATE(Directive);
     CharBlock source;
-    std::tuple<std::optional<ScalarIntConstantExpr>, std::list<ScalarIntExpr>,
-        std::list<ScalarIntExpr>, std::optional<ScalarIntExpr>>
+    std::tuple<std::optional<ScalarIntConstantExpr>, std::list<StarOrExpr>,
+        std::list<StarOrExpr>, std::optional<ScalarIntExpr>>
         t;
   };
   std::tuple<Directive, std::optional<DoConstruct>> t;

@@ -5,10 +5,8 @@ define void @test1(i32 %n) {
 ; CHECK-LABEL: 'test1'
 ; CHECK-NEXT:  Determining loop execution counts for: @test1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-32 + (96 * %n)) /u 32)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 134217727
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 134217727
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-32 + (96 * %n)) /u 32)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-32 + (96 * %n)) /u 32)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -29,10 +27,8 @@ define i32 @test2(i32 %n) {
 ; CHECK-LABEL: 'test2'
 ; CHECK-NEXT:  Determining loop execution counts for: @test2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-32 + (32 * (%n /u 32))<nuw>) /u 32)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 134217727
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 134217727
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-32 + (32 * (%n /u 32))<nuw>) /u 32)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-32 + (32 * (%n /u 32))<nuw>) /u 32)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -52,10 +48,8 @@ define void @test3(i32 %n) {
 ; CHECK-LABEL: 'test3'
 ; CHECK-NEXT:  Determining loop execution counts for: @test3
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-32 + (32 * %n)) /u 32)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 134217727
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 134217727
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-32 + (32 * %n)) /u 32)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-32 + (32 * %n)) /u 32)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -75,10 +69,8 @@ define void @test4(i32 %n) {
 ; CHECK-LABEL: 'test4'
 ; CHECK-NEXT:  Determining loop execution counts for: @test4
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (-1431655764 * %n)) /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 1073741823
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1073741823
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (-1431655764 * %n)) /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (-1431655764 * %n)) /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -98,10 +90,8 @@ define void @test5(i32 %n) {
 ; CHECK-LABEL: 'test5'
 ; CHECK-NEXT:  Determining loop execution counts for: @test5
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * %n)) /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 1073741823
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1073741823
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * %n)) /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * %n)) /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
