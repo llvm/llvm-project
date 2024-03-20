@@ -91,16 +91,48 @@ void DFsanThreadLocalMallocStorage::CommitBack() {
 static void *DFsanAllocate(uptr size, uptr alignment, bool zeroise) {
   if (size > max_malloc_size) {
     if (AllocatorMayReturnNull()) {
-      Report("WARNING: DataflowSanitizer failed to allocate 0x%zx bytes\n",
-             size);
-      return nullptr;
-    }
-    BufferedStackTrace stack;
-    ReportAllocationSizeTooBig(size, max_malloc_size, &stack);
-  }
-  if (UNLIKELY(IsRssLimitExceeded())) {
-    if (AllocatorMayReturnNull())
-      return nullptr;
+  Report("WARNING: DataflowSanitizer failed to allocate 0x%zx bytes\n",
+         size);
+  return nullptr;
+}
+
+if (AllocatorMayReturnNull())
+  return nullptr;
+
+if (AllocatorMayReturnNull())
+  return nullptr;
+
+if (AllocatorMayReturnNull())
+  return nullptr;
+
+if (!p)
+  return nullptr;
+
+if (!beg)
+  return nullptr;
+
+if (!b)
+  return nullptr;
+
+if (!ptr)
+  return SetErrnoOnNull(DFsanAllocate(size, sizeof(u64), false /*zeroise*/));
+if (size == 0) {
+  dfsan_deallocate(ptr);
+  return nullptr;
+}
+
+if (AllocatorMayReturnNull())
+  return nullptr;
+
+if (AllocatorMayReturnNull())
+  return nullptr;
+
+if (AllocatorMayReturnNull())
+  return nullptr;
+
+if (AllocatorMayReturnNull())
+  return nullptr;
+
     BufferedStackTrace stack;
     ReportRssLimitExceeded(&stack);
   }
