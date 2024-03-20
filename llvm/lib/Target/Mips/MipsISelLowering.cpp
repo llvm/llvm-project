@@ -365,8 +365,13 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::JumpTable,          MVT::i64,   Custom);
     setOperationAction(ISD::ConstantPool,       MVT::i64,   Custom);
     setOperationAction(ISD::SELECT,             MVT::i64,   Custom);
-    setOperationAction(ISD::LOAD,               MVT::i64,   Custom);
-    setOperationAction(ISD::STORE,              MVT::i64,   Custom);
+    if (Subtarget.hasMips64r6()) {
+      setOperationAction(ISD::LOAD,               MVT::i64,   Legal);
+      setOperationAction(ISD::STORE,              MVT::i64,   Legal);
+    } else {
+      setOperationAction(ISD::LOAD,               MVT::i64,   Custom);
+      setOperationAction(ISD::STORE,              MVT::i64,   Custom);
+    }
     setOperationAction(ISD::FP_TO_SINT,         MVT::i64,   Custom);
     setOperationAction(ISD::SHL_PARTS,          MVT::i64,   Custom);
     setOperationAction(ISD::SRA_PARTS,          MVT::i64,   Custom);
@@ -481,7 +486,12 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   if (!Subtarget.hasMips64r2())
     setOperationAction(ISD::BSWAP, MVT::i64, Expand);
 
-  if (Subtarget.isGP64bit()) {
+  if (Subtarget.isGP64bit() && Subtarget.hasMips64r6()) {
+    setLoadExtAction(ISD::SEXTLOAD, MVT::i64, MVT::i32, Legal);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::i64, MVT::i32, Legal);
+    setLoadExtAction(ISD::EXTLOAD, MVT::i64, MVT::i32, Legal);
+    setTruncStoreAction(MVT::i64, MVT::i32, Legal);
+  } else if (Subtarget.isGP64bit()) {
     setLoadExtAction(ISD::SEXTLOAD, MVT::i64, MVT::i32, Custom);
     setLoadExtAction(ISD::ZEXTLOAD, MVT::i64, MVT::i32, Custom);
     setLoadExtAction(ISD::EXTLOAD, MVT::i64, MVT::i32, Custom);
