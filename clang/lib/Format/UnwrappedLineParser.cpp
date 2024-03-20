@@ -13,9 +13,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnwrappedLineParser.h"
+#include "FormatToken.h"
+#include "FormatTokenLexer.h"
 #include "FormatTokenSource.h"
+#include "Macros.h"
 #include "TokenAnnotator.h"
+#include "clang/Basic/TokenKinds.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_os_ostream.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include <algorithm>
+#include <utility>
 
 #define DEBUG_TYPE "format-parser"
 
