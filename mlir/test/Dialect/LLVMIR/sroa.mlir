@@ -223,7 +223,7 @@ llvm.func @store_first_field(%arg: i32) {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i32
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i32, i32)> : (i32) -> !llvm.ptr
-  // CHECK: llvm.store %{{.*}}, %[[ALLOCA]] : i32
+  // CHECK-NEXT: llvm.store %{{.*}}, %[[ALLOCA]] : i32
   llvm.store %arg, %1 : i32, !llvm.ptr
   llvm.return
 }
@@ -236,7 +236,7 @@ llvm.func @store_first_field_different_type(%arg: f32) {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i32
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i32, i32)> : (i32) -> !llvm.ptr
-  // CHECK: llvm.store %[[ARG]], %[[ALLOCA]] : f32
+  // CHECK-NEXT: llvm.store %[[ARG]], %[[ALLOCA]] : f32
   llvm.store %arg, %1 : f32, !llvm.ptr
   llvm.return
 }
@@ -249,7 +249,7 @@ llvm.func @store_sub_field(%arg: f32) {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i64
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i64, i32)> : (i32) -> !llvm.ptr
-  // CHECK: llvm.store %[[ARG]], %[[ALLOCA]] : f32
+  // CHECK-NEXT: llvm.store %[[ARG]], %[[ALLOCA]] : f32
   llvm.store %arg, %1 : f32, !llvm.ptr
   llvm.return
 }
@@ -261,7 +261,7 @@ llvm.func @load_first_field() -> i32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i32
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i32, i32)> : (i32) -> !llvm.ptr
-  // CHECK: %[[RES:.*]] = llvm.load %[[ALLOCA]] : !llvm.ptr -> i32
+  // CHECK-NEXT: %[[RES:.*]] = llvm.load %[[ALLOCA]] : !llvm.ptr -> i32
   %2 = llvm.load %1 : !llvm.ptr -> i32
   // CHECK: llvm.return %[[RES]] : i32
   llvm.return %2 : i32
@@ -274,7 +274,7 @@ llvm.func @load_first_field_different_type() -> f32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i32
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i32, i32)> : (i32) -> !llvm.ptr
-  // CHECK: %[[RES:.*]] = llvm.load %[[ALLOCA]] : !llvm.ptr -> f32
+  // CHECK-NEXT: %[[RES:.*]] = llvm.load %[[ALLOCA]] : !llvm.ptr -> f32
   %2 = llvm.load %1 : !llvm.ptr -> f32
   // CHECK: llvm.return %[[RES]] : f32
   llvm.return %2 : f32
@@ -286,9 +286,8 @@ llvm.func @load_first_field_different_type() -> f32 {
 llvm.func @load_sub_field() -> i32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i64 : (i32) -> !llvm.ptr
-  // CHECK-NOT: llvm.alloca
   %1 = llvm.alloca %0 x !llvm.struct<(i64, i32)> : (i32) -> !llvm.ptr
-  // CHECK: %[[RES:.*]] = llvm.load %[[ALLOCA]]
+  // CHECK-NEXT: %[[RES:.*]] = llvm.load %[[ALLOCA]]
   %res = llvm.load %1 : !llvm.ptr -> i32
   // CHECK: llvm.return %[[RES]] : i32
   llvm.return %res : i32
@@ -302,7 +301,7 @@ llvm.func @vector_store_type_mismatch(%arg: vector<4xi32>) {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x vector<4xf32>
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (vector<4xf32>)> : (i32) -> !llvm.ptr
-  // CHECK: llvm.store %[[ARG]], %[[ALLOCA]]
+  // CHECK-NEXT: llvm.store %[[ARG]], %[[ALLOCA]]
   llvm.store %arg, %1 : vector<4xi32>, !llvm.ptr
   llvm.return
 }

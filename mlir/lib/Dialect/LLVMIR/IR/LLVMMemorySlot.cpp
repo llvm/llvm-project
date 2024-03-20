@@ -251,7 +251,7 @@ bool LLVM::StoreOp::canRewire(const DestructurableMemorySlot &slot,
   if (getVolatile_())
     return false;
 
-  // A load always accesses the first element of the destructured slot.
+  // A store always accesses the first element of the destructured slot.
   auto index = IntegerAttr::get(IntegerType::get(getContext(), 32), 0);
   Type subslotType = getTypeAtIndex(slot, index);
   if (!subslotType)
@@ -468,9 +468,6 @@ bool LLVM::GEPOp::canRewire(const DestructurableMemorySlot &slot,
   // dynamic indices can never be properly rewired.
   if (!getDynamicIndices().empty())
     return false;
-  //// TODO: This is not necessary, I think.
-  // if (slot.elemType != getElemType())
-  //   return false;
   Type reachedType = getResultPtrElementType();
   if (!reachedType || getIndices().size() < 2)
     return false;
