@@ -277,11 +277,6 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
           M.getModuleFlag("aarch64-elf-pauthabi-version")))
     PAuthABIVersion = PAV->getZExtValue();
 
-  if ((PAuthABIPlatform == uint64_t(-1)) != (PAuthABIVersion == uint64_t(-1)))
-    report_fatal_error(
-        "either both or no 'aarch64-elf-pauthabi-platform' and "
-        "'aarch64-elf-pauthabi-version' module flags must be present");
-
   // Emit a .note.gnu.property section with the flags.
   auto *TS =
       static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
