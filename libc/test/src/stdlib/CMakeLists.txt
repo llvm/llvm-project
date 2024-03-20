@@ -169,6 +169,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  strfromf_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strfromf_test.cpp
+  DEPENDS
+    libc.src.stdlib.strfromf
+)
+
+add_libc_test(
   abs_test
   SUITE
     libc-stdlib-tests
@@ -258,7 +268,6 @@ add_libc_test(
     libc.include.stdlib
     libc.src.stdlib.qsort
 )
-
 
 add_libc_test(
   qsort_r_test
