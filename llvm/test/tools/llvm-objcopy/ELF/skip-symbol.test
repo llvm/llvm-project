@@ -21,6 +21,7 @@
 # LH-SYMS-DAG: LOCAL  HIDDEN      1 foo5
 
 ## Check --skip-symbol functionality when changing symbol names.
+# RUN: echo -e "foo1 bar1\nfoo2 bar2" > %t.renames.list
 # RUN: llvm-objcopy %t.o %t4.o --redefine-syms=%t.renames.list \
 # RUN:   --skip-symbol='fo*' --wildcard
 # RUN: llvm-readelf -s %t4.o | FileCheck %s --check-prefix=RS-SYM
@@ -31,7 +32,6 @@
 # RS-SYM-DAG: foo5
 
 ## Check --skip-symbols functionality when changing symbol names.
-# RUN: echo -e "foo1 bar1\nfoo2 bar2" > %t.renames.list
 # RUN: llvm-objcopy %t.o %t3.o --redefine-syms=%t.renames.list \
 # RUN:   --skip-symbols=%t.skip.regex --regex
 # RUN: llvm-readelf -s %t3.o | FileCheck %s --check-prefix=RS-SYMS
