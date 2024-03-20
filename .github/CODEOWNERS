@@ -107,7 +107,7 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
 
 # MLIR NVGPU Dialect
-/mlir/**/NVGPU/ @grypp
+/mlir/**/NVGPU*/ @grypp
 /mlir/test/**/CUDA/ @grypp
 
 # MLIR NVVM Dialect in MLIR
