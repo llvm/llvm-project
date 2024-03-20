@@ -15,6 +15,10 @@
 #include "BreakableToken.h"
 #include "ContinuationIndenter.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Format/Format.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Debug.h"
+#include <algorithm>
 
 #define DEBUG_TYPE "format-token-breaker"
 
