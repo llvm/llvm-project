@@ -8,7 +8,3 @@ commit 55783bd0 [HIP] fix host min/max in header (#82956)
 Revert :breaks hip catch tests.
 1de7e6c8cba2 [clang] move -Wcast-function-type under -Wextra (#77178)
 999d4f840777 Split -Wcast-function-type into a separate group (#86131)   
-
-Revert: breaks sles build 
-36146d2b6be [ELF] Make LinkerDrive::link a template. NFC  
-
