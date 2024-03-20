@@ -341,3 +341,4 @@ entry:
 
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
+
