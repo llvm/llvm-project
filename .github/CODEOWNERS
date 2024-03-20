@@ -108,14 +108,11 @@ clang/test/AST/Interp/ @tbaederr
 
 # MLIR NVGPU Dialect
 /mlir/**/NVGPU/ @grypp
-/mlir/**/NVGPUTo*/ @grypp
-/mlir/**/NVGPUTo*/ @grypp
-/mlir/**/sm90*/ @grypp
+/mlir/test/**/CUDA/ @grypp
 
 # MLIR NVVM Dialect in MLIR
 /mlir/**/LLVMIR/BasicPtxBuilderInterface* @grypp
-/mlir/**/LLVMIR/NVVM* @grypp
-/mlir/**/NVVMToLLVM*/ @grypp
+/mlir/**/NVVM*/ 
 
 # BOLT
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
