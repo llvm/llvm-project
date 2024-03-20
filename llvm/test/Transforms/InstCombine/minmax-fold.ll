@@ -131,7 +131,7 @@ define i64 @t9(i32 %a) {
 define float @t10(i32 %x) {
 ; CHECK-LABEL: @t10(
 ; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 255)
-; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[R1]] to float
+; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[R1]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %f_x = sitofp i32 %x to float
@@ -143,7 +143,7 @@ define float @t10(i32 %x) {
 define float @t11(i64 %x) {
 ; CHECK-LABEL: @t11(
 ; CHECK-NEXT:    [[R1:%.*]] = call i64 @llvm.smax.i64(i64 [[X:%.*]], i64 255)
-; CHECK-NEXT:    [[R:%.*]] = uitofp i64 [[R1]] to float
+; CHECK-NEXT:    [[R:%.*]] = sitofp i64 [[R1]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %f_x = sitofp i64 %x to float
@@ -526,7 +526,7 @@ falselabel:
 define double @PR31751_umin1(i32 %x) {
 ; CHECK-LABEL: @PR31751_umin1(
 ; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 2147483647)
-; CHECK-NEXT:    [[CONV:%.*]] = uitofp i32 [[SEL]] to double
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[SEL]] to double
 ; CHECK-NEXT:    ret double [[CONV]]
 ;
   %cmp = icmp slt i32 %x, 0
@@ -538,7 +538,7 @@ define double @PR31751_umin1(i32 %x) {
 define double @PR31751_umin2(i32 %x) {
 ; CHECK-LABEL: @PR31751_umin2(
 ; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 2147483647)
-; CHECK-NEXT:    [[CONV:%.*]] = uitofp i32 [[SEL]] to double
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[SEL]] to double
 ; CHECK-NEXT:    ret double [[CONV]]
 ;
   %cmp = icmp ult i32 %x, 2147483647
@@ -550,7 +550,7 @@ define double @PR31751_umin2(i32 %x) {
 define double @PR31751_umin3(i32 %x) {
 ; CHECK-LABEL: @PR31751_umin3(
 ; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 2147483647)
-; CHECK-NEXT:    [[CONV:%.*]] = uitofp i32 [[SEL]] to double
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[SEL]] to double
 ; CHECK-NEXT:    ret double [[CONV]]
 ;
   %cmp = icmp ugt i32 %x, 2147483647
