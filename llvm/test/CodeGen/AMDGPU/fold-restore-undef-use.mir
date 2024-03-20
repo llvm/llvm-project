@@ -7,8 +7,6 @@
 
 ---
 name:            restore_undef_copy_use
-frameInfo:
-  adjustsStack:    true
 tracksRegLiveness: true
 machineFunctionInfo:
   maxKernArgAlign: 1

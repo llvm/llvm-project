@@ -3,8 +3,6 @@
 
 ---
 name:            widget
-frameInfo:
-  adjustsStack:    true
 tracksRegLiveness: true
 jumpTable:
   kind:            label-difference32
