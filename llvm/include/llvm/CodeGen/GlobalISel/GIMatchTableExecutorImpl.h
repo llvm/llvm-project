@@ -647,15 +647,15 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       unsigned Size = MRI.getType(MO.getReg()).getSizeInBits();
       if (MatcherOpcode == GIM_CheckMemorySizeEqualToLLT &&
-          MMO->getSizeInBits() != Size) {
+          MMO->getSizeInBits().getValue() != Size) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       } else if (MatcherOpcode == GIM_CheckMemorySizeLessThanLLT &&
-                 MMO->getSizeInBits() >= Size) {
+                 MMO->getSizeInBits().getValue() >= Size) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       } else if (MatcherOpcode == GIM_CheckMemorySizeGreaterThanLLT &&
-                 MMO->getSizeInBits() <= Size)
+                 MMO->getSizeInBits().getValue() <= Size)
         if (handleReject() == RejectAndGiveUp)
           return false;
 

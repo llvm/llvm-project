@@ -4704,9 +4704,9 @@ def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
     " (RISC-V only)")>;
 
 def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_Group>,
-  HelpText<"Allow memory accesses to be unaligned (AArch32 only)">;
+  HelpText<"Allow memory accesses to be unaligned (AArch32/MIPSr6 only)">;
 def mno_unaligned_access : Flag<["-"], "mno-unaligned-access">, Group<m_Group>,
-  HelpText<"Force all memory accesses to be aligned (AArch32 only)">;
+  HelpText<"Force all memory accesses to be aligned (AArch32/MIPSr6 only)">;
 def munaligned_symbols : Flag<["-"], "munaligned-symbols">, Group<m_Group>,
   HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
 def mno_unaligned_symbols : Flag<["-"], "mno-unaligned-symbols">, Group<m_Group>,
@@ -6440,11 +6440,6 @@ def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
 def flang_deprecated_no_hlfir : Flag<["-"], "flang-deprecated-no-hlfir">,
   Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Do not use HLFIR lowering (deprecated)">;
-
-def flang_experimental_polymorphism : Flag<["-"], "flang-experimental-polymorphism">,
-  Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Enable Fortran 2003 polymorphism (experimental)">;
-
 
 //===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption

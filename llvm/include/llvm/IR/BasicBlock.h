@@ -14,6 +14,7 @@
 #define LLVM_IR_BASICBLOCK_H
 
 #include "llvm-c/Types.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
@@ -21,7 +22,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
 #include <cassert>
@@ -38,7 +38,7 @@ class LLVMContext;
 class Module;
 class PHINode;
 class ValueSymbolTable;
-class DPValue;
+class DbgVariableRecord;
 class DPMarker;
 
 /// LLVM Basic Block Representation
@@ -121,10 +121,10 @@ public:
   DPMarker *getNextMarker(Instruction *I);
 
   /// Insert a DbgRecord into a block at the position given by \p I.
-  void insertDbgRecordAfter(DbgRecord *DPV, Instruction *I);
+  void insertDbgRecordAfter(DbgRecord *DR, Instruction *I);
 
   /// Insert a DbgRecord into a block at the position given by \p Here.
-  void insertDbgRecordBefore(DbgRecord *DPV, InstListType::iterator Here);
+  void insertDbgRecordBefore(DbgRecord *DR, InstListType::iterator Here);
 
   /// Eject any debug-info trailing at the end of a block. DbgRecords can
   /// transiently be located "off the end" of a block if the blocks terminator
@@ -773,6 +773,32 @@ BasicBlock::iterator skipDebugIntrinsics(BasicBlock::iterator It);
 /// implemented in the .cpp file to avoid circular header deps.
 inline void BasicBlock::validateInstrOrdering() const {}
 #endif
+
+// Specialize DenseMapInfo for iterators, so that ththey can be installed into
+// maps and sets. The iterator is made up of its node pointer, and the
+// debug-info "head" bit.
+template <> struct DenseMapInfo<BasicBlock::iterator> {
+  static inline BasicBlock::iterator getEmptyKey() {
+    return BasicBlock::iterator(nullptr);
+  }
+
+  static inline BasicBlock::iterator getTombstoneKey() {
+    BasicBlock::iterator It(nullptr);
+    It.setHeadBit(true);
+    return It;
+  }
+
+  static unsigned getHashValue(const BasicBlock::iterator &It) {
+    return DenseMapInfo<void *>::getHashValue(
+               reinterpret_cast<void *>(It.getNodePtr())) ^
+           It.getHeadBit();
+  }
+
+  static bool isEqual(const BasicBlock::iterator &LHS,
+                      const BasicBlock::iterator &RHS) {
+    return LHS == RHS && LHS.getHeadBit() == RHS.getHeadBit();
+  }
+};
 
 } // end namespace llvm
 

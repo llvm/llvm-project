@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a function which calls the Generic Delta pass in order
-// to reduce uninteresting DPValues from defined functions.
+// to reduce uninteresting DbgVariableRecords from defined functions.
 //
-// DPValues store variable-location debug-info and are attached to instructions.
-// This information used to be represented by intrinsics such as dbg.value, and
-// would naturally get reduced by llvm-reduce like any other instruction. As
-// DPValues get stored elsewhere, they need to be enumerated and eliminated like
-// any other data structure in LLVM.
+// DbgVariableRecords store variable-location debug-info and are attached to
+// instructions. This information used to be represented by intrinsics such as
+// dbg.value, and would naturally get reduced by llvm-reduce like any other
+// instruction. As DbgVariableRecords get stored elsewhere, they need to be
+// enumerated and eliminated like any other data structure in LLVM.
 //
 //===----------------------------------------------------------------------===//
 
