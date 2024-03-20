@@ -19,7 +19,7 @@ def Foo : TestInstructionWithConstraints<"$dest1 == $src2">;
 #endif
 
 #ifdef T2
-// CHECK2: [[FILE]]:[[@LINE+1]]:5: error: Illegal format for tied-to constraint in 'Foo': '= $rhs'
+// CHECK2: [[FILE]]:[[@LINE+1]]:5: error: Unrecognized constraint '= $rhs' in 'Foo'
 def Foo : TestInstructionWithConstraints<"= $rhs">;
 #endif
 
