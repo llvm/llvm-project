@@ -40,8 +40,9 @@ static Type matchContainerType(Type element, Type container) {
 
 /// Lowering from a vector::contractOp arm neon smmla intrinsic. This will tile
 /// any vector.contract into multiple smmla instructions with unrolling so long
-/// as [2,2,8] is a divisor of its shape. If no unrolling is necessary, a single
-/// smmla instruction is emitted.
+/// as [2,2,8] is a divisor of its shape. It can also process vecmats with dimM
+/// = 1 (either explicitly or inferred if LHS has only dimK) If no unrolling is
+/// necessary, a single smmla instruction is emitted.
 class LowerContractionToSMMLAPattern
     : public OpRewritePattern<vector::ContractionOp> {
 public:
@@ -49,32 +50,28 @@ public:
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    // Check index maps that represent M N K in contract.
-    auto indexingMaps = op.getIndexingMapsArray();
-    if (llvm::any_of(indexingMaps, [](mlir::AffineMap affineMap) {
-          return affineMap.isPermutation() || affineMap.getNumDims() != 3 ||
-                 affineMap.getNumResults() != 2;
-        })) {
-      return failure();
-    }
-    // Check iterator types for contract.
-    auto iteratorTypes = op.getIteratorTypesArray();
-    if (iteratorTypes.size() != 3 ||
-        iteratorTypes[0] != vector::IteratorType::parallel ||
-        iteratorTypes[1] != vector::IteratorType::parallel ||
-        iteratorTypes[2] != vector::IteratorType::reduction) {
-      return failure();
-    }
-    // Infer tile sizes from operands; Note: RHS is not transposed.
+    // Infer tile sizes from operands. For vecmat, LHS may only have 1 dim.
+    // Note: RHS is not transposed.
     mlir::VectorType lhsType = op.getLhsType();
     mlir::VectorType rhsType = op.getRhsType();
-    auto dimM = lhsType.getDimSize(0);
+    auto dimM = lhsType.getRank() == 1 ? 1 : lhsType.getDimSize(0);
     auto dimN = rhsType.getDimSize(0);
-    auto dimK = lhsType.getDimSize(1);
-
+    auto dimK = rhsType.getDimSize(1);
+    bool isVecmat = dimM == 1 ? true : false;
+    if (lhsType.getDimSize(lhsType.getRank() - 1) !=
+        rhsType.getDimSize(rhsType.getRank() - 1)) {
+      return failure(); // dimK mismatch
+    }
     // Unrolling patterns can handle any [2, 2, 8] shaped multiple of inputs for
     // tiling.
-    if (dimM % 2 != 0 || dimN % 2 != 0 || dimK % 8 != 0) {
+    if ((dimM % 2 != 0 && !isVecmat) || dimN % 2 != 0 || dimK % 8 != 0) {
+      return failure();
+    }
+
+    // Check iterator types for contract.
+    auto iteratorTypes = op.getIteratorTypesArray();
+    if (iteratorTypes.size() > 3 || iteratorTypes[iteratorTypes.size() - 1] !=
+                                        vector::IteratorType::reduction) {
       return failure();
     }
 
@@ -120,11 +117,14 @@ public:
         loc, op.getResultType(), rewriter.getZeroAttr(op.getResultType()));
 
     SmallVector<int64_t> unrolledSize = *op.getShapeForUnroll();
-    SmallVector<int64_t> smmlaShape{2, 2, 8};
+    SmallVector<int64_t> smmlaShape{isVecmat ? 1 : 2, 2, 8};
     SmallVector<int64_t> loopOrder{0, 1, 2};
+    if (unrolledSize.size() == 2) {
+      smmlaShape = {2, 8};
+      loopOrder = {0, 1};
+    }
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(unrolledSize, smmlaShape, loopOrder)) {
-
       // Helper to compute the new shape of each operand and extract the slice.
       auto extractOperand = [&](Value operand, AffineMap permutationMap,
                                 ArrayRef<int64_t> operandOffsets) {
@@ -150,16 +150,30 @@ public:
       Value tiledAcc =
           extractOperand(op.getAcc(), accPermutationMap, accOffsets);
 
+      // With vecmat, tiled LHS and ACC will contain only one of 2 necessary
+      // rows along dimM. Broadcast both to the full width
+      if (isVecmat) {
+        auto lhsBroadcastType = VectorType::get(
+            {2, 8}, tiledLhs.getType().cast<ShapedType>().getElementType());
+        tiledLhs = rewriter.create<vector::BroadcastOp>(loc, lhsBroadcastType,
+                                                        tiledLhs);
+        auto accBroadcastType = VectorType::get(
+            {2, 2}, tiledAcc.getType().cast<ShapedType>().getElementType());
+        tiledAcc = rewriter.create<vector::BroadcastOp>(loc, accBroadcastType,
+                                                        tiledAcc);
+      }
+
       // Collapse tiled operands to 1D vectors required by smmla intrinsic
       auto collapsedInputType = VectorType::get(
           tiledLhs.getType().cast<ShapedType>().getNumElements(),
           tiledLhs.getType().cast<ShapedType>().getElementType());
-      auto collapsedOutputType = VectorType::get(
-          {4}, tiledAcc.getType().cast<ShapedType>().getElementType());
       auto collapsedLhs = rewriter.createOrFold<vector::ShapeCastOp>(
           tiledLhs.getLoc(), collapsedInputType, tiledLhs);
       auto collapsedRhs = rewriter.createOrFold<vector::ShapeCastOp>(
           tiledRhs.getLoc(), collapsedInputType, tiledRhs);
+      auto collapsedOutputType = VectorType::get(
+          tiledAcc.getType().cast<ShapedType>().getNumElements(),
+          tiledAcc.getType().cast<ShapedType>().getElementType());
       auto collapsedRes = rewriter.createOrFold<vector::ShapeCastOp>(
           tiledAcc.getLoc(), collapsedOutputType, tiledAcc);
 
@@ -171,6 +185,11 @@ public:
       // Reshape output back to 2D
       Value tiledRes = rewriter.createOrFold<vector::ShapeCastOp>(
           smmlaOp.getLoc(), tiledAcc.getType(), smmlaOp);
+
+      // With vecmat, only one row of tiled ACC can be inserted inot file result
+      if (isVecmat) {
+        tiledRes = rewriter.createOrFold<vector::ExtractOp>(loc, tiledRes, 0);
+      }
 
       // Insert the tiled result back into the non tiled result of the
       // contract op.
