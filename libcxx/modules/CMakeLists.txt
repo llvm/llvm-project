@@ -207,10 +207,10 @@ add_custom_target(generate-cxx-modules
 # Use the relative path between the installation and the module in the json
 # file. This allows moving the entire installation to a different location.
 cmake_path(ABSOLUTE_PATH LIBCXX_INSTALL_LIBRARY_DIR
-  BASE_DIRECTORY ${CMAKE_INSTALL_PREFIX}
+  BASE_DIRECTORY "${CMAKE_INSTALL_PREFIX}"
   OUTPUT_VARIABLE ABS_LIBRARY_DIR)
 cmake_path(ABSOLUTE_PATH LIBCXX_INSTALL_MODULES_DIR
-  BASE_DIRECTORY ${CMAKE_INSTALL_PREFIX}
+  BASE_DIRECTORY "${CMAKE_INSTALL_PREFIX}"
   OUTPUT_VARIABLE ABS_MODULES_DIR)
 file(RELATIVE_PATH LIBCXX_MODULE_RELATIVE_PATH
   ${ABS_LIBRARY_DIR}
