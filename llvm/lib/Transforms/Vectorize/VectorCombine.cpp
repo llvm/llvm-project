@@ -684,10 +684,10 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
 /// destination type followed by shuffle. This can enable further transforms by
 /// moving bitcasts or shuffles together.
 bool VectorCombine::foldBitcastShuffle(Instruction &I) {
-  Value *V0;
+  Value *V0, *V1;
   ArrayRef<int> Mask;
   if (!match(&I, m_BitCast(m_OneUse(
-                     m_Shuffle(m_Value(V0), m_Undef(), m_Mask(Mask))))))
+                     m_Shuffle(m_Value(V0), m_Value(V1), m_Mask(Mask))))))
     return false;
 
   // 1) Do not fold bitcast shuffle for scalable type. First, shuffle cost for
@@ -728,17 +728,21 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
       FixedVectorType::get(DestTy->getScalarType(), NumSrcElts);
   auto *OldShuffleTy =
       FixedVectorType::get(SrcTy->getScalarType(), Mask.size());
+  bool IsUnary = isa<UndefValue>(V1);
+  unsigned NumOps = IsUnary ? 1 : 2;
 
   // The new shuffle must not cost more than the old shuffle.
   TargetTransformInfo::TargetCostKind CK =
       TargetTransformInfo::TCK_RecipThroughput;
   TargetTransformInfo::ShuffleKind SK =
-      TargetTransformInfo::SK_PermuteSingleSrc;
+      IsUnary ? TargetTransformInfo::SK_PermuteSingleSrc
+              : TargetTransformInfo::SK_PermuteTwoSrc;
 
   InstructionCost DestCost =
       TTI.getShuffleCost(SK, NewShuffleTy, NewMask, CK) +
-      TTI.getCastInstrCost(Instruction::BitCast, NewShuffleTy, SrcTy,
-                           TargetTransformInfo::CastContextHint::None, CK);
+      (NumOps * TTI.getCastInstrCost(Instruction::BitCast, NewShuffleTy, SrcTy,
+                                     TargetTransformInfo::CastContextHint::None,
+                                     CK));
   InstructionCost SrcCost =
       TTI.getShuffleCost(SK, SrcTy, Mask, CK) +
       TTI.getCastInstrCost(Instruction::BitCast, DestTy, OldShuffleTy,
@@ -746,10 +750,11 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   if (DestCost > SrcCost || !DestCost.isValid())
     return false;
 
-  // bitcast (shuf V0, MaskC) --> shuf (bitcast V0), MaskC'
+  // bitcast (shuf V0, V1, MaskC) --> shuf (bitcast V0), (bitcast V1), MaskC'
   ++NumShufOfBitcast;
-  Value *CastV = Builder.CreateBitCast(V0, NewShuffleTy);
-  Value *Shuf = Builder.CreateShuffleVector(CastV, NewMask);
+  Value *CastV0 = Builder.CreateBitCast(V0, NewShuffleTy);
+  Value *CastV1 = Builder.CreateBitCast(V1, NewShuffleTy);
+  Value *Shuf = Builder.CreateShuffleVector(CastV0, CastV1, NewMask);
   replaceValue(I, *Shuf);
   return true;
 }
