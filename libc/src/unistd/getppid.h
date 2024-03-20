@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_GETPPID_H
 #define LLVM_LIBC_SRC_UNISTD_GETPPID_H
 
-#include <unistd.h>
+#include "include/llvm-libc-types/pid_t.h"
 
 namespace LIBC_NAMESPACE {
 

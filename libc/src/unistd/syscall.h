@@ -9,9 +9,6 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_SYSCALL_H
 #define LLVM_LIBC_SRC_UNISTD_SYSCALL_H
 
-#include <stdarg.h>
-#include <unistd.h>
-
 namespace LIBC_NAMESPACE {
 
 long __llvm_libc_syscall(long number, long arg1, long arg2, long arg3,

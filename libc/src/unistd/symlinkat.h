@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_SYMLINKAT_H
 #define LLVM_LIBC_SRC_UNISTD_SYMLINKAT_H
 
-#include <unistd.h>
-
 namespace LIBC_NAMESPACE {
 
 int symlinkat(const char *, int, const char *);

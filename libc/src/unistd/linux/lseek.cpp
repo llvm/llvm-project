@@ -7,14 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/lseek.h"
-#include "src/errno/libc_errno.h"
 
+#include "include/llvm-libc-types/off_t.h"
 #include "src/__support/File/linux/lseekImpl.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/errno/libc_errno.h"
 
 #include <sys/syscall.h> // For syscall numbers.
-#include <unistd.h>      // For off_t.
 
 namespace LIBC_NAMESPACE {
 

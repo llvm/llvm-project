@@ -9,7 +9,8 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_READLINKAT_H
 #define LLVM_LIBC_SRC_UNISTD_READLINKAT_H
 
-#include <unistd.h>
+#include "include/llvm-libc-types/size_t.h"
+#include "include/llvm-libc-types/ssize_t.h"
 
 namespace LIBC_NAMESPACE {
 

@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_LINK_H
 #define LLVM_LIBC_SRC_UNISTD_LINK_H
 
-#include <unistd.h>
-
 namespace LIBC_NAMESPACE {
 
 int link(const char *, const char *);

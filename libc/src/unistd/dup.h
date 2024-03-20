@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_DUP_H
 #define LLVM_LIBC_SRC_UNISTD_DUP_H
 
-#include <unistd.h>
-
 namespace LIBC_NAMESPACE {
 
 int dup(int fd);

@@ -8,13 +8,13 @@
 
 #include "src/unistd/truncate.h"
 
+#include "include/llvm-libc-types/off_t.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
 
 #include <stdint.h>      // For uint64_t.
 #include <sys/syscall.h> // For syscall numbers.
-#include <unistd.h>
 
 namespace LIBC_NAMESPACE {
 
