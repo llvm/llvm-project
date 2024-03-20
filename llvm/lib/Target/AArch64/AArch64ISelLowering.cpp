@@ -16616,6 +16616,38 @@ bool AArch64TargetLowering::isLegalAddImmediate(int64_t Immed) const {
   return IsLegal;
 }
 
+bool AArch64TargetLowering::isLegalAddScalableImmediate(int64_t Imm) const {
+  // We will only emit addvl/inc* instructions for SVE2
+  if (!Subtarget->hasSVE2())
+    return false;
+
+  // addvl's immediates are in terms of the number of bytes in a register.
+  // Since there are 16 in the base supported size (128bits), we need to
+  // divide the immediate by that much to give us a useful immediate to
+  // multiply by vscale. We can't have a remainder as a result of this.
+  if (Imm % 16 == 0)
+    return isInt<6>(Imm / 16);
+
+  // Inc[b|h|w|d] instructions take a pattern and a positive immediate
+  // multiplier. For now, assume a pattern of 'all'. Incb would be a subset
+  // of addvl as a result, so only take h|w|d into account.
+  // Dec[h|w|d] will cover subtractions.
+  // Immediates are in the range [1,16], so we can't do a 2's complement check.
+  // FIXME: Can we make use of other patterns to cover other immediates?
+
+  // inch|dech
+  if (Imm % 8 == 0)
+    return std::labs(Imm / 8) <= 16;
+  // incw|decw
+  if (Imm % 4 == 0)
+    return std::labs(Imm / 4) <= 16;
+  // incd|decd
+  if (Imm % 2 == 0)
+    return std::labs(Imm / 2) <= 16;
+
+  return false;
+}
+
 // Return false to prevent folding
 // (mul (add x, c1), c2) -> (add (mul x, c2), c2*c1) in DAGCombine,
 // if the folding leads to worse code.

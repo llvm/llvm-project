@@ -328,6 +328,10 @@ public:
     return getTLI()->isLegalAddImmediate(imm);
   }
 
+  bool isLegalAddScalableImmediate(int64_t Imm) {
+    return getTLI()->isLegalAddScalableImmediate(Imm);
+  }
+
   bool isLegalICmpImmediate(int64_t imm) {
     return getTLI()->isLegalICmpImmediate(imm);
   }
