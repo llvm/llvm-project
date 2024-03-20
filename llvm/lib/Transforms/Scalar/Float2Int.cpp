@@ -407,11 +407,10 @@ Value *Float2IntPass::convert(Instruction *I, Type *ToTy) {
     } else if (Instruction *VI = dyn_cast<Instruction>(V)) {
       NewOperands.push_back(convert(VI, ToTy));
     } else if (ConstantFP *CF = dyn_cast<ConstantFP>(V)) {
-      APSInt Val(ToTy->getPrimitiveSizeInBits(), /*isUnsigned=*/false);
+      const APFloat &F = CF->getValueAPF();
+      APSInt Val(ToTy->getPrimitiveSizeInBits(), !F.isNegative());
       bool Exact;
-      CF->getValueAPF().convertToInteger(Val,
-                                         APFloat::rmNearestTiesToEven,
-                                         &Exact);
+      F.convertToInteger(Val, APFloat::rmNearestTiesToEven, &Exact);
       NewOperands.push_back(ConstantInt::get(ToTy, Val));
     } else {
       llvm_unreachable("Unhandled operand type?");

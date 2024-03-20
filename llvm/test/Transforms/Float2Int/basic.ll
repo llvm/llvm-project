@@ -358,8 +358,9 @@ define i32 @pr79158() {
 ; CHECK-NEXT:    store volatile i32 1, ptr [[X_I]], align 4
 ; CHECK-NEXT:    [[X_I_0_X_I_0_X_0_X_0_X_0__I:%.*]] = load volatile i32, ptr [[X_I]], align 4
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp sgt i32 [[X_I_0_X_I_0_X_0_X_0_X_0__I]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[CMP_I]] to i32
-; CHECK-NEXT:    [[MUL_I1:%.*]] = mul i32 [[TMP0]], 2147483647
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[CMP_I]] to i64
+; CHECK-NEXT:    [[MUL_I2:%.*]] = mul i64 [[TMP0]], 4294967295
+; CHECK-NEXT:    [[MUL_I1:%.*]] = trunc i64 [[MUL_I2]] to i32
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X_I]])
 ; CHECK-NEXT:    ret i32 [[MUL_I1]]
 ;
@@ -384,8 +385,9 @@ define i32 @pr79158_2() {
 ; CHECK-NEXT:    store volatile i32 1, ptr [[X_I]], align 4
 ; CHECK-NEXT:    [[X_I_0_X_I_0_X_0_X_0_X_0__I:%.*]] = load volatile i32, ptr [[X_I]], align 4
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp sgt i32 [[X_I_0_X_I_0_X_0_X_0_X_0__I]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[CMP_I]] to i32
-; CHECK-NEXT:    [[MUL_I1:%.*]] = mul i32 [[TMP0]], 2147483647
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[CMP_I]] to i64
+; CHECK-NEXT:    [[MUL_I2:%.*]] = mul i64 [[TMP0]], 2147483648
+; CHECK-NEXT:    [[MUL_I1:%.*]] = trunc i64 [[MUL_I2]] to i32
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X_I]])
 ; CHECK-NEXT:    ret i32 [[MUL_I1]]
 ;
