@@ -826,15 +826,15 @@ private:
   /// Assumes the queue lock is acquired.
   void publishKernelPacket(uint64_t PacketId, uint16_t Setup,
                            hsa_kernel_dispatch_packet_t *Packet) {
-    uint32_t *PacketPtr = reinterpret_cast<uint32_t *>(Packet);
-
-    uint16_t Header = HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE;
-    Header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
-    Header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
+    uint16_t Header =
+        (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
+        (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
+        (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE);
 
     // Publish the packet. Do not modify the package after this point.
     uint32_t HeaderWord = Header | (Setup << 16u);
-    __atomic_store_n(PacketPtr, HeaderWord, __ATOMIC_RELEASE);
+    __atomic_store_n(reinterpret_cast<uint32_t *>(Packet), HeaderWord,
+                     __ATOMIC_RELEASE);
 
     // Signal the doorbell about the published packet.
     hsa_signal_store_relaxed(Queue->doorbell_signal, PacketId);
@@ -845,15 +845,16 @@ private:
   /// barrier dependencies (signals) are satisfied. Assumes the queue is locked
   void publishBarrierPacket(uint64_t PacketId,
                             hsa_barrier_and_packet_t *Packet) {
-    uint32_t *PacketPtr = reinterpret_cast<uint32_t *>(Packet);
     uint16_t Setup = 0;
-    uint16_t Header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
-    Header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
-    Header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
+    uint16_t Header =
+        (HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE) |
+        (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
+        (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE);
 
     // Publish the packet. Do not modify the package after this point.
     uint32_t HeaderWord = Header | (Setup << 16u);
-    __atomic_store_n(PacketPtr, HeaderWord, __ATOMIC_RELEASE);
+    __atomic_store_n(reinterpret_cast<uint32_t *>(Packet), HeaderWord,
+                     __ATOMIC_RELEASE);
 
     // Signal the doorbell about the published packet.
     hsa_signal_store_relaxed(Queue->doorbell_signal, PacketId);
