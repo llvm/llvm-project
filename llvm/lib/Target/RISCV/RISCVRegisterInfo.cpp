@@ -431,29 +431,28 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
 
   if (!IsRVVSpill) {
-    if (MI.getOpcode() == RISCV::ADDI && !isInt<12>(Offset.getFixed())) {
+    int64_t Val = Offset.getFixed();
+    int64_t Lo12 = SignExtend64<12>(Val);
+    unsigned Opc = MI.getOpcode();
+    if (Opc == RISCV::ADDI && !isInt<12>(Val)) {
       // We chose to emit the canonical immediate sequence rather than folding
       // the offset into the using add under the theory that doing so doesn't
       // save dynamic instruction count and some target may fuse the canonical
       // 32 bit immediate sequence.  We still need to clear the portion of the
       // offset encoded in the immediate.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+    } else if ((Opc == RISCV::PREFETCH_I || Opc == RISCV::PREFETCH_R ||
+                Opc == RISCV::PREFETCH_W) &&
+               (Lo12 & 0b11111) != 0) {
+      // Prefetch instructions require the offset to be 32 byte aligned.
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
     } else {
       // We can encode an add with 12 bit signed immediate in the immediate
       // operand of our user instruction.  As a result, the remaining
       // offset can by construction, at worst, a LUI and a ADD.
-      int64_t Val = Offset.getFixed();
-      int64_t Lo12 = SignExtend64<12>(Val);
-      if ((MI.getOpcode() == RISCV::PREFETCH_I ||
-           MI.getOpcode() == RISCV::PREFETCH_R ||
-           MI.getOpcode() == RISCV::PREFETCH_W) &&
-          (Lo12 & 0b11111) != 0)
-        MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
-      else {
-        MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo12);
-        Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo12,
-                                  Offset.getScalable());
-      }
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo12);
+      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo12,
+                                Offset.getScalable());
     }
   }
 
