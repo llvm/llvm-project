@@ -751,7 +751,7 @@ public:
 
   unsigned getLine() const { return Line; }
   uint64_t getSizeInBits() const { return SizeInBits; }
-  uint32_t getAlignInBits() const { return SubclassData32; }
+  uint32_t getAlignInBits() const;
   uint32_t getAlignInBytes() const { return getAlignInBits() / CHAR_BIT; }
   uint64_t getOffsetInBits() const { return OffsetInBits; }
   uint32_t getNumExtraInhabitants() const { return NumExtraInhabitants; }
@@ -988,26 +988,29 @@ class DIDerivedType : public DIType {
 public:
   /// Pointer authentication (__ptrauth) metadata.
   struct PtrAuthData {
-    union {
-      struct {
-        unsigned Key : 3;
-        unsigned IsAddressDiscriminated : 1;
-        unsigned ExtraDiscriminator : 16;
-      } Data;
-      unsigned RawData;
-    } Payload;
+    // RawData layout:
+    // - Bits 0..3:  Key
+    // - Bit  4:     IsAddressDiscriminated
+    // - Bits 5..20: ExtraDiscriminator
+    // - Bit  21:    IsaPointer
+    // - Bit  22:    AuthenticatesNullValues
+    unsigned RawData;
 
-    PtrAuthData(unsigned FromRawData) { Payload.RawData = FromRawData; }
-    PtrAuthData(unsigned Key, bool IsDiscr, unsigned Discriminator) {
-      assert(Key < 8);
+    PtrAuthData(unsigned FromRawData) : RawData(FromRawData) {}
+    PtrAuthData(unsigned Key, bool IsDiscr, unsigned Discriminator,
+                bool IsaPointer, bool AuthenticatesNullValues) {
+      assert(Key < 16);
       assert(Discriminator <= 0xffff);
-      Payload.Data.Key = Key;
-      Payload.Data.IsAddressDiscriminated = IsDiscr;
-      Payload.Data.ExtraDiscriminator = Discriminator;
+      RawData = (Key << 0) | (IsDiscr ? (1 << 4) : 0) | (Discriminator << 5) |
+                (IsaPointer ? (1 << 21) : 0) |
+                (AuthenticatesNullValues ? (1 << 22) : 0);
     }
-    bool operator==(struct PtrAuthData Other) const {
-      return Payload.RawData == Other.Payload.RawData;
-    }
+
+    unsigned key() { return (RawData >> 0) & 0b1111; }
+    bool isAddressDiscriminated() { return (RawData >> 4) & 1; }
+    unsigned extraDiscriminator() { return (RawData >> 5) & 0xffff; }
+    bool isaPointer() { return (RawData >> 21) & 1; }
+    bool authenticatesNullValues() { return (RawData >> 22) & 1; }
   };
 
 private:
@@ -1025,37 +1028,44 @@ private:
                 unsigned Line, uint64_t SizeInBits, uint32_t AlignInBits,
                 uint64_t OffsetInBits,
                 std::optional<unsigned> DWARFAddressSpace,
-                std::optional<PtrAuthData> PtrAuth, DIFlags Flags,
+                std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                 ArrayRef<Metadata *> Ops)
       : DIType(C, DIDerivedTypeKind, Storage, Tag, Line, SizeInBits,
-               AlignInBits, OffsetInBits, 0, Flags, Ops),
-        DWARFAddressSpace(DWARFAddressSpace), PtrAuth(PtrAuth) {}
+               AlignInBits, OffsetInBits, /*NumExtraInhabitants=*/0, Flags,
+               Ops),
+        DWARFAddressSpace(DWARFAddressSpace) {
+    if (PtrAuthData)
+      SubclassData32 = PtrAuthData->RawData;
+  }
   ~DIDerivedType() = default;
   static DIDerivedType *
   getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, DIFile *File,
           unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
           uint32_t AlignInBits, uint64_t OffsetInBits,
-          std::optional<unsigned> DWARFAddressSpace, std::optional<PtrAuthData>
-          PtrAuth, DIFlags Flags, Metadata *ExtraData, DINodeArray
-          Annotations, StorageType Storage, bool ShouldCreate = true) {
+          std::optional<unsigned> DWARFAddressSpace,
+          std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
+          Metadata *ExtraData, DINodeArray Annotations, StorageType Storage,
+          bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
                    Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
-                   DWARFAddressSpace, PtrAuth, Flags, ExtraData,
+                   DWARFAddressSpace, PtrAuthData, Flags, ExtraData,
                    Annotations.get(), Storage, ShouldCreate);
   }
   static DIDerivedType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
           unsigned Line, Metadata *Scope, Metadata *BaseType,
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
-          std::optional<unsigned> DWARFAddressSpace, std::optional<PtrAuthData> PtrAuth,
-          DIFlags Flags, Metadata *ExtraData, Metadata *Annotations,
-          StorageType Storage, bool ShouldCreate = true);
+          std::optional<unsigned> DWARFAddressSpace,
+          std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
+          Metadata *ExtraData, Metadata *Annotations, StorageType Storage,
+          bool ShouldCreate = true);
 
   TempDIDerivedType cloneImpl() const {
-    return getTemporary(
-        getContext(), getTag(), getName(), getFile(), getLine(), getScope(),
-        getBaseType(), getSizeInBits(), getAlignInBits(), getOffsetInBits(),
-        getDWARFAddressSpace(), getPtrAuthData(), getFlags(), getExtraData(), getAnnotations());
+    return getTemporary(getContext(), getTag(), getName(), getFile(), getLine(),
+                        getScope(), getBaseType(), getSizeInBits(),
+                        getAlignInBits(), getOffsetInBits(),
+                        getDWARFAddressSpace(), getPtrAuthData(), getFlags(),
+                        getExtraData(), getAnnotations());
   }
 
 public:
@@ -1064,22 +1074,24 @@ public:
                      unsigned Line, Metadata *Scope, Metadata *BaseType,
                      uint64_t SizeInBits, uint32_t AlignInBits,
                      uint64_t OffsetInBits,
-                     std::optional<unsigned> DWARFAddressSpace, std::optional<PtrAuthData> PtrAuth, DIFlags Flags,
+                     std::optional<unsigned> DWARFAddressSpace,
+                     std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                      Metadata *ExtraData = nullptr,
                      Metadata *Annotations = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                     AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuth, Flags,
-                     ExtraData, Annotations))
+                     AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
+                     Flags, ExtraData, Annotations))
   DEFINE_MDNODE_GET(DIDerivedType,
                     (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
                      DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
                      uint32_t AlignInBits, uint64_t OffsetInBits,
-                     std::optional<unsigned> DWARFAddressSpace, std::optional<PtrAuthData> PtrAuth, DIFlags Flags,
+                     std::optional<unsigned> DWARFAddressSpace,
+                     std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                      Metadata *ExtraData = nullptr,
                      DINodeArray Annotations = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                     AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuth, Flags,
-                     ExtraData, Annotations))
+                     AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
+                     Flags, ExtraData, Annotations))
 
   TempDIDerivedType clone() const { return cloneImpl(); }
 
@@ -1093,31 +1105,7 @@ public:
     return DWARFAddressSpace;
   }
 
-  std::optional<PtrAuthData> getPtrAuthData() const {
-    return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ? PtrAuth : std::nullopt;
-  }
-
-  /// \returns The PointerAuth key.
-  std::optional<unsigned> getPtrAuthKey() const {
-    if (auto PA = getPtrAuthData())
-      return (unsigned)PA->Payload.Data.Key;
-    else
-      return std::nullopt;
-  }
-  /// \returns The PointerAuth address discrimination bit.
-  std::optional<bool> isPtrAuthAddressDiscriminated() const {
-    if (auto PA = getPtrAuthData())
-      return (bool)PA->Payload.Data.IsAddressDiscriminated;
-    else
-      return std::nullopt;
-  }
-  /// \returns The PointerAuth extra discriminator.
-  std::optional<unsigned> getPtrAuthExtraDiscriminator() const {
-    if (auto PA = getPtrAuthData())
-      return (unsigned)PA->Payload.Data.ExtraDiscriminator;
-    else
-      return std::nullopt;
-  }
+  std::optional<PtrAuthData> getPtrAuthData() const;
 
   /// Get extra data associated with this derived type.
   ///
@@ -1157,6 +1145,16 @@ public:
     return MD->getMetadataID() == DIDerivedTypeKind;
   }
 };
+
+inline bool operator==(DIDerivedType::PtrAuthData Lhs,
+                       DIDerivedType::PtrAuthData Rhs) {
+  return Lhs.RawData == Rhs.RawData;
+}
+
+inline bool operator!=(DIDerivedType::PtrAuthData Lhs,
+                       DIDerivedType::PtrAuthData Rhs) {
+  return !(Lhs == Rhs);
+}
 
 /// Composite types.
 ///

@@ -5192,7 +5192,9 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
 ///                      align: 32, offset: 0, flags: 0, extraData: !3,
 ///                      dwarfAddressSpace: 3, ptrAuthKey: 1,
 ///                      ptrAuthIsAddressDiscriminated: true,
-///                      ptrAuthExtraDiscriminator: 0x1234)
+///                      ptrAuthExtraDiscriminator: 0x1234,
+///                      ptrAuthIsaPointer: 1, ptrAuthAuthenticatesNullValues:1
+///                      )
 bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(tag, DwarfTagField, );                                              \
@@ -5210,7 +5212,9 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(annotations, MDField, );                                            \
   OPTIONAL(ptrAuthKey, MDUnsignedField, (0, 7));                               \
   OPTIONAL(ptrAuthIsAddressDiscriminated, MDBoolField, );                      \
-  OPTIONAL(ptrAuthExtraDiscriminator, MDUnsignedField, (0, 0xffff));
+  OPTIONAL(ptrAuthExtraDiscriminator, MDUnsignedField, (0, 0xffff));           \
+  OPTIONAL(ptrAuthIsaPointer, MDBoolField, );                                  \
+  OPTIONAL(ptrAuthAuthenticatesNullValues, MDBoolField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5219,9 +5223,10 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
     DWARFAddressSpace = dwarfAddressSpace.Val;
   std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
   if (ptrAuthKey.Val)
-    PtrAuthData = DIDerivedType::PtrAuthData(
+    PtrAuthData.emplace(
         (unsigned)ptrAuthKey.Val, ptrAuthIsAddressDiscriminated.Val,
-        (unsigned)ptrAuthExtraDiscriminator.Val);
+        (unsigned)ptrAuthExtraDiscriminator.Val, ptrAuthIsaPointer.Val,
+        ptrAuthAuthenticatesNullValues.Val);
 
   Result = GET_OR_DISTINCT(DIDerivedType,
                            (Context, tag.Val, name.Val, file.Val, line.Val,
