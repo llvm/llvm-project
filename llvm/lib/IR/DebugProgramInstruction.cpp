@@ -1,4 +1,4 @@
-//=====-- DebugProgramInstruction.cpp - Implement DbgRecords/DPMarkers --=====//
+//=====-- DebugProgramInstruction.cpp - Implement DbgRecords/DbgMarkers --====//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -529,40 +529,40 @@ const LLVMContext &DbgRecord::getContext() const {
 
 void DbgRecord::insertBefore(DbgRecord *InsertBefore) {
   assert(!getMarker() &&
-         "Cannot insert a DbgRecord that is already has a DPMarker!");
+         "Cannot insert a DbgRecord that is already has a DbgMarker!");
   assert(InsertBefore->getMarker() &&
          "Cannot insert a DbgRecord before a DbgRecord that does not have a "
-         "DPMarker!");
+         "DbgMarker!");
   InsertBefore->getMarker()->insertDbgRecord(this, InsertBefore);
 }
 void DbgRecord::insertAfter(DbgRecord *InsertAfter) {
   assert(!getMarker() &&
-         "Cannot insert a DbgRecord that is already has a DPMarker!");
+         "Cannot insert a DbgRecord that is already has a DbgMarker!");
   assert(InsertAfter->getMarker() &&
          "Cannot insert a DbgRecord after a DbgRecord that does not have a "
-         "DPMarker!");
+         "DbgMarker!");
   InsertAfter->getMarker()->insertDbgRecordAfter(this, InsertAfter);
 }
 void DbgRecord::moveBefore(DbgRecord *MoveBefore) {
   assert(getMarker() &&
-         "Canot move a DbgRecord that does not currently have a DPMarker!");
+         "Canot move a DbgRecord that does not currently have a DbgMarker!");
   removeFromParent();
   insertBefore(MoveBefore);
 }
 void DbgRecord::moveAfter(DbgRecord *MoveAfter) {
   assert(getMarker() &&
-         "Canot move a DbgRecord that does not currently have a DPMarker!");
+         "Canot move a DbgRecord that does not currently have a DbgMarker!");
   removeFromParent();
   insertAfter(MoveAfter);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// An empty, global, DPMarker for the purpose of describing empty ranges of
+// An empty, global, DbgMarker for the purpose of describing empty ranges of
 // DbgRecords.
-DPMarker DPMarker::EmptyDPMarker;
+DbgMarker DbgMarker::EmptyDbgMarker;
 
-void DPMarker::dropDbgRecords() {
+void DbgMarker::dropDbgRecords() {
   while (!StoredDbgRecords.empty()) {
     auto It = StoredDbgRecords.begin();
     DbgRecord *DR = &*It;
@@ -571,31 +571,31 @@ void DPMarker::dropDbgRecords() {
   }
 }
 
-void DPMarker::dropOneDbgRecord(DbgRecord *DR) {
+void DbgMarker::dropOneDbgRecord(DbgRecord *DR) {
   assert(DR->getMarker() == this);
   StoredDbgRecords.erase(DR->getIterator());
   DR->deleteRecord();
 }
 
-const BasicBlock *DPMarker::getParent() const {
+const BasicBlock *DbgMarker::getParent() const {
   return MarkedInstr->getParent();
 }
 
-BasicBlock *DPMarker::getParent() { return MarkedInstr->getParent(); }
+BasicBlock *DbgMarker::getParent() { return MarkedInstr->getParent(); }
 
-void DPMarker::removeMarker() {
-  // Are there any DbgRecords in this DPMarker? If not, nothing to preserve.
+void DbgMarker::removeMarker() {
+  // Are there any DbgRecords in this DbgMarker? If not, nothing to preserve.
   Instruction *Owner = MarkedInstr;
   if (StoredDbgRecords.empty()) {
     eraseFromParent();
-    Owner->DbgMarker = nullptr;
+    Owner->DebugMarker = nullptr;
     return;
   }
 
   // The attached DbgRecords need to be preserved; attach them to the next
   // instruction. If there isn't a next instruction, put them on the
   // "trailing" list.
-  DPMarker *NextMarker = Owner->getParent()->getNextMarker(Owner);
+  DbgMarker *NextMarker = Owner->getParent()->getNextMarker(Owner);
   if (NextMarker) {
     NextMarker->absorbDebugValues(*this, true);
     eraseFromParent();
@@ -608,30 +608,30 @@ void DPMarker::removeMarker() {
       getParent()->setTrailingDbgRecords(this);
       MarkedInstr = nullptr;
     } else {
-      NextIt->DbgMarker = this;
+      NextIt->DebugMarker = this;
       MarkedInstr = &*NextIt;
     }
   }
-  Owner->DbgMarker = nullptr;
+  Owner->DebugMarker = nullptr;
 }
 
-void DPMarker::removeFromParent() {
-  MarkedInstr->DbgMarker = nullptr;
+void DbgMarker::removeFromParent() {
+  MarkedInstr->DebugMarker = nullptr;
   MarkedInstr = nullptr;
 }
 
-void DPMarker::eraseFromParent() {
+void DbgMarker::eraseFromParent() {
   if (MarkedInstr)
     removeFromParent();
   dropDbgRecords();
   delete this;
 }
 
-iterator_range<DbgRecord::self_iterator> DPMarker::getDbgRecordRange() {
+iterator_range<DbgRecord::self_iterator> DbgMarker::getDbgRecordRange() {
   return make_range(StoredDbgRecords.begin(), StoredDbgRecords.end());
 }
 iterator_range<DbgRecord::const_self_iterator>
-DPMarker::getDbgRecordRange() const {
+DbgMarker::getDbgRecordRange() const {
   return make_range(StoredDbgRecords.begin(), StoredDbgRecords.end());
 }
 
@@ -645,25 +645,25 @@ void DbgRecord::eraseFromParent() {
   deleteRecord();
 }
 
-void DPMarker::insertDbgRecord(DbgRecord *New, bool InsertAtHead) {
+void DbgMarker::insertDbgRecord(DbgRecord *New, bool InsertAtHead) {
   auto It = InsertAtHead ? StoredDbgRecords.begin() : StoredDbgRecords.end();
   StoredDbgRecords.insert(It, *New);
   New->setMarker(this);
 }
-void DPMarker::insertDbgRecord(DbgRecord *New, DbgRecord *InsertBefore) {
+void DbgMarker::insertDbgRecord(DbgRecord *New, DbgRecord *InsertBefore) {
   assert(InsertBefore->getMarker() == this &&
-         "DbgRecord 'InsertBefore' must be contained in this DPMarker!");
+         "DbgRecord 'InsertBefore' must be contained in this DbgMarker!");
   StoredDbgRecords.insert(InsertBefore->getIterator(), *New);
   New->setMarker(this);
 }
-void DPMarker::insertDbgRecordAfter(DbgRecord *New, DbgRecord *InsertAfter) {
+void DbgMarker::insertDbgRecordAfter(DbgRecord *New, DbgRecord *InsertAfter) {
   assert(InsertAfter->getMarker() == this &&
-         "DbgRecord 'InsertAfter' must be contained in this DPMarker!");
+         "DbgRecord 'InsertAfter' must be contained in this DbgMarker!");
   StoredDbgRecords.insert(++(InsertAfter->getIterator()), *New);
   New->setMarker(this);
 }
 
-void DPMarker::absorbDebugValues(DPMarker &Src, bool InsertAtHead) {
+void DbgMarker::absorbDebugValues(DbgMarker &Src, bool InsertAtHead) {
   auto It = InsertAtHead ? StoredDbgRecords.begin() : StoredDbgRecords.end();
   for (DbgRecord &DVR : Src.StoredDbgRecords)
     DVR.setMarker(this);
@@ -671,8 +671,9 @@ void DPMarker::absorbDebugValues(DPMarker &Src, bool InsertAtHead) {
   StoredDbgRecords.splice(It, Src.StoredDbgRecords);
 }
 
-void DPMarker::absorbDebugValues(iterator_range<DbgRecord::self_iterator> Range,
-                                 DPMarker &Src, bool InsertAtHead) {
+void DbgMarker::absorbDebugValues(
+    iterator_range<DbgRecord::self_iterator> Range, DbgMarker &Src,
+    bool InsertAtHead) {
   for (DbgRecord &DR : Range)
     DR.setMarker(this);
 
@@ -683,8 +684,8 @@ void DPMarker::absorbDebugValues(iterator_range<DbgRecord::self_iterator> Range,
                           Range.end());
 }
 
-iterator_range<simple_ilist<DbgRecord>::iterator> DPMarker::cloneDebugInfoFrom(
-    DPMarker *From, std::optional<simple_ilist<DbgRecord>::iterator> from_here,
+iterator_range<simple_ilist<DbgRecord>::iterator> DbgMarker::cloneDebugInfoFrom(
+    DbgMarker *From, std::optional<simple_ilist<DbgRecord>::iterator> from_here,
     bool InsertAtHead) {
   DbgRecord *First = nullptr;
   // Work out what range of DbgRecords to clone: normally all the contents of
