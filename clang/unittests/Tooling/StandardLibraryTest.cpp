@@ -193,6 +193,7 @@ TEST(StdlibTest, SpecialCMappings) {
   auto &SizeT = lookup(AST, "size_t");
   stdlib::Recognizer Recognizer;
   auto ActualSym = Recognizer(&SizeT);
+  assert(ActualSym);
   EXPECT_EQ(ActualSym, stdlib::Symbol::named("", "size_t", stdlib::Lang::C));
   EXPECT_EQ(ActualSym->header()->name(), "<stddef.h>");
 }

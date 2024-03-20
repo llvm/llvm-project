@@ -148,6 +148,7 @@ static int initialize(Lang Language) {
   switch (Language) {
   case Lang::C: {
     static constexpr Symbol CSymbols[] = {
+#include "CSpecialSymbolMap.inc"
 #include "CSymbolMap.inc"
     };
     for (const Symbol &S : CSymbols)
