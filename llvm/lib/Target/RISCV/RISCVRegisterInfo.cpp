@@ -447,7 +447,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // Prefetch instructions require the offset to be 32 byte aligned.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
     } else if ((Opc == RISCV::PseudoRV32ZdinxLD ||
-                 Opc == RISCV::PseudoRV32ZdinxSD) &&
+                Opc == RISCV::PseudoRV32ZdinxSD) &&
                Lo12 >= 2044) {
       // This instruction will be split into 2 instructions. The second
       // instruction will add 4 to the immediate. If that would overflow 12
