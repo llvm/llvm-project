@@ -448,6 +448,10 @@ public:
   }
 };
 
+inline bool isStaticRelSecType(uint32_t type) {
+  return type == llvm::ELF::SHT_RELA || type == llvm::ELF::SHT_REL;
+}
+
 inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&
          sec.name.starts_with(".debug");
