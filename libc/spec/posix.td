@@ -86,6 +86,10 @@ def ConstStructSockAddrPtr : ConstType<StructSockAddrPtr>;
 
 def StructSockAddrUn : NamedType<"struct sockaddr_un">;
 
+def StructStatvfs : NamedType<"struct statvfs">;
+def StructStatvfsPtr : PtrType<StructStatvfs>;
+def RestrictedStructStatvfsPtr : RestrictedPtrType<StructStatvfs>;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -888,6 +892,31 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec SysStatvfs = HeaderSpec<
+      "sys/statvfs.h",
+      [], // Macros
+      [StructStatvfs], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+          "statvfs",
+          RetValSpec<IntType>,
+          [
+            ArgSpec<ConstRestrictedCharPtr>,
+            ArgSpec<RestrictedStructStatvfsPtr>
+          ]
+        >,
+        FunctionSpec<
+          "fstatvfs",
+          RetValSpec<IntType>,
+          [
+            ArgSpec<IntType>,
+            ArgSpec<StructStatvfsPtr>
+          ]
+        >,
+      ]  // Functions
+    >;
+
   NamedType StructUtsName = NamedType<"struct utsname">;
   PtrType StructUtsNamePtr = PtrType<StructUtsName>;
   HeaderSpec SysUtsName = HeaderSpec<
@@ -1505,6 +1534,7 @@ def POSIX : StandardSpec<"POSIX"> {
     SysSelect,
     SysSocket,
     SysStat,
+    SysStatvfs,
     SysTypes,
     SysUtsName,
     SysWait,
