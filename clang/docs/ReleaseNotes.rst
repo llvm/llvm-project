@@ -263,6 +263,9 @@ Improvements to Clang's diagnostics
   operands, distinguishing it from potential typographical errors or unintended
   bitwise operations. Fixes #GH77601.
 
+- Clang now correctly diagnoses no arguments to a variadic macro parameter as a C23/C++20 extension.
+  Fixes #GH84495.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
