@@ -1,4 +1,4 @@
-// RUN: fir-opt --split-input-file --cfg-conversion --fir-to-llvm-ir="target=aarch64-unknown-linux-gnu" %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cfg-conversion-on-func-opt --fir-to-llvm-ir="target=aarch64-unknown-linux-gnu" %s | FileCheck %s
 
 func.func @_QPsb1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr"}) {
   %c1_i64 = arith.constant 1 : i64
