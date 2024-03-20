@@ -993,6 +993,8 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
       // If the macro contains the comma pasting extension, the diagnostic
       // is suppressed; we know we'll get another diagnostic later.
       if (!MI->hasCommaPasting()) {
+        // C++20 [cpp.replace]p15, C23 6.10.5p12
+        //
         // C++20 and C23 allow this construct, but standards before that
         // do not (we allow it as an extension).
         unsigned ID;
