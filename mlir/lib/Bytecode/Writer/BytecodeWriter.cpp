@@ -68,12 +68,12 @@ BytecodeWriterConfig::BytecodeWriterConfig(FallbackAsmResourceMap &map,
 }
 BytecodeWriterConfig::~BytecodeWriterConfig() = default;
 
-ArrayRef<std::unique_ptr<AttrTypeBytecodeWriter<Attribute>>>
+ArrayRef<const std::unique_ptr<AttrTypeBytecodeWriter<Attribute>> &>
 BytecodeWriterConfig::getAttributeWriterCallbacks() const {
   return impl->attributeWriterCallbacks;
 }
 
-ArrayRef<std::unique_ptr<AttrTypeBytecodeWriter<Type>>>
+ArrayRef<const std::unique_ptr<AttrTypeBytecodeWriter<Type>> &> 
 BytecodeWriterConfig::getTypeWriterCallbacks() const {
   return impl->typeWriterCallbacks;
 }
