@@ -13,7 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "TokenAnnotator.h"
+#include "FormatToken.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "format-token-annotator"
 
