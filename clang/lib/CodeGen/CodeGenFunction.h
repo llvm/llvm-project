@@ -670,12 +670,51 @@ public:
 
   EHScopeStack EHStack;
   llvm::SmallVector<char, 256> LifetimeExtendedCleanupStack;
-  struct DeactivateAfterFullExprCleanup {
+
+  // A stack of cleanups which were added to EHStack but have to be deactivated
+  // later before being popped or emitted. These are usually deactivated on
+  // exiting a `CleanupDeactivationScope` scope. For instance, after a
+  // full-expr.
+  //
+  // These are specially useful for correctly emitting cleanups while
+  // encountering branches out of expression (through stmt-expr or coroutine
+  // suspensions).
+  struct DeferredDeactivateCleanup {
     EHScopeStack::stable_iterator Cleanup;
     llvm::Instruction *DominatingIP;
   };
-  llvm::SmallVector<DeactivateAfterFullExprCleanup>
-      DeactivateAfterFullExprStack;
+  llvm::SmallVector<DeferredDeactivateCleanup> DeferredDeactivationCleanupStack;
+
+  // Enters a new scope for capturing cleanups which are deferred to be
+  // deactivated, all of which will be deactivated once the scope is exited.
+  struct CleanupDeactivationScope {
+    CodeGenFunction &CGF;
+    size_t OldDeactivateCleanupStackSize;
+    bool Deactivated;
+    CleanupDeactivationScope(CodeGenFunction &CGF)
+        : CGF(CGF), OldDeactivateCleanupStackSize(
+                        CGF.DeferredDeactivationCleanupStack.size()),
+          Deactivated(false) {}
+
+    void ForceDeactivate() {
+      assert(!Deactivated && "Deactivating already deactivated scope");
+      auto &Stack = CGF.DeferredDeactivationCleanupStack;
+      for (size_t I = Stack.size(); I > OldDeactivateCleanupStackSize; I--) {
+        CGF.DeactivateCleanupBlock(Stack[I - 1].Cleanup,
+                                   Stack[I - 1].DominatingIP);
+        Stack[I - 1].DominatingIP->eraseFromParent();
+      }
+      Stack.resize(OldDeactivateCleanupStackSize);
+      Deactivated = true;
+    }
+
+    ~CleanupDeactivationScope() {
+      if (Deactivated)
+        return;
+      ForceDeactivate();
+    }
+  };
+
   llvm::SmallVector<const JumpDest *, 2> SEHTryEpilogueStack;
 
   llvm::Instruction *CurrentFuncletPad = nullptr;
@@ -881,6 +920,19 @@ public:
       new (Buffer + sizeof(Header) + sizeof(T)) RawAddress(ActiveFlag);
   }
 
+  // Push a cleanup onto EHStack and deactivate it later. It is usually
+  // deactivated when exiting a `CleanupDeactivationScope` (for example: after a
+  // full expression).
+  template <class T, class... As>
+  void pushCleanupAndDeferDeactivation(CleanupKind Kind, As... A) {
+    // Placeholder dominating IP for this cleanup.
+    llvm::Instruction *DominatingIP =
+        Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
+    EHStack.pushCleanup<T>(Kind, A...);
+    DeferredDeactivationCleanupStack.push_back(
+        {EHStack.stable_begin(), DominatingIP});
+  }
+
   /// Set up the last cleanup that was pushed as a conditional
   /// full-expression cleanup.
   void initFullExprCleanup() {
@@ -932,7 +984,7 @@ public:
   class RunCleanupsScope {
     EHScopeStack::stable_iterator CleanupStackDepth, OldCleanupScopeDepth;
     size_t LifetimeExtendedCleanupStackSize;
-    size_t DeactivateAfterFullExprStackSize;
+    CleanupDeactivationScope DeactivateCleanups;
     bool OldDidCallStackSave;
   protected:
     bool PerformCleanup;
@@ -947,13 +999,10 @@ public:
   public:
     /// Enter a new cleanup scope.
     explicit RunCleanupsScope(CodeGenFunction &CGF)
-      : PerformCleanup(true), CGF(CGF)
-    {
+        : DeactivateCleanups(CGF), PerformCleanup(true), CGF(CGF) {
       CleanupStackDepth = CGF.EHStack.stable_begin();
       LifetimeExtendedCleanupStackSize =
           CGF.LifetimeExtendedCleanupStack.size();
-      DeactivateAfterFullExprStackSize =
-          CGF.DeactivateAfterFullExprStack.size();
       OldDidCallStackSave = CGF.DidCallStackSave;
       CGF.DidCallStackSave = false;
       OldCleanupScopeDepth = CGF.CurrentCleanupScopeDepth;
@@ -980,8 +1029,9 @@ public:
     void ForceCleanup(std::initializer_list<llvm::Value**> ValuesToReload = {}) {
       assert(PerformCleanup && "Already forced cleanup");
       CGF.DidCallStackSave = OldDidCallStackSave;
+      DeactivateCleanups.ForceDeactivate();
       CGF.PopCleanupBlocks(CleanupStackDepth, LifetimeExtendedCleanupStackSize,
-                           DeactivateAfterFullExprStackSize, ValuesToReload);
+                           ValuesToReload);
       PerformCleanup = false;
       CGF.CurrentCleanupScopeDepth = OldCleanupScopeDepth;
     }
@@ -1203,7 +1253,6 @@ public:
   void
   PopCleanupBlocks(EHScopeStack::stable_iterator OldCleanupStackSize,
                    size_t OldLifetimeExtendedStackSize,
-                   size_t OldDeactivateAfterFullExprStackSize,
                    std::initializer_list<llvm::Value **> ValuesToReload = {});
 
   void ResolveBranchFixups(llvm::BasicBlock *Target);
@@ -2170,6 +2219,11 @@ public:
                      Address addr, QualType type);
   void pushDestroy(CleanupKind kind, Address addr, QualType type,
                    Destroyer *destroyer, bool useEHCleanupForArray);
+  void pushDestroyAndDeferDeactivation(QualType::DestructionKind dtorKind,
+                                       Address addr, QualType type);
+  void pushDestroyAndDeferDeactivation(CleanupKind cleanupKind, Address addr,
+                                       QualType type, Destroyer *destroyer,
+                                       bool useEHCleanupForArray);
   void pushLifetimeExtendedDestroy(CleanupKind kind, Address addr,
                                    QualType type, Destroyer *destroyer,
                                    bool useEHCleanupForArray);

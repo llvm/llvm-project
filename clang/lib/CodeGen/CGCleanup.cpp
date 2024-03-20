@@ -465,15 +465,7 @@ void CodeGenFunction::PopCleanupBlocks(
 /// cleanups from the given savepoint in the lifetime-extended cleanups stack.
 void CodeGenFunction::PopCleanupBlocks(
     EHScopeStack::stable_iterator Old, size_t OldLifetimeExtendedSize,
-    size_t OldDeactivateAfterFullExprStackSize,
     std::initializer_list<llvm::Value **> ValuesToReload) {
-  for (size_t I = DeactivateAfterFullExprStack.size();
-       I > OldDeactivateAfterFullExprStackSize; I--) {
-    DeactivateCleanupBlock(DeactivateAfterFullExprStack[I - 1].Cleanup,
-                           DeactivateAfterFullExprStack[I - 1].DominatingIP);
-    DeactivateAfterFullExprStack[I - 1].DominatingIP->eraseFromParent();
-  }
-  DeactivateAfterFullExprStack.resize(OldDeactivateAfterFullExprStackSize);
   PopCleanupBlocks(Old, ValuesToReload);
 
   // Move our deferred cleanups onto the EH stack.
@@ -703,6 +695,8 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   // cleanup, rewrite it so that it leads to the appropriate place.
   if (Scope.isNormalCleanup() && HasPrebranchedFallthrough &&
       !RequiresNormalCleanup) {
+    // FIXME: Come up with a program which would need forwarding prebranched
+    // fallthrough and add tests. Otherwise delete this and assert against it.
     assert(!IsActive);
     llvm::BasicBlock *prebranchDest;
 

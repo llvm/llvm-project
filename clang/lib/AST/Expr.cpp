@@ -25,6 +25,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
@@ -2527,16 +2528,20 @@ Stmt *BlockExpr::getBody() {
 // Generic Expression Routines
 //===----------------------------------------------------------------------===//
 
-bool Expr::containsControlFlow() const {
+bool Expr::mayBranchOut() const {
   struct BranchDetector : public RecursiveASTVisitor<BranchDetector> {
     bool HasBranch = false;
     bool activate() {
       HasBranch = true;
       return false;
     }
+    // Coroutine suspensions.
     bool VisitCoawaitExpr(CoawaitExpr *) { return activate(); }
     bool VisitCoyieldExpr(CoyieldExpr *) { return activate(); }
-    bool VisitStmtExpr(StmtExpr *) { return activate(); }
+    // Control flow in stmt-expressions.
+    bool VisitBreakStmt(BreakStmt *) { return activate(); }
+    bool VisitReturnStmt(ReturnStmt *) { return activate(); }
+    bool VisitGotoStmt(GotoStmt *) { return activate(); }
   };
   BranchDetector detector;
   detector.TraverseStmt(const_cast<Expr *>(this));
