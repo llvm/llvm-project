@@ -1,5 +1,6 @@
 // REQUIRES: spirv-registered-target
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -fcuda-is-device -emit-llvm -o - %s | FileCheck %s
+
 struct x {
   double b;
   long a;
