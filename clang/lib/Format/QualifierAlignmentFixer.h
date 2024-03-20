@@ -71,10 +71,11 @@ public:
                                  tok::TokenKind QualifierType);
 
   // Is the Token a simple or qualifier type
-  static bool isQualifierOrType(const FormatToken *Tok);
+  static bool isQualifierOrType(const FormatToken *Tok, bool IsCpp = true);
   static bool
   isConfiguredQualifierOrType(const FormatToken *Tok,
-                              const std::vector<tok::TokenKind> &Qualifiers);
+                              const std::vector<tok::TokenKind> &Qualifiers,
+                              bool IsCpp = true);
 
   // Is the Token likely a Macro
   static bool isPossibleMacro(const FormatToken *Tok);

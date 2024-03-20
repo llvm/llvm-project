@@ -3827,15 +3827,13 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
 }
 
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {
-  IsCpp = Style.isCpp();
+  LangOptions LangOpts;
 
   FormatStyle::LanguageStandard LexingStd = Style.Standard;
   if (LexingStd == FormatStyle::LS_Auto)
     LexingStd = FormatStyle::LS_Latest;
   if (LexingStd == FormatStyle::LS_Latest)
     LexingStd = FormatStyle::LS_Cpp20;
-
-  LangOptions LangOpts;
   LangOpts.CPlusPlus = 1;
   LangOpts.CPlusPlus11 = LexingStd >= FormatStyle::LS_Cpp11;
   LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
@@ -3846,8 +3844,10 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   // the sequence "<::" will be unconditionally treated as "[:".
   // Cf. Lexer::LexTokenInternal.
   LangOpts.Digraphs = LexingStd >= FormatStyle::LS_Cpp11;
+
   LangOpts.LineComment = 1;
-  LangOpts.CXXOperatorNames = IsCpp;
+  bool AlternativeOperators = Style.isCpp();
+  LangOpts.CXXOperatorNames = AlternativeOperators ? 1 : 0;
   LangOpts.Bool = 1;
   LangOpts.ObjC = 1;
   LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.
