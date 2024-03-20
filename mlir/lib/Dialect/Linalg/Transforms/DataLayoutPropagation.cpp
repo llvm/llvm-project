@@ -703,10 +703,6 @@ public:
 
   LogicalResult matchAndRewrite(tensor::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
-    // User controlled propagation function.
-    if (!controlFn(packOp))
-      return failure();
-
     Operation *srcOp = packOp.getSource().getDefiningOp();
     // Currently only support when the pack op is the only user.
     if (!srcOp || !(srcOp->getNumResults() == 1) ||
@@ -719,6 +715,10 @@ public:
         })) {
       return failure();
     }
+
+    // User controlled propagation function.
+    if (!controlFn(srcOp))
+      return failure();
 
     return TypeSwitch<Operation *, LogicalResult>(srcOp)
         .Case([&](tensor::CollapseShapeOp op) {
@@ -825,10 +825,6 @@ public:
 
   LogicalResult matchAndRewrite(tensor::UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
-    // User controlled propagation function.
-    if (!controlFn(unPackOp))
-      return failure();
-
     Value result = unPackOp.getResult();
     // Currently only support unpack op with the single user.
     if (!result.hasOneUse()) {
@@ -841,8 +837,12 @@ public:
       return failure();
     }
 
-    Operation *userOp = *result.user_begin();
-    return TypeSwitch<Operation *, LogicalResult>(userOp)
+    Operation *consumerOp = *result.user_begin();
+    // User controlled propagation function.
+    if (!controlFn(consumerOp))
+      return failure();
+
+    return TypeSwitch<Operation *, LogicalResult>(consumerOp)
         .Case([&](tensor::ExpandShapeOp op) {
           return pushDownUnPackOpThroughExpandShape(unPackOp, op, rewriter);
         })
