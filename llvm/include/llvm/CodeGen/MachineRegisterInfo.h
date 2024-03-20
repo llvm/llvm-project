@@ -98,6 +98,12 @@ private:
   /// to enable classes dynamically during codegen.
   BitVector RegClassSyntheticInfo;
 
+  /// To have more restrictions on the allocation order for each register class.
+  /// For some targets, two distinct register classes can have the same set of
+  /// registers, but their allocatable set can vary. This vector helps targets
+  /// to dynamically determine the actual allocatable set for RCs.
+  std::vector<BitVector> RegClassAllocationMasks;
+
   /// RegAllocHints - This vector records register allocation hints for
   /// virtual registers. For each virtual register, it keeps a pair of hint
   /// type and hints vector making up the allocation hints. Only the first
@@ -272,6 +278,18 @@ public:
   /// This function checks if \p RC is enabled or not so that it can be included
   /// in various regclass related queries.
   bool isEnabled(const TargetRegisterClass *RC) const;
+
+  /// Update dynamically determined allocation mask for register classes.
+  void updateAllocationMaskForRCs(std::vector<BitVector> &&Mask);
+
+  // Return the allocation mask for regclass \p RC.
+  const BitVector &getAllocationMaskForRC(const TargetRegisterClass &RC) const;
+
+  /// True when the target has dynamically determined allocation mask for its
+  /// register classes.
+  bool hasAllocationMaskForRCs() const {
+    return RegClassAllocationMasks.size();
+  }
 
   // Strictly for use by MachineInstr.cpp.
   void addRegOperandToUseList(MachineOperand *MO);

@@ -49,6 +49,7 @@ MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
   UsedPhysRegMask.resize(NumRegs);
   PhysRegUseDefLists.reset(new MachineOperand*[NumRegs]());
   initializeRegClassSyntheticInfo();
+  RegClassAllocationMasks.clear();
   TheDelegates.clear();
 }
 
@@ -677,6 +678,18 @@ void MachineRegisterInfo::changeSyntheticInfoForRC(
 
 bool MachineRegisterInfo::isEnabled(const TargetRegisterClass *RC) const {
   return !RegClassSyntheticInfo.test(RC->getID());
+}
+
+void MachineRegisterInfo::updateAllocationMaskForRCs(
+    std::vector<BitVector> &&Mask) {
+  unsigned Size = Mask.size();
+  for (unsigned I = 0; I < Size; ++I)
+    RegClassAllocationMasks.push_back(std::move(Mask[I]));
+}
+
+const BitVector &MachineRegisterInfo::getAllocationMaskForRC(
+    const TargetRegisterClass &RC) const {
+  return RegClassAllocationMasks[RC.getID()];
 }
 
 bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
