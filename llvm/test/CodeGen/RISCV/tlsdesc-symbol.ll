@@ -1,3 +1,5 @@
+;; The test in this file do not appear in tls-models.ll because
+;; they are not auto-generated.
 ; RUN: llc -mtriple=riscv64 -relocation-model=pic -enable-tlsdesc < %s \
 ; RUN:     | llvm-mc -triple=riscv64 -filetype=obj -o - \
 ; RUN:     | llvm-readelf --symbols - \
