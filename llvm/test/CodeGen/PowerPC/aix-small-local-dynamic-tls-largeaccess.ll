@@ -13,102 +13,40 @@
 ; RUN:      --code-model=large -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck -D#NFA=2 --check-prefix=DIS %s
 
-@mySmallLocalDynamicTLSv1 = thread_local(localdynamic) global [8187 x i32] zeroinitializer, align 4
-@mySmallLocalDynamicTLS2 = thread_local(localdynamic) global [4000 x i32] zeroinitializer, align 4
-@mySmallLocalDynamicTLS3 = thread_local(localdynamic) global [4000 x i32] zeroinitializer, align 4
-@mySmallLocalDynamicTLS4 = thread_local(localdynamic) global [4000 x i32] zeroinitializer, align 4
-@mySmallLocalDynamicTLS5 = thread_local(localdynamic) global [4000 x i32] zeroinitializer, align 4
-@mySmallLocalDynamicTLSv2 = thread_local(localdynamic) global [9000 x i32] zeroinitializer, align 4
+@ElementIntTLSv1 = thread_local(localdynamic) global [8187 x i32] zeroinitializer, align 4  ; Within 32K
+@ElementIntTLS2 = thread_local(localdynamic) global [4000 x i32] zeroinitializer, align 4
+@ElementIntTLS3 = thread_local(localdynamic) global [4000 x i32] zeroinitializer, align 4
+@ElementIntTLS4 = thread_local(localdynamic) global [4000 x i32] zeroinitializer, align 4
+@ElementIntTLS5 = thread_local(localdynamic) global [4000 x i32] zeroinitializer, align 4
+@ElementIntTLSv2 = thread_local(localdynamic) global [9000 x i32] zeroinitializer, align 4  ; Beyond 32K
+
+@ElementLongTLS6 = external thread_local(localdynamic) global [60 x i64], align 8
+@ElementLongTLS2 = thread_local(localdynamic) global [3000 x i64] zeroinitializer, align 8  ; Within 32K
+@MyTLSGDVar = thread_local global [800 x i64] zeroinitializer, align 8
+@ElementLongTLS3 = thread_local(localdynamic) global [3000 x i64] zeroinitializer, align 8
+@ElementLongTLS4 = thread_local(localdynamic) global [3000 x i64] zeroinitializer, align 8
+@ElementLongTLS5 = thread_local(localdynamic) global [3000 x i64] zeroinitializer, align 8
+@ElementLongTLS = thread_local(localdynamic) local_unnamed_addr global [7800 x i64] zeroinitializer, align 8  ; Beyond 32K
+
 declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull) #1
 
 ; All accesses use a "faster" local-dynamic sequence directly off the thread pointer.
-define signext i32 @StoreArrays1() {
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-LABEL: StoreArrays1:
-; SMALL-LOCAL-DYNAMIC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsldm) @"_$TLSML"
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r6, L..C1(r2) # target-flags(ppc-tlsld) @mySmallLocalDynamicTLS2
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r7, L..C2(r2) # target-flags(ppc-tlsld) @mySmallLocalDynamicTLS3
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r8, L..C3(r2) # target-flags(ppc-tlsld) @mySmallLocalDynamicTLS4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r9, L..C4(r2) # target-flags(ppc-tlsld) @mySmallLocalDynamicTLS5
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r5, L..C5(r2) # target-flags(ppc-tlsld) @mySmallLocalDynamicTLSv1
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r4, 1
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    add r6, r3, r6
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    add r7, r3, r7
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    add r8, r3, r8
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    add r9, r3, r9
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stwux r4, r3, r5
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r4, 4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r4, 24(r3)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r3, 2
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r3, 320(r6)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r3, 3
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r3, 324(r7)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r3, 88
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r4, 328(r8)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r3, 332(r9)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r3, 102
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    blr
-;
-; SMALL-LOCAL-DYNAMIC-LARGECM64-LABEL: StoreArrays1:
-; SMALL-LOCAL-DYNAMIC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C1@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r7, L..C2@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r8, L..C3@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r9, L..C4@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r7, L..C2@l(r7)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r8, L..C3@l(r8)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r9, L..C4@l(r9)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r5, L..C1@l(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C5@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r4, 1
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r6, L..C5@l(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    add r7, r3, r7
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    add r8, r3, r8
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    add r9, r3, r9
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    add r6, r3, r6
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stwux r4, r3, r5
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r4, 4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r4, 24(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r3, 2
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r3, 320(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r3, 3
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r3, 324(r7)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r3, 88
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r4, 328(r8)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r3, 332(r9)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r3, 102
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    blr
+define signext i32 @test1() {
 entry:
-  %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @mySmallLocalDynamicTLSv1)
+  %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @ElementIntTLSv1)
   store i32 1, ptr %0, align 4
   %arrayidx1 = getelementptr inbounds [8187 x i32], ptr %0, i64 0, i64 6
   store i32 4, ptr %arrayidx1, align 4
-  %1 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @mySmallLocalDynamicTLS2)
+  %1 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @ElementIntTLS2)
   %arrayidx2 = getelementptr inbounds [4000 x i32], ptr %1, i64 0, i64 80
   store i32 2, ptr %arrayidx2, align 4
-  %2 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @mySmallLocalDynamicTLS3)
+  %2 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @ElementIntTLS3)
   %arrayidx3 = getelementptr inbounds [4000 x i32], ptr %2, i64 0, i64 81
   store i32 3, ptr %arrayidx3, align 4
-  %3 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @mySmallLocalDynamicTLS4)
+  %3 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @ElementIntTLS4)
   %arrayidx4 = getelementptr inbounds [4000 x i32], ptr %3, i64 0, i64 82
   store i32 4, ptr %arrayidx4, align 4
-  %4 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @mySmallLocalDynamicTLS5)
+  %4 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @ElementIntTLS5)
   %arrayidx5 = getelementptr inbounds [4000 x i32], ptr %4, i64 0, i64 83
   store i32 88, ptr %arrayidx5, align 4
   %5 = load i32, ptr %0, align 4
@@ -125,93 +63,22 @@ entry:
 }
 
 ; Example of one access using the regular local-dynamic access from the TOC.
-define signext i32 @StoreArrays2() {
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-LABEL: StoreArrays2:
-; SMALL-LOCAL-DYNAMIC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsldm) @"_$TLSML"
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r6, L..C1(r2) # target-flags(ppc-tlsld) @mySmallLocalDynamicTLS2
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r7, L..C2(r2) # target-flags(ppc-tlsld) @mySmallLocalDynamicTLS3
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r8, L..C3(r2) # target-flags(ppc-tlsld) @mySmallLocalDynamicTLS4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r9, L..C4(r2) # target-flags(ppc-tlsld) @mySmallLocalDynamicTLS5
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r5, L..C6(r2) # target-flags(ppc-tlsld) @mySmallLocalDynamicTLSv2
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r4, 1
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    add r6, r3, r6
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    add r7, r3, r7
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    add r8, r3, r8
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    add r9, r3, r9
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stwux r4, r3, r5
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r4, 4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r4, 24(r3)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r3, 2
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r3, 320(r6)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r3, 3
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r3, 324(r7)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r3, 88
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r4, 328(r8)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r3, 332(r9)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r3, 102
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    blr
-;
-; SMALL-LOCAL-DYNAMIC-LARGECM64-LABEL: StoreArrays2:
-; SMALL-LOCAL-DYNAMIC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C6@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r7, L..C2@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r8, L..C3@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r9, L..C4@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r7, L..C2@l(r7)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r8, L..C3@l(r8)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r9, L..C4@l(r9)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r5, L..C6@l(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C5@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r4, 1
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r6, L..C5@l(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    add r7, r3, r7
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    add r8, r3, r8
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    add r9, r3, r9
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    add r6, r3, r6
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stwux r4, r3, r5
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r4, 4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r4, 24(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r3, 2
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r3, 320(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r3, 3
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r3, 324(r7)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r3, 88
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r4, 328(r8)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r3, 332(r9)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r3, 102
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    blr
+define signext i32 @test2() {
 entry:
-  %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @mySmallLocalDynamicTLSv2)
+  %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @ElementIntTLSv2)
   store i32 1, ptr %0, align 4
   %arrayidx1 = getelementptr inbounds [9000 x i32], ptr %0, i64 0, i64 6
   store i32 4, ptr %arrayidx1, align 4
-  %1 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @mySmallLocalDynamicTLS2)
+  %1 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @ElementIntTLS2)
   %arrayidx2 = getelementptr inbounds [4000 x i32], ptr %1, i64 0, i64 80
   store i32 2, ptr %arrayidx2, align 4
-  %2 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @mySmallLocalDynamicTLS3)
+  %2 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @ElementIntTLS3)
   %arrayidx3 = getelementptr inbounds [4000 x i32], ptr %2, i64 0, i64 81
   store i32 3, ptr %arrayidx3, align 4
-  %3 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @mySmallLocalDynamicTLS4)
+  %3 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @ElementIntTLS4)
   %arrayidx4 = getelementptr inbounds [4000 x i32], ptr %3, i64 0, i64 82
   store i32 4, ptr %arrayidx4, align 4
-  %4 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @mySmallLocalDynamicTLS5)
+  %4 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @ElementIntTLS5)
   %arrayidx5 = getelementptr inbounds [4000 x i32], ptr %4, i64 0, i64 83
   store i32 88, ptr %arrayidx5, align 4
   %5 = load i32, ptr %0, align 4
@@ -227,6 +94,36 @@ entry:
   ret i32 %add15
 }
 
+; All accesses use a "faster" local-dynamic sequence directly off the thread pointer.
+define i64 @test3() {
+entry:
+  %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @ElementLongTLS6)
+  %arrayidx = getelementptr inbounds [60 x i64], ptr %0, i64 0, i64 53
+  store i64 212, ptr %arrayidx, align 8
+  %1 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @ElementLongTLS2)
+  %arrayidx1 = getelementptr inbounds [3000 x i64], ptr %1, i64 0, i64 150
+  store i64 203, ptr %arrayidx1, align 8
+  %2 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @MyTLSGDVar)
+  %arrayidx2 = getelementptr inbounds [800 x i64], ptr %2, i64 0, i64 55
+  store i64 44, ptr %arrayidx2, align 8
+  %3 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @ElementLongTLS3)
+  %arrayidx3 = getelementptr inbounds [3000 x i64], ptr %3, i64 0, i64 250
+  store i64 6, ptr %arrayidx3, align 8
+  %4 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @ElementLongTLS4)
+  %arrayidx4 = getelementptr inbounds [3000 x i64], ptr %4, i64 0, i64 850
+  store i64 100, ptr %arrayidx4, align 8
+  %5 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @ElementLongTLS5)
+  %arrayidx5 = getelementptr inbounds [3000 x i64], ptr %5, i64 0, i64 1050
+  store i64 882, ptr %arrayidx5, align 8
+  %6 = load i64, ptr %arrayidx1, align 8
+  %7 = load i64, ptr %arrayidx3, align 8
+  %8 = load i64, ptr %arrayidx4, align 8
+  %add = add i64 %6, 882
+  %add9 = add i64 %add, %7
+  %add11 = add i64 %add9, %8
+  ret i64 %add11
+}
+
 ; DIS:      file format aix5coff64-rs6000
 ; DIS:      Disassembly of section .text:
 ; DIS:      0000000000000000 (idx: [[#NFA+5]]) .StoreArrays1:
@@ -235,31 +132,31 @@ entry:
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 3, 2, 0
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+15]]) _$TLSML[TC]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 6, 2, 0
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+17]]) mySmallLocalDynamicTLSv1[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+17]]) ElementIntTLSv1[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                std 0, 64(1)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 7, 2, 0
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+19]]) mySmallLocalDynamicTLS3[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+19]]) ElementIntTLS3[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 3, 0(3)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+15]]) _$TLSML[TC]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 8, 2, 0
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+21]]) mySmallLocalDynamicTLS4[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+21]]) ElementIntTLS4[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 9, 2, 0
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+23]]) mySmallLocalDynamicTLS5[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+23]]) ElementIntTLS5[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 7, 16(7)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+19]]) mySmallLocalDynamicTLS3[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+19]]) ElementIntTLS3[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 8, 24(8)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+21]]) mySmallLocalDynamicTLS4[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+21]]) ElementIntTLS4[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 9, 32(9)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+23]]) mySmallLocalDynamicTLS5[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+23]]) ElementIntTLS5[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                bla 0x0
 ; DIS-NEXT: {{0*}}[[#ADDR]]: R_RBA              (idx: [[#NFA+1]]) .__tls_get_mod[PR]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 5, 8(6)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+17]]) mySmallLocalDynamicTLSv1[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+17]]) ElementIntTLSv1[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 6, 2, 0
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+25]]) mySmallLocalDynamicTLS2[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+25]]) ElementIntTLS2[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 1
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 6, 40(6)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+25]]) mySmallLocalDynamicTLS2[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+25]]) ElementIntTLS2[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 7, 3, 7
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 8, 3, 8
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 9, 3, 9
@@ -286,31 +183,31 @@ entry:
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 3, 2, 0
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+15]]) _$TLSML[TC]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 6, 2, 0
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+27]]) mySmallLocalDynamicTLSv2[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+27]]) ElementIntTLSv2[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                std 0, 64(1)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 7, 2, 0
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+19]]) mySmallLocalDynamicTLS3[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+19]]) ElementIntTLS3[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 3, 0(3)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+15]]) _$TLSML[TC]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 8, 2, 0
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+21]]) mySmallLocalDynamicTLS4[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+21]]) ElementIntTLS4[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 9, 2, 0
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+23]]) mySmallLocalDynamicTLS5[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU         (idx: [[#NFA+23]]) ElementIntTLS5[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 7, 16(7)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+19]]) mySmallLocalDynamicTLS3[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+19]]) ElementIntTLS3[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 8, 24(8)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+21]]) mySmallLocalDynamicTLS4[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+21]]) ElementIntTLS4[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 9, 32(9)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+23]]) mySmallLocalDynamicTLS5[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+23]]) ElementIntTLS5[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                bla 0x0
 ; DIS-NEXT: {{0*}}[[#ADDR]]: R_RBA              (idx: [[#NFA+1]]) .__tls_get_mod[PR]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 5, 48(6)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+27]]) mySmallLocalDynamicTLSv2[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+27]]) ElementIntTLSv2[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 6, 2, 0
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU	        (idx: [[#NFA+25]]) mySmallLocalDynamicTLS2[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU	        (idx: [[#NFA+25]]) ElementIntTLS2[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 1
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 6, 40(6)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+25]]) mySmallLocalDynamicTLS2[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	        (idx: [[#NFA+25]]) ElementIntTLS2[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 7, 3, 7
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 8, 3, 8
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 9, 3, 9
@@ -349,15 +246,15 @@ entry:
 ; DIS-NEXT: 0000000000000140:  R_POS        (idx: [[#NFA+13]]) TOC[TC0]
 ; DIS-NEXT:      144: 00 00 01 50
 
-; DIS:      0000000000000180 (idx: [[#NFA+27]]) mySmallLocalDynamicTLSv2[TE]:
+; DIS:      0000000000000180 (idx: [[#NFA+27]]) ElementIntTLSv2[TE]:
 ; DIS-NEXT:      180: 00 00 00 00
-; DIS-NEXT: 0000000000000180:  R_TLS_LD     (idx: [[#NFA+39]]) mySmallLocalDynamicTLSv2[TL]
+; DIS-NEXT: 0000000000000180:  R_TLS_LD     (idx: [[#NFA+39]]) ElementIntTLSv2[TL]
 ; DIS-NEXT:      184: 00 01 79 ec
 
 ; DIS:      Disassembly of section .tdata:
-; DIS:      0000000000000000 (idx: [[#NFA+29]]) mySmallLocalDynamicTLSv1[TL]:
-; DIS:      0000000000007fec (idx: [[#NFA+31]]) mySmallLocalDynamicTLS2[TL]:
-; DIS:      000000000000be6c (idx: [[#NFA+33]]) mySmallLocalDynamicTLS3[TL]:
-; DIS:      000000000000fcec (idx: [[#NFA+35]]) mySmallLocalDynamicTLS4[TL]:
-; DIS:      0000000000013b6c (idx: [[#NFA+37]]) mySmallLocalDynamicTLS5[TL]:
-; DIS:      00000000000179ec (idx: [[#NFA+39]]) mySmallLocalDynamicTLSv2[TL]:
+; DIS:      0000000000000000 (idx: [[#NFA+29]]) ElementIntTLSv1[TL]:
+; DIS:      0000000000007fec (idx: [[#NFA+31]]) ElementIntTLS2[TL]:
+; DIS:      000000000000be6c (idx: [[#NFA+33]]) ElementIntTLS3[TL]:
+; DIS:      000000000000fcec (idx: [[#NFA+35]]) ElementIntTLS4[TL]:
+; DIS:      0000000000013b6c (idx: [[#NFA+37]]) ElementIntTLS5[TL]:
+; DIS:      00000000000179ec (idx: [[#NFA+39]]) ElementIntTLSv2[TL]:

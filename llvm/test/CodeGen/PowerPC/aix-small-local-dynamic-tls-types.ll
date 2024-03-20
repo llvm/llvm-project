@@ -24,37 +24,6 @@ declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull) #1
 @a = thread_local(localdynamic) global [87 x i32] zeroinitializer, align 4
 
 define nonnull ptr @AddrTest1() local_unnamed_addr #0 {
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-LABEL: AddrTest1:
-; SMALL-LOCAL-DYNAMIC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsldm) @"_$TLSML"
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r4, L..C1(r2) # target-flags(ppc-tlsld) @a
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    add r3, r3, r4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r3, r3, 12
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    blr
-;
-; SMALL-LOCAL-DYNAMIC-LARGECM64-LABEL: AddrTest1:
-; SMALL-LOCAL-DYNAMIC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C1@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r4, L..C1@l(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    add r3, r3, r4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r3, r3, 12
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @a)
   %arrayidx = getelementptr inbounds [87 x i32], ptr %0, i64 0, i64 3
@@ -62,35 +31,6 @@ entry:
 }
 
 define signext i32 @testUnaligned() {
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-LABEL: testUnaligned:
-; SMALL-LOCAL-DYNAMIC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsldm) @"_$TLSML"
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r4, L..C2(r2) # target-flags(ppc-tlsld) @ThreadLocalStruct
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    lwax r3, r3, r4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    blr
-;
-; SMALL-LOCAL-DYNAMIC-LARGECM64-LABEL: testUnaligned:
-; SMALL-LOCAL-DYNAMIC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C2@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r4, L..C2@l(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    lwax r3, r3, r4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    blr
 entry:
   %0 = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @ThreadLocalStruct)
   %x = getelementptr inbounds %struct.anon, ptr %0, i32 0, i32 0
@@ -99,37 +39,6 @@ entry:
 }
 
 define void @testChar(i8 noundef signext %x) {
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-LABEL: testChar:
-; SMALL-LOCAL-DYNAMIC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mr r6, r3
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsldm) @"_$TLSML"
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r4, L..C3(r2) # target-flags(ppc-tlsld) @TLVChar
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stbx r6, r3, r4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    blr
-;
-; SMALL-LOCAL-DYNAMIC-LARGECM64-LABEL: testChar:
-; SMALL-LOCAL-DYNAMIC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mr r6, r3
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r7, L..C3@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r4, L..C3@l(r7)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stbx r6, r3, r4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @TLVChar)
   store i8 %x, ptr %0, align 1
@@ -137,37 +46,6 @@ entry:
 }
 
 define void @testShort(i16 noundef signext %x) {
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-LABEL: testShort:
-; SMALL-LOCAL-DYNAMIC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mr r6, r3
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsldm) @"_$TLSML"
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r4, L..C4(r2) # target-flags(ppc-tlsld) @TLVShort
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    sthx r6, r3, r4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    blr
-;
-; SMALL-LOCAL-DYNAMIC-LARGECM64-LABEL: testShort:
-; SMALL-LOCAL-DYNAMIC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mr r6, r3
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r7, L..C4@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r4, L..C4@l(r7)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    sthx r6, r3, r4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 2 ptr @llvm.threadlocal.address.p0(ptr align 2 @TLVShort)
   store i16 %x, ptr %0, align 2
@@ -175,35 +53,6 @@ entry:
 }
 
 define signext i32 @testInt1() {
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-LABEL: testInt1:
-; SMALL-LOCAL-DYNAMIC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsldm) @"_$TLSML"
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r4, L..C5(r2) # target-flags(ppc-tlsld) @TLVInt
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    lwax r3, r3, r4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    blr
-;
-; SMALL-LOCAL-DYNAMIC-LARGECM64-LABEL: testInt1:
-; SMALL-LOCAL-DYNAMIC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C5@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r4, L..C5@l(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    lwax r3, r3, r4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @TLVInt)
   %1 = load i32, ptr %0, align 4
@@ -211,44 +60,6 @@ entry:
 }
 
 define signext i32 @testInt2() {
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-LABEL: testInt2:
-; SMALL-LOCAL-DYNAMIC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsldm) @"_$TLSML"
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r4, L..C6(r2) # target-flags(ppc-tlsld) @InternalTLVInt
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    lwzx r3, r3, r4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r4, L..C7(r2) # @TLVIntInit
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    lwz r4, 0(r4)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    add r3, r4, r3
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    extsw r3, r3
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    blr
-;
-; SMALL-LOCAL-DYNAMIC-LARGECM64-LABEL: testInt2:
-; SMALL-LOCAL-DYNAMIC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C6@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r4, L..C6@l(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    lwzx r3, r3, r4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r4, L..C7@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r4, L..C7@l(r4)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    lwz r4, 0(r4)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    add r3, r4, r3
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    extsw r3, r3
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @InternalTLVInt)
   %1 = load i32, ptr %0, align 4
@@ -258,35 +69,6 @@ entry:
 }
 
 define signext i64 @testLong1() {
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-LABEL: testLong1:
-; SMALL-LOCAL-DYNAMIC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsldm) @"_$TLSML"
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r4, L..C8(r2) # target-flags(ppc-tlsld) @TLVLong
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ldx r3, r3, r4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    blr
-;
-; SMALL-LOCAL-DYNAMIC-LARGECM64-LABEL: testLong1:
-; SMALL-LOCAL-DYNAMIC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C8@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r4, L..C8@l(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ldx r3, r3, r4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @TLVLong)
   %1 = load i64, ptr %0, align 4
@@ -294,39 +76,6 @@ entry:
 }
 
 define void @testLong2(i64 noundef signext %x) {
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-LABEL: testLong2:
-; SMALL-LOCAL-DYNAMIC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsldm) @"_$TLSML"
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r4, L..C9(r2) # target-flags(ppc-tlsld) @InternalTLVLong
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ldx r5, r3, r4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r5, r5, 9
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdx r5, r3, r4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    blr
-;
-; SMALL-LOCAL-DYNAMIC-LARGECM64-LABEL: testLong2:
-; SMALL-LOCAL-DYNAMIC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C9@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r4, L..C9@l(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ldx r5, r3, r4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r5, r5, 9
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdx r5, r3, r4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @InternalTLVLong)
   %1 = load i64, ptr %0, align 8
@@ -335,50 +84,15 @@ entry:
   ret void
 }
 
-define void @testFloat(float noundef %x) {
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-LABEL: testFloat:
-; SMALL-LOCAL-DYNAMIC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsldm) @"_$TLSML"
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    vspltisw v2, 1
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    vspltisw v3, 8
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    xvcvsxwdp vs0, vs34
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r4, L..C10(r2) # target-flags(ppc-tlsld) @TLVFloat
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    lfsx f1, r3, r4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    fadds f0, f1, f0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    xvcvsxwdp vs1, vs35
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    fadds f0, f0, f1
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stfsx f0, r3, r4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    blr
-;
-; SMALL-LOCAL-DYNAMIC-LARGECM64-LABEL: testFloat:
-; SMALL-LOCAL-DYNAMIC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    vspltisw v2, 1
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C10@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    vspltisw v3, 8
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    xvcvsxwdp vs0, vs34
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r4, L..C10@l(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    lfsx f1, r3, r4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    fadds f0, f1, f0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    xvcvsxwdp vs1, vs35
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    fadds f0, f0, f1
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stfsx f0, r3, r4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    blr
+define i32 @testLong3() {
+entry:
+  %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @TLVLong)
+  %1 = load i64, ptr %0, align 8
+  %conv = trunc i64 %1 to i32
+  ret i32 %conv
+}
+
+define void @testFloat1(float noundef %x) {
 entry:
   %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @TLVFloat)
   %1 = load float, ptr %0, align 4
@@ -388,38 +102,25 @@ entry:
   ret void
 }
 
-define void @testDouble(double noundef %x) {
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-LABEL: testDouble:
-; SMALL-LOCAL-DYNAMIC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsldm) @"_$TLSML"
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r4, L..C11(r2) # target-flags(ppc-tlsld) @InternalTLVDouble
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stfdx f1, r3, r4
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    blr
-;
-; SMALL-LOCAL-DYNAMIC-LARGECM64-LABEL: testDouble:
-; SMALL-LOCAL-DYNAMIC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mflr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdu r1, -48(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C11@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    std r0, 64(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    bla .__tls_get_mod[PR]
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r4, L..C11@l(r6)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stfdx f1, r3, r4
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r1, r1, 48
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r0, 16(r1)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mtlr r0
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    blr
+define i32 @testFloat2() {
+entry:
+  %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @TLVFloat)
+  %1 = load float, ptr %0, align 4
+  %conv = fptosi float %1 to i32
+  ret i32 %conv
+}
+
+define void @testDouble1(double noundef %x) {
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @InternalTLVDouble)
   store double %x, ptr %0, align 8
   ret void
+}
+
+define i32 @testDouble2() {
+entry:
+  %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @InternalTLVDouble)
+  %1 = load double, ptr %0, align 8
+  %conv = fptosi double %1 to i32
+  ret i32 %conv
 }
