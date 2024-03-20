@@ -292,7 +292,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   InstructionCost TotalSpeculationCost = 0;
   unsigned NotHoistedInstCount = 0;
   for (const auto &I : FromBlock) {
-    // Make note of any DbgVariableRecords that need hoisting. DPLabels
+    // Make note of any DbgVariableRecords that need hoisting. DbgLabelRecords
     // get left behind just like llvm.dbg.labels.
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
       if (HasNoUnhoistedInstr(DVR.location_ops()))
