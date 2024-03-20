@@ -10,6 +10,12 @@
 
 #include <iterator>
 
+#include "test_iterators.h"
+
+using sized_it = random_access_iterator<int*>;
+static_assert(std::sized_sentinel_for<sized_it, sized_it>);
+static_assert(std::sized_sentinel_for<std::move_iterator<sized_it>, std::move_iterator<sized_it>>);
+
 struct unsized_it {
   using value_type      = int;
   using difference_type = std::ptrdiff_t;
