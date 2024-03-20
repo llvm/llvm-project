@@ -560,16 +560,12 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     break;
   case Triple::Linux:
     // exp10, exp10f, exp10l is available on Linux (GLIBC) but are extremely
-    // buggy prior to glibc version 2.18. Until this version is widely deployed
-    // or we have a reasonable detection strategy, we cannot use exp10 reliably
-    // on Linux.
-    //
-    // Fall through to disable all of them.
-    [[fallthrough]];
-  default:
-    TLI.setUnavailable(LibFunc_exp10);
-    TLI.setUnavailable(LibFunc_exp10f);
-    TLI.setUnavailable(LibFunc_exp10l);
+    // buggy prior to glibc version 2.18. As this version is so old, we
+    // don't really need to worry about using exp10 on Linux.
+    TLI.setAvailableWithName(LibFunc_exp10, "__exp10");
+    TLI.setAvailableWithName(LibFunc_exp10f, "__exp10f");
+    TLI.setAvailableWithName(LibFunc_exp10l, "__exp10l");
+    break;
   }
 
   // ffsl is available on at least Darwin, Mac OS X, iOS, FreeBSD, and
@@ -841,6 +837,9 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_strndup);
     TLI.setUnavailable(LibFunc_strnlen);
     TLI.setUnavailable(LibFunc_toascii);
+    TLI.setUnavailable(LibFunc_exp10);
+    TLI.setUnavailable(LibFunc_exp10f);
+    TLI.setUnavailable(LibFunc_exp10l);
   }
 
   // As currently implemented in clang, NVPTX code has no standard library to

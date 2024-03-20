@@ -224,11 +224,20 @@ define double @expm1_test2(float %f)   {
 ; exp10f() doesn't exist for this triple, so it doesn't shrink.
 
 define float @exp10_test1(float %f)   {
-; CHECK-LABEL: @exp10_test1(
-; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[F:%.*]] to double
-; CHECK-NEXT:    [[CALL:%.*]] = call fast double @exp10(double [[CONV]])
-; CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL]] to float
-; CHECK-NEXT:    ret float [[CONV1]]
+; LINUX-LABEL: define float @exp10_test1(
+; LINUX-SAME: float [[F:%.*]]) {
+; LINUX-NEXT:    [[EXP10F:%.*]] = call fast float @__exp10f(float [[F]])
+; LINUX-NEXT:    ret float [[EXP10F]]
+;
+; MS64-LABEL: define float @exp10_test1(
+; MS64-SAME: float [[F:%.*]]) {
+; MS64-NEXT:    [[EXP10F:%.*]] = call fast float @exp10f(float [[F]])
+; MS64-NEXT:    ret float [[EXP10F]]
+;
+; MS32-LABEL: define float @exp10_test1(
+; MS32-SAME: float [[F:%.*]]) {
+; MS32-NEXT:    [[EXP10F:%.*]] = call fast float @exp10f(float [[F]])
+; MS32-NEXT:    ret float [[EXP10F]]
 ;
   %conv = fpext float %f to double
   %call = call fast double @exp10(double %conv)
