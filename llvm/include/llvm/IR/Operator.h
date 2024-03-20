@@ -404,7 +404,6 @@ class GEPOperator
 
   enum {
     IsInBounds = (1 << 0),
-    // InRangeIndex: bits 1-6
   };
 
   void setIsInBounds(bool B) {
@@ -423,11 +422,7 @@ public:
 
   /// Returns the offset of the index with an inrange attachment, or
   /// std::nullopt if none.
-  std::optional<unsigned> getInRangeIndex() const {
-    if (SubclassOptionalData >> 1 == 0)
-      return std::nullopt;
-    return (SubclassOptionalData >> 1) - 1;
-  }
+  std::optional<ConstantRange> getInRange() const;
 
   inline op_iterator       idx_begin()       { return op_begin()+1; }
   inline const_op_iterator idx_begin() const { return op_begin()+1; }

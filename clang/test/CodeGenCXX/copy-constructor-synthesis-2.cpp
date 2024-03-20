@@ -24,4 +24,4 @@ struct A { virtual void a(); };
 A x(A& y) { return y; }
 
 // CHECK: define linkonce_odr {{.*}} @_ZN1AC1ERKS_(ptr {{.*}}%this, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
-// CHECK: store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1A, i32 0, inrange i32 0, i32 2)
+// CHECK: store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 2)
