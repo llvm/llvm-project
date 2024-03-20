@@ -97,6 +97,11 @@ libc_support_library(
     deps = [":llvm_libc_macros_float_macros"],
 )
 
+libc_support_library(
+  name = "llvm_libc_types",
+  hdrs = glob(["include/llvm-libc-types/*.h"]),
+)
+
 ############################### Support libraries ##############################
 
 libc_support_library(
@@ -2732,6 +2737,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
@@ -2754,6 +2760,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
@@ -2765,6 +2772,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
@@ -2776,6 +2784,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
@@ -2787,6 +2796,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
@@ -2846,6 +2856,7 @@ libc_function(
         ":__support_file_linux_lseekimpl",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
@@ -2857,6 +2868,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
@@ -2868,6 +2880,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
@@ -2881,6 +2894,7 @@ libc_function(
         ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
@@ -2892,6 +2906,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
@@ -2903,6 +2918,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
@@ -2961,6 +2977,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
@@ -2972,6 +2989,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
@@ -3006,6 +3024,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_types",
     ],
 )
 
