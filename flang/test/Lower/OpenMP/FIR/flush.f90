@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenMP Flush Directive.
 
 !RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s --check-prefixes="FIRDialect,OMPDialect"
-!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | fir-opt --cfg-conversion | fir-opt --fir-to-llvm-ir | FileCheck %s --check-prefixes="LLVMIRDialect,OMPDialect"
+!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | fir-opt --cfg-conversion-on-func-opt | fir-opt --fir-to-llvm-ir | FileCheck %s --check-prefixes="LLVMIRDialect,OMPDialect"
 
 subroutine flush_standalone(a, b, c)
     integer, intent(inout) :: a, b, c
