@@ -72,8 +72,7 @@ void XtensaConstantPoolValue::print(raw_ostream &O) const {}
 
 XtensaConstantPoolConstant::XtensaConstantPoolConstant(
     const Constant *C, unsigned ID, XtensaCP::XtensaCPKind Kind)
-    : XtensaConstantPoolValue((Type *)C->getType(), ID, Kind),
-      CVal(C) {}
+    : XtensaConstantPoolValue((Type *)C->getType(), ID, Kind), CVal(C) {}
 
 XtensaConstantPoolConstant *
 XtensaConstantPoolConstant::Create(const Constant *C, unsigned ID,
@@ -147,8 +146,7 @@ void XtensaConstantPoolSymbol::print(raw_ostream &O) const {
 XtensaConstantPoolMBB::XtensaConstantPoolMBB(LLVMContext &C,
                                              const MachineBasicBlock *mbb,
                                              unsigned id)
-    : XtensaConstantPoolValue(C, 0, XtensaCP::CPMachineBasicBlock),
-      MBB(mbb) {}
+    : XtensaConstantPoolValue(C, 0, XtensaCP::CPMachineBasicBlock), MBB(mbb) {}
 
 XtensaConstantPoolMBB *
 XtensaConstantPoolMBB::Create(LLVMContext &C, const MachineBasicBlock *mbb,
@@ -205,4 +203,3 @@ void XtensaConstantPoolJumpTable::print(raw_ostream &O) const {
   O << "JT" << IDX;
   XtensaConstantPoolValue::print(O);
 }
-

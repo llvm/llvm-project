@@ -136,41 +136,40 @@ void XtensaAsmPrinter::emitConstantPool() {
   if (CP.empty())
     return;
 
-  for (unsigned i = 0, e = CP.size(); i != e; ++i) {
-    const MachineConstantPoolEntry &CPE = CP[i];
+  if (OutStreamer->hasRawTextSupport()) {
+    OutStreamer->switchSection(getObjFileLowering().SectionForGlobal(&F, TM));
+    OutStreamer->emitRawText(StringRef("\t.literal_position\n"));
+  } else {
+    MCSectionELF *CS =
+        (MCSectionELF *)getObjFileLowering().SectionForGlobal(&F, TM);
+    StringRef CSectionName = CS->getName();
+    std::size_t Pos = CSectionName.find(".text");
+    std::string SectionName;
+    if (Pos != std::string::npos) {
+      SectionName = CSectionName.substr(0, Pos);
 
-    if (i == 0) {
-      if (OutStreamer->hasRawTextSupport()) {
-        OutStreamer->switchSection(
-            getObjFileLowering().SectionForGlobal(&F, TM));
-        OutStreamer->emitRawText(StringRef("\t.literal_position\n"));
-      } else {
-        MCSectionELF *CS =
-            (MCSectionELF *)getObjFileLowering().SectionForGlobal(&F, TM);
-        std::string CSectionName = CS->getName().str();
-        std::size_t Pos = CSectionName.find(".text");
-        std::string SectionName;
-        if (Pos != std::string::npos) {
-          if (Pos > 0)
-            SectionName = CSectionName.substr(0, Pos + 5);
-          else
-            SectionName = "";
-          SectionName += ".literal";
-          SectionName += CSectionName.substr(Pos + 5);
-        } else {
-          SectionName = CSectionName;
-          SectionName += ".literal";
-        }
+      if (Pos > 0)
+        SectionName += ".text";
 
-        MCSectionELF *S =
-            OutContext.getELFSection(SectionName, ELF::SHT_PROGBITS,
-                                     ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
-        S->setAlignment(Align(4));
-        OutStreamer->switchSection(S);
-      }
+      CSectionName = CSectionName.drop_front(Pos);
+      CSectionName.consume_front(".text");
+
+      SectionName += ".literal";
+      SectionName += CSectionName;
+    } else {
+      SectionName = CSectionName;
+      SectionName += ".literal";
     }
 
-    emitMachineConstantPoolEntry(CPE, i);
+    MCSectionELF *S = OutContext.getELFSection(
+        SectionName, ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
+    S->setAlignment(Align(4));
+    OutStreamer->switchSection(S);
+  }
+
+  int CPIdx = 0;
+  for (const MachineConstantPoolEntry &CPE : CP) {
+    emitMachineConstantPoolEntry(CPE, CPIdx++);
   }
 }
 

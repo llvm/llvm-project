@@ -8,10 +8,10 @@
 //
 //===----------------------------------------------------------------------===//
 #include "XtensaMCTargetDesc.h"
+#include "TargetInfo/XtensaTargetInfo.h"
 #include "XtensaInstPrinter.h"
 #include "XtensaMCAsmInfo.h"
 #include "XtensaTargetStreamer.h"
-#include "TargetInfo/XtensaTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrInfo.h"

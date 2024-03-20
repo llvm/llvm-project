@@ -1,7 +1,5 @@
 //===-- XtensaTargetStreamer.cpp - Xtensa Target Streamer Methods ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -48,16 +46,20 @@ void XtensaTargetAsmStreamer::emitLiteralPosition() {
 XtensaTargetELFStreamer::XtensaTargetELFStreamer(MCStreamer &S)
     : XtensaTargetStreamer(S) {}
 
-static std::string getLiteralSectionName(std::string CSectionName) {
+static std::string getLiteralSectionName(StringRef CSectionName) {
   std::size_t Pos = CSectionName.find(".text");
   std::string SectionName;
   if (Pos != std::string::npos) {
+    SectionName = CSectionName.substr(0, Pos);
+
     if (Pos > 0)
-      SectionName = CSectionName.substr(0, Pos + 5);
-    else
-      SectionName = "";
+      SectionName += ".text";
+
+    CSectionName = CSectionName.drop_front(Pos);
+    CSectionName.consume_front(".text");
+
     SectionName += ".literal";
-    SectionName += CSectionName.substr(Pos + 5);
+    SectionName += CSectionName;
   } else {
     SectionName = CSectionName;
     SectionName += ".literal";
@@ -70,7 +72,7 @@ void XtensaTargetELFStreamer::emitLiteral(MCSymbol *LblSym, const MCExpr *Value,
   MCContext &Context = getStreamer().getContext();
   MCStreamer &OutStreamer = getStreamer();
   MCSectionELF *CS = (MCSectionELF *)OutStreamer.getCurrentSectionOnly();
-  std::string SectionName = getLiteralSectionName(CS->getName().str());
+  std::string SectionName = getLiteralSectionName(CS->getName());
 
   MCSection *ConstSection = Context.getELFSection(
       SectionName, ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);

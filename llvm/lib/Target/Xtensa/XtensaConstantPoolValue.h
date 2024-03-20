@@ -48,7 +48,7 @@ enum XtensaCPModifier {
 class XtensaConstantPoolValue : public MachineConstantPoolValue {
   unsigned LabelId;                    // Label id of the load.
   XtensaCP::XtensaCPKind Kind;         // Kind of constant.
-  XtensaCP::XtensaCPModifier Modifier; // Symbol name modifier 
+  XtensaCP::XtensaCPModifier Modifier; // Symbol name modifier
                                        //(for example Global Variable name)
 
 protected:
@@ -153,7 +153,6 @@ public:
     return CVal == A->CVal && XtensaConstantPoolValue::equals(A);
   }
 };
-
 
 /// XtensaConstantPoolSymbol - Xtensa-specific constantpool values for external
 /// symbols.

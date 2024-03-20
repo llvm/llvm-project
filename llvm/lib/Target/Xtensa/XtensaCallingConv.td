@@ -12,9 +12,6 @@
 // Xtensa return value calling convention
 //===----------------------------------------------------------------------===//
 def RetCC_Xtensa : CallingConv<[
-  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
-  CCIfType<[f32], CCBitConvertToType<i32>>,
-
   // First two return values go in a2, a3, a4, a5
   CCIfType<[i32], CCAssignToReg<[A2, A3, A4, A5]>>,
   CCIfType<[i64], CCAssignToRegWithShadow<[A2, A4], [A3, A5]>>

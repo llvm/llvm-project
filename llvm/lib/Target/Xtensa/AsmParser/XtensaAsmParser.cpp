@@ -162,12 +162,7 @@ public:
   bool isImm12() const { return isImm(-2048, 2047); }
 
   // Convert MOVI to literal load, when immediate is not in range (-2048, 2047)
-  bool isImm12m() const {
-    if (Kind == Immediate)
-      return true;
-
-    return false;
-  }
+  bool isImm12m() const { return Kind == Immediate; }
 
   bool isOffset4m32() const {
     return isImm(0, 60) &&
@@ -375,7 +370,7 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   switch (Opcode) {
   case Xtensa::L32R: {
     const MCSymbolRefExpr *OpExpr =
-        (const MCSymbolRefExpr *)Inst.getOperand(1).getExpr();
+        static_cast<const MCSymbolRefExpr *>(Inst.getOperand(1).getExpr());
     XtensaMCExpr::VariantKind Kind = XtensaMCExpr::VK_Xtensa_None;
     const MCExpr *NewOpExpr = XtensaMCExpr::create(OpExpr, Kind, getContext());
     Inst.getOperand(1).setExpr(NewOpExpr);
@@ -387,7 +382,7 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     if (!Inst.getOperand(1).isExpr()) {
       uint64_t ImmOp64 = Inst.getOperand(1).getImm();
       int32_t Imm = ImmOp64;
-      if ((Imm < -2048) || (Imm > 2047)) {
+      if (!isInt<12>(Imm)) {
         XtensaTargetStreamer &TS = this->getTargetStreamer();
         MCInst TmpInst;
         TmpInst.setLoc(IDLoc);
@@ -420,7 +415,8 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       Inst = TmpInst;
       TS.emitLiteral(Sym, Value, IDLoc);
     }
-  } break;
+    break;
+  }
   default:
     break;
   }
@@ -769,7 +765,6 @@ bool XtensaAsmParser::ParseInstruction(ParseInstructionInfo &Info,
 
 bool XtensaAsmParser::parseLiteralDirective(SMLoc L) {
   MCAsmParser &Parser = getParser();
-  MCSymbol *Sym;
   const MCExpr *Value;
   SMLoc LiteralLoc = getLexer().getLoc();
   XtensaTargetStreamer &TS = this->getTargetStreamer();
@@ -778,11 +773,9 @@ bool XtensaAsmParser::parseLiteralDirective(SMLoc L) {
     return true;
 
   const MCSymbolRefExpr *SE = dyn_cast<MCSymbolRefExpr>(Value);
+
   if (!SE)
     return Error(LiteralLoc, "literal label must be a symbol");
-  else {
-    Sym = getContext().getOrCreateSymbol(SE->getSymbol().getName());
-  }
 
   if (Parser.parseToken(AsmToken::Comma, "expected comma"))
     return true;
@@ -793,6 +786,8 @@ bool XtensaAsmParser::parseLiteralDirective(SMLoc L) {
 
   if (Parser.parseExpression(Value))
     return true;
+
+  MCSymbol *Sym = getContext().getOrCreateSymbol(SE->getSymbol().getName());
 
   TS.emitLiteral(Sym, Value, LiteralLoc);
 

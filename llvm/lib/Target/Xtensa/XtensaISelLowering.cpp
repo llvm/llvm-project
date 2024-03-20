@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "XtensaConstantPoolValue.h"
 #include "XtensaISelLowering.h"
+#include "XtensaConstantPoolValue.h"
 #include "XtensaSubtarget.h"
 #include "XtensaTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -56,6 +56,17 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::Constant, MVT::i64, Expand);
 
   setBooleanContents(ZeroOrOneBooleanContent);
+
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Expand);
+
+  setOperationAction(ISD::BITCAST, MVT::i32, Expand);
+  setOperationAction(ISD::BITCAST, MVT::f32, Expand);
+  setOperationAction(ISD::UINT_TO_FP, MVT::i32, Expand);
+  setOperationAction(ISD::SINT_TO_FP, MVT::i32, Expand);
+  setOperationAction(ISD::FP_TO_UINT, MVT::i32, Expand);
+  setOperationAction(ISD::FP_TO_SINT, MVT::i32, Expand);
 
   // No sign extend instructions for i1
   for (MVT VT : MVT::integer_valuetypes()) {
@@ -155,53 +166,6 @@ static bool CC_Xtensa_Custom(unsigned ValNo, MVT ValVT, MVT LocVT,
 CCAssignFn *XtensaTargetLowering::CCAssignFnForCall(CallingConv::ID CC,
                                                     bool IsVarArg) const {
   return CC_Xtensa_Custom;
-}
-
-// Value is a value that has been passed to us in the location described by VA
-// (and so has type VA.getLocVT()).  Convert Value to VA.getValVT(), chaining
-// any loads onto Chain.
-static SDValue convertLocVTToValVT(SelectionDAG &DAG, const SDLoc &DL,
-                                   CCValAssign &VA, SDValue Chain,
-                                   SDValue Value) {
-  // If the argument has been promoted from a smaller type, insert an
-  // assertion to capture this.
-  if (VA.getLocInfo() == CCValAssign::SExt)
-    Value = DAG.getNode(ISD::AssertSext, DL, VA.getLocVT(), Value,
-                        DAG.getValueType(VA.getValVT()));
-  else if (VA.getLocInfo() == CCValAssign::ZExt)
-    Value = DAG.getNode(ISD::AssertZext, DL, VA.getLocVT(), Value,
-                        DAG.getValueType(VA.getValVT()));
-
-  if (VA.isExtInLoc())
-    Value = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Value);
-  else if (VA.getLocInfo() == CCValAssign::Indirect)
-    Value = DAG.getLoad(VA.getValVT(), DL, Chain, Value, MachinePointerInfo());
-  else if (VA.getValVT() == MVT::f32)
-    Value = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Value);
-  else
-    assert(VA.getLocInfo() == CCValAssign::Full && "Unsupported getLocInfo");
-  return Value;
-}
-
-// Value is a value of type VA.getValVT() that we need to copy into
-// the location described by VA.  Return a copy of Value converted to
-// VA.getValVT().  The caller is responsible for handling indirect values.
-static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDLoc DL, CCValAssign &VA,
-                                   SDValue Value) {
-  switch (VA.getLocInfo()) {
-  case CCValAssign::SExt:
-    return DAG.getNode(ISD::SIGN_EXTEND, DL, VA.getLocVT(), Value);
-  case CCValAssign::ZExt:
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), Value);
-  case CCValAssign::AExt:
-    return DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Value);
-  case CCValAssign::BCvt:
-    return DAG.getNode(ISD::BITCAST, DL, VA.getLocVT(), Value);
-  case CCValAssign::Full:
-    return Value;
-  default:
-    report_fatal_error("Unhandled getLocInfo()");
-  }
 }
 
 SDValue XtensaTargetLowering::LowerFormalArguments(
@@ -340,8 +304,6 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue ArgValue = OutVals[I];
     ISD::ArgFlagsTy Flags = Outs[I].Flags;
 
-    ArgValue = convertValVTToLocVT(DAG, DL, VA, ArgValue);
-
     if (VA.isRegLoc())
       // Queue up the argument copies and emit them at the end.
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
@@ -468,9 +430,7 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = RetValue.getValue(1);
     Glue = RetValue.getValue(2);
 
-    // Convert the value of the return register into the value that's
-    // being returned.
-    InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, RetValue));
+    InVals.push_back(RetValue);
   }
   return Chain;
 }
@@ -513,9 +473,6 @@ XtensaTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
     // Make the return register live on exit.
     assert(VA.isRegLoc() && "Can only return in registers!");
-
-    // Promote the value as required.
-    RetValue = convertValVTToLocVT(DAG, DL, VA, RetValue);
 
     // Chain and glue the copies together.
     unsigned Register = VA.getLocReg();
