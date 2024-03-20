@@ -349,3 +349,55 @@ bogusBB:                                          ; preds = %bogusBB
   %tobool = fcmp une double %inc, 0.000000e+00
   br label %bogusBB
 }
+
+define i32 @pr79158() {
+; CHECK-LABEL: @pr79158(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_I:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X_I]])
+; CHECK-NEXT:    store volatile i32 1, ptr [[X_I]], align 4
+; CHECK-NEXT:    [[X_I_0_X_I_0_X_0_X_0_X_0__I:%.*]] = load volatile i32, ptr [[X_I]], align 4
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp sgt i32 [[X_I_0_X_I_0_X_0_X_0_X_0__I]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[CMP_I]] to i32
+; CHECK-NEXT:    [[MUL_I1:%.*]] = mul i32 [[TMP0]], 2147483647
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X_I]])
+; CHECK-NEXT:    ret i32 [[MUL_I1]]
+;
+entry:
+  %x.i = alloca i32, align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %x.i)
+  store volatile i32 1, ptr %x.i, align 4
+  %x.i.0.x.i.0.x.0.x.0.x.0..i = load volatile i32, ptr %x.i, align 4
+  %cmp.i = icmp sgt i32 %x.i.0.x.i.0.x.0.x.0.x.0..i, 0
+  %conv.i = uitofp i1 %cmp.i to double
+  %mul.i = fmul double %conv.i, 4294967295.0
+  %conv1.i = fptoui double %mul.i to i32
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %x.i)
+  ret i32 %conv1.i
+}
+
+define i32 @pr79158_2() {
+; CHECK-LABEL: @pr79158_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_I:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X_I]])
+; CHECK-NEXT:    store volatile i32 1, ptr [[X_I]], align 4
+; CHECK-NEXT:    [[X_I_0_X_I_0_X_0_X_0_X_0__I:%.*]] = load volatile i32, ptr [[X_I]], align 4
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp sgt i32 [[X_I_0_X_I_0_X_0_X_0_X_0__I]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[CMP_I]] to i32
+; CHECK-NEXT:    [[MUL_I1:%.*]] = mul i32 [[TMP0]], 2147483647
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X_I]])
+; CHECK-NEXT:    ret i32 [[MUL_I1]]
+;
+entry:
+  %x.i = alloca i32, align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %x.i)
+  store volatile i32 1, ptr %x.i, align 4
+  %x.i.0.x.i.0.x.0.x.0.x.0..i = load volatile i32, ptr %x.i, align 4
+  %cmp.i = icmp sgt i32 %x.i.0.x.i.0.x.0.x.0.x.0..i, 0
+  %conv.i = uitofp i1 %cmp.i to double
+  %mul.i = fmul double %conv.i, 2147483648.0
+  %conv1.i = fptoui double %mul.i to i32
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %x.i)
+  ret i32 %conv1.i
+}
