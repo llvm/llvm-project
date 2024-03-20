@@ -1387,6 +1387,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     concatOutputSections.clear();
     inputFiles.clear();
     inputSections.clear();
+    inputSectionsOrder = 0;
     loadedArchives.clear();
     loadedObjectFrameworks.clear();
     missingAutolinkWarnings.clear();
