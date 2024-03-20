@@ -54,6 +54,35 @@ void mlir::emitc::buildTerminatedBody(OpBuilder &builder, Location loc) {
   builder.create<emitc::YieldOp>(loc);
 }
 
+bool mlir::emitc::isSupportedIntegerType(Type type) {
+  if (auto intType = llvm::dyn_cast<IntegerType>(type)) {
+    switch (intType.getWidth()) {
+    case 1:
+    case 8:
+    case 16:
+    case 32:
+    case 64:
+      return true;
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
+bool mlir::emitc::isSupportedFloatType(Type type) {
+  if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
+    switch (floatType.getWidth()) {
+    case 32:
+    case 64:
+      return true;
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
 /// Check that the type of the initial value is compatible with the operations
 /// result type.
 static LogicalResult verifyInitializationAttribute(Operation *op,
