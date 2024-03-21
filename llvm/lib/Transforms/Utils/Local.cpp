@@ -475,8 +475,8 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
         II->getIntrinsicID() == Intrinsic::launder_invariant_group)
       return true;
 
-    // Intrinsics declare sideeffects to prevent it from moving. They are sill
-    // safe to delete if checks are simplified and we have nothing to guard.
+    // Intrinsics declare sideeffects to prevent them from moving, but they are
+    // nops without users.
     if (II->getIntrinsicID() == Intrinsic::allow_runtime_check ||
         II->getIntrinsicID() == Intrinsic::allow_ubsan_check)
       return true;
