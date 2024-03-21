@@ -517,8 +517,8 @@ LLVM_DUMP_METHOD void MachineRegisterInfo::dumpUses(Register Reg) const {
 }
 #endif
 
-void MachineRegisterInfo::freezeReservedRegs(const MachineFunction &MF) {
-  ReservedRegs = getTargetRegisterInfo()->getReservedRegs(MF);
+void MachineRegisterInfo::freezeReservedRegs() {
+  ReservedRegs = getTargetRegisterInfo()->getReservedRegs(*MF);
   assert(ReservedRegs.size() == getTargetRegisterInfo()->getNumRegs() &&
          "Invalid ReservedRegs vector from target");
 }
@@ -658,19 +658,4 @@ bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
       return true;
   }
   return false;
-}
-
-bool MachineRegisterInfo::isArgumentRegister(const MachineFunction &MF,
-                                             MCRegister Reg) const {
-  return getTargetRegisterInfo()->isArgumentRegister(MF, Reg);
-}
-
-bool MachineRegisterInfo::isFixedRegister(const MachineFunction &MF,
-                                          MCRegister Reg) const {
-  return getTargetRegisterInfo()->isFixedRegister(MF, Reg);
-}
-
-bool MachineRegisterInfo::isGeneralPurposeRegister(const MachineFunction &MF,
-                                                   MCRegister Reg) const {
-  return getTargetRegisterInfo()->isGeneralPurposeRegister(MF, Reg);
 }

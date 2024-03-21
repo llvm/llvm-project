@@ -230,3 +230,20 @@ using AFoo = Foo<U>*; // expected-note {{template is declared here}}
 
 AFoo s = {1}; // expected-error {{alias template 'AFoo' requires template arguments; argument deduction only allowed for}}
 } // namespace test17
+
+namespace test18 {
+template<typename T>
+concept False = false; // expected-note {{because 'false' evaluated to false}}
+
+template <typename T> struct Foo { T t; };
+
+template<typename T> requires False<T> // expected-note {{because 'int' does not satisfy 'False'}}
+Foo(T) -> Foo<int>;
+
+template <typename U>
+using Bar = Foo<U>; // expected-note {{could not match 'Foo<type-parameter-0-0>' against 'int'}} \
+                    // expected-note {{candidate template ignored: constraints not satisfied}} \
+                    // expected-note {{candidate function template not viable}}
+
+Bar s = {1}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
+} // namespace test18

@@ -192,13 +192,13 @@
 ; GCN-O1-NEXT:      Uniformity Analysis
 ; GCN-O1-NEXT:      AMDGPU atomic optimizations
 ; GCN-O1-NEXT:      Expand Atomic instructions
-; GCN-O1-NEXT:      AMDGPU Promote Alloca
 ; GCN-O1-NEXT:      Dominator Tree Construction
+; GCN-O1-NEXT:      Natural Loop Information
+; GCN-O1-NEXT:      AMDGPU Promote Alloca
 ; GCN-O1-NEXT:      Cycle Info Analysis
 ; GCN-O1-NEXT:      Uniformity Analysis
 ; GCN-O1-NEXT:      AMDGPU IR optimizations
 ; GCN-O1-NEXT:      Basic Alias Analysis (stateless AA impl)
-; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      Canonicalize natural loops
 ; GCN-O1-NEXT:      Scalar Evolution Analysis
 ; GCN-O1-NEXT:      Loop Pass Manager
@@ -464,9 +464,9 @@
 ; GCN-O1-OPTS-NEXT:      Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:      AMDGPU atomic optimizations
 ; GCN-O1-OPTS-NEXT:      Expand Atomic instructions
-; GCN-O1-OPTS-NEXT:      AMDGPU Promote Alloca
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
+; GCN-O1-OPTS-NEXT:      AMDGPU Promote Alloca
 ; GCN-O1-OPTS-NEXT:      Canonicalize natural loops
 ; GCN-O1-OPTS-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:      Lazy Block Frequency Analysis
@@ -766,9 +766,9 @@
 ; GCN-O2-NEXT:      Uniformity Analysis
 ; GCN-O2-NEXT:      AMDGPU atomic optimizations
 ; GCN-O2-NEXT:      Expand Atomic instructions
-; GCN-O2-NEXT:      AMDGPU Promote Alloca
 ; GCN-O2-NEXT:      Dominator Tree Construction
 ; GCN-O2-NEXT:      Natural Loop Information
+; GCN-O2-NEXT:      AMDGPU Promote Alloca
 ; GCN-O2-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O2-NEXT:      Scalar Evolution Analysis
 ; GCN-O2-NEXT:      Straight line strength reduction
@@ -1072,9 +1072,9 @@
 ; GCN-O3-NEXT:      Uniformity Analysis
 ; GCN-O3-NEXT:      AMDGPU atomic optimizations
 ; GCN-O3-NEXT:      Expand Atomic instructions
-; GCN-O3-NEXT:      AMDGPU Promote Alloca
 ; GCN-O3-NEXT:      Dominator Tree Construction
 ; GCN-O3-NEXT:      Natural Loop Information
+; GCN-O3-NEXT:      AMDGPU Promote Alloca
 ; GCN-O3-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
 ; GCN-O3-NEXT:      Straight line strength reduction

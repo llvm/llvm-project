@@ -1272,7 +1272,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX10-NEXT:  ; %bb.1: ; %else
 ; GFX10-NEXT:    s_add_u32 s4, s4, s6
 ; GFX10-NEXT:    s_addc_u32 s5, s5, s7
-; GFX10-NEXT:    s_mov_b32 s6, 0
 ; GFX10-NEXT:    s_cbranch_execnz .LBB9_3
 ; GFX10-NEXT:  .LBB9_2: ; %if
 ; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
@@ -1284,7 +1283,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ; GFX10-NEXT:  .LBB9_4:
-; GFX10-NEXT:    s_mov_b32 s6, -1
 ; GFX10-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX10-NEXT:    s_branch .LBB9_2
 ;
@@ -1297,7 +1295,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-NEXT:  ; %bb.1: ; %else
 ; GFX11-NEXT:    s_add_u32 s4, s4, s6
 ; GFX11-NEXT:    s_addc_u32 s5, s5, s7
-; GFX11-NEXT:    s_mov_b32 s6, 0
 ; GFX11-NEXT:    s_cbranch_execnz .LBB9_3
 ; GFX11-NEXT:  .LBB9_2: ; %if
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[2:3], 0x0
@@ -1310,7 +1307,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB9_4:
-; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX11-NEXT:    s_branch .LBB9_2
 ;
@@ -1322,7 +1318,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB9_4
 ; GFX12-NEXT:  ; %bb.1: ; %else
 ; GFX12-NEXT:    s_add_nc_u64 s[4:5], s[4:5], s[6:7]
-; GFX12-NEXT:    s_mov_b32 s6, 0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB9_3
 ; GFX12-NEXT:  .LBB9_2: ; %if
 ; GFX12-NEXT:    s_load_b64 s[4:5], s[2:3], 0x0
@@ -1335,7 +1330,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ; GFX12-NEXT:  .LBB9_4:
-; GFX12-NEXT:    s_mov_b32 s6, -1
 ; GFX12-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX12-NEXT:    s_branch .LBB9_2
 entry:

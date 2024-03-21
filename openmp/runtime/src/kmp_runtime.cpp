@@ -1743,14 +1743,8 @@ __kmp_serial_fork_call(ident_t *loc, int gtid, enum fork_context_e call_context,
       __kmp_alloc_argv_entries(argc, team, TRUE);
       team->t.t_argc = argc;
       argv = (void **)team->t.t_argv;
-      if (ap) {
-        for (i = argc - 1; i >= 0; --i)
-          *argv++ = va_arg(kmp_va_deref(ap), void *);
-      } else {
-        for (i = 0; i < argc; ++i)
-          // Get args from parent team for teams construct
-          argv[i] = parent_team->t.t_argv[i];
-      }
+      for (i = argc - 1; i >= 0; --i)
+        *argv++ = va_arg(kmp_va_deref(ap), void *);
       // AC: revert change made in __kmpc_serialized_parallel()
       //     because initial code in teams should have level=0
       team->t.t_level--;
