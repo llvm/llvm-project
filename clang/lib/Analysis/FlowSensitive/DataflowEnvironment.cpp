@@ -17,7 +17,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
-#include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -29,6 +28,169 @@
 
 namespace clang {
 namespace dataflow {
+
+namespace simple_bool_model {
+static std::optional<bool> getLiteralValue(const Formula &F,
+                                           const Environment &Env) {
+  switch (F.kind()) {
+  case Formula::AtomRef:
+    return Env.getAtomValue(F.getAtom());
+  case Formula::Literal:
+    return F.literal();
+  case Formula::Not: {
+    ArrayRef<const Formula *> Operands = F.operands();
+    assert(Operands.size() == 1);
+    if (std::optional<bool> Maybe = getLiteralValue(*Operands[0], Env))
+      return !*Maybe;
+    return std::nullopt;
+  }
+  case Formula::And: {
+    ArrayRef<const Formula *> Operands = F.operands();
+    assert(Operands.size() == 2);
+    auto &LHS = *Operands[0];
+    auto &RHS = *Operands[1];
+    if (std::optional<bool> Left = getLiteralValue(LHS, Env))
+      return !*Left ? Left : getLiteralValue(RHS, Env);
+    if (std::optional<bool> Right = getLiteralValue(RHS, Env); Right == false)
+      return Right;
+    return std::nullopt;
+  }
+  case Formula::Or: {
+    ArrayRef<const Formula *> Operands = F.operands();
+    assert(Operands.size() == 2);
+    auto &LHS = *Operands[0];
+    auto &RHS = *Operands[1];
+    if (std::optional<bool> Left = getLiteralValue(LHS, Env))
+      return *Left ? Left : getLiteralValue(RHS, Env);
+    if (std::optional<bool> Right = getLiteralValue(RHS, Env); Right == true)
+      return Right;
+    return std::nullopt;
+  }
+  case Formula::Equal: {
+    ArrayRef<const Formula *> Operands = F.operands();
+    assert(Operands.size() == 2);
+    auto &LHS = *Operands[0];
+    auto &RHS = *Operands[1];
+    if (&LHS == &RHS)
+      return true;
+    auto V_L = getLiteralValue(LHS, Env);
+    return V_L.has_value() && V_L == getLiteralValue(RHS, Env);
+  }
+  default:
+    return std::nullopt;
+  }
+}
+
+// Updates atom settings in `Env` based on the formula. `AtomVal` indicates the
+// value to use for atoms encountered in the formula.
+static void assumeFormula(bool AtomVal, const Formula &F, Environment &Env) {
+  switch (F.kind()) {
+  case Formula::AtomRef:
+    // FIXME: if the atom is set to a different value, mark the block as
+    // unreachable.
+    Env.setAtomValue(F.getAtom(), AtomVal);
+    break;
+  case Formula::Literal:
+    // FIXME: if the literal is `false`, mark the block as unreachable.
+    break;
+  case Formula::Not: {
+    ArrayRef<const Formula *> Operands = F.operands();
+    assert(Operands.size() == 1);
+    assumeFormula(!AtomVal, *Operands[0], Env);
+    break;
+  }
+  case Formula::And: {
+    if (AtomVal == true) {
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 2);
+      assumeFormula(true, *Operands[0], Env);
+      assumeFormula(true, *Operands[1], Env);
+    }
+    break;
+  }
+  case Formula::Or: {
+    if (AtomVal == false) {
+      // Interpret the negated "or" as "and" of negated operands.
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 2);
+      assumeFormula(false, *Operands[0], Env);
+      assumeFormula(false, *Operands[1], Env);
+    }
+    break;
+  }
+  case Formula::Equal: {
+    ArrayRef<const Formula *> Operands = F.operands();
+    assert(Operands.size() == 2);
+    auto &LHS = *Operands[0];
+    auto &RHS = *Operands[1];
+    if (auto V = getLiteralValue(LHS, Env)) {
+      assumeFormula(AtomVal == *V, RHS, Env);
+    } else if (auto V = getLiteralValue(RHS, Env)) {
+      assumeFormula(AtomVal == *V, LHS, Env);
+    }
+    break;
+  }
+  default:
+    break;
+  }
+}
+
+BoolValue &join(BoolValue &Val1, const Environment &Env1, BoolValue &Val2,
+                const Environment &Env2, Environment &JoinedEnv) {
+  if (auto V1 = getLiteralValue(Val1.formula(), Env1);
+      V1.has_value() && V1 == getLiteralValue(Val2.formula(), Env2))
+    return JoinedEnv.getBoolLiteralValue(*V1);
+  return JoinedEnv.makeAtomicBoolValue();
+}
+
+void assume(Environment &Env, const Formula &F) {
+  assumeFormula(/*AtomVal*/ true, F, Env);
+}
+
+bool allows(const Environment &Env, const Formula &F) {
+  auto V = getLiteralValue(F, Env);
+  // We are conservative in the negative direction: if we can't determine the
+  // value, assume it is allowed.
+  return V.value_or(true);
+}
+
+bool proves(const Environment &Env, const Formula &F) {
+  auto V = getLiteralValue(F, Env);
+  return V.value_or(false);
+}
+} // namespace simple_bool_model
+
+namespace sat_bool_model {
+BoolValue &join(BoolValue &Val1, const Environment &Env1, BoolValue &Val2,
+                const Environment &Env2, Environment &JoinedEnv) {
+  auto &A = JoinedEnv.arena();
+  auto &JoinedVal = JoinedEnv.makeAtomicBoolValue();
+  auto &JoinedFormula = JoinedVal.formula();
+  JoinedEnv.assume(
+      A.makeOr(A.makeAnd(A.makeAtomRef(Env1.getFlowConditionToken()),
+                         A.makeEquals(JoinedFormula, Val1.formula())),
+               A.makeAnd(A.makeAtomRef(Env2.getFlowConditionToken()),
+                         A.makeEquals(JoinedFormula, Val2.formula()))));
+  return JoinedVal;
+}
+
+void assume(Environment &Env, const Formula &F) {
+  Env.getDataflowAnalysisContext().addFlowConditionConstraint(
+      Env.getFlowConditionToken(), F);
+}
+
+bool allows(const Environment &Env, const Formula &F) {
+  return Env.getDataflowAnalysisContext().flowConditionAllows(
+      Env.getFlowConditionToken(), F);
+}
+
+bool proves(const Environment &Env, const Formula &F) {
+  return Env.getDataflowAnalysisContext().flowConditionImplies(
+      Env.getFlowConditionToken(), F);
+}
+} // namespace sat_bool_model
+
+namespace bool_model = simple_bool_model;
 
 // FIXME: convert these to parameters of the analysis or environment. Current
 // settings have been experimentaly validated, but only for a particular
@@ -130,23 +292,9 @@ static Value *joinDistinctValues(QualType Type, Value &Val1,
     // if (o.has_value())
     //   x = o.value();
     // ```
-    auto &Expr1 = cast<BoolValue>(Val1).formula();
-    auto &Expr2 = cast<BoolValue>(Val2).formula();
-    auto &A = JoinedEnv.arena();
-
-#if 1
-    if (auto V1 = simple_bool_model::getLiteralValue(Expr1, Env1);
-        V1.has_value() && V1 == simple_bool_model::getLiteralValue(Expr2, Env2))
-      return &JoinedEnv.getBoolLiteralValue(*V1);
-#endif
-
-    auto &JoinedVal = A.makeAtomRef(A.makeAtom());
-    JoinedEnv.assume(
-        A.makeOr(A.makeAnd(A.makeAtomRef(Env1.getFlowConditionToken()),
-                           A.makeEquals(JoinedVal, Expr1)),
-                 A.makeAnd(A.makeAtomRef(Env2.getFlowConditionToken()),
-                           A.makeEquals(JoinedVal, Expr2))));
-    return &A.makeBoolValue(JoinedVal);
+    auto &B1 = cast<BoolValue>(Val1);
+    auto &B2 = cast<BoolValue>(Val2);
+    return &bool_model::join(B1, Env1, B2, Env2, JoinedEnv);
   }
 
   Value *JoinedVal = nullptr;
@@ -1070,23 +1218,14 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
   return Loc;
 }
 
-void Environment::assume(const Formula &F) {
-  DACtx->addFlowConditionConstraint(FlowConditionToken, F);
-}
+void Environment::assume(const Formula &F) { bool_model::assume(*this, F); }
 
-#if 0
 bool Environment::proves(const Formula &F) const {
-  return DACtx->flowConditionImplies(FlowConditionToken, F);
+  return bool_model::proves(*this, F);
 }
-#else
-bool Environment::proves(const Formula &F) const {
-  auto V = simple_bool_model::getLiteralValue(F, *this);
-  return V.has_value() && *V;
-}
-#endif
 
 bool Environment::allows(const Formula &F) const {
-  return DACtx->flowConditionAllows(FlowConditionToken, F);
+  return bool_model::allows(*this, F);
 }
 
 void Environment::dump(raw_ostream &OS) const {

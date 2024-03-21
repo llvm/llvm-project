@@ -296,6 +296,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
       // assert ourselves instead of asserting via `cast()` so that we get
       // a more meaningful line number if the assertion fails.
       assert(CondVal != nullptr);
+      // Invert the condition if this is the successor for the "else" branch.
       BoolValue *AssertedVal =
           BranchVal ? CondVal : &Copy.Env.makeNot(*CondVal);
       Copy.Env.assume(AssertedVal->formula());

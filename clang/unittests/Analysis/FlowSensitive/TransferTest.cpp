@@ -3749,6 +3749,11 @@ TEST(TransferTest, AssignFromBoolLiteral) {
       });
 }
 
+// TODO: this looks like a change-detector test. And, I don't see the value of
+// the three different cases. Why not 12? It's really not clear what we're
+// getting at here. Is this a test for correct formula construction? If so, we
+// should name it (and comment) rather than tieing it to assignment.
+// Also, this should be "InitializeFrom...".
 TEST(TransferTest, AssignFromCompositeBoolExpression) {
   {
     std::string Code = R"(
@@ -5119,6 +5124,10 @@ TEST(TransferTest, WhileStmtBranchExtendsFlowCondition) {
       });
 }
 
+// TODO: this test is overly complicated for what its name implies it's
+// testing. It involves a complex condition of (A or B), where neither holds
+// separately. But, that involves join machinery and SAT solving, which is well
+// more than the simple test for DoWhile support in flow-condition extenionsion.
 TEST(TransferTest, DoWhileStmtBranchExtendsFlowCondition) {
   std::string Code = R"(
     void target(bool Foo) {
