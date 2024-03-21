@@ -1124,9 +1124,8 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
 
   cp.processTODO<clause::Private, clause::Firstprivate, clause::IsDevicePtr,
                  clause::HasDeviceAddr, clause::Reduction, clause::InReduction,
-                 clause::Allocate, clause::UsesAllocators,
-                 clause::Defaultmap>(currentLocation,
-                                     llvm::omp::Directive::OMPD_target);
+                 clause::Allocate, clause::UsesAllocators, clause::Defaultmap>(
+      currentLocation, llvm::omp::Directive::OMPD_target);
 
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
