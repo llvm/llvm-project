@@ -219,8 +219,10 @@ bool SIFoldOperands::canUseImmWithOpSel(FoldCandidate &Fold) const {
   default:
     return false;
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     break;
   }
@@ -773,20 +775,23 @@ void SIFoldOperands::foldOperand(
     Register RegSeqDstReg = UseMI->getOperand(0).getReg();
     unsigned RegSeqDstSubReg = UseMI->getOperand(UseOpIdx + 1).getImm();
 
-    for (auto &RSUse : make_early_inc_range(MRI->use_nodbg_operands(RegSeqDstReg))) {
-      MachineInstr *RSUseMI = RSUse.getParent();
+    // Grab the use operands first
+    SmallVector<MachineOperand *, 4> UsesToProcess;
+    for (auto &Use : MRI->use_nodbg_operands(RegSeqDstReg))
+      UsesToProcess.push_back(&Use);
+    for (auto *RSUse : UsesToProcess) {
+      MachineInstr *RSUseMI = RSUse->getParent();
 
       if (tryToFoldACImm(UseMI->getOperand(0), RSUseMI,
-                         RSUseMI->getOperandNo(&RSUse), FoldList))
+                         RSUseMI->getOperandNo(RSUse), FoldList))
         continue;
 
-      if (RSUse.getSubReg() != RegSeqDstSubReg)
+      if (RSUse->getSubReg() != RegSeqDstSubReg)
         continue;
 
-      foldOperand(OpToFold, RSUseMI, RSUseMI->getOperandNo(&RSUse), FoldList,
+      foldOperand(OpToFold, RSUseMI, RSUseMI->getOperandNo(RSUse), FoldList,
                   CopiesToReplace);
     }
-
     return;
   }
 
@@ -1049,6 +1054,7 @@ void SIFoldOperands::foldOperand(
       // Don't fold if OpToFold doesn't hold an aligned register.
       const TargetRegisterClass *RC =
           TRI->getRegClassForReg(*MRI, OpToFold.getReg());
+      assert(RC);
       if (TRI->hasVectorRegisters(RC) && OpToFold.getSubReg()) {
         unsigned SubReg = OpToFold.getSubReg();
         if (const TargetRegisterClass *SubRC =

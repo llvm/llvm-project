@@ -182,7 +182,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
 
         functions = ["main"]
         breakpoint_ids = self.set_function_breakpoints(functions)
-        self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
+        self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
         self.continue_to_breakpoints(breakpoint_ids)
         output = self.get_console(timeout=1.0)
         self.verify_commands("stopCommands", output, stopCommands)

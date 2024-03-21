@@ -330,8 +330,6 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
       report_fatal_error(Twine("unable to parse pass pipeline description '") +
                          Conf.OptPipeline + "': " + toString(std::move(Err)));
     }
-  } else if (Conf.UseDefaultPipeline) {
-    MPM.addPass(PB.buildPerModuleDefaultPipeline(OL));
   } else if (IsThinLTO) {
     MPM.addPass(PB.buildThinLTODefaultPipeline(OL, ImportSummary));
   } else {
@@ -433,7 +431,7 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
                          AddStreamFn AddStream,
                          unsigned ParallelCodeGenParallelismLevel, Module &Mod,
                          const ModuleSummaryIndex &CombinedIndex) {
-  ThreadPool CodegenThreadPool(
+  DefaultThreadPool CodegenThreadPool(
       heavyweight_hardware_concurrency(ParallelCodeGenParallelismLevel));
   unsigned ThreadCount = 0;
   const Target *T = &TM->getTarget();

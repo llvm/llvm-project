@@ -19,8 +19,8 @@ subroutine capture_char_func_dummy(char_func_dummy, n)
   ! CHECK:  fir.call @_QFcapture_char_func_dummyPinternal(%[[VAL_2]]) {{.*}}: (!fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>, !fir.ref<i32>>>) -> ()
   call internal()
 contains
-  ! CHECK-LABEL: func @_QFcapture_char_func_dummyPinternal(
-  ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>, !fir.ref<i32>>> {fir.host_assoc}) attributes {fir.internal_proc} {
+  ! CHECK-LABEL: func private @_QFcapture_char_func_dummyPinternal(
+  ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>, !fir.ref<i32>>> {fir.host_assoc}) attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
   subroutine internal()
   ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
   ! CHECK:  %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>, !fir.ref<i32>>>, i32) -> !fir.ref<tuple<!fir.boxproc<() -> ()>, i64>>
@@ -55,8 +55,8 @@ subroutine capture_char_func_assumed_dummy(char_func_dummy)
 ! CHECK:  fir.call @_QFcapture_char_func_assumed_dummyPinternal(%[[VAL_1]]) {{.*}}: (!fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>>>) -> ()
   call internal()
 contains
-! CHECK-LABEL: func @_QFcapture_char_func_assumed_dummyPinternal(
-! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>>> {fir.host_assoc}) attributes {fir.internal_proc} {
+! CHECK-LABEL: func private @_QFcapture_char_func_assumed_dummyPinternal(
+! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>>> {fir.host_assoc}) attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
   subroutine internal()
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>>>, i32) -> !fir.ref<tuple<!fir.boxproc<() -> ()>, i64>>
@@ -84,7 +84,7 @@ subroutine capture_char_func(n)
 ! CHECK:  fir.call @_QFcapture_char_funcPinternal(%[[VAL_1]]) {{.*}}: (!fir.ref<tuple<!fir.ref<i32>>>) -> ()
   call internal()
 contains
-! CHECK-LABEL: func @_QFcapture_char_funcPinternal(
+! CHECK-LABEL: func private @_QFcapture_char_funcPinternal(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc})
   subroutine internal()
    print *, char_func()
@@ -109,8 +109,8 @@ subroutine capture_array_func(n)
   call internal()
 contains
   subroutine internal()
-! CHECK-LABEL: func @_QFcapture_array_funcPinternal(
-! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) attributes {fir.internal_proc} {
+! CHECK-LABEL: func private @_QFcapture_array_funcPinternal(
+! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.llvm_ptr<!fir.ref<i32>>
@@ -146,7 +146,7 @@ subroutine use_module()
 ! CHECK:  fir.call @_QFuse_modulePinternal() {{.*}}: () -> ()
   call internal()
   contains
-! CHECK-LABEL: func @_QFuse_modulePinternal() {
+! CHECK-LABEL: func private @_QFuse_modulePinternal() {{.*}} {
   subroutine internal()
     print *, return_char(42)
   end subroutine

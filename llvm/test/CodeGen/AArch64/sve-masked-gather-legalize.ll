@@ -113,8 +113,8 @@ define <vscale x 8 x half> @masked_gather_nxv8f16(<vscale x 8 x ptr> %ptrs, <vsc
 ; CHECK-NEXT:    ld1h { z2.d }, p1/z, [z2.d]
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
-; CHECK-NEXT:    uzp1 z2.s, z2.s, z3.s
 ; CHECK-NEXT:    ld1h { z1.d }, p1/z, [z1.d]
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z3.s
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h

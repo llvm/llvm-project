@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H
-#define LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H
+#ifndef LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H
+#define LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "test/UnitTest/RoundingModeUtils.h"
@@ -426,4 +426,4 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
     }                                                                          \
   }
 
-#endif // LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H
+#endif // LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H

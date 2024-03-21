@@ -227,7 +227,7 @@ CodeGenInstAlias::CodeGenInstAlias(Record *R, CodeGenTarget &T) : TheDef(R) {
                              InstOpRec->getValueAsDef("ParserMatchClass")
                                      ->getValueAsString("Name") != "Imm")) {
         ResultOperands.push_back(ResOp);
-        ResultInstOperandIndex.push_back(std::make_pair(i, -1));
+        ResultInstOperandIndex.push_back(std::pair(i, -1));
         ++AliasOpNo;
 
         // Otherwise, we need to match each of the suboperands individually.
@@ -242,7 +242,7 @@ CodeGenInstAlias::CodeGenInstAlias(Record *R, CodeGenTarget &T) : TheDef(R) {
               Result->getArgName(AliasOpNo)->getAsUnquotedString() + "." +
                   MIOI->getArgName(SubOp)->getAsUnquotedString(),
               SubRec);
-          ResultInstOperandIndex.push_back(std::make_pair(i, SubOp));
+          ResultInstOperandIndex.push_back(std::pair(i, SubOp));
         }
         ++AliasOpNo;
       }
@@ -260,7 +260,7 @@ CodeGenInstAlias::CodeGenInstAlias(Record *R, CodeGenTarget &T) : TheDef(R) {
         if (tryAliasOpMatch(Result, AliasOpNo, SubRec, false, R->getLoc(), T,
                             ResOp)) {
           ResultOperands.push_back(ResOp);
-          ResultInstOperandIndex.push_back(std::make_pair(i, SubOp));
+          ResultInstOperandIndex.push_back(std::pair(i, SubOp));
           ++AliasOpNo;
         } else {
           PrintFatalError(

@@ -18,7 +18,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -1874,9 +1874,9 @@ prepareCompareSwapOperands(MachineBasicBlock::iterator const MBBI) const {
     }
   }
   if (CCLive) {
-    LivePhysRegs LiveRegs(*MBB->getParent()->getSubtarget().getRegisterInfo());
+    LiveRegUnits LiveRegs(*MBB->getParent()->getSubtarget().getRegisterInfo());
     LiveRegs.addLiveOuts(*MBB);
-    if (LiveRegs.contains(SystemZ::CC))
+    if (!LiveRegs.available(SystemZ::CC))
       return false;
   }
 
@@ -2020,11 +2020,12 @@ areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   }
   if (SameVal) {
     int OffsetA = MMOa->getOffset(), OffsetB = MMOb->getOffset();
-    int WidthA = MMOa->getSize(), WidthB = MMOb->getSize();
+    LocationSize WidthA = MMOa->getSize(), WidthB = MMOb->getSize();
     int LowOffset = OffsetA < OffsetB ? OffsetA : OffsetB;
     int HighOffset = OffsetA < OffsetB ? OffsetB : OffsetA;
-    int LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
-    if (LowOffset + LowWidth <= HighOffset)
+    LocationSize LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
+    if (LowWidth.hasValue() &&
+        LowOffset + (int)LowWidth.getValue() <= HighOffset)
       return true;
   }
 

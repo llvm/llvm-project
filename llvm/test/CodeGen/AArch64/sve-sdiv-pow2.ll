@@ -9,7 +9,7 @@ define <vscale x 16 x i8> @sdiv_i8(<vscale x 16 x i8> %a) #0 {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    asrd z0.b, p0/m, z0.b, #4
 ; CHECK-NEXT:    ret
-  %out = sdiv <vscale x 16 x i8> %a, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 16, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %out = sdiv <vscale x 16 x i8> %a, splat (i8 16)
   ret <vscale x 16 x i8> %out
 }
 
@@ -20,7 +20,7 @@ define <vscale x 16 x i8> @sdiv_i8_neg(<vscale x 16 x i8> %a) #0 {
 ; CHECK-NEXT:    asrd z0.b, p0/m, z0.b, #6
 ; CHECK-NEXT:    subr z0.b, z0.b, #0 // =0x0
 ; CHECK-NEXT:    ret
-  %out = sdiv <vscale x 16 x i8> %a, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -64, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %out = sdiv <vscale x 16 x i8> %a, splat (i8 -64)
   ret <vscale x 16 x i8> %out
 }
 
@@ -30,7 +30,7 @@ define <vscale x 8 x i16> @sdiv_i16(<vscale x 8 x i16> %a) #0 {
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    asrd z0.h, p0/m, z0.h, #10
 ; CHECK-NEXT:    ret
-  %out = sdiv <vscale x 8 x i16> %a, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 1024, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %out = sdiv <vscale x 8 x i16> %a, splat (i16 1024)
   ret <vscale x 8 x i16> %out
 }
 
@@ -41,7 +41,7 @@ define <vscale x 8 x i16> @sdiv_i16_neg(<vscale x 8 x i16> %a) #0 {
 ; CHECK-NEXT:    asrd z0.h, p0/m, z0.h, #12
 ; CHECK-NEXT:    subr z0.h, z0.h, #0 // =0x0
 ; CHECK-NEXT:    ret
-  %out = sdiv <vscale x 8 x i16> %a, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -4096, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %out = sdiv <vscale x 8 x i16> %a, splat (i16 -4096)
   ret <vscale x 8 x i16> %out
 }
 
@@ -51,7 +51,7 @@ define <vscale x 4 x i32> @sdiv_i32(<vscale x 4 x i32> %a) #0 {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    asrd z0.s, p0/m, z0.s, #23
 ; CHECK-NEXT:    ret
-  %out = sdiv <vscale x 4 x i32> %a, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 8388608, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %out = sdiv <vscale x 4 x i32> %a, splat (i32 8388608)
   ret <vscale x 4 x i32> %out
 }
 
@@ -62,7 +62,7 @@ define <vscale x 4 x i32> @sdiv_i32_neg(<vscale x 4 x i32> %a) #0 {
 ; CHECK-NEXT:    asrd z0.s, p0/m, z0.s, #25
 ; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
 ; CHECK-NEXT:    ret
-  %out = sdiv <vscale x 4 x i32> %a, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -33554432, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %out = sdiv <vscale x 4 x i32> %a, splat (i32 -33554432)
   ret <vscale x 4 x i32> %out
 }
 
@@ -72,7 +72,7 @@ define <vscale x 2 x i64> @sdiv_i64(<vscale x 2 x i64> %a) #0 {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    asrd z0.d, p0/m, z0.d, #53
 ; CHECK-NEXT:    ret
-  %out = sdiv <vscale x 2 x i64> %a, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 9007199254740992, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %out = sdiv <vscale x 2 x i64> %a, splat (i64 9007199254740992)
   ret <vscale x 2 x i64> %out
 }
 
@@ -83,7 +83,7 @@ define <vscale x 2 x i64> @sdiv_i64_neg(<vscale x 2 x i64> %a) #0 {
 ; CHECK-NEXT:    asrd z0.d, p0/m, z0.d, #55
 ; CHECK-NEXT:    subr z0.d, z0.d, #0 // =0x0
 ; CHECK-NEXT:    ret
-  %out = sdiv <vscale x 2 x i64> %a, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -36028797018963968, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %out = sdiv <vscale x 2 x i64> %a, splat (i64 -36028797018963968)
   ret <vscale x 2 x i64> %out
 }
 

@@ -8,6 +8,7 @@
 
 #include "DAP.h"
 #include "Watchpoint.h"
+#include "lldb/API/SBMemoryRegionInfo.h"
 
 #include <cassert>
 #include <climits>
@@ -1822,8 +1823,10 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     // Set the launch info so that run commands can access the configured
     // launch details.
     g_dap.target.SetLaunchInfo(launch_info);
-    if (llvm::Error err = g_dap.RunLaunchCommands(launchCommands))
+    if (llvm::Error err = g_dap.RunLaunchCommands(launchCommands)) {
       error.SetErrorString(llvm::toString(std::move(err)).c_str());
+      return error;
+    }
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
     g_dap.target = g_dap.debugger.GetSelectedTarget();
@@ -2741,15 +2744,22 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
   std::string addr, size;
 
   if (variable.IsValid()) {
-    addr = llvm::utohexstr(variable.GetLoadAddress());
-    size = llvm::utostr(variable.GetByteSize());
+    lldb::addr_t load_addr = variable.GetLoadAddress();
+    size_t byte_size = variable.GetByteSize();
+    if (load_addr == LLDB_INVALID_ADDRESS) {
+      body.try_emplace("dataId", nullptr);
+      body.try_emplace("description",
+                       "does not exist in memory, its location is " +
+                           std::string(variable.GetLocation()));
+    } else if (byte_size == 0) {
+      body.try_emplace("dataId", nullptr);
+      body.try_emplace("description", "variable size is 0");
+    } else {
+      addr = llvm::utohexstr(load_addr);
+      size = llvm::utostr(byte_size);
+    }
   } else if (variablesReference == 0 && frame.IsValid()) {
-    // Name might be an expression. In this case we assume that name is composed
-    // of the number of bytes to watch and expression, separated by '@':
-    // "${size}@${expression}"
-    llvm::StringRef expr;
-    std::tie(size, expr) = name.split('@');
-    lldb::SBValue value = frame.EvaluateExpression(expr.data());
+    lldb::SBValue value = frame.EvaluateExpression(name.data());
     if (value.GetError().Fail()) {
       lldb::SBError error = value.GetError();
       const char *error_cstr = error.GetCString();
@@ -2757,13 +2767,39 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
       body.try_emplace("description", error_cstr && error_cstr[0]
                                           ? std::string(error_cstr)
                                           : "evaluation failed");
-    } else
-      addr = llvm::utohexstr(value.GetValueAsUnsigned());
+    } else {
+      uint64_t load_addr = value.GetValueAsUnsigned();
+      addr = llvm::utohexstr(load_addr);
+      lldb::SBMemoryRegionInfo region;
+      lldb::SBError err =
+          g_dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
+      if (err.Success()) {
+        if (!(region.IsReadable() || region.IsWritable())) {
+          body.try_emplace("dataId", nullptr);
+          body.try_emplace("description",
+                           "memory region for address " + addr +
+                               " has no read or write permissions");
+        } else {
+          lldb::SBData data = value.GetPointeeData();
+          if (data.IsValid())
+            size = llvm::utostr(data.GetByteSize());
+          else {
+            body.try_emplace("dataId", nullptr);
+            body.try_emplace("description",
+                             "unable to get byte size for expression: " +
+                                 name.str());
+          }
+        }
+      } else {
+        body.try_emplace("dataId", nullptr);
+        body.try_emplace("description",
+                         "unable to get memory region info for address " +
+                             addr);
+      }
+    }
   } else {
-    auto state = g_dap.target.GetProcess().GetState();
     body.try_emplace("dataId", nullptr);
-    body.try_emplace("description",
-                     "variable not found: " + llvm::utostr(state));
+    body.try_emplace("description", "variable not found: " + name.str());
   }
 
   if (!body.getObject("dataId")) {
@@ -2844,15 +2880,29 @@ void request_setDataBreakpoints(const llvm::json::Object &request) {
   const auto *breakpoints = arguments->getArray("breakpoints");
   llvm::json::Array response_breakpoints;
   g_dap.target.DeleteAllWatchpoints();
+  std::vector<Watchpoint> watchpoints;
   if (breakpoints) {
     for (const auto &bp : *breakpoints) {
       const auto *bp_obj = bp.getAsObject();
       if (bp_obj) {
         Watchpoint wp(*bp_obj);
-        AppendBreakpoint(&wp, response_breakpoints);
+        watchpoints.push_back(wp);
       }
     }
   }
+  // If two watchpoints start at the same address, the latter overwrite the
+  // former. So, we only enable those at first-seen addresses when iterating
+  // backward.
+  std::set<lldb::addr_t> addresses;
+  for (auto iter = watchpoints.rbegin(); iter != watchpoints.rend(); ++iter) {
+    if (addresses.count(iter->addr) == 0) {
+      iter->SetWatchpoint();
+      addresses.insert(iter->addr);
+    }
+  }
+  for (auto wp : watchpoints)
+    AppendBreakpoint(&wp, response_breakpoints);
+
   llvm::json::Object body;
   body.try_emplace("breakpoints", std::move(response_breakpoints));
   response.try_emplace("body", std::move(body));

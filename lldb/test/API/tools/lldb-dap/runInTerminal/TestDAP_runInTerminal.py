@@ -78,7 +78,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
         # We verify we actually stopped inside the loop
         counter = int(self.dap_server.get_local_variable_value("counter"))
-        self.assertTrue(counter > 0)
+        self.assertGreater(counter, 0)
 
         # We verify we were able to set the launch arguments
         argc = int(self.dap_server.get_local_variable_value("argc"))
@@ -122,7 +122,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             capture_output=True,
             universal_newlines=True,
         )
-        self.assertTrue(proc.returncode != 0)
+        self.assertNotEqual(proc.returncode, 0)
         self.assertIn(
             '"--launch-target" requires "--comm-file" to be specified', proc.stderr
         )

@@ -275,7 +275,7 @@ AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
     return ConstantFoldLoadFromConst(Initializer, &Ty, Offset, DL);
   }
 
-  return ConstantFoldLoadFromUniformValue(Initializer, &Ty);
+  return ConstantFoldLoadFromUniformValue(Initializer, &Ty, DL);
 }
 
 bool AA::isValidInScope(const Value &V, const Function *Scope) {
@@ -3123,12 +3123,12 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       // Create a new call or invoke instruction to replace the old one.
       CallBase *NewCB;
       if (InvokeInst *II = dyn_cast<InvokeInst>(OldCB)) {
-        NewCB =
-            InvokeInst::Create(NewFn, II->getNormalDest(), II->getUnwindDest(),
-                               NewArgOperands, OperandBundleDefs, "", OldCB);
+        NewCB = InvokeInst::Create(NewFn, II->getNormalDest(),
+                                   II->getUnwindDest(), NewArgOperands,
+                                   OperandBundleDefs, "", OldCB->getIterator());
       } else {
         auto *NewCI = CallInst::Create(NewFn, NewArgOperands, OperandBundleDefs,
-                                       "", OldCB);
+                                       "", OldCB->getIterator());
         NewCI->setTailCallKind(cast<CallInst>(OldCB)->getTailCallKind());
         NewCB = NewCI;
       }

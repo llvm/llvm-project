@@ -383,14 +383,16 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       // If X is not frozen, %rem becomes undef after transformation.
       // TODO: We need a undef-specific checking function in ValueTracking
       if (!isGuaranteedNotToBeUndefOrPoison(X, nullptr, DivInst, &DT)) {
-        auto *FrX = new FreezeInst(X, X->getName() + ".frozen", DivInst);
+        auto *FrX =
+            new FreezeInst(X, X->getName() + ".frozen", DivInst->getIterator());
         DivInst->setOperand(0, FrX);
         Sub->setOperand(0, FrX);
       }
       // Same for Y. If X = 1 and Y = (undef | 1), %rem in src is either 1 or 0,
       // but %rem in tgt can be one of many integer values.
       if (!isGuaranteedNotToBeUndefOrPoison(Y, nullptr, DivInst, &DT)) {
-        auto *FrY = new FreezeInst(Y, Y->getName() + ".frozen", DivInst);
+        auto *FrY =
+            new FreezeInst(Y, Y->getName() + ".frozen", DivInst->getIterator());
         DivInst->setOperand(1, FrY);
         Mul->setOperand(1, FrY);
       }

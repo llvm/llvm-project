@@ -95,7 +95,7 @@ struct CGRecordLowering {
   CGRecordLowering(CodeGenTypes &Types, const RecordDecl *D, bool Packed);
   // Short helper routines.
   /// Constructs a MemberInfo instance from an offset and llvm::Type *.
-  MemberInfo StorageInfo(CharUnits Offset, llvm::Type *Data) {
+  static MemberInfo StorageInfo(CharUnits Offset, llvm::Type *Data) {
     return MemberInfo(Offset, MemberInfo::Field, Data);
   }
 
@@ -104,7 +104,7 @@ struct CGRecordLowering {
   /// fields of the same formal type.  We want to emit a layout with
   /// these discrete storage units instead of combining them into a
   /// continuous run.
-  bool isDiscreteBitFieldABI() {
+  bool isDiscreteBitFieldABI() const {
     return Context.getTargetInfo().getCXXABI().isMicrosoft() ||
            D->isMsStruct(Context);
   }
@@ -121,22 +121,22 @@ struct CGRecordLowering {
   /// other bases, which complicates layout in specific ways.
   ///
   /// Note specifically that the ms_struct attribute doesn't change this.
-  bool isOverlappingVBaseABI() {
+  bool isOverlappingVBaseABI() const {
     return !Context.getTargetInfo().getCXXABI().isMicrosoft();
   }
 
   /// Wraps llvm::Type::getIntNTy with some implicit arguments.
-  llvm::Type *getIntNType(uint64_t NumBits) {
+  llvm::Type *getIntNType(uint64_t NumBits) const {
     unsigned AlignedBits = llvm::alignTo(NumBits, Context.getCharWidth());
     return llvm::Type::getIntNTy(Types.getLLVMContext(), AlignedBits);
   }
   /// Get the LLVM type sized as one character unit.
-  llvm::Type *getCharType() {
+  llvm::Type *getCharType() const {
     return llvm::Type::getIntNTy(Types.getLLVMContext(),
                                  Context.getCharWidth());
   }
   /// Gets an llvm type of size NumChars and alignment 1.
-  llvm::Type *getByteArrayType(CharUnits NumChars) {
+  llvm::Type *getByteArrayType(CharUnits NumChars) const {
     assert(!NumChars.isZero() && "Empty byte arrays aren't allowed.");
     llvm::Type *Type = getCharType();
     return NumChars == CharUnits::One() ? Type :
@@ -144,7 +144,7 @@ struct CGRecordLowering {
   }
   /// Gets the storage type for a field decl and handles storage
   /// for itanium bitfields that are smaller than their declared type.
-  llvm::Type *getStorageType(const FieldDecl *FD) {
+  llvm::Type *getStorageType(const FieldDecl *FD) const {
     llvm::Type *Type = Types.ConvertTypeForMem(FD->getType());
     if (!FD->isBitField()) return Type;
     if (isDiscreteBitFieldABI()) return Type;
@@ -152,29 +152,29 @@ struct CGRecordLowering {
                              (unsigned)Context.toBits(getSize(Type))));
   }
   /// Gets the llvm Basesubobject type from a CXXRecordDecl.
-  llvm::Type *getStorageType(const CXXRecordDecl *RD) {
+  llvm::Type *getStorageType(const CXXRecordDecl *RD) const {
     return Types.getCGRecordLayout(RD).getBaseSubobjectLLVMType();
   }
-  CharUnits bitsToCharUnits(uint64_t BitOffset) {
+  CharUnits bitsToCharUnits(uint64_t BitOffset) const {
     return Context.toCharUnitsFromBits(BitOffset);
   }
-  CharUnits getSize(llvm::Type *Type) {
+  CharUnits getSize(llvm::Type *Type) const {
     return CharUnits::fromQuantity(DataLayout.getTypeAllocSize(Type));
   }
-  CharUnits getAlignment(llvm::Type *Type) {
+  CharUnits getAlignment(llvm::Type *Type) const {
     return CharUnits::fromQuantity(DataLayout.getABITypeAlign(Type));
   }
-  bool isZeroInitializable(const FieldDecl *FD) {
+  bool isZeroInitializable(const FieldDecl *FD) const {
     return Types.isZeroInitializable(FD->getType());
   }
-  bool isZeroInitializable(const RecordDecl *RD) {
+  bool isZeroInitializable(const RecordDecl *RD) const {
     return Types.isZeroInitializable(RD);
   }
   void appendPaddingBytes(CharUnits Size) {
     if (!Size.isZero())
       FieldTypes.push_back(getByteArrayType(Size));
   }
-  uint64_t getFieldBitOffset(const FieldDecl *FD) {
+  uint64_t getFieldBitOffset(const FieldDecl *FD) const {
     return Layout.getFieldOffset(FD->getFieldIndex());
   }
   // Layout routines.

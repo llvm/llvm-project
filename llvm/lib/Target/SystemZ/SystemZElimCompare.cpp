@@ -18,7 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -690,9 +690,9 @@ bool SystemZElimCompare::processBlock(MachineBasicBlock &MBB) {
   // Walk backwards through the block looking for comparisons, recording
   // all CC users as we go.  The subroutines can delete Compare and
   // instructions before it.
-  LivePhysRegs LiveRegs(*TRI);
+  LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(MBB);
-  bool CompleteCCUsers = !LiveRegs.contains(SystemZ::CC);
+  bool CompleteCCUsers = LiveRegs.available(SystemZ::CC);
   SmallVector<MachineInstr *, 4> CCUsers;
   MachineBasicBlock::iterator MBBI = MBB.end();
   while (MBBI != MBB.begin()) {

@@ -662,7 +662,7 @@ let hasSideEffects = false in {
                    // bf16->f32 was introduced early.
                    [hasPTX<71>, hasSM<80>],
                    // bf16->everything else needs sm90/ptx78
-                   [hasPTX<78>, hasSM<90>])>; 
+                   [hasPTX<78>, hasSM<90>])>;
     def _f32 :
       NVPTXInst<(outs RC:$dst),
                 (ins Float32Regs:$src, CvtMode:$mode),
@@ -838,7 +838,6 @@ defm ADD : I3<"add.s", add>;
 defm SUB : I3<"sub.s", sub>;
 
 def ADD16x2 : I16x2<"add.s", add>;
-def SUB16x2 : I16x2<"sub.s", sub>;
 
 // in32 and int64 addition and subtraction with carry-out.
 defm ADDCC : ADD_SUB_INT_CARRY<"add.cc", addc>;
@@ -2738,6 +2737,8 @@ def StoreParamI32    : StoreParamInst<Int32Regs, ".b32">;
 
 def StoreParamI16    : StoreParamInst<Int16Regs, ".b16">;
 def StoreParamI8     : StoreParamInst<Int16Regs, ".b8">;
+def StoreParamI8TruncI32 : StoreParamInst<Int32Regs, ".b8">;
+def StoreParamI8TruncI64 : StoreParamInst<Int64Regs, ".b8">;
 def StoreParamV2I64  : StoreParamV2Inst<Int64Regs, ".b64">;
 def StoreParamV2I32  : StoreParamV2Inst<Int32Regs, ".b32">;
 def StoreParamV2I16  : StoreParamV2Inst<Int16Regs, ".b16">;
@@ -2757,6 +2758,8 @@ def StoreRetvalI64    : StoreRetvalInst<Int64Regs, ".b64">;
 def StoreRetvalI32    : StoreRetvalInst<Int32Regs, ".b32">;
 def StoreRetvalI16    : StoreRetvalInst<Int16Regs, ".b16">;
 def StoreRetvalI8     : StoreRetvalInst<Int16Regs, ".b8">;
+def StoreRetvalI8TruncI32 : StoreRetvalInst<Int32Regs, ".b8">;
+def StoreRetvalI8TruncI64 : StoreRetvalInst<Int64Regs, ".b8">;
 def StoreRetvalV2I64  : StoreRetvalV2Inst<Int64Regs, ".b64">;
 def StoreRetvalV2I32  : StoreRetvalV2Inst<Int32Regs, ".b32">;
 def StoreRetvalV2I16  : StoreRetvalV2Inst<Int16Regs, ".b16">;
@@ -3247,23 +3250,23 @@ def : Pat<(f16 (uint_to_fp Int64Regs:$a)),
 
 // sint -> bf16
 def : Pat<(bf16 (sint_to_fp Int1Regs:$a)),
-          (CVT_bf16_s32 (SELP_u32ii 1, 0, Int1Regs:$a), CvtRN)>;
+          (CVT_bf16_s32 (SELP_u32ii 1, 0, Int1Regs:$a), CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 def : Pat<(bf16 (sint_to_fp Int16Regs:$a)),
-          (CVT_bf16_s16 Int16Regs:$a, CvtRN)>;
+          (CVT_bf16_s16 Int16Regs:$a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 def : Pat<(bf16 (sint_to_fp Int32Regs:$a)),
-          (CVT_bf16_s32 Int32Regs:$a, CvtRN)>;
+          (CVT_bf16_s32 Int32Regs:$a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 def : Pat<(bf16 (sint_to_fp Int64Regs:$a)),
-          (CVT_bf16_s64 Int64Regs:$a, CvtRN)>;
+          (CVT_bf16_s64 Int64Regs:$a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 
 // uint -> bf16
 def : Pat<(bf16 (uint_to_fp Int1Regs:$a)),
-          (CVT_bf16_u32 (SELP_u32ii 1, 0, Int1Regs:$a), CvtRN)>;
+          (CVT_bf16_u32 (SELP_u32ii 1, 0, Int1Regs:$a), CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 def : Pat<(bf16 (uint_to_fp Int16Regs:$a)),
-          (CVT_bf16_u16 Int16Regs:$a, CvtRN)>;
+          (CVT_bf16_u16 Int16Regs:$a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 def : Pat<(bf16 (uint_to_fp Int32Regs:$a)),
-          (CVT_bf16_u32 Int32Regs:$a, CvtRN)>;
+          (CVT_bf16_u32 Int32Regs:$a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 def : Pat<(bf16 (uint_to_fp Int64Regs:$a)),
-          (CVT_bf16_u64 Int64Regs:$a, CvtRN)>;
+          (CVT_bf16_u64 Int64Regs:$a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 
 // sint -> f32
 def : Pat<(f32 (sint_to_fp Int1Regs:$a)),
@@ -3546,6 +3549,11 @@ let hasSideEffects = false in {
                              (ins Int64Regs:$s),
                              "{{ .reg .b32 tmp; mov.b64 {tmp, $high}, $s; }}",
                              []>;
+  def I64toI32L  : NVPTXInst<(outs Int32Regs:$low),
+                             (ins Int64Regs:$s),
+                             "{{ .reg .b32 tmp; mov.b64 {$low, tmp}, $s; }}",
+                             []>;
+
 }
 
 // Using partial vectorized move produces better SASS code for extraction of
@@ -3647,7 +3655,7 @@ def : Pat<(f16 (fpround Float32Regs:$a)),
 
 // fpround f32 -> bf16
 def : Pat<(bf16 (fpround Float32Regs:$a)),
-          (CVT_bf16_f32 Float32Regs:$a, CvtRN)>;
+          (CVT_bf16_f32 Float32Regs:$a, CvtRN)>, Requires<[hasPTX<70>, hasSM<80>]>;
 
 // fpround f64 -> f16
 def : Pat<(f16 (fpround Float64Regs:$a)),
@@ -3655,7 +3663,7 @@ def : Pat<(f16 (fpround Float64Regs:$a)),
 
 // fpround f64 -> bf16
 def : Pat<(bf16 (fpround Float64Regs:$a)),
-          (CVT_bf16_f64 Float64Regs:$a, CvtRN)>;
+          (CVT_bf16_f64 Float64Regs:$a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 // fpround f64 -> f32
 def : Pat<(f32 (fpround Float64Regs:$a)),
           (CVT_f32_f64 Float64Regs:$a, CvtRN_FTZ)>, Requires<[doF32FTZ]>;
@@ -3671,7 +3679,7 @@ def : Pat<(f32 (fpextend (f16 Int16Regs:$a))),
 def : Pat<(f32 (fpextend (bf16 Int16Regs:$a))),
           (CVT_f32_bf16 Int16Regs:$a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(f32 (fpextend (bf16 Int16Regs:$a))),
-          (CVT_f32_bf16 Int16Regs:$a, CvtNONE)>;
+          (CVT_f32_bf16 Int16Regs:$a, CvtNONE)>, Requires<[hasPTX<71>, hasSM<80>]>;
 
 // fpextend f16 -> f64
 def : Pat<(f64 (fpextend (f16 Int16Regs:$a))),
@@ -3679,7 +3687,7 @@ def : Pat<(f64 (fpextend (f16 Int16Regs:$a))),
 
 // fpextend bf16 -> f64
 def : Pat<(f64 (fpextend (bf16 Int16Regs:$a))),
-          (CVT_f64_bf16 Int16Regs:$a, CvtNONE)>;
+          (CVT_f64_bf16 Int16Regs:$a, CvtNONE)>, Requires<[hasPTX<78>, hasSM<90>]>;
 
 // fpextend f32 -> f64
 def : Pat<(f64 (fpextend Float32Regs:$a)),
@@ -3802,6 +3810,28 @@ def CALL_PROTOTYPE :
   NVPTXInst<(outs), (ins ProtoIdent:$ident),
             "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
 
+def SDTDynAllocaOp :
+  SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisInt<2>]>;
+
+def dyn_alloca :
+  SDNode<"NVPTXISD::DYNAMIC_STACKALLOC", SDTDynAllocaOp,
+         [SDNPHasChain, SDNPSideEffect]>;
+
+def DYNAMIC_STACKALLOC32 :
+  NVPTXInst<(outs Int32Regs:$ptr),
+            (ins Int32Regs:$size, i32imm:$align),
+            "alloca.u32 \t$ptr, $size, $align;\n\t"
+            "cvta.local.u32 \t$ptr, $ptr;",
+            [(set (i32 Int32Regs:$ptr), (dyn_alloca Int32Regs:$size, (i32 timm:$align)))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
+
+def DYNAMIC_STACKALLOC64 :
+  NVPTXInst<(outs Int64Regs:$ptr),
+            (ins Int64Regs:$size, i32imm:$align),
+            "alloca.u64 \t$ptr, $size, $align;\n\t"
+            "cvta.local.u64 \t$ptr, $ptr;",
+            [(set Int64Regs:$ptr, (dyn_alloca Int64Regs:$size, (i32 timm:$align)))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
 
 include "NVPTXIntrinsics.td"
 
@@ -3813,3 +3843,17 @@ include "NVPTXIntrinsics.td"
 // - for sm_20, use pmpt (use vector scalar mov to get the pack and
 //   unpack). sm_20 supports native 32-bit register, but not native 16-bit
 // register.
+
+def : Pat <
+  (i32 (bswap i32:$a)),
+  (INT_NVVM_PRMT Int32Regs:$a, (i32 0), (i32 0x0123))>;
+
+def : Pat <
+  (v2i16 (bswap v2i16:$a)),
+  (INT_NVVM_PRMT Int32Regs:$a, (i32 0), (i32 0x2301))>;
+
+def : Pat <
+  (i64 (bswap i64:$a)),
+  (V2I32toI64
+    (INT_NVVM_PRMT (I64toI32H Int64Regs:$a), (i32 0), (i32 0x0123)),
+    (INT_NVVM_PRMT (I64toI32L Int64Regs:$a), (i32 0), (i32 0x0123)))>;

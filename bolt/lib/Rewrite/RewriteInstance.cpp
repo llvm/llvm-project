@@ -199,10 +199,7 @@ static cl::opt<cl::boolOrDefault> RelocationMode(
     "relocs", cl::desc("use relocations in the binary (default=autodetect)"),
     cl::cat(BoltCategory));
 
-static cl::opt<std::string>
-SaveProfile("w",
-  cl::desc("save recorded profile to a file"),
-  cl::cat(BoltOutputCategory));
+extern cl::opt<std::string> SaveProfile;
 
 static cl::list<std::string>
 SkipFunctionNames("skip-funcs",
@@ -732,6 +729,13 @@ Error RewriteInstance::run() {
   // Skip disassembling if we have a translation table and we are running an
   // aggregation job.
   if (opts::AggregateOnly && BAT->enabledFor(InputFile)) {
+    // YAML profile in BAT mode requires CFG for .bolt.org.text functions
+    if (!opts::SaveProfile.empty() ||
+        opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
+      selectFunctionsToProcess();
+      disassembleFunctions();
+      buildFunctionsCFG();
+    }
     processProfileData();
     return Error::success();
   }
@@ -747,6 +751,10 @@ Error RewriteInstance::run() {
   buildFunctionsCFG();
 
   processProfileData();
+
+  // Save input binary metadata if BAT section needs to be emitted
+  if (opts::EnableBAT)
+    BAT->saveMetadata(*BC);
 
   postProcessFunctions();
 
@@ -2023,14 +2031,6 @@ void RewriteInstance::adjustCommandLineOptions() {
 
   if (opts::Lite)
     BC->outs() << "BOLT-INFO: enabling lite mode\n";
-
-  if (!opts::SaveProfile.empty() && BAT->enabledFor(InputFile)) {
-    BC->errs()
-        << "BOLT-ERROR: unable to save profile in YAML format for input "
-           "file processed by BOLT. Please remove -w option and use branch "
-           "profile.\n";
-    exit(1);
-  }
 }
 
 namespace {
@@ -3122,12 +3122,13 @@ void RewriteInstance::processProfileData() {
     }
   }
 
-  if (!opts::SaveProfile.empty()) {
+  if (!opts::SaveProfile.empty() && !BAT->enabledFor(InputFile)) {
     YAMLProfileWriter PW(opts::SaveProfile);
     PW.writeProfile(*this);
   }
   if (opts::AggregateOnly &&
-      opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
+      opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML &&
+      !BAT->enabledFor(InputFile)) {
     YAMLProfileWriter PW(opts::OutputFilename);
     PW.writeProfile(*this);
   }
@@ -4088,12 +4089,9 @@ void RewriteInstance::rewriteNoteSections() {
       return getNewValueForSymbol(S->getName());
     });
 
-    // Set/modify section info.
-    BinarySection &NewSection = BC->registerOrUpdateNoteSection(
-        SectionName, SectionData, Size, Section.sh_addralign,
-        !BSec->isWritable(), BSec->getELFType());
-    NewSection.setOutputAddress(0);
-    NewSection.setOutputFileOffset(NextAvailableOffset);
+    // Section contents are no longer needed, but we need to update the size so
+    // that it will be reflected in the section header table.
+    BSec->updateContents(nullptr, Size);
 
     NextAvailableOffset += Size;
   }

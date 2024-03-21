@@ -214,6 +214,7 @@ set(x86_files
   popcntintrin.h
   prfchiintrin.h
   prfchwintrin.h
+  ptrauth.h
   ptwriteintrin.h
   raointintrin.h
   rdpruintrin.h
@@ -253,8 +254,10 @@ set(x86_files
   )
 
 set(windows_only_files
+  intrin0.h
   intrin.h
   vadefs.h
+  yvals_core.h
 )
 
 set(utility_files

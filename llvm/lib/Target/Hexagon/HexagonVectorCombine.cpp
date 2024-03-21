@@ -1411,9 +1411,9 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
   // Return the element with the maximum alignment from Range,
   // where GetValue obtains the value to compare from an element.
   auto getMaxOf = [](auto Range, auto GetValue) {
-    return *std::max_element(
-        Range.begin(), Range.end(),
-        [&GetValue](auto &A, auto &B) { return GetValue(A) < GetValue(B); });
+    return *llvm::max_element(Range, [&GetValue](auto &A, auto &B) {
+      return GetValue(A) < GetValue(B);
+    });
   };
 
   const AddrList &BaseInfos = AddrGroups.at(Move.Base);

@@ -54,7 +54,7 @@ class TestAllowJIT(TestBase):
         # First make sure we can call the function with the default option set.
         options = lldb.SBExpressionOptions()
         # Check that the default is to allow JIT:
-        self.assertEqual(options.GetAllowJIT(), True, "Default is true")
+        self.assertTrue(options.GetAllowJIT(), "Default is true")
 
         # Now use the options:
         result = frame.EvaluateExpression("call_me(10)", options)
@@ -64,9 +64,7 @@ class TestAllowJIT(TestBase):
         # Now disallow JIT and make sure it fails:
         options.SetAllowJIT(False)
         # Check that we got the right value:
-        self.assertEqual(
-            options.GetAllowJIT(), False, "Got False after setting to False"
-        )
+        self.assertFalse(options.GetAllowJIT(), "Got False after setting to False")
 
         # Again use it and ensure we fail:
         result = frame.EvaluateExpression("call_me(10)", options)
@@ -79,7 +77,7 @@ class TestAllowJIT(TestBase):
 
         # Finally set the allow JIT value back to true and make sure that works:
         options.SetAllowJIT(True)
-        self.assertEqual(options.GetAllowJIT(), True, "Set back to True correctly")
+        self.assertTrue(options.GetAllowJIT(), "Set back to True correctly")
 
         # And again, make sure this works:
         result = frame.EvaluateExpression("call_me(10)", options)

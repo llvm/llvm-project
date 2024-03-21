@@ -22,7 +22,6 @@ Macros:
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 
 #include <errno.h>
@@ -37,6 +36,19 @@ Macros:
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
+#endif
+
+#ifdef ENODATA
+#  pragma clang deprecated(ENODATA, "ENODATA is deprecated in ISO C++")
+#endif
+#ifdef ENOSR
+#  pragma clang deprecated(ENOSR, "ENOSR is deprecated in ISO C++")
+#endif
+#ifdef ENOSTR
+#  pragma clang deprecated(ENOSTR, "ENOSTR is deprecated in ISO C++")
+#endif
+#ifdef ETIME
+#  pragma clang deprecated(ETIME, "ETIME is deprecated in ISO C++")
 #endif
 
 #endif // _LIBCPP_CERRNO

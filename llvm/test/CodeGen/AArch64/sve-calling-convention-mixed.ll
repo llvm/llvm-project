@@ -567,30 +567,30 @@ define <vscale x 4 x float> @sve_caller_non_sve_callee_high_range(<vscale x 4 x 
 ; CHECK-NEXT:    bl non_sve_callee_high_range
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #3
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
@@ -659,30 +659,30 @@ define <vscale x 4 x float> @sve_ret_caller_non_sve_callee_high_range()  {
 ; CHECK-NEXT:    fmov s7, #7.00000000
 ; CHECK-NEXT:    bl non_sve_callee_high_range
 ; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
@@ -724,7 +724,7 @@ define void @verify_all_operands_are_initialised() {
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @func_f8_and_v0_passed_via_memory(float 0.0, float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 9.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer))
+  call void @func_f8_and_v0_passed_via_memory(float 0.0, float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, <vscale x 4 x float> splat (float 9.000000e+00))
   ret void
 }
 
