@@ -399,15 +399,17 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
         }
       }
 
-      // Check if the transpose effects outer unit dims only. Such transposes do
-      // not materially effect the underlying vector and can be omitted.
-      bool tranposeNonOuterUnitDims = false;
-      for (int64_t i = 0; i < (int64_t)perm.size(); ++i) {
-        if (perm[i] != i && i != (int64_t)perm.size() - 1) {
-          if (operands[it.index()].getType().cast<ShapedType>().getDimSize(i) !=
-              1) {
-            tranposeNonOuterUnitDims = true;
-          }
+      // Checks if only the outer, unit dimensions (of size 1) are permuted.
+      // Such transposes do not materially effect the underlying vector and can
+      // be omitted. EG: perm [1, 0, 2] applied to vector<1x1x8xi32>
+      bool transposeNonOuterUnitDims = false;
+      auto operandShape = operands[it.index()].getType().cast<ShapedType>();
+      for (auto [index, dim] :
+           llvm::enumerate(ArrayRef<int64_t>(perm).drop_back(1))) {
+        if (dim != static_cast<int64_t>(index) &&
+            operandShape.getDimSize(index) != 1) {
+          transposeNonOuterUnitDims = true;
+          break;
         }
       }
 
@@ -416,7 +418,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
       if (tranposeNeeded) {
         map = AffineMap::get(map.getNumDims(), 0, transposeResults,
                              contractOp.getContext());
-        if (tranposeNonOuterUnitDims) {
+        if (transposeNonOuterUnitDims) {
           operands[it.index()] = rewriter.createOrFold<vector::TransposeOp>(
               loc, operands[it.index()], perm);
         }
