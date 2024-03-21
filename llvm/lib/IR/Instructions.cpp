@@ -3276,9 +3276,7 @@ UnaryOperator *UnaryOperator::Create(UnaryOps Op, Value *S,
 UnaryOperator *UnaryOperator::Create(UnaryOps Op, Value *S,
                                      const Twine &Name,
                                      BasicBlock *InsertAtEnd) {
-  UnaryOperator *Res = Create(Op, S, Name);
-  Res->insertInto(InsertAtEnd, InsertAtEnd->end());
-  return Res;
+  return new UnaryOperator(Op, S, S->getType(), Name, InsertAtEnd);
 }
 
 void UnaryOperator::AssertOK() {
@@ -3426,9 +3424,9 @@ BinaryOperator *BinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
 BinaryOperator *BinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
                                        const Twine &Name,
                                        BasicBlock *InsertAtEnd) {
-  BinaryOperator *Res = Create(Op, S1, S2, Name);
-  Res->insertInto(InsertAtEnd, InsertAtEnd->end());
-  return Res;
+  assert(S1->getType() == S2->getType() &&
+         "Cannot create binary operator with two operands of differing type!");
+  return new BinaryOperator(Op, S1, S2, S1->getType(), Name, InsertAtEnd);
 }
 
 BinaryOperator *BinaryOperator::CreateNeg(Value *Op, const Twine &Name,
