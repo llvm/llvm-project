@@ -3269,11 +3269,10 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  if (!isElementwise(target)) {
-    failed(rewriter.notifyMatchFailure(
-        target, "only elementwise flattening is supported"));
-    return emitDefaultSilenceableFailure(target);
-  }
+  if (!isElementwise(target))
+
+    return mlir::emitSilenceableFailure(target->getLoc())
+           << "only elementwise flattening is supported";
   // If rank <= 1, do nothing
   if (target.getNumLoops() <= 1) {
     results.push_back(target);
