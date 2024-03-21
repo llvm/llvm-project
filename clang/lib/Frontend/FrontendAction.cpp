@@ -535,8 +535,13 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
     if (*OriginalModuleMap != CI.getSourceManager().getFileEntryRefForID(
                                   CI.getSourceManager().getMainFileID())) {
       M->IsInferred = true;
+      bool IsSystem = false; // TODO: Propagate the real thing here.
+      auto FileCharacter =
+          IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
+      FileID OriginalModuleMapFID = CI.getSourceManager().getOrCreateFileID(
+          *OriginalModuleMap, FileCharacter);
       CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()
-        .setInferredModuleAllowedBy(M, *OriginalModuleMap);
+        .setInferredModuleAllowedBy(M, OriginalModuleMapFID);
     }
   }
 
