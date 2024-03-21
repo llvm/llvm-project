@@ -27,7 +27,7 @@ include "mlir/IR/BuiltinAttributes.td"
 // Base class for FIR operations.
 // All operations automatically get a prefix of "fir.".
 class fir_Op<string mnemonic, list<Trait> traits>
-  : Op<fir_Dialect, mnemonic, traits>;
+  : Op<FIROpsDialect, mnemonic, traits>;
 
 // Base class for FIR operations that take a single argument
 class fir_SimpleOp<string mnemonic, list<Trait> traits>
@@ -2454,6 +2454,7 @@ def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
     SymbolRefAttr:$callee,
     I32:$grid_x,
     I32:$grid_y,
+    I32:$grid_z,
     I32:$block_x,
     I32:$block_y,
     I32:$block_z,
@@ -2463,9 +2464,9 @@ def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
   );
 
   let assemblyFormat = [{
-    $callee `<` `<` `<` $grid_x `,` $grid_y `,` $block_x `,` $block_y `,`
-        $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
-        `` `(` ( $args^ `:` type($args) )? `)` attr-dict
+    $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
+        $block_y `,` $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
+        `` `(` $args `)` ( `:` `(` type($args)^ `)` )? attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -3129,6 +3130,16 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
 
 def fir_CUDAKernelOp : fir_Op<"cuda_kernel", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+
+  let description = [{
+    Represent the CUDA Fortran kernel directive. The operation is a loop like
+    operation that represents the iteration range of the embedded loop nest.
+
+    When grid or block variadic operands are empty, a `*` only syntax was used
+    in the Fortran code.
+    If the `*` is mixed with values for either grid or block, these are
+    represented by a 0 constant value.
+  }];
 
   let arguments = (ins
     Variadic<I32>:$grid, // empty means `*`

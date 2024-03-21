@@ -1,6 +1,9 @@
 ! Test delayed privatization for the `private` clause.
 
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN:   -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %s 2>&1 \
+! RUN:   | FileCheck %s
 
 subroutine delayed_privatization_private
   implicit none

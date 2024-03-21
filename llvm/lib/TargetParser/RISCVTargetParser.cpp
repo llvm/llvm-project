@@ -120,4 +120,95 @@ void getFeaturesForCPU(StringRef CPU,
       EnabledFeatures.push_back(F.substr(1));
 }
 } // namespace RISCV
+
+namespace RISCVVType {
+// Encode VTYPE into the binary format used by the the VSETVLI instruction which
+// is used by our MC layer representation.
+//
+// Bits | Name       | Description
+// -----+------------+------------------------------------------------
+// 7    | vma        | Vector mask agnostic
+// 6    | vta        | Vector tail agnostic
+// 5:3  | vsew[2:0]  | Standard element width (SEW) setting
+// 2:0  | vlmul[2:0] | Vector register group multiplier (LMUL) setting
+unsigned encodeVTYPE(RISCVII::VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
+                     bool MaskAgnostic) {
+  assert(isValidSEW(SEW) && "Invalid SEW");
+  unsigned VLMULBits = static_cast<unsigned>(VLMUL);
+  unsigned VSEWBits = encodeSEW(SEW);
+  unsigned VTypeI = (VSEWBits << 3) | (VLMULBits & 0x7);
+  if (TailAgnostic)
+    VTypeI |= 0x40;
+  if (MaskAgnostic)
+    VTypeI |= 0x80;
+
+  return VTypeI;
+}
+
+std::pair<unsigned, bool> decodeVLMUL(RISCVII::VLMUL VLMUL) {
+  switch (VLMUL) {
+  default:
+    llvm_unreachable("Unexpected LMUL value!");
+  case RISCVII::VLMUL::LMUL_1:
+  case RISCVII::VLMUL::LMUL_2:
+  case RISCVII::VLMUL::LMUL_4:
+  case RISCVII::VLMUL::LMUL_8:
+    return std::make_pair(1 << static_cast<unsigned>(VLMUL), false);
+  case RISCVII::VLMUL::LMUL_F2:
+  case RISCVII::VLMUL::LMUL_F4:
+  case RISCVII::VLMUL::LMUL_F8:
+    return std::make_pair(1 << (8 - static_cast<unsigned>(VLMUL)), true);
+  }
+}
+
+void printVType(unsigned VType, raw_ostream &OS) {
+  unsigned Sew = getSEW(VType);
+  OS << "e" << Sew;
+
+  unsigned LMul;
+  bool Fractional;
+  std::tie(LMul, Fractional) = decodeVLMUL(getVLMUL(VType));
+
+  if (Fractional)
+    OS << ", mf";
+  else
+    OS << ", m";
+  OS << LMul;
+
+  if (isTailAgnostic(VType))
+    OS << ", ta";
+  else
+    OS << ", tu";
+
+  if (isMaskAgnostic(VType))
+    OS << ", ma";
+  else
+    OS << ", mu";
+}
+
+unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
+  unsigned LMul;
+  bool Fractional;
+  std::tie(LMul, Fractional) = decodeVLMUL(VLMul);
+
+  // Convert LMul to a fixed point value with 3 fractional bits.
+  LMul = Fractional ? (8 / LMul) : (LMul * 8);
+
+  assert(SEW >= 8 && "Unexpected SEW value");
+  return (SEW * 8) / LMul;
+}
+
+std::optional<RISCVII::VLMUL>
+getSameRatioLMUL(unsigned SEW, RISCVII::VLMUL VLMUL, unsigned EEW) {
+  unsigned Ratio = RISCVVType::getSEWLMULRatio(SEW, VLMUL);
+  unsigned EMULFixedPoint = (EEW * 8) / Ratio;
+  bool Fractional = EMULFixedPoint < 8;
+  unsigned EMUL = Fractional ? 8 / EMULFixedPoint : EMULFixedPoint / 8;
+  if (!isValidLMUL(EMUL, Fractional))
+    return std::nullopt;
+  return RISCVVType::encodeLMUL(EMUL, Fractional);
+}
+
+} // namespace RISCVVType
+
 } // namespace llvm

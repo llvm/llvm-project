@@ -420,7 +420,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
     // (b) Leave that as the only edge in the "Indirect" PHI.
     // (c) Merge the two in the body block.
     BasicBlock::iterator Indirect = Target->begin(),
-                         End = Target->getFirstNonPHI()->getIterator();
+                         End = Target->getFirstNonPHIIt();
     BasicBlock::iterator Direct = DirectSucc->begin();
     BasicBlock::iterator MergeInsert = BodyBlock->getFirstInsertionPt();
 
@@ -430,6 +430,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
     while (Indirect != End) {
       PHINode *DirPHI = cast<PHINode>(Direct);
       PHINode *IndPHI = cast<PHINode>(Indirect);
+      BasicBlock::iterator InsertPt = Indirect;
 
       // Now, clean up - the direct block shouldn't get the indirect value,
       // and vice versa.
@@ -440,7 +441,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       // PHI is erased.
       Indirect++;
 
-      PHINode *NewIndPHI = PHINode::Create(IndPHI->getType(), 1, "ind", IndPHI);
+      PHINode *NewIndPHI = PHINode::Create(IndPHI->getType(), 1, "ind", InsertPt);
       NewIndPHI->addIncoming(IndPHI->getIncomingValueForBlock(IBRPred),
                              IBRPred);
 

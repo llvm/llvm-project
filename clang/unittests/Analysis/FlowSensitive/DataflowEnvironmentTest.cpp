@@ -190,7 +190,8 @@ TEST_F(EnvironmentTest, JoinRecords) {
     Env2.setValue(Loc, Val2);
 
     Environment::ValueModel Model;
-    Environment EnvJoined = Environment::join(Env1, Env2, Model);
+    Environment EnvJoined =
+        Environment::join(Env1, Env2, Model, Environment::DiscardExprState);
     auto *JoinedVal = cast<RecordValue>(EnvJoined.getValue(Loc));
     EXPECT_NE(JoinedVal, &Val1);
     EXPECT_NE(JoinedVal, &Val2);

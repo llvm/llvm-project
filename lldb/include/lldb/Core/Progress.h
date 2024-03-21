@@ -66,7 +66,11 @@ public:
   /// @param [in] title The title of this progress activity.
   ///
   /// @param [in] details Specific information about what the progress report
-  /// is currently working on.
+  /// is currently working on. Although not required, if the progress report is
+  /// updated with Progress::Increment() then this field will be overwritten
+  /// with the new set of details passed into that function, and the details
+  /// passed initially will act as an "item 0" for the total set of
+  /// items being reported on.
   ///
   /// @param [in] total The total units of work to be done if specified, if
   /// set to std::nullopt then an indeterminate progress indicator should be
@@ -148,9 +152,14 @@ public:
 
   static ProgressManager &Instance();
 
-  static void ReportProgress(const Progress::ProgressData &);
-
 private:
+  enum class EventType {
+    Begin,
+    End,
+  };
+  static void ReportProgress(const Progress::ProgressData &progress_data,
+                             EventType type);
+
   llvm::StringMap<std::pair<uint64_t, Progress::ProgressData>>
       m_progress_category_map;
   std::mutex m_progress_map_mutex;

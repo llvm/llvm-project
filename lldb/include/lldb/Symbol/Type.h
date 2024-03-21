@@ -440,7 +440,7 @@ public:
 
   std::optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope);
 
-  uint32_t GetNumChildren(bool omit_empty_base_classes);
+  llvm::Expected<uint32_t> GetNumChildren(bool omit_empty_base_classes);
 
   bool IsAggregateType();
 

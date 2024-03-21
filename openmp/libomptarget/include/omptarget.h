@@ -20,11 +20,10 @@
 
 #include "OpenMP/InternalTypes.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <deque>
 #include <functional>
-#include <stddef.h>
-#include <stdint.h>
 #include <type_traits>
 
 #include "llvm/ADT/SmallVector.h"
@@ -274,6 +273,7 @@ struct __tgt_target_non_contig {
 extern "C" {
 #endif
 
+void ompx_dump_mapping_tables(void);
 int omp_get_num_devices(void);
 int omp_get_device_num(void);
 int omp_get_initial_device(void);

@@ -125,6 +125,7 @@ static_library("CodeGen") {
     "MachineCSE.cpp",
     "MachineCheckDebugify.cpp",
     "MachineCombiner.cpp",
+    "MachineConvergenceVerifier.cpp",
     "MachineCopyPropagation.cpp",
     "MachineCycleAnalysis.cpp",
     "MachineDebugify.cpp",

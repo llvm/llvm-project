@@ -239,7 +239,8 @@ func.func @masked_transfer_read_dynamic_rank_reducing_scalable_unit_dim(
 //       CHECK: vector.transfer_read {{.*}} vector<[16]x[1]xi8>
 
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.vector.rank_reducing_subview_patterns
     } : !transform.op<"func.func">

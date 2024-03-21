@@ -295,9 +295,8 @@ static Expected<LLTCodeGen> getInstResultType(const TreePatternNode &Dst,
   // below, we only expect one explicit def here.
   assert(Dst.getOperator()->isSubClassOf("Instruction"));
   CodeGenInstruction &InstInfo = Target.getInstruction(Dst.getOperator());
-  if (InstInfo.Operands.NumDefs != 1)
-    return failedImport(
-        "Dst pattern child only supported with exactly one result");
+  if (!InstInfo.Operands.NumDefs)
+    return failedImport("Dst pattern child needs a def");
 
   ArrayRef<TypeSetByHwMode> ChildTypes = Dst.getExtTypes();
   if (ChildTypes.size() < 1)
@@ -408,9 +407,11 @@ private:
   createInstructionRenderer(action_iterator InsertPt, RuleMatcher &M,
                             const TreePatternNode &Dst);
 
-  Expected<action_iterator> importExplicitDefRenderers(
-      action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
-      const TreePatternNode &Src, const TreePatternNode &Dst);
+  Expected<action_iterator>
+  importExplicitDefRenderers(action_iterator InsertPt, RuleMatcher &M,
+                             BuildMIAction &DstMIBuilder,
+                             const TreePatternNode &Src,
+                             const TreePatternNode &Dst, unsigned Start = 0);
 
   Expected<action_iterator> importExplicitUseRenderers(
       action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
@@ -1379,6 +1380,14 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
   // Assign the result to TempReg.
   DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID, true);
 
+  // Handle additional (ignored) results.
+  if (DstMIBuilder.getCGI()->Operands.NumDefs > 1) {
+    InsertPtOrError = importExplicitDefRenderers(
+        std::prev(*InsertPtOrError), M, DstMIBuilder, Src, Dst, /*Start=*/1);
+    if (auto Error = InsertPtOrError.takeError())
+      return std::move(Error);
+  }
+
   InsertPtOrError = importExplicitUseRenderers(InsertPtOrError.get(), M,
                                                DstMIBuilder, Dst, Src);
   if (auto Error = InsertPtOrError.takeError())
@@ -1507,14 +1516,14 @@ Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
     action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
-    const TreePatternNode &Src, const TreePatternNode &Dst) {
+    const TreePatternNode &Src, const TreePatternNode &Dst, unsigned Start) {
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
   const unsigned SrcNumDefs = Src.getExtTypes().size();
   const unsigned DstNumDefs = DstI->Operands.NumDefs;
   if (DstNumDefs == 0)
     return InsertPt;
 
-  for (unsigned I = 0; I < SrcNumDefs; ++I) {
+  for (unsigned I = Start; I < SrcNumDefs; ++I) {
     std::string OpName = getMangledRootDefName(DstI->Operands[I].Name);
     // CopyRenderer saves a StringRef, so cannot pass OpName itself -
     // let's use a string with an appropriate lifetime.
@@ -1800,8 +1809,6 @@ GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
   // Don't want to try and infer things when there could potentially be more
   // than one candidate register class.
   auto &Inst = Target.getInstruction(OpRec);
-  if (Inst.Operands.NumDefs > 1)
-    return std::nullopt;
 
   // Handle any special-case instructions which we can safely infer register
   // classes from.

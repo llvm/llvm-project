@@ -10,11 +10,11 @@
 #include "src/stdbit/stdc_has_single_bit_uc.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcStdcCountOnesUcTest, Zero) {
+TEST(LlvmLibcStdcHasSingleBitUcTest, Zero) {
   EXPECT_EQ(LIBC_NAMESPACE::stdc_has_single_bit_uc(0U), false);
 }
 
-TEST(LlvmLibcStdcCountOnesUcTest, OneHot) {
+TEST(LlvmLibcStdcHasSingleBitUcTest, OneHot) {
   for (unsigned i = 0U; i != UCHAR_WIDTH; ++i)
     EXPECT_EQ(LIBC_NAMESPACE::stdc_has_single_bit_uc(1U << i), true);
 }

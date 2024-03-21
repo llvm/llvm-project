@@ -86,6 +86,7 @@ Clang-Tidy Checks
    :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
+   :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
    :doc:`bugprone-dangling-handle <bugprone/dangling-handle>`,
    :doc:`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>`,
    :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,
@@ -138,6 +139,7 @@ Clang-Tidy Checks
    :doc:`bugprone-suspicious-realloc-usage <bugprone/suspicious-realloc-usage>`,
    :doc:`bugprone-suspicious-semicolon <bugprone/suspicious-semicolon>`, "Yes"
    :doc:`bugprone-suspicious-string-compare <bugprone/suspicious-string-compare>`, "Yes"
+   :doc:`bugprone-suspicious-stringview-data-usage <bugprone/suspicious-stringview-data-usage>`,
    :doc:`bugprone-swapped-arguments <bugprone/swapped-arguments>`, "Yes"
    :doc:`bugprone-switch-missing-default-case <bugprone/switch-missing-default-case>`,
    :doc:`bugprone-terminating-continue <bugprone/terminating-continue>`, "Yes"
