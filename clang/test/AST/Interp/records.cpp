@@ -335,9 +335,9 @@ namespace InitializerTemporaries {
   };
 
   constexpr int f() {
-    S{}; // ref-note {{in call to 'S{}.~S()'}}
-    /// FIXME: Wrong source location below.
-    return 12; // expected-note {{in call to '&S{}->~S()'}}
+    S{}; // ref-note {{in call to 'S{}.~S()'}} \
+         // expected-note {{in call to '&S{}->~S()'}}
+    return 12;
   }
   static_assert(f() == 12); // both-error {{not an integral constant expression}} \
                             // both-note {{in call to 'f()'}}
@@ -420,11 +420,10 @@ namespace DeriveFailures {
 
   constexpr Derived D(12); // both-error {{must be initialized by a constant expression}} \
                            // both-note {{in call to 'Derived(12)'}} \
-                           // ref-note {{declared here}}
+                           // both-note {{declared here}}
 
   static_assert(D.Val == 0, ""); // both-error {{not an integral constant expression}} \
-                                 // ref-note {{initializer of 'D' is not a constant expression}} \
-                                 // expected-note {{read of uninitialized object}}
+                                 // both-note {{initializer of 'D' is not a constant expression}}
 #endif
 
   struct AnotherBase {
@@ -478,10 +477,11 @@ namespace ConditionalInit {
 namespace DeclRefs {
   struct A{ int m; const int &f = m; }; // expected-note {{implicit use of 'this'}}
 
-  constexpr A a{10}; // expected-error {{must be initialized by a constant expression}}
+  constexpr A a{10}; // expected-error {{must be initialized by a constant expression}} \
+                     // expected-note {{declared here}}
   static_assert(a.m == 10, "");
   static_assert(a.f == 10, ""); // expected-error {{not an integral constant expression}} \
-                                // expected-note {{read of uninitialized object}}
+                                // expected-note {{initializer of 'a' is not a constant expression}}
 
   class Foo {
   public:
@@ -604,9 +604,9 @@ namespace Destructors {
     }
   };
   constexpr int testS() {
-    S{}; // ref-note {{in call to 'S{}.~S()'}}
-    return 1; // expected-note {{in call to '&S{}->~S()'}}
-              // FIXME: ^ Wrong line
+    S{}; // ref-note {{in call to 'S{}.~S()'}} \
+         // expected-note {{in call to '&S{}->~S()'}}
+    return 1;
   }
   static_assert(testS() == 1); // both-error {{not an integral constant expression}} \
                                // both-note {{in call to 'testS()'}}
@@ -1232,10 +1232,56 @@ namespace InheritedConstructor {
 namespace InvalidCtorInitializer {
   struct X {
     int Y;
-    constexpr X() // expected-note {{declared here}}
+    constexpr X()
         : Y(fo_o_()) {} // both-error {{use of undeclared identifier 'fo_o_'}}
   };
   // no crash on evaluating the constexpr ctor.
-  constexpr int Z = X().Y; // both-error {{constexpr variable 'Z' must be initialized by a constant expression}} \
-                           // expected-note {{undefined constructor 'X'}}
+  constexpr int Z = X().Y; // both-error {{constexpr variable 'Z' must be initialized by a constant expression}}
 }
+
+extern int f(); // both-note {{here}}
+struct HasNonConstExprMemInit {
+  int x = f(); // both-note {{non-constexpr function}}
+  constexpr HasNonConstExprMemInit() {} // both-error {{never produces a constant expression}}
+};
+
+namespace {
+  template <class Tp, Tp v>
+  struct integral_constant {
+    static const Tp value = v;
+  };
+
+  template <class Tp, Tp v>
+  const Tp integral_constant<Tp, v>::value;
+
+  typedef integral_constant<bool, true> true_type;
+  typedef integral_constant<bool, false> false_type;
+
+  /// This might look innocent, but we get an evaluateAsInitializer call for the
+  /// static bool member before evaluating the first static_assert, but we do NOT
+  /// get such a call for the second one. So the second one needs to lazily visit
+  /// the data member itself.
+  static_assert(true_type::value, "");
+  static_assert(true_type::value, "");
+}
+
+#if __cplusplus >= 202002L
+namespace {
+  /// Used to crash because the CXXDefaultInitExpr is of compound type.
+  struct A {
+    int &x;
+    constexpr ~A() { --x; }
+  };
+  struct B {
+    int &x;
+    const A &a = A{x};
+  };
+  constexpr int a() {
+    int x = 1;
+    int f = B{x}.x;
+    B{x}; // both-warning {{expression result unused}}
+
+    return 1;
+  }
+}
+#endif

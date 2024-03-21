@@ -4000,7 +4000,16 @@ public:
                                             SourceLocation BeginLoc,
                                             SourceLocation EndLoc,
                                             StmtResult StrBlock) {
-    llvm_unreachable("Not yet implemented!");
+    getSema().ActOnOpenACCConstruct(K, BeginLoc);
+
+    // TODO OpenACC: Include clauses.
+    if (getSema().ActOnStartOpenACCStmtDirective(K, BeginLoc))
+      return StmtError();
+
+    StrBlock = getSema().ActOnOpenACCAssociatedStmt(K, StrBlock);
+
+    return getSema().ActOnEndOpenACCStmtDirective(K, BeginLoc, EndLoc,
+                                                  StrBlock);
   }
 
 private:
@@ -4776,6 +4785,14 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
     TemplateArgumentLoc In = *First;
 
     if (In.getArgument().getKind() == TemplateArgument::Pack) {
+      // When building the deduction guides, we rewrite the argument packs
+      // instead of unpacking.
+      if (getSema().CodeSynthesisContexts.back().Kind ==
+          Sema::CodeSynthesisContext::BuildingDeductionGuides) {
+        if (getDerived().TransformTemplateArgument(In, Out, Uneval))
+          return true;
+        continue;
+      }
       // Unpack argument packs, which we translate them into separate
       // arguments.
       // FIXME: We could do much better if we could guarantee that the
@@ -6552,7 +6569,11 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
       return QualType();
     if (!ShouldExpand) {
       Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), -1);
-      QualType Pack = getDerived().TransformType(T);
+      // FIXME: should we keep TypeLoc for individual expansions in
+      // PackIndexingTypeLoc?
+      TypeSourceInfo *TI =
+          SemaRef.getASTContext().getTrivialTypeSourceInfo(T, TL.getBeginLoc());
+      QualType Pack = getDerived().TransformType(TLB, TI->getTypeLoc());
       if (Pack.isNull())
         return QualType();
       if (NotYetExpanded) {
@@ -7246,6 +7267,34 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
       TLB, TL, [&](TypeLocBuilder &TLB, TypeLoc ModifiedLoc) -> QualType {
         return getDerived().TransformType(TLB, ModifiedLoc);
       });
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformCountAttributedType(
+    TypeLocBuilder &TLB, CountAttributedTypeLoc TL) {
+  const CountAttributedType *OldTy = TL.getTypePtr();
+  QualType InnerTy = getDerived().TransformType(TLB, TL.getInnerLoc());
+  if (InnerTy.isNull())
+    return QualType();
+
+  Expr *OldCount = TL.getCountExpr();
+  Expr *NewCount = nullptr;
+  if (OldCount) {
+    ExprResult CountResult = getDerived().TransformExpr(OldCount);
+    if (CountResult.isInvalid())
+      return QualType();
+    NewCount = CountResult.get();
+  }
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || InnerTy != OldTy->desugar() ||
+      OldCount != NewCount) {
+    // Currently, CountAttributedType can only wrap incomplete array types.
+    Result = SemaRef.BuildCountAttributedArrayType(InnerTy, NewCount);
+  }
+
+  TLB.push<CountAttributedTypeLoc>(Result);
+  return Result;
 }
 
 template <typename Derived>
@@ -13636,10 +13685,29 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   // use evaluation contexts to distinguish the function parameter case.
   CXXRecordDecl::LambdaDependencyKind DependencyKind =
       CXXRecordDecl::LDK_Unknown;
+  DeclContext *DC = getSema().CurContext;
+  // A RequiresExprBodyDecl is not interesting for dependencies.
+  // For the following case,
+  //
+  // template <typename>
+  // concept C = requires { [] {}; };
+  //
+  // template <class F>
+  // struct Widget;
+  //
+  // template <C F>
+  // struct Widget<F> {};
+  //
+  // While we are substituting Widget<F>, the parent of DC would be
+  // the template specialization itself. Thus, the lambda expression
+  // will be deemed as dependent even if there are no dependent template
+  // arguments.
+  // (A ClassTemplateSpecializationDecl is always a dependent context.)
+  while (DC->getDeclKind() == Decl::Kind::RequiresExprBody)
+    DC = DC->getParent();
   if ((getSema().isUnevaluatedContext() ||
        getSema().isConstantEvaluatedContext()) &&
-      (getSema().CurContext->isFileContext() ||
-       !getSema().CurContext->getParent()->isDependentContext()))
+      (DC->isFileContext() || !DC->getParent()->isDependentContext()))
     DependencyKind = CXXRecordDecl::LDK_NeverDependent;
 
   CXXRecordDecl *OldClass = E->getLambdaClass();
@@ -13674,6 +13742,16 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
     // Capturing 'this' is trivial.
     if (C->capturesThis()) {
+      // If this is a lambda that is part of a default member initialiser
+      // and which we're instantiating outside the class that 'this' is
+      // supposed to refer to, adjust the type of 'this' accordingly.
+      //
+      // Otherwise, leave the type of 'this' as-is.
+      Sema::CXXThisScopeRAII ThisScope(
+          getSema(),
+          dyn_cast_if_present<CXXRecordDecl>(
+              getSema().getFunctionLevelDeclContext()),
+          Qualifiers());
       getSema().CheckCXXThisCapture(C->getLocation(), C->isExplicit(),
                                     /*BuildAndDiagnose*/ true, nullptr,
                                     C->getCaptureKind() == LCK_StarThis);

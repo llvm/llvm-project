@@ -16,6 +16,7 @@
 #include <map>
 #include <optional>
 #include <system_error>
+#include <unordered_map>
 
 namespace llvm {
 class raw_ostream;
@@ -111,6 +112,47 @@ public:
   /// addresses when aggregating profile
   bool enabledFor(llvm::object::ELFObjectFileBase *InputFile) const;
 
+  /// Save function and basic block hashes used for metadata dump.
+  void saveMetadata(BinaryContext &BC);
+
+  /// Returns BB hash by function output address (after BOLT) and basic block
+  /// input offset.
+  size_t getBBHash(uint64_t FuncOutputAddress, uint32_t BBInputOffset) const;
+
+  /// Returns BF hash by function output address (after BOLT).
+  size_t getBFHash(uint64_t OutputAddress) const;
+
+  /// True if a given \p Address is a function with translation table entry.
+  bool isBATFunction(uint64_t Address) const { return Maps.count(Address); }
+
+  /// Returns BB index by function output address (after BOLT) and basic block
+  /// input offset.
+  unsigned getBBIndex(uint64_t FuncOutputAddress, uint32_t BBInputOffset) const;
+
+  using BBHashMap = std::map<uint32_t, std::pair<unsigned, size_t>>;
+  /// Return a mapping from basic block input offset to hash and block index for a given function.
+  const BBHashMap &getBBHashMap(uint64_t OutputAddress) const {
+    return FuncHashes.at(OutputAddress).second;
+  }
+
+  static unsigned getBBIndex(const BBHashMap &BBMap, uint32_t BBInputOffset) {
+    return BBMap.at(BBInputOffset).first;
+  }
+
+  static size_t getBBHash(const BBHashMap &BBMap, uint32_t BBInputOffset) {
+    return BBMap.at(BBInputOffset).second;
+  }
+
+  /// Returns the maximum BB index for a given function.
+  size_t getNumBasicBlocks(uint64_t OutputAddress) const {
+    return NumBasicBlocksMap.at(OutputAddress);
+  }
+
+  /// Returns branch offsets grouped by containing basic block in a given
+  /// function.
+  std::unordered_map<uint32_t, std::vector<uint32_t>>
+  getBFBranches(uint64_t FuncOutputAddress) const;
+
 private:
   /// Helper to update \p Map by inserting one or more BAT entries reflecting
   /// \p BB for function located at \p FuncAddress. At least one entry will be
@@ -140,8 +182,20 @@ private:
 
   std::map<uint64_t, MapTy> Maps;
 
+  /// Map basic block input offset to a basic block index and hash pair.
+  std::unordered_map<uint64_t, std::pair<size_t, BBHashMap>> FuncHashes;
+
+  /// Map a function to its basic blocks count
+  std::unordered_map<uint64_t, size_t> NumBasicBlocksMap;
+
+  /// Map a function to its secondary entry points vector
+  std::unordered_map<uint64_t, std::vector<uint32_t>> SecondaryEntryPointsMap;
+
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;
+
+  /// Links output address of a main fragment back to input address.
+  std::unordered_map<uint64_t, uint64_t> ReverseMap;
 
   /// Identifies the address of a control-flow changing instructions in a
   /// translation map entry

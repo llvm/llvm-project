@@ -1939,7 +1939,13 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
     OS << Endl;
     return;
   }
-  InstPrinter->printInst(&Instruction, 0, "", *STI, OS);
+  if (std::optional<uint32_t> DynamicID =
+          MIB->getDynamicBranchID(Instruction)) {
+    OS << "\tjit\t" << MIB->getTargetSymbol(Instruction)->getName()
+       << " # ID: " << DynamicID;
+  } else {
+    InstPrinter->printInst(&Instruction, 0, "", *STI, OS);
+  }
   if (MIB->isCall(Instruction)) {
     if (MIB->isTailCall(Instruction))
       OS << " # TAILCALL ";
@@ -1967,7 +1973,7 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
     OS << " # Offset: " << *Offset;
   if (std::optional<uint32_t> Size = MIB->getSize(Instruction))
     OS << " # Size: " << *Size;
-  if (MCSymbol *Label = MIB->getLabel(Instruction))
+  if (MCSymbol *Label = MIB->getInstLabel(Instruction))
     OS << " # Label: " << *Label;
 
   MIB->printAnnotations(Instruction, OS);

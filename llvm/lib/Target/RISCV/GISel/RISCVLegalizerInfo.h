@@ -38,8 +38,6 @@ public:
 
 private:
   bool shouldBeInConstantPool(APInt APImm, bool ShouldOptForSize) const;
-  bool emitLoadFromConstantPool(Register DstReg, const Constant *CPVal,
-                                MachineIRBuilder &MIRBuilder) const;
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;
 

@@ -21,10 +21,10 @@
 #include "lock.h"
 #include "terminator.h"
 #include "flang/Common/constexpr-bitset.h"
+#include "flang/Common/optional.h"
 #include "flang/Runtime/memory.h"
 #include <cstdlib>
 #include <cstring>
-#include <optional>
 #include <variant>
 
 namespace Fortran::runtime::io {
@@ -36,10 +36,14 @@ class ExternalFileUnit : public ConnectionState,
                          public OpenFile,
                          public FileFrame<ExternalFileUnit> {
 public:
+  static constexpr int maxAsyncIds{64 * 16};
+
   explicit ExternalFileUnit(int unitNumber) : unitNumber_{unitNumber} {
     isUTF8 = executionEnvironment.defaultUTF8;
-    asyncIdAvailable_.set();
-    asyncIdAvailable_.reset(0);
+    for (int j{0}; 64 * j < maxAsyncIds; ++j) {
+      asyncIdAvailable_[j].set();
+    }
+    asyncIdAvailable_[0].reset(0);
   }
   ~ExternalFileUnit() {}
 
@@ -51,7 +55,7 @@ public:
   static ExternalFileUnit *LookUpOrCreate(
       int unit, const Terminator &, bool &wasExtant);
   static ExternalFileUnit *LookUpOrCreateAnonymous(int unit, Direction,
-      std::optional<bool> isUnformatted, const Terminator &);
+      Fortran::common::optional<bool> isUnformatted, const Terminator &);
   static ExternalFileUnit *LookUp(const char *path, std::size_t pathLen);
   static ExternalFileUnit &CreateNew(int unit, const Terminator &);
   static ExternalFileUnit *LookUpForClose(int unit);
@@ -60,11 +64,11 @@ public:
   static void FlushAll(IoErrorHandler &);
 
   // Returns true if an existing unit was closed
-  bool OpenUnit(std::optional<OpenStatus>, std::optional<Action>, Position,
-      OwningPtr<char> &&path, std::size_t pathLength, Convert,
-      IoErrorHandler &);
-  void OpenAnonymousUnit(std::optional<OpenStatus>, std::optional<Action>,
-      Position, Convert, IoErrorHandler &);
+  bool OpenUnit(Fortran::common::optional<OpenStatus>,
+      Fortran::common::optional<Action>, Position, OwningPtr<char> &&path,
+      std::size_t pathLength, Convert, IoErrorHandler &);
+  void OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
+      Fortran::common::optional<Action>, Position, Convert, IoErrorHandler &);
   void CloseUnit(CloseStatus, IoErrorHandler &);
   void DestroyClosed();
 
@@ -150,7 +154,7 @@ private:
   std::size_t recordOffsetInFrame_{0}; // of currentRecordNumber
   bool swapEndianness_{false};
   bool createdForInternalChildIo_{false};
-  common::BitSet<64> asyncIdAvailable_;
+  common::BitSet<64> asyncIdAvailable_[maxAsyncIds / 64];
 
   // When a synchronous I/O statement is in progress on this unit, holds its
   // state.
@@ -165,7 +169,7 @@ private:
       u_;
 
   // Points to the active alternative (if any) in u_ for use as a Cookie
-  std::optional<IoStatementState> io_;
+  Fortran::common::optional<IoStatementState> io_;
 
   // A stack of child I/O pseudo-units for defined I/O that have this
   // unit number.
@@ -207,7 +211,7 @@ private:
       ChildUnformattedIoStatementState<Direction::Input>, InquireUnitState,
       ErroneousIoStatementState, ExternalMiscIoStatementState>
       u_;
-  std::optional<IoStatementState> io_;
+  Fortran::common::optional<IoStatementState> io_;
 };
 
 } // namespace Fortran::runtime::io

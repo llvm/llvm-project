@@ -24,6 +24,7 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -50,9 +51,21 @@ def GPU_DimensionAttr : EnumAttr<GPU_Dialect, GPU_Dimension, "dim">;
 
 class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
     GPU_Op<mnemonic, !listconcat(traits, [
-        Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>])>,
+        Pure,
+        DeclareOpInterfaceMethods<InferIntRangeInterface>,
+        DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>])>,
     Arguments<(ins GPU_DimensionAttr:$dimension)>, Results<(outs Index)> {
   let assemblyFormat = "$dimension attr-dict";
+  let extraClassDefinition = [{
+    void $cppClass::getAsmResultNames(
+        llvm::function_ref<void(mlir::Value, mlir::StringRef)> setNameFn) {
+      auto dimStr = stringifyDimension(getDimensionAttr().getValue());
+      auto opName = getOperationName();
+      opName.consume_front("gpu.");
+      SmallString<8> resultName({opName, "_", dimStr});
+      setNameFn(getResult(),resultName);
+    }
+  }];
 }
 
 def GPU_ClusterDimOp : GPU_IndexOp<"cluster_dim"> {

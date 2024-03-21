@@ -5190,6 +5190,12 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
   } else if (auto *LI = dyn_cast<LoadInst>(I)) {
     if (LI->getPointerOperand() == UseV)
       MA = LI->getAlign();
+  } else if (auto *AI = dyn_cast<AtomicRMWInst>(I)) {
+    if (AI->getPointerOperand() == UseV)
+      MA = AI->getAlign();
+  } else if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I)) {
+    if (AI->getPointerOperand() == UseV)
+      MA = AI->getAlign();
   }
 
   if (!MA || *MA <= QueryingAA.getKnownAlign())
@@ -6128,8 +6134,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       return TypedV;
     if (CtxI && V.getType()->canLosslesslyBitCastTo(&Ty))
       return Check ? &V
-                   : BitCastInst::CreatePointerBitCastOrAddrSpaceCast(&V, &Ty,
-                                                                      "", CtxI);
+                   : BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
+                         &V, &Ty, "", CtxI->getIterator());
     return nullptr;
   }
 
@@ -6731,8 +6737,9 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         Size = SizeOffsetPair.Size;
       }
 
-      Instruction *IP =
-          AI.MoveAllocaIntoEntry ? &F->getEntryBlock().front() : AI.CB;
+      BasicBlock::iterator IP = AI.MoveAllocaIntoEntry
+                                    ? F->getEntryBlock().begin()
+                                    : AI.CB->getIterator();
 
       Align Alignment(1);
       if (MaybeAlign RetAlign = AI.CB->getRetAlign())
@@ -6753,7 +6760,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
       if (Alloca->getType() != AI.CB->getType())
         Alloca = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
-            Alloca, AI.CB->getType(), "malloc_cast", AI.CB);
+            Alloca, AI.CB->getType(), "malloc_cast", AI.CB->getIterator());
 
       auto *I8Ty = Type::getInt8Ty(F->getContext());
       auto *InitVal = getInitialValueOfAllocation(AI.CB, TLI, I8Ty);
@@ -7450,10 +7457,10 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
   /// The values needed are taken from the arguments of \p F starting at
   /// position \p ArgNo.
   static void createInitialization(Type *PrivType, Value &Base, Function &F,
-                                   unsigned ArgNo, Instruction &IP) {
+                                   unsigned ArgNo, BasicBlock::iterator IP) {
     assert(PrivType && "Expected privatizable type!");
 
-    IRBuilder<NoFolder> IRB(&IP);
+    IRBuilder<NoFolder> IRB(IP->getParent(), IP);
     const DataLayout &DL = F.getParent()->getDataLayout();
 
     // Traverse the type, build GEPs and stores.
@@ -7462,17 +7469,17 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++) {
         Value *Ptr =
             constructPointer(&Base, PrivStructLayout->getElementOffset(u), IRB);
-        new StoreInst(F.getArg(ArgNo + u), Ptr, &IP);
+        new StoreInst(F.getArg(ArgNo + u), Ptr, IP);
       }
     } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
       Type *PointeeTy = PrivArrayType->getElementType();
       uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
         Value *Ptr = constructPointer(&Base, u * PointeeTySize, IRB);
-        new StoreInst(F.getArg(ArgNo + u), Ptr, &IP);
+        new StoreInst(F.getArg(ArgNo + u), Ptr, IP);
       }
     } else {
-      new StoreInst(F.getArg(ArgNo), &Base, &IP);
+      new StoreInst(F.getArg(ArgNo), &Base, IP);
     }
   }
 
@@ -7495,7 +7502,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
         Type *PointeeTy = PrivStructType->getElementType(u);
         Value *Ptr =
             constructPointer(Base, PrivStructLayout->getElementOffset(u), IRB);
-        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
+        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP->getIterator());
         L->setAlignment(Alignment);
         ReplacementValues.push_back(L);
       }
@@ -7504,12 +7511,12 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
         Value *Ptr = constructPointer(Base, u * PointeeTySize, IRB);
-        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
+        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP->getIterator());
         L->setAlignment(Alignment);
         ReplacementValues.push_back(L);
       }
     } else {
-      LoadInst *L = new LoadInst(PrivType, Base, "", IP);
+      LoadInst *L = new LoadInst(PrivType, Base, "", IP->getIterator());
       L->setAlignment(Alignment);
       ReplacementValues.push_back(L);
     }
@@ -7549,13 +7556,13 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
         [=](const Attributor::ArgumentReplacementInfo &ARI,
             Function &ReplacementFn, Function::arg_iterator ArgIt) {
           BasicBlock &EntryBB = ReplacementFn.getEntryBlock();
-          Instruction *IP = &*EntryBB.getFirstInsertionPt();
+          BasicBlock::iterator IP = EntryBB.getFirstInsertionPt();
           const DataLayout &DL = IP->getModule()->getDataLayout();
           unsigned AS = DL.getAllocaAddrSpace();
           Instruction *AI = new AllocaInst(*PrivatizableType, AS,
                                            Arg->getName() + ".priv", IP);
           createInitialization(*PrivatizableType, *AI, ReplacementFn,
-                               ArgIt->getArgNo(), *IP);
+                               ArgIt->getArgNo(), IP);
 
           if (AI->getType() != Arg->getType())
             AI = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
@@ -12313,10 +12320,10 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     Value *FP = CB->getCalledOperand();
     if (FP->getType()->getPointerAddressSpace())
       FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getType(), 0),
-                                 FP->getName() + ".as0", CB);
+                                 FP->getName() + ".as0", CB->getIterator());
 
     bool CBIsVoid = CB->getType()->isVoidTy();
-    Instruction *IP = CB;
+    BasicBlock::iterator IP = CB->getIterator();
     FunctionType *CSFT = CB->getFunctionType();
     SmallVector<Value *> CSArgs(CB->arg_begin(), CB->arg_end());
 
@@ -12336,8 +12343,9 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
         promoteCall(*CB, NewCallee, nullptr);
         return ChangeStatus::CHANGED;
       }
-      Instruction *NewCall = CallInst::Create(FunctionCallee(CSFT, NewCallee),
-                                              CSArgs, CB->getName(), CB);
+      Instruction *NewCall =
+          CallInst::Create(FunctionCallee(CSFT, NewCallee), CSArgs,
+                           CB->getName(), CB->getIterator());
       if (!CBIsVoid)
         A.changeAfterManifest(IRPosition::callsite_returned(*CB), *NewCall);
       A.deleteAfterManifest(*CB);
@@ -12369,14 +12377,14 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
           SplitBlockAndInsertIfThen(LastCmp, IP, /* Unreachable */ false);
       BasicBlock *CBBB = CB->getParent();
       A.registerManifestAddedBasicBlock(*ThenTI->getParent());
-      A.registerManifestAddedBasicBlock(*CBBB);
+      A.registerManifestAddedBasicBlock(*IP->getParent());
       auto *SplitTI = cast<BranchInst>(LastCmp->getNextNode());
       BasicBlock *ElseBB;
-      if (IP == CB) {
+      if (&*IP == CB) {
         ElseBB = BasicBlock::Create(ThenTI->getContext(), "",
                                     ThenTI->getFunction(), CBBB);
         A.registerManifestAddedBasicBlock(*ElseBB);
-        IP = BranchInst::Create(CBBB, ElseBB);
+        IP = BranchInst::Create(CBBB, ElseBB)->getIterator();
         SplitTI->replaceUsesOfWith(CBBB, ElseBB);
       } else {
         ElseBB = IP->getParent();
@@ -12390,7 +12398,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
         NewCall = &cast<CallInst>(promoteCall(*CBClone, NewCallee, &RetBC));
       } else {
         NewCall = CallInst::Create(FunctionCallee(CSFT, NewCallee), CSArgs,
-                                   CB->getName(), ThenTI);
+                                   CB->getName(), ThenTI->getIterator());
       }
       NewCalls.push_back({NewCall, RetBC});
     }
@@ -12416,7 +12424,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     } else {
       auto *CBClone = cast<CallInst>(CB->clone());
       CBClone->setName(CB->getName());
-      CBClone->insertBefore(IP);
+      CBClone->insertBefore(*IP->getParent(), IP);
       NewCalls.push_back({CBClone, nullptr});
       AttachCalleeMetadata(*CBClone);
     }
@@ -12425,7 +12433,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     if (!CBIsVoid) {
       auto *PHI = PHINode::Create(CB->getType(), NewCalls.size(),
                                   CB->getName() + ".phi",
-                                  &*CB->getParent()->getFirstInsertionPt());
+                                  CB->getParent()->getFirstInsertionPt());
       for (auto &It : NewCalls) {
         CallBase *NewCall = It.first;
         Instruction *CallRet = It.second ? It.second : It.first;
@@ -12783,9 +12791,11 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
       auto *NumBytesToValue =
           ConstantInt::get(I->getContext(), APInt(32, NumBytesToAllocate));
 
+      BasicBlock::iterator insertPt = AI->getIterator();
+      insertPt = std::next(insertPt);
       AllocaInst *NewAllocaInst =
           new AllocaInst(CharType, AI->getAddressSpace(), NumBytesToValue,
-                         AI->getAlign(), AI->getName(), AI->getNextNode());
+                         AI->getAlign(), AI->getName(), insertPt);
 
       if (A.changeAfterManifest(IRPosition::inst(*AI), *NewAllocaInst))
         return ChangeStatus::CHANGED;

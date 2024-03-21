@@ -252,7 +252,7 @@ void Preprocessor::DefineStandardMacros() {
   Define("__LINE__"s, "__LINE__"s);
 }
 
-void Preprocessor::Define(std::string macro, std::string value) {
+void Preprocessor::Define(const std::string &macro, const std::string &value) {
   definitions_.emplace(SaveTokenAsName(macro), Definition{value, allSources_});
 }
 

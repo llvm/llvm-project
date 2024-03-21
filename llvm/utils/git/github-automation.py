@@ -298,55 +298,6 @@ If you don't get any reports, no action is required from you. Your changes are w
         return True
 
 
-class PRMergeOnBehalfInformation:
-    COMMENT_TAG = "<!--LLVM MERGE ON BEHALF INFORMATION COMMENT-->\n"
-
-    def __init__(
-        self, token: str, repo: str, pr_number: int, author: str, reviewer: str
-    ):
-        self.repo = github.Github(token).get_repo(repo)
-        self.pr = self.repo.get_issue(pr_number).as_pull_request()
-        self.author = author
-        self.reviewer = reviewer
-
-    def can_merge(self, user: str) -> bool:
-        try:
-            return self.repo.get_collaborator_permission(user) in ["admin", "write"]
-        # There is a UnknownObjectException for this scenario, but this method
-        # does not use it.
-        except github.GithubException as e:
-            # 404 means the author was not found in the collaborator list, so we
-            # know they don't have push permissions. Anything else is a real API
-            # issue, raise it so it is visible.
-            if e.status != 404:
-                raise e
-            return False
-
-    def run(self) -> bool:
-        # Check this first because it only costs 1 API point.
-        if self.can_merge(self.author):
-            return
-
-        # A review can be approved more than once, only comment the first time.
-        for comment in self.pr.as_issue().get_comments():
-            if self.COMMENT_TAG in comment.body:
-                return
-
-        # This text is using Markdown formatting.
-        if self.can_merge(self.reviewer):
-            comment = f"""\
-{self.COMMENT_TAG}
-@{self.reviewer} the PR author does not have permission to merge their own PRs yet. Please merge on their behalf."""
-        else:
-            comment = f"""\
-{self.COMMENT_TAG}
-@{self.reviewer} the author of this PR does not have permission to merge and neither do you.
-Please find someone who has merge permissions who can merge it on the author's behalf. This could be one of the other reviewers or you can ask on [Discord](https://discord.com/invite/xS7Z362)."""
-
-        self.pr.as_issue().create_comment(comment)
-        return True
-
-
 def setup_llvmbot_git(git_dir="."):
     """
     Configure the git repo in `git_dir` with the llvmbot account so
@@ -635,7 +586,7 @@ class ReleaseWorkflow:
                 body=body,
                 base=release_branch_for_issue,
                 head=head,
-                maintainer_can_modify=False,
+                maintainer_can_modify=True,
             )
 
             pull.as_issue().edit(milestone=self.issue.milestone)
@@ -665,22 +616,20 @@ class ReleaseWorkflow:
     def execute_command(self) -> bool:
         """
         This function reads lines from STDIN and executes the first command
-        that it finds.  The 2 supported commands are:
-        /cherry-pick commit0 <commit1> <commit2> <...>
-        /branch <owner>/<repo>/<branch>
+        that it finds.  The supported command is:
+        /cherry-pick< ><:> commit0 <commit1> <commit2> <...>
         """
         for line in sys.stdin:
             line.rstrip()
-            m = re.search(r"/([a-z-]+)\s(.+)", line)
+            m = re.search(r"/cherry-pick\s*:? *(.*)", line)
             if not m:
                 continue
-            command = m.group(1)
-            args = m.group(2)
 
-            if command == "cherry-pick":
-                arg_list = args.split()
-                commits = list(map(lambda a: extract_commit_hash(a), arg_list))
-                return self.create_branch(commits)
+            args = m.group(1)
+
+            arg_list = args.split()
+            commits = list(map(lambda a: extract_commit_hash(a), arg_list))
+            return self.create_branch(commits)
 
         print("Do not understand input:")
         print(sys.stdin.readlines())
@@ -713,17 +662,6 @@ pr_greeter_parser.add_argument("--issue-number", type=int, required=True)
 pr_buildbot_information_parser = subparsers.add_parser("pr-buildbot-information")
 pr_buildbot_information_parser.add_argument("--issue-number", type=int, required=True)
 pr_buildbot_information_parser.add_argument("--author", type=str, required=True)
-
-pr_merge_on_behalf_information_parser = subparsers.add_parser(
-    "pr-merge-on-behalf-information"
-)
-pr_merge_on_behalf_information_parser.add_argument(
-    "--issue-number", type=int, required=True
-)
-pr_merge_on_behalf_information_parser.add_argument("--author", type=str, required=True)
-pr_merge_on_behalf_information_parser.add_argument(
-    "--reviewer", type=str, required=True
-)
 
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
@@ -784,11 +722,6 @@ elif args.command == "pr-buildbot-information":
         args.token, args.repo, args.issue_number, args.author
     )
     pr_buildbot_information.run()
-elif args.command == "pr-merge-on-behalf-information":
-    pr_merge_on_behalf_information = PRMergeOnBehalfInformation(
-        args.token, args.repo, args.issue_number, args.author, args.reviewer
-    )
-    pr_merge_on_behalf_information.run()
 elif args.command == "release-workflow":
     release_workflow = ReleaseWorkflow(
         args.token,

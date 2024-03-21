@@ -32,8 +32,6 @@ const char *Action::getClassName(ActionClass AC) {
   case CompileJobClass: return "compiler";
   case BackendJobClass: return "backend";
   case AssembleJobClass: return "assembler";
-  case InstallAPIJobClass:
-    return "installapi";
   case IfsMergeJobClass: return "interface-stub-merger";
   case LinkJobClass: return "linker";
   case LipoJobClass: return "lipo";
@@ -363,11 +361,6 @@ void ExtractAPIJobAction::anchor() {}
 
 ExtractAPIJobAction::ExtractAPIJobAction(Action *Inputs, types::ID OutputType)
     : JobAction(ExtractAPIJobClass, Inputs, OutputType) {}
-
-void InstallAPIJobAction::anchor() {}
-
-InstallAPIJobAction::InstallAPIJobAction(Action *Inputs, types::ID OutputType)
-    : JobAction(InstallAPIJobClass, Inputs, OutputType) {}
 
 void AnalyzeJobAction::anchor() {}
 
