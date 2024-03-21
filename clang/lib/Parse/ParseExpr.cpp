@@ -1823,7 +1823,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     }
     goto ExpectedExpression;
   case tok::l_square:
-    if (getLangOpts().CPlusPlus11) {
+    if (getLangOpts().CPlusPlus) {
       if (getLangOpts().ObjC) {
         // C++11 lambda expressions and Objective-C message sends both start with a
         // square bracket.  There are three possibilities here:
