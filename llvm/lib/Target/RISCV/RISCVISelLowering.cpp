@@ -13715,12 +13715,8 @@ struct NodeExtensionHelper {
 
       SDValue NarrowElt = OrigOperand.getOperand(0);
       MVT NarrowVT = NarrowElt.getSimpleValueType();
-
-      unsigned ScalarBits = VT.getScalarSizeInBits();
-      unsigned NarrowScalarBits = NarrowVT.getScalarSizeInBits();
-
-      // Ensure the extension's semantic is equivalent to rvv vzext or vsext.
-      if (ScalarBits != NarrowScalarBits * 2)
+      // i1 types are legal but we can't select V{S,Z}EXT_VLs with them.
+      if (NarrowVT.getVectorElementType() == MVT::i1)
         break;
 
       SupportsZExt = Opc == ISD::ZERO_EXTEND;
