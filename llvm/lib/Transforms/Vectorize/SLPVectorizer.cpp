@@ -9275,11 +9275,16 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
 
   // Check if any of the gather node forms an insertelement buildvector
   // somewhere.
-  if (any_of(VectorizableTree, [](const std::unique_ptr<TreeEntry> &TE) {
+  bool IsAllowedSingleBVNode =
+      VectorizableTree.size() > 1 ||
+      (VectorizableTree.size() == 1 && VectorizableTree.front()->getOpcode() &&
+       allSameBlock(VectorizableTree.front()->Scalars));
+  if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->State == TreeEntry::NeedToGather &&
-               all_of(TE->Scalars, [](Value *V) {
+               all_of(TE->Scalars, [&](Value *V) {
                  return isa<ExtractElementInst, UndefValue>(V) ||
-                        (!V->hasNUsesOrMore(UsesLimit) &&
+                        (IsAllowedSingleBVNode &&
+                         !V->hasNUsesOrMore(UsesLimit) &&
                          any_of(V->users(), [](User *U) {
                            return isa<InsertElementInst>(U);
                          }));
