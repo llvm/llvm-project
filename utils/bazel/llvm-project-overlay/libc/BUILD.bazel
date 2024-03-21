@@ -97,6 +97,11 @@ libc_support_library(
     deps = [":llvm_libc_macros_float_macros"],
 )
 
+libc_support_library(
+    name = "llvm_libc_macros_fcntl_macros",
+    hdrs = ["include/llvm-libc-macros/linux/fcntl-macros.h"],
+)
+
 ############################### Support libraries ##############################
 
 libc_support_library(
@@ -3271,6 +3276,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":llvm_libc_macros_fcntl_macros",
     ],
 )
 
