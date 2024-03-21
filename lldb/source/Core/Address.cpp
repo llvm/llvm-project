@@ -398,7 +398,7 @@ bool Address::GetDescription(Stream &s, Target &target,
          "Non-brief descriptions not implemented");
   LineEntry line_entry;
   if (CalculateSymbolContextLineEntry(line_entry)) {
-    s.Printf(" (%s:%u:%u)", line_entry.file.GetFilename().GetCString(),
+    s.Printf(" (%s:%u:%u)", line_entry.GetFile().GetFilename().GetCString(),
              line_entry.line, line_entry.column);
     return true;
   }
