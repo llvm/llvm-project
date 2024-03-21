@@ -38,4 +38,17 @@ Macros:
 #  pragma GCC system_header
 #endif
 
+#ifdef ENODATA
+#  pragma clang deprecated(ENODATA, "ENODATA is deprecated in ISO C++")
+#endif
+#ifdef ENOSR
+#  pragma clang deprecated(ENOSR, "ENOSR is deprecated in ISO C++")
+#endif
+#ifdef ENOSTR
+#  pragma clang deprecated(ENOSTR, "ENOSTR is deprecated in ISO C++")
+#endif
+#ifdef ETIME
+#  pragma clang deprecated(ETIME, "ETIME is deprecated in ISO C++")
+#endif
+
 #endif // _LIBCPP_CERRNO
