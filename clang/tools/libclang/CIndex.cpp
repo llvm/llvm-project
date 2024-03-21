@@ -2126,7 +2126,7 @@ public:
   void VisitBlockExpr(const BlockExpr *B);
   void VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   void VisitCompoundStmt(const CompoundStmt *S);
-  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) { /* Do nothing. */ 
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) { /* Do nothing. */
   }
   void VisitMSDependentExistsStmt(const MSDependentExistsStmt *S);
   void VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E);
