@@ -26,7 +26,7 @@
 ; ELF-NEXT:   EF_AMDGPU_MACH_AMDGCN_GFX900   (0x2C)
 ; ELF-NEXT: ]
 
-define void @func0() #0 {
+define void @func0() "target-features"="-xnack" {
 entry:
   ret void
 }
@@ -40,8 +40,6 @@ define void @func2() {
 entry:
   ret void
 }
-
-attributes #0 = { "target-features"="-xnack" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}

@@ -8,7 +8,7 @@
 ; SI-DAG: {{flat|buffer}}_load_ubyte
 ; SI-DAG: {{flat|buffer}}_load_ushort
 ; SI: {{flat|buffer}}_store_dword
-define amdgpu_kernel void @load_i24(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @load_i24(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %1 = load i24, ptr addrspace(1) %in
   %2 = zext i24 %1 to i32
   store i32 %2, ptr addrspace(1) %out
@@ -21,11 +21,9 @@ define amdgpu_kernel void @load_i24(ptr addrspace(1) %out, ptr addrspace(1) %in)
 
 ; CI-HSA: flat_load_dword [[VAL:v[0-9]+]]
 ; CI-HSA: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[VAL]]
-define amdgpu_kernel void @load_i25(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @load_i25(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %1 = load i25, ptr addrspace(1) %in
   %2 = zext i25 %1 to i32
   store i32 %2, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }

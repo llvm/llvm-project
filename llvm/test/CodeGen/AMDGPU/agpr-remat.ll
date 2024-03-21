@@ -3,7 +3,7 @@
 
 ; Make sure there are no v_accvgpr_read_b32 copying back and forth
 ; between AGPR and VGPR.
-define amdgpu_kernel void @remat_constant_voids_spill(ptr addrspace(1) %p) #1 {
+define amdgpu_kernel void @remat_constant_voids_spill(ptr addrspace(1) %p) nounwind "amdgpu-num-vgpr"="8" {
 ; GFX908-LABEL: remat_constant_voids_spill:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, 1
@@ -25,7 +25,7 @@ define amdgpu_kernel void @remat_constant_voids_spill(ptr addrspace(1) %p) #1 {
   ret void
 }
 
-define void @remat_regcopy_avoids_spill(i32 %v0, i32 %v1, i32 %v2, i32 %v3, i32 %v4, i32 %v5, i32 %v6, i32 %v7, i32 %v8, i32 %v9, i32 %v10) #1 {
+define void @remat_regcopy_avoids_spill(i32 %v0, i32 %v1, i32 %v2, i32 %v3, i32 %v4, i32 %v5, i32 %v6, i32 %v7, i32 %v8, i32 %v9, i32 %v10) nounwind "amdgpu-num-vgpr"="8" {
 ; GFX908-LABEL: remat_regcopy_avoids_spill:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -47,5 +47,3 @@ define void @remat_regcopy_avoids_spill(i32 %v0, i32 %v1, i32 %v2, i32 %v3, i32 
   call void asm sideeffect "", "a,a,a,a,a"(i32 %v4, i32 %v5, i32 %v6, i32 %v7, i32 %v8)
   ret void
 }
-
-attributes #1 = { nounwind "amdgpu-num-vgpr"="8" }

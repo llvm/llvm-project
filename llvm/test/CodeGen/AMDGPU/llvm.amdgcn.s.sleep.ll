@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare void @llvm.amdgcn.s.sleep(i32) #0
+declare void @llvm.amdgcn.s.sleep(i32) nounwind
 
 ; GCN-LABEL: {{^}}test_s_sleep:
 ; GCN: s_sleep 0{{$}}
@@ -20,7 +20,7 @@ declare void @llvm.amdgcn.s.sleep(i32) #0
 ; GCN: s_sleep 13{{$}}
 ; GCN: s_sleep 14{{$}}
 ; GCN: s_sleep 15{{$}}
-define amdgpu_kernel void @test_s_sleep(i32 %x) #0 {
+define amdgpu_kernel void @test_s_sleep(i32 %x) nounwind {
   call void @llvm.amdgcn.s.sleep(i32 0)
   call void @llvm.amdgcn.s.sleep(i32 1)
   call void @llvm.amdgcn.s.sleep(i32 2)
@@ -41,5 +41,3 @@ define amdgpu_kernel void @test_s_sleep(i32 %x) #0 {
   call void @llvm.amdgcn.s.sleep(i32 15)
   ret void
 }
-
-attributes #0 = { nounwind }

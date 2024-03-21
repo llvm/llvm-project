@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; Load argument depends on waitcnt which should be skipped.
-define amdgpu_kernel void @call_memory_arg_load(ptr addrspace(3) %ptr, i32) #0 {
+define amdgpu_kernel void @call_memory_arg_load(ptr addrspace(3) %ptr, i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; GCN-LABEL: call_memory_arg_load:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
@@ -25,7 +25,7 @@ define amdgpu_kernel void @call_memory_arg_load(ptr addrspace(3) %ptr, i32) #0 {
 }
 
 ; Memory waitcnt with no register dependence on the call
-define amdgpu_kernel void @call_memory_no_dep(ptr addrspace(1) %ptr, i32) #0 {
+define amdgpu_kernel void @call_memory_no_dep(ptr addrspace(1) %ptr, i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; GCN-LABEL: call_memory_no_dep:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
@@ -49,7 +49,7 @@ define amdgpu_kernel void @call_memory_no_dep(ptr addrspace(1) %ptr, i32) #0 {
 }
 
 ; Should not wait after the call before memory
-define amdgpu_kernel void @call_no_wait_after_call(ptr addrspace(1) %ptr, i32) #0 {
+define amdgpu_kernel void @call_no_wait_after_call(ptr addrspace(1) %ptr, i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; GCN-LABEL: call_no_wait_after_call:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
@@ -71,7 +71,7 @@ define amdgpu_kernel void @call_no_wait_after_call(ptr addrspace(1) %ptr, i32) #
   ret void
 }
 
-define amdgpu_kernel void @call_no_wait_after_call_return_val(ptr addrspace(1) %ptr, i32) #0 {
+define amdgpu_kernel void @call_no_wait_after_call_return_val(ptr addrspace(1) %ptr, i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; GCN-LABEL: call_no_wait_after_call_return_val:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
@@ -94,7 +94,7 @@ define amdgpu_kernel void @call_no_wait_after_call_return_val(ptr addrspace(1) %
 }
 
 ; Need to wait for the address dependency
-define amdgpu_kernel void @call_got_load(ptr addrspace(1) %ptr, i32) #0 {
+define amdgpu_kernel void @call_got_load(ptr addrspace(1) %ptr, i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; GCN-LABEL: call_got_load:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
@@ -115,7 +115,7 @@ define amdgpu_kernel void @call_got_load(ptr addrspace(1) %ptr, i32) #0 {
 }
 
 ; Need to wait for the address dependency
-define void @tailcall_got_load(ptr addrspace(1) %ptr, i32) #0 {
+define void @tailcall_got_load(ptr addrspace(1) %ptr, i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; GCN-LABEL: tailcall_got_load:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -131,7 +131,7 @@ define void @tailcall_got_load(ptr addrspace(1) %ptr, i32) #0 {
 }
 
 ; No need to wait for the load.
-define void @tail_call_memory_arg_load(ptr addrspace(3) %ptr, i32) #0 {
+define void @tail_call_memory_arg_load(ptr addrspace(3) %ptr, i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; GCN-LABEL: tail_call_memory_arg_load:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -145,11 +145,9 @@ define void @tail_call_memory_arg_load(ptr addrspace(3) %ptr, i32) #0 {
   ret void
 }
 
-declare hidden void @func(i32) #0
-declare hidden i32 @func.return(i32) #0
-declare void @got.func(i32) #0
-
-attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+declare hidden void @func(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden i32 @func.return(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare void @got.func(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

@@ -5,7 +5,7 @@
 ; We may have subregister live ranges that are undefined on some paths. The
 ; verifier should not complain about this.
 
-define amdgpu_kernel void @func() #0 {
+define amdgpu_kernel void @func() nounwind {
 ; CHECK-LABEL: func:
 ; CHECK:       ; %bb.0: ; %B0
 ; CHECK-NEXT:    s_mov_b32 s0, 0
@@ -40,7 +40,7 @@ B30.2:
 
 ; FIXME: Extra undef subregister copy should be removed before
 ; overwritten with defined copy
-define amdgpu_ps float @valley_partially_undef_copy() #0 {
+define amdgpu_ps float @valley_partially_undef_copy() nounwind {
 ; CHECK-LABEL: valley_partially_undef_copy:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_mov_b32 s3, 0xf000
@@ -90,7 +90,7 @@ bb11:                                             ; preds = %bb9
 }
 
 ; FIXME: Should be able to remove the undef copies
-define amdgpu_kernel void @partially_undef_copy() #0 {
+define amdgpu_kernel void @partially_undef_copy() nounwind {
 ; CHECK-LABEL: partially_undef_copy:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -123,7 +123,4 @@ define amdgpu_kernel void @partially_undef_copy() #0 {
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readonly }
+declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly

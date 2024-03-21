@@ -5,7 +5,7 @@
 ; available to save exec. This scenario won't be true anymore as we reseve SGPR(s)
 ; upfront for saving exec.
 
-define amdgpu_kernel void @test() #1 {
+define amdgpu_kernel void @test() nounwind "amdgpu-num-sgpr"="16" "amdgpu-num-vgpr"="8" {
 ; GFX10-LABEL: test:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
@@ -29,13 +29,10 @@ define amdgpu_kernel void @test() #1 {
 ; GFX10-NEXT:    ; use s[8:12]
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm
-  %wide.sgpr0 = call <8 x i32> asm sideeffect "; def $0", "={s[0:7]}" () #0
-  %wide.sgpr2 = call <5 x i32> asm sideeffect "; def $0", "={s[8:12]}" () #0
-  call void asm sideeffect "", "~{v[0:7]}" () #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr0) #0
-  call void asm sideeffect "; use $0", "s"(<5 x i32> %wide.sgpr2) #0
+  %wide.sgpr0 = call <8 x i32> asm sideeffect "; def $0", "={s[0:7]}" () nounwind
+  %wide.sgpr2 = call <5 x i32> asm sideeffect "; def $0", "={s[8:12]}" () nounwind
+  call void asm sideeffect "", "~{v[0:7]}" () nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr0) nounwind
+  call void asm sideeffect "; use $0", "s"(<5 x i32> %wide.sgpr2) nounwind
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind "amdgpu-num-sgpr"="16" "amdgpu-num-vgpr"="8" }

@@ -218,11 +218,11 @@ define float @test_mad_f32_noinline(float %x, float %y, float %z) {
 ; CHECK-NEXT:    [[MAD:%.*]] = tail call fast float @_Z3madfff(float [[X]], float [[Y]], float [[Z]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret float [[MAD]]
 ;
-  %mad = tail call fast float @_Z3madfff(float %x, float %y, float %z) #1
+  %mad = tail call fast float @_Z3madfff(float %x, float %y, float %z) noinline
   ret float %mad
 }
 
-define float @test_mad_f32_fast_minsize(float %x, float %y, float %z) #0 {
+define float @test_mad_f32_fast_minsize(float %x, float %y, float %z) minsize {
 ; CHECK-LABEL: define float @test_mad_f32_fast_minsize
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[MAD:%.*]] = tail call fast float @llvm.fmuladd.f32(float [[X]], float [[Y]], float [[Z]])
@@ -232,13 +232,13 @@ define float @test_mad_f32_fast_minsize(float %x, float %y, float %z) #0 {
   ret float %mad
 }
 
-define float @test_mad_f32_fast_strictfp(float %x, float %y, float %z) #2 {
+define float @test_mad_f32_fast_strictfp(float %x, float %y, float %z) strictfp {
 ; CHECK-LABEL: define float @test_mad_f32_fast_strictfp
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[MAD:%.*]] = tail call nnan nsz float @_Z3madfff(float [[X]], float [[Y]], float [[Z]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret float [[MAD]]
 ;
-  %mad = tail call nsz nnan float @_Z3madfff(float %x, float %y, float %z) #2
+  %mad = tail call nsz nnan float @_Z3madfff(float %x, float %y, float %z) strictfp
   ret float %mad
 }
 
@@ -248,11 +248,6 @@ define float @test_mad_f32_fast_nobuiltin(float %x, float %y, float %z) {
 ; CHECK-NEXT:    [[MAD:%.*]] = tail call fast float @_Z3madfff(float [[X]], float [[Y]], float [[Z]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[MAD]]
 ;
-  %mad = tail call fast float @_Z3madfff(float %x, float %y, float %z) #3
+  %mad = tail call fast float @_Z3madfff(float %x, float %y, float %z) nobuiltin
   ret float %mad
 }
-
-attributes #0 = { minsize }
-attributes #1 = { noinline }
-attributes #2 = { strictfp }
-attributes #3 = { nobuiltin }

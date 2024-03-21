@@ -8,7 +8,7 @@
 
 ; Ideally we only need 2 VGPRs for all spilling. The VGPRs are
 ; allocated per-frame index, so it's possible to get up with more.
-define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(ptr addrspace(1) %out, i32 %in) #0 {
+define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(ptr addrspace(1) %out, i32 %in) nounwind {
 ; GCN-LABEL: spill_sgprs_to_multiple_vgprs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s92, SCRATCH_RSRC_DWORD0
@@ -435,44 +435,44 @@ define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(ptr addrspace(1) %out, 
 ; GCN-NEXT:    ; kill: killed $vgpr1
 ; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    s_endpgm
-  %wide.sgpr0 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr1 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr2 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr3 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr4 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr5 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr6 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr7 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr8 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr9 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr10 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr11 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr12 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr13 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr14 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr15 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr16 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
+  %wide.sgpr0 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr1 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr2 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr3 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr4 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr5 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr6 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr7 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr8 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr9 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr10 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr11 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr12 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr13 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr14 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr15 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr16 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
   %cmp = icmp eq i32 %in, 0
   br i1 %cmp, label %bb0, label %ret
 
 bb0:
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr0) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr1) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr2) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr3) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr4) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr5) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr6) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr7) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr8) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr9) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr10) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr11) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr12) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr13) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr14) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr15) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr16) #0
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr0) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr1) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr2) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr3) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr4) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr5) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr6) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr7) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr8) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr9) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr10) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr11) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr12) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr13) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr14) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr15) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr16) nounwind
   br label %ret
 
 ret:
@@ -481,7 +481,7 @@ ret:
 
 ; Some of the lanes of an SGPR spill are in one VGPR and some forced
 ; into the next available VGPR.
-define amdgpu_kernel void @split_sgpr_spill_2_vgprs(ptr addrspace(1) %out, i32 %in) #1 {
+define amdgpu_kernel void @split_sgpr_spill_2_vgprs(ptr addrspace(1) %out, i32 %in) nounwind "amdgpu-waves-per-eu"="8,8" {
 ; GCN-LABEL: split_sgpr_spill_2_vgprs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s52, SCRATCH_RSRC_DWORD0
@@ -706,23 +706,23 @@ define amdgpu_kernel void @split_sgpr_spill_2_vgprs(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    ; kill: killed $vgpr1
 ; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    s_endpgm
-  %wide.sgpr0 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr1 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr2 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr5 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr3 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr4 = call <2 x i32> asm sideeffect "; def $0", "=s" () #0
+  %wide.sgpr0 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr1 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr2 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr5 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr3 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr4 = call <2 x i32> asm sideeffect "; def $0", "=s" () nounwind
 
   %cmp = icmp eq i32 %in, 0
   br i1 %cmp, label %bb0, label %ret
 
 bb0:
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr0) #0
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr1) #0
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr2) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr3) #0
-  call void asm sideeffect "; use $0", "s"(<2 x i32> %wide.sgpr4) #0
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr5) #0
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr0) nounwind
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr1) nounwind
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr2) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr3) nounwind
+  call void asm sideeffect "; use $0", "s"(<2 x i32> %wide.sgpr4) nounwind
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr5) nounwind
   br label %ret
 
 ret:
@@ -732,7 +732,7 @@ ret:
 ; The first 64 SGPR spills can go to a VGPR, but there isn't a second
 ; so some spills must be to memory. The last 16 element spill runs out
 ; of lanes at the 15th element.
-define amdgpu_kernel void @no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %in) #1 {
+define amdgpu_kernel void @no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %in) nounwind "amdgpu-waves-per-eu"="8,8" {
 ; GCN-LABEL: no_vgprs_last_sgpr_spill:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s52, SCRATCH_RSRC_DWORD0
@@ -955,27 +955,27 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    ; kill: killed $vgpr1
 ; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    s_endpgm
-  call void asm sideeffect "", "~{v[0:7]}" () #0
-  call void asm sideeffect "", "~{v[8:15]}" () #0
-  call void asm sideeffect "", "~{v[16:23]}" () #0
-  call void asm sideeffect "", "~{v[24:27]}"() #0
-  call void asm sideeffect "", "~{v[28:29]}"() #0
-  call void asm sideeffect "", "~{v30}"() #0
+  call void asm sideeffect "", "~{v[0:7]}" () nounwind
+  call void asm sideeffect "", "~{v[8:15]}" () nounwind
+  call void asm sideeffect "", "~{v[16:23]}" () nounwind
+  call void asm sideeffect "", "~{v[24:27]}"() nounwind
+  call void asm sideeffect "", "~{v[28:29]}"() nounwind
+  call void asm sideeffect "", "~{v30}"() nounwind
 
-  %wide.sgpr0 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr1 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr2 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr3 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr4 = call <2 x i32> asm sideeffect "; def $0", "=s" () #0
+  %wide.sgpr0 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr1 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr2 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr3 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr4 = call <2 x i32> asm sideeffect "; def $0", "=s" () nounwind
   %cmp = icmp eq i32 %in, 0
   br i1 %cmp, label %bb0, label %ret
 
 bb0:
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr0) #0
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr1) #0
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr2) #0
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr3) #0
-  call void asm sideeffect "; use $0", "s"(<2 x i32> %wide.sgpr4) #0
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr0) nounwind
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr1) nounwind
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr2) nounwind
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr3) nounwind
+  call void asm sideeffect "; use $0", "s"(<2 x i32> %wide.sgpr4) nounwind
   br label %ret
 
 ret:
@@ -984,7 +984,7 @@ ret:
 
 ; Same as @no_vgprs_last_sgpr_spill, some SGPR spills must go to memory.
 ; Additionally, v0 is live throughout the function.
-define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) #1 {
+define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) nounwind "amdgpu-waves-per-eu"="8,8" {
 ; GCN-LABEL: no_vgprs_last_sgpr_spill_live_v0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s52, SCRATCH_RSRC_DWORD0
@@ -1213,37 +1213,34 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) #1 {
 ; GCN-NEXT:    ; kill: killed $vgpr1
 ; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    s_endpgm
-  call void asm sideeffect "", "~{v[0:7]}" () #0
-  call void asm sideeffect "", "~{v[8:15]}" () #0
-  call void asm sideeffect "", "~{v[16:23]}" () #0
-  call void asm sideeffect "", "~{v[24:27]}"() #0
-  call void asm sideeffect "", "~{v[28:29]}"() #0
-  call void asm sideeffect "", "~{v30}"() #0
+  call void asm sideeffect "", "~{v[0:7]}" () nounwind
+  call void asm sideeffect "", "~{v[8:15]}" () nounwind
+  call void asm sideeffect "", "~{v[16:23]}" () nounwind
+  call void asm sideeffect "", "~{v[24:27]}"() nounwind
+  call void asm sideeffect "", "~{v[28:29]}"() nounwind
+  call void asm sideeffect "", "~{v30}"() nounwind
 
-  %wide.sgpr0 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr1 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr2 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr3 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr4 = call <2 x i32> asm sideeffect "; def $0", "=s" () #0
+  %wide.sgpr0 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr1 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr2 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr3 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr4 = call <2 x i32> asm sideeffect "; def $0", "=s" () nounwind
   %cmp = icmp eq i32 %in, 0
   br i1 %cmp, label %bb0, label %ret
 
 bb0:
-  %vgpr0 = call i32 asm sideeffect "; def $0", "=v" () #0
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr0) #0
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr1) #0
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr2) #0
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr3) #0
-  call void asm sideeffect "; use $0", "s"(<2 x i32> %wide.sgpr4) #0
-  call void asm sideeffect "; use $0", "v"(i32 %vgpr0) #0
+  %vgpr0 = call i32 asm sideeffect "; def $0", "=v" () nounwind
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr0) nounwind
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr1) nounwind
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr2) nounwind
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr3) nounwind
+  call void asm sideeffect "; use $0", "s"(<2 x i32> %wide.sgpr4) nounwind
+  call void asm sideeffect "; use $0", "v"(i32 %vgpr0) nounwind
   br label %ret
 
 ret:
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind "amdgpu-waves-per-eu"="8,8" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

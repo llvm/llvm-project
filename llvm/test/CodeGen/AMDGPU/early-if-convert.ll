@@ -12,7 +12,7 @@
 ; GCN: v_add_f32_e32 [[ADD:v[0-9]+]], [[VAL]], [[VAL]]
 ; GCN: v_cndmask_b32_e32 [[RESULT:v[0-9]+]], [[ADD]], [[VAL]], vcc
 ; GCN: buffer_store_dword [[RESULT]]
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %v = load float, ptr addrspace(1) %in
   %cc = fcmp oeq float %v, 1.000000e+00
@@ -34,7 +34,7 @@ endif:
 ; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], [[VAL]], [[VAL]]
 ; GCN-DAG: v_mul_f32_e32 [[MUL:v[0-9]+]], [[VAL]], [[VAL]]
 ; GCN: buffer_store_dword [[MUL]]
-define amdgpu_kernel void @test_vccnz_ifcvt_diamond(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_diamond(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %v = load float, ptr addrspace(1) %in
   %cc = fcmp oeq float %v, 1.000000e+00
@@ -60,14 +60,14 @@ endif:
 ; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc
 ; GCN: s_mov_b64 vcc, [[CMP]]
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle_vcc_clobber(ptr addrspace(1) %out, ptr addrspace(1) %in, float %k) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle_vcc_clobber(ptr addrspace(1) %out, ptr addrspace(1) %in, float %k) nounwind {
 entry:
   %v = load i32, ptr addrspace(1) %in
   %cc = fcmp oeq float %k, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
 if:
-  call void asm "; clobber $0", "~{vcc}"() #0
+  call void asm "; clobber $0", "~{vcc}"() nounwind
   %u = add i32 %v, %v
   br label %endif
 
@@ -89,7 +89,7 @@ endif:
 ; GCN: v_mul_f32
 ; GCN: v_mul_f32
 ; GCN: v_cndmask_b32_e32
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle_max_cheap(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle_max_cheap(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %v = load float, ptr addrspace(1) %in
   %cc = fcmp oeq float %v, 1.000000e+00
@@ -130,7 +130,7 @@ endif:
 
 ; GCN: [[ENDIF]]:
 ; GCN: buffer_store_dword
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle_min_expensive(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle_min_expensive(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %v = load float, ptr addrspace(1) %in
   %cc = fcmp oeq float %v, 1.000000e+00
@@ -164,7 +164,7 @@ endif:
 
 ; GCN: [[ENDIF]]:
 ; GCN: buffer_store_dword
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle_expensive(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle_expensive(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %v = load float, ptr addrspace(1) %in
   %cc = fcmp oeq float %v, 1.000000e+00
@@ -189,7 +189,7 @@ endif:
 
 ; GCN: [[ENDIF]]:
 ; GCN: buffer_store_dword
-define amdgpu_kernel void @test_vccnz_sgpr_ifcvt_triangle(ptr addrspace(1) %out, ptr addrspace(4) %in, float %cnd) #0 {
+define amdgpu_kernel void @test_vccnz_sgpr_ifcvt_triangle(ptr addrspace(1) %out, ptr addrspace(4) %in, float %cnd) nounwind {
 entry:
   %v = load i32, ptr addrspace(4) %in
   %cc = fcmp oeq float %cnd, 1.000000e+00
@@ -208,7 +208,7 @@ endif:
 
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle_constant_load:
 ; GCN: v_cndmask_b32
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle_constant_load(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle_constant_load(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 entry:
   %v = load float, ptr addrspace(4) %in
   %cc = fcmp oeq float %v, 1.000000e+00
@@ -229,7 +229,7 @@ endif:
 
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle_argload:
 ; GCN: v_cndmask_b32
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle_argload(ptr addrspace(1) %out, float %v) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle_argload(ptr addrspace(1) %out, float %v) nounwind {
 entry:
   %cc = fcmp oeq float %v, 1.000000e+00
   br i1 %cc, label %if, label %endif
@@ -250,7 +250,7 @@ endif:
 ; GCN: s_add_i32 [[ADD:s[0-9]+]], [[VAL]], [[VAL]]
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 1
 ; GCN-NEXT: s_cselect_b32 [[SELECT:s[0-9]+]], [[VAL]], [[ADD]]
-define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle(ptr addrspace(4) %in, i32 %cond) #0 {
+define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle(ptr addrspace(4) %in, i32 %cond) nounwind {
 entry:
   %v = load i32, ptr addrspace(4) %in
   %cc = icmp eq i32 %cond, 1
@@ -262,7 +262,7 @@ if:
 
 endif:
   %r = phi i32 [ %v, %entry ], [ %u, %if ]
-  call void asm sideeffect "; reg use $0", "s"(i32 %r) #0
+  call void asm sideeffect "; reg use $0", "s"(i32 %r) nounwind
   ret void
 }
 
@@ -276,7 +276,7 @@ endif:
 
 ; GCN: [[ENDIF]]:
 ; GCN: buffer_store_dword
-define amdgpu_kernel void @test_scc1_vgpr_ifcvt_triangle(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %cond) #0 {
+define amdgpu_kernel void @test_scc1_vgpr_ifcvt_triangle(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %cond) nounwind {
 entry:
   %v = load float, ptr addrspace(1) %in
   %cc = icmp eq i32 %cond, 1
@@ -297,7 +297,7 @@ endif:
 ; GCN: s_addc_u32
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 1
 ; GCN-NEXT: s_cselect_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle64(ptr addrspace(4) %in, i32 %cond) #0 {
+define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle64(ptr addrspace(4) %in, i32 %cond) nounwind {
 entry:
   %v = load i64, ptr addrspace(4) %in
   %cc = icmp eq i32 %cond, 1
@@ -309,7 +309,7 @@ if:
 
 endif:
   %r = phi i64 [ %v, %entry ], [ %u, %if ]
-  call void asm sideeffect "; reg use $0", "s"(i64 %r) #0
+  call void asm sideeffect "; reg use $0", "s"(i64 %r) nounwind
   ret void
 }
 
@@ -322,7 +322,7 @@ endif:
 ; GCN-NEXT: s_cselect_b32 s
 ; GCN-NEXT: s_cselect_b32 s
 ; GCN-NEXT: s_cselect_b32 s
-define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle96(ptr addrspace(4) %in, i32 %cond) #0 {
+define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle96(ptr addrspace(4) %in, i32 %cond) nounwind {
 entry:
   %v = load <3 x i32>, ptr addrspace(4) %in
   %cc = icmp eq i32 %cond, 1
@@ -335,7 +335,7 @@ if:
 endif:
   %r = phi <3 x i32> [ %v, %entry ], [ %u, %if ]
   %r.ext = shufflevector <3 x i32> %r, <3 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  call void asm sideeffect "; reg use $0", "s"(<4 x i32> %r.ext) #0
+  call void asm sideeffect "; reg use $0", "s"(<4 x i32> %r.ext) nounwind
   ret void
 }
 
@@ -347,7 +347,7 @@ endif:
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 1
 ; GCN-NEXT: s_cselect_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}
 ; GCN-NEXT: s_cselect_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle128(ptr addrspace(4) %in, i32 %cond) #0 {
+define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle128(ptr addrspace(4) %in, i32 %cond) nounwind {
 entry:
   %v = load <4 x i32>, ptr addrspace(4) %in
   %cc = icmp eq i32 %cond, 1
@@ -359,7 +359,7 @@ if:
 
 endif:
   %r = phi <4 x i32> [ %v, %entry ], [ %u, %if ]
-  call void asm sideeffect "; reg use $0", "s"(<4 x i32> %r) #0
+  call void asm sideeffect "; reg use $0", "s"(<4 x i32> %r) nounwind
   ret void
 }
 
@@ -412,7 +412,7 @@ done:
 
 ; GCN: [[ENDIF]]:
 ; GCN: buffer_store_dword
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle256(ptr addrspace(1) %out, ptr addrspace(1) %in, float %cnd) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle256(ptr addrspace(1) %out, ptr addrspace(1) %in, float %cnd) nounwind {
 entry:
   %v = load <8 x i32>, ptr addrspace(1) %in
   %cc = fcmp oeq float %cnd, 1.000000e+00
@@ -437,7 +437,7 @@ endif:
 
 ; GCN: [[ENDIF]]:
 ; GCN: buffer_store_dword
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle512(ptr addrspace(1) %out, ptr addrspace(1) %in, float %cnd) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle512(ptr addrspace(1) %out, ptr addrspace(1) %in, float %cnd) nounwind {
 entry:
   %v = load <16 x i32>, ptr addrspace(1) %in
   %cc = fcmp oeq float %cnd, 1.000000e+00
@@ -452,5 +452,3 @@ endif:
   store <16 x i32> %r, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }

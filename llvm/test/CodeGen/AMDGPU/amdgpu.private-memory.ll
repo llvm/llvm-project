@@ -73,7 +73,7 @@
 ; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.x(), !range !2
 ; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.y(), !range !2
 ; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.z(), !range !2
-define amdgpu_kernel void @mova_same_clause(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #0 {
+define amdgpu_kernel void @mova_same_clause(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
   %0 = load i32, ptr addrspace(1) %in, align 4
@@ -94,7 +94,7 @@ entry:
 
 ; OPT-LABEL: @high_alignment(
 ; OPT: getelementptr inbounds [256 x [8 x i32]], ptr addrspace(3) @high_alignment.stack, i32 0, i32 %{{[0-9]+}}
-define amdgpu_kernel void @high_alignment(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #0 {
+define amdgpu_kernel void @high_alignment(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %stack = alloca [8 x i32], align 16, addrspace(5)
   %0 = load i32, ptr addrspace(1) %in, align 4
@@ -118,7 +118,7 @@ entry:
 ; OPT: alloca [5 x i32]
 
 ; SI-NOT: ds_write
-define amdgpu_kernel void @no_replace_inbounds_gep(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #0 {
+define amdgpu_kernel void @no_replace_inbounds_gep(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
   %0 = load i32, ptr addrspace(1) %in, align 4
@@ -152,7 +152,7 @@ entry:
 ; SI-NOT: v_movrel
 %struct.point = type { i32, i32 }
 
-define amdgpu_kernel void @multiple_structs(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @multiple_structs(ptr addrspace(1) %out) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %a = alloca %struct.point, addrspace(5)
   %b = alloca %struct.point, addrspace(5)
@@ -177,7 +177,7 @@ entry:
 ; R600-NOT: MOVA_INT
 ; SI-NOT: v_movrel
 
-define amdgpu_kernel void @direct_loop(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @direct_loop(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %prv_array_const = alloca [2 x i32], addrspace(5)
   %prv_array = alloca [2 x i32], addrspace(5)
@@ -218,7 +218,7 @@ for.end:
 ; SI-PROMOTE-VECT: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 4
 ; SI-PROMOTE-VECT: s_lshr_b32 [[SREG:s[0-9]+]], 0x10000, [[SCALED_IDX]]
 ; SI-PROMOTE-VECT: s_and_b32 s{{[0-9]+}}, [[SREG]], 1
-define amdgpu_kernel void @short_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @short_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %0 = alloca [2 x i16], addrspace(5)
   %1 = getelementptr inbounds [2 x i16], ptr addrspace(5) %0, i32 0, i32 1
@@ -240,7 +240,7 @@ entry:
 
 ; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ; encoding: [0x00,0x00,0x60,0xe0
 ; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:1 ; encoding: [0x01,0x00,0x60,0xe0
-define amdgpu_kernel void @char_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @char_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %0 = alloca [2 x i8], addrspace(5)
   %1 = getelementptr inbounds [2 x i8], ptr addrspace(5) %0, i32 0, i32 1
@@ -259,7 +259,7 @@ entry:
 ;
 ; A total of 5 bytes should be allocated and used.
 ; SI: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ;
-define amdgpu_kernel void @no_overlap(ptr addrspace(1) %out, i32 %in) #0 {
+define amdgpu_kernel void @no_overlap(ptr addrspace(1) %out, i32 %in) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %0 = alloca [3 x i8], align 1, addrspace(5)
   %1 = alloca [2 x i8], align 1, addrspace(5)
@@ -281,7 +281,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @char_array_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @char_array_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [2 x [2 x i8]], addrspace(5)
   %gep1 = getelementptr [2 x [2 x i8]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 1
@@ -294,7 +294,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @i32_array_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @i32_array_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [2 x [2 x i32]], addrspace(5)
   %gep1 = getelementptr [2 x [2 x i32]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 1
@@ -306,7 +306,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @i64_array_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @i64_array_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [2 x [2 x i64]], addrspace(5)
   %gep1 = getelementptr [2 x [2 x i64]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 1
@@ -320,7 +320,7 @@ entry:
 
 %struct.pair32 = type { i32, i32 }
 
-define amdgpu_kernel void @struct_array_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @struct_array_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [2 x [2 x %struct.pair32]], addrspace(5)
   %gep0 = getelementptr [2 x [2 x %struct.pair32]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 0, i32 1
@@ -333,7 +333,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @struct_pair32_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @struct_pair32_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [2 x %struct.pair32], addrspace(5)
   %gep0 = getelementptr [2 x %struct.pair32], ptr addrspace(5) %alloca, i32 0, i32 0, i32 1
@@ -367,7 +367,7 @@ entry:
 ; SI: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
 ; SI: v_add_{{[iu]}}32_e32 [[ADD_OFFSET:v[0-9]+]], vcc, 5,
 ; SI: buffer_load_dword v{{[0-9]+}}, [[ADD_OFFSET:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0 offen ;
-define amdgpu_kernel void @ptrtoint(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @ptrtoint(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
   %alloca = alloca [16 x i32], addrspace(5)
   %tmp0 = getelementptr [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
   store i32 5, ptr addrspace(5) %tmp0
@@ -383,7 +383,7 @@ define amdgpu_kernel void @ptrtoint(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 ; OPT-LABEL: @pointer_typed_alloca(
 ; OPT:  getelementptr inbounds [256 x ptr addrspace(1)], ptr addrspace(3) @pointer_typed_alloca.A.addr, i32 0, i32 %{{[0-9]+}}
 ; OPT: load ptr addrspace(1), ptr addrspace(3) %{{[0-9]+}}, align 4
-define amdgpu_kernel void @pointer_typed_alloca(ptr addrspace(1) %A) #1 {
+define amdgpu_kernel void @pointer_typed_alloca(ptr addrspace(1) %A) nounwind "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %A.addr = alloca ptr addrspace(1), align 4, addrspace(5)
   store ptr addrspace(1) %A, ptr addrspace(5) %A.addr, align 4
@@ -525,9 +525,6 @@ entry:
   store [1 x i32] %load, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" }
-attributes #1 = { nounwind "amdgpu-flat-work-group-size"="1,256" }
 
 !llvm.module.flags = !{!99}
 !99 = !{i32 1, !"amdhsa_code_object_version", i32 400}

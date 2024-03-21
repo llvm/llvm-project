@@ -13,7 +13,7 @@ define internal void @indirect() {
   ret void
 }
 
-define amdgpu_kernel void @test_simple_indirect_call() #0 {
+define amdgpu_kernel void @test_simple_indirect_call() "amdgpu-no-dispatch-id" {
 ; AKF_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
 ; AKF_GCN-SAME: () #[[ATTR0:[0-9]+]] {
 ; AKF_GCN-NEXT:    [[FPTR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -36,8 +36,6 @@ define amdgpu_kernel void @test_simple_indirect_call() #0 {
   call void %fp()
   ret void
 }
-
-attributes #0 = { "amdgpu-no-dispatch-id" }
 
 ;.
 ; AKF_GCN: attributes #[[ATTR0]] = { "amdgpu-calls" "amdgpu-no-dispatch-id" "amdgpu-stack-objects" }

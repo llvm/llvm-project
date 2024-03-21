@@ -3,22 +3,22 @@
 ; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-attributor | FileCheck -check-prefixes=CHECK,V5 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-attributor | FileCheck -check-prefixes=CHECK,V6 %s
 
-declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #0
+declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() nocallback nofree nosync nounwind speculatable willreturn memory(none)
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-declare i32 @llvm.amdgcn.workgroup.id.y() #0
-declare i32 @llvm.amdgcn.workgroup.id.z() #0
+declare i32 @llvm.amdgcn.workgroup.id.x() nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare i32 @llvm.amdgcn.workgroup.id.y() nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare i32 @llvm.amdgcn.workgroup.id.z() nocallback nofree nosync nounwind speculatable willreturn memory(none)
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.workitem.id.y() #0
-declare i32 @llvm.amdgcn.workitem.id.z() #0
-declare i32 @llvm.amdgcn.lds.kernel.id() #0
-declare i64 @llvm.amdgcn.dispatch.id() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare i32 @llvm.amdgcn.workitem.id.y() nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare i32 @llvm.amdgcn.workitem.id.z() nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare i32 @llvm.amdgcn.lds.kernel.id() nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare i64 @llvm.amdgcn.dispatch.id() nocallback nofree nosync nounwind speculatable willreturn memory(none)
 
 
-declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #0
+declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr addrspace(4) @llvm.amdgcn.queue.ptr() nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() nocallback nofree nosync nounwind speculatable willreturn memory(none)
 
 ; Avoid adding all of these to the output attribute sets
 define void @use_everything_else() {
@@ -248,9 +248,6 @@ define amdgpu_kernel void @test_default_queue_completion_action_offset_v5_0(ptr 
   store <2 x ptr> %load, ptr addrspace(1) %kernarg
   ret void
 }
-
-
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}

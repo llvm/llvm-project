@@ -812,11 +812,11 @@ define float @test_pown_fast_f32_nobuiltin(float %x, i32 %y) {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
-  %call = tail call fast float @_Z4pownfi(float %x, i32 %y) #0
+  %call = tail call fast float @_Z4pownfi(float %x, i32 %y) nobuiltin
   ret float %call
 }
 
-define float @test_pown_fast_f32_strictfp(float %x, i32 %y) #1 {
+define float @test_pown_fast_f32_strictfp(float %x, i32 %y) strictfp {
 ; CHECK-LABEL: define float @test_pown_fast_f32_strictfp
 ; CHECK-SAME: (float [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -834,7 +834,7 @@ define float @test_pown_fast_f32_strictfp(float %x, i32 %y) #1 {
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
 entry:
-  %call = tail call fast float @_Z4pownfi(float %x, i32 %y) #1
+  %call = tail call fast float @_Z4pownfi(float %x, i32 %y) strictfp
   ret float %call
 }
 
@@ -1157,6 +1157,3 @@ entry:
   %call = tail call fast float @_Z4pownfi(float %x, i32 %y)
   ret float %call
 }
-
-attributes #0 = { nobuiltin }
-attributes #1 = { strictfp }

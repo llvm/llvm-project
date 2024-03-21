@@ -508,14 +508,14 @@ entry:
   ret float %call
 }
 
-define float @test_rootn_f32__y_1__strictfp(float %x) #1 {
+define float @test_rootn_f32__y_1__strictfp(float %x) strictfp {
 ; CHECK-LABEL: define float @test_rootn_f32__y_1__strictfp(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret float [[X]]
 ;
 entry:
-  %call = tail call float @_Z5rootnfi(float %x, i32 1) #1
+  %call = tail call float @_Z5rootnfi(float %x, i32 1) strictfp
   ret float %call
 }
 
@@ -531,7 +531,7 @@ entry:
   ret <2 x float> %call
 }
 
-define <2 x float> @test_rootn_v2f32__y_1__strictfp(<2 x float> %x) #1 {
+define <2 x float> @test_rootn_v2f32__y_1__strictfp(<2 x float> %x) strictfp {
 ; CHECK-LABEL: define <2 x float> @test_rootn_v2f32__y_1__strictfp(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -539,7 +539,7 @@ define <2 x float> @test_rootn_v2f32__y_1__strictfp(<2 x float> %x) #1 {
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
 entry:
-  %call = tail call <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> %x, <2 x i32> <i32 1, i32 1>) #1
+  %call = tail call <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> %x, <2 x i32> <i32 1, i32 1>) strictfp
   ret <2 x float> %call
 }
 
@@ -892,7 +892,7 @@ entry:
   ret float %call
 }
 
-define float @test_rootn_f32__y_neg2__strictfp(float %x) #1 {
+define float @test_rootn_f32__y_neg2__strictfp(float %x) strictfp {
 ; CHECK-LABEL: define float @test_rootn_f32__y_neg2__strictfp(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -900,7 +900,7 @@ define float @test_rootn_f32__y_neg2__strictfp(float %x) #1 {
 ; CHECK-NEXT:    ret float [[__ROOTN2RSQRT]]
 ;
 entry:
-  %call = tail call float @_Z5rootnfi(float %x, i32 -2) #1
+  %call = tail call float @_Z5rootnfi(float %x, i32 -2) strictfp
   ret float %call
 }
 
@@ -912,7 +912,7 @@ define float @test_rootn_f32__y_neg2__noinline(float %x) {
 ; CHECK-NEXT:    ret float [[__ROOTN2RSQRT]]
 ;
 entry:
-  %call = tail call float @_Z5rootnfi(float %x, i32 -2) #2
+  %call = tail call float @_Z5rootnfi(float %x, i32 -2) noinline
   ret float %call
 }
 
@@ -924,7 +924,7 @@ define float @test_rootn_f32__y_neg2__nobuiltin(float %x) {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
-  %call = tail call float @_Z5rootnfi(float %x, i32 -2) #0
+  %call = tail call float @_Z5rootnfi(float %x, i32 -2) nobuiltin
   ret float %call
 }
 
@@ -952,7 +952,7 @@ entry:
   ret <2 x float> %call
 }
 
-define <2 x float> @test_rootn_v2f32__y_neg2__strictfp(<2 x float> %x) #1 {
+define <2 x float> @test_rootn_v2f32__y_neg2__strictfp(<2 x float> %x) strictfp {
 ; CHECK-LABEL: define <2 x float> @test_rootn_v2f32__y_neg2__strictfp(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -960,7 +960,7 @@ define <2 x float> @test_rootn_v2f32__y_neg2__strictfp(<2 x float> %x) #1 {
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
 entry:
-  %call = tail call <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> %x, <2 x i32> <i32 -2, i32 -2>) #1
+  %call = tail call <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> %x, <2 x i32> <i32 -2, i32 -2>) strictfp
   ret <2 x float> %call
 }
 
@@ -1136,11 +1136,11 @@ define float @test_rootn_fast_f32_nobuiltin(float %x, i32 %y) {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
-  %call = tail call fast float @_Z5rootnfi(float %x, i32 %y) #0
+  %call = tail call fast float @_Z5rootnfi(float %x, i32 %y) nobuiltin
   ret float %call
 }
 
-define float @test_rootn_fast_f32_strictfp(float %x, i32 %y) #1 {
+define float @test_rootn_fast_f32_strictfp(float %x, i32 %y) strictfp {
 ; CHECK-LABEL: define float @test_rootn_fast_f32_strictfp(
 ; CHECK-SAME: float [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1148,7 +1148,7 @@ define float @test_rootn_fast_f32_strictfp(float %x, i32 %y) #1 {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
-  %call = tail call fast float @_Z5rootnfi(float %x, i32 %y) #1
+  %call = tail call fast float @_Z5rootnfi(float %x, i32 %y) strictfp
   ret float %call
 }
 
@@ -1430,7 +1430,7 @@ define float @test_rootn_f32__y_0_nobuiltin(float %x) {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call float @_Z5rootnfi(float [[X]], i32 0) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = tail call float @_Z5rootnfi(float %x, i32 0) #0
+  %call = tail call float @_Z5rootnfi(float %x, i32 0) nobuiltin
   ret float %call
 }
 
@@ -1440,7 +1440,7 @@ define float @test_rootn_f32__y_1_nobuiltin(float %x) {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call float @_Z5rootnfi(float [[X]], i32 1) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = tail call float @_Z5rootnfi(float %x, i32 1) #0
+  %call = tail call float @_Z5rootnfi(float %x, i32 1) nobuiltin
   ret float %call
 }
 
@@ -1450,7 +1450,7 @@ define float @test_rootn_f32__y_2_nobuiltin(float %x) {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call float @_Z5rootnfi(float [[X]], i32 2) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = tail call float @_Z5rootnfi(float %x, i32 2) #0
+  %call = tail call float @_Z5rootnfi(float %x, i32 2) nobuiltin
   ret float %call
 }
 
@@ -1460,7 +1460,7 @@ define float @test_rootn_f32__y_3_nobuiltin(float %x) {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call float @_Z5rootnfi(float [[X]], i32 3) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = tail call float @_Z5rootnfi(float %x, i32 3) #0
+  %call = tail call float @_Z5rootnfi(float %x, i32 3) nobuiltin
   ret float %call
 }
 
@@ -1470,7 +1470,7 @@ define float @test_rootn_f32__y_neg1_nobuiltin(float %x) {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call float @_Z5rootnfi(float [[X]], i32 -1) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = tail call float @_Z5rootnfi(float %x, i32 -1) #0
+  %call = tail call float @_Z5rootnfi(float %x, i32 -1) nobuiltin
   ret float %call
 }
 
@@ -1480,13 +1480,9 @@ define float @test_rootn_f32__y_neg2_nobuiltin(float %x) {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call float @_Z5rootnfi(float [[X]], i32 -2) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = tail call float @_Z5rootnfi(float %x, i32 -2) #0
+  %call = tail call float @_Z5rootnfi(float %x, i32 -2) nobuiltin
   ret float %call
 }
-
-attributes #0 = { nobuiltin }
-attributes #1 = { strictfp }
-attributes #2 = { noinline }
 
 
 !0 = !{float 3.0}

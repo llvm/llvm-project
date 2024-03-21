@@ -15,7 +15,7 @@
 ; s_setpc_b64
 ; and some register copies
 
-declare void @func() #0
+declare void @func() nounwind
 
 ; GCN-LABEL: {{^}}bundle_size:
 ; GCN: s_cbranch_scc0 [[BB_EXPANSION:.LBB[0-9]+_[0-9]+]]
@@ -30,7 +30,7 @@ declare void @func() #0
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, func@
 ; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, func@
 ; GCN: s_swappc_b64
-define amdgpu_kernel void @bundle_size(ptr addrspace(1) %arg, i32 %cnd) #0 {
+define amdgpu_kernel void @bundle_size(ptr addrspace(1) %arg, i32 %cnd) nounwind {
 bb:
   %cmp = icmp eq i32 %cnd, 0
   br i1 %cmp, label %bb3, label %bb2 ; +8 dword branch
@@ -42,13 +42,10 @@ bb2:
    v_nop_e64
    v_nop_e64
    v_nop_e64
-   v_nop_e64", ""() #0
+   v_nop_e64", ""() nounwind
   br label %bb3
 
 bb3:
   store volatile i32 %cnd, ptr addrspace(1) %arg
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

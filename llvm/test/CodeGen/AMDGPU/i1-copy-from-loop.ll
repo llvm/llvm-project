@@ -80,8 +80,5 @@ end:
   ret void
 }
 
-declare float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
-
-attributes #0 = { nounwind memory(argmem: read) }
-attributes #1 = { nounwind inaccessiblememonly }
+declare float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind memory(argmem: read)
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind inaccessiblememonly

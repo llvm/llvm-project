@@ -109,7 +109,7 @@ entry:
   ret void
 }
 
-define void @test_sgpr_offset_function_scavenge_fail_func() #2 {
+define void @test_sgpr_offset_function_scavenge_fail_func() nounwind "amdgpu-num-sgpr"="16" "amdgpu-num-vgpr"="8" {
 ; MUBUF-LABEL: test_sgpr_offset_function_scavenge_fail_func:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -184,13 +184,13 @@ entry:
   %asm6 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 6
   %asm7 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 7
 
-  call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() #0
+  call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() nounwind
    ; Force %a to spill with no free SGPRs
   call void asm sideeffect "", "s,s,s,s,s,s,s,s,v"(i32 %asm0, i32 %asm1, i32 %asm2, i32 %asm3, i32 %asm4, i32 %asm5, i32 %asm6, i32 %asm7, i32 %a)
   ret void
 }
 
-define amdgpu_kernel void @test_sgpr_offset_function_scavenge_fail_kernel() #3 {
+define amdgpu_kernel void @test_sgpr_offset_function_scavenge_fail_kernel() nounwind "amdgpu-num-sgpr"="18" "amdgpu-num-vgpr"="8" {
 ; MUBUF-LABEL: test_sgpr_offset_function_scavenge_fail_kernel:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s7
@@ -266,7 +266,7 @@ entry:
   %asm6 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 6
   %asm7 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 7
 
-  call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() #0
+  call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() nounwind
    ; Force %a to spill with no free SGPRs
   call void asm sideeffect "", "s,s,s,s,s,s,s,s,v"(i32 %asm0, i32 %asm1, i32 %asm2, i32 %asm3, i32 %asm4, i32 %asm5, i32 %asm6, i32 %asm7, i32 %a)
   ret void
@@ -633,8 +633,3 @@ entry:
 
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind "amdgpu-num-sgpr"="17" "amdgpu-num-vgpr"="8" }
-attributes #2 = { nounwind "amdgpu-num-sgpr"="16" "amdgpu-num-vgpr"="8" }
-attributes #3 = { nounwind "amdgpu-num-sgpr"="18" "amdgpu-num-vgpr"="8" }

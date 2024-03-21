@@ -86,7 +86,4 @@ define amdgpu_kernel void @zext_i16_to_i64_divergent(ptr addrspace(1) %out, i16 
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable

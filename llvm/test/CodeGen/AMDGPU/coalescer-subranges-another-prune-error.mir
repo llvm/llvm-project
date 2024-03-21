@@ -10,11 +10,9 @@
   target triple = "amdgcn--amdpal"
 
   ; Function Attrs: nounwind
-  define amdgpu_ps void @_amdgpu_ps_main(float %arg) #0 {
+  define amdgpu_ps void @_amdgpu_ps_main(float %arg) nounwind "InitialPSInputAddr"="3842" "target-cpu"="gfx803" {
     ret void
   }
-
-  attributes #0 = { nounwind "InitialPSInputAddr"="3842" "target-cpu"="gfx803" }
 ...
 
 ---

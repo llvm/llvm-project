@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=r600 -mcpu=cayman -stress-sched -verify-misched -verify-machineinstrs < %s
 ; REQUIRES: asserts
 
-define amdgpu_kernel void @main() #0 {
+define amdgpu_kernel void @main() nounwind {
 main_body:
   %tmp = load <4 x float>, ptr addrspace(9) null
   %tmp5 = extractelement <4 x float> %tmp, i32 3
@@ -83,9 +83,6 @@ ENDIF30:                                          ; preds = %LOOP29
   br label %LOOP29
 }
 
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32) #0
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32) nounwind
+declare float @llvm.minnum.f32(float, float) nounwind readnone
+declare float @llvm.maxnum.f32(float, float) nounwind readnone

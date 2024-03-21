@@ -111,5 +111,3 @@ define amdgpu_kernel void @v_input_output_v32i16() {
   tail call void asm sideeffect "; use $0", "v"(<32 x i16> %v)
   ret void
 }
-
-attributes #0 = { nounwind }

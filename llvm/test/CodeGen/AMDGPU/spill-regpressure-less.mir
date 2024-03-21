@@ -2,11 +2,9 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx90a -run-pass=machine-scheduler -verify-misched -o - %s | FileCheck -check-prefix=GCN %s
 
 --- |
-  define amdgpu_kernel void @spill_regpressure_less() #0 {
+  define amdgpu_kernel void @spill_regpressure_less() "amdgpu-waves-per-eu"="8,8" {
     ret void
   }
-
-  attributes #0 = { "amdgpu-waves-per-eu"="8,8" }
 ...
 
 ---

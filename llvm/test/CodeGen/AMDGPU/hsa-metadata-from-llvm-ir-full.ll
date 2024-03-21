@@ -46,7 +46,7 @@
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_char
 ; CHECK:          .symbol:         test_char.kd
-define amdgpu_kernel void @test_char(i8 %a) #0
+define amdgpu_kernel void @test_char(i8 %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !9
     !kernel_arg_base_type !9 !kernel_arg_type_qual !4 {
   ret void
@@ -80,7 +80,7 @@ define amdgpu_kernel void @test_char(i8 %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_char_byref_constant
 ; CHECK:          .symbol:         test_char_byref_constant.kd
-define amdgpu_kernel void @test_char_byref_constant(ptr addrspace(4) byref(i8) %a) #0
+define amdgpu_kernel void @test_char_byref_constant(ptr addrspace(4) byref(i8) %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !9
     !kernel_arg_base_type !9 !kernel_arg_type_qual !4 {
   ret void
@@ -118,7 +118,7 @@ define amdgpu_kernel void @test_char_byref_constant(ptr addrspace(4) byref(i8) %
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_char_byref_constant_align512
 ; CHECK:          .symbol:         test_char_byref_constant_align512.kd
-define amdgpu_kernel void @test_char_byref_constant_align512(i8, ptr addrspace(4) byref(i8) align(512) %a) #0
+define amdgpu_kernel void @test_char_byref_constant_align512(i8, ptr addrspace(4) byref(i8) align(512) %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !111
     !kernel_arg_base_type !9 !kernel_arg_type_qual !4 {
   ret void
@@ -157,7 +157,7 @@ define amdgpu_kernel void @test_char_byref_constant_align512(i8, ptr addrspace(4
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_ushort2
 ; CHECK:          .symbol:         test_ushort2.kd
-define amdgpu_kernel void @test_ushort2(<2 x i16> %a) #0
+define amdgpu_kernel void @test_ushort2(<2 x i16> %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !10
     !kernel_arg_base_type !10 !kernel_arg_type_qual !4 {
   ret void
@@ -196,7 +196,7 @@ define amdgpu_kernel void @test_ushort2(<2 x i16> %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_int3
 ; CHECK:          .symbol:         test_int3.kd
-define amdgpu_kernel void @test_int3(<3 x i32> %a) #0
+define amdgpu_kernel void @test_int3(<3 x i32> %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !11
     !kernel_arg_base_type !11 !kernel_arg_type_qual !4 {
   ret void
@@ -235,7 +235,7 @@ define amdgpu_kernel void @test_int3(<3 x i32> %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_ulong4
 ; CHECK:          .symbol:         test_ulong4.kd
-define amdgpu_kernel void @test_ulong4(<4 x i64> %a) #0
+define amdgpu_kernel void @test_ulong4(<4 x i64> %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !12
     !kernel_arg_base_type !12 !kernel_arg_type_qual !4 {
   ret void
@@ -274,7 +274,7 @@ define amdgpu_kernel void @test_ulong4(<4 x i64> %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_half8
 ; CHECK:          .symbol:         test_half8.kd
-define amdgpu_kernel void @test_half8(<8 x half> %a) #0
+define amdgpu_kernel void @test_half8(<8 x half> %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !13
     !kernel_arg_base_type !13 !kernel_arg_type_qual !4 {
   ret void
@@ -313,7 +313,7 @@ define amdgpu_kernel void @test_half8(<8 x half> %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_float16
 ; CHECK:          .symbol:         test_float16.kd
-define amdgpu_kernel void @test_float16(<16 x float> %a) #0
+define amdgpu_kernel void @test_float16(<16 x float> %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !14
     !kernel_arg_base_type !14 !kernel_arg_type_qual !4 {
   ret void
@@ -352,7 +352,7 @@ define amdgpu_kernel void @test_float16(<16 x float> %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_double16
 ; CHECK:          .symbol:         test_double16.kd
-define amdgpu_kernel void @test_double16(<16 x double> %a) #0
+define amdgpu_kernel void @test_double16(<16 x double> %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !15
     !kernel_arg_base_type !15 !kernel_arg_type_qual !4 {
   ret void
@@ -392,7 +392,7 @@ define amdgpu_kernel void @test_double16(<16 x double> %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_pointer
 ; CHECK:          .symbol:         test_pointer.kd
-define amdgpu_kernel void @test_pointer(ptr addrspace(1) %a) #0
+define amdgpu_kernel void @test_pointer(ptr addrspace(1) %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !16
     !kernel_arg_base_type !16 !kernel_arg_type_qual !4 {
   ret void
@@ -431,7 +431,7 @@ define amdgpu_kernel void @test_pointer(ptr addrspace(1) %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_image
 ; CHECK:          .symbol:         test_image.kd
-define amdgpu_kernel void @test_image(ptr addrspace(1) %a) #0
+define amdgpu_kernel void @test_image(ptr addrspace(1) %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !17
     !kernel_arg_base_type !17 !kernel_arg_type_qual !4 {
   ret void
@@ -470,7 +470,7 @@ define amdgpu_kernel void @test_image(ptr addrspace(1) %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_sampler
 ; CHECK:          .symbol:         test_sampler.kd
-define amdgpu_kernel void @test_sampler(i32 %a) #0
+define amdgpu_kernel void @test_sampler(i32 %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !18
     !kernel_arg_base_type !18 !kernel_arg_type_qual !4 {
   ret void
@@ -509,7 +509,7 @@ define amdgpu_kernel void @test_sampler(i32 %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_queue
 ; CHECK:          .symbol:         test_queue.kd
-define amdgpu_kernel void @test_queue(ptr addrspace(1) %a) #0
+define amdgpu_kernel void @test_queue(ptr addrspace(1) %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !19
     !kernel_arg_base_type !19 !kernel_arg_type_qual !4 {
   ret void
@@ -548,7 +548,7 @@ define amdgpu_kernel void @test_queue(ptr addrspace(1) %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_struct
 ; CHECK:          .symbol:         test_struct.kd
-define amdgpu_kernel void @test_struct(%struct.A %a) #0
+define amdgpu_kernel void @test_struct(%struct.A %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
     !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
   ret void
@@ -587,7 +587,7 @@ define amdgpu_kernel void @test_struct(%struct.A %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_struct_byref_constant
 ; CHECK:          .symbol:         test_struct_byref_constant.kd
-define amdgpu_kernel void @test_struct_byref_constant(ptr addrspace(4) byref(%struct.A) %a) #0
+define amdgpu_kernel void @test_struct_byref_constant(ptr addrspace(4) byref(%struct.A) %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
     !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
   ret void
@@ -626,7 +626,7 @@ define amdgpu_kernel void @test_struct_byref_constant(ptr addrspace(4) byref(%st
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_array
 ; CHECK:          .symbol:         test_array.kd
-define amdgpu_kernel void @test_array([32 x i8] %a) #0
+define amdgpu_kernel void @test_array([32 x i8] %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
     !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
   ret void
@@ -665,7 +665,7 @@ define amdgpu_kernel void @test_array([32 x i8] %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_array_byref_constant
 ; CHECK:          .symbol:         test_array_byref_constant.kd
-define amdgpu_kernel void @test_array_byref_constant(ptr addrspace(4) byref([32 x i8]) %a) #0
+define amdgpu_kernel void @test_array_byref_constant(ptr addrspace(4) byref([32 x i8]) %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
     !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
   ret void
@@ -704,7 +704,7 @@ define amdgpu_kernel void @test_array_byref_constant(ptr addrspace(4) byref([32 
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_i128
 ; CHECK:          .symbol:         test_i128.kd
-define amdgpu_kernel void @test_i128(i128 %a) #0
+define amdgpu_kernel void @test_i128(i128 %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !21
     !kernel_arg_base_type !21 !kernel_arg_type_qual !4 {
   ret void
@@ -753,7 +753,7 @@ define amdgpu_kernel void @test_i128(i128 %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_multi_arg
 ; CHECK:          .symbol:         test_multi_arg.kd
-define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c) #0
+define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !22 !kernel_arg_access_qual !23 !kernel_arg_type !24
     !kernel_arg_base_type !24 !kernel_arg_type_qual !25 {
   ret void
@@ -808,7 +808,7 @@ define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c) #0
 ; CHECK:          .symbol:         test_addr_space.kd
 define amdgpu_kernel void @test_addr_space(ptr addrspace(1) %g,
                                            ptr addrspace(4) %c,
-                                           ptr addrspace(3) align 4 %l) #0
+                                           ptr addrspace(3) align 4 %l) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !50 !kernel_arg_access_qual !23 !kernel_arg_type !51
     !kernel_arg_base_type !51 !kernel_arg_type_qual !25 {
   ret void
@@ -865,7 +865,7 @@ define amdgpu_kernel void @test_addr_space(ptr addrspace(1) %g,
 ; CHECK:          .symbol:         test_type_qual.kd
 define amdgpu_kernel void @test_type_qual(ptr addrspace(1) %a,
                                           ptr addrspace(1) %b,
-                                          ptr addrspace(1) %c) #0
+                                          ptr addrspace(1) %c) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !22 !kernel_arg_access_qual !23 !kernel_arg_type !51
     !kernel_arg_base_type !51 !kernel_arg_type_qual !70 {
   ret void
@@ -919,7 +919,7 @@ define amdgpu_kernel void @test_type_qual(ptr addrspace(1) %a,
 ; CHECK:          .symbol:         test_access_qual.kd
 define amdgpu_kernel void @test_access_qual(ptr addrspace(1) %ro,
                                             ptr addrspace(1) %wo,
-                                            ptr addrspace(1) %rw) #0
+                                            ptr addrspace(1) %rw) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !60 !kernel_arg_access_qual !61 !kernel_arg_type !62
     !kernel_arg_base_type !62 !kernel_arg_type_qual !25 {
   ret void
@@ -959,7 +959,7 @@ define amdgpu_kernel void @test_access_qual(ptr addrspace(1) %ro,
 ; CHECK:          .name:           test_vec_type_hint_half
 ; CHECK:          .symbol:         test_vec_type_hint_half.kd
 ; CHECK:          .vec_type_hint:  half
-define amdgpu_kernel void @test_vec_type_hint_half(i32 %a) #0
+define amdgpu_kernel void @test_vec_type_hint_half(i32 %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !26 {
   ret void
@@ -999,7 +999,7 @@ define amdgpu_kernel void @test_vec_type_hint_half(i32 %a) #0
 ; CHECK:          .name:           test_vec_type_hint_float
 ; CHECK:          .symbol:         test_vec_type_hint_float.kd
 ; CHECK:          .vec_type_hint:  float
-define amdgpu_kernel void @test_vec_type_hint_float(i32 %a) #0
+define amdgpu_kernel void @test_vec_type_hint_float(i32 %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !27 {
   ret void
@@ -1039,7 +1039,7 @@ define amdgpu_kernel void @test_vec_type_hint_float(i32 %a) #0
 ; CHECK:          .name:           test_vec_type_hint_double
 ; CHECK:          .symbol:         test_vec_type_hint_double.kd
 ; CHECK:          .vec_type_hint:  double
-define amdgpu_kernel void @test_vec_type_hint_double(i32 %a) #0
+define amdgpu_kernel void @test_vec_type_hint_double(i32 %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !28 {
   ret void
@@ -1079,7 +1079,7 @@ define amdgpu_kernel void @test_vec_type_hint_double(i32 %a) #0
 ; CHECK:          .name:           test_vec_type_hint_char
 ; CHECK:          .symbol:         test_vec_type_hint_char.kd
 ; CHECK:          .vec_type_hint:  char
-define amdgpu_kernel void @test_vec_type_hint_char(i32 %a) #0
+define amdgpu_kernel void @test_vec_type_hint_char(i32 %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !29 {
   ret void
@@ -1119,7 +1119,7 @@ define amdgpu_kernel void @test_vec_type_hint_char(i32 %a) #0
 ; CHECK:          .name:           test_vec_type_hint_short
 ; CHECK:          .symbol:         test_vec_type_hint_short.kd
 ; CHECK:          .vec_type_hint:  short
-define amdgpu_kernel void @test_vec_type_hint_short(i32 %a) #0
+define amdgpu_kernel void @test_vec_type_hint_short(i32 %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !30 {
   ret void
@@ -1159,7 +1159,7 @@ define amdgpu_kernel void @test_vec_type_hint_short(i32 %a) #0
 ; CHECK:          .name:           test_vec_type_hint_long
 ; CHECK:          .symbol:         test_vec_type_hint_long.kd
 ; CHECK:          .vec_type_hint:  long
-define amdgpu_kernel void @test_vec_type_hint_long(i32 %a) #0
+define amdgpu_kernel void @test_vec_type_hint_long(i32 %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !31 {
   ret void
@@ -1199,7 +1199,7 @@ define amdgpu_kernel void @test_vec_type_hint_long(i32 %a) #0
 ; CHECK:          .name:           test_vec_type_hint_unknown
 ; CHECK:          .symbol:         test_vec_type_hint_unknown.kd
 ; CHECK:          .vec_type_hint:  unknown
-define amdgpu_kernel void @test_vec_type_hint_unknown(i32 %a) #0
+define amdgpu_kernel void @test_vec_type_hint_unknown(i32 %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !32 {
   ret void
@@ -1243,7 +1243,7 @@ define amdgpu_kernel void @test_vec_type_hint_unknown(i32 %a) #0
 ; CHECK-NEXT:       - 4
 ; CHECK:          .symbol:         test_reqd_wgs_vec_type_hint.kd
 ; CHECK:          .vec_type_hint:  int
-define amdgpu_kernel void @test_reqd_wgs_vec_type_hint(i32 %a) #0
+define amdgpu_kernel void @test_reqd_wgs_vec_type_hint(i32 %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !5
     !reqd_work_group_size !6 {
@@ -1288,7 +1288,7 @@ define amdgpu_kernel void @test_reqd_wgs_vec_type_hint(i32 %a) #0
 ; CHECK-NEXT:       - 8
 ; CHECK-NEXT:       - 16
 ; CHECK-NEXT:       - 32
-define amdgpu_kernel void @test_wgs_hint_vec_type_hint(i32 %a) #0
+define amdgpu_kernel void @test_wgs_hint_vec_type_hint(i32 %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !7
     !work_group_size_hint !8 {
@@ -1329,7 +1329,7 @@ define amdgpu_kernel void @test_wgs_hint_vec_type_hint(i32 %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_arg_ptr_to_ptr
 ; CHECK:          .symbol:         test_arg_ptr_to_ptr.kd
-define amdgpu_kernel void @test_arg_ptr_to_ptr(ptr addrspace(1) %a) #0
+define amdgpu_kernel void @test_arg_ptr_to_ptr(ptr addrspace(1) %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !81 !kernel_arg_access_qual !2 !kernel_arg_type !80
     !kernel_arg_base_type !80 !kernel_arg_type_qual !4 {
   ret void
@@ -1368,7 +1368,7 @@ define amdgpu_kernel void @test_arg_ptr_to_ptr(ptr addrspace(1) %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_arg_struct_contains_ptr
 ; CHECK:          .symbol:         test_arg_struct_contains_ptr.kd
-define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B %a) #0
+define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !82
     !kernel_arg_base_type !82 !kernel_arg_type_qual !4 {
  ret void
@@ -1407,7 +1407,7 @@ define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_arg_vector_of_ptr
 ; CHECK:          .symbol:         test_arg_vector_of_ptr.kd
-define amdgpu_kernel void @test_arg_vector_of_ptr(<2 x ptr addrspace(1)> %a) #0
+define amdgpu_kernel void @test_arg_vector_of_ptr(<2 x ptr addrspace(1)> %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !83
     !kernel_arg_base_type !83 !kernel_arg_type_qual !4 {
   ret void
@@ -1448,7 +1448,7 @@ define amdgpu_kernel void @test_arg_vector_of_ptr(<2 x ptr addrspace(1)> %a) #0
 ; CHECK:          .name:           test_arg_unknown_builtin_type
 ; CHECK:          .symbol:         test_arg_unknown_builtin_type.kd
 define amdgpu_kernel void @test_arg_unknown_builtin_type(
-    ptr addrspace(1) %a) #0
+    ptr addrspace(1) %a) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !81 !kernel_arg_access_qual !2 !kernel_arg_type !84
     !kernel_arg_base_type !84 !kernel_arg_type_qual !4 {
   ret void
@@ -1543,7 +1543,7 @@ define amdgpu_kernel void @test_pointee_align(ptr addrspace(1) %a,
                                               ptr addrspace(3) align 4 %e,
                                               ptr addrspace(3) align 8 %f,
                                               ptr addrspace(3) align 16 %g,
-                                              ptr addrspace(3) %h) #0
+                                              ptr addrspace(3) %h) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !91 !kernel_arg_access_qual !92 !kernel_arg_type !93
     !kernel_arg_base_type !93 !kernel_arg_type_qual !94 {
   ret void
@@ -1638,7 +1638,7 @@ define amdgpu_kernel void @test_pointee_align_attribute(ptr addrspace(1) align 1
                                                         ptr addrspace(3) align 256 %e,
                                                         ptr addrspace(3) align 128 %f,
                                                         ptr addrspace(3) align 1024 %g,
-                                                        ptr addrspace(3) align 16 %h) #0
+                                                        ptr addrspace(3) align 16 %h) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !91 !kernel_arg_access_qual !92 !kernel_arg_type !93
     !kernel_arg_base_type !93 !kernel_arg_type_qual !94 {
   ret void
@@ -1678,7 +1678,7 @@ define amdgpu_kernel void @test_pointee_align_attribute(ptr addrspace(1) align 1
 ; CHECK:          .name:           __test_block_invoke_kernel
 ; CHECK:          .symbol:         __test_block_invoke_kernel.kd
 define amdgpu_kernel void @__test_block_invoke_kernel(
-    <{ i32, i32, ptr, ptr addrspace(1), i8 }> %arg) #1
+    <{ i32, i32, ptr, ptr addrspace(1), i8 }> %arg) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56" "runtime-handle"="__test_block_invoke_kernel_runtime_handle"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !110
     !kernel_arg_base_type !110 !kernel_arg_type_qual !4 {
   ret void
@@ -1717,7 +1717,7 @@ define amdgpu_kernel void @__test_block_invoke_kernel(
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_enqueue_kernel_caller
 ; CHECK:          .symbol:         test_enqueue_kernel_caller.kd
-define amdgpu_kernel void @test_enqueue_kernel_caller(i8 %a) #2
+define amdgpu_kernel void @test_enqueue_kernel_caller(i8 %a) optnone noinline "amdgpu-implicitarg-num-bytes"="56"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !9
     !kernel_arg_base_type !9 !kernel_arg_type_qual !4 {
   ret void
@@ -1730,7 +1730,7 @@ define amdgpu_kernel void @test_enqueue_kernel_caller(i8 %a) #2
 ; CHECK-NEXT:         .value_kind:     global_buffer
 ; CHECK:          .name:           unknown_addrspace_kernarg
 ; CHECK:          .symbol:         unknown_addrspace_kernarg.kd
-define amdgpu_kernel void @unknown_addrspace_kernarg(ptr addrspace(12345) %ptr) #0 {
+define amdgpu_kernel void @unknown_addrspace_kernarg(ptr addrspace(12345) %ptr) optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56" {
   ret void
 }
 
@@ -1740,10 +1740,6 @@ define amdgpu_kernel void @unknown_addrspace_kernarg(ptr addrspace(12345) %ptr) 
 ; CHECK:  amdhsa.version:
 ; CHECK-NEXT: - 1
 ; CHECK-NEXT: - 1
-
-attributes #0 = { optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56" }
-attributes #1 = { optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56" "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
-attributes #2 = { optnone noinline "amdgpu-implicitarg-num-bytes"="56" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

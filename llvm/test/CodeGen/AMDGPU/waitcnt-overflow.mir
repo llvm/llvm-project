@@ -4,11 +4,9 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GFX11 %s
 
 --- |
-    define amdgpu_kernel void @max-counter-lgkmcnt() #0 { ret void }
-    define amdgpu_kernel void @max-counter-vmcnt() #0 { ret void }
-    define amdgpu_kernel void @max-counter-expcnt() #0 { ret void }
-
-    attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
+    define amdgpu_kernel void @max-counter-lgkmcnt() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @max-counter-vmcnt() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @max-counter-expcnt() "amdgpu-flat-work-group-size"="1,256" { ret void }
 ...
 
 # Check that we handle cases where a counter has overflowed.

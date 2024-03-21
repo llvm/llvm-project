@@ -5,7 +5,7 @@
 ; GCN-NOT: v1
 ; GCN-NOT: v0
 ; GCN: buffer_store_dword v0
-define amdgpu_ps void @adjust_writemask_crash_0_nochain() #0 {
+define amdgpu_ps void @adjust_writemask_crash_0_nochain() nounwind {
 main_body:
   %tmp = call <2 x float> @llvm.amdgcn.image.getlod.1d.v2f32.f32(i32 3, float undef, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
   %tmp1 = bitcast <2 x float> %tmp to <2 x i32>
@@ -21,7 +21,7 @@ main_body:
 ; GCN-NOT: v1
 ; GCN-NOT: v0
 ; GCN: buffer_store_dword v0
-define amdgpu_ps void @adjust_writemask_crash_1_nochain() #0 {
+define amdgpu_ps void @adjust_writemask_crash_1_nochain() nounwind {
 main_body:
   %tmp = call <2 x float> @llvm.amdgcn.image.getlod.1d.v2f32.f32(i32 3, float undef, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
   %tmp1 = bitcast <2 x float> %tmp to <2 x i32>
@@ -37,7 +37,7 @@ main_body:
 ; GCN-NOT: v1
 ; GCN-NOT: v0
 ; GCN: buffer_store_dword v0
-define amdgpu_ps void @adjust_writemask_crash_0_chain() #0 {
+define amdgpu_ps void @adjust_writemask_crash_0_chain() nounwind {
 main_body:
   %tmp = call <2 x float> @llvm.amdgcn.image.sample.1d.v2f32.f32(i32 3, float undef, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
   %tmp1 = bitcast <2 x float> %tmp to <2 x i32>
@@ -53,7 +53,7 @@ main_body:
 ; GCN-NOT: v1
 ; GCN-NOT: v0
 ; GCN: buffer_store_dword v0
-define amdgpu_ps void @adjust_writemask_crash_1_chain() #0 {
+define amdgpu_ps void @adjust_writemask_crash_1_chain() nounwind {
 main_body:
   %tmp = call <2 x float> @llvm.amdgcn.image.sample.1d.v2f32.f32(i32 3, float undef, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
   %tmp1 = bitcast <2 x float> %tmp to <2 x i32>
@@ -64,7 +64,7 @@ main_body:
   ret void
 }
 
-define amdgpu_ps void @adjust_writemask_crash_0_v4() #0 {
+define amdgpu_ps void @adjust_writemask_crash_0_v4() nounwind {
 main_body:
   %tmp = call <4 x float> @llvm.amdgcn.image.getlod.1d.v4f32.f32(i32 5, float undef, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
   %tmp1 = bitcast <4 x float> %tmp to <4 x i32>
@@ -76,9 +76,6 @@ main_body:
 }
 
 
-declare <2 x float> @llvm.amdgcn.image.sample.1d.v2f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <2 x float> @llvm.amdgcn.image.getlod.1d.v2f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.getlod.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readonly }
+declare <2 x float> @llvm.amdgcn.image.sample.1d.v2f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <2 x float> @llvm.amdgcn.image.getlod.1d.v2f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.getlod.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly

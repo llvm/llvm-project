@@ -11,7 +11,7 @@ define amdgpu_kernel void @kern_noargs() {
   ret void
 }
 
-define amdgpu_kernel void @kern_i8(i8 %arg) #0 {
+define amdgpu_kernel void @kern_i8(i8 %arg) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_i8(
 ; HSA-NEXT:    [[KERN_I8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_I8_KERNARG_SEGMENT]], i64 0
@@ -32,7 +32,7 @@ define amdgpu_kernel void @kern_i8(i8 %arg) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_i16(i16 %arg) #0 {
+define amdgpu_kernel void @kern_i16(i16 %arg) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_i16(
 ; HSA-NEXT:    [[KERN_I16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_I16_KERNARG_SEGMENT]], i64 0
@@ -53,7 +53,7 @@ define amdgpu_kernel void @kern_i16(i16 %arg) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_f16(half %arg) #0 {
+define amdgpu_kernel void @kern_f16(half %arg) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_f16(
 ; HSA-NEXT:    [[KERN_F16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_F16_KERNARG_SEGMENT]], i64 0
@@ -76,7 +76,7 @@ define amdgpu_kernel void @kern_f16(half %arg) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_zeroext_i8(i8 zeroext %arg) #0 {
+define amdgpu_kernel void @kern_zeroext_i8(i8 zeroext %arg) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_zeroext_i8(
 ; HSA-NEXT:    [[KERN_ZEROEXT_I8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_ZEROEXT_I8_KERNARG_SEGMENT]], i64 0
@@ -97,7 +97,7 @@ define amdgpu_kernel void @kern_zeroext_i8(i8 zeroext %arg) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_zeroext_i16(i16 zeroext %arg) #0 {
+define amdgpu_kernel void @kern_zeroext_i16(i16 zeroext %arg) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_zeroext_i16(
 ; HSA-NEXT:    [[KERN_ZEROEXT_I16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_ZEROEXT_I16_KERNARG_SEGMENT]], i64 0
@@ -118,7 +118,7 @@ define amdgpu_kernel void @kern_zeroext_i16(i16 zeroext %arg) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_signext_i8(i8 signext %arg) #0 {
+define amdgpu_kernel void @kern_signext_i8(i8 signext %arg) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_signext_i8(
 ; HSA-NEXT:    [[KERN_SIGNEXT_I8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_SIGNEXT_I8_KERNARG_SEGMENT]], i64 0
@@ -139,7 +139,7 @@ define amdgpu_kernel void @kern_signext_i8(i8 signext %arg) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_signext_i16(i16 signext %arg) #0 {
+define amdgpu_kernel void @kern_signext_i16(i16 signext %arg) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_signext_i16(
 ; HSA-NEXT:    [[KERN_SIGNEXT_I16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_SIGNEXT_I16_KERNARG_SEGMENT]], i64 0
@@ -295,7 +295,7 @@ define amdgpu_kernel void @kern_v3i32(<3 x i32> %arg0) {
   ret void
 }
 
-define amdgpu_kernel void @kern_v8i32(<8 x i32> %arg) #0 {
+define amdgpu_kernel void @kern_v8i32(<8 x i32> %arg) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_v8i32(
 ; HSA-NEXT:    [[KERN_V8I32_KERNARG_SEGMENT:%.*]] = call nonnull align 32 dereferenceable(288) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_V8I32_KERNARG_SEGMENT]], i64 0
@@ -314,7 +314,7 @@ define amdgpu_kernel void @kern_v8i32(<8 x i32> %arg) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_v8i64(<8 x i64> %arg) #0 {
+define amdgpu_kernel void @kern_v8i64(<8 x i64> %arg) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_v8i64(
 ; HSA-NEXT:    [[KERN_V8I64_KERNARG_SEGMENT:%.*]] = call nonnull align 64 dereferenceable(320) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_V8I64_KERNARG_SEGMENT]], i64 0
@@ -333,7 +333,7 @@ define amdgpu_kernel void @kern_v8i64(<8 x i64> %arg) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_v16i64(<16 x i64> %arg) #0 {
+define amdgpu_kernel void @kern_v16i64(<16 x i64> %arg) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_v16i64(
 ; HSA-NEXT:    [[KERN_V16I64_KERNARG_SEGMENT:%.*]] = call nonnull align 128 dereferenceable(384) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_V16I64_KERNARG_SEGMENT]], i64 0
@@ -402,7 +402,7 @@ define amdgpu_kernel void @kern_struct_a(%struct.a %arg0) {
   ret void
 }
 
-define amdgpu_kernel void @kern_struct_b_packed(%struct.b.packed %arg0) #0 {
+define amdgpu_kernel void @kern_struct_b_packed(%struct.b.packed %arg0) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_struct_b_packed(
 ; HSA-NEXT:    [[KERN_STRUCT_B_PACKED_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(288) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_STRUCT_B_PACKED_KERNARG_SEGMENT]], i64 0
@@ -421,7 +421,7 @@ define amdgpu_kernel void @kern_struct_b_packed(%struct.b.packed %arg0) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_implicit_arg_num_bytes(i32 %arg0) #1 {
+define amdgpu_kernel void @kern_implicit_arg_num_bytes(i32 %arg0) nounwind "target-cpu"="kaveri" "amdgpu-implicitarg-num-bytes"="40" {
 ; HSA-LABEL: @kern_implicit_arg_num_bytes(
 ; HSA-NEXT:    [[KERN_IMPLICIT_ARG_NUM_BYTES_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(48) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_IMPLICIT_ARG_NUM_BYTES_KERNARG_SEGMENT]], i64 0
@@ -440,7 +440,7 @@ define amdgpu_kernel void @kern_implicit_arg_num_bytes(i32 %arg0) #1 {
   ret void
 }
 
-define amdgpu_kernel void @kernel_implicitarg_no_struct_align(<16 x i32>, i32 %arg1) #1 {
+define amdgpu_kernel void @kernel_implicitarg_no_struct_align(<16 x i32>, i32 %arg1) nounwind "target-cpu"="kaveri" "amdgpu-implicitarg-num-bytes"="40" {
 ; HSA-LABEL: @kernel_implicitarg_no_struct_align(
 ; HSA-NEXT:    [[KERNEL_IMPLICITARG_NO_STRUCT_ALIGN_KERNARG_SEGMENT:%.*]] = call nonnull align 64 dereferenceable(112) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERNEL_IMPLICITARG_NO_STRUCT_ALIGN_KERNARG_SEGMENT]], i64 64
@@ -459,7 +459,7 @@ define amdgpu_kernel void @kernel_implicitarg_no_struct_align(<16 x i32>, i32 %a
   ret void
 }
 
-define amdgpu_kernel void @kern_lds_ptr(ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @kern_lds_ptr(ptr addrspace(3) %lds) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_lds_ptr(
 ; HSA-NEXT:    [[KERN_LDS_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[LDS_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_LDS_PTR_KERNARG_SEGMENT]], i64 0
@@ -478,7 +478,7 @@ define amdgpu_kernel void @kern_lds_ptr(ptr addrspace(3) %lds) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_lds_ptr_si(ptr addrspace(3) %lds) #2 {
+define amdgpu_kernel void @kern_lds_ptr_si(ptr addrspace(3) %lds) nounwind "target-cpu"="tahiti" {
 ; GCN-LABEL: @kern_lds_ptr_si(
 ; GCN-NEXT:    [[KERN_LDS_PTR_SI_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; GCN-NEXT:    store i32 0, ptr addrspace(3) [[LDS:%.*]], align 4
@@ -488,7 +488,7 @@ define amdgpu_kernel void @kern_lds_ptr_si(ptr addrspace(3) %lds) #2 {
   ret void
 }
 
-define amdgpu_kernel void @kern_realign_i8_i8(i8 %arg0, i8 %arg1) #0 {
+define amdgpu_kernel void @kern_realign_i8_i8(i8 %arg0, i8 %arg1) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_realign_i8_i8(
 ; HSA-NEXT:    [[KERN_REALIGN_I8_I8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_REALIGN_I8_I8_KERNARG_SEGMENT]], i64 0
@@ -520,7 +520,7 @@ define amdgpu_kernel void @kern_realign_i8_i8(i8 %arg0, i8 %arg1) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_realign_i8_i8_i8(i8 %arg0, i8 %arg1, i8 %arg2) #0 {
+define amdgpu_kernel void @kern_realign_i8_i8_i8(i8 %arg0, i8 %arg1, i8 %arg2) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_realign_i8_i8_i8(
 ; HSA-NEXT:    [[KERN_REALIGN_I8_I8_I8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_REALIGN_I8_I8_I8_KERNARG_SEGMENT]], i64 0
@@ -563,7 +563,7 @@ define amdgpu_kernel void @kern_realign_i8_i8_i8(i8 %arg0, i8 %arg1, i8 %arg2) #
   ret void
 }
 
-define amdgpu_kernel void @kern_realign_i8_i8_i8_i8(i8 %arg0, i8 %arg1, i8 %arg2, i8 %arg3) #0 {
+define amdgpu_kernel void @kern_realign_i8_i8_i8_i8(i8 %arg0, i8 %arg1, i8 %arg2, i8 %arg3) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_realign_i8_i8_i8_i8(
 ; HSA-NEXT:    [[KERN_REALIGN_I8_I8_I8_I8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_REALIGN_I8_I8_I8_I8_KERNARG_SEGMENT]], i64 0
@@ -617,7 +617,7 @@ define amdgpu_kernel void @kern_realign_i8_i8_i8_i8(i8 %arg0, i8 %arg1, i8 %arg2
   ret void
 }
 
-define amdgpu_kernel void @kern_realign_i8_v3i8(i8 %arg0, <3 x i8> %arg1) #0 {
+define amdgpu_kernel void @kern_realign_i8_v3i8(i8 %arg0, <3 x i8> %arg1) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_realign_i8_v3i8(
 ; HSA-NEXT:    [[KERN_REALIGN_I8_V3I8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_REALIGN_I8_V3I8_KERNARG_SEGMENT]], i64 0
@@ -649,7 +649,7 @@ define amdgpu_kernel void @kern_realign_i8_v3i8(i8 %arg0, <3 x i8> %arg1) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_realign_i8_i16(i8 %arg0, i16 %arg1) #0 {
+define amdgpu_kernel void @kern_realign_i8_i16(i8 %arg0, i16 %arg1) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_realign_i8_i16(
 ; HSA-NEXT:    [[KERN_REALIGN_I8_I16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_REALIGN_I8_I16_KERNARG_SEGMENT]], i64 0
@@ -681,7 +681,7 @@ define amdgpu_kernel void @kern_realign_i8_i16(i8 %arg0, i16 %arg1) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_realign_i1_i1(i1 %arg0, i1 %arg1) #0 {
+define amdgpu_kernel void @kern_realign_i1_i1(i1 %arg0, i1 %arg1) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_realign_i1_i1(
 ; HSA-NEXT:    [[KERN_REALIGN_I1_I1_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_REALIGN_I1_I1_KERNARG_SEGMENT]], i64 0
@@ -713,7 +713,7 @@ define amdgpu_kernel void @kern_realign_i1_i1(i1 %arg0, i1 %arg1) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_realign_i1_i1_i1(i1 %arg0, i1 %arg1, i1 %arg2) #0 {
+define amdgpu_kernel void @kern_realign_i1_i1_i1(i1 %arg0, i1 %arg1, i1 %arg2) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_realign_i1_i1_i1(
 ; HSA-NEXT:    [[KERN_REALIGN_I1_I1_I1_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_REALIGN_I1_I1_I1_KERNARG_SEGMENT]], i64 0
@@ -756,7 +756,7 @@ define amdgpu_kernel void @kern_realign_i1_i1_i1(i1 %arg0, i1 %arg1, i1 %arg2) #
   ret void
 }
 
-define amdgpu_kernel void @kern_realign_i1_i1_i1_i1(i1 %arg0, i1 %arg1, i1 %arg2, i1 %arg3) #0 {
+define amdgpu_kernel void @kern_realign_i1_i1_i1_i1(i1 %arg0, i1 %arg1, i1 %arg2, i1 %arg3) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_realign_i1_i1_i1_i1(
 ; HSA-NEXT:    [[KERN_REALIGN_I1_I1_I1_I1_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_REALIGN_I1_I1_I1_I1_KERNARG_SEGMENT]], i64 0
@@ -810,7 +810,7 @@ define amdgpu_kernel void @kern_realign_i1_i1_i1_i1(i1 %arg0, i1 %arg1, i1 %arg2
   ret void
 }
 
-define amdgpu_kernel void @kern_realign_i1_v3i1(i1 %arg0, <3 x i1> %arg1) #0 {
+define amdgpu_kernel void @kern_realign_i1_v3i1(i1 %arg0, <3 x i1> %arg1) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_realign_i1_v3i1(
 ; HSA-NEXT:    [[KERN_REALIGN_I1_V3I1_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_REALIGN_I1_V3I1_KERNARG_SEGMENT]], i64 0
@@ -844,7 +844,7 @@ define amdgpu_kernel void @kern_realign_i1_v3i1(i1 %arg0, <3 x i1> %arg1) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_realign_i1_i16(i1 %arg0, i16 %arg1) #0 {
+define amdgpu_kernel void @kern_realign_i1_i16(i1 %arg0, i16 %arg1) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_realign_i1_i16(
 ; HSA-NEXT:    [[KERN_REALIGN_I1_I16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_REALIGN_I1_I16_KERNARG_SEGMENT]], i64 0
@@ -876,7 +876,7 @@ define amdgpu_kernel void @kern_realign_i1_i16(i1 %arg0, i16 %arg1) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_realign_i8_i8_i8_i8_i8_i8_i8_i8(i8 %arg0, i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4, i8 %arg5, i8 %arg6, i8 %arg7) #0 {
+define amdgpu_kernel void @kern_realign_i8_i8_i8_i8_i8_i8_i8_i8(i8 %arg0, i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4, i8 %arg5, i8 %arg6, i8 %arg7) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_realign_i8_i8_i8_i8_i8_i8_i8_i8(
 ; HSA-NEXT:    [[KERN_REALIGN_I8_I8_I8_I8_I8_I8_I8_I8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_REALIGN_I8_I8_I8_I8_I8_I8_I8_I8_KERNARG_SEGMENT]], i64 0
@@ -963,7 +963,7 @@ define amdgpu_kernel void @kern_realign_i8_i8_i8_i8_i8_i8_i8_i8(i8 %arg0, i8 %ar
   ret void
 }
 
-define amdgpu_kernel void @kern_realign_f16_f16(half %arg0, half %arg1) #0 {
+define amdgpu_kernel void @kern_realign_f16_f16(half %arg0, half %arg1) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_realign_f16_f16(
 ; HSA-NEXT:    [[KERN_REALIGN_F16_F16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_REALIGN_F16_F16_KERNARG_SEGMENT]], i64 0
@@ -999,7 +999,7 @@ define amdgpu_kernel void @kern_realign_f16_f16(half %arg0, half %arg1) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_global_ptr(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @kern_global_ptr(ptr addrspace(1) %ptr) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_global_ptr(
 ; HSA-NEXT:    [[KERN_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_GLOBAL_PTR_KERNARG_SEGMENT]], i64 0
@@ -1018,7 +1018,7 @@ define amdgpu_kernel void @kern_global_ptr(ptr addrspace(1) %ptr) #0 {
   ret void
 }
 
-define amdgpu_kernel void @kern_global_ptr_dereferencable(ptr addrspace(1) dereferenceable(42) %ptr) #0 {
+define amdgpu_kernel void @kern_global_ptr_dereferencable(ptr addrspace(1) dereferenceable(42) %ptr) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_global_ptr_dereferencable(
 ; HSA-NEXT:    [[KERN_GLOBAL_PTR_DEREFERENCABLE_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_GLOBAL_PTR_DEREFERENCABLE_KERNARG_SEGMENT]], i64 0
@@ -1037,7 +1037,7 @@ define amdgpu_kernel void @kern_global_ptr_dereferencable(ptr addrspace(1) deref
   ret void
 }
 
-define amdgpu_kernel void @kern_global_ptr_dereferencable_or_null(ptr addrspace(1) dereferenceable_or_null(128) %ptr) #0 {
+define amdgpu_kernel void @kern_global_ptr_dereferencable_or_null(ptr addrspace(1) dereferenceable_or_null(128) %ptr) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_global_ptr_dereferencable_or_null(
 ; HSA-NEXT:    [[KERN_GLOBAL_PTR_DEREFERENCABLE_OR_NULL_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_GLOBAL_PTR_DEREFERENCABLE_OR_NULL_KERNARG_SEGMENT]], i64 0
@@ -1056,7 +1056,7 @@ define amdgpu_kernel void @kern_global_ptr_dereferencable_or_null(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @kern_nonnull_global_ptr(ptr addrspace(1) nonnull %ptr) #0 {
+define amdgpu_kernel void @kern_nonnull_global_ptr(ptr addrspace(1) nonnull %ptr) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_nonnull_global_ptr(
 ; HSA-NEXT:    [[KERN_NONNULL_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_NONNULL_GLOBAL_PTR_KERNARG_SEGMENT]], i64 0
@@ -1075,7 +1075,7 @@ define amdgpu_kernel void @kern_nonnull_global_ptr(ptr addrspace(1) nonnull %ptr
   ret void
 }
 
-define amdgpu_kernel void @kern_align32_global_ptr(ptr addrspace(1) align 1024 %ptr) #0 {
+define amdgpu_kernel void @kern_align32_global_ptr(ptr addrspace(1) align 1024 %ptr) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @kern_align32_global_ptr(
 ; HSA-NEXT:    [[KERN_ALIGN32_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_ALIGN32_GLOBAL_PTR_KERNARG_SEGMENT]], i64 0
@@ -1094,7 +1094,7 @@ define amdgpu_kernel void @kern_align32_global_ptr(ptr addrspace(1) align 1024 %
   ret void
 }
 
-define amdgpu_kernel void @kern_noalias_global_ptr(ptr addrspace(1) noalias %ptr) #0 {
+define amdgpu_kernel void @kern_noalias_global_ptr(ptr addrspace(1) noalias %ptr) nounwind "target-cpu"="kaveri" {
 ; GCN-LABEL: @kern_noalias_global_ptr(
 ; GCN-NEXT:    [[KERN_NOALIAS_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; GCN-NEXT:    store volatile ptr addrspace(1) [[PTR:%.*]], ptr addrspace(1) undef, align 8
@@ -1104,7 +1104,7 @@ define amdgpu_kernel void @kern_noalias_global_ptr(ptr addrspace(1) noalias %ptr
   ret void
 }
 
-define amdgpu_kernel void @kern_noalias_global_ptr_x2(ptr addrspace(1) noalias %ptr0, ptr addrspace(1) noalias %ptr1) #0 {
+define amdgpu_kernel void @kern_noalias_global_ptr_x2(ptr addrspace(1) noalias %ptr0, ptr addrspace(1) noalias %ptr1) nounwind "target-cpu"="kaveri" {
 ; GCN-LABEL: @kern_noalias_global_ptr_x2(
 ; GCN-NEXT:    [[KERN_NOALIAS_GLOBAL_PTR_X2_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; GCN-NEXT:    store volatile ptr addrspace(1) [[PTR0:%.*]], ptr addrspace(1) undef, align 8
@@ -1116,7 +1116,7 @@ define amdgpu_kernel void @kern_noalias_global_ptr_x2(ptr addrspace(1) noalias %
   ret void
 }
 
-define amdgpu_kernel void @struct_i8_i8_arg({i8, i8} %in) #0 {
+define amdgpu_kernel void @struct_i8_i8_arg({i8, i8} %in) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @struct_i8_i8_arg(
 ; HSA-NEXT:  entry:
 ; HSA-NEXT:    [[STRUCT_I8_I8_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -1147,7 +1147,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @struct_i8_i16_arg({i8, i16} %in) #0 {
+define amdgpu_kernel void @struct_i8_i16_arg({i8, i16} %in) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @struct_i8_i16_arg(
 ; HSA-NEXT:  entry:
 ; HSA-NEXT:    [[STRUCT_I8_I16_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -1178,7 +1178,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @array_2xi8_arg([2 x i8] %in) #0 {
+define amdgpu_kernel void @array_2xi8_arg([2 x i8] %in) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @array_2xi8_arg(
 ; HSA-NEXT:  entry:
 ; HSA-NEXT:    [[ARRAY_2XI8_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -1209,7 +1209,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @array_2xi1_arg([2 x i1] %in) #0 {
+define amdgpu_kernel void @array_2xi1_arg([2 x i1] %in) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @array_2xi1_arg(
 ; HSA-NEXT:  entry:
 ; HSA-NEXT:    [[ARRAY_2XI1_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -1240,7 +1240,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @only_empty_struct({} %empty) #0 {
+define amdgpu_kernel void @only_empty_struct({} %empty) nounwind "target-cpu"="kaveri" {
 ; GCN-LABEL: @only_empty_struct(
 ; GCN-NEXT:    [[ONLY_EMPTY_STRUCT_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; GCN-NEXT:    ret void
@@ -1248,7 +1248,7 @@ define amdgpu_kernel void @only_empty_struct({} %empty) #0 {
   ret void
 }
 
-define amdgpu_kernel void @empty_struct_with_other({} %empty, i32 %arg1) #0 {
+define amdgpu_kernel void @empty_struct_with_other({} %empty, i32 %arg1) nounwind "target-cpu"="kaveri" {
 ; HSA-LABEL: @empty_struct_with_other(
 ; HSA-NEXT:    [[EMPTY_STRUCT_WITH_OTHER_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[EMPTY_STRUCT_WITH_OTHER_KERNARG_SEGMENT]], i64 0
@@ -1689,10 +1689,6 @@ define amdgpu_kernel void @byref_constant_i32_arg_offset0(ptr addrspace(4) byref
   store i32 %in, ptr addrspace(1) undef, align 4
   ret void
 }
-
-attributes #0 = { nounwind "target-cpu"="kaveri" }
-attributes #1 = { nounwind "target-cpu"="kaveri" "amdgpu-implicitarg-num-bytes"="40" }
-attributes #2 = { nounwind "target-cpu"="tahiti" }
 
 
 !llvm.module.flags = !{!0}

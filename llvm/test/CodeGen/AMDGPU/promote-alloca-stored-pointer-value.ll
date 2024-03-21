@@ -5,7 +5,7 @@
 
 ; GCN-LABEL: {{^}}stored_lds_pointer_value:
 ; GCN: buffer_store_dword v
-define amdgpu_kernel void @stored_lds_pointer_value(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @stored_lds_pointer_value(ptr addrspace(1) %ptr) nounwind {
   %tmp = alloca float, addrspace(5)
   store float 0.0, ptr  addrspace(5) %tmp
   store ptr addrspace(5) %tmp, ptr addrspace(1) %ptr
@@ -14,7 +14,7 @@ define amdgpu_kernel void @stored_lds_pointer_value(ptr addrspace(1) %ptr) #0 {
 
 ; GCN-LABEL: {{^}}stored_lds_pointer_value_offset:
 ; GCN: buffer_store_dword v
-define amdgpu_kernel void @stored_lds_pointer_value_offset(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @stored_lds_pointer_value_offset(ptr addrspace(1) %ptr) nounwind {
   %tmp0 = alloca float, addrspace(5)
   %tmp1 = alloca float, addrspace(5)
   store float 0.0, ptr  addrspace(5) %tmp0
@@ -29,7 +29,7 @@ define amdgpu_kernel void @stored_lds_pointer_value_offset(ptr addrspace(1) %ptr
 ; GCN-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; GCN: buffer_store_dword v
 ; GCN: buffer_store_dword v
-define amdgpu_kernel void @stored_lds_pointer_value_gep(ptr addrspace(1) %ptr, i32 %idx) #0 {
+define amdgpu_kernel void @stored_lds_pointer_value_gep(ptr addrspace(1) %ptr, i32 %idx) nounwind {
 bb:
   %tmp = alloca float, i32 16, addrspace(5)
   store float 0.0, ptr addrspace(5) %tmp
@@ -63,11 +63,9 @@ entry:
 
 ; GCN-LABEL: {{^}}stored_fi_to_self:
 ; GCN-NOT: ds_
-define amdgpu_kernel void @stored_fi_to_self() #0 {
+define amdgpu_kernel void @stored_fi_to_self() nounwind {
   %tmp = alloca ptr addrspace(5), addrspace(5)
   store volatile ptr addrspace(5) inttoptr (i32 1234 to ptr addrspace(5)), ptr addrspace(5) %tmp
   store volatile ptr addrspace(5) %tmp, ptr addrspace(5) %tmp
   ret void
 }
-
-attributes #0 = { nounwind }

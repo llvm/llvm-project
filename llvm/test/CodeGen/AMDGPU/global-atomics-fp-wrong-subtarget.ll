@@ -8,7 +8,7 @@
 ; DISASSEMBLY-VI: .long 0xdd348000                                           // {{[0-9A-Z]+}}: DD348000
 ; DISASSEMBLY-VI-NEXT: v_cndmask_b32_e32 v0, v0, v0, vcc                     // {{[0-9A-Z]+}}: 00000100
 
-define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "target-features"="+atomic-fadd-no-rtn-insts" "amdgpu-unsafe-fp-atomics"="true" {
 ; GCN-LABEL: global_atomic_fadd_noret_f32_wrong_subtarget:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b64 s[2:3], exec
@@ -32,5 +32,3 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(ptr addr
   %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("agent") seq_cst
   ret void
 }
-
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "target-features"="+atomic-fadd-no-rtn-insts" "amdgpu-unsafe-fp-atomics"="true" }

@@ -1145,10 +1145,8 @@ define amdgpu_kernel void @s_test_copysign_f32_fpext_bf16(ptr addrspace(1) %out,
   ret void
 }
 
-declare float @llvm.copysign.f32(float, float) #0
-declare <2 x float> @llvm.copysign.v2f32(<2 x float>, <2 x float>) #0
-declare <3 x float> @llvm.copysign.v3f32(<3 x float>, <3 x float>) #0
-declare <4 x float> @llvm.copysign.v4f32(<4 x float>, <4 x float>) #0
-declare <5 x float> @llvm.copysign.v5f32(<5 x float>, <5 x float>) #0
-
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+declare float @llvm.copysign.f32(float, float) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x float> @llvm.copysign.v2f32(<2 x float>, <2 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <3 x float> @llvm.copysign.v3f32(<3 x float>, <3 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <4 x float> @llvm.copysign.v4f32(<4 x float>, <4 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <5 x float> @llvm.copysign.v5f32(<5 x float>, <5 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)

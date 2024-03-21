@@ -11,7 +11,7 @@
 ; GCN-NEXT: v_xor_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-NEXT: v_and_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define amdgpu_kernel void @in_worklist_once() #0 {
+define amdgpu_kernel void @in_worklist_once() nounwind {
 bb:
 	%tmp = load i64, ptr addrspace(5) undef
 br label %bb1
@@ -25,5 +25,3 @@ bb1:                                              ; preds = %bb1, %bb
 	%tmp16 = xor i64 %tmp15, %tmp3
 br label %bb1
 }
-
-attributes #0 = { nounwind }

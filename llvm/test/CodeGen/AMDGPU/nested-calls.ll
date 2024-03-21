@@ -5,7 +5,7 @@
 ; Test calls when called by other callable functions rather than
 ; kernels.
 
-declare void @external_void_func_i32(i32) #0
+declare void @external_void_func_i32(i32) nounwind
 
 ; GCN-LABEL: {{^}}test_func_call_external_void_func_i32_imm:
 ; GCN: s_waitcnt
@@ -33,7 +33,7 @@ declare void @external_void_func_i32(i32) #0
 ; GCN-NEXT: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64 s[30:31]
-define void @test_func_call_external_void_func_i32_imm() #0 {
+define void @test_func_call_external_void_func_i32_imm() nounwind {
   call void @external_void_func_i32(i32 42)
   ret void
 }
@@ -46,7 +46,7 @@ define void @test_func_call_external_void_func_i32_imm() #0 {
 ; GCN: s_swappc_b64
 ; GCN: s_addk_i32 s32, 0xec00{{$}}
 ; GCN: s_setpc_b64
-define void @test_func_call_external_void_func_i32_imm_stack_use() #0 {
+define void @test_func_call_external_void_func_i32_imm_stack_use() nounwind {
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep15 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 16
   store volatile i32 0, ptr addrspace(5) %alloca
@@ -54,7 +54,3 @@ define void @test_func_call_external_void_func_i32_imm_stack_use() #0 {
   call void @external_void_func_i32(i32 42)
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind noinline }

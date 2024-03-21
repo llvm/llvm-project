@@ -441,9 +441,7 @@ define amdgpu_vs <4 x float> @test_v4f16_v4f32_add_ext_fma_mul_rhs(<4 x float> %
     ret <4 x float> %d
 }
 
-declare float @llvm.fmuladd.f32(float, float, float) #0
-declare half @llvm.fmuladd.f16(half, half, half) #0
-declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) #0
-declare <4 x half> @llvm.fmuladd.v4f16(<4 x half>, <4 x half>, <4 x half>) #0
-
-attributes #0 = { nounwind readnone }
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone
+declare half @llvm.fmuladd.f16(half, half, half) nounwind readnone
+declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
+declare <4 x half> @llvm.fmuladd.v4f16(<4 x half>, <4 x half>, <4 x half>) nounwind readnone

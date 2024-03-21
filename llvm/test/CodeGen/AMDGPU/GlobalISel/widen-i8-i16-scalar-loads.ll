@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX10 %s
 
-define amdgpu_kernel void @constant_load_i8_align4(ptr addrspace (1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_i8_align4(ptr addrspace (1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX8-LABEL: constant_load_i8_align4:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -42,7 +42,7 @@ define amdgpu_kernel void @constant_load_i8_align4(ptr addrspace (1) %out, ptr a
   ret void
 }
 
-define amdgpu_kernel void @constant_load_i16_align4(ptr addrspace (1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_i16_align4(ptr addrspace (1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX8-LABEL: constant_load_i16_align4:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -81,7 +81,7 @@ define amdgpu_kernel void @constant_load_i16_align4(ptr addrspace (1) %out, ptr 
   ret void
 }
 
-define amdgpu_kernel void @sextload_i8_to_i32_align4(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @sextload_i8_to_i32_align4(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX8-LABEL: sextload_i8_to_i32_align4:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -124,7 +124,7 @@ define amdgpu_kernel void @sextload_i8_to_i32_align4(ptr addrspace(1) %out, ptr 
   ret void
 }
 
-define amdgpu_kernel void @sextload_i16_to_i32_align4(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @sextload_i16_to_i32_align4(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX8-LABEL: sextload_i16_to_i32_align4:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -167,7 +167,7 @@ define amdgpu_kernel void @sextload_i16_to_i32_align4(ptr addrspace(1) %out, ptr
   ret void
 }
 
-define amdgpu_kernel void @zextload_i8_to_i32_align4(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @zextload_i8_to_i32_align4(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX8-LABEL: zextload_i8_to_i32_align4:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -210,7 +210,7 @@ define amdgpu_kernel void @zextload_i8_to_i32_align4(ptr addrspace(1) %out, ptr 
   ret void
 }
 
-define amdgpu_kernel void @zextload_i16_to_i32_align4(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @zextload_i16_to_i32_align4(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX8-LABEL: zextload_i16_to_i32_align4:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -253,7 +253,7 @@ define amdgpu_kernel void @zextload_i16_to_i32_align4(ptr addrspace(1) %out, ptr
   ret void
 }
 
-define amdgpu_kernel void @constant_load_i8_align2(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @constant_load_i8_align2(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX8-LABEL: constant_load_i8_align2:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -291,7 +291,7 @@ define amdgpu_kernel void @constant_load_i8_align2(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @constant_load_i16_align2(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @constant_load_i16_align2(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX8-LABEL: constant_load_i16_align2:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -329,7 +329,7 @@ define amdgpu_kernel void @constant_load_i16_align2(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_i8_align2(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @constant_sextload_i8_align2(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX8-LABEL: constant_sextload_i8_align2:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -376,7 +376,7 @@ define amdgpu_kernel void @constant_sextload_i8_align2(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_i8_align2(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @constant_zextload_i8_align2(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX8-LABEL: constant_zextload_i8_align2:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -422,5 +422,3 @@ define amdgpu_kernel void @constant_zextload_i8_align2(ptr addrspace(1) %out, pt
   store i32 %zextload, ptr addrspace(1) %out, align 2
   ret void
 }
-
-attributes #0 = { nounwind }

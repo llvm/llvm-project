@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s -enable-var-scope -check-prefixes=GFX11
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
-define amdgpu_kernel void @v_test_sub_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_test_sub_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; GFX9-LABEL: v_test_sub_v2i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -93,7 +93,7 @@ define amdgpu_kernel void @v_test_sub_v2i16(ptr addrspace(1) %out, ptr addrspace
   ret void
 }
 
-define amdgpu_kernel void @s_test_sub_v2i16(ptr addrspace(1) %out, ptr addrspace(4) %in0, ptr addrspace(4) %in1) #1 {
+define amdgpu_kernel void @s_test_sub_v2i16(ptr addrspace(1) %out, ptr addrspace(4) %in0, ptr addrspace(4) %in1) nounwind {
 ; GFX9-LABEL: s_test_sub_v2i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x34
@@ -172,7 +172,7 @@ define amdgpu_kernel void @s_test_sub_v2i16(ptr addrspace(1) %out, ptr addrspace
   ret void
 }
 
-define amdgpu_kernel void @s_test_sub_self_v2i16(ptr addrspace(1) %out, ptr addrspace(4) %in0) #1 {
+define amdgpu_kernel void @s_test_sub_self_v2i16(ptr addrspace(1) %out, ptr addrspace(4) %in0) nounwind {
 ; GCN-LABEL: s_test_sub_self_v2i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -211,7 +211,7 @@ define amdgpu_kernel void @s_test_sub_self_v2i16(ptr addrspace(1) %out, ptr addr
 }
 
 ; FIXME: VI should not scalarize arg access.
-define amdgpu_kernel void @s_test_sub_v2i16_kernarg(ptr addrspace(1) %out, <2 x i16> %a, <2 x i16> %b) #1 {
+define amdgpu_kernel void @s_test_sub_v2i16_kernarg(ptr addrspace(1) %out, <2 x i16> %a, <2 x i16> %b) nounwind {
 ; GFX9-LABEL: s_test_sub_v2i16_kernarg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -274,7 +274,7 @@ define amdgpu_kernel void @s_test_sub_v2i16_kernarg(ptr addrspace(1) %out, <2 x 
   ret void
 }
 
-define amdgpu_kernel void @v_test_sub_v2i16_constant(ptr addrspace(1) %out, ptr addrspace(1) %in0) #1 {
+define amdgpu_kernel void @v_test_sub_v2i16_constant(ptr addrspace(1) %out, ptr addrspace(1) %in0) nounwind {
 ; GFX9-LABEL: v_test_sub_v2i16_constant:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -346,7 +346,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_constant(ptr addrspace(1) %out, ptr 
 }
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
-define amdgpu_kernel void @v_test_sub_v2i16_neg_constant(ptr addrspace(1) %out, ptr addrspace(1) %in0) #1 {
+define amdgpu_kernel void @v_test_sub_v2i16_neg_constant(ptr addrspace(1) %out, ptr addrspace(1) %in0) nounwind {
 ; GFX9-LABEL: v_test_sub_v2i16_neg_constant:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -417,7 +417,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_neg_constant(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @v_test_sub_v2i16_inline_neg1(ptr addrspace(1) %out, ptr addrspace(1) %in0) #1 {
+define amdgpu_kernel void @v_test_sub_v2i16_inline_neg1(ptr addrspace(1) %out, ptr addrspace(1) %in0) nounwind {
 ; GFX9-LABEL: v_test_sub_v2i16_inline_neg1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -487,7 +487,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_neg1(ptr addrspace(1) %out, p
   ret void
 }
 
-define amdgpu_kernel void @v_test_sub_v2i16_inline_lo_zero_hi(ptr addrspace(1) %out, ptr addrspace(1) %in0) #1 {
+define amdgpu_kernel void @v_test_sub_v2i16_inline_lo_zero_hi(ptr addrspace(1) %out, ptr addrspace(1) %in0) nounwind {
 ; GFX9-LABEL: v_test_sub_v2i16_inline_lo_zero_hi:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -557,7 +557,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_lo_zero_hi(ptr addrspace(1) %
 }
 
 ; The high element gives fp
-define amdgpu_kernel void @v_test_sub_v2i16_inline_fp_split(ptr addrspace(1) %out, ptr addrspace(1) %in0) #1 {
+define amdgpu_kernel void @v_test_sub_v2i16_inline_fp_split(ptr addrspace(1) %out, ptr addrspace(1) %in0) nounwind {
 ; GFX9-LABEL: v_test_sub_v2i16_inline_fp_split:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -627,7 +627,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_fp_split(ptr addrspace(1) %ou
 }
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
-define amdgpu_kernel void @v_test_sub_v2i16_zext_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_test_sub_v2i16_zext_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; GFX9-LABEL: v_test_sub_v2i16_zext_to_v2i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -723,7 +723,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_zext_to_v2i32(ptr addrspace(1) %out,
 }
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
-define amdgpu_kernel void @v_test_sub_v2i16_zext_to_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_test_sub_v2i16_zext_to_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; GFX9-LABEL: v_test_sub_v2i16_zext_to_v2i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -826,7 +826,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_zext_to_v2i64(ptr addrspace(1) %out,
 }
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
-define amdgpu_kernel void @v_test_sub_v2i16_sext_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_test_sub_v2i16_sext_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; GFX9-LABEL: v_test_sub_v2i16_sext_to_v2i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -924,7 +924,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_sext_to_v2i32(ptr addrspace(1) %out,
 }
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
-define amdgpu_kernel void @v_test_sub_v2i16_sext_to_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_test_sub_v2i16_sext_to_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; GFX9-LABEL: v_test_sub_v2i16_sext_to_v2i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -1031,7 +1031,4 @@ define amdgpu_kernel void @v_test_sub_v2i16_sext_to_v2i64(ptr addrspace(1) %out,
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

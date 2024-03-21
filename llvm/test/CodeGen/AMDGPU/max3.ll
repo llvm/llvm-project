@@ -4,7 +4,7 @@
 
 ; GCN-LABEL: {{^}}v_test_imax3_sgt_i32:
 ; GCN: v_max3_i32
-define amdgpu_kernel void @v_test_imax3_sgt_i32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @v_test_imax3_sgt_i32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i32, ptr addrspace(1) %aptr, i32 %tid
   %gep1 = getelementptr i32, ptr addrspace(1) %bptr, i32 %tid
@@ -23,7 +23,7 @@ define amdgpu_kernel void @v_test_imax3_sgt_i32(ptr addrspace(1) %out, ptr addrs
 
 ; GCN-LABEL: {{^}}v_test_umax3_ugt_i32:
 ; GCN: v_max3_u32
-define amdgpu_kernel void @v_test_umax3_ugt_i32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @v_test_umax3_ugt_i32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i32, ptr addrspace(1) %aptr, i32 %tid
   %gep1 = getelementptr i32, ptr addrspace(1) %bptr, i32 %tid
@@ -47,7 +47,7 @@ define amdgpu_kernel void @v_test_umax3_ugt_i32(ptr addrspace(1) %out, ptr addrs
 ; VI: v_max_i16
 
 ; GFX9: v_max3_i16
-define amdgpu_kernel void @v_test_imax3_sgt_i16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @v_test_imax3_sgt_i16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i16, ptr addrspace(1) %aptr, i32 %tid
   %gep1 = getelementptr i16, ptr addrspace(1) %bptr, i32 %tid
@@ -71,7 +71,7 @@ define amdgpu_kernel void @v_test_imax3_sgt_i16(ptr addrspace(1) %out, ptr addrs
 ; VI: v_max_u16
 
 ; GFX9: v_max3_u16
-define amdgpu_kernel void @v_test_umax3_ugt_i16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @v_test_umax3_ugt_i16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i16, ptr addrspace(1) %aptr, i32 %tid
   %gep1 = getelementptr i16, ptr addrspace(1) %bptr, i32 %tid
@@ -95,7 +95,7 @@ define amdgpu_kernel void @v_test_umax3_ugt_i16(ptr addrspace(1) %out, ptr addrs
 ; VI: v_max_i16
 
 ; GFX9: v_max3_i16
-define amdgpu_kernel void @v_test_imax3_sgt_i8(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @v_test_imax3_sgt_i8(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i8, ptr addrspace(1) %aptr, i32 %tid
   %gep1 = getelementptr i8, ptr addrspace(1) %bptr, i32 %tid
@@ -119,7 +119,7 @@ define amdgpu_kernel void @v_test_imax3_sgt_i8(ptr addrspace(1) %out, ptr addrsp
 ; VI: v_max_u16
 
 ; GFX9: v_max3_u16
-define amdgpu_kernel void @v_test_umax3_ugt_i8(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @v_test_umax3_ugt_i8(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i8, ptr addrspace(1) %aptr, i32 %tid
   %gep1 = getelementptr i8, ptr addrspace(1) %bptr, i32 %tid
@@ -143,7 +143,7 @@ define amdgpu_kernel void @v_test_umax3_ugt_i8(ptr addrspace(1) %out, ptr addrsp
 ; VI: v_max_i16
 
 ; GFX9: v_max3_i16
-define amdgpu_kernel void @v_test_imax3_sgt_i7(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @v_test_imax3_sgt_i7(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i7, ptr addrspace(1) %aptr, i32 %tid
   %gep1 = getelementptr i7, ptr addrspace(1) %bptr, i32 %tid
@@ -167,7 +167,7 @@ define amdgpu_kernel void @v_test_imax3_sgt_i7(ptr addrspace(1) %out, ptr addrsp
 ; VI: v_max_u16
 
 ; GFX9: v_max3_u16
-define amdgpu_kernel void @v_test_umax3_ugt_i7(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @v_test_umax3_ugt_i7(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i7, ptr addrspace(1) %aptr, i32 %tid
   %gep1 = getelementptr i7, ptr addrspace(1) %bptr, i32 %tid
@@ -186,7 +186,7 @@ define amdgpu_kernel void @v_test_umax3_ugt_i7(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}v_test_imax3_sgt_i33:
 ; GCN-NOT: v_max3
-define amdgpu_kernel void @v_test_imax3_sgt_i33(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @v_test_imax3_sgt_i33(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i33, ptr addrspace(1) %aptr, i32 %tid
   %gep1 = getelementptr i33, ptr addrspace(1) %bptr, i32 %tid
@@ -205,7 +205,7 @@ define amdgpu_kernel void @v_test_imax3_sgt_i33(ptr addrspace(1) %out, ptr addrs
 
 ; GCN-LABEL: {{^}}v_test_umax3_ugt_i33:
 ; GCN-NOT: v_max3
-define amdgpu_kernel void @v_test_umax3_ugt_i33(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @v_test_umax3_ugt_i33(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i33, ptr addrspace(1) %aptr, i32 %tid
   %gep1 = getelementptr i33, ptr addrspace(1) %bptr, i32 %tid
@@ -224,7 +224,7 @@ define amdgpu_kernel void @v_test_umax3_ugt_i33(ptr addrspace(1) %out, ptr addrs
 
 ; GCN-LABEL: {{^}}v_test_imax3_sgt_i64:
 ; GCN-NOT: v_max3
-define amdgpu_kernel void @v_test_imax3_sgt_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @v_test_imax3_sgt_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i64, ptr addrspace(1) %aptr, i32 %tid
   %gep1 = getelementptr i64, ptr addrspace(1) %bptr, i32 %tid
@@ -243,7 +243,7 @@ define amdgpu_kernel void @v_test_imax3_sgt_i64(ptr addrspace(1) %out, ptr addrs
 
 ; GCN-LABEL: {{^}}v_test_umax3_ugt_i64:
 ; GCN-NOT: v_max3
-define amdgpu_kernel void @v_test_umax3_ugt_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @v_test_umax3_ugt_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i64, ptr addrspace(1) %aptr, i32 %tid
   %gep1 = getelementptr i64, ptr addrspace(1) %bptr, i32 %tid
@@ -260,7 +260,4 @@ define amdgpu_kernel void @v_test_umax3_ugt_i64(ptr addrspace(1) %out, ptr addrs
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable

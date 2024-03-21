@@ -46,7 +46,4 @@ define amdgpu_kernel void @s_fadd_v2f64(ptr addrspace(1) %out, <2 x double> %r0,
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

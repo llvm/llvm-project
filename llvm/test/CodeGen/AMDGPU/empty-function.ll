@@ -7,15 +7,13 @@
 ; SI-LABEL: {{^}}empty_function_ret:
 ; SI: s_endpgm
 ; SI: codeLenInByte = 4
-define amdgpu_kernel void @empty_function_ret() #0 {
+define amdgpu_kernel void @empty_function_ret() nounwind {
   ret void
 }
 
 ; SI: .text
 ; SI-LABEL: {{^}}empty_function_unreachable:
 ; SI: codeLenInByte = 0
-define amdgpu_kernel void @empty_function_unreachable() #0 {
+define amdgpu_kernel void @empty_function_unreachable() nounwind {
   unreachable
 }
-
-attributes #0 = { nounwind }

@@ -35,7 +35,5 @@ define half @v_fneg_fabs_sqrt_f16(half %src)  {
   ret half %sqrt
 }
 
-declare half @llvm.amdgcn.sqrt.f16(half) #0
-declare half @llvm.fabs.f16(half) #0
-
-attributes #0 = { nounwind readnone speculatable willreturn }
+declare half @llvm.amdgcn.sqrt.f16(half) nounwind readnone speculatable willreturn
+declare half @llvm.fabs.f16(half) nounwind readnone speculatable willreturn

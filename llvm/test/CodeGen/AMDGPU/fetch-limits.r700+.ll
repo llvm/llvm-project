@@ -92,6 +92,4 @@ entry:
 declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
 ; Function Attrs: readnone
-declare <4 x float> @llvm.r600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) #0
-
-attributes #0 = { readnone }
+declare <4 x float> @llvm.r600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) readnone

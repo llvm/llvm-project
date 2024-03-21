@@ -210,7 +210,7 @@ define float @test_rint_f32_nobuiltin_callsite(float %arg) {
 ; CHECK-NEXT:    [[RINT:%.*]] = tail call float @_Z4rintf(float [[ARG]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[RINT]]
 ;
-  %rint = tail call float @_Z4rintf(float %arg) #0
+  %rint = tail call float @_Z4rintf(float %arg) nobuiltin
   ret float %rint
 }
 
@@ -220,28 +220,28 @@ define <2 x float> @test_rint_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 ; CHECK-NEXT:    [[RINT:%.*]] = tail call <2 x float> @_Z4rintDv2_f(<2 x float> [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret <2 x float> [[RINT]]
 ;
-  %rint = tail call <2 x float> @_Z4rintDv2_f(<2 x float> %arg) #0
+  %rint = tail call <2 x float> @_Z4rintDv2_f(<2 x float> %arg) nobuiltin
   ret <2 x float> %rint
 }
 
 ; "no-builtins" should be ignored
-define float @test_rint_f32_nobuiltins(float %arg) #1 {
+define float @test_rint_f32_nobuiltins(float %arg) "no-builtins" {
 ; CHECK-LABEL: define float @test_rint_f32_nobuiltins
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[RINT:%.*]] = tail call float @_Z4rintf(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[RINT]]
 ;
-  %rint = tail call float @_Z4rintf(float %arg) #0
+  %rint = tail call float @_Z4rintf(float %arg) nobuiltin
   ret float %rint
 }
 
-define <2 x float> @test_rint_v2f32_nobuiltins(<2 x float> %arg) #1 {
+define <2 x float> @test_rint_v2f32_nobuiltins(<2 x float> %arg) "no-builtins" {
 ; CHECK-LABEL: define <2 x float> @test_rint_v2f32_nobuiltins
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[RINT:%.*]] = tail call <2 x float> @_Z4rintDv2_f(<2 x float> [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret <2 x float> [[RINT]]
 ;
-  %rint = tail call <2 x float> @_Z4rintDv2_f(<2 x float> %arg) #0
+  %rint = tail call <2 x float> @_Z4rintDv2_f(<2 x float> %arg) nobuiltin
   ret <2 x float> %rint
 }
 
@@ -286,8 +286,8 @@ define <2 x float> @test_rint_v2f32_preserve_flags_md(<2 x float> %arg) {
 }
 
 ; Test the libm name, not a recognized opencl builtin.
-declare float @rintf(float) #2
-declare double @rint(double) #2
+declare float @rintf(float) nounwind memory(none)
+declare double @rint(double) nounwind memory(none)
 
 define float @test_libm_rint_f32(float %arg) {
 ; CHECK-LABEL: define float @test_libm_rint_f32
@@ -309,19 +309,14 @@ define double @test_libm_rint_f64(double %arg) {
   ret double %rint
 }
 
-define float @test_rint_f32_strictfp(float %arg) #3 {
+define float @test_rint_f32_strictfp(float %arg) strictfp {
 ; CHECK-LABEL: define float @test_rint_f32_strictfp
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[RINT:%.*]] = tail call nnan float @_Z4rintf(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[RINT]]
 ;
-  %rint = tail call nnan float @_Z4rintf(float %arg) #3
+  %rint = tail call nnan float @_Z4rintf(float %arg) strictfp
   ret float %rint
 }
-
-attributes #0 = { nobuiltin }
-attributes #1 = { "no-builtins" }
-attributes #2 = { nounwind memory(none) }
-attributes #3 = { strictfp }
 
 !0 = !{i32 1234}

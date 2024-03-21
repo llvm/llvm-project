@@ -108,7 +108,7 @@ define amdgpu_kernel void @minimal_kernel_inputs_with_stack() {
 ; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
 ; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 2
 define amdgpu_kernel void @queue_ptr() {
-  %queue.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
+  %queue.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr() nounwind readnone speculatable willreturn
   %load = load volatile i8, ptr addrspace(4) %queue.ptr
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
   store volatile i32 %id, ptr addrspace(1) undef
@@ -182,16 +182,14 @@ define amdgpu_kernel void @all_inputs() {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-declare i32 @llvm.amdgcn.workgroup.id.y() #0
-declare i32 @llvm.amdgcn.workgroup.id.z() #0
-declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #0
-declare align 4 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
-declare align 4 ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
-declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #0
-declare i64 @llvm.amdgcn.dispatch.id() #0
-
-attributes #0 = { nounwind readnone speculatable willreturn }
+declare i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone speculatable willreturn
+declare i32 @llvm.amdgcn.workgroup.id.y() nounwind readnone speculatable willreturn
+declare i32 @llvm.amdgcn.workgroup.id.z() nounwind readnone speculatable willreturn
+declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() nounwind readnone speculatable willreturn
+declare align 4 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() nounwind readnone speculatable willreturn
+declare align 4 ptr addrspace(4) @llvm.amdgcn.queue.ptr() nounwind readnone speculatable willreturn
+declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() nounwind readnone speculatable willreturn
+declare i64 @llvm.amdgcn.dispatch.id() nounwind readnone speculatable willreturn
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

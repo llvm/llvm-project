@@ -5,7 +5,7 @@ target datalayout = "n32"
 
 ; CHECK-LABEL: @invalid_reqd_work_group_size(
 ; CHECK: load i16,
-define amdgpu_kernel void @invalid_reqd_work_group_size(ptr addrspace(1) %out) #0 !reqd_work_group_size !1 {
+define amdgpu_kernel void @invalid_reqd_work_group_size(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !1 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -15,7 +15,7 @@ define amdgpu_kernel void @invalid_reqd_work_group_size(ptr addrspace(1) %out) #
 
 ; CHECK-LABEL: @volatile_load_group_size_x(
 ; CHECK: load volatile i16,
-define amdgpu_kernel void @volatile_load_group_size_x(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @volatile_load_group_size_x(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load volatile i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -25,7 +25,7 @@ define amdgpu_kernel void @volatile_load_group_size_x(ptr addrspace(1) %out) #0 
 
 ; CHECK-LABEL: @load_group_size_x(
 ; CHECK: store i16 %group.size.x,
-define amdgpu_kernel void @load_group_size_x(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @load_group_size_x(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -35,7 +35,7 @@ define amdgpu_kernel void @load_group_size_x(ptr addrspace(1) %out) #0 !reqd_wor
 
 ; CHECK-LABEL: @load_group_size_y(
 ; CHECK: store i16 %group.size.y,
-define amdgpu_kernel void @load_group_size_y(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @load_group_size_y(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.y = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 6
   %group.size.y = load i16, ptr addrspace(4) %gep.group.size.y, align 4
@@ -45,7 +45,7 @@ define amdgpu_kernel void @load_group_size_y(ptr addrspace(1) %out) #0 !reqd_wor
 
 ; CHECK-LABEL: @load_group_size_z(
 ; CHECK: store i16 %group.size.z,
-define amdgpu_kernel void @load_group_size_z(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @load_group_size_z(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.z = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 8
   %group.size.z = load i16, ptr addrspace(4) %gep.group.size.z, align 4
@@ -56,7 +56,7 @@ define amdgpu_kernel void @load_group_size_z(ptr addrspace(1) %out) #0 !reqd_wor
 ; Metadata uses i64 instead of i32
 ; CHECK-LABEL: @load_group_size_x_reqd_work_group_size_i64(
 ; CHECK: store i16 %group.size.x,
-define amdgpu_kernel void @load_group_size_x_reqd_work_group_size_i64(ptr addrspace(1) %out) #0 !reqd_work_group_size !2 {
+define amdgpu_kernel void @load_group_size_x_reqd_work_group_size_i64(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !2 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -67,7 +67,7 @@ define amdgpu_kernel void @load_group_size_x_reqd_work_group_size_i64(ptr addrsp
 ; Metadata uses i16 instead of i32
 ; CHECK-LABEL: @load_group_size_x_reqd_work_group_size_i16(
 ; CHECK: store i16 %group.size.x,
-define amdgpu_kernel void @load_group_size_x_reqd_work_group_size_i16(ptr addrspace(1) %out) #0 !reqd_work_group_size !3 {
+define amdgpu_kernel void @load_group_size_x_reqd_work_group_size_i16(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !3 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -77,7 +77,7 @@ define amdgpu_kernel void @load_group_size_x_reqd_work_group_size_i16(ptr addrsp
 
 ; CHECK-LABEL: @use_local_size_x_8_16_2(
 ; CHECK: store i64 %zext,
-define amdgpu_kernel void @use_local_size_x_8_16_2(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @use_local_size_x_8_16_2(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -95,7 +95,7 @@ define amdgpu_kernel void @use_local_size_x_8_16_2(ptr addrspace(1) %out) #0 !re
 
 ; CHECK-LABEL: @use_local_size_y_8_16_2(
 ; CHECK: store i64 %zext,
-define amdgpu_kernel void @use_local_size_y_8_16_2(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @use_local_size_y_8_16_2(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.y = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 6
   %group.size.y = load i16, ptr addrspace(4) %gep.group.size.y, align 4
@@ -113,7 +113,7 @@ define amdgpu_kernel void @use_local_size_y_8_16_2(ptr addrspace(1) %out) #0 !re
 
 ; CHECK-LABEL: @use_local_size_z_8_16_2(
 ; CHECK: store i64 %zext,
-define amdgpu_kernel void @use_local_size_z_8_16_2(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @use_local_size_z_8_16_2(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.z = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 8
   %group.size.z = load i16, ptr addrspace(4) %gep.group.size.z, align 4
@@ -135,7 +135,7 @@ define amdgpu_kernel void @use_local_size_z_8_16_2(ptr addrspace(1) %out) #0 !re
 ; CHECK-LABEL: @local_size_x_8_16_2_wrong_group_id(
 ; CHECK: %group.id = tail call i32 @llvm.amdgcn.workgroup.id.y()
 ; CHECK: %group.id_x_group.size.x = mul i32 %group.id, %group.size.x.zext
-define amdgpu_kernel void @local_size_x_8_16_2_wrong_group_id(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @local_size_x_8_16_2_wrong_group_id(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -155,7 +155,7 @@ define amdgpu_kernel void @local_size_x_8_16_2_wrong_group_id(ptr addrspace(1) %
 ; CHECK: %grid.size.x = load i32, ptr addrspace(4) %gep.grid.size.x, align 4
 ; CHECK: %group.id = tail call i32 @llvm.amdgcn.workgroup.id.x()
 ; CHECK: %group.id_x_group.size.x = mul i32 %group.id, %group.size.x.zext
-  define amdgpu_kernel void @local_size_x_8_16_2_wrong_grid_size(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+  define amdgpu_kernel void @local_size_x_8_16_2_wrong_grid_size(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -177,7 +177,7 @@ define amdgpu_kernel void @local_size_x_8_16_2_wrong_group_id(ptr addrspace(1) %
 ; CHECK: %group.id_x_group.size.x = mul i32 %group.id, %group.size.x.zext
 ; CHECK: %sub = sub i32 %grid.size.x, %group.id_x_group.size.x
 ; CHECK: %smin = call i32 @llvm.smin.i32(i32 %sub, i32 %group.size.x.zext)
-define amdgpu_kernel void @local_size_x_8_16_2_wrong_cmp_type(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @local_size_x_8_16_2_wrong_cmp_type(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -198,7 +198,7 @@ define amdgpu_kernel void @local_size_x_8_16_2_wrong_cmp_type(ptr addrspace(1) %
 ; CHECK: %sub = sub i32 %grid.size.x, %group.id_x_group.size.x
 ; CHECK: %umax = call i32 @llvm.umax.i32(i32 %sub, i32 %group.size.x.zext)
 ; CHECK: %zext = zext i32 %umax to i64
-define amdgpu_kernel void @local_size_x_8_16_2_wrong_select(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @local_size_x_8_16_2_wrong_select(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -220,7 +220,7 @@ define amdgpu_kernel void @local_size_x_8_16_2_wrong_select(ptr addrspace(1) %ou
 ; CHECK: %group.id = tail call i32 @llvm.amdgcn.workgroup.id.x()
 ; CHECK: %group.id_x_group.size.x = mul i32 %group.id, %group.size.x.zext
 ; CHECK: %sub = sub i32 %grid.size.x.zext, %group.id_x_group.size.x
-define amdgpu_kernel void @use_local_size_x_8_16_2_wrong_grid_load_size(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @use_local_size_x_8_16_2_wrong_grid_load_size(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -239,7 +239,7 @@ define amdgpu_kernel void @use_local_size_x_8_16_2_wrong_grid_load_size(ptr addr
 
 ; CHECK-LABEL: @func_group_size_x(
 ; CHECK: ret i32 %zext
-define i32 @func_group_size_x(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define i32 @func_group_size_x(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -249,9 +249,9 @@ define i32 @func_group_size_x(ptr addrspace(1) %out) #0 !reqd_work_group_size !0
 
 ; CHECK-LABEL: @__ockl_get_local_size_reqd_size(
 ; CHECK: %group.size = phi i16 [ %tmp24, %bb17 ], [ %tmp16, %bb9 ], [ %tmp8, %bb1 ], [ 1, %bb ]
-define i64 @__ockl_get_local_size_reqd_size(i32 %arg) #1 !reqd_work_group_size !0 {
+define i64 @__ockl_get_local_size_reqd_size(i32 %arg) nounwind readnone speculatable !reqd_work_group_size !0 {
 bb:
-  %tmp = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #2
+  %tmp = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() nounwind "uniform-work-group-size"="true"
   switch i32 %arg, label %bb25 [
     i32 0, label %bb1
     i32 1, label %bb9
@@ -298,9 +298,9 @@ bb25:                                             ; preds = %bb17, %bb9, %bb1, %
 ; CHECK: store volatile i64 %tmp34.i, ptr addrspace(1) %out, align 4
 ; CHECK-NEXT: store volatile i64 %tmp34.i14, ptr addrspace(1) %out, align 4
 ; CHECK-NEXT: store volatile i64 %tmp34.i7, ptr addrspace(1) %out, align 4
-define amdgpu_kernel void @all_local_size(ptr addrspace(1) nocapture readnone %out) #0 !reqd_work_group_size !0 {
-  %tmp.i = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
-  %tmp2.i = tail call i32 @llvm.amdgcn.workgroup.id.x() #0
+define amdgpu_kernel void @all_local_size(ptr addrspace(1) nocapture readnone %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
+  %tmp.i = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() nounwind "uniform-work-group-size"="true"
+  %tmp2.i = tail call i32 @llvm.amdgcn.workgroup.id.x() nounwind "uniform-work-group-size"="true"
   %tmp3.i = getelementptr inbounds i8, ptr addrspace(4) %tmp.i, i64 12
   %tmp5.i = load i32, ptr addrspace(4) %tmp3.i, align 4
   %tmp6.i = getelementptr inbounds i8, ptr addrspace(4) %tmp.i, i64 4
@@ -310,7 +310,7 @@ define amdgpu_kernel void @all_local_size(ptr addrspace(1) nocapture readnone %o
   %tmp31.i = sub i32 %tmp5.i, %tmp30.i
   %umin0 = call i32 @llvm.umin.i32(i32 %tmp31.i, i32 %tmp29.i)
   %tmp34.i = zext i32 %umin0 to i64
-  %tmp10.i = tail call i32 @llvm.amdgcn.workgroup.id.y() #0
+  %tmp10.i = tail call i32 @llvm.amdgcn.workgroup.id.y() nounwind "uniform-work-group-size"="true"
   %tmp11.i = getelementptr inbounds i8, ptr addrspace(4) %tmp.i, i64 16
   %tmp13.i = load i32, ptr addrspace(4) %tmp11.i, align 8
   %tmp14.i = getelementptr inbounds i8, ptr addrspace(4) %tmp.i, i64 6
@@ -320,7 +320,7 @@ define amdgpu_kernel void @all_local_size(ptr addrspace(1) nocapture readnone %o
   %tmp31.i11 = sub i32 %tmp13.i, %tmp30.i10
   %umin1 = call i32 @llvm.umin.i32(i32 %tmp31.i11, i32 %tmp29.i9)
   %tmp34.i14 = zext i32 %umin1 to i64
-  %tmp18.i = tail call i32 @llvm.amdgcn.workgroup.id.z() #0
+  %tmp18.i = tail call i32 @llvm.amdgcn.workgroup.id.z() nounwind "uniform-work-group-size"="true"
   %tmp19.i = getelementptr inbounds i8, ptr addrspace(4) %tmp.i, i64 20
   %tmp21.i = load i32, ptr addrspace(4) %tmp19.i, align 4
   %tmp22.i = getelementptr inbounds i8, ptr addrspace(4) %tmp.i, i64 8
@@ -342,7 +342,7 @@ define amdgpu_kernel void @all_local_size(ptr addrspace(1) nocapture readnone %o
 ; CHECK-NEXT: %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
 ; CHECK-NEXT: %group.size.x.lo = load i8, ptr addrspace(4) %gep.group.size.x, align 4
 ; CHECK-NEXT: store i8 %group.size.x.lo, ptr addrspace(1) %out, align 1
-define amdgpu_kernel void @partial_load_group_size_x(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @partial_load_group_size_x(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x.lo = load i8, ptr addrspace(4) %gep.group.size.x, align 1
@@ -355,7 +355,7 @@ define amdgpu_kernel void @partial_load_group_size_x(ptr addrspace(1) %out) #0 !
 ; CHECK-NEXT: %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
 ; CHECK-NEXT: %group.size.x.lo = load i8, ptr addrspace(4) %gep.group.size.x, align 2
 ; CHECK-NEXT: store i8 %group.size.x.lo, ptr addrspace(1) %out, align 1
-define amdgpu_kernel void @partial_load_group_size_x_explicit_callsite_align(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @partial_load_group_size_x_explicit_callsite_align(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call align 2 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x.lo = load i8, ptr addrspace(4) %gep.group.size.x, align 1
@@ -367,7 +367,7 @@ define amdgpu_kernel void @partial_load_group_size_x_explicit_callsite_align(ptr
 ; CHECK-LABEL: @load_group_size_xy_i32(
 ; CHECK: %group.size.xy = load i32,
 ; CHECK: store i32 %group.size.xy
-define amdgpu_kernel void @load_group_size_xy_i32(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @load_group_size_xy_i32(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.xy = load i32, ptr addrspace(4) %gep.group.size.x, align 4
@@ -378,7 +378,7 @@ define amdgpu_kernel void @load_group_size_xy_i32(ptr addrspace(1) %out) #0 !req
 ; CHECK-LABEL: @load_group_size_x_y_multiple_dispatch_ptr(
 ; CHECK: store volatile i16 %group.size.x, ptr addrspace(1) %out, align 2
 ; CHECK: store volatile i16 %group.size.y, ptr addrspace(1) %out, align 2
-define amdgpu_kernel void @load_group_size_x_y_multiple_dispatch_ptr(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @load_group_size_x_y_multiple_dispatch_ptr(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
   %dispatch.ptr0 = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr0, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -398,7 +398,7 @@ define amdgpu_kernel void @load_group_size_x_y_multiple_dispatch_ptr(ptr addrspa
 ; CHECK-NEXT: %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
 ; CHECK: %group.size.x.zext = zext i16 %group.size.x to i32
 ; CHECK: store i64 %zext, ptr addrspace(1) %out
-define amdgpu_kernel void @use_local_size_x_uniform_work_group_size(ptr addrspace(1) %out) #2 {
+define amdgpu_kernel void @use_local_size_x_uniform_work_group_size(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -416,7 +416,7 @@ define amdgpu_kernel void @use_local_size_x_uniform_work_group_size(ptr addrspac
 
 ; CHECK-LABEL: @use_local_size_x_uniform_work_group_size_false(
 ; CHECK: call i32 @llvm.umin
-define amdgpu_kernel void @use_local_size_x_uniform_work_group_size_false(ptr addrspace(1) %out) #3 {
+define amdgpu_kernel void @use_local_size_x_uniform_work_group_size_false(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="false" {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -439,18 +439,13 @@ define amdgpu_kernel void @no_use_dispatch_ptr() {
   ret void
 }
 
-declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #1
-declare i32 @llvm.amdgcn.workgroup.id.x() #1
-declare i32 @llvm.amdgcn.workgroup.id.y() #1
-declare i32 @llvm.amdgcn.workgroup.id.z() #1
-declare i32 @llvm.umin.i32(i32, i32) #1
-declare i32 @llvm.smin.i32(i32, i32) #1
-declare i32 @llvm.umax.i32(i32, i32) #1
-
-attributes #0 = { nounwind "uniform-work-group-size"="true" }
-attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { nounwind "uniform-work-group-size"="true" }
-attributes #3 = { nounwind "uniform-work-group-size"="false" }
+declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workgroup.id.y() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workgroup.id.z() nounwind readnone speculatable
+declare i32 @llvm.umin.i32(i32, i32) nounwind readnone speculatable
+declare i32 @llvm.smin.i32(i32, i32) nounwind readnone speculatable
+declare i32 @llvm.umax.i32(i32, i32) nounwind readnone speculatable
 
 !0 = !{i32 8, i32 16, i32 2}
 !1 = !{i32 8, i32 16}

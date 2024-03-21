@@ -5,7 +5,7 @@
 ; EG: MEM_RAT_CACHELESS STORE_RAW T1.X
 define amdgpu_kernel void @tgid_x(ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.tgid.x() #0
+  %0 = call i32 @llvm.r600.read.tgid.x() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -15,7 +15,7 @@ entry:
 ; EG: MOV [[REG]].X, T1.Y
 define amdgpu_kernel void @tgid_y(ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.tgid.y() #0
+  %0 = call i32 @llvm.r600.read.tgid.y() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -25,7 +25,7 @@ entry:
 ; EG: MOV [[REG]].X, T1.Z
 define amdgpu_kernel void @tgid_z(ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.tgid.z() #0
+  %0 = call i32 @llvm.r600.read.tgid.z() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -34,7 +34,7 @@ entry:
 ; EG: MEM_RAT_CACHELESS STORE_RAW T0.X
 define amdgpu_kernel void @tidig_x(ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.tidig.x() #0
+  %0 = call i32 @llvm.r600.read.tidig.x() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -44,7 +44,7 @@ entry:
 ; EG: MOV [[REG]].X, T0.Y
 define amdgpu_kernel void @tidig_y(ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.tidig.y() #0
+  %0 = call i32 @llvm.r600.read.tidig.y() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -54,7 +54,7 @@ entry:
 ; EG: MOV [[REG]].X, T0.Z
 define amdgpu_kernel void @tidig_z(ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.tidig.z() #0
+  %0 = call i32 @llvm.r600.read.tidig.z() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -84,14 +84,12 @@ define amdgpu_kernel void @test_implicit_dyn(ptr addrspace(1) %out, i32 %in) #1 
   ret void
 }
 
-declare ptr addrspace(7) @llvm.r600.implicitarg.ptr() #0
+declare ptr addrspace(7) @llvm.r600.implicitarg.ptr() readnone
 
-declare i32 @llvm.r600.read.tgid.x() #0
-declare i32 @llvm.r600.read.tgid.y() #0
-declare i32 @llvm.r600.read.tgid.z() #0
+declare i32 @llvm.r600.read.tgid.x() readnone
+declare i32 @llvm.r600.read.tgid.y() readnone
+declare i32 @llvm.r600.read.tgid.z() readnone
 
-declare i32 @llvm.r600.read.tidig.x() #0
-declare i32 @llvm.r600.read.tidig.y() #0
-declare i32 @llvm.r600.read.tidig.z() #0
-
-attributes #0 = { readnone }
+declare i32 @llvm.r600.read.tidig.x() readnone
+declare i32 @llvm.r600.read.tidig.y() readnone
+declare i32 @llvm.r600.read.tidig.z() readnone

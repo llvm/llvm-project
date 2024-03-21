@@ -17,7 +17,7 @@
 
 ; Check for incorrect fmad formation when distributing
 
-define float @unsafe_fmul_fadd_distribute_fast_f32(float %arg0, float %arg1) #0 {
+define float @unsafe_fmul_fadd_distribute_fast_f32(float %arg0, float %arg1) "no-infs-fp-math"="true" "unsafe-fp-math"="true" {
 ; FMA-LABEL: unsafe_fmul_fadd_distribute_fast_f32:
 ; FMA:       ; %bb.0:
 ; FMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -59,7 +59,7 @@ define float @unsafe_fmul_fadd_distribute_fast_f32(float %arg0, float %arg1) #0 
   ret float %tmp1
 }
 
-define float @unsafe_fmul_fsub_distribute_fast_f32(float %arg0, float %arg1) #0 {
+define float @unsafe_fmul_fsub_distribute_fast_f32(float %arg0, float %arg1) "no-infs-fp-math"="true" "unsafe-fp-math"="true" {
 ; FMA-LABEL: unsafe_fmul_fsub_distribute_fast_f32:
 ; FMA:       ; %bb.0:
 ; FMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -101,7 +101,7 @@ define float @unsafe_fmul_fsub_distribute_fast_f32(float %arg0, float %arg1) #0 
   ret float %tmp1
 }
 
-define <2 x float> @unsafe_fmul_fadd_distribute_fast_v2f32(<2 x float> %arg0, <2 x float> %arg1) #0 {
+define <2 x float> @unsafe_fmul_fadd_distribute_fast_v2f32(<2 x float> %arg0, <2 x float> %arg1) "no-infs-fp-math"="true" "unsafe-fp-math"="true" {
 ; FMA-LABEL: unsafe_fmul_fadd_distribute_fast_v2f32:
 ; FMA:       ; %bb.0:
 ; FMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -149,7 +149,7 @@ define <2 x float> @unsafe_fmul_fadd_distribute_fast_v2f32(<2 x float> %arg0, <2
   ret <2 x float> %tmp1
 }
 
-define <2 x float> @unsafe_fmul_fsub_distribute_fast_v2f32(<2 x float> %arg0, <2 x float> %arg1) #0 {
+define <2 x float> @unsafe_fmul_fsub_distribute_fast_v2f32(<2 x float> %arg0, <2 x float> %arg1) "no-infs-fp-math"="true" "unsafe-fp-math"="true" {
 ; FMA-LABEL: unsafe_fmul_fsub_distribute_fast_v2f32:
 ; FMA:       ; %bb.0:
 ; FMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -198,7 +198,7 @@ define <2 x float> @unsafe_fmul_fsub_distribute_fast_v2f32(<2 x float> %arg0, <2
   ret <2 x float> %tmp1
 }
 
-define <2 x float> @unsafe_fast_fmul_fadd_distribute_post_legalize_f32(float %arg0, <2 x float> %arg1) #0 {
+define <2 x float> @unsafe_fast_fmul_fadd_distribute_post_legalize_f32(float %arg0, <2 x float> %arg1) "no-infs-fp-math"="true" "unsafe-fp-math"="true" {
 ; FMA-LABEL: unsafe_fast_fmul_fadd_distribute_post_legalize_f32:
 ; FMA:       ; %bb.0:
 ; FMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -241,7 +241,7 @@ define <2 x float> @unsafe_fast_fmul_fadd_distribute_post_legalize_f32(float %ar
   ret <2 x float> %tmp1
 }
 
-define <2 x float> @unsafe_fast_fmul_fsub_ditribute_post_legalize(float %arg0, <2 x float> %arg1) #0 {
+define <2 x float> @unsafe_fast_fmul_fsub_ditribute_post_legalize(float %arg0, <2 x float> %arg1) "no-infs-fp-math"="true" "unsafe-fp-math"="true" {
 ; FMA-LABEL: unsafe_fast_fmul_fsub_ditribute_post_legalize:
 ; FMA:       ; %bb.0:
 ; FMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -283,5 +283,3 @@ define <2 x float> @unsafe_fast_fmul_fsub_ditribute_post_legalize(float %arg0, <
   %tmp1 = fmul fast <2 x float> %arg1, %splat
   ret <2 x float> %tmp1
 }
-
-attributes #0 = { "no-infs-fp-math"="true" "unsafe-fp-math"="true" }

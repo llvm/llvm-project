@@ -7,7 +7,7 @@
 ; SI: s_or_b64 exec, exec, [[SAVED:s\[[0-9]+:[0-9]+\]|[a-z]+]]
 ; SI-NOT: v_readlane_b32 [[SAVED]]
 
-define amdgpu_ps void @main() #0 {
+define amdgpu_ps void @main() nounwind {
 main_body:
   %tmp = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 16, i32 0)
   %tmp1 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 32, i32 0)
@@ -90,7 +90,7 @@ ENDLOOP:                                          ; preds = %ELSE2566, %LOOP
   %one.sub.ac.i = fmul float %one.sub.a.i, undef
   %fmul = fmul float undef, undef
   %result.i = fadd float %fmul, %one.sub.ac.i
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float undef, float %result.i, float undef, float 1.000000e+00, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float undef, float %result.i, float undef, float 1.000000e+00, i1 true, i1 true) nounwind
   ret void
 
 ENDIF:                                            ; preds = %LOOP
@@ -492,13 +492,10 @@ ELSE2824:                                         ; preds = %ELSE2821
   br label %ENDIF2795
 }
 
-declare float @llvm.floor.f32(float) #1
-declare float @llvm.sqrt.f32(float) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare float @llvm.floor.f32(float) nounwind readnone
+declare float @llvm.sqrt.f32(float) nounwind readnone
+declare float @llvm.minnum.f32(float, float) nounwind readnone
+declare float @llvm.maxnum.f32(float, float) nounwind readnone
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind
+declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) nounwind readnone

@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -amdgpu-opt-vgpr-liverange=true -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 ; a normal if-else
-define amdgpu_ps float @else1(i32 %z, float %v) #0 {
+define amdgpu_ps float @else1(i32 %z, float %v) nounwind {
 ; SI-LABEL: else1:
 ; SI:       ; %bb.0: ; %main_body
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 6, v0
@@ -45,7 +45,7 @@ end:
 
 
 ; %v was used after if-else
-define amdgpu_ps float @else2(i32 %z, float %v) #0 {
+define amdgpu_ps float @else2(i32 %z, float %v) nounwind {
 ; SI-LABEL: else2:
 ; SI:       ; %bb.0: ; %main_body
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 6, v0
@@ -83,7 +83,7 @@ end:
 }
 
 ; if-else inside loop, %x can be optimized, but %v cannot be.
-define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
+define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) nounwind {
 ; SI-LABEL: else3:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 6, v0
@@ -158,7 +158,7 @@ for.end:
 }
 
 ; a loop inside an if-else
-define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_func, ptr %extern_func2) #0 {
+define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_func, ptr %extern_func2) nounwind {
 ; SI-LABEL: loop:
 ; SI:       ; %bb.0: ; %main_body
 ; SI-NEXT:    v_mov_b32_e32 v6, v0
@@ -236,7 +236,7 @@ end:
 }
 
 ; a loop inside an if-else, but the variable is still in use after the if-else
-define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %extern_func, ptr %extern_func2) #0 {
+define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %extern_func, ptr %extern_func2) nounwind {
 ; SI-LABEL: loop_with_use:
 ; SI:       ; %bb.0: ; %main_body
 ; SI-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -309,5 +309,3 @@ end:
   %r2 = fadd float %r, %v
   ret float %r2
 }
-
-attributes #0 = { nounwind }

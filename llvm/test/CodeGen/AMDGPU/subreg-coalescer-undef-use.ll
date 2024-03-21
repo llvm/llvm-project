@@ -41,7 +41,7 @@ define amdgpu_kernel void @foobar(float %a0, float %a1, ptr addrspace(1) %out) n
 ; but the PHI node in "ife" block is divergent because of the CF dependency (divergent branch in bb0)
 entry:
   %v0 = insertelement <4 x float> undef, float %a0, i32 0
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %cnd = icmp eq i32 %tid, 0
   br i1 %cnd, label %ift, label %ife
 
@@ -56,6 +56,4 @@ ife:
   ret void
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
-
-attributes #0 = { nounwind readnone }
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone

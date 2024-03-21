@@ -12,7 +12,7 @@
 ; fadd tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_add_f16(half %a, half %b) #0 {
+define half @v_fneg_add_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_add_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -65,7 +65,7 @@ define half @v_fneg_add_f16(half %a, half %b) #0 {
   ret half %fneg
 }
 
-define { half, half } @v_fneg_add_store_use_add_f16(half %a, half %b) #0 {
+define { half, half } @v_fneg_add_store_use_add_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_add_store_use_add_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -98,7 +98,7 @@ define { half, half } @v_fneg_add_store_use_add_f16(half %a, half %b) #0 {
   ret { half, half } %insert.1
 }
 
-define { half, half } @v_fneg_add_multi_use_add_f16(half %a, half %b) #0 {
+define { half, half } @v_fneg_add_multi_use_add_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_add_multi_use_add_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -162,7 +162,7 @@ define { half, half } @v_fneg_add_multi_use_add_f16(half %a, half %b) #0 {
   ret { half, half } %insert.1
 }
 
-define half @v_fneg_add_fneg_x_f16(half %a, half %b) #0 {
+define half @v_fneg_add_fneg_x_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_add_fneg_x_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -216,7 +216,7 @@ define half @v_fneg_add_fneg_x_f16(half %a, half %b) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_add_x_fneg_f16(half %a, half %b) #0 {
+define half @v_fneg_add_x_fneg_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_add_x_fneg_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -270,7 +270,7 @@ define half @v_fneg_add_x_fneg_f16(half %a, half %b) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_add_fneg_fneg_f16(half %a, half %b) #0 {
+define half @v_fneg_add_fneg_fneg_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_add_fneg_fneg_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -325,7 +325,7 @@ define half @v_fneg_add_fneg_fneg_f16(half %a, half %b) #0 {
   ret half %fneg
 }
 
-define { half, half } @v_fneg_add_store_use_fneg_x_f16(half %a, half %b) #0 {
+define { half, half } @v_fneg_add_store_use_fneg_x_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_add_store_use_fneg_x_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -392,7 +392,7 @@ define { half, half } @v_fneg_add_store_use_fneg_x_f16(half %a, half %b) #0 {
   ret { half, half } %insert.1
 }
 
-define { half, half } @v_fneg_add_multi_use_fneg_x_f16(half %a, half %b, half %c) #0 {
+define { half, half } @v_fneg_add_multi_use_fneg_x_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_add_multi_use_fneg_x_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -468,7 +468,7 @@ define { half, half } @v_fneg_add_multi_use_fneg_x_f16(half %a, half %b, half %c
 }
 
 ; This one asserted with -enable-no-signed-zeros-fp-math
-define amdgpu_ps half @fneg_fadd_0_f16(half inreg %tmp2, half inreg %tmp6, <4 x i32> %arg) #0 {
+define amdgpu_ps half @fneg_fadd_0_f16(half inreg %tmp2, half inreg %tmp6, <4 x i32> %arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: fneg_fadd_0_f16:
 ; SI-SAFE:       ; %bb.0: ; %.entry
 ; SI-SAFE-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
@@ -594,7 +594,7 @@ define amdgpu_ps half @fneg_fadd_0_f16(half inreg %tmp2, half inreg %tmp6, <4 x 
 ; This is a workaround because -enable-no-signed-zeros-fp-math does not set up
 ; function attribute unsafe-fp-math automatically. Combine with the previous test
 ; when that is done.
-define amdgpu_ps half @fneg_fadd_0_nsz_f16(half inreg %tmp2, half inreg %tmp6, <4 x i32> %arg) #2 {
+define amdgpu_ps half @fneg_fadd_0_nsz_f16(half inreg %tmp2, half inreg %tmp6, <4 x i32> %arg) nounwind "unsafe-fp-math"="true" {
 ; SI-SAFE-LABEL: fneg_fadd_0_nsz_f16:
 ; SI-SAFE:       ; %bb.0: ; %.entry
 ; SI-SAFE-NEXT:    v_cvt_f16_f32_e32 v0, s0
@@ -684,7 +684,7 @@ define amdgpu_ps half @fneg_fadd_0_nsz_f16(half inreg %tmp2, half inreg %tmp6, <
 ; fmul tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_mul_f16(half %a, half %b) #0 {
+define half @v_fneg_mul_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_mul_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -711,7 +711,7 @@ define half @v_fneg_mul_f16(half %a, half %b) #0 {
   ret half %fneg
 }
 
-define { half, half } @v_fneg_mul_store_use_mul_f16(half %a, half %b) #0 {
+define { half, half } @v_fneg_mul_store_use_mul_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_mul_store_use_mul_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -744,7 +744,7 @@ define { half, half } @v_fneg_mul_store_use_mul_f16(half %a, half %b) #0 {
   ret { half, half } %insert.1
 }
 
-define { half, half } @v_fneg_mul_multi_use_mul_f16(half %a, half %b) #0 {
+define { half, half } @v_fneg_mul_multi_use_mul_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_mul_multi_use_mul_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -778,7 +778,7 @@ define { half, half } @v_fneg_mul_multi_use_mul_f16(half %a, half %b) #0 {
   ret { half, half } %insert.1
 }
 
-define half @v_fneg_mul_fneg_x_f16(half %a, half %b) #0 {
+define half @v_fneg_mul_fneg_x_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_mul_fneg_x_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -806,7 +806,7 @@ define half @v_fneg_mul_fneg_x_f16(half %a, half %b) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_mul_x_fneg_f16(half %a, half %b) #0 {
+define half @v_fneg_mul_x_fneg_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_mul_x_fneg_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -834,7 +834,7 @@ define half @v_fneg_mul_x_fneg_f16(half %a, half %b) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_mul_fneg_fneg_f16(half %a, half %b) #0 {
+define half @v_fneg_mul_fneg_fneg_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_mul_fneg_fneg_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -863,7 +863,7 @@ define half @v_fneg_mul_fneg_fneg_f16(half %a, half %b) #0 {
   ret half %fneg
 }
 
-define { half, half } @v_fneg_mul_store_use_fneg_x_f16(half %a, half %b) #0 {
+define { half, half } @v_fneg_mul_store_use_fneg_x_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_mul_store_use_fneg_x_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -899,7 +899,7 @@ define { half, half } @v_fneg_mul_store_use_fneg_x_f16(half %a, half %b) #0 {
   ret { half, half } %insert.1
 }
 
-define { half, half } @v_fneg_mul_multi_use_fneg_x_f16(half %a, half %b, half %c) #0 {
+define { half, half } @v_fneg_mul_multi_use_fneg_x_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_mul_multi_use_fneg_x_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -943,7 +943,7 @@ define { half, half } @v_fneg_mul_multi_use_fneg_x_f16(half %a, half %b, half %c
 ; fminnum tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_minnum_f16_ieee(half %a, half %b) #0 {
+define half @v_fneg_minnum_f16_ieee(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_minnum_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -975,7 +975,7 @@ define half @v_fneg_minnum_f16_ieee(half %a, half %b) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_minnum_f16_no_ieee(half %a, half %b) #4 {
+define half @v_fneg_minnum_f16_no_ieee(half %a, half %b) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_minnum_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1002,7 +1002,7 @@ define half @v_fneg_minnum_f16_no_ieee(half %a, half %b) #4 {
   ret half %fneg
 }
 
-define half @v_fneg_self_minnum_f16_ieee(half %a) #0 {
+define half @v_fneg_self_minnum_f16_ieee(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_self_minnum_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1025,7 +1025,7 @@ define half @v_fneg_self_minnum_f16_ieee(half %a) #0 {
   ret half %min.fneg
 }
 
-define half @v_fneg_self_minnum_f16_no_ieee(half %a) #4 {
+define half @v_fneg_self_minnum_f16_no_ieee(half %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_self_minnum_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1048,7 +1048,7 @@ define half @v_fneg_self_minnum_f16_no_ieee(half %a) #4 {
   ret half %min.fneg
 }
 
-define half @v_fneg_posk_minnum_f16_ieee(half %a) #0 {
+define half @v_fneg_posk_minnum_f16_ieee(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_posk_minnum_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1076,7 +1076,7 @@ define half @v_fneg_posk_minnum_f16_ieee(half %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_posk_minnum_f16_no_ieee(half %a) #4 {
+define half @v_fneg_posk_minnum_f16_no_ieee(half %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_posk_minnum_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1101,7 +1101,7 @@ define half @v_fneg_posk_minnum_f16_no_ieee(half %a) #4 {
   ret half %fneg
 }
 
-define half @v_fneg_negk_minnum_f16_ieee(half %a) #0 {
+define half @v_fneg_negk_minnum_f16_ieee(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_negk_minnum_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1129,7 +1129,7 @@ define half @v_fneg_negk_minnum_f16_ieee(half %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_negk_minnum_f16_no_ieee(half %a) #4 {
+define half @v_fneg_negk_minnum_f16_no_ieee(half %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_negk_minnum_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1154,7 +1154,7 @@ define half @v_fneg_negk_minnum_f16_no_ieee(half %a) #4 {
   ret half %fneg
 }
 
-define half @v_fneg_0_minnum_f16(half %a) #0 {
+define half @v_fneg_0_minnum_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_0_minnum_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1183,7 +1183,7 @@ define half @v_fneg_0_minnum_f16(half %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_neg0_minnum_f16_ieee(half %a) #0 {
+define half @v_fneg_neg0_minnum_f16_ieee(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_neg0_minnum_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1211,7 +1211,7 @@ define half @v_fneg_neg0_minnum_f16_ieee(half %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_inv2pi_minnum_f16(half %a) #0 {
+define half @v_fneg_inv2pi_minnum_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_inv2pi_minnum_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1241,7 +1241,7 @@ define half @v_fneg_inv2pi_minnum_f16(half %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_neg_inv2pi_minnum_f16(half %a) #0 {
+define half @v_fneg_neg_inv2pi_minnum_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_neg_inv2pi_minnum_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1271,7 +1271,7 @@ define half @v_fneg_neg_inv2pi_minnum_f16(half %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_neg0_minnum_f16_no_ieee(half %a) #4 {
+define half @v_fneg_neg0_minnum_f16_no_ieee(half %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_neg0_minnum_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1296,7 +1296,7 @@ define half @v_fneg_neg0_minnum_f16_no_ieee(half %a) #4 {
   ret half %fneg
 }
 
-define half @v_fneg_0_minnum_foldable_use_f16_ieee(half %a, half %b) #0 {
+define half @v_fneg_0_minnum_foldable_use_f16_ieee(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_0_minnum_foldable_use_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1330,7 +1330,7 @@ define half @v_fneg_0_minnum_foldable_use_f16_ieee(half %a, half %b) #0 {
   ret half %mul
 }
 
-define half @v_fneg_inv2pi_minnum_foldable_use_f16(half %a, half %b) #0 {
+define half @v_fneg_inv2pi_minnum_foldable_use_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_inv2pi_minnum_foldable_use_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1364,7 +1364,7 @@ define half @v_fneg_inv2pi_minnum_foldable_use_f16(half %a, half %b) #0 {
   ret half %mul
 }
 
-define half @v_fneg_0_minnum_foldable_use_f16_no_ieee(half %a, half %b) #4 {
+define half @v_fneg_0_minnum_foldable_use_f16_no_ieee(half %a, half %b) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_0_minnum_foldable_use_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1396,7 +1396,7 @@ define half @v_fneg_0_minnum_foldable_use_f16_no_ieee(half %a, half %b) #4 {
   ret half %mul
 }
 
-define { half, half } @v_fneg_minnum_multi_use_minnum_f16_ieee(half %a, half %b) #0 {
+define { half, half } @v_fneg_minnum_multi_use_minnum_f16_ieee(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_minnum_multi_use_minnum_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1434,7 +1434,7 @@ define { half, half } @v_fneg_minnum_multi_use_minnum_f16_ieee(half %a, half %b)
   ret { half, half } %insert.1
 }
 
-define <2 x half> @v_fneg_minnum_multi_use_minnum_f16_no_ieee(half %a, half %b) #4 {
+define <2 x half> @v_fneg_minnum_multi_use_minnum_f16_no_ieee(half %a, half %b) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_minnum_multi_use_minnum_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1475,7 +1475,7 @@ define <2 x half> @v_fneg_minnum_multi_use_minnum_f16_no_ieee(half %a, half %b) 
 ; fmaxnum tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_maxnum_f16_ieee(half %a, half %b) #0 {
+define half @v_fneg_maxnum_f16_ieee(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_maxnum_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1507,7 +1507,7 @@ define half @v_fneg_maxnum_f16_ieee(half %a, half %b) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_maxnum_f16_no_ieee(half %a, half %b) #4 {
+define half @v_fneg_maxnum_f16_no_ieee(half %a, half %b) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_maxnum_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1534,7 +1534,7 @@ define half @v_fneg_maxnum_f16_no_ieee(half %a, half %b) #4 {
   ret half %fneg
 }
 
-define half @v_fneg_self_maxnum_f16_ieee(half %a) #0 {
+define half @v_fneg_self_maxnum_f16_ieee(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_self_maxnum_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1557,7 +1557,7 @@ define half @v_fneg_self_maxnum_f16_ieee(half %a) #0 {
   ret half %max.fneg
 }
 
-define half @v_fneg_self_maxnum_f16_no_ieee(half %a) #4 {
+define half @v_fneg_self_maxnum_f16_no_ieee(half %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_self_maxnum_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1580,7 +1580,7 @@ define half @v_fneg_self_maxnum_f16_no_ieee(half %a) #4 {
   ret half %max.fneg
 }
 
-define half @v_fneg_posk_maxnum_f16_ieee(half %a) #0 {
+define half @v_fneg_posk_maxnum_f16_ieee(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_posk_maxnum_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1608,7 +1608,7 @@ define half @v_fneg_posk_maxnum_f16_ieee(half %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_posk_maxnum_f16_no_ieee(half %a) #4 {
+define half @v_fneg_posk_maxnum_f16_no_ieee(half %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_posk_maxnum_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1633,7 +1633,7 @@ define half @v_fneg_posk_maxnum_f16_no_ieee(half %a) #4 {
   ret half %fneg
 }
 
-define half @v_fneg_negk_maxnum_f16_ieee(half %a) #0 {
+define half @v_fneg_negk_maxnum_f16_ieee(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_negk_maxnum_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1661,7 +1661,7 @@ define half @v_fneg_negk_maxnum_f16_ieee(half %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_negk_maxnum_f16_no_ieee(half %a) #4 {
+define half @v_fneg_negk_maxnum_f16_no_ieee(half %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_negk_maxnum_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1686,7 +1686,7 @@ define half @v_fneg_negk_maxnum_f16_no_ieee(half %a) #4 {
   ret half %fneg
 }
 
-define half @v_fneg_0_maxnum_f16(half %a) #0 {
+define half @v_fneg_0_maxnum_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_0_maxnum_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1715,7 +1715,7 @@ define half @v_fneg_0_maxnum_f16(half %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_neg0_maxnum_f16_ieee(half %a) #0 {
+define half @v_fneg_neg0_maxnum_f16_ieee(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_neg0_maxnum_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1743,7 +1743,7 @@ define half @v_fneg_neg0_maxnum_f16_ieee(half %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_neg0_maxnum_f16_no_ieee(half %a) #4 {
+define half @v_fneg_neg0_maxnum_f16_no_ieee(half %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_neg0_maxnum_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1768,7 +1768,7 @@ define half @v_fneg_neg0_maxnum_f16_no_ieee(half %a) #4 {
   ret half %fneg
 }
 
-define half @v_fneg_0_maxnum_foldable_use_f16_ieee(half %a, half %b) #0 {
+define half @v_fneg_0_maxnum_foldable_use_f16_ieee(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_0_maxnum_foldable_use_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1802,7 +1802,7 @@ define half @v_fneg_0_maxnum_foldable_use_f16_ieee(half %a, half %b) #0 {
   ret half %mul
 }
 
-define half @v_fneg_0_maxnum_foldable_use_f16_no_ieee(half %a, half %b) #4 {
+define half @v_fneg_0_maxnum_foldable_use_f16_no_ieee(half %a, half %b) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_0_maxnum_foldable_use_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1834,7 +1834,7 @@ define half @v_fneg_0_maxnum_foldable_use_f16_no_ieee(half %a, half %b) #4 {
   ret half %mul
 }
 
-define { half, half } @v_fneg_maxnum_multi_use_maxnum_f16_ieee(half %a, half %b) #0 {
+define { half, half } @v_fneg_maxnum_multi_use_maxnum_f16_ieee(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_maxnum_multi_use_maxnum_f16_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1872,7 +1872,7 @@ define { half, half } @v_fneg_maxnum_multi_use_maxnum_f16_ieee(half %a, half %b)
   ret { half, half } %insert.1
 }
 
-define <2 x half> @v_fneg_maxnum_multi_use_maxnum_f16_no_ieee(half %a, half %b) #4 {
+define <2 x half> @v_fneg_maxnum_multi_use_maxnum_f16_no_ieee(half %a, half %b) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_maxnum_multi_use_maxnum_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1913,7 +1913,7 @@ define <2 x half> @v_fneg_maxnum_multi_use_maxnum_f16_no_ieee(half %a, half %b) 
 ; fma tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_fma_f16(half %a, half %b, half %c) #0 {
+define half @v_fneg_fma_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_fma_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1970,7 +1970,7 @@ define half @v_fneg_fma_f16(half %a, half %b, half %c) #0 {
   ret half %fneg
 }
 
-define { half, half } @v_fneg_fma_store_use_fma_f16(half %a, half %b, half %c) #0 {
+define { half, half } @v_fneg_fma_store_use_fma_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_fma_store_use_fma_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2005,7 +2005,7 @@ define { half, half } @v_fneg_fma_store_use_fma_f16(half %a, half %b, half %c) #
   ret { half, half } %insert.1
 }
 
-define { half, half } @v_fneg_fma_multi_use_fma_f16(half %a, half %b, half %c) #0 {
+define { half, half } @v_fneg_fma_multi_use_fma_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_fma_multi_use_fma_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2072,7 +2072,7 @@ define { half, half } @v_fneg_fma_multi_use_fma_f16(half %a, half %b, half %c) #
   ret { half, half } %insert.1
 }
 
-define half @v_fneg_fma_fneg_x_y_f16(half %a, half %b, half %c) #0 {
+define half @v_fneg_fma_fneg_x_y_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_fma_fneg_x_y_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2130,7 +2130,7 @@ define half @v_fneg_fma_fneg_x_y_f16(half %a, half %b, half %c) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_fma_x_fneg_y_f16(half %a, half %b, half %c) #0 {
+define half @v_fneg_fma_x_fneg_y_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_fma_x_fneg_y_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2188,7 +2188,7 @@ define half @v_fneg_fma_x_fneg_y_f16(half %a, half %b, half %c) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_fma_fneg_fneg_y_f16(half %a, half %b, half %c) #0 {
+define half @v_fneg_fma_fneg_fneg_y_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_fma_fneg_fneg_y_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2247,7 +2247,7 @@ define half @v_fneg_fma_fneg_fneg_y_f16(half %a, half %b, half %c) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_fma_fneg_x_fneg_f16(half %a, half %b, half %c) #0 {
+define half @v_fneg_fma_fneg_x_fneg_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_fma_fneg_x_fneg_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2306,7 +2306,7 @@ define half @v_fneg_fma_fneg_x_fneg_f16(half %a, half %b, half %c) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_fma_x_y_fneg_f16(half %a, half %b, half %c) #0 {
+define half @v_fneg_fma_x_y_fneg_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_fma_x_y_fneg_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2364,7 +2364,7 @@ define half @v_fneg_fma_x_y_fneg_f16(half %a, half %b, half %c) #0 {
   ret half %fneg
 }
 
-define { half, half } @v_fneg_fma_store_use_fneg_x_y_f16(half %a, half %b, half %c) #0 {
+define { half, half } @v_fneg_fma_store_use_fneg_x_y_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_fma_store_use_fneg_x_y_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2435,7 +2435,7 @@ define { half, half } @v_fneg_fma_store_use_fneg_x_y_f16(half %a, half %b, half 
   ret { half, half } %insert.1
 }
 
-define { half, half } @v_fneg_fma_multi_use_fneg_x_y_f16(half %a, half %b, half %c, half %d) #0 {
+define { half, half } @v_fneg_fma_multi_use_fneg_x_y_f16(half %a, half %b, half %c, half %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_fma_multi_use_fneg_x_y_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2516,7 +2516,7 @@ define { half, half } @v_fneg_fma_multi_use_fneg_x_y_f16(half %a, half %b, half 
 ; fmad tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_fmad_f16(half %a, half %b, half %c) #0 {
+define half @v_fneg_fmad_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_fmad_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2573,7 +2573,7 @@ define half @v_fneg_fmad_f16(half %a, half %b, half %c) #0 {
   ret half %fneg
 }
 
-define <4 x half> @v_fneg_fmad_v4f32(<4 x half> %a, <4 x half> %b, <4 x half> %c) #0 {
+define <4 x half> @v_fneg_fmad_v4f32(<4 x half> %a, <4 x half> %b, <4 x half> %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_fmad_v4f32:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2705,7 +2705,7 @@ define <4 x half> @v_fneg_fmad_v4f32(<4 x half> %a, <4 x half> %b, <4 x half> %c
   ret <4 x half> %fneg
 }
 
-define { half, half } @v_fneg_fmad_multi_use_fmad_f16(half %a, half %b, half %c) #0 {
+define { half, half } @v_fneg_fmad_multi_use_fmad_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_fmad_multi_use_fmad_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2776,7 +2776,7 @@ define { half, half } @v_fneg_fmad_multi_use_fmad_f16(half %a, half %b, half %c)
 ; fp_extend tests
 ; --------------------------------------------------------------------------------
 
-define double @v_fneg_fp_extend_f16_to_f64(half %a) #0 {
+define double @v_fneg_fp_extend_f16_to_f64(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_fp_extend_f16_to_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2804,7 +2804,7 @@ define double @v_fneg_fp_extend_f16_to_f64(half %a) #0 {
   ret double %fneg
 }
 
-define double @v_fneg_fp_extend_fneg_f16_to_f64(half %a) #0 {
+define double @v_fneg_fp_extend_fneg_f16_to_f64(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_fp_extend_fneg_f16_to_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2831,7 +2831,7 @@ define double @v_fneg_fp_extend_fneg_f16_to_f64(half %a) #0 {
   ret double %fneg
 }
 
-define { double, half } @v_fneg_fp_extend_store_use_fneg_f16_to_f64(half %a) #0 {
+define { double, half } @v_fneg_fp_extend_store_use_fneg_f16_to_f64(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_fp_extend_store_use_fneg_f16_to_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2866,7 +2866,7 @@ define { double, half } @v_fneg_fp_extend_store_use_fneg_f16_to_f64(half %a) #0 
   ret { double, half } %insert.1
 }
 
-define { double, double } @v_fneg_multi_use_fp_extend_fneg_f16_to_f64(half %a) #0 {
+define { double, double } @v_fneg_multi_use_fp_extend_fneg_f16_to_f64(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_multi_use_fp_extend_fneg_f16_to_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2901,7 +2901,7 @@ define { double, double } @v_fneg_multi_use_fp_extend_fneg_f16_to_f64(half %a) #
   ret { double, double } %insert.1
 }
 
-define { double, double } @v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f64(half %a) #0 {
+define { double, double } @v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f64(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2937,7 +2937,7 @@ define { double, double } @v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f64(h
   ret { double, double } %insert.1
 }
 
-define { float, float } @v_fneg_multi_use_fp_extend_fneg_f16_to_f32(half %a) #0 {
+define { float, float } @v_fneg_multi_use_fp_extend_fneg_f16_to_f32(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_multi_use_fp_extend_fneg_f16_to_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2970,7 +2970,7 @@ define { float, float } @v_fneg_multi_use_fp_extend_fneg_f16_to_f32(half %a) #0 
 ; fp_round tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_fp_round_f64_to_f16(double %a) #0 {
+define half @v_fneg_fp_round_f64_to_f16(double %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_fp_round_f64_to_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3121,7 +3121,7 @@ define half @v_fneg_fp_round_f64_to_f16(double %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_fp_round_fneg_f64_to_f16(double %a) #0 {
+define half @v_fneg_fp_round_fneg_f64_to_f16(double %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_fp_round_fneg_f64_to_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3268,7 +3268,7 @@ define half @v_fneg_fp_round_fneg_f64_to_f16(double %a) #0 {
   ret half %fneg
 }
 
-define { half, double } @v_fneg_fp_round_store_use_fneg_f64_to_f16(double %a) #0 {
+define { half, double } @v_fneg_fp_round_store_use_fneg_f64_to_f16(double %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_fp_round_store_use_fneg_f64_to_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3427,7 +3427,7 @@ define { half, double } @v_fneg_fp_round_store_use_fneg_f64_to_f16(double %a) #0
   ret { half, double } %insert.1
 }
 
-define { half, double } @v_fneg_fp_round_multi_use_fneg_f64_to_f16(double %a, double %c) #0 {
+define { half, double } @v_fneg_fp_round_multi_use_fneg_f64_to_f16(double %a, double %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_fp_round_multi_use_fneg_f64_to_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3585,7 +3585,7 @@ define { half, double } @v_fneg_fp_round_multi_use_fneg_f64_to_f16(double %a, do
   ret { half, double } %insert.1
 }
 
-define { half, half } @v_fneg_multi_use_fp_round_fneg_f64_to_f16(double %a) #0 {
+define { half, half } @v_fneg_multi_use_fp_round_fneg_f64_to_f16(double %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_multi_use_fp_round_fneg_f64_to_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3741,7 +3741,7 @@ define { half, half } @v_fneg_multi_use_fp_round_fneg_f64_to_f16(double %a) #0 {
 ; ftrunc tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_trunc_f16(half %a) #0 {
+define half @v_fneg_trunc_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_trunc_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3770,7 +3770,7 @@ define half @v_fneg_trunc_f16(half %a) #0 {
 ; fround tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_round_f16(half %a) #0 {
+define half @v_fneg_round_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_round_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3864,7 +3864,7 @@ define half @v_fneg_round_f16(half %a) #0 {
 ; rint tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_rint_f16(half %a) #0 {
+define half @v_fneg_rint_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_rint_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3893,7 +3893,7 @@ define half @v_fneg_rint_f16(half %a) #0 {
 ; nearbyint tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_nearbyint_f16(half %a) #0 {
+define half @v_fneg_nearbyint_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_nearbyint_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3922,7 +3922,7 @@ define half @v_fneg_nearbyint_f16(half %a) #0 {
 ; sin tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_sin_f16(half %a) #0 {
+define half @v_fneg_sin_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_sin_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3957,7 +3957,7 @@ define half @v_fneg_sin_f16(half %a) #0 {
 ; fcanonicalize tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_canonicalize_f16(half %a) #0 {
+define half @v_fneg_canonicalize_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_canonicalize_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3985,7 +3985,7 @@ define half @v_fneg_canonicalize_f16(half %a) #0 {
 ; CopyToReg tests
 ; --------------------------------------------------------------------------------
 
-define void @v_fneg_copytoreg_f16(ptr addrspace(1) %out, half %a, half %b, half %c, i32 %d) #0 {
+define void @v_fneg_copytoreg_f16(ptr addrspace(1) %out, half %a, half %b, half %c, i32 %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_copytoreg_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4082,7 +4082,7 @@ endif:
 ; --------------------------------------------------------------------------------
 
 ; Can't fold into use, so should fold into source
-define half @v_fneg_inlineasm_f16(half %a, half %b, half %c, i32 %d) #0 {
+define half @v_fneg_inlineasm_f16(half %a, half %b, half %c, i32 %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_inlineasm_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4116,7 +4116,7 @@ define half @v_fneg_inlineasm_f16(half %a, half %b, half %c, i32 %d) #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul half %a, %b
   %fneg = fneg half %mul
-  call void asm sideeffect "; use $0", "v"(half %fneg) #0
+  call void asm sideeffect "; use $0", "v"(half %fneg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign"
   ret half %fneg
 }
 
@@ -4125,7 +4125,7 @@ define half @v_fneg_inlineasm_f16(half %a, half %b, half %c, i32 %d) #0 {
 ; --------------------------------------------------------------------------------
 
 ; Can't fold into use, so should fold into source
-define half @v_fneg_inlineasm_multi_use_src_f16(ptr addrspace(1) %out, half %a, half %b, half %c, i32 %d) #0 {
+define half @v_fneg_inlineasm_multi_use_src_f16(ptr addrspace(1) %out, half %a, half %b, half %c, i32 %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_inlineasm_multi_use_src_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4165,7 +4165,7 @@ define half @v_fneg_inlineasm_multi_use_src_f16(ptr addrspace(1) %out, half %a, 
   %out.gep = getelementptr inbounds half, ptr addrspace(1) %out, i64 %tid.ext
   %mul = fmul half %a, %b
   %fneg = fneg half %mul
-  call void asm sideeffect "; use $0", "v"(half %fneg) #0
+  call void asm sideeffect "; use $0", "v"(half %fneg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign"
   ret half %mul
 }
 
@@ -4175,7 +4175,7 @@ define half @v_fneg_inlineasm_multi_use_src_f16(ptr addrspace(1) %out, half %a, 
 
 ; There are multiple users of the fneg that must use a VOP3
 ; instruction, so there is no penalty
-define { half, half } @multiuse_fneg_2_vop3_users_f16(half %a, half %b, half %c) #0 {
+define { half, half } @multiuse_fneg_2_vop3_users_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: multiuse_fneg_2_vop3_users_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4215,7 +4215,7 @@ define { half, half } @multiuse_fneg_2_vop3_users_f16(half %a, half %b, half %c)
 
 ; There are multiple users, but both require using a larger encoding
 ; for the modifier.
-define { half, half } @multiuse_fneg_2_vop2_users_f16(half %a, half %b, half %c) #0 {
+define { half, half } @multiuse_fneg_2_vop2_users_f16(half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: multiuse_fneg_2_vop2_users_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4254,7 +4254,7 @@ define { half, half } @multiuse_fneg_2_vop2_users_f16(half %a, half %b, half %c)
 }
 
 ; One user is VOP3 so has no cost to folding the modifier, the other does.
-define { half, half } @multiuse_fneg_vop2_vop3_users_f16(ptr addrspace(1) %out, half %a, half %b, half %c) #0 {
+define { half, half } @multiuse_fneg_vop2_vop3_users_f16(ptr addrspace(1) %out, half %a, half %b, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: multiuse_fneg_vop2_vop3_users_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4296,7 +4296,7 @@ define { half, half } @multiuse_fneg_vop2_vop3_users_f16(ptr addrspace(1) %out, 
 
 ; The use of the fneg requires a code size increase, but folding into
 ; the source does not
-define { half, half } @free_fold_src_code_size_cost_use_f16(ptr addrspace(1) %out, half %a, half %b, half %c, half %d) #0 {
+define { half, half } @free_fold_src_code_size_cost_use_f16(ptr addrspace(1) %out, half %a, half %b, half %c, half %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: free_fold_src_code_size_cost_use_f16:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4378,7 +4378,7 @@ define { half, half } @free_fold_src_code_size_cost_use_f16(ptr addrspace(1) %ou
 
 ; %trunc.a has one fneg use, but it requires a code size increase and
 ; %the fneg can instead be folded for free into the fma.
-define half @one_use_cost_to_fold_into_src_f16(ptr addrspace(1) %out, half %a, half %b, half %c, half %d) #0 {
+define half @one_use_cost_to_fold_into_src_f16(ptr addrspace(1) %out, half %a, half %b, half %c, half %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: one_use_cost_to_fold_into_src_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4416,7 +4416,7 @@ define half @one_use_cost_to_fold_into_src_f16(ptr addrspace(1) %out, half %a, h
   ret half %fma0
 }
 
-define { half, half } @multi_use_cost_to_fold_into_src(ptr addrspace(1) %out, half %a, half %b, half %c, half %d) #0 {
+define { half, half } @multi_use_cost_to_fold_into_src(ptr addrspace(1) %out, half %a, half %b, half %c, half %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: multi_use_cost_to_fold_into_src:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4465,7 +4465,7 @@ define { half, half } @multi_use_cost_to_fold_into_src(ptr addrspace(1) %out, ha
 ; undone by the generic combine to pull the fneg out of the fma if
 ; !isFNegFree. We were reporting false for v2f32 even though it will
 ; be split into f32 where it will be free.
-define <2 x half> @fneg_fma_fneg_dagcombine_loop(<2 x half> %arg, <2 x half> %arg1, <2 x half> %arg2) #0 {
+define <2 x half> @fneg_fma_fneg_dagcombine_loop(<2 x half> %arg, <2 x half> %arg1, <2 x half> %arg2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: fneg_fma_fneg_dagcombine_loop:
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4529,7 +4529,7 @@ bb:
 
 ; This expects denormal flushing, so can't turn this fmul into fneg
 ; TODO: Keeping this as fmul saves encoding size
-define half @nnan_fmul_neg1_to_fneg(half %x, half %y) #0 {
+define half @nnan_fmul_neg1_to_fneg(half %x, half %y) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: nnan_fmul_neg1_to_fneg:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4619,7 +4619,7 @@ define half @denorm_snan_fmul_neg1_to_fneg(half %x, half %y) {
   ret half %add
 }
 
-define half @flush_snan_fmul_neg1_to_fneg(half %x, half %y) #0 {
+define half @flush_snan_fmul_neg1_to_fneg(half %x, half %y) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: flush_snan_fmul_neg1_to_fneg:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4741,23 +4741,17 @@ define <2 x half> @fadd_select_fneg_fneg_v2f16(i32 %arg0, <2 x half> %x, <2 x ha
   ret <2 x half> %add
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare half @llvm.sin.f16(half) #1
-declare half @llvm.trunc.f16(half) #1
-declare half @llvm.round.f16(half) #1
-declare half @llvm.rint.f16(half) #1
-declare half @llvm.nearbyint.f16(half) #1
-declare half @llvm.roundeven.f16(half) #1
-declare half @llvm.canonicalize.f16(half) #1
-declare half @llvm.minnum.f16(half, half) #1
-declare half @llvm.maxnum.f16(half, half) #1
-declare half @llvm.fma.f16(half, half, half) #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare half @llvm.sin.f16(half) nounwind readnone
+declare half @llvm.trunc.f16(half) nounwind readnone
+declare half @llvm.round.f16(half) nounwind readnone
+declare half @llvm.rint.f16(half) nounwind readnone
+declare half @llvm.nearbyint.f16(half) nounwind readnone
+declare half @llvm.roundeven.f16(half) nounwind readnone
+declare half @llvm.canonicalize.f16(half) nounwind readnone
+declare half @llvm.minnum.f16(half, half) nounwind readnone
+declare half @llvm.maxnum.f16(half, half) nounwind readnone
+declare half @llvm.fma.f16(half, half, half) nounwind readnone
 declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>)
-declare half @llvm.fmuladd.f16(half, half, half) #1
-declare <4 x half> @llvm.fmuladd.v4f16(<4 x half>, <4 x half>, <4 x half>) #1
-
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "unsafe-fp-math"="true" }
-attributes #3 = { nounwind "no-signed-zeros-fp-math"="true" }
-attributes #4 = { nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+declare half @llvm.fmuladd.f16(half, half, half) nounwind readnone
+declare <4 x half> @llvm.fmuladd.v4f16(<4 x half>, <4 x half>, <4 x half>) nounwind readnone

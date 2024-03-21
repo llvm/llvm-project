@@ -14,7 +14,7 @@
 ; SI-DAG: buffer_store_dword
 ; SI-DAG: buffer_store_dword
 ; SI:     s_endpgm
-define amdgpu_kernel void @missing_store_reduced(ptr addrspace(1) %out, ptr addrspace(1) %gptr) #0 {
+define amdgpu_kernel void @missing_store_reduced(ptr addrspace(1) %out, ptr addrspace(1) %gptr) nounwind {
   %ptr0 = load ptr addrspace(4), ptr addrspace(3) @ptr_load, align 8
   %ptr2 = getelementptr inbounds i32, ptr addrspace(4) %ptr0, i64 2
 
@@ -24,6 +24,4 @@ define amdgpu_kernel void @missing_store_reduced(ptr addrspace(1) %out, ptr addr
   store i32 %tmp2, ptr addrspace(1) %out, align 4
   ret void
 }
-
-attributes #0 = { nounwind }
 

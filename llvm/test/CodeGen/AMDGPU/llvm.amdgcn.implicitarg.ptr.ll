@@ -13,7 +13,7 @@
 
 ; COV4: .amdhsa_kernarg_size 56
 ; COV5: .amdhsa_kernarg_size 256
-define amdgpu_kernel void @kernel_implicitarg_ptr_empty() #0 {
+define amdgpu_kernel void @kernel_implicitarg_ptr_empty() nounwind noinline {
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
@@ -31,7 +31,7 @@ define amdgpu_kernel void @kernel_implicitarg_ptr_empty() #0 {
 
 ; COV4: .amdhsa_kernarg_size 0
 ; COV5: .amdhsa_kernarg_size 0
-define amdgpu_kernel void @kernel_implicitarg_ptr_empty_0implicit() #3 {
+define amdgpu_kernel void @kernel_implicitarg_ptr_empty_0implicit() nounwind noinline "amdgpu-implicitarg-num-bytes"="0" {
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
@@ -46,7 +46,7 @@ define amdgpu_kernel void @kernel_implicitarg_ptr_empty_0implicit() #3 {
 ; HSA: s_load_dword s0, s[4:5], 0x0
 
 ; HSA: .amdhsa_kernarg_size 48
-define amdgpu_kernel void @opencl_kernel_implicitarg_ptr_empty() #1 {
+define amdgpu_kernel void @opencl_kernel_implicitarg_ptr_empty() nounwind noinline "amdgpu-implicitarg-num-bytes"="48" {
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
@@ -62,7 +62,7 @@ define amdgpu_kernel void @opencl_kernel_implicitarg_ptr_empty() #1 {
 
 ; COV4: .amdhsa_kernarg_size 168
 ; COV5: .amdhsa_kernarg_size 368
-define amdgpu_kernel void @kernel_implicitarg_ptr([112 x i8]) #0 {
+define amdgpu_kernel void @kernel_implicitarg_ptr([112 x i8]) nounwind noinline {
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
@@ -77,7 +77,7 @@ define amdgpu_kernel void @kernel_implicitarg_ptr([112 x i8]) #0 {
 ; HSA: s_load_dword s0, s[4:5], 0x1c
 
 ; HSA: .amdhsa_kernarg_size 160
-define amdgpu_kernel void @opencl_kernel_implicitarg_ptr([112 x i8]) #1 {
+define amdgpu_kernel void @opencl_kernel_implicitarg_ptr([112 x i8]) nounwind noinline "amdgpu-implicitarg-num-bytes"="48" {
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
@@ -88,7 +88,7 @@ define amdgpu_kernel void @opencl_kernel_implicitarg_ptr([112 x i8]) #1 {
 ; GCN: s_load_dword s{{[0-9]+}}, s[8:9], 0x0
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @func_implicitarg_ptr() #0 {
+define void @func_implicitarg_ptr() nounwind noinline {
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
@@ -99,7 +99,7 @@ define void @func_implicitarg_ptr() #0 {
 ; GCN: s_load_dword s{{[0-9]+}}, s[8:9], 0x0
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @opencl_func_implicitarg_ptr() #0 {
+define void @opencl_func_implicitarg_ptr() nounwind noinline {
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
@@ -116,7 +116,7 @@ define void @opencl_func_implicitarg_ptr() #0 {
 
 ; COV4: .amdhsa_kernarg_size 56
 ; COV5: .amdhsa_kernarg_size 256
-define amdgpu_kernel void @kernel_call_implicitarg_ptr_func_empty() #0 {
+define amdgpu_kernel void @kernel_call_implicitarg_ptr_func_empty() nounwind noinline {
   call void @func_implicitarg_ptr()
   ret void
 }
@@ -131,7 +131,7 @@ define amdgpu_kernel void @kernel_call_implicitarg_ptr_func_empty() #0 {
 ; GCN: s_swappc_b64
 
 ; HSA: .amdhsa_kernarg_size 0
-define amdgpu_kernel void @kernel_call_implicitarg_ptr_func_empty_implicit0() #3 {
+define amdgpu_kernel void @kernel_call_implicitarg_ptr_func_empty_implicit0() nounwind noinline "amdgpu-implicitarg-num-bytes"="0" {
   call void @func_implicitarg_ptr()
   ret void
 }
@@ -145,7 +145,7 @@ define amdgpu_kernel void @kernel_call_implicitarg_ptr_func_empty_implicit0() #3
 ; GCN: s_swappc_b64
 
 ; HSA: .amdhsa_kernarg_size 48
-define amdgpu_kernel void @opencl_kernel_call_implicitarg_ptr_func_empty() #1 {
+define amdgpu_kernel void @opencl_kernel_call_implicitarg_ptr_func_empty() nounwind noinline "amdgpu-implicitarg-num-bytes"="48" {
   call void @func_implicitarg_ptr()
   ret void
 }
@@ -163,7 +163,7 @@ define amdgpu_kernel void @opencl_kernel_call_implicitarg_ptr_func_empty() #1 {
 
 ; COV4: .amdhsa_kernarg_size 168
 ; COV5: .amdhsa_kernarg_size 368
-define amdgpu_kernel void @kernel_call_implicitarg_ptr_func([112 x i8]) #0 {
+define amdgpu_kernel void @kernel_call_implicitarg_ptr_func([112 x i8]) nounwind noinline {
   call void @func_implicitarg_ptr()
   ret void
 }
@@ -178,7 +178,7 @@ define amdgpu_kernel void @kernel_call_implicitarg_ptr_func([112 x i8]) #0 {
 ; GCN: s_swappc_b64
 
 ; HSA: .amdhsa_kernarg_size 160
-define amdgpu_kernel void @opencl_kernel_call_implicitarg_ptr_func([112 x i8]) #1 {
+define amdgpu_kernel void @opencl_kernel_call_implicitarg_ptr_func([112 x i8]) nounwind noinline "amdgpu-implicitarg-num-bytes"="48" {
   call void @func_implicitarg_ptr()
   ret void
 }
@@ -189,7 +189,7 @@ define amdgpu_kernel void @opencl_kernel_call_implicitarg_ptr_func([112 x i8]) #
 ; GCN-NOT: s[8:9]
 ; GCN: s_swappc_b64
 ; GCN: s_setpc_b64 s[30:31]
-define void @func_call_implicitarg_ptr_func() #0 {
+define void @func_call_implicitarg_ptr_func() nounwind noinline {
   call void @func_implicitarg_ptr()
   ret void
 }
@@ -200,7 +200,7 @@ define void @func_call_implicitarg_ptr_func() #0 {
 ; GCN-NOT: s[8:9]
 ; GCN: s_swappc_b64
 ; GCN: s_setpc_b64 s[30:31]
-define void @opencl_func_call_implicitarg_ptr_func() #0 {
+define void @opencl_func_call_implicitarg_ptr_func() nounwind noinline {
   call void @func_implicitarg_ptr()
   ret void
 }
@@ -211,7 +211,7 @@ define void @opencl_func_call_implicitarg_ptr_func() #0 {
 ; GCN-DAG: s_load_dword s{{[0-9]+}}, [[NULL]], 0x0
 ; GCN: s_load_dword s{{[0-9]+}}, s[8:9], 0x0
 ; GCN: s_waitcnt lgkmcnt(0)
-define void @func_kernarg_implicitarg_ptr() #0 {
+define void @func_kernarg_implicitarg_ptr() nounwind noinline {
   %kernarg.segment.ptr = call ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %load0 = load volatile i32, ptr addrspace(4) %kernarg.segment.ptr
@@ -225,7 +225,7 @@ define void @func_kernarg_implicitarg_ptr() #0 {
 ; GCN-DAG: s_load_dword s{{[0-9]+}}, [[NULL]], 0x0
 ; GCN: s_load_dword s{{[0-9]+}}, s[8:9], 0x0
 ; GCN: s_waitcnt lgkmcnt(0)
-define void @opencl_func_kernarg_implicitarg_ptr() #0 {
+define void @opencl_func_kernarg_implicitarg_ptr() nounwind noinline {
   %kernarg.segment.ptr = call ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %load0 = load volatile i32, ptr addrspace(4) %kernarg.segment.ptr
@@ -237,7 +237,7 @@ define void @opencl_func_kernarg_implicitarg_ptr() #0 {
 ; GCN: s_add_u32 s8, s4, 0x70
 ; GCN: s_addc_u32 s9, s5, 0
 ; GCN: s_swappc_b64
-define amdgpu_kernel void @kernel_call_kernarg_implicitarg_ptr_func([112 x i8]) #0 {
+define amdgpu_kernel void @kernel_call_kernarg_implicitarg_ptr_func([112 x i8]) nounwind noinline {
   call void @func_kernarg_implicitarg_ptr()
   ret void
 }
@@ -247,7 +247,7 @@ define amdgpu_kernel void @kernel_call_kernarg_implicitarg_ptr_func([112 x i8]) 
 ; MESA: kernarg_segment_alignment = 6
 
 ; HSA: .amdhsa_kernarg_size 120
-define amdgpu_kernel void @kernel_implicitarg_no_struct_align_padding(<16 x i32>, i32) #1 {
+define amdgpu_kernel void @kernel_implicitarg_no_struct_align_padding(<16 x i32>, i32) nounwind noinline "amdgpu-implicitarg-num-bytes"="48" {
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
@@ -307,13 +307,8 @@ define amdgpu_kernel void @kernel_implicitarg_no_struct_align_padding(<16 x i32>
 ; HSA-NEXT:    .kernarg_segment_size: 120
 ; HSA-LABEL:   .name:           kernel_implicitarg_no_struct_align_padding
 
-declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #2
-declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #2
-
-attributes #0 = { nounwind noinline }
-attributes #1 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="48" }
-attributes #2 = { nounwind readnone speculatable }
-attributes #3 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="0" }
+declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() nounwind readnone speculatable
+declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() nounwind readnone speculatable
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}

@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga -stop-after=irtranslator %s -o - | FileCheck %s
 
 ; Check that we correctly skip over disabled inputs
-define amdgpu_ps void @disabled_input(float inreg %arg0, float %psinput0, float %psinput1) #1 {
+define amdgpu_ps void @disabled_input(float inreg %arg0, float %psinput0, float %psinput1) "InitialPSInputAddr"="0x00002" {
   ; CHECK-LABEL: name: disabled_input
   ; CHECK: bb.1.main_body:
   ; CHECK-NEXT:   liveins: $sgpr2, $vgpr0
@@ -13,11 +13,11 @@ define amdgpu_ps void @disabled_input(float inreg %arg0, float %psinput0, float 
   ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 15, [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY1]](s32), 0, 0
   ; CHECK-NEXT:   S_ENDPGM 0
 main_body:
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg0, float %arg0, float %arg0, float %psinput1, i1 false, i1 false) #0
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg0, float %arg0, float %arg0, float %psinput1, i1 false, i1 false) nounwind
   ret void
 }
 
-define amdgpu_ps void @disabled_input_struct(float inreg %arg0, { float, float } %psinput0, float %psinput1) #1 {
+define amdgpu_ps void @disabled_input_struct(float inreg %arg0, { float, float } %psinput0, float %psinput1) "InitialPSInputAddr"="0x00002" {
   ; CHECK-LABEL: name: disabled_input_struct
   ; CHECK: bb.1.main_body:
   ; CHECK-NEXT:   liveins: $sgpr2, $vgpr0
@@ -29,7 +29,7 @@ define amdgpu_ps void @disabled_input_struct(float inreg %arg0, { float, float }
   ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 15, [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY1]](s32), 0, 0
   ; CHECK-NEXT:   S_ENDPGM 0
 main_body:
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg0, float %arg0, float %arg0, float %psinput1, i1 false, i1 false) #0
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg0, float %arg0, float %arg0, float %psinput1, i1 false, i1 false) nounwind
   ret void
 }
 
@@ -152,7 +152,4 @@ define amdgpu_ps <2 x i16> @sgpr_return_v2i16(<2 x i16> %vgpr) {
   ret <2 x i16> %vgpr
 }
 
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg)  #0
-
-attributes #0 = { nounwind }
-attributes #1 = { "InitialPSInputAddr"="0x00002" }
+declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg)  nounwind

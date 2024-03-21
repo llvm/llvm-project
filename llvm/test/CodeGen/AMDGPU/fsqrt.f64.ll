@@ -1446,7 +1446,7 @@ define double @v_sqrt_f64_afn_nnan_ninf_nsz(double %x) {
   ret double %result
 }
 
-define double @v_sqrt_f64__approx_func_fp_math(double %x) #2 {
+define double @v_sqrt_f64__approx_func_fp_math(double %x) "approx-func-fp-math"="true" {
 ; SDAG-LABEL: v_sqrt_f64__approx_func_fp_math:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1506,7 +1506,7 @@ define double @v_sqrt_f64__approx_func_fp_math(double %x) #2 {
   ret double %result
 }
 
-define double @v_sqrt_f64__enough_unsafe_attrs(double %x) #3 {
+define double @v_sqrt_f64__enough_unsafe_attrs(double %x) "approx-func-fp-math"="true" "no-nans-fp-math"="true" "no-infs-fp-math"="true" {
 ; SDAG-LABEL: v_sqrt_f64__enough_unsafe_attrs:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1566,7 +1566,7 @@ define double @v_sqrt_f64__enough_unsafe_attrs(double %x) #3 {
   ret double %result
 }
 
-define double @v_sqrt_f64__unsafe_attr(double %x) #4 {
+define double @v_sqrt_f64__unsafe_attr(double %x) "unsafe-fp-math"="true" {
 ; SDAG-LABEL: v_sqrt_f64__unsafe_attr:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1864,14 +1864,8 @@ define <3 x double> @v_sqrt_v3f64(<3 x double> %x) {
   ret <3 x double> %result
 }
 
-declare double @llvm.fabs.f64(double) #0
-declare double @llvm.sqrt.f64(double) #0
-declare <2 x double> @llvm.sqrt.v2f64(<2 x double>) #0
-declare <3 x double> @llvm.sqrt.v3f64(<3 x double>) #0
-declare i32 @llvm.amdgcn.readfirstlane(i32) #1
-
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #1 = { convergent nounwind willreturn memory(none) }
-attributes #2 = { "approx-func-fp-math"="true" }
-attributes #3 = { "approx-func-fp-math"="true" "no-nans-fp-math"="true" "no-infs-fp-math"="true" }
-attributes #4 = { "unsafe-fp-math"="true" }
+declare double @llvm.fabs.f64(double) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @llvm.sqrt.f64(double) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x double> @llvm.sqrt.v2f64(<2 x double>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <3 x double> @llvm.sqrt.v3f64(<3 x double>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare i32 @llvm.amdgcn.readfirstlane(i32) convergent nounwind willreturn memory(none)

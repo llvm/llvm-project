@@ -12,7 +12,7 @@
 ; GCN-NEXT: BB0_{{[0-9]+}}: ; %UnifiedReturnBlock
 ; GCN: s_endpgm
 
-define amdgpu_kernel void @lower_control_flow_unreachable_terminator() #0 {
+define amdgpu_kernel void @lower_control_flow_unreachable_terminator() nounwind {
 bb:
   %tmp15 = tail call i32 @llvm.amdgcn.workitem.id.y()
   %tmp63 = icmp eq i32 %tmp15, 32
@@ -37,7 +37,7 @@ ret:
 
 ; GCN: BB1_{{[0-9]+}}:
 ; GCN-NEXT: s_endpgm
-define amdgpu_kernel void @lower_control_flow_unreachable_terminator_swap_block_order() #0 {
+define amdgpu_kernel void @lower_control_flow_unreachable_terminator_swap_block_order() nounwind {
 bb:
   %tmp15 = tail call i32 @llvm.amdgcn.workitem.id.y()
   %tmp63 = icmp eq i32 %tmp15, 32
@@ -60,7 +60,7 @@ unreachable:
 
 ; GCN: [[UNREACHABLE]]:
 ; GCN: ds_write_b32
-define amdgpu_kernel void @uniform_lower_control_flow_unreachable_terminator(i32 %arg0) #0 {
+define amdgpu_kernel void @uniform_lower_control_flow_unreachable_terminator(i32 %arg0) nounwind {
 bb:
   %tmp63 = icmp eq i32 %arg0, 32
   br i1 %tmp63, label %unreachable, label %ret
@@ -73,8 +73,4 @@ ret:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.y() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind }
+declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone

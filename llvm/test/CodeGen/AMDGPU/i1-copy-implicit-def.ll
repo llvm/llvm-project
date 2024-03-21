@@ -5,7 +5,7 @@
 ; SI-LABEL: {{^}}br_implicit_def:
 ; SI: %bb.0:
 ; SI-NEXT: s_cbranch_scc1
-define amdgpu_kernel void @br_implicit_def(ptr addrspace(1) %out, i32 %arg) #0 {
+define amdgpu_kernel void @br_implicit_def(ptr addrspace(1) %out, i32 %arg) nounwind {
 bb:
   br i1 undef, label %bb1, label %bb2
 
@@ -16,5 +16,3 @@ bb1:
 bb2:
   ret void
 }
-
-attributes #0 = { nounwind }

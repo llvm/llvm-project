@@ -211,9 +211,7 @@ define amdgpu_ps float @struct_tbuffer_load_f32__sgpr_rsrc__vgpr_vindex__vgpr_vo
   ret float %val
 }
 
-declare float @llvm.amdgcn.struct.ptr.tbuffer.load.f32(ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg) #0
-declare <2 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v2f32(ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg) #0
-declare <3 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v3f32(ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v4f32(ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg) #0
-
-attributes #0 = { nounwind readonly }
+declare float @llvm.amdgcn.struct.ptr.tbuffer.load.f32(ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg) nounwind readonly
+declare <2 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v2f32(ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg) nounwind readonly
+declare <3 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v3f32(ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v4f32(ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg) nounwind readonly

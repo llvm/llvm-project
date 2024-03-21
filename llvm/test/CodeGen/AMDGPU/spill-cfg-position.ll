@@ -15,7 +15,7 @@
 
 define amdgpu_kernel void @spill_cfg_position(ptr addrspace(1) nocapture %arg) {
 bb:
-  %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tmp14 = load i32, ptr addrspace(1) %arg, align 4
   %tmp15 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 1
   %tmp16 = load i32, ptr addrspace(1) %tmp15, align 4
@@ -73,6 +73,4 @@ bb52:                                             ; preds = %bb44, %bb36
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

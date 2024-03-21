@@ -25,7 +25,7 @@
 
 ; CHECK: flat_store_dword
 
-define amdgpu_kernel void @cfg(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, i32 %arg2) #0 {
+define amdgpu_kernel void @cfg(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, i32 %arg2) "target-cpu"="fiji" {
 bb:
   %tmp = sext i32 %arg2 to i64
   %tmp3 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp
@@ -85,7 +85,7 @@ bb22:                                             ; preds = %bb20, %bb11
 
 ; CHECK: flat_load_dword
 
-define amdgpu_kernel void @cfg_selfloop(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, i32 %arg2) #0 {
+define amdgpu_kernel void @cfg_selfloop(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, i32 %arg2) "target-cpu"="fiji" {
 bb:
   br label %bb1
 
@@ -105,9 +105,6 @@ bb1:
   %tmp31 = icmp eq i32 %tmp25, 100
   br i1 %tmp31, label %bb2, label %bb1
 }
-
-
-attributes #0 = { "target-cpu"="fiji" }
 
 !0 = !{!1, !1, i64 0}
 !1 = !{!"int", !2, i64 0}

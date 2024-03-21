@@ -14,8 +14,8 @@
 ; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
 ; CI: buffer_store_dword [[RESULT]]
 ; GFX9: global_store_dword v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @simple_read2st64_f32_0_1(ptr addrspace(1) %out) #0 {
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @simple_read2st64_f32_0_1(ptr addrspace(1) %out) nounwind {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %x.i
   %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 64
@@ -36,8 +36,8 @@ define amdgpu_kernel void @simple_read2st64_f32_0_1(ptr addrspace(1) %out) #0 {
 ; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
 ; CI: buffer_store_dword [[RESULT]]
 ; GFX9: global_store_dword v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @simple_read2st64_f32_1_2(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @simple_read2st64_f32_1_2(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %add.x.0 = add nsw i32 %x.i, 64
   %arrayidx0 = getelementptr inbounds float, ptr addrspace(3) %lds, i32 %add.x.0
   %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
@@ -59,8 +59,8 @@ define amdgpu_kernel void @simple_read2st64_f32_1_2(ptr addrspace(1) %out, ptr a
 ; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
 ; CI: buffer_store_dword [[RESULT]]
 ; GFX9: global_store_dword v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @simple_read2st64_f32_max_offset(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @simple_read2st64_f32_max_offset(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %add.x.0 = add nsw i32 %x.i, 64
   %arrayidx0 = getelementptr inbounds float, ptr addrspace(3) %lds, i32 %add.x.0
   %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
@@ -82,8 +82,8 @@ define amdgpu_kernel void @simple_read2st64_f32_max_offset(ptr addrspace(1) %out
 ; GCN-DAG: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:256
 ; GCN-DAG: ds_read_b32 {{v[0-9]+}}, [[BIGADD]]{{$}}
 ; GCN: s_endpgm
-define amdgpu_kernel void @simple_read2st64_f32_over_max_offset(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @simple_read2st64_f32_over_max_offset(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %add.x.0 = add nsw i32 %x.i, 64
   %arrayidx0 = getelementptr inbounds float, ptr addrspace(3) %lds, i32 %add.x.0
   %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
@@ -102,8 +102,8 @@ define amdgpu_kernel void @simple_read2st64_f32_over_max_offset(ptr addrspace(1)
 
 ; GCN-NOT: ds_read2st64_b32
 ; GCN: s_endpgm
-define amdgpu_kernel void @odd_invalid_read2st64_f32_0(ptr addrspace(1) %out) #0 {
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @odd_invalid_read2st64_f32_0(ptr addrspace(1) %out) nounwind {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %x.i
   %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 63
@@ -121,8 +121,8 @@ define amdgpu_kernel void @odd_invalid_read2st64_f32_0(ptr addrspace(1) %out) #0
 
 ; GCN-NOT: ds_read2st64_b32
 ; GCN: s_endpgm
-define amdgpu_kernel void @odd_invalid_read2st64_f32_1(ptr addrspace(1) %out) #0 {
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @odd_invalid_read2st64_f32_1(ptr addrspace(1) %out) nounwind {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %add.x.0 = add nsw i32 %x.i, 64
   %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %add.x.0
   %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
@@ -144,8 +144,8 @@ define amdgpu_kernel void @odd_invalid_read2st64_f32_1(ptr addrspace(1) %out) #0
 ; GCN: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], v[[[LO_VREG]]:{{[0-9]+\]}}, v{{\[[0-9]+}}:[[HI_VREG]]]
 ; CI: buffer_store_dwordx2 [[RESULT]]
 ; GFX9: global_store_dwordx2 v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @simple_read2st64_f64_0_1(ptr addrspace(1) %out) #0 {
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @simple_read2st64_f64_0_1(ptr addrspace(1) %out) nounwind {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %arrayidx0 = getelementptr inbounds [512 x double], ptr addrspace(3) @lds.f64, i32 0, i32 %x.i
   %val0 = load double, ptr addrspace(3) %arrayidx0, align 8
   %add.x = add nsw i32 %x.i, 64
@@ -167,8 +167,8 @@ define amdgpu_kernel void @simple_read2st64_f64_0_1(ptr addrspace(1) %out) #0 {
 
 ; CI: buffer_store_dwordx2 [[RESULT]]
 ; GFX9: global_store_dwordx2 v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @simple_read2st64_f64_1_2(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @simple_read2st64_f64_1_2(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %add.x.0 = add nsw i32 %x.i, 64
   %arrayidx0 = getelementptr inbounds double, ptr addrspace(3) %lds, i32 %add.x.0
   %val0 = load double, ptr addrspace(3) %arrayidx0, align 8
@@ -190,8 +190,8 @@ define amdgpu_kernel void @simple_read2st64_f64_1_2(ptr addrspace(1) %out, ptr a
 ; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset1:1
 ; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset0:128 offset1:129
 ; GCN: s_endpgm
-define amdgpu_kernel void @misaligned_read2st64_f64(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @misaligned_read2st64_f64(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %arrayidx0 = getelementptr inbounds double, ptr addrspace(3) %lds, i32 %x.i
   %val0 = load double, ptr addrspace(3) %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 64
@@ -214,8 +214,8 @@ define amdgpu_kernel void @misaligned_read2st64_f64(ptr addrspace(1) %out, ptr a
 
 ; CI: buffer_store_dwordx2 [[RESULT]]
 ; GFX9: global_store_dwordx2 v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @simple_read2st64_f64_max_offset(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @simple_read2st64_f64_max_offset(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %add.x.0 = add nsw i32 %x.i, 256
   %arrayidx0 = getelementptr inbounds double, ptr addrspace(3) %lds, i32 %add.x.0
   %val0 = load double, ptr addrspace(3) %arrayidx0, align 8
@@ -237,8 +237,8 @@ define amdgpu_kernel void @simple_read2st64_f64_max_offset(ptr addrspace(1) %out
 ; GCN-DAG: v_add_{{i|u}}32_e32 [[BIGADD:v[0-9]+]], {{(vcc, )?}}0x10000, {{v[0-9]+}}
 ; GCN: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, [[BIGADD]]
 ; GCN: s_endpgm
-define amdgpu_kernel void @simple_read2st64_f64_over_max_offset(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @simple_read2st64_f64_over_max_offset(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %add.x.0 = add nsw i32 %x.i, 64
   %arrayidx0 = getelementptr inbounds double, ptr addrspace(3) %lds, i32 %add.x.0
   %val0 = load double, ptr addrspace(3) %arrayidx0, align 8
@@ -257,8 +257,8 @@ define amdgpu_kernel void @simple_read2st64_f64_over_max_offset(ptr addrspace(1)
 
 ; GCN-NOT: ds_read2st64_b64
 ; GCN: s_endpgm
-define amdgpu_kernel void @invalid_read2st64_f64_odd_offset(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @invalid_read2st64_f64_odd_offset(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %add.x.0 = add nsw i32 %x.i, 64
   %arrayidx0 = getelementptr inbounds double, ptr addrspace(3) %lds, i32 %add.x.0
   %val0 = load double, ptr addrspace(3) %arrayidx0, align 8
@@ -281,8 +281,8 @@ define amdgpu_kernel void @invalid_read2st64_f64_odd_offset(ptr addrspace(1) %ou
 ; GCN-NOT: ds_read2st_b64
 ; GCN: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:8
 ; GCN: s_endpgm
-define amdgpu_kernel void @byte_size_only_divisible_64_read2_f64(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @byte_size_only_divisible_64_read2_f64(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %arrayidx0 = getelementptr inbounds double, ptr addrspace(3) %lds, i32 %x.i
   %val0 = load double, ptr addrspace(3) %arrayidx0, align 8
   %add.x = add nsw i32 %x.i, 8
@@ -294,8 +294,5 @@ define amdgpu_kernel void @byte_size_only_divisible_64_read2_f64(ptr addrspace(1
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare i32 @llvm.amdgcn.workitem.id.y() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone

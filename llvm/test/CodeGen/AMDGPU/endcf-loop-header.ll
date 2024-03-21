@@ -14,7 +14,7 @@
 ; CHECK: s_cbranch_execnz [[LOOP_LABEL]]
 define amdgpu_kernel void @test(ptr addrspace(1) %out) {
 entry:
-  %cond = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %cond = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tmp0 = icmp eq i32 %cond, 0
   br i1 %tmp0, label %if, label %loop
 
@@ -34,6 +34,4 @@ done:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

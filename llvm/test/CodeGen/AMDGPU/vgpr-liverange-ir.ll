@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -amdgpu-opt-vgpr-liverange=true -stop-after=si-opt-vgpr-liverange -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 ; a normal if-else
-define amdgpu_ps float @else1(i32 %z, float %v) #0 {
+define amdgpu_ps float @else1(i32 %z, float %v) nounwind {
   ; SI-LABEL: name: else1
   ; SI: bb.0.main_body:
   ; SI-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
@@ -58,7 +58,7 @@ end:
 
 
 ; %v was used after if-else
-define amdgpu_ps float @else2(i32 %z, float %v) #0 {
+define amdgpu_ps float @else2(i32 %z, float %v) nounwind {
   ; SI-LABEL: name: else2
   ; SI: bb.0.main_body:
   ; SI-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
@@ -117,7 +117,7 @@ end:
 }
 
 ; if-else inside loop, %x can be optimized, but %v cannot be.
-define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
+define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) nounwind {
   ; SI-LABEL: name: else3
   ; SI: bb.0.entry:
   ; SI-NEXT:   successors: %bb.1(0x80000000)
@@ -214,7 +214,7 @@ for.end:
 }
 
 ; a loop inside an if-else
-define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_func, ptr %extern_func2) #0 {
+define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_func, ptr %extern_func2) nounwind {
   ; SI-LABEL: name: loop
   ; SI: bb.0.main_body:
   ; SI-NEXT:   successors: %bb.6(0x40000000), %bb.1(0x40000000)
@@ -337,7 +337,7 @@ end:
 }
 
 ; a loop inside an if-else, but the variable is still in use after the if-else
-define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %extern_func, ptr %extern_func2) #0 {
+define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %extern_func, ptr %extern_func2) nounwind {
   ; SI-LABEL: name: loop_with_use
   ; SI: bb.0.main_body:
   ; SI-NEXT:   successors: %bb.6(0x40000000), %bb.1(0x40000000)
@@ -668,10 +668,6 @@ if.then:                                          ; preds = %entry
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable willreturn
 
-declare float @llvm.amdgcn.image.sample.2d.f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #2
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable willreturn }
-attributes #2 = { nounwind readonly willreturn }
+declare float @llvm.amdgcn.image.sample.2d.f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly willreturn

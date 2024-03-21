@@ -36,7 +36,7 @@ bb:
 ; GCN-LABEL: {{^}}name:{{[ 	]*}}no_vector_clause
 ; GCN-NOT:   BUNDLE
 ; GCN-NOT:   KILL
-define amdgpu_kernel void @no_vector_clause(ptr addrspace(1) noalias nocapture readonly %arg, ptr addrspace(1) noalias nocapture %arg1) #0 {
+define amdgpu_kernel void @no_vector_clause(ptr addrspace(1) noalias nocapture readonly %arg, ptr addrspace(1) noalias nocapture %arg1) "amdgpu-max-memory-clause"="1" {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = zext i32 %tmp to i64
@@ -63,6 +63,4 @@ bb:
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x()
-
-attributes #0 = { "amdgpu-max-memory-clause"="1" }
 

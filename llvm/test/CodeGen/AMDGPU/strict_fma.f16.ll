@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11 %s
 
-define half @v_constained_fma_f16_fpexcept_strict(half %x, half %y, half %z) #0 {
+define half @v_constained_fma_f16_fpexcept_strict(half %x, half %y, half %z) strictfp {
 ; GCN-LABEL: v_constained_fma_f16_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -26,7 +26,7 @@ define half @v_constained_fma_f16_fpexcept_strict(half %x, half %y, half %z) #0 
   ret half %val
 }
 
-define <2 x half> @v_constained_fma_v2f16_fpexcept_strict(<2 x half> %x, <2 x half> %y, <2 x half> %z) #0 {
+define <2 x half> @v_constained_fma_v2f16_fpexcept_strict(<2 x half> %x, <2 x half> %y, <2 x half> %z) strictfp {
 ; GFX9-LABEL: v_constained_fma_v2f16_fpexcept_strict:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -60,7 +60,7 @@ define <2 x half> @v_constained_fma_v2f16_fpexcept_strict(<2 x half> %x, <2 x ha
   ret <2 x half> %val
 }
 
-define <3 x half> @v_constained_fma_v3f16_fpexcept_strict(<3 x half> %x, <3 x half> %y, <3 x half> %z) #0 {
+define <3 x half> @v_constained_fma_v3f16_fpexcept_strict(<3 x half> %x, <3 x half> %y, <3 x half> %z) strictfp {
 ; GFX9-LABEL: v_constained_fma_v3f16_fpexcept_strict:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -98,7 +98,7 @@ define <3 x half> @v_constained_fma_v3f16_fpexcept_strict(<3 x half> %x, <3 x ha
   ret <3 x half> %val
 }
 
-define <4 x half> @v_constained_fma_v4f16_fpexcept_strict(<4 x half> %x, <4 x half> %y, <4 x half> %z) #0 {
+define <4 x half> @v_constained_fma_v4f16_fpexcept_strict(<4 x half> %x, <4 x half> %y, <4 x half> %z) strictfp {
 ; GFX9-LABEL: v_constained_fma_v4f16_fpexcept_strict:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -173,7 +173,7 @@ define <4 x half> @v_constained_fma_v4f16_fpexcept_strict(<4 x half> %x, <4 x ha
   ret <4 x half> %val
 }
 
-define half @v_constained_fma_f16_fpexcept_strict_fneg(half %x, half %y, half %z) #0 {
+define half @v_constained_fma_f16_fpexcept_strict_fneg(half %x, half %y, half %z) strictfp {
 ; GCN-LABEL: v_constained_fma_f16_fpexcept_strict_fneg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -196,7 +196,7 @@ define half @v_constained_fma_f16_fpexcept_strict_fneg(half %x, half %y, half %z
   ret half %val
 }
 
-define half @v_constained_fma_f16_fpexcept_strict_fneg_fneg(half %x, half %y, half %z) #0 {
+define half @v_constained_fma_f16_fpexcept_strict_fneg_fneg(half %x, half %y, half %z) strictfp {
 ; GCN-LABEL: v_constained_fma_f16_fpexcept_strict_fneg_fneg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -220,7 +220,7 @@ define half @v_constained_fma_f16_fpexcept_strict_fneg_fneg(half %x, half %y, ha
   ret half %val
 }
 
-define half @v_constained_fma_f16_fpexcept_strict_fabs_fabs(half %x, half %y, half %z) #0 {
+define half @v_constained_fma_f16_fpexcept_strict_fabs_fabs(half %x, half %y, half %z) strictfp {
 ; GCN-LABEL: v_constained_fma_f16_fpexcept_strict_fabs_fabs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -238,13 +238,13 @@ define half @v_constained_fma_f16_fpexcept_strict_fabs_fabs(half %x, half %y, ha
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_fma_f16 v0, |v0|, |v1|, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %neg.x = call half @llvm.fabs.f16(half %x) #0
-  %neg.y = call half @llvm.fabs.f16(half %y) #0
+  %neg.x = call half @llvm.fabs.f16(half %x) strictfp
+  %neg.y = call half @llvm.fabs.f16(half %y) strictfp
   %val = call half @llvm.experimental.constrained.fma.f16(half %neg.x, half %neg.y, half %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %val
 }
 
-define <2 x half> @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg(<2 x half> %x, <2 x half> %y, <2 x half> %z) #0 {
+define <2 x half> @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg(<2 x half> %x, <2 x half> %y, <2 x half> %z) strictfp {
 ; GFX9-LABEL: v_constained_fma_v2f16_fpexcept_strict_fneg_fneg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -285,5 +285,3 @@ declare half @llvm.experimental.constrained.fma.f16(half, half, half, metadata, 
 declare <2 x half> @llvm.experimental.constrained.fma.v2f16(<2 x half>, <2 x half>, <2 x half>, metadata, metadata)
 declare <3 x half> @llvm.experimental.constrained.fma.v3f16(<3 x half>, <3 x half>, <3 x half>, metadata, metadata)
 declare <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half>, <4 x half>, <4 x half>, metadata, metadata)
-
-attributes #0 = { strictfp }

@@ -1178,7 +1178,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat(ptr addrspace(1) %ptr) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: global_atomic_fadd_f64_noret_pat:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1220,7 +1220,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent(ptr addrspace(1) %ptr) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: global_atomic_fadd_f64_noret_pat_agent:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1249,7 +1249,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_system(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_system(ptr addrspace(1) %ptr) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: global_atomic_fadd_f64_noret_pat_system:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1291,7 +1291,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_flush(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_flush(ptr addrspace(1) %ptr) "denormal-fp-math"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: global_atomic_fadd_f64_noret_pat_flush:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1339,7 +1339,7 @@ main_body:
   ret double %ret
 }
 
-define double @global_atomic_fadd_f64_rtn_pat(ptr addrspace(1) %ptr, double %data) #1 {
+define double @global_atomic_fadd_f64_rtn_pat(ptr addrspace(1) %ptr, double %data) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: global_atomic_fadd_f64_rtn_pat:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1379,7 +1379,7 @@ main_body:
   ret double %ret
 }
 
-define double @global_atomic_fadd_f64_rtn_pat_agent(ptr addrspace(1) %ptr, double %data) #1 {
+define double @global_atomic_fadd_f64_rtn_pat_agent(ptr addrspace(1) %ptr, double %data) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: global_atomic_fadd_f64_rtn_pat_agent:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1404,7 +1404,7 @@ main_body:
   ret double %ret
 }
 
-define double @global_atomic_fadd_f64_rtn_pat_system(ptr addrspace(1) %ptr, double %data) #1 {
+define double @global_atomic_fadd_f64_rtn_pat_system(ptr addrspace(1) %ptr, double %data) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: global_atomic_fadd_f64_rtn_pat_system:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1522,7 +1522,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat(ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat(ptr %ptr) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: flat_atomic_fadd_f64_noret_pat:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
@@ -1564,7 +1564,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent(ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent(ptr %ptr) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: flat_atomic_fadd_f64_noret_pat_agent:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1593,7 +1593,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_system(ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_system(ptr %ptr) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: flat_atomic_fadd_f64_noret_pat_system:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
@@ -1636,7 +1636,7 @@ main_body:
   ret void
 }
 
-define double @flat_atomic_fadd_f64_rtn_pat(ptr %ptr) #1 {
+define double @flat_atomic_fadd_f64_rtn_pat(ptr %ptr) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: flat_atomic_fadd_f64_rtn_pat:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1676,7 +1676,7 @@ main_body:
   ret double %ret
 }
 
-define double @flat_atomic_fadd_f64_rtn_pat_agent(ptr %ptr) #1 {
+define double @flat_atomic_fadd_f64_rtn_pat_agent(ptr %ptr) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: flat_atomic_fadd_f64_rtn_pat_agent:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1701,7 +1701,7 @@ main_body:
   ret double %ret
 }
 
-define double @flat_atomic_fadd_f64_rtn_pat_system(ptr %ptr) #1 {
+define double @flat_atomic_fadd_f64_rtn_pat_system(ptr %ptr) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: flat_atomic_fadd_f64_rtn_pat_system:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2017,7 +2017,7 @@ main_body:
   ret double %ret
 }
 
-define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat(ptr addrspace(3) %ptr) #1 {
+define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat(ptr addrspace(3) %ptr) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: local_atomic_fadd_f64_noret_pat:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dword s0, s[0:1], 0x24
@@ -2043,7 +2043,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush(ptr addrspace(3) %ptr) #0 {
+define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush(ptr addrspace(3) %ptr) "denormal-fp-math"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: local_atomic_fadd_f64_noret_pat_flush:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dword s0, s[0:1], 0x24
@@ -2069,7 +2069,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush_safe(ptr addrspace(3) %ptr) #4 {
+define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush_safe(ptr addrspace(3) %ptr) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; GFX90A-LABEL: local_atomic_fadd_f64_noret_pat_flush_safe:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dword s2, s[0:1], 0x24
@@ -2118,7 +2118,7 @@ main_body:
   ret void
 }
 
-define double @local_atomic_fadd_f64_rtn_pat(ptr addrspace(3) %ptr, double %data) #1 {
+define double @local_atomic_fadd_f64_rtn_pat(ptr addrspace(3) %ptr, double %data) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: local_atomic_fadd_f64_rtn_pat:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2140,7 +2140,7 @@ main_body:
   ret double %ret
 }
 
-define double @local_atomic_fadd_f64_rtn_ieee_unsafe(ptr addrspace(3) %ptr, double %data) #2 {
+define double @local_atomic_fadd_f64_rtn_ieee_unsafe(ptr addrspace(3) %ptr, double %data) "denormal-fp-math"="ieee,ieee" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX90A-LABEL: local_atomic_fadd_f64_rtn_ieee_unsafe:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2163,7 +2163,7 @@ main_body:
   ret double %ret
 }
 
-define double @local_atomic_fadd_f64_rtn_ieee_safe(ptr addrspace(3) %ptr, double %data) #3 {
+define double @local_atomic_fadd_f64_rtn_ieee_safe(ptr addrspace(3) %ptr, double %data) "denormal-fp-math"="ieee,ieee" {
 ; GFX90A-LABEL: local_atomic_fadd_f64_rtn_ieee_safe:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2185,9 +2185,3 @@ main_body:
   %ret = call double @llvm.amdgcn.ds.fadd.f64(ptr addrspace(3) %ptr, double %data, i32 0, i32 0, i1 0)
   ret double %ret
 }
-
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
-attributes #1 = { "amdgpu-unsafe-fp-atomics"="true" }
-attributes #2 = { "denormal-fp-math"="ieee,ieee" "amdgpu-unsafe-fp-atomics"="true" }
-attributes #3 = { "denormal-fp-math"="ieee,ieee" }
-attributes #4 = { "denormal-fp-math"="preserve-sign,preserve-sign" }

@@ -1605,13 +1605,11 @@ define amdgpu_ps <4 x half> @image_load_tfe_v4f16_dmask_0000(<8 x i32> inreg %rs
   ret <4 x half> %tex
 }
 
-declare half @llvm.amdgcn.image.load.2d.f16.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare <2 x half> @llvm.amdgcn.image.load.2d.v2f16.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare <3 x half> @llvm.amdgcn.image.load.2d.v3f16.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare <4 x half> @llvm.amdgcn.image.load.2d.v4f16.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare { half, i32 } @llvm.amdgcn.image.load.2d.sl_f16i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare { <2 x half>, i32 } @llvm.amdgcn.image.load.2d.sl_v2f16i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare { <3 x half>, i32 } @llvm.amdgcn.image.load.2d.sl_v3f16i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare { <4 x half>, i32 } @llvm.amdgcn.image.load.2d.sl_v4f16i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-
-attributes #0 = { nounwind readonly }
+declare half @llvm.amdgcn.image.load.2d.f16.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly
+declare <2 x half> @llvm.amdgcn.image.load.2d.v2f16.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly
+declare <3 x half> @llvm.amdgcn.image.load.2d.v3f16.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x half> @llvm.amdgcn.image.load.2d.v4f16.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly
+declare { half, i32 } @llvm.amdgcn.image.load.2d.sl_f16i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly
+declare { <2 x half>, i32 } @llvm.amdgcn.image.load.2d.sl_v2f16i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly
+declare { <3 x half>, i32 } @llvm.amdgcn.image.load.2d.sl_v3f16i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly
+declare { <4 x half>, i32 } @llvm.amdgcn.image.load.2d.sl_v4f16i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly

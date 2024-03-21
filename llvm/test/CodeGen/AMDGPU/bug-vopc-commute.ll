@@ -41,7 +41,4 @@ ENDIF62:                                          ; preds = %ENDIF59
 }
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { readnone }
+declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) nounwind readnone

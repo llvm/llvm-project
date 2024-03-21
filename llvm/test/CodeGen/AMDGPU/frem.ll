@@ -206,7 +206,7 @@ define amdgpu_kernel void @frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                      ptr addrspace(1) %in2) #0 {
+                      ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %gep2 = getelementptr half, ptr addrspace(1) %in2, i32 4
    %r0 = load half, ptr addrspace(1) %in1, align 4
    %r1 = load half, ptr addrspace(1) %gep2, align 4
@@ -375,7 +375,7 @@ define amdgpu_kernel void @fast_frem_f16(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                      ptr addrspace(1) %in2) #0 {
+                      ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %gep2 = getelementptr half, ptr addrspace(1) %in2, i32 4
    %r0 = load half, ptr addrspace(1) %in1, align 4
    %r1 = load half, ptr addrspace(1) %gep2, align 4
@@ -544,7 +544,7 @@ define amdgpu_kernel void @unsafe_frem_f16(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                             ptr addrspace(1) %in2) #1 {
+                             ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %gep2 = getelementptr half, ptr addrspace(1) %in2, i32 4
    %r0 = load half, ptr addrspace(1) %in1, align 4
    %r1 = load half, ptr addrspace(1) %gep2, align 4
@@ -790,7 +790,7 @@ define amdgpu_kernel void @frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                      ptr addrspace(1) %in2) #0 {
+                      ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %gep2 = getelementptr float, ptr addrspace(1) %in2, i32 4
    %r0 = load float, ptr addrspace(1) %in1, align 4
    %r1 = load float, ptr addrspace(1) %gep2, align 4
@@ -951,7 +951,7 @@ define amdgpu_kernel void @fast_frem_f32(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                      ptr addrspace(1) %in2) #0 {
+                      ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %gep2 = getelementptr float, ptr addrspace(1) %in2, i32 4
    %r0 = load float, ptr addrspace(1) %in1, align 4
    %r1 = load float, ptr addrspace(1) %gep2, align 4
@@ -1112,7 +1112,7 @@ define amdgpu_kernel void @unsafe_frem_f32(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                             ptr addrspace(1) %in2) #1 {
+                             ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %gep2 = getelementptr float, ptr addrspace(1) %in2, i32 4
    %r0 = load float, ptr addrspace(1) %in1, align 4
    %r1 = load float, ptr addrspace(1) %gep2, align 4
@@ -1368,7 +1368,7 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                      ptr addrspace(1) %in2) #0 {
+                      ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %r0 = load double, ptr addrspace(1) %in1, align 8
    %r1 = load double, ptr addrspace(1) %in2, align 8
    %r2 = frem double %r0, %r1
@@ -1593,7 +1593,7 @@ define amdgpu_kernel void @fast_frem_f64(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                      ptr addrspace(1) %in2) #0 {
+                      ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %r0 = load double, ptr addrspace(1) %in1, align 8
    %r1 = load double, ptr addrspace(1) %in2, align 8
    %r2 = frem fast double %r0, %r1
@@ -1818,7 +1818,7 @@ define amdgpu_kernel void @unsafe_frem_f64(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                             ptr addrspace(1) %in2) #1 {
+                             ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %r0 = load double, ptr addrspace(1) %in1, align 8
    %r1 = load double, ptr addrspace(1) %in2, align 8
    %r2 = frem afn double %r0, %r1
@@ -2127,7 +2127,7 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                        ptr addrspace(1) %in2) #0 {
+                        ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %gep2 = getelementptr <2 x half>, ptr addrspace(1) %in2, i32 4
    %r0 = load <2 x half>, ptr addrspace(1) %in1, align 8
    %r1 = load <2 x half>, ptr addrspace(1) %gep2, align 8
@@ -2613,7 +2613,7 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                        ptr addrspace(1) %in2) #0 {
+                        ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %gep2 = getelementptr <4 x half>, ptr addrspace(1) %in2, i32 4
    %r0 = load <4 x half>, ptr addrspace(1) %in1, align 16
    %r1 = load <4 x half>, ptr addrspace(1) %gep2, align 16
@@ -2977,7 +2977,7 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                        ptr addrspace(1) %in2) #0 {
+                        ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %gep2 = getelementptr <2 x float>, ptr addrspace(1) %in2, i32 4
    %r0 = load <2 x float>, ptr addrspace(1) %in1, align 8
    %r1 = load <2 x float>, ptr addrspace(1) %gep2, align 8
@@ -3577,7 +3577,7 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                        ptr addrspace(1) %in2) #0 {
+                        ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %gep2 = getelementptr <4 x float>, ptr addrspace(1) %in2, i32 4
    %r0 = load <4 x float>, ptr addrspace(1) %in1, align 16
    %r1 = load <4 x float>, ptr addrspace(1) %gep2, align 16
@@ -3961,7 +3961,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
-                        ptr addrspace(1) %in2) #0 {
+                        ptr addrspace(1) %in2) nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
    %gep2 = getelementptr <2 x double>, ptr addrspace(1) %in2, i32 4
    %r0 = load <2 x double>, ptr addrspace(1) %in1, align 16
    %r1 = load <2 x double>, ptr addrspace(1) %gep2, align 16
@@ -3969,6 +3969,3 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
    store <2 x double> %r2, ptr addrspace(1) %out, align 16
    ret void
 }
-
-attributes #0 = { nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

@@ -24,7 +24,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; SI: [[FLOW_BB]]:
 ; SI-NEXT: s_andn2_saveexec_b64 [[SAVE2]], [[SAVE2]]
 ;
-define amdgpu_kernel void @test_if(i32 %b, ptr addrspace(1) %src, ptr addrspace(1) %dst) #1 {
+define amdgpu_kernel void @test_if(i32 %b, ptr addrspace(1) %src, ptr addrspace(1) %dst) nounwind {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   switch i32 %tid, label %default [
@@ -69,7 +69,7 @@ end:
 
 ; SI-NEXT: {{^}}[[EXIT]]:
 ; SI: s_endpgm
-define amdgpu_kernel void @simple_test_v_if(ptr addrspace(1) %dst, ptr addrspace(1) %src) #1 {
+define amdgpu_kernel void @simple_test_v_if(ptr addrspace(1) %dst, ptr addrspace(1) %src) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %is.0 = icmp ne i32 %tid, 0
   br i1 %is.0, label %then, label %exit
@@ -95,7 +95,7 @@ exit:
 
 ; SI-NEXT: {{^}}[[EXIT]]:
 ; SI: s_endpgm
-define amdgpu_kernel void @simple_test_v_if_ret_else_ret(ptr addrspace(1) %dst, ptr addrspace(1) %src) #1 {
+define amdgpu_kernel void @simple_test_v_if_ret_else_ret(ptr addrspace(1) %dst, ptr addrspace(1) %src) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %is.0 = icmp ne i32 %tid, 0
   br i1 %is.0, label %then, label %exit
@@ -132,7 +132,7 @@ exit:
 
 ; SI-NEXT: {{^}}[[EXIT]]:
 ; SI: ds_write_b32
-define amdgpu_kernel void @simple_test_v_if_ret_else_code_ret(ptr addrspace(1) %dst, ptr addrspace(1) %src) #1 {
+define amdgpu_kernel void @simple_test_v_if_ret_else_code_ret(ptr addrspace(1) %dst, ptr addrspace(1) %src) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %is.0 = icmp ne i32 %tid, 0
   br i1 %is.0, label %then, label %exit
@@ -161,7 +161,7 @@ exit:
 ; SI: s_cbranch_scc1 [[LABEL_LOOP]]
 ; SI: [[LABEL_EXIT]]:
 ; SI: s_endpgm
-define amdgpu_kernel void @simple_test_v_loop(ptr addrspace(1) %dst, ptr addrspace(1) %src) #1 {
+define amdgpu_kernel void @simple_test_v_loop(ptr addrspace(1) %dst, ptr addrspace(1) %src) nounwind {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %is.0 = icmp ne i32 %tid, 0
@@ -220,9 +220,9 @@ exit:
 ; SI: [[LABEL_EXIT]]:
 ; SI-NOT: [[COND_STATE]]
 ; SI: s_endpgm
-define amdgpu_kernel void @multi_vcond_loop(ptr addrspace(1) noalias nocapture %arg, ptr addrspace(1) noalias nocapture readonly %arg1, ptr addrspace(1) noalias nocapture readonly %arg2, ptr addrspace(1) noalias nocapture readonly %arg3) #1 {
+define amdgpu_kernel void @multi_vcond_loop(ptr addrspace(1) noalias nocapture %arg, ptr addrspace(1) noalias nocapture readonly %arg1, ptr addrspace(1) noalias nocapture readonly %arg2, ptr addrspace(1) noalias nocapture readonly %arg3) nounwind {
 bb:
-  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tmp4 = sext i32 %tmp to i64
   %tmp5 = getelementptr inbounds i32, ptr addrspace(1) %arg3, i64 %tmp4
   %tmp6 = load i32, ptr addrspace(1) %tmp5, align 4
@@ -253,6 +253,3 @@ bb20:                                             ; preds = %bb10
 bb26:                                             ; preds = %bb10, %bb20, %bb
   ret void
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }

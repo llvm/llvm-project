@@ -554,8 +554,6 @@ define float @v_powi_neg128_f32(float %l) {
 ;   ret double %res
 ; }
 
-declare half @llvm.powi.f16.i32(half, i32) #0
-declare float @llvm.powi.f32.i32(float, i32) #0
-declare double @llvm.powi.f64.i32(double, i32) #0
-
-attributes #0 = { nounwind readnone speculatable willreturn }
+declare half @llvm.powi.f16.i32(half, i32) nounwind readnone speculatable willreturn
+declare float @llvm.powi.f32.i32(float, i32) nounwind readnone speculatable willreturn
+declare double @llvm.powi.f64.i32(double, i32) nounwind readnone speculatable willreturn

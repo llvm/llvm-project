@@ -43,7 +43,7 @@ define amdgpu_kernel void @test_sink_small_offset_global_atomic_csub_i32(ptr add
 ; GCN-NEXT:    global_store_dword v1, v0, s[0:1] offset:252
 ; GCN-NEXT:    s_endpgm
 entry:
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) argmemonly nounwind
   %cmp = icmp eq i32 %tid, 0
   br i1 %cmp, label %endif, label %if
 
@@ -62,9 +62,5 @@ done:
   ret void
 }
 
-declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) #0
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-
-attributes #0 = { argmemonly nounwind }
-attributes #1 = { nounwind readnone willreturn }
-attributes #2 = { argmemonly nounwind willreturn }
+declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) argmemonly nounwind
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone willreturn

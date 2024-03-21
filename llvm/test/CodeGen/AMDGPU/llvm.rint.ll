@@ -8,7 +8,7 @@
 ; SI: v_rndne_f32_e32
 define amdgpu_kernel void @rint_f32(ptr addrspace(1) %out, float %in) {
 entry:
-  %0 = call float @llvm.rint.f32(float %in) #0
+  %0 = call float @llvm.rint.f32(float %in) nounwind readnone
   store float %0, ptr addrspace(1) %out
   ret void
 }
@@ -21,7 +21,7 @@ entry:
 ; SI: v_rndne_f32_e32
 define amdgpu_kernel void @rint_v2f32(ptr addrspace(1) %out, <2 x float> %in) {
 entry:
-  %0 = call <2 x float> @llvm.rint.v2f32(<2 x float> %in) #0
+  %0 = call <2 x float> @llvm.rint.v2f32(<2 x float> %in) nounwind readnone
   store <2 x float> %0, ptr addrspace(1) %out
   ret void
 }
@@ -38,13 +38,11 @@ entry:
 ; SI: v_rndne_f32_e32
 define amdgpu_kernel void @rint_v4f32(ptr addrspace(1) %out, <4 x float> %in) {
 entry:
-  %0 = call <4 x float> @llvm.rint.v4f32(<4 x float> %in) #0
+  %0 = call <4 x float> @llvm.rint.v4f32(<4 x float> %in) nounwind readnone
   store <4 x float> %0, ptr addrspace(1) %out
   ret void
 }
 
-declare float @llvm.rint.f32(float) #0
-declare <2 x float> @llvm.rint.v2f32(<2 x float>) #0
-declare <4 x float> @llvm.rint.v4f32(<4 x float>) #0
-
-attributes #0 = { nounwind readnone }
+declare float @llvm.rint.f32(float) nounwind readnone
+declare <2 x float> @llvm.rint.v2f32(<2 x float>) nounwind readnone
+declare <4 x float> @llvm.rint.v4f32(<4 x float>) nounwind readnone

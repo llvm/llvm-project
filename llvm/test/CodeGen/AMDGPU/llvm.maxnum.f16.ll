@@ -143,7 +143,7 @@ define amdgpu_kernel void @maxnum_f16(
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load volatile half, ptr addrspace(1) %a
   %b.val = load volatile half, ptr addrspace(1) %b
@@ -252,7 +252,7 @@ define amdgpu_kernel void @maxnum_f16_imm_a(
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 entry:
   %b.val = load half, ptr addrspace(1) %b
   %r.val = call half @llvm.maxnum.f16(half 3.0, half %b.val)
@@ -360,7 +360,7 @@ define amdgpu_kernel void @maxnum_f16_imm_b(
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
-    ptr addrspace(1) %a) #0 {
+    ptr addrspace(1) %a) "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %r.val = call half @llvm.maxnum.f16(half %a.val, half 4.0)
@@ -474,7 +474,7 @@ define amdgpu_kernel void @maxnum_v2f16(
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x half>, ptr addrspace(1) %a
   %b.val = load <2 x half>, ptr addrspace(1) %b
@@ -565,7 +565,7 @@ define amdgpu_kernel void @maxnum_v2f16_imm_a(
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 entry:
   %b.val = load <2 x half>, ptr addrspace(1) %b
   %r.val = call <2 x half> @llvm.maxnum.v2f16(<2 x half> <half 3.0, half 4.0>, <2 x half> %b.val)
@@ -655,7 +655,7 @@ define amdgpu_kernel void @maxnum_v2f16_imm_b(
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
-    ptr addrspace(1) %a) #0 {
+    ptr addrspace(1) %a) "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x half>, ptr addrspace(1) %a
   %r.val = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a.val, <2 x half> <half 4.0, half 3.0>)
@@ -792,7 +792,7 @@ define amdgpu_kernel void @maxnum_v3f16(
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <3 x half>, ptr addrspace(1) %a
   %b.val = load <3 x half>, ptr addrspace(1) %b
@@ -939,7 +939,7 @@ define amdgpu_kernel void @maxnum_v4f16(
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <4 x half>, ptr addrspace(1) %a
   %b.val = load <4 x half>, ptr addrspace(1) %b
@@ -1057,12 +1057,10 @@ define amdgpu_kernel void @fmax_v4f16_imm_a(
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 entry:
   %b.val = load <4 x half>, ptr addrspace(1) %b
   %r.val = call <4 x half> @llvm.maxnum.v4f16(<4 x half> <half 8.0, half 2.0, half 3.0, half 4.0>, <4 x half> %b.val)
   store <4 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
-
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

@@ -91,7 +91,7 @@ define amdgpu_ps half @ps_ret_cc_inreg_f16(half inreg %arg0) {
   ret half %add
 }
 
-define fastcc float @fastcc(float %arg0) #0 {
+define fastcc float @fastcc(float %arg0) nounwind noinline {
 ; GCN-LABEL: fastcc:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -101,7 +101,7 @@ define fastcc float @fastcc(float %arg0) #0 {
   ret float %add
 }
 
-define coldcc float @coldcc(float %arg0) #0 {
+define coldcc float @coldcc(float %arg0) nounwind noinline {
 ; GCN-LABEL: coldcc:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -111,7 +111,7 @@ define coldcc float @coldcc(float %arg0) #0 {
  ret float %add
 }
 
-define amdgpu_kernel void @call_coldcc() #0 {
+define amdgpu_kernel void @call_coldcc() nounwind noinline {
 ; SI-LABEL: call_coldcc:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_mov_b32 s32, 0
@@ -173,7 +173,7 @@ define amdgpu_kernel void @call_coldcc() #0 {
   ret void
 }
 
-define amdgpu_kernel void @call_fastcc() #0 {
+define amdgpu_kernel void @call_fastcc() nounwind noinline {
 ; SI-LABEL: call_fastcc:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_mov_b32 s32, 0
@@ -3291,5 +3291,3 @@ define amdgpu_cs void @amdgpu_cs_i1_zext(i1 zeroext %arg0) {
   store i1 %arg0, ptr addrspace(1) undef
   ret void
 }
-
-attributes #0 = { nounwind noinline }

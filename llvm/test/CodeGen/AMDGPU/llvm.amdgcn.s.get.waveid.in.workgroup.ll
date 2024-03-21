@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
 
-declare i32 @llvm.amdgcn.s.get.waveid.in.workgroup() #0
+declare i32 @llvm.amdgcn.s.get.waveid.in.workgroup() nounwind
 
 ; GCN-LABEL: {{^}}test_s_get_waveid_in_workgroup:
 ; GFX10: global_store_dword
@@ -15,5 +15,3 @@ define amdgpu_kernel void @test_s_get_waveid_in_workgroup(ptr addrspace(1) %out)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }

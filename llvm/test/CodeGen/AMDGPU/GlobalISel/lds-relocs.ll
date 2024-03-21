@@ -12,7 +12,7 @@
 ; GCN: .amdgpu_lds lds.external, 0, 4
 ; GCN: .globl lds.defined
 ; GCN: .amdgpu_lds lds.defined, 32, 8
-define amdgpu_gs float @test_basic(i32 inreg %wave, i32 %arg1) #0 {
+define amdgpu_gs float @test_basic(i32 inreg %wave, i32 %arg1) "no-signed-zeros-fp-math"="true" {
 main_body:
   %gep0 = getelementptr [0 x i32], ptr addrspace(3) @lds.external, i32 0, i32 %arg1
   %tmp = load i32, ptr addrspace(3) %gep0
@@ -23,6 +23,3 @@ main_body:
   %r = bitcast i32 %tmp to float
   ret float %r
 }
-
-attributes #0 = { "no-signed-zeros-fp-math"="true" }
-attributes #4 = { convergent nounwind readnone }

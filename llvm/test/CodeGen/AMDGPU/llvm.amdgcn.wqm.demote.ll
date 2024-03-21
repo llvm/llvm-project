@@ -69,7 +69,7 @@ define amdgpu_ps void @static_exact(float %arg0, float %arg1) {
   %c1 = fcmp oge float %arg1, 0.0
   call void @llvm.amdgcn.wqm.demote(i1 false)
   %tmp1 = select i1 %c0, float 1.000000e+00, float 0.000000e+00
-  call void @llvm.amdgcn.exp.f32(i32 1, i32 15, float %tmp1, float %tmp1, float %tmp1, float %tmp1, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.f32(i32 1, i32 15, float %tmp1, float %tmp1, float %tmp1, float %tmp1, i1 true, i1 true) nounwind
   ret void
 }
 
@@ -150,7 +150,7 @@ define amdgpu_ps void @dynamic_exact(float %arg0, float %arg1) {
   %c1 = fcmp oge float %arg1, 0.0
   call void @llvm.amdgcn.wqm.demote(i1 %c1)
   %tmp1 = select i1 %c0, float 1.000000e+00, float 0.000000e+00
-  call void @llvm.amdgcn.exp.f32(i32 1, i32 15, float %tmp1, float %tmp1, float %tmp1, float %tmp1, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.f32(i32 1, i32 15, float %tmp1, float %tmp1, float %tmp1, float %tmp1, i1 true, i1 true) nounwind
   ret void
 }
 
@@ -276,7 +276,7 @@ define amdgpu_ps void @branch(float %arg0, float %arg1) {
 
 .continue:
   %tmp1 = select i1 %c2, float 1.000000e+00, float 0.000000e+00
-  call void @llvm.amdgcn.exp.f32(i32 1, i32 15, float %tmp1, float %tmp1, float %tmp1, float %tmp1, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.f32(i32 1, i32 15, float %tmp1, float %tmp1, float %tmp1, float %tmp1, i1 true, i1 true) nounwind
   ret void
 }
 
@@ -406,11 +406,11 @@ define amdgpu_ps <4 x float> @wqm_demote_1(<8 x i32> inreg %rsrc, <4 x i32> inre
   br label %.continue
 
 .continue:
-  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) nounwind
   %tex0 = extractelement <4 x float> %tex, i32 0
   %tex1 = extractelement <4 x float> %tex, i32 0
   %coord1 = fadd float %tex0, %tex1
-  %rtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord1, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
+  %rtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord1, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) nounwind
 
   ret <4 x float> %rtex
 }
@@ -532,7 +532,7 @@ define amdgpu_ps <4 x float> @wqm_demote_2(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10-64-NEXT:    s_endpgm
 ; GFX10-64-NEXT:  .LBB4_5:
 .entry:
-  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) nounwind
   %tex0 = extractelement <4 x float> %tex, i32 0
   %tex1 = extractelement <4 x float> %tex, i32 0
   %z.cmp = fcmp olt float %tex0, 0.0
@@ -544,7 +544,7 @@ define amdgpu_ps <4 x float> @wqm_demote_2(<8 x i32> inreg %rsrc, <4 x i32> inre
 
 .continue:
   %coord1 = fadd float %tex0, %tex1
-  %rtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord1, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
+  %rtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord1, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) nounwind
 
   ret <4 x float> %rtex
 }
@@ -646,13 +646,13 @@ define amdgpu_ps <4 x float> @wqm_demote_dynamic(<8 x i32> inreg %rsrc, <4 x i32
 ; GFX10-64-NEXT:    s_endpgm
 ; GFX10-64-NEXT:  .LBB5_3:
 .entry:
-  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) nounwind
   %tex0 = extractelement <4 x float> %tex, i32 0
   %tex1 = extractelement <4 x float> %tex, i32 0
   %z.cmp = fcmp olt float %tex0, 0.0
   call void @llvm.amdgcn.wqm.demote(i1 %z.cmp)
   %coord1 = fadd float %tex0, %tex1
-  %rtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord1, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
+  %rtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord1, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) nounwind
 
   ret <4 x float> %rtex
 }
@@ -849,8 +849,8 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 .entry:
   %p0 = extractelement <2 x float> %input, i32 0
   %p1 = extractelement <2 x float> %input, i32 1
-  %x0 = call float @llvm.amdgcn.interp.p1(float %p0, i32 immarg 0, i32 immarg 0, i32 %index) #2
-  %x1 = call float @llvm.amdgcn.interp.p2(float %x0, float %p1, i32 immarg 0, i32 immarg 0, i32 %index) #2
+  %x0 = call float @llvm.amdgcn.interp.p1(float %p0, i32 immarg 0, i32 immarg 0, i32 %index) nounwind readnone speculatable
+  %x1 = call float @llvm.amdgcn.interp.p2(float %x0, float %p1, i32 immarg 0, i32 immarg 0, i32 %index) nounwind readnone speculatable
   %argi = fptosi float %arg to i32
   %cond0 = icmp eq i32 %argi, 0
   br i1 %cond0, label %.continue0, label %.demote0
@@ -877,7 +877,7 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
   br label %.continue1
 
 .continue1:
-  call void @llvm.amdgcn.exp.compr.v2f16(i32 immarg 0, i32 immarg 15, <2 x half> <half 0xH3C00, half 0xH0000>, <2 x half> <half 0xH0000, half 0xH3C00>, i1 immarg true, i1 immarg true) #3
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 immarg 0, i32 immarg 15, <2 x half> <half 0xH3C00, half 0xH0000>, <2 x half> <half 0xH0000, half 0xH3C00>, i1 immarg true, i1 immarg true) inaccessiblememonly nounwind
   ret void
 }
 
@@ -1142,8 +1142,8 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 .entry:
   %p0 = extractelement <2 x float> %input, i32 0
   %p1 = extractelement <2 x float> %input, i32 1
-  %x0 = call float @llvm.amdgcn.interp.p1(float %p0, i32 immarg 0, i32 immarg 0, i32 %index) #2
-  %x1 = call float @llvm.amdgcn.interp.p2(float %x0, float %p1, i32 immarg 0, i32 immarg 0, i32 %index) #2
+  %x0 = call float @llvm.amdgcn.interp.p1(float %p0, i32 immarg 0, i32 immarg 0, i32 %index) nounwind readnone speculatable
+  %x1 = call float @llvm.amdgcn.interp.p2(float %x0, float %p1, i32 immarg 0, i32 immarg 0, i32 %index) nounwind readnone speculatable
   %argi = fptosi float %arg to i32
   %cond0 = icmp eq i32 %argi, 0
   br i1 %cond0, label %.continue0, label %.demote0
@@ -1176,7 +1176,7 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
   br i1 %loop.cond, label %.continue0, label %.return
 
 .return:
-  call void @llvm.amdgcn.exp.compr.v2f16(i32 immarg 0, i32 immarg 15, <2 x half> <half 0xH3C00, half 0xH0000>, <2 x half> <half 0xH0000, half 0xH3C00>, i1 immarg true, i1 immarg true) #3
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 immarg 0, i32 immarg 15, <2 x half> <half 0xH3C00, half 0xH0000>, <2 x half> <half 0xH0000, half 0xH3C00>, i1 immarg true, i1 immarg true) inaccessiblememonly nounwind
   ret void
 }
 
@@ -1213,23 +1213,17 @@ define amdgpu_ps void @static_exact_nop(float %arg0, float %arg1) {
   %c1 = fcmp oge float %arg1, 0.0
   call void @llvm.amdgcn.wqm.demote(i1 true)
   %tmp1 = select i1 %c0, float 1.000000e+00, float 0.000000e+00
-  call void @llvm.amdgcn.exp.f32(i32 1, i32 15, float %tmp1, float %tmp1, float %tmp1, float %tmp1, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.f32(i32 1, i32 15, float %tmp1, float %tmp1, float %tmp1, float %tmp1, i1 true, i1 true) nounwind
   ret void
 }
 
 
-declare void @llvm.amdgcn.wqm.demote(i1) #0
-declare i1 @llvm.amdgcn.live.mask() #0
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare float @llvm.amdgcn.wqm.f32(float) #1
-declare float @llvm.amdgcn.interp.p1(float, i32 immarg, i32 immarg, i32) #2
-declare float @llvm.amdgcn.interp.p2(float, float, i32 immarg, i32 immarg, i32) #2
-declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg) #3
-declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg) #4
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind readnone speculatable }
-attributes #3 = { inaccessiblememonly nounwind }
-attributes #4 = { convergent nounwind readnone }
+declare void @llvm.amdgcn.wqm.demote(i1) nounwind
+declare i1 @llvm.amdgcn.live.mask() nounwind
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind
+declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readnone
+declare float @llvm.amdgcn.wqm.f32(float) nounwind readnone
+declare float @llvm.amdgcn.interp.p1(float, i32 immarg, i32 immarg, i32) nounwind readnone speculatable
+declare float @llvm.amdgcn.interp.p2(float, float, i32 immarg, i32 immarg, i32) nounwind readnone speculatable
+declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg) inaccessiblememonly nounwind
+declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg) convergent nounwind readnone

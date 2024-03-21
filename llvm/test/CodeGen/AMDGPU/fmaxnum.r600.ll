@@ -3,7 +3,7 @@
 ; EG-LABEL: {{^}}test_fmax_f32:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG: MAX_DX10 {{.*}}[[OUT]]
-define amdgpu_kernel void @test_fmax_f32(ptr addrspace(1) %out, float %a, float %b) #0 {
+define amdgpu_kernel void @test_fmax_f32(ptr addrspace(1) %out, float %a, float %b) nounwind {
   %val = call float @llvm.maxnum.f32(float %a, float %b)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
@@ -13,7 +13,7 @@ define amdgpu_kernel void @test_fmax_f32(ptr addrspace(1) %out, float %a, float 
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+]]
 ; EG: MAX_DX10 {{.*}}[[OUT]]
 ; EG: MAX_DX10 {{.*}}[[OUT]]
-define amdgpu_kernel void @test_fmax_v2f32(ptr addrspace(1) %out, <2 x float> %a, <2 x float> %b) #0 {
+define amdgpu_kernel void @test_fmax_v2f32(ptr addrspace(1) %out, <2 x float> %a, <2 x float> %b) nounwind {
   %val = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %a, <2 x float> %b)
   store <2 x float> %val, ptr addrspace(1) %out, align 8
   ret void
@@ -25,7 +25,7 @@ define amdgpu_kernel void @test_fmax_v2f32(ptr addrspace(1) %out, <2 x float> %a
 ; EG: MAX_DX10 {{.*}}[[OUT]]
 ; EG: MAX_DX10 {{.*}}[[OUT]]
 ; EG: MAX_DX10 {{.*}}[[OUT]]
-define amdgpu_kernel void @test_fmax_v4f32(ptr addrspace(1) %out, <4 x float> %a, <4 x float> %b) #0 {
+define amdgpu_kernel void @test_fmax_v4f32(ptr addrspace(1) %out, <4 x float> %a, <4 x float> %b) nounwind {
   %val = call <4 x float> @llvm.maxnum.v4f32(<4 x float> %a, <4 x float> %b)
   store <4 x float> %val, ptr addrspace(1) %out, align 16
   ret void
@@ -42,7 +42,7 @@ define amdgpu_kernel void @test_fmax_v4f32(ptr addrspace(1) %out, <4 x float> %a
 ; EG-DAG: MAX_DX10 {{.*}}[[OUT2]].Y
 ; EG-DAG: MAX_DX10 {{.*}}[[OUT2]].Z
 ; EG-DAG: MAX_DX10 {{.*}}[[OUT2]].W
-define amdgpu_kernel void @test_fmax_v8f32(ptr addrspace(1) %out, <8 x float> %a, <8 x float> %b) #0 {
+define amdgpu_kernel void @test_fmax_v8f32(ptr addrspace(1) %out, <8 x float> %a, <8 x float> %b) nounwind {
   %val = call <8 x float> @llvm.maxnum.v8f32(<8 x float> %a, <8 x float> %b)
   store <8 x float> %val, ptr addrspace(1) %out, align 32
   ret void
@@ -69,7 +69,7 @@ define amdgpu_kernel void @test_fmax_v8f32(ptr addrspace(1) %out, <8 x float> %a
 ; EG-DAG: MAX_DX10 {{.*}}[[OUT4]].Y
 ; EG-DAG: MAX_DX10 {{.*}}[[OUT4]].Z
 ; EG-DAG: MAX_DX10 {{.*}}[[OUT4]].W
-define amdgpu_kernel void @test_fmax_v16f32(ptr addrspace(1) %out, <16 x float> %a, <16 x float> %b) #0 {
+define amdgpu_kernel void @test_fmax_v16f32(ptr addrspace(1) %out, <16 x float> %a, <16 x float> %b) nounwind {
   %val = call <16 x float> @llvm.maxnum.v16f32(<16 x float> %a, <16 x float> %b)
   store <16 x float> %val, ptr addrspace(1) %out, align 64
   ret void
@@ -79,7 +79,7 @@ define amdgpu_kernel void @test_fmax_v16f32(ptr addrspace(1) %out, <16 x float> 
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MAX_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define amdgpu_kernel void @constant_fold_fmax_f32(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @constant_fold_fmax_f32(ptr addrspace(1) %out) nounwind {
   %val = call float @llvm.maxnum.f32(float 1.0, float 2.0)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
@@ -90,7 +90,7 @@ define amdgpu_kernel void @constant_fold_fmax_f32(ptr addrspace(1) %out) #0 {
 ; EG-NOT: MAX_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
 ; EG: 2143289344(nan)
-define amdgpu_kernel void @constant_fold_fmax_f32_nan_nan(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @constant_fold_fmax_f32_nan_nan(ptr addrspace(1) %out) nounwind {
   %val = call float @llvm.maxnum.f32(float 0x7FF8000000000000, float 0x7FF8000000000000)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
@@ -100,7 +100,7 @@ define amdgpu_kernel void @constant_fold_fmax_f32_nan_nan(ptr addrspace(1) %out)
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MAX_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define amdgpu_kernel void @constant_fold_fmax_f32_val_nan(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @constant_fold_fmax_f32_val_nan(ptr addrspace(1) %out) nounwind {
   %val = call float @llvm.maxnum.f32(float 1.0, float 0x7FF8000000000000)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
@@ -110,7 +110,7 @@ define amdgpu_kernel void @constant_fold_fmax_f32_val_nan(ptr addrspace(1) %out)
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MAX_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define amdgpu_kernel void @constant_fold_fmax_f32_nan_val(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @constant_fold_fmax_f32_nan_val(ptr addrspace(1) %out) nounwind {
   %val = call float @llvm.maxnum.f32(float 0x7FF8000000000000, float 1.0)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
@@ -120,7 +120,7 @@ define amdgpu_kernel void @constant_fold_fmax_f32_nan_val(ptr addrspace(1) %out)
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MAX_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define amdgpu_kernel void @constant_fold_fmax_f32_p0_p0(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @constant_fold_fmax_f32_p0_p0(ptr addrspace(1) %out) nounwind {
   %val = call float @llvm.maxnum.f32(float 0.0, float 0.0)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
@@ -130,7 +130,7 @@ define amdgpu_kernel void @constant_fold_fmax_f32_p0_p0(ptr addrspace(1) %out) #
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MAX_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define amdgpu_kernel void @constant_fold_fmax_f32_p0_n0(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @constant_fold_fmax_f32_p0_n0(ptr addrspace(1) %out) nounwind {
   %val = call float @llvm.maxnum.f32(float 0.0, float -0.0)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
@@ -140,7 +140,7 @@ define amdgpu_kernel void @constant_fold_fmax_f32_p0_n0(ptr addrspace(1) %out) #
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MAX_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define amdgpu_kernel void @constant_fold_fmax_f32_n0_p0(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @constant_fold_fmax_f32_n0_p0(ptr addrspace(1) %out) nounwind {
   %val = call float @llvm.maxnum.f32(float -0.0, float 0.0)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
@@ -150,7 +150,7 @@ define amdgpu_kernel void @constant_fold_fmax_f32_n0_p0(ptr addrspace(1) %out) #
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MAX_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define amdgpu_kernel void @constant_fold_fmax_f32_n0_n0(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @constant_fold_fmax_f32_n0_n0(ptr addrspace(1) %out) nounwind {
   %val = call float @llvm.maxnum.f32(float -0.0, float -0.0)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
@@ -159,7 +159,7 @@ define amdgpu_kernel void @constant_fold_fmax_f32_n0_n0(ptr addrspace(1) %out) #
 ; EG-LABEL: {{^}}fmax_var_immediate_f32:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG: MAX_DX10 * [[OUT]]
-define amdgpu_kernel void @fmax_var_immediate_f32(ptr addrspace(1) %out, float %a) #0 {
+define amdgpu_kernel void @fmax_var_immediate_f32(ptr addrspace(1) %out, float %a) nounwind {
   %val = call float @llvm.maxnum.f32(float %a, float 2.0)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
@@ -168,7 +168,7 @@ define amdgpu_kernel void @fmax_var_immediate_f32(ptr addrspace(1) %out, float %
 ; EG-LABEL: {{^}}fmax_immediate_var_f32:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG: MAX_DX10 {{.*}}[[OUT]], {{KC0\[[0-9]\].[XYZW]}}, literal.{{[xy]}}
-define amdgpu_kernel void @fmax_immediate_var_f32(ptr addrspace(1) %out, float %a) #0 {
+define amdgpu_kernel void @fmax_immediate_var_f32(ptr addrspace(1) %out, float %a) nounwind {
   %val = call float @llvm.maxnum.f32(float 2.0, float %a)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
@@ -177,7 +177,7 @@ define amdgpu_kernel void @fmax_immediate_var_f32(ptr addrspace(1) %out, float %
 ; EG-LABEL: {{^}}fmax_var_literal_f32:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG: MAX_DX10 {{.*}}[[OUT]], {{KC0\[[0-9]\].[XYZW]}}, literal.{{[xy]}}
-define amdgpu_kernel void @fmax_var_literal_f32(ptr addrspace(1) %out, float %a) #0 {
+define amdgpu_kernel void @fmax_var_literal_f32(ptr addrspace(1) %out, float %a) nounwind {
   %val = call float @llvm.maxnum.f32(float %a, float 99.0)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
@@ -186,18 +186,15 @@ define amdgpu_kernel void @fmax_var_literal_f32(ptr addrspace(1) %out, float %a)
 ; EG-LABEL: {{^}}fmax_literal_var_f32:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG: MAX_DX10 {{.*}}[[OUT]], {{KC0\[[0-9]\].[XYZW]}}, literal.{{[xy]}}
-define amdgpu_kernel void @fmax_literal_var_f32(ptr addrspace(1) %out, float %a) #0 {
+define amdgpu_kernel void @fmax_literal_var_f32(ptr addrspace(1) %out, float %a) nounwind {
   %val = call float @llvm.maxnum.f32(float 99.0, float %a)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
-declare float @llvm.maxnum.f32(float, float) #1
-declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>) #1
-declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>) #1
-declare <8 x float> @llvm.maxnum.v8f32(<8 x float>, <8 x float>) #1
-declare <16 x float> @llvm.maxnum.v16f32(<16 x float>, <16 x float>) #1
+declare float @llvm.maxnum.f32(float, float) nounwind readnone
+declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>) nounwind readnone
+declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>) nounwind readnone
+declare <8 x float> @llvm.maxnum.v8f32(<8 x float>, <8 x float>) nounwind readnone
+declare <16 x float> @llvm.maxnum.v16f32(<16 x float>, <16 x float>) nounwind readnone
 declare double @llvm.maxnum.f64(double, double)
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck --check-prefix=EG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX12 %s
 
-define amdgpu_kernel void @constant_load_i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-LABEL: constant_load_i64:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -78,7 +78,7 @@ define amdgpu_kernel void @constant_load_i64(ptr addrspace(1) %out, ptr addrspac
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v2i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_v2i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-LABEL: constant_load_v2i64:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -159,7 +159,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v3i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_v3i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-LABEL: constant_load_v3i64:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -275,7 +275,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v4i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_v4i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-LABEL: constant_load_v4i64:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
@@ -393,7 +393,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v8i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_v8i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-LABEL: constant_load_v8i64:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dwordx4 s[16:19], s[0:1], 0x9
@@ -585,7 +585,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v16i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_v16i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-LABEL: constant_load_v16i64:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -939,5 +939,3 @@ entry:
   store <16 x i64> %ld, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }

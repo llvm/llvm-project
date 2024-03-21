@@ -15,9 +15,9 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-DENORM,GFX11-DENORM-STRICT %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-DENORM,GFX11-DENORM-CONTRACT %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare half @llvm.fmuladd.f16(half, half, half) #1
-declare half @llvm.fabs.f16(half) #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare half @llvm.fmuladd.f16(half, half, half) nounwind readnone
+declare half @llvm.fabs.f16(half) nounwind readnone
 
 define amdgpu_kernel void @fmuladd_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; VI-FLUSH-LABEL: fmuladd_f16:
@@ -124,7 +124,7 @@ define amdgpu_kernel void @fmuladd_f16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX11-DENORM-NEXT:    s_nop 0
 ; GFX11-DENORM-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-NEXT:    s_endpgm
-                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) #0 {
+                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) nounwind {
   %r0 = load half, ptr addrspace(1) %in1
   %r1 = load half, ptr addrspace(1) %in2
   %r2 = load half, ptr addrspace(1) %in3
@@ -273,7 +273,7 @@ define amdgpu_kernel void @fmul_fadd_f16(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX11-DENORM-CONTRACT-NEXT:    s_nop 0
 ; GFX11-DENORM-CONTRACT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-CONTRACT-NEXT:    s_endpgm
-                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) #0 {
+                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) nounwind {
   %r0 = load half, ptr addrspace(1) %in1
   %r1 = load half, ptr addrspace(1) %in2
   %r2 = load half, ptr addrspace(1) %in3
@@ -388,7 +388,7 @@ define amdgpu_kernel void @fmul_fadd_contract_f16(ptr addrspace(1) %out, ptr add
 ; GFX11-DENORM-NEXT:    s_nop 0
 ; GFX11-DENORM-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-NEXT:    s_endpgm
-                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) #0 {
+                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) nounwind {
   %r0 = load half, ptr addrspace(1) %in1
   %r1 = load half, ptr addrspace(1) %in2
   %r2 = load half, ptr addrspace(1) %in3
@@ -398,7 +398,7 @@ define amdgpu_kernel void @fmul_fadd_contract_f16(ptr addrspace(1) %out, ptr add
   ret void
 }
 
-define amdgpu_kernel void @fmuladd_2.0_a_b_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @fmuladd_2.0_a_b_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; VI-FLUSH-LABEL: fmuladd_2.0_a_b_f16:
 ; VI-FLUSH:       ; %bb.0:
 ; VI-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -506,7 +506,7 @@ define amdgpu_kernel void @fmuladd_2.0_a_b_f16(ptr addrspace(1) %out, ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @fmuladd_a_2.0_b_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @fmuladd_a_2.0_b_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; VI-FLUSH-LABEL: fmuladd_a_2.0_b_f16:
 ; VI-FLUSH:       ; %bb.0:
 ; VI-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -741,7 +741,7 @@ define amdgpu_kernel void @fadd_a_a_b_f16(ptr addrspace(1) %out,
 ; GFX11-DENORM-CONTRACT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-CONTRACT-NEXT:    s_endpgm
                             ptr addrspace(1) %in1,
-                            ptr addrspace(1) %in2) #0 {
+                            ptr addrspace(1) %in2) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr half, ptr addrspace(1) %out, i32 %tid
   %gep.1 = getelementptr half, ptr addrspace(1) %gep.0, i32 1
@@ -883,7 +883,7 @@ define amdgpu_kernel void @fadd_b_a_a_f16(ptr addrspace(1) %out,
 ; GFX11-DENORM-CONTRACT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-CONTRACT-NEXT:    s_endpgm
                             ptr addrspace(1) %in1,
-                            ptr addrspace(1) %in2) #0 {
+                            ptr addrspace(1) %in2) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr half, ptr addrspace(1) %out, i32 %tid
   %gep.1 = getelementptr half, ptr addrspace(1) %gep.0, i32 1
@@ -898,7 +898,7 @@ define amdgpu_kernel void @fadd_b_a_a_f16(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @fmuladd_neg_2.0_a_b_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @fmuladd_neg_2.0_a_b_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; VI-FLUSH-LABEL: fmuladd_neg_2.0_a_b_f16:
 ; VI-FLUSH:       ; %bb.0:
 ; VI-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1006,7 +1006,7 @@ define amdgpu_kernel void @fmuladd_neg_2.0_a_b_f16(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @fmuladd_neg_2.0_neg_a_b_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @fmuladd_neg_2.0_neg_a_b_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; VI-FLUSH-LABEL: fmuladd_neg_2.0_neg_a_b_f16:
 ; VI-FLUSH:       ; %bb.0:
 ; VI-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1116,7 +1116,7 @@ define amdgpu_kernel void @fmuladd_neg_2.0_neg_a_b_f16(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @fmuladd_2.0_neg_a_b_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @fmuladd_2.0_neg_a_b_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; VI-FLUSH-LABEL: fmuladd_2.0_neg_a_b_f16:
 ; VI-FLUSH:       ; %bb.0:
 ; VI-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1226,7 +1226,7 @@ define amdgpu_kernel void @fmuladd_2.0_neg_a_b_f16(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @fmuladd_2.0_a_neg_b_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @fmuladd_2.0_a_neg_b_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; VI-FLUSH-LABEL: fmuladd_2.0_a_neg_b_f16:
 ; VI-FLUSH:       ; %bb.0:
 ; VI-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1336,7 +1336,7 @@ define amdgpu_kernel void @fmuladd_2.0_a_neg_b_f16(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @mad_sub_f16(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) #1 {
+define amdgpu_kernel void @mad_sub_f16(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) nounwind readnone {
 ; VI-FLUSH-LABEL: mad_sub_f16:
 ; VI-FLUSH:       ; %bb.0:
 ; VI-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -1488,7 +1488,7 @@ define amdgpu_kernel void @mad_sub_f16(ptr addrspace(1) noalias nocapture %out, 
 ; GFX11-DENORM-CONTRACT-NEXT:    s_nop 0
 ; GFX11-DENORM-CONTRACT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-CONTRACT-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr half, ptr addrspace(1) %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -1505,7 +1505,7 @@ define amdgpu_kernel void @mad_sub_f16(ptr addrspace(1) noalias nocapture %out, 
   ret void
 }
 
-define amdgpu_kernel void @mad_sub_inv_f16(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) #1 {
+define amdgpu_kernel void @mad_sub_inv_f16(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) nounwind readnone {
 ; VI-FLUSH-LABEL: mad_sub_inv_f16:
 ; VI-FLUSH:       ; %bb.0:
 ; VI-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -1657,7 +1657,7 @@ define amdgpu_kernel void @mad_sub_inv_f16(ptr addrspace(1) noalias nocapture %o
 ; GFX11-DENORM-CONTRACT-NEXT:    s_nop 0
 ; GFX11-DENORM-CONTRACT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-CONTRACT-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr half, ptr addrspace(1) %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -1674,7 +1674,7 @@ define amdgpu_kernel void @mad_sub_inv_f16(ptr addrspace(1) noalias nocapture %o
   ret void
 }
 
-define amdgpu_kernel void @mad_sub_fabs_f16(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) #1 {
+define amdgpu_kernel void @mad_sub_fabs_f16(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) nounwind readnone {
 ; VI-FLUSH-LABEL: mad_sub_fabs_f16:
 ; VI-FLUSH:       ; %bb.0:
 ; VI-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -1826,7 +1826,7 @@ define amdgpu_kernel void @mad_sub_fabs_f16(ptr addrspace(1) noalias nocapture %
 ; GFX11-DENORM-CONTRACT-NEXT:    s_nop 0
 ; GFX11-DENORM-CONTRACT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-CONTRACT-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr half, ptr addrspace(1) %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -1837,14 +1837,14 @@ define amdgpu_kernel void @mad_sub_fabs_f16(ptr addrspace(1) noalias nocapture %
   %a = load volatile half, ptr addrspace(1) %gep0, align 2
   %b = load volatile half, ptr addrspace(1) %gep1, align 2
   %c = load volatile half, ptr addrspace(1) %gep2, align 2
-  %c.abs = call half @llvm.fabs.f16(half %c) #0
+  %c.abs = call half @llvm.fabs.f16(half %c) nounwind
   %mul = fmul half %a, %b
   %sub = fsub half %mul, %c.abs
   store half %sub, ptr addrspace(1) %outgep, align 2
   ret void
 }
 
-define amdgpu_kernel void @mad_sub_fabs_inv_f16(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) #1 {
+define amdgpu_kernel void @mad_sub_fabs_inv_f16(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) nounwind readnone {
 ; VI-FLUSH-LABEL: mad_sub_fabs_inv_f16:
 ; VI-FLUSH:       ; %bb.0:
 ; VI-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -1996,7 +1996,7 @@ define amdgpu_kernel void @mad_sub_fabs_inv_f16(ptr addrspace(1) noalias nocaptu
 ; GFX11-DENORM-CONTRACT-NEXT:    s_nop 0
 ; GFX11-DENORM-CONTRACT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-CONTRACT-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr half, ptr addrspace(1) %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -2007,14 +2007,14 @@ define amdgpu_kernel void @mad_sub_fabs_inv_f16(ptr addrspace(1) noalias nocaptu
   %a = load volatile half, ptr addrspace(1) %gep0, align 2
   %b = load volatile half, ptr addrspace(1) %gep1, align 2
   %c = load volatile half, ptr addrspace(1) %gep2, align 2
-  %c.abs = call half @llvm.fabs.f16(half %c) #0
+  %c.abs = call half @llvm.fabs.f16(half %c) nounwind
   %mul = fmul half %a, %b
   %sub = fsub half %c.abs, %mul
   store half %sub, ptr addrspace(1) %outgep, align 2
   ret void
 }
 
-define amdgpu_kernel void @neg_neg_mad_f16(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) #1 {
+define amdgpu_kernel void @neg_neg_mad_f16(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) nounwind readnone {
 ; VI-FLUSH-LABEL: neg_neg_mad_f16:
 ; VI-FLUSH:       ; %bb.0:
 ; VI-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -2166,7 +2166,7 @@ define amdgpu_kernel void @neg_neg_mad_f16(ptr addrspace(1) noalias nocapture %o
 ; GFX11-DENORM-CONTRACT-NEXT:    s_nop 0
 ; GFX11-DENORM-CONTRACT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-CONTRACT-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr half, ptr addrspace(1) %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -2185,7 +2185,7 @@ define amdgpu_kernel void @neg_neg_mad_f16(ptr addrspace(1) noalias nocapture %o
   ret void
 }
 
-define amdgpu_kernel void @mad_fabs_sub_f16(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) #1 {
+define amdgpu_kernel void @mad_fabs_sub_f16(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) nounwind readnone {
 ; VI-FLUSH-LABEL: mad_fabs_sub_f16:
 ; VI-FLUSH:       ; %bb.0:
 ; VI-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -2337,7 +2337,7 @@ define amdgpu_kernel void @mad_fabs_sub_f16(ptr addrspace(1) noalias nocapture %
 ; GFX11-DENORM-CONTRACT-NEXT:    s_nop 0
 ; GFX11-DENORM-CONTRACT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-CONTRACT-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr half, ptr addrspace(1) %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -2348,7 +2348,7 @@ define amdgpu_kernel void @mad_fabs_sub_f16(ptr addrspace(1) noalias nocapture %
   %a = load volatile half, ptr addrspace(1) %gep0, align 2
   %b = load volatile half, ptr addrspace(1) %gep1, align 2
   %c = load volatile half, ptr addrspace(1) %gep2, align 2
-  %b.abs = call half @llvm.fabs.f16(half %b) #0
+  %b.abs = call half @llvm.fabs.f16(half %b) nounwind
   %mul = fmul half %a, %b.abs
   %sub = fsub half %mul, %c
   store half %sub, ptr addrspace(1) %outgep, align 2
@@ -2636,6 +2636,3 @@ define amdgpu_kernel void @fsub_fadd_a_a_c_f16(ptr addrspace(1) %out, ptr addrsp
   store half %r3, ptr addrspace(1) %gep.out
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

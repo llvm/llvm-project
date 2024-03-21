@@ -60,7 +60,7 @@ define amdgpu_ps float @flat_atomic_fadd_f32_rtn_intrinsic(ptr %ptr, float %data
   ret float %ret
 }
 
-define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_atomicrmw(ptr %ptr, float %data) #0 {
+define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_atomicrmw(ptr %ptr, float %data) "amdgpu-unsafe-fp-atomics"="true" {
   ; GFX940-LABEL: name: flat_atomic_fadd_f32_no_rtn_atomicrmw
   ; GFX940: bb.0 (%ir-block.0):
   ; GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -88,7 +88,7 @@ define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_atomicrmw(ptr %ptr, float %da
   ret void
 }
 
-define amdgpu_ps float @flat_atomic_fadd_f32_rtn_atomicrmw(ptr %ptr, float %data) #0 {
+define amdgpu_ps float @flat_atomic_fadd_f32_rtn_atomicrmw(ptr %ptr, float %data) "amdgpu-unsafe-fp-atomics"="true" {
   ; GFX940-LABEL: name: flat_atomic_fadd_f32_rtn_atomicrmw
   ; GFX940: bb.0 (%ir-block.0):
   ; GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -119,5 +119,3 @@ define amdgpu_ps float @flat_atomic_fadd_f32_rtn_atomicrmw(ptr %ptr, float %data
 }
 
 declare float @llvm.amdgcn.flat.atomic.fadd.f32.p1.f32(ptr, float)
-
-attributes #0 = {"amdgpu-unsafe-fp-atomics"="true" }

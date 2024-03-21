@@ -43,8 +43,5 @@ main_body:
   ret float %tmp7
 }
 
-declare float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32, i32 immarg) #1
-declare float @llvm.amdgcn.raw.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32 immarg) #1
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind readonly }
+declare float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind readonly
+declare float @llvm.amdgcn.raw.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32 immarg) nounwind readonly

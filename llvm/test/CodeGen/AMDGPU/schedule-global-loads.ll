@@ -10,7 +10,7 @@
 ; SI-DAG: buffer_load_dword [[REG1:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
 ; SI: buffer_store_dword [[REG0]]
 ; SI: buffer_store_dword [[REG1]]
-define amdgpu_kernel void @cluster_global_arg_loads(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @cluster_global_arg_loads(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %ptr) nounwind {
   %load0 = load i32, ptr addrspace(1) %ptr, align 4
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 2
   %load1 = load i32, ptr addrspace(1) %gep, align 4
@@ -33,6 +33,3 @@ entry:
   store i32 %tmp2, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

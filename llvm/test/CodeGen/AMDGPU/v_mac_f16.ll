@@ -18,7 +18,7 @@ define amdgpu_kernel void @mac_f16(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -45,7 +45,7 @@ define amdgpu_kernel void @mac_f16_same_add(
     ptr addrspace(1) %b,
     ptr addrspace(1) %c,
     ptr addrspace(1) %d,
-    ptr addrspace(1) %e) #0 {
+    ptr addrspace(1) %e) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -77,7 +77,7 @@ define amdgpu_kernel void @mac_f16_neg_a(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -104,7 +104,7 @@ define amdgpu_kernel void @mac_f16_neg_b(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -131,7 +131,7 @@ define amdgpu_kernel void @mac_f16_neg_c(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -155,7 +155,7 @@ define amdgpu_kernel void @mac_f16_neg_a_safe_fp_math(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -179,7 +179,7 @@ define amdgpu_kernel void @mac_f16_neg_b_safe_fp_math(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -203,7 +203,7 @@ define amdgpu_kernel void @mac_f16_neg_c_safe_fp_math(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -230,7 +230,7 @@ define amdgpu_kernel void @mac_f16_neg_a_nsz_fp_math(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #1 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="true" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -257,7 +257,7 @@ define amdgpu_kernel void @mac_f16_neg_b_nsz_fp_math(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #1 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="true" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -284,7 +284,7 @@ define amdgpu_kernel void @mac_f16_neg_c_nsz_fp_math(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #1 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="true" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -336,12 +336,12 @@ define amdgpu_kernel void @mac_v2f16(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x half>, ptr addrspace(1) %a
-  call void @llvm.amdgcn.s.barrier() #2
+  call void @llvm.amdgcn.s.barrier() nounwind convergent
   %b.val = load <2 x half>, ptr addrspace(1) %b
-  call void @llvm.amdgcn.s.barrier() #2
+  call void @llvm.amdgcn.s.barrier() nounwind convergent
   %c.val = load <2 x half>, ptr addrspace(1) %c
 
   %t.val = fmul <2 x half> %a.val, %b.val
@@ -370,7 +370,7 @@ define amdgpu_kernel void @mac_v2f16_same_add(
     ptr addrspace(1) %b,
     ptr addrspace(1) %c,
     ptr addrspace(1) %d,
-    ptr addrspace(1) %e) #0 {
+    ptr addrspace(1) %e) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x half>, ptr addrspace(1) %a
   %b.val = load <2 x half>, ptr addrspace(1) %b
@@ -404,7 +404,7 @@ define amdgpu_kernel void @mac_v2f16_neg_a(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x half>, ptr addrspace(1) %a
   %b.val = load <2 x half>, ptr addrspace(1) %b
@@ -433,7 +433,7 @@ define amdgpu_kernel void @mac_v2f16_neg_b(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x half>, ptr addrspace(1) %a
   %b.val = load <2 x half>, ptr addrspace(1) %b
@@ -466,7 +466,7 @@ define amdgpu_kernel void @mac_v2f16_neg_c(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x half>, ptr addrspace(1) %a
   %b.val = load <2 x half>, ptr addrspace(1) %b
@@ -498,7 +498,7 @@ define amdgpu_kernel void @mac_v2f16_neg_a_safe_fp_math(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x half>, ptr addrspace(1) %a
   %b.val = load <2 x half>, ptr addrspace(1) %b
@@ -530,7 +530,7 @@ define amdgpu_kernel void @mac_v2f16_neg_b_safe_fp_math(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x half>, ptr addrspace(1) %a
   %b.val = load <2 x half>, ptr addrspace(1) %b
@@ -562,7 +562,7 @@ define amdgpu_kernel void @mac_v2f16_neg_c_safe_fp_math(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x half>, ptr addrspace(1) %a
   %b.val = load <2 x half>, ptr addrspace(1) %b
@@ -595,7 +595,7 @@ define amdgpu_kernel void @mac_v2f16_neg_a_nsz_fp_math(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #1 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="true" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x half>, ptr addrspace(1) %a
   %b.val = load <2 x half>, ptr addrspace(1) %b
@@ -628,7 +628,7 @@ define amdgpu_kernel void @mac_v2f16_neg_b_nsz_fp_math(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #1 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="true" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x half>, ptr addrspace(1) %a
   %b.val = load <2 x half>, ptr addrspace(1) %b
@@ -661,7 +661,7 @@ define amdgpu_kernel void @mac_v2f16_neg_c_nsz_fp_math(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #1 {
+    ptr addrspace(1) %c) nounwind "no-signed-zeros-fp-math"="true" "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x half>, ptr addrspace(1) %a
   %b.val = load <2 x half>, ptr addrspace(1) %b
@@ -675,8 +675,4 @@ entry:
   ret void
 }
 
-declare void @llvm.amdgcn.s.barrier() #2
-
-attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind "no-signed-zeros-fp-math"="true" "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #2 = { nounwind convergent }
+declare void @llvm.amdgcn.s.barrier() nounwind convergent

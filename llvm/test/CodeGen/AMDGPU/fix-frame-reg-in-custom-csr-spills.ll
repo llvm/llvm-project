@@ -8,7 +8,7 @@
 ; at function entry, the FP-SP can't be statically determined with dynamic stack realignment. To
 ; fix the problem, use FP as the frame base in the spills whenever the function has FP.
 
-define void @test_stack_realign(<8 x i32> %val, i32 %idx) #0 {
+define void @test_stack_realign(<8 x i32> %val, i32 %idx) noinline nounwind {
 ; GCN-LABEL: test_stack_realign:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -71,6 +71,4 @@ define void @test_stack_realign(<8 x i32> %val, i32 %idx) #0 {
   ret void
 }
 
-declare void @extern_func(i32) #0
-
-attributes #0 = { noinline nounwind }
+declare void @extern_func(i32) noinline nounwind

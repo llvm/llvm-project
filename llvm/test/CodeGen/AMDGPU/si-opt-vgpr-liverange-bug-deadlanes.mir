@@ -6,11 +6,9 @@
 # DetectDeadLanes.
 
 --- |
-  define dllexport amdgpu_ps void @_amdgpu_ps_main() #0 {
+  define dllexport amdgpu_ps void @_amdgpu_ps_main() "target-cpu"="gfx1100" "target-features"=",+wavefrontsize64,+cumode" "uniform-work-group-size"="false" {
     unreachable
   }
-
-  attributes #0 = { "target-cpu"="gfx1100" "target-features"=",+wavefrontsize64,+cumode" "uniform-work-group-size"="false" }
 ...
 ---
 name:            _amdgpu_ps_main

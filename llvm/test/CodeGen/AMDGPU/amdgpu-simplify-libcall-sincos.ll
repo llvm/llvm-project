@@ -3,49 +3,49 @@
 
 target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
 
-declare float @_Z3sinf(float) #0
-declare float @_Z3cosf(float) #0
-declare <2 x float> @_Z3sinDv2_f(<2 x float>) #0
-declare <2 x float> @_Z3cosDv2_f(<2 x float>) #0
-declare <3 x float> @_Z3sinDv3_f(<3 x float>) #0
-declare <3 x float> @_Z3cosDv3_f(<3 x float>) #0
-declare <4 x float> @_Z3sinDv4_f(<4 x float>) #0
-declare <4 x float> @_Z3cosDv4_f(<4 x float>) #0
-declare <8 x float> @_Z3sinDv8_f(<8 x float>) #0
-declare <8 x float> @_Z3cosDv8_f(<8 x float>) #0
-declare <16 x float> @_Z3sinDv16_f(<16 x float>) #0
-declare <16 x float> @_Z3cosDv16_f(<16 x float>) #0
+declare float @_Z3sinf(float) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @_Z3cosf(float) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x float> @_Z3sinDv2_f(<2 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x float> @_Z3cosDv2_f(<2 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <3 x float> @_Z3sinDv3_f(<3 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <3 x float> @_Z3cosDv3_f(<3 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <4 x float> @_Z3sinDv4_f(<4 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <4 x float> @_Z3cosDv4_f(<4 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <8 x float> @_Z3sinDv8_f(<8 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <8 x float> @_Z3cosDv8_f(<8 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <16 x float> @_Z3sinDv16_f(<16 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <16 x float> @_Z3cosDv16_f(<16 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
 
 
-declare half @_Z3sinDh(half) #0
-declare half @_Z3cosDh(half) #0
-declare <2 x half> @_Z3sinDv2_Dh(<2 x half>) #0
-declare <2 x half> @_Z3cosDv2_Dh(<2 x half>) #0
-declare <3 x half> @_Z3sinDv3_Dh(<3 x half>) #0
-declare <3 x half> @_Z3cosDv3_Dh(<3 x half>) #0
-declare <4 x half> @_Z3sinDv4_Dh(<4 x half>) #0
-declare <4 x half> @_Z3cosDv4_Dh(<4 x half>) #0
-declare <8 x half> @_Z3sinDv8_Dh(<8 x half>) #0
-declare <8 x half> @_Z3cosDv8_Dh(<8 x half>) #0
-declare <16 x half> @_Z3sinDv16_Dh(<16 x half>) #0
-declare <16 x half> @_Z3cosDv16_Dh(<16 x half>) #0
+declare half @_Z3sinDh(half) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare half @_Z3cosDh(half) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x half> @_Z3sinDv2_Dh(<2 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x half> @_Z3cosDv2_Dh(<2 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <3 x half> @_Z3sinDv3_Dh(<3 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <3 x half> @_Z3cosDv3_Dh(<3 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <4 x half> @_Z3sinDv4_Dh(<4 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <4 x half> @_Z3cosDv4_Dh(<4 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <8 x half> @_Z3sinDv8_Dh(<8 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <8 x half> @_Z3cosDv8_Dh(<8 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <16 x half> @_Z3sinDv16_Dh(<16 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <16 x half> @_Z3cosDv16_Dh(<16 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
 
 
-declare double @_Z3sind(double) #0
-declare double @_Z3cosd(double) #0
-declare <2 x double> @_Z3sinDv2_d(<2 x double>) #0
-declare <2 x double> @_Z3cosDv2_d(<2 x double>) #0
-declare <3 x double> @_Z3sinDv3_d(<3 x double>) #0
-declare <3 x double> @_Z3cosDv3_d(<3 x double>) #0
-declare <4 x double> @_Z3sinDv4_d(<4 x double>) #0
-declare <4 x double> @_Z3cosDv4_d(<4 x double>) #0
-declare <8 x double> @_Z3sinDv8_d(<8 x double>) #0
-declare <8 x double> @_Z3cosDv8_d(<8 x double>) #0
-declare <16 x double> @_Z3sinDv16_d(<16 x double>) #0
-declare <16 x double> @_Z3cosDv16_d(<16 x double>) #0
+declare double @_Z3sind(double) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @_Z3cosd(double) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x double> @_Z3sinDv2_d(<2 x double>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x double> @_Z3cosDv2_d(<2 x double>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <3 x double> @_Z3sinDv3_d(<3 x double>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <3 x double> @_Z3cosDv3_d(<3 x double>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <4 x double> @_Z3sinDv4_d(<4 x double>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <4 x double> @_Z3cosDv4_d(<4 x double>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <8 x double> @_Z3sinDv8_d(<8 x double>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <8 x double> @_Z3cosDv8_d(<8 x double>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <16 x double> @_Z3sinDv16_d(<16 x double>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <16 x double> @_Z3cosDv16_d(<16 x double>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
 
-declare float @_Z6sincosfPU3AS5f(float %x, ptr addrspace(5) writeonly %ptr) #1
-declare float @_Z6sincosfPU3AS0f(float %x, ptr writeonly %ptr) #1
+declare float @_Z6sincosfPU3AS5f(float %x, ptr addrspace(5) writeonly %ptr) argmemonly nounwind willreturn
+declare float @_Z6sincosfPU3AS0f(float %x, ptr writeonly %ptr) argmemonly nounwind willreturn
 
 define void @sincos_f16_nocontract(half %x, ptr addrspace(1) nocapture writeonly %sin_out, ptr addrspace(1) nocapture writeonly %cos_out) {
 ; CHECK-LABEL: define void @sincos_f16_nocontract
@@ -1275,10 +1275,7 @@ entry:
   ret float %sin2
 }
 
-declare void @llvm.dbg.value(metadata, metadata, metadata) #0
-
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #1 = { argmemonly nounwind willreturn }
+declare void @llvm.dbg.value(metadata, metadata, metadata) nocallback nofree nosync nounwind speculatable willreturn memory(none)
 
 !llvm.dbg.cu = !{!0}
 !llvm.debugify = !{!2, !3}

@@ -6,7 +6,7 @@ declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x4f16(<4 x half>, <4 x half>, <3
 ; CHECK: CritRes: {{[0-9]+}} HWXDL
 ; CHECK: Picking: Cand SU([[nid:[0-9]+]]) RES-DEMAND
 ; CHECK: Scheduling SU([[nid]]) {{.*}} V_MFMA_F32_32X32X4F16
-define amdgpu_kernel void @schedule-xdl-resource(ptr addrspace(1) %in, ptr addrspace(1) %out, ptr addrspace(3) %lds, i32 %stride) #0 {
+define amdgpu_kernel void @schedule-xdl-resource(ptr addrspace(1) %in, ptr addrspace(1) %out, ptr addrspace(3) %lds, i32 %stride) nounwind "amdgpu-waves-per-eu"="1,1" {
   %in_ptr.1 = getelementptr <32 x float>, ptr addrspace(1) %in, i32 %stride
   %in_ptr.2 = getelementptr <32 x float>, ptr addrspace(1) %in_ptr.1, i32 %stride
   %in_ptr.3 = getelementptr <32 x float>, ptr addrspace(1) %in_ptr.2, i32 %stride
@@ -40,5 +40,3 @@ define amdgpu_kernel void @schedule-xdl-resource(ptr addrspace(1) %in, ptr addrs
 
   ret void
 }
-
-attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" }

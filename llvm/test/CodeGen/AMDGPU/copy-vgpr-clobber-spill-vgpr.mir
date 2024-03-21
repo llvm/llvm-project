@@ -4,7 +4,7 @@
 
 --- |
 
-  define amdgpu_kernel void @test_spill() #0 {
+  define amdgpu_kernel void @test_spill() "amdgpu-waves-per-eu"="4,4" "amdgpu-no-agpr" {
   ; GFX908-LABEL: test_spill:
   ; GFX908:       ; %bb.0:
   ; GFX908-NEXT:    ; implicit-def: $agpr96_agpr97_agpr98_agpr99_agpr100_agpr101_agpr102_agpr103_agpr104_agpr105_agpr106_agpr107_agpr108_agpr109_agpr110_agpr111
@@ -332,8 +332,6 @@
   ; GFX90A-NEXT:    s_nop 0
     ret void
   }
-
-  attributes #0 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-no-agpr" }
 
 ...
 ---

@@ -70,7 +70,7 @@ define double @v_floor_f64_ieee_fneg(double %x) {
   ret double %result
 }
 
-define double @v_floor_f64_nonieee(double %x) #1 {
+define double @v_floor_f64_nonieee(double %x) "amdgpu-ieee"="false" {
 ; GFX6-LABEL: v_floor_f64_nonieee:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -93,7 +93,7 @@ define double @v_floor_f64_nonieee(double %x) #1 {
   ret double %result
 }
 
-define double @v_floor_f64_nonieee_nnan(double %x) #1 {
+define double @v_floor_f64_nonieee_nnan(double %x) "amdgpu-ieee"="false" {
 ; GFX6-LABEL: v_floor_f64_nonieee_nnan:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -113,7 +113,7 @@ define double @v_floor_f64_nonieee_nnan(double %x) #1 {
   ret double %result
 }
 
-define double @v_floor_f64_non_ieee_fneg(double %x) #1 {
+define double @v_floor_f64_non_ieee_fneg(double %x) "amdgpu-ieee"="false" {
 ; GFX6-LABEL: v_floor_f64_non_ieee_fneg:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -286,8 +286,5 @@ define amdgpu_ps <2 x float> @s_floor_f64_fneg_fabs(double inreg %x) {
   ret <2 x float> %cast
 }
 
-declare double @llvm.floor.f64(double) #0
-declare double @llvm.fabs.f64(double) #0
-
-attributes #0 = { nounwind readnone speculatable willreturn }
-attributes #1 = { "amdgpu-ieee"="false" }
+declare double @llvm.floor.f64(double) nounwind readnone speculatable willreturn
+declare double @llvm.fabs.f64(double) nounwind readnone speculatable willreturn

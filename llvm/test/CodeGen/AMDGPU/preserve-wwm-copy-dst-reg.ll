@@ -6,7 +6,7 @@
 ; and introduce a copy. The copy should be of whole-wave with exec mask manipulation around it.
 ; FIXME: The destination register involved in the whole-wave copy should be considered for preserving all the lanes
 ; with a spill/restore at function prolog/epilog. The copy might otherwise clobber its inactive lanes unwantedly.
-define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
+define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) "amdgpu-num-vgpr"="42" "amdgpu-num-sgpr"="40" {
 ; GFX906-LABEL: preserve_wwm_copy_dstreg:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -826,8 +826,6 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 }
 
 declare void @foo()
-
-attributes #0 = { "amdgpu-num-vgpr"="42" "amdgpu-num-sgpr"="40"}
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

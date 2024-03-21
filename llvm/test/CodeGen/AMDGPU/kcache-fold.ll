@@ -2,7 +2,7 @@
 
 ; CHECK: {{^}}main1:
 ; CHECK: MOV * T{{[0-9]+\.[XYZW], KC0}}
-define amdgpu_kernel void @main1() #0 {
+define amdgpu_kernel void @main1() nounwind {
 main_body:
   %tmp = load <4 x float>, ptr addrspace(8) null
   %tmp7 = extractelement <4 x float> %tmp, i32 0
@@ -54,7 +54,7 @@ main_body:
 
 ; CHECK: {{^}}main2:
 ; CHECK-NOT: MOV
-define amdgpu_kernel void @main2() #0 {
+define amdgpu_kernel void @main2() nounwind {
 main_body:
   %tmp = load <4 x float>, ptr addrspace(8) null
   %tmp7 = extractelement <4 x float> %tmp, i32 0
@@ -104,9 +104,6 @@ main_body:
   ret void
 }
 
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32) #0
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32) nounwind
+declare float @llvm.minnum.f32(float, float) nounwind readnone
+declare float @llvm.maxnum.f32(float, float) nounwind readnone

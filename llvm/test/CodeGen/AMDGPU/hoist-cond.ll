@@ -13,7 +13,7 @@
 
 define amdgpu_kernel void @hoist_cond(ptr addrspace(1) nocapture %arg, ptr addrspace(1) noalias nocapture readonly %arg1, i32 %arg3, i32 %arg4) {
 bb:
-  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tmp5 = icmp ult i32 %tmp, %arg3
   br label %bb1
 
@@ -41,6 +41,4 @@ bb4:                                             ; preds = %bb3
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

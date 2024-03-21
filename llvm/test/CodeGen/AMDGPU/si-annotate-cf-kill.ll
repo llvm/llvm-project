@@ -121,14 +121,9 @@ endif2:
 }
 
 
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.swap.i32(i32, ptr addrspace(8), i32, i32, i32 immarg) #2
-declare i1 @llvm.amdgcn.wqm.vote(i1) #3
-declare void @llvm.amdgcn.kill(i1) #4
-declare float @llvm.amdgcn.wqm.f32(float) #1
-
-attributes #1 = { nounwind readnone speculatable willreturn }
-attributes #2 = { nounwind willreturn memory(argmem: readwrite) }
-attributes #3 = { convergent nounwind readnone willreturn }
-attributes #4 = { nounwind }
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.swap.i32(i32, ptr addrspace(8), i32, i32, i32 immarg) nounwind willreturn memory(argmem: readwrite)
+declare i1 @llvm.amdgcn.wqm.vote(i1) convergent nounwind readnone willreturn
+declare void @llvm.amdgcn.kill(i1) nounwind
+declare float @llvm.amdgcn.wqm.f32(float) nounwind readnone speculatable willreturn
 
 !0 = !{}

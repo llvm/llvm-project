@@ -18,7 +18,7 @@
 ; EG: MOV {{\*? *}}[[VAL]], KC0[0].X
 define amdgpu_kernel void @ngroups_x (ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.ngroups.x() #0
+  %0 = call i32 @llvm.r600.read.ngroups.x() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -33,7 +33,7 @@ entry:
 ; EG: MOV {{\*? *}}[[VAL]], KC0[0].Y
 define amdgpu_kernel void @ngroups_y (ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.ngroups.y() #0
+  %0 = call i32 @llvm.r600.read.ngroups.y() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -48,7 +48,7 @@ entry:
 ; EG: MOV {{\*? *}}[[VAL]], KC0[0].Z
 define amdgpu_kernel void @ngroups_z (ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.ngroups.z() #0
+  %0 = call i32 @llvm.r600.read.ngroups.z() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -63,7 +63,7 @@ entry:
 ; EG: MOV {{\*? *}}[[VAL]], KC0[0].W
 define amdgpu_kernel void @global_size_x (ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.global.size.x() #0
+  %0 = call i32 @llvm.r600.read.global.size.x() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -78,7 +78,7 @@ entry:
 ; EG: MOV {{\*? *}}[[VAL]], KC0[1].X
 define amdgpu_kernel void @global_size_y (ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.global.size.y() #0
+  %0 = call i32 @llvm.r600.read.global.size.y() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -93,7 +93,7 @@ entry:
 ; EG: MOV {{\*? *}}[[VAL]], KC0[1].Y
 define amdgpu_kernel void @global_size_z (ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.global.size.z() #0
+  %0 = call i32 @llvm.r600.read.global.size.z() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -108,7 +108,7 @@ entry:
 ; EG: MOV {{\*? *}}[[VAL]], KC0[1].Z
 define amdgpu_kernel void @local_size_x (ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.local.size.x() #0
+  %0 = call i32 @llvm.r600.read.local.size.x() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -123,7 +123,7 @@ entry:
 ; EG: MOV {{\*? *}}[[VAL]], KC0[1].W
 define amdgpu_kernel void @local_size_y (ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.local.size.y() #0
+  %0 = call i32 @llvm.r600.read.local.size.y() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -138,21 +138,19 @@ entry:
 ; EG: MOV {{\*? *}}[[VAL]], KC0[2].X
 define amdgpu_kernel void @local_size_z (ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.local.size.z() #0
+  %0 = call i32 @llvm.r600.read.local.size.z() readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
-declare i32 @llvm.r600.read.ngroups.x() #0
-declare i32 @llvm.r600.read.ngroups.y() #0
-declare i32 @llvm.r600.read.ngroups.z() #0
+declare i32 @llvm.r600.read.ngroups.x() readnone
+declare i32 @llvm.r600.read.ngroups.y() readnone
+declare i32 @llvm.r600.read.ngroups.z() readnone
 
-declare i32 @llvm.r600.read.global.size.x() #0
-declare i32 @llvm.r600.read.global.size.y() #0
-declare i32 @llvm.r600.read.global.size.z() #0
+declare i32 @llvm.r600.read.global.size.x() readnone
+declare i32 @llvm.r600.read.global.size.y() readnone
+declare i32 @llvm.r600.read.global.size.z() readnone
 
-declare i32 @llvm.r600.read.local.size.x() #0
-declare i32 @llvm.r600.read.local.size.y() #0
-declare i32 @llvm.r600.read.local.size.z() #0
-
-attributes #0 = { readnone }
+declare i32 @llvm.r600.read.local.size.x() readnone
+declare i32 @llvm.r600.read.local.size.y() readnone
+declare i32 @llvm.r600.read.local.size.z() readnone

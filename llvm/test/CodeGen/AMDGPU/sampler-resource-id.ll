@@ -7,7 +7,7 @@
 ; EG-NEXT: 0(
 define amdgpu_kernel void @test_0(i32 %in0, ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.OpenCL.sampler.get.resource.id(i32 %in0) #0
+  %0 = call i32 @llvm.OpenCL.sampler.get.resource.id(i32 %in0) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -19,7 +19,7 @@ entry:
 ; EG-NEXT: 1(
 define amdgpu_kernel void @test_1(i32 %in0, i32 %in1, ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.OpenCL.sampler.get.resource.id(i32 %in1) #0
+  %0 = call i32 @llvm.OpenCL.sampler.get.resource.id(i32 %in1) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -31,15 +31,13 @@ entry:
 ; EG-NEXT: 2(
 define amdgpu_kernel void @test_2(i32 %in0, i32 %in1, i32 %in2, ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.OpenCL.sampler.get.resource.id(i32 %in2) #0
+  %0 = call i32 @llvm.OpenCL.sampler.get.resource.id(i32 %in2) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
 
-declare i32 @llvm.OpenCL.sampler.get.resource.id(i32) #0
-
-attributes #0 = { readnone }
+declare i32 @llvm.OpenCL.sampler.get.resource.id(i32) readnone
 
 !opencl.kernels = !{!0, !1, !2}
 

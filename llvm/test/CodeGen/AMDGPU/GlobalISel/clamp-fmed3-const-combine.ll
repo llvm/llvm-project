@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX12 %s
 
-define float @test_fmed3_f32_known_nnan_ieee_true(float %a) #0 {
+define float @test_fmed3_f32_known_nnan_ieee_true(float %a) "amdgpu-ieee"="true" {
 ; GFX10-LABEL: test_fmed3_f32_known_nnan_ieee_true:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -23,7 +23,7 @@ define float @test_fmed3_f32_known_nnan_ieee_true(float %a) #0 {
   ret float %fmed
 }
 
-define half @test_fmed3_f16_known_nnan_ieee_false(half %a) #1 {
+define half @test_fmed3_f16_known_nnan_ieee_false(half %a) "amdgpu-ieee"="false" {
 ; GFX10-LABEL: test_fmed3_f16_known_nnan_ieee_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -45,7 +45,7 @@ define half @test_fmed3_f16_known_nnan_ieee_false(half %a) #1 {
 }
 
 ; %fmin is known non-SNaN because fmin inputs are fcanonicalized
-define float @test_fmed3_non_SNaN_input_ieee_true_dx10clamp_true(float %a) #2 {
+define float @test_fmed3_non_SNaN_input_ieee_true_dx10clamp_true(float %a) "amdgpu-ieee"="true" "amdgpu-dx10-clamp"="true" {
 ; GFX10-LABEL: test_fmed3_non_SNaN_input_ieee_true_dx10clamp_true:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -70,7 +70,7 @@ define float @test_fmed3_non_SNaN_input_ieee_true_dx10clamp_true(float %a) #2 {
 }
 
 ; input may be SNaN. It's safe to clamp since third operand in fmed3 is 0.0
-define float @test_fmed3_maybe_SNaN_input_zero_third_operand_ieee_true_dx10clamp_true(float %a) #2 {
+define float @test_fmed3_maybe_SNaN_input_zero_third_operand_ieee_true_dx10clamp_true(float %a) "amdgpu-ieee"="true" "amdgpu-dx10-clamp"="true" {
 ; GFX10-LABEL: test_fmed3_maybe_SNaN_input_zero_third_operand_ieee_true_dx10clamp_true:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -93,7 +93,7 @@ define float @test_fmed3_maybe_SNaN_input_zero_third_operand_ieee_true_dx10clamp
 
 ; global nnan function attribute always forces clamp combine
 
-define float @test_fmed3_global_nnan(float %a) #3 {
+define float @test_fmed3_global_nnan(float %a) "no-nans-fp-math"="true" {
 ; GFX10-LABEL: test_fmed3_global_nnan:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -119,7 +119,7 @@ define float @test_fmed3_global_nnan(float %a) #3 {
 ; ------------------------------------------------------------------------------
 
 ; ieee=false requires known never NaN input
-define float @test_fmed3_f32_maybe_NaN_ieee_false(float %a) #1 {
+define float @test_fmed3_f32_maybe_NaN_ieee_false(float %a) "amdgpu-ieee"="false" {
 ; GFX10-LABEL: test_fmed3_f32_maybe_NaN_ieee_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -142,7 +142,7 @@ define float @test_fmed3_f32_maybe_NaN_ieee_false(float %a) #1 {
 }
 
 ; ieee=true input is known non-SNaN but dx10_clamp=false
-define float @test_fmed3_non_SNaN_input_ieee_true_dx10clamp_false(float %a) #4 {
+define float @test_fmed3_non_SNaN_input_ieee_true_dx10clamp_false(float %a) "amdgpu-ieee"="true" "amdgpu-dx10-clamp"="false" {
 ; GFX10-LABEL: test_fmed3_non_SNaN_input_ieee_true_dx10clamp_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -168,7 +168,7 @@ define float @test_fmed3_non_SNaN_input_ieee_true_dx10clamp_false(float %a) #4 {
 }
 
 ; ieee=true dx10_clamp=true but input may be SNaN, clamp requires third operand in fmed3 to be 0.0
-define float @test_fmed3_maybe_SNaN_input_ieee_true_dx10clamp_true(float %a) #2 {
+define float @test_fmed3_maybe_SNaN_input_ieee_true_dx10clamp_true(float %a) "amdgpu-ieee"="true" "amdgpu-dx10-clamp"="true" {
 ; GFX10-LABEL: test_fmed3_maybe_SNaN_input_ieee_true_dx10clamp_true:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -192,9 +192,3 @@ define float @test_fmed3_maybe_SNaN_input_ieee_true_dx10clamp_true(float %a) #2 
 declare half @llvm.amdgcn.fmed3.f16(half, half, half)
 declare float @llvm.amdgcn.fmed3.f32(float, float, float)
 declare float @llvm.minnum.f32(float, float)
-
-attributes #0 = {"amdgpu-ieee"="true"}
-attributes #1 = {"amdgpu-ieee"="false"}
-attributes #2 = {"amdgpu-ieee"="true" "amdgpu-dx10-clamp"="true"}
-attributes #3 = {"no-nans-fp-math"="true"}
-attributes #4 = {"amdgpu-ieee"="true" "amdgpu-dx10-clamp"="false"}

@@ -31,7 +31,7 @@
 ; GFX12-DAG: s_wait_expcnt 0x0
 ; GCN: buffer_store_b32
 ; GCN: buffer_store_b32
-define amdgpu_ps void @lds_param_load(ptr addrspace(8) inreg %buf, i32 inreg %arg) #0 {
+define amdgpu_ps void @lds_param_load(ptr addrspace(8) inreg %buf, i32 inreg %arg) nounwind {
 main_body:
   %p0 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 0, i32 %arg)
   ; Ensure memory clustering is occuring for lds_param_load
@@ -49,8 +49,5 @@ main_body:
   ret void
 }
 
-declare float @llvm.amdgcn.lds.param.load(i32, i32, i32) #1
+declare float @llvm.amdgcn.lds.param.load(i32, i32, i32) nounwind readnone
 declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32)
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

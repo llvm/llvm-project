@@ -23,16 +23,13 @@
     ret void
   }
 
-  define amdgpu_ps void @early_term_no_export() #0 {
+  define amdgpu_ps void @early_term_no_export() "amdgpu-color-export"="0" "amdgpu-depth-export"="0" {
     ret void
   }
 
-  define amdgpu_ps void @early_term_depth_only() #1 {
+  define amdgpu_ps void @early_term_depth_only() "amdgpu-color-export"="0" "amdgpu-depth-export"="1" {
     ret void
   }
-
-  attributes #0 = { "amdgpu-color-export"="0" "amdgpu-depth-export"="0" }
-  attributes #1 = { "amdgpu-color-export"="0" "amdgpu-depth-export"="1" }
 ...
 
 ---

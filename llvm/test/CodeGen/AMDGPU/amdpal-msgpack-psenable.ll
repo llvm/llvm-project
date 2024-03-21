@@ -9,7 +9,7 @@
 ; GCN: .amdgpu_pal_metadata
 ; GCN: 0xa1b3 (SPI_PS_INPUT_ENA): 0x2
 ; GCN: 0xa1b4 (SPI_PS_INPUT_ADDR): 0x2
-define amdgpu_ps void @amdpal_psenable(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <2 x float> %pos) #6 {
+define amdgpu_ps void @amdpal_psenable(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <2 x float> %pos) nounwind "InitialPSInputAddr"="2" {
   %inst23 = extractelement <2 x float> %pos, i32 0
   %inst24 = extractelement <2 x float> %pos, i32 1
   %inst25 = tail call float @llvm.amdgcn.interp.p1(float %inst23, i32 0, i32 0, i32 %m0)
@@ -19,8 +19,6 @@ define amdgpu_ps void @amdpal_psenable(i32 inreg, i32 inreg, i32 inreg, i32 inre
 
 declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #2
 declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #2
-
-attributes #6 = { nounwind "InitialPSInputAddr"="2" }
 
 ; Force MsgPack format metadata
 !amdgpu.pal.metadata.msgpack = !{!0}

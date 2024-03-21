@@ -155,6 +155,4 @@ shader_eval_surface.exit:                         ; preds = %entry
   ret void
 }
 
-declare hidden i32 @svm_eval_nodes(ptr addrspace(5), ptr addrspace(5), ptr addrspace(5), i32, i32) local_unnamed_addr #0
-
-attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+declare hidden i32 @svm_eval_nodes(ptr addrspace(5), ptr addrspace(5), ptr addrspace(5), i32, i32) local_unnamed_addr nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"

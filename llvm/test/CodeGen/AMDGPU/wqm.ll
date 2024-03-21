@@ -27,7 +27,7 @@ main_body:
 }
 
 ; Check that WQM is triggered by code calculating inputs to image samples and is disabled as soon as possible
-define amdgpu_ps <4 x float> @test2(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, <2 x float> %pos) #6 {
+define amdgpu_ps <4 x float> @test2(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, <2 x float> %pos) nounwind "InitialPSInputAddr"="2" {
 ; GFX9-W64-LABEL: test2:
 ; GFX9-W64:       ; %bb.0: ; %main_body
 ; GFX9-W64-NEXT:    s_mov_b64 s[0:1], exec
@@ -131,7 +131,7 @@ main_body:
 }
 
 ; ... and disabled for export.
-define amdgpu_ps void @test3x(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, <2 x float> %pos) #6 {
+define amdgpu_ps void @test3x(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, <2 x float> %pos) nounwind "InitialPSInputAddr"="2" {
 ; GFX9-W64-LABEL: test3x:
 ; GFX9-W64:       ; %bb.0: ; %main_body
 ; GFX9-W64-NEXT:    s_mov_b64 s[0:1], exec
@@ -1906,7 +1906,7 @@ main_body:
 }
 
 ; Check prolog shaders.
-define amdgpu_ps float @test_prolog_1(float %a, float %b) #5 {
+define amdgpu_ps float @test_prolog_1(float %a, float %b) "amdgpu-ps-wqm-outputs" {
 ; GFX9-W64-LABEL: test_prolog_1:
 ; GFX9-W64:       ; %bb.0: ; %main_body
 ; GFX9-W64-NEXT:    s_mov_b64 s[0:1], exec
@@ -2176,7 +2176,7 @@ else:
 }
 
 ; Test awareness that s_wqm_b64 clobbers SCC.
-define amdgpu_ps <4 x float> @test_scc(i32 inreg %sel, i32 %idx) #1 {
+define amdgpu_ps <4 x float> @test_scc(i32 inreg %sel, i32 %idx) nounwind {
 ; GFX9-W64-LABEL: test_scc:
 ; GFX9-W64:       ; %bb.0: ; %main_body
 ; GFX9-W64-NEXT:    s_mov_b64 s[2:3], exec
@@ -3306,56 +3306,48 @@ define amdgpu_ps void @test_for_deactivating_lanes_in_wave32(ptr addrspace(6) in
 main_body:
   %1 = ptrtoint ptr addrspace(6) %0 to i32
   %2 = insertelement <4 x i32> <i32 poison, i32 32768, i32 32, i32 822177708>, i32 %1, i32 0
-  %3 = call nsz arcp float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %2, i32 0, i32 0) #3
+  %3 = call nsz arcp float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %2, i32 0, i32 0) nounwind readnone
   %4 = fcmp nsz arcp ugt float %3, 0.000000e+00
-  call void @llvm.amdgcn.kill(i1 %4) #1
+  call void @llvm.amdgcn.kill(i1 %4) nounwind
   ret void
 }
 
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
-declare void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float>, i32, i32, <8 x i32>, i32, i32) #1
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind
+declare void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float>, i32, i32, <8 x i32>, i32, i32) nounwind
 
-declare void @llvm.amdgcn.struct.buffer.store.f32(float, <4 x i32>, i32, i32, i32, i32 immarg) #2
-declare void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32 immarg) #2
-declare void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32 immarg) #2
-declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg) #2
-declare float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32>, i32, i32, i32) #3
-declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32) #3
+declare void @llvm.amdgcn.struct.buffer.store.f32(float, <4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly
+declare void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly
+declare void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32 immarg) nounwind readonly
+declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg) nounwind readonly
+declare float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32>, i32, i32, i32) nounwind readnone
+declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32) nounwind readnone
 
-declare void @llvm.amdgcn.struct.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32, i32 immarg) #2
-declare void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32 immarg) #2
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32 immarg) #2
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg) #2
-declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32) #3
-declare float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32, i32) #3
+declare void @llvm.amdgcn.struct.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind readonly
+declare void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind readonly
+declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32 immarg) nounwind readonly
+declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg) nounwind readonly
+declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32) nounwind readnone
+declare float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32, i32) nounwind readnone
 
-declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32, i32, <8 x i32>, i32, i32) #3
-declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #3
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #3
-declare float @llvm.amdgcn.image.sample.1d.f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #3
-declare void @llvm.amdgcn.kill(i1) #1
-declare float @llvm.amdgcn.wqm.f32(float) #3
-declare i32 @llvm.amdgcn.wqm.i32(i32) #3
-declare float @llvm.amdgcn.strict.wwm.f32(float) #3
-declare i32 @llvm.amdgcn.strict.wwm.i32(i32) #3
-declare float @llvm.amdgcn.wwm.f32(float) #3
-declare i32 @llvm.amdgcn.wwm.i32(i32) #3
-declare float @llvm.amdgcn.strict.wqm.f32(float) #3
-declare i32 @llvm.amdgcn.strict.wqm.i32(i32) #3
-declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #4
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #3
-declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #3
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #3
-declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #1
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #2
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #2
+declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32, i32, <8 x i32>, i32, i32) nounwind readnone
+declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readnone
+declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readnone
+declare float @llvm.amdgcn.image.sample.1d.f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readnone
+declare void @llvm.amdgcn.kill(i1) nounwind
+declare float @llvm.amdgcn.wqm.f32(float) nounwind readnone
+declare i32 @llvm.amdgcn.wqm.i32(i32) nounwind readnone
+declare float @llvm.amdgcn.strict.wwm.f32(float) nounwind readnone
+declare i32 @llvm.amdgcn.strict.wwm.i32(i32) nounwind readnone
+declare float @llvm.amdgcn.wwm.f32(float) nounwind readnone
+declare i32 @llvm.amdgcn.wwm.i32(i32) nounwind readnone
+declare float @llvm.amdgcn.strict.wqm.f32(float) nounwind readnone
+declare i32 @llvm.amdgcn.strict.wqm.i32(i32) nounwind readnone
+declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) nounwind readnone convergent
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone
+declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) nounwind readnone
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) nounwind readnone
+declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) nounwind
+declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) nounwind readonly
+declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) nounwind readonly
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32)
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32 immarg) #7
-
-attributes #1 = { nounwind }
-attributes #2 = { nounwind readonly }
-attributes #3 = { nounwind readnone }
-attributes #4 = { nounwind readnone convergent }
-attributes #5 = { "amdgpu-ps-wqm-outputs" }
-attributes #6 = { nounwind "InitialPSInputAddr"="2" }
-attributes #7 = { nounwind readnone willreturn }
+declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32 immarg) nounwind readnone willreturn

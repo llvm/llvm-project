@@ -2116,46 +2116,44 @@ main_body:
   ret <2 x float> %out
 }
 
-declare i32 @llvm.amdgcn.image.atomic.swap.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.add.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.sub.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.smin.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.umin.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.smax.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.umax.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.and.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.or.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.xor.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.inc.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.dec.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.cmpswap.1d.i32.i16(i32, i32, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.add.2d.i32.i16(i32, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.add.3d.i32.i16(i32, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.add.cube.i32.i16(i32, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.add.1darray.i32.i16(i32, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.add.2darray.i32.i16(i32, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.add.2dmsaa.i32.i16(i32, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i32 @llvm.amdgcn.image.atomic.add.2darraymsaa.i32.i16(i32, i16, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
+declare i32 @llvm.amdgcn.image.atomic.swap.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.add.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.sub.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.smin.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.umin.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.smax.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.umax.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.and.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.or.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.xor.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.inc.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.dec.1d.i32.i16(i32, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.cmpswap.1d.i32.i16(i32, i32, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.add.2d.i32.i16(i32, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.add.3d.i32.i16(i32, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.add.cube.i32.i16(i32, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.add.1darray.i32.i16(i32, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.add.2darray.i32.i16(i32, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.add.2dmsaa.i32.i16(i32, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i32 @llvm.amdgcn.image.atomic.add.2darraymsaa.i32.i16(i32, i16, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
 
-declare i64 @llvm.amdgcn.image.atomic.swap.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.add.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.sub.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.smin.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.umin.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.smax.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.umax.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.and.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.or.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.xor.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.inc.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.dec.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.cmpswap.1d.i64.i16(i64, i64, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.add.2d.i64.i16(i64, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.add.3d.i64.i16(i64, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.add.cube.i64.i16(i64, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.add.1darray.i64.i16(i64, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.add.2darray.i64.i16(i64, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.add.2dmsaa.i64.i16(i64, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-declare i64 @llvm.amdgcn.image.atomic.add.2darraymsaa.i64.i16(i64, i16, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-
-attributes #0 = { nounwind }
+declare i64 @llvm.amdgcn.image.atomic.swap.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.add.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.sub.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.smin.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.umin.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.smax.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.umax.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.and.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.or.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.xor.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.inc.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.dec.1d.i64.i16(i64, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.cmpswap.1d.i64.i16(i64, i64, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.add.2d.i64.i16(i64, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.add.3d.i64.i16(i64, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.add.cube.i64.i16(i64, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.add.1darray.i64.i16(i64, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.add.2darray.i64.i16(i64, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.add.2dmsaa.i64.i16(i64, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind
+declare i64 @llvm.amdgcn.image.atomic.add.2darraymsaa.i64.i16(i64, i16, i16, i16, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind

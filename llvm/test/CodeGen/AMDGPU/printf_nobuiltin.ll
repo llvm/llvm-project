@@ -11,7 +11,7 @@ define void @caller(i32 %n) {
 ; GCN-NEXT:    ret void
 ;
 entry:
-  %call = call i32 (ptr, ...) @printf(ptr @str, i32 %n) #0
+  %call = call i32 (ptr, ...) @printf(ptr @str, i32 %n) nobuiltin
   ret void
 }
 
@@ -40,5 +40,3 @@ entry:
 }
 
 declare i32 @printf(ptr, ...)
-
-attributes #0 = { nobuiltin }

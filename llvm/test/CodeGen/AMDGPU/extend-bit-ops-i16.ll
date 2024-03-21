@@ -4,7 +4,7 @@
 ; GCN: v_and_b32_e32 [[VAL16:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 0xffff, [[VAL16]]
 define amdgpu_kernel void @and_zext(ptr addrspace(1) %out, ptr addrspace(1) %in) {
-  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %id = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %ptr = getelementptr i16, ptr addrspace(1) %in, i32 %id
   %a = load i16, ptr addrspace(1) %in
   %b = load i16, ptr addrspace(1) %ptr
@@ -19,7 +19,7 @@ define amdgpu_kernel void @and_zext(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; GCN: v_or_b32_e32 [[VAL16:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 0xffff, [[VAL16]]
 define amdgpu_kernel void @or_zext(ptr addrspace(1) %out, ptr addrspace(1) %in) {
-  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %id = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %ptr = getelementptr i16, ptr addrspace(1) %in, i32 %id
   %a = load i16, ptr addrspace(1) %in
   %b = load i16, ptr addrspace(1) %ptr
@@ -34,7 +34,7 @@ define amdgpu_kernel void @or_zext(ptr addrspace(1) %out, ptr addrspace(1) %in) 
 ; GCN: v_xor_b32_e32 [[VAL16:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 0xffff, [[VAL16]]
 define amdgpu_kernel void @xor_zext(ptr addrspace(1) %out, ptr addrspace(1) %in) {
-  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %id = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %ptr = getelementptr i16, ptr addrspace(1) %in, i32 %id
   %a = load i16, ptr addrspace(1) %in
   %b = load i16, ptr addrspace(1) %ptr
@@ -45,6 +45,4 @@ define amdgpu_kernel void @xor_zext(ptr addrspace(1) %out, ptr addrspace(1) %in)
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare double @llvm.fabs.f64(double) #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare double @llvm.fabs.f64(double) nounwind readnone
 
 ; SI-LABEL: {{^}}fp_to_uint_i32_f64:
 ; SI: v_cvt_u32_f64_e32
@@ -71,7 +71,7 @@ define amdgpu_kernel void @fp_to_uint_v4i64_v4f64(ptr addrspace(1) %out, <4 x do
 
 ; FUNC-LABEL: {{^}}fp_to_uint_f64_to_i1:
 ; SI: v_cmp_eq_f64_e64 s{{\[[0-9]+:[0-9]+\]}}, 1.0, s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fp_to_uint_f64_to_i1(ptr addrspace(1) %out, double %in) #0 {
+define amdgpu_kernel void @fp_to_uint_f64_to_i1(ptr addrspace(1) %out, double %in) nounwind {
   %conv = fptoui double %in to i1
   store i1 %conv, ptr addrspace(1) %out
   ret void
@@ -79,12 +79,9 @@ define amdgpu_kernel void @fp_to_uint_f64_to_i1(ptr addrspace(1) %out, double %i
 
 ; FUNC-LABEL: {{^}}fp_to_uint_fabs_f64_to_i1:
 ; SI: v_cmp_eq_f64_e64 s{{\[[0-9]+:[0-9]+\]}}, 1.0, |s{{\[[0-9]+:[0-9]+\]}}|
-define amdgpu_kernel void @fp_to_uint_fabs_f64_to_i1(ptr addrspace(1) %out, double %in) #0 {
+define amdgpu_kernel void @fp_to_uint_fabs_f64_to_i1(ptr addrspace(1) %out, double %in) nounwind {
   %in.fabs = call double @llvm.fabs.f64(double %in)
   %conv = fptoui double %in.fabs to i1
   store i1 %conv, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

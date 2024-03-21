@@ -3364,8 +3364,6 @@ define <2 x half> @select_fneg_posk_src_fmad_v2f16(<2 x i32> %c, <2 x half> %x, 
   ret <2 x half> %select
 }
 
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #0
-declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>) #0
-declare <2 x half> @llvm.fmuladd.v2f16(<2 x half>, <2 x half>, <2 x half>) #0
-
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+declare <2 x half> @llvm.fabs.v2f16(<2 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x half> @llvm.fmuladd.v2f16(<2 x half>, <2 x half>, <2 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)

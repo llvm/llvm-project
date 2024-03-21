@@ -32,18 +32,18 @@
 ; TOVMEM: s_mov_b32 m0, [[M0_RESTORE]]
 
 ; GCN: s_add_i32 s{{[0-9]+}}, m0, 1
-define amdgpu_kernel void @spill_m0(i32 %cond, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @spill_m0(i32 %cond, ptr addrspace(1) %out) nounwind {
 entry:
-  %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={m0}"() #0
+  %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={m0}"() nounwind
   %cmp0 = icmp eq i32 %cond, 0
   br i1 %cmp0, label %if, label %endif
 
 if:
-  call void asm sideeffect "v_nop", ""() #0
+  call void asm sideeffect "v_nop", ""() nounwind
   br label %endif
 
 endif:
-  %foo = call i32 asm sideeffect "s_add_i32 $0, $1, 1", "=s,{m0}"(i32 %m0) #0
+  %foo = call i32 asm sideeffect "s_add_i32 $0, $1, 1", "=s,{m0}"(i32 %m0) nounwind
   store i32 %foo, ptr addrspace(1) %out
   ret void
 }
@@ -56,7 +56,7 @@ endif:
 ; GCN-NOT: v_readlane_b32 m0
 ; GCN-NOT: s_buffer_store_dword m0
 ; GCN-NOT: s_buffer_load_dword m0
-define amdgpu_ps void @spill_kill_m0_lds(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, i32 inreg %m0) #0 {
+define amdgpu_ps void @spill_kill_m0_lds(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, i32 inreg %m0) nounwind {
 main_body:
   %tmp = call float @llvm.amdgcn.interp.mov(i32 2, i32 0, i32 0, i32 %m0)
   %cmp = fcmp ueq float 0.000000e+00, %tmp
@@ -74,7 +74,7 @@ else:                                             ; preds = %main_body
 endif:                                            ; preds = %else, %if
   %export = phi float [ %lds_data, %if ], [ %interp, %else ]
   %tmp4 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %export, float %export)
-  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp4, <2 x half> %tmp4, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp4, <2 x half> %tmp4, i1 true, i1 true) nounwind
   ret void
 }
 
@@ -105,11 +105,11 @@ endif:                                            ; preds = %else, %if
 ; GCN-NOT: v_readlane_b32 m0
 ; GCN-NOT: s_buffer_store_dword m0
 ; GCN-NOT: s_buffer_load_dword m0
-define amdgpu_kernel void @m0_unavailable_spill(i32 %m0.arg) #0 {
+define amdgpu_kernel void @m0_unavailable_spill(i32 %m0.arg) nounwind {
 main_body:
-  %m0 = call i32 asm sideeffect "; def $0, 1", "={m0}"() #0
+  %m0 = call i32 asm sideeffect "; def $0, 1", "={m0}"() nounwind
   %tmp = call float @llvm.amdgcn.interp.mov(i32 2, i32 0, i32 0, i32 %m0.arg)
-  call void asm sideeffect "; clobber $0", "~{m0}"() #0
+  call void asm sideeffect "; clobber $0", "~{m0}"() nounwind
   %cmp = fcmp ueq float 0.000000e+00, %tmp
    br i1 %cmp, label %if, label %else
 
@@ -168,28 +168,25 @@ endif:
 ; TOSMEM: s_dcache_wb
 ; TOSMEM: s_endpgm
 define amdgpu_kernel void @restore_m0_lds(i32 %arg) {
-  %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={m0}"() #0
+  %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={m0}"() nounwind
   %sval = load volatile i64, ptr addrspace(4) undef
   %cmp = icmp eq i32 %arg, 0
   br i1 %cmp, label %ret, label %bb
 
 bb:
   store volatile i64 %sval, ptr addrspace(3) undef
-  call void asm sideeffect "; use $0", "{m0}"(i32 %m0) #0
+  call void asm sideeffect "; use $0", "{m0}"(i32 %m0) nounwind
   br label %ret
 
 ret:
   ret void
 }
 
-declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #1
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
-declare float @llvm.amdgcn.wqm.f32(float) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) nounwind readnone
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind
+declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) nounwind
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) nounwind readnone
+declare float @llvm.amdgcn.wqm.f32(float) nounwind readnone
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

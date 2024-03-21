@@ -53,7 +53,7 @@ define amdgpu_kernel void @break_inserted_outside_of_loop(ptr addrspace(1) %out,
 ; FLAT-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; FLAT-NEXT:    s_endpgm
 main_body:
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %0 = and i32 %a, %tid
   %1 = trunc i32 %0 to i1
   br label %ENDIF
@@ -117,7 +117,7 @@ define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 ; FLAT-NEXT:  ; %bb.4: ; %exit
 ; FLAT-NEXT:    s_endpgm
 entry:
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %0 = icmp eq i32 %tid , 0
   br i1 %0, label %if, label %else
 
@@ -246,6 +246,4 @@ return:
   ret void
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
-
-attributes #0 = { nounwind readnone }
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone

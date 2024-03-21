@@ -6,19 +6,15 @@
 ; vgpr value into a scalar register, but I don't think there's much we
 ; can do to avoid this.
 
-declare void @llvm.write_register.i32(metadata, i32) #0
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare void @llvm.amdgcn.wave.barrier() #2
+declare void @llvm.write_register.i32(metadata, i32) nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare void @llvm.amdgcn.wave.barrier() convergent nounwind
 
 define amdgpu_kernel void @write_vgpr_into_sgpr() {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   call void @llvm.write_register.i32(metadata !0, i32 %tid)
-  call void @llvm.amdgcn.wave.barrier() #2
+  call void @llvm.amdgcn.wave.barrier() convergent nounwind
   ret void
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
-attributes #2 = { convergent nounwind }
 
 !0 = !{!"exec_lo"}

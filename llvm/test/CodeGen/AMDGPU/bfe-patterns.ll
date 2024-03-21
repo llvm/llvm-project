@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI %s
 
-define amdgpu_kernel void @v_ubfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_ubfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; SI-LABEL: v_ubfe_sub_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -52,7 +52,7 @@ define amdgpu_kernel void @v_ubfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; SI-LABEL: v_ubfe_sub_multi_use_shl_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -112,7 +112,7 @@ define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, p
   ret void
 }
 
-define amdgpu_kernel void @s_ubfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %width) #1 {
+define amdgpu_kernel void @s_ubfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %width) nounwind {
 ; SI-LABEL: s_ubfe_sub_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -152,7 +152,7 @@ define amdgpu_kernel void @s_ubfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %
   ret void
 }
 
-define amdgpu_kernel void @s_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i32 %src, i32 %width) #1 {
+define amdgpu_kernel void @s_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i32 %src, i32 %width) nounwind {
 ; SI-LABEL: s_ubfe_sub_multi_use_shl_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -200,7 +200,7 @@ define amdgpu_kernel void @s_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i
   ret void
 }
 
-define amdgpu_kernel void @v_sbfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_sbfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; SI-LABEL: v_sbfe_sub_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -250,7 +250,7 @@ define amdgpu_kernel void @v_sbfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @v_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; SI-LABEL: v_sbfe_sub_multi_use_shl_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -310,7 +310,7 @@ define amdgpu_kernel void @v_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, p
   ret void
 }
 
-define amdgpu_kernel void @s_sbfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %width) #1 {
+define amdgpu_kernel void @s_sbfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %width) nounwind {
 ; SI-LABEL: s_sbfe_sub_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -350,7 +350,7 @@ define amdgpu_kernel void @s_sbfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %
   ret void
 }
 
-define amdgpu_kernel void @s_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i32 %src, i32 %width) #1 {
+define amdgpu_kernel void @s_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i32 %src, i32 %width) nounwind {
 ; SI-LABEL: s_sbfe_sub_multi_use_shl_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -534,7 +534,4 @@ define amdgpu_kernel void @s_sbfe_or_shl_shl_toosmall_i32(ptr addrspace(1) %out,
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

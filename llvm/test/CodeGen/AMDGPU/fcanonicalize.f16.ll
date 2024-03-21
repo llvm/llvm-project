@@ -4,21 +4,21 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=CI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
-declare half @llvm.fabs.f16(half) #0
-declare half @llvm.canonicalize.f16(half) #0
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #0
-declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) #0
-declare <3 x half> @llvm.canonicalize.v3f16(<3 x half>) #0
-declare <4 x half> @llvm.canonicalize.v4f16(<4 x half>) #0
-declare <6 x half> @llvm.canonicalize.v6f16(<6 x half>) #0
-declare <8 x half> @llvm.canonicalize.v8f16(<8 x half>) #0
-declare <12 x half> @llvm.canonicalize.v12f16(<12 x half>) #0
-declare <16 x half> @llvm.canonicalize.v16f16(<16 x half>) #0
-declare <32 x half> @llvm.canonicalize.v32f16(<32 x half>) #0
-declare <64 x half> @llvm.canonicalize.v64f16(<64 x half>) #0
-declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare half @llvm.fabs.f16(half) nounwind readnone
+declare half @llvm.canonicalize.f16(half) nounwind readnone
+declare <2 x half> @llvm.fabs.v2f16(<2 x half>) nounwind readnone
+declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) nounwind readnone
+declare <3 x half> @llvm.canonicalize.v3f16(<3 x half>) nounwind readnone
+declare <4 x half> @llvm.canonicalize.v4f16(<4 x half>) nounwind readnone
+declare <6 x half> @llvm.canonicalize.v6f16(<6 x half>) nounwind readnone
+declare <8 x half> @llvm.canonicalize.v8f16(<8 x half>) nounwind readnone
+declare <12 x half> @llvm.canonicalize.v12f16(<12 x half>) nounwind readnone
+declare <16 x half> @llvm.canonicalize.v16f16(<16 x half>) nounwind readnone
+declare <32 x half> @llvm.canonicalize.v32f16(<32 x half>) nounwind readnone
+declare <64 x half> @llvm.canonicalize.v64f16(<64 x half>) nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_undef_value_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -61,7 +61,7 @@ define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_var_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_var_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -116,7 +116,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_f16(ptr addrspace(1) %out) #1
   ret void
 }
 
-define amdgpu_kernel void @s_test_canonicalize_var_f16(ptr addrspace(1) %out, i16 zeroext %val.arg) #1 {
+define amdgpu_kernel void @s_test_canonicalize_var_f16(ptr addrspace(1) %out, i16 zeroext %val.arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: s_test_canonicalize_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[0:1], 0x2c
@@ -168,7 +168,7 @@ define amdgpu_kernel void @s_test_canonicalize_var_f16(ptr addrspace(1) %out, i1
   ret void
 }
 
-define half @s_test_canonicalize_arg(half %x) #1 {
+define half @s_test_canonicalize_arg(half %x) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: s_test_canonicalize_arg:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -197,7 +197,7 @@ define half @s_test_canonicalize_arg(half %x) #1 {
   ret half %canonicalized
 }
 
-define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) #1 {
+define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_build_vector_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -236,7 +236,7 @@ define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) #1
   ret <2 x half> %canonicalized
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_fabs_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -292,7 +292,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_fneg_fabs_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -349,7 +349,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_fneg_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -405,7 +405,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(ptr addrspace(1) %out) #2 {
+define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_no_denormals_canonicalize_fneg_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -461,7 +461,7 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(ptr add
   ret void
 }
 
-define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_fabs_var_f16(ptr addrspace(1) %out) #2 {
+define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_fabs_var_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_no_denormals_canonicalize_fneg_fabs_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -518,7 +518,7 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_fabs_var_f16(pt
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_p0_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_p0_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_p0_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -561,7 +561,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_f16(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_n0_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_n0_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_n0_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -605,7 +605,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_f16(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_p1_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_p1_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_p1_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -649,7 +649,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_f16(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_n1_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_n1_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_n1_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -693,7 +693,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_f16(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_literal_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_literal_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_literal_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -737,7 +737,7 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_f16(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal0_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal0_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_default_denormals_fold_canonicalize_denormal0_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -781,7 +781,7 @@ define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal0_f1
   ret void
 }
 
-define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f16(ptr addrspace(1) %out) #3 {
+define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_denormals_fold_canonicalize_denormal0_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -825,7 +825,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f16(ptr ad
   ret void
 }
 
-define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal1_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal1_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_default_denormals_fold_canonicalize_denormal1_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -869,7 +869,7 @@ define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal1_f1
   ret void
 }
 
-define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f16(ptr addrspace(1) %out) #3 {
+define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_denormals_fold_canonicalize_denormal1_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -913,7 +913,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f16(ptr ad
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_qnan_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -957,7 +957,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_f16(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_qnan_value_neg1_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1001,7 +1001,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f16(ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_qnan_value_neg2_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1045,7 +1045,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f16(ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_snan0_value_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1089,7 +1089,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f16(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_snan1_value_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1133,7 +1133,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f16(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_snan2_value_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1177,7 +1177,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f16(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_snan3_value_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1221,7 +1221,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_var_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_var_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_var_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1295,7 +1295,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f16(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_fabs_var_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1373,7 +1373,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_fneg_fabs_var_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1453,7 +1453,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(ptr addrspace
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_fneg_var_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1529,7 +1529,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @s_test_canonicalize_var_v2f16(ptr addrspace(1) %out, i32 zeroext %val.arg) #1 {
+define amdgpu_kernel void @s_test_canonicalize_var_v2f16(ptr addrspace(1) %out, i32 zeroext %val.arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: s_test_canonicalize_var_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[0:1], 0x2c
@@ -1590,7 +1590,7 @@ define amdgpu_kernel void @s_test_canonicalize_var_v2f16(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_p0_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_p0_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_p0_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1633,7 +1633,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_v2f16(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_n0_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_n0_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_n0_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1677,7 +1677,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_v2f16(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_p1_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_p1_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_p1_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1721,7 +1721,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_v2f16(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_n1_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_n1_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_n1_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1765,7 +1765,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_v2f16(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_literal_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_literal_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_literal_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1809,7 +1809,7 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_v2f16(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_no_denormals_fold_canonicalize_denormal0_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1853,7 +1853,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_v2f16(p
   ret void
 }
 
-define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_v2f16(ptr addrspace(1) %out) #3 {
+define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_denormals_fold_canonicalize_denormal0_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1897,7 +1897,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_v2f16(ptr 
   ret void
 }
 
-define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_no_denormals_fold_canonicalize_denormal1_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1941,7 +1941,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_v2f16(p
   ret void
 }
 
-define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_v2f16(ptr addrspace(1) %out) #3 {
+define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_denormals_fold_canonicalize_denormal1_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1985,7 +1985,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_v2f16(ptr 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_qnan_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -2029,7 +2029,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_v2f16(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_qnan_value_neg1_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -2073,7 +2073,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_v2f16(ptr addr
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_qnan_value_neg2_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -2117,7 +2117,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_v2f16(ptr addr
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan0_value_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan0_value_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_snan0_value_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -2161,7 +2161,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_v2f16(ptr addrspac
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan1_value_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan1_value_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_snan1_value_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -2205,7 +2205,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_v2f16(ptr addrspac
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan2_value_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan2_value_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_snan2_value_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -2249,7 +2249,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_v2f16(ptr addrspac
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan3_value_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan3_value_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: test_fold_canonicalize_snan3_value_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -2293,7 +2293,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_v2f16(ptr addrspac
   ret void
 }
 
-define <3 x half> @v_test_canonicalize_var_v3f16(<3 x half> %val) #1 {
+define <3 x half> @v_test_canonicalize_var_v3f16(<3 x half> %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_var_v3f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2331,7 +2331,7 @@ define <3 x half> @v_test_canonicalize_var_v3f16(<3 x half> %val) #1 {
   ret <3 x half> %canonicalized
 }
 
-define <4 x half> @v_test_canonicalize_var_v4f16(<4 x half> %val) #1 {
+define <4 x half> @v_test_canonicalize_var_v4f16(<4 x half> %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_var_v4f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2373,7 +2373,7 @@ define <4 x half> @v_test_canonicalize_var_v4f16(<4 x half> %val) #1 {
   ret <4 x half> %canonicalized
 }
 
-define amdgpu_kernel void @s_test_canonicalize_undef_v2f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @s_test_canonicalize_undef_v2f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: s_test_canonicalize_undef_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -2416,7 +2416,7 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v2f16(ptr addrspace(1) %out
   ret void
 }
 
-define <2 x half> @v_test_canonicalize_reg_undef_v2f16(half %val) #1 {
+define <2 x half> @v_test_canonicalize_reg_undef_v2f16(half %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_reg_undef_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2450,7 +2450,7 @@ define <2 x half> @v_test_canonicalize_reg_undef_v2f16(half %val) #1 {
   ret <2 x half> %canonicalized
 }
 
-define <2 x half> @v_test_canonicalize_undef_reg_v2f16(half %val) #1 {
+define <2 x half> @v_test_canonicalize_undef_reg_v2f16(half %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_undef_reg_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2483,7 +2483,7 @@ define <2 x half> @v_test_canonicalize_undef_reg_v2f16(half %val) #1 {
   ret <2 x half> %canonicalized
 }
 
-define <2 x half> @v_test_canonicalize_undef_lo_imm_hi_v2f16() #1 {
+define <2 x half> @v_test_canonicalize_undef_lo_imm_hi_v2f16() nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_undef_lo_imm_hi_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2513,7 +2513,7 @@ define <2 x half> @v_test_canonicalize_undef_lo_imm_hi_v2f16() #1 {
   ret <2 x half> %canonicalized
 }
 
-define <2 x half> @v_test_canonicalize_imm_lo_undef_hi_v2f16() #1 {
+define <2 x half> @v_test_canonicalize_imm_lo_undef_hi_v2f16() nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_imm_lo_undef_hi_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2543,7 +2543,7 @@ define <2 x half> @v_test_canonicalize_imm_lo_undef_hi_v2f16() #1 {
   ret <2 x half> %canonicalized
 }
 
-define <2 x half> @v_test_canonicalize_undef_lo_k_hi_v2f16() #1 {
+define <2 x half> @v_test_canonicalize_undef_lo_k_hi_v2f16() nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_undef_lo_k_hi_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2573,7 +2573,7 @@ define <2 x half> @v_test_canonicalize_undef_lo_k_hi_v2f16() #1 {
   ret <2 x half> %canonicalized
 }
 
-define <2 x half> @v_test_canonicalize_k_lo_undef_hi_v2f16() #1 {
+define <2 x half> @v_test_canonicalize_k_lo_undef_hi_v2f16() nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_k_lo_undef_hi_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2603,7 +2603,7 @@ define <2 x half> @v_test_canonicalize_k_lo_undef_hi_v2f16() #1 {
   ret <2 x half> %canonicalized
 }
 
-define <2 x half> @v_test_canonicalize_reg_k_v2f16(half %val) #1 {
+define <2 x half> @v_test_canonicalize_reg_k_v2f16(half %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_reg_k_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2639,7 +2639,7 @@ define <2 x half> @v_test_canonicalize_reg_k_v2f16(half %val) #1 {
   ret <2 x half> %canonicalized
 }
 
-define <2 x half> @v_test_canonicalize_k_reg_v2f16(half %val) #1 {
+define <2 x half> @v_test_canonicalize_k_reg_v2f16(half %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_k_reg_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2675,7 +2675,7 @@ define <2 x half> @v_test_canonicalize_k_reg_v2f16(half %val) #1 {
   ret <2 x half> %canonicalized
 }
 
-define amdgpu_kernel void @s_test_canonicalize_undef_v4f16(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @s_test_canonicalize_undef_v4f16(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: s_test_canonicalize_undef_v4f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -2723,7 +2723,7 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v4f16(ptr addrspace(1) %out
   ret void
 }
 
-define <4 x half> @v_test_canonicalize_reg_undef_undef_undef_v4f16(half %val) #1 {
+define <4 x half> @v_test_canonicalize_reg_undef_undef_undef_v4f16(half %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2763,7 +2763,7 @@ define <4 x half> @v_test_canonicalize_reg_undef_undef_undef_v4f16(half %val) #1
   ret <4 x half> %canonicalized
 }
 
-define <4 x half> @v_test_canonicalize_reg_reg_undef_undef_v4f16(half %val0, half %val1) #1 {
+define <4 x half> @v_test_canonicalize_reg_reg_undef_undef_v4f16(half %val0, half %val1) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_reg_reg_undef_undef_v4f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2807,7 +2807,7 @@ define <4 x half> @v_test_canonicalize_reg_reg_undef_undef_v4f16(half %val0, hal
   ret <4 x half> %canonicalized
 }
 
-define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half %val1, half %val2) #1 {
+define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half %val1, half %val2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_reg_undef_reg_reg_v4f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2856,7 +2856,7 @@ define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half 
   ret <4 x half> %canonicalized
 }
 
-define <6 x half> @v_test_canonicalize_var_v6f16(<6 x half> %val) #1 {
+define <6 x half> @v_test_canonicalize_var_v6f16(<6 x half> %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_var_v6f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2907,7 +2907,7 @@ define <6 x half> @v_test_canonicalize_var_v6f16(<6 x half> %val) #1 {
   ret <6 x half> %canonicalized
 }
 
-define <8 x half> @v_test_canonicalize_var_v8f16(<8 x half> %val) #1 {
+define <8 x half> @v_test_canonicalize_var_v8f16(<8 x half> %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_var_v8f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2967,7 +2967,7 @@ define <8 x half> @v_test_canonicalize_var_v8f16(<8 x half> %val) #1 {
   ret <8 x half> %canonicalized
 }
 
-define <12 x half> @v_test_canonicalize_var_v12f16(<12 x half> %val) #1 {
+define <12 x half> @v_test_canonicalize_var_v12f16(<12 x half> %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_var_v12f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3045,7 +3045,7 @@ define <12 x half> @v_test_canonicalize_var_v12f16(<12 x half> %val) #1 {
   ret <12 x half> %canonicalized
 }
 
-define <16 x half> @v_test_canonicalize_var_v16f16(<16 x half> %val) #1 {
+define <16 x half> @v_test_canonicalize_var_v16f16(<16 x half> %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_var_v16f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3141,7 +3141,7 @@ define <16 x half> @v_test_canonicalize_var_v16f16(<16 x half> %val) #1 {
   ret <16 x half> %canonicalized
 }
 
-define <32 x half> @v_test_canonicalize_var_v32f16(<32 x half> %val) #1 {
+define <32 x half> @v_test_canonicalize_var_v32f16(<32 x half> %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_var_v32f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3311,7 +3311,7 @@ define <32 x half> @v_test_canonicalize_var_v32f16(<32 x half> %val) #1 {
   ret <32 x half> %canonicalized
 }
 
-define <64 x half> @v_test_canonicalize_var_v64f16(<64 x half> %val) #1 {
+define <64 x half> @v_test_canonicalize_var_v64f16(<64 x half> %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; VI-LABEL: v_test_canonicalize_var_v64f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3883,8 +3883,3 @@ define <64 x half> @v_test_canonicalize_var_v64f16(<64 x half> %val) #1 {
   %canonicalized = call <64 x half> @llvm.canonicalize.v64f16(<64 x half> %val)
   ret <64 x half> %canonicalized
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #2 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #3 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

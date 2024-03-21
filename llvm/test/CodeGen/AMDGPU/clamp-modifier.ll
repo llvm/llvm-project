@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
-define amdgpu_kernel void @v_clamp_add_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_add_src_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -72,7 +72,7 @@ define amdgpu_kernel void @v_clamp_add_src_f32(ptr addrspace(1) %out, ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_multi_use_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_clamp_multi_use_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_multi_use_src_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -155,7 +155,7 @@ define amdgpu_kernel void @v_clamp_multi_use_src_f32(ptr addrspace(1) %out, ptr 
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_dbg_use_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_clamp_dbg_use_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_dbg_use_src_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -224,7 +224,7 @@ define amdgpu_kernel void @v_clamp_dbg_use_src_f32(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_add_neg_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_neg_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_add_neg_src_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -298,7 +298,7 @@ define amdgpu_kernel void @v_clamp_add_neg_src_f32(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @v_non_clamp_max_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_non_clamp_max_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_non_clamp_max_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -370,7 +370,7 @@ define amdgpu_kernel void @v_non_clamp_max_f32(ptr addrspace(1) %out, ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_add_src_f32_denormals(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #2 {
+define amdgpu_kernel void @v_clamp_add_src_f32_denormals(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="ieee.ieee" {
 ; SI-LABEL: v_clamp_add_src_f32_denormals:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -438,7 +438,7 @@ define amdgpu_kernel void @v_clamp_add_src_f32_denormals(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_add_src_f16_denorm(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_f16_denorm(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_add_src_f16_denorm:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -508,7 +508,7 @@ define amdgpu_kernel void @v_clamp_add_src_f16_denorm(ptr addrspace(1) %out, ptr
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_add_src_f16_no_denormals(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #3 {
+define amdgpu_kernel void @v_clamp_add_src_f16_no_denormals(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_add_src_f16_no_denormals:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -578,7 +578,7 @@ define amdgpu_kernel void @v_clamp_add_src_f16_no_denormals(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_add_src_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_add_src_v2f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -650,7 +650,7 @@ define amdgpu_kernel void @v_clamp_add_src_v2f32(ptr addrspace(1) %out, ptr addr
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_add_src_f64(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_f64(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_add_src_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -718,7 +718,7 @@ define amdgpu_kernel void @v_clamp_add_src_f64(ptr addrspace(1) %out, ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_mac_to_mad(ptr addrspace(1) %out, ptr addrspace(1) %aptr, float %a) #0 {
+define amdgpu_kernel void @v_clamp_mac_to_mad(ptr addrspace(1) %out, ptr addrspace(1) %aptr, float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_mac_to_mad:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -799,7 +799,7 @@ define amdgpu_kernel void @v_clamp_mac_to_mad(ptr addrspace(1) %out, ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_add_src_v2f16_denorm:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -878,7 +878,7 @@ define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm(ptr addrspace(1) %out, p
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_add_src_v2f16_no_denormals(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #3 {
+define amdgpu_kernel void @v_clamp_add_src_v2f16_no_denormals(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_add_src_v2f16_no_denormals:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -957,7 +957,7 @@ define amdgpu_kernel void @v_clamp_add_src_v2f16_no_denormals(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_add_src_v2f16_denorm_neg:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1050,7 +1050,7 @@ define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg_lo(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg_lo(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_add_src_v2f16_denorm_neg_lo:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1137,7 +1137,7 @@ define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg_lo(ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg_hi(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg_hi(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_add_src_v2f16_denorm_neg_hi:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1224,7 +1224,7 @@ define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg_hi(ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_shuf(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_shuf(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_add_src_v2f16_denorm_shuf:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1308,7 +1308,7 @@ define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_shuf(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_no_clamp_add_src_v2f16_f32_src(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_no_clamp_add_src_v2f16_f32_src(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_no_clamp_add_src_v2f16_f32_src:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1391,7 +1391,7 @@ define amdgpu_kernel void @v_no_clamp_add_src_v2f16_f32_src(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @v_no_clamp_add_packed_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_no_clamp_add_packed_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_no_clamp_add_packed_src_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1478,7 +1478,7 @@ define amdgpu_kernel void @v_no_clamp_add_packed_src_f32(ptr addrspace(1) %out, 
 
 ; Since the high bits are zeroed, it probably would be OK in this case
 ; to use clamp.
-define amdgpu_kernel void @v_no_clamp_add_src_v2f16_f16_src(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_no_clamp_add_src_v2f16_f16_src(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_no_clamp_add_src_v2f16_f16_src:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1567,7 +1567,7 @@ define amdgpu_kernel void @v_no_clamp_add_src_v2f16_f16_src(ptr addrspace(1) %ou
 
 ; FIXME: Worse code pre-gfx9
 
-define <2 x half> @v_clamp_cvt_pkrtz_src_v2f16_denorm(float %a, float %b) #0 {
+define <2 x half> @v_clamp_cvt_pkrtz_src_v2f16_denorm(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_clamp_cvt_pkrtz_src_v2f16_denorm:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1603,31 +1603,26 @@ define <2 x half> @v_clamp_cvt_pkrtz_src_v2f16_denorm(float %a, float %b) #0 {
   ret <2 x half> %clamp
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.floor.f32(float) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare float @llvm.amdgcn.fmed3.f32(float, float, float) #1
-declare double @llvm.fabs.f64(double) #1
-declare double @llvm.minnum.f64(double, double) #1
-declare double @llvm.maxnum.f64(double, double) #1
-declare half @llvm.fabs.f16(half) #1
-declare half @llvm.minnum.f16(half, half) #1
-declare half @llvm.maxnum.f16(half, half) #1
-declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) #1
-declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>) #1
-declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>) #1
-declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>) #1
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare float @llvm.fabs.f32(float) nounwind readnone
+declare float @llvm.floor.f32(float) nounwind readnone
+declare float @llvm.minnum.f32(float, float) nounwind readnone
+declare float @llvm.maxnum.f32(float, float) nounwind readnone
+declare float @llvm.amdgcn.fmed3.f32(float, float, float) nounwind readnone
+declare double @llvm.fabs.f64(double) nounwind readnone
+declare double @llvm.minnum.f64(double, double) nounwind readnone
+declare double @llvm.maxnum.f64(double, double) nounwind readnone
+declare half @llvm.fabs.f16(half) nounwind readnone
+declare half @llvm.minnum.f16(half, half) nounwind readnone
+declare half @llvm.maxnum.f16(half, half) nounwind readnone
+declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) nounwind readnone
+declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>) nounwind readnone
+declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>) nounwind readnone
+declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>) nounwind readnone
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) nounwind readnone
 
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
-
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "denormal-fp-math-f32"="ieee.ieee" }
-attributes #3 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" }
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

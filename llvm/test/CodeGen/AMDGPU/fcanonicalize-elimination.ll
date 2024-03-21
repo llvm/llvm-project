@@ -223,7 +223,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fpextend_value_f32_f16(ptr add
 ; GCN-NOT: v_mul
 ; GCN-NOT: v_max
 ; GCN: {{flat|global}}_store_dword v{{.+}}, [[V]]
-define amdgpu_kernel void @test_fold_canonicalize_fpextend_value_f32_f16_flushf16(ptr addrspace(1) %arg, ptr addrspace(1) %out) #2 {
+define amdgpu_kernel void @test_fold_canonicalize_fpextend_value_f32_f16_flushf16(ptr addrspace(1) %arg, ptr addrspace(1) %out) "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds half, ptr addrspace(1) %arg, i32 %id
   %load = load half, ptr addrspace(1) %gep, align 2
@@ -271,7 +271,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fpround_value_f16_f32(ptr addr
 ; GCN-NOT: v_max
 ; GCN-NOT: v_mul
 ; GCN: {{flat|global}}_store_short v{{.+}}, [[V]]
-define amdgpu_kernel void @test_fold_canonicalize_fpround_value_f16_f32_flushf16(ptr addrspace(1) %arg, ptr addrspace(1) %out) #2 {
+define amdgpu_kernel void @test_fold_canonicalize_fpround_value_f16_f32_flushf16(ptr addrspace(1) %arg, ptr addrspace(1) %out) "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
   %load = load float, ptr addrspace(1) %gep, align 4
@@ -471,7 +471,7 @@ define amdgpu_kernel void @test_fold_canonicalize_minnum_value_from_load_f32_iee
   ret void
 }
 
-; define amdgpu_kernel void @test_fold_canonicalize_minnum_value_from_load_f32_nnan_ieee_mode(ptr addrspace(1) %arg) #1 {
+; define amdgpu_kernel void @test_fold_canonicalize_minnum_value_from_load_f32_nnan_ieee_mode(ptr addrspace(1) %arg) "no-nans-fp-math"="true" {
 ;   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
 ;   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
 ;   %load = load float, ptr addrspace(1) %gep, align 4
@@ -621,7 +621,7 @@ entry:
 ; GFX9-DENORM-NOT: v_max
 ; VI-FLUSH: v_mul_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
 ; GFX9-FLUSH: v_max_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f32(ptr addrspace(1) %arg, ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f32(ptr addrspace(1) %arg, ptr addrspace(1) %out) "no-nans-fp-math"="true" {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
   %v = load float, ptr addrspace(1) %gep, align 4
@@ -636,7 +636,7 @@ define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f32(ptr addrsp
 ; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, [[V]]
 ; GCN-NOT: v_mul_
 ; GCN-NOT: v_max_
-define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f64(ptr addrspace(1) %arg, ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f64(ptr addrspace(1) %arg, ptr addrspace(1) %out) "no-nans-fp-math"="true" {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds double, ptr addrspace(1) %arg, i32 %id
   %v = load double, ptr addrspace(1) %gep, align 8
@@ -650,7 +650,7 @@ define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f64(ptr addrsp
 ; GCN: {{flat|global}}_load_ushort [[V1:v[0-9]+]],
 ; GCN: v_max_f16_e32 [[V2:v[0-9]+]], [[V1]], [[V1]]
 ; GCN: {{flat|global}}_store_short v{{.+}}, [[V2]]
-define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f16(ptr addrspace(1) %arg, ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f16(ptr addrspace(1) %arg, ptr addrspace(1) %out) "no-nans-fp-math"="true" {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds half, ptr addrspace(1) %arg, i32 %id
   %v = load half, ptr addrspace(1) %gep, align 2
@@ -724,7 +724,7 @@ define float @test_fold_canonicalize_minnum_value_ieee_mode(float %arg0, float %
 ; GCN: v_min_f32_e32 v0, v0, v1
 ; VI-FLUSH-NEXT: v_mul_f32_e32 v0, 1.0, v0
 ; GCN-NEXT: ; return
-define amdgpu_ps float @test_fold_canonicalize_minnum_value_no_ieee_mode_nnan(float %arg0, float %arg1) #1 {
+define amdgpu_ps float @test_fold_canonicalize_minnum_value_no_ieee_mode_nnan(float %arg0, float %arg1) "no-nans-fp-math"="true" {
   %v = tail call float @llvm.minnum.f32(float %arg0, float %arg1)
   %canonicalized = tail call float @llvm.canonicalize.f32(float %v)
   ret float %canonicalized
@@ -859,33 +859,29 @@ define float @v_test_canonicalize_amdgcn_exp2(float %a) {
 ; in the .amd_amdgpu_isa "amdgcn-unknown-freebsd11.0--gfx802" directive
 ; GCN: .amd_amdgpu_isa
 
-declare float @llvm.canonicalize.f32(float) #0
-declare float @llvm.copysign.f32(float, float) #0
-declare float @llvm.amdgcn.fmul.legacy(float, float) #0
-declare float @llvm.amdgcn.fmad.ftz.f32(float, float, float) #0
-declare double @llvm.canonicalize.f64(double) #0
-declare half @llvm.canonicalize.f16(half) #0
-declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) #0
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare float @llvm.sqrt.f32(float) #0
-declare float @llvm.ceil.f32(float) #0
-declare float @llvm.floor.f32(float) #0
-declare float @llvm.fma.f32(float, float, float) #0
-declare float @llvm.fmuladd.f32(float, float, float) #0
-declare float @llvm.fabs.f32(float) #0
-declare float @llvm.sin.f32(float) #0
-declare float @llvm.cos.f32(float) #0
-declare half @llvm.sin.f16(half) #0
-declare half @llvm.cos.f16(half) #0
-declare float @llvm.minnum.f32(float, float) #0
-declare float @llvm.maxnum.f32(float, float) #0
-declare double @llvm.maxnum.f64(double, double) #0
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #0
-declare float @llvm.amdgcn.cubeid(float, float, float) #0
-declare float @llvm.amdgcn.frexp.mant.f32(float) #0
-declare float @llvm.amdgcn.log.f32(float) #0
-declare float @llvm.amdgcn.exp2.f32(float) #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { "no-nans-fp-math"="true" }
-attributes #2 = { "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" }
+declare float @llvm.canonicalize.f32(float) nounwind readnone
+declare float @llvm.copysign.f32(float, float) nounwind readnone
+declare float @llvm.amdgcn.fmul.legacy(float, float) nounwind readnone
+declare float @llvm.amdgcn.fmad.ftz.f32(float, float, float) nounwind readnone
+declare double @llvm.canonicalize.f64(double) nounwind readnone
+declare half @llvm.canonicalize.f16(half) nounwind readnone
+declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare float @llvm.sqrt.f32(float) nounwind readnone
+declare float @llvm.ceil.f32(float) nounwind readnone
+declare float @llvm.floor.f32(float) nounwind readnone
+declare float @llvm.fma.f32(float, float, float) nounwind readnone
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone
+declare float @llvm.fabs.f32(float) nounwind readnone
+declare float @llvm.sin.f32(float) nounwind readnone
+declare float @llvm.cos.f32(float) nounwind readnone
+declare half @llvm.sin.f16(half) nounwind readnone
+declare half @llvm.cos.f16(half) nounwind readnone
+declare float @llvm.minnum.f32(float, float) nounwind readnone
+declare float @llvm.maxnum.f32(float, float) nounwind readnone
+declare double @llvm.maxnum.f64(double, double) nounwind readnone
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) nounwind readnone
+declare float @llvm.amdgcn.cubeid(float, float, float) nounwind readnone
+declare float @llvm.amdgcn.frexp.mant.f32(float) nounwind readnone
+declare float @llvm.amdgcn.log.f32(float) nounwind readnone
+declare float @llvm.amdgcn.exp2.f32(float) nounwind readnone

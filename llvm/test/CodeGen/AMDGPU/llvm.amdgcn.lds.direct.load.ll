@@ -27,7 +27,7 @@
 ; GCN: buffer_store_b32
 ; GCN: buffer_store_b32
 define amdgpu_ps void @lds_direct_load(ptr addrspace(8) inreg %buf, i32 inreg %arg0,
-                                       i32 inreg %arg1, i32 inreg %arg2) #0 {
+                                       i32 inreg %arg1, i32 inreg %arg2) nounwind {
 main_body:
   %p0 = call float @llvm.amdgcn.lds.direct.load(i32 %arg0)
   ; Ensure memory clustering is occuring for lds_direct_load
@@ -45,8 +45,5 @@ main_body:
   ret void
 }
 
-declare float @llvm.amdgcn.lds.direct.load(i32) #1
+declare float @llvm.amdgcn.lds.direct.load(i32) nounwind readonly
 declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32)
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readonly }

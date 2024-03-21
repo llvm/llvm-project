@@ -5,7 +5,7 @@
 ; This normally would be fixed by instcombine to be compare to the GEP
 ; indices
 
-define amdgpu_kernel void @lds_promoted_alloca_icmp_same_derived_pointer(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @lds_promoted_alloca_icmp_same_derived_pointer(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 ; CHECK-LABEL: @lds_promoted_alloca_icmp_same_derived_pointer(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP1]], i64 1
@@ -47,7 +47,7 @@ define amdgpu_kernel void @lds_promoted_alloca_icmp_same_derived_pointer(ptr add
   ret void
 }
 
-define amdgpu_kernel void @lds_promoted_alloca_icmp_null_rhs(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @lds_promoted_alloca_icmp_null_rhs(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 ; CHECK-LABEL: @lds_promoted_alloca_icmp_null_rhs(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP1]], i64 1
@@ -86,7 +86,7 @@ define amdgpu_kernel void @lds_promoted_alloca_icmp_null_rhs(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @lds_promoted_alloca_icmp_null_lhs(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @lds_promoted_alloca_icmp_null_lhs(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 ; CHECK-LABEL: @lds_promoted_alloca_icmp_null_lhs(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP1]], i64 1
@@ -125,7 +125,7 @@ define amdgpu_kernel void @lds_promoted_alloca_icmp_null_lhs(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @lds_promoted_alloca_icmp_unknown_ptr(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @lds_promoted_alloca_icmp_unknown_ptr(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 ; CHECK-LABEL: @lds_promoted_alloca_icmp_unknown_ptr(
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [16 x i32], align 4, addrspace(5)
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[A:%.*]]
@@ -153,6 +153,4 @@ define amdgpu_kernel void @lds_promoted_alloca_icmp_unknown_ptr(ptr addrspace(1)
   ret void
 }
 
-declare ptr addrspace(5) @get_unknown_pointer() #0
-
-attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" }
+declare ptr addrspace(5) @get_unknown_pointer() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256"

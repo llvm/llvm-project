@@ -6,7 +6,7 @@
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @fold_mi_v_and_0(ptr addrspace(1) %out) {
-  %x = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %x = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %and = and i32 %size, %x
   store i32 %and, ptr addrspace(1) %out
@@ -17,7 +17,7 @@ define amdgpu_kernel void @fold_mi_v_and_0(ptr addrspace(1) %out) {
 ; GCN: v_mov_b32_e32 [[RESULT:v[0-9]+]], 0{{$}}
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_dword [[RESULT]]
-define amdgpu_kernel void @fold_mi_s_and_0(ptr addrspace(1) %out, i32 %x) #0 {
+define amdgpu_kernel void @fold_mi_s_and_0(ptr addrspace(1) %out, i32 %x) nounwind {
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %and = and i32 %size, %x
   store i32 %and, ptr addrspace(1) %out
@@ -29,7 +29,7 @@ define amdgpu_kernel void @fold_mi_s_and_0(ptr addrspace(1) %out, i32 %x) #0 {
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @fold_mi_v_or_0(ptr addrspace(1) %out) {
-  %x = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %x = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %or = or i32 %size, %x
   store i32 %or, ptr addrspace(1) %out
@@ -42,7 +42,7 @@ define amdgpu_kernel void @fold_mi_v_or_0(ptr addrspace(1) %out) {
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[SVAL]]
 ; GCN-NOT: [[VVAL]]
 ; GCN: buffer_store_dword [[VVAL]]
-define amdgpu_kernel void @fold_mi_s_or_0(ptr addrspace(1) %out, i32 %x) #0 {
+define amdgpu_kernel void @fold_mi_s_or_0(ptr addrspace(1) %out, i32 %x) nounwind {
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %or = or i32 %size, %x
   store i32 %or, ptr addrspace(1) %out
@@ -54,7 +54,7 @@ define amdgpu_kernel void @fold_mi_s_or_0(ptr addrspace(1) %out, i32 %x) #0 {
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @fold_mi_v_xor_0(ptr addrspace(1) %out) {
-  %x = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %x = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %xor = xor i32 %size, %x
   store i32 %xor, ptr addrspace(1) %out
@@ -67,7 +67,7 @@ define amdgpu_kernel void @fold_mi_v_xor_0(ptr addrspace(1) %out) {
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[SVAL]]
 ; GCN-NOT: [[VVAL]]
 ; GCN: buffer_store_dword [[VVAL]]
-define amdgpu_kernel void @fold_mi_s_xor_0(ptr addrspace(1) %out, i32 %x) #0 {
+define amdgpu_kernel void @fold_mi_s_xor_0(ptr addrspace(1) %out, i32 %x) nounwind {
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %xor = xor i32 %size, %x
   store i32 %xor, ptr addrspace(1) %out
@@ -78,7 +78,7 @@ define amdgpu_kernel void @fold_mi_s_xor_0(ptr addrspace(1) %out, i32 %x) #0 {
 ; GCN: v_mov_b32_e32 [[RESULT:v[0-9]+]], -1{{$}}
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_dword [[RESULT]]
-define amdgpu_kernel void @fold_mi_s_not_0(ptr addrspace(1) %out, i32 %x) #0 {
+define amdgpu_kernel void @fold_mi_s_not_0(ptr addrspace(1) %out, i32 %x) nounwind {
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %xor = xor i32 %size, -1
   store i32 %xor, ptr addrspace(1) %out
@@ -136,9 +136,6 @@ define amdgpu_kernel void @fold_mi_and_neg1(ptr addrspace(1) %out) {
   ret void
 }
 
-declare i64 @llvm.ctpop.i64(i64) #1
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-declare i32 @llvm.amdgcn.groupstaticsize() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i64 @llvm.ctpop.i64(i64) nounwind readnone
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone
+declare i32 @llvm.amdgcn.groupstaticsize() nounwind readnone

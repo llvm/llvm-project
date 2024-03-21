@@ -2,38 +2,38 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -enable-var-scope -check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -enable-var-scope -check-prefix=GFX11 %s
 
-declare hidden void @external_void_func_i8_inreg(i8 inreg) #0
-declare hidden void @external_void_func_i16_inreg(i32 inreg) #0
-declare hidden void @external_void_func_i32_inreg(i32 inreg) #0
-declare hidden void @external_void_func_i64_inreg(i64 inreg) #0
-declare hidden void @external_void_func_v2i32_inreg(<2 x i32> inreg) #0
-declare hidden void @external_void_func_v3i32_inreg(<3 x i32> inreg) #0
-declare hidden void @external_void_func_v4i32_inreg(<4 x i32> inreg) #0
-declare hidden void @external_void_func_v8i32_inreg(<8 x i32> inreg) #0
-declare hidden void @external_void_func_v16i32_inreg(<16 x i32> inreg) #0
-declare hidden void @external_void_func_f16_inreg(half inreg) #0
-declare hidden void @external_void_func_bf16_inreg(bfloat inreg) #0
-declare hidden void @external_void_func_f32_inreg(float inreg) #0
-declare hidden void @external_void_func_f64_inreg(double inreg) #0
-declare hidden void @external_void_func_v2f16_inreg(<2 x half> inreg) #0
-declare hidden void @external_void_func_v2bf16_inreg(<2 x bfloat> inreg) #0
-declare hidden void @external_void_func_v3f16_inreg(<3 x half> inreg) #0
-declare hidden void @external_void_func_v4f16_inreg(<4 x half> inreg) #0
+declare hidden void @external_void_func_i8_inreg(i8 inreg) nounwind
+declare hidden void @external_void_func_i16_inreg(i32 inreg) nounwind
+declare hidden void @external_void_func_i32_inreg(i32 inreg) nounwind
+declare hidden void @external_void_func_i64_inreg(i64 inreg) nounwind
+declare hidden void @external_void_func_v2i32_inreg(<2 x i32> inreg) nounwind
+declare hidden void @external_void_func_v3i32_inreg(<3 x i32> inreg) nounwind
+declare hidden void @external_void_func_v4i32_inreg(<4 x i32> inreg) nounwind
+declare hidden void @external_void_func_v8i32_inreg(<8 x i32> inreg) nounwind
+declare hidden void @external_void_func_v16i32_inreg(<16 x i32> inreg) nounwind
+declare hidden void @external_void_func_f16_inreg(half inreg) nounwind
+declare hidden void @external_void_func_bf16_inreg(bfloat inreg) nounwind
+declare hidden void @external_void_func_f32_inreg(float inreg) nounwind
+declare hidden void @external_void_func_f64_inreg(double inreg) nounwind
+declare hidden void @external_void_func_v2f16_inreg(<2 x half> inreg) nounwind
+declare hidden void @external_void_func_v2bf16_inreg(<2 x bfloat> inreg) nounwind
+declare hidden void @external_void_func_v3f16_inreg(<3 x half> inreg) nounwind
+declare hidden void @external_void_func_v4f16_inreg(<4 x half> inreg) nounwind
 
-declare hidden void @external_void_func_p0_inreg(ptr inreg) #0
-declare hidden void @external_void_func_p1_inreg(ptr addrspace(1) inreg) #0
-declare hidden void @external_void_func_p3_inreg(ptr addrspace(3) inreg) #0
-declare hidden void @external_void_func_v2p1_inreg(<2 x ptr addrspace(1)> inreg) #0
-declare hidden void @external_void_func_v2p5_inreg(<2 x ptr addrspace(5)> inreg) #0
+declare hidden void @external_void_func_p0_inreg(ptr inreg) nounwind
+declare hidden void @external_void_func_p1_inreg(ptr addrspace(1) inreg) nounwind
+declare hidden void @external_void_func_p3_inreg(ptr addrspace(3) inreg) nounwind
+declare hidden void @external_void_func_v2p1_inreg(<2 x ptr addrspace(1)> inreg) nounwind
+declare hidden void @external_void_func_v2p5_inreg(<2 x ptr addrspace(5)> inreg) nounwind
 
-declare hidden void @external_void_func_i64_inreg_i32_inreg_i64_inreg(i64 inreg, i32 inreg, i64 inreg) #0
+declare hidden void @external_void_func_i64_inreg_i32_inreg_i64_inreg(i64 inreg, i32 inreg, i64 inreg) nounwind
 
-declare hidden void @external_void_func_a15i32_inreg([15 x i32] inreg) #0
-declare hidden void @external_void_func_a16i32_inreg([16 x i32] inreg) #0
-declare hidden void @external_void_func_a15i32_inreg_i32_inreg([15 x i32] inreg, i32 inreg) #0
-declare hidden void @external_void_func_a15i32_inreg_i32_inreg__noimplicit([15 x i32] inreg, i32 inreg) #1
+declare hidden void @external_void_func_a15i32_inreg([15 x i32] inreg) nounwind
+declare hidden void @external_void_func_a16i32_inreg([16 x i32] inreg) nounwind
+declare hidden void @external_void_func_a15i32_inreg_i32_inreg([15 x i32] inreg, i32 inreg) nounwind
+declare hidden void @external_void_func_a15i32_inreg_i32_inreg__noimplicit([15 x i32] inreg, i32 inreg) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z"
 
-define void @test_call_external_void_func_i8_inreg(i8 inreg %arg) #0 {
+define void @test_call_external_void_func_i8_inreg(i8 inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i8_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -94,7 +94,7 @@ define void @test_call_external_void_func_i8_inreg(i8 inreg %arg) #0 {
   ret void
 }
 
-define void @test_call_external_void_func_i16_inreg(i16 inreg %arg) #0 {
+define void @test_call_external_void_func_i16_inreg(i16 inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -155,7 +155,7 @@ define void @test_call_external_void_func_i16_inreg(i16 inreg %arg) #0 {
   ret void
 }
 
-define void @test_call_external_void_func_i32_inreg(i32 inreg %arg) #0 {
+define void @test_call_external_void_func_i32_inreg(i32 inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -216,7 +216,7 @@ define void @test_call_external_void_func_i32_inreg(i32 inreg %arg) #0 {
   ret void
 }
 
-define void @test_call_external_void_func_i64_inreg(i64 inreg %arg) #0 {
+define void @test_call_external_void_func_i64_inreg(i64 inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -277,7 +277,7 @@ define void @test_call_external_void_func_i64_inreg(i64 inreg %arg) #0 {
   ret void
 }
 
-define void @test_call_external_void_func_v2i32_inreg(<2 x i32> inreg %arg) #0 {
+define void @test_call_external_void_func_v2i32_inreg(<2 x i32> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -338,7 +338,7 @@ define void @test_call_external_void_func_v2i32_inreg(<2 x i32> inreg %arg) #0 {
   ret void
 }
 
-define void @test_call_external_void_func_v3i32_inreg(<3 x i32> inreg %arg) #0 {
+define void @test_call_external_void_func_v3i32_inreg(<3 x i32> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -400,7 +400,7 @@ define void @test_call_external_void_func_v3i32_inreg(<3 x i32> inreg %arg) #0 {
   ret void
 }
 
-define void @test_call_external_void_func_v4i32_inreg(<4 x i32> inreg %arg) #0 {
+define void @test_call_external_void_func_v4i32_inreg(<4 x i32> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -463,7 +463,7 @@ define void @test_call_external_void_func_v4i32_inreg(<4 x i32> inreg %arg) #0 {
   ret void
 }
 
-define void @test_call_external_void_func_v8i32_inreg(<8 x i32> inreg %arg) #0 {
+define void @test_call_external_void_func_v8i32_inreg(<8 x i32> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v8i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -535,12 +535,12 @@ define void @test_call_external_void_func_v8i32_inreg(<8 x i32> inreg %arg) #0 {
 }
 
 ; FIXME:
-; define void @test_call_external_void_func_v16i32_inreg(<16 x i32> inreg %arg) #0 {
+; define void @test_call_external_void_func_v16i32_inreg(<16 x i32> inreg %arg) nounwind {
 ;   call void @external_void_func_v16i32_inreg(<16 x i32> inreg %arg)
 ;   ret void
 ; }
 
-define void @test_call_external_void_func_f16_inreg(half inreg %arg) #0 {
+define void @test_call_external_void_func_f16_inreg(half inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_f16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -601,7 +601,7 @@ define void @test_call_external_void_func_f16_inreg(half inreg %arg) #0 {
   ret void
 }
 
-define void @test_call_external_void_func_bf16_inreg(bfloat inreg %arg) #0 {
+define void @test_call_external_void_func_bf16_inreg(bfloat inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -662,7 +662,7 @@ define void @test_call_external_void_func_bf16_inreg(bfloat inreg %arg) #0 {
   ret void
 }
 
-define void @test_call_external_void_func_f32_inreg(float inreg %arg) #0 {
+define void @test_call_external_void_func_f32_inreg(float inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_f32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -723,7 +723,7 @@ define void @test_call_external_void_func_f32_inreg(float inreg %arg) #0 {
   ret void
 }
 
-define void @test_call_external_void_func_f64_inreg(double inreg %arg) #0 {
+define void @test_call_external_void_func_f64_inreg(double inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_f64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -784,7 +784,7 @@ define void @test_call_external_void_func_f64_inreg(double inreg %arg) #0 {
   ret void
 }
 
-define void @test_call_external_void_func_v2f16_inreg(<2 x half> inreg %arg) #0 {
+define void @test_call_external_void_func_v2f16_inreg(<2 x half> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2f16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -846,7 +846,7 @@ define void @test_call_external_void_func_v2f16_inreg(<2 x half> inreg %arg) #0 
 }
 
 
-define void @test_call_external_void_func_v2bf16_inreg(<2 x bfloat> inreg %arg) #0 {
+define void @test_call_external_void_func_v2bf16_inreg(<2 x bfloat> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -907,7 +907,7 @@ define void @test_call_external_void_func_v2bf16_inreg(<2 x bfloat> inreg %arg) 
   ret void
 }
 
-define void @test_call_external_void_func_v3f16_inreg(<3 x half> inreg %arg) #0 {
+define void @test_call_external_void_func_v3f16_inreg(<3 x half> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3f16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -968,7 +968,7 @@ define void @test_call_external_void_func_v3f16_inreg(<3 x half> inreg %arg) #0 
   ret void
 }
 
-define void @test_call_external_void_func_v4f16_inreg(<4 x half> inreg %arg) #0 {
+define void @test_call_external_void_func_v4f16_inreg(<4 x half> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4f16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1029,7 +1029,7 @@ define void @test_call_external_void_func_v4f16_inreg(<4 x half> inreg %arg) #0 
   ret void
 }
 
-define void @test_call_external_void_func_p0_inreg(ptr inreg %arg) #0 {
+define void @test_call_external_void_func_p0_inreg(ptr inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_p0_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1090,7 +1090,7 @@ define void @test_call_external_void_func_p0_inreg(ptr inreg %arg) #0 {
   ret void
 }
 
-define void @test_call_external_void_func_p1_inreg(ptr addrspace(1) inreg %arg) #0 {
+define void @test_call_external_void_func_p1_inreg(ptr addrspace(1) inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_p1_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1151,7 +1151,7 @@ define void @test_call_external_void_func_p1_inreg(ptr addrspace(1) inreg %arg) 
   ret void
 }
 
-define void @test_call_external_void_func_p3_inreg(ptr addrspace(3) inreg %arg) #0 {
+define void @test_call_external_void_func_p3_inreg(ptr addrspace(3) inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_p3_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1212,7 +1212,7 @@ define void @test_call_external_void_func_p3_inreg(ptr addrspace(3) inreg %arg) 
   ret void
 }
 
-define void @test_call_external_void_func_v2p1_inreg(<2 x ptr addrspace(1)> inreg %arg) #0 {
+define void @test_call_external_void_func_v2p1_inreg(<2 x ptr addrspace(1)> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2p1_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1275,7 +1275,7 @@ define void @test_call_external_void_func_v2p1_inreg(<2 x ptr addrspace(1)> inre
   ret void
 }
 
-define void @test_call_external_void_func_v2p5_inreg(<2 x ptr addrspace(5)> inreg %arg) #0 {
+define void @test_call_external_void_func_v2p5_inreg(<2 x ptr addrspace(5)> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2p5_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1336,7 +1336,7 @@ define void @test_call_external_void_func_v2p5_inreg(<2 x ptr addrspace(5)> inre
   ret void
 }
 
-define void @test_call_external_void_func_i64_inreg_i32_inreg_i64_inreg(i64 inreg %arg0, i32 inreg %arg1, i64 inreg %arg2) #0 {
+define void @test_call_external_void_func_i64_inreg_i32_inreg_i64_inreg(i64 inreg %arg0, i32 inreg %arg1, i64 inreg %arg2) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i64_inreg_i32_inreg_i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1402,7 +1402,7 @@ define void @test_call_external_void_func_i64_inreg_i32_inreg_i64_inreg(i64 inre
   ret void
 }
 
-define void @test_call_external_void_func_a15i32_inreg([15 x i32] inreg %arg0) #0 {
+define void @test_call_external_void_func_a15i32_inreg([15 x i32] inreg %arg0) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_a15i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1488,20 +1488,20 @@ define void @test_call_external_void_func_a15i32_inreg([15 x i32] inreg %arg0) #
 }
 
 ; FIXME:
-; define void @test_call_external_void_func_a16i32_inreg([16 x i32] inreg %arg0) #0 {
+; define void @test_call_external_void_func_a16i32_inreg([16 x i32] inreg %arg0) nounwind {
 ;   call void @external_void_func_a16i32_inreg([16 x i32] inreg %arg0)
 ;   ret void
 ; }
 
 ; FIXME:
-; define void @test_call_external_void_func_a15i32_inreg_i32_inreg([15 x i32] inreg %arg0, i32 inreg %arg1) #0 {
+; define void @test_call_external_void_func_a15i32_inreg_i32_inreg([15 x i32] inreg %arg0, i32 inreg %arg1) nounwind {
 ;   call void @external_void_func_a15i32_inreg_i32_inreg([15 x i32] inreg %arg0, i32 inreg %arg1)
 ;   ret void
 ; }
 
 
 ; FIXME: This should also fail
-define void @test_call_external_void_func_a15i32_inreg_i32_inreg([15 x i32] inreg %arg0, i32 inreg %arg1) #1 {
+define void @test_call_external_void_func_a15i32_inreg_i32_inreg([15 x i32] inreg %arg0, i32 inreg %arg1) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; GFX9-LABEL: test_call_external_void_func_a15i32_inreg_i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1575,9 +1575,6 @@ define void @test_call_external_void_func_a15i32_inreg_i32_inreg([15 x i32] inre
   call void @external_void_func_a15i32_inreg_i32_inreg__noimplicit([15 x i32] inreg %arg0, i32 inreg %arg1)
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

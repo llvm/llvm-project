@@ -3,7 +3,7 @@
 ; RUN: opt -S -mtriple=amdgcn-- -mcpu=hawaii -passes=amdgpu-codegenprepare -denormal-fp-math-f32=dynamic %s | FileCheck -check-prefixes=CHECK,IEEE %s
 ; RUN: opt -S -mtriple=amdgcn-- -mcpu=hawaii -passes=amdgpu-codegenprepare -denormal-fp-math-f32=preserve-sign %s | FileCheck -check-prefixes=CHECK,DAZ %s
 
-define amdgpu_kernel void @noop_sqrt_fpmath(ptr addrspace(1) %out, float %x) #0 {
+define amdgpu_kernel void @noop_sqrt_fpmath(ptr addrspace(1) %out, float %x) optnone noinline {
 ; CHECK-LABEL: define amdgpu_kernel void @noop_sqrt_fpmath
 ; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !0
@@ -606,8 +606,6 @@ declare float @llvm.sqrt.f32(float)
 declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)
 declare float @llvm.fabs.f32(float)
 declare void @llvm.assume(i1 noundef)
-
-attributes #0 = { optnone noinline }
 
 !0 = !{float 2.500000e+00}
 !1 = !{float 5.000000e-01}

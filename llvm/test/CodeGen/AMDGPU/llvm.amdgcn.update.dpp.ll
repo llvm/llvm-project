@@ -11,7 +11,7 @@
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
 define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in1, i32 %in2) {
-  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 1, i32 1, i32 1, i1 false) #0
+  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 1, i32 1, i32 1, i1 false) nounwind readnone convergent
   store i32 %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -24,7 +24,7 @@ define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in1, i32 %in2) {
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[2,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_bc(ptr addrspace(1) %out, i32 %in1, i32 %in2) {
-  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 2, i32 1, i32 1, i1 true) #0
+  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 2, i32 1, i32 1, i1 true) nounwind readnone convergent
   store i32 %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -63,7 +63,7 @@ define amdgpu_kernel void @update_dpp64_test(ptr addrspace(1) %arg, i64 %in1, i6
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, ptr addrspace(1) %arg, i32 %id
   %load = load i64, ptr addrspace(1) %gep
-  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 %load, i32 1, i32 1, i32 1, i1 false) #0
+  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 %load, i32 1, i32 1, i32 1, i1 false) nounwind readnone convergent
   store i64 %tmp0, ptr addrspace(1) %gep
   ret void
 }
@@ -83,7 +83,7 @@ define amdgpu_kernel void @update_dpp64_imm_old_test(ptr addrspace(1) %arg, i64 
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, ptr addrspace(1) %arg, i32 %id
   %load = load i64, ptr addrspace(1) %gep
-  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 123451234512345, i64 %load, i32 1, i32 1, i32 1, i1 false) #0
+  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 123451234512345, i64 %load, i32 1, i32 1, i32 1, i1 false) nounwind readnone convergent
   store i64 %tmp0, ptr addrspace(1) %gep
   ret void
 }
@@ -98,7 +98,7 @@ define amdgpu_kernel void @update_dpp64_imm_old_test(ptr addrspace(1) %arg, i64 
 ; GCN-NOOPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
 ; GCN-NOOPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
 define amdgpu_kernel void @update_dpp64_imm_src_test(ptr addrspace(1) %out, i64 %in1) {
-  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 123451234512345, i32 1, i32 1, i32 1, i1 false) #0
+  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 123451234512345, i32 1, i32 1, i32 1, i1 false) nounwind readnone convergent
   store i64 %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -457,10 +457,8 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb8(ptr addrspace(1) %out, <2 x 
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare void @llvm.amdgcn.s.barrier()
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1) #0
-declare <2 x i16> @llvm.amdgcn.update.dpp.v2i16(<2 x i16>, <2 x i16>, i32, i32, i32, i1) #0
-declare <2 x half> @llvm.amdgcn.update.dpp.v2f16(<2 x half>, <2 x half>, i32, i32, i32, i1) #0
-declare float @llvm.amdgcn.update.dpp.f32(float, float, i32, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.update.dpp.i64(i64, i64, i32, i32, i32, i1) #0
-
-attributes #0 = { nounwind readnone convergent }
+declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1) nounwind readnone convergent
+declare <2 x i16> @llvm.amdgcn.update.dpp.v2i16(<2 x i16>, <2 x i16>, i32, i32, i32, i1) nounwind readnone convergent
+declare <2 x half> @llvm.amdgcn.update.dpp.v2f16(<2 x half>, <2 x half>, i32, i32, i32, i1) nounwind readnone convergent
+declare float @llvm.amdgcn.update.dpp.f32(float, float, i32, i32, i32, i1) nounwind readnone convergent
+declare i64 @llvm.amdgcn.update.dpp.i64(i64, i64, i32, i32, i32, i1) nounwind readnone convergent

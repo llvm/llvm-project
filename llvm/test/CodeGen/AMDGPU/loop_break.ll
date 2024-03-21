@@ -4,7 +4,7 @@
 
 ; Uses llvm.amdgcn.break
 
-define amdgpu_kernel void @break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @break_loop(i32 %arg) nounwind {
 ; OPT-LABEL: @break_loop(
 ; OPT-NEXT:  bb:
 ; OPT-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -85,7 +85,7 @@ bb9:
   ret void
 }
 
-define amdgpu_kernel void @undef_phi_cond_break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @undef_phi_cond_break_loop(i32 %arg) nounwind {
 ; OPT-LABEL: @undef_phi_cond_break_loop(
 ; OPT-NEXT:  bb:
 ; OPT-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -177,7 +177,7 @@ bb9:                                              ; preds = %Flow
 ; FIXME: ConstantExpr compare of address to null folds away
 @lds = addrspace(3) global i32 undef
 
-define amdgpu_kernel void @constexpr_phi_cond_break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @constexpr_phi_cond_break_loop(i32 %arg) nounwind {
 ; OPT-LABEL: @constexpr_phi_cond_break_loop(
 ; OPT-NEXT:  bb:
 ; OPT-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -266,7 +266,7 @@ bb9:                                              ; preds = %Flow
   ret void
 }
 
-define amdgpu_kernel void @true_phi_cond_break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @true_phi_cond_break_loop(i32 %arg) nounwind {
 ; OPT-LABEL: @true_phi_cond_break_loop(
 ; OPT-NEXT:  bb:
 ; OPT-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -355,7 +355,7 @@ bb9:                                              ; preds = %Flow
   ret void
 }
 
-define amdgpu_kernel void @false_phi_cond_break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @false_phi_cond_break_loop(i32 %arg) nounwind {
 ; OPT-LABEL: @false_phi_cond_break_loop(
 ; OPT-NEXT:  bb:
 ; OPT-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -447,7 +447,7 @@ bb9:                                              ; preds = %Flow
 ; Swap order of branches in flow block so that the true phi is
 ; continue.
 
-define amdgpu_kernel void @invert_true_phi_cond_break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @invert_true_phi_cond_break_loop(i32 %arg) nounwind {
 ; OPT-LABEL: @invert_true_phi_cond_break_loop(
 ; OPT-NEXT:  bb:
 ; OPT-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -538,7 +538,4 @@ bb9:                                              ; preds = %Flow
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

@@ -3,9 +3,9 @@
 ; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,MESA3D %s
 ; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,MESA3D %s
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-declare i32 @llvm.amdgcn.workgroup.id.y() #0
-declare i32 @llvm.amdgcn.workgroup.id.z() #0
+declare i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone
+declare i32 @llvm.amdgcn.workgroup.id.y() nounwind readnone
+declare i32 @llvm.amdgcn.workgroup.id.z() nounwind readnone
 
 ; ALL-LABEL: {{^}}test_workgroup_id_x:
 
@@ -32,7 +32,7 @@ declare i32 @llvm.amdgcn.workgroup.id.z() #0
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
-define amdgpu_kernel void @test_workgroup_id_x(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_workgroup_id_x(ptr addrspace(1) %out) nounwind {
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
   store i32 %id, ptr addrspace(1) %out
   ret void
@@ -59,7 +59,7 @@ define amdgpu_kernel void @test_workgroup_id_x(ptr addrspace(1) %out) #1 {
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 1
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
-define amdgpu_kernel void @test_workgroup_id_y(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_workgroup_id_y(ptr addrspace(1) %out) nounwind {
   %id = call i32 @llvm.amdgcn.workgroup.id.y()
   store i32 %id, ptr addrspace(1) %out
   ret void
@@ -94,14 +94,11 @@ define amdgpu_kernel void @test_workgroup_id_y(ptr addrspace(1) %out) #1 {
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 1
 ; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
-define amdgpu_kernel void @test_workgroup_id_z(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_workgroup_id_z(ptr addrspace(1) %out) nounwind {
   %id = call i32 @llvm.amdgcn.workgroup.id.z()
   store i32 %id, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

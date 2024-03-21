@@ -11,9 +11,9 @@
 @lds0 = internal addrspace(3) global [512 x i32] undef, align 4
 @lds1 = internal addrspace(3) global [512 x i64] undef, align 8
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind speculatable willreturn memory(none)
 
-define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) #1 {
+define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
 ; CI-LABEL: lds_atomic_inc_ret_i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -92,7 +92,7 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr add
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) #1 {
+define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
 ; CI-LABEL: lds_atomic_inc_ret_i32_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -172,7 +172,7 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_inc_noret_i32(ptr addrspace(3) %ptr) #1 {
+define amdgpu_kernel void @lds_atomic_inc_noret_i32(ptr addrspace(3) %ptr) nounwind {
 ; CI-LABEL: lds_atomic_inc_noret_i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -229,7 +229,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32(ptr addrspace(3) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_inc_noret_i32_offset(ptr addrspace(3) %ptr) #1 {
+define amdgpu_kernel void @lds_atomic_inc_noret_i32_offset(ptr addrspace(3) %ptr) nounwind {
 ; CI-LABEL: lds_atomic_inc_noret_i32_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -287,7 +287,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32_offset(ptr addrspace(3) %ptr
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_ret_i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -361,7 +361,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr 
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_ret_i32_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -440,7 +440,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_sistem(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_sistem(ptr addrspace(1) %out, ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_ret_i32_offset_sistem:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -519,7 +519,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_sistem(ptr addrspace
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_noret_i32(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_noret_i32(ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_noret_i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -581,7 +581,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32(ptr addrspace(1) %ptr) #1
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_noret_i32_offset(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_noret_i32_offset(ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_noret_i32_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -648,7 +648,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_system(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_system(ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_noret_i32_offset_system:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -715,7 +715,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_system(ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_addr64(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_addr64(ptr addrspace(1) %out, ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_ret_i32_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -807,7 +807,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_addr64(ptr addrspace
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_noret_i32_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -882,7 +882,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(ptr addrspace(1) %out, ptr addrspace(1) %add_use) #1 {
+define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(ptr addrspace(1) %out, ptr addrspace(1) %add_use) nounwind {
 ; CI-LABEL: atomic_inc_shl_base_lds_0_i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -964,7 +964,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(ptr addrspace(1) %out, 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #2
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind memory(none)
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], ptr addrspace(3) @lds0, i32 0, i32 %idx.0
   %result = atomicrmw uinc_wrap ptr addrspace(3) %arrayidx0, i32 9 syncscope("agent") seq_cst, align 4
@@ -973,7 +973,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr addrspace(3) %ptr) #1 {
+define amdgpu_kernel void @lds_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
 ; CI-LABEL: lds_atomic_inc_ret_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -1057,7 +1057,7 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr add
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) #1 {
+define amdgpu_kernel void @lds_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
 ; CI-LABEL: lds_atomic_inc_ret_i64_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -1142,7 +1142,7 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_inc_noret_i64(ptr addrspace(3) %ptr) #1 {
+define amdgpu_kernel void @lds_atomic_inc_noret_i64(ptr addrspace(3) %ptr) nounwind {
 ; CI-LABEL: lds_atomic_inc_noret_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -1204,7 +1204,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64(ptr addrspace(3) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_inc_noret_i64_offset(ptr addrspace(3) %ptr) #1 {
+define amdgpu_kernel void @lds_atomic_inc_noret_i64_offset(ptr addrspace(3) %ptr) nounwind {
 ; CI-LABEL: lds_atomic_inc_noret_i64_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -1267,7 +1267,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64_offset(ptr addrspace(3) %ptr
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_ret_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1346,7 +1346,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr 
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_ret_i64_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1430,7 +1430,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_system(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_system(ptr addrspace(1) %out, ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_ret_i64_offset_system:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1514,7 +1514,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_system(ptr addrspace
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_noret_i64(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_noret_i64(ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_noret_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1581,7 +1581,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64(ptr addrspace(1) %ptr) #1
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_noret_i64_offset(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_noret_i64_offset(ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_noret_i64_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1653,7 +1653,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_system(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_system(ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_noret_i64_offset_system:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1725,7 +1725,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_system(ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(ptr addrspace(1) %out, ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_ret_i64_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1822,7 +1822,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(ptr addrspace
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_addr64(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_addr64(ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_inc_noret_i64_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1902,7 +1902,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_addr64(ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_ret_i32(ptr %out, ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_ret_i32(ptr %out, ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_ret_i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1982,7 +1982,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32(ptr %out, ptr %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset(ptr %out, ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset(ptr %out, ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_ret_i32_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2069,7 +2069,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset(ptr %out, ptr %ptr) #1
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_system(ptr %out, ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_system(ptr %out, ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_ret_i32_offset_system:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2156,7 +2156,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_system(ptr %out, ptr %
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_noret_i32(ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_noret_i32(ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_noret_i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -2223,7 +2223,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32(ptr %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset(ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset(ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_noret_i32_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -2297,7 +2297,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset(ptr %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_system(ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_system(ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_noret_i32_offset_system:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -2371,7 +2371,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_system(ptr %ptr) #1 
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(ptr %out, ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(ptr %out, ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_ret_i32_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2487,7 +2487,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(ptr %out, ptr %
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_noret_i32_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -2579,7 +2579,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(ptr %ptr) #1 
   ret void
 }
 
-define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(ptr addrspace(1) %out, ptr addrspace(1) %add_use) #1 {
+define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(ptr addrspace(1) %out, ptr addrspace(1) %add_use) nounwind {
 ; CI-LABEL: atomic_inc_shl_base_lds_0_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2666,7 +2666,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(ptr addrspace(1) %out, 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #2
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind memory(none)
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i64], ptr addrspace(3) @lds1, i32 0, i32 %idx.0
   %result = atomicrmw uinc_wrap ptr addrspace(3) %arrayidx0, i64 9 syncscope("agent") seq_cst, align 8
@@ -2675,7 +2675,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_ret_i64(ptr %out, ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_ret_i64(ptr %out, ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_ret_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2770,7 +2770,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64(ptr %out, ptr %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset(ptr %out, ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset(ptr %out, ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_ret_i64_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2872,7 +2872,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset(ptr %out, ptr %ptr) #1
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_system(ptr %out, ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_system(ptr %out, ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_ret_i64_offset_system:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2974,7 +2974,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_system(ptr %out, ptr %
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_noret_i64(ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_noret_i64(ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_noret_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -3046,7 +3046,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64(ptr %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset(ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset(ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_noret_i64_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -3125,7 +3125,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset(ptr %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_system(ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_system(ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_noret_i64_offset_system:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -3204,7 +3204,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_system(ptr %ptr) #1 
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(ptr %out, ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(ptr %out, ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_ret_i64_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -3332,7 +3332,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(ptr %out, ptr %
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(ptr %ptr) #1 {
+define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_inc_noret_i64_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -3429,7 +3429,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(ptr %ptr) #1 
   ret void
 }
 
-define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(3) %ptr) #1 {
+define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(3) %ptr) nounwind {
 ; CI-LABEL: nocse_lds_atomic_inc_ret_i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s6, s[4:5], 0x4
@@ -3531,9 +3531,5 @@ define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(ptr addrspace(1) %out0, 
   store i32 %result1, ptr addrspace(1) %out1, align 4
   ret void
 }
-
-attributes #0 = { nounwind speculatable willreturn memory(none) }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind memory(none) }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}

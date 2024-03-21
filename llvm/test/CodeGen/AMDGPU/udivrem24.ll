@@ -31,7 +31,7 @@ define amdgpu_kernel void @udiv24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-DAG: UINT_TO_FLT
 ; EG-DAG: RECIP_IEEE
 ; EG: FLT_TO_UINT
-define amdgpu_kernel void @udiv24_i8_denorm_flush_in_out(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @udiv24_i8_denorm_flush_in_out(ptr addrspace(1) %out, ptr addrspace(1) %in) "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
   %den_ptr = getelementptr i8, ptr addrspace(1) %in, i8 1
   %num = load i8, ptr addrspace(1) %in
   %den = load i8, ptr addrspace(1) %den_ptr
@@ -50,7 +50,7 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_in_out(ptr addrspace(1) %out, 
 ; EG-DAG: UINT_TO_FLT
 ; EG-DAG: RECIP_IEEE
 ; EG: FLT_TO_UINT
-define amdgpu_kernel void @udiv24_i8_denorm_flush_in(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
+define amdgpu_kernel void @udiv24_i8_denorm_flush_in(ptr addrspace(1) %out, ptr addrspace(1) %in) "denormal-fp-math-f32"="ieee,preserve-sign" {
   %den_ptr = getelementptr i8, ptr addrspace(1) %in, i8 1
   %num = load i8, ptr addrspace(1) %in
   %den = load i8, ptr addrspace(1) %den_ptr
@@ -69,7 +69,7 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_in(ptr addrspace(1) %out, ptr 
 ; EG-DAG: UINT_TO_FLT
 ; EG-DAG: RECIP_IEEE
 ; EG: FLT_TO_UINT
-define amdgpu_kernel void @udiv24_i8_denorm_flush_out(ptr addrspace(1) %out, ptr addrspace(1) %in) #2 {
+define amdgpu_kernel void @udiv24_i8_denorm_flush_out(ptr addrspace(1) %out, ptr addrspace(1) %in) "denormal-fp-math-f32"="preserve-sign,ieee" {
   %den_ptr = getelementptr i8, ptr addrspace(1) %in, i8 1
   %num = load i8, ptr addrspace(1) %in
   %den = load i8, ptr addrspace(1) %den_ptr
@@ -380,7 +380,3 @@ define amdgpu_kernel void @test_udiv24_u23_u16_i32(ptr addrspace(1) %out, ptr ad
   store i32 %result, ptr addrspace(1) %out, align 4
   ret void
 }
-
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math-f32"="ieee,preserve-sign" }
-attributes #2 = { "denormal-fp-math-f32"="preserve-sign,ieee" }

@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=CIGFX89,GFX89,GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
-define void @void_func_i1(i1 %arg0) #0 {
+define void @void_func_i1(i1 %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_i1:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -27,7 +27,7 @@ define void @void_func_i1(i1 %arg0) #0 {
   ret void
 }
 
-define void @void_func_i1_zeroext(i1 zeroext %arg0) #0 {
+define void @void_func_i1_zeroext(i1 zeroext %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_i1_zeroext:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -52,7 +52,7 @@ define void @void_func_i1_zeroext(i1 zeroext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i1_signext(i1 signext %arg0) #0 {
+define void @void_func_i1_signext(i1 signext %arg0) nounwind {
 ; CI-LABEL: void_func_i1_signext:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -97,7 +97,7 @@ define void @void_func_i1_signext(i1 signext %arg0) #0 {
   ret void
 }
 
-define void @i1_arg_i1_use(i1 %arg) #0 {
+define void @i1_arg_i1_use(i1 %arg) nounwind {
 ; CIGFX89-LABEL: i1_arg_i1_use:
 ; CIGFX89:       ; %bb.0: ; %bb
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -146,7 +146,7 @@ bb2:
   ret void
 }
 
-define void @void_func_i8(i8 %arg0) #0 {
+define void @void_func_i8(i8 %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_i8:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -167,7 +167,7 @@ define void @void_func_i8(i8 %arg0) #0 {
   ret void
 }
 
-define void @void_func_i8_zeroext(i8 zeroext %arg0) #0 {
+define void @void_func_i8_zeroext(i8 zeroext %arg0) nounwind {
 ; CI-LABEL: void_func_i8_zeroext:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -212,7 +212,7 @@ define void @void_func_i8_zeroext(i8 zeroext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i8_signext(i8 signext %arg0) #0 {
+define void @void_func_i8_signext(i8 signext %arg0) nounwind {
 ; CI-LABEL: void_func_i8_signext:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -257,7 +257,7 @@ define void @void_func_i8_signext(i8 signext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i16(i16 %arg0) #0 {
+define void @void_func_i16(i16 %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_i16:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -278,7 +278,7 @@ define void @void_func_i16(i16 %arg0) #0 {
   ret void
 }
 
-define void @void_func_i16_zeroext(i16 zeroext %arg0) #0 {
+define void @void_func_i16_zeroext(i16 zeroext %arg0) nounwind {
 ; CI-LABEL: void_func_i16_zeroext:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -323,7 +323,7 @@ define void @void_func_i16_zeroext(i16 zeroext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i16_signext(i16 signext %arg0) #0 {
+define void @void_func_i16_signext(i16 signext %arg0) nounwind {
 ; CI-LABEL: void_func_i16_signext:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -368,7 +368,7 @@ define void @void_func_i16_signext(i16 signext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i32(i32 %arg0) #0 {
+define void @void_func_i32(i32 %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_i32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -389,7 +389,7 @@ define void @void_func_i32(i32 %arg0) #0 {
   ret void
 }
 
-define void @void_func_i64(i64 %arg0) #0 {
+define void @void_func_i64(i64 %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_i64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -410,7 +410,7 @@ define void @void_func_i64(i64 %arg0) #0 {
   ret void
 }
 
-define void @void_func_f16(half %arg0) #0 {
+define void @void_func_f16(half %arg0) nounwind {
 ; CI-LABEL: void_func_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -441,7 +441,7 @@ define void @void_func_f16(half %arg0) #0 {
   ret void
 }
 
-define void @void_func_f32(float %arg0) #0 {
+define void @void_func_f32(float %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_f32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -462,7 +462,7 @@ define void @void_func_f32(float %arg0) #0 {
   ret void
 }
 
-define void @void_func_f64(double %arg0) #0 {
+define void @void_func_f64(double %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_f64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -483,7 +483,7 @@ define void @void_func_f64(double %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i32(<2 x i32> %arg0) #0 {
+define void @void_func_v2i32(<2 x i32> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v2i32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -504,7 +504,7 @@ define void @void_func_v2i32(<2 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3i32(<3 x i32> %arg0) #0 {
+define void @void_func_v3i32(<3 x i32> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v3i32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -525,7 +525,7 @@ define void @void_func_v3i32(<3 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4i32(<4 x i32> %arg0) #0 {
+define void @void_func_v4i32(<4 x i32> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v4i32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -546,7 +546,7 @@ define void @void_func_v4i32(<4 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v5i32(<5 x i32> %arg0) #0 {
+define void @void_func_v5i32(<5 x i32> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v5i32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -570,7 +570,7 @@ define void @void_func_v5i32(<5 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8i32(<8 x i32> %arg0) #0 {
+define void @void_func_v8i32(<8 x i32> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v8i32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -594,7 +594,7 @@ define void @void_func_v8i32(<8 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16i32(<16 x i32> %arg0) #0 {
+define void @void_func_v16i32(<16 x i32> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v16i32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -622,7 +622,7 @@ define void @void_func_v16i32(<16 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v32i32(<32 x i32> %arg0) #0 {
+define void @void_func_v32i32(<32 x i32> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v32i32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -664,7 +664,7 @@ define void @void_func_v32i32(<32 x i32> %arg0) #0 {
 }
 
 ; 1 over register limit
-define void @void_func_v33i32(<33 x i32> %arg0) #0 {
+define void @void_func_v33i32(<33 x i32> %arg0) nounwind {
 ; CI-LABEL: void_func_v33i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -756,7 +756,7 @@ define void @void_func_v33i32(<33 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i64(<2 x i64> %arg0) #0 {
+define void @void_func_v2i64(<2 x i64> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v2i64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -777,7 +777,7 @@ define void @void_func_v2i64(<2 x i64> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3i64(<3 x i64> %arg0) #0 {
+define void @void_func_v3i64(<3 x i64> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v3i64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -801,7 +801,7 @@ define void @void_func_v3i64(<3 x i64> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4i64(<4 x i64> %arg0) #0 {
+define void @void_func_v4i64(<4 x i64> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v4i64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -825,7 +825,7 @@ define void @void_func_v4i64(<4 x i64> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v5i64(<5 x i64> %arg0) #0 {
+define void @void_func_v5i64(<5 x i64> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v5i64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -851,7 +851,7 @@ define void @void_func_v5i64(<5 x i64> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8i64(<8 x i64> %arg0) #0 {
+define void @void_func_v8i64(<8 x i64> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v8i64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -879,7 +879,7 @@ define void @void_func_v8i64(<8 x i64> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16i64(<16 x i64> %arg0) #0 {
+define void @void_func_v16i64(<16 x i64> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v16i64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -920,7 +920,7 @@ define void @void_func_v16i64(<16 x i64> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i8(<2 x i8> %arg0) #0 {
+define void @void_func_v2i8(<2 x i8> %arg0) nounwind {
 ; CI-LABEL: void_func_v2i8:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -964,7 +964,7 @@ define void @void_func_v2i8(<2 x i8> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i16(<2 x i16> %arg0) #0 {
+define void @void_func_v2i16(<2 x i16> %arg0) nounwind {
 ; CI-LABEL: void_func_v2i16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -997,7 +997,7 @@ define void @void_func_v2i16(<2 x i16> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3i8(<3 x i8> %arg0) #0 {
+define void @void_func_v3i8(<3 x i8> %arg0) nounwind {
 ; CI-LABEL: void_func_v3i8:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1047,7 +1047,7 @@ define void @void_func_v3i8(<3 x i8> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4i8(<4 x i8> %arg0) #0 {
+define void @void_func_v4i8(<4 x i8> %arg0) nounwind {
 ; CI-LABEL: void_func_v4i8:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1108,7 +1108,7 @@ define void @void_func_v4i8(<4 x i8> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v5i8(<5 x i8> %arg0) #0 {
+define void @void_func_v5i8(<5 x i8> %arg0) nounwind {
 ; CI-LABEL: void_func_v5i8:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1174,7 +1174,7 @@ define void @void_func_v5i8(<5 x i8> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8i8(<8 x i8> %arg0) #0 {
+define void @void_func_v8i8(<8 x i8> %arg0) nounwind {
 ; CI-LABEL: void_func_v8i8:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1257,7 +1257,7 @@ define void @void_func_v8i8(<8 x i8> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16i8(<16 x i8> %arg0) #0 {
+define void @void_func_v16i8(<16 x i8> %arg0) nounwind {
 ; CI-LABEL: void_func_v16i8:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1385,7 +1385,7 @@ define void @void_func_v16i8(<16 x i8> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v32i8(<32 x i8> %arg0) #0 {
+define void @void_func_v32i8(<32 x i8> %arg0) nounwind {
 ; CI-LABEL: void_func_v32i8:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1619,7 +1619,7 @@ define void @void_func_v32i8(<32 x i8> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3i16(<3 x i16> %arg0) #0 {
+define void @void_func_v3i16(<3 x i16> %arg0) nounwind {
 ; CI-LABEL: void_func_v3i16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1656,7 +1656,7 @@ define void @void_func_v3i16(<3 x i16> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4i16(<4 x i16> %arg0) #0 {
+define void @void_func_v4i16(<4 x i16> %arg0) nounwind {
 ; CI-LABEL: void_func_v4i16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1692,7 +1692,7 @@ define void @void_func_v4i16(<4 x i16> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v5i16(<5 x i16> %arg0) #0 {
+define void @void_func_v5i16(<5 x i16> %arg0) nounwind {
 ; CI-LABEL: void_func_v5i16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1732,7 +1732,7 @@ define void @void_func_v5i16(<5 x i16> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8i16(<8 x i16> %arg0) #0 {
+define void @void_func_v8i16(<8 x i16> %arg0) nounwind {
 ; CI-LABEL: void_func_v8i16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1774,7 +1774,7 @@ define void @void_func_v8i16(<8 x i16> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16i16(<16 x i16> %arg0) #0 {
+define void @void_func_v16i16(<16 x i16> %arg0) nounwind {
 ; CI-LABEL: void_func_v16i16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1832,7 +1832,7 @@ define void @void_func_v16i16(<16 x i16> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i24(<2 x i24> %arg0) #0 {
+define void @void_func_v2i24(<2 x i24> %arg0) nounwind {
 ; CI-LABEL: void_func_v2i24:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1888,7 +1888,7 @@ define void @void_func_v2i24(<2 x i24> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2f32(<2 x float> %arg0) #0 {
+define void @void_func_v2f32(<2 x float> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v2f32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1909,7 +1909,7 @@ define void @void_func_v2f32(<2 x float> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3f32(<3 x float> %arg0) #0 {
+define void @void_func_v3f32(<3 x float> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v3f32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1930,7 +1930,7 @@ define void @void_func_v3f32(<3 x float> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4f32(<4 x float> %arg0) #0 {
+define void @void_func_v4f32(<4 x float> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v4f32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1951,7 +1951,7 @@ define void @void_func_v4f32(<4 x float> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8f32(<8 x float> %arg0) #0 {
+define void @void_func_v8f32(<8 x float> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v8f32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1975,7 +1975,7 @@ define void @void_func_v8f32(<8 x float> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16f32(<16 x float> %arg0) #0 {
+define void @void_func_v16f32(<16 x float> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v16f32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2003,7 +2003,7 @@ define void @void_func_v16f32(<16 x float> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2f64(<2 x double> %arg0) #0 {
+define void @void_func_v2f64(<2 x double> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v2f64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2024,7 +2024,7 @@ define void @void_func_v2f64(<2 x double> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3f64(<3 x double> %arg0) #0 {
+define void @void_func_v3f64(<3 x double> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v3f64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2048,7 +2048,7 @@ define void @void_func_v3f64(<3 x double> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4f64(<4 x double> %arg0) #0 {
+define void @void_func_v4f64(<4 x double> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v4f64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2072,7 +2072,7 @@ define void @void_func_v4f64(<4 x double> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8f64(<8 x double> %arg0) #0 {
+define void @void_func_v8f64(<8 x double> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v8f64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2100,7 +2100,7 @@ define void @void_func_v8f64(<8 x double> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16f64(<16 x double> %arg0) #0 {
+define void @void_func_v16f64(<16 x double> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v16f64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2141,7 +2141,7 @@ define void @void_func_v16f64(<16 x double> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2f16(<2 x half> %arg0) #0 {
+define void @void_func_v2f16(<2 x half> %arg0) nounwind {
 ; CI-LABEL: void_func_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2176,7 +2176,7 @@ define void @void_func_v2f16(<2 x half> %arg0) #0 {
 }
 
 ; FIXME: Different abi if f16 legal
-define void @void_func_v3f16(<3 x half> %arg0) #0 {
+define void @void_func_v3f16(<3 x half> %arg0) nounwind {
 ; CI-LABEL: void_func_v3f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2215,7 +2215,7 @@ define void @void_func_v3f16(<3 x half> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4f16(<4 x half> %arg0) #0 {
+define void @void_func_v4f16(<4 x half> %arg0) nounwind {
 ; CI-LABEL: void_func_v4f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2253,7 +2253,7 @@ define void @void_func_v4f16(<4 x half> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8f16(<8 x half> %arg0) #0 {
+define void @void_func_v8f16(<8 x half> %arg0) nounwind {
 ; CI-LABEL: void_func_v8f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2299,7 +2299,7 @@ define void @void_func_v8f16(<8 x half> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16f16(<16 x half> %arg0) #0 {
+define void @void_func_v16f16(<16 x half> %arg0) nounwind {
 ; CI-LABEL: void_func_v16f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2366,7 +2366,7 @@ define void @void_func_v16f16(<16 x half> %arg0) #0 {
 }
 
 ; Make sure there is no alignment requirement for passed vgprs.
-define void @void_func_i32_i64_i32(i32 %arg0, i64 %arg1, i32 %arg2) #0 {
+define void @void_func_i32_i64_i32(i32 %arg0, i64 %arg1, i32 %arg2) nounwind {
 ; CIGFX89-LABEL: void_func_i32_i64_i32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2398,7 +2398,7 @@ define void @void_func_i32_i64_i32(i32 %arg0, i64 %arg1, i32 %arg2) #0 {
   ret void
 }
 
-define void @void_func_struct_i32({ i32 } %arg0) #0 {
+define void @void_func_struct_i32({ i32 } %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_struct_i32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2419,7 +2419,7 @@ define void @void_func_struct_i32({ i32 } %arg0) #0 {
   ret void
 }
 
-define void @void_func_struct_i8_i32({ i8, i32 } %arg0) #0 {
+define void @void_func_struct_i8_i32({ i8, i32 } %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_struct_i8_i32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2443,7 +2443,7 @@ define void @void_func_struct_i8_i32({ i8, i32 } %arg0) #0 {
   ret void
 }
 
-define void @void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 }) %arg0) #0 {
+define void @void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 }) %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_byval_struct_i8_i32:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2476,7 +2476,7 @@ define void @void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 }) %
   ret void
 }
 
-define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }) %arg0, ptr addrspace(5) byval({ i8, i32 }) %arg1, i32 %arg2) #0 {
+define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }) %arg0, ptr addrspace(5) byval({ i8, i32 }) %arg1, i32 %arg2) nounwind {
 ; CI-LABEL: void_func_byval_struct_i8_i32_x2:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2586,7 +2586,7 @@ define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }
   ret void
 }
 
-define void @void_func_byval_i32_byval_i64(ptr addrspace(5) byval(i32) %arg0, ptr addrspace(5) byval(i64) %arg1) #0 {
+define void @void_func_byval_i32_byval_i64(ptr addrspace(5) byval(i32) %arg0, ptr addrspace(5) byval(i64) %arg1) nounwind {
 ; CIGFX89-LABEL: void_func_byval_i32_byval_i64:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2622,7 +2622,7 @@ define void @void_func_byval_i32_byval_i64(ptr addrspace(5) byval(i32) %arg0, pt
   ret void
 }
 
-define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) #0 {
+define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) nounwind {
 ; CI-LABEL: void_func_v32i32_i32_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2761,7 +2761,7 @@ define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) #0
 }
 
 ; FIXME: Different ext load types on CI vs. VI
-define void @void_func_v32i32_i1_i8_i16_bf16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i16 %arg3, half %arg4, bfloat %arg5) #0 {
+define void @void_func_v32i32_i1_i8_i16_bf16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i16 %arg3, half %arg4, bfloat %arg5) nounwind {
 ; CI-LABEL: void_func_v32i32_i1_i8_i16_bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2945,7 +2945,7 @@ define void @void_func_v32i32_i1_i8_i16_bf16(<32 x i32> %arg0, i1 %arg1, i8 %arg
   ret void
 }
 
-define void @void_func_v32i32_v2i32_v2f32(<32 x i32> %arg0, <2 x i32> %arg1, <2 x float> %arg2) #0 {
+define void @void_func_v32i32_v2i32_v2f32(<32 x i32> %arg0, <2 x i32> %arg1, <2 x float> %arg2) nounwind {
 ; CI-LABEL: void_func_v32i32_v2i32_v2f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3087,7 +3087,7 @@ define void @void_func_v32i32_v2i32_v2f32(<32 x i32> %arg0, <2 x i32> %arg1, <2 
   ret void
 }
 
-define void @void_func_v32i32_v2i16_v2f16_v2bf16_v4bf16(<32 x i32> %arg0, <2 x i16> %arg1, <2 x half> %arg2, <2 x bfloat> %arg3, <4 x bfloat> %arg4) #0 {
+define void @void_func_v32i32_v2i16_v2f16_v2bf16_v4bf16(<32 x i32> %arg0, <2 x i16> %arg1, <2 x half> %arg2, <2 x bfloat> %arg3, <4 x bfloat> %arg4) nounwind {
 ; CI-LABEL: void_func_v32i32_v2i16_v2f16_v2bf16_v4bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3284,7 +3284,7 @@ define void @void_func_v32i32_v2i16_v2f16_v2bf16_v4bf16(<32 x i32> %arg0, <2 x i
   ret void
 }
 
-define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 x double> %arg2) #0 {
+define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 x double> %arg2) nounwind {
 ; CI-LABEL: void_func_v32i32_v2i64_v2f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3443,7 +3443,7 @@ define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 
   ret void
 }
 
-define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 x float> %arg2) #0 {
+define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 x float> %arg2) nounwind {
 ; CI-LABEL: void_func_v32i32_v4i32_v4f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3602,7 +3602,7 @@ define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 
   ret void
 }
 
-define void @void_func_v32i32_v8i32_v8f32(<32 x i32> %arg0, <8 x i32> %arg1, <8 x float> %arg2) #0 {
+define void @void_func_v32i32_v8i32_v8f32(<32 x i32> %arg0, <8 x i32> %arg1, <8 x float> %arg2) nounwind {
 ; CI-LABEL: void_func_v32i32_v8i32_v8f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3813,7 +3813,7 @@ define void @void_func_v32i32_v8i32_v8f32(<32 x i32> %arg0, <8 x i32> %arg1, <8 
   ret void
 }
 
-define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, <16 x float> %arg2) #0 {
+define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, <16 x float> %arg2) nounwind {
 ; CI-LABEL: void_func_v32i32_v16i32_v16f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4129,7 +4129,7 @@ define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, 
 }
 
 ; Make sure v3 isn't a wasted register because of v3 types being promoted to v4
-define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) #0 {
+define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) nounwind {
 ; CI-LABEL: void_func_v3f32_wasted_reg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4181,7 +4181,7 @@ define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) #0 {
   ret void
 }
 
-define void @void_func_v3i32_wasted_reg(<3 x i32> %arg0, i32 %arg1) #0 {
+define void @void_func_v3i32_wasted_reg(<3 x i32> %arg0, i32 %arg1) nounwind {
 ; CI-LABEL: void_func_v3i32_wasted_reg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4234,7 +4234,7 @@ define void @void_func_v3i32_wasted_reg(<3 x i32> %arg0, i32 %arg1) #0 {
 }
 
 ; Check there is no crash.
-define void @void_func_volatile_v16i8(<16 x i8> %arg0) #0 {
+define void @void_func_volatile_v16i8(<16 x i8> %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_volatile_v16i8:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4317,7 +4317,7 @@ define void @void_func_volatile_v16i8(<16 x i8> %arg0) #0 {
 }
 
 ; Check there is no crash.
-define void @void_func_v32i32_v16i8(<32 x i32> %arg0, <16 x i8> %arg1) #0 {
+define void @void_func_v32i32_v16i8(<32 x i32> %arg0, <16 x i8> %arg1) nounwind {
 ; CI-LABEL: void_func_v32i32_v16i8:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4636,7 +4636,7 @@ define void @void_func_v32i32_v16i8(<32 x i32> %arg0, <16 x i8> %arg1) #0 {
 }
 
 
-define void @void_func_bf16(bfloat %arg0) #0 {
+define void @void_func_bf16(bfloat %arg0) nounwind {
 ; CI-LABEL: void_func_bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4668,7 +4668,7 @@ define void @void_func_bf16(bfloat %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2bf16(<2 x bfloat> %arg0) #0 {
+define void @void_func_v2bf16(<2 x bfloat> %arg0) nounwind {
 ; CI-LABEL: void_func_v2bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4702,7 +4702,7 @@ define void @void_func_v2bf16(<2 x bfloat> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3bf16(<3 x bfloat> %arg0) #0 {
+define void @void_func_v3bf16(<3 x bfloat> %arg0) nounwind {
 ; CI-LABEL: void_func_v3bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4742,7 +4742,7 @@ define void @void_func_v3bf16(<3 x bfloat> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4bf16(<4 x bfloat> %arg0) #0 {
+define void @void_func_v4bf16(<4 x bfloat> %arg0) nounwind {
 ; CI-LABEL: void_func_v4bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4780,7 +4780,7 @@ define void @void_func_v4bf16(<4 x bfloat> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8bf16(<8 x bfloat> %arg0) #0 {
+define void @void_func_v8bf16(<8 x bfloat> %arg0) nounwind {
 ; CI-LABEL: void_func_v8bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4826,7 +4826,7 @@ define void @void_func_v8bf16(<8 x bfloat> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16bf16(<16 x bfloat> %arg0) #0 {
+define void @void_func_v16bf16(<16 x bfloat> %arg0) nounwind {
 ; CI-LABEL: void_func_v16bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4891,5 +4891,3 @@ define void @void_func_v16bf16(<16 x bfloat> %arg0) #0 {
   store <16 x bfloat> %arg0, ptr addrspace(1) undef
   ret void
 }
-
-attributes #0 = { nounwind }

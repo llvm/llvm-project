@@ -11,7 +11,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=VI,GISEL-VI %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=GISEL-CI %s
 
-define half @mixlo_simple(float %src0, float %src1, float %src2) #0 {
+define half @mixlo_simple(float %src0, float %src1, float %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: mixlo_simple:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -103,7 +103,7 @@ define half @mixlo_simpl_no_flush(float %src0, float %src1, float %src2) {
   ret half %cvt.result
 }
 
-define half @v_mad_mixlo_f16_f16lo_f16lo_f16lo(half %src0, half %src1, half %src2) #0 {
+define half @v_mad_mixlo_f16_f16lo_f16lo_f16lo(half %src0, half %src1, half %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -216,7 +216,7 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f16lo_no_flush(half %src0, half %src1, 
   ret half %cvt.result
 }
 
-define half @v_mad_mixlo_f16_f16lo_f16lo_f32(half %src0, half %src1, float %src2) #0 {
+define half @v_mad_mixlo_f16_f16lo_f16lo_f32(half %src0, half %src1, float %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -267,7 +267,7 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f32(half %src0, half %src1, float %src2
   ret half %cvt.result
 }
 
-define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_post_cvt(half %src0, half %src1, float %src2) #0 {
+define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_post_cvt(half %src0, half %src1, float %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_post_cvt:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -328,7 +328,7 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_post_cvt(half %src0, half %sr
   ret half %clamp
 }
 
-define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_pre_cvt(half %src0, half %src1, float %src2) #0 {
+define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_pre_cvt(half %src0, half %src1, float %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_pre_cvt:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -388,7 +388,7 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_pre_cvt(half %src0, half %src
 ; FIXME(DAG): Should abe able to avoid extra register because first
 ; operation only clobbers relevant lane.
 
-define <2 x half> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
+define <2 x half> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_v2f32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -491,7 +491,7 @@ define <2 x half> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x half
   ret <2 x half> %cvt.result
 }
 
-define <3 x half> @v_mad_mix_v3f32(<3 x half> %src0, <3 x half> %src1, <3 x half> %src2) #0 {
+define <3 x half> @v_mad_mix_v3f32(<3 x half> %src0, <3 x half> %src1, <3 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_v3f32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -639,7 +639,7 @@ define <3 x half> @v_mad_mix_v3f32(<3 x half> %src0, <3 x half> %src1, <3 x half
   ret <3 x half> %cvt.result
 }
 
-define <4 x half> @v_mad_mix_v4f32(<4 x half> %src0, <4 x half> %src1, <4 x half> %src2) #0 {
+define <4 x half> @v_mad_mix_v4f32(<4 x half> %src0, <4 x half> %src1, <4 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_v4f32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -825,7 +825,7 @@ define <4 x half> @v_mad_mix_v4f32(<4 x half> %src0, <4 x half> %src1, <4 x half
 
 ; FIXME (DAG): Fold clamp
 
-define <2 x half> @v_mad_mix_v2f32_clamp_postcvt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
+define <2 x half> @v_mad_mix_v2f32_clamp_postcvt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_v2f32_clamp_postcvt:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -947,7 +947,7 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt(<2 x half> %src0, <2 x half> %s
 ; FIXME (DAG): Should be packed into 2 registers per argument?
 ; FIXME (GIsel): V_PK_MAX clamp could be folded into mixlo
 
-define <3 x half> @v_mad_mix_v3f32_clamp_postcvt(<3 x half> %src0, <3 x half> %src1, <3 x half> %src2) #0 {
+define <3 x half> @v_mad_mix_v3f32_clamp_postcvt(<3 x half> %src0, <3 x half> %src1, <3 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_v3f32_clamp_postcvt:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1152,7 +1152,7 @@ define <3 x half> @v_mad_mix_v3f32_clamp_postcvt(<3 x half> %src0, <3 x half> %s
   ret <3 x half> %clamp
 }
 
-define <4 x half> @v_mad_mix_v4f32_clamp_postcvt(<4 x half> %src0, <4 x half> %src1, <4 x half> %src2) #0 {
+define <4 x half> @v_mad_mix_v4f32_clamp_postcvt(<4 x half> %src0, <4 x half> %src1, <4 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_v4f32_clamp_postcvt:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1396,7 +1396,7 @@ define <4 x half> @v_mad_mix_v4f32_clamp_postcvt(<4 x half> %src0, <4 x half> %s
 ; FIXME (GISel): Packed Vectors handling isn't great for now, so we don't end up with
 ;  a build_vector to select the mixhi. Issue is more specifically with how insert_vector_elt is being
 ;  legalized (bitwise ops instead of shuffle/build_vector for instance).
-define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_lo(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
+define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_lo(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_v2f32_clamp_postcvt_lo:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1552,7 +1552,7 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_lo(<2 x half> %src0, <2 x half>
   ret <2 x half> %insert
 }
 
-define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_hi(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
+define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_hi(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_v2f32_clamp_postcvt_hi:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1715,7 +1715,7 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_hi(<2 x half> %src0, <2 x half>
 
 ; FIXME (DAG): Should be able to use mixlo/mixhi
 
-define <2 x half> @v_mad_mix_v2f32_clamp_precvt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
+define <2 x half> @v_mad_mix_v2f32_clamp_precvt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_v2f32_clamp_precvt:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1861,7 +1861,7 @@ define <2 x half> @v_mad_mix_v2f32_clamp_precvt(<2 x half> %src0, <2 x half> %sr
 
 ; FIXME (DAG): Handling undef 4th component
 
-define <3 x half> @v_mad_mix_v3f32_clamp_precvt(<3 x half> %src0, <3 x half> %src1, <3 x half> %src2) #0 {
+define <3 x half> @v_mad_mix_v3f32_clamp_precvt(<3 x half> %src0, <3 x half> %src1, <3 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_v3f32_clamp_precvt:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2041,7 +2041,7 @@ define <3 x half> @v_mad_mix_v3f32_clamp_precvt(<3 x half> %src0, <3 x half> %sr
   ret <3 x half> %cvt.result
 }
 
-define <4 x half> @v_mad_mix_v4f32_clamp_precvt(<4 x half> %src0, <4 x half> %src1, <4 x half> %src2) #0 {
+define <4 x half> @v_mad_mix_v4f32_clamp_precvt(<4 x half> %src0, <4 x half> %src1, <4 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_v4f32_clamp_precvt:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2267,7 +2267,7 @@ define <4 x half> @v_mad_mix_v4f32_clamp_precvt(<4 x half> %src0, <4 x half> %sr
   ret <4 x half> %cvt.result
 }
 
-define i32 @mixlo_zext(float %src0, float %src1, float %src2) #0 {
+define i32 @mixlo_zext(float %src0, float %src1, float %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: mixlo_zext:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2317,7 +2317,7 @@ define i32 @mixlo_zext(float %src0, float %src1, float %src2) #0 {
   ret i32 %cvt.result.i32
 }
 
-define half @mixlo_fptrunc(float %a, float %b) #0 {
+define half @mixlo_fptrunc(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: mixlo_fptrunc:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2410,7 +2410,7 @@ define half @mixlo_fptrunc_no_flush(float %a, float %b) {
   ret half %trunc
 }
 
-define half @mixlo_fptrunc_abs_src_mod(float %a, float %b) #0 {
+define half @mixlo_fptrunc_abs_src_mod(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: mixlo_fptrunc_abs_src_mod:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2457,7 +2457,7 @@ define half @mixlo_fptrunc_abs_src_mod(float %a, float %b) #0 {
   ret half %trunc
 }
 
-define half @mixlo_fptrunc_neg_src_mod(float %a, float %b) #0 {
+define half @mixlo_fptrunc_neg_src_mod(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: mixlo_fptrunc_neg_src_mod:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2504,32 +2504,29 @@ define half @mixlo_fptrunc_neg_src_mod(float %a, float %b) #0 {
   ret half %trunc
 }
 
-declare float @llvm.fabs.f32(float) #1
+declare float @llvm.fabs.f32(float) nounwind readnone speculatable
 
-declare half @llvm.minnum.f16(half, half) #1
-declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) #1
-declare <3 x half> @llvm.minnum.v3f16(<3 x half>, <3 x half>) #1
-declare <4 x half> @llvm.minnum.v4f16(<4 x half>, <4 x half>) #1
+declare half @llvm.minnum.f16(half, half) nounwind readnone speculatable
+declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) nounwind readnone speculatable
+declare <3 x half> @llvm.minnum.v3f16(<3 x half>, <3 x half>) nounwind readnone speculatable
+declare <4 x half> @llvm.minnum.v4f16(<4 x half>, <4 x half>) nounwind readnone speculatable
 
-declare half @llvm.maxnum.f16(half, half) #1
-declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>) #1
-declare <3 x half> @llvm.maxnum.v3f16(<3 x half>, <3 x half>) #1
-declare <4 x half> @llvm.maxnum.v4f16(<4 x half>, <4 x half>) #1
+declare half @llvm.maxnum.f16(half, half) nounwind readnone speculatable
+declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>) nounwind readnone speculatable
+declare <3 x half> @llvm.maxnum.v3f16(<3 x half>, <3 x half>) nounwind readnone speculatable
+declare <4 x half> @llvm.maxnum.v4f16(<4 x half>, <4 x half>) nounwind readnone speculatable
 
-declare float @llvm.minnum.f32(float, float) #1
-declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>) #1
-declare <3 x float> @llvm.minnum.v3f32(<3 x float>, <3 x float>) #1
-declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>) #1
+declare float @llvm.minnum.f32(float, float) nounwind readnone speculatable
+declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>) nounwind readnone speculatable
+declare <3 x float> @llvm.minnum.v3f32(<3 x float>, <3 x float>) nounwind readnone speculatable
+declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>) nounwind readnone speculatable
 
-declare float @llvm.maxnum.f32(float, float) #1
-declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>) #1
-declare <3 x float> @llvm.maxnum.v3f32(<3 x float>, <3 x float>) #1
-declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>) #1
+declare float @llvm.maxnum.f32(float, float) nounwind readnone speculatable
+declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>) nounwind readnone speculatable
+declare <3 x float> @llvm.maxnum.v3f32(<3 x float>, <3 x float>) nounwind readnone speculatable
+declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>) nounwind readnone speculatable
 
-declare float @llvm.fmuladd.f32(float, float, float) #1
-declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>) #1
-declare <3 x float> @llvm.fmuladd.v3f32(<3 x float>, <3 x float>, <3 x float>) #1
-declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) #1
-
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind readnone speculatable }
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone speculatable
+declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>) nounwind readnone speculatable
+declare <3 x float> @llvm.fmuladd.v3f32(<3 x float>, <3 x float>, <3 x float>) nounwind readnone speculatable
+declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone speculatable

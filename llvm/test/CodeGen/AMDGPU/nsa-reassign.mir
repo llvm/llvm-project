@@ -1,10 +1,8 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass greedy,amdgpu-nsa-reassign,virtregrewriter,si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
 
 --- |
-  define amdgpu_kernel void @nsa_reassign() #0 { ret void }
-  define amdgpu_kernel void @do_not_reassign_spill() #0 { ret void }
-
-  attributes #0 = { "amdgpu-num-vgpr"="8" }
+  define amdgpu_kernel void @nsa_reassign() "amdgpu-num-vgpr"="8" { ret void }
+  define amdgpu_kernel void @do_not_reassign_spill() "amdgpu-num-vgpr"="8" { ret void }
 ...
 
 # GCN-LABEL: name: nsa_reassign

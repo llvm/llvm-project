@@ -15,7 +15,7 @@
 ; GCN: NumVgprs: {{[0-9]$}}
 ; GCN: ScratchSize: 0{{$}}
 
-define amdgpu_kernel void @load_store_max_9vgprs(ptr addrspace(1) nocapture noalias readonly %arg, ptr addrspace(1) nocapture noalias %arg1, i1 %cnd) #1 {
+define amdgpu_kernel void @load_store_max_9vgprs(ptr addrspace(1) nocapture noalias readonly %arg, ptr addrspace(1) nocapture noalias %arg1, i1 %cnd) "amdgpu-num-vgpr"="9" {
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %base = getelementptr inbounds <4 x i32>, ptr addrspace(1) %arg, i32 %id
@@ -39,7 +39,4 @@ bb2:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { "amdgpu-num-vgpr"="9" }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

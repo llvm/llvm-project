@@ -13,7 +13,7 @@
 ; Test that add/sub with a constant is swapped to sub/add with negated
 ; constant to minimize code size.
 
-define amdgpu_kernel void @v_test_i32_x_sub_64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_i32_x_sub_64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_i32_x_sub_64:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -126,7 +126,7 @@ define amdgpu_kernel void @v_test_i32_x_sub_64(ptr addrspace(1) %out, ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_x_sub_64_multi_use(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_i32_x_sub_64_multi_use(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_i32_x_sub_64_multi_use:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -284,7 +284,7 @@ define amdgpu_kernel void @v_test_i32_x_sub_64_multi_use(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_64_sub_x(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_i32_64_sub_x(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_i32_64_sub_x:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -397,7 +397,7 @@ define amdgpu_kernel void @v_test_i32_64_sub_x(ptr addrspace(1) %out, ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_x_sub_65(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_i32_x_sub_65(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_i32_x_sub_65:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -545,7 +545,7 @@ define amdgpu_kernel void @v_test_i32_x_sub_65(ptr addrspace(1) %out, ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_65_sub_x(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_i32_65_sub_x(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_i32_65_sub_x:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -658,7 +658,7 @@ define amdgpu_kernel void @v_test_i32_65_sub_x(ptr addrspace(1) %out, ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_x_sub_neg16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_i32_x_sub_neg16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_i32_x_sub_neg16:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -806,7 +806,7 @@ define amdgpu_kernel void @v_test_i32_x_sub_neg16(ptr addrspace(1) %out, ptr add
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_neg16_sub_x(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_i32_neg16_sub_x(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_i32_neg16_sub_x:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -919,7 +919,7 @@ define amdgpu_kernel void @v_test_i32_neg16_sub_x(ptr addrspace(1) %out, ptr add
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_x_sub_neg17(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_i32_x_sub_neg17(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_i32_x_sub_neg17:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1067,7 +1067,7 @@ define amdgpu_kernel void @v_test_i32_x_sub_neg17(ptr addrspace(1) %out, ptr add
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_neg17_sub_x(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_i32_neg17_sub_x(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_i32_neg17_sub_x:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1180,7 +1180,7 @@ define amdgpu_kernel void @v_test_i32_neg17_sub_x(ptr addrspace(1) %out, ptr add
   ret void
 }
 
-define amdgpu_kernel void @s_test_i32_x_sub_64(i32 %x) #0 {
+define amdgpu_kernel void @s_test_i32_x_sub_64(i32 %x) nounwind {
 ; SI-LABEL: s_test_i32_x_sub_64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s0, s[0:1], 0x9
@@ -1235,7 +1235,7 @@ define amdgpu_kernel void @s_test_i32_x_sub_64(i32 %x) #0 {
   ret void
 }
 
-define amdgpu_kernel void @v_test_i16_x_sub_64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_i16_x_sub_64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_i16_x_sub_64:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1348,7 +1348,7 @@ define amdgpu_kernel void @v_test_i16_x_sub_64(ptr addrspace(1) %out, ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @v_test_i16_x_sub_64_zext_to_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_i16_x_sub_64_zext_to_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_i16_x_sub_64_zext_to_i32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1474,7 +1474,7 @@ define amdgpu_kernel void @v_test_i16_x_sub_64_zext_to_i32(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_i16_x_sub_64_multi_use(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_i16_x_sub_64_multi_use(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_i16_x_sub_64_multi_use:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1632,7 +1632,7 @@ define amdgpu_kernel void @v_test_i16_x_sub_64_multi_use(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_sub_64_64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_64_64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_sub_64_64:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1760,7 +1760,7 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_64_64(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_sub_7_64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_7_64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_sub_7_64:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1901,7 +1901,7 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_7_64(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_sub_64_123(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_64_123(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_sub_64_123:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2043,7 +2043,7 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_64_123(ptr addrspace(1) %out, ptr 
 }
 
 ; Can fold 0 and inline immediate in other half.
-define amdgpu_kernel void @v_test_v2i16_x_sub_7_0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_7_0(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_sub_7_0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2168,7 +2168,7 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_7_0(ptr addrspace(1) %out, ptr add
 }
 
 ; Can fold 0 and inline immediate in other half.
-define amdgpu_kernel void @v_test_v2i16_x_sub_0_16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_0_16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_sub_0_16:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2290,7 +2290,7 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_0_16(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_sub_0_1_0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_0_1_0(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_sub_0_1_0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2425,7 +2425,7 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_0_1_0(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_sub_0_neg1_0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_0_neg1_0(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_sub_0_neg1_0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2561,7 +2561,7 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_0_neg1_0(ptr addrspace(1) %out, pt
 }
 
 ; -32 isn't an inline immediate, but 32 is
-define amdgpu_kernel void @v_test_v2i16_x_add_neg32_neg32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg32_neg32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_add_neg32_neg32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2689,7 +2689,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_neg32(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_0_neg32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_0_neg32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_add_0_neg32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2811,7 +2811,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_0_neg32(ptr addrspace(1) %out, ptr
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg32_0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg32_0(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_add_neg32_0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2936,7 +2936,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_0(ptr addrspace(1) %out, ptr
 }
 
 ; 16 and -16 are both inline immediates
-define amdgpu_kernel void @v_test_v2i16_x_add_neg16_neg16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg16_neg16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_add_neg16_neg16:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3064,7 +3064,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg16_neg16(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_0_neg16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_0_neg16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_add_0_neg16:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3186,7 +3186,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_0_neg16(ptr addrspace(1) %out, ptr
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg16_0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg16_0(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_add_neg16_0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3310,7 +3310,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg16_0(ptr addrspace(1) %out, ptr
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg_fpone(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg_fpone(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_add_neg_fpone:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3475,7 +3475,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_fpone(ptr addrspace(1) %out, p
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfpone(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfpone(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_add_neg_negfpone:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3640,7 +3640,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfpone(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg_fptwo(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg_fptwo(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_add_neg_fptwo:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3768,7 +3768,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_fptwo(ptr addrspace(1) %out, p
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfptwo(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfptwo(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_add_neg_negfptwo:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3896,7 +3896,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfptwo(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_undef_neg32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_undef_neg32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_add_undef_neg32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -4017,7 +4017,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_undef_neg32(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg32_undef(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg32_undef(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-SDAG-LABEL: v_test_v2i16_x_add_neg32_undef:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -4171,7 +4171,4 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_undef(ptr addrspace(1) %out,
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

@@ -7,7 +7,7 @@
 ; CHECK: [[ASC:%[a-z0-9]+]] = addrspacecast ptr addrspace(3) [[GEP]] to ptr
 ; CHECK: [[LOAD:%[a-z0-9]+]] = load <2 x i16>, ptr [[ASC]]
 ; CHECK: bitcast <2 x i16> [[LOAD]] to <2 x half>
-define amdgpu_kernel void @invalid_bitcast_addrspace() #0 {
+define amdgpu_kernel void @invalid_bitcast_addrspace() nounwind "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %data = alloca [1 x i32], addrspace(5)
   %tmp1 = addrspacecast ptr addrspace(5) %data to ptr
@@ -15,5 +15,3 @@ entry:
   %tmp4 = bitcast <2 x i16> %tmp3 to <2 x half>
   ret void
 }
-
-attributes #0 = { nounwind "amdgpu-flat-work-group-size"="1,256" }

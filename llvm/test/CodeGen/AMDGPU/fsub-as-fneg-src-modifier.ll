@@ -5,7 +5,7 @@
 ; Test that fneg is folded into source modifiers when it wasn't
 ; possible to fold fsub to fneg without context.
 
-define float @no_fold_f32_fsub_into_fneg_modifier_ieee_pos1(float %v0, float %v1) #0 {
+define float @no_fold_f32_fsub_into_fneg_modifier_ieee_pos1(float %v0, float %v1) "denormal-fp-math"="ieee,ieee" {
 ; CHECK-LABEL: no_fold_f32_fsub_into_fneg_modifier_ieee_pos1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17,7 +17,7 @@ define float @no_fold_f32_fsub_into_fneg_modifier_ieee_pos1(float %v0, float %v1
   ret float %mul
 }
 
-define float @no_fold_f32_fsub_into_fneg_modifier_daz_pos1(float %v0, float %v1) #1 {
+define float @no_fold_f32_fsub_into_fneg_modifier_daz_pos1(float %v0, float %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; CHECK-LABEL: no_fold_f32_fsub_into_fneg_modifier_daz_pos1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -29,7 +29,7 @@ define float @no_fold_f32_fsub_into_fneg_modifier_daz_pos1(float %v0, float %v1)
   ret float %mul
 }
 
-define float @no_fold_f32_fsub_into_fneg_modifier_ieee_commuted(float %v0, float %v1) #0 {
+define float @no_fold_f32_fsub_into_fneg_modifier_ieee_commuted(float %v0, float %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: no_fold_f32_fsub_into_fneg_modifier_ieee_commuted:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -48,7 +48,7 @@ define float @no_fold_f32_fsub_into_fneg_modifier_ieee_commuted(float %v0, float
   ret float %mul
 }
 
-define float @fold_f32_fsub_into_fneg_modifier_ieee_pos0(float %v0, float %v1) #0 {
+define float @fold_f32_fsub_into_fneg_modifier_ieee_pos0(float %v0, float %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_f32_fsub_into_fneg_modifier_ieee_pos0:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -66,7 +66,7 @@ define float @fold_f32_fsub_into_fneg_modifier_ieee_pos0(float %v0, float %v1) #
   ret float %mul
 }
 
-define float @fold_f32_fsub_into_fneg_modifier_daz_pos0(float %v0, float %v1) #1 {
+define float @fold_f32_fsub_into_fneg_modifier_daz_pos0(float %v0, float %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: fold_f32_fsub_into_fneg_modifier_daz_pos0:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -84,7 +84,7 @@ define float @fold_f32_fsub_into_fneg_modifier_daz_pos0(float %v0, float %v1) #1
   ret float %mul
 }
 
-define float @no_fold_f32_fsub_into_fneg_modifier_daz_commuted(float %v0, float %v1) #1 {
+define float @no_fold_f32_fsub_into_fneg_modifier_daz_commuted(float %v0, float %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: no_fold_f32_fsub_into_fneg_modifier_daz_commuted:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -103,7 +103,7 @@ define float @no_fold_f32_fsub_into_fneg_modifier_daz_commuted(float %v0, float 
   ret float %mul
 }
 
-define float @fold_f32_fsub_into_fneg_modifier_ieee(float %v0, float %v1) #0 {
+define float @fold_f32_fsub_into_fneg_modifier_ieee(float %v0, float %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_f32_fsub_into_fneg_modifier_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -121,7 +121,7 @@ define float @fold_f32_fsub_into_fneg_modifier_ieee(float %v0, float %v1) #0 {
   ret float %mul
 }
 
-define float @fold_f32_fsub_into_fneg_modifier_daz(float %v0, float %v1) #1 {
+define float @fold_f32_fsub_into_fneg_modifier_daz(float %v0, float %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: fold_f32_fsub_into_fneg_modifier_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -139,7 +139,7 @@ define float @fold_f32_fsub_into_fneg_modifier_daz(float %v0, float %v1) #1 {
   ret float %mul
 }
 
-define float @fold_f32_fsub_into_fneg_modifier_ieee_nsz(float %v0, float %v1) #0 {
+define float @fold_f32_fsub_into_fneg_modifier_ieee_nsz(float %v0, float %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_f32_fsub_into_fneg_modifier_ieee_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -157,7 +157,7 @@ define float @fold_f32_fsub_into_fneg_modifier_ieee_nsz(float %v0, float %v1) #0
   ret float %mul
 }
 
-define float @fold_f32_fsub_into_fneg_modifier_daz_nsz(float %v0, float %v1) #1 {
+define float @fold_f32_fsub_into_fneg_modifier_daz_nsz(float %v0, float %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: fold_f32_fsub_into_fneg_modifier_daz_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -175,7 +175,7 @@ define float @fold_f32_fsub_into_fneg_modifier_daz_nsz(float %v0, float %v1) #1 
   ret float %mul
 }
 
-define float @fold_f32_fsub_into_fneg_modifier_dynamic(float %v0, float %v1) #2 {
+define float @fold_f32_fsub_into_fneg_modifier_dynamic(float %v0, float %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: fold_f32_fsub_into_fneg_modifier_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -193,7 +193,7 @@ define float @fold_f32_fsub_into_fneg_modifier_dynamic(float %v0, float %v1) #2 
   ret float %mul
 }
 
-define float @fold_f32_fsub_into_fneg_modifier_dynamic_nsz(float %v0, float %v1) #2 {
+define float @fold_f32_fsub_into_fneg_modifier_dynamic_nsz(float %v0, float %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: fold_f32_fsub_into_fneg_modifier_dynamic_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -211,7 +211,7 @@ define float @fold_f32_fsub_into_fneg_modifier_dynamic_nsz(float %v0, float %v1)
   ret float %mul
 }
 
-define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_ieee(<2 x float> %v0, <2 x float> %v1) #0 {
+define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_ieee(<2 x float> %v0, <2 x float> %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_v2f32_fsub_into_fneg_modifier_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -232,7 +232,7 @@ define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_ieee(<2 x float> %v0, <2 
   ret <2 x float> %mul
 }
 
-define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_daz(<2 x float> %v0, <2 x float> %v1) #1 {
+define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_daz(<2 x float> %v0, <2 x float> %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: fold_v2f32_fsub_into_fneg_modifier_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -253,7 +253,7 @@ define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_daz(<2 x float> %v0, <2 x
   ret <2 x float> %mul
 }
 
-define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_ieee_nsz(<2 x float> %v0, <2 x float> %v1) #0 {
+define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_ieee_nsz(<2 x float> %v0, <2 x float> %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_v2f32_fsub_into_fneg_modifier_ieee_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -274,7 +274,7 @@ define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_ieee_nsz(<2 x float> %v0,
   ret <2 x float> %mul
 }
 
-define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_daz_nsz(<2 x float> %v0, <2 x float> %v1) #1 {
+define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_daz_nsz(<2 x float> %v0, <2 x float> %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: fold_v2f32_fsub_into_fneg_modifier_daz_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -295,7 +295,7 @@ define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_daz_nsz(<2 x float> %v0, 
   ret <2 x float> %mul
 }
 
-define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_dynamic(<2 x float> %v0, <2 x float> %v1) #2 {
+define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_dynamic(<2 x float> %v0, <2 x float> %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: fold_v2f32_fsub_into_fneg_modifier_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -316,7 +316,7 @@ define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_dynamic(<2 x float> %v0, 
   ret <2 x float> %mul
 }
 
-define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_dynamic_nsz(<2 x float> %v0, <2 x float> %v1) #2 {
+define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_dynamic_nsz(<2 x float> %v0, <2 x float> %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: fold_v2f32_fsub_into_fneg_modifier_dynamic_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -338,7 +338,7 @@ define <2 x float> @fold_v2f32_fsub_into_fneg_modifier_dynamic_nsz(<2 x float> %
 }
 
 
-define half @fold_f16_fsub_into_fneg_modifier_ieee(half %v0, half %v1) #0 {
+define half @fold_f16_fsub_into_fneg_modifier_ieee(half %v0, half %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_f16_fsub_into_fneg_modifier_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -356,7 +356,7 @@ define half @fold_f16_fsub_into_fneg_modifier_ieee(half %v0, half %v1) #0 {
   ret half %mul
 }
 
-define half @fold_f16_fsub_into_fneg_modifier_daz(half %v0, half %v1) #1 {
+define half @fold_f16_fsub_into_fneg_modifier_daz(half %v0, half %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: fold_f16_fsub_into_fneg_modifier_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -374,7 +374,7 @@ define half @fold_f16_fsub_into_fneg_modifier_daz(half %v0, half %v1) #1 {
   ret half %mul
 }
 
-define half @fold_f16_fsub_into_fneg_modifier_ieee_nsz(half %v0, half %v1) #0 {
+define half @fold_f16_fsub_into_fneg_modifier_ieee_nsz(half %v0, half %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_f16_fsub_into_fneg_modifier_ieee_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -392,7 +392,7 @@ define half @fold_f16_fsub_into_fneg_modifier_ieee_nsz(half %v0, half %v1) #0 {
   ret half %mul
 }
 
-define half @fold_f16_fsub_into_fneg_modifier_daz_nsz(half %v0, half %v1) #1 {
+define half @fold_f16_fsub_into_fneg_modifier_daz_nsz(half %v0, half %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: fold_f16_fsub_into_fneg_modifier_daz_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -410,7 +410,7 @@ define half @fold_f16_fsub_into_fneg_modifier_daz_nsz(half %v0, half %v1) #1 {
   ret half %mul
 }
 
-define half @fold_f16_fsub_into_fneg_modifier_dynamic(half %v0, half %v1) #2 {
+define half @fold_f16_fsub_into_fneg_modifier_dynamic(half %v0, half %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: fold_f16_fsub_into_fneg_modifier_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -428,7 +428,7 @@ define half @fold_f16_fsub_into_fneg_modifier_dynamic(half %v0, half %v1) #2 {
   ret half %mul
 }
 
-define half @fold_f16_fsub_into_fneg_modifier_dynamic_nsz(half %v0, half %v1) #2 {
+define half @fold_f16_fsub_into_fneg_modifier_dynamic_nsz(half %v0, half %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: fold_f16_fsub_into_fneg_modifier_dynamic_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -446,7 +446,7 @@ define half @fold_f16_fsub_into_fneg_modifier_dynamic_nsz(half %v0, half %v1) #2
   ret half %mul
 }
 
-define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_ieee(<2 x half> %v0, <2 x half> %v1) #0 {
+define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_ieee(<2 x half> %v0, <2 x half> %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_v2f16_fsub_into_fneg_modifier_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -464,7 +464,7 @@ define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_ieee(<2 x half> %v0, <2 x 
   ret <2 x half> %mul
 }
 
-define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_daz(<2 x half> %v0, <2 x half> %v1) #1 {
+define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_daz(<2 x half> %v0, <2 x half> %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: fold_v2f16_fsub_into_fneg_modifier_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -482,7 +482,7 @@ define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_daz(<2 x half> %v0, <2 x h
   ret <2 x half> %mul
 }
 
-define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_ieee_nsz(<2 x half> %v0, <2 x half> %v1) #0 {
+define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_ieee_nsz(<2 x half> %v0, <2 x half> %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_v2f16_fsub_into_fneg_modifier_ieee_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -500,7 +500,7 @@ define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_ieee_nsz(<2 x half> %v0, <
   ret <2 x half> %mul
 }
 
-define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_daz_nsz(<2 x half> %v0, <2 x half> %v1) #1 {
+define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_daz_nsz(<2 x half> %v0, <2 x half> %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: fold_v2f16_fsub_into_fneg_modifier_daz_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -518,7 +518,7 @@ define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_daz_nsz(<2 x half> %v0, <2
   ret <2 x half> %mul
 }
 
-define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_dynamic(<2 x half> %v0, <2 x half> %v1) #2 {
+define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_dynamic(<2 x half> %v0, <2 x half> %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: fold_v2f16_fsub_into_fneg_modifier_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -536,7 +536,7 @@ define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_dynamic(<2 x half> %v0, <2
   ret <2 x half> %mul
 }
 
-define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_dynamic_nsz(<2 x half> %v0, <2 x half> %v1) #2 {
+define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_dynamic_nsz(<2 x half> %v0, <2 x half> %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: fold_v2f16_fsub_into_fneg_modifier_dynamic_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -554,7 +554,7 @@ define <2 x half> @fold_v2f16_fsub_into_fneg_modifier_dynamic_nsz(<2 x half> %v0
   ret <2 x half> %mul
 }
 
-define double @fold_f64_fsub_into_fneg_modifier_ieee(double %v0, double %v1) #0 {
+define double @fold_f64_fsub_into_fneg_modifier_ieee(double %v0, double %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_f64_fsub_into_fneg_modifier_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -572,7 +572,7 @@ define double @fold_f64_fsub_into_fneg_modifier_ieee(double %v0, double %v1) #0 
   ret double %mul
 }
 
-define double @fold_f64_fsub_into_fneg_modifier_daz(double %v0, double %v1) #1 {
+define double @fold_f64_fsub_into_fneg_modifier_daz(double %v0, double %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: fold_f64_fsub_into_fneg_modifier_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -590,7 +590,7 @@ define double @fold_f64_fsub_into_fneg_modifier_daz(double %v0, double %v1) #1 {
   ret double %mul
 }
 
-define double @fold_f64_fsub_into_fneg_modifier_ieee_nsz(double %v0, double %v1) #0 {
+define double @fold_f64_fsub_into_fneg_modifier_ieee_nsz(double %v0, double %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_f64_fsub_into_fneg_modifier_ieee_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -608,7 +608,7 @@ define double @fold_f64_fsub_into_fneg_modifier_ieee_nsz(double %v0, double %v1)
   ret double %mul
 }
 
-define double @fold_f64_fsub_into_fneg_modifier_daz_nsz(double %v0, double %v1) #1 {
+define double @fold_f64_fsub_into_fneg_modifier_daz_nsz(double %v0, double %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: fold_f64_fsub_into_fneg_modifier_daz_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -626,7 +626,7 @@ define double @fold_f64_fsub_into_fneg_modifier_daz_nsz(double %v0, double %v1) 
   ret double %mul
 }
 
-define double @fold_f64_fsub_into_fneg_modifier_dynamic(double %v0, double %v1) #2 {
+define double @fold_f64_fsub_into_fneg_modifier_dynamic(double %v0, double %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: fold_f64_fsub_into_fneg_modifier_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -644,7 +644,7 @@ define double @fold_f64_fsub_into_fneg_modifier_dynamic(double %v0, double %v1) 
   ret double %mul
 }
 
-define double @fold_f64_fsub_into_fneg_modifier_dynamic_nsz(double %v0, double %v1) #2 {
+define double @fold_f64_fsub_into_fneg_modifier_dynamic_nsz(double %v0, double %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: fold_f64_fsub_into_fneg_modifier_dynamic_nsz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -662,7 +662,7 @@ define double @fold_f64_fsub_into_fneg_modifier_dynamic_nsz(double %v0, double %
   ret double %mul
 }
 
-define float @fold_f32_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, float %v0, float %v1) #0 {
+define float @fold_f32_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, float %v0, float %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_f32_select_user_fsub_into_fneg_modifier_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -684,7 +684,7 @@ define float @fold_f32_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, float 
   ret float %mul
 }
 
-define float @no_fold_f32_select_user_fsub_into_fneg_modifier_daz(i1 %cond, float %v0, float %v1) #1 {
+define float @no_fold_f32_select_user_fsub_into_fneg_modifier_daz(i1 %cond, float %v0, float %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: no_fold_f32_select_user_fsub_into_fneg_modifier_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -707,7 +707,7 @@ define float @no_fold_f32_select_user_fsub_into_fneg_modifier_daz(i1 %cond, floa
   ret float %mul
 }
 
-define float @no_fold_f32_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond, float %v0, float %v1) #2 {
+define float @no_fold_f32_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond, float %v0, float %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: no_fold_f32_select_user_fsub_into_fneg_modifier_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -730,7 +730,7 @@ define float @no_fold_f32_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond, 
   ret float %mul
 }
 
-define half @fold_f16_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, half %v0, half %v1) #0 {
+define half @fold_f16_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, half %v0, half %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_f16_select_user_fsub_into_fneg_modifier_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -753,7 +753,7 @@ define half @fold_f16_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, half %v
   ret half %mul
 }
 
-define half @no_fold_f16_select_user_fsub_into_fneg_modifier_daz(i1 %cond, half %v0, half %v1) #1 {
+define half @no_fold_f16_select_user_fsub_into_fneg_modifier_daz(i1 %cond, half %v0, half %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: no_fold_f16_select_user_fsub_into_fneg_modifier_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -776,7 +776,7 @@ define half @no_fold_f16_select_user_fsub_into_fneg_modifier_daz(i1 %cond, half 
   ret half %mul
 }
 
-define half @no_fold_f16_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond, half %v0, half %v1) #2 {
+define half @no_fold_f16_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond, half %v0, half %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: no_fold_f16_select_user_fsub_into_fneg_modifier_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -799,7 +799,7 @@ define half @no_fold_f16_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond, h
   ret half %mul
 }
 
-define double @fold_f64_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, double %v0, double %v1) #0 {
+define double @fold_f64_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, double %v0, double %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_f64_select_user_fsub_into_fneg_modifier_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -824,7 +824,7 @@ define double @fold_f64_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, doubl
   ret double %mul
 }
 
-define double @no_fold_f64_select_user_fsub_into_fneg_modifier_daz(i1 %cond, double %v0, double %v1) #1 {
+define double @no_fold_f64_select_user_fsub_into_fneg_modifier_daz(i1 %cond, double %v0, double %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: no_fold_f64_select_user_fsub_into_fneg_modifier_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -849,7 +849,7 @@ define double @no_fold_f64_select_user_fsub_into_fneg_modifier_daz(i1 %cond, dou
   ret double %mul
 }
 
-define double @no_fold_f64_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond, double %v0, double %v1) #2 {
+define double @no_fold_f64_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond, double %v0, double %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: no_fold_f64_select_user_fsub_into_fneg_modifier_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -874,7 +874,7 @@ define double @no_fold_f64_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond,
   ret double %mul
 }
 
-define <2 x half> @fold_v2f16_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, <2 x half> %v0, <2 x half> %v1) #0 {
+define <2 x half> @fold_v2f16_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, <2 x half> %v0, <2 x half> %v1) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: fold_v2f16_select_user_fsub_into_fneg_modifier_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -897,7 +897,7 @@ define <2 x half> @fold_v2f16_select_user_fsub_into_fneg_modifier_ieee(i1 %cond,
   ret <2 x half> %mul
 }
 
-define <2 x half> @no_fold_v2f16_select_user_fsub_into_fneg_modifier_daz(i1 %cond, <2 x half> %v0, <2 x half> %v1) #1 {
+define <2 x half> @no_fold_v2f16_select_user_fsub_into_fneg_modifier_daz(i1 %cond, <2 x half> %v0, <2 x half> %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: no_fold_v2f16_select_user_fsub_into_fneg_modifier_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -920,7 +920,7 @@ define <2 x half> @no_fold_v2f16_select_user_fsub_into_fneg_modifier_daz(i1 %con
   ret <2 x half> %mul
 }
 
-define <2 x half> @no_fold_v2f16_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond, <2 x half> %v0, <2 x half> %v1) #2 {
+define <2 x half> @no_fold_v2f16_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond, <2 x half> %v0, <2 x half> %v1) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: no_fold_v2f16_select_user_fsub_into_fneg_modifier_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -943,7 +943,7 @@ define <2 x half> @no_fold_v2f16_select_user_fsub_into_fneg_modifier_dynamic(i1 
   ret <2 x half> %mul
 }
 
-define float @fold_f32_strict_fsub_into_fneg_modifier_ieee(float %v0, float %v1) #3 {
+define float @fold_f32_strict_fsub_into_fneg_modifier_ieee(float %v0, float %v1) "denormal-fp-math"="ieee,ieee" strictfp {
 ; CHECK-LABEL: fold_f32_strict_fsub_into_fneg_modifier_ieee:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -955,7 +955,7 @@ define float @fold_f32_strict_fsub_into_fneg_modifier_ieee(float %v0, float %v1)
   ret float %mul
 }
 
-define float @fold_f32_strict_fsub_into_fneg_modifier_daz(float %v0, float %v1) #4 {
+define float @fold_f32_strict_fsub_into_fneg_modifier_daz(float %v0, float %v1) "denormal-fp-math"="preserve-sign,preserve-sign" strictfp {
 ; CHECK-LABEL: fold_f32_strict_fsub_into_fneg_modifier_daz:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -967,7 +967,7 @@ define float @fold_f32_strict_fsub_into_fneg_modifier_daz(float %v0, float %v1) 
   ret float %mul
 }
 
-define float @fold_f32_strict_fsub_into_fneg_modifier_dynamic(float %v0, float %v1) #5 {
+define float @fold_f32_strict_fsub_into_fneg_modifier_dynamic(float %v0, float %v1) "denormal-fp-math"="dynamic,dynamic" strictfp {
 ; CHECK-LABEL: fold_f32_strict_fsub_into_fneg_modifier_dynamic:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -979,7 +979,7 @@ define float @fold_f32_strict_fsub_into_fneg_modifier_dynamic(float %v0, float %
   ret float %mul
 }
 
-define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_ieee(float %v0) #0 {
+define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_ieee(float %v0) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_issnan_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -999,7 +999,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_ieee(float %v0) #0 {
   ret i1 %class
 }
 
-define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_daz(float %v0) #1 {
+define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_daz(float %v0) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_issnan_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1020,7 +1020,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_daz(float %v0) #1 {
   ret i1 %class
 }
 
-define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_dynamic(float %v0) #2 {
+define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_dynamic(float %v0) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_issnan_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1041,7 +1041,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_dynamic(float %v0) #
   ret i1 %class
 }
 
-define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_ieee(float %v0) #0 {
+define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_ieee(float %v0) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1063,7 +1063,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_ieee(float %v0) 
   ret i1 %class
 }
 
-define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_daz(float %v0) #1 {
+define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_daz(float %v0) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1086,7 +1086,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_daz(float %v0) #
   ret i1 %class
 }
 
-define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_dynamic(float %v0) #2 {
+define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_dynamic(float %v0) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1109,7 +1109,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_dynamic(float %v
   ret i1 %class
 }
 
-define i1 @no_fold_f32_fsub_into_fneg_modifier_class_var_ieee(float %v0, i32 %testmask) #0 {
+define i1 @no_fold_f32_fsub_into_fneg_modifier_class_var_ieee(float %v0, i32 %testmask) "denormal-fp-math"="ieee,ieee" {
 ; SDAG-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_var_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1129,7 +1129,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_var_ieee(float %v0, i32 %te
   ret i1 %class
 }
 
-define i1 @no_fold_f32_fsub_into_fneg_modifier_class_var_daz(float %v0, i32 %testmask) #1 {
+define i1 @no_fold_f32_fsub_into_fneg_modifier_class_var_daz(float %v0, i32 %testmask) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_var_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1150,7 +1150,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_var_daz(float %v0, i32 %tes
   ret i1 %class
 }
 
-define i1 @no_fold_f32_fsub_into_fneg_modifier_class_var_dynamic(float %v0, i32 %testmask) #2 {
+define i1 @no_fold_f32_fsub_into_fneg_modifier_class_var_dynamic(float %v0, i32 %testmask) "denormal-fp-math"="dynamic,dynamic" {
 ; SDAG-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_var_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1171,7 +1171,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_var_dynamic(float %v0, i32 
   ret i1 %class
 }
 
-define i1 @no_fold_f64_fsub_into_fneg_modifier_class_var_daz(double %v0, i32 %testmask) #1 {
+define i1 @no_fold_f64_fsub_into_fneg_modifier_class_var_daz(double %v0, i32 %testmask) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: no_fold_f64_fsub_into_fneg_modifier_class_var_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1191,7 +1191,7 @@ define i1 @no_fold_f64_fsub_into_fneg_modifier_class_var_daz(double %v0, i32 %te
   ret i1 %class
 }
 
-define i1 @no_fold_f16_fsub_into_fneg_modifier_class_var_daz(half %v0, i32 %testmask) #1 {
+define i1 @no_fold_f16_fsub_into_fneg_modifier_class_var_daz(half %v0, i32 %testmask) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: no_fold_f16_fsub_into_fneg_modifier_class_var_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1212,7 +1212,7 @@ define i1 @no_fold_f16_fsub_into_fneg_modifier_class_var_daz(half %v0, i32 %test
   ret i1 %class
 }
 
-define i1 @no_fold_f64_fsub_into_fneg_modifier_class_daz(double %v0) #1 {
+define i1 @no_fold_f64_fsub_into_fneg_modifier_class_daz(double %v0) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: no_fold_f64_fsub_into_fneg_modifier_class_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1234,7 +1234,7 @@ define i1 @no_fold_f64_fsub_into_fneg_modifier_class_daz(double %v0) #1 {
   ret i1 %class
 }
 
-define i1 @no_fold_f16_fsub_into_fneg_modifier_class_daz(half %v0) #1 {
+define i1 @no_fold_f16_fsub_into_fneg_modifier_class_daz(half %v0) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: no_fold_f16_fsub_into_fneg_modifier_class_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1257,7 +1257,7 @@ define i1 @no_fold_f16_fsub_into_fneg_modifier_class_daz(half %v0) #1 {
   ret i1 %class
 }
 
-define amdgpu_gfx float @fold_f32_fsub_into_fneg_modifier_interp_daz(float %v0, i32 inreg %v1) #1 {
+define amdgpu_gfx float @fold_f32_fsub_into_fneg_modifier_interp_daz(float %v0, i32 inreg %v1) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: fold_f32_fsub_into_fneg_modifier_interp_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1280,7 +1280,7 @@ define amdgpu_gfx float @fold_f32_fsub_into_fneg_modifier_interp_daz(float %v0, 
   ret float %p0_0
 }
 
-define amdgpu_gfx float @fold_f16_fsub_into_fneg_modifier_interp_daz(float %v0, i32 inreg %m0) #1 {
+define amdgpu_gfx float @fold_f16_fsub_into_fneg_modifier_interp_daz(float %v0, i32 inreg %m0) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SDAG-LABEL: fold_f16_fsub_into_fneg_modifier_interp_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1312,10 +1312,3 @@ declare i1 @llvm.is.fpclass.f16(half, i32 immarg)
 declare i1 @llvm.amdgcn.class.f16(half, i32)
 declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32)
 declare float @llvm.amdgcn.interp.p1.f16(float, i32, i32, i1, i32)
-
-attributes #0 = { "denormal-fp-math"="ieee,ieee" }
-attributes #1 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #2 = { "denormal-fp-math"="dynamic,dynamic" }
-attributes #3 = { "denormal-fp-math"="ieee,ieee" strictfp }
-attributes #4 = { "denormal-fp-math"="preserve-sign,preserve-sign" strictfp }
-attributes #5 = { "denormal-fp-math"="dynamic,dynamic" strictfp }

@@ -79,8 +79,6 @@ for.cond.cleanup:                                 ; preds = %for.cond4.preheader
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-declare align 4 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
-
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+declare i32 @llvm.amdgcn.workitem.id.x() nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare i32 @llvm.amdgcn.workgroup.id.x() nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare align 4 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() nocallback nofree nosync nounwind speculatable willreturn memory(none)

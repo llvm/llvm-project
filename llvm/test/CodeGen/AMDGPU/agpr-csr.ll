@@ -5,7 +5,7 @@
 ; GCN-NOT: buffer_
 ; GCN-NOT: v_accvgpr
 ; GCN:     s_setpc_b64
-define void @func_empty() #0 {
+define void @func_empty() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
   ret void
 }
 
@@ -16,7 +16,7 @@ define void @func_empty() #0 {
 ; GCN-NOT: buffer_
 ; GCN-NOT: v_accvgpr
 ; GCN: s_setpc_b64
-define void @func_areg_4() #0 {
+define void @func_areg_4() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
   call void asm sideeffect "; use agpr3", "~{a3}" ()
   ret void
 }
@@ -28,7 +28,7 @@ define void @func_areg_4() #0 {
 ; GCN-NOT: buffer_
 ; GCN-NOT: v_accvgpr
 ; GCN: s_setpc_b64
-define void @func_areg_32() #0 {
+define void @func_areg_32() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
   call void asm sideeffect "; use agpr31", "~{a31}" ()
   ret void
 }
@@ -42,7 +42,7 @@ define void @func_areg_32() #0 {
 ; GFX90A: v_accvgpr_write_b32 a32, v0 ; Reload Reuse
 ; GCN-NOT: a32
 ; GCN:        s_setpc_b64
-define void @func_areg_33() #0 {
+define void @func_areg_33() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
   call void asm sideeffect "; use agpr32", "~{a32}" ()
   ret void
 }
@@ -55,7 +55,7 @@ define void @func_areg_33() #0 {
 ; GFX90A: v_accvgpr_write_b32 a63, v0 ; Reload Reuse
 ; GCN-NOT:    v_accvgpr
 ; GCN:        s_setpc_b64
-define void @func_areg_64() #0 {
+define void @func_areg_64() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
   call void asm sideeffect "; use agpr63", "~{a63}" ()
   ret void
 }
@@ -70,12 +70,12 @@ define void @func_areg_64() #0 {
 ; GFX908-NOT: v_accvgpr
 ; GFX908-NOT: buffer
 ; GCN:        s_setpc_b64
-define void @func_areg_31_63() #0 {
+define void @func_areg_31_63() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
   call void asm sideeffect "; use agpr31, agpr63", "~{a31},~{a63}" ()
   ret void
 }
 
-declare void @func_unknown() #0
+declare void @func_unknown() nounwind noinline "amdgpu-flat-work-group-size"="1,512"
 
 ; GCN-LABEL: {{^}}test_call_empty:
 ; GCN-NOT:         buffer_
@@ -90,7 +90,7 @@ declare void @func_unknown() #0
 ; GFX908-COUNT-8:  global_store_dwordx4 v[{{[0-9:]+}}], v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v[{{[0-9:]+}}], a[{{[0-9:]+}}]
 ; GCN:             s_endpgm
-define amdgpu_kernel void @test_call_empty() #0 {
+define amdgpu_kernel void @test_call_empty() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   %reg = call <32 x float> asm sideeffect "; def $0", "=a"()
   call void @func_empty()
@@ -112,7 +112,7 @@ bb:
 ; GFX908-COUNT-8:  global_store_dwordx4 v[{{[0-9:]+}}], v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v[{{[0-9:]+}}], a[{{[0-9:]+}}]
 ; GCN:             s_endpgm
-define amdgpu_kernel void @test_call_areg4() #0 {
+define amdgpu_kernel void @test_call_areg4() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   %reg = call <32 x float> asm sideeffect "; def $0", "=a"()
   call void @func_areg_4()
@@ -134,7 +134,7 @@ bb:
 ; GFX908-COUNT-8:  global_store_dwordx4 v[{{[0-9:]+}}], v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v[{{[0-9:]+}}], a[{{[0-9:]+}}]
 ; GCN:             s_endpgm
-define amdgpu_kernel void @test_call_areg32() #0 {
+define amdgpu_kernel void @test_call_areg32() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   %reg = call <32 x float> asm sideeffect "; def $0", "=a"()
   call void @func_areg_32()
@@ -155,7 +155,7 @@ bb:
 ; GFX908-COUNT-8:  global_store_dwordx4 v[{{[0-9:]+}}], v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v[{{[0-9:]+}}], a[{{[0-9:]+}}]
 ; GCN:             s_endpgm
-define amdgpu_kernel void @test_call_areg64() #0 {
+define amdgpu_kernel void @test_call_areg64() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   %reg = call <32 x float> asm sideeffect "; def $0", "=a"()
   call void @func_areg_64()
@@ -177,7 +177,7 @@ bb:
 ; GFX908-COUNT-8:  global_store_dwordx4 v[{{[0-9:]+}}], v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v[{{[0-9:]+}}], a[{{[0-9:]+}}]
 ; GCN:             s_endpgm
-define amdgpu_kernel void @test_call_areg31_63() #0 {
+define amdgpu_kernel void @test_call_areg31_63() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   %reg = call <32 x float> asm sideeffect "; def $0", "=a"()
   call void @func_areg_31_63()
@@ -199,12 +199,10 @@ bb:
 ; GFX908-COUNT-8:  global_store_dwordx4 v[{{[0-9:]+}}], v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v[{{[0-9:]+}}], a[{{[0-9:]+}}]
 ; GCN:             s_endpgm
-define amdgpu_kernel void @test_call_unknown() #0 {
+define amdgpu_kernel void @test_call_unknown() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   %reg = call <32 x float> asm sideeffect "; def $0", "=a"()
   call void @func_unknown()
   store volatile <32 x float> %reg, ptr addrspace(1) undef
   ret void
 }
-
-attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" }

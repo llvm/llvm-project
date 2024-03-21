@@ -134,7 +134,7 @@ define amdgpu_kernel void @test_vopc_2xf16(ptr addrspace(1) %arg) {
   ret void
 }
 
-define amdgpu_kernel void @test_vopc_class(ptr addrspace(1) %out, float %x) #0 {
+define amdgpu_kernel void @test_vopc_class(ptr addrspace(1) %out, float %x) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_vopc_class:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_clause 0x1
@@ -165,7 +165,7 @@ define amdgpu_kernel void @test_vopc_class(ptr addrspace(1) %out, float %x) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_vcmp_vcnd_f16(ptr addrspace(1) %out, half %x) #0 {
+define amdgpu_kernel void @test_vcmp_vcnd_f16(ptr addrspace(1) %out, half %x) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_vcmp_vcnd_f16:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_clause 0x1
@@ -314,7 +314,7 @@ define amdgpu_kernel void @test_vop3_cmp_u32_sop_or(ptr addrspace(1) %arg) {
   ret void
 }
 
-define amdgpu_kernel void @test_mask_if(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mask_if(ptr addrspace(1) %arg) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_mask_if:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 10, v0
@@ -352,7 +352,7 @@ endif:
   ret void
 }
 
-define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_loop_with_if:
 ; GFX1032:       ; %bb.0: ; %bb
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -512,7 +512,7 @@ bb13:
 
 
 
-define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_loop_with_if_else_break:
 ; GFX1032:       ; %bb.0: ; %bb
 ; GFX1032-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
@@ -628,7 +628,7 @@ bb8:
   ret void
 }
 
-define amdgpu_kernel void @test_addc_vop2b(ptr addrspace(1) %arg, i64 %arg1) #0 {
+define amdgpu_kernel void @test_addc_vop2b(ptr addrspace(1) %arg, i64 %arg1) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_addc_vop2b:
 ; GFX1032:       ; %bb.0: ; %bb
 ; GFX1032-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -661,7 +661,7 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_subbrev_vop2b(ptr addrspace(1) %arg, i64 %arg1) #0 {
+define amdgpu_kernel void @test_subbrev_vop2b(ptr addrspace(1) %arg, i64 %arg1) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_subbrev_vop2b:
 ; GFX1032:       ; %bb.0: ; %bb
 ; GFX1032-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -694,7 +694,7 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_subb_vop2b(ptr addrspace(1) %arg, i64 %arg1) #0 {
+define amdgpu_kernel void @test_subb_vop2b(ptr addrspace(1) %arg, i64 %arg1) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_subb_vop2b:
 ; GFX1032:       ; %bb.0: ; %bb
 ; GFX1032-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -727,7 +727,7 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_udiv64:
 ; GFX1032:       ; %bb.0: ; %bb
 ; GFX1032-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
@@ -1060,7 +1060,7 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @test_div_scale_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_div_scale_f32:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -1101,7 +1101,7 @@ define amdgpu_kernel void @test_div_scale_f32(ptr addrspace(1) %out, ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @test_div_scale_f64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %in) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_div_scale_f64:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -1144,7 +1144,7 @@ define amdgpu_kernel void @test_div_scale_f64(ptr addrspace(1) %out, ptr addrspa
   ret void
 }
 
-define i64 @test_mad_i64_i32(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
+define i64 @test_mad_i64_i32(i32 %arg0, i32 %arg1, i64 %arg2) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_mad_i64_i32:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1163,7 +1163,7 @@ define i64 @test_mad_i64_i32(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
   ret i64 %mad
 }
 
-define i64 @test_mad_u64_u32(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
+define i64 @test_mad_u64_u32(i32 %arg0, i32 %arg1, i64 %arg2) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_mad_u64_u32:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1258,7 +1258,7 @@ define amdgpu_kernel void @test_div_fmas_f64(ptr addrspace(1) %out, double %a, d
 
 
 
-define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %dummy) #0 {
+define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %dummy) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_div_fmas_f32_i1_phi_vcc:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_clause 0x1
@@ -1341,7 +1341,7 @@ exit:
 }
 
 
-define amdgpu_kernel void @fdiv_f32(ptr addrspace(1) %out, float %a, float %b) #0 {
+define amdgpu_kernel void @fdiv_f32(ptr addrspace(1) %out, float %a, float %b) nounwind readnone speculatable {
 ; GFX1032-LABEL: fdiv_f32:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -1443,7 +1443,7 @@ two:
   ret void
 }
 
-define amdgpu_kernel void @test_brcc_i1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, i1 %val) #0 {
+define amdgpu_kernel void @test_brcc_i1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, i1 %val) nounwind readnone speculatable {
 ; GCN-LABEL: test_brcc_i1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -1469,7 +1469,7 @@ end:
   ret void
 }
 
-define amdgpu_kernel void @test_preserve_condition_undef_flag(float %arg, i32 %arg1, float %arg2) #0 {
+define amdgpu_kernel void @test_preserve_condition_undef_flag(float %arg, i32 %arg1, float %arg2) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_preserve_condition_undef_flag:
 ; GFX1032:       ; %bb.0: ; %bb0
 ; GFX1032-NEXT:    s_clause 0x1
@@ -1528,7 +1528,7 @@ bb2:
   ret void
 }
 
-define amdgpu_kernel void @test_invert_true_phi_cond_break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @test_invert_true_phi_cond_break_loop(i32 %arg) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_invert_true_phi_cond_break_loop:
 ; GFX1032:       ; %bb.0: ; %bb
 ; GFX1032-NEXT:    s_load_dword s0, s[0:1], 0x24
@@ -1630,7 +1630,7 @@ bb9:                                              ; preds = %Flow
   ret void
 }
 
-define amdgpu_kernel void @test_movrels_extract_neg_offset_vgpr(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_movrels_extract_neg_offset_vgpr(ptr addrspace(1) %out) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_movrels_extract_neg_offset_vgpr:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    v_add_nc_u32_e32 v0, 0xfffffe00, v0
@@ -1661,14 +1661,14 @@ define amdgpu_kernel void @test_movrels_extract_neg_offset_vgpr(ptr addrspace(1)
 ; GFX1064-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX1064-NEXT:    s_endpgm
 entry:
-  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %id = call i32 @llvm.amdgcn.workitem.id.x() nounwind
   %index = add i32 %id, -512
   %value = extractelement <4 x i32> <i32 0, i32 1, i32 2, i32 3>, i32 %index
   store i32 %value, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_set_inactive(ptr addrspace(1) %out, i32 %in) #0 {
+define amdgpu_kernel void @test_set_inactive(ptr addrspace(1) %out, i32 %in) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_set_inactive:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_clause 0x1
@@ -1701,7 +1701,7 @@ define amdgpu_kernel void @test_set_inactive(ptr addrspace(1) %out, i32 %in) #0 
   ret void
 }
 
-define amdgpu_kernel void @test_set_inactive_64(ptr addrspace(1) %out, i64 %in) #0 {
+define amdgpu_kernel void @test_set_inactive_64(ptr addrspace(1) %out, i64 %in) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_set_inactive_64:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -1734,7 +1734,7 @@ define amdgpu_kernel void @test_set_inactive_64(ptr addrspace(1) %out, i64 %in) 
   ret void
 }
 
-define amdgpu_ps void @test_kill_i1_terminator_float() #0 {
+define amdgpu_ps void @test_kill_i1_terminator_float() nounwind readnone speculatable {
 ; GFX1032-LABEL: test_kill_i1_terminator_float:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, exec_lo
@@ -1758,7 +1758,7 @@ define amdgpu_ps void @test_kill_i1_terminator_float() #0 {
   ret void
 }
 
-define amdgpu_gs void @test_kill_i1_terminator_i1(i32 %a, i32 %b, i32 %c, i32 %d) #0 {
+define amdgpu_gs void @test_kill_i1_terminator_i1(i32 %a, i32 %b, i32 %c, i32 %d) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_kill_i1_terminator_i1:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v1
@@ -1798,7 +1798,7 @@ define amdgpu_gs void @test_kill_i1_terminator_i1(i32 %a, i32 %b, i32 %c, i32 %d
   ret void
 }
 
-define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) #0 {
+define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_loop_vcc:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_mov_b32 s0, exec_lo
@@ -2056,7 +2056,7 @@ endif:
 }
 
 
-define amdgpu_ps <4 x float> @test_wqm1(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, <2 x float> %pos) #0 {
+define amdgpu_ps <4 x float> @test_wqm1(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, <2 x float> %pos) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_wqm1:
 ; GFX1032:       ; %bb.0: ; %main_body
 ; GFX1032-NEXT:    s_mov_b32 s0, exec_lo
@@ -2095,7 +2095,7 @@ main_body:
   ret <4 x float> %tex
 }
 
-define amdgpu_ps float @test_wqm2(i32 inreg %idx0, i32 inreg %idx1) #0 {
+define amdgpu_ps float @test_wqm2(i32 inreg %idx0, i32 inreg %idx1) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_wqm2:
 ; GFX1032:       ; %bb.0: ; %main_body
 ; GFX1032-NEXT:    s_mov_b32 s2, exec_lo
@@ -2290,7 +2290,7 @@ define amdgpu_ps void @test_wqm_vote(float %a) {
   ret void
 }
 
-define amdgpu_kernel void @test_branch_true() #2 {
+define amdgpu_kernel void @test_branch_true() nounwind readnone optnone noinline {
 ; GFX1032-LABEL: test_branch_true:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_mov_b32 vcc_lo, exec_lo
@@ -2333,7 +2333,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-define amdgpu_ps float @test_ps_live() #0 {
+define amdgpu_ps float @test_ps_live() nounwind readnone speculatable {
 ; GFX1032-LABEL: test_ps_live:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_mov_b32 s0, exec_lo
@@ -2351,7 +2351,7 @@ define amdgpu_ps float @test_ps_live() #0 {
   ret float %r
 }
 
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind readnone speculatable {
 ; GFX1032-LABEL: test_vccnz_ifcvt_triangle64:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -2421,7 +2421,7 @@ define amdgpu_gs float @test_vgprblocks_w32_attr(float %a, float %b, float %c, f
 ; GCN-NEXT:    v_add_f32_e32 v0, v0, v10
 ; GCN-NEXT:    v_add_f32_e32 v0, v0, v11
 ; GCN-NEXT:    ; return to shader part epilog
-                                        float %f, float %g, float %h, float %i, float %j, float %k, float %l) #3 {
+                                        float %f, float %g, float %h, float %i, float %j, float %k, float %l) "target-features"="+wavefrontsize32" {
 main_body:
   %s = fadd float %a, %b
   %s.1 = fadd float %s, %c
@@ -2452,7 +2452,7 @@ define amdgpu_gs float @test_vgprblocks_w64_attr(float %a, float %b, float %c, f
 ; GCN-NEXT:    v_add_f32_e32 v0, v0, v10
 ; GCN-NEXT:    v_add_f32_e32 v0, v0, v11
 ; GCN-NEXT:    ; return to shader part epilog
-                                        float %f, float %g, float %h, float %i, float %j, float %k, float %l) #4 {
+                                        float %f, float %g, float %h, float %i, float %j, float %k, float %l) "target-features"="+wavefrontsize64" {
 main_body:
   %s = fadd float %a, %b
   %s.1 = fadd float %s, %c
@@ -2850,9 +2850,9 @@ if.end2:                                          ; preds = %if.end
   ret void
 }
 
-declare void @external_void_func_void() #1
+declare void @external_void_func_void() nounwind
 
-define void @callee_no_stack_with_call() #1 {
+define void @callee_no_stack_with_call() nounwind {
 ; GFX1032-LABEL: callee_no_stack_with_call:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2947,13 +2947,6 @@ declare i1 @llvm.amdgcn.wqm.vote(i1)
 declare i1 @llvm.amdgcn.ps.live()
 declare i64 @llvm.cttz.i64(i64, i1)
 declare i32 @llvm.cttz.i32(i32, i1)
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #5
-
-attributes #0 = { nounwind readnone speculatable }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind readnone optnone noinline }
-attributes #3 = { "target-features"="+wavefrontsize32" }
-attributes #4 = { "target-features"="+wavefrontsize64" }
-attributes #5 = { inaccessiblememonly nounwind }
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) inaccessiblememonly nounwind
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GFX10DEFWAVE: {{.*}}

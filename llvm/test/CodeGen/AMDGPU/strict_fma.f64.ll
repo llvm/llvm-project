@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefix=GFX10 %s
 
-define double @v_constained_fma_f64_fpexcept_strict(double %x, double %y, double %z) #0 {
+define double @v_constained_fma_f64_fpexcept_strict(double %x, double %y, double %z) strictfp {
 ; GCN-LABEL: v_constained_fma_f64_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -19,7 +19,7 @@ define double @v_constained_fma_f64_fpexcept_strict(double %x, double %y, double
   ret double %val
 }
 
-define <2 x double> @v_constained_fma_v2f64_fpexcept_strict(<2 x double> %x, <2 x double> %y, <2 x double> %z) #0 {
+define <2 x double> @v_constained_fma_v2f64_fpexcept_strict(<2 x double> %x, <2 x double> %y, <2 x double> %z) strictfp {
 ; GCN-LABEL: v_constained_fma_v2f64_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -37,7 +37,7 @@ define <2 x double> @v_constained_fma_v2f64_fpexcept_strict(<2 x double> %x, <2 
   ret <2 x double> %val
 }
 
-define <3 x double> @v_constained_fma_v3f64_fpexcept_strict(<3 x double> %x, <3 x double> %y, <3 x double> %z) #0 {
+define <3 x double> @v_constained_fma_v3f64_fpexcept_strict(<3 x double> %x, <3 x double> %y, <3 x double> %z) strictfp {
 ; GCN-LABEL: v_constained_fma_v3f64_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -57,7 +57,7 @@ define <3 x double> @v_constained_fma_v3f64_fpexcept_strict(<3 x double> %x, <3 
   ret <3 x double> %val
 }
 
-define <4 x double> @v_constained_fma_v4f64_fpexcept_strict(<4 x double> %x, <4 x double> %y, <4 x double> %z) #0 {
+define <4 x double> @v_constained_fma_v4f64_fpexcept_strict(<4 x double> %x, <4 x double> %y, <4 x double> %z) strictfp {
 ; GCN-LABEL: v_constained_fma_v4f64_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -79,7 +79,7 @@ define <4 x double> @v_constained_fma_v4f64_fpexcept_strict(<4 x double> %x, <4 
   ret <4 x double> %val
 }
 
-define double @v_constained_fma_f64_fpexcept_strict_fneg(double %x, double %y, double %z) #0 {
+define double @v_constained_fma_f64_fpexcept_strict_fneg(double %x, double %y, double %z) strictfp {
 ; GCN-LABEL: v_constained_fma_f64_fpexcept_strict_fneg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -96,7 +96,7 @@ define double @v_constained_fma_f64_fpexcept_strict_fneg(double %x, double %y, d
   ret double %val
 }
 
-define double @v_constained_fma_f64_fpexcept_strict_fneg_fneg(double %x, double %y, double %z) #0 {
+define double @v_constained_fma_f64_fpexcept_strict_fneg_fneg(double %x, double %y, double %z) strictfp {
 ; GCN-LABEL: v_constained_fma_f64_fpexcept_strict_fneg_fneg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -114,7 +114,7 @@ define double @v_constained_fma_f64_fpexcept_strict_fneg_fneg(double %x, double 
   ret double %val
 }
 
-define double @v_constained_fma_f64_fpexcept_strict_fabs_fabs(double %x, double %y, double %z) #0 {
+define double @v_constained_fma_f64_fpexcept_strict_fabs_fabs(double %x, double %y, double %z) strictfp {
 ; GCN-LABEL: v_constained_fma_f64_fpexcept_strict_fabs_fabs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -126,13 +126,13 @@ define double @v_constained_fma_f64_fpexcept_strict_fabs_fabs(double %x, double 
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_fma_f64 v[0:1], |v[0:1]|, |v[2:3]|, v[4:5]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-  %neg.x = call double @llvm.fabs.f64(double %x) #0
-  %neg.y = call double @llvm.fabs.f64(double %y) #0
+  %neg.x = call double @llvm.fabs.f64(double %x) strictfp
+  %neg.y = call double @llvm.fabs.f64(double %y) strictfp
   %val = call double @llvm.experimental.constrained.fma.f64(double %neg.x, double %neg.y, double %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret double %val
 }
 
-define <2 x double> @v_constained_fma_v2f64_fpexcept_strict_fneg_fneg(<2 x double> %x, <2 x double> %y, <2 x double> %z) #0 {
+define <2 x double> @v_constained_fma_v2f64_fpexcept_strict_fneg_fneg(<2 x double> %x, <2 x double> %y, <2 x double> %z) strictfp {
 ; GCN-LABEL: v_constained_fma_v2f64_fpexcept_strict_fneg_fneg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -157,5 +157,3 @@ declare double @llvm.experimental.constrained.fma.f64(double, double, double, me
 declare <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double>, <2 x double>, <2 x double>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.fma.v3f64(<3 x double>, <3 x double>, <3 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fma.v4f64(<4 x double>, <4 x double>, <4 x double>, metadata, metadata)
-
-attributes #0 = { strictfp }

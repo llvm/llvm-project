@@ -3,9 +3,9 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
-declare hidden amdgpu_gfx void @external_void_func_void() #0
+declare hidden amdgpu_gfx void @external_void_func_void() nounwind
 
-define amdgpu_gfx void @test_call_external_void_func_void_clobber_s30_s31_call_external_void_func_void() #0 {
+define amdgpu_gfx void @test_call_external_void_func_void_clobber_s30_s31_call_external_void_func_void() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_void_clobber_s30_s31_call_external_void_func_void:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -108,12 +108,12 @@ define amdgpu_gfx void @test_call_external_void_func_void_clobber_s30_s31_call_e
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   call amdgpu_gfx void @external_void_func_void()
-  call void asm sideeffect "", ""() #0
+  call void asm sideeffect "", ""() nounwind
   call amdgpu_gfx void @external_void_func_void()
   ret void
 }
 
-define amdgpu_gfx void @void_func_void_clobber_s28_s29() #1 {
+define amdgpu_gfx void @void_func_void_clobber_s28_s29() nounwind noinline {
 ; GFX9-LABEL: void_func_void_clobber_s28_s29:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -194,12 +194,12 @@ define amdgpu_gfx void @void_func_void_clobber_s28_s29() #1 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  call void asm sideeffect "; clobber", "~{s[30:31]}"() #0
-  call void asm sideeffect "; clobber", "~{s[28:29]}"() #0
+  call void asm sideeffect "; clobber", "~{s[30:31]}"() nounwind
+  call void asm sideeffect "; clobber", "~{s[28:29]}"() nounwind
   ret void
 }
 
-define amdgpu_gfx void @test_call_void_func_void_mayclobber_s31(ptr addrspace(1) %out) #0 {
+define amdgpu_gfx void @test_call_void_func_void_mayclobber_s31(ptr addrspace(1) %out) nounwind {
 ; GFX9-LABEL: test_call_void_func_void_mayclobber_s31:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -315,7 +315,7 @@ define amdgpu_gfx void @test_call_void_func_void_mayclobber_s31(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_gfx void @test_call_void_func_void_mayclobber_v31(ptr addrspace(1) %out) #0 {
+define amdgpu_gfx void @test_call_void_func_void_mayclobber_v31(ptr addrspace(1) %out) nounwind {
 ; GFX9-LABEL: test_call_void_func_void_mayclobber_v31:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -433,7 +433,7 @@ define amdgpu_gfx void @test_call_void_func_void_mayclobber_v31(ptr addrspace(1)
 }
 
 
-define amdgpu_gfx void @test_call_void_func_void_preserves_s33(ptr addrspace(1) %out) #0 {
+define amdgpu_gfx void @test_call_void_func_void_preserves_s33(ptr addrspace(1) %out) nounwind {
 ; GFX9-LABEL: test_call_void_func_void_preserves_s33:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -550,7 +550,7 @@ define amdgpu_gfx void @test_call_void_func_void_preserves_s33(ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_gfx void @test_call_void_func_void_preserves_s34(ptr addrspace(1) %out) #0 {
+define amdgpu_gfx void @test_call_void_func_void_preserves_s34(ptr addrspace(1) %out) nounwind {
 ; GFX9-LABEL: test_call_void_func_void_preserves_s34:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -667,7 +667,7 @@ define amdgpu_gfx void @test_call_void_func_void_preserves_s34(ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_gfx void @test_call_void_func_void_preserves_v40(ptr addrspace(1) %out) #0 {
+define amdgpu_gfx void @test_call_void_func_void_preserves_v40(ptr addrspace(1) %out) nounwind {
 ; GFX9-LABEL: test_call_void_func_void_preserves_v40:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -777,7 +777,7 @@ define amdgpu_gfx void @test_call_void_func_void_preserves_v40(ptr addrspace(1) 
   ret void
 }
 
-define hidden void @void_func_void_clobber_s33() #1 {
+define hidden void @void_func_void_clobber_s33() nounwind noinline {
 ; GFX9-LABEL: void_func_void_clobber_s33:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -831,11 +831,11 @@ define hidden void @void_func_void_clobber_s33() #1 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  call void asm sideeffect "; clobber", "~{s33}"() #0
+  call void asm sideeffect "; clobber", "~{s33}"() nounwind
   ret void
 }
 
-define hidden void @void_func_void_clobber_s34() #1 {
+define hidden void @void_func_void_clobber_s34() nounwind noinline {
 ; GFX9-LABEL: void_func_void_clobber_s34:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -889,11 +889,11 @@ define hidden void @void_func_void_clobber_s34() #1 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  call void asm sideeffect "; clobber", "~{s34}"() #0
+  call void asm sideeffect "; clobber", "~{s34}"() nounwind
   ret void
 }
 
-define amdgpu_gfx void @test_call_void_func_void_clobber_s33() #0 {
+define amdgpu_gfx void @test_call_void_func_void_clobber_s33() nounwind {
 ; GFX9-LABEL: test_call_void_func_void_clobber_s33:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -978,7 +978,7 @@ define amdgpu_gfx void @test_call_void_func_void_clobber_s33() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_void_func_void_clobber_s34() #0 {
+define amdgpu_gfx void @test_call_void_func_void_clobber_s34() nounwind {
 ; GFX9-LABEL: test_call_void_func_void_clobber_s34:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1063,7 +1063,7 @@ define amdgpu_gfx void @test_call_void_func_void_clobber_s34() #0 {
   ret void
 }
 
-define amdgpu_gfx void @callee_saved_sgpr_kernel() #1 {
+define amdgpu_gfx void @callee_saved_sgpr_kernel() nounwind noinline {
 ; GFX9-LABEL: callee_saved_sgpr_kernel:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1171,13 +1171,13 @@ define amdgpu_gfx void @callee_saved_sgpr_kernel() #1 {
 ; GFX11-NEXT:    s_mov_b32 s33, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %s40 = call i32 asm sideeffect "; def s40", "={s40}"() #0
+  %s40 = call i32 asm sideeffect "; def s40", "={s40}"() nounwind
   call amdgpu_gfx void @external_void_func_void()
-  call void asm sideeffect "; use $0", "s"(i32 %s40) #0
+  call void asm sideeffect "; use $0", "s"(i32 %s40) nounwind
   ret void
 }
 
-define amdgpu_gfx void @callee_saved_sgpr_vgpr_kernel() #1 {
+define amdgpu_gfx void @callee_saved_sgpr_vgpr_kernel() nounwind noinline {
 ; GFX9-LABEL: callee_saved_sgpr_vgpr_kernel:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1311,13 +1311,10 @@ define amdgpu_gfx void @callee_saved_sgpr_vgpr_kernel() #1 {
 ; GFX11-NEXT:    s_mov_b32 s33, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %s40 = call i32 asm sideeffect "; def s40", "={s40}"() #0
-  %v32 = call i32 asm sideeffect "; def v32", "={v32}"() #0
+  %s40 = call i32 asm sideeffect "; def s40", "={s40}"() nounwind
+  %v32 = call i32 asm sideeffect "; def v32", "={v32}"() nounwind
   call amdgpu_gfx void @external_void_func_void()
-  call void asm sideeffect "; use $0", "s"(i32 %s40) #0
-  call void asm sideeffect "; use $0", "v"(i32 %v32) #0
+  call void asm sideeffect "; use $0", "s"(i32 %s40) nounwind
+  call void asm sideeffect "; use $0", "v"(i32 %v32) nounwind
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind noinline }

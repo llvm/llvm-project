@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 --mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=GCN,FLAT_SCR_OPT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 --mattr=+architected-flat-scratch < %s | FileCheck -check-prefixes=GCN,FLAT_SCR_ARCH %s
 
-declare void @extern_func() #0
+declare void @extern_func() nounwind
 
 define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 ; FLAT_SCR_OPT-LABEL: stack_object_addrspacecast_in_kernel_no_calls:
@@ -414,8 +414,6 @@ define amdgpu_kernel void @kernel_no_calls_no_stack() {
 ; GCN-NEXT:    s_endpgm
   ret void
 }
-
-attributes #0 = { nounwind }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

@@ -4,9 +4,9 @@
 
 ; Check frame setup where SGPR spills to VGPRs are disabled or enabled.
 
-declare hidden void @external_void_func_void() #0
+declare hidden void @external_void_func_void() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
-define void @callee_with_stack_and_call() #0 {
+define void @callee_with_stack_and_call() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; SPILL-TO-VGPR-LABEL: callee_with_stack_and_call:
 ; SPILL-TO-VGPR:       ; %bb.0:
 ; SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -97,5 +97,3 @@ define void @callee_with_stack_and_call() #0 {
   call void @external_void_func_void()
   ret void
 }
-
-attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

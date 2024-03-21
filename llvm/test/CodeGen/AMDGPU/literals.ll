@@ -59,6 +59,4 @@ entry:
   ret void
 }
 
-declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
-
-attributes #1 = { readnone }
+declare float @llvm.r600.dot4(<4 x float>, <4 x float>) readnone

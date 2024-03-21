@@ -3,12 +3,10 @@
 
 --- |
 
-  define void @main() #0 {
+  define void @main() "amdgpu-waves-per-eu"="10,10" {
   bb:
     ret void
   }
-
-  attributes #0 = { "amdgpu-waves-per-eu"="10,10" }
 
 ...
 ---

@@ -41,7 +41,7 @@ entry:
 ; CHECK: alloca double
 ; CHECK: load double
 ; CHECK: load volatile double
-define amdgpu_kernel void @volatile_and_non_volatile_load(ptr addrspace(1) nocapture %arg, i32 %arg1) #0 {
+define amdgpu_kernel void @volatile_and_non_volatile_load(ptr addrspace(1) nocapture %arg, i32 %arg1) nounwind {
 bb:
   %tmp = alloca double, align 8, addrspace(5)
   store double 0.000000e+00, ptr addrspace(5) %tmp, align 8
@@ -52,5 +52,3 @@ bb:
   store double %tmp4, ptr addrspace(1) %arg
   ret void
 }
-
-attributes #0 = { nounwind }

@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -check-prefix=CI --check-prefix=CHECK %s
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs -mattr=+load-store-opt,+unsafe-ds-offset-folding < %s | FileCheck -check-prefix=CI --check-prefix=CHECK %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare void @llvm.amdgcn.s.barrier() #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare void @llvm.amdgcn.s.barrier() convergent nounwind
 
 ; Function Attrs: nounwind
 ; CHECK-LABEL: {{^}}signed_ds_offset_addressing_loop:
@@ -23,9 +23,9 @@ declare void @llvm.amdgcn.s.barrier() #1
 ; CI-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[VADDR]] offset0:32 offset1:34
 ; CI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR]] offset:256
 ; CHECK: s_endpgm
-define amdgpu_kernel void @signed_ds_offset_addressing_loop(ptr addrspace(1) noalias nocapture %out, ptr addrspace(3) noalias nocapture readonly %lptr, i32 %n) #2 {
+define amdgpu_kernel void @signed_ds_offset_addressing_loop(ptr addrspace(1) noalias nocapture %out, ptr addrspace(3) noalias nocapture readonly %lptr, i32 %n) nounwind {
 entry:
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %mul = shl nsw i32 %x.i, 1
   br label %for.body
 
@@ -33,7 +33,7 @@ for.body:                                         ; preds = %for.body, %entry
   %sum.03 = phi float [ 0.000000e+00, %entry ], [ %add13, %for.body ]
   %offset.02 = phi i32 [ %mul, %entry ], [ %add14, %for.body ]
   %k.01 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  tail call void @llvm.amdgcn.s.barrier() #1
+  tail call void @llvm.amdgcn.s.barrier() convergent nounwind
   %arrayidx = getelementptr inbounds float, ptr addrspace(3) %lptr, i32 %offset.02
   %tmp = load float, ptr addrspace(3) %arrayidx, align 4
   %add1 = add nsw i32 %offset.02, 2
@@ -64,7 +64,3 @@ for.end:                                          ; preds = %for.body
   store float %add13, ptr addrspace(1) %arrayidx15, align 4
   ret void
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { convergent nounwind }
-attributes #2 = { nounwind }

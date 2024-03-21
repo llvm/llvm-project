@@ -8,11 +8,9 @@
 
 --- |
 
-  define amdgpu_kernel void @regalloc_introduces_s_to_a_copy() #0 {
+  define amdgpu_kernel void @regalloc_introduces_s_to_a_copy() "amdgpu-waves-per-eu"="7,7" {
     ret void
   }
-
-  attributes #0 = { "amdgpu-waves-per-eu"="7,7" }
 
 ...
 ---

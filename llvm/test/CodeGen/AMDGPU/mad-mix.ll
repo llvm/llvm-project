@@ -13,7 +13,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=VI,GISEL-VI %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=CI,GISEL-CI %s
 
-define float @v_mad_mix_f32_f16lo_f16lo_f16lo(half %src0, half %src1, half %src2) #0 {
+define float @v_mad_mix_f32_f16lo_f16lo_f16lo(half %src0, half %src1, half %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -71,7 +71,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f16lo(half %src0, half %src1, half %src2
   ret float %result
 }
 
-define float @v_mad_mix_f32_f16hi_f16hi_f16hi_int(i32 %src0, i32 %src1, i32 %src2) #0 {
+define float @v_mad_mix_f32_f16hi_f16hi_f16hi_int(i32 %src0, i32 %src1, i32 %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_f16hi_f16hi_f16hi_int:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -135,7 +135,7 @@ define float @v_mad_mix_f32_f16hi_f16hi_f16hi_int(i32 %src0, i32 %src1, i32 %src
   ret float %result
 }
 
-define float @v_mad_mix_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
+define float @v_mad_mix_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_f16hi_f16hi_f16hi_elt:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -196,7 +196,7 @@ define float @v_mad_mix_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x half> %
   ret float %result
 }
 
-define <2 x float> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
+define <2 x float> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_v2f32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -329,7 +329,7 @@ define <2 x float> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x hal
   ret <2 x float> %result
 }
 
-define <2 x float> @v_mad_mix_v2f32_shuffle(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
+define <2 x float> @v_mad_mix_v2f32_shuffle(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_v2f32_shuffle:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -427,7 +427,7 @@ define <2 x float> @v_mad_mix_v2f32_shuffle(<2 x half> %src0, <2 x half> %src1, 
   ret <2 x float> %result
 }
 
-define float @v_mad_mix_f32_negf16lo_f16lo_f16lo(half %src0, half %src1, half %src2) #0 {
+define float @v_mad_mix_f32_negf16lo_f16lo_f16lo(half %src0, half %src1, half %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_negf16lo_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -504,7 +504,7 @@ define float @v_mad_mix_f32_negf16lo_f16lo_f16lo(half %src0, half %src1, half %s
   ret float %result
 }
 
-define float @v_mad_mix_f32_absf16lo_f16lo_f16lo(half %src0, half %src1, half %src2) #0 {
+define float @v_mad_mix_f32_absf16lo_f16lo_f16lo(half %src0, half %src1, half %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_absf16lo_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -563,7 +563,7 @@ define float @v_mad_mix_f32_absf16lo_f16lo_f16lo(half %src0, half %src1, half %s
   ret float %result
 }
 
-define float @v_mad_mix_f32_negabsf16lo_f16lo_f16lo(half %src0, half %src1, half %src2) #0 {
+define float @v_mad_mix_f32_negabsf16lo_f16lo_f16lo(half %src0, half %src1, half %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_negabsf16lo_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -623,7 +623,7 @@ define float @v_mad_mix_f32_negabsf16lo_f16lo_f16lo(half %src0, half %src1, half
   ret float %result
 }
 
-define float @v_mad_mix_f32_f16lo_f16lo_f32(half %src0, half %src1, float %src2) #0 {
+define float @v_mad_mix_f32_f16lo_f16lo_f32(half %src0, half %src1, float %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -677,7 +677,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32(half %src0, half %src1, float %src2)
   ret float %result
 }
 
-define float @v_mad_mix_f32_f16lo_f16lo_negf32(half %src0, half %src1, float %src2) #0 {
+define float @v_mad_mix_f32_f16lo_f16lo_negf32(half %src0, half %src1, float %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_negf32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -732,7 +732,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_negf32(half %src0, half %src1, float %sr
   ret float %result
 }
 
-define float @v_mad_mix_f32_f16lo_f16lo_absf32(half %src0, half %src1, float %src2) #0 {
+define float @v_mad_mix_f32_f16lo_f16lo_absf32(half %src0, half %src1, float %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_absf32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -787,7 +787,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_absf32(half %src0, half %src1, float %sr
   ret float %result
 }
 
-define float @v_mad_mix_f32_f16lo_f16lo_negabsf32(half %src0, half %src1, float %src2) #0 {
+define float @v_mad_mix_f32_f16lo_f16lo_negabsf32(half %src0, half %src1, float %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_negabsf32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -847,7 +847,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_negabsf32(half %src0, half %src1, float 
 ; f16 inline immediate that may be converted to f32, not an actual f32
 ; inline immediate.
 
-define float @v_mad_mix_f32_f16lo_f16lo_f32imm1(half %src0, half %src1) #0 {
+define float @v_mad_mix_f32_f16lo_f16lo_f32imm1(half %src0, half %src1) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32imm1:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -927,7 +927,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32imm1(half %src0, half %src1) #0 {
   ret float %result
 }
 
-define float @v_mad_mix_f32_f16lo_f16lo_f32imminv2pi(half %src0, half %src1) #0 {
+define float @v_mad_mix_f32_f16lo_f16lo_f32imminv2pi(half %src0, half %src1) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32imminv2pi:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1014,7 +1014,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32imminv2pi(half %src0, half %src1) #0 
 ;	fpext f16 1/2pi = 0x3e230000
 ;	      f32 1/2pi = 0x3e22f983
 
-define float @v_mad_mix_f32_f16lo_f16lo_cvtf16imminv2pi(half %src0, half %src1) #0 {
+define float @v_mad_mix_f32_f16lo_f16lo_cvtf16imminv2pi(half %src0, half %src1) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_cvtf16imminv2pi:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1115,7 +1115,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_cvtf16imminv2pi(half %src0, half %src1) 
 }
 
 
-define float @v_mad_mix_f32_f16lo_f16lo_cvtf16imm63(half %src0, half %src1) #0 {
+define float @v_mad_mix_f32_f16lo_f16lo_cvtf16imm63(half %src0, half %src1) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_cvtf16imm63:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1215,7 +1215,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_cvtf16imm63(half %src0, half %src1) #0 {
   ret float %result
 }
 
-define <2 x float> @v_mad_mix_v2f32_f32imm1(<2 x half> %src0, <2 x half> %src1) #0 {
+define <2 x float> @v_mad_mix_v2f32_f32imm1(<2 x half> %src0, <2 x half> %src1) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_v2f32_f32imm1:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1347,7 +1347,7 @@ define <2 x float> @v_mad_mix_v2f32_f32imm1(<2 x half> %src0, <2 x half> %src1) 
   ret <2 x float> %result
 }
 
-define <2 x float> @v_mad_mix_v2f32_cvtf16imminv2pi(<2 x half> %src0, <2 x half> %src1) #0 {
+define <2 x float> @v_mad_mix_v2f32_cvtf16imminv2pi(<2 x half> %src0, <2 x half> %src1) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_v2f32_cvtf16imminv2pi:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1486,7 +1486,7 @@ define <2 x float> @v_mad_mix_v2f32_cvtf16imminv2pi(<2 x half> %src0, <2 x half>
   ret <2 x float> %result
 }
 
-define <2 x float> @v_mad_mix_v2f32_f32imminv2pi(<2 x half> %src0, <2 x half> %src1) #0 {
+define <2 x float> @v_mad_mix_v2f32_f32imminv2pi(<2 x half> %src0, <2 x half> %src1) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SDAG-GFX1100-LABEL: v_mad_mix_v2f32_f32imminv2pi:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1621,7 +1621,7 @@ define <2 x float> @v_mad_mix_v2f32_f32imminv2pi(<2 x half> %src0, <2 x half> %s
   ret <2 x float> %result
 }
 
-define float @v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
+define float @v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1684,7 +1684,7 @@ define float @v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x h
   ret float %clamp
 }
 
-define float @no_mix_simple(float %src0, float %src1, float %src2) #0 {
+define float @no_mix_simple(float %src0, float %src1, float %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: no_mix_simple:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1724,7 +1724,7 @@ define float @no_mix_simple(float %src0, float %src1, float %src2) #0 {
   ret float %result
 }
 
-define float @no_mix_simple_fabs(float %src0, float %src1, float %src2) #0 {
+define float @no_mix_simple_fabs(float %src0, float %src1, float %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: no_mix_simple_fabs:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1769,7 +1769,7 @@ define float @no_mix_simple_fabs(float %src0, float %src1, float %src2) #0 {
 ; All sources are converted from f16, so it doesn't matter
 ; v_mad_mix_f32 flushes.
 
-define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals(half %src0, half %src1, half %src2) #1 {
+define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals(half %src0, half %src1, half %src2) nounwind "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1831,7 +1831,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals(half %src0, half %sr
   ret float %result
 }
 
-define float @v_mad_mix_f32_f16lo_f16lo_f32_denormals(half %src0, half %src1, float %src2) #1 {
+define float @v_mad_mix_f32_f16lo_f16lo_f32_denormals(half %src0, half %src1, float %src2) nounwind "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32_denormals:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1888,7 +1888,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32_denormals(half %src0, half %src1, fl
   ret float %result
 }
 
-define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals_fmulfadd(half %src0, half %src1, half %src2) #1 {
+define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals_fmulfadd(half %src0, half %src1, half %src2) nounwind "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals_fmulfadd:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1964,7 +1964,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals_fmulfadd(half %src0,
   ret float %result
 }
 
-define float @v_mad_mix_f32_f16lo_f16lo_f32_denormals_fmulfadd(half %src0, half %src1, float %src2) #1 {
+define float @v_mad_mix_f32_f16lo_f16lo_f32_denormals_fmulfadd(half %src0, half %src1, float %src2) nounwind "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32_denormals_fmulfadd:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2033,7 +2033,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32_denormals_fmulfadd(half %src0, half 
   ret float %result
 }
 
-define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_flush_fmulfadd(half %src0, half %src1, half %src2) #0 {
+define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_flush_fmulfadd(half %src0, half %src1, half %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo_f32_flush_fmulfadd:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2092,7 +2092,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_flush_fmulfadd(half %src0, hal
   ret float %result
 }
 
-define float @v_mad_mix_f32_f16lo_f16lo_f32_flush_fmulfadd(half %src0, half %src1, float %src2) #0 {
+define float @v_mad_mix_f32_f16lo_f16lo_f32_flush_fmulfadd(half %src0, half %src1, float %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32_flush_fmulfadd:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2147,7 +2147,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32_flush_fmulfadd(half %src0, half %src
   ret float %result
 }
 
-define float @v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
+define float @v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2230,7 +2230,7 @@ define float @v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo(i32 %src0.arg, half %src1
 
 ; Make sure we don't fold pre-cvt fneg if we already have a fabs
 
-define float @v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
+define float @v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2302,7 +2302,7 @@ define float @v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo(i32 %src0.arg, half %
   ret float %result
 }
 
-define float @v_mad_mix_f32_precvtabsf16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
+define float @v_mad_mix_f32_precvtabsf16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_precvtabsf16hi_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2366,7 +2366,7 @@ define float @v_mad_mix_f32_precvtabsf16hi_f16lo_f16lo(i32 %src0.arg, half %src1
   ret float %result
 }
 
-define float @v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
+define float @v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2451,7 +2451,7 @@ define float @v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half
   ret float %result
 }
 
-define float @v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
+define float @v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2536,7 +2536,7 @@ define float @v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo(i32 %src0.arg, half
   ret float %result
 }
 
-define float @v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
+define float @v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX1100-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2622,14 +2622,10 @@ define float @v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo(i32 %src0.arg, 
   ret float %result
 }
 
-declare half @llvm.fabs.f16(half) #2
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #2
-declare float @llvm.fabs.f32(float) #2
-declare float @llvm.minnum.f32(float, float) #2
-declare float @llvm.maxnum.f32(float, float) #2
-declare float @llvm.fmuladd.f32(float, float, float) #2
-declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>) #2
-
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
-attributes #2 = { nounwind readnone speculatable }
+declare half @llvm.fabs.f16(half) nounwind readnone speculatable
+declare <2 x half> @llvm.fabs.v2f16(<2 x half>) nounwind readnone speculatable
+declare float @llvm.fabs.f32(float) nounwind readnone speculatable
+declare float @llvm.minnum.f32(float, float) nounwind readnone speculatable
+declare float @llvm.maxnum.f32(float, float) nounwind readnone speculatable
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone speculatable
+declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>) nounwind readnone speculatable

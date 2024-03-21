@@ -6,7 +6,7 @@
 ; should be introduced before LSR or not. It seems to help in some
 ; cases, and hurt others.
 
-define void @lsr_order_mul24_0(i32 %arg, i32 %arg2, i32 %arg6, i32 %arg13, i32 %arg16) #0 {
+define void @lsr_order_mul24_0(i32 %arg, i32 %arg2, i32 %arg6, i32 %arg13, i32 %arg16) nounwind willreturn "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX9-LABEL: lsr_order_mul24_0:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -50,7 +50,7 @@ bb23:                                             ; preds = %bb23, %bb
   br i1 %tmp37, label %bb23, label %.loopexit
 }
 
-define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, ptr addrspace(3) nocapture %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9, ptr addrspace(1) nocapture readonly %arg10, i32 %arg11, i32 %arg12, i32 %arg13, i32 %arg14, i32 %arg15, i32 %arg16, i1 zeroext %arg17, i1 zeroext %arg18) #0 {
+define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, ptr addrspace(3) nocapture %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9, ptr addrspace(1) nocapture readonly %arg10, i32 %arg11, i32 %arg12, i32 %arg13, i32 %arg14, i32 %arg15, i32 %arg16, i1 zeroext %arg17, i1 zeroext %arg18) nounwind willreturn "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX9-LABEL: lsr_order_mul24_1:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -120,7 +120,7 @@ bb19:                                             ; preds = %bb
 bb23:                                             ; preds = %bb19, %bb23
   %tmp24 = phi i32 [ %arg, %bb19 ], [ %tmp47, %bb23 ]
   %tmp25 = uitofp i32 %tmp24 to float
-  %tmp26 = tail call float @llvm.fmuladd.f32(float %tmp25, float %tmp21, float 0x3EE4F8B580000000) #2
+  %tmp26 = tail call float @llvm.fmuladd.f32(float %tmp25, float %tmp21, float 0x3EE4F8B580000000) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign"
   %tmp27 = fptoui float %tmp26 to i32
   %tmp28 = and i32 %tmp27, 16777215
   %tmp29 = mul i32 %tmp28, %tmp22
@@ -147,7 +147,7 @@ bb23:                                             ; preds = %bb19, %bb23
   br i1 %tmp48, label %bb23, label %.loopexit
 }
 
-define void @slsr1_0(i32 %b.arg, i32 %s.arg) #0 {
+define void @slsr1_0(i32 %b.arg, i32 %s.arg) nounwind willreturn "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX9-LABEL: slsr1_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -184,7 +184,7 @@ define void @slsr1_0(i32 %b.arg, i32 %s.arg) #0 {
   ret void
 }
 
-define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
+define void @slsr1_1(i32 %b.arg, i32 %s.arg) nounwind willreturn "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX9-LABEL: slsr1_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -260,11 +260,7 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
   ret void
 }
 
-declare void @foo(i32) #2
-declare float @llvm.fmuladd.f32(float, float, float) #1
-
-attributes #0 = { nounwind willreturn "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+declare void @foo(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone speculatable
 
 !0 = !{float 2.500000e+00}

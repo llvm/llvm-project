@@ -32,11 +32,8 @@ define amdgpu_kernel void @dbg_clause(ptr addrspace(1) %out, ptr addrspace(1) %a
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind readnone speculatable willreturn }
-attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable willreturn
+declare void @llvm.dbg.value(metadata, metadata, metadata) nofree nosync nounwind readnone speculatable willreturn
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

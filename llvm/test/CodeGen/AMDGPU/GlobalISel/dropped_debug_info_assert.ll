@@ -72,9 +72,7 @@ entry:
   ret void
 }
 
-declare ptr @llvm.returnaddress(i32 immarg) #0
-
-attributes #0 = { nofree nosync nounwind readnone willreturn }
+declare ptr @llvm.returnaddress(i32 immarg) nofree nosync nounwind readnone willreturn
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3, !4, !5, !10}

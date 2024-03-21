@@ -30,7 +30,7 @@
 
 ; COMPATIBLE:         define void @needs_gws
 ; INCOMPATIBLE-NOT:   define void @needs_gws
-define void @needs_gws(i32 %val0, i32 %val1) #0 {
+define void @needs_gws(i32 %val0, i32 %val1) "target-features"="+gws" {
   call void @llvm.amdgcn.ds.gws.init(i32 %val0, i32 %val1)
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val0, i32 %val1)
   ret void
@@ -45,10 +45,5 @@ define void @gws_caller(i32 %val0, i32 %val1) {
   ret void
 }
 
-declare void @llvm.amdgcn.ds.gws.barrier(i32, i32) #1
-declare void @llvm.amdgcn.ds.gws.init(i32, i32) #2
-
-
-attributes #0 = { "target-features"="+gws"}
-attributes #1 = { convergent inaccessiblememonly nounwind }
-attributes #2 = { convergent inaccessiblememonly nounwind writeonly }
+declare void @llvm.amdgcn.ds.gws.barrier(i32, i32) convergent inaccessiblememonly nounwind
+declare void @llvm.amdgcn.ds.gws.init(i32, i32) convergent inaccessiblememonly nounwind writeonly

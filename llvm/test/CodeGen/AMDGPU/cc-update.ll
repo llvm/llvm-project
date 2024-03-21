@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck --check-prefix=GFX1010 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefix=GFX1100 %s
 
-define amdgpu_kernel void @test_kern_empty() local_unnamed_addr #0 {
+define amdgpu_kernel void @test_kern_empty() local_unnamed_addr nounwind {
 ; GFX803-LABEL: test_kern_empty:
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_endpgm
@@ -24,7 +24,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_kern_stack() local_unnamed_addr #0 {
+define amdgpu_kernel void @test_kern_stack() local_unnamed_addr nounwind {
 ; GFX803-LABEL: test_kern_stack:
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_add_u32 s0, s0, s7
@@ -64,7 +64,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_kern_call() local_unnamed_addr #0 {
+define amdgpu_kernel void @test_kern_call() local_unnamed_addr nounwind {
 ; GFX803-LABEL: test_kern_call:
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_add_i32 s10, s10, s15
@@ -140,11 +140,11 @@ define amdgpu_kernel void @test_kern_call() local_unnamed_addr #0 {
 ; GFX1100-NEXT:    s_endpgm
 
 entry:
-  tail call void @ex() #0
+  tail call void @ex() nounwind
   ret void
 }
 
-define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
+define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr nounwind {
 ; GFX803-LABEL: test_kern_stack_and_call:
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_add_i32 s10, s10, s15
@@ -234,11 +234,11 @@ define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
 entry:
   %x = alloca i32, align 4, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %x, align 4
-  tail call void @ex() #0
+  tail call void @ex() nounwind
   ret void
 }
 
-define amdgpu_kernel void @test_force_fp_kern_empty() local_unnamed_addr #2 {
+define amdgpu_kernel void @test_force_fp_kern_empty() local_unnamed_addr nounwind "frame-pointer"="all" {
 ; GFX803-LABEL: test_force_fp_kern_empty:
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_mov_b32 s33, 0
@@ -263,7 +263,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_force_fp_kern_stack() local_unnamed_addr #2 {
+define amdgpu_kernel void @test_force_fp_kern_stack() local_unnamed_addr nounwind "frame-pointer"="all" {
 ; GFX803-LABEL: test_force_fp_kern_stack:
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_add_u32 s0, s0, s7
@@ -307,7 +307,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_force_fp_kern_call() local_unnamed_addr #2 {
+define amdgpu_kernel void @test_force_fp_kern_call() local_unnamed_addr nounwind "frame-pointer"="all" {
 ; GFX803-LABEL: test_force_fp_kern_call:
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_add_i32 s10, s10, s15
@@ -405,11 +405,11 @@ define amdgpu_kernel void @test_force_fp_kern_call() local_unnamed_addr #2 {
 ; GFX1010-NEXT    s_swappc_b64 s[30:31], s[18:19]
 ; GFX1010-NEXT    s_endpgm
 entry:
-  tail call void @ex() #2
+  tail call void @ex() nounwind "frame-pointer"="all"
   ret void
 }
 
-define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_addr #2 {
+define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_addr nounwind "frame-pointer"="all" {
 ; GFX803-LABEL: test_force_fp_kern_stack_and_call:
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_add_i32 s10, s10, s15
@@ -502,11 +502,11 @@ define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_add
 entry:
   %x = alloca i32, align 4, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %x, align 4
-  tail call void @ex() #2
+  tail call void @ex() nounwind "frame-pointer"="all"
   ret void
 }
 
-define amdgpu_kernel void @test_sgpr_offset_kernel() #1 {
+define amdgpu_kernel void @test_sgpr_offset_kernel() nounwind "amdgpu-num-vgpr"="8" {
 ; GFX803-LABEL: test_sgpr_offset_kernel:
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_add_u32 s0, s0, s7
@@ -588,11 +588,7 @@ entry:
   ret void
 }
 
-declare hidden void @ex() local_unnamed_addr #0
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind "amdgpu-num-vgpr"="8" }
-attributes #2 = { nounwind "frame-pointer"="all" }
+declare hidden void @ex() local_unnamed_addr nounwind
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

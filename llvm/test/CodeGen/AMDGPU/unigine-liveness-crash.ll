@@ -9,14 +9,14 @@
 ;
 ; Check for a valid output.
 ; CHECK: image_sample_c
-define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main(ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg, ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg1, ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg2, ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg3, ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg4, float inreg %arg5, i32 inreg %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <3 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, <2 x i32> %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, i32 %arg20, float %arg21, i32 %arg22) #0 {
+define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main(ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg, ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg1, ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg2, ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg3, ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg4, float inreg %arg5, i32 inreg %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <3 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, <2 x i32> %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, i32 %arg20, float %arg21, i32 %arg22) nounwind "InitialPSInputAddr"="36983" "target-cpu"="tonga" {
 main_body:
   %i.i = extractelement <2 x i32> %arg8, i32 0
   %j.i = extractelement <2 x i32> %arg8, i32 1
   %i.f.i = bitcast i32 %i.i to float
   %j.f.i = bitcast i32 %j.i to float
-  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 3, i32 4, i32 %arg6) #2
-  %p2.i = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 3, i32 4, i32 %arg6) #2
+  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 3, i32 4, i32 %arg6) nounwind readonly
+  %p2.i = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 3, i32 4, i32 %arg6) nounwind readonly
   %tmp23 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float undef, float undef, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
 
   %tmp24 = extractelement <4 x float> %tmp23, i32 3
@@ -97,14 +97,9 @@ ENDIF28:                                          ; preds = %LOOP
   br label %LOOP
 }
 
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-
-attributes #0 = { nounwind "InitialPSInputAddr"="36983" "target-cpu"="tonga" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind readonly }
-attributes #3 = { nounwind }
+declare float @llvm.minnum.f32(float, float) nounwind readnone
+declare float @llvm.maxnum.f32(float, float) nounwind readnone
+declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) nounwind readnone
+declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) nounwind readnone
+declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly

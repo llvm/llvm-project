@@ -9,7 +9,7 @@
 ; GCN-NOT: buffer_load_dword
 ; GCN:     v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
 ; GCN:     ScratchSize: 0
-define amdgpu_kernel void @max_12regs_13a_used(i32 %cond, ptr addrspace(1) %arg, ptr addrspace(1) %out) #2 {
+define amdgpu_kernel void @max_12regs_13a_used(i32 %cond, ptr addrspace(1) %arg, ptr addrspace(1) %out) nounwind "amdgpu-num-vgpr"="12" {
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 1.0, <4 x float> %in.1, i32 0, i32 0, i32 0)
@@ -37,7 +37,7 @@ st:
 ; GCN-NOT: buffer_load_dword
 ; GCN:     v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
 ; GCN:     ScratchSize: 0
-define amdgpu_kernel void @max_10_vgprs_used_9a() #1 {
+define amdgpu_kernel void @max_10_vgprs_used_9a() nounwind "amdgpu-num-vgpr"="10" {
   %a1 = call <4 x i32> asm sideeffect "", "=a"()
   %a2 = call <4 x i32> asm sideeffect "", "=a"()
   %a3 = call i32 asm sideeffect "", "=a"()
@@ -56,7 +56,7 @@ define amdgpu_kernel void @max_10_vgprs_used_9a() #1 {
 ; GCN-NOT: buffer_load_dword
 ; GCN:     v_accvgpr_write_b32
 ; GCN:     ScratchSize: 0
-define amdgpu_kernel void @max_32regs_mfma32(ptr addrspace(1) %arg) #3 {
+define amdgpu_kernel void @max_32regs_mfma32(ptr addrspace(1) %arg) nounwind "amdgpu-num-vgpr"="32" {
 bb:
   %v = call i32 asm sideeffect "", "=a"()
   br label %use
@@ -103,7 +103,7 @@ use:
 ; GFX90A:  global_store_dwordx4 v[0:1], v[2:5], off
 
 ; GCN: ScratchSize: 20
-define amdgpu_kernel void @max_6regs_used_8a(ptr addrspace(1) %arg) #4 {
+define amdgpu_kernel void @max_6regs_used_8a(ptr addrspace(1) %arg) nounwind "amdgpu-num-vgpr"="6" {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %v0 = call float asm sideeffect "; def $0", "=v"()
   %a4 = call <4 x float> asm sideeffect "; def $0", "=a"()
@@ -120,8 +120,3 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>, i32, i32, i32)
 declare <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float, float, <4 x float>, i32, i32, i32)
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
-
-attributes #1 = { nounwind "amdgpu-num-vgpr"="10" }
-attributes #2 = { nounwind "amdgpu-num-vgpr"="12" }
-attributes #3 = { nounwind "amdgpu-num-vgpr"="32" }
-attributes #4 = { nounwind "amdgpu-num-vgpr"="6" }

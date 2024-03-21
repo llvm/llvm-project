@@ -10,11 +10,9 @@
   target triple = "amdgcn--amdpal"
 
   ; Function Attrs: nounwind
-  define amdgpu_cs void @_amdgpu_cs_main(<3 x i32> %arg) #0 {
+  define amdgpu_cs void @_amdgpu_cs_main(<3 x i32> %arg) nounwind "target-cpu"="gfx803" {
     ret void
   }
-
-  attributes #0 = { nounwind "target-cpu"="gfx803" }
 ...
 
 ---

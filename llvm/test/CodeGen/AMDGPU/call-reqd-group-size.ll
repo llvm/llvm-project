@@ -5,7 +5,7 @@
 ; Check for optimizing the passed implicit workitem ID based on the
 ; required group size. This should avoid a few bit packing operations.
 
-declare hidden void @callee() #0
+declare hidden void @callee() "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z"
 
 define amdgpu_kernel void @known_x_0(ptr addrspace(1) %out) !reqd_work_group_size !0 {
 ; CHECK-LABEL: known_x_0:
@@ -122,8 +122,6 @@ define amdgpu_kernel void @known_xyz_0(ptr addrspace(1) %out) !reqd_work_group_s
   ret void
 }
 ; CHECK: .amdhsa_system_vgpr_workitem_id 0
-
-attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" }
 
 !0 = !{i32 1, i32 64, i32 64}
 !1 = !{i32 64, i32 1, i32 64}

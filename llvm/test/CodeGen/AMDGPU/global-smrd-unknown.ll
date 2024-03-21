@@ -4,7 +4,7 @@
 ; GCN: flat_load_dword
 ; GCN: flat_load_dword
 ; GCN: flat_store_dword
-define void @unknown_memdep_analysis(ptr addrspace(1) nocapture readonly %arg, float %arg1) #0 {
+define void @unknown_memdep_analysis(ptr addrspace(1) nocapture readonly %arg, float %arg1) nounwind {
 bb:
   %tmp53 = load float, ptr addrspace(1) undef, align 4
   %tmp54 = getelementptr inbounds float, ptr addrspace(1) %arg, i32 31
@@ -14,7 +14,4 @@ bb:
   ret void
 }
 
-declare float @llvm.fmuladd.f32(float, float, float) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable }
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone speculatable

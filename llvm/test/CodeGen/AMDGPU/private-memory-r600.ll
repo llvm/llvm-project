@@ -18,7 +18,7 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 ; OPT: call i32 @llvm.r600.read.tidig.y(), !range !1
 ; OPT: call i32 @llvm.r600.read.tidig.z(), !range !1
 
-define amdgpu_kernel void @mova_same_clause(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #0 {
+define amdgpu_kernel void @mova_same_clause(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
   %0 = load i32, ptr addrspace(1) %in, align 4
@@ -48,7 +48,7 @@ entry:
 ; R600-NOT: MOVA_INT
 %struct.point = type { i32, i32 }
 
-define amdgpu_kernel void @multiple_structs(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @multiple_structs(ptr addrspace(1) %out) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %a = alloca %struct.point, addrspace(5)
   %b = alloca %struct.point, addrspace(5)
@@ -72,7 +72,7 @@ entry:
 ; FUNC-LABEL: {{^}}direct_loop:
 ; R600-NOT: MOVA_INT
 
-define amdgpu_kernel void @direct_loop(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @direct_loop(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %prv_array_const = alloca [2 x i32], addrspace(5)
   %prv_array = alloca [2 x i32], addrspace(5)
@@ -103,7 +103,7 @@ for.end:
 ; FUNC-LABEL: {{^}}short_array:
 
 ; R600-VECT: MOVA_INT
-define amdgpu_kernel void @short_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @short_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %0 = alloca [2 x i16], addrspace(5)
   %1 = getelementptr inbounds [2 x i16], ptr addrspace(5) %0, i32 0, i32 1
@@ -119,7 +119,7 @@ entry:
 ; FUNC-LABEL: {{^}}char_array:
 
 ; R600-VECT: MOVA_INT
-define amdgpu_kernel void @char_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @char_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %0 = alloca [2 x i8], addrspace(5)
   %1 = getelementptr inbounds [2 x i8], ptr addrspace(5) %0, i32 0, i32 1
@@ -139,7 +139,7 @@ entry:
 ; R600-NOT: MOV T0.X
 ; Additional check in case the move ends up in the last slot
 ; R600-NOT: MOV * TO.X
-define amdgpu_kernel void @work_item_info(ptr addrspace(1) %out, i32 %in) #0 {
+define amdgpu_kernel void @work_item_info(ptr addrspace(1) %out, i32 %in) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %0 = alloca [2 x i32], addrspace(5)
   %1 = getelementptr inbounds [2 x i32], ptr addrspace(5) %0, i32 0, i32 1
@@ -156,7 +156,7 @@ entry:
 ; Test that two stack objects are not stored in the same register
 ; The second stack object should be in T3.X
 ; FUNC-LABEL: {{^}}no_overlap:
-define amdgpu_kernel void @no_overlap(ptr addrspace(1) %out, i32 %in) #0 {
+define amdgpu_kernel void @no_overlap(ptr addrspace(1) %out, i32 %in) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %0 = alloca [3 x i8], align 1, addrspace(5)
   %1 = alloca [2 x i8], align 1, addrspace(5)
@@ -178,7 +178,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @char_array_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @char_array_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [2 x [2 x i8]], addrspace(5)
   %gep1 = getelementptr inbounds [2 x [2 x i8]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 1
@@ -191,7 +191,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @i32_array_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @i32_array_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [2 x [2 x i32]], addrspace(5)
   %gep1 = getelementptr inbounds [2 x [2 x i32]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 1
@@ -203,7 +203,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @i64_array_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @i64_array_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [2 x [2 x i64]], addrspace(5)
   %gep1 = getelementptr inbounds [2 x [2 x i64]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 1
@@ -217,7 +217,7 @@ entry:
 
 %struct.pair32 = type { i32, i32 }
 
-define amdgpu_kernel void @struct_array_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @struct_array_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [2 x [2 x %struct.pair32]], addrspace(5)
   %gep0 = getelementptr inbounds [2 x [2 x %struct.pair32]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 0, i32 1
@@ -230,7 +230,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @struct_pair32_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @struct_pair32_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [2 x %struct.pair32], addrspace(5)
   %gep0 = getelementptr inbounds [2 x %struct.pair32], ptr addrspace(5) %alloca, i32 0, i32 0, i32 1
@@ -263,7 +263,7 @@ entry:
 ; SI-NOT: ds_write
 ; SI: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen
 ; SI: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ;
-define amdgpu_kernel void @ptrtoint(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @ptrtoint(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" {
   %alloca = alloca [16 x i32], addrspace(5)
   %tmp0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
   store i32 5, ptr addrspace(5) %tmp0
@@ -278,5 +278,3 @@ define amdgpu_kernel void @ptrtoint(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 
 ; OPT: !0 = !{i32 0, i32 257}
 ; OPT: !1 = !{i32 0, i32 256}
-
-attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" }

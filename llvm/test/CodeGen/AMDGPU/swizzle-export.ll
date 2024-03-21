@@ -121,8 +121,6 @@ main_body:
 }
 
 ; Function Attrs: nounwind readonly
-declare float @llvm.cos.f32(float) #1
+declare float @llvm.cos.f32(float) nounwind readonly
 
 declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
-
-attributes #1 = { nounwind readonly }

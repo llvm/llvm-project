@@ -2,7 +2,7 @@
 
 ; This test ensures that R600 backend can handle ifcvt properly
 
-define amdgpu_ps void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4 x float> inreg %reg2, <4 x float> inreg %reg3, <4 x float> inreg %reg4, <4 x float> inreg %reg5, <4 x float> inreg %reg6, <4 x float> inreg %reg7, <4 x float> inreg %reg8, <4 x float> inreg %reg9) #0 {
+define amdgpu_ps void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4 x float> inreg %reg2, <4 x float> inreg %reg3, <4 x float> inreg %reg4, <4 x float> inreg %reg5, <4 x float> inreg %reg6, <4 x float> inreg %reg7, <4 x float> inreg %reg8, <4 x float> inreg %reg9) nounwind {
 main_body:
   %tmp = extractelement <4 x float> %reg0, i32 0
   %tmp1 = extractelement <4 x float> %reg0, i32 1
@@ -1297,14 +1297,11 @@ ENDIF178:                                         ; preds = %IF179, %ENDIF175
   ret void
 }
 
-declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
-declare float @llvm.r600.recipsqrt.clamped.f32(float) #1
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.exp2.f32(float) #1
+declare float @llvm.r600.dot4(<4 x float>, <4 x float>) nounwind readnone
+declare float @llvm.r600.recipsqrt.clamped.f32(float) nounwind readnone
+declare float @llvm.fabs.f32(float) nounwind readnone
+declare float @llvm.exp2.f32(float) nounwind readnone
 declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
-declare <4 x float> @llvm.r600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare <4 x float> @llvm.r600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) nounwind readnone
+declare float @llvm.minnum.f32(float, float) nounwind readnone
+declare float @llvm.maxnum.f32(float, float) nounwind readnone

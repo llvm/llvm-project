@@ -4,11 +4,11 @@
 
 ; Workitem IDs are passed to the kernel differently for gfx908
 
-declare hidden void @external_void_func_void() #0
-declare hidden void @external_void_func_i32(i32) #0
-declare hidden void @external_void_func_v32i32(<32 x i32>) #0
+declare hidden void @external_void_func_void() nounwind
+declare hidden void @external_void_func_i32(i32) nounwind
+declare hidden void @external_void_func_v32i32(<32 x i32>) nounwind
 
-define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) #0 {
+define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) nounwind {
   ; GFX900-LABEL: name: test_call_external_void_func_i32
   ; GFX900: bb.1 (%ir-block.1):
   ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9
@@ -116,7 +116,7 @@ define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) #0 {
   ret void
 }
 
-define void @test_func_call_external_void_func_i32() #0 {
+define void @test_func_call_external_void_func_i32() nounwind {
   ; GFX900-LABEL: name: test_func_call_external_void_func_i32
   ; GFX900: bb.1 (%ir-block.0):
   ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -204,7 +204,7 @@ define void @test_func_call_external_void_func_i32() #0 {
 
 ; Explicit argument is split between registers ad the stack due to v31
 ; being used for workitem IDs.
-define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
+define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) nounwind {
   ; GFX900-LABEL: name: test_call_external_void_func_v32i32
   ; GFX900: bb.1 (%ir-block.1):
   ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9
@@ -384,7 +384,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ret void
 }
 
-define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
+define void @test_func_call_external_void_func_v32i32([17 x i8]) nounwind {
   ; GFX900-LABEL: name: test_func_call_external_void_func_v32i32
   ; GFX900: bb.1 (%ir-block.1):
   ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -644,7 +644,7 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_only_workitem_id_x() #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @test_only_workitem_id_x() nounwind !reqd_work_group_size !0 {
   ; GFX900-LABEL: name: test_only_workitem_id_x
   ; GFX900: bb.1 (%ir-block.0):
   ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr0, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9
@@ -730,7 +730,7 @@ define amdgpu_kernel void @test_only_workitem_id_x() #0 !reqd_work_group_size !0
   ret void
 }
 
-define amdgpu_kernel void @test_only_workitem_id_y() #0 !reqd_work_group_size !1 {
+define amdgpu_kernel void @test_only_workitem_id_y() nounwind !reqd_work_group_size !1 {
   ; GFX900-LABEL: name: test_only_workitem_id_y
   ; GFX900: bb.1 (%ir-block.0):
   ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr1, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9
@@ -824,7 +824,7 @@ define amdgpu_kernel void @test_only_workitem_id_y() #0 !reqd_work_group_size !1
   ret void
 }
 
-define amdgpu_kernel void @test_only_workitem_id_z() #0 !reqd_work_group_size !2 {
+define amdgpu_kernel void @test_only_workitem_id_z() nounwind !reqd_work_group_size !2 {
   ; GFX900-LABEL: name: test_only_workitem_id_z
   ; GFX900: bb.1 (%ir-block.0):
   ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9
@@ -918,7 +918,7 @@ define amdgpu_kernel void @test_only_workitem_id_z() #0 !reqd_work_group_size !2
   ret void
 }
 
-define amdgpu_kernel void @test_only_workitem_id_xy() #0 !reqd_work_group_size !3 {
+define amdgpu_kernel void @test_only_workitem_id_xy() nounwind !reqd_work_group_size !3 {
   ; GFX900-LABEL: name: test_only_workitem_id_xy
   ; GFX900: bb.1 (%ir-block.0):
   ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr0, $vgpr1, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9
@@ -1014,7 +1014,7 @@ define amdgpu_kernel void @test_only_workitem_id_xy() #0 !reqd_work_group_size !
   ret void
 }
 
-define amdgpu_kernel void @test_only_workitem_id_yz() #0 !reqd_work_group_size !4 {
+define amdgpu_kernel void @test_only_workitem_id_yz() nounwind !reqd_work_group_size !4 {
   ; GFX900-LABEL: name: test_only_workitem_id_yz
   ; GFX900: bb.1 (%ir-block.0):
   ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9
@@ -1118,7 +1118,7 @@ define amdgpu_kernel void @test_only_workitem_id_yz() #0 !reqd_work_group_size !
   ret void
 }
 
-define amdgpu_kernel void @test_only_workitem_id_xz() #0 !reqd_work_group_size !5 {
+define amdgpu_kernel void @test_only_workitem_id_xz() nounwind !reqd_work_group_size !5 {
   ; GFX900-LABEL: name: test_only_workitem_id_xz
   ; GFX900: bb.1 (%ir-block.0):
   ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr0, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9
@@ -1214,12 +1214,9 @@ define amdgpu_kernel void @test_only_workitem_id_xz() #0 !reqd_work_group_size !
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare i32 @llvm.amdgcn.workitem.id.y() #1
-declare i32 @llvm.amdgcn.workitem.id.z() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable willreturn }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable willreturn
+declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone speculatable willreturn
+declare i32 @llvm.amdgcn.workitem.id.z() nounwind readnone speculatable willreturn
 
 !llvm.module.flags = !{!6}
 !0 = !{i32 64, i32 1, i32 1}

@@ -1012,19 +1012,17 @@ main_body:
   ret <4 x float> %v
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f16(i32 immarg, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.cube.v4f32.f16(i32 immarg, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.2darray.v4f32.f16(i32 immarg, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.cl.2d.v4f32.f16(i32 immarg, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.b.2d.v4f32.f16.f16(i32 immarg, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.b.2d.v4f32.f16.f16(i32 immarg, half, float, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.b.cl.2d.v4f32.f16.f16(i32 immarg, half, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f16.f16(i32 immarg, half, float, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.l.2d.v4f32.f16(i32 immarg, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f16(i32 immarg, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.2d.v4f32.f16(i32 immarg, float, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.cl.2d.v4f32.f16(i32 immarg, float, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.l.2d.v4f32.f16(i32 immarg, float, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.lz.2d.v4f32.f16(i32 immarg, float, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-
-attributes #0 = { nounwind readonly }
+declare <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f16(i32 immarg, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.gather4.cube.v4f32.f16(i32 immarg, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.gather4.2darray.v4f32.f16(i32 immarg, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.gather4.cl.2d.v4f32.f16(i32 immarg, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.gather4.b.2d.v4f32.f16.f16(i32 immarg, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.gather4.c.b.2d.v4f32.f16.f16(i32 immarg, half, float, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.gather4.b.cl.2d.v4f32.f16.f16(i32 immarg, half, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f16.f16(i32 immarg, half, float, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.gather4.l.2d.v4f32.f16(i32 immarg, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f16(i32 immarg, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.gather4.c.2d.v4f32.f16(i32 immarg, float, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.gather4.c.cl.2d.v4f32.f16(i32 immarg, float, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.gather4.c.l.2d.v4f32.f16(i32 immarg, float, half, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.gather4.c.lz.2d.v4f32.f16(i32 immarg, float, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly

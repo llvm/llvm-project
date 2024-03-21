@@ -691,7 +691,7 @@ entry:
 ; XSI: buffer_store_dwordx2
 ; SI: buffer_store_dword
 ; SI: buffer_store_dword
-define amdgpu_kernel void @vecload2(ptr addrspace(5) nocapture %out, ptr addrspace(4) nocapture %mem) #0 {
+define amdgpu_kernel void @vecload2(ptr addrspace(5) nocapture %out, ptr addrspace(4) nocapture %mem) nounwind {
 entry:
   %0 = load i32, ptr addrspace(4) %mem, align 4
   %arrayidx1.i = getelementptr inbounds i32, ptr addrspace(4) %mem, i64 1
@@ -740,6 +740,3 @@ entry:
   store i32 2, ptr addrspace(5) %arrayidx6, align 4
   ret void
 }
-
-
-attributes #0 = { nounwind }

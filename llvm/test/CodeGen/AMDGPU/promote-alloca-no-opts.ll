@@ -5,7 +5,7 @@
 ; NOOPTS: .amdhsa_group_segment_fixed_size 0
 ; NOOPTS-NOT: ds_write
 ; OPTS: ds_write
-define amdgpu_kernel void @promote_alloca_i32_array_array(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @promote_alloca_i32_array_array(ptr addrspace(1) %out, i32 %index) nounwind "amdgpu-flat-work-group-size"="64,64" {
 entry:
   %alloca = alloca [2 x [2 x i32]], addrspace(5)
   %gep1 = getelementptr inbounds [2 x [2 x i32]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 1
@@ -20,7 +20,7 @@ entry:
 ; ALL-LABEL: {{^}}optnone_promote_alloca_i32_array_array:
 ; ALL: .amdhsa_group_segment_fixed_size 0
 ; ALL-NOT: ds_write
-define amdgpu_kernel void @optnone_promote_alloca_i32_array_array(ptr addrspace(1) %out, i32 %index) #1 {
+define amdgpu_kernel void @optnone_promote_alloca_i32_array_array(ptr addrspace(1) %out, i32 %index) nounwind optnone noinline "amdgpu-flat-work-group-size"="64,64" {
 entry:
   %alloca = alloca [2 x [2 x i32]], addrspace(5)
   %gep1 = getelementptr inbounds [2 x [2 x i32]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 1
@@ -31,9 +31,6 @@ entry:
   store i32 %load, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" }
-attributes #1 = { nounwind optnone noinline "amdgpu-flat-work-group-size"="64,64" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

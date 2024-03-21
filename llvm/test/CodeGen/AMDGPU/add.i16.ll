@@ -6,7 +6,7 @@
 ; VI: flat_load_ushort [[B:v[0-9]+]]
 ; VI: v_add_u16_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; VI-NEXT: buffer_store_short [[ADD]]
-define amdgpu_kernel void @v_test_add_i16(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_test_add_i16(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds i16, ptr addrspace(1) %out, i32 %tid
   %gep.in0 = getelementptr inbounds i16, ptr addrspace(1) %in0, i32 %tid
@@ -23,7 +23,7 @@ define amdgpu_kernel void @v_test_add_i16(ptr addrspace(1) %out, ptr addrspace(1
 ; VI: flat_load_ushort [[A:v[0-9]+]]
 ; VI: v_add_u16_e32 [[ADD:v[0-9]+]], 0x7b, [[A]]
 ; VI-NEXT: buffer_store_short [[ADD]]
-define amdgpu_kernel void @v_test_add_i16_constant(ptr addrspace(1) %out, ptr addrspace(1) %in0) #1 {
+define amdgpu_kernel void @v_test_add_i16_constant(ptr addrspace(1) %out, ptr addrspace(1) %in0) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds i16, ptr addrspace(1) %out, i32 %tid
   %gep.in0 = getelementptr inbounds i16, ptr addrspace(1) %in0, i32 %tid
@@ -38,7 +38,7 @@ define amdgpu_kernel void @v_test_add_i16_constant(ptr addrspace(1) %out, ptr ad
 ; VI: flat_load_ushort [[A:v[0-9]+]]
 ; VI: v_add_u16_e32 [[ADD:v[0-9]+]], 0xfcb3, [[A]]
 ; VI-NEXT: buffer_store_short [[ADD]]
-define amdgpu_kernel void @v_test_add_i16_neg_constant(ptr addrspace(1) %out, ptr addrspace(1) %in0) #1 {
+define amdgpu_kernel void @v_test_add_i16_neg_constant(ptr addrspace(1) %out, ptr addrspace(1) %in0) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds i16, ptr addrspace(1) %out, i32 %tid
   %gep.in0 = getelementptr inbounds i16, ptr addrspace(1) %in0, i32 %tid
@@ -53,7 +53,7 @@ define amdgpu_kernel void @v_test_add_i16_neg_constant(ptr addrspace(1) %out, pt
 ; VI: flat_load_ushort [[A:v[0-9]+]]
 ; VI: v_add_u16_e32 [[ADD:v[0-9]+]], -1, [[A]]
 ; VI-NEXT: buffer_store_short [[ADD]]
-define amdgpu_kernel void @v_test_add_i16_inline_neg1(ptr addrspace(1) %out, ptr addrspace(1) %in0) #1 {
+define amdgpu_kernel void @v_test_add_i16_inline_neg1(ptr addrspace(1) %out, ptr addrspace(1) %in0) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds i16, ptr addrspace(1) %out, i32 %tid
   %gep.in0 = getelementptr inbounds i16, ptr addrspace(1) %in0, i32 %tid
@@ -69,7 +69,7 @@ define amdgpu_kernel void @v_test_add_i16_inline_neg1(ptr addrspace(1) %out, ptr
 ; VI: flat_load_ushort [[B:v[0-9]+]]
 ; VI: v_add_u16_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; VI-NEXT: buffer_store_dword [[ADD]]
-define amdgpu_kernel void @v_test_add_i16_zext_to_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_test_add_i16_zext_to_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i32 %tid
   %gep.in0 = getelementptr inbounds i16, ptr addrspace(1) %in0, i32 %tid
@@ -88,7 +88,7 @@ define amdgpu_kernel void @v_test_add_i16_zext_to_i32(ptr addrspace(1) %out, ptr
 ; VI: flat_load_ushort [[B:v[0-9]+]]
 ; VI-DAG: v_add_u16_e32 v[[ADD:[0-9]+]], [[A]], [[B]]
 ; VI: buffer_store_dwordx2 v[[[ADD]]:{{[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0{{$}}
-define amdgpu_kernel void @v_test_add_i16_zext_to_i64(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_test_add_i16_zext_to_i64(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds i64, ptr addrspace(1) %out, i32 %tid
   %gep.in0 = getelementptr inbounds i16, ptr addrspace(1) %in0, i32 %tid
@@ -108,7 +108,7 @@ define amdgpu_kernel void @v_test_add_i16_zext_to_i64(ptr addrspace(1) %out, ptr
 ; VI: v_add_u16_e32 [[ADD:v[0-9]+]],  [[A]], [[B]]
 ; VI-NEXT: v_bfe_i32 [[SEXT:v[0-9]+]], [[ADD]], 0, 16
 ; VI-NEXT: buffer_store_dword [[SEXT]]
-define amdgpu_kernel void @v_test_add_i16_sext_to_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_test_add_i16_sext_to_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i32 %tid
   %gep.in0 = getelementptr inbounds i16, ptr addrspace(1) %in0, i32 %tid
@@ -129,7 +129,7 @@ define amdgpu_kernel void @v_test_add_i16_sext_to_i32(ptr addrspace(1) %out, ptr
 ; VI-NEXT: v_bfe_i32 v[[LO:[0-9]+]], [[ADD]], 0, 16
 ; VI-NEXT: v_ashrrev_i32_e32 v[[HI:[0-9]+]], 31, v[[LO]]
 ; VI-NEXT: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
-define amdgpu_kernel void @v_test_add_i16_sext_to_i64(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
+define amdgpu_kernel void @v_test_add_i16_sext_to_i64(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds i64, ptr addrspace(1) %out, i32 %tid
   %gep.in0 = getelementptr inbounds i16, ptr addrspace(1) %in0, i32 %tid
@@ -142,7 +142,4 @@ define amdgpu_kernel void @v_test_add_i16_sext_to_i64(ptr addrspace(1) %out, ptr
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

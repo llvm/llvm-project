@@ -212,7 +212,7 @@ define <16 x half> @test_fmax_v16f16(<16 x half> %x, <16 x half> %y) {
   ret <16 x half> %fmax
 }
 
-define float @test_fmax_f32_minsize(float %x, float %y) #0 {
+define float @test_fmax_f32_minsize(float %x, float %y) minsize {
 ; CHECK-LABEL: define float @test_fmax_f32_minsize
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[FMAX:%.*]] = tail call float @llvm.maxnum.f32(float [[X]], float [[Y]])
@@ -222,7 +222,7 @@ define float @test_fmax_f32_minsize(float %x, float %y) #0 {
   ret float %fmax
 }
 
-define float @test_fmax_f32_nnan_minsize(float %x, float %y) #0 {
+define float @test_fmax_f32_nnan_minsize(float %x, float %y) minsize {
 ; CHECK-LABEL: define float @test_fmax_f32_nnan_minsize
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMAX:%.*]] = tail call nnan float @llvm.maxnum.f32(float [[X]], float [[Y]])
@@ -238,7 +238,7 @@ define float @test_fmax_f32_noinline(float %x, float %y) {
 ; CHECK-NEXT:    [[FMAX:%.*]] = tail call float @_Z4fmaxff(float [[X]], float [[Y]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret float [[FMAX]]
 ;
-  %fmax = tail call float @_Z4fmaxff(float %x, float %y) #1
+  %fmax = tail call float @_Z4fmaxff(float %x, float %y) noinline
   ret float %fmax
 }
 
@@ -248,17 +248,17 @@ define float @test_fmax_f32_nnan_noinline(float %x, float %y) {
 ; CHECK-NEXT:    [[FMAX:%.*]] = tail call nnan float @_Z4fmaxff(float [[X]], float [[Y]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret float [[FMAX]]
 ;
-  %fmax = tail call nnan float @_Z4fmaxff(float %x, float %y) #1
+  %fmax = tail call nnan float @_Z4fmaxff(float %x, float %y) noinline
   ret float %fmax
 }
 
-define float @test_fmax_f32_strictfp(float %x, float %y) #2 {
+define float @test_fmax_f32_strictfp(float %x, float %y) strictfp {
 ; CHECK-LABEL: define float @test_fmax_f32_strictfp
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[FMAX:%.*]] = tail call nnan nsz float @_Z4fmaxff(float [[X]], float [[Y]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret float [[FMAX]]
 ;
-  %fmax = tail call nsz nnan float @_Z4fmaxff(float %x, float %y) #2
+  %fmax = tail call nsz nnan float @_Z4fmaxff(float %x, float %y) strictfp
   ret float %fmax
 }
 
@@ -268,11 +268,6 @@ define float @test_fmax_f32_fast_nobuiltin(float %x, float %y) {
 ; CHECK-NEXT:    [[FMAX:%.*]] = tail call fast float @_Z4fmaxff(float [[X]], float [[Y]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[FMAX]]
 ;
-  %fmax = tail call fast float @_Z4fmaxff(float %x, float %y) #3
+  %fmax = tail call fast float @_Z4fmaxff(float %x, float %y) nobuiltin
   ret float %fmax
 }
-
-attributes #0 = { minsize }
-attributes #1 = { noinline }
-attributes #2 = { strictfp }
-attributes #3 = { nobuiltin }

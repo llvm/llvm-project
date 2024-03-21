@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare void @llvm.amdgcn.s.incperflevel(i32) #0
+declare void @llvm.amdgcn.s.incperflevel(i32) nounwind
 
 ; GCN-LABEL: {{^}}test_s_incperflevel:
 ; GCN: s_incperflevel 0{{$}}
@@ -20,7 +20,7 @@ declare void @llvm.amdgcn.s.incperflevel(i32) #0
 ; GCN: s_incperflevel 13{{$}}
 ; GCN: s_incperflevel 14{{$}}
 ; GCN: s_incperflevel 15{{$}}
-define amdgpu_kernel void @test_s_incperflevel(i32 %x) #0 {
+define amdgpu_kernel void @test_s_incperflevel(i32 %x) nounwind {
   call void @llvm.amdgcn.s.incperflevel(i32 0)
   call void @llvm.amdgcn.s.incperflevel(i32 1)
   call void @llvm.amdgcn.s.incperflevel(i32 2)
@@ -39,5 +39,3 @@ define amdgpu_kernel void @test_s_incperflevel(i32 %x) #0 {
   call void @llvm.amdgcn.s.incperflevel(i32 15)
   ret void
 }
-
-attributes #0 = { nounwind }

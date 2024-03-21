@@ -11,8 +11,6 @@
 ; WARN: warning: xnack 'Off' was requested for a processor that does not support it!
 ; OFF: xnack setting for subtarget: Off
 
-define void @xnack-subtarget-feature-disabled() #0 {
+define void @xnack-subtarget-feature-disabled() "target-features"="-xnack" {
   ret void
 }
-
-attributes #0 = { "target-features"="-xnack" }

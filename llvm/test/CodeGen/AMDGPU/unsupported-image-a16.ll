@@ -14,6 +14,4 @@ main_body:
   ret <4 x float> %v
 }
 
-declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) #0
-
-attributes #0 = { nounwind readonly }
+declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i16(i32 immarg, i16, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly

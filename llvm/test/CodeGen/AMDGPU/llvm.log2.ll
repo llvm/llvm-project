@@ -1826,7 +1826,7 @@ define float @v_log2_f32_afn(float %in) {
   ret float %result
 }
 
-define float @v_log2_f32_afn_daz(float %in) #0 {
+define float @v_log2_f32_afn_daz(float %in) "denormal-fp-math-f32"="ieee,preserve-sign" {
 ; GFX689-LABEL: v_log2_f32_afn_daz:
 ; GFX689:       ; %bb.0:
 ; GFX689-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1852,7 +1852,7 @@ define float @v_log2_f32_afn_daz(float %in) #0 {
   ret float %result
 }
 
-define float @v_log2_f32_afn_dynamic(float %in) #1 {
+define float @v_log2_f32_afn_dynamic(float %in) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX689-SDAG-LABEL: v_log2_f32_afn_dynamic:
 ; GFX689-SDAG:       ; %bb.0:
 ; GFX689-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1991,7 +1991,7 @@ define float @v_fabs_log2_f32_afn(float %in) {
   ret float %result
 }
 
-define float @v_log2_f32_daz(float %in) #0 {
+define float @v_log2_f32_daz(float %in) "denormal-fp-math-f32"="ieee,preserve-sign" {
 ; GFX689-LABEL: v_log2_f32_daz:
 ; GFX689:       ; %bb.0:
 ; GFX689-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2085,7 +2085,7 @@ define float @v_log2_f32_nnan(float %in) {
   ret float %result
 }
 
-define float @v_log2_f32_nnan_daz(float %in) #0 {
+define float @v_log2_f32_nnan_daz(float %in) "denormal-fp-math-f32"="ieee,preserve-sign" {
 ; GFX689-LABEL: v_log2_f32_nnan_daz:
 ; GFX689:       ; %bb.0:
 ; GFX689-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2111,7 +2111,7 @@ define float @v_log2_f32_nnan_daz(float %in) #0 {
   ret float %result
 }
 
-define float @v_log2_f32_nnan_dynamic(float %in) #1 {
+define float @v_log2_f32_nnan_dynamic(float %in) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX689-SDAG-LABEL: v_log2_f32_nnan_dynamic:
 ; GFX689-SDAG:       ; %bb.0:
 ; GFX689-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2179,7 +2179,7 @@ define float @v_log2_f32_nnan_dynamic(float %in) #1 {
   ret float %result
 }
 
-define float @v_log2_f32_ninf_daz(float %in) #0 {
+define float @v_log2_f32_ninf_daz(float %in) "denormal-fp-math-f32"="ieee,preserve-sign" {
 ; GFX689-LABEL: v_log2_f32_ninf_daz:
 ; GFX689:       ; %bb.0:
 ; GFX689-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2205,7 +2205,7 @@ define float @v_log2_f32_ninf_daz(float %in) #0 {
   ret float %result
 }
 
-define float @v_log2_f32_ninf_dynamic(float %in) #1 {
+define float @v_log2_f32_ninf_dynamic(float %in) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX689-SDAG-LABEL: v_log2_f32_ninf_dynamic:
 ; GFX689-SDAG:       ; %bb.0:
 ; GFX689-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2341,7 +2341,7 @@ define float @v_log2_f32_nnan_ninf(float %in) {
   ret float %result
 }
 
-define float @v_log2_f32_nnan_ninf_daz(float %in) #0 {
+define float @v_log2_f32_nnan_ninf_daz(float %in) "denormal-fp-math-f32"="ieee,preserve-sign" {
 ; GFX689-LABEL: v_log2_f32_nnan_ninf_daz:
 ; GFX689:       ; %bb.0:
 ; GFX689-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2367,7 +2367,7 @@ define float @v_log2_f32_nnan_ninf_daz(float %in) #0 {
   ret float %result
 }
 
-define float @v_log2_f32_nnan_ninf_dynamic(float %in) #1 {
+define float @v_log2_f32_nnan_ninf_dynamic(float %in) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX689-SDAG-LABEL: v_log2_f32_nnan_ninf_dynamic:
 ; GFX689-SDAG:       ; %bb.0:
 ; GFX689-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2435,7 +2435,7 @@ define float @v_log2_f32_nnan_ninf_dynamic(float %in) #1 {
   ret float %result
 }
 
-define float @v_log2_f32_fast_daz(float %in) #0 {
+define float @v_log2_f32_fast_daz(float %in) "denormal-fp-math-f32"="ieee,preserve-sign" {
 ; GFX689-LABEL: v_log2_f32_fast_daz:
 ; GFX689:       ; %bb.0:
 ; GFX689-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2461,7 +2461,7 @@ define float @v_log2_f32_fast_daz(float %in) #0 {
   ret float %result
 }
 
-define float @v_log2_f32_dynamic_mode(float %in) #1 {
+define float @v_log2_f32_dynamic_mode(float %in) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX689-SDAG-LABEL: v_log2_f32_dynamic_mode:
 ; GFX689-SDAG:       ; %bb.0:
 ; GFX689-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3990,18 +3990,14 @@ define <4 x half> @v_log2_v4f16_fast(<4 x half> %in) {
   ret <4 x half> %result
 }
 
-declare float @llvm.fabs.f32(float) #2
-declare float @llvm.log2.f32(float) #2
-declare <2 x float> @llvm.log2.v2f32(<2 x float>) #2
-declare <3 x float> @llvm.log2.v3f32(<3 x float>) #2
-declare <4 x float> @llvm.log2.v4f32(<4 x float>) #2
-declare half @llvm.fabs.f16(half) #2
-declare half @llvm.log2.f16(half) #2
-declare <2 x half> @llvm.log2.v2f16(<2 x half>) #2
-declare <3 x half> @llvm.log2.v3f16(<3 x half>) #2
-declare <4 x half> @llvm.log2.v4f16(<4 x half>) #2
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #2
-
-attributes #0 = { "denormal-fp-math-f32"="ieee,preserve-sign" }
-attributes #1 = { "denormal-fp-math-f32"="dynamic,dynamic" }
-attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+declare float @llvm.fabs.f32(float) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.log2.f32(float) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x float> @llvm.log2.v2f32(<2 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <3 x float> @llvm.log2.v3f32(<3 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <4 x float> @llvm.log2.v4f32(<4 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare half @llvm.fabs.f16(half) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare half @llvm.log2.f16(half) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x half> @llvm.log2.v2f16(<2 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <3 x half> @llvm.log2.v3f16(<3 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <4 x half> @llvm.log2.v4f16(<4 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x half> @llvm.fabs.v2f16(<2 x half>) nocallback nofree nosync nounwind speculatable willreturn memory(none)

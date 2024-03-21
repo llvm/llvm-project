@@ -14,12 +14,12 @@
 
 ; Used to emit an always 4 byte instruction. Inline asm always assumes
 ; each instruction is the maximum size.
-declare void @llvm.amdgcn.s.sleep(i32) #0
+declare void @llvm.amdgcn.s.sleep(i32) nounwind
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 
-define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addrspace(1) %arg, i32 %cnd) #0 {
+define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addrspace(1) %arg, i32 %cnd) nounwind {
 ; GCN-LABEL: uniform_conditional_max_short_forward_branch:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -51,7 +51,7 @@ bb2:
   call void asm sideeffect
   "v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   call void @llvm.amdgcn.s.sleep(i32 0)
   br label %bb3
 
@@ -60,7 +60,7 @@ bb3:
   ret void
 }
 
-define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrspace(1) %arg, i32 %cnd) #0 {
+define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrspace(1) %arg, i32 %cnd) nounwind {
 ; GCN-LABEL: uniform_conditional_min_long_forward_branch:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -99,7 +99,7 @@ bb2:
   "v_nop_e64
   v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   br label %bb3
 
 bb3:
@@ -107,7 +107,7 @@ bb3:
   ret void
 }
 
-define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr addrspace(1) %arg, float %cnd) #0 {
+define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr addrspace(1) %arg, float %cnd) nounwind {
 ; GCN-LABEL: uniform_conditional_min_long_forward_vcnd_branch:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -147,7 +147,7 @@ bb2:
   v_nop_e64
   v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   br label %bb3
 
 bb3:
@@ -155,7 +155,7 @@ bb3:
   ret void
 }
 
-define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) nounwind {
 ; GCN-LABEL: min_long_forward_vbranch:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -206,7 +206,7 @@ bb2:
   v_nop_e64
   v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   br label %bb3
 
 bb3:
@@ -214,7 +214,7 @@ bb3:
   ret void
 }
 
-define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) nounwind {
 ; GCN-LABEL: long_backward_sbranch:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_mov_b32 s0, 0
@@ -246,7 +246,7 @@ bb2:
   call void asm sideeffect
   "v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   %inc = add nsw i32 %loop.idx, 1 ; add cost 4
   %cmp = icmp slt i32 %inc, 10 ; condition cost = 8
   br i1 %cmp, label %bb2, label %bb3 ; -
@@ -325,7 +325,7 @@ bb3:
   "v_nop_e64
   v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   br label %bb4
 
 bb4:
@@ -365,14 +365,14 @@ loop:
   "v_nop_e64
   v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   br label %loop
 }
 
 ; Expansion of branch from %bb1 to %bb3 introduces need to expand
 ; branch from %bb0 to %bb2
 
-define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
+define amdgpu_kernel void @expand_requires_expand(i32 %cond0) nounwind {
 ; GCN-LABEL: expand_requires_expand:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x9
@@ -411,7 +411,7 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_endpgm
 bb0:
-  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind
   %cmp0 = icmp slt i32 %cond0, 0
   br i1 %cmp0, label %bb2, label %bb1
 
@@ -425,22 +425,22 @@ bb2:
   "v_nop_e64
   v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   br label %bb3
 
 bb3:
 ; These NOPs prevent tail-duplication-based outlining
 ; from firing, which defeats the need to expand the branches and this test.
   call void asm sideeffect
-  "v_nop_e64", ""() #0
+  "v_nop_e64", ""() nounwind
   call void asm sideeffect
-  "v_nop_e64", ""() #0
+  "v_nop_e64", ""() nounwind
   ret void
 }
 
 ; Requires expanding of required skip branch.
 
-define amdgpu_kernel void @uniform_inside_divergent(ptr addrspace(1) %out, i32 %cond) #0 {
+define amdgpu_kernel void @uniform_inside_divergent(ptr addrspace(1) %out, i32 %cond) nounwind {
 ; GCN-LABEL: uniform_inside_divergent:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, 16, v0
@@ -493,7 +493,7 @@ endif:
 
 ; si_mask_branch
 
-define amdgpu_kernel void @analyze_mask_branch() #0 {
+define amdgpu_kernel void @analyze_mask_branch() nounwind {
 ; GCN-LABEL: analyze_mask_branch:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    ;;#ASMSTART
@@ -552,7 +552,7 @@ loop:
   %phi = phi float [ 0.000000e+00, %loop_body ], [ 1.000000e+00, %entry ]
   call void asm sideeffect
   "v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   %cmp1 = fcmp olt float %phi, 8.0
   br i1 %cmp1, label %loop_body, label %ret
 
@@ -561,7 +561,7 @@ loop_body:
   "v_nop_e64
   v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   br label %loop
 
 ret:
@@ -569,7 +569,7 @@ ret:
   ret void
 }
 
-define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i64 %arg5) #0 {
+define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i64 %arg5) nounwind {
 ; GCN-LABEL: long_branch_hang:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xb
@@ -651,7 +651,7 @@ bb13:                                             ; preds = %bb
   "v_nop_e64
   v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   br i1 %tmp6, label %bb19, label %bb14
 
 bb14:                                             ; preds = %bb13, %bb9
@@ -667,6 +667,3 @@ bb19:                                             ; preds = %bb14, %bb13, %bb9
   store i32 %tmp20, ptr addrspace(1) %tmp21, align 4
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

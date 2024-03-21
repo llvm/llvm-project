@@ -5,7 +5,7 @@
 
 ; FIXME: This should be merged with sint_to_fp.ll, but s_sint_to_fp_v2i64 crashes on r600
 
-define amdgpu_kernel void @s_sint_to_fp_i64_to_f16(ptr addrspace(1) %out, i64 %in) #0 {
+define amdgpu_kernel void @s_sint_to_fp_i64_to_f16(ptr addrspace(1) %out, i64 %in) nounwind {
 ; GFX6-LABEL: s_sint_to_fp_i64_to_f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -84,7 +84,7 @@ define amdgpu_kernel void @s_sint_to_fp_i64_to_f16(ptr addrspace(1) %out, i64 %i
   ret void
 }
 
-define amdgpu_kernel void @v_sint_to_fp_i64_to_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_sint_to_fp_i64_to_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX6-LABEL: v_sint_to_fp_i64_to_f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -183,7 +183,7 @@ define amdgpu_kernel void @v_sint_to_fp_i64_to_f16(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @s_sint_to_fp_i64_to_f32(ptr addrspace(1) %out, i64 %in) #0 {
+define amdgpu_kernel void @s_sint_to_fp_i64_to_f32(ptr addrspace(1) %out, i64 %in) nounwind {
 ; GFX6-LABEL: s_sint_to_fp_i64_to_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -258,7 +258,7 @@ define amdgpu_kernel void @s_sint_to_fp_i64_to_f32(ptr addrspace(1) %out, i64 %i
   ret void
 }
 
-define amdgpu_kernel void @v_sint_to_fp_i64_to_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_sint_to_fp_i64_to_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX6-LABEL: v_sint_to_fp_i64_to_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -354,7 +354,7 @@ define amdgpu_kernel void @v_sint_to_fp_i64_to_f32(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @s_sint_to_fp_v2i64_to_v2f32(ptr addrspace(1) %out, <2 x i64> %in) #0{
+define amdgpu_kernel void @s_sint_to_fp_v2i64_to_v2f32(ptr addrspace(1) %out, <2 x i64> %in) nounwind{
 ; GFX6-LABEL: s_sint_to_fp_v2i64_to_v2f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
@@ -464,7 +464,7 @@ define amdgpu_kernel void @s_sint_to_fp_v2i64_to_v2f32(ptr addrspace(1) %out, <2
   ret void
 }
 
-define amdgpu_kernel void @v_sint_to_fp_v4i64_to_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_sint_to_fp_v4i64_to_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX6-LABEL: v_sint_to_fp_v4i64_to_v4f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -677,7 +677,7 @@ define amdgpu_kernel void @v_sint_to_fp_v4i64_to_v4f32(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @s_sint_to_fp_v2i64_to_v2f16(ptr addrspace(1) %out, <2 x i64> %in) #0{
+define amdgpu_kernel void @s_sint_to_fp_v2i64_to_v2f16(ptr addrspace(1) %out, <2 x i64> %in) nounwind{
 ; GFX6-LABEL: s_sint_to_fp_v2i64_to_v2f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
@@ -799,7 +799,7 @@ define amdgpu_kernel void @s_sint_to_fp_v2i64_to_v2f16(ptr addrspace(1) %out, <2
   ret void
 }
 
-define amdgpu_kernel void @v_sint_to_fp_v4i64_to_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_sint_to_fp_v4i64_to_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX6-LABEL: v_sint_to_fp_v4i64_to_v4f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1035,7 +1035,4 @@ define amdgpu_kernel void @v_sint_to_fp_v4i64_to_v4f16(ptr addrspace(1) %out, pt
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

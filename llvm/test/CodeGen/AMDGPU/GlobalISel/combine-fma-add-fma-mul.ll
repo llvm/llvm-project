@@ -1035,10 +1035,9 @@ define <4 x double> @test_f64_add_mul_rhs(<4 x double> %a, <4 x double> %b, <4 x
   ret <4 x double> %z
 }
 
-declare <4 x double> @llvm.fmuladd.v4f64(<4 x double>, <4 x double>, <4 x double>) #0
-declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) #0
-declare <4 x half> @llvm.fmuladd.v4f16(<4 x half>, <4 x half>, <4 x half>) #0
-declare double @llvm.fmuladd.f64(double, double, double) #0
-declare float @llvm.fmuladd.f32(float, float, float) #0
-declare half @llvm.fmuladd.f16(half, half, half) #0
-attributes #0 = { nounwind readnone }
+declare <4 x double> @llvm.fmuladd.v4f64(<4 x double>, <4 x double>, <4 x double>) nounwind readnone
+declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
+declare <4 x half> @llvm.fmuladd.v4f16(<4 x half>, <4 x half>, <4 x half>) nounwind readnone
+declare double @llvm.fmuladd.f64(double, double, double) nounwind readnone
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone
+declare half @llvm.fmuladd.f16(half, half, half) nounwind readnone

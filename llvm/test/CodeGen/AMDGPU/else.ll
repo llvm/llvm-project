@@ -4,7 +4,7 @@
 ; CHECK-LABEL: {{^}}else_no_execfix:
 ; CHECK: ; %Flow
 ; CHECK-NEXT: s_andn2_saveexec_b64 [[DST:s\[[0-9]+:[0-9]+\]]], [[DST]]
-define amdgpu_ps float @else_no_execfix(i32 %z, float %v) #0 {
+define amdgpu_ps float @else_no_execfix(i32 %z, float %v) nounwind {
 main_body:
   %cc = icmp sgt i32 %z, 5
   br i1 %cc, label %if, label %else
@@ -31,7 +31,7 @@ end:
 ; CHECK-NEXT: s_and_b64 [[AND_INIT:s\[[0-9]+:[0-9]+\]]], exec, [[DST]]
 ; CHECK-NEXT: s_xor_b64 exec, exec, [[AND_INIT]]
 ; CHECK-NEXT: s_cbranch_execz
-define amdgpu_ps void @else_execfix_leave_wqm(i32 %z, float %v) #0 {
+define amdgpu_ps void @else_execfix_leave_wqm(i32 %z, float %v) nounwind {
 main_body:
   %cc = icmp sgt i32 %z, 5
   br i1 %cc, label %if, label %else
@@ -52,9 +52,5 @@ end:
   ret void
 }
 
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 immarg, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #2
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind writeonly }
-attributes #2 = { nounwind readonly }
+declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg) nounwind writeonly
+declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 immarg, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly

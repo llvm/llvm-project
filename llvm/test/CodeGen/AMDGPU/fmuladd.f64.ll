@@ -8,7 +8,7 @@
 ; GCN-LABEL: {{^}}fmuladd_f64:
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fmuladd_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) #0 {
+                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) nounwind {
   %r0 = load double, ptr addrspace(1) %in1
   %r1 = load double, ptr addrspace(1) %in2
   %r2 = load double, ptr addrspace(1) %in3
@@ -23,7 +23,7 @@ define amdgpu_kernel void @fmuladd_f64(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GCN-STRICT: v_mul_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 ; GCN-STRICT: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fmul_fadd_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                           ptr addrspace(1) %in2, ptr addrspace(1) %in3) #0 {
+                           ptr addrspace(1) %in2, ptr addrspace(1) %in3) nounwind {
   %r0 = load double, ptr addrspace(1) %in1
   %r1 = load double, ptr addrspace(1) %in2
   %r2 = load double, ptr addrspace(1) %in3
@@ -37,7 +37,7 @@ define amdgpu_kernel void @fmul_fadd_f64(ptr addrspace(1) %out, ptr addrspace(1)
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 
 define amdgpu_kernel void @fmul_fadd_contract_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                           ptr addrspace(1) %in2, ptr addrspace(1) %in3) #0 {
+                           ptr addrspace(1) %in2, ptr addrspace(1) %in3) nounwind {
   %r0 = load double, ptr addrspace(1) %in1
   %r1 = load double, ptr addrspace(1) %in2
   %r2 = load double, ptr addrspace(1) %in3
@@ -60,7 +60,7 @@ define amdgpu_kernel void @fmul_fadd_contract_f64(ptr addrspace(1) %out, ptr add
 ; VI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fadd_a_a_b_f64(ptr addrspace(1) %out,
                             ptr addrspace(1) %in1,
-                            ptr addrspace(1) %in2) #0 {
+                            ptr addrspace(1) %in2) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %out, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
@@ -88,7 +88,7 @@ define amdgpu_kernel void @fadd_a_a_b_f64(ptr addrspace(1) %out,
 ; VI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fadd_b_a_a_f64(ptr addrspace(1) %out,
                             ptr addrspace(1) %in1,
-                            ptr addrspace(1) %in2) #0 {
+                            ptr addrspace(1) %in2) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %out, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
@@ -108,8 +108,8 @@ define amdgpu_kernel void @fadd_b_a_a_f64(ptr addrspace(1) %out,
 ; GCN-STRICT: v_add_f64 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, -v{{\[[0-9]+:[0-9]+\]}}
 
 ; GCN-CONTRACT: v_fma_f64 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, -v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @mad_sub_f64(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) #1 {
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @mad_sub_f64(ptr addrspace(1) noalias nocapture %out, ptr addrspace(1) noalias nocapture readonly %ptr) nounwind readnone {
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr double, ptr addrspace(1) %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -133,7 +133,7 @@ define amdgpu_kernel void @mad_sub_f64(ptr addrspace(1) noalias nocapture %out, 
 ; GCN-CONTRACT: v_fma_f64
 define amdgpu_kernel void @fadd_a_a_b_f64_fast_add0(ptr addrspace(1) %out,
                                       ptr addrspace(1) %in1,
-                                      ptr addrspace(1) %in2) #0 {
+                                      ptr addrspace(1) %in2) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %out, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
@@ -155,7 +155,7 @@ define amdgpu_kernel void @fadd_a_a_b_f64_fast_add0(ptr addrspace(1) %out,
 ; GCN-CONTRACT: v_fma_f64
 define amdgpu_kernel void @fadd_a_a_b_f64_fast_add1(ptr addrspace(1) %out,
                                       ptr addrspace(1) %in1,
-                                      ptr addrspace(1) %in2) #0 {
+                                      ptr addrspace(1) %in2) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %out, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
@@ -174,7 +174,7 @@ define amdgpu_kernel void @fadd_a_a_b_f64_fast_add1(ptr addrspace(1) %out,
 ; GCN: v_fma_f64
 define amdgpu_kernel void @fadd_a_a_b_f64_fast(ptr addrspace(1) %out,
                                  ptr addrspace(1) %in1,
-                                ptr addrspace(1) %in2) #0 {
+                                ptr addrspace(1) %in2) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %out, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
@@ -189,8 +189,5 @@ define amdgpu_kernel void @fadd_a_a_b_f64_fast(ptr addrspace(1) %out,
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare double @llvm.fmuladd.f64(double, double, double) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare double @llvm.fmuladd.f64(double, double, double) nounwind readnone

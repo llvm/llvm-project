@@ -11,7 +11,7 @@ define amdgpu_kernel void @width_2d (ptr addrspace(1) %in,
                        ptr addrspace(1) %out) {
 entry:
   %0 = call [3 x i32] @llvm.OpenCL.image.get.size.2d(
-      ptr addrspace(1) %in) #0
+      ptr addrspace(1) %in) readnone
   %1 = extractvalue [3 x i32] %0, 0
   store i32 %1, ptr addrspace(1) %out
   ret void
@@ -24,7 +24,7 @@ define amdgpu_kernel void @width_3d (ptr addrspace(1) %in,
                        ptr addrspace(1) %out) {
 entry:
   %0 = call [3 x i32] @llvm.OpenCL.image.get.size.3d(
-      ptr addrspace(1) %in) #0
+      ptr addrspace(1) %in) readnone
   %1 = extractvalue [3 x i32] %0, 0
   store i32 %1, ptr addrspace(1) %out
   ret void
@@ -41,7 +41,7 @@ define amdgpu_kernel void @height_2d (ptr addrspace(1) %in,
                         ptr addrspace(1) %out) {
 entry:
   %0 = call [3 x i32] @llvm.OpenCL.image.get.size.2d(
-      ptr addrspace(1) %in) #0
+      ptr addrspace(1) %in) readnone
   %1 = extractvalue [3 x i32] %0, 1
   store i32 %1, ptr addrspace(1) %out
   ret void
@@ -54,7 +54,7 @@ define amdgpu_kernel void @height_3d (ptr addrspace(1) %in,
                         ptr addrspace(1) %out) {
 entry:
   %0 = call [3 x i32] @llvm.OpenCL.image.get.size.3d(
-      ptr addrspace(1) %in) #0
+      ptr addrspace(1) %in) readnone
   %1 = extractvalue [3 x i32] %0, 1
   store i32 %1, ptr addrspace(1) %out
   ret void
@@ -71,7 +71,7 @@ define amdgpu_kernel void @depth_3d (ptr addrspace(1) %in,
                        ptr addrspace(1) %out) {
 entry:
   %0 = call [3 x i32] @llvm.OpenCL.image.get.size.3d(
-      ptr addrspace(1) %in) #0
+      ptr addrspace(1) %in) readnone
   %1 = extractvalue [3 x i32] %0, 2
   store i32 %1, ptr addrspace(1) %out
   ret void
@@ -88,7 +88,7 @@ define amdgpu_kernel void @data_type_2d (ptr addrspace(1) %in,
                            ptr addrspace(1) %out) {
 entry:
   %0 = call [2 x i32] @llvm.OpenCL.image.get.format.2d(
-      ptr addrspace(1) %in) #0
+      ptr addrspace(1) %in) readnone
   %1 = extractvalue [2 x i32] %0, 0
   store i32 %1, ptr addrspace(1) %out
   ret void
@@ -101,7 +101,7 @@ define amdgpu_kernel void @data_type_3d (ptr addrspace(1) %in,
                                      ptr addrspace(1) %out) {
 entry:
   %0 = call [2 x i32] @llvm.OpenCL.image.get.format.3d(
-      ptr addrspace(1) %in) #0
+      ptr addrspace(1) %in) readnone
   %1 = extractvalue [2 x i32] %0, 0
   store i32 %1, ptr addrspace(1) %out
   ret void
@@ -118,7 +118,7 @@ define amdgpu_kernel void @channel_order_2d (ptr addrspace(1) %in,
                                ptr addrspace(1) %out) {
 entry:
   %0 = call [2 x i32] @llvm.OpenCL.image.get.format.2d(
-      ptr addrspace(1) %in) #0
+      ptr addrspace(1) %in) readnone
   %1 = extractvalue [2 x i32] %0, 1
   store i32 %1, ptr addrspace(1) %out
   ret void
@@ -131,7 +131,7 @@ define amdgpu_kernel void @channel_order_3d (ptr addrspace(1) %in,
                                          ptr addrspace(1) %out) {
 entry:
   %0 = call [2 x i32] @llvm.OpenCL.image.get.format.3d(
-      ptr addrspace(1) %in) #0
+      ptr addrspace(1) %in) readnone
   %1 = extractvalue [2 x i32] %0, 1
   store i32 %1, ptr addrspace(1) %out
   ret void
@@ -152,7 +152,7 @@ define amdgpu_kernel void @image_arg_2nd (ptr addrspace(1) %in1,
                             ptr addrspace(1) %out) {
 entry:
   %0 = call [3 x i32] @llvm.OpenCL.image.get.size.2d(
-      ptr addrspace(1) %in2) #0
+      ptr addrspace(1) %in2) readnone
   %1 = extractvalue [3 x i32] %0, 1
   store i32 %1, ptr addrspace(1) %out
   ret void
@@ -161,12 +161,10 @@ entry:
 %opencl.image2d_t = type opaque
 %opencl.image3d_t = type opaque
 
-declare [3 x i32] @llvm.OpenCL.image.get.size.2d(ptr addrspace(1)) #0
-declare [3 x i32] @llvm.OpenCL.image.get.size.3d(ptr addrspace(1)) #0
-declare [2 x i32] @llvm.OpenCL.image.get.format.2d(ptr addrspace(1)) #0
-declare [2 x i32] @llvm.OpenCL.image.get.format.3d(ptr addrspace(1)) #0
-
-attributes #0 = { readnone }
+declare [3 x i32] @llvm.OpenCL.image.get.size.2d(ptr addrspace(1)) readnone
+declare [3 x i32] @llvm.OpenCL.image.get.size.3d(ptr addrspace(1)) readnone
+declare [2 x i32] @llvm.OpenCL.image.get.format.2d(ptr addrspace(1)) readnone
+declare [2 x i32] @llvm.OpenCL.image.get.format.3d(ptr addrspace(1)) readnone
 
 !opencl.kernels = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9}
 !0 = !{ptr @width_2d,

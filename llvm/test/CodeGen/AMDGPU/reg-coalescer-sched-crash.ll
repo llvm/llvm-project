@@ -4,9 +4,9 @@
 ; The register coalescer introduces a verifier error which later
 ; results in a crash during scheduling.
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-define amdgpu_kernel void @reg_coalescer_breaks_dead(ptr addrspace(1) nocapture readonly %arg, i32 %arg1, i32 %arg2, i32 %arg3, i1 %c0) #1 {
+define amdgpu_kernel void @reg_coalescer_breaks_dead(ptr addrspace(1) nocapture readonly %arg, i32 %arg1, i32 %arg2, i32 %arg3, i1 %c0) nounwind {
 bb:
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %cmp0 = icmp eq i32 %id.x, 0
@@ -38,6 +38,3 @@ bb15:                                             ; preds = %bb4
 bb16:                                             ; preds = %bb15, %bb4
   unreachable
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }

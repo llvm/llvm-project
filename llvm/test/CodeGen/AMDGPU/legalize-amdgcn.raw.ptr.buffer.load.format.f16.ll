@@ -325,9 +325,7 @@ define <4 x half> @raw_ptr_buffer_load_format_v4f16__sgpr_rsrc__vgpr_voffset__sg
   ret <4 x half> %val
 }
 
-declare half @llvm.amdgcn.raw.ptr.buffer.load.format.f16(ptr addrspace(8), i32, i32, i32 immarg) #0
-declare <2 x half> @llvm.amdgcn.raw.ptr.buffer.load.format.v2f16(ptr addrspace(8), i32, i32, i32 immarg) #0
-declare <3 x half> @llvm.amdgcn.raw.ptr.buffer.load.format.v3f16(ptr addrspace(8), i32, i32, i32 immarg) #0
-declare <4 x half> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f16(ptr addrspace(8), i32, i32, i32 immarg) #0
-
-attributes #0 = { nounwind readonly }
+declare half @llvm.amdgcn.raw.ptr.buffer.load.format.f16(ptr addrspace(8), i32, i32, i32 immarg) nounwind readonly
+declare <2 x half> @llvm.amdgcn.raw.ptr.buffer.load.format.v2f16(ptr addrspace(8), i32, i32, i32 immarg) nounwind readonly
+declare <3 x half> @llvm.amdgcn.raw.ptr.buffer.load.format.v3f16(ptr addrspace(8), i32, i32, i32 immarg) nounwind readonly
+declare <4 x half> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f16(ptr addrspace(8), i32, i32, i32 immarg) nounwind readonly

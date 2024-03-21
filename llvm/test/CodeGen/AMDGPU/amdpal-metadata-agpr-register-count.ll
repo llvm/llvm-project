@@ -7,7 +7,7 @@
 
 ; CHECK:      .type          kernel_32_agprs
 ; CHECK:      NumAgprs:       32
-define amdgpu_kernel void @kernel_32_agprs() #0 {
+define amdgpu_kernel void @kernel_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v8}" ()
   call void asm sideeffect "", "~{a31}" ()
@@ -16,7 +16,7 @@ bb:
 
 ; CHECK:      .type          kernel_0_agprs
 ; CHECK:      NumAgprs:       0
-define amdgpu_kernel void @kernel_0_agprs() #0 {
+define amdgpu_kernel void @kernel_0_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v0}" ()
   ret void
@@ -24,7 +24,7 @@ bb:
 
 ; CHECK:      .type           kernel_40_vgprs
 ; CHECK:      NumAgprs:       16
-define amdgpu_kernel void @kernel_40_vgprs() #0 {
+define amdgpu_kernel void @kernel_40_vgprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v39}" ()
   call void asm sideeffect "", "~{a15}" ()
@@ -33,7 +33,7 @@ bb:
 
 ; CHECK:      .type          kernel_max_gprs
 ; CHECK:      NumAgprs:       256
-define amdgpu_kernel void @kernel_max_gprs() #0 {
+define amdgpu_kernel void @kernel_max_gprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v255}" ()
   call void asm sideeffect "", "~{a255}" ()
@@ -42,7 +42,7 @@ bb:
 
 ; CHECK:      .type          func_32_agprs
 ; CHECK:      NumAgprs:       32
-define void @func_32_agprs() #0 {
+define void @func_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v8}" ()
   call void asm sideeffect "", "~{a31}" ()
@@ -51,9 +51,9 @@ bb:
 
 ; CHECK:      .type          kernel_call_func_32_agprs
 ; CHECK:      NumAgprs:       32
-define amdgpu_kernel void @kernel_call_func_32_agprs() #0 {
+define amdgpu_kernel void @kernel_call_func_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
-  call void @func_32_agprs() #0
+  call void @func_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512"
   ret void
 }
 
@@ -61,7 +61,7 @@ declare void @undef_func()
 
 ; CHECK:      .type          kernel_call_undef_func
 ; CHECK:      NumAgprs:       32
-define amdgpu_kernel void @kernel_call_undef_func() #0 {
+define amdgpu_kernel void @kernel_call_undef_func() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void @undef_func()
   ret void
@@ -74,5 +74,3 @@ bb:
 
 ; GFX908: agpr_count:  0x20
 ; GFX908: vgpr_count:  0x20
-
-attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" }

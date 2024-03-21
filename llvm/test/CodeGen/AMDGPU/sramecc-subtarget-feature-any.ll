@@ -6,8 +6,6 @@
 
 ; NOT-SUPPORTED: sramecc setting for subtarget: Unsupported
 ; ANY: sramecc setting for subtarget: Any
-define void @sramecc-subtarget-feature-default() #0 {
+define void @sramecc-subtarget-feature-default() nounwind {
   ret void
 }
-
-attributes #0 = { nounwind }

@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
 
-define amdgpu_kernel void @s_shl_v2i16(ptr addrspace(1) %out, <2 x i16> %lhs, <2 x i16> %rhs) #0 {
+define amdgpu_kernel void @s_shl_v2i16(ptr addrspace(1) %out, <2 x i16> %lhs, <2 x i16> %rhs) nounwind {
 ; GFX9-LABEL: s_shl_v2i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -87,7 +87,7 @@ define amdgpu_kernel void @s_shl_v2i16(ptr addrspace(1) %out, <2 x i16> %lhs, <2
   ret void
 }
 
-define amdgpu_kernel void @v_shl_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_shl_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX9-LABEL: v_shl_v2i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -175,7 +175,7 @@ define amdgpu_kernel void @v_shl_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @shl_v_s_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in, <2 x i16> %sgpr) #0 {
+define amdgpu_kernel void @shl_v_s_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in, <2 x i16> %sgpr) nounwind {
 ; GFX9-LABEL: shl_v_s_v2i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -268,7 +268,7 @@ define amdgpu_kernel void @shl_v_s_v2i16(ptr addrspace(1) %out, ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @shl_s_v_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in, <2 x i16> %sgpr) #0 {
+define amdgpu_kernel void @shl_s_v_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in, <2 x i16> %sgpr) nounwind {
 ; GFX9-LABEL: shl_s_v_v2i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -361,7 +361,7 @@ define amdgpu_kernel void @shl_s_v_v2i16(ptr addrspace(1) %out, ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @shl_imm_v_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @shl_imm_v_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX9-LABEL: shl_imm_v_v2i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -447,7 +447,7 @@ define amdgpu_kernel void @shl_imm_v_v2i16(ptr addrspace(1) %out, ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @shl_v_imm_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @shl_v_imm_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX9-LABEL: shl_v_imm_v2i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -529,7 +529,7 @@ define amdgpu_kernel void @shl_v_imm_v2i16(ptr addrspace(1) %out, ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @v_shl_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_shl_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX9-LABEL: v_shl_v4i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -630,7 +630,7 @@ define amdgpu_kernel void @v_shl_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @shl_v_imm_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @shl_v_imm_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX9-LABEL: shl_v_imm_v4i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -725,7 +725,4 @@ define amdgpu_kernel void @shl_v_imm_v4i16(ptr addrspace(1) %out, ptr addrspace(
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

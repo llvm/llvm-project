@@ -8,7 +8,7 @@
 
 ; Test that we correctly legalize VGPR Rsrc operands in MUBUF instructions.
 
-define float @mubuf_vgpr(ptr addrspace(8) %i, i32 %c) #0 {
+define float @mubuf_vgpr(ptr addrspace(8) %i, i32 %c) nounwind {
 ; GFX9_W64-LABEL: mubuf_vgpr:
 ; GFX9_W64:       ; %bb.0:
 ; GFX9_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -261,7 +261,7 @@ define float @mubuf_vgpr(ptr addrspace(8) %i, i32 %c) #0 {
 ; W64-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    s_setpc_b64 s[30:31]
-  %call = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %i, i32 %c, i32 0, i32 0, i32 0) #1
+  %call = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %i, i32 %c, i32 0, i32 0, i32 0) nounwind readonly
   ret float %call
 }
 
@@ -269,7 +269,7 @@ define float @mubuf_vgpr(ptr addrspace(8) %i, i32 %c) #0 {
 
 ; FIXME: redundant s_mov
 
-define void @mubuf_vgpr_adjacent_in_block(ptr addrspace(8) %i, ptr addrspace(8) %j, i32 %c, ptr addrspace(1) %out0, ptr addrspace(1) %out1) #0 {
+define void @mubuf_vgpr_adjacent_in_block(ptr addrspace(8) %i, ptr addrspace(8) %j, i32 %c, ptr addrspace(1) %out0, ptr addrspace(1) %out1) nounwind {
 ; GFX9_W64-LABEL: mubuf_vgpr_adjacent_in_block:
 ; GFX9_W64:       ; %bb.0: ; %entry
 ; GFX9_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -755,8 +755,8 @@ define void @mubuf_vgpr_adjacent_in_block(ptr addrspace(8) %i, ptr addrspace(8) 
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %val0 = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %i, i32 %c, i32 0, i32 0, i32 0) #1
-  %val1 = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %j, i32 %c, i32 0, i32 0, i32 0) #1
+  %val0 = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %i, i32 %c, i32 0, i32 0, i32 0) nounwind readonly
+  %val1 = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %j, i32 %c, i32 0, i32 0, i32 0) nounwind readonly
   store volatile float %val0, ptr addrspace(1) %out0
   store volatile float %val1, ptr addrspace(1) %out1
   ret void
@@ -765,7 +765,7 @@ entry:
 ; Confirm spills do not occur between the XOR and branch that terminate the
 ; waterfall loop BBs.
 
-define void @mubuf_vgpr_outside_entry(ptr addrspace(8) %i, ptr addrspace(8) %j, i32 %c, ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
+define void @mubuf_vgpr_outside_entry(ptr addrspace(8) %i, ptr addrspace(8) %j, i32 %c, ptr addrspace(1) %in, ptr addrspace(1) %out) nounwind {
 ; GFX9_W64-LABEL: mubuf_vgpr_outside_entry:
 ; GFX9_W64:       ; %bb.0: ; %entry
 ; GFX9_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1348,13 +1348,13 @@ define void @mubuf_vgpr_outside_entry(ptr addrspace(8) %i, ptr addrspace(8) %j, 
 ; W64-O0-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %live.out.reg = call i32 asm sideeffect "s_mov_b32 $0, 17", "={s4}" ()
-  %val0 = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %i, i32 %live.out.reg, i32 0, i32 0, i32 0) #1
-  %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %val0 = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %i, i32 %live.out.reg, i32 0, i32 0, i32 0) nounwind readonly
+  %idx = call i32 @llvm.amdgcn.workitem.id.x() nounwind readonly
   %cmp = icmp eq i32 %idx, 0
   br i1 %cmp, label %bb1, label %bb2
 
 bb1:
-  %val1 = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %j, i32 %live.out.reg, i32 0, i32 0, i32 0) #1
+  %val1 = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %j, i32 %live.out.reg, i32 0, i32 0, i32 0) nounwind readonly
   br label %bb2
 
 bb2:
@@ -1363,8 +1363,5 @@ bb2:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32, i32 immarg) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readonly }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readonly
+declare float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind readonly

@@ -14,7 +14,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; GCN-NEXT:    s_nop 2
 ; GCN-NOT:     v_accvgpr_read
 ; GCN-COUNT-8: global_store_dwordx4 v{{[0-9:]+}}, a[{{[0-9:]+}}], s[{{[0-9:]+}}]
-define amdgpu_kernel void @test_load_mfma_store16(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_load_mfma_store16(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <32 x float>, ptr addrspace(1) %arg, i32 %tid
@@ -33,7 +33,7 @@ bb:
 ; GCN-NEXT: s_nop 2
 ; GCN-NOT:  v_accvgpr_read
 ; GCN-NEXT: global_store_dword v{{[0-9:]+}}, a[[N]], s[{{[0-9:]+}}]
-define amdgpu_kernel void @test_load1_mfma_store1(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_load1_mfma_store1(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %tid
@@ -52,7 +52,7 @@ bb:
 ; GCN-NEXT: s_nop 4
 ; GCN-NOT:  v_accvgpr_read
 ; GCN-NEXT: global_store_dwordx4 v{{[0-9:]+}}, [[A]], s[{{[0-9:]+}}]
-define amdgpu_kernel void @test_load4_mfma_store4(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_load4_mfma_store4(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <4 x i32>, ptr addrspace(1) %arg, i32 %tid
@@ -66,7 +66,7 @@ bb:
 ; GCN-COUNT-8: global_load_dwordx4 v[{{[0-9:]+}}], v{{[0-9:]+}}, s[{{[0-9:]+}}]
 ; GCN-NOT:     v_accvgpr
 ; GCN-COUNT-8: global_store_dwordx4 v[{{[0-9:]+}}], v[{{[0-9:]+}}]
-define amdgpu_kernel void @test_load_store(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_load_store(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.1 = getelementptr inbounds <32 x float>, ptr addrspace(1) %arg, i32 %tid
@@ -85,7 +85,7 @@ bb:
 ; GCN-NEXT:     s_nop 2
 ; GCN-NOT:      v_accvgpr_read
 ; GCN-COUNT-8:  global_store_dwordx4 v{{[0-9:]+}}, a[{{[0-9:]+}}]
-define amdgpu_kernel void @test_load_add_mfma_store(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_load_add_mfma_store(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <32 x float>, ptr addrspace(1) %arg, i32 %tid
@@ -102,7 +102,7 @@ bb:
 ; GCN-COUNT-16: v_pk_add_f32
 ; GCN-NOT:      v_accvgpr
 ; GCN-COUNT-8:  global_store_dwordx4 v{{[0-9:]+}}, v[{{[0-9:]+}}]
-define amdgpu_kernel void @test_load_add_store(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_load_add_store(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <32 x float>, ptr addrspace(1) %arg, i32 %tid
@@ -119,7 +119,7 @@ bb:
 ; GCN-COUNT-32: v_accvgpr_read
 ; GCN:          v_pk_add_f32
 ; GCN-COUNT-8:  global_store_dwordx4 v{{[0-9:]+}}, v[{{[0-9:]+}}]
-define amdgpu_kernel void @test_load_mfma_add_store(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_load_mfma_add_store(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <32 x float>, ptr addrspace(1) %arg, i32 %tid
@@ -138,7 +138,7 @@ bb:
 ; GCN-COUNT-32: v_accvgpr_read
 ; GCN:          v_pk_mul_f32
 ; GCN-COUNT-8:  global_store_dwordx4 v{{[0-9:]+}}, v[{{[0-9:]+}}]
-define amdgpu_kernel void @test_load_add_mfma_mul_store(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_load_add_mfma_mul_store(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <32 x float>, ptr addrspace(1) %arg, i32 %tid
@@ -157,7 +157,7 @@ bb:
 ; GCN-COUNT-32: v_accvgpr_read
 ; GCN:          v_pk_mul_f32
 ; GCN-COUNT-8:  global_store_dwordx4 v{{[0-9:]+}}, v[{{[0-9:]+}}]
-define amdgpu_kernel void @test_mixeduse_load_add_mfma_mul_store(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mixeduse_load_add_mfma_mul_store(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <32 x float>, ptr addrspace(1) %arg, i32 %tid
@@ -175,7 +175,7 @@ bb:
 ; GCN:         v_mfma_f32_32x32x1f32
 ; GCN-NOT:     v_accvgpr_read
 ; GCN-COUNT-8: global_store_dwordx4 v[{{[0-9:]+}}], a[{{[0-9:]+}}]
-define amdgpu_kernel void @test_multiuse_load_mfma_mfma_store(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_multiuse_load_mfma_mfma_store(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.1 = getelementptr inbounds <32 x float>, ptr addrspace(1) %arg, i32 %tid
@@ -199,7 +199,7 @@ bb:
 ; GCN:     v_accvgpr_read_b32 [[V:v[0-9]+]], a[[N]]{{$}}
 ; GCN:     global_atomic_add v{{[0-9]+}}, v{{[0-9:]+}}, [[V]], s[{{[0-9:]+}}] glc
 ; GCN:     global_store_dword v{{[0-9]+}}, v{{[0-9]+}},
-define amdgpu_kernel void @test_atomic_mfma_4xi32_atomic_store(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_atomic_mfma_4xi32_atomic_store(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tid
@@ -222,7 +222,7 @@ bb:
 ; GCN:         v_accvgpr_read_b32 v{{[0-9]+}}, a{{[0-9]+}}
 ; GCN:         v_accvgpr_read_b32 v{{[0-9]+}}, a{{[0-9]+}}
 ; GCN:         global_atomic_add_x2 v[{{[0-9:]+}}], v{{[0-9:]+}}, v[{{[0-9:]+}}], s[{{[0-9:]+}}] glc
-define amdgpu_kernel void @test_atomic_mfma_4xi32_atomic64_store(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_atomic_mfma_4xi32_atomic64_store(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, ptr addrspace(1) %arg, i32 %tid
@@ -249,7 +249,7 @@ bb:
 ; GCN-DAG: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-NOT: v_accvgpr_read
 ; GCN:     ds_write_b32 v{{[0-9]+}}, a[[N]] offset:128
-define amdgpu_kernel void @test_load_mfma_ds2_store(ptr addrspace(3) %arg) #0 {
+define amdgpu_kernel void @test_load_mfma_ds2_store(ptr addrspace(3) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.1 = getelementptr inbounds <4 x i32>, ptr addrspace(3) %arg, i32 %tid
@@ -268,7 +268,7 @@ bb:
 ; GCN:     v_mfma_i32_4x4x4i8 [[RES:a\[[0-9:]+\]]], v{{[0-9:]+}}, v{{[0-9:]+}}, [[IN]]
 ; GCN-NOT: v_accvgpr_read
 ; GCN:     global_store_dwordx4 v[{{[0-9:]+}}], [[RES]],
-define amdgpu_kernel void @test_mfma_loop_4xi32(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_loop_4xi32(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <4 x i32>, ptr addrspace(1) %arg, i32 %tid
@@ -295,7 +295,7 @@ exit:
 ; GCN-NOT:     v_accvgpr_read
 ; GCN-COUNT-8: global_store_dwordx4 v[{{[0-9:]+}}], a[{{[0-9:]+}}],
 ; GCN:         s_endpgm
-define amdgpu_kernel void @test_mfma_loop_32xfloat(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_loop_32xfloat(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <32 x float>, ptr addrspace(1) %arg, i32 %tid
@@ -314,5 +314,3 @@ exit:
   store <32 x float> %mai.1, ptr addrspace(1) %gep
   ret void
 }
-
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }

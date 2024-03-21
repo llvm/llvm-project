@@ -52,7 +52,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; GFX908:          global_store_dwordx4
 ; GFX90A-NOT:      v_accvgpr_read_b32
 ; GFX90A-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}],
-define amdgpu_kernel void @test_mfma_f32_32x32x2bf16(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x2bf16(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <32 x float>, ptr addrspace(1) %arg
   %a = bitcast i32 1 to <2 x i16>
@@ -73,7 +73,7 @@ bb:
 ; GFX908:          global_store_dwordx4
 ; GFX90A-NOT:      v_accvgpr_read_b32
 ; GFX90A-COUNT-4:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}],
-define amdgpu_kernel void @test_mfma_f32_16x16x2bf16(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x2bf16(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <16 x float>, ptr addrspace(1) %arg
   %a = bitcast i32 1 to <2 x i16>
@@ -94,7 +94,7 @@ bb:
 ; GFX908:         global_store_dwordx4
 ; GFX90A-NOT:     v_accvgpr_read_b32
 ; GFX90A:         global_store_dwordx4 v{{[0-9]+}}, [[RES]],
-define amdgpu_kernel void @test_mfma_f32_4x4x2bf16(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_4x4x2bf16(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
   %a = bitcast i32 1 to <2 x i16>
@@ -115,7 +115,7 @@ bb:
 ; GFX908:          global_store_dwordx4
 ; GFX90A-NOT:      v_accvgpr_read_b32
 ; GFX90A-COUNT-4:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}],
-define amdgpu_kernel void @test_mfma_f32_32x32x4bf16(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x4bf16(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <16 x float>, ptr addrspace(1) %arg
   %a = bitcast i32 1 to <2 x i16>
@@ -136,7 +136,7 @@ bb:
 ; GFX908:         global_store_dwordx4
 ; GFX90A-NOT:     v_accvgpr_read_b32
 ; GFX90A:         global_store_dwordx4 v{{[0-9]+}}, [[RES]],
-define amdgpu_kernel void @test_mfma_f32_16x16x8bf16(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x8bf16(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
   %a = bitcast i32 1 to <2 x i16>
@@ -145,5 +145,3 @@ bb:
   store <4 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
-
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }

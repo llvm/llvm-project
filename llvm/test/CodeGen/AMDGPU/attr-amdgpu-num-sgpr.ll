@@ -6,7 +6,7 @@
 
 ; ALL: SGPRBlocks: 1
 ; ALL: NumSGPRsForWavesPerEU: 10
-define amdgpu_kernel void @max_10_sgprs() #0 {
+define amdgpu_kernel void @max_10_sgprs() nounwind "amdgpu-num-sgpr"="14" {
   %one = load volatile i32, ptr addrspace(4) undef
   %two = load volatile i32, ptr addrspace(4) undef
   %three = load volatile i32, ptr addrspace(4) undef
@@ -61,7 +61,7 @@ define amdgpu_kernel void @max_10_sgprs() #0 {
 ;                                        ptr addrspace(1) %out2,
 ;                                        ptr addrspace(1) %out3,
 ;                                        ptr addrspace(1) %out4,
-;                                        i32 %one, i32 %two, i32 %three, i32 %four) #2 {
+;                                        i32 %one, i32 %two, i32 %three, i32 %four) nounwind "amdgpu-num-sgpr"="12" {
 ;  %x.0 = call i32 @llvm.amdgcn.workgroup.id.x()
 ;  %x.1 = call i32 @llvm.amdgcn.workgroup.id.y()
 ;  %x.2 = call i32 @llvm.amdgcn.workgroup.id.z()
@@ -98,7 +98,7 @@ define amdgpu_kernel void @max_10_sgprs() #0 {
 ;                                        ptr addrspace(1) %out2,
 ;                                        ptr addrspace(1) %out3,
 ;                                        ptr addrspace(1) %out4,
-;                                        i32 %one, i32 %two, i32 %three, i32 %four) #2 {
+;                                        i32 %one, i32 %two, i32 %three, i32 %four) nounwind "amdgpu-num-sgpr"="12" {
 ;  store volatile i32 0, ptr undef
 ;  %x.0 = call i32 @llvm.amdgcn.workgroup.id.x()
 ;  store volatile i32 %x.0, ptr addrspace(1) undef
@@ -118,14 +118,9 @@ define amdgpu_kernel void @max_10_sgprs() #0 {
 ;  ret void
 ;}
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #1
-declare i32 @llvm.amdgcn.workgroup.id.y() #1
-declare i32 @llvm.amdgcn.workgroup.id.z() #1
-declare i64 @llvm.amdgcn.dispatch.id() #1
-declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #1
-declare ptr addrspace(4) @llvm.amdgcn.queue.ptr() #1
-
-attributes #0 = { nounwind "amdgpu-num-sgpr"="14" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "amdgpu-num-sgpr"="12" }
-attributes #3 = { nounwind "amdgpu-num-sgpr"="11" }
+declare i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone
+declare i32 @llvm.amdgcn.workgroup.id.y() nounwind readnone
+declare i32 @llvm.amdgcn.workgroup.id.z() nounwind readnone
+declare i64 @llvm.amdgcn.dispatch.id() nounwind readnone
+declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() nounwind readnone
+declare ptr addrspace(4) @llvm.amdgcn.queue.ptr() nounwind readnone

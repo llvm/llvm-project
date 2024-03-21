@@ -5,26 +5,26 @@
 
 --- |
   define amdgpu_kernel void @load_global_v8i32_non_uniform(ptr addrspace(1) %in) {
-    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() #0
+    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
     %global.not.uniform.v8i32 = getelementptr <8 x i32>, ptr addrspace(1) %in, i32 %tmp0
     %tmp2 = load <8 x i32>, ptr addrspace(1) %global.not.uniform.v8i32
     ret void
   }
 
   define amdgpu_kernel void @load_global_v4i64_non_uniform(ptr addrspace(1) %in) {
-    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() #0
+    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
     %global.not.uniform.v4i64 = getelementptr <4 x i64>, ptr addrspace(1) %in, i32 %tmp0
     %tmp2 = load <4 x i64>, ptr addrspace(1) %global.not.uniform.v4i64
     ret void
   }
   define amdgpu_kernel void @load_global_v16i32_non_uniform(ptr addrspace(1) %in) {
-    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() #0
+    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
     %global.not.uniform.v16i32 = getelementptr <16 x i32>, ptr addrspace(1) %in, i32 %tmp0
     %tmp2 = load <16 x i32>, ptr addrspace(1) %global.not.uniform.v16i32
     ret void
   }
   define amdgpu_kernel void @load_global_v8i64_non_uniform(ptr addrspace(1) %in) {
-    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() #0
+    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
     %global.not.uniform.v8i64 = getelementptr <8 x i64>, ptr addrspace(1) %in, i32 %tmp0
     %tmp2 = load <8 x i64>, ptr addrspace(1) %global.not.uniform.v8i64
     ret void
@@ -34,40 +34,40 @@
   define amdgpu_kernel void @load_global_v16i32_uniform() {ret void}
   define amdgpu_kernel void @load_global_v8i64_uniform() {ret void}
   define amdgpu_kernel void @load_constant_v8i32_non_uniform(ptr addrspace(4) %in) {
-    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() #0
+    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
     %constant.not.uniform.v8i32 = getelementptr <8 x i32>, ptr addrspace(4) %in, i32 %tmp0
     %tmp2 = load <8 x i32>, ptr addrspace(4) %constant.not.uniform.v8i32
     ret void
   }
 
   define amdgpu_kernel void @load_constant_i256_non_uniform(ptr addrspace(4) %in) {
-    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() #0
+    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
     %constant.not.uniform = getelementptr i256, ptr addrspace(4) %in, i32 %tmp0
     %tmp2 = load i256, ptr addrspace(4) %constant.not.uniform
     ret void
   }
 
   define amdgpu_kernel void @load_constant_v16i16_non_uniform(ptr addrspace(4) %in) {
-    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() #0
+    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
     %constant.not.uniform = getelementptr <16 x i16>, ptr addrspace(4) %in, i32 %tmp0
     %tmp2 = load <16 x i16>, ptr addrspace(4) %constant.not.uniform
     ret void
   }
 
   define amdgpu_kernel void @load_constant_v4i64_non_uniform(ptr addrspace(4) %in) {
-    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() #0
+    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
     %constant.not.uniform.v4i64 = getelementptr <4 x i64>, ptr addrspace(4) %in, i32 %tmp0
     %tmp2 = load <4 x i64>, ptr addrspace(4) %constant.not.uniform.v4i64
     ret void
   }
   define amdgpu_kernel void @load_constant_v16i32_non_uniform(ptr addrspace(4) %in) {
-    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() #0
+    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
     %constant.not.uniform.v16i32 = getelementptr <16 x i32>, ptr addrspace(4) %in, i32 %tmp0
     %tmp2 = load <16 x i32>, ptr addrspace(4) %constant.not.uniform.v16i32
     ret void
   }
   define amdgpu_kernel void @load_constant_v8i64_non_uniform(ptr addrspace(4) %in) {
-    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() #0
+    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
     %constant.not.uniform.v8i64 = getelementptr <8 x i64>, ptr addrspace(4) %in, i32 %tmp0
     %tmp2 = load <8 x i64>, ptr addrspace(4) %constant.not.uniform.v8i64
     ret void
@@ -103,8 +103,7 @@
   define amdgpu_kernel void @load_constant_i96_align8() { ret void }
   define amdgpu_kernel void @load_constant_i96_align16() { ret void }
 
-  declare i32 @llvm.amdgcn.workitem.id.x() #0
-  attributes #0 = { nounwind readnone }
+  declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ...
 
 ---

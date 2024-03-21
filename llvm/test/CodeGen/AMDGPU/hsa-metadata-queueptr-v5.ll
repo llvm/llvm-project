@@ -3,22 +3,22 @@
 
 declare void @function1()
 
-declare void @function2() #0
+declare void @function2() "amdgpu-no-queue-ptr"
 
 ; Function Attrs: noinline
-define void @function3(ptr addrspace(4) %argptr, ptr addrspace(1) %sink) #2 {
+define void @function3(ptr addrspace(4) %argptr, ptr addrspace(1) %sink) noinline {
   store ptr addrspace(4) %argptr, ptr addrspace(1) %sink, align 8
   ret void
 }
 
 ; Function Attrs: noinline
-define void @function4(i64 %arg, ptr %a) #2 {
+define void @function4(i64 %arg, ptr %a) noinline {
   store i64 %arg, ptr %a
   ret void
 }
 
 ; Function Attrs: noinline
-define void @function5(ptr addrspace(4) %ptr, ptr %sink) #2 {
+define void @function5(ptr addrspace(4) %ptr, ptr %sink) noinline {
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 168
   %x = load i64, ptr addrspace(4) %gep
   store i64 %x, ptr %sink
@@ -26,7 +26,7 @@ define void @function5(ptr addrspace(4) %ptr, ptr %sink) #2 {
 }
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #1
+declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() nounwind readnone speculatable willreturn
 
 ; CHECK: amdhsa.kernels:
 ; CHECK:  - .args:
@@ -53,7 +53,7 @@ define amdgpu_kernel void @test_kernel20(ptr %a) {
 ; CHECK:  - .args:
 ; CHECK-NOT: hidden_queue_ptr
 ; CHECK-LABEL:    .name:           test_kernel21
-define amdgpu_kernel void @test_kernel21(ptr %a) #0 {
+define amdgpu_kernel void @test_kernel21(ptr %a) "amdgpu-no-queue-ptr" {
   call void @function1()
   store i8 3, ptr %a, align 1
   ret void
@@ -101,7 +101,7 @@ define amdgpu_kernel void @test_kernel40(ptr %a) {
 ; CHECK:  - .args:
 ; CHECK-NOT: hidden_queue_ptr
 ; CHECK-LABEL:    .name:           test_kernel41
-define amdgpu_kernel void @test_kernel41(ptr %a) #0 {
+define amdgpu_kernel void @test_kernel41(ptr %a) "amdgpu-no-queue-ptr" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 200
   %x = load i64, ptr addrspace(4) %gep
@@ -233,7 +233,7 @@ define amdgpu_kernel void @test_kernel52(ptr %a) {
 ; CHECK:  - .args:
 ; CHECK: hidden_queue_ptr
 ; CHECK-LABEL:    .name:           test_kernel60
-define amdgpu_kernel void @test_kernel60(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel60(ptr %a) noinline {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 200
   %x = load i64, ptr addrspace(4) %gep
@@ -246,7 +246,7 @@ define amdgpu_kernel void @test_kernel60(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_queue_ptr
 ; CHECK-LABEL:    .name:           test_kernel61
-define amdgpu_kernel void @test_kernel61(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel61(ptr %a) noinline {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 32
   call void @function5(ptr addrspace(4) %gep, ptr %a)
@@ -258,7 +258,7 @@ define amdgpu_kernel void @test_kernel61(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_queue_ptr
 ; CHECK-LABEL:    .name:           test_kernel70
-define amdgpu_kernel void @test_kernel70(ptr addrspace(1) %sink) #2 {
+define amdgpu_kernel void @test_kernel70(ptr addrspace(1) %sink) noinline {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i32 42
   store ptr addrspace(4) %gep, ptr addrspace(1) %sink, align 8
@@ -270,7 +270,7 @@ define amdgpu_kernel void @test_kernel70(ptr addrspace(1) %sink) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_queue_ptr
 ; CHECK-LABEL:    .name:           test_kernel71
-define amdgpu_kernel void @test_kernel71(ptr addrspace(1) %sink) #2 {
+define amdgpu_kernel void @test_kernel71(ptr addrspace(1) %sink) noinline {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i32 42
   call void @function3(ptr addrspace(4) %gep, ptr addrspace(1) %sink)
@@ -282,16 +282,12 @@ define amdgpu_kernel void @test_kernel71(ptr addrspace(1) %sink) #2 {
 ; CHECK:  - .args:
 ; CHECK-NOT: hidden_queue_ptr
 ; CHECK-LABEL:    .name:           test_kernel72
-define amdgpu_kernel void @test_kernel72() #2 {
+define amdgpu_kernel void @test_kernel72() noinline {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i32 42
   store ptr addrspace(4) %gep, ptr addrspace(1) undef, align 8
   ret void
 }
-
-attributes #0 = { "amdgpu-no-queue-ptr" }
-attributes #1 = { nounwind readnone speculatable willreturn }
-attributes #2 = { noinline }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

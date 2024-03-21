@@ -5,11 +5,9 @@
 # when the frame pointer is enabled. That limitation is now removed and this test should compile without any crash.
 
 --- |
-  define amdgpu_kernel void @kernel_vgpr32_spill() #0 {
+  define amdgpu_kernel void @kernel_vgpr32_spill() "frame-pointer"="all" {
     ret void
   }
-
-  attributes #0 = { "frame-pointer"="all"}
 ...
 ---
 name: kernel_vgpr32_spill

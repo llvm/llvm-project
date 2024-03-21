@@ -15,7 +15,7 @@
 
 --- |
 
-  define amdgpu_kernel void @long_branch_dbg_value(ptr addrspace(1) nocapture %arg, float %arg1) #1 !dbg !5 {
+  define amdgpu_kernel void @long_branch_dbg_value(ptr addrspace(1) nocapture %arg, float %arg1) nounwind writeonly !dbg !5 {
   bb:
     %long_branch_dbg_value.kernarg.segment = call nonnull align 16 dereferenceable(12) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
     %arg.kernarg.offset = getelementptr inbounds i8, ptr addrspace(4) %long_branch_dbg_value.kernarg.segment, i64 0
@@ -26,7 +26,7 @@
     %arg1.load = load float, ptr addrspace(4) %arg1.kernarg.offset.cast, align 8, !invariant.load !2
     %tmp = fmul float %arg1.load, %arg1.load
     %tmp2 = getelementptr inbounds float, ptr addrspace(1) %arg.load, i64 3
-    call void @llvm.dbg.value(metadata ptr addrspace(1) %tmp2, metadata !11, metadata !DIExpression()) #5, !dbg !12
+    call void @llvm.dbg.value(metadata ptr addrspace(1) %tmp2, metadata !11, metadata !DIExpression()) nounwind, !dbg !12
     store float %tmp, ptr addrspace(1) %tmp2, align 4, !dbg !12
     %tmp3 = fcmp olt float %tmp, 0x3810000000000000
     %tmp3.inv = xor i1 %tmp3, true
@@ -47,15 +47,8 @@
     ret void
   }
 
-  declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #2
-  declare void @llvm.dbg.value(metadata, metadata, metadata) #0
-
-  attributes #0 = { nounwind readnone speculatable willreturn }
-  attributes #1 = { nounwind writeonly }
-  attributes #2 = { nounwind readnone speculatable willreturn }
-  attributes #3 = { convergent nounwind willreturn }
-  attributes #4 = { convergent nounwind readnone willreturn }
-  attributes #5 = { nounwind }
+  declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone speculatable willreturn
 
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3, !4}

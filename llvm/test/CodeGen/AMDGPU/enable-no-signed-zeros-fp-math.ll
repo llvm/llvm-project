@@ -7,7 +7,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; GCN-LABEL: {{^}}fneg_fsub_f32_fmf:
 ; GCN: v_sub_f32_e32 [[SUB:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GCN-FMF-NOT: xor
-define amdgpu_kernel void @fneg_fsub_f32_fmf(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @fneg_fsub_f32_fmf(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %add = add i32 %tid, 1
   %gep = getelementptr float, ptr addrspace(1) %in, i32 %tid
@@ -23,7 +23,7 @@ define amdgpu_kernel void @fneg_fsub_f32_fmf(ptr addrspace(1) %out, ptr addrspac
 ; GCN-LABEL: {{^}}fneg_fsub_f32_safe:
 ; GCN: v_sub_f32_e32 [[SUB:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[SUB]]
-define amdgpu_kernel void @fneg_fsub_f32_safe(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @fneg_fsub_f32_safe(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %add = add i32 %tid, 1
   %gep = getelementptr float, ptr addrspace(1) %in, i32 %tid
@@ -35,5 +35,3 @@ define amdgpu_kernel void @fneg_fsub_f32_safe(ptr addrspace(1) %out, ptr addrspa
   store float %neg.result, ptr addrspace(1) %out, align 4
   ret void
 }
-
-attributes #0 = { nounwind }

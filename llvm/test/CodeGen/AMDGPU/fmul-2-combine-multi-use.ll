@@ -9,10 +9,10 @@
 ; Make sure (fmul (fadd x, x), c) -> (fmul x, (fmul 2.0, c)) doesn't
 ; make add an instruction if the fadd has more than one use.
 
-declare half @llvm.fabs.f16(half) #1
-declare float @llvm.fabs.f32(float) #1
+declare half @llvm.fabs.f16(half) nounwind readnone
+declare float @llvm.fabs.f32(float) nounwind readnone
 
-define amdgpu_kernel void @multiple_fadd_use_test_f32(ptr addrspace(1) %out, float %x, float %y, float %z) #0 {
+define amdgpu_kernel void @multiple_fadd_use_test_f32(ptr addrspace(1) %out, float %x, float %y, float %z) nounwind "unsafe-fp-math"="true" {
 ; VI-LABEL: multiple_fadd_use_test_f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -76,7 +76,7 @@ define amdgpu_kernel void @multiple_fadd_use_test_f32(ptr addrspace(1) %out, flo
   ret void
 }
 
-define amdgpu_kernel void @multiple_use_fadd_fmac_f32(ptr addrspace(1) %out, float %x, [8 x i32], float %y) #0 {
+define amdgpu_kernel void @multiple_use_fadd_fmac_f32(ptr addrspace(1) %out, float %x, [8 x i32], float %y) nounwind "unsafe-fp-math"="true" {
 ; VI-LABEL: multiple_use_fadd_fmac_f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -139,7 +139,7 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f32(ptr addrspace(1) %out, flo
   ret void
 }
 
-define amdgpu_kernel void @multiple_use_fadd_fmad_f32(ptr addrspace(1) %out, float %x, float %y) #0 {
+define amdgpu_kernel void @multiple_use_fadd_fmad_f32(ptr addrspace(1) %out, float %x, float %y) nounwind "unsafe-fp-math"="true" {
 ; VI-LABEL: multiple_use_fadd_fmad_f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -195,7 +195,7 @@ define amdgpu_kernel void @multiple_use_fadd_fmad_f32(ptr addrspace(1) %out, flo
   ret void
 }
 
-define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f32(ptr addrspace(1) %out, float %x, float %y, float %z) #0 {
+define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f32(ptr addrspace(1) %out, float %x, float %y, float %z) nounwind "unsafe-fp-math"="true" {
 ; VI-LABEL: multiple_use_fadd_multi_fmad_f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
@@ -258,7 +258,7 @@ define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f32(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @fmul_x2_xn2_f32(ptr addrspace(1) %out, float %x, float %y) #0 {
+define amdgpu_kernel void @fmul_x2_xn2_f32(ptr addrspace(1) %out, float %x, float %y) nounwind "unsafe-fp-math"="true" {
 ; VI-LABEL: fmul_x2_xn2_f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -307,7 +307,7 @@ define amdgpu_kernel void @fmul_x2_xn2_f32(ptr addrspace(1) %out, float %x, floa
   ret void
 }
 
-define amdgpu_kernel void @fmul_x2_xn3_f32(ptr addrspace(1) %out, float %x, float %y) #0 {
+define amdgpu_kernel void @fmul_x2_xn3_f32(ptr addrspace(1) %out, float %x, float %y) nounwind "unsafe-fp-math"="true" {
 ; VI-LABEL: fmul_x2_xn3_f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -357,7 +357,7 @@ define amdgpu_kernel void @fmul_x2_xn3_f32(ptr addrspace(1) %out, float %x, floa
   ret void
 }
 
-define amdgpu_kernel void @multiple_fadd_use_test_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg, i16 zeroext %z.arg) #0 {
+define amdgpu_kernel void @multiple_fadd_use_test_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg, i16 zeroext %z.arg) nounwind "unsafe-fp-math"="true" {
 ; VI-DENORM-LABEL: multiple_fadd_use_test_f16:
 ; VI-DENORM:       ; %bb.0:
 ; VI-DENORM-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -493,7 +493,7 @@ define amdgpu_kernel void @multiple_fadd_use_test_f16(ptr addrspace(1) %out, i16
   ret void
 }
 
-define amdgpu_kernel void @multiple_use_fadd_fmac_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
+define amdgpu_kernel void @multiple_use_fadd_fmac_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg) nounwind "unsafe-fp-math"="true" {
 ; VI-DENORM-LABEL: multiple_use_fadd_fmac_f16:
 ; VI-DENORM:       ; %bb.0:
 ; VI-DENORM-NEXT:    s_load_dword s6, s[4:5], 0x8
@@ -614,7 +614,7 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f16(ptr addrspace(1) %out, i16
   ret void
 }
 
-define amdgpu_kernel void @multiple_use_fadd_fmad_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
+define amdgpu_kernel void @multiple_use_fadd_fmad_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg) nounwind "unsafe-fp-math"="true" {
 ; VI-DENORM-LABEL: multiple_use_fadd_fmad_f16:
 ; VI-DENORM:       ; %bb.0:
 ; VI-DENORM-NEXT:    s_load_dword s6, s[4:5], 0x8
@@ -736,7 +736,7 @@ define amdgpu_kernel void @multiple_use_fadd_fmad_f16(ptr addrspace(1) %out, i16
   ret void
 }
 
-define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg, i16 zeroext %z.arg) #0 {
+define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg, i16 zeroext %z.arg) nounwind "unsafe-fp-math"="true" {
 ; VI-DENORM-LABEL: multiple_use_fadd_multi_fmad_f16:
 ; VI-DENORM:       ; %bb.0:
 ; VI-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
@@ -870,7 +870,7 @@ define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f16(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @fmul_x2_xn2_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
+define amdgpu_kernel void @fmul_x2_xn2_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg) nounwind "unsafe-fp-math"="true" {
 ; VI-LABEL: fmul_x2_xn2_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -922,7 +922,7 @@ define amdgpu_kernel void @fmul_x2_xn2_f16(ptr addrspace(1) %out, i16 zeroext %x
   ret void
 }
 
-define amdgpu_kernel void @fmul_x2_xn3_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
+define amdgpu_kernel void @fmul_x2_xn3_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg) nounwind "unsafe-fp-math"="true" {
 ; VI-LABEL: fmul_x2_xn3_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -974,6 +974,3 @@ define amdgpu_kernel void @fmul_x2_xn3_f16(ptr addrspace(1) %out, i16 zeroext %x
   store volatile half %mul, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind "unsafe-fp-math"="true" }
-attributes #1 = { nounwind readnone }

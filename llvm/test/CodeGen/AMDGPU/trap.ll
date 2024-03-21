@@ -26,8 +26,8 @@
 ; GCN-WARNING: warning: <unknown>:0:0: in function hsa_debugtrap void (ptr addrspace(1)): debugtrap handler not supported
 
 
-declare void @llvm.trap() #0
-declare void @llvm.debugtrap() #1
+declare void @llvm.trap() nounwind noreturn
+declare void @llvm.debugtrap() nounwind
 
 ; MESA-TRAP: .section .AMDGPU.config
 ; MESA-TRAP:  .long   47180
@@ -141,9 +141,6 @@ ret:
   store volatile i32 3, ptr addrspace(1) %arg0
   ret void
 }
-
-attributes #0 = { nounwind noreturn }
-attributes #1 = { nounwind }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

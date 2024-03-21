@@ -10,7 +10,7 @@
 ;WAVE64: s_wqm_b64 [[WQM:[^,]+]], [[CMP]]
 ;WAVE32: s_wqm_b32 [[WQM:[^,]+]], [[CMP]]
 ;CHECK: v_cndmask_b32_e64 v0, 0, 1.0, [[WQM]]
-define amdgpu_ps float @ret(i32 %v0, i32 %v1) #1 {
+define amdgpu_ps float @ret(i32 %v0, i32 %v1) nounwind {
 main_body:
   %c = icmp eq i32 %v0, %v1
   %w = call i1 @llvm.amdgcn.wqm.vote(i1 %c)
@@ -21,7 +21,7 @@ main_body:
 ;CHECK-LABEL: {{^}}true:
 ;WAVE64: s_wqm_b64
 ;WAVE32: s_wqm_b32
-define amdgpu_ps float @true() #1 {
+define amdgpu_ps float @true() nounwind {
 main_body:
   %w = call i1 @llvm.amdgcn.wqm.vote(i1 true)
   %r = select i1 %w, float 1.0, float 0.0
@@ -31,7 +31,7 @@ main_body:
 ;CHECK-LABEL: {{^}}false:
 ;WAVE64: s_wqm_b64
 ;WAVE32: s_wqm_b32
-define amdgpu_ps float @false() #1 {
+define amdgpu_ps float @false() nounwind {
 main_body:
   %w = call i1 @llvm.amdgcn.wqm.vote(i1 false)
   %r = select i1 %w, float 1.0, float 0.0
@@ -53,7 +53,7 @@ main_body:
 ;WAVE32: s_and_b32 exec_lo, exec_lo, [[MASK]]
 
 ;CHECK: s_endpgm
-define amdgpu_ps float @kill(i32 %v0, i32 %v1) #1 {
+define amdgpu_ps float @kill(i32 %v0, i32 %v1) nounwind {
 main_body:
   %c = icmp eq i32 %v0, %v1
   %w = call i1 @llvm.amdgcn.wqm.vote(i1 %c)
@@ -61,7 +61,5 @@ main_body:
   ret float 0.0
 }
 
-declare void @llvm.amdgcn.kill(i1) #1
+declare void @llvm.amdgcn.kill(i1) nounwind
 declare i1 @llvm.amdgcn.wqm.vote(i1)
-
-attributes #1 = { nounwind }

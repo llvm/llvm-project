@@ -5,7 +5,7 @@
 ; GCN: v_add
 define amdgpu_kernel void @checkTwoBlocksWithUniformBranch(ptr addrspace(1) nocapture %out, i32 %width, float %xPos, float %yPos, float %xStep, float %yStep, i32 %maxIter) {
 entry:
-  %conv = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %conv = call i32 @llvm.amdgcn.workitem.id.x() readnone
   %rem = urem i32 %conv, %width
   %div = udiv i32 %conv, %width
   %conv1 = sitofp i32 %rem to float
@@ -27,10 +27,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %iter_val = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %y_val = phi float [ %call9, %for.body ], [ %y, %for.body.preheader ]
   %sub = fsub float -0.000000e+00, %y_val
-  %call7 = tail call float @llvm.fmuladd.f32(float %x_val, float %x_val, float %x) #1
-  %call8 = tail call float @llvm.fmuladd.f32(float %sub, float %y_val, float %call7) #1
+  %call7 = tail call float @llvm.fmuladd.f32(float %x_val, float %x_val, float %x) readnone
+  %call8 = tail call float @llvm.fmuladd.f32(float %sub, float %y_val, float %call7) readnone
   %mul = fmul float %x_val, 2.000000e+00
-  %call9 = tail call float @llvm.fmuladd.f32(float %mul, float %y_val, float %y) #1
+  %call9 = tail call float @llvm.fmuladd.f32(float %mul, float %y_val, float %y) readnone
   %inc = add nuw i32 %iter_val, 1
   %mul3 = fmul float %call9, %call9
   %0 = tail call float @llvm.fmuladd.f32(float %call8, float %call8, float %mul3)
@@ -51,8 +51,5 @@ for.end:                                          ; preds = %for.end.loopexit, %
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare float @llvm.fmuladd.f32(float, float, float) #1
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare float @llvm.fmuladd.f32(float, float, float) readnone

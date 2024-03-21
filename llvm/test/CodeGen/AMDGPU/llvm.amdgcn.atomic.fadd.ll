@@ -95,17 +95,14 @@ main_body:
 ; the feature set.
 ; GCN-LABEL: {{^}}global_atomic_fadd_f32_wrong_subtarget:
 ; GCN: global_atomic_add_f32 v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]$}}
-define amdgpu_kernel void @global_atomic_fadd_f32_wrong_subtarget(ptr addrspace(1) %ptr, float %data) #0 {
+define amdgpu_kernel void @global_atomic_fadd_f32_wrong_subtarget(ptr addrspace(1) %ptr, float %data) "target-cpu"="gfx803" "target-features"="+atomic-fadd-no-rtn-insts" {
   %ret = call float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
   ret void
 }
 
 ; GCN-LABEL: {{^}}flat_atomic_fadd_f32_wrong_subtarget:
 ; GCN: flat_atomic_add_f32 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
-define amdgpu_kernel void @flat_atomic_fadd_f32_wrong_subtarget(ptr %ptr, float %data) #1 {
+define amdgpu_kernel void @flat_atomic_fadd_f32_wrong_subtarget(ptr %ptr, float %data) "target-cpu"="gfx803" "target-features"="+flat-atomic-fadd-f32-inst" {
   %ret = call float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr %ptr, float %data)
   ret void
 }
-
-attributes #0 = { "target-cpu"="gfx803" "target-features"="+atomic-fadd-no-rtn-insts"}
-attributes #1 = { "target-cpu"="gfx803" "target-features"="+flat-atomic-fadd-f32-inst"}

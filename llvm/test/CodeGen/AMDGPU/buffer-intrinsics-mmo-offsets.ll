@@ -324,315 +324,307 @@ define amdgpu_cs void @mmo_offsets0(ptr addrspace(6) inreg noalias align(16) der
 bb.0:
   %tmp0 = load <4 x i32>, ptr addrspace(6) %arg0, align 16, !invariant.load !0
   %tmp1 = load ptr addrspace(8), ptr addrspace(6) %arg0, align 16, !invariant.load !0
-  %buffer0 = call nsz <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 16, i1 false, i1 false) #0
-  %buffer1 = call nsz <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 %arg1, i1 false, i1 false) #0
-  %buffer2 = call nsz <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %tmp0, i32 1, i32 16, i1 false, i1 false) #0
-  %buffer3 = call nsz <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %tmp0, i32 %arg1, i32 16, i1 false, i1 false) #0
+  %buffer0 = call nsz <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 16, i1 false, i1 false) nounwind readonly
+  %buffer1 = call nsz <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 %arg1, i1 false, i1 false) nounwind readonly
+  %buffer2 = call nsz <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %tmp0, i32 1, i32 16, i1 false, i1 false) nounwind readonly
+  %buffer3 = call nsz <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %tmp0, i32 %arg1, i32 16, i1 false, i1 false) nounwind readonly
 
   ; Insert inline asm to keep the different instruction types from being mixed.  This makes the output easier to read.
   call void asm sideeffect "", "" ()
 
-  call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %buffer0, <4 x i32> %tmp0, i32 0, i32 32, i1 false, i1 false) #1
-  call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %buffer1, <4 x i32> %tmp0, i32 0, i32 %arg1, i1 false, i1 false) #1
-  call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %buffer2, <4 x i32> %tmp0, i32 1, i32 32, i1 false, i1 false) #1
-  call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %buffer3, <4 x i32> %tmp0, i32 %arg1, i32 32, i1 false, i1 false) #1
+  call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %buffer0, <4 x i32> %tmp0, i32 0, i32 32, i1 false, i1 false) nounwind writeonly
+  call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %buffer1, <4 x i32> %tmp0, i32 0, i32 %arg1, i1 false, i1 false) nounwind writeonly
+  call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %buffer2, <4 x i32> %tmp0, i32 1, i32 32, i1 false, i1 false) nounwind writeonly
+  call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %buffer3, <4 x i32> %tmp0, i32 %arg1, i32 32, i1 false, i1 false) nounwind writeonly
 
   call void asm sideeffect "", "" ()
 
-  %buffer_format0 = call nsz <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 48, i1 false, i1 false) #0
-  %buffer_format1 = call nsz <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 %arg1, i1 false, i1 false) #0
-  %buffer_format2 = call nsz <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 1, i32 48, i1 false, i1 false) #0
-  %buffer_format3 = call nsz <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 %arg1, i32 48, i1 false, i1 false) #0
+  %buffer_format0 = call nsz <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 48, i1 false, i1 false) nounwind readonly
+  %buffer_format1 = call nsz <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 %arg1, i1 false, i1 false) nounwind readonly
+  %buffer_format2 = call nsz <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 1, i32 48, i1 false, i1 false) nounwind readonly
+  %buffer_format3 = call nsz <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 %arg1, i32 48, i1 false, i1 false) nounwind readonly
 
   call void asm sideeffect "", "" ()
 
-  call void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float> %buffer_format0, <4 x i32> %tmp0, i32 0, i32 64, i1 false, i1 false) #1
-  call void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float> %buffer_format1, <4 x i32> %tmp0, i32 0, i32 %arg1, i1 false, i1 false) #1
-  call void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float> %buffer_format2, <4 x i32> %tmp0, i32 1, i32 64, i1 false, i1 false) #1
-  call void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float> %buffer_format3, <4 x i32> %tmp0, i32 %arg1, i32 64, i1 false, i1 false) #1
+  call void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float> %buffer_format0, <4 x i32> %tmp0, i32 0, i32 64, i1 false, i1 false) nounwind writeonly
+  call void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float> %buffer_format1, <4 x i32> %tmp0, i32 0, i32 %arg1, i1 false, i1 false) nounwind writeonly
+  call void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float> %buffer_format2, <4 x i32> %tmp0, i32 1, i32 64, i1 false, i1 false) nounwind writeonly
+  call void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float> %buffer_format3, <4 x i32> %tmp0, i32 %arg1, i32 64, i1 false, i1 false) nounwind writeonly
 
   call void asm sideeffect "", "" ()
 
-  %atomic_add0 = call i32 @llvm.amdgcn.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 80, i1 false) #2
-  %atomic_add1 = call i32 @llvm.amdgcn.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 %arg1, i1 false) #2
-  %atomic_add2 = call i32 @llvm.amdgcn.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 1, i32 80, i1 false) #2
-  %atomic_add3 = call i32 @llvm.amdgcn.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 %arg1, i32 80, i1 false) #2
+  %atomic_add0 = call i32 @llvm.amdgcn.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 80, i1 false) nounwind
+  %atomic_add1 = call i32 @llvm.amdgcn.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 %arg1, i1 false) nounwind
+  %atomic_add2 = call i32 @llvm.amdgcn.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 1, i32 80, i1 false) nounwind
+  %atomic_add3 = call i32 @llvm.amdgcn.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 %arg1, i32 80, i1 false) nounwind
 
   call void asm sideeffect "", "" ()
 
-  %atomic_cmpswap0 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 96, i1 false) #2
-  %atomic_cmpswap1 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 %arg1, i1 false) #2
-  %atomic_cmpswap2 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 1, i32 96, i1 false) #2
-  %atomic_cmpswap3 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 %arg1, i32 96, i1 false) #2
+  %atomic_cmpswap0 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 96, i1 false) nounwind
+  %atomic_cmpswap1 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 %arg1, i1 false) nounwind
+  %atomic_cmpswap2 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 1, i32 96, i1 false) nounwind
+  %atomic_cmpswap3 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 %arg1, i32 96, i1 false) nounwind
 
   call void asm sideeffect "", "" ()
 
-  %fadd1 = call float @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 0, i32 112, i1 false) #2
-  %fadd2 = call float @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 0, i32 %arg1, i1 false) #2
-  %fadd3 = call float @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 1, i32 112, i1 false) #2
-  %fadd4 = call float @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 %arg1, i32 112, i1 false) #2
-
-  call void asm sideeffect "", "" ()
-
-  ; rsrc, offset, soffset, cachepolicy
-  %raw_buffer0 = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %tmp0, i32 128, i32 0, i32 0) #0
-  %raw_buffer1 = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %tmp0, i32 64, i32 64, i32 0) #0
-  %raw_buffer2 = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 128, i32 0) #0
-  %raw_buffer3 = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %tmp0, i32 %arg1, i32 128, i32 0) #0
-  %raw_buffer4 = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %tmp0, i32 128, i32 %arg1, i32 0) #0
+  %fadd1 = call float @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 0, i32 112, i1 false) nounwind
+  %fadd2 = call float @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 0, i32 %arg1, i1 false) nounwind
+  %fadd3 = call float @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 1, i32 112, i1 false) nounwind
+  %fadd4 = call float @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 %arg1, i32 112, i1 false) nounwind
 
   call void asm sideeffect "", "" ()
 
   ; rsrc, offset, soffset, cachepolicy
-  %raw_ptr_buffer0 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 128, i32 0, i32 0) #3
-  %raw_ptr_buffer1 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 64, i32 64, i32 0) #3
-  %raw_ptr_buffer2 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 128, i32 0) #3
-  %raw_ptr_buffer3 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 %arg1, i32 128, i32 0) #3
-  %raw_ptr_buffer4 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 128, i32 %arg1, i32 0) #3
+  %raw_buffer0 = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %tmp0, i32 128, i32 0, i32 0) nounwind readonly
+  %raw_buffer1 = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %tmp0, i32 64, i32 64, i32 0) nounwind readonly
+  %raw_buffer2 = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 128, i32 0) nounwind readonly
+  %raw_buffer3 = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %tmp0, i32 %arg1, i32 128, i32 0) nounwind readonly
+  %raw_buffer4 = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %tmp0, i32 128, i32 %arg1, i32 0) nounwind readonly
 
   call void asm sideeffect "", "" ()
 
-  %raw_buffer_format0 = call <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 144, i32 0, i32 0) #0
-  %raw_buffer_format1 = call <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 72, i32 72, i32 0) #0
-  %raw_buffer_format2 = call <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 144, i32 0) #0
-  %raw_buffer_format3 = call <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 %arg1, i32 144, i32 0) #0
-  %raw_buffer_format4 = call <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 144, i32 %arg1, i32 0) #0
+  ; rsrc, offset, soffset, cachepolicy
+  %raw_ptr_buffer0 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 128, i32 0, i32 0) nounwind memory(argmem: read)
+  %raw_ptr_buffer1 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 64, i32 64, i32 0) nounwind memory(argmem: read)
+  %raw_ptr_buffer2 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 128, i32 0) nounwind memory(argmem: read)
+  %raw_ptr_buffer3 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 %arg1, i32 128, i32 0) nounwind memory(argmem: read)
+  %raw_ptr_buffer4 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 128, i32 %arg1, i32 0) nounwind memory(argmem: read)
 
   call void asm sideeffect "", "" ()
 
-  %raw_buffer_format_ptr0 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 144, i32 0, i32 0) #3
-  %raw_buffer_format_ptr1 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 72, i32 72, i32 0) #3
-  %raw_buffer_format_ptr2 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 144, i32 0) #3
-  %raw_buffer_format_ptr3 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 %arg1, i32 144, i32 0) #3
-  %raw_buffer_format_ptr4 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 144, i32 %arg1, i32 0) #3
+  %raw_buffer_format0 = call <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 144, i32 0, i32 0) nounwind readonly
+  %raw_buffer_format1 = call <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 72, i32 72, i32 0) nounwind readonly
+  %raw_buffer_format2 = call <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 144, i32 0) nounwind readonly
+  %raw_buffer_format3 = call <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 %arg1, i32 144, i32 0) nounwind readonly
+  %raw_buffer_format4 = call <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 144, i32 %arg1, i32 0) nounwind readonly
 
   call void asm sideeffect "", "" ()
 
-  %raw_atomic_add0 = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 160, i32 0, i32 0) #2
-  %raw_atomic_add1 = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 80, i32 80, i32 0) #2
-  %raw_atomic_add2 = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 160, i32 0) #2
-  %raw_atomic_add3 = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 %arg1, i32 160, i32 0) #2
-  %raw_atomic_add4 = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 160, i32 %arg1, i32 0) #2
+  %raw_buffer_format_ptr0 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 144, i32 0, i32 0) nounwind memory(argmem: read)
+  %raw_buffer_format_ptr1 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 72, i32 72, i32 0) nounwind memory(argmem: read)
+  %raw_buffer_format_ptr2 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 144, i32 0) nounwind memory(argmem: read)
+  %raw_buffer_format_ptr3 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 %arg1, i32 144, i32 0) nounwind memory(argmem: read)
+  %raw_buffer_format_ptr4 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 144, i32 %arg1, i32 0) nounwind memory(argmem: read)
 
   call void asm sideeffect "", "" ()
 
-  %raw_ptr_atomic_add0 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 160, i32 0, i32 0) #5
-  %raw_ptr_atomic_add1 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 80, i32 80, i32 0) #5
-  %raw_ptr_atomic_add2 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 160, i32 0) #5
-  %raw_ptr_atomic_add3 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 %arg1, i32 160, i32 0) #5
-  %raw_ptr_atomic_add4 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 160, i32 %arg1, i32 0) #5
+  %raw_atomic_add0 = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 160, i32 0, i32 0) nounwind
+  %raw_atomic_add1 = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 80, i32 80, i32 0) nounwind
+  %raw_atomic_add2 = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 160, i32 0) nounwind
+  %raw_atomic_add3 = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 %arg1, i32 160, i32 0) nounwind
+  %raw_atomic_add4 = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 160, i32 %arg1, i32 0) nounwind
 
   call void asm sideeffect "", "" ()
 
-  %raw_atomic_cmpswap0 = call i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 176, i32 0, i32 0) #2
-  %raw_atomic_cmpswap1 = call i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 88, i32 88, i32 0) #2
-  %raw_atomic_cmpswap2 = call i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 176, i32 0) #2
-  %raw_atomic_cmpswap3 = call i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 %arg1, i32 176, i32 0) #2
-  %raw_atomic_cmpswap4 = call i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 176, i32 %arg1, i32 0) #2
+  %raw_ptr_atomic_add0 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 160, i32 0, i32 0) nounwind memory(argmem: readwrite)
+  %raw_ptr_atomic_add1 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 80, i32 80, i32 0) nounwind memory(argmem: readwrite)
+  %raw_ptr_atomic_add2 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 160, i32 0) nounwind memory(argmem: readwrite)
+  %raw_ptr_atomic_add3 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 %arg1, i32 160, i32 0) nounwind memory(argmem: readwrite)
+  %raw_ptr_atomic_add4 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 160, i32 %arg1, i32 0) nounwind memory(argmem: readwrite)
 
   call void asm sideeffect "", "" ()
 
-  %raw_ptr_atomic_cmpswap0 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 176, i32 0, i32 0) #5
-  %raw_ptr_atomic_cmpswap1 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 88, i32 88, i32 0) #5
-  %raw_ptr_atomic_cmpswap2 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 176, i32 0) #5
-  %raw_ptr_atomic_cmpswap3 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 %arg1, i32 176, i32 0) #5
-  %raw_ptr_atomic_cmpswap4 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 176, i32 %arg1, i32 0) #5
+  %raw_atomic_cmpswap0 = call i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 176, i32 0, i32 0) nounwind
+  %raw_atomic_cmpswap1 = call i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 88, i32 88, i32 0) nounwind
+  %raw_atomic_cmpswap2 = call i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 176, i32 0) nounwind
+  %raw_atomic_cmpswap3 = call i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 %arg1, i32 176, i32 0) nounwind
+  %raw_atomic_cmpswap4 = call i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 176, i32 %arg1, i32 0) nounwind
 
   call void asm sideeffect "", "" ()
 
-  call void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float> %raw_buffer0, <4 x i32> %tmp0, i32 192, i32 0, i32 0) #2
-  call void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float> %raw_buffer1, <4 x i32> %tmp0, i32 96, i32 96, i32 0) #2
-  call void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float> %raw_buffer2, <4 x i32> %tmp0, i32 0, i32 192, i32 0) #2
-  call void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float> %raw_buffer3, <4 x i32> %tmp0, i32 %arg1, i32 192, i32 0) #2
-  call void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float> %raw_buffer4, <4 x i32> %tmp0, i32 192, i32 %arg1, i32 0) #2
+  %raw_ptr_atomic_cmpswap0 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 176, i32 0, i32 0) nounwind memory(argmem: readwrite)
+  %raw_ptr_atomic_cmpswap1 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 88, i32 88, i32 0) nounwind memory(argmem: readwrite)
+  %raw_ptr_atomic_cmpswap2 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 176, i32 0) nounwind memory(argmem: readwrite)
+  %raw_ptr_atomic_cmpswap3 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 %arg1, i32 176, i32 0) nounwind memory(argmem: readwrite)
+  %raw_ptr_atomic_cmpswap4 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 176, i32 %arg1, i32 0) nounwind memory(argmem: readwrite)
 
   call void asm sideeffect "", "" ()
 
-  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %raw_ptr_buffer0, ptr addrspace(8) %tmp1, i32 192, i32 0, i32 0) #5
-  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %raw_ptr_buffer1, ptr addrspace(8) %tmp1, i32 96, i32 96, i32 0) #5
-  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %raw_ptr_buffer2, ptr addrspace(8) %tmp1, i32 0, i32 192, i32 0) #5
-  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %raw_ptr_buffer3, ptr addrspace(8) %tmp1, i32 %arg1, i32 192, i32 0) #5
-  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %raw_ptr_buffer4, ptr addrspace(8) %tmp1, i32 192, i32 %arg1, i32 0) #5
+  call void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float> %raw_buffer0, <4 x i32> %tmp0, i32 192, i32 0, i32 0) nounwind
+  call void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float> %raw_buffer1, <4 x i32> %tmp0, i32 96, i32 96, i32 0) nounwind
+  call void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float> %raw_buffer2, <4 x i32> %tmp0, i32 0, i32 192, i32 0) nounwind
+  call void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float> %raw_buffer3, <4 x i32> %tmp0, i32 %arg1, i32 192, i32 0) nounwind
+  call void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float> %raw_buffer4, <4 x i32> %tmp0, i32 192, i32 %arg1, i32 0) nounwind
 
   call void asm sideeffect "", "" ()
 
-  call void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float> %raw_buffer_format0, <4 x i32> %tmp0, i32 208, i32 0, i32 0) #2
-  call void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float> %raw_buffer_format1, <4 x i32> %tmp0, i32 104, i32 104, i32 0) #2
-  call void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float> %raw_buffer_format2, <4 x i32> %tmp0, i32 0, i32 208, i32 0) #2
-  call void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float> %raw_buffer_format3, <4 x i32> %tmp0, i32 %arg1, i32 208, i32 0) #2
-  call void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float> %raw_buffer_format4, <4 x i32> %tmp0, i32 208, i32 %arg1, i32 0) #2
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %raw_ptr_buffer0, ptr addrspace(8) %tmp1, i32 192, i32 0, i32 0) nounwind memory(argmem: readwrite)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %raw_ptr_buffer1, ptr addrspace(8) %tmp1, i32 96, i32 96, i32 0) nounwind memory(argmem: readwrite)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %raw_ptr_buffer2, ptr addrspace(8) %tmp1, i32 0, i32 192, i32 0) nounwind memory(argmem: readwrite)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %raw_ptr_buffer3, ptr addrspace(8) %tmp1, i32 %arg1, i32 192, i32 0) nounwind memory(argmem: readwrite)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %raw_ptr_buffer4, ptr addrspace(8) %tmp1, i32 192, i32 %arg1, i32 0) nounwind memory(argmem: readwrite)
 
   call void asm sideeffect "", "" ()
 
-  call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> %raw_buffer_format_ptr0, ptr addrspace(8) %tmp1, i32 208, i32 0, i32 0) #4
-  call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> %raw_buffer_format_ptr1, ptr addrspace(8) %tmp1, i32 104, i32 104, i32 0) #4
-  call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> %raw_buffer_format_ptr2, ptr addrspace(8) %tmp1, i32 0, i32 208, i32 0) #4
-  call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> %raw_buffer_format_ptr3, ptr addrspace(8) %tmp1, i32 %arg1, i32 208, i32 0) #4
-  call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> %raw_buffer_format_ptr4, ptr addrspace(8) %tmp1, i32 208, i32 %arg1, i32 0) #4
+  call void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float> %raw_buffer_format0, <4 x i32> %tmp0, i32 208, i32 0, i32 0) nounwind
+  call void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float> %raw_buffer_format1, <4 x i32> %tmp0, i32 104, i32 104, i32 0) nounwind
+  call void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float> %raw_buffer_format2, <4 x i32> %tmp0, i32 0, i32 208, i32 0) nounwind
+  call void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float> %raw_buffer_format3, <4 x i32> %tmp0, i32 %arg1, i32 208, i32 0) nounwind
+  call void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float> %raw_buffer_format4, <4 x i32> %tmp0, i32 208, i32 %arg1, i32 0) nounwind
+
+  call void asm sideeffect "", "" ()
+
+  call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> %raw_buffer_format_ptr0, ptr addrspace(8) %tmp1, i32 208, i32 0, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> %raw_buffer_format_ptr1, ptr addrspace(8) %tmp1, i32 104, i32 104, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> %raw_buffer_format_ptr2, ptr addrspace(8) %tmp1, i32 0, i32 208, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> %raw_buffer_format_ptr3, ptr addrspace(8) %tmp1, i32 %arg1, i32 208, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> %raw_buffer_format_ptr4, ptr addrspace(8) %tmp1, i32 208, i32 %arg1, i32 0) nounwind memory(argmem: write)
 
   call void asm sideeffect "", "" ()
 
   ; rsrc, vindex, offset, soffset, cachepolicy
-  %struct_buffer0 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 224, i32 0, i32 0) #0
-  %struct_buffer1 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 112, i32 112, i32 0) #0
-  %struct_buffer2 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 0, i32 224, i32 0) #0
-  %struct_buffer3 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 %arg1, i32 224, i32 0) #0
-  %struct_buffer4 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 224, i32 %arg1, i32 0) #0
-  %struct_buffer5 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 1, i32 224, i32 0, i32 0) #0
-  %struct_buffer6 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 %arg1, i32 224, i32 0, i32 0) #0
+  %struct_buffer0 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 224, i32 0, i32 0) nounwind readonly
+  %struct_buffer1 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 112, i32 112, i32 0) nounwind readonly
+  %struct_buffer2 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 0, i32 224, i32 0) nounwind readonly
+  %struct_buffer3 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 %arg1, i32 224, i32 0) nounwind readonly
+  %struct_buffer4 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 0, i32 224, i32 %arg1, i32 0) nounwind readonly
+  %struct_buffer5 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 1, i32 224, i32 0, i32 0) nounwind readonly
+  %struct_buffer6 = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %tmp0, i32 %arg1, i32 224, i32 0, i32 0) nounwind readonly
 
   call void asm sideeffect "", "" ()
 
-  %struct_ptr_buffer0 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 224, i32 0, i32 0) #3
-  %struct_ptr_buffer1 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 112, i32 112, i32 0) #3
-  %struct_ptr_buffer2 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 0, i32 224, i32 0) #3
-  %struct_ptr_buffer3 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 %arg1, i32 224, i32 0) #3
-  %struct_ptr_buffer4 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 224, i32 %arg1, i32 0) #3
-  %struct_ptr_buffer5 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 1, i32 224, i32 0, i32 0) #3
-  %struct_ptr_buffer6 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 %arg1, i32 224, i32 0, i32 0) #3
+  %struct_ptr_buffer0 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 224, i32 0, i32 0) nounwind memory(argmem: read)
+  %struct_ptr_buffer1 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 112, i32 112, i32 0) nounwind memory(argmem: read)
+  %struct_ptr_buffer2 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 0, i32 224, i32 0) nounwind memory(argmem: read)
+  %struct_ptr_buffer3 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 %arg1, i32 224, i32 0) nounwind memory(argmem: read)
+  %struct_ptr_buffer4 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 224, i32 %arg1, i32 0) nounwind memory(argmem: read)
+  %struct_ptr_buffer5 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 1, i32 224, i32 0, i32 0) nounwind memory(argmem: read)
+  %struct_ptr_buffer6 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) %tmp1, i32 %arg1, i32 224, i32 0, i32 0) nounwind memory(argmem: read)
 
   call void asm sideeffect "", "" ()
 
-  %struct_buffer_format0 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 240, i32 0, i32 0) #0
-  %struct_buffer_format1 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 120, i32 120, i32 0) #0
-  %struct_buffer_format2 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 0, i32 240, i32 0) #0
-  %struct_buffer_format3 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 %arg1, i32 240, i32 0) #0
-  %struct_buffer_format4 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 240, i32 %arg1, i32 0) #0
-  %struct_buffer_format5 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 1, i32 240, i32 0, i32 0) #0
-  %struct_buffer_format6 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 %arg1, i32 240, i32 0, i32 0) #0
+  %struct_buffer_format0 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 240, i32 0, i32 0) nounwind readonly
+  %struct_buffer_format1 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 120, i32 120, i32 0) nounwind readonly
+  %struct_buffer_format2 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 0, i32 240, i32 0) nounwind readonly
+  %struct_buffer_format3 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 %arg1, i32 240, i32 0) nounwind readonly
+  %struct_buffer_format4 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 0, i32 240, i32 %arg1, i32 0) nounwind readonly
+  %struct_buffer_format5 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 1, i32 240, i32 0, i32 0) nounwind readonly
+  %struct_buffer_format6 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp0, i32 %arg1, i32 240, i32 0, i32 0) nounwind readonly
 
   call void asm sideeffect "", "" ()
 
-  %struct_buffer_format_ptr0 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 240, i32 0, i32 0) #3
-  %struct_buffer_format_ptr1 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 120, i32 120, i32 0) #3
-  %struct_buffer_format_ptr2 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 0, i32 240, i32 0) #3
-  %struct_buffer_format_ptr3 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 %arg1, i32 240, i32 0) #3
-  %struct_buffer_format_ptr4 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 240, i32 %arg1, i32 0) #3
-  %struct_buffer_format_ptr5 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 1, i32 240, i32 0, i32 0) #3
-  %struct_buffer_format_ptr6 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 %arg1, i32 240, i32 0, i32 0) #3
+  %struct_buffer_format_ptr0 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 240, i32 0, i32 0) nounwind memory(argmem: read)
+  %struct_buffer_format_ptr1 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 120, i32 120, i32 0) nounwind memory(argmem: read)
+  %struct_buffer_format_ptr2 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 0, i32 240, i32 0) nounwind memory(argmem: read)
+  %struct_buffer_format_ptr3 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 %arg1, i32 240, i32 0) nounwind memory(argmem: read)
+  %struct_buffer_format_ptr4 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 0, i32 240, i32 %arg1, i32 0) nounwind memory(argmem: read)
+  %struct_buffer_format_ptr5 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 1, i32 240, i32 0, i32 0) nounwind memory(argmem: read)
+  %struct_buffer_format_ptr6 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp1, i32 %arg1, i32 240, i32 0, i32 0) nounwind memory(argmem: read)
 
   call void asm sideeffect "", "" ()
 
-  %struct_atomic_add0 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 256, i32 0, i32 0) #2
-  %struct_atomic_add1 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 128, i32 128, i32 0) #2
-  %struct_atomic_add2 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 0, i32 256, i32 0) #2
-  %struct_atomic_add3 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 %arg1, i32 256, i32 0) #2
-  %struct_atomic_add4 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 256, i32 %arg1, i32 0) #2
-  %struct_atomic_add5 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 1, i32 256, i32 0, i32 0) #2
-  %struct_atomic_add6 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 %arg1, i32 256, i32 0, i32 0) #2
+  %struct_atomic_add0 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 256, i32 0, i32 0) nounwind
+  %struct_atomic_add1 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 128, i32 128, i32 0) nounwind
+  %struct_atomic_add2 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 0, i32 256, i32 0) nounwind
+  %struct_atomic_add3 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 %arg1, i32 256, i32 0) nounwind
+  %struct_atomic_add4 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 0, i32 256, i32 %arg1, i32 0) nounwind
+  %struct_atomic_add5 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 1, i32 256, i32 0, i32 0) nounwind
+  %struct_atomic_add6 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %arg1, <4 x i32> %tmp0, i32 %arg1, i32 256, i32 0, i32 0) nounwind
 
   call void asm sideeffect "", "" ()
 
-  %struct_atomic_add_ptr0 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 256, i32 0, i32 0) #5
-  %struct_atomic_add_ptr1 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 128, i32 128, i32 0) #5
-  %struct_atomic_add_ptr2 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 0, i32 256, i32 0) #5
-  %struct_atomic_add_ptr3 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 %arg1, i32 256, i32 0) #5
-  %struct_atomic_add_ptr4 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 256, i32 %arg1, i32 0) #5
-  %struct_atomic_add_ptr5 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 1, i32 256, i32 0, i32 0) #5
-  %struct_atomic_add_ptr6 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 %arg1, i32 256, i32 0, i32 0) #5
+  %struct_atomic_add_ptr0 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 256, i32 0, i32 0) nounwind memory(argmem: readwrite)
+  %struct_atomic_add_ptr1 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 128, i32 128, i32 0) nounwind memory(argmem: readwrite)
+  %struct_atomic_add_ptr2 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 0, i32 256, i32 0) nounwind memory(argmem: readwrite)
+  %struct_atomic_add_ptr3 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 %arg1, i32 256, i32 0) nounwind memory(argmem: readwrite)
+  %struct_atomic_add_ptr4 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 256, i32 %arg1, i32 0) nounwind memory(argmem: readwrite)
+  %struct_atomic_add_ptr5 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 1, i32 256, i32 0, i32 0) nounwind memory(argmem: readwrite)
+  %struct_atomic_add_ptr6 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 %arg1, ptr addrspace(8) %tmp1, i32 %arg1, i32 256, i32 0, i32 0) nounwind memory(argmem: readwrite)
 
   call void asm sideeffect "", "" ()
 
-  %struct_atomic_cmpswap0 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 272, i32 0, i32 0) #2
-  %struct_atomic_cmpswap1 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 136, i32 136, i32 0) #2
-  %struct_atomic_cmpswap2 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 0, i32 272, i32 0) #2
-  %struct_atomic_cmpswap3 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 %arg1, i32 272, i32 0) #2
-  %struct_atomic_cmpswap4 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 272, i32 %arg1, i32 0) #2
-  %struct_atomic_cmpswap5 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 1, i32 272, i32 0, i32 0) #2
-  %struct_atomic_cmpswap6 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 %arg1, i32 272, i32 0, i32 0) #2
+  %struct_atomic_cmpswap0 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 272, i32 0, i32 0) nounwind
+  %struct_atomic_cmpswap1 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 136, i32 136, i32 0) nounwind
+  %struct_atomic_cmpswap2 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 0, i32 272, i32 0) nounwind
+  %struct_atomic_cmpswap3 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 %arg1, i32 272, i32 0) nounwind
+  %struct_atomic_cmpswap4 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 0, i32 272, i32 %arg1, i32 0) nounwind
+  %struct_atomic_cmpswap5 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 1, i32 272, i32 0, i32 0) nounwind
+  %struct_atomic_cmpswap6 = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, <4 x i32> %tmp0, i32 %arg1, i32 272, i32 0, i32 0) nounwind
 
   call void asm sideeffect "", "" ()
 
-  %struct_atomic_cmpswap_ptr0 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 272, i32 0, i32 0) #5
-  %struct_atomic_cmpswap_ptr1 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 136, i32 136, i32 0) #5
-  %struct_atomic_cmpswap_ptr2 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 0, i32 272, i32 0) #5
-  %struct_atomic_cmpswap_ptr3 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 %arg1, i32 272, i32 0) #5
-  %struct_atomic_cmpswap_ptr4 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 272, i32 %arg1, i32 0) #5
-  %struct_atomic_cmpswap_ptr5 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 1, i32 272, i32 0, i32 0) #5
-  %struct_atomic_cmpswap_ptr6 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 %arg1, i32 272, i32 0, i32 0) #5
+  %struct_atomic_cmpswap_ptr0 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 272, i32 0, i32 0) nounwind memory(argmem: readwrite)
+  %struct_atomic_cmpswap_ptr1 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 136, i32 136, i32 0) nounwind memory(argmem: readwrite)
+  %struct_atomic_cmpswap_ptr2 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 0, i32 272, i32 0) nounwind memory(argmem: readwrite)
+  %struct_atomic_cmpswap_ptr3 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 %arg1, i32 272, i32 0) nounwind memory(argmem: readwrite)
+  %struct_atomic_cmpswap_ptr4 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 0, i32 272, i32 %arg1, i32 0) nounwind memory(argmem: readwrite)
+  %struct_atomic_cmpswap_ptr5 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 1, i32 272, i32 0, i32 0) nounwind memory(argmem: readwrite)
+  %struct_atomic_cmpswap_ptr6 = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %arg1, i32 %arg1, ptr addrspace(8) %tmp1, i32 %arg1, i32 272, i32 0, i32 0) nounwind memory(argmem: readwrite)
 
   call void asm sideeffect "", "" ()
 
-  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer0, <4 x i32> %tmp0, i32 0, i32 288, i32 0, i32 0) #2
-  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer1, <4 x i32> %tmp0, i32 0, i32 144, i32 144, i32 0) #2
-  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer2, <4 x i32> %tmp0, i32 0, i32 0, i32 288, i32 0) #2
-  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer3, <4 x i32> %tmp0, i32 0, i32 %arg1, i32 288, i32 0) #2
-  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer4, <4 x i32> %tmp0, i32 0, i32 288, i32 %arg1, i32 0) #2
-  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer5, <4 x i32> %tmp0, i32 1, i32 288, i32 0, i32 0) #2
-  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer6, <4 x i32> %tmp0, i32 %arg1, i32 288, i32 0, i32 0) #2
+  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer0, <4 x i32> %tmp0, i32 0, i32 288, i32 0, i32 0) nounwind
+  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer1, <4 x i32> %tmp0, i32 0, i32 144, i32 144, i32 0) nounwind
+  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer2, <4 x i32> %tmp0, i32 0, i32 0, i32 288, i32 0) nounwind
+  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer3, <4 x i32> %tmp0, i32 0, i32 %arg1, i32 288, i32 0) nounwind
+  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer4, <4 x i32> %tmp0, i32 0, i32 288, i32 %arg1, i32 0) nounwind
+  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer5, <4 x i32> %tmp0, i32 1, i32 288, i32 0, i32 0) nounwind
+  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %struct_buffer6, <4 x i32> %tmp0, i32 %arg1, i32 288, i32 0, i32 0) nounwind
 
   call void asm sideeffect "", "" ()
 
-  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer0, ptr addrspace(8) %tmp1, i32 0, i32 288, i32 0, i32 0) #4
-  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer1, ptr addrspace(8) %tmp1, i32 0, i32 144, i32 144, i32 0) #4
-  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer2, ptr addrspace(8) %tmp1, i32 0, i32 0, i32 288, i32 0) #4
-  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer3, ptr addrspace(8) %tmp1, i32 0, i32 %arg1, i32 288, i32 0) #4
-  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer4, ptr addrspace(8) %tmp1, i32 0, i32 288, i32 %arg1, i32 0) #4
-  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer5, ptr addrspace(8) %tmp1, i32 1, i32 288, i32 0, i32 0) #4
-  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer6, ptr addrspace(8) %tmp1, i32 %arg1, i32 288, i32 0, i32 0) #4
+  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer0, ptr addrspace(8) %tmp1, i32 0, i32 288, i32 0, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer1, ptr addrspace(8) %tmp1, i32 0, i32 144, i32 144, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer2, ptr addrspace(8) %tmp1, i32 0, i32 0, i32 288, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer3, ptr addrspace(8) %tmp1, i32 0, i32 %arg1, i32 288, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer4, ptr addrspace(8) %tmp1, i32 0, i32 288, i32 %arg1, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer5, ptr addrspace(8) %tmp1, i32 1, i32 288, i32 0, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %struct_ptr_buffer6, ptr addrspace(8) %tmp1, i32 %arg1, i32 288, i32 0, i32 0) nounwind memory(argmem: write)
 
   call void asm sideeffect "", "" ()
 
-  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format0, <4 x i32> %tmp0, i32 0, i32 304, i32 0, i32 0) #2
-  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format1, <4 x i32> %tmp0, i32 0, i32 152, i32 152, i32 0) #2
-  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format2, <4 x i32> %tmp0, i32 0, i32 0, i32 304, i32 0) #2
-  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format3, <4 x i32> %tmp0, i32 0, i32 %arg1, i32 304, i32 0) #2
-  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format4, <4 x i32> %tmp0, i32 0, i32 304, i32 %arg1, i32 0) #2
-  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format5, <4 x i32> %tmp0, i32 1, i32 304, i32 0, i32 0) #2
-  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format6, <4 x i32> %tmp0, i32 %arg1, i32 304, i32 0, i32 0) #2
+  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format0, <4 x i32> %tmp0, i32 0, i32 304, i32 0, i32 0) nounwind
+  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format1, <4 x i32> %tmp0, i32 0, i32 152, i32 152, i32 0) nounwind
+  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format2, <4 x i32> %tmp0, i32 0, i32 0, i32 304, i32 0) nounwind
+  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format3, <4 x i32> %tmp0, i32 0, i32 %arg1, i32 304, i32 0) nounwind
+  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format4, <4 x i32> %tmp0, i32 0, i32 304, i32 %arg1, i32 0) nounwind
+  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format5, <4 x i32> %tmp0, i32 1, i32 304, i32 0, i32 0) nounwind
+  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %struct_buffer_format6, <4 x i32> %tmp0, i32 %arg1, i32 304, i32 0, i32 0) nounwind
 
-  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr0, ptr addrspace(8) %tmp1, i32 0, i32 304, i32 0, i32 0) #4
-  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr1, ptr addrspace(8) %tmp1, i32 0, i32 152, i32 152, i32 0) #4
-  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr2, ptr addrspace(8) %tmp1, i32 0, i32 0, i32 304, i32 0) #4
-  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr3, ptr addrspace(8) %tmp1, i32 0, i32 %arg1, i32 304, i32 0) #4
-  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr4, ptr addrspace(8) %tmp1, i32 0, i32 304, i32 %arg1, i32 0) #4
-  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr5, ptr addrspace(8) %tmp1, i32 1, i32 304, i32 0, i32 0) #4
-  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr6, ptr addrspace(8) %tmp1, i32 %arg1, i32 304, i32 0, i32 0) #4
+  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr0, ptr addrspace(8) %tmp1, i32 0, i32 304, i32 0, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr1, ptr addrspace(8) %tmp1, i32 0, i32 152, i32 152, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr2, ptr addrspace(8) %tmp1, i32 0, i32 0, i32 304, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr3, ptr addrspace(8) %tmp1, i32 0, i32 %arg1, i32 304, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr4, ptr addrspace(8) %tmp1, i32 0, i32 304, i32 %arg1, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr5, ptr addrspace(8) %tmp1, i32 1, i32 304, i32 0, i32 0) nounwind memory(argmem: write)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> %struct_buffer_format_ptr6, ptr addrspace(8) %tmp1, i32 %arg1, i32 304, i32 0, i32 0) nounwind memory(argmem: write)
 
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32>, i32, i32, i1, i1) #0
-declare void @llvm.amdgcn.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #1
-declare <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32>, i32, i32, i1, i1) #0
-declare void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i1) #2
-declare i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32, i32, <4 x i32>, i32, i32, i1) #2
-declare float @llvm.amdgcn.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i1) #2
-declare <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32>, i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i32) #2
-declare i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32, i32, <4 x i32>, i32, i32, i32) #2
-declare void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32) #2
-declare void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i32) #2
-declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8), i32, i32, i32) #3
-declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32) #3
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32, ptr addrspace(8), i32, i32, i32) #5
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32, i32, ptr addrspace(8), i32, i32, i32) #5
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32) #4
-declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32) #4
+declare <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32>, i32, i32, i1, i1) nounwind readonly
+declare void @llvm.amdgcn.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) nounwind writeonly
+declare <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32>, i32, i32, i1, i1) nounwind readonly
+declare void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) nounwind writeonly
+declare i32 @llvm.amdgcn.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i1) nounwind
+declare i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32, i32, <4 x i32>, i32, i32, i1) nounwind
+declare float @llvm.amdgcn.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i1) nounwind
+declare <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32>, i32, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32) nounwind readonly
+declare i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32, i32, <4 x i32>, i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i32) nounwind
+declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8), i32, i32, i32) nounwind memory(argmem: read)
+declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32) nounwind memory(argmem: read)
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind memory(argmem: readwrite)
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32, i32, ptr addrspace(8), i32, i32, i32) nounwind memory(argmem: readwrite)
+declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32) nounwind memory(argmem: write)
+declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32) nounwind memory(argmem: write)
 
 
-declare <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32>, i32, i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i32, i32) #2
-declare i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32, i32, <4 x i32>, i32, i32, i32, i32) #2
-declare void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) #2
-declare void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) #2
+declare <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32>, i32, i32, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32, i32) nounwind readonly
+declare i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32, i32, <4 x i32>, i32, i32, i32, i32) nounwind
+declare void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) nounwind
+declare void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) nounwind
 
-declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8), i32, i32, i32, i32) #3
-declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32, i32) #3
-declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32, ptr addrspace(8), i32, i32, i32, i32) #5
-declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32, i32, ptr addrspace(8), i32, i32, i32, i32) #5
-declare void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32) #4
-declare void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32) #4
-
-
-attributes #0 = { nounwind readonly }
-attributes #1 = { nounwind writeonly }
-attributes #2 = { nounwind }
-attributes #3 = { nounwind memory(argmem: read) }
-attributes #4 = { nounwind memory(argmem: write) }
-attributes #5 = { nounwind memory(argmem: readwrite) }
+declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8), i32, i32, i32, i32) nounwind memory(argmem: read)
+declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32, i32) nounwind memory(argmem: read)
+declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32, ptr addrspace(8), i32, i32, i32, i32) nounwind memory(argmem: readwrite)
+declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32, i32, ptr addrspace(8), i32, i32, i32, i32) nounwind memory(argmem: readwrite)
+declare void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32) nounwind memory(argmem: write)
+declare void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32) nounwind memory(argmem: write)
 
 !0 = !{}

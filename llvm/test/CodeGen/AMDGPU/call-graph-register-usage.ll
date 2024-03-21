@@ -9,8 +9,8 @@
 ; GCN-LABEL: {{^}}use_vcc:
 ; GCN: ; NumSgprs: 34
 ; GCN: ; NumVgprs: 0
-define void @use_vcc() #1 {
-  call void asm sideeffect "", "~{vcc}" () #0
+define void @use_vcc() nounwind noinline norecurse {
+  call void asm sideeffect "", "~{vcc}" () nounwind noinline norecurse
   ret void
 }
 
@@ -27,7 +27,7 @@ define void @use_vcc() #1 {
 ; GCN: s_setpc_b64 s[30:31]
 ; GCN: ; NumSgprs: 36
 ; GCN: ; NumVgprs: 41
-define void @indirect_use_vcc() #1 {
+define void @indirect_use_vcc() nounwind noinline norecurse {
   call void @use_vcc()
   ret void
 }
@@ -37,7 +37,7 @@ define void @indirect_use_vcc() #1 {
 ; VI-NOBUG: ; NumSgprs: 40
 ; VI-BUG: ; NumSgprs: 96
 ; GCN: ; NumVgprs: 41
-define amdgpu_kernel void @indirect_2level_use_vcc_kernel(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @indirect_2level_use_vcc_kernel(ptr addrspace(1) %out) nounwind noinline norecurse {
   call void @indirect_use_vcc()
   ret void
 }
@@ -46,8 +46,8 @@ define amdgpu_kernel void @indirect_2level_use_vcc_kernel(ptr addrspace(1) %out)
 ; CI: ; NumSgprs: 36
 ; VI: ; NumSgprs: 38
 ; GCN: ; NumVgprs: 0
-define void @use_flat_scratch() #1 {
-  call void asm sideeffect "", "~{flat_scratch}" () #0
+define void @use_flat_scratch() nounwind noinline norecurse {
+  call void asm sideeffect "", "~{flat_scratch}" () nounwind noinline norecurse
   ret void
 }
 
@@ -55,7 +55,7 @@ define void @use_flat_scratch() #1 {
 ; CI: ; NumSgprs: 38
 ; VI: ; NumSgprs: 40
 ; GCN: ; NumVgprs: 41
-define void @indirect_use_flat_scratch() #1 {
+define void @indirect_use_flat_scratch() nounwind noinline norecurse {
   call void @use_flat_scratch()
   ret void
 }
@@ -65,57 +65,57 @@ define void @indirect_use_flat_scratch() #1 {
 ; VI-NOBUG: ; NumSgprs: 40
 ; VI-BUG: ; NumSgprs: 96
 ; GCN: ; NumVgprs: 41
-define amdgpu_kernel void @indirect_2level_use_flat_scratch_kernel(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @indirect_2level_use_flat_scratch_kernel(ptr addrspace(1) %out) nounwind noinline norecurse {
   call void @indirect_use_flat_scratch()
   ret void
 }
 
 ; GCN-LABEL: {{^}}use_10_vgpr:
 ; GCN: ; NumVgprs: 10
-define void @use_10_vgpr() #1 {
-  call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4}"() #0
-  call void asm sideeffect "", "~{v5},~{v6},~{v7},~{v8},~{v9}"() #0
+define void @use_10_vgpr() nounwind noinline norecurse {
+  call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4}"() nounwind noinline norecurse
+  call void asm sideeffect "", "~{v5},~{v6},~{v7},~{v8},~{v9}"() nounwind noinline norecurse
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_use_10_vgpr:
 ; GCN: ; NumVgprs: 41
-define void @indirect_use_10_vgpr() #0 {
+define void @indirect_use_10_vgpr() nounwind noinline norecurse {
   call void @use_10_vgpr()
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_2_level_use_10_vgpr:
 ; GCN: ; NumVgprs: 41
-define amdgpu_kernel void @indirect_2_level_use_10_vgpr() #0 {
+define amdgpu_kernel void @indirect_2_level_use_10_vgpr() nounwind noinline norecurse {
   call void @indirect_use_10_vgpr()
   ret void
 }
 
 ; GCN-LABEL: {{^}}use_50_vgpr:
 ; GCN: ; NumVgprs: 50
-define void @use_50_vgpr() #1 {
-  call void asm sideeffect "", "~{v49}"() #0
+define void @use_50_vgpr() nounwind noinline norecurse {
+  call void asm sideeffect "", "~{v49}"() nounwind noinline norecurse
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_use_50_vgpr:
 ; GCN: ; NumVgprs: 50
-define void @indirect_use_50_vgpr() #0 {
+define void @indirect_use_50_vgpr() nounwind noinline norecurse {
   call void @use_50_vgpr()
   ret void
 }
 
 ; GCN-LABEL: {{^}}use_80_sgpr:
 ; GCN: ; NumSgprs: 80
-define void @use_80_sgpr() #1 {
-  call void asm sideeffect "", "~{s79}"() #0
+define void @use_80_sgpr() nounwind noinline norecurse {
+  call void asm sideeffect "", "~{s79}"() nounwind noinline norecurse
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_use_80_sgpr:
 ; GCN: ; NumSgprs: 82
-define void @indirect_use_80_sgpr() #1 {
+define void @indirect_use_80_sgpr() nounwind noinline norecurse {
   call void @use_80_sgpr()
   ret void
 }
@@ -124,7 +124,7 @@ define void @indirect_use_80_sgpr() #1 {
 ; CI: ; NumSgprs: 84
 ; VI-NOBUG: ; NumSgprs: 86
 ; VI-BUG: ; NumSgprs: 96
-define amdgpu_kernel void @indirect_2_level_use_80_sgpr() #0 {
+define amdgpu_kernel void @indirect_2_level_use_80_sgpr() nounwind noinline norecurse {
   call void @indirect_use_80_sgpr()
   ret void
 }
@@ -132,32 +132,32 @@ define amdgpu_kernel void @indirect_2_level_use_80_sgpr() #0 {
 
 ; GCN-LABEL: {{^}}use_stack0:
 ; GCN: ScratchSize: 2052
-define void @use_stack0() #1 {
+define void @use_stack0() nounwind noinline norecurse {
   %alloca = alloca [512 x i32], align 4, addrspace(5)
-  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) nounwind noinline norecurse
   ret void
 }
 
 ; GCN-LABEL: {{^}}use_stack1:
 ; GCN: ScratchSize: 404
-define void @use_stack1() #1 {
+define void @use_stack1() nounwind noinline norecurse {
   %alloca = alloca [100 x i32], align 4, addrspace(5)
-  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) nounwind noinline norecurse
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_use_stack:
 ; GCN: ScratchSize: 2132
-define void @indirect_use_stack() #1 {
+define void @indirect_use_stack() nounwind noinline norecurse {
   %alloca = alloca [16 x i32], align 4, addrspace(5)
-  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) nounwind noinline norecurse
   call void @use_stack0()
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_2_level_use_stack:
 ; GCN: ScratchSize: 2132
-define amdgpu_kernel void @indirect_2_level_use_stack() #0 {
+define amdgpu_kernel void @indirect_2_level_use_stack() nounwind noinline norecurse {
   call void @indirect_use_stack()
   ret void
 }
@@ -166,14 +166,14 @@ define amdgpu_kernel void @indirect_2_level_use_stack() #0 {
 ; Should be maximum of callee usage
 ; GCN-LABEL: {{^}}multi_call_use_use_stack:
 ; GCN: ScratchSize: 2052
-define amdgpu_kernel void @multi_call_use_use_stack() #0 {
+define amdgpu_kernel void @multi_call_use_use_stack() nounwind noinline norecurse {
   call void @use_stack0()
   call void @use_stack1()
   ret void
 }
 
 
-declare void @external() #0
+declare void @external() nounwind noinline norecurse
 
 ; GCN-LABEL: {{^}}usage_external:
 ; NumSgprs: 48
@@ -182,12 +182,12 @@ declare void @external() #0
 ;
 ; GCN-V5-LABEL: {{^}}usage_external:
 ; GCN-V5: ScratchSize: 0
-define amdgpu_kernel void @usage_external() #0 {
+define amdgpu_kernel void @usage_external() nounwind noinline norecurse {
   call void @external()
   ret void
 }
 
-declare void @external_recurse() #2
+declare void @external_recurse() nounwind noinline
 
 ; GCN-LABEL: {{^}}usage_external_recurse:
 ; NumSgprs: 48
@@ -196,7 +196,7 @@ declare void @external_recurse() #2
 ;
 ; GCN-V5-LABEL: {{^}}usage_external_recurse:
 ; GCN-V5: ScratchSize: 0
-define amdgpu_kernel void @usage_external_recurse() #0 {
+define amdgpu_kernel void @usage_external_recurse() nounwind noinline norecurse {
   call void @external_recurse()
   ret void
 }
@@ -206,9 +206,9 @@ define amdgpu_kernel void @usage_external_recurse() #0 {
 ;
 ; GCN-V5-LABEL: {{^}}direct_recursion_use_stack:
 ; GCN-V5: ScratchSize: 2064{{$}}
-define void @direct_recursion_use_stack(i32 %val) #2 {
+define void @direct_recursion_use_stack(i32 %val) nounwind noinline {
   %alloca = alloca [512 x i32], align 4, addrspace(5)
-  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) nounwind noinline norecurse
   %cmp = icmp eq i32 %val, 0
   br i1 %cmp, label %ret, label %call
 
@@ -226,7 +226,7 @@ ret:
 ;
 ; GCN-V5-LABEL: {{^}}usage_direct_recursion:
 ; GCN-V5: .amdhsa_private_segment_fixed_size 2064{{$}}
-define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
+define amdgpu_kernel void @usage_direct_recursion(i32 %n) nounwind noinline norecurse {
   call void @direct_recursion_use_stack(i32 %n)
   ret void
 }
@@ -240,7 +240,7 @@ define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
 ; GCN: NumVgprs: 50
 define amdgpu_kernel void @count_use_sgpr96_external_call()  {
 entry:
-  tail call void asm sideeffect "; sgpr96 $0", "s"(<3 x i32> <i32 10, i32 11, i32 12>) #1
+  tail call void asm sideeffect "; sgpr96 $0", "s"(<3 x i32> <i32 10, i32 11, i32 12>) nounwind noinline norecurse
   call void @external()
   ret void
 }
@@ -254,7 +254,7 @@ entry:
 ; GCN: NumVgprs: 50
 define amdgpu_kernel void @count_use_sgpr160_external_call()  {
 entry:
-  tail call void asm sideeffect "; sgpr160 $0", "s"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1
+  tail call void asm sideeffect "; sgpr160 $0", "s"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) nounwind noinline norecurse
   call void @external()
   ret void
 }
@@ -268,14 +268,10 @@ entry:
 ; GCN: NumVgprs: 50
 define amdgpu_kernel void @count_use_vgpr160_external_call()  {
 entry:
-  tail call void asm sideeffect "; vgpr160 $0", "v"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1
+  tail call void asm sideeffect "; vgpr160 $0", "v"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) nounwind noinline norecurse
   call void @external()
   ret void
 }
-
-attributes #0 = { nounwind noinline norecurse }
-attributes #1 = { nounwind noinline norecurse }
-attributes #2 = { nounwind noinline }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}

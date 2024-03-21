@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; GCN-LABEL: {{^}}convergent_inlineasm:
 ; GCN: %bb.0:
 ; GCN: v_cmp_ne_u32_e64
@@ -9,7 +9,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 define amdgpu_kernel void @convergent_inlineasm(ptr addrspace(1) nocapture %arg) {
 bb:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = tail call i64 asm "v_cmp_ne_u32_e64 $0, 0, $1", "=s,v"(i32 1) #1
+  %tmp1 = tail call i64 asm "v_cmp_ne_u32_e64 $0, 0, $1", "=s,v"(i32 1) convergent nounwind readnone
   %tmp2 = icmp eq i32 %tmp, 8
   br i1 %tmp2, label %bb3, label %bb5
 
@@ -45,6 +45,3 @@ bb3:                                              ; preds = %bb
 bb5:                                              ; preds = %bb3, %bb
   ret void
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { convergent nounwind readnone }

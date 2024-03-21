@@ -40,7 +40,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat(ptr %ptr) {
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat_ieee(ptr %ptr) #0 {
+define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat_ieee(ptr %ptr) "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX940-LABEL: flat_atomic_fadd_f32_noret_pat_ieee:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -208,5 +208,3 @@ define <2 x i16> @local_atomic_fadd_v2bf16_rtn(ptr addrspace(3) %ptr, <2 x i16> 
   %ret = call <2 x i16> @llvm.amdgcn.ds.fadd.v2bf16(ptr addrspace(3) %ptr, <2 x i16> %data)
   ret <2 x i16> %ret
 }
-
-attributes #0 = { "denormal-fp-math-f32"="ieee,ieee" }

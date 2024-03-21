@@ -290,7 +290,7 @@ define amdgpu_kernel void @fabs_fold_f16(ptr addrspace(1) %out, half %in0, half 
   ret void
 }
 
-define amdgpu_kernel void @v_fabs_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_fabs_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: v_fabs_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
@@ -351,7 +351,7 @@ define amdgpu_kernel void @v_fabs_v2f16(ptr addrspace(1) %out, ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_kernel void @fabs_free_v2f16(ptr addrspace(1) %out, i32 %in) #0 {
+define amdgpu_kernel void @fabs_free_v2f16(ptr addrspace(1) %out, i32 %in) nounwind {
 ; CI-LABEL: fabs_free_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -408,7 +408,7 @@ define amdgpu_kernel void @fabs_free_v2f16(ptr addrspace(1) %out, i32 %in) #0 {
 
 ; FIXME: Should do fabs after conversion to avoid converting multiple
 ; times in this particular case.
-define amdgpu_kernel void @v_fabs_fold_self_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_fabs_fold_self_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: v_fabs_fold_self_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -490,7 +490,7 @@ define amdgpu_kernel void @v_fabs_fold_self_v2f16(ptr addrspace(1) %out, ptr add
   ret void
 }
 
-define amdgpu_kernel void @v_fabs_fold_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %other.val) #0 {
+define amdgpu_kernel void @v_fabs_fold_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %other.val) nounwind {
 ; CI-LABEL: v_fabs_fold_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -579,7 +579,7 @@ define amdgpu_kernel void @v_fabs_fold_v2f16(ptr addrspace(1) %out, ptr addrspac
   ret void
 }
 
-define amdgpu_kernel void @v_extract_fabs_fold_v2f16(ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_extract_fabs_fold_v2f16(ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: v_extract_fabs_fold_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -670,7 +670,7 @@ define amdgpu_kernel void @v_extract_fabs_fold_v2f16(ptr addrspace(1) %in) #0 {
   ret void
 }
 
-define amdgpu_kernel void @v_extract_fabs_no_fold_v2f16(ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_extract_fabs_no_fold_v2f16(ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: v_extract_fabs_no_fold_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -747,11 +747,8 @@ define amdgpu_kernel void @v_extract_fabs_no_fold_v2f16(ptr addrspace(1) %in) #0
   ret void
 }
 
-declare half @llvm.fabs.f16(half) #1
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #1
-declare <4 x half> @llvm.fabs.v4f16(<4 x half>) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare half @llvm.fabs.f16(half) nounwind readnone
+declare <2 x half> @llvm.fabs.v2f16(<2 x half>) nounwind readnone
+declare <4 x half> @llvm.fabs.v4f16(<4 x half>) nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 

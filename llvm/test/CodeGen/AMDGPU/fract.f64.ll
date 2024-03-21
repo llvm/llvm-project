@@ -5,8 +5,8 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,SI,FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,CI,FUNC %s
 
-declare double @llvm.fabs.f64(double) #0
-declare double @llvm.floor.f64(double) #0
+declare double @llvm.fabs.f64(double) nounwind readnone
+declare double @llvm.floor.f64(double) nounwind readnone
 
 ; FUNC-LABEL: {{^}}fract_f64:
 ; SI-DAG: v_fract_f64_e32 [[FRC:v\[[0-9]+:[0-9]+\]]], v[[[LO:[0-9]+]]:[[HI:[0-9]+]]]
@@ -24,7 +24,7 @@ declare double @llvm.floor.f64(double) #0
 ; CI: v_add_f64 [[FRACT:v\[[0-9]+:[0-9]+\]]], [[X]], -[[FLOORX]]
 
 ; GCN: buffer_store_dwordx2 [[FRACT]]
-define amdgpu_kernel void @fract_f64(ptr addrspace(1) %out, ptr addrspace(1) %src) #1 {
+define amdgpu_kernel void @fract_f64(ptr addrspace(1) %out, ptr addrspace(1) %src) nounwind {
   %x = load double, ptr addrspace(1) %src
   %floor.x = call double @llvm.floor.f64(double %x)
   %fract = fsub double %x, %floor.x
@@ -48,7 +48,7 @@ define amdgpu_kernel void @fract_f64(ptr addrspace(1) %out, ptr addrspace(1) %sr
 ; CI: v_add_f64 [[FRACT:v\[[0-9]+:[0-9]+\]]], -[[X]], -[[FLOORX]]
 
 ; GCN: buffer_store_dwordx2 [[FRACT]]
-define amdgpu_kernel void @fract_f64_neg(ptr addrspace(1) %out, ptr addrspace(1) %src) #1 {
+define amdgpu_kernel void @fract_f64_neg(ptr addrspace(1) %out, ptr addrspace(1) %src) nounwind {
   %x = load double, ptr addrspace(1) %src
   %neg.x = fneg double %x
   %floor.neg.x = call double @llvm.floor.f64(double %neg.x)
@@ -73,7 +73,7 @@ define amdgpu_kernel void @fract_f64_neg(ptr addrspace(1) %out, ptr addrspace(1)
 ; CI: v_add_f64 [[FRACT:v\[[0-9]+:[0-9]+\]]], -|[[X]]|, -[[FLOORX]]
 
 ; GCN: buffer_store_dwordx2 [[FRACT]]
-define amdgpu_kernel void @fract_f64_neg_abs(ptr addrspace(1) %out, ptr addrspace(1) %src) #1 {
+define amdgpu_kernel void @fract_f64_neg_abs(ptr addrspace(1) %out, ptr addrspace(1) %src) nounwind {
   %x = load double, ptr addrspace(1) %src
   %abs.x = call double @llvm.fabs.f64(double %x)
   %neg.abs.x = fneg double %abs.x
@@ -84,7 +84,7 @@ define amdgpu_kernel void @fract_f64_neg_abs(ptr addrspace(1) %out, ptr addrspac
 }
 
 ; FUNC-LABEL: {{^}}multi_use_floor_fract_f64:
-define amdgpu_kernel void @multi_use_floor_fract_f64(ptr addrspace(1) %out, ptr addrspace(1) %src) #1 {
+define amdgpu_kernel void @multi_use_floor_fract_f64(ptr addrspace(1) %out, ptr addrspace(1) %src) nounwind {
   %x = load double, ptr addrspace(1) %src
   %floor.x = call double @llvm.floor.f64(double %x)
   %fract = fsub double %x, %floor.x
@@ -92,6 +92,3 @@ define amdgpu_kernel void @multi_use_floor_fract_f64(ptr addrspace(1) %out, ptr 
   store volatile double %fract, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }

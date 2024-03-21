@@ -426,7 +426,7 @@ define <16 x half> @test_powr_v16f16(<16 x half> %x, <16 x half> %y) {
   ret <16 x half> %powr
 }
 
-define float @test_powr_afn_f32_minsize(float %x, float %y) #0 {
+define float @test_powr_afn_f32_minsize(float %x, float %y) minsize {
 ; CHECK-LABEL: define float @test_powr_afn_f32_minsize
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[POWR:%.*]] = tail call afn float @_Z4powrff(float [[X]], float [[Y]])
@@ -436,7 +436,7 @@ define float @test_powr_afn_f32_minsize(float %x, float %y) #0 {
   ret float %powr
 }
 
-define float @test_powr_afn_f32_nnan_minsize(float %x, float %y) #0 {
+define float @test_powr_afn_f32_nnan_minsize(float %x, float %y) minsize {
 ; CHECK-LABEL: define float @test_powr_afn_f32_nnan_minsize
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[POWR:%.*]] = tail call nnan afn float @_Z4powrff(float [[X]], float [[Y]])
@@ -452,7 +452,7 @@ define float @test_powr_afn_f32_noinline(float %x, float %y) {
 ; CHECK-NEXT:    [[POWR:%.*]] = tail call afn float @_Z4powrff(float [[X]], float [[Y]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[POWR]]
 ;
-  %powr = tail call afn float @_Z4powrff(float %x, float %y) #1
+  %powr = tail call afn float @_Z4powrff(float %x, float %y) noinline
   ret float %powr
 }
 
@@ -462,17 +462,17 @@ define float @test_powr_afn_f32_nnan_noinline(float %x, float %y) {
 ; CHECK-NEXT:    [[POWR:%.*]] = tail call nnan afn float @_Z4powrff(float [[X]], float [[Y]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[POWR]]
 ;
-  %powr = tail call afn nnan float @_Z4powrff(float %x, float %y) #1
+  %powr = tail call afn nnan float @_Z4powrff(float %x, float %y) noinline
   ret float %powr
 }
 
-define float @test_powr_afn_f32_strictfp(float %x, float %y) #2 {
+define float @test_powr_afn_f32_strictfp(float %x, float %y) strictfp {
 ; CHECK-LABEL: define float @test_powr_afn_f32_strictfp
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[POWR:%.*]] = tail call nnan nsz afn float @_Z4powrff(float [[X]], float [[Y]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret float [[POWR]]
 ;
-  %powr = tail call afn nsz nnan float @_Z4powrff(float %x, float %y) #2
+  %powr = tail call afn nsz nnan float @_Z4powrff(float %x, float %y) strictfp
   ret float %powr
 }
 
@@ -482,7 +482,7 @@ define float @test_powr_fast_f32_nobuiltin(float %x, float %y) {
 ; CHECK-NEXT:    [[POWR:%.*]] = tail call fast float @_Z4powrff(float [[X]], float [[Y]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret float [[POWR]]
 ;
-  %powr = tail call fast float @_Z4powrff(float %x, float %y) #3
+  %powr = tail call fast float @_Z4powrff(float %x, float %y) nobuiltin
   ret float %powr
 }
 
@@ -1208,8 +1208,3 @@ define <2 x float> @test_powr_afn_nnan_ninf_v2f32_known_integral_uitofp(<2 x flo
   %powr = tail call afn nnan ninf <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> %y.cast)
   ret <2 x float> %powr
 }
-
-attributes #0 = { minsize }
-attributes #1 = { noinline }
-attributes #2 = { strictfp }
-attributes #3 = { nobuiltin }

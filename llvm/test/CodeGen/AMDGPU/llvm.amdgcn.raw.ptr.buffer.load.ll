@@ -1126,18 +1126,17 @@ main_body:
   ret void
 }
 
-declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32) #0
-declare <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.v2f32(ptr addrspace(8), i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8), i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8), i32, i32, i32) #0
-declare <2 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v2i32(ptr addrspace(8), i32, i32, i32) #0
-declare <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8), i32, i32, i32) #0
-declare i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8), i32, i32, i32) #0
-declare <2 x i16> @llvm.amdgcn.raw.ptr.buffer.load.v2i16(ptr addrspace(8), i32, i32, i32) #0
-declare <4 x i16> @llvm.amdgcn.raw.ptr.buffer.load.v4i16(ptr addrspace(8), i32, i32, i32) #0
-declare half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8), i32, i32, i32) #0
-declare <2 x half> @llvm.amdgcn.raw.ptr.buffer.load.v2f16(ptr addrspace(8), i32, i32, i32) #0
-declare <4 x half> @llvm.amdgcn.raw.ptr.buffer.load.v4f16(ptr addrspace(8), i32, i32, i32) #0
-attributes #0 = { nounwind readonly }
+declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32) nounwind readonly
+declare <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.v2f32(ptr addrspace(8), i32, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8), i32, i32, i32) nounwind readonly
+declare i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8), i32, i32, i32) nounwind readonly
+declare <2 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v2i32(ptr addrspace(8), i32, i32, i32) nounwind readonly
+declare <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8), i32, i32, i32) nounwind readonly
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind readonly
+declare i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8), i32, i32, i32) nounwind readonly
+declare i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8), i32, i32, i32) nounwind readonly
+declare <2 x i16> @llvm.amdgcn.raw.ptr.buffer.load.v2i16(ptr addrspace(8), i32, i32, i32) nounwind readonly
+declare <4 x i16> @llvm.amdgcn.raw.ptr.buffer.load.v4i16(ptr addrspace(8), i32, i32, i32) nounwind readonly
+declare half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8), i32, i32, i32) nounwind readonly
+declare <2 x half> @llvm.amdgcn.raw.ptr.buffer.load.v2f16(ptr addrspace(8), i32, i32, i32) nounwind readonly
+declare <4 x half> @llvm.amdgcn.raw.ptr.buffer.load.v4f16(ptr addrspace(8), i32, i32, i32) nounwind readonly

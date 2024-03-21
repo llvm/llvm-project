@@ -6,7 +6,7 @@
 ; GCN: ; %bb.0:
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @callee_no_stack() #0 {
+define void @callee_no_stack() nounwind {
   ret void
 }
 
@@ -18,7 +18,7 @@ define void @callee_no_stack() #0 {
 ; GCN-NEXT: s_mov_b32 s33, s32
 ; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
 ; GCN-NEXT: s_setpc_b64
-define void @callee_no_stack_no_fp_elim_all() #1 {
+define void @callee_no_stack_no_fp_elim_all() nounwind "frame-pointer"="all" {
   ret void
 }
 
@@ -26,7 +26,7 @@ define void @callee_no_stack_no_fp_elim_all() #1 {
 ; GCN: ; %bb.0:
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @callee_no_stack_no_fp_elim_nonleaf() #2 {
+define void @callee_no_stack_no_fp_elim_nonleaf() nounwind "frame-pointer"="non-leaf" {
   ret void
 }
 
@@ -38,7 +38,7 @@ define void @callee_no_stack_no_fp_elim_nonleaf() #2 {
 ; FLATSCR-NEXT: scratch_store_dword off, v0, s32
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @callee_with_stack() #0 {
+define void @callee_with_stack() nounwind {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
   ret void
@@ -62,7 +62,7 @@ define void @callee_with_stack() #0 {
 ; FLATSCR-NEXT: s_add_i32 s32, s32, -8
 ; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
 ; GCN-NEXT: s_setpc_b64
-define void @callee_with_stack_no_fp_elim_all() #1 {
+define void @callee_with_stack_no_fp_elim_all() nounwind "frame-pointer"="all" {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
   ret void
@@ -76,7 +76,7 @@ define void @callee_with_stack_no_fp_elim_all() #1 {
 ; FLATSCR-NEXT: scratch_store_dword off, v0, s32{{$}}
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @callee_with_stack_no_fp_elim_non_leaf() #2 {
+define void @callee_with_stack_no_fp_elim_non_leaf() nounwind "frame-pointer"="non-leaf" {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
   ret void
@@ -117,7 +117,7 @@ define void @callee_with_stack_no_fp_elim_non_leaf() #2 {
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 
 ; GCN-NEXT: s_setpc_b64 s[30:31]
-define void @callee_with_stack_and_call() #0 {
+define void @callee_with_stack_and_call() nounwind {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
   call void @external_void_func_void()
@@ -159,12 +159,12 @@ define void @callee_with_stack_and_call() #0 {
 ; GCN-NEXT: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64 s[30:31]
-define void @callee_no_stack_with_call() #0 {
+define void @callee_no_stack_with_call() nounwind {
   call void @external_void_func_void()
   ret void
 }
 
-declare hidden void @external_void_func_void() #0
+declare hidden void @external_void_func_void() nounwind
 
 ; Make sure if a CSR vgpr is used for SGPR spilling, it is saved and
 ; restored. No FP is required.
@@ -187,26 +187,26 @@ declare hidden void @external_void_func_void() #0
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
-  call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() #0
-  call void asm sideeffect "", "~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15}"() #0
-  call void asm sideeffect "", "~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23}"() #0
-  call void asm sideeffect "", "~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"() #0
-  call void asm sideeffect "", "~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38},~{v39}"() #0
+define void @callee_func_sgpr_spill_no_calls(i32 %in) nounwind {
+  call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() nounwind
+  call void asm sideeffect "", "~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15}"() nounwind
+  call void asm sideeffect "", "~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23}"() nounwind
+  call void asm sideeffect "", "~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"() nounwind
+  call void asm sideeffect "", "~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38},~{v39}"() nounwind
 
-  %wide.sgpr0 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr1 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr2 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr5 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr3 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
-  %wide.sgpr4 = call <2 x i32> asm sideeffect "; def $0", "=s" () #0
+  %wide.sgpr0 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr1 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr2 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr5 = call <16 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr3 = call <8 x i32> asm sideeffect "; def $0", "=s" () nounwind
+  %wide.sgpr4 = call <2 x i32> asm sideeffect "; def $0", "=s" () nounwind
 
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr0) #0
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr1) #0
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr2) #0
-  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr3) #0
-  call void asm sideeffect "; use $0", "s"(<2 x i32> %wide.sgpr4) #0
-  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr5) #0
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr0) nounwind
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr1) nounwind
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr2) nounwind
+  call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr3) nounwind
+  call void asm sideeffect "; use $0", "s"(<2 x i32> %wide.sgpr4) nounwind
+  call void asm sideeffect "; use $0", "s"(<16 x i32> %wide.sgpr5) nounwind
   ret void
 }
 
@@ -260,7 +260,7 @@ define void @spill_only_csr_sgpr() {
 ; FLATSCR-NEXT: s_mov_b32 s33, s0
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
-define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
+define void @callee_with_stack_no_fp_elim_csr_vgpr() nounwind "frame-pointer"="all" {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
   call void asm sideeffect "; clobber v41", "~{v41}"()
@@ -295,7 +295,7 @@ define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
 ; GCN-NEXT: s_mov_b32 s33, [[TMP_SGPR]]
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
-define void @last_lane_vgpr_for_fp_csr() #1 {
+define void @last_lane_vgpr_for_fp_csr() nounwind "frame-pointer"="all" {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
   call void asm sideeffect "; clobber v41", "~{v41}"()
@@ -306,7 +306,7 @@ define void @last_lane_vgpr_for_fp_csr() #1 {
     ,~{s70},~{s71},~{s72},~{s73},~{s74},~{s75},~{s76},~{s77},~{s78},~{s79}
     ,~{s80},~{s81},~{s82},~{s83},~{s84},~{s85},~{s86},~{s87},~{s88},~{s89}
     ,~{s90},~{s91},~{s92},~{s93},~{s94},~{s95},~{s96},~{s97},~{s98},~{s99}
-    ,~{s100},~{s101},~{s102}"() #1
+    ,~{s100},~{s101},~{s102}"() nounwind "frame-pointer"="all"
 
   ret void
 }
@@ -342,7 +342,7 @@ define void @last_lane_vgpr_for_fp_csr() #1 {
 ; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
-define void @no_new_vgpr_for_fp_csr() #1 {
+define void @no_new_vgpr_for_fp_csr() nounwind "frame-pointer"="all" {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
   call void asm sideeffect "; clobber v41", "~{v41}"()
@@ -353,7 +353,7 @@ define void @no_new_vgpr_for_fp_csr() #1 {
     ,~{s70},~{s71},~{s72},~{s73},~{s74},~{s75},~{s76},~{s77},~{s78},~{s79}
     ,~{s80},~{s81},~{s82},~{s83},~{s84},~{s85},~{s86},~{s87},~{s88},~{s89}
     ,~{s90},~{s91},~{s92},~{s93},~{s94},~{s95},~{s96},~{s97},~{s98},~{s99}
-    ,~{s100},~{s101},~{s102}"() #1
+    ,~{s100},~{s101},~{s102}"() nounwind "frame-pointer"="all"
 
   ret void
 }
@@ -378,7 +378,7 @@ define void @no_new_vgpr_for_fp_csr() #1 {
 ; FLATSCR-NEXT: s_addk_i32 s32, 0xa000
 ; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
 ; GCN-NEXT: s_setpc_b64
-define void @realign_stack_no_fp_elim() #1 {
+define void @realign_stack_no_fp_elim() nounwind "frame-pointer"="all" {
   %alloca = alloca i32, align 8192, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
   ret void
@@ -412,7 +412,7 @@ define void @realign_stack_no_fp_elim() #1 {
 ; GCN-NEXT: s_mov_b32 s33, vcc_lo
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64 s[30:31]
-define void @no_unused_non_csr_sgpr_for_fp() #1 {
+define void @no_unused_non_csr_sgpr_for_fp() nounwind "frame-pointer"="all" {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
 
@@ -421,7 +421,7 @@ define void @no_unused_non_csr_sgpr_for_fp() #1 {
     "~{s0},~{s1},~{s2},~{s3},~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
     ,~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19}
     ,~{s20},~{s21},~{s22},~{s23},~{s24},~{s25},~{s26},~{s27},~{s28},~{s29}
-    ,~{s30},~{s31}"() #0
+    ,~{s30},~{s31}"() nounwind
 
   ret void
 }
@@ -451,7 +451,7 @@ define void @no_unused_non_csr_sgpr_for_fp() #1 {
 ; GCN-NEXT: s_mov_b32 s33, vcc_lo
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64 s[30:31]
-define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
+define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() nounwind "frame-pointer"="all" {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
 
@@ -460,13 +460,13 @@ define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
     "~{s0},~{s1},~{s2},~{s3},~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
     ,~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19}
     ,~{s20},~{s21},~{s22},~{s23},~{s24},~{s25},~{s26},~{s27},~{s28},~{s29}
-    ,~{s30},~{s31}"() #0
+    ,~{s30},~{s31}"() nounwind
 
   call void asm sideeffect "; clobber nonpreserved initial VGPRs",
     "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
     ,~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19}
     ,~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29}
-    ,~{v30},~{v31},~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38},~{v39}"() #1
+    ,~{v30},~{v31},~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38},~{v39}"() nounwind "frame-pointer"="all"
 
   ret void
 }
@@ -500,7 +500,7 @@ define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
 ; GCN-NEXT: s_mov_b32 s33, vcc_lo
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64 s[30:31]
-define void @scratch_reg_needed_mubuf_offset(ptr addrspace(5) byval([4096 x i8]) align 4 %arg) #1 {
+define void @scratch_reg_needed_mubuf_offset(ptr addrspace(5) byval([4096 x i8]) align 4 %arg) nounwind "frame-pointer"="all" {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
 
@@ -509,14 +509,14 @@ define void @scratch_reg_needed_mubuf_offset(ptr addrspace(5) byval([4096 x i8])
     "~{s0},~{s1},~{s2},~{s3},~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
     ,~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19}
     ,~{s20},~{s21},~{s22},~{s23},~{s24},~{s25},~{s26},~{s27},~{s28},~{s29}
-    ,~{s30},~{s31}"() #0
+    ,~{s30},~{s31}"() nounwind
 
   ; Use all clobberable VGPRs, so a CSR spill is needed for the VGPR
   call void asm sideeffect "; clobber nonpreserved VGPRs",
     "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
     ,~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19}
     ,~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29}
-    ,~{v30},~{v31},~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38},~{v39}"() #1
+    ,~{v30},~{v31},~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38},~{v39}"() nounwind "frame-pointer"="all"
 
   ret void
 }
@@ -524,7 +524,7 @@ define void @scratch_reg_needed_mubuf_offset(ptr addrspace(5) byval([4096 x i8])
 ; GCN-LABEL: {{^}}local_empty_func:
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define internal void @local_empty_func() #0 {
+define internal void @local_empty_func() nounwind {
   ret void
 }
 
@@ -541,7 +541,7 @@ define internal void @local_empty_func() #0 {
 ; MUBUF:   s_addk_i32 s32, 0xfc00
 ; FLATSCR: s_add_i32 s32, s32, -16
 ; GCN: s_mov_b32 s33, [[TMP_SGPR]]
-define void @ipra_call_with_stack() #0 {
+define void @ipra_call_with_stack() nounwind {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
   call void @local_empty_func()
@@ -563,7 +563,7 @@ define void @ipra_call_with_stack() #0 {
 ; GCN:     s_setpc_b64
 ; MUBUF:   ScratchSize: 8
 ; FLATSCR: ScratchSize: 0
-define void @callee_need_to_spill_fp_to_memory() #3 {
+define void @callee_need_to_spill_fp_to_memory() nounwind "frame-pointer"="all" "amdgpu-waves-per-eu"="6,6" {
   call void asm sideeffect "; clobber nonpreserved SGPRs",
     "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
     ,~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19}
@@ -597,7 +597,7 @@ define void @callee_need_to_spill_fp_to_memory() #3 {
 ; MUBUF:   s_mov_b64 exec, [[COPY_EXEC2]]
 ; MUBUF:   s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN:     s_setpc_b64
-define void @callee_need_to_spill_fp_to_memory_full_reserved_vgpr() #3 {
+define void @callee_need_to_spill_fp_to_memory_full_reserved_vgpr() nounwind "frame-pointer"="all" "amdgpu-waves-per-eu"="6,6" {
   call void asm sideeffect "; clobber nonpreserved SGPRs and 64 CSRs",
     "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
     ,~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19}
@@ -632,7 +632,7 @@ define void @callee_need_to_spill_fp_to_memory_full_reserved_vgpr() #3 {
 ; GCN-NOT: v_readlane_b32 s33, v40
 ; FLATSCR: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN:     s_setpc_b64
-define void @callee_need_to_spill_fp_to_reg() #1 {
+define void @callee_need_to_spill_fp_to_reg() nounwind "frame-pointer"="all" {
   call void asm sideeffect "; clobber nonpreserved SGPRs and 64 CSRs",
     "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
     ,~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19}
@@ -668,7 +668,7 @@ define void @callee_need_to_spill_fp_to_reg() #1 {
 ; FLATSCR: v_mov_b32_e32 v0, 0
 ; FLATSCR: s_add_i32 [[SOFF:s[0-9]+]], s33, 0x1000
 ; FLATSCR: scratch_store_dword off, v0, [[SOFF]]
-define void @spill_fp_to_memory_scratch_reg_needed_mubuf_offset(ptr addrspace(5) byval([4096 x i8]) align 4 %arg) #3 {
+define void @spill_fp_to_memory_scratch_reg_needed_mubuf_offset(ptr addrspace(5) byval([4096 x i8]) align 4 %arg) nounwind "frame-pointer"="all" "amdgpu-waves-per-eu"="6,6" {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
 
@@ -691,8 +691,3 @@ define void @spill_fp_to_memory_scratch_reg_needed_mubuf_offset(ptr addrspace(5)
     ,~{v30},~{v31},~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38}"()
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind "frame-pointer"="all" }
-attributes #2 = { nounwind "frame-pointer"="non-leaf" }
-attributes #3 = { nounwind "frame-pointer"="all" "amdgpu-waves-per-eu"="6,6" }

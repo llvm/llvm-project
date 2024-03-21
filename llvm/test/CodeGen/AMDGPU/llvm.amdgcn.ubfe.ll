@@ -2,7 +2,7 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=SI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefix=VI %s
 
-define amdgpu_kernel void @bfe_u32_arg_arg_arg(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #0 {
+define amdgpu_kernel void @bfe_u32_arg_arg_arg(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) nounwind {
 ; SI-LABEL: bfe_u32_arg_arg_arg:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -33,7 +33,7 @@ define amdgpu_kernel void @bfe_u32_arg_arg_arg(ptr addrspace(1) %out, i32 %src0,
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_arg_arg_imm(ptr addrspace(1) %out, i32 %src0, i32 %src1) #0 {
+define amdgpu_kernel void @bfe_u32_arg_arg_imm(ptr addrspace(1) %out, i32 %src0, i32 %src1) nounwind {
 ; SI-LABEL: bfe_u32_arg_arg_imm:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -66,7 +66,7 @@ define amdgpu_kernel void @bfe_u32_arg_arg_imm(ptr addrspace(1) %out, i32 %src0,
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_arg_imm_arg(ptr addrspace(1) %out, i32 %src0, i32 %src2) #0 {
+define amdgpu_kernel void @bfe_u32_arg_imm_arg(ptr addrspace(1) %out, i32 %src0, i32 %src2) nounwind {
 ; SI-LABEL: bfe_u32_arg_imm_arg:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -99,7 +99,7 @@ define amdgpu_kernel void @bfe_u32_arg_imm_arg(ptr addrspace(1) %out, i32 %src0,
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_imm_arg_arg(ptr addrspace(1) %out, i32 %src1, i32 %src2) #0 {
+define amdgpu_kernel void @bfe_u32_imm_arg_arg(ptr addrspace(1) %out, i32 %src1, i32 %src2) nounwind {
 ; SI-LABEL: bfe_u32_imm_arg_arg:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -134,7 +134,7 @@ define amdgpu_kernel void @bfe_u32_imm_arg_arg(ptr addrspace(1) %out, i32 %src1,
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_arg_0_width_reg_offset(ptr addrspace(1) %out, i32 %src0, i32 %src1) #0 {
+define amdgpu_kernel void @bfe_u32_arg_0_width_reg_offset(ptr addrspace(1) %out, i32 %src0, i32 %src1) nounwind {
 ; SI-LABEL: bfe_u32_arg_0_width_reg_offset:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -159,7 +159,7 @@ define amdgpu_kernel void @bfe_u32_arg_0_width_reg_offset(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_arg_0_width_imm_offset(ptr addrspace(1) %out, i32 %src0, i32 %src1) #0 {
+define amdgpu_kernel void @bfe_u32_arg_0_width_imm_offset(ptr addrspace(1) %out, i32 %src0, i32 %src1) nounwind {
 ; SI-LABEL: bfe_u32_arg_0_width_imm_offset:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -184,7 +184,7 @@ define amdgpu_kernel void @bfe_u32_arg_0_width_imm_offset(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_zextload_i8(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_zextload_i8(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_zextload_i8:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -226,7 +226,7 @@ define amdgpu_kernel void @bfe_u32_zextload_i8(ptr addrspace(1) %out, ptr addrsp
 }
 
 ; FIXME: Should be using s_add_i32
-define amdgpu_kernel void @bfe_u32_zext_in_reg_i8(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_zext_in_reg_i8(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_zext_in_reg_i8:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -272,7 +272,7 @@ define amdgpu_kernel void @bfe_u32_zext_in_reg_i8(ptr addrspace(1) %out, ptr add
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_zext_in_reg_i16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_zext_in_reg_i16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_zext_in_reg_i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -318,7 +318,7 @@ define amdgpu_kernel void @bfe_u32_zext_in_reg_i16(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_zext_in_reg_i8_offset_1(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_zext_in_reg_i8_offset_1(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_zext_in_reg_i8_offset_1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -366,7 +366,7 @@ define amdgpu_kernel void @bfe_u32_zext_in_reg_i8_offset_1(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_zext_in_reg_i8_offset_3(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_zext_in_reg_i8_offset_3(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_zext_in_reg_i8_offset_3:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -414,7 +414,7 @@ define amdgpu_kernel void @bfe_u32_zext_in_reg_i8_offset_3(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_zext_in_reg_i8_offset_7(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_zext_in_reg_i8_offset_7(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_zext_in_reg_i8_offset_7:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -462,7 +462,7 @@ define amdgpu_kernel void @bfe_u32_zext_in_reg_i8_offset_7(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_zext_in_reg_i16_offset_8(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_zext_in_reg_i16_offset_8(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_zext_in_reg_i16_offset_8:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -508,7 +508,7 @@ define amdgpu_kernel void @bfe_u32_zext_in_reg_i16_offset_8(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_test_1(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_1(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -550,7 +550,7 @@ define amdgpu_kernel void @bfe_u32_test_1(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_test_2(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_2(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_2:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -577,7 +577,7 @@ define amdgpu_kernel void @bfe_u32_test_2(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_test_3(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_3(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_3:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -604,7 +604,7 @@ define amdgpu_kernel void @bfe_u32_test_3(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_test_4(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_4(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_4:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -632,7 +632,7 @@ define amdgpu_kernel void @bfe_u32_test_4(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_test_5(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_5(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_5:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -676,7 +676,7 @@ define amdgpu_kernel void @bfe_u32_test_5(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_test_6(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_6(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_6:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -721,7 +721,7 @@ define amdgpu_kernel void @bfe_u32_test_6(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_test_7(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_7(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_7:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -764,7 +764,7 @@ define amdgpu_kernel void @bfe_u32_test_7(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_test_8(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_8(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_8:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -807,7 +807,7 @@ define amdgpu_kernel void @bfe_u32_test_8(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_test_9(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_9(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_9:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -849,7 +849,7 @@ define amdgpu_kernel void @bfe_u32_test_9(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_test_10(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_10(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_10:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -891,7 +891,7 @@ define amdgpu_kernel void @bfe_u32_test_10(ptr addrspace(1) %out, ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_test_11(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_11(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_11:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -933,7 +933,7 @@ define amdgpu_kernel void @bfe_u32_test_11(ptr addrspace(1) %out, ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_test_12(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_12(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_12:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -976,7 +976,7 @@ define amdgpu_kernel void @bfe_u32_test_12(ptr addrspace(1) %out, ptr addrspace(
 }
 
 ; V_ASHRREV_U32_e32 {{v[0-9]+}}, 31, {{v[0-9]+}}
-define amdgpu_kernel void @bfe_u32_test_13(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_13(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_13:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1018,7 +1018,7 @@ define amdgpu_kernel void @bfe_u32_test_13(ptr addrspace(1) %out, ptr addrspace(
   store i32 %bfe, ptr addrspace(1) %out, align 4 ret void
 }
 
-define amdgpu_kernel void @bfe_u32_test_14(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @bfe_u32_test_14(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: bfe_u32_test_14:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1044,7 +1044,7 @@ define amdgpu_kernel void @bfe_u32_test_14(ptr addrspace(1) %out, ptr addrspace(
   store i32 %bfe, ptr addrspace(1) %out, align 4 ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_0(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_0(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1069,7 +1069,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_0(ptr addrspace(1) %out) #
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_1(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_1(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1094,7 +1094,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_1(ptr addrspace(1) %out) #
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_2(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_2(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_2:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1119,7 +1119,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_2(ptr addrspace(1) %out) #
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_3(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_3(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_3:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1144,7 +1144,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_3(ptr addrspace(1) %out) #
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_4(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_4(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_4:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1169,7 +1169,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_4(ptr addrspace(1) %out) #
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_5(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_5(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_5:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1194,7 +1194,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_5(ptr addrspace(1) %out) #
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_6(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_6(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_6:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1219,7 +1219,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_6(ptr addrspace(1) %out) #
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_7(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_7(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_7:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1244,7 +1244,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_7(ptr addrspace(1) %out) #
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_8(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_8(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_8:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1269,7 +1269,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_8(ptr addrspace(1) %out) #
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_9(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_9(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_9:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1294,7 +1294,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_9(ptr addrspace(1) %out) #
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_10(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_10(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_10:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1319,7 +1319,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_10(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_11(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_11(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_11:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1344,7 +1344,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_11(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_12(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_12(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_12:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1369,7 +1369,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_12(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_13(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_13(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_13:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1394,7 +1394,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_13(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_14(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_14(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_14:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1419,7 +1419,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_14(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_15(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_15(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_15:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1444,7 +1444,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_15(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_16(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_16(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1469,7 +1469,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_16(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_17(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_17(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_17:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1494,7 +1494,7 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_17(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @bfe_u32_constant_fold_test_18(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @bfe_u32_constant_fold_test_18(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: bfe_u32_constant_fold_test_18:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1569,7 +1569,7 @@ define amdgpu_kernel void @simplify_bfe_u32_multi_use_arg(ptr addrspace(1) %out0
 ; VI-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
                                             ptr addrspace(1) %out1,
-                                            ptr addrspace(1) %in) #0 {
+                                            ptr addrspace(1) %in) nounwind {
   %src = load i32, ptr addrspace(1) %in, align 4
   %and = and i32 %src, 63
   %bfe_u32 = call i32 @llvm.amdgcn.ubfe.i32(i32 %and, i32 2, i32 2)
@@ -1578,7 +1578,7 @@ define amdgpu_kernel void @simplify_bfe_u32_multi_use_arg(ptr addrspace(1) %out0
   ret void
 }
 
-define amdgpu_kernel void @lshr_and(ptr addrspace(1) %out, i32 %a) #0 {
+define amdgpu_kernel void @lshr_and(ptr addrspace(1) %out, i32 %a) nounwind {
 ; SI-LABEL: lshr_and:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -1608,7 +1608,7 @@ define amdgpu_kernel void @lshr_and(ptr addrspace(1) %out, i32 %a) #0 {
   ret void
 }
 
-define amdgpu_kernel void @v_lshr_and(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @v_lshr_and(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {
 ; SI-LABEL: v_lshr_and:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1642,7 +1642,7 @@ define amdgpu_kernel void @v_lshr_and(ptr addrspace(1) %out, i32 %a, i32 %b) #0 
   ret void
 }
 
-define amdgpu_kernel void @and_lshr(ptr addrspace(1) %out, i32 %a) #0 {
+define amdgpu_kernel void @and_lshr(ptr addrspace(1) %out, i32 %a) nounwind {
 ; SI-LABEL: and_lshr:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -1672,7 +1672,7 @@ define amdgpu_kernel void @and_lshr(ptr addrspace(1) %out, i32 %a) #0 {
   ret void
 }
 
-define amdgpu_kernel void @and_lshr2(ptr addrspace(1) %out, i32 %a) #0 {
+define amdgpu_kernel void @and_lshr2(ptr addrspace(1) %out, i32 %a) nounwind {
 ; SI-LABEL: and_lshr2:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -1702,7 +1702,7 @@ define amdgpu_kernel void @and_lshr2(ptr addrspace(1) %out, i32 %a) #0 {
   ret void
 }
 
-define amdgpu_kernel void @shl_lshr(ptr addrspace(1) %out, i32 %a) #0 {
+define amdgpu_kernel void @shl_lshr(ptr addrspace(1) %out, i32 %a) nounwind {
 ; SI-LABEL: shl_lshr:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -1732,7 +1732,4 @@ define amdgpu_kernel void @shl_lshr(ptr addrspace(1) %out, i32 %a) #0 {
   ret void
 }
 
-declare i32 @llvm.amdgcn.ubfe.i32(i32, i32, i32) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.ubfe.i32(i32, i32, i32) nounwind readnone

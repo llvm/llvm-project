@@ -764,9 +764,9 @@ declare float @_Z6sincosfPf(float, ptr)
 define amdgpu_kernel void @test_read_pipe(ptr addrspace(1) %p, ptr addrspace(1) %ptr) local_unnamed_addr {
 entry:
   %tmp1 = addrspacecast ptr addrspace(1) %ptr to ptr
-  %tmp2 = call i32 @__read_pipe_2(ptr addrspace(1) %p, ptr %tmp1, i32 4, i32 4) #0
+  %tmp2 = call i32 @__read_pipe_2(ptr addrspace(1) %p, ptr %tmp1, i32 4, i32 4) nounwind
   %tmp3 = call ptr addrspace(5) @__reserve_read_pipe(ptr addrspace(1) %p, i32 2, i32 4, i32 4)
-  %tmp4 = call i32 @__read_pipe_4(ptr addrspace(1) %p, ptr addrspace(5) %tmp3, i32 2, ptr %tmp1, i32 4, i32 4) #0
+  %tmp4 = call i32 @__read_pipe_4(ptr addrspace(1) %p, ptr addrspace(5) %tmp3, i32 2, ptr %tmp1, i32 4, i32 4) nounwind
   call void @__commit_read_pipe(ptr addrspace(1) %p, ptr addrspace(5) %tmp3, i32 4, i32 4)
   ret void
 }
@@ -785,10 +785,10 @@ declare void @__commit_read_pipe(ptr addrspace(1), ptr addrspace(5), i32, i32)
 define amdgpu_kernel void @test_write_pipe(ptr addrspace(1) %p, ptr addrspace(1) %ptr) local_unnamed_addr {
 entry:
   %tmp1 = addrspacecast ptr addrspace(1) %ptr to ptr
-  %tmp2 = call i32 @__write_pipe_2(ptr addrspace(1) %p, ptr %tmp1, i32 4, i32 4) #0
-  %tmp3 = call ptr addrspace(5) @__reserve_write_pipe(ptr addrspace(1) %p, i32 2, i32 4, i32 4) #0
-  %tmp4 = call i32 @__write_pipe_4(ptr addrspace(1) %p, ptr addrspace(5) %tmp3, i32 2, ptr %tmp1, i32 4, i32 4) #0
-  call void @__commit_write_pipe(ptr addrspace(1) %p, ptr addrspace(5) %tmp3, i32 4, i32 4) #0
+  %tmp2 = call i32 @__write_pipe_2(ptr addrspace(1) %p, ptr %tmp1, i32 4, i32 4) nounwind
+  %tmp3 = call ptr addrspace(5) @__reserve_write_pipe(ptr addrspace(1) %p, i32 2, i32 4, i32 4) nounwind
+  %tmp4 = call i32 @__write_pipe_4(ptr addrspace(1) %p, ptr addrspace(5) %tmp3, i32 2, ptr %tmp1, i32 4, i32 4) nounwind
+  call void @__commit_write_pipe(ptr addrspace(1) %p, ptr addrspace(5) %tmp3, i32 4, i32 4) nounwind
   ret void
 }
 
@@ -812,26 +812,26 @@ declare void @__commit_write_pipe(ptr addrspace(1), ptr addrspace(5), i32, i32) 
 ; GCN-PRELINK: call i32 @__read_pipe_2_64(ptr addrspace(1) %{{.*}}, ptr %{{.*}} #[[$NOUNWIND]]
 ; GCN-PRELINK: call i32 @__read_pipe_2_128(ptr addrspace(1) %{{.*}}, ptr %{{.*}} #[[$NOUNWIND]]
 ; GCN-PRELINK: call i32 @__read_pipe_2(ptr addrspace(1) %{{.*}}, ptr %{{.*}} i32 400, i32 4) #[[$NOUNWIND]]
-define amdgpu_kernel void @test_pipe_size(ptr addrspace(1) %p1, ptr addrspace(1) %ptr1, ptr addrspace(1) %p2, ptr addrspace(1) %ptr2, ptr addrspace(1) %p4, ptr addrspace(1) %ptr4, ptr addrspace(1) %p8, ptr addrspace(1) %ptr8, ptr addrspace(1) %p16, ptr addrspace(1) %ptr16, ptr addrspace(1) %p32, ptr addrspace(1) %ptr32, ptr addrspace(1) %p64, ptr addrspace(1) %ptr64, ptr addrspace(1) %p128, ptr addrspace(1) %ptr128, ptr addrspace(1) %pu, ptr addrspace(1) %ptru) local_unnamed_addr #0 {
+define amdgpu_kernel void @test_pipe_size(ptr addrspace(1) %p1, ptr addrspace(1) %ptr1, ptr addrspace(1) %p2, ptr addrspace(1) %ptr2, ptr addrspace(1) %p4, ptr addrspace(1) %ptr4, ptr addrspace(1) %p8, ptr addrspace(1) %ptr8, ptr addrspace(1) %p16, ptr addrspace(1) %ptr16, ptr addrspace(1) %p32, ptr addrspace(1) %ptr32, ptr addrspace(1) %p64, ptr addrspace(1) %ptr64, ptr addrspace(1) %p128, ptr addrspace(1) %ptr128, ptr addrspace(1) %pu, ptr addrspace(1) %ptru) local_unnamed_addr nounwind {
 entry:
   %tmp = addrspacecast ptr addrspace(1) %ptr1 to ptr
-  %tmp1 = call i32 @__read_pipe_2(ptr addrspace(1) %p1, ptr %tmp, i32 1, i32 1) #0
+  %tmp1 = call i32 @__read_pipe_2(ptr addrspace(1) %p1, ptr %tmp, i32 1, i32 1) nounwind
   %tmp3 = addrspacecast ptr addrspace(1) %ptr2 to ptr
-  %tmp4 = call i32 @__read_pipe_2(ptr addrspace(1) %p2, ptr %tmp3, i32 2, i32 2) #0
+  %tmp4 = call i32 @__read_pipe_2(ptr addrspace(1) %p2, ptr %tmp3, i32 2, i32 2) nounwind
   %tmp6 = addrspacecast ptr addrspace(1) %ptr4 to ptr
-  %tmp7 = call i32 @__read_pipe_2(ptr addrspace(1) %p4, ptr %tmp6, i32 4, i32 4) #0
+  %tmp7 = call i32 @__read_pipe_2(ptr addrspace(1) %p4, ptr %tmp6, i32 4, i32 4) nounwind
   %tmp9 = addrspacecast ptr addrspace(1) %ptr8 to ptr
-  %tmp10 = call i32 @__read_pipe_2(ptr addrspace(1) %p8, ptr %tmp9, i32 8, i32 8) #0
+  %tmp10 = call i32 @__read_pipe_2(ptr addrspace(1) %p8, ptr %tmp9, i32 8, i32 8) nounwind
   %tmp12 = addrspacecast ptr addrspace(1) %ptr16 to ptr
-  %tmp13 = call i32 @__read_pipe_2(ptr addrspace(1) %p16, ptr %tmp12, i32 16, i32 16) #0
+  %tmp13 = call i32 @__read_pipe_2(ptr addrspace(1) %p16, ptr %tmp12, i32 16, i32 16) nounwind
   %tmp15 = addrspacecast ptr addrspace(1) %ptr32 to ptr
-  %tmp16 = call i32 @__read_pipe_2(ptr addrspace(1) %p32, ptr %tmp15, i32 32, i32 32) #0
+  %tmp16 = call i32 @__read_pipe_2(ptr addrspace(1) %p32, ptr %tmp15, i32 32, i32 32) nounwind
   %tmp18 = addrspacecast ptr addrspace(1) %ptr64 to ptr
-  %tmp19 = call i32 @__read_pipe_2(ptr addrspace(1) %p64, ptr %tmp18, i32 64, i32 64) #0
+  %tmp19 = call i32 @__read_pipe_2(ptr addrspace(1) %p64, ptr %tmp18, i32 64, i32 64) nounwind
   %tmp21 = addrspacecast ptr addrspace(1) %ptr128 to ptr
-  %tmp22 = call i32 @__read_pipe_2(ptr addrspace(1) %p128, ptr %tmp21, i32 128, i32 128) #0
+  %tmp22 = call i32 @__read_pipe_2(ptr addrspace(1) %p128, ptr %tmp21, i32 128, i32 128) nounwind
   %tmp24 = addrspacecast ptr addrspace(1) %ptru to ptr
-  %tmp25 = call i32 @__read_pipe_2(ptr addrspace(1) %pu, ptr %tmp24, i32 400, i32 4) #0
+  %tmp25 = call i32 @__read_pipe_2(ptr addrspace(1) %pu, ptr %tmp24, i32 400, i32 4) nounwind
   ret void
 }
 
@@ -839,4 +839,3 @@ entry:
 
 ; GCN-PRELINK-DAG: attributes #[[$NOUNWIND]] = { nounwind }
 ; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nofree nounwind memory(read) }
-attributes #0 = { nounwind }

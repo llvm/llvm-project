@@ -4,7 +4,7 @@
 ; Don't crash.
 
 ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
+declare void @llvm.dbg.declare(metadata, metadata, metadata) nocallback nofree nosync nounwind readnone speculatable willreturn
 
 declare ptr @__kmpc_alloc_shared()
 
@@ -106,8 +106,6 @@ define weak_odr void @test(i32 %0) !dbg !34 {
   call void @llvm.dbg.declare(metadata ptr %3, metadata !40, metadata !DIExpression()), !dbg !43
   ret void
 }
-
-attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 
 !llvm.dbg.cu = !{!0, !25, !26}
 !llvm.module.flags = !{!27, !28, !29, !30, !31, !32, !44}

@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -amdgpu-sdwa-peephole=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; --------------------------------------------------------------------------------
 ; i32 compares
@@ -8,8 +8,8 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 ; GCN-LABEL: {{^}}commute_eq_64_i32:
 ; GCN: v_cmp_eq_u32_e32 vcc, 64, v{{[0-9]+}}
-define amdgpu_kernel void @commute_eq_64_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_eq_64_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i32, ptr addrspace(1) %gep.in
@@ -21,8 +21,8 @@ define amdgpu_kernel void @commute_eq_64_i32(ptr addrspace(1) %out, ptr addrspac
 
 ; GCN-LABEL: {{^}}commute_ne_64_i32:
 ; GCN: v_cmp_ne_u32_e32 vcc, 64, v{{[0-9]+}}
-define amdgpu_kernel void @commute_ne_64_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ne_64_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i32, ptr addrspace(1) %gep.in
@@ -36,8 +36,8 @@ define amdgpu_kernel void @commute_ne_64_i32(ptr addrspace(1) %out, ptr addrspac
 ; GCN-LABEL: {{^}}commute_ne_litk_i32:
 ; GCN: s_movk_i32 [[K:s[0-9]+]], 0x3039
 ; GCN: v_cmp_ne_u32_e32 vcc, [[K]], v{{[0-9]+}}
-define amdgpu_kernel void @commute_ne_litk_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ne_litk_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i32, ptr addrspace(1) %gep.in
@@ -49,8 +49,8 @@ define amdgpu_kernel void @commute_ne_litk_i32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ugt_64_i32:
 ; GCN: v_cmp_lt_u32_e32 vcc, 64, v{{[0-9]+}}
-define amdgpu_kernel void @commute_ugt_64_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ugt_64_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i32, ptr addrspace(1) %gep.in
@@ -62,8 +62,8 @@ define amdgpu_kernel void @commute_ugt_64_i32(ptr addrspace(1) %out, ptr addrspa
 
 ; GCN-LABEL: {{^}}commute_uge_64_i32:
 ; GCN: v_cmp_lt_u32_e32 vcc, 63, v{{[0-9]+}}
-define amdgpu_kernel void @commute_uge_64_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_uge_64_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i32, ptr addrspace(1) %gep.in
@@ -75,8 +75,8 @@ define amdgpu_kernel void @commute_uge_64_i32(ptr addrspace(1) %out, ptr addrspa
 
 ; GCN-LABEL: {{^}}commute_ult_64_i32:
 ; GCN: v_cmp_gt_u32_e32 vcc, 64, v{{[0-9]+}}
-define amdgpu_kernel void @commute_ult_64_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ult_64_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i32, ptr addrspace(1) %gep.in
@@ -88,8 +88,8 @@ define amdgpu_kernel void @commute_ult_64_i32(ptr addrspace(1) %out, ptr addrspa
 
 ; GCN-LABEL: {{^}}commute_ule_63_i32:
 ; GCN: v_cmp_gt_u32_e32 vcc, 64, v{{[0-9]+}}
-define amdgpu_kernel void @commute_ule_63_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ule_63_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i32, ptr addrspace(1) %gep.in
@@ -102,8 +102,8 @@ define amdgpu_kernel void @commute_ule_63_i32(ptr addrspace(1) %out, ptr addrspa
 ; GCN-LABEL: {{^}}commute_ule_64_i32:
 ; GCN: s_movk_i32 [[K:s[0-9]+]], 0x41{{$}}
 ; GCN: v_cmp_gt_u32_e32 vcc, [[K]], v{{[0-9]+}}
-define amdgpu_kernel void @commute_ule_64_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ule_64_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i32, ptr addrspace(1) %gep.in
@@ -115,8 +115,8 @@ define amdgpu_kernel void @commute_ule_64_i32(ptr addrspace(1) %out, ptr addrspa
 
 ; GCN-LABEL: {{^}}commute_sgt_neg1_i32:
 ; GCN: v_ashrrev_i32_e32 v2, 31, v2
-define amdgpu_kernel void @commute_sgt_neg1_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_sgt_neg1_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i32, ptr addrspace(1) %gep.in
@@ -128,8 +128,8 @@ define amdgpu_kernel void @commute_sgt_neg1_i32(ptr addrspace(1) %out, ptr addrs
 
 ; GCN-LABEL: {{^}}commute_sge_neg2_i32:
 ; GCN: v_cmp_lt_i32_e32 vcc, -3, v{{[0-9]+}}
-define amdgpu_kernel void @commute_sge_neg2_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_sge_neg2_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i32, ptr addrspace(1) %gep.in
@@ -141,8 +141,8 @@ define amdgpu_kernel void @commute_sge_neg2_i32(ptr addrspace(1) %out, ptr addrs
 
 ; GCN-LABEL: {{^}}commute_slt_neg16_i32:
 ; GCN: v_cmp_gt_i32_e32 vcc, -16, v{{[0-9]+}}
-define amdgpu_kernel void @commute_slt_neg16_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_slt_neg16_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i32, ptr addrspace(1) %gep.in
@@ -154,8 +154,8 @@ define amdgpu_kernel void @commute_slt_neg16_i32(ptr addrspace(1) %out, ptr addr
 
 ; GCN-LABEL: {{^}}commute_sle_5_i32:
 ; GCN: v_cmp_gt_i32_e32 vcc, 6, v{{[0-9]+}}
-define amdgpu_kernel void @commute_sle_5_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_sle_5_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i32, ptr addrspace(1) %gep.in
@@ -171,8 +171,8 @@ define amdgpu_kernel void @commute_sle_5_i32(ptr addrspace(1) %out, ptr addrspac
 
 ; GCN-LABEL: {{^}}commute_eq_64_i64:
 ; GCN: v_cmp_eq_u64_e32 vcc, 64, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_eq_64_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_eq_64_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i64, ptr addrspace(1) %gep.in
@@ -184,8 +184,8 @@ define amdgpu_kernel void @commute_eq_64_i64(ptr addrspace(1) %out, ptr addrspac
 
 ; GCN-LABEL: {{^}}commute_ne_64_i64:
 ; GCN: v_cmp_ne_u64_e32 vcc, 64, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_ne_64_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ne_64_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i64, ptr addrspace(1) %gep.in
@@ -197,8 +197,8 @@ define amdgpu_kernel void @commute_ne_64_i64(ptr addrspace(1) %out, ptr addrspac
 
 ; GCN-LABEL: {{^}}commute_ugt_64_i64:
 ; GCN: v_cmp_lt_u64_e32 vcc, 64, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_ugt_64_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ugt_64_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i64, ptr addrspace(1) %gep.in
@@ -210,8 +210,8 @@ define amdgpu_kernel void @commute_ugt_64_i64(ptr addrspace(1) %out, ptr addrspa
 
 ; GCN-LABEL: {{^}}commute_uge_64_i64:
 ; GCN: v_cmp_lt_u64_e32 vcc, 63, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_uge_64_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_uge_64_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i64, ptr addrspace(1) %gep.in
@@ -223,8 +223,8 @@ define amdgpu_kernel void @commute_uge_64_i64(ptr addrspace(1) %out, ptr addrspa
 
 ; GCN-LABEL: {{^}}commute_ult_64_i64:
 ; GCN: v_cmp_gt_u64_e32 vcc, 64, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_ult_64_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ult_64_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i64, ptr addrspace(1) %gep.in
@@ -236,8 +236,8 @@ define amdgpu_kernel void @commute_ult_64_i64(ptr addrspace(1) %out, ptr addrspa
 
 ; GCN-LABEL: {{^}}commute_ule_63_i64:
 ; GCN: v_cmp_gt_u64_e32 vcc, 64, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_ule_63_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ule_63_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i64, ptr addrspace(1) %gep.in
@@ -252,8 +252,8 @@ define amdgpu_kernel void @commute_ule_63_i64(ptr addrspace(1) %out, ptr addrspa
 ; GCN-LABEL: {{^}}commute_ule_64_i64:
 ; GCN: s_mov_b64 [[K:s\[[0-9:]+\]]], 0x41
 ; GCN: v_cmp_gt_u64_e32 vcc, [[K]], v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_ule_64_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ule_64_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i64, ptr addrspace(1) %gep.in
@@ -265,8 +265,8 @@ define amdgpu_kernel void @commute_ule_64_i64(ptr addrspace(1) %out, ptr addrspa
 
 ; GCN-LABEL: {{^}}commute_sgt_neg1_i64:
 ; GCN: v_cmp_lt_i64_e32 vcc, -1, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_sgt_neg1_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_sgt_neg1_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i64, ptr addrspace(1) %gep.in
@@ -278,8 +278,8 @@ define amdgpu_kernel void @commute_sgt_neg1_i64(ptr addrspace(1) %out, ptr addrs
 
 ; GCN-LABEL: {{^}}commute_sge_neg2_i64:
 ; GCN: v_cmp_lt_i64_e32 vcc, -3, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_sge_neg2_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_sge_neg2_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i64, ptr addrspace(1) %gep.in
@@ -291,8 +291,8 @@ define amdgpu_kernel void @commute_sge_neg2_i64(ptr addrspace(1) %out, ptr addrs
 
 ; GCN-LABEL: {{^}}commute_slt_neg16_i64:
 ; GCN: v_cmp_gt_i64_e32 vcc, -16, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_slt_neg16_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_slt_neg16_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i64, ptr addrspace(1) %gep.in
@@ -304,8 +304,8 @@ define amdgpu_kernel void @commute_slt_neg16_i64(ptr addrspace(1) %out, ptr addr
 
 ; GCN-LABEL: {{^}}commute_sle_5_i64:
 ; GCN: v_cmp_gt_i64_e32 vcc, 6, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_sle_5_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_sle_5_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load i64, ptr addrspace(1) %gep.in
@@ -322,8 +322,8 @@ define amdgpu_kernel void @commute_sle_5_i64(ptr addrspace(1) %out, ptr addrspac
 
 ; GCN-LABEL: {{^}}commute_oeq_2.0_f32:
 ; GCN: v_cmp_eq_f32_e32 vcc, 2.0, v{{[0-9]+}}
-define amdgpu_kernel void @commute_oeq_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_oeq_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -336,8 +336,8 @@ define amdgpu_kernel void @commute_oeq_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ogt_2.0_f32:
 ; GCN: v_cmp_lt_f32_e32 vcc, 2.0, v{{[0-9]+}}
-define amdgpu_kernel void @commute_ogt_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ogt_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -349,8 +349,8 @@ define amdgpu_kernel void @commute_ogt_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_oge_2.0_f32:
 ; GCN: v_cmp_le_f32_e32 vcc, 2.0, v{{[0-9]+}}
-define amdgpu_kernel void @commute_oge_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_oge_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -362,8 +362,8 @@ define amdgpu_kernel void @commute_oge_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_olt_2.0_f32:
 ; GCN: v_cmp_gt_f32_e32 vcc, 2.0, v{{[0-9]+}}
-define amdgpu_kernel void @commute_olt_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_olt_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -375,8 +375,8 @@ define amdgpu_kernel void @commute_olt_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ole_2.0_f32:
 ; GCN: v_cmp_ge_f32_e32 vcc, 2.0, v{{[0-9]+}}
-define amdgpu_kernel void @commute_ole_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ole_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -388,8 +388,8 @@ define amdgpu_kernel void @commute_ole_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_one_2.0_f32:
 ; GCN: v_cmp_lg_f32_e32 vcc, 2.0, v{{[0-9]+}}
-define amdgpu_kernel void @commute_one_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_one_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -401,8 +401,8 @@ define amdgpu_kernel void @commute_one_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ord_2.0_f32:
 ; GCN: v_cmp_o_f32_e32 vcc, [[REG:v[0-9]+]], [[REG]]
-define amdgpu_kernel void @commute_ord_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ord_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -414,8 +414,8 @@ define amdgpu_kernel void @commute_ord_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ueq_2.0_f32:
 ; GCN: v_cmp_nlg_f32_e32 vcc, 2.0, v{{[0-9]+}}
-define amdgpu_kernel void @commute_ueq_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ueq_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -427,8 +427,8 @@ define amdgpu_kernel void @commute_ueq_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ugt_2.0_f32:
 ; GCN: v_cmp_nge_f32_e32 vcc, 2.0, v{{[0-9]+}}
-define amdgpu_kernel void @commute_ugt_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ugt_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -440,8 +440,8 @@ define amdgpu_kernel void @commute_ugt_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_uge_2.0_f32:
 ; GCN: v_cmp_ngt_f32_e32 vcc, 2.0, v{{[0-9]+}}
-define amdgpu_kernel void @commute_uge_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_uge_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -453,8 +453,8 @@ define amdgpu_kernel void @commute_uge_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ult_2.0_f32:
 ; GCN: v_cmp_nle_f32_e32 vcc, 2.0, v{{[0-9]+}}
-define amdgpu_kernel void @commute_ult_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ult_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -466,8 +466,8 @@ define amdgpu_kernel void @commute_ult_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ule_2.0_f32:
 ; GCN: v_cmp_nlt_f32_e32 vcc, 2.0, v{{[0-9]+}}
-define amdgpu_kernel void @commute_ule_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ule_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -479,8 +479,8 @@ define amdgpu_kernel void @commute_ule_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_une_2.0_f32:
 ; GCN: v_cmp_neq_f32_e32 vcc, 2.0, v{{[0-9]+}}
-define amdgpu_kernel void @commute_une_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_une_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -492,8 +492,8 @@ define amdgpu_kernel void @commute_une_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_uno_2.0_f32:
 ; GCN: v_cmp_u_f32_e32 vcc, [[REG:v[0-9]+]], [[REG]]
-define amdgpu_kernel void @commute_uno_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_uno_2.0_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load float, ptr addrspace(1) %gep.in
@@ -510,8 +510,8 @@ define amdgpu_kernel void @commute_uno_2.0_f32(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_oeq_2.0_f64:
 ; GCN: v_cmp_eq_f64_e32 vcc, 2.0, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_oeq_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_oeq_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -524,8 +524,8 @@ define amdgpu_kernel void @commute_oeq_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ogt_2.0_f64:
 ; GCN: v_cmp_lt_f64_e32 vcc, 2.0, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_ogt_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ogt_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -537,8 +537,8 @@ define amdgpu_kernel void @commute_ogt_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_oge_2.0_f64:
 ; GCN: v_cmp_le_f64_e32 vcc, 2.0, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_oge_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_oge_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -550,8 +550,8 @@ define amdgpu_kernel void @commute_oge_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_olt_2.0_f64:
 ; GCN: v_cmp_gt_f64_e32 vcc, 2.0, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_olt_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_olt_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -563,8 +563,8 @@ define amdgpu_kernel void @commute_olt_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ole_2.0_f64:
 ; GCN: v_cmp_ge_f64_e32 vcc, 2.0, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_ole_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ole_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -576,8 +576,8 @@ define amdgpu_kernel void @commute_ole_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_one_2.0_f64:
 ; GCN: v_cmp_lg_f64_e32 vcc, 2.0, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_one_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_one_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -589,8 +589,8 @@ define amdgpu_kernel void @commute_one_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ord_2.0_f64:
 ; GCN: v_cmp_o_f64_e32 vcc, [[REG:v\[[0-9]+:[0-9]+\]]], [[REG]]
-define amdgpu_kernel void @commute_ord_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ord_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -602,8 +602,8 @@ define amdgpu_kernel void @commute_ord_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ueq_2.0_f64:
 ; GCN: v_cmp_nlg_f64_e32 vcc, 2.0, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_ueq_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ueq_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -615,8 +615,8 @@ define amdgpu_kernel void @commute_ueq_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ugt_2.0_f64:
 ; GCN: v_cmp_nge_f64_e32 vcc, 2.0, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_ugt_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ugt_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -628,8 +628,8 @@ define amdgpu_kernel void @commute_ugt_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_uge_2.0_f64:
 ; GCN: v_cmp_ngt_f64_e32 vcc, 2.0, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_uge_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_uge_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -641,8 +641,8 @@ define amdgpu_kernel void @commute_uge_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ult_2.0_f64:
 ; GCN: v_cmp_nle_f64_e32 vcc, 2.0, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_ult_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ult_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -654,8 +654,8 @@ define amdgpu_kernel void @commute_ult_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_ule_2.0_f64:
 ; GCN: v_cmp_nlt_f64_e32 vcc, 2.0, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_ule_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_ule_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -667,8 +667,8 @@ define amdgpu_kernel void @commute_ule_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_une_2.0_f64:
 ; GCN: v_cmp_neq_f64_e32 vcc, 2.0, v{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @commute_une_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_une_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -680,8 +680,8 @@ define amdgpu_kernel void @commute_une_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN-LABEL: {{^}}commute_uno_2.0_f64:
 ; GCN: v_cmp_u_f64_e32 vcc, [[REG:v\[[0-9]+:[0-9]+\]]], [[REG]]
-define amdgpu_kernel void @commute_uno_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+define amdgpu_kernel void @commute_uno_2.0_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   %val = load double, ptr addrspace(1) %gep.in
@@ -701,7 +701,7 @@ define amdgpu_kernel void @commute_uno_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 
 ; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
 ; GCN: v_cmp_eq_u32_e32 vcc, v{{[0-9]+}}, [[FI]]
-define amdgpu_kernel void @commute_frameindex(ptr addrspace(1) nocapture %out) #0 {
+define amdgpu_kernel void @commute_frameindex(ptr addrspace(1) nocapture %out) nounwind readnone {
 entry:
   %stack0 = alloca i32, addrspace(5)
   %ptr0 = load volatile ptr addrspace(5), ptr addrspace(1) undef
@@ -710,6 +710,3 @@ entry:
   store volatile i32 %ext, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }

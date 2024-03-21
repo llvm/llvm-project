@@ -2,8 +2,8 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=CI -check-prefix=CI-NOHSA %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI --check-prefix=GCN-HSA %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.workitem.id.y() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
 
 ; In this test both the pointer and the offset operands to the
 ; BUFFER_LOAD instructions end up being stored in vgprs.  This
@@ -24,7 +24,7 @@ declare i32 @llvm.amdgcn.workitem.id.y() #0
 ; GCN-HSA: flat_load_ubyte v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}
 ; GCN-HSA: flat_load_ubyte v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}
 
-define amdgpu_kernel void @mubuf(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
+define amdgpu_kernel void @mubuf(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = call i32 @llvm.amdgcn.workitem.id.y()
@@ -64,7 +64,7 @@ done:                                             ; preds = %loop
 ; GCN: v_mov_b32_e32 [[V_OUT:v[0-9]+]], [[OUT]]
 ; GCN-NOHSA: buffer_store_dword [[V_OUT]]
 ; GCN-HSA: flat_store_dword {{.*}}, [[V_OUT]]
-define amdgpu_kernel void @smrd_valu(ptr addrspace(1) %in, i32 %a, i32 %b, ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @smrd_valu(ptr addrspace(1) %in, i32 %a, i32 %b, ptr addrspace(1) %out) nounwind {
 entry:
   %tmp = icmp ne i32 %a, 0
   br i1 %tmp, label %if, label %else
@@ -92,7 +92,7 @@ endif:                                            ; preds = %else, %if
 ; GCN-NOHSA-NOT: v_add
 ; GCN-NOHSA: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:16{{$}}
 ; GCN-HSA: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
-define amdgpu_kernel void @smrd_valu2(ptr addrspace(1) %out, ptr addrspace(4) %in) #1 {
+define amdgpu_kernel void @smrd_valu2(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp, 4
@@ -112,7 +112,7 @@ entry:
 ; GCN-NOHSA: buffer_store_dword
 ; GCN-HSA: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
 ; GCN-HSA: flat_store_dword v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}
-define amdgpu_kernel void @smrd_valu_ci_offset(ptr addrspace(1) %out, ptr addrspace(4) %in, i32 %c) #1 {
+define amdgpu_kernel void @smrd_valu_ci_offset(ptr addrspace(1) %out, ptr addrspace(4) %in, i32 %c) nounwind {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = getelementptr i32, ptr addrspace(4) %in, i32 %tmp
@@ -132,7 +132,7 @@ entry:
 ; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GCN-NOHSA: buffer_store_dwordx2
 ; GCN-HSA: flat_load_dwordx2 v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}]
-define amdgpu_kernel void @smrd_valu_ci_offset_x2(ptr addrspace(1) %out, ptr addrspace(4) %in, i64 %c) #1 {
+define amdgpu_kernel void @smrd_valu_ci_offset_x2(ptr addrspace(1) %out, ptr addrspace(4) %in, i64 %c) nounwind {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = getelementptr i64, ptr addrspace(4) %in, i32 %tmp
@@ -154,7 +154,7 @@ entry:
 ; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GCN-NOHSA: buffer_store_dwordx4
 ; GCN-HSA: flat_load_dwordx4 v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}]
-define amdgpu_kernel void @smrd_valu_ci_offset_x4(ptr addrspace(1) %out, ptr addrspace(4) %in, <4 x i32> %c) #1 {
+define amdgpu_kernel void @smrd_valu_ci_offset_x4(ptr addrspace(1) %out, ptr addrspace(4) %in, <4 x i32> %c) nounwind {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = getelementptr <4 x i32>, ptr addrspace(4) %in, i32 %tmp
@@ -188,7 +188,7 @@ entry:
 ; GCN-NOHSA: buffer_store_dwordx4
 ; GCN-HSA: flat_load_dwordx4
 ; GCN-HSA: flat_load_dwordx4
-define amdgpu_kernel void @smrd_valu_ci_offset_x8(ptr addrspace(1) %out, ptr addrspace(4) %in, <8 x i32> %c) #1 {
+define amdgpu_kernel void @smrd_valu_ci_offset_x8(ptr addrspace(1) %out, ptr addrspace(4) %in, <8 x i32> %c) nounwind {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = getelementptr <8 x i32>, ptr addrspace(4) %in, i32 %tmp
@@ -234,7 +234,7 @@ entry:
 ; GCN-HSA: flat_load_dwordx4
 
 ; GCN: s_endpgm
-define amdgpu_kernel void @smrd_valu_ci_offset_x16(ptr addrspace(1) %out, ptr addrspace(4) %in, <16 x i32> %c) #1 {
+define amdgpu_kernel void @smrd_valu_ci_offset_x16(ptr addrspace(1) %out, ptr addrspace(4) %in, <16 x i32> %c) nounwind {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = getelementptr <16 x i32>, ptr addrspace(4) %in, i32 %tmp
@@ -251,7 +251,7 @@ entry:
 ; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, s{{[0-9]+}}, [[MOVED]]
 ; GCN-NOHSA: buffer_store_dword [[ADD]]
 ; GCN-HSA: flat_store_dword {{.*}}, [[ADD]]
-define amdgpu_kernel void @smrd_valu2_salu_user(ptr addrspace(1) %out, ptr addrspace(4) %in, i32 %a) #1 {
+define amdgpu_kernel void @smrd_valu2_salu_user(ptr addrspace(1) %out, ptr addrspace(4) %in, i32 %a) nounwind {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp, 4
@@ -265,7 +265,7 @@ entry:
 ; GCN-LABEL: {{^}}smrd_valu2_max_smrd_offset:
 ; GCN-NOHSA: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:1020{{$}}
 ; GCN-HSA: flat_load_dword v{{[0-9]}}, v[{{[0-9]+:[0-9]+}}]
-define amdgpu_kernel void @smrd_valu2_max_smrd_offset(ptr addrspace(1) %out, ptr addrspace(4) %in) #1 {
+define amdgpu_kernel void @smrd_valu2_max_smrd_offset(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp, 4
@@ -279,7 +279,7 @@ entry:
 ; GCN-NOHSA-NOT: v_add
 ; GCN-NOHSA: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:1024{{$}}
 ; GCN-HSA: flat_load_dword v{{[0-9]}}, v[{{[0-9]+:[0-9]+}}]
-define amdgpu_kernel void @smrd_valu2_mubuf_offset(ptr addrspace(1) %out, ptr addrspace(4) %in) #1 {
+define amdgpu_kernel void @smrd_valu2_mubuf_offset(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp, 4
@@ -294,7 +294,7 @@ entry:
 ; GCN-NOHSA: buffer_load_dwordx4
 ; GCN-HSA: flat_load_dwordx4
 ; GCN-HSA: flat_load_dwordx4
-define amdgpu_kernel void @s_load_imm_v8i32(ptr addrspace(1) %out, ptr addrspace(4) nocapture readonly %in) #1 {
+define amdgpu_kernel void @s_load_imm_v8i32(ptr addrspace(1) %out, ptr addrspace(4) nocapture readonly %in) nounwind {
 entry:
   %tmp0 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = getelementptr inbounds i32, ptr addrspace(4) %in, i32 %tmp0
@@ -316,7 +316,7 @@ entry:
 ; GCN-NOHSA: buffer_store_dword
 ; GCN-HSA: flat_load_dwordx4
 ; GCN-HSA: flat_load_dwordx4
-define amdgpu_kernel void @s_load_imm_v8i32_salu_user(ptr addrspace(1) %out, ptr addrspace(4) nocapture readonly %in) #1 {
+define amdgpu_kernel void @s_load_imm_v8i32_salu_user(ptr addrspace(1) %out, ptr addrspace(4) nocapture readonly %in) nounwind {
 entry:
   %tmp0 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = getelementptr inbounds i32, ptr addrspace(4) %in, i32 %tmp0
@@ -352,7 +352,7 @@ entry:
 ; GCN-HSA: flat_load_dwordx4
 ; GCN-HSA: flat_load_dwordx4
 ; GCN-HSA: flat_load_dwordx4
-define amdgpu_kernel void @s_load_imm_v16i32(ptr addrspace(1) %out, ptr addrspace(4) nocapture readonly %in) #1 {
+define amdgpu_kernel void @s_load_imm_v16i32(ptr addrspace(1) %out, ptr addrspace(4) nocapture readonly %in) nounwind {
 entry:
   %tmp0 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = getelementptr inbounds i32, ptr addrspace(4) %in, i32 %tmp0
@@ -386,7 +386,7 @@ entry:
 ; GCN-HSA: flat_load_dwordx4
 ; GCN-HSA: flat_load_dwordx4
 ; GCN-HSA: flat_load_dwordx4
-define amdgpu_kernel void @s_load_imm_v16i32_salu_user(ptr addrspace(1) %out, ptr addrspace(4) nocapture readonly %in) #1 {
+define amdgpu_kernel void @s_load_imm_v16i32_salu_user(ptr addrspace(1) %out, ptr addrspace(4) nocapture readonly %in) nounwind {
 entry:
   %tmp0 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = getelementptr inbounds i32, ptr addrspace(4) %in, i32 %tmp0
@@ -501,6 +501,3 @@ loop:
 exit:
   ret void
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }

@@ -14,7 +14,7 @@
 ; GCN: s_cselect_b32 [[RESULT:s[0-9]+]]
 ; GCN: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[RESULT]]
 ; GCN: buffer_store_dword [[VRESULT]]
-define amdgpu_kernel void @opt_select_i32_and_cmp_i32(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @opt_select_i32_and_cmp_i32(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i32 %x, i32 %y) nounwind {
   %icmp0 = icmp ne i32 %a, %b
   %icmp1 = icmp ne i32 %a, %c
   %and = and i1 %icmp0, %icmp1
@@ -31,7 +31,7 @@ define amdgpu_kernel void @opt_select_i32_and_cmp_i32(ptr addrspace(1) %out, i32
 ; GCN: s_cselect_b32 [[RESULT:s[0-9]+]]
 ; GCN: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[RESULT]]
 ; GCN: buffer_store_dword [[VRESULT]]
-define amdgpu_kernel void @opt_select_i32_and_cmp_f32(ptr addrspace(1) %out, float %a, float %b, float %c, i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @opt_select_i32_and_cmp_f32(ptr addrspace(1) %out, float %a, float %b, float %c, i32 %x, i32 %y) nounwind {
   %fcmp0 = fcmp one float %a, %b
   %fcmp1 = fcmp one float %a, %c
   %and = and i1 %fcmp0, %fcmp1
@@ -52,7 +52,7 @@ define amdgpu_kernel void @opt_select_i32_and_cmp_f32(ptr addrspace(1) %out, flo
 ; GCN-DAG: v_mov_b32_e32 v[[VRESULT1:[0-9]+]], [[RESULT0]]
 ; GCN-DAG: v_mov_b32_e32 v[[VRESULT0:[0-9]+]], [[RESULT1]]
 ; GCN: buffer_store_dwordx2 v[[[VRESULT0]]:[[VRESULT1]]]
-define amdgpu_kernel void @opt_select_i64_and_cmp_i32(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i64 %x, i64 %y) #0 {
+define amdgpu_kernel void @opt_select_i64_and_cmp_i32(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i64 %x, i64 %y) nounwind {
   %icmp0 = icmp ne i32 %a, %b
   %icmp1 = icmp ne i32 %a, %c
   %and = and i1 %icmp0, %icmp1
@@ -71,7 +71,7 @@ define amdgpu_kernel void @opt_select_i64_and_cmp_i32(ptr addrspace(1) %out, i32
 ; GCN-DAG: v_mov_b32_e32 v[[VRESULT1:[0-9]+]], [[RESULT0]]
 ; GCN-DAG: v_mov_b32_e32 v[[VRESULT0:[0-9]+]], [[RESULT1]]
 ; GCN: buffer_store_dwordx2 v[[[VRESULT0]]:[[VRESULT1]]]
-define amdgpu_kernel void @opt_select_i64_and_cmp_f32(ptr addrspace(1) %out, float %a, float %b, float %c, i64 %x, i64 %y) #0 {
+define amdgpu_kernel void @opt_select_i64_and_cmp_f32(ptr addrspace(1) %out, float %a, float %b, float %c, i64 %x, i64 %y) nounwind {
   %fcmp0 = fcmp one float %a, %b
   %fcmp1 = fcmp one float %a, %c
   %and = and i1 %fcmp0, %fcmp1
@@ -91,7 +91,7 @@ define amdgpu_kernel void @opt_select_i64_and_cmp_f32(ptr addrspace(1) %out, flo
 ; GCN-DAG: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[RESULT]]
 ; GCN: buffer_store_dword [[VRESULT]]
 ; GCN: s_endpgm
-define amdgpu_kernel void @opt_select_i32_or_cmp_i32(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @opt_select_i32_or_cmp_i32(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i32 %x, i32 %y) nounwind {
   %icmp0 = icmp ne i32 %a, %b
   %icmp1 = icmp ne i32 %a, %c
   %or = or i1 %icmp0, %icmp1
@@ -108,7 +108,7 @@ define amdgpu_kernel void @opt_select_i32_or_cmp_i32(ptr addrspace(1) %out, i32 
 ; GCN-DAG: s_cselect_b32 [[RESULT:s[0-9]+]]
 ; GCN-DAG: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[RESULT]]
 ; GCN: buffer_store_dword [[VRESULT]]
-define amdgpu_kernel void @opt_select_i32_or_cmp_f32(ptr addrspace(1) %out, float %a, float %b, float %c, i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @opt_select_i32_or_cmp_f32(ptr addrspace(1) %out, float %a, float %b, float %c, i32 %x, i32 %y) nounwind {
   %fcmp0 = fcmp one float %a, %b
   %fcmp1 = fcmp one float %a, %c
   %or = or i1 %fcmp0, %fcmp1
@@ -129,7 +129,7 @@ define amdgpu_kernel void @opt_select_i32_or_cmp_f32(ptr addrspace(1) %out, floa
 ; GCN-DAG: v_mov_b32_e32 v[[VRESULT1:[0-9]+]], [[RESULT0]]
 ; GCN-DAG: v_mov_b32_e32 v[[VRESULT0:[0-9]+]], [[RESULT1]]
 ; GCN: buffer_store_dwordx2 v[[[VRESULT0]]:[[VRESULT1]]]
-define amdgpu_kernel void @opt_select_i64_or_cmp_i32(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i64 %x, i64 %y) #0 {
+define amdgpu_kernel void @opt_select_i64_or_cmp_i32(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i64 %x, i64 %y) nounwind {
   %icmp0 = icmp ne i32 %a, %b
   %icmp1 = icmp ne i32 %a, %c
   %or = or i1 %icmp0, %icmp1
@@ -148,7 +148,7 @@ define amdgpu_kernel void @opt_select_i64_or_cmp_i32(ptr addrspace(1) %out, i32 
 ; GCN-DAG: v_mov_b32_e32 v[[VRESULT1:[0-9]+]], [[RESULT0]]
 ; GCN-DAG: v_mov_b32_e32 v[[VRESULT0:[0-9]+]], [[RESULT1]]
 ; GCN: buffer_store_dwordx2 v[[[VRESULT0]]:[[VRESULT1]]]
-define amdgpu_kernel void @opt_select_i64_or_cmp_f32(ptr addrspace(1) %out, float %a, float %b, float %c, i64 %x, i64 %y) #0 {
+define amdgpu_kernel void @opt_select_i64_or_cmp_f32(ptr addrspace(1) %out, float %a, float %b, float %c, i64 %x, i64 %y) nounwind {
   %fcmp0 = fcmp one float %a, %b
   %fcmp1 = fcmp one float %a, %c
   %or = or i1 %fcmp0, %fcmp1
@@ -160,7 +160,7 @@ define amdgpu_kernel void @opt_select_i64_or_cmp_f32(ptr addrspace(1) %out, floa
 ; GCN-LABEL: {{^}}regression:
 ; GCN: v_cmp_neq_f32_e64 s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}, 1.0
 
-define amdgpu_kernel void @regression(ptr addrspace(1) %out, float %c0, float %c1) #0 {
+define amdgpu_kernel void @regression(ptr addrspace(1) %out, float %c0, float %c1) nounwind {
 entry:
   %cmp0 = fcmp oeq float %c0, 1.0
   br i1 %cmp0, label %if0, label %endif
@@ -179,5 +179,3 @@ endif:
   store float %tmp2, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }

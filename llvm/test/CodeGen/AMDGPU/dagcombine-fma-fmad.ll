@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11 %s
 
-define amdgpu_ps float @_amdgpu_ps_main() #0 {
+define amdgpu_ps float @_amdgpu_ps_main() "denormal-fp-math-f32"="preserve-sign" {
 ; GFX10-LABEL: _amdgpu_ps_main:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    image_sample v[0:1], v[0:1], s[0:7], s[0:3] dmask:0x3 dim:SQ_RSRC_IMG_2D
@@ -236,7 +236,7 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
   ret float %.i2551
 }
 
-define float @fmac_sequence_simple(float %a, float %b, float %c, float %d, float %e) #0 {
+define float @fmac_sequence_simple(float %a, float %b, float %c, float %d, float %e) "denormal-fp-math-f32"="preserve-sign" {
 ; GFX10-LABEL: fmac_sequence_simple:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -260,7 +260,7 @@ define float @fmac_sequence_simple(float %a, float %b, float %c, float %d, float
   ret float %t5
 }
 
-define float @fmac_sequence_innermost_fmul(float %a, float %b, float %c, float %d, float %e, float %f, float %g) #0 {
+define float @fmac_sequence_innermost_fmul(float %a, float %b, float %c, float %d, float %e, float %f, float %g) "denormal-fp-math-f32"="preserve-sign" {
 ; GFX10-LABEL: fmac_sequence_innermost_fmul:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -289,7 +289,7 @@ define float @fmac_sequence_innermost_fmul(float %a, float %b, float %c, float %
   ret float %t5
 }
 
-define float @fmac_sequence_innermost_fmul_swapped_operands(float %a, float %b, float %c, float %d, float %e, float %f, float %g) #0 {
+define float @fmac_sequence_innermost_fmul_swapped_operands(float %a, float %b, float %c, float %d, float %e, float %f, float %g) "denormal-fp-math-f32"="preserve-sign" {
 ; GFX10-LABEL: fmac_sequence_innermost_fmul_swapped_operands:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -318,7 +318,7 @@ define float @fmac_sequence_innermost_fmul_swapped_operands(float %a, float %b, 
   ret float %t5
 }
 
-define amdgpu_ps float @fmac_sequence_innermost_fmul_sgpr(float inreg %a, float inreg %b, float inreg %c, float inreg %d, float inreg %e, float inreg %f, float %g) #0 {
+define amdgpu_ps float @fmac_sequence_innermost_fmul_sgpr(float inreg %a, float inreg %b, float inreg %c, float inreg %d, float inreg %e, float inreg %f, float %g) "denormal-fp-math-f32"="preserve-sign" {
 ; GFX10-LABEL: fmac_sequence_innermost_fmul_sgpr:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mac_f32_e64 v0, s2, s3
@@ -342,7 +342,7 @@ define amdgpu_ps float @fmac_sequence_innermost_fmul_sgpr(float inreg %a, float 
   ret float %t5
 }
 
-define amdgpu_ps float @fmac_sequence_innermost_fmul_multiple_use(float inreg %a, float inreg %b, float inreg %c, float inreg %d, float inreg %e, float inreg %f, float %g) #0 {
+define amdgpu_ps float @fmac_sequence_innermost_fmul_multiple_use(float inreg %a, float inreg %b, float inreg %c, float inreg %d, float inreg %e, float inreg %f, float %g) "denormal-fp-math-f32"="preserve-sign" {
 ; GFX10-LABEL: fmac_sequence_innermost_fmul_multiple_use:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mul_f32_e64 v1, s2, s3
@@ -376,7 +376,7 @@ define amdgpu_ps float @fmac_sequence_innermost_fmul_multiple_use(float inreg %a
 ; "fmul %m, 2.0" could select to an FMA instruction, but it is no better than
 ; selecting it as a multiply. In some cases the multiply is better because
 ; SIFoldOperands can fold it into a previous instruction as an output modifier.
-define amdgpu_ps float @fma_vs_output_modifier(float %x, i32 %n) #0 {
+define amdgpu_ps float @fma_vs_output_modifier(float %x, i32 %n) "denormal-fp-math-f32"="preserve-sign" {
 ; GFX10-LABEL: fma_vs_output_modifier:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_cvt_f32_i32_e64 v1, v1 mul:2
@@ -398,7 +398,7 @@ define amdgpu_ps float @fma_vs_output_modifier(float %x, i32 %n) #0 {
   ret float %r
 }
 
-define amdgpu_ps float @fma_vs_output_modifier_2(float %x) #0 {
+define amdgpu_ps float @fma_vs_output_modifier_2(float %x) "denormal-fp-math-f32"="preserve-sign" {
 ; GCN-LABEL: fma_vs_output_modifier_2:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mul_f32_e64 v0, v0, v0 mul:2
@@ -409,30 +409,25 @@ define amdgpu_ps float @fma_vs_output_modifier_2(float %x) #0 {
 }
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
-declare float @llvm.maxnum.f32(float, float) #1
+declare float @llvm.maxnum.f32(float, float) nofree nosync nounwind readnone speculatable willreturn
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare float @llvm.amdgcn.fmed3.f32(float, float, float) #2
+declare float @llvm.amdgcn.fmed3.f32(float, float, float) nounwind readnone speculatable willreturn
 
 ; Function Attrs: nounwind readonly willreturn
-declare <2 x float> @llvm.amdgcn.image.sample.2d.v2f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #3
+declare <2 x float> @llvm.amdgcn.image.sample.2d.v2f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly willreturn
 
 ; Function Attrs: nounwind readonly willreturn
-declare float @llvm.amdgcn.image.sample.2d.f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #3
+declare float @llvm.amdgcn.image.sample.2d.f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly willreturn
 
 ; Function Attrs: nounwind readonly willreturn
-declare <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #3
+declare <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly willreturn
 
 ; Function Attrs: nounwind readonly willreturn
-declare <3 x float> @llvm.amdgcn.image.load.mip.2d.v3f32.i32(i32 immarg, i32, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #3
+declare <3 x float> @llvm.amdgcn.image.load.mip.2d.v3f32.i32(i32 immarg, i32, i32, i32, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly willreturn
 
 ; Function Attrs: nounwind readnone willreturn
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg) #3
+declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg) nounwind readonly willreturn
 
 ; Function Attrs: nounwind readnone willreturn
-declare <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32>, i32, i32 immarg) #3
-
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign" }
-attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
-attributes #2 = { nounwind readnone speculatable willreturn }
-attributes #3 = { nounwind readonly willreturn }
+declare <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32>, i32, i32 immarg) nounwind readonly willreturn

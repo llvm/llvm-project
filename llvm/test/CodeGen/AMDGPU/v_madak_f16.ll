@@ -80,7 +80,7 @@ define amdgpu_kernel void @madak_f16(
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -208,7 +208,7 @@ define amdgpu_kernel void @madak_f16_use_2(
     ptr addrspace(1) %r1,
     ptr addrspace(1) %a,
     ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
+    ptr addrspace(1) %c) "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load volatile half, ptr addrspace(1) %a
   %b.val = load volatile half, ptr addrspace(1) %b
@@ -223,5 +223,3 @@ entry:
   store half %r1.val, ptr addrspace(1) %r1
   ret void
 }
-
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }

@@ -3,7 +3,7 @@
 
 ; FIXME: Also test with a pre-gfx8 target.
 
-define i1 @i1_func_void() #0 {
+define i1 @i1_func_void() nounwind {
   ; CHECK-LABEL: name: i1_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -15,7 +15,7 @@ define i1 @i1_func_void() #0 {
   ret i1 %val
 }
 
-define zeroext i1 @i1_zeroext_func_void() #0 {
+define zeroext i1 @i1_zeroext_func_void() nounwind {
   ; CHECK-LABEL: name: i1_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -27,7 +27,7 @@ define zeroext i1 @i1_zeroext_func_void() #0 {
   ret i1 %val
 }
 
-define signext i1 @i1_signext_func_void() #0 {
+define signext i1 @i1_signext_func_void() nounwind {
   ; CHECK-LABEL: name: i1_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -39,7 +39,7 @@ define signext i1 @i1_signext_func_void() #0 {
   ret i1 %val
 }
 
-define i7 @i7_func_void() #0 {
+define i7 @i7_func_void() nounwind {
   ; CHECK-LABEL: name: i7_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -51,7 +51,7 @@ define i7 @i7_func_void() #0 {
   ret i7 %val
 }
 
-define zeroext i7 @i7_zeroext_func_void() #0 {
+define zeroext i7 @i7_zeroext_func_void() nounwind {
   ; CHECK-LABEL: name: i7_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -63,7 +63,7 @@ define zeroext i7 @i7_zeroext_func_void() #0 {
   ret i7 %val
 }
 
-define signext i7 @i7_signext_func_void() #0 {
+define signext i7 @i7_signext_func_void() nounwind {
   ; CHECK-LABEL: name: i7_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -75,7 +75,7 @@ define signext i7 @i7_signext_func_void() #0 {
   ret i7 %val
 }
 
-define i8 @i8_func_void() #0 {
+define i8 @i8_func_void() nounwind {
   ; CHECK-LABEL: name: i8_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -87,7 +87,7 @@ define i8 @i8_func_void() #0 {
   ret i8 %val
 }
 
-define zeroext i8 @i8_zeroext_func_void() #0 {
+define zeroext i8 @i8_zeroext_func_void() nounwind {
   ; CHECK-LABEL: name: i8_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -99,7 +99,7 @@ define zeroext i8 @i8_zeroext_func_void() #0 {
   ret i8 %val
 }
 
-define signext i8 @i8_signext_func_void() #0 {
+define signext i8 @i8_signext_func_void() nounwind {
   ; CHECK-LABEL: name: i8_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -111,7 +111,7 @@ define signext i8 @i8_signext_func_void() #0 {
   ret i8 %val
 }
 
-define i16 @i16_func_void() #0 {
+define i16 @i16_func_void() nounwind {
   ; CHECK-LABEL: name: i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -123,7 +123,7 @@ define i16 @i16_func_void() #0 {
   ret i16 %val
 }
 
-define zeroext i16 @i16_zeroext_func_void() #0 {
+define zeroext i16 @i16_zeroext_func_void() nounwind {
   ; CHECK-LABEL: name: i16_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -135,7 +135,7 @@ define zeroext i16 @i16_zeroext_func_void() #0 {
   ret i16 %val
 }
 
-define signext i16 @i16_signext_func_void() #0 {
+define signext i16 @i16_signext_func_void() nounwind {
   ; CHECK-LABEL: name: i16_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -147,7 +147,7 @@ define signext i16 @i16_signext_func_void() #0 {
   ret i16 %val
 }
 
-define half @f16_func_void() #0 {
+define half @f16_func_void() nounwind {
   ; CHECK-LABEL: name: f16_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -159,7 +159,7 @@ define half @f16_func_void() #0 {
   ret half %val
 }
 
-define i24 @i24_func_void() #0 {
+define i24 @i24_func_void() nounwind {
   ; CHECK-LABEL: name: i24_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -171,7 +171,7 @@ define i24 @i24_func_void() #0 {
   ret i24 %val
 }
 
-define zeroext i24 @i24_zeroext_func_void() #0 {
+define zeroext i24 @i24_zeroext_func_void() nounwind {
   ; CHECK-LABEL: name: i24_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -183,7 +183,7 @@ define zeroext i24 @i24_zeroext_func_void() #0 {
   ret i24 %val
 }
 
-define signext i24 @i24_signext_func_void() #0 {
+define signext i24 @i24_signext_func_void() nounwind {
   ; CHECK-LABEL: name: i24_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -195,7 +195,7 @@ define signext i24 @i24_signext_func_void() #0 {
   ret i24 %val
 }
 
-define <2 x i24> @v2i24_func_void() #0 {
+define <2 x i24> @v2i24_func_void() nounwind {
   ; CHECK-LABEL: name: v2i24_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -210,7 +210,7 @@ define <2 x i24> @v2i24_func_void() #0 {
   ret <2 x i24> %val
 }
 
-define <3 x i24> @v3i24_func_void() #0 {
+define <3 x i24> @v3i24_func_void() nounwind {
   ; CHECK-LABEL: name: v3i24_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -227,7 +227,7 @@ define <3 x i24> @v3i24_func_void() #0 {
   ret <3 x i24> %val
 }
 
-define i32 @i32_func_void() #0 {
+define i32 @i32_func_void() nounwind {
   ; CHECK-LABEL: name: i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -238,7 +238,7 @@ define i32 @i32_func_void() #0 {
   ret i32 %val
 }
 
-define i48 @i48_func_void() #0 {
+define i48 @i48_func_void() nounwind {
   ; CHECK-LABEL: name: i48_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -252,7 +252,7 @@ define i48 @i48_func_void() #0 {
   ret i48 %val
 }
 
-define signext i48 @i48_signext_func_void() #0 {
+define signext i48 @i48_signext_func_void() nounwind {
   ; CHECK-LABEL: name: i48_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -266,7 +266,7 @@ define signext i48 @i48_signext_func_void() #0 {
   ret i48 %val
 }
 
-define zeroext i48 @i48_zeroext_func_void() #0 {
+define zeroext i48 @i48_zeroext_func_void() nounwind {
   ; CHECK-LABEL: name: i48_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -280,7 +280,7 @@ define zeroext i48 @i48_zeroext_func_void() #0 {
   ret i48 %val
 }
 
-define i64 @i64_func_void() #0 {
+define i64 @i64_func_void() nounwind {
   ; CHECK-LABEL: name: i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -293,7 +293,7 @@ define i64 @i64_func_void() #0 {
   ret i64 %val
 }
 
-define i65 @i65_func_void() #0 {
+define i65 @i65_func_void() nounwind {
   ; CHECK-LABEL: name: i65_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -308,7 +308,7 @@ define i65 @i65_func_void() #0 {
   ret i65 %val
 }
 
-define signext i65 @i65_signext_func_void() #0 {
+define signext i65 @i65_signext_func_void() nounwind {
   ; CHECK-LABEL: name: i65_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -323,7 +323,7 @@ define signext i65 @i65_signext_func_void() #0 {
   ret i65 %val
 }
 
-define zeroext i65 @i65_zeroext_func_void() #0 {
+define zeroext i65 @i65_zeroext_func_void() nounwind {
   ; CHECK-LABEL: name: i65_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -338,7 +338,7 @@ define zeroext i65 @i65_zeroext_func_void() #0 {
   ret i65 %val
 }
 
-define float @f32_func_void() #0 {
+define float @f32_func_void() nounwind {
   ; CHECK-LABEL: name: f32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -349,7 +349,7 @@ define float @f32_func_void() #0 {
   ret float %val
 }
 
-define double @f64_func_void() #0 {
+define double @f64_func_void() nounwind {
   ; CHECK-LABEL: name: f64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -362,7 +362,7 @@ define double @f64_func_void() #0 {
   ret double %val
 }
 
-define <2 x double> @v2f64_func_void() #0 {
+define <2 x double> @v2f64_func_void() nounwind {
   ; CHECK-LABEL: name: v2f64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -377,7 +377,7 @@ define <2 x double> @v2f64_func_void() #0 {
   ret <2 x double> %val
 }
 
-define <2 x i32> @v2i32_func_void() #0 {
+define <2 x i32> @v2i32_func_void() nounwind {
   ; CHECK-LABEL: name: v2i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -390,7 +390,7 @@ define <2 x i32> @v2i32_func_void() #0 {
   ret <2 x i32> %val
 }
 
-define <3 x i32> @v3i32_func_void() #0 {
+define <3 x i32> @v3i32_func_void() nounwind {
   ; CHECK-LABEL: name: v3i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -404,7 +404,7 @@ define <3 x i32> @v3i32_func_void() #0 {
   ret <3 x i32> %val
 }
 
-define <4 x i32> @v4i32_func_void() #0 {
+define <4 x i32> @v4i32_func_void() nounwind {
   ; CHECK-LABEL: name: v4i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -419,7 +419,7 @@ define <4 x i32> @v4i32_func_void() #0 {
   ret <4 x i32> %val
 }
 
-define <5 x i32> @v5i32_func_void() #0 {
+define <5 x i32> @v5i32_func_void() nounwind {
   ; CHECK-LABEL: name: v5i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -435,7 +435,7 @@ define <5 x i32> @v5i32_func_void() #0 {
   ret <5 x i32> %val
 }
 
-define <8 x i32> @v8i32_func_void() #0 {
+define <8 x i32> @v8i32_func_void() nounwind {
   ; CHECK-LABEL: name: v8i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -456,7 +456,7 @@ define <8 x i32> @v8i32_func_void() #0 {
   ret <8 x i32> %val
 }
 
-define <16 x i32> @v16i32_func_void() #0 {
+define <16 x i32> @v16i32_func_void() nounwind {
   ; CHECK-LABEL: name: v16i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -485,7 +485,7 @@ define <16 x i32> @v16i32_func_void() #0 {
   ret <16 x i32> %val
 }
 
-define <32 x i32> @v32i32_func_void() #0 {
+define <32 x i32> @v32i32_func_void() nounwind {
   ; CHECK-LABEL: name: v32i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -530,7 +530,7 @@ define <32 x i32> @v32i32_func_void() #0 {
   ret <32 x i32> %val
 }
 
-define <2 x i64> @v2i64_func_void() #0 {
+define <2 x i64> @v2i64_func_void() nounwind {
   ; CHECK-LABEL: name: v2i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -545,7 +545,7 @@ define <2 x i64> @v2i64_func_void() #0 {
   ret <2 x i64> %val
 }
 
-define <3 x i64> @v3i64_func_void() #0 {
+define <3 x i64> @v3i64_func_void() nounwind {
   ; CHECK-LABEL: name: v3i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -564,7 +564,7 @@ define <3 x i64> @v3i64_func_void() #0 {
   ret <3 x i64> %val
 }
 
-define <4 x i64> @v4i64_func_void() #0 {
+define <4 x i64> @v4i64_func_void() nounwind {
   ; CHECK-LABEL: name: v4i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -585,7 +585,7 @@ define <4 x i64> @v4i64_func_void() #0 {
   ret <4 x i64> %val
 }
 
-define <5 x i64> @v5i64_func_void() #0 {
+define <5 x i64> @v5i64_func_void() nounwind {
   ; CHECK-LABEL: name: v5i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -608,7 +608,7 @@ define <5 x i64> @v5i64_func_void() #0 {
   ret <5 x i64> %val
 }
 
-define <8 x i64> @v8i64_func_void() #0 {
+define <8 x i64> @v8i64_func_void() nounwind {
   ; CHECK-LABEL: name: v8i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -637,7 +637,7 @@ define <8 x i64> @v8i64_func_void() #0 {
   ret <8 x i64> %val
 }
 
-define <16 x i64> @v16i64_func_void() #0 {
+define <16 x i64> @v16i64_func_void() nounwind {
   ; CHECK-LABEL: name: v16i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -682,7 +682,7 @@ define <16 x i64> @v16i64_func_void() #0 {
   ret <16 x i64> %val
 }
 
-define <2 x i16> @v2i16_func_void() #0 {
+define <2 x i16> @v2i16_func_void() nounwind {
   ; CHECK-LABEL: name: v2i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -693,7 +693,7 @@ define <2 x i16> @v2i16_func_void() #0 {
   ret <2 x i16> %val
 }
 
-define <2 x half> @v2f16_func_void() #0 {
+define <2 x half> @v2f16_func_void() nounwind {
   ; CHECK-LABEL: name: v2f16_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -704,7 +704,7 @@ define <2 x half> @v2f16_func_void() #0 {
   ret <2 x half> %val
 }
 
-define <3 x i16> @v3i16_func_void() #0 {
+define <3 x i16> @v3i16_func_void() nounwind {
   ; CHECK-LABEL: name: v3i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -720,7 +720,7 @@ define <3 x i16> @v3i16_func_void() #0 {
   ret <3 x i16> %val
 }
 
-define <4 x i16> @v4i16_func_void() #0 {
+define <4 x i16> @v4i16_func_void() nounwind {
   ; CHECK-LABEL: name: v4i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -733,7 +733,7 @@ define <4 x i16> @v4i16_func_void() #0 {
   ret <4 x i16> %val
 }
 
-define <4 x half> @v4f16_func_void() #0 {
+define <4 x half> @v4f16_func_void() nounwind {
   ; CHECK-LABEL: name: v4f16_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -746,7 +746,7 @@ define <4 x half> @v4f16_func_void() #0 {
   ret <4 x half> %val
 }
 
-define <5 x i16> @v5i16_func_void() #0 {
+define <5 x i16> @v5i16_func_void() nounwind {
   ; CHECK-LABEL: name: v5i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -765,7 +765,7 @@ define <5 x i16> @v5i16_func_void() #0 {
   ret <5 x i16> %val
 }
 
-define <8 x i16> @v8i16_func_void() #0 {
+define <8 x i16> @v8i16_func_void() nounwind {
   ; CHECK-LABEL: name: v8i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -782,7 +782,7 @@ define <8 x i16> @v8i16_func_void() #0 {
   ret <8 x i16> %val
 }
 
-define <16 x i16> @v16i16_func_void() #0 {
+define <16 x i16> @v16i16_func_void() nounwind {
   ; CHECK-LABEL: name: v16i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -803,7 +803,7 @@ define <16 x i16> @v16i16_func_void() #0 {
   ret <16 x i16> %val
 }
 
-define <16 x i8> @v16i8_func_void() #0 {
+define <16 x i8> @v16i8_func_void() nounwind {
   ; CHECK-LABEL: name: v16i8_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -864,7 +864,7 @@ define <16 x i8> @v16i8_func_void() #0 {
   ret <16 x i8> %val
 }
 
-define <2 x i8> @v2i8_func_void() #0 {
+define <2 x i8> @v2i8_func_void() nounwind {
   ; CHECK-LABEL: name: v2i8_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -881,7 +881,7 @@ define <2 x i8> @v2i8_func_void() #0 {
   ret <2 x i8> %val
 }
 
-define <3 x i8> @v3i8_func_void() #0 {
+define <3 x i8> @v3i8_func_void() nounwind {
   ; CHECK-LABEL: name: v3i8_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -901,7 +901,7 @@ define <3 x i8> @v3i8_func_void() #0 {
   ret <3 x i8> %val
 }
 
-define <4  x i8> @v4i8_func_void() #0 {
+define <4  x i8> @v4i8_func_void() nounwind {
   ; CHECK-LABEL: name: v4i8_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -926,7 +926,7 @@ define <4  x i8> @v4i8_func_void() #0 {
   ret <4  x i8> %val
 }
 
-define {i8, i32} @struct_i8_i32_func_void() #0 {
+define {i8, i32} @struct_i8_i32_func_void() nounwind {
   ; CHECK-LABEL: name: struct_i8_i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -942,7 +942,7 @@ define {i8, i32} @struct_i8_i32_func_void() #0 {
   ret { i8, i32 } %val
 }
 
-define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %arg0) #0 {
+define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_sret_struct_i8_i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -969,7 +969,7 @@ define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %ar
 ; lowering introduces an extra CopyToReg/CopyFromReg obscuring the
 ; AssertZext inserted. Not using it introduces the spills.
 
-define <33 x i32> @v33i32_func_void() #0 {
+define <33 x i32> @v33i32_func_void() nounwind {
   ; CHECK-LABEL: name: v33i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -985,7 +985,7 @@ define <33 x i32> @v33i32_func_void() #0 {
   ret <33 x i32> %val
 }
 
-define <33 x i32> @v33i32_func_v33i32_i32(ptr addrspace(1) %p, i32 %idx) #0 {
+define <33 x i32> @v33i32_func_v33i32_i32(ptr addrspace(1) %p, i32 %idx) nounwind {
   ; CHECK-LABEL: name: v33i32_func_v33i32_i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -1008,7 +1008,7 @@ define <33 x i32> @v33i32_func_v33i32_i32(ptr addrspace(1) %p, i32 %idx) #0 {
   ret <33 x i32> %val
 }
 
-define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
+define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() nounwind {
   ; CHECK-LABEL: name: struct_v32i32_i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -1030,7 +1030,7 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
   ret { <32 x i32>, i32 }%val
 }
 
-define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
+define { i32, <32 x i32> } @struct_i32_v32i32_func_void() nounwind {
   ; CHECK-LABEL: name: struct_i32_v32i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -1053,7 +1053,7 @@ define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
 }
 
 ; Make sure the last struct component is returned in v3, not v4.
-define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() #0 {
+define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() nounwind {
   ; CHECK-LABEL: name: v3i32_struct_func_void_wasted_reg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_IMPLICIT_DEF
@@ -1088,7 +1088,7 @@ define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() #0 {
   ret { <3 x i32>, i32 } %insert.4
 }
 
-define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
+define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() nounwind {
   ; CHECK-LABEL: name: v3f32_struct_func_void_wasted_reg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_IMPLICIT_DEF
@@ -1123,7 +1123,7 @@ define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
   ret { <3 x float>, i32 } %insert.4
 }
 
-define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0) #0 {
+define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_sret_max_known_zero_bits
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -1153,7 +1153,7 @@ define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0)
   ret void
 }
 
-define i1022 @i1022_func_void() #0 {
+define i1022 @i1022_func_void() nounwind {
   ; CHECK-LABEL: name: i1022_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -1197,7 +1197,7 @@ define i1022 @i1022_func_void() #0 {
   ret i1022 %val
 }
 
-define signext i1022 @i1022_signext_func_void() #0 {
+define signext i1022 @i1022_signext_func_void() nounwind {
   ; CHECK-LABEL: name: i1022_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -1241,7 +1241,7 @@ define signext i1022 @i1022_signext_func_void() #0 {
   ret i1022 %val
 }
 
-define zeroext i1022 @i1022_zeroext_func_void() #0 {
+define zeroext i1022 @i1022_zeroext_func_void() nounwind {
   ; CHECK-LABEL: name: i1022_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -1287,7 +1287,7 @@ define zeroext i1022 @i1022_zeroext_func_void() #0 {
 
 %struct.with.ptrs = type { <32 x i32>, ptr addrspace(3), ptr addrspace(1), <2 x ptr addrspace(1)> }
 
-define %struct.with.ptrs @ptr_in_struct_func_void() #0 {
+define %struct.with.ptrs @ptr_in_struct_func_void() nounwind {
   ; CHECK-LABEL: name: ptr_in_struct_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -1318,5 +1318,3 @@ define %struct.with.ptrs @ptr_in_struct_func_void() #0 {
   %val = load volatile %struct.with.ptrs, ptr addrspace(1) undef
   ret %struct.with.ptrs %val
 }
-
-attributes #0 = { nounwind }

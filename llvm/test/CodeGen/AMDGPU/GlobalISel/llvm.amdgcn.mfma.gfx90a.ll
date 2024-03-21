@@ -10,7 +10,7 @@ declare <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double, double, <4 x doubl
 declare double @llvm.amdgcn.mfma.f64.4x4x4f64(double, double, double, i32, i32, i32)
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_mfma_f32_32x32x4bf16_1k:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[34:35], s[0:1], 0x24
@@ -78,7 +78,7 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_mfma_f32_16x16x4bf16_1k:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[16:17], s[0:1], 0x24
@@ -124,7 +124,7 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f32_4x4x4bf16_1k(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_4x4x4bf16_1k(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_mfma_f32_4x4x4bf16_1k:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
@@ -154,7 +154,7 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_mfma_f32_32x32x8bf16_1k:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[16:17], s[0:1], 0x24
@@ -201,7 +201,7 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f32_16x16x16bf16_1k(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x16bf16_1k(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_mfma_f32_16x16x16bf16_1k:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
@@ -232,7 +232,7 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f64_4x4x4f64(ptr addrspace(1) %arg, double %a, double %b) #0 {
+define amdgpu_kernel void @test_mfma_f64_4x4x4f64(ptr addrspace(1) %arg, double %a, double %b) "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_mfma_f64_4x4x4f64:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -255,7 +255,7 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f64_16x16x4f64(ptr addrspace(1) %arg, double %a, double %b) #0 {
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64(ptr addrspace(1) %arg, double %a, double %b) "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_mfma_f64_16x16x4f64:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x24
@@ -289,7 +289,7 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm(ptr addrspace(1) %arg, double %a, double %b) #0 {
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm(ptr addrspace(1) %arg, double %a, double %b) "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_mfma_f64_16x16x4f64_splat_imm:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -314,7 +314,7 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, double %a, double %b) #0 {
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, double %a, double %b) "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_mfma_f64_16x16x4f64_imm:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x24
@@ -349,7 +349,7 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %arg, double %a, double %b) #0 {
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %arg, double %a, double %b) "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_mfma_f64_16x16x4f64_splat_lit:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[12:15], s[0:1], 0x24
@@ -384,5 +384,3 @@ bb:
   store <4 x double> %mai.1, ptr addrspace(1) %arg
   ret void
 }
-
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }

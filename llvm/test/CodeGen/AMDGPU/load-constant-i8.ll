@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX12 %s
 
 ; TODO: NOT AND
-define amdgpu_kernel void @constant_load_i8(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_i8(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_load_i8:
 ; GFX6-NOHSA:       ; %bb.0: ; %entry
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -93,7 +93,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v2i8(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_v2i8(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_load_v2i8:
 ; GFX6-NOHSA:       ; %bb.0: ; %entry
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -180,7 +180,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v3i8(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_v3i8(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_load_v3i8:
 ; GFX6-NOHSA:       ; %bb.0: ; %entry
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -295,7 +295,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v4i8(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_v4i8(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_load_v4i8:
 ; GFX6-NOHSA:       ; %bb.0: ; %entry
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -365,7 +365,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v8i8(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_v8i8(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_load_v8i8:
 ; GFX6-NOHSA:       ; %bb.0: ; %entry
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -439,7 +439,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v16i8(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_v16i8(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_load_v16i8:
 ; GFX6-NOHSA:       ; %bb.0: ; %entry
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -520,7 +520,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_i8_to_i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_i8_to_i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_i8_to_i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -597,7 +597,7 @@ define amdgpu_kernel void @constant_zextload_i8_to_i32(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_i8_to_i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_i8_to_i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_i8_to_i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -675,7 +675,7 @@ define amdgpu_kernel void @constant_sextload_i8_to_i32(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v1i8_to_v1i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v1i8_to_v1i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v1i8_to_v1i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -752,7 +752,7 @@ define amdgpu_kernel void @constant_zextload_v1i8_to_v1i32(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v1i8_to_v1i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v1i8_to_v1i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v1i8_to_v1i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -831,7 +831,7 @@ define amdgpu_kernel void @constant_sextload_v1i8_to_v1i32(ptr addrspace(1) %out
 }
 
 ; TODO: This should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_zextload_v2i8_to_v2i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v2i8_to_v2i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v2i8_to_v2i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -931,7 +931,7 @@ define amdgpu_kernel void @constant_zextload_v2i8_to_v2i32(ptr addrspace(1) %out
 }
 
 ; TODO: These should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_sextload_v2i8_to_v2i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v2i8_to_v2i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v2i8_to_v2i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1031,7 +1031,7 @@ define amdgpu_kernel void @constant_sextload_v2i8_to_v2i32(ptr addrspace(1) %out
 }
 
 ; TODO: These should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_zextload_v3i8_to_v3i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v3i8_to_v3i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v3i8_to_v3i32:
 ; GFX6-NOHSA:       ; %bb.0: ; %entry
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1134,7 +1134,7 @@ entry:
 }
 
 ; TODO: These should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_sextload_v3i8_to_v3i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v3i8_to_v3i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v3i8_to_v3i32:
 ; GFX6-NOHSA:       ; %bb.0: ; %entry
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1239,7 +1239,7 @@ entry:
 }
 
 ; TODO: These should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_zextload_v4i8_to_v4i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v4i8_to_v4i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v4i8_to_v4i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1345,7 +1345,7 @@ define amdgpu_kernel void @constant_zextload_v4i8_to_v4i32(ptr addrspace(1) %out
 }
 
 ; TODO: These should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_sextload_v4i8_to_v4i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v4i8_to_v4i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v4i8_to_v4i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1454,7 +1454,7 @@ define amdgpu_kernel void @constant_sextload_v4i8_to_v4i32(ptr addrspace(1) %out
 }
 
 ; TODO: These should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_zextload_v8i8_to_v8i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v8i8_to_v8i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v8i8_to_v8i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1613,7 +1613,7 @@ define amdgpu_kernel void @constant_zextload_v8i8_to_v8i32(ptr addrspace(1) %out
 }
 
 ; TODO: These should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_sextload_v8i8_to_v8i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v8i8_to_v8i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v8i8_to_v8i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1779,7 +1779,7 @@ define amdgpu_kernel void @constant_sextload_v8i8_to_v8i32(ptr addrspace(1) %out
 }
 
 ; TODO: These should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_zextload_v16i8_to_v16i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v16i8_to_v16i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v16i8_to_v16i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2043,7 +2043,7 @@ define amdgpu_kernel void @constant_zextload_v16i8_to_v16i32(ptr addrspace(1) %o
 }
 
 ; TODO: These should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_sextload_v16i8_to_v16i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v16i8_to_v16i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v16i8_to_v16i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2323,7 +2323,7 @@ define amdgpu_kernel void @constant_sextload_v16i8_to_v16i32(ptr addrspace(1) %o
 }
 
 ; TODO: These should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_zextload_v32i8_to_v32i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v32i8_to_v32i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v32i8_to_v32i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2799,7 +2799,7 @@ define amdgpu_kernel void @constant_zextload_v32i8_to_v32i32(ptr addrspace(1) %o
 }
 
 ; TODO: These should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_sextload_v32i8_to_v32i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v32i8_to_v32i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v32i8_to_v32i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3312,7 +3312,7 @@ define amdgpu_kernel void @constant_sextload_v32i8_to_v32i32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v64i8_to_v64i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v64i8_to_v64i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v64i8_to_v64i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[16:19], s[0:1], 0x9
@@ -4223,7 +4223,7 @@ define amdgpu_kernel void @constant_zextload_v64i8_to_v64i32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v64i8_to_v64i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v64i8_to_v64i32(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v64i8_to_v64i32:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[16:19], s[0:1], 0x9
@@ -5199,7 +5199,7 @@ define amdgpu_kernel void @constant_sextload_v64i8_to_v64i32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_i8_to_i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_i8_to_i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_i8_to_i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -5283,7 +5283,7 @@ define amdgpu_kernel void @constant_zextload_i8_to_i64(ptr addrspace(1) %out, pt
 }
 
 ; TODO: Why not 7 ?
-define amdgpu_kernel void @constant_sextload_i8_to_i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_i8_to_i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_i8_to_i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -5370,7 +5370,7 @@ define amdgpu_kernel void @constant_sextload_i8_to_i64(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v1i8_to_v1i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v1i8_to_v1i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v1i8_to_v1i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -5452,7 +5452,7 @@ define amdgpu_kernel void @constant_zextload_v1i8_to_v1i64(ptr addrspace(1) %out
 }
 
 ; TODO: Why not 7 ?
-define amdgpu_kernel void @constant_sextload_v1i8_to_v1i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v1i8_to_v1i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v1i8_to_v1i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -5539,7 +5539,7 @@ define amdgpu_kernel void @constant_sextload_v1i8_to_v1i64(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v2i8_to_v2i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v2i8_to_v2i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v2i8_to_v2i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -5646,7 +5646,7 @@ define amdgpu_kernel void @constant_zextload_v2i8_to_v2i64(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v2i8_to_v2i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v2i8_to_v2i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v2i8_to_v2i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -5760,7 +5760,7 @@ define amdgpu_kernel void @constant_sextload_v2i8_to_v2i64(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v4i8_to_v4i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v4i8_to_v4i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v4i8_to_v4i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -5896,7 +5896,7 @@ define amdgpu_kernel void @constant_zextload_v4i8_to_v4i64(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v4i8_to_v4i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v4i8_to_v4i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v4i8_to_v4i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -6050,7 +6050,7 @@ define amdgpu_kernel void @constant_sextload_v4i8_to_v4i64(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v8i8_to_v8i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v8i8_to_v8i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v8i8_to_v8i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -6264,7 +6264,7 @@ define amdgpu_kernel void @constant_zextload_v8i8_to_v8i64(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v8i8_to_v8i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v8i8_to_v8i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v8i8_to_v8i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -6522,7 +6522,7 @@ define amdgpu_kernel void @constant_sextload_v8i8_to_v8i64(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v16i8_to_v16i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v16i8_to_v16i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v16i8_to_v16i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -6891,7 +6891,7 @@ define amdgpu_kernel void @constant_zextload_v16i8_to_v16i64(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v16i8_to_v16i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v16i8_to_v16i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v16i8_to_v16i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -7351,7 +7351,7 @@ define amdgpu_kernel void @constant_sextload_v16i8_to_v16i64(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v32i8_to_v32i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v32i8_to_v32i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v32i8_to_v32i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
@@ -8043,7 +8043,7 @@ define amdgpu_kernel void @constant_zextload_v32i8_to_v32i64(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v32i8_to_v32i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v32i8_to_v32i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v32i8_to_v32i64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
@@ -8922,7 +8922,7 @@ define amdgpu_kernel void @constant_sextload_v32i8_to_v32i64(ptr addrspace(1) %o
 }
 
 ; XFUNC-LABEL: {{^}}constant_zextload_v64i8_to_v64i64:
-; define amdgpu_kernel void @constant_zextload_v64i8_to_v64i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+; define amdgpu_kernel void @constant_zextload_v64i8_to_v64i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ;   %load = load <64 x i8>, ptr addrspace(4) %in
 ;   %ext = zext <64 x i8> %load to <64 x i64>
 ;   store <64 x i64> %ext, ptr addrspace(1) %out
@@ -8930,14 +8930,14 @@ define amdgpu_kernel void @constant_sextload_v32i8_to_v32i64(ptr addrspace(1) %o
 ; }
 
 ; XFUNC-LABEL: {{^}}constant_sextload_v64i8_to_v64i64:
-; define amdgpu_kernel void @constant_sextload_v64i8_to_v64i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+; define amdgpu_kernel void @constant_sextload_v64i8_to_v64i64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ;   %load = load <64 x i8>, ptr addrspace(4) %in
 ;   %ext = sext <64 x i8> %load to <64 x i64>
 ;   store <64 x i64> %ext, ptr addrspace(1) %out
 ;   ret void
 ; }
 
-define amdgpu_kernel void @constant_zextload_i8_to_i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_i8_to_i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_i8_to_i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -9023,7 +9023,7 @@ define amdgpu_kernel void @constant_zextload_i8_to_i16(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_i8_to_i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_i8_to_i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_i8_to_i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -9111,7 +9111,7 @@ define amdgpu_kernel void @constant_sextload_i8_to_i16(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v1i8_to_v1i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v1i8_to_v1i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v1i8_to_v1i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -9197,7 +9197,7 @@ define amdgpu_kernel void @constant_zextload_v1i8_to_v1i16(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v1i8_to_v1i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v1i8_to_v1i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v1i8_to_v1i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -9285,7 +9285,7 @@ define amdgpu_kernel void @constant_sextload_v1i8_to_v1i16(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v2i8_to_v2i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v2i8_to_v2i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v2i8_to_v2i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -9384,7 +9384,7 @@ define amdgpu_kernel void @constant_zextload_v2i8_to_v2i16(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v2i8_to_v2i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v2i8_to_v2i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v2i8_to_v2i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -9497,7 +9497,7 @@ define amdgpu_kernel void @constant_sextload_v2i8_to_v2i16(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v4i8_to_v4i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v4i8_to_v4i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v4i8_to_v4i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -9632,7 +9632,7 @@ define amdgpu_kernel void @constant_zextload_v4i8_to_v4i16(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v4i8_to_v4i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v4i8_to_v4i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v4i8_to_v4i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -9782,7 +9782,7 @@ define amdgpu_kernel void @constant_sextload_v4i8_to_v4i16(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v8i8_to_v8i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v8i8_to_v8i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v8i8_to_v8i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -9981,7 +9981,7 @@ define amdgpu_kernel void @constant_zextload_v8i8_to_v8i16(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v8i8_to_v8i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v8i8_to_v8i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v8i8_to_v8i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -10211,7 +10211,7 @@ define amdgpu_kernel void @constant_sextload_v8i8_to_v8i16(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v16i8_to_v16i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v16i8_to_v16i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v16i8_to_v16i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -10561,7 +10561,7 @@ define amdgpu_kernel void @constant_zextload_v16i8_to_v16i16(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v16i8_to_v16i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v16i8_to_v16i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v16i8_to_v16i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -10973,7 +10973,7 @@ define amdgpu_kernel void @constant_sextload_v16i8_to_v16i16(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v32i8_to_v32i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_zextload_v32i8_to_v32i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_zextload_v32i8_to_v32i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
@@ -11621,7 +11621,7 @@ define amdgpu_kernel void @constant_zextload_v32i8_to_v32i16(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v32i8_to_v32i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_sextload_v32i8_to_v32i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_sextload_v32i8_to_v32i16:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
@@ -12397,7 +12397,7 @@ define amdgpu_kernel void @constant_sextload_v32i8_to_v32i16(ptr addrspace(1) %o
 }
 
 ; XFUNC-LABEL: {{^}}constant_zextload_v64i8_to_v64i16:
-; define amdgpu_kernel void @constant_zextload_v64i8_to_v64i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+; define amdgpu_kernel void @constant_zextload_v64i8_to_v64i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ;   %load = load <64 x i8>, ptr addrspace(4) %in
 ;   %ext = zext <64 x i8> %load to <64 x i16>
 ;   store <64 x i16> %ext, ptr addrspace(1) %out
@@ -12405,11 +12405,9 @@ define amdgpu_kernel void @constant_sextload_v32i8_to_v32i16(ptr addrspace(1) %o
 ; }
 
 ; XFUNC-LABEL: {{^}}constant_sextload_v64i8_to_v64i16:
-; define amdgpu_kernel void @constant_sextload_v64i8_to_v64i16(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+; define amdgpu_kernel void @constant_sextload_v64i8_to_v64i16(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ;   %load = load <64 x i8>, ptr addrspace(4) %in
 ;   %ext = sext <64 x i8> %load to <64 x i16>
 ;   store <64 x i16> %ext, ptr addrspace(1) %out
 ;   ret void
 ; }
-
-attributes #0 = { nounwind }

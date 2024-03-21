@@ -57,7 +57,7 @@ entry:
   ret void
 }
 
-define internal amdgpu_kernel void @__test_block_invoke_kernel(<{ i32, i32, ptr addrspace(1), i8 }> %arg) #0 {
+define internal amdgpu_kernel void @__test_block_invoke_kernel(<{ i32, i32, ptr addrspace(1), i8 }> %arg) "enqueued-block" {
 entry:
   %.fca.3.extract = extractvalue <{ i32, i32, ptr addrspace(1), i8 }> %arg, 2
   %.fca.4.extract = extractvalue <{ i32, i32, ptr addrspace(1), i8 }> %arg, 3
@@ -67,7 +67,7 @@ entry:
 
 declare i32 @__enqueue_kernel_basic(ptr addrspace(1), i32, ptr addrspace(5), ptr, ptr) local_unnamed_addr
 
-define internal amdgpu_kernel void @__test_block_invoke_2_kernel(<{ i32, i32, ptr addrspace(1), ptr addrspace(1), i64, i8 }> %arg) #0 {
+define internal amdgpu_kernel void @__test_block_invoke_2_kernel(<{ i32, i32, ptr addrspace(1), ptr addrspace(1), i64, i8 }> %arg) "enqueued-block" {
 entry:
   %.fca.3.extract = extractvalue <{ i32, i32, ptr addrspace(1), ptr addrspace(1), i64, i8 }> %arg, 2
   %.fca.4.extract = extractvalue <{ i32, i32, ptr addrspace(1), ptr addrspace(1), i64, i8 }> %arg, 3
@@ -80,7 +80,7 @@ entry:
 
 @kernel_address_user = global [1 x ptr] [ ptr @block_has_used_kernel_address ]
 
-define internal amdgpu_kernel void @block_has_used_kernel_address(<{ i32, i32, ptr addrspace(1), i8 }> %arg) #0 {
+define internal amdgpu_kernel void @block_has_used_kernel_address(<{ i32, i32, ptr addrspace(1), i8 }> %arg) "enqueued-block" {
 entry:
   %.fca.3.extract = extractvalue <{ i32, i32, ptr addrspace(1), i8 }> %arg, 2
   %.fca.4.extract = extractvalue <{ i32, i32, ptr addrspace(1), i8 }> %arg, 3
@@ -93,15 +93,13 @@ define amdgpu_kernel void @user_of_kernel_address(ptr addrspace(1) %arg) {
   ret void
 }
 
-define internal amdgpu_kernel void @0(<{ i32, i32, ptr addrspace(1), i8 }> %arg) #0 {
+define internal amdgpu_kernel void @0(<{ i32, i32, ptr addrspace(1), i8 }> %arg) "enqueued-block" {
   ret void
 }
 
-define internal amdgpu_kernel void @1(<{ i32, i32, ptr addrspace(1), i8 }> %arg) #0 {
+define internal amdgpu_kernel void @1(<{ i32, i32, ptr addrspace(1), i8 }> %arg) "enqueued-block" {
   ret void
 }
-
-attributes #0 = { "enqueued-block" }
 ;.
 ; CHECK: @[[KERNEL_ADDRESS_USER:[a-zA-Z0-9_$"\\.-]+]] = global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @block_has_used_kernel_address.runtime_handle to ptr)]
 ; CHECK: @[[__TEST_BLOCK_INVOKE_KERNEL_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) externally_initialized constant [[BLOCK_RUNTIME_HANDLE_T:%.*]] zeroinitializer

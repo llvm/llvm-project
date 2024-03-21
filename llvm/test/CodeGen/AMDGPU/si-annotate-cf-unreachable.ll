@@ -11,7 +11,7 @@
 ; GCN: s_and_saveexec_b64
 ; GCN-NOT: s_endpgm
 ; GCN: .Lfunc_end0
-define amdgpu_kernel void @annotate_unreachable(ptr addrspace(1) noalias nocapture readonly %arg, i1 %c0) #0 {
+define amdgpu_kernel void @annotate_unreachable(ptr addrspace(1) noalias nocapture readonly %arg, i1 %c0) nounwind {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1
@@ -34,7 +34,4 @@ bb5:                                              ; preds = %bb3, %bb1
   unreachable
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

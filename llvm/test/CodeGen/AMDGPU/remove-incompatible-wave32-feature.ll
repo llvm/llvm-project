@@ -22,7 +22,7 @@
 ; WARN-GFX90A: removing function 'needs_wavefrontsize32': +wavefrontsize32 is not supported on the current target
 ; WARN-GFX90A-NOT: not supported
 
-define void @needs_wavefrontsize32(ptr %out) #0 {
+define void @needs_wavefrontsize32(ptr %out) "target-features"="+wavefrontsize32" {
 ; GFX906-NOT:   @needs_wavefrontsize32
 ; GFX90A-NOT:   @needs_wavefrontsize32
 ; GFX10:        define void @needs_wavefrontsize32(
@@ -46,5 +46,3 @@ declare i32 @llvm.read_register.i32(metadata)
 declare i32 @llvm.ctpop.i32(i32)
 
 !0 = !{!"exec_lo"}
-
-attributes #0 = { "target-features"="+wavefrontsize32" }

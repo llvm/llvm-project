@@ -8,7 +8,7 @@
 
 ; On GFX11, ensure vdst and src2 do not partially overlap. Full overlap is ok.
 
-define i64 @mad_i64_i32_sextops(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
+define i64 @mad_i64_i32_sextops(i32 %arg0, i32 %arg1, i64 %arg2) nounwind {
 ; CI-LABEL: mad_i64_i32_sextops:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -60,7 +60,7 @@ define i64 @mad_i64_i32_sextops(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
   ret i64 %mad
 }
 
-define i64 @mad_i64_i32_sextops_commute(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
+define i64 @mad_i64_i32_sextops_commute(i32 %arg0, i32 %arg1, i64 %arg2) nounwind {
 ; CI-LABEL: mad_i64_i32_sextops_commute:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -112,7 +112,7 @@ define i64 @mad_i64_i32_sextops_commute(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
   ret i64 %mad
 }
 
-define i64 @mad_u64_u32_zextops(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
+define i64 @mad_u64_u32_zextops(i32 %arg0, i32 %arg1, i64 %arg2) nounwind {
 ; CI-LABEL: mad_u64_u32_zextops:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -164,7 +164,7 @@ define i64 @mad_u64_u32_zextops(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
   ret i64 %mad
 }
 
-define i64 @mad_u64_u32_zextops_commute(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
+define i64 @mad_u64_u32_zextops_commute(i32 %arg0, i32 %arg1, i64 %arg2) nounwind {
 ; CI-LABEL: mad_u64_u32_zextops_commute:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -216,7 +216,7 @@ define i64 @mad_u64_u32_zextops_commute(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
   ret i64 %mad
 }
 
-define i128 @mad_i64_i32_sextops_i32_i128(i32 %arg0, i32 %arg1, i128 %arg2) #0 {
+define i128 @mad_i64_i32_sextops_i32_i128(i32 %arg0, i32 %arg1, i128 %arg2) nounwind {
 ; CI-LABEL: mad_i64_i32_sextops_i32_i128:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -402,7 +402,7 @@ define i128 @mad_i64_i32_sextops_i32_i128(i32 %arg0, i32 %arg1, i128 %arg2) #0 {
   ret i128 %mad
 }
 
-define i63 @mad_i64_i32_sextops_i32_i63(i32 %arg0, i32 %arg1, i63 %arg2) #0 {
+define i63 @mad_i64_i32_sextops_i32_i63(i32 %arg0, i32 %arg1, i63 %arg2) nounwind {
 ; CI-LABEL: mad_i64_i32_sextops_i32_i63:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -454,7 +454,7 @@ define i63 @mad_i64_i32_sextops_i32_i63(i32 %arg0, i32 %arg1, i63 %arg2) #0 {
   ret i63 %mad
 }
 
-define i63 @mad_i64_i32_sextops_i31_i63(i31 %arg0, i31 %arg1, i63 %arg2) #0 {
+define i63 @mad_i64_i32_sextops_i31_i63(i31 %arg0, i31 %arg1, i63 %arg2) nounwind {
 ; CI-LABEL: mad_i64_i32_sextops_i31_i63:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -521,7 +521,7 @@ define i63 @mad_i64_i32_sextops_i31_i63(i31 %arg0, i31 %arg1, i63 %arg2) #0 {
   ret i63 %mad
 }
 
-define i64 @mad_i64_i32_extops_i32_i64(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
+define i64 @mad_i64_i32_extops_i32_i64(i32 %arg0, i32 %arg1, i64 %arg2) nounwind {
 ; CI-LABEL: mad_i64_i32_extops_i32_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -596,7 +596,7 @@ define i64 @mad_i64_i32_extops_i32_i64(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
   ret i64 %mad
 }
 
-define i64 @mad_u64_u32_bitops(i64 %arg0, i64 %arg1, i64 %arg2) #0 {
+define i64 @mad_u64_u32_bitops(i64 %arg0, i64 %arg1, i64 %arg2) nounwind {
 ; CI-LABEL: mad_u64_u32_bitops:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -648,7 +648,7 @@ define i64 @mad_u64_u32_bitops(i64 %arg0, i64 %arg1, i64 %arg2) #0 {
   ret i64 %add
 }
 
-define i64 @mad_u64_u32_bitops_lhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #0 {
+define i64 @mad_u64_u32_bitops_lhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) nounwind {
 ; CI-LABEL: mad_u64_u32_bitops_lhs_mask_small:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -722,7 +722,7 @@ define i64 @mad_u64_u32_bitops_lhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #
   ret i64 %add
 }
 
-define i64 @mad_u64_u32_bitops_rhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #0 {
+define i64 @mad_u64_u32_bitops_rhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) nounwind {
 ; CI-LABEL: mad_u64_u32_bitops_rhs_mask_small:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -797,7 +797,7 @@ define i64 @mad_u64_u32_bitops_rhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #
   ret i64 %add
 }
 
-define i64 @mad_i64_i32_bitops(i64 %arg0, i64 %arg1, i64 %arg2) #0 {
+define i64 @mad_i64_i32_bitops(i64 %arg0, i64 %arg1, i64 %arg2) nounwind {
 ; CI-LABEL: mad_i64_i32_bitops:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -852,7 +852,7 @@ define i64 @mad_i64_i32_bitops(i64 %arg0, i64 %arg1, i64 %arg2) #0 {
 }
 
 ; Example from bug report
-define i64 @mad_i64_i32_unpack_i64ops(i64 %arg0) #0 {
+define i64 @mad_i64_i32_unpack_i64ops(i64 %arg0) nounwind {
 ; CI-LABEL: mad_i64_i32_unpack_i64ops:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -904,7 +904,7 @@ define i64 @mad_i64_i32_unpack_i64ops(i64 %arg0) #0 {
   ret i64 %mad
 }
 
-define amdgpu_kernel void @mad_i64_i32_uniform(ptr addrspace(1) %out, i32 %arg0, i32 %arg1, i64 %arg2) #0 {
+define amdgpu_kernel void @mad_i64_i32_uniform(ptr addrspace(1) %out, i32 %arg0, i32 %arg1, i64 %arg2) nounwind {
 ; CI-LABEL: mad_i64_i32_uniform:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -998,7 +998,7 @@ define amdgpu_kernel void @mad_i64_i32_uniform(ptr addrspace(1) %out, i32 %arg0,
   ret void
 }
 
-define i64 @mad_i64_i32_twice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3) #0 {
+define i64 @mad_i64_i32_twice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3) nounwind {
 ; CI-LABEL: mad_i64_i32_twice:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1072,7 +1072,7 @@ define i64 @mad_i64_i32_twice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3) #0 {
   ret i64 %out
 }
 
-define i64 @mad_i64_i32_thrice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3, i64 %arg4) #0 {
+define i64 @mad_i64_i32_thrice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3, i64 %arg4) nounwind {
 ; CI-LABEL: mad_i64_i32_thrice:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1189,7 +1189,7 @@ define i64 @mad_i64_i32_thrice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3, i64 %
   ret i64 %out
 }
 
-define i64 @mad_i64_i32_secondary_use(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
+define i64 @mad_i64_i32_secondary_use(i32 %arg0, i32 %arg1, i64 %arg2) nounwind {
 ; CI-LABEL: mad_i64_i32_secondary_use:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1267,7 +1267,7 @@ define i64 @mad_i64_i32_secondary_use(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
   ret i64 %out
 }
 
-define i48 @mad_i48_i48(i48 %arg0, i48 %arg1, i48 %arg2) #0 {
+define i48 @mad_i48_i48(i48 %arg0, i48 %arg1, i48 %arg2) nounwind {
 ; CI-LABEL: mad_i48_i48:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1335,6 +1335,3 @@ define i48 @mad_i48_i48(i48 %arg0, i48 %arg1, i48 %arg2) #0 {
   %a = add i48 %m, %arg2
   ret i48 %a
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable }

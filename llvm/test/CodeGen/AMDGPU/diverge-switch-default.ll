@@ -4,7 +4,7 @@ target datalayout = "n32"
 
 ; CHECK-LABEL: @switch_unreachable_default
 
-define amdgpu_kernel void @switch_unreachable_default(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @switch_unreachable_default(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind readnone {
 centry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   switch i32 %tid, label %sw.default [
@@ -59,7 +59,4 @@ sw.exit:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { convergent noinline optnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

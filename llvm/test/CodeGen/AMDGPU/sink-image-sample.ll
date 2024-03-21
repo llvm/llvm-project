@@ -15,12 +15,12 @@ main_body:
   br i1 undef, label %endif1, label %if1
 
 if1:                                              ; preds = %main_body
-  call void @llvm.amdgcn.kill(i1 false) #4
+  call void @llvm.amdgcn.kill(i1 false) nounwind
   br label %exit
 
 endif1:                                           ; preds = %main_body
   %i22 = extractelement <3 x float> %i, i32 2
-  %i23 = call nsz arcp contract float @llvm.fma.f32(float %i22, float 0.000000e+00, float 0.000000e+00) #1
+  %i23 = call nsz arcp contract float @llvm.fma.f32(float %i22, float 0.000000e+00, float 0.000000e+00) nounwind readnone
   br label %exit
 
 exit:                                             ; preds = %endif1, %if1
@@ -28,15 +28,10 @@ exit:                                             ; preds = %endif1, %if1
   ret float %i24
 }
 ; Function Attrs: nounwind readonly willreturn
-declare <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #3
+declare <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly willreturn
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
-declare float @llvm.fma.f32(float, float, float) #2
+declare float @llvm.fma.f32(float, float, float) nofree nosync nounwind readnone speculatable willreturn
 
 ; Function Attrs: nounwind
-declare void @llvm.amdgcn.kill(i1) #4
-
-attributes #1 = { nounwind readnone }
-attributes #2 = { nofree nosync nounwind readnone speculatable willreturn }
-attributes #3 = { nounwind readonly willreturn }
-attributes #4 = { nounwind }
+declare void @llvm.amdgcn.kill(i1) nounwind

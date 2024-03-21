@@ -8,9 +8,9 @@
 ; Check that moving the pointer out of the resource descriptor to
 ; vaddr works for atomics.
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-define amdgpu_kernel void @atomic_max_i32(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %x, i32 %y) #0 {
+define amdgpu_kernel void @atomic_max_i32(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %x, i32 %y) nounwind {
 ; GCN-LABEL: atomic_max_i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -55,7 +55,7 @@ exit:
   ret void
 }
 
-define amdgpu_kernel void @atomic_max_i32_noret(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %x, i32 %y) #0 {
+define amdgpu_kernel void @atomic_max_i32_noret(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %x, i32 %y) nounwind {
 ; GCN-LABEL: atomic_max_i32_noret:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
@@ -93,6 +93,3 @@ atomic:
 exit:
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

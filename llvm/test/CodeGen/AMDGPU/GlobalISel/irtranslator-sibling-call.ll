@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -stop-after=irtranslator -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 ; This is a copy of sibling-call.ll, but stops after the IRTranslator.
 
-define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
+define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) nounwind noinline {
   ; GCN-LABEL: name: i32_fastcc_i32_i32
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1
@@ -16,7 +16,7 @@ define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
   ret i32 %add0
 }
 
-define fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %arg0, i32 %arg1) #1 {
+define fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %arg0, i32 %arg1) nounwind noinline {
   ; GCN-LABEL: name: i32_fastcc_i32_i32_stack_object
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1
@@ -38,7 +38,7 @@ define fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %arg0, i32 %arg1) #1 {
   ret i32 %add0
 }
 
-define hidden fastcc i32 @sibling_call_i32_fastcc_i32_i32(i32 %a, i32 %b, i32 %c) #1 {
+define hidden fastcc i32 @sibling_call_i32_fastcc_i32_i32(i32 %a, i32 %b, i32 %c) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_i32_fastcc_i32_i32
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -57,7 +57,7 @@ entry:
   ret i32 %ret
 }
 
-define fastcc i32 @sibling_call_i32_fastcc_i32_i32_stack_object(i32 %a, i32 %b, i32 %c) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_i32_stack_object(i32 %a, i32 %b, i32 %c) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_i32_fastcc_i32_i32_stack_object
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -84,7 +84,7 @@ entry:
   ret i32 %ret
 }
 
-define fastcc i32 @sibling_call_i32_fastcc_i32_i32_callee_stack_object(i32 %a, i32 %b, i32 %c) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_i32_callee_stack_object(i32 %a, i32 %b, i32 %c) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_i32_fastcc_i32_i32_callee_stack_object
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -111,7 +111,7 @@ entry:
   ret i32 %ret
 }
 
-define fastcc void @sibling_call_i32_fastcc_i32_i32_unused_result(i32 %a, i32 %b, i32 %c) #1 {
+define fastcc void @sibling_call_i32_fastcc_i32_i32_unused_result(i32 %a, i32 %b, i32 %c) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_i32_fastcc_i32_i32_unused_result
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -131,7 +131,7 @@ entry:
 }
 
 ; It doesn't make sense to do a tail from a kernel
-define amdgpu_kernel void @kernel_call_i32_fastcc_i32_i32_unused_result(i32 %a, i32 %b, i32 %c) #1 {
+define amdgpu_kernel void @kernel_call_i32_fastcc_i32_i32_unused_result(i32 %a, i32 %b, i32 %c) nounwind noinline {
   ; GCN-LABEL: name: kernel_call_i32_fastcc_i32_i32_unused_result
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr4_sgpr5
@@ -158,7 +158,7 @@ entry:
   ret void
 }
 
-define hidden fastcc i32 @i32_fastcc_i32_byval_i32(i32 %arg0, ptr addrspace(5) byval(i32) align 4 %arg1) #1 {
+define hidden fastcc i32 @i32_fastcc_i32_byval_i32(i32 %arg0, ptr addrspace(5) byval(i32) align 4 %arg1) nounwind noinline {
   ; GCN-LABEL: name: i32_fastcc_i32_byval_i32
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $vgpr0
@@ -176,7 +176,7 @@ define hidden fastcc i32 @i32_fastcc_i32_byval_i32(i32 %arg0, ptr addrspace(5) b
 }
 
 ; Tail call disallowed with byval in parent.
-define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32_byval_parent(i32 %a, ptr addrspace(5) byval(i32) %b.byval, i32 %c) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32_byval_parent(i32 %a, ptr addrspace(5) byval(i32) %b.byval, i32 %c) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_i32_fastcc_i32_byval_i32_byval_parent
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1
@@ -208,7 +208,7 @@ entry:
 ; Tail call disallowed with byval in parent, not callee. The stack
 ; usage of incoming arguments must be <= the outgoing stack
 ; arguments.
-define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32(i32 %a, [32 x i32] %large) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32(i32 %a, [32 x i32] %large) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_i32_fastcc_i32_byval_i32
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -263,7 +263,7 @@ entry:
   ret i32 %ret
 }
 
-define fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %arg0, i32 %arg1, [32 x i32] %large) #1 {
+define fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %arg0, i32 %arg1, [32 x i32] %large) nounwind noinline {
   ; GCN-LABEL: name: i32_fastcc_i32_i32_a32i32
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -318,7 +318,7 @@ define fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %arg0, i32 %arg1, [32 x i32] %l
   ret i32 %add2
 }
 
-define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x i32] %c) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x i32] %c) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_i32_fastcc_i32_i32_a32i32
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -406,7 +406,7 @@ entry:
   ret i32 %ret
 }
 
-define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32_stack_object(i32 %a, i32 %b, [32 x i32] %c) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32_stack_object(i32 %a, i32 %b, [32 x i32] %c) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_i32_fastcc_i32_i32_a32i32_stack_object
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -505,7 +505,7 @@ entry:
 ; If the callee requires more stack argument space than the caller,
 ; don't do a tail call.
 ; TODO: Do we really need this restriction?
-define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) #1 {
+define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) nounwind noinline {
   ; GCN-LABEL: name: no_sibling_call_callee_more_stack_space
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1
@@ -569,7 +569,7 @@ entry:
 }
 
 ; Have another non-tail in the function
-define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i32 %c) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i32 %c) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_i32_fastcc_i32_i32_other_call
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -601,7 +601,7 @@ entry:
 
 ; Have stack object in caller and stack passed arguments. SP should be
 ; in same place at function exit.
-define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x i32] %c) #1 {
+define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x i32] %c) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_stack_objecti32_fastcc_i32_i32_a32i32
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -697,7 +697,7 @@ entry:
   ret i32 %ret
 }
 
-define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32_larger_arg_area(i32 %a, i32 %b, [36 x i32] %c) #1 {
+define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32_larger_arg_area(i32 %a, i32 %b, [36 x i32] %c) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_stack_objecti32_fastcc_i32_i32_a32i32_larger_arg_area
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -804,7 +804,7 @@ entry:
 
 declare hidden void @void_fastcc_multi_byval(i32 %a, ptr addrspace(5) byval([3 x i32]) align 16, ptr addrspace(5) byval([2 x i64]))
 
-define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
+define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_fastcc_multi_byval
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -972,7 +972,7 @@ entry:
 declare hidden void @void_fastcc_byval_and_stack_passed(ptr addrspace(5) byval([3 x i32]) align 16, [32 x i32], i32)
 
 ; Callee has a byval and non-byval stack passed argument
-define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 x i32]) #1 {
+define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 x i32]) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_byval_and_stack_passed
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -1164,7 +1164,7 @@ entry:
 
 declare hidden fastcc i64 @i64_fastcc_i64(i64 %arg0)
 
-define hidden fastcc i64 @sibling_call_i64_fastcc_i64(i64 %a) #1 {
+define hidden fastcc i64 @sibling_call_i64_fastcc_i64(i64 %a) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_i64_fastcc_i64
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -1213,7 +1213,7 @@ entry:
 
 declare hidden fastcc ptr addrspace(1) @p1i8_fastcc_p1i8(ptr addrspace(1) %arg0)
 
-define hidden fastcc ptr addrspace(1) @sibling_call_p1i8_fastcc_p1i8(ptr addrspace(1) %a) #1 {
+define hidden fastcc ptr addrspace(1) @sibling_call_p1i8_fastcc_p1i8(ptr addrspace(1) %a) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_p1i8_fastcc_p1i8
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -1262,7 +1262,7 @@ entry:
 
 declare hidden fastcc i16 @i16_fastcc_i16(i16 %arg0)
 
-define hidden fastcc i16 @sibling_call_i16_fastcc_i16(i16 %a) #1 {
+define hidden fastcc i16 @sibling_call_i16_fastcc_i16(i16 %a) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_i16_fastcc_i16
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -1309,7 +1309,7 @@ entry:
 
 declare hidden fastcc half @f16_fastcc_f16(half %arg0)
 
-define hidden fastcc half @sibling_call_f16_fastcc_f16(half %a) #1 {
+define hidden fastcc half @sibling_call_f16_fastcc_f16(half %a) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_f16_fastcc_f16
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -1356,7 +1356,7 @@ entry:
 
 declare hidden fastcc <3 x i16> @v3i16_fastcc_v3i16(<3 x i16> %arg0)
 
-define hidden fastcc <3 x i16> @sibling_call_v3i16_fastcc_v3i16(<3 x i16> %a) #1 {
+define hidden fastcc <3 x i16> @sibling_call_v3i16_fastcc_v3i16(<3 x i16> %a) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_v3i16_fastcc_v3i16
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -1410,7 +1410,7 @@ entry:
 
 declare hidden fastcc <4 x i16> @v4i16_fastcc_v4i16(<4 x i16> %arg0)
 
-define hidden fastcc <4 x i16> @sibling_call_v4i16_fastcc_v4i16(<4 x i16> %a) #1 {
+define hidden fastcc <4 x i16> @sibling_call_v4i16_fastcc_v4i16(<4 x i16> %a) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_v4i16_fastcc_v4i16
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -1459,7 +1459,7 @@ entry:
 
 declare hidden fastcc <2 x i64> @v2i64_fastcc_v2i64(<2 x i64> %arg0)
 
-define hidden fastcc <2 x i64> @sibling_call_v2i64_fastcc_v2i64(<2 x i64> %a) #1 {
+define hidden fastcc <2 x i64> @sibling_call_v2i64_fastcc_v2i64(<2 x i64> %a) nounwind noinline {
   ; GCN-LABEL: name: sibling_call_v2i64_fastcc_v2i64
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -1511,9 +1511,6 @@ entry:
   %ret = tail call fastcc <2 x i64> @v2i64_fastcc_v2i64(<2 x i64> %a)
   ret <2 x i64> %ret
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind noinline }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

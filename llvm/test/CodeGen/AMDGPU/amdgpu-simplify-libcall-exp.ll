@@ -280,7 +280,7 @@ define float @test_exp_f32_nobuiltin_callsite(float %arg) {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call float @_Z3expf(float [[ARG]]) #[[ATTR6:[0-9]+]], !fpmath !0
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
-  %exp = tail call float @_Z3expf(float %arg) #0, !fpmath !0
+  %exp = tail call float @_Z3expf(float %arg) nobuiltin, !fpmath !0
   ret float %exp
 }
 
@@ -290,7 +290,7 @@ define <2 x float> @test_exp_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call <2 x float> @_Z3expDv2_f(<2 x float> [[ARG]]) #[[ATTR6]], !fpmath !0
 ; CHECK-NEXT:    ret <2 x float> [[EXP]]
 ;
-  %exp = tail call <2 x float> @_Z3expDv2_f(<2 x float> %arg) #0, !fpmath !0
+  %exp = tail call <2 x float> @_Z3expDv2_f(<2 x float> %arg) nobuiltin, !fpmath !0
   ret <2 x float> %exp
 }
 
@@ -300,7 +300,7 @@ define float @test_exp_cr_f32_nobuiltin_callsite(float %arg) {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call float @_Z3expf(float [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
-  %exp = tail call float @_Z3expf(float %arg) #0
+  %exp = tail call float @_Z3expf(float %arg) nobuiltin
   ret float %exp
 }
 
@@ -310,48 +310,48 @@ define <2 x float> @test_exp_cr_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call <2 x float> @_Z3expDv2_f(<2 x float> [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret <2 x float> [[EXP]]
 ;
-  %exp = tail call <2 x float> @_Z3expDv2_f(<2 x float> %arg) #0
+  %exp = tail call <2 x float> @_Z3expDv2_f(<2 x float> %arg) nobuiltin
   ret <2 x float> %exp
 }
 
 ; "no-builtins" should be ignored
-define float @test_exp_f32_nobuiltins(float %arg) #1 {
+define float @test_exp_f32_nobuiltins(float %arg) "no-builtins" {
 ; CHECK-LABEL: define float @test_exp_f32_nobuiltins
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call float @_Z3expf(float [[ARG]]) #[[ATTR6]], !fpmath !0
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
-  %exp = tail call float @_Z3expf(float %arg) #0, !fpmath !0
+  %exp = tail call float @_Z3expf(float %arg) nobuiltin, !fpmath !0
   ret float %exp
 }
 
-define <2 x float> @test_exp_v2f32_nobuiltins(<2 x float> %arg) #1 {
+define <2 x float> @test_exp_v2f32_nobuiltins(<2 x float> %arg) "no-builtins" {
 ; CHECK-LABEL: define <2 x float> @test_exp_v2f32_nobuiltins
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call <2 x float> @_Z3expDv2_f(<2 x float> [[ARG]]) #[[ATTR6]], !fpmath !0
 ; CHECK-NEXT:    ret <2 x float> [[EXP]]
 ;
-  %exp = tail call <2 x float> @_Z3expDv2_f(<2 x float> %arg) #0, !fpmath !0
+  %exp = tail call <2 x float> @_Z3expDv2_f(<2 x float> %arg) nobuiltin, !fpmath !0
   ret <2 x float> %exp
 }
 
-define float @test_exp_cr_f32_nobuiltins(float %arg) #1 {
+define float @test_exp_cr_f32_nobuiltins(float %arg) "no-builtins" {
 ; CHECK-LABEL: define float @test_exp_cr_f32_nobuiltins
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call float @_Z3expf(float [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
-  %exp = tail call float @_Z3expf(float %arg) #0
+  %exp = tail call float @_Z3expf(float %arg) nobuiltin
   ret float %exp
 }
 
-define <2 x float> @test_exp_cr_v2f32_nobuiltins(<2 x float> %arg) #1 {
+define <2 x float> @test_exp_cr_v2f32_nobuiltins(<2 x float> %arg) "no-builtins" {
 ; CHECK-LABEL: define <2 x float> @test_exp_cr_v2f32_nobuiltins
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call <2 x float> @_Z3expDv2_f(<2 x float> [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret <2 x float> [[EXP]]
 ;
-  %exp = tail call <2 x float> @_Z3expDv2_f(<2 x float> %arg) #0
+  %exp = tail call <2 x float> @_Z3expDv2_f(<2 x float> %arg) nobuiltin
   ret <2 x float> %exp
 }
 
@@ -416,8 +416,8 @@ define <2 x float> @test_exp_cr_v2f32_preserve_flags(<2 x float> %arg) {
 }
 
 ; Test the libm name, not a recognized opencl builtin.
-declare float @expf(float) #2
-declare double @exp(double) #2
+declare float @expf(float) nounwind memory(none)
+declare double @exp(double) nounwind memory(none)
 
 define float @test_libm_exp_f32(float %arg) {
 ; CHECK-LABEL: define float @test_libm_exp_f32
@@ -485,11 +485,11 @@ define float @test_exp_f32_fast_noinline(float %arg) {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call fast float @_Z3expf(float [[ARG]]) #[[ATTR7:[0-9]+]], !fpmath !0
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
-  %exp = tail call fast float @_Z3expf(float %arg) #3, !fpmath !0
+  %exp = tail call fast float @_Z3expf(float %arg) noinline, !fpmath !0
   ret float %exp
 }
 
-define float @test_exp_f32_fast_optsize(float %arg) #4 {
+define float @test_exp_f32_fast_optsize(float %arg) optsize {
 ; CHECK-LABEL: define float @test_exp_f32_fast_optsize
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call fast float @llvm.exp.f32(float [[ARG]]), !fpmath !0
@@ -499,7 +499,7 @@ define float @test_exp_f32_fast_optsize(float %arg) #4 {
   ret float %exp
 }
 
-define float @test_exp_f32_fast_minsize(float %arg) #5 {
+define float @test_exp_f32_fast_minsize(float %arg) minsize {
 ; CHECK-LABEL: define float @test_exp_f32_fast_minsize
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call fast float @llvm.exp.f32(float [[ARG]]), !fpmath !0
@@ -509,7 +509,7 @@ define float @test_exp_f32_fast_minsize(float %arg) #5 {
   ret float %exp
 }
 
-define float @test_exp_f32_nsz_contract_optsize(float %arg) #4 {
+define float @test_exp_f32_nsz_contract_optsize(float %arg) optsize {
 ; CHECK-LABEL: define float @test_exp_f32_nsz_contract_optsize
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call nsz contract float @llvm.exp.f32(float [[ARG]]), !fpmath !0
@@ -519,7 +519,7 @@ define float @test_exp_f32_nsz_contract_optsize(float %arg) #4 {
   ret float %exp
 }
 
-define float @test_exp_f32_nsz_contract_minsize(float %arg) #5 {
+define float @test_exp_f32_nsz_contract_minsize(float %arg) minsize {
 ; CHECK-LABEL: define float @test_exp_f32_nsz_contract_minsize
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call nsz contract float @_Z3expf(float [[ARG]]), !fpmath !0
@@ -529,7 +529,7 @@ define float @test_exp_f32_nsz_contract_minsize(float %arg) #5 {
   ret float %exp
 }
 
-define half @test_exp_f16_fast_minsize(half %arg) #5 {
+define half @test_exp_f16_fast_minsize(half %arg) minsize {
 ; CHECK-LABEL: define half @test_exp_f16_fast_minsize
 ; CHECK-SAME: (half [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call half @_Z3expDh(half [[ARG]])
@@ -539,23 +539,15 @@ define half @test_exp_f16_fast_minsize(half %arg) #5 {
   ret half %exp
 }
 
-define float @test_exp_f32_strictfp(float %arg) #6 {
+define float @test_exp_f32_strictfp(float %arg) strictfp {
 ; CHECK-LABEL: define float @test_exp_f32_strictfp
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    [[EXP:%.*]] = tail call nsz float @_Z3expf(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
-  %exp = tail call nsz float @_Z3expf(float %arg) #6
+  %exp = tail call nsz float @_Z3expf(float %arg) strictfp
   ret float %exp
 }
-
-attributes #0 = { nobuiltin }
-attributes #1 = { "no-builtins" }
-attributes #2 = { nounwind memory(none) }
-attributes #3 = { noinline }
-attributes #4 = { optsize }
-attributes #5 = { minsize }
-attributes #6 = { strictfp }
 
 !0 = !{float 3.000000e+00}
 !1 = !{i32 1234}

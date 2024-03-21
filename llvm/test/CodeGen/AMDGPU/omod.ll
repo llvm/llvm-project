@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11PLUS,GFX12 %s
 
 ; IEEE bit enabled for compute kernel, so shouldn't use.
-define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_signed_zeros(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #4 {
+define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_signed_zeros(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "no-signed-zeros-fp-math"="false" {
 ; SI-LABEL: v_omod_div2_f32_enable_ieee_signed_zeros:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -81,7 +81,7 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_signed_zeros(ptr addrspac
 }
 
 ; IEEE bit enabled for compute kernel, so shouldn't use.
-define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_signed_zeros(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #4 {
+define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_signed_zeros(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "no-signed-zeros-fp-math"="false" {
 ; SI-LABEL: v_omod_div2_f64_enable_ieee_signed_zeros:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -157,7 +157,7 @@ define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_signed_zeros(ptr addrspac
 }
 
 ; IEEE bit enabled for compute kernel, so shouldn't use even though nsz is allowed
-define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_nsz(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
+define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_nsz(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_div2_f32_enable_ieee_nsz:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -233,7 +233,7 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_nsz(ptr addrspace(1) %out
 }
 
 ; IEEE bit enabled for compute kernel, so shouldn't use even though nsz is allowed.
-define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_nsz(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #5 {
+define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_nsz(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_omod_div2_f64_enable_ieee_nsz:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -309,7 +309,7 @@ define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_nsz(ptr addrspace(1) %out
 }
 
 ; Only allow without IEEE bit if signed zeros are significant.
-define amdgpu_ps void @v_omod_div2_f32_signed_zeros(float %a) #4 {
+define amdgpu_ps void @v_omod_div2_f32_signed_zeros(float %a) nounwind "no-signed-zeros-fp-math"="false" {
 ; SI-LABEL: v_omod_div2_f32_signed_zeros:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
@@ -342,7 +342,7 @@ define amdgpu_ps void @v_omod_div2_f32_signed_zeros(float %a) #4 {
 }
 
 ; Only allow without IEEE bit if signed zeros are significant.
-define amdgpu_ps void @v_omod_div2_f64_signed_zeros(double %a) #4 {
+define amdgpu_ps void @v_omod_div2_f64_signed_zeros(double %a) nounwind "no-signed-zeros-fp-math"="false" {
 ; SI-LABEL: v_omod_div2_f64_signed_zeros:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
@@ -384,7 +384,7 @@ define amdgpu_ps void @v_omod_div2_f64_signed_zeros(double %a) #4 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_div2_f32(float %a) #0 {
+define amdgpu_ps void @v_omod_div2_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_div2_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 div:2
@@ -412,7 +412,7 @@ define amdgpu_ps void @v_omod_div2_f32(float %a) #0 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_div2_f64(double %a) #5 {
+define amdgpu_ps void @v_omod_div2_f64(double %a) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_omod_div2_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0 div:2
@@ -448,7 +448,7 @@ define amdgpu_ps void @v_omod_div2_f64(double %a) #5 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_mul2_f32(float %a) #0 {
+define amdgpu_ps void @v_omod_mul2_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_mul2_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 mul:2
@@ -476,7 +476,7 @@ define amdgpu_ps void @v_omod_mul2_f32(float %a) #0 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_mul2_med3(float %x, float %y, float %z) #0 {
+define amdgpu_ps void @v_omod_mul2_med3(float %x, float %y, float %z) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_mul2_med3:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_med3_f32 v0, v0, v1, v2 mul:2
@@ -512,7 +512,7 @@ define amdgpu_ps void @v_omod_mul2_med3(float %x, float %y, float %z) #0 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_mul2_f64(double %a) #5 {
+define amdgpu_ps void @v_omod_mul2_f64(double %a) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_omod_mul2_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0 mul:2
@@ -548,7 +548,7 @@ define amdgpu_ps void @v_omod_mul2_f64(double %a) #5 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_mul4_f32(float %a) #0 {
+define amdgpu_ps void @v_omod_mul4_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_mul4_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 mul:4
@@ -576,7 +576,7 @@ define amdgpu_ps void @v_omod_mul4_f32(float %a) #0 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_mul4_f64(double %a) #5 {
+define amdgpu_ps void @v_omod_mul4_f64(double %a) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_omod_mul4_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0 mul:4
@@ -612,7 +612,7 @@ define amdgpu_ps void @v_omod_mul4_f64(double %a) #5 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_mul4_multi_use_f32(float %a) #0 {
+define amdgpu_ps void @v_omod_mul4_multi_use_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_mul4_multi_use_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
@@ -665,7 +665,7 @@ define amdgpu_ps void @v_omod_mul4_multi_use_f32(float %a) #0 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_mul4_dbg_use_f32(float %a) #0 {
+define amdgpu_ps void @v_omod_mul4_dbg_use_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_mul4_dbg_use_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 mul:4
@@ -695,7 +695,7 @@ define amdgpu_ps void @v_omod_mul4_dbg_use_f32(float %a) #0 {
 }
 
 ; Clamp is applied after omod, folding both into instruction is OK.
-define amdgpu_ps void @v_clamp_omod_div2_f32(float %a) #0 {
+define amdgpu_ps void @v_clamp_omod_div2_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_clamp_omod_div2_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 clamp div:2
@@ -727,7 +727,7 @@ define amdgpu_ps void @v_clamp_omod_div2_f32(float %a) #0 {
 }
 
 ; Cannot fold omod into clamp
-define amdgpu_ps void @v_omod_div2_clamp_f32(float %a) #0 {
+define amdgpu_ps void @v_omod_div2_clamp_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_div2_clamp_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 clamp
@@ -761,7 +761,7 @@ define amdgpu_ps void @v_omod_div2_clamp_f32(float %a) #0 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_div2_abs_src_f32(float %a) #0 {
+define amdgpu_ps void @v_omod_div2_abs_src_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_div2_abs_src_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
@@ -794,7 +794,7 @@ define amdgpu_ps void @v_omod_div2_abs_src_f32(float %a) #0 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_add_self_clamp_f32(float %a) #0 {
+define amdgpu_ps void @v_omod_add_self_clamp_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_add_self_clamp_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e64 v0, v0, v0 clamp
@@ -823,7 +823,7 @@ define amdgpu_ps void @v_omod_add_self_clamp_f32(float %a) #0 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_add_clamp_self_f32(float %a) #0 {
+define amdgpu_ps void @v_omod_add_clamp_self_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_add_clamp_self_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_max_f32_e64 v0, v0, v0 clamp
@@ -866,7 +866,7 @@ define amdgpu_ps void @v_omod_add_clamp_self_f32(float %a) #0 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_add_abs_self_f32(float %a) #0 {
+define amdgpu_ps void @v_omod_add_abs_self_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_add_abs_self_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
@@ -899,7 +899,7 @@ define amdgpu_ps void @v_omod_add_abs_self_f32(float %a) #0 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_add_abs_x_x_f32(float %a) #0 {
+define amdgpu_ps void @v_omod_add_abs_x_x_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_add_abs_x_x_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
@@ -932,7 +932,7 @@ define amdgpu_ps void @v_omod_add_abs_x_x_f32(float %a) #0 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_add_x_abs_x_f32(float %a) #0 {
+define amdgpu_ps void @v_omod_add_x_abs_x_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_add_x_abs_x_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
@@ -966,7 +966,7 @@ define amdgpu_ps void @v_omod_add_x_abs_x_f32(float %a) #0 {
 }
 
 ; Don't fold omod into omod into another omod.
-define amdgpu_ps void @v_omod_div2_omod_div2_f32(float %a) #0 {
+define amdgpu_ps void @v_omod_div2_omod_div2_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_div2_omod_div2_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 div:2
@@ -1000,7 +1000,7 @@ define amdgpu_ps void @v_omod_div2_omod_div2_f32(float %a) #0 {
 }
 
 ; Don't fold omod if denorms enabled
-define amdgpu_ps void @v_omod_div2_f32_denormals(float %a) #2 {
+define amdgpu_ps void @v_omod_div2_f32_denormals(float %a) nounwind "denormal-fp-math-f32"="ieee,ieee" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_div2_f32_denormals:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
@@ -1033,7 +1033,7 @@ define amdgpu_ps void @v_omod_div2_f32_denormals(float %a) #2 {
 }
 
 ; Don't fold omod if denorms enabled.
-define amdgpu_ps void @v_omod_div2_f64_denormals(double %a) #6 {
+define amdgpu_ps void @v_omod_div2_f64_denormals(double %a) nounwind "denormal-fp-math"="ieee,ieee" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_div2_f64_denormals:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
@@ -1076,7 +1076,7 @@ define amdgpu_ps void @v_omod_div2_f64_denormals(double %a) #6 {
 }
 
 ; Don't fold omod if denorms enabled for add form.
-define amdgpu_ps void @v_omod_mul2_f32_denormals(float %a) #2 {
+define amdgpu_ps void @v_omod_mul2_f32_denormals(float %a) nounwind "denormal-fp-math-f32"="ieee,ieee" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_mul2_f32_denormals:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
@@ -1109,7 +1109,7 @@ define amdgpu_ps void @v_omod_mul2_f32_denormals(float %a) #2 {
 }
 
 ; Don't fold omod if denorms enabled for add form.
-define amdgpu_ps void @v_omod_mul2_f64_denormals(double %a) #2 {
+define amdgpu_ps void @v_omod_mul2_f64_denormals(double %a) nounwind "denormal-fp-math-f32"="ieee,ieee" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_mul2_f64_denormals:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
@@ -1152,7 +1152,7 @@ define amdgpu_ps void @v_omod_mul2_f64_denormals(double %a) #2 {
 }
 
 ; Don't fold omod if denorms enabled
-define amdgpu_ps void @v_omod_div2_f16_denormals(half %a) #0 {
+define amdgpu_ps void @v_omod_div2_f16_denormals(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_div2_f16_denormals:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
@@ -1187,7 +1187,7 @@ define amdgpu_ps void @v_omod_div2_f16_denormals(half %a) #0 {
 }
 
 ; Don't fold omod if denorms enabled for add form.
-define amdgpu_ps void @v_omod_mul2_f16_denormals(half %a) #0 {
+define amdgpu_ps void @v_omod_mul2_f16_denormals(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_mul2_f16_denormals:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
@@ -1221,7 +1221,7 @@ define amdgpu_ps void @v_omod_mul2_f16_denormals(half %a) #0 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_div2_f16_no_denormals(half %a) #3 {
+define amdgpu_ps void @v_omod_div2_f16_no_denormals(half %a) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_div2_f16_no_denormals:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
@@ -1252,7 +1252,7 @@ define amdgpu_ps void @v_omod_div2_f16_no_denormals(half %a) #3 {
   ret void
 }
 
-define amdgpu_ps void @v_omod_mac_to_mad(float %b, float %a) #0 {
+define amdgpu_ps void @v_omod_mac_to_mad(float %b, float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: v_omod_mac_to_mad:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_mad_f32 v1, v1, v1, v0 mul:2
@@ -1287,27 +1287,19 @@ define amdgpu_ps void @v_omod_mac_to_mad(float %b, float %a) #0 {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.floor.f32(float) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare float @llvm.amdgcn.fmed3.f32(float, float, float) #1
-declare double @llvm.fabs.f64(double) #1
-declare double @llvm.minnum.f64(double, double) #1
-declare double @llvm.maxnum.f64(double, double) #1
-declare half @llvm.fabs.f16(half) #1
-declare half @llvm.minnum.f16(half, half) #1
-declare half @llvm.maxnum.f16(half, half) #1
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
-
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "no-signed-zeros-fp-math"="true" }
-attributes #3 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" }
-attributes #4 = { nounwind "no-signed-zeros-fp-math"="false" }
-attributes #5 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #6 = { nounwind "denormal-fp-math"="ieee,ieee" "no-signed-zeros-fp-math"="true" }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare float @llvm.fabs.f32(float) nounwind readnone
+declare float @llvm.floor.f32(float) nounwind readnone
+declare float @llvm.minnum.f32(float, float) nounwind readnone
+declare float @llvm.maxnum.f32(float, float) nounwind readnone
+declare float @llvm.amdgcn.fmed3.f32(float, float, float) nounwind readnone
+declare double @llvm.fabs.f64(double) nounwind readnone
+declare double @llvm.minnum.f64(double, double) nounwind readnone
+declare double @llvm.maxnum.f64(double, double) nounwind readnone
+declare half @llvm.fabs.f16(half) nounwind readnone
+declare half @llvm.minnum.f16(half, half) nounwind readnone
+declare half @llvm.maxnum.f16(half, half) nounwind readnone
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

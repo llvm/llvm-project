@@ -4,125 +4,125 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=+enable-flat-scratch -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10-SCRATCH %s
 
-declare hidden amdgpu_gfx void @external_void_func_i1(i1) #0
-declare hidden amdgpu_gfx void @external_void_func_i1_signext(i1 signext) #0
-declare hidden amdgpu_gfx void @external_void_func_i1_zeroext(i1 zeroext) #0
+declare hidden amdgpu_gfx void @external_void_func_i1(i1) nounwind
+declare hidden amdgpu_gfx void @external_void_func_i1_signext(i1 signext) nounwind
+declare hidden amdgpu_gfx void @external_void_func_i1_zeroext(i1 zeroext) nounwind
 
-declare hidden amdgpu_gfx void @external_void_func_i8(i8) #0
-declare hidden amdgpu_gfx void @external_void_func_i8_signext(i8 signext) #0
-declare hidden amdgpu_gfx void @external_void_func_i8_zeroext(i8 zeroext) #0
-declare hidden amdgpu_gfx void @external_void_func_v2i8(<2 x i8>) #0
-declare hidden amdgpu_gfx void @external_void_func_v3i8(<3 x i8>) #0
-declare hidden amdgpu_gfx void @external_void_func_v4i8(<4 x i8>) #0
-declare hidden amdgpu_gfx void @external_void_func_v5i8(<5 x i8>) #0
-declare hidden amdgpu_gfx void @external_void_func_v8i8(<8 x i8>) #0
-declare hidden amdgpu_gfx void @external_void_func_v16i8(<8 x i8>) #0
-declare hidden amdgpu_gfx void @external_void_func_v32i8(<32 x i8>) #0
+declare hidden amdgpu_gfx void @external_void_func_i8(i8) nounwind
+declare hidden amdgpu_gfx void @external_void_func_i8_signext(i8 signext) nounwind
+declare hidden amdgpu_gfx void @external_void_func_i8_zeroext(i8 zeroext) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v2i8(<2 x i8>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3i8(<3 x i8>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v4i8(<4 x i8>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v5i8(<5 x i8>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v8i8(<8 x i8>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v16i8(<8 x i8>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v32i8(<32 x i8>) nounwind
 
-declare hidden amdgpu_gfx i8 @external_void_func_i8_ret(i8) #0
-declare hidden amdgpu_gfx <2 x i8> @external_void_func_v2i8_ret(<2 x i8>) #0
-declare hidden amdgpu_gfx <3 x i8> @external_void_func_v3i8_ret(<3 x i8>) #0
-declare hidden amdgpu_gfx <4 x i8> @external_void_func_v4i8_ret(<4 x i8>) #0
-declare hidden amdgpu_gfx <5 x i8> @external_void_func_v5i8_ret(<5 x i8>) #0
-declare hidden amdgpu_gfx <8 x i8> @external_void_func_v8i8_ret(<8 x i8>) #0
-declare hidden amdgpu_gfx <32 x i8> @external_void_func_v32i8_ret(<32 x i8>) #0
+declare hidden amdgpu_gfx i8 @external_void_func_i8_ret(i8) nounwind
+declare hidden amdgpu_gfx <2 x i8> @external_void_func_v2i8_ret(<2 x i8>) nounwind
+declare hidden amdgpu_gfx <3 x i8> @external_void_func_v3i8_ret(<3 x i8>) nounwind
+declare hidden amdgpu_gfx <4 x i8> @external_void_func_v4i8_ret(<4 x i8>) nounwind
+declare hidden amdgpu_gfx <5 x i8> @external_void_func_v5i8_ret(<5 x i8>) nounwind
+declare hidden amdgpu_gfx <8 x i8> @external_void_func_v8i8_ret(<8 x i8>) nounwind
+declare hidden amdgpu_gfx <32 x i8> @external_void_func_v32i8_ret(<32 x i8>) nounwind
 
-declare hidden amdgpu_gfx void @external_void_func_i16(i16) #0
-declare hidden amdgpu_gfx void @external_void_func_i16_signext(i16 signext) #0
-declare hidden amdgpu_gfx void @external_void_func_i16_zeroext(i16 zeroext) #0
+declare hidden amdgpu_gfx void @external_void_func_i16(i16) nounwind
+declare hidden amdgpu_gfx void @external_void_func_i16_signext(i16 signext) nounwind
+declare hidden amdgpu_gfx void @external_void_func_i16_zeroext(i16 zeroext) nounwind
 
-declare hidden amdgpu_gfx void @external_void_func_i32(i32) #0
-declare hidden amdgpu_gfx void @external_void_func_i64(i64) #0
-declare hidden amdgpu_gfx void @external_void_func_v2i64(<2 x i64>) #0
-declare hidden amdgpu_gfx void @external_void_func_v3i64(<3 x i64>) #0
-declare hidden amdgpu_gfx void @external_void_func_v4i64(<4 x i64>) #0
+declare hidden amdgpu_gfx void @external_void_func_i32(i32) nounwind
+declare hidden amdgpu_gfx void @external_void_func_i64(i64) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v2i64(<2 x i64>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3i64(<3 x i64>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v4i64(<4 x i64>) nounwind
 
-declare hidden amdgpu_gfx void @external_void_func_f16(half) #0
-declare hidden amdgpu_gfx void @external_void_func_f32(float) #0
-declare hidden amdgpu_gfx void @external_void_func_f64(double) #0
-declare hidden amdgpu_gfx void @external_void_func_v2f32(<2 x float>) #0
-declare hidden amdgpu_gfx void @external_void_func_v2f64(<2 x double>) #0
-declare hidden amdgpu_gfx void @external_void_func_v3f32(<3 x float>) #0
-declare hidden amdgpu_gfx void @external_void_func_v3f64(<3 x double>) #0
-declare hidden amdgpu_gfx void @external_void_func_v5f32(<5 x float>) #0
+declare hidden amdgpu_gfx void @external_void_func_f16(half) nounwind
+declare hidden amdgpu_gfx void @external_void_func_f32(float) nounwind
+declare hidden amdgpu_gfx void @external_void_func_f64(double) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v2f32(<2 x float>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v2f64(<2 x double>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3f32(<3 x float>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3f64(<3 x double>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v5f32(<5 x float>) nounwind
 
-declare hidden amdgpu_gfx void @external_void_func_v2i16(<2 x i16>) #0
-declare hidden amdgpu_gfx void @external_void_func_v2f16(<2 x half>) #0
-declare hidden amdgpu_gfx void @external_void_func_v3i16(<3 x i16>) #0
-declare hidden amdgpu_gfx void @external_void_func_v3f16(<3 x half>) #0
-declare hidden amdgpu_gfx void @external_void_func_v4i16(<4 x i16>) #0
-declare hidden amdgpu_gfx void @external_void_func_v4f16(<4 x half>) #0
+declare hidden amdgpu_gfx void @external_void_func_v2i16(<2 x i16>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v2f16(<2 x half>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3i16(<3 x i16>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3f16(<3 x half>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v4i16(<4 x i16>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v4f16(<4 x half>) nounwind
 
-declare hidden amdgpu_gfx void @external_void_func_bf16(bfloat) #0
-declare hidden amdgpu_gfx void @external_void_func_v1bf16(<1 x bfloat>) #0
-declare hidden amdgpu_gfx void @external_void_func_v2bf16(<2 x bfloat>) #0
-declare hidden amdgpu_gfx void @external_void_func_v3bf16(<3 x bfloat>) #0
-declare hidden amdgpu_gfx void @external_void_func_v4bf16(<4 x bfloat>) #0
-declare hidden amdgpu_gfx void @external_void_func_v8bf16(<8 x bfloat>) #0
-declare hidden amdgpu_gfx void @external_void_func_v16bf16(<16 x bfloat>) #0
+declare hidden amdgpu_gfx void @external_void_func_bf16(bfloat) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v1bf16(<1 x bfloat>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v2bf16(<2 x bfloat>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3bf16(<3 x bfloat>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v4bf16(<4 x bfloat>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v8bf16(<8 x bfloat>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v16bf16(<16 x bfloat>) nounwind
 
-declare hidden amdgpu_gfx void @external_void_func_bf16_inreg(bfloat inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v1bf16_inreg(<1 x bfloat> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v2bf16_inreg(<2 x bfloat> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v3bf16_inreg(<3 x bfloat> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v4bf16_inreg(<4 x bfloat> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v8bf16_inreg(<8 x bfloat> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v16bf16_inreg(<16 x bfloat> inreg) #0
+declare hidden amdgpu_gfx void @external_void_func_bf16_inreg(bfloat inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v1bf16_inreg(<1 x bfloat> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v2bf16_inreg(<2 x bfloat> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3bf16_inreg(<3 x bfloat> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v4bf16_inreg(<4 x bfloat> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v8bf16_inreg(<8 x bfloat> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v16bf16_inreg(<16 x bfloat> inreg) nounwind
 
-declare hidden amdgpu_gfx void @external_void_func_v2i32(<2 x i32>) #0
-declare hidden amdgpu_gfx void @external_void_func_v3i32(<3 x i32>) #0
-declare hidden amdgpu_gfx void @external_void_func_v3i32_i32(<3 x i32>, i32) #0
-declare hidden amdgpu_gfx void @external_void_func_v4i32(<4 x i32>) #0
-declare hidden amdgpu_gfx void @external_void_func_v5i32(<5 x i32>) #0
-declare hidden amdgpu_gfx void @external_void_func_v8i32(<8 x i32>) #0
-declare hidden amdgpu_gfx void @external_void_func_v16i32(<16 x i32>) #0
-declare hidden amdgpu_gfx void @external_void_func_v32i32(<32 x i32>) #0
-declare hidden amdgpu_gfx void @external_void_func_v32i32_i32(<32 x i32>, i32) #0
+declare hidden amdgpu_gfx void @external_void_func_v2i32(<2 x i32>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3i32(<3 x i32>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3i32_i32(<3 x i32>, i32) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v4i32(<4 x i32>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v5i32(<5 x i32>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v8i32(<8 x i32>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v16i32(<16 x i32>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v32i32(<32 x i32>) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v32i32_i32(<32 x i32>, i32) nounwind
 
-declare hidden amdgpu_gfx void @external_void_func_i1_inreg(i1 inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_i8_inreg(i8 inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_i16_inreg(i16 inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_i32_inreg(i32 inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_i64_inreg(i64 inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v2i64_inreg(<2 x i64> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v3i64_inreg(<3 x i64> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v4i64_inreg(<4 x i64> inreg) #0
+declare hidden amdgpu_gfx void @external_void_func_i1_inreg(i1 inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_i8_inreg(i8 inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_i16_inreg(i16 inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_i32_inreg(i32 inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_i64_inreg(i64 inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v2i64_inreg(<2 x i64> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3i64_inreg(<3 x i64> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v4i64_inreg(<4 x i64> inreg) nounwind
 
-declare hidden amdgpu_gfx void @external_void_func_f16_inreg(half inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_f32_inreg(float inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_f64_inreg(double inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v2f32_inreg(<2 x float> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v2f64_inreg(<2 x double> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v3f32_inreg(<3 x float> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v3f64_inreg(<3 x double> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v5f32_inreg(<5 x float> inreg) #0
+declare hidden amdgpu_gfx void @external_void_func_f16_inreg(half inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_f32_inreg(float inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_f64_inreg(double inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v2f32_inreg(<2 x float> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v2f64_inreg(<2 x double> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3f32_inreg(<3 x float> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3f64_inreg(<3 x double> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v5f32_inreg(<5 x float> inreg) nounwind
 
-declare hidden amdgpu_gfx void @external_void_func_v2i16_inreg(<2 x i16> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v2f16_inreg(<2 x half> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v3i16_inreg(<3 x i16> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v3f16_inreg(<3 x half> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v4i16_inreg(<4 x i16> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v4f16_inreg(<4 x half> inreg) #0
+declare hidden amdgpu_gfx void @external_void_func_v2i16_inreg(<2 x i16> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v2f16_inreg(<2 x half> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3i16_inreg(<3 x i16> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3f16_inreg(<3 x half> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v4i16_inreg(<4 x i16> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v4f16_inreg(<4 x half> inreg) nounwind
 
-declare hidden amdgpu_gfx void @external_void_func_v2i32_inreg(<2 x i32> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v3i32_inreg(<3 x i32> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v3i32_i32_inreg(<3 x i32> inreg, i32 inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v4i32_inreg(<4 x i32> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v5i32_inreg(<5 x i32> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v8i32_inreg(<8 x i32> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v16i32_inreg(<16 x i32> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v32i32_inreg(<32 x i32> inreg) #0
-declare hidden amdgpu_gfx void @external_void_func_v32i32_i32_inreg(<32 x i32> inreg, i32 inreg) #0
+declare hidden amdgpu_gfx void @external_void_func_v2i32_inreg(<2 x i32> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3i32_inreg(<3 x i32> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v3i32_i32_inreg(<3 x i32> inreg, i32 inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v4i32_inreg(<4 x i32> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v5i32_inreg(<5 x i32> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v8i32_inreg(<8 x i32> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v16i32_inreg(<16 x i32> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v32i32_inreg(<32 x i32> inreg) nounwind
+declare hidden amdgpu_gfx void @external_void_func_v32i32_i32_inreg(<32 x i32> inreg, i32 inreg) nounwind
 
 ; return value and argument
-declare hidden amdgpu_gfx i32 @external_i32_func_i32(i32) #0
+declare hidden amdgpu_gfx i32 @external_i32_func_i32(i32) nounwind
 
 ; Structs
-declare hidden amdgpu_gfx void @external_void_func_struct_i8_i32({ i8, i32 }) #0
-declare hidden amdgpu_gfx void @external_void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 })) #0
-declare hidden amdgpu_gfx void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }), ptr addrspace(5) byval({ i8, i32 })) #0
+declare hidden amdgpu_gfx void @external_void_func_struct_i8_i32({ i8, i32 }) nounwind
+declare hidden amdgpu_gfx void @external_void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 })) nounwind
+declare hidden amdgpu_gfx void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }), ptr addrspace(5) byval({ i8, i32 })) nounwind
 
-define amdgpu_gfx void @test_call_external_void_func_i1_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_i1_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i1_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -243,7 +243,7 @@ define amdgpu_gfx void @test_call_external_void_func_i1_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i1_signext(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_i1_signext(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i1_signext:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -372,7 +372,7 @@ define amdgpu_gfx void @test_call_external_void_func_i1_signext(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i1_zeroext(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_i1_zeroext(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i1_zeroext:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -501,7 +501,7 @@ define amdgpu_gfx void @test_call_external_void_func_i1_zeroext(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i8_imm(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_i8_imm(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i8_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -618,7 +618,7 @@ define amdgpu_gfx void @test_call_external_void_func_i8_imm(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i8_signext(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_i8_signext(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i8_signext:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -740,7 +740,7 @@ define amdgpu_gfx void @test_call_external_void_func_i8_signext(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i8_zeroext(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_i8_zeroext(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i8_zeroext:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -862,7 +862,7 @@ define amdgpu_gfx void @test_call_external_void_func_i8_zeroext(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i16_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_i16_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i16_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -979,7 +979,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i16_signext(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_i16_signext(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i16_signext:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1101,7 +1101,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_signext(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i16_zeroext(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_i16_zeroext(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i16_zeroext:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1223,7 +1223,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_zeroext(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i32_imm(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_i32_imm(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i32_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1340,7 +1340,7 @@ define amdgpu_gfx void @test_call_external_void_func_i32_imm(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i64_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_i64_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i64_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1460,7 +1460,7 @@ define amdgpu_gfx void @test_call_external_void_func_i64_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2i64() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2i64() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1586,7 +1586,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2i64_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2i64_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2i64_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1713,7 +1713,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3i64() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3i64() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1847,7 +1847,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i64() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v4i64() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4i64() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1987,7 +1987,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i64() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_f16_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_f16_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_f16_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2104,7 +2104,7 @@ define amdgpu_gfx void @test_call_external_void_func_f16_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_f32_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_f32_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_f32_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2221,7 +2221,7 @@ define amdgpu_gfx void @test_call_external_void_func_f32_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2f32_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2f32_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2f32_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2341,7 +2341,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2f32_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3f32_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3f32_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3f32_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2465,7 +2465,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f32_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v5f32_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v5f32_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v5f32_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2596,7 +2596,7 @@ define amdgpu_gfx void @test_call_external_void_func_v5f32_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_f64_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_f64_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_f64_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2716,7 +2716,7 @@ define amdgpu_gfx void @test_call_external_void_func_f64_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2f64_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2f64_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2f64_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2843,7 +2843,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2f64_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3f64_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3f64_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3f64_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2977,7 +2977,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f64_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2i8() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2i8() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3111,7 +3111,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i8() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3i8() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3i8() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3248,7 +3248,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i8() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v4i8() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4i8() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3389,7 +3389,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i8() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v5i8() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v5i8() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v5i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3538,7 +3538,7 @@ define amdgpu_gfx void @test_call_external_void_func_v5i8() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v8i8() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v8i8() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v8i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3698,7 +3698,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8i8() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v32i8() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v32i8() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v32i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3985,7 +3985,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i8() #0 {
 }
 
 
-define amdgpu_gfx void @test_call_external_void_func_i8_ret() #0 {
+define amdgpu_gfx void @test_call_external_void_func_i8_ret() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i8_ret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4137,7 +4137,7 @@ define amdgpu_gfx void @test_call_external_void_func_i8_ret() #0 {
 }
 
 
-define amdgpu_gfx void @test_call_external_void_func_v2i8_ret() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2i8_ret() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2i8_ret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4307,7 +4307,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i8_ret() #0 {
 }
 
 
-define amdgpu_gfx void @test_call_external_void_func_v3i8_ret() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3i8_ret() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3i8_ret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4494,7 +4494,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i8_ret() #0 {
 }
 
 
-define amdgpu_gfx void @test_call_external_void_func_v4i8_ret() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4i8_ret() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4i8_ret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4689,7 +4689,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i8_ret() #0 {
 }
 
 
-define amdgpu_gfx void @test_call_external_void_func_v5i8_ret() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v5i8_ret() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v5i8_ret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4904,7 +4904,7 @@ define amdgpu_gfx void @test_call_external_void_func_v5i8_ret() #0 {
 }
 
 
-define amdgpu_gfx void @test_call_external_void_func_v8i8_ret() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v8i8_ret() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v8i8_ret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5141,7 +5141,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8i8_ret() #0 {
 }
 
 
-define amdgpu_gfx void @test_call_external_void_func_v32i8_ret() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v32i8_ret() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v32i8_ret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5668,7 +5668,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i8_ret() #0 {
 
 
 
-define amdgpu_gfx void @test_call_external_void_func_v2i16() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2i16() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5786,7 +5786,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i16() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3i16() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3i16() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5904,7 +5904,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3f16() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3f16() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6022,7 +6022,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3i16_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3i16_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3i16_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6142,7 +6142,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3f16_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3f16_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3f16_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6263,7 +6263,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v4i16() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4i16() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6381,7 +6381,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v4i16_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4i16_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4i16_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6502,7 +6502,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2f16() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2f16() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6620,7 +6620,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2f16() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2i32() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2i32() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6738,7 +6738,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2i32_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2i32_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2i32_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6858,7 +6858,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3i32_imm(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3i32_imm(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3i32_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6982,7 +6982,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_imm(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3i32_i32(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3i32_i32(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3i32_i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7109,7 +7109,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_i32(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v4i32() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4i32() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7227,7 +7227,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v4i32_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4i32_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4i32_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7354,7 +7354,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v5i32_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v5i32_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v5i32_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7485,7 +7485,7 @@ define amdgpu_gfx void @test_call_external_void_func_v5i32_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v8i32() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v8i32() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v8i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7623,7 +7623,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v8i32_imm() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v8i32_imm() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v8i32_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7764,7 +7764,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_imm() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v16i32() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v16i32() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v16i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7910,7 +7910,7 @@ define amdgpu_gfx void @test_call_external_void_func_v16i32() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v32i32() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v32i32() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v32i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8073,7 +8073,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v32i32_i32(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v32i32_i32(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v32i32_i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8248,7 +8248,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_i32_func_i32_imm(ptr addrspace(1) %out) #0 {
+define amdgpu_gfx void @test_call_external_i32_func_i32_imm(ptr addrspace(1) %out) nounwind {
 ; GFX9-LABEL: test_call_external_i32_func_i32_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8400,7 +8400,7 @@ define amdgpu_gfx void @test_call_external_i32_func_i32_imm(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_struct_i8_i32() #0 {
+define amdgpu_gfx void @test_call_external_void_func_struct_i8_i32() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_struct_i8_i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8538,7 +8538,7 @@ define amdgpu_gfx void @test_call_external_void_func_struct_i8_i32() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_byval_struct_i8_i32() #0 {
+define amdgpu_gfx void @test_call_external_void_func_byval_struct_i8_i32() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_byval_struct_i8_i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8676,7 +8676,7 @@ define amdgpu_gfx void @test_call_external_void_func_byval_struct_i8_i32() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8859,7 +8859,7 @@ define amdgpu_gfx void @test_call_external_void_func_sret_struct_i8_i32_byval_st
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v16i8() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v16i8() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v16i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9065,7 +9065,7 @@ define amdgpu_gfx void @test_call_external_void_func_v16i8() #0 {
   ret void
 }
 
-define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
+define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) nounwind {
 ; GFX9-LABEL: tail_call_byval_align16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9437,7 +9437,7 @@ entry:
 }
 
 ; inreg arguments are put in sgprs
-define amdgpu_gfx void @test_call_external_void_func_i1_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_i1_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i1_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9558,7 +9558,7 @@ define amdgpu_gfx void @test_call_external_void_func_i1_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i8_imm_inreg(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_i8_imm_inreg(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i8_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9675,7 +9675,7 @@ define amdgpu_gfx void @test_call_external_void_func_i8_imm_inreg(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i16_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_i16_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i16_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9792,7 +9792,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i32_imm_inreg(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_i32_imm_inreg(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i32_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9909,7 +9909,7 @@ define amdgpu_gfx void @test_call_external_void_func_i32_imm_inreg(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_i64_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_i64_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_i64_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10030,7 +10030,7 @@ define amdgpu_gfx void @test_call_external_void_func_i64_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2i64_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2i64_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10162,7 +10162,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2i64_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2i64_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2i64_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10291,7 +10291,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3i64_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3i64_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10449,7 +10449,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i64_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v4i64_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4i64_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10630,7 +10630,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i64_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_f16_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_f16_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_f16_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10747,7 +10747,7 @@ define amdgpu_gfx void @test_call_external_void_func_f16_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_f32_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_f32_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_f32_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10864,7 +10864,7 @@ define amdgpu_gfx void @test_call_external_void_func_f32_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2f32_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2f32_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2f32_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10985,7 +10985,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2f32_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3f32_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3f32_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3f32_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11110,7 +11110,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f32_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v5f32_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v5f32_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v5f32_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11251,7 +11251,7 @@ define amdgpu_gfx void @test_call_external_void_func_v5f32_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_f64_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_f64_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_f64_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11372,7 +11372,7 @@ define amdgpu_gfx void @test_call_external_void_func_f64_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2f64_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2f64_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2f64_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11501,7 +11501,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2f64_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3f64_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3f64_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3f64_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11654,7 +11654,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f64_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2i16_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2i16_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2i16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11772,7 +11772,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i16_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3i16_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3i16_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3i16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11896,7 +11896,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3f16_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3f16_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3f16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12020,7 +12020,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3i16_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3i16_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3i16_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12141,7 +12141,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3f16_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3f16_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3f16_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12262,7 +12262,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v4i16_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4i16_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4i16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12386,7 +12386,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v4i16_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4i16_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4i16_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12507,7 +12507,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2f16_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2f16_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2f16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12625,7 +12625,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2f16_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2i32_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2i32_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12749,7 +12749,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2i32_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2i32_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2i32_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12870,7 +12870,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3i32_imm_inreg(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3i32_imm_inreg(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3i32_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12995,7 +12995,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_imm_inreg(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3i32_i32_inreg(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3i32_i32_inreg(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3i32_i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13124,7 +13124,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_i32_inreg(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v4i32_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4i32_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13252,7 +13252,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v4i32_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4i32_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4i32_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13381,7 +13381,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v5i32_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v5i32_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v5i32_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13522,7 +13522,7 @@ define amdgpu_gfx void @test_call_external_void_func_v5i32_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v8i32_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v8i32_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v8i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13699,7 +13699,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v8i32_imm_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v8i32_imm_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v8i32_imm_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13876,7 +13876,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_imm_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v16i32_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v16i32_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v16i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14133,7 +14133,7 @@ define amdgpu_gfx void @test_call_external_void_func_v16i32_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v32i32_inreg() #0 {
+define amdgpu_gfx void @test_call_external_void_func_v32i32_inreg() nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v32i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14524,7 +14524,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_inreg() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v32i32_i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14935,7 +14935,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, double %tmp) #0 {
+define amdgpu_gfx void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, double %tmp) nounwind {
 ; GFX9-LABEL: stack_passed_arg_alignment_v32i32_f64:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15067,7 +15067,7 @@ entry:
   ret void
 }
 
-define amdgpu_gfx void @stack_12xv3i32() #0 {
+define amdgpu_gfx void @stack_12xv3i32() nounwind {
 ; GFX9-LABEL: stack_12xv3i32:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15329,7 +15329,7 @@ entry:
   ret void
 }
 
-define amdgpu_gfx void @stack_8xv5i32() #0 {
+define amdgpu_gfx void @stack_8xv5i32() nounwind {
 ; GFX9-LABEL: stack_8xv5i32:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15613,7 +15613,7 @@ entry:
   ret void
 }
 
-define amdgpu_gfx void @stack_8xv5f32() #0 {
+define amdgpu_gfx void @stack_8xv5f32() nounwind {
 ; GFX9-LABEL: stack_8xv5f32:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15903,7 +15903,7 @@ entry:
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_bf16(i16 %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_bf16(i16 %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16017,7 +16017,7 @@ define amdgpu_gfx void @test_call_external_void_func_bf16(i16 %arg) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v1bf16(i16 %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v1bf16(i16 %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v1bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16131,7 +16131,7 @@ define amdgpu_gfx void @test_call_external_void_func_v1bf16(i16 %arg) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2bf16(i32 %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2bf16(i32 %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16245,7 +16245,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2bf16(i32 %arg) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3bf16(<3 x i16> %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3bf16(<3 x i16> %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16359,7 +16359,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3bf16(<3 x i16> %arg) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v4bf16(<4 x i16> %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4bf16(<4 x i16> %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16473,7 +16473,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4bf16(<4 x i16> %arg) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v8bf16(<8 x i16> %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v8bf16(<8 x i16> %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v8bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16587,7 +16587,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8bf16(<8 x i16> %arg) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v16bf16(<16 x i16> %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v16bf16(<16 x i16> %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v16bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16701,7 +16701,7 @@ define amdgpu_gfx void @test_call_external_void_func_v16bf16(<16 x i16> %arg) #0
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_bf16_inreg(i16 inreg %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_bf16_inreg(i16 inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16817,7 +16817,7 @@ define amdgpu_gfx void @test_call_external_void_func_bf16_inreg(i16 inreg %arg) 
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v1bf16_inreg(i16 inreg %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v1bf16_inreg(i16 inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v1bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16933,7 +16933,7 @@ define amdgpu_gfx void @test_call_external_void_func_v1bf16_inreg(i16 inreg %arg
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v2bf16_inreg(i32 inreg %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v2bf16_inreg(i32 inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v2bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17049,7 +17049,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2bf16_inreg(i32 inreg %arg
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v3bf16_inreg(<3 x i16> inreg %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v3bf16_inreg(<3 x i16> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v3bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17167,7 +17167,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3bf16_inreg(<3 x i16> inre
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v4bf16_inreg(<4 x i16> inreg %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v4bf16_inreg(<4 x i16> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v4bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17285,7 +17285,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4bf16_inreg(<4 x i16> inre
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v8bf16_inreg(<8 x i16> inreg %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v8bf16_inreg(<8 x i16> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v8bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17407,7 +17407,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8bf16_inreg(<8 x i16> inre
   ret void
 }
 
-define amdgpu_gfx void @test_call_external_void_func_v16bf16_inreg(<16 x i16> inreg %arg) #0 {
+define amdgpu_gfx void @test_call_external_void_func_v16bf16_inreg(<16 x i16> inreg %arg) nounwind {
 ; GFX9-LABEL: test_call_external_void_func_v16bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17553,15 +17553,13 @@ define amdgpu_gfx void @test_call_external_void_func_v16bf16_inreg(<16 x i16> in
   ret void
 }
 
-declare hidden amdgpu_gfx void @byval_align16_f64_arg(<32 x i32>, ptr addrspace(5) byval(double) align 16) #0
-declare hidden amdgpu_gfx void @stack_passed_f64_arg(<32 x i32>, double) #0
+declare hidden amdgpu_gfx void @byval_align16_f64_arg(<32 x i32>, ptr addrspace(5) byval(double) align 16) nounwind
+declare hidden amdgpu_gfx void @stack_passed_f64_arg(<32 x i32>, double) nounwind
 declare hidden amdgpu_gfx void @external_void_func_12xv3i32(<3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>,
-    <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>) #0
+    <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>) nounwind
 declare hidden amdgpu_gfx void @external_void_func_8xv5i32(<5 x i32>, <5 x i32>, <5 x i32>, <5 x i32>,
-    <5 x i32>, <5 x i32>, <5 x i32>, <5 x i32>) #0
+    <5 x i32>, <5 x i32>, <5 x i32>, <5 x i32>) nounwind
 declare hidden amdgpu_gfx void @external_void_func_12xv3f32(<3 x float>, <3 x float>, <3 x float>, <3 x float>,
-    <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>) #0
+    <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>) nounwind
 declare hidden amdgpu_gfx void @external_void_func_8xv5f32(<5 x float>, <5 x float>, <5 x float>, <5 x float>,
-    <5 x float>, <5 x float>, <5 x float>, <5 x float>) #0
-attributes #0 = { nounwind }
-attributes #1 = { nounwind noinline }
+    <5 x float>, <5 x float>, <5 x float>, <5 x float>) nounwind

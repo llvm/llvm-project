@@ -12,11 +12,11 @@
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9-GISEL %s
 
 
-declare float @llvm.amdgcn.fmed3.f32(float, float, float) #0
-declare float @llvm.fabs.f32(float) #0
-declare half @llvm.fabs.f16(half) #0
+declare float @llvm.amdgcn.fmed3.f32(float, float, float) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.fabs.f32(float) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare half @llvm.fabs.f16(half) nocallback nofree nosync nounwind speculatable willreturn memory(none)
 
-define half @fmed3_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #1 {
+define half @fmed3_f32_fpext_f16(half %arg0, half %arg1, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -70,7 +70,7 @@ define half @fmed3_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #1 {
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_flags(half %arg0, half %arg1, half %arg2) #1 {
+define half @fmed3_f32_fpext_f16_flags(half %arg0, half %arg1, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_flags:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -124,7 +124,7 @@ define half @fmed3_f32_fpext_f16_flags(half %arg0, half %arg1, half %arg2) #1 {
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_multi_use(half %arg0, half %arg1, half %arg2, ptr addrspace(1) %ptr) #1 {
+define half @fmed3_f32_fpext_f16_multi_use(half %arg0, half %arg1, half %arg2, ptr addrspace(1) %ptr) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_multi_use:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -179,7 +179,7 @@ define half @fmed3_f32_fpext_f16_multi_use(half %arg0, half %arg1, half %arg2, p
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_k0(half %arg1, half %arg2) #1 {
+define half @fmed3_f32_fpext_f16_k0(half %arg1, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_k0:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -230,7 +230,7 @@ define half @fmed3_f32_fpext_f16_k0(half %arg1, half %arg2) #1 {
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_k1(half %arg0, half %arg2) #1 {
+define half @fmed3_f32_fpext_f16_k1(half %arg0, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_k1:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -281,7 +281,7 @@ define half @fmed3_f32_fpext_f16_k1(half %arg0, half %arg2) #1 {
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_k2(half %arg0, half %arg1) #1 {
+define half @fmed3_f32_fpext_f16_k2(half %arg0, half %arg1) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_k2:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -332,7 +332,7 @@ define half @fmed3_f32_fpext_f16_k2(half %arg0, half %arg1) #1 {
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_k0_k1(half %arg2) #1 {
+define half @fmed3_f32_fpext_f16_k0_k1(half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_k0_k1:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -385,7 +385,7 @@ define half @fmed3_f32_fpext_f16_k0_k1(half %arg2) #1 {
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_k0_k2(half %arg1) #1 {
+define half @fmed3_f32_fpext_f16_k0_k2(half %arg1) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_k0_k2:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -433,7 +433,7 @@ define half @fmed3_f32_fpext_f16_k0_k2(half %arg1) #1 {
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_fabs(half %arg0, half %arg1, half %arg2) #1 {
+define half @fmed3_f32_fpext_f16_fabs(half %arg0, half %arg1, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_fabs:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -496,7 +496,7 @@ define half @fmed3_f32_fpext_f16_fabs(half %arg0, half %arg1, half %arg2) #1 {
   ret half %cast
 }
 
-define half @fmed3_fabs_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #1 {
+define half @fmed3_fabs_f32_fpext_f16(half %arg0, half %arg1, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_fabs_f32_fpext_f16:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -545,7 +545,7 @@ define half @fmed3_fabs_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #1 {
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_fneg(half %arg0, half %arg1, half %arg2) #1 {
+define half @fmed3_f32_fpext_f16_fneg(half %arg0, half %arg1, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_fneg:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -602,7 +602,7 @@ define half @fmed3_f32_fpext_f16_fneg(half %arg0, half %arg1, half %arg2) #1 {
   ret half %cast
 }
 
-define half @fmed3_fneg_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #1 {
+define half @fmed3_fneg_f32_fpext_f16(half %arg0, half %arg1, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_fneg_f32_fpext_f16:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -651,7 +651,7 @@ define half @fmed3_fneg_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #1 {
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_fneg_fabs(half %arg0, half %arg1, half %arg2) #1 {
+define half @fmed3_f32_fpext_f16_fneg_fabs(half %arg0, half %arg1, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_fneg_fabs:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -717,7 +717,7 @@ define half @fmed3_f32_fpext_f16_fneg_fabs(half %arg0, half %arg1, half %arg2) #
   ret half %cast
 }
 
-define half @fmed3_fneg_fabs_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #1 {
+define half @fmed3_fneg_fabs_f32_fpext_f16(half %arg0, half %arg1, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_fneg_fabs_f32_fpext_f16:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -772,7 +772,7 @@ define half @fmed3_fneg_fabs_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #
 ; Negative tests
 ; --------------------------------------------------------------------------------
 
-define bfloat @fmed3_f32_fpext_f16_fptrunc_bf16(half %arg0, half %arg1, half %arg2) #1 {
+define bfloat @fmed3_f32_fpext_f16_fptrunc_bf16(half %arg0, half %arg1, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-LABEL: fmed3_f32_fpext_f16_fptrunc_bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -819,7 +819,7 @@ define bfloat @fmed3_f32_fpext_f16_fptrunc_bf16(half %arg0, half %arg1, half %ar
   ret bfloat %cast
 }
 
-define half @fmed3_f32_fpext_f16_multi_use_0(half %arg0, half %arg1, half %arg2, ptr addrspace(1) %ptr) #1 {
+define half @fmed3_f32_fpext_f16_multi_use_0(half %arg0, half %arg1, half %arg2, ptr addrspace(1) %ptr) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_multi_use_0:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -887,7 +887,7 @@ define half @fmed3_f32_fpext_f16_multi_use_0(half %arg0, half %arg1, half %arg2,
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_multi_use_1(half %arg0, half %arg1, half %arg2, ptr addrspace(1) %ptr) #1 {
+define half @fmed3_f32_fpext_f16_multi_use_1(half %arg0, half %arg1, half %arg2, ptr addrspace(1) %ptr) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_multi_use_1:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -954,7 +954,7 @@ define half @fmed3_f32_fpext_f16_multi_use_1(half %arg0, half %arg1, half %arg2,
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_multi_use_2(half %arg0, half %arg1, half %arg2, ptr addrspace(1) %ptr) #1 {
+define half @fmed3_f32_fpext_f16_multi_use_2(half %arg0, half %arg1, half %arg2, ptr addrspace(1) %ptr) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_multi_use_2:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1021,7 +1021,7 @@ define half @fmed3_f32_fpext_f16_multi_use_2(half %arg0, half %arg1, half %arg2,
   half ret half %cast
 }
 
-define half @fmed3_f32_fpext_bf16(bfloat %arg0, bfloat %arg1, bfloat %arg2) #1 {
+define half @fmed3_f32_fpext_bf16(bfloat %arg0, bfloat %arg1, bfloat %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-LABEL: fmed3_f32_fpext_bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1057,7 +1057,7 @@ define half @fmed3_f32_fpext_bf16(bfloat %arg0, bfloat %arg1, bfloat %arg2) #1 {
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_bf16_0(bfloat %arg0, half %arg1, half %arg2) #1 {
+define half @fmed3_f32_fpext_f16_bf16_0(bfloat %arg0, half %arg1, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-LABEL: fmed3_f32_fpext_f16_bf16_0:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1093,7 +1093,7 @@ define half @fmed3_f32_fpext_f16_bf16_0(bfloat %arg0, half %arg1, half %arg2) #1
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_bf16_1(half %arg0, bfloat %arg1, half %arg2) #1 {
+define half @fmed3_f32_fpext_f16_bf16_1(half %arg0, bfloat %arg1, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-LABEL: fmed3_f32_fpext_f16_bf16_1:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1129,7 +1129,7 @@ define half @fmed3_f32_fpext_f16_bf16_1(half %arg0, bfloat %arg1, half %arg2) #1
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_bf16_2(half %arg0, half %arg1, bfloat %arg2) #1 {
+define half @fmed3_f32_fpext_f16_bf16_2(half %arg0, half %arg1, bfloat %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-LABEL: fmed3_f32_fpext_f16_bf16_2:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1165,7 +1165,7 @@ define half @fmed3_f32_fpext_f16_bf16_2(half %arg0, half %arg1, bfloat %arg2) #1
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_unrepresentable_k0(half %arg1, half %arg2) #1 {
+define half @fmed3_f32_fpext_f16_unrepresentable_k0(half %arg1, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_unrepresentable_k0:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1231,7 +1231,7 @@ define half @fmed3_f32_fpext_f16_unrepresentable_k0(half %arg1, half %arg2) #1 {
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_unrepresentable_k1(half %arg0, half %arg2) #1 {
+define half @fmed3_f32_fpext_f16_unrepresentable_k1(half %arg0, half %arg2) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_unrepresentable_k1:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1297,7 +1297,7 @@ define half @fmed3_f32_fpext_f16_unrepresentable_k1(half %arg0, half %arg2) #1 {
   ret half %cast
 }
 
-define half @fmed3_f32_fpext_f16_unrepresentable_k2(half %arg0, half %arg1) #1 {
+define half @fmed3_f32_fpext_f16_unrepresentable_k2(half %arg0, half %arg1) nocallback nofree nosync nounwind speculatable willreturn {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_unrepresentable_k2:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1362,8 +1362,5 @@ define half @fmed3_f32_fpext_f16_unrepresentable_k2(half %arg0, half %arg1) #1 {
   %cast = fptrunc float %med3 to half
   ret half %cast
 }
-
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}

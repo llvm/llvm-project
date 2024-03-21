@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -start-before=machine-scheduler -verify-misched -o - %s | FileCheck -check-prefix=GCN %s
 
 --- |
-  define amdgpu_kernel void @largeInterleave() #0 { ret void }
+  define amdgpu_kernel void @largeInterleave() "amdgpu-flat-work-group-size"="256,256" { ret void }
   ; GCN-LABEL: largeInterleave:
   ; GCN:       ; %bb.0:
   ; GCN-NEXT:    ; implicit-def: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
@@ -1145,7 +1145,6 @@
   ; GCN-NEXT:    s_waitcnt vmcnt(8)
   ; GCN-NEXT:    ;;#ASMEND
   ; GCN-NEXT:    s_endpgm
-  attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
   !0 = !{i64 2862105}
 
 ...

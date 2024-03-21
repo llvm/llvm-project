@@ -6,7 +6,7 @@
 ; This type promotion on smaller aligned loads can cause a page fault error
 ; while accessing one extra dword beyond the buffer.
 
-define protected amdgpu_kernel void @load_v3i32_align4(ptr addrspace(1) %arg) #0 {
+define protected amdgpu_kernel void @load_v3i32_align4(ptr addrspace(1) %arg) nounwind noinline {
 ; GCN-LABEL: load_v3i32_align4:
 ; GCN:       ; %bb.0:
 ; GCN:         s_waitcnt lgkmcnt(0)
@@ -17,7 +17,7 @@ define protected amdgpu_kernel void @load_v3i32_align4(ptr addrspace(1) %arg) #0
   ret void
 }
 
-define protected amdgpu_kernel void @load_v3i32_align8(ptr addrspace(1) %arg) #0 {
+define protected amdgpu_kernel void @load_v3i32_align8(ptr addrspace(1) %arg) nounwind noinline {
 ; GCN-LABEL: load_v3i32_align8:
 ; GCN:       ; %bb.0:
 ; GCN:         s_waitcnt lgkmcnt(0)
@@ -27,7 +27,7 @@ define protected amdgpu_kernel void @load_v3i32_align8(ptr addrspace(1) %arg) #0
   ret void
 }
 
-define protected amdgpu_kernel void @load_v3i32_align16(ptr addrspace(1) %arg) #0 {
+define protected amdgpu_kernel void @load_v3i32_align16(ptr addrspace(1) %arg) nounwind noinline {
 ; GCN-LABEL: load_v3i32_align16:
 ; GCN:       ; %bb.0:
 ; GCN:         s_waitcnt lgkmcnt(0)
@@ -37,7 +37,7 @@ define protected amdgpu_kernel void @load_v3i32_align16(ptr addrspace(1) %arg) #
   ret void
 }
 
-define protected amdgpu_kernel void @load_v3f32_align4(ptr addrspace(1) %arg) #0 {
+define protected amdgpu_kernel void @load_v3f32_align4(ptr addrspace(1) %arg) nounwind noinline {
 ; GCN-LABEL: load_v3f32_align4:
 ; GCN:       ; %bb.0:
 ; GCN:         s_waitcnt lgkmcnt(0)
@@ -48,7 +48,7 @@ define protected amdgpu_kernel void @load_v3f32_align4(ptr addrspace(1) %arg) #0
   ret void
 }
 
-define protected amdgpu_kernel void @load_v3f32_align8(ptr addrspace(1) %arg) #0 {
+define protected amdgpu_kernel void @load_v3f32_align8(ptr addrspace(1) %arg) nounwind noinline {
 ; GCN-LABEL: load_v3f32_align8:
 ; GCN:       ; %bb.0:
 ; GCN:         s_waitcnt lgkmcnt(0)
@@ -58,7 +58,7 @@ define protected amdgpu_kernel void @load_v3f32_align8(ptr addrspace(1) %arg) #0
   ret void
 }
 
-define protected amdgpu_kernel void @load_v3f32_align16(ptr addrspace(1) %arg) #0 {
+define protected amdgpu_kernel void @load_v3f32_align16(ptr addrspace(1) %arg) nounwind noinline {
 ; GCN-LABEL: load_v3f32_align16:
 ; GCN:       ; %bb.0:
 ; GCN:         s_waitcnt lgkmcnt(0)
@@ -67,5 +67,3 @@ define protected amdgpu_kernel void @load_v3f32_align16(ptr addrspace(1) %arg) #
   store <3 x float> %vec, ptr addrspace(1) undef, align 16
   ret void
 }
-
-attributes #0 = { nounwind noinline }

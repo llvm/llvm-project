@@ -4,46 +4,44 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx940 -run-pass postrapseudos -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX940 %s
 
 --- |
-    define amdgpu_kernel void @a_to_v() #0 { ret void }
-    define amdgpu_kernel void @a2_to_v2() #0 { ret void }
-    define amdgpu_kernel void @a3_to_v3() #0 { ret void }
-    define amdgpu_kernel void @a4_to_v4() #0 { ret void }
-    define amdgpu_kernel void @a8_to_v8() #0 { ret void }
-    define amdgpu_kernel void @a16_to_v16() #0 { ret void }
+    define amdgpu_kernel void @a_to_v() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a2_to_v2() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a3_to_v3() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a4_to_v4() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a8_to_v8() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a16_to_v16() "amdgpu-flat-work-group-size"="1,256" { ret void }
 
-    define amdgpu_kernel void @v_to_a() #0 { ret void }
-    define amdgpu_kernel void @v2_to_a2() #0 { ret void }
-    define amdgpu_kernel void @v3_to_a3() #0 { ret void }
-    define amdgpu_kernel void @v4_to_a4() #0 { ret void }
-    define amdgpu_kernel void @v8_to_a8() #0 { ret void }
-    define amdgpu_kernel void @v16_to_a16() #0 { ret void }
+    define amdgpu_kernel void @v_to_a() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @v2_to_a2() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @v3_to_a3() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @v4_to_a4() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @v8_to_a8() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @v16_to_a16() "amdgpu-flat-work-group-size"="1,256" { ret void }
 
-    define amdgpu_kernel void @s_to_a() #0 { ret void }
-    define amdgpu_kernel void @s2_to_a2() #0 { ret void }
-    define amdgpu_kernel void @s3_to_a3() #0 { ret void }
-    define amdgpu_kernel void @s4_to_a4() #0 { ret void }
-    define amdgpu_kernel void @s6_to_a6() #0 { ret void }
-    define amdgpu_kernel void @s8_to_a8() #0 { ret void }
-    define amdgpu_kernel void @s16_to_a16() #0 { ret void }
+    define amdgpu_kernel void @s_to_a() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @s2_to_a2() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @s3_to_a3() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @s4_to_a4() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @s6_to_a6() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @s8_to_a8() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @s16_to_a16() "amdgpu-flat-work-group-size"="1,256" { ret void }
 
-    define amdgpu_kernel void @a_to_a() #0 { ret void }
-    define amdgpu_kernel void @a2_to_a2() #0 { ret void }
-    define amdgpu_kernel void @a2_to_a2_kill() #0 { ret void }
-    define amdgpu_kernel void @a2_to_a2_implicit_defs() #0 { ret void }
-    define amdgpu_kernel void @a3_to_a3_nonoverlap_kill() #0 { ret void }
-    define amdgpu_kernel void @a3_to_a3_overlap_kill() #0 { ret void }
-    define amdgpu_kernel void @a4_to_a4() #0 { ret void }
-    define amdgpu_kernel void @a4_to_a4_overlap() #0 { ret void }
-    define amdgpu_kernel void @a8_to_a8() #0 { ret void }
-    define amdgpu_kernel void @a16_to_a16() #0 { ret void }
+    define amdgpu_kernel void @a_to_a() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a2_to_a2() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a2_to_a2_kill() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a2_to_a2_implicit_defs() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a3_to_a3_nonoverlap_kill() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a3_to_a3_overlap_kill() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a4_to_a4() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a4_to_a4_overlap() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a8_to_a8() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @a16_to_a16() "amdgpu-flat-work-group-size"="1,256" { ret void }
 
-    define amdgpu_kernel void @a_to_a_spill() #0 { ret void }
-    define amdgpu_kernel void @copy_sgpr_to_agpr_tuple() #0 { ret void }
-    define amdgpu_kernel void @copy_sgpr_to_agpr_tuple_kill() #0 { ret void }
-    define amdgpu_kernel void @copy_agpr_to_agpr_tuple() #0 { ret void }
-    define amdgpu_kernel void @copy_agpr_to_agpr_tuple_kill() #0 { ret void }
-
-    attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
+    define amdgpu_kernel void @a_to_a_spill() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @copy_sgpr_to_agpr_tuple() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @copy_sgpr_to_agpr_tuple_kill() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @copy_agpr_to_agpr_tuple() "amdgpu-flat-work-group-size"="1,256" { ret void }
+    define amdgpu_kernel void @copy_agpr_to_agpr_tuple_kill() "amdgpu-flat-work-group-size"="1,256" { ret void }
 ...
 
 ---

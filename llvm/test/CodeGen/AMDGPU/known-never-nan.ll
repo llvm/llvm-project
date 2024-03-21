@@ -22,7 +22,7 @@ define half @known_nnan_extract_vector_elt(float %a, float %b, i32 %idx, half %c
 }
 
 ; should not emit v_max
-define float @fma_not_fmaxnm_maybe_nan(i32 %i1, i32 %i2, i32 %i3) #0 {
+define float @fma_not_fmaxnm_maybe_nan(i32 %i1, i32 %i2, i32 %i3) nounwind "no-signed-zeros-fp-math"="true" "target-features"="+mad-mac-f32-insts" {
 ; CHECK-LABEL: fma_not_fmaxnm_maybe_nan:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -46,5 +46,3 @@ declare float @llvm.amdgcn.fmad.ftz.f32(float, float, float)
 
 declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float)
 declare half @llvm.canonicalize.f16(half)
-
-attributes #0 = { nounwind "no-signed-zeros-fp-math"="true" "target-features"="+mad-mac-f32-insts" }

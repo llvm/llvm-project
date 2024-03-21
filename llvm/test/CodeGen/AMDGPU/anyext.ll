@@ -6,7 +6,7 @@
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
 
-define amdgpu_kernel void @anyext_i1_i32(ptr addrspace(1) %out, i32 %cond) #0 {
+define amdgpu_kernel void @anyext_i1_i32(ptr addrspace(1) %out, i32 %cond) nounwind {
 ; GCN-LABEL: anyext_i1_i32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -59,7 +59,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b) #0 {
+define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b) nounwind {
 ; GCN-LABEL: s_anyext_i16_i32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -145,7 +145,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
+define amdgpu_kernel void @anyext_v2i16_to_v2i32() nounwind {
 ; GCN-LABEL: anyext_v2i16_to_v2i32:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
@@ -199,5 +199,3 @@ bb:
   store i8 %tmp12, ptr addrspace(1) undef, align 1
   ret void
 }
-
-attributes #0 = { nounwind }

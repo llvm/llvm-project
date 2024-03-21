@@ -8,7 +8,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-SDAG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=1 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-GISEL %s
 
-define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -119,7 +119,7 @@ define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_fmed3_nnan_r_i_i_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -231,7 +231,7 @@ define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_f32(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute0_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute0_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_fmed3_nnan_r_i_i_commute0_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -343,7 +343,7 @@ define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute0_f32(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute1_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute1_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_fmed3_nnan_r_i_i_commute1_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -455,7 +455,7 @@ define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute1_f32(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_constant_order_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_constant_order_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_fmed3_nnan_r_i_i_constant_order_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -572,7 +572,7 @@ define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_constant_order_f32(ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_multi_use_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_multi_use_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_fmed3_nnan_r_i_i_multi_use_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -744,7 +744,7 @@ define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_multi_use_f32(ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @v_test_fmed3_r_i_i_f64(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_r_i_i_f64(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_fmed3_r_i_i_f64:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -862,7 +862,7 @@ define amdgpu_kernel void @v_test_fmed3_r_i_i_f64(ptr addrspace(1) %out, ptr add
   ret void
 }
 
-define amdgpu_kernel void @v_test_fmed3_r_i_i_no_nans_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #2 {
+define amdgpu_kernel void @v_test_fmed3_r_i_i_no_nans_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_fmed3_r_i_i_no_nans_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -966,7 +966,7 @@ define amdgpu_kernel void @v_test_fmed3_r_i_i_no_nans_f32(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_legacy_fmed3_r_i_i_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1120,7 +1120,7 @@ define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat0_srcmod0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -1310,7 +1310,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0(ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod1(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod1(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat0_srcmod1:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -1500,7 +1500,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod1(ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod2(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod2(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat0_srcmod2:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -1690,7 +1690,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod2(ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat0_srcmod012:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -1890,7 +1890,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(ptr addrs
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_negabs012(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_negabs012(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat0_negabs012:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -2096,7 +2096,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_negabs012(ptr addrs
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_nnan_inputs_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -2271,7 +2271,7 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_input_calls_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_input_calls_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_nnan_input_calls_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -2423,7 +2423,7 @@ define amdgpu_kernel void @v_nnan_input_calls_med3_f32_pat0(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_call_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_call_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_nnan_call_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -2575,7 +2575,7 @@ define amdgpu_kernel void @v_nnan_call_med3_f32_pat0(ptr addrspace(1) %out, ptr 
   ret void
 }
 
-define amdgpu_kernel void @v_fast_call_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_fast_call_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_fast_call_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -2739,7 +2739,7 @@ define amdgpu_kernel void @v_fast_call_med3_f32_pat0(ptr addrspace(1) %out, ptr 
 ; 7: max(min(y, x), min(z, max(y, x)))
 ; + commute outermost max
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -2891,7 +2891,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat1(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat1(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat1:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -3043,7 +3043,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat1(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat1_srcmod0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat1_srcmod0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat1_srcmod0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -3233,7 +3233,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat1_srcmod0(ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat2(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat2(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat2:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -3385,7 +3385,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat2(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat3(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat3(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat3:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -3537,7 +3537,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat3(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat4(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat4(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat4:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -3689,7 +3689,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat4(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat5(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat5(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat5:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -3841,7 +3841,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat5(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat6(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat6(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat6:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -3993,7 +3993,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat6(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat7(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat7(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat7:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -4145,7 +4145,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat7(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat8(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat8(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat8:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -4297,7 +4297,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat8(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat9(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat9(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat9:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -4449,7 +4449,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat9(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat10(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat10(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat10:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -4601,7 +4601,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat10(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat11(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat11(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat11:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -4753,7 +4753,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat11(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat12(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat12(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat12:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -4905,7 +4905,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat12(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat13(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat13(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat13:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -5057,7 +5057,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat13(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat14(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat14(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat14:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -5209,7 +5209,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat14(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat15(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat15(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat15:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -5364,7 +5364,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat15(ptr addrspace(1) %
 ; Also handle `min` at the root:
 ; min(max(x, y), max(min(x, y), z))
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat16:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -5520,7 +5520,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat16(ptr addrspace(1) %
 ; Negative patterns
 ; ---------------------------------------------------------------------
 
-define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_safe_med3_f32_pat0_multi_use0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -5722,7 +5722,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_safe_med3_f32_pat0_multi_use1:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -5948,7 +5948,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use2(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use2(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_safe_med3_f32_pat0_multi_use2:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -6150,7 +6150,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use2(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_test_safe_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_test_safe_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_safe_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -6356,7 +6356,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0(ptr addrspace(1) %out, ptr 
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_inputs_missing0_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_missing0_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_nnan_inputs_missing0_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -6531,7 +6531,7 @@ define amdgpu_kernel void @v_nnan_inputs_missing0_med3_f32_pat0(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_inputs_missing1_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_missing1_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_nnan_inputs_missing1_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -6706,7 +6706,7 @@ define amdgpu_kernel void @v_nnan_inputs_missing1_med3_f32_pat0(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_inputs_missing2_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_missing2_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_nnan_inputs_missing2_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -6881,7 +6881,7 @@ define amdgpu_kernel void @v_nnan_inputs_missing2_med3_f32_pat0(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_test_nnan_on_call_med3_f32_pat0_srcmod0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_test_nnan_on_call_med3_f32_pat0_srcmod0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_nnan_on_call_med3_f32_pat0_srcmod0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -7071,7 +7071,7 @@ define amdgpu_kernel void @v_test_nnan_on_call_med3_f32_pat0_srcmod0(ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0_mismatch(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0_mismatch(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_med3_f32_pat0_srcmod0_mismatch:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -7283,7 +7283,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0_mismatch(pt
 }
 
 ; A simple min and max is not sufficient
-define amdgpu_kernel void @v_test_global_nnans_min_max_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_min_max_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; SI-SDAG-LABEL: v_test_global_nnans_min_max_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -7438,7 +7438,7 @@ define amdgpu_kernel void @v_test_global_nnans_min_max_f32(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f16:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -7563,7 +7563,7 @@ define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f16(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: v_nnan_inputs_med3_f16_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -7771,7 +7771,7 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @two_non_inline_constant(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @two_non_inline_constant(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: two_non_inline_constant:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -7905,7 +7905,7 @@ define amdgpu_kernel void @two_non_inline_constant(ptr addrspace(1) %out, ptr ad
 }
 
 ; FIXME: Simple stores do not work as a multiple use because they are bitcasted to integer constants.
-define amdgpu_kernel void @one_non_inline_constant(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @one_non_inline_constant(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: one_non_inline_constant:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -8044,7 +8044,7 @@ define amdgpu_kernel void @one_non_inline_constant(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @two_non_inline_constant_multi_use(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @two_non_inline_constant_multi_use(ptr addrspace(1) %out, ptr addrspace(1) %aptr) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" {
 ; SI-SDAG-LABEL: two_non_inline_constant_multi_use:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -8250,18 +8250,14 @@ define amdgpu_kernel void @two_non_inline_constant_multi_use(ptr addrspace(1) %o
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare float @llvm.fabs.f32(float) #0
-declare float @llvm.minnum.f32(float, float) #0
-declare float @llvm.maxnum.f32(float, float) #0
-declare double @llvm.minnum.f64(double, double) #0
-declare double @llvm.maxnum.f64(double, double) #0
-declare half @llvm.fabs.f16(half) #0
-declare half @llvm.minnum.f16(half, half) #0
-declare half @llvm.maxnum.f16(half, half) #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" }
-attributes #2 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare float @llvm.fabs.f32(float) nounwind readnone
+declare float @llvm.minnum.f32(float, float) nounwind readnone
+declare float @llvm.maxnum.f32(float, float) nounwind readnone
+declare double @llvm.minnum.f64(double, double) nounwind readnone
+declare double @llvm.maxnum.f64(double, double) nounwind readnone
+declare half @llvm.fabs.f16(half) nounwind readnone
+declare half @llvm.minnum.f16(half, half) nounwind readnone
+declare half @llvm.maxnum.f16(half, half) nounwind readnone
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; SI: {{.*}}

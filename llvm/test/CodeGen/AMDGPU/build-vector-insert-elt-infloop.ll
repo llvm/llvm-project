@@ -6,7 +6,7 @@
 ; GCN-LABEL: {{^}}combine_loop:
 ; GCN: flat_load_short_d16_hi
 ; GCN: flat_store_short
-define amdgpu_kernel void @combine_loop(ptr %arg) #0 {
+define amdgpu_kernel void @combine_loop(ptr %arg) nounwind {
 bb:
   br label %bb1
 
@@ -21,5 +21,3 @@ bb1:
   %tmp8 = extractelement <2 x half> %tmp7, i32 0
   br label %bb1
 }
-
-attributes #0 = { nounwind }

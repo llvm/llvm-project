@@ -10,12 +10,9 @@
 define amdgpu_kernel void @getreg_callsite_attributes() {
   %reg0 = call i32 @llvm.amdgcn.s.getreg(i32 0)
   store volatile i32 %reg0, ptr addrspace(1) undef
-  %reg1 = call i32 @llvm.amdgcn.s.getreg(i32 0) #1
+  %reg1 = call i32 @llvm.amdgcn.s.getreg(i32 0) nounwind readnone
   store volatile i32 %reg1, ptr addrspace(1) undef
   ret void
 }
 
-declare i32 @llvm.amdgcn.s.getreg(i32) #0
-
-attributes #0 = { nounwind readonly inaccessiblememonly }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.s.getreg(i32) nounwind readonly inaccessiblememonly

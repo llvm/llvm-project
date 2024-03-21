@@ -48,7 +48,7 @@ define amdgpu_cs_chain void @set_inactive_chain_arg(ptr addrspace(1) %out, i32 %
 ; GFX10_W64-NEXT:    s_not_b64 exec, exec
 ; GFX10_W64-NEXT:    global_store_dword v[8:9], v0, off
 ; GFX10_W64-NEXT:    s_endpgm
-  %tmp = call i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32 %active, i32 %inactive) #0
+  %tmp = call i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32 %active, i32 %inactive) convergent readnone willreturn nocallback nofree
   store i32 %tmp, ptr addrspace(1) %out
   ret void
 }
@@ -101,7 +101,7 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_64(ptr addrspace(1) %out, i6
 ; GFX10_W64-NEXT:    s_not_b64 exec, exec
 ; GFX10_W64-NEXT:    global_store_dwordx2 v[8:9], v[0:1], off
 ; GFX10_W64-NEXT:    s_endpgm
-  %tmp = call i64 @llvm.amdgcn.set.inactive.chain.arg.i64(i64 %active, i64 %inactive) #0
+  %tmp = call i64 @llvm.amdgcn.set.inactive.chain.arg.i64(i64 %active, i64 %inactive) convergent readnone willreturn nocallback nofree
   store i64 %tmp, ptr addrspace(1) %out
   ret void
 }
@@ -183,7 +183,7 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_dpp(ptr addrspace(1) %out, i
 ; GFX10_W64-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX10_W64-NEXT:    global_store_dword v[8:9], v2, off
 ; GFX10_W64-NEXT:    s_endpgm
-  %tmp = call i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32 %active, i32 %inactive) #0
+  %tmp = call i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32 %active, i32 %inactive) convergent readnone willreturn nocallback nofree
   %dpp = call i32 @llvm.amdgcn.update.dpp.i32(i32 0, i32 %tmp, i32 353, i32 15, i32 15, i1 false)
   %wwm = call i32 @llvm.amdgcn.strict.wwm.i32(i32 %dpp)
   store i32 %wwm, ptr addrspace(1) %out
@@ -479,7 +479,7 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_call(ptr addrspace(1) %out, 
 ; DAGISEL10_W64-NEXT:    global_store_dword v[41:42], v0, off
 ; DAGISEL10_W64-NEXT:    s_endpgm
   call amdgpu_gfx void @gfx_callee(<12 x i32> zeroinitializer)
-  %tmp = call i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32 %active, i32 %inactive) #0
+  %tmp = call i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32 %active, i32 %inactive) convergent readnone willreturn nocallback nofree
   %wwm = call i32 @llvm.amdgcn.strict.wwm.i32(i32 %tmp)
   store i32 %wwm, ptr addrspace(1) %out
   ret void
@@ -776,16 +776,14 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_last_vgpr(ptr addrspace(1) %
 ; DAGISEL10_W64-NEXT:    global_store_dword v[41:42], v0, off
 ; DAGISEL10_W64-NEXT:    s_endpgm
   call amdgpu_gfx void @gfx_callee(<12 x i32> zeroinitializer)
-  %tmp = call i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32 %active, i32 %inactive) #0
+  %tmp = call i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32 %active, i32 %inactive) convergent readnone willreturn nocallback nofree
   %wwm = call i32 @llvm.amdgcn.strict.wwm.i32(i32 %tmp)
   store i32 %wwm, ptr addrspace(1) %out
   ret void
 }
 
-declare i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32, i32) #0
-declare i64 @llvm.amdgcn.set.inactive.chain.arg.i64(i64, i64) #0
+declare i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32, i32) convergent readnone willreturn nocallback nofree
+declare i64 @llvm.amdgcn.set.inactive.chain.arg.i64(i64, i64) convergent readnone willreturn nocallback nofree
 declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg)
 declare i32 @llvm.amdgcn.strict.wwm.i32(i32)
 declare amdgpu_gfx void @gfx_callee(<12 x i32>)
-
-attributes #0 = { convergent readnone willreturn nocallback nofree}

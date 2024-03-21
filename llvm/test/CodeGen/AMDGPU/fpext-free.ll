@@ -7,7 +7,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx803 -denormal-fp-math-f32=ieee -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX89 %s
 
 ;  fold (fadd (fpext (fmul x, y)), z) -> (fma (fpext x), (fpext y), z)
-define float @fadd_fpext_fmul_f16_to_f32(half %x, half %y, float %z) #0 {
+define float @fadd_fpext_fmul_f16_to_f32(half %x, half %y, float %z) nounwind readnone speculatable {
 ; GFX11-LABEL: fadd_fpext_fmul_f16_to_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -38,7 +38,7 @@ entry:
 }
 
 ; f16->f64 is not free.
-define double @fadd_fpext_fmul_f16_to_f64(half %x, half %y, double %z) #0 {
+define double @fadd_fpext_fmul_f16_to_f64(half %x, half %y, double %z) nounwind readnone speculatable {
 ; GFX11-LABEL: fadd_fpext_fmul_f16_to_f64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -66,7 +66,7 @@ entry:
 }
 
 ; f32->f64 is not free.
-define double @fadd_fpext_fmul_f32_to_f64(float %x, float %y, double %z) #0 {
+define double @fadd_fpext_fmul_f32_to_f64(float %x, float %y, double %z) nounwind readnone speculatable {
 ; GFX11-LABEL: fadd_fpext_fmul_f32_to_f64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -91,7 +91,7 @@ entry:
 }
 
 ; fold (fadd x, (fpext (fmul y, z))) -> (fma (fpext y), (fpext z), x)
-define float @fadd_fpext_fmul_f16_to_f32_commute(half %x, half %y, float %z) #0 {
+define float @fadd_fpext_fmul_f16_to_f32_commute(half %x, half %y, float %z) nounwind readnone speculatable {
 ; GFX11-LABEL: fadd_fpext_fmul_f16_to_f32_commute:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -123,7 +123,7 @@ entry:
 
 ; fold (fadd (fma x, y, (fpext (fmul u, v))), z)
 ;   -> (fma x, y, (fma (fpext u), (fpext v), z))
-define float @fadd_muladd_fpext_fmul_f16_to_f32(float %x, float %y, half %u, half %v, float %z) #0 {
+define float @fadd_muladd_fpext_fmul_f16_to_f32(float %x, float %y, half %u, half %v, float %z) nounwind readnone speculatable {
 ; GFX11-LABEL: fadd_muladd_fpext_fmul_f16_to_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -159,7 +159,7 @@ entry:
 
 ; fold (fadd x, (fma y, z, (fpext (fmul u, v)))
 ;   -> (fma y, z, (fma (fpext u), (fpext v), x))
-define float @fadd_muladd_fpext_fmul_f16_to_f32_commute(float %x, float %y, half %u, half %v, float %z) #0 {
+define float @fadd_muladd_fpext_fmul_f16_to_f32_commute(float %x, float %y, half %u, half %v, float %z) nounwind readnone speculatable {
 ; GFX11-LABEL: fadd_muladd_fpext_fmul_f16_to_f32_commute:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -193,7 +193,7 @@ entry:
   ret float %add
 }
 
-define float @fadd_fmad_fpext_fmul_f16_to_f32(float %x, float %y, half %u, half %v, float %z) #0 {
+define float @fadd_fmad_fpext_fmul_f16_to_f32(float %x, float %y, half %u, half %v, float %z) nounwind readnone speculatable {
 ; GFX11-LABEL: fadd_fmad_fpext_fmul_f16_to_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -230,7 +230,7 @@ entry:
 
 ; fold (fadd (fma x, y, (fpext (fmul u, v))), z)
 ;   -> (fma x, y, (fma (fpext u), (fpext v), z))
-define float @fadd_fma_fpext_fmul_f16_to_f32(float %x, float %y, half %u, half %v, float %z) #0 {
+define float @fadd_fma_fpext_fmul_f16_to_f32(float %x, float %y, half %u, half %v, float %z) nounwind readnone speculatable {
 ; GFX11-LABEL: fadd_fma_fpext_fmul_f16_to_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -264,7 +264,7 @@ entry:
   ret float %add
 }
 
-define float @fadd_fma_fpext_fmul_f16_to_f32_commute(float %x, float %y, half %u, half %v, float %z) #0 {
+define float @fadd_fma_fpext_fmul_f16_to_f32_commute(float %x, float %y, half %u, half %v, float %z) nounwind readnone speculatable {
 ; GFX11-LABEL: fadd_fma_fpext_fmul_f16_to_f32_commute:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -300,7 +300,7 @@ entry:
 
 ; fold (fadd x, (fpext (fma y, z, (fmul u, v)))
 ;   -> (fma (fpext y), (fpext z), (fma (fpext u), (fpext v), x))
-define float @fadd_fpext_fmuladd_f16_to_f32(float %x, half %y, half %z, half %u, half %v) #0 {
+define float @fadd_fpext_fmuladd_f16_to_f32(float %x, half %y, half %z, half %u, half %v) nounwind readnone speculatable {
 ; GFX11-LABEL: fadd_fpext_fmuladd_f16_to_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -335,7 +335,7 @@ entry:
   ret float %add
 }
 
-define float @fadd_fpext_fma_f16_to_f32(float %x, half %y, half %z, half %u, half %v) #0 {
+define float @fadd_fpext_fma_f16_to_f32(float %x, half %y, half %z, half %u, half %v) nounwind readnone speculatable {
 ; GFX11-LABEL: fadd_fpext_fma_f16_to_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -370,7 +370,7 @@ entry:
   ret float %add
 }
 
-define float @fadd_fpext_fma_f16_to_f32_commute(float %x, half %y, half %z, half %u, half %v) #0 {
+define float @fadd_fpext_fma_f16_to_f32_commute(float %x, half %y, half %z, half %u, half %v) nounwind readnone speculatable {
 ; GFX11-LABEL: fadd_fpext_fma_f16_to_f32_commute:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -407,7 +407,7 @@ entry:
 
 ; fold (fsub (fpext (fmul x, y)), z)
 ;   -> (fma (fpext x), (fpext y), (fneg z))
-define float @fsub_fpext_fmul_f16_to_f32(half %x, half %y, float %z) #0 {
+define float @fsub_fpext_fmul_f16_to_f32(half %x, half %y, float %z) nounwind readnone speculatable {
 ; GFX11-LABEL: fsub_fpext_fmul_f16_to_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -439,7 +439,7 @@ entry:
 
 ; fold (fsub x, (fpext (fmul y, z)))
 ;   -> (fma (fneg (fpext y)), (fpext z), x)
-define float @fsub_fpext_fmul_f16_to_f32_commute(float %x, half %y, half %z) #0 {
+define float @fsub_fpext_fmul_f16_to_f32_commute(float %x, half %y, half %z) nounwind readnone speculatable {
 ; GFX11-F32FLUSH-LABEL: fsub_fpext_fmul_f16_to_f32_commute:
 ; GFX11-F32FLUSH:       ; %bb.0: ; %entry
 ; GFX11-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -477,7 +477,7 @@ entry:
 
 ; fold (fsub (fpext (fneg (fmul, x, y))), z)
 ;   -> (fneg (fma (fpext x), (fpext y), z))
-define float @fsub_fpext_fneg_fmul_f16_to_f32(half %x, half %y, float %z) #0 {
+define float @fsub_fpext_fneg_fmul_f16_to_f32(half %x, half %y, float %z) nounwind readnone speculatable {
 ; GFX11-LABEL: fsub_fpext_fneg_fmul_f16_to_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -510,7 +510,7 @@ entry:
 
 ; fold (fsub (fneg (fpext (fmul, x, y))), z)
 ;   -> (fneg (fma (fpext x)), (fpext y), z)
-define float @fsub_fneg_fpext_fmul_f16_to_f32(half %x, half %y, float %z) #0 {
+define float @fsub_fneg_fpext_fmul_f16_to_f32(half %x, half %y, float %z) nounwind readnone speculatable {
 ; GFX11-LABEL: fsub_fneg_fpext_fmul_f16_to_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -543,7 +543,7 @@ entry:
 
 ; fold (fsub (fmad x, y, (fpext (fmul u, v))), z)
 ;    -> (fmad x, y (fmad (fpext u), (fpext v), (fneg z)))
-define float @fsub_muladd_fpext_mul_f16_to_f32(float %x, float %y, float %z, half %u, half %v) #0 {
+define float @fsub_muladd_fpext_mul_f16_to_f32(float %x, float %y, float %z, half %u, half %v) nounwind readnone speculatable {
 ; GFX11-LABEL: fsub_muladd_fpext_mul_f16_to_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -580,7 +580,7 @@ entry:
 ;  fold (fsub (fpext (fmad x, y, (fmul u, v))), z)
 ;    -> (fmad (fpext x), (fpext y),
 ;            (fmad (fpext u), (fpext v), (fneg z)))
-define float @fsub_fpext_muladd_mul_f16_to_f32(half %x, half %y, float %z, half %u, half %v) #0 {
+define float @fsub_fpext_muladd_mul_f16_to_f32(half %x, half %y, float %z, half %u, half %v) nounwind readnone speculatable {
 ; GFX11-LABEL: fsub_fpext_muladd_mul_f16_to_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -610,7 +610,7 @@ entry:
 
 ; fold (fsub x, (fmad y, z, (fpext (fmul u, v))))
 ;   -> (fmad (fneg y), z, (fmad (fneg (fpext u)), (fpext v), x))
-define float @fsub_muladd_fpext_mul_f16_to_f32_commute(float %x, float %y, float %z, half %u, half %v) #0 {
+define float @fsub_muladd_fpext_mul_f16_to_f32_commute(float %x, float %y, float %z, half %u, half %v) nounwind readnone speculatable {
 ; GFX11-LABEL: fsub_muladd_fpext_mul_f16_to_f32_commute:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -646,7 +646,7 @@ entry:
 ; fold (fsub x, (fpext (fma y, z, (fmul u, v))))
 ;    -> (fma (fneg (fpext y)), (fpext z),
 ;            (fma (fneg (fpext u)), (fpext v), x))
-define float @fsub_fpext_muladd_mul_f16_to_f32_commute(float %x, half %y, half %z, half %u, half %v) #0 {
+define float @fsub_fpext_muladd_mul_f16_to_f32_commute(float %x, half %y, half %z, half %u, half %v) nounwind readnone speculatable {
 ; GFX11-LABEL: fsub_fpext_muladd_mul_f16_to_f32_commute:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -674,9 +674,7 @@ entry:
   ret float %add
 }
 
-declare float @llvm.fmuladd.f32(float, float, float) #0
-declare float @llvm.fma.f32(float, float, float) #0
-declare half @llvm.fmuladd.f16(half, half, half) #0
-declare half @llvm.fma.f16(half, half, half) #0
-
-attributes #0 = { nounwind readnone speculatable }
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone speculatable
+declare float @llvm.fma.f32(float, float, float) nounwind readnone speculatable
+declare half @llvm.fmuladd.f16(half, half, half) nounwind readnone speculatable
+declare half @llvm.fma.f16(half, half, half) nounwind readnone speculatable

@@ -7,13 +7,10 @@
 ; MIR-NEXT: DS_GWS_BARRIER renamable $vgpr0, 0, implicit $m0, implicit $exec :: (load (s32) from custom "GWSResource")
 ; MIR-NEXT: S_WAITCNT 0
 ; MIR-NEXT: }
-define amdgpu_kernel void @gws_barrier_offset0(i32 %val) #0 {
+define amdgpu_kernel void @gws_barrier_offset0(i32 %val) nounwind {
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 0)
   ret void
 }
 
 
-declare void @llvm.amdgcn.ds.gws.barrier(i32, i32) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { convergent inaccessiblememonly nounwind }
+declare void @llvm.amdgcn.ds.gws.barrier(i32, i32) convergent inaccessiblememonly nounwind

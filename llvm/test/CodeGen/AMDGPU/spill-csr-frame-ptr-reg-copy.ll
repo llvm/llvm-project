@@ -21,10 +21,10 @@
 ; GCN: s_mov_b64 exec
 ; GCN: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN: s_setpc_b64
-define void @spill_csr_s5_copy() #0 {
+define void @spill_csr_s5_copy() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 bb:
   %alloca = alloca i32, addrspace(5)
-  %tmp = tail call i64 @func() #1
+  %tmp = tail call i64 @func() nounwind readnone
   %tmp1 = getelementptr inbounds i32, ptr addrspace(1) null, i64 %tmp
   %tmp2 = load i32, ptr addrspace(1) %tmp1, align 4
   %tmp3 = zext i32 %tmp2 to i64
@@ -32,7 +32,4 @@ bb:
   ret void
 }
 
-declare i64 @func() #0
-
-attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
-attributes #1 = { nounwind readnone }
+declare i64 @func() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"

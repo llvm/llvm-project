@@ -202,7 +202,7 @@ define float @v_fdiv_f32(float %a, float %b) {
 }
 
 
-define float @v_fdiv_f32_dynamic_denorm(float %a, float %b) #0 {
+define float @v_fdiv_f32_dynamic_denorm(float %a, float %b) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-IEEE-FASTFMA-LABEL: v_fdiv_f32_dynamic_denorm:
 ; GFX6-IEEE-FASTFMA:       ; %bb.0:
 ; GFX6-IEEE-FASTFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -521,7 +521,7 @@ define float @v_fdiv_f32_ulp25(float %a, float %b) {
   ret float %fdiv
 }
 
-define float @v_fdiv_f32_dynamic_25ulp(float %x, float %y) #0 {
+define float @v_fdiv_f32_dynamic_25ulp(float %x, float %y) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-LABEL: v_fdiv_f32_dynamic_25ulp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2543,7 +2543,7 @@ define <2 x float> @v_fdiv_v2f32_arcp_afn_ulp25(<2 x float> %a, <2 x float> %b) 
 }
 
 
-define float @v_fdiv_f32_dynamic__nnan_ninf(float %x, float %y, float %z) #0 {
+define float @v_fdiv_f32_dynamic__nnan_ninf(float %x, float %y, float %z) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-FASTFMA-LABEL: v_fdiv_f32_dynamic__nnan_ninf:
 ; GFX6-FASTFMA:       ; %bb.0:
 ; GFX6-FASTFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2815,7 +2815,7 @@ define float @v_fdiv_f32_dynamic__nnan_ninf(float %x, float %y, float %z) #0 {
   ret float %div
 }
 
-define float @v_fdiv_f32_dynamic_25ulp__nnan_ninf(float %x, float %y, float %z) #0 {
+define float @v_fdiv_f32_dynamic_25ulp__nnan_ninf(float %x, float %y, float %z) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-LABEL: v_fdiv_f32_dynamic_25ulp__nnan_ninf:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2932,7 +2932,7 @@ define float @v_fdiv_f32_dynamic_25ulp__nnan_ninf(float %x, float %y, float %z) 
   ret float %div
 }
 
-define float @v_fdiv_f32_dynamic_25ulp__nnan_ninf_contractable_user(float %x, float %y, float %z) #0 {
+define float @v_fdiv_f32_dynamic_25ulp__nnan_ninf_contractable_user(float %x, float %y, float %z) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-LABEL: v_fdiv_f32_dynamic_25ulp__nnan_ninf_contractable_user:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3058,7 +3058,7 @@ define float @v_fdiv_f32_dynamic_25ulp__nnan_ninf_contractable_user(float %x, fl
 }
 
 
-define float @v_fdiv_neglhs_f32_dynamic(float %x, float %y) #0 {
+define float @v_fdiv_neglhs_f32_dynamic(float %x, float %y) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-FASTFMA-LABEL: v_fdiv_neglhs_f32_dynamic:
 ; GFX6-FASTFMA:       ; %bb.0:
 ; GFX6-FASTFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3343,7 +3343,7 @@ define float @v_fdiv_neglhs_f32_dynamic(float %x, float %y) #0 {
   ret float %div
 }
 
-define float @v_fdiv_neglhs_f32_dynamic_25ulp(float %x, float %y) #0 {
+define float @v_fdiv_neglhs_f32_dynamic_25ulp(float %x, float %y) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-LABEL: v_fdiv_neglhs_f32_dynamic_25ulp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3462,7 +3462,7 @@ define float @v_fdiv_neglhs_f32_dynamic_25ulp(float %x, float %y) #0 {
 }
 
 
-define float @v_fdiv_negrhs_f32_dynamic(float %x, float %y) #0 {
+define float @v_fdiv_negrhs_f32_dynamic(float %x, float %y) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-FASTFMA-LABEL: v_fdiv_negrhs_f32_dynamic:
 ; GFX6-FASTFMA:       ; %bb.0:
 ; GFX6-FASTFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3748,7 +3748,7 @@ define float @v_fdiv_negrhs_f32_dynamic(float %x, float %y) #0 {
 }
 
 
-define float @v_fdiv_f32_constrhs0_dynamic(float %x) #0 {
+define float @v_fdiv_f32_constrhs0_dynamic(float %x) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-FASTFMA-LABEL: v_fdiv_f32_constrhs0_dynamic:
 ; GFX6-FASTFMA:       ; %bb.0:
 ; GFX6-FASTFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4030,7 +4030,7 @@ define float @v_fdiv_f32_constrhs0_dynamic(float %x) #0 {
   ret float %div
 }
 
-define float @v_fdiv_f32_constrhs0_dynamic_25ulp(float %x) #0 {
+define float @v_fdiv_f32_constrhs0_dynamic_25ulp(float %x) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-LABEL: v_fdiv_f32_constrhs0_dynamic_25ulp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4127,7 +4127,7 @@ define float @v_fdiv_f32_constrhs0_dynamic_25ulp(float %x) #0 {
 }
 
 
-define float @v_fdiv_f32_constlhs0_dynamic(float %x) #0 {
+define float @v_fdiv_f32_constlhs0_dynamic(float %x) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-FASTFMA-LABEL: v_fdiv_f32_constlhs0_dynamic:
 ; GFX6-FASTFMA:       ; %bb.0:
 ; GFX6-FASTFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4409,7 +4409,7 @@ define float @v_fdiv_f32_constlhs0_dynamic(float %x) #0 {
   ret float %div
 }
 
-define float @v_fdiv_f32_constlhs0_dynamic_25ulp(float %x) #0 {
+define float @v_fdiv_f32_constlhs0_dynamic_25ulp(float %x) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-LABEL: v_fdiv_f32_constlhs0_dynamic_25ulp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4510,7 +4510,7 @@ define float @v_fdiv_f32_constlhs0_dynamic_25ulp(float %x) #0 {
 }
 
 
-define float @v_fdiv_f32_dynamic_nodenorm_x(float nofpclass(sub) %x, float %y) #0 {
+define float @v_fdiv_f32_dynamic_nodenorm_x(float nofpclass(sub) %x, float %y) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-FASTFMA-LABEL: v_fdiv_f32_dynamic_nodenorm_x:
 ; GFX6-FASTFMA:       ; %bb.0:
 ; GFX6-FASTFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4782,7 +4782,7 @@ define float @v_fdiv_f32_dynamic_nodenorm_x(float nofpclass(sub) %x, float %y) #
   ret float %div
 }
 
-define float @v_fdiv_f32_dynamic_25ulp_nodenorm_x(float nofpclass(sub) %x, float %y) #0 {
+define float @v_fdiv_f32_dynamic_25ulp_nodenorm_x(float nofpclass(sub) %x, float %y) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-LABEL: v_fdiv_f32_dynamic_25ulp_nodenorm_x:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4899,7 +4899,7 @@ define float @v_fdiv_f32_dynamic_25ulp_nodenorm_x(float nofpclass(sub) %x, float
   ret float %div
 }
 
-define float @v_fdiv_f32_dynamic_nodenorm_y(float %x, float nofpclass(sub) %y) #0 {
+define float @v_fdiv_f32_dynamic_nodenorm_y(float %x, float nofpclass(sub) %y) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-FASTFMA-LABEL: v_fdiv_f32_dynamic_nodenorm_y:
 ; GFX6-FASTFMA:       ; %bb.0:
 ; GFX6-FASTFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5171,7 +5171,7 @@ define float @v_fdiv_f32_dynamic_nodenorm_y(float %x, float nofpclass(sub) %y) #
   ret float %div
 }
 
-define float @v_fdiv_f32_dynamic_25ulp_nodenorm_y(float %x, float nofpclass(sub) %y) #0 {
+define float @v_fdiv_f32_dynamic_25ulp_nodenorm_y(float %x, float nofpclass(sub) %y) "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX6-LABEL: v_fdiv_f32_dynamic_25ulp_nodenorm_y:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5289,8 +5289,6 @@ define float @v_fdiv_f32_dynamic_25ulp_nodenorm_y(float %x, float nofpclass(sub)
 }
 
 !0 = !{float 2.500000e+00}
-
-attributes #0 = { "denormal-fp-math-f32"="dynamic,dynamic" }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN-IEEE: {{.*}}

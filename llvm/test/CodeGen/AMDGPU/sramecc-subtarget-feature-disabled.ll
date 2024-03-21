@@ -7,8 +7,6 @@
 ; WARN: warning: sramecc 'Off' was requested for a processor that does not support it!
 ; OFF: sramecc setting for subtarget: Off
 
-define void @sramecc-subtarget-feature-disabled() #0 {
+define void @sramecc-subtarget-feature-disabled() "target-features"="-sramecc" {
   ret void
 }
-
-attributes #0 = { "target-features"="-sramecc" }

@@ -435,7 +435,7 @@ done:
   ret void
 }
 
-define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
+define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) nounwind {
 ; OPT-GFX7-LABEL: @test_sink_flat_small_max_flat_offset(
 ; OPT-GFX7-NEXT:  entry:
 ; OPT-GFX7-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i32 1024
@@ -590,7 +590,7 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 entry:
   %out.gep = getelementptr i32, ptr %out, i32 1024
   %in.gep = getelementptr i8, ptr %in, i64 4095
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %endif, label %if
 
@@ -608,7 +608,7 @@ done:
   ret void
 }
 
-define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) #1 {
+define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) nounwind {
 ; OPT-LABEL: @test_sink_flat_small_max_plus_1_flat_offset(
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 99999
@@ -713,7 +713,7 @@ define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) #1 {
 entry:
   %out.gep = getelementptr i32, ptr %out, i64 99999
   %in.gep = getelementptr i8, ptr %in, i64 4096
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %endif, label %if
 
@@ -731,7 +731,7 @@ done:
   ret void
 }
 
-define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) #1 {
+define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) nounwind {
 ; OPT-LABEL: @test_sinkable_flat_reg_offset(
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i32 1024
@@ -836,7 +836,7 @@ define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) #1 {
 entry:
   %out.gep = getelementptr i32, ptr %out, i32 1024
   %in.gep = getelementptr i8, ptr %in, i64 %reg
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %endif, label %if
 
@@ -854,8 +854,4 @@ done:
   ret void
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind argmemonly }
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone

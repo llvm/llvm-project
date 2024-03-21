@@ -489,7 +489,7 @@ define float @v_sqrt_f32_ninf(float %x) {
   ret float %result
 }
 
-define float @v_sqrt_f32_no_infs_attribute(float %x) #5 {
+define float @v_sqrt_f32_no_infs_attribute(float %x) "no-infs-fp-math"="true" {
 ; SDAG-IEEE-LABEL: v_sqrt_f32_no_infs_attribute:
 ; SDAG-IEEE:       ; %bb.0:
 ; SDAG-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1274,7 +1274,7 @@ define float @v_sqrt_f32_afn_nnan_ninf_nsz(float %x) {
   ret float %result
 }
 
-define float @v_sqrt_f32__approx_func_fp_math(float %x) #2 {
+define float @v_sqrt_f32__approx_func_fp_math(float %x) "approx-func-fp-math"="true" {
 ; GCN-LABEL: v_sqrt_f32__approx_func_fp_math:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1284,7 +1284,7 @@ define float @v_sqrt_f32__approx_func_fp_math(float %x) #2 {
   ret float %result
 }
 
-define float @v_sqrt_f32__enough_unsafe_attrs(float %x) #3 {
+define float @v_sqrt_f32__enough_unsafe_attrs(float %x) "approx-func-fp-math"="true" "no-nans-fp-math"="true" "no-infs-fp-math"="true" {
 ; GCN-LABEL: v_sqrt_f32__enough_unsafe_attrs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1294,7 +1294,7 @@ define float @v_sqrt_f32__enough_unsafe_attrs(float %x) #3 {
   ret float %result
 }
 
-define float @v_sqrt_f32__unsafe_attr(float %x) #4 {
+define float @v_sqrt_f32__unsafe_attr(float %x) "unsafe-fp-math"="true" {
 ; GCN-LABEL: v_sqrt_f32__unsafe_attr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4780,21 +4780,14 @@ entry:
   ret void
 }
 
-declare float @llvm.fabs.f32(float) #0
-declare float @llvm.sqrt.f32(float) #0
-declare <2 x float> @llvm.fabs.v2f32(<2 x float>) #0
-declare <2 x float> @llvm.sqrt.v2f32(<2 x float>) #0
-declare <3 x float> @llvm.sqrt.v3f32(<3 x float>) #0
-declare i32 @llvm.amdgcn.readfirstlane(i32) #1
+declare float @llvm.fabs.f32(float) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.sqrt.f32(float) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x float> @llvm.fabs.v2f32(<2 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <2 x float> @llvm.sqrt.v2f32(<2 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <3 x float> @llvm.sqrt.v3f32(<3 x float>) nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare i32 @llvm.amdgcn.readfirstlane(i32) convergent nounwind willreturn memory(none)
 
-declare { float, i32 } @llvm.frexp.f32.i32(float) #0
-
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #1 = { convergent nounwind willreturn memory(none) }
-attributes #2 = { "approx-func-fp-math"="true" }
-attributes #3 = { "approx-func-fp-math"="true" "no-nans-fp-math"="true" "no-infs-fp-math"="true" }
-attributes #4 = { "unsafe-fp-math"="true" }
-attributes #5 = { "no-infs-fp-math"="true" }
+declare { float, i32 } @llvm.frexp.f32.i32(float) nocallback nofree nosync nounwind speculatable willreturn memory(none)
 
 !0 = !{float 0.5}
 !1 = !{float 1.0}

@@ -36,7 +36,7 @@ bb:
   ret void
 }
 
-define <2 x i64> @f1() #0 {
+define <2 x i64> @f1() noinline optnone {
 ; GFX11-LABEL: f1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -244,8 +244,6 @@ bb43:
   call void @f0()
   unreachable
 }
-
-attributes #0 = { noinline optnone }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

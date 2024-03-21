@@ -1273,19 +1273,17 @@ define <2 x double> @v_roundeven_v2f64(<2 x double> %x) {
   ret <2 x double> %roundeven
 }
 
-declare half @llvm.roundeven.f16(half) #0
-declare <2 x half> @llvm.roundeven.v2f16(<2 x half>) #0
-declare <4 x half> @llvm.roundeven.v4f16(<4 x half>) #0
+declare half @llvm.roundeven.f16(half) nounwind readnone speculatable willreturn
+declare <2 x half> @llvm.roundeven.v2f16(<2 x half>) nounwind readnone speculatable willreturn
+declare <4 x half> @llvm.roundeven.v4f16(<4 x half>) nounwind readnone speculatable willreturn
 
-declare float @llvm.roundeven.f32(float) #0
-declare <2 x float> @llvm.roundeven.v2f32(<2 x float>) #0
-declare <3 x float> @llvm.roundeven.v3f32(<3 x float>) #0
-declare <4 x float> @llvm.roundeven.v4f32(<4 x float>) #0
+declare float @llvm.roundeven.f32(float) nounwind readnone speculatable willreturn
+declare <2 x float> @llvm.roundeven.v2f32(<2 x float>) nounwind readnone speculatable willreturn
+declare <3 x float> @llvm.roundeven.v3f32(<3 x float>) nounwind readnone speculatable willreturn
+declare <4 x float> @llvm.roundeven.v4f32(<4 x float>) nounwind readnone speculatable willreturn
 
-declare double @llvm.roundeven.f64(double) #0
-declare <2 x double> @llvm.roundeven.v2f64(<2 x double>) #0
+declare double @llvm.roundeven.f64(double) nounwind readnone speculatable willreturn
+declare <2 x double> @llvm.roundeven.v2f64(<2 x double>) nounwind readnone speculatable willreturn
 
-declare half @llvm.fabs.f16(half) #0
-declare float @llvm.fabs.f32(float) #0
-
-attributes #0 = { nounwind readnone speculatable willreturn }
+declare half @llvm.fabs.f16(half) nounwind readnone speculatable willreturn
+declare float @llvm.fabs.f32(float) nounwind readnone speculatable willreturn

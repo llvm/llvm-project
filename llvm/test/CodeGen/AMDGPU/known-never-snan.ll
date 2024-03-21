@@ -4,7 +4,7 @@
 ; Mostly overlaps with fmed3.ll to stress specific cases of
 ; isKnownNeverSNaN.
 
-define float @v_test_known_not_snan_fabs_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_fabs_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_fabs_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -18,7 +18,7 @@ define float @v_test_known_not_snan_fabs_input_fmed3_r_i_i_f32(float %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_fneg_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_fneg_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_fneg_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -32,7 +32,7 @@ define float @v_test_known_not_snan_fneg_input_fmed3_r_i_i_f32(float %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_fpext_input_fmed3_r_i_i_f32(half %a) #0 {
+define float @v_test_known_not_snan_fpext_input_fmed3_r_i_i_f32(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_fpext_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -47,7 +47,7 @@ define float @v_test_known_not_snan_fpext_input_fmed3_r_i_i_f32(half %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_fptrunc_input_fmed3_r_i_i_f32(double %a) #0 {
+define float @v_test_known_not_snan_fptrunc_input_fmed3_r_i_i_f32(double %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_fptrunc_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -62,7 +62,7 @@ define float @v_test_known_not_snan_fptrunc_input_fmed3_r_i_i_f32(double %a) #0 
   ret float %med
 }
 
-define float @v_test_known_not_snan_copysign_input_fmed3_r_i_i_f32(float %a, float %sign) #0 {
+define float @v_test_known_not_snan_copysign_input_fmed3_r_i_i_f32(float %a, float %sign) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_copysign_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -79,7 +79,7 @@ define float @v_test_known_not_snan_copysign_input_fmed3_r_i_i_f32(float %a, flo
 }
 
 ; Canonicalize always quiets, so nothing is necessary.
-define float @v_test_known_canonicalize_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_canonicalize_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_canonicalize_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -92,7 +92,7 @@ define float @v_test_known_canonicalize_input_fmed3_r_i_i_f32(float %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_minnum_input_fmed3_r_i_i_f32(float %a, float %b) #0 {
+define float @v_test_known_not_snan_minnum_input_fmed3_r_i_i_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_minnum_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -109,7 +109,7 @@ define float @v_test_known_not_snan_minnum_input_fmed3_r_i_i_f32(float %a, float
   ret float %med
 }
 
-define float @v_test_known_not_minnum_maybe_nan_src0_input_fmed3_r_i_i_f32(float %a, float %b) #0 {
+define float @v_test_known_not_minnum_maybe_nan_src0_input_fmed3_r_i_i_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_minnum_maybe_nan_src0_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -125,7 +125,7 @@ define float @v_test_known_not_minnum_maybe_nan_src0_input_fmed3_r_i_i_f32(float
   ret float %med
 }
 
-define float @v_test_known_not_minnum_maybe_nan_src1_input_fmed3_r_i_i_f32(float %a, float %b) #0 {
+define float @v_test_known_not_minnum_maybe_nan_src1_input_fmed3_r_i_i_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_minnum_maybe_nan_src1_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -141,7 +141,7 @@ define float @v_test_known_not_minnum_maybe_nan_src1_input_fmed3_r_i_i_f32(float
   ret float %med
 }
 
-define float @v_minnum_possible_nan_lhs_input_fmed3_r_i_i_f32(float %a, float %b) #0 {
+define float @v_minnum_possible_nan_lhs_input_fmed3_r_i_i_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_minnum_possible_nan_lhs_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -157,7 +157,7 @@ define float @v_minnum_possible_nan_lhs_input_fmed3_r_i_i_f32(float %a, float %b
   ret float %med
 }
 
-define float @v_minnum_possible_nan_rhs_input_fmed3_r_i_i_f32(float %a, float %b) #0 {
+define float @v_minnum_possible_nan_rhs_input_fmed3_r_i_i_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_minnum_possible_nan_rhs_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -173,7 +173,7 @@ define float @v_minnum_possible_nan_rhs_input_fmed3_r_i_i_f32(float %a, float %b
   ret float %med
 }
 
-define float @v_test_known_not_snan_maxnum_input_fmed3_r_i_i_f32(float %a, float %b) #0 {
+define float @v_test_known_not_snan_maxnum_input_fmed3_r_i_i_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_maxnum_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -190,7 +190,7 @@ define float @v_test_known_not_snan_maxnum_input_fmed3_r_i_i_f32(float %a, float
   ret float %med
 }
 
-define float @v_maxnum_possible_nan_lhs_input_fmed3_r_i_i_f32(float %a, float %b) #0 {
+define float @v_maxnum_possible_nan_lhs_input_fmed3_r_i_i_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_maxnum_possible_nan_lhs_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -206,7 +206,7 @@ define float @v_maxnum_possible_nan_lhs_input_fmed3_r_i_i_f32(float %a, float %b
   ret float %med
 }
 
-define float @v_maxnum_possible_nan_rhs_input_fmed3_r_i_i_f32(float %a, float %b) #0 {
+define float @v_maxnum_possible_nan_rhs_input_fmed3_r_i_i_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_maxnum_possible_nan_rhs_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -222,7 +222,7 @@ define float @v_maxnum_possible_nan_rhs_input_fmed3_r_i_i_f32(float %a, float %b
   ret float %med
 }
 
-define float @v_test_known_not_snan_select_input_fmed3_r_i_i_f32(float %a, float %b, i32 %c) #0 {
+define float @v_test_known_not_snan_select_input_fmed3_r_i_i_f32(float %a, float %b, i32 %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_select_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -241,7 +241,7 @@ define float @v_test_known_not_snan_select_input_fmed3_r_i_i_f32(float %a, float
   ret float %med
 }
 
-define float @v_select_possible_nan_lhs_input_fmed3_r_i_i_f32(float %a, float %b, i32 %c) #0 {
+define float @v_select_possible_nan_lhs_input_fmed3_r_i_i_f32(float %a, float %b, i32 %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_select_possible_nan_lhs_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -259,7 +259,7 @@ define float @v_select_possible_nan_lhs_input_fmed3_r_i_i_f32(float %a, float %b
   ret float %med
 }
 
-define float @v_select_possible_nan_rhs_input_fmed3_r_i_i_f32(float %a, float %b, i32 %c) #0 {
+define float @v_select_possible_nan_rhs_input_fmed3_r_i_i_f32(float %a, float %b, i32 %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_select_possible_nan_rhs_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -277,7 +277,7 @@ define float @v_select_possible_nan_rhs_input_fmed3_r_i_i_f32(float %a, float %b
   ret float %med
 }
 
-define float @v_test_known_not_snan_fadd_input_fmed3_r_i_i_f32(float %a, float %b) #0 {
+define float @v_test_known_not_snan_fadd_input_fmed3_r_i_i_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_fadd_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -290,7 +290,7 @@ define float @v_test_known_not_snan_fadd_input_fmed3_r_i_i_f32(float %a, float %
   ret float %med
 }
 
-define float @v_test_known_not_snan_fsub_input_fmed3_r_i_i_f32(float %a, float %b) #0 {
+define float @v_test_known_not_snan_fsub_input_fmed3_r_i_i_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_fsub_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -303,7 +303,7 @@ define float @v_test_known_not_snan_fsub_input_fmed3_r_i_i_f32(float %a, float %
   ret float %med
 }
 
-define float @v_test_known_not_snan_fmul_input_fmed3_r_i_i_f32(float %a, float %b) #0 {
+define float @v_test_known_not_snan_fmul_input_fmed3_r_i_i_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_fmul_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -316,7 +316,7 @@ define float @v_test_known_not_snan_fmul_input_fmed3_r_i_i_f32(float %a, float %
   ret float %med
 }
 
-define float @v_test_known_not_snan_uint_to_fp_input_fmed3_r_i_i_f32(i32 %a) #0 {
+define float @v_test_known_not_snan_uint_to_fp_input_fmed3_r_i_i_f32(i32 %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_uint_to_fp_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -329,7 +329,7 @@ define float @v_test_known_not_snan_uint_to_fp_input_fmed3_r_i_i_f32(i32 %a) #0 
   ret float %med
 }
 
-define float @v_test_known_not_snan_sint_to_fp_input_fmed3_r_i_i_f32(i32 %a) #0 {
+define float @v_test_known_not_snan_sint_to_fp_input_fmed3_r_i_i_f32(i32 %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_sint_to_fp_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -342,7 +342,7 @@ define float @v_test_known_not_snan_sint_to_fp_input_fmed3_r_i_i_f32(i32 %a) #0 
   ret float %med
 }
 
-define float @v_test_known_not_snan_fma_input_fmed3_r_i_i_f32(float %a, float %b, float %c) #0 {
+define float @v_test_known_not_snan_fma_input_fmed3_r_i_i_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_fma_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -355,7 +355,7 @@ define float @v_test_known_not_snan_fma_input_fmed3_r_i_i_f32(float %a, float %b
   ret float %med
 }
 
-define float @v_test_known_not_snan_fmad_input_fmed3_r_i_i_f32(float %a, float %b, float %c) #0 {
+define float @v_test_known_not_snan_fmad_input_fmed3_r_i_i_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_fmad_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -369,7 +369,7 @@ define float @v_test_known_not_snan_fmad_input_fmed3_r_i_i_f32(float %a, float %
 }
 
 
-define float @v_test_known_not_snan_sin_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_sin_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_sin_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -384,7 +384,7 @@ define float @v_test_known_not_snan_sin_input_fmed3_r_i_i_f32(float %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_cos_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_cos_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_cos_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -399,7 +399,7 @@ define float @v_test_known_not_snan_cos_input_fmed3_r_i_i_f32(float %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_exp2_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_exp2_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_exp2_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -412,7 +412,7 @@ define float @v_test_known_not_snan_exp2_input_fmed3_r_i_i_f32(float %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_trunc_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_trunc_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_trunc_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -425,7 +425,7 @@ define float @v_test_known_not_snan_trunc_input_fmed3_r_i_i_f32(float %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_floor_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_floor_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_floor_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -438,7 +438,7 @@ define float @v_test_known_not_snan_floor_input_fmed3_r_i_i_f32(float %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_ceil_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_ceil_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_ceil_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -451,7 +451,7 @@ define float @v_test_known_not_snan_ceil_input_fmed3_r_i_i_f32(float %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_round_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_round_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_round_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -470,7 +470,7 @@ define float @v_test_known_not_snan_round_input_fmed3_r_i_i_f32(float %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_rint_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_rint_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_rint_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -483,7 +483,7 @@ define float @v_test_known_not_snan_rint_input_fmed3_r_i_i_f32(float %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_nearbyint_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_nearbyint_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_nearbyint_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -496,7 +496,7 @@ define float @v_test_known_not_snan_nearbyint_input_fmed3_r_i_i_f32(float %a) #0
   ret float %med
 }
 
-define float @v_test_known_not_snan_fmul_legacy_input_fmed3_r_i_i_f32(float %a, float %b) #0 {
+define float @v_test_known_not_snan_fmul_legacy_input_fmed3_r_i_i_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_fmul_legacy_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -509,7 +509,7 @@ define float @v_test_known_not_snan_fmul_legacy_input_fmed3_r_i_i_f32(float %a, 
   ret float %med
 }
 
-define float @v_test_known_not_snan_ldexp_input_fmed3_r_i_i_f32(float %a, i32 %b) #0 {
+define float @v_test_known_not_snan_ldexp_input_fmed3_r_i_i_f32(float %a, i32 %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_ldexp_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -522,7 +522,7 @@ define float @v_test_known_not_snan_ldexp_input_fmed3_r_i_i_f32(float %a, i32 %b
   ret float %med
 }
 
-define float @v_test_known_not_snan_fmed3_input_fmed3_r_i_i_f32(float %a, float %b, float %c) #0 {
+define float @v_test_known_not_snan_fmed3_input_fmed3_r_i_i_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_fmed3_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -536,7 +536,7 @@ define float @v_test_known_not_snan_fmed3_input_fmed3_r_i_i_f32(float %a, float 
   ret float %med
 }
 
-define float @v_test_known_not_snan_fmin3_input_fmed3_r_i_i_f32(float %a, float %b, float %c) #0 {
+define float @v_test_known_not_snan_fmin3_input_fmed3_r_i_i_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_fmin3_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -550,7 +550,7 @@ define float @v_test_known_not_snan_fmin3_input_fmed3_r_i_i_f32(float %a, float 
   ret float %med
 }
 
-define float @v_test_known_not_snan_cvt_ubyte0_input_fmed3_r_i_i_f32(i8 %char) #0 {
+define float @v_test_known_not_snan_cvt_ubyte0_input_fmed3_r_i_i_f32(i8 %char) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_cvt_ubyte0_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -563,7 +563,7 @@ define float @v_test_known_not_snan_cvt_ubyte0_input_fmed3_r_i_i_f32(i8 %char) #
   ret float %med
 }
 
-define float @v_test_not_known_frexp_mant_input_fmed3_r_i_i_f32(float %arg) #0 {
+define float @v_test_not_known_frexp_mant_input_fmed3_r_i_i_f32(float %arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_not_known_frexp_mant_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -576,7 +576,7 @@ define float @v_test_not_known_frexp_mant_input_fmed3_r_i_i_f32(float %arg) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_frexp_mant_input_fmed3_r_i_i_f32(float %arg) #0 {
+define float @v_test_known_not_frexp_mant_input_fmed3_r_i_i_f32(float %arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_frexp_mant_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -591,7 +591,7 @@ define float @v_test_known_not_frexp_mant_input_fmed3_r_i_i_f32(float %arg) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_rcp_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_rcp_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_rcp_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -603,7 +603,7 @@ define float @v_test_known_not_snan_rcp_input_fmed3_r_i_i_f32(float %a) #0 {
   %med = call float @llvm.minnum.f32(float %max, float 4.0)
   ret float %med
 }
-define float @v_test_known_not_snan_rsq_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_rsq_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_rsq_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -616,7 +616,7 @@ define float @v_test_known_not_snan_rsq_input_fmed3_r_i_i_f32(float %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_fract_input_fmed3_r_i_i_f32(float %a) #0 {
+define float @v_test_known_not_snan_fract_input_fmed3_r_i_i_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_fract_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -629,7 +629,7 @@ define float @v_test_known_not_snan_fract_input_fmed3_r_i_i_f32(float %a) #0 {
   ret float %med
 }
 
-define float @v_test_known_not_snan_cubeid_input_fmed3_r_i_i_f32(float %a, float %b, float %c) #0 {
+define float @v_test_known_not_snan_cubeid_input_fmed3_r_i_i_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_test_known_not_snan_cubeid_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -642,32 +642,29 @@ define float @v_test_known_not_snan_cubeid_input_fmed3_r_i_i_f32(float %a, float
   ret float %med
 }
 
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.sin.f32(float) #1
-declare float @llvm.cos.f32(float) #1
-declare float @llvm.exp2.f32(float) #1
-declare float @llvm.trunc.f32(float) #1
-declare float @llvm.floor.f32(float) #1
-declare float @llvm.ceil.f32(float) #1
-declare float @llvm.round.f32(float) #1
-declare float @llvm.rint.f32(float) #1
-declare float @llvm.nearbyint.f32(float) #1
-declare float @llvm.canonicalize.f32(float) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare float @llvm.copysign.f32(float, float) #1
-declare float @llvm.fma.f32(float, float, float) #1
-declare float @llvm.fmuladd.f32(float, float, float) #1
-declare float @llvm.ldexp.f32.i32(float, i32) #1
-declare float @llvm.amdgcn.fmul.legacy(float, float) #1
-declare float @llvm.amdgcn.fmed3.f32(float, float, float) #1
-declare float @llvm.amdgcn.frexp.mant.f32(float) #1
-declare float @llvm.amdgcn.rcp.f32(float) #1
-declare float @llvm.amdgcn.rsq.f32(float) #1
-declare float @llvm.amdgcn.fract.f32(float) #1
-declare float @llvm.amdgcn.cubeid(float, float, float) #0
-
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind readnone speculatable }
+declare float @llvm.fabs.f32(float) nounwind readnone speculatable
+declare float @llvm.sin.f32(float) nounwind readnone speculatable
+declare float @llvm.cos.f32(float) nounwind readnone speculatable
+declare float @llvm.exp2.f32(float) nounwind readnone speculatable
+declare float @llvm.trunc.f32(float) nounwind readnone speculatable
+declare float @llvm.floor.f32(float) nounwind readnone speculatable
+declare float @llvm.ceil.f32(float) nounwind readnone speculatable
+declare float @llvm.round.f32(float) nounwind readnone speculatable
+declare float @llvm.rint.f32(float) nounwind readnone speculatable
+declare float @llvm.nearbyint.f32(float) nounwind readnone speculatable
+declare float @llvm.canonicalize.f32(float) nounwind readnone speculatable
+declare float @llvm.minnum.f32(float, float) nounwind readnone speculatable
+declare float @llvm.maxnum.f32(float, float) nounwind readnone speculatable
+declare float @llvm.copysign.f32(float, float) nounwind readnone speculatable
+declare float @llvm.fma.f32(float, float, float) nounwind readnone speculatable
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone speculatable
+declare float @llvm.ldexp.f32.i32(float, i32) nounwind readnone speculatable
+declare float @llvm.amdgcn.fmul.legacy(float, float) nounwind readnone speculatable
+declare float @llvm.amdgcn.fmed3.f32(float, float, float) nounwind readnone speculatable
+declare float @llvm.amdgcn.frexp.mant.f32(float) nounwind readnone speculatable
+declare float @llvm.amdgcn.rcp.f32(float) nounwind readnone speculatable
+declare float @llvm.amdgcn.rsq.f32(float) nounwind readnone speculatable
+declare float @llvm.amdgcn.fract.f32(float) nounwind readnone speculatable
+declare float @llvm.amdgcn.cubeid(float, float, float) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign"
 
 !0 = !{float 2.500000e+00}

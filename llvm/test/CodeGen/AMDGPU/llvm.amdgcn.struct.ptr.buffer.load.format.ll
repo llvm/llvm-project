@@ -835,16 +835,15 @@ define amdgpu_cs float @buffer_load_f32_tfe(ptr addrspace(8) inreg %rsrc, ptr ad
   ret float %fstatus
 }
 
-declare float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32, i32) #0
-declare <2 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v2f32(ptr addrspace(8), i32, i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.struct.ptr.buffer.load.format.i32(ptr addrspace(8), i32, i32, i32, i32) #0
-declare { <4 x i32>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v4i32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare { <4 x float>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v4f32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare { <3 x i32>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v3i32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare { <3 x float>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v3f32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare { <2 x i32>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v2i32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare { <2 x float>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v2f32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare { i32, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_i32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare { float, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_f32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-attributes #0 = { nounwind readonly }
+declare float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32, i32) nounwind readonly
+declare <2 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v2f32(ptr addrspace(8), i32, i32, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32, i32) nounwind readonly
+declare i32 @llvm.amdgcn.struct.ptr.buffer.load.format.i32(ptr addrspace(8), i32, i32, i32, i32) nounwind readonly
+declare { <4 x i32>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v4i32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind readonly
+declare { <4 x float>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v4f32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind readonly
+declare { <3 x i32>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v3i32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind readonly
+declare { <3 x float>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v3f32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind readonly
+declare { <2 x i32>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v2i32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind readonly
+declare { <2 x float>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v2f32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind readonly
+declare { i32, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_i32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind readonly
+declare { float, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_f32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind readonly

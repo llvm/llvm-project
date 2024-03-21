@@ -18,7 +18,7 @@ target datalayout = "A5"
 
 ; ASM-LABEL: constant_expression_uses_all_lds:
 ; ASM: .amdhsa_group_segment_fixed_size 65536
-define amdgpu_kernel void @constant_expression_uses_all_lds(ptr addrspace(1) nocapture %out, i32 %idx) #0 {
+define amdgpu_kernel void @constant_expression_uses_all_lds(ptr addrspace(1) nocapture %out, i32 %idx) "amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="256,256" {
 entry:
   %stack = alloca [4 x i32], align 4, addrspace(5)
   %gep1 = getelementptr inbounds [4 x i32], ptr addrspace(5) %stack, i32 0, i32 1
@@ -44,7 +44,7 @@ entry:
 
 ; ASM-LABEL: {{^}}constant_expression_uses_some_lds:
 ; ASM: .amdhsa_group_segment_fixed_size 4224{{$}}
-define amdgpu_kernel void @constant_expression_uses_some_lds(ptr addrspace(1) nocapture %out, i32 %idx) #0 {
+define amdgpu_kernel void @constant_expression_uses_some_lds(ptr addrspace(1) nocapture %out, i32 %idx) "amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="256,256" {
 entry:
   %stack = alloca [4 x i32], align 4, addrspace(5)
   %gep1 = getelementptr inbounds [4 x i32], ptr addrspace(5) %stack, i32 0, i32 1
@@ -69,7 +69,7 @@ entry:
 
 ; ASM-LABEL: {{^}}constant_expression_uses_some_dynamic_lds:
 ; ASM: .amdhsa_group_segment_fixed_size 0{{$}}
-define amdgpu_kernel void @constant_expression_uses_some_dynamic_lds(ptr addrspace(1) nocapture %out, i32 %idx) #0 {
+define amdgpu_kernel void @constant_expression_uses_some_dynamic_lds(ptr addrspace(1) nocapture %out, i32 %idx) "amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="256,256" {
 entry:
   %stack = alloca [4 x i32], align 4, addrspace(5)
   %gep1 = getelementptr inbounds [4 x i32], ptr addrspace(5) %stack, i32 0, i32 1
@@ -93,7 +93,7 @@ declare void @callee(ptr)
 
 ; ASM-LABEL: {{^}}constant_expression_uses_all_lds_multi_level:
 ; ASM: .amdhsa_group_segment_fixed_size 65536{{$}}
-define amdgpu_kernel void @constant_expression_uses_all_lds_multi_level(ptr addrspace(1) nocapture %out, i32 %idx) #0 {
+define amdgpu_kernel void @constant_expression_uses_all_lds_multi_level(ptr addrspace(1) nocapture %out, i32 %idx) "amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="256,256" {
 entry:
   %stack = alloca [4 x i32], align 4, addrspace(5)
   %gep1 = getelementptr inbounds [4 x i32], ptr addrspace(5) %stack, i32 0, i32 1
@@ -116,7 +116,7 @@ entry:
 
 ; ASM-LABEL: {{^}}constant_expression_uses_some_lds_multi_level:
 ; ASM: .amdhsa_group_segment_fixed_size 4224{{$}}
-define amdgpu_kernel void @constant_expression_uses_some_lds_multi_level(ptr addrspace(1) nocapture %out, i32 %idx) #0 {
+define amdgpu_kernel void @constant_expression_uses_some_lds_multi_level(ptr addrspace(1) nocapture %out, i32 %idx) "amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="256,256" {
 entry:
   %stack = alloca [4 x i32], align 4, addrspace(5)
   %gep1 = getelementptr inbounds [4 x i32], ptr addrspace(5) %stack, i32 0, i32 1
@@ -138,7 +138,7 @@ entry:
 
 ; ASM-LABEL: {{^}}constant_expression_uses_some_dynamic_lds_multi_level:
 ; ASM: .amdhsa_group_segment_fixed_size 0{{$}}
-define amdgpu_kernel void @constant_expression_uses_some_dynamic_lds_multi_level(ptr addrspace(1) nocapture %out, i32 %idx) #0 {
+define amdgpu_kernel void @constant_expression_uses_some_dynamic_lds_multi_level(ptr addrspace(1) nocapture %out, i32 %idx) "amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="256,256" {
 entry:
   %stack = alloca [4 x i32], align 4, addrspace(5)
   %gep1 = getelementptr inbounds [4 x i32], ptr addrspace(5) %stack, i32 0, i32 1
@@ -161,7 +161,7 @@ entry:
 
 ; ASM-LABEL: {{^}}constant_expression_uses_some_lds_global_initializer:
 ; ASM: .amdhsa_group_segment_fixed_size 4096{{$}}
-define amdgpu_kernel void @constant_expression_uses_some_lds_global_initializer(ptr addrspace(1) nocapture %out, i32 %idx) #0 {
+define amdgpu_kernel void @constant_expression_uses_some_lds_global_initializer(ptr addrspace(1) nocapture %out, i32 %idx) "amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="256,256" {
 entry:
   %stack = alloca [4 x i32], align 4, addrspace(5)
   %gep1 = getelementptr inbounds [4 x i32], ptr addrspace(5) %stack, i32 0, i32 1
@@ -187,7 +187,7 @@ entry:
 
 ; ASM-LABEL: {{^}}constant_expression_uses_all_lds_global_initializer:
 ; ASM: .group_segment_fixed_size: 65536
-define amdgpu_kernel void @constant_expression_uses_all_lds_global_initializer(ptr addrspace(1) nocapture %out, i32 %idx) #0 {
+define amdgpu_kernel void @constant_expression_uses_all_lds_global_initializer(ptr addrspace(1) nocapture %out, i32 %idx) "amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="256,256" {
 entry:
   %stack = alloca [4 x i32], align 4, addrspace(5)
   %gep1 = getelementptr inbounds [4 x i32], ptr addrspace(5) %stack, i32 0, i32 1
@@ -203,5 +203,3 @@ entry:
   store volatile i32 ptrtoint (ptr addrspace(1) @initializer_user_all to i32), ptr addrspace(1) undef
   ret void
 }
-
-attributes #0 = { "amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="256,256" }

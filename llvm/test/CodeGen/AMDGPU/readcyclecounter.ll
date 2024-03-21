@@ -11,7 +11,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 
-declare i64 @llvm.readcyclecounter() #0
+declare i64 @llvm.readcyclecounter() nounwind
 
 ; GCN-LABEL: {{^}}test_readcyclecounter:
 ; MEMTIME-DAG: s_memtime s{{\[[0-9]+:[0-9]+\]}}
@@ -37,7 +37,7 @@ declare i64 @llvm.readcyclecounter() #0
 ; GETREG:      v_mov_b32_e32 v[[VCNT2:[0-9]+]], [[CNT2]]
 ; GETREG:      global_store_{{dwordx2|b64}} v{{.+}}, v[[[VCNT2]]:[[ZERO]]]
 
-define amdgpu_kernel void @test_readcyclecounter(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_readcyclecounter(ptr addrspace(1) %out) nounwind {
   %cycle0 = call i64 @llvm.readcyclecounter()
   store volatile i64 %cycle0, ptr addrspace(1) %out
 
@@ -57,12 +57,10 @@ define amdgpu_kernel void @test_readcyclecounter(ptr addrspace(1) %out) #0 {
 ; GETREG-DAG:  s_getreg_b32 s{{[0-9]+}}, hwreg(HW_REG_SHADER_CYCLES, 0, 20)
 ; GFX12:       s_cmp_eq_u32 [[HI1]], [[HI2]]
 ; GFX12:       s_cselect_b32 {{s[0-9]+}}, [[LO1]], 0
-define amdgpu_cs i32 @test_readcyclecounter_smem(ptr addrspace(4) inreg %in) #0 {
+define amdgpu_cs i32 @test_readcyclecounter_smem(ptr addrspace(4) inreg %in) nounwind {
   %cycle0 = call i64 @llvm.readcyclecounter()
   %in.v = load i64, ptr addrspace(4) %in
   %r.64 = add i64 %cycle0, %in.v
   %r.32 = trunc i64 %r.64 to i32
   ret i32 %r.32
 }
-
-attributes #0 = { nounwind }

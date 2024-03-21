@@ -10,8 +10,6 @@
 
 ; WARN: warning: xnack 'On' was requested for a processor that does not support it!
 ; ON: xnack setting for subtarget: On
-define void @xnack-subtarget-feature-enabled() #0 {
+define void @xnack-subtarget-feature-enabled() "target-features"="+xnack" {
   ret void
 }
-
-attributes #0 = { "target-features"="+xnack" }

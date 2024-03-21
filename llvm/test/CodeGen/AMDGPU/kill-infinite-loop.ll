@@ -10,7 +10,7 @@
 ; tests.
 
 ; FIXME: Immediate value 0x41200000 should be folded into the v_cmp instruction.
-define amdgpu_ps void @return_void(float %0) #0 {
+define amdgpu_ps void @return_void(float %0) nounwind {
 ; CHECK-LABEL: return_void:
 ; CHECK:       ; %bb.0: ; %main_body
 ; CHECK-NEXT:    s_mov_b64 s[0:1], exec
@@ -54,7 +54,7 @@ end:
   ret void
 }
 
-define amdgpu_ps void @return_void_compr(float %0) #0 {
+define amdgpu_ps void @return_void_compr(float %0) nounwind {
 ; CHECK-LABEL: return_void_compr:
 ; CHECK:       ; %bb.0: ; %main_body
 ; CHECK-NEXT:    s_mov_b64 s[0:1], exec
@@ -98,7 +98,7 @@ end:
 }
 
 ; test the case where there's only a kill in an infinite loop
-define amdgpu_ps void @only_kill() #0 {
+define amdgpu_ps void @only_kill() nounwind {
 ; CHECK-LABEL: only_kill:
 ; CHECK:       ; %bb.0: ; %main_body
 ; CHECK-NEXT:    s_mov_b64 s[0:1], exec
@@ -126,7 +126,7 @@ loop:
 }
 
 ; Check that the epilog is the final block
-define amdgpu_ps float @return_nonvoid(float %0) #0 {
+define amdgpu_ps float @return_nonvoid(float %0) nounwind {
 ; CHECK-LABEL: return_nonvoid:
 ; CHECK:       ; %bb.0: ; %main_body
 ; CHECK-NEXT:    s_mov_b64 s[0:1], exec
@@ -165,8 +165,6 @@ end:
   ret float 0.
 }
 
-declare void @llvm.amdgcn.kill(i1) #0
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #0
-declare void @llvm.amdgcn.exp.compr.v2i16(i32 immarg, i32 immarg, <2 x i16>, <2 x i16>, i1 immarg, i1 immarg) #0
-
-attributes #0 = { nounwind }
+declare void @llvm.amdgcn.kill(i1) nounwind
+declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) nounwind
+declare void @llvm.amdgcn.exp.compr.v2i16(i32 immarg, i32 immarg, <2 x i16>, <2 x i16>, i1 immarg, i1 immarg) nounwind

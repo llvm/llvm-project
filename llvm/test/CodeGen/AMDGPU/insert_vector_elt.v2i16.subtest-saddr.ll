@@ -16,8 +16,8 @@
 
 ; GCN: v_bfi_b32 [[RESULT:v[0-9]+]], [[MASK]], [[K]], [[VEC]]
 ; GCN: {{flat|global}}_store_dword v{{.+}}, [[RESULT]]
-define amdgpu_kernel void @v_insertelement_v2i16_dynamic_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %idx.ptr) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @v_insertelement_v2i16_dynamic_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %idx.ptr) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %idx.gep = getelementptr inbounds i32, ptr addrspace(1) %idx.ptr, i64 %tid.ext
@@ -30,7 +30,4 @@ define amdgpu_kernel void @v_insertelement_v2i16_dynamic_vgpr(ptr addrspace(1) %
 }
 
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

@@ -102,6 +102,4 @@ define amdgpu_kernel void @memset_size_8(ptr addrspace(1) %dst, i8 %val) {
   ret void
 }
 
-declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture writeonly, i8, i64, i1 immarg) #0
-
-attributes #0 = { argmemonly nounwind willreturn writeonly }
+declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture writeonly, i8, i64, i1 immarg) argmemonly nounwind willreturn writeonly

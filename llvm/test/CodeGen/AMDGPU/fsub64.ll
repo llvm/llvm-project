@@ -1,7 +1,7 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
-declare double @llvm.fabs.f64(double) #0
+declare double @llvm.fabs.f64(double) nounwind readnone
 
 ; SI-LABEL: {{^}}fsub_f64:
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
@@ -20,7 +20,7 @@ define amdgpu_kernel void @fsub_fabs_f64(ptr addrspace(1) %out, ptr addrspace(1)
                            ptr addrspace(1) %in2) {
   %r0 = load double, ptr addrspace(1) %in1
   %r1 = load double, ptr addrspace(1) %in2
-  %r1.fabs = call double @llvm.fabs.f64(double %r1) #0
+  %r1.fabs = call double @llvm.fabs.f64(double %r1) nounwind readnone
   %r2 = fsub double %r0, %r1.fabs
   store double %r2, ptr addrspace(1) %out
   ret void
@@ -32,7 +32,7 @@ define amdgpu_kernel void @fsub_fabs_inv_f64(ptr addrspace(1) %out, ptr addrspac
                                ptr addrspace(1) %in2) {
   %r0 = load double, ptr addrspace(1) %in1
   %r1 = load double, ptr addrspace(1) %in2
-  %r0.fabs = call double @llvm.fabs.f64(double %r0) #0
+  %r0.fabs = call double @llvm.fabs.f64(double %r0) nounwind readnone
   %r2 = fsub double %r0.fabs, %r1
   store double %r2, ptr addrspace(1) %out
   ret void
@@ -103,5 +103,3 @@ define amdgpu_kernel void @s_fsub_v4f64(ptr addrspace(1) %out, <4 x double> %a, 
   store <4 x double> %result, ptr addrspace(1) %out, align 16
   ret void
 }
-
-attributes #0 = { nounwind readnone }

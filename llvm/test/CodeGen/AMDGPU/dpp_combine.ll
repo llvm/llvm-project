@@ -10,7 +10,7 @@ define amdgpu_kernel void @dpp_add(ptr addrspace(1) %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %id
   %load = load i32, ptr addrspace(1) %gep
-  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %load, i32 %load, i32 1, i32 15, i32 15, i1 1) #0
+  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %load, i32 %load, i32 1, i32 15, i32 15, i1 1) nounwind readnone convergent
   %add = add i32 %tmp0, %load
   store i32 %add, ptr addrspace(1) %gep
   ret void
@@ -23,7 +23,7 @@ define amdgpu_kernel void @dpp_ceil(ptr addrspace(1) %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %id
   %load = load i32, ptr addrspace(1) %gep
-  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %load, i32 %load, i32 1, i32 15, i32 15, i1 1) #0
+  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %load, i32 %load, i32 1, i32 15, i32 15, i1 1) nounwind readnone convergent
   %tmp1 = bitcast i32 %tmp0 to float
   %round = tail call float @llvm.ceil.f32(float %tmp1)
   %tmp2 = bitcast float %round to i32
@@ -38,7 +38,7 @@ define amdgpu_kernel void @dpp_fadd(ptr addrspace(1) %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %id
   %load = load i32, ptr addrspace(1) %gep
-  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %load, i32 %load, i32 1, i32 15, i32 15, i1 1) #0
+  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %load, i32 %load, i32 1, i32 15, i32 15, i1 1) nounwind readnone convergent
   %tmp1 = bitcast i32 %tmp0 to float
   %t = bitcast i32 %load to float
   %add = fadd float %tmp1, %t
@@ -49,7 +49,5 @@ define amdgpu_kernel void @dpp_fadd(ptr addrspace(1) %arg) {
 
 
 declare i32 @llvm.amdgcn.workitem.id.x()
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1) nounwind readnone convergent
 declare float @llvm.ceil.f32(float)
-
-attributes #0 = { nounwind readnone convergent }

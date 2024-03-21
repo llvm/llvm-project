@@ -41,7 +41,7 @@ entry:
 ; PAL: s_load_dwordx4 s[[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s[[[GITPTR]]:
 ; PAL: buffer_store{{.*}}, s[[[SCRATCHDESC]]:
 
-define amdgpu_kernel void @scratch2(<2 x i32> %in, i32 %idx, ptr addrspace(5) %out) #0 {
+define amdgpu_kernel void @scratch2(<2 x i32> %in, i32 %idx, ptr addrspace(5) %out) nounwind "amdgpu-git-ptr-high"="0x1234" {
 entry:
   %v = alloca [2 x i32], addrspace(5)
   store <2 x i32> %in, ptr addrspace(5) %v
@@ -63,7 +63,7 @@ entry:
 ; VI: s_load_dwordx4 s[[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s[[[GITPTR]]:{{[0-9]+\]}}, 0x10
 ; PAL: buffer_store{{.*}}, s[[[SCRATCHDESC]]:
 
-define amdgpu_cs void @scratch2_cs(i32 inreg, i32 inreg, i32 inreg, <3 x i32> inreg, i32 inreg, <3 x i32> %coord, <2 x i32> %in, i32 %extra, i32 %idx) #0 {
+define amdgpu_cs void @scratch2_cs(i32 inreg, i32 inreg, i32 inreg, <3 x i32> inreg, i32 inreg, <3 x i32> %coord, <2 x i32> %in, i32 %extra, i32 %idx) nounwind "amdgpu-git-ptr-high"="0x1234" {
 entry:
   %v = alloca [3 x i32], addrspace(5)
   %v1 = getelementptr [3 x i32], ptr addrspace(5) %v, i32 0, i32 1
@@ -75,8 +75,6 @@ entry:
   call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %xf, ptr addrspace(8) undef, i32 0, i32 0, i32 0)
   ret void
 }
-
-attributes #0 = { nounwind "amdgpu-git-ptr-high"="0x1234" }
 
 declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg)
 

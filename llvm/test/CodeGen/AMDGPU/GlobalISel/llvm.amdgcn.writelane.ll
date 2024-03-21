@@ -4,7 +4,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10 %s
 
-define amdgpu_ps float @test_writelane_s_s_s(i32 inreg %data, i32 inreg %lane, i32 inreg %vdst.in) #0 {
+define amdgpu_ps float @test_writelane_s_s_s(i32 inreg %data, i32 inreg %lane, i32 inreg %vdst.in) nounwind {
 ; GFX7-LABEL: test_writelane_s_s_s:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
@@ -29,7 +29,7 @@ define amdgpu_ps float @test_writelane_s_s_s(i32 inreg %data, i32 inreg %lane, i
   ret float %writelane.cast
 }
 
-define amdgpu_ps float @test_writelane_s_s_imm(i32 inreg %data, i32 inreg %lane) #0 {
+define amdgpu_ps float @test_writelane_s_s_imm(i32 inreg %data, i32 inreg %lane) nounwind {
 ; GFX7-LABEL: test_writelane_s_s_imm:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_mov_b32_e32 v0, 42
@@ -55,7 +55,7 @@ define amdgpu_ps float @test_writelane_s_s_imm(i32 inreg %data, i32 inreg %lane)
 }
 
 ; data is not inline imm
-define amdgpu_ps float @test_writelane_k_s_v(i32 inreg %lane, i32 %vdst.in) #0 {
+define amdgpu_ps float @test_writelane_k_s_v(i32 inreg %lane, i32 %vdst.in) nounwind {
 ; GFX7-LABEL: test_writelane_k_s_v:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_movk_i32 s0, 0x3e7
@@ -81,7 +81,7 @@ define amdgpu_ps float @test_writelane_k_s_v(i32 inreg %lane, i32 %vdst.in) #0 {
 }
 
 ; Data is inline imm
-define amdgpu_ps float @test_writelane_imm_s_v(i32 inreg %lane, i32 %vdst.in) #0 {
+define amdgpu_ps float @test_writelane_imm_s_v(i32 inreg %lane, i32 %vdst.in) nounwind {
 ; GFX7-LABEL: test_writelane_imm_s_v:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_writelane_b32 v0, 42, s2
@@ -102,7 +102,7 @@ define amdgpu_ps float @test_writelane_imm_s_v(i32 inreg %lane, i32 %vdst.in) #0
 }
 
 ; Data is subtarget dependent inline imm
-define amdgpu_ps float @test_writelane_imminv2pi_s_v(i32 inreg %lane, i32 %vdst.in) #0 {
+define amdgpu_ps float @test_writelane_imminv2pi_s_v(i32 inreg %lane, i32 %vdst.in) nounwind {
 ; GFX7-LABEL: test_writelane_imminv2pi_s_v:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_mov_b32 s0, 0x3e22f983
@@ -126,7 +126,7 @@ define amdgpu_ps float @test_writelane_imminv2pi_s_v(i32 inreg %lane, i32 %vdst.
 
 
 ; Lane is inline imm
-define amdgpu_ps float @test_writelane_s_imm_v(i32 inreg %data, i32 %vdst.in) #0 {
+define amdgpu_ps float @test_writelane_s_imm_v(i32 inreg %data, i32 %vdst.in) nounwind {
 ; GFX7-LABEL: test_writelane_s_imm_v:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_writelane_b32 v0, s2, 23
@@ -147,7 +147,7 @@ define amdgpu_ps float @test_writelane_s_imm_v(i32 inreg %data, i32 %vdst.in) #0
 }
 
 ; Lane index is larger than the wavesize
-define amdgpu_ps float @test_writelane_s_k0_v(i32 inreg %data, i32 %vdst.in) #0 {
+define amdgpu_ps float @test_writelane_s_k0_v(i32 inreg %data, i32 %vdst.in) nounwind {
 ; GFX7-LABEL: test_writelane_s_k0_v:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_writelane_b32 v0, s2, 3
@@ -169,7 +169,7 @@ define amdgpu_ps float @test_writelane_s_k0_v(i32 inreg %data, i32 %vdst.in) #0 
 }
 
 ; Lane index is larger than the wavesize for wave32
-define amdgpu_ps float @test_writelane_s_k1_v(i32 inreg %data, i32 %vdst.in) #0 {
+define amdgpu_ps float @test_writelane_s_k1_v(i32 inreg %data, i32 %vdst.in) nounwind {
 ; GFX7-LABEL: test_writelane_s_k1_v:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_writelane_b32 v0, s2, 32
@@ -189,7 +189,7 @@ define amdgpu_ps float @test_writelane_s_k1_v(i32 inreg %data, i32 %vdst.in) #0 
   ret float %writelane.cast
 }
 
-define amdgpu_ps float @test_writelane_v_v_v(i32 %data, i32 %lane, i32 %vdst.in) #0 {
+define amdgpu_ps float @test_writelane_v_v_v(i32 %data, i32 %lane, i32 %vdst.in) nounwind {
 ; GFX7-LABEL: test_writelane_v_v_v:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_readfirstlane_b32 s1, v1
@@ -220,7 +220,7 @@ define amdgpu_ps float @test_writelane_v_v_v(i32 %data, i32 %lane, i32 %vdst.in)
   ret float %writelane.cast
 }
 
-define amdgpu_ps float @test_writelane_v_s_v(i32 %data, i32 inreg %lane, i32 %vdst.in) #0 {
+define amdgpu_ps float @test_writelane_v_s_v(i32 %data, i32 inreg %lane, i32 %vdst.in) nounwind {
 ; GFX7-LABEL: test_writelane_v_s_v:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
@@ -250,7 +250,7 @@ define amdgpu_ps float @test_writelane_v_s_v(i32 %data, i32 inreg %lane, i32 %vd
 
 ; FIXME: This could theoretically use m0 directly as the data source,
 ; and another SGPR as the lane selector and avoid register swap.
-define amdgpu_ps float @test_writelane_m0_s_v(i32 inreg %lane, i32 %vdst.in) #0 {
+define amdgpu_ps float @test_writelane_m0_s_v(i32 inreg %lane, i32 %vdst.in) nounwind {
 ; GFX7-LABEL: test_writelane_m0_s_v:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    ;;#ASMSTART
@@ -284,7 +284,7 @@ define amdgpu_ps float @test_writelane_m0_s_v(i32 inreg %lane, i32 %vdst.in) #0 
   ret float %writelane.cast
 }
 
-define amdgpu_ps float @test_writelane_s_m0_v(i32 inreg %data, i32 %vdst.in) #0 {
+define amdgpu_ps float @test_writelane_s_m0_v(i32 inreg %data, i32 %vdst.in) nounwind {
 ; GFX7-LABEL: test_writelane_s_m0_v:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    ;;#ASMSTART
@@ -314,9 +314,5 @@ define amdgpu_ps float @test_writelane_s_m0_v(i32 inreg %data, i32 %vdst.in) #0 
   ret float %writelane.cast
 }
 
-declare i32 @llvm.amdgcn.writelane(i32, i32, i32) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
-attributes #0 = { nounwind }
-attributes #1 = { convergent nounwind readnone willreturn }
-attributes #2 = { nounwind readnone speculatable willreturn }
+declare i32 @llvm.amdgcn.writelane(i32, i32, i32) convergent nounwind readnone willreturn
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable willreturn

@@ -22,7 +22,7 @@
 ; GFX908-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
 
-define amdgpu_kernel void @test_mfma_loop_zeroinit(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_loop_zeroinit(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   br label %for.cond.preheader
 
@@ -60,7 +60,7 @@ exit:
 ; GFX908-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
 
-define amdgpu_kernel void @test_mfma_loop_unfoldable_splat(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_loop_unfoldable_splat(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   br label %for.cond.preheader
 
@@ -94,7 +94,7 @@ exit:
 ; GFX908-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
 
-define amdgpu_kernel void @test_mfma_loop_non_splat(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_loop_non_splat(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   br label %for.cond.preheader
 
@@ -228,7 +228,7 @@ exit:
 ; GFX908-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
 
-define amdgpu_kernel void @test_mfma_loop_unfoldable_seq(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_loop_unfoldable_seq(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   br label %for.cond.preheader
 
@@ -261,7 +261,7 @@ exit:
 ; GFX908-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
 
-define amdgpu_kernel void @test_mfma_loop_vgpr_init(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_loop_vgpr_init(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %init = bitcast i32 %tid to float
@@ -331,7 +331,7 @@ exit:
 ; GFX908-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
 
-define amdgpu_kernel void @test_mfma_loop_sgpr_init(ptr addrspace(1) %arg, float %init) #0 {
+define amdgpu_kernel void @test_mfma_loop_sgpr_init(ptr addrspace(1) %arg, float %init) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %tmp0 = insertelement <32 x float> undef, float %init, i32 0
   %tmp1 = insertelement <32 x float> %tmp0, float %init, i32 1
@@ -433,7 +433,7 @@ exit:
 ; GFX908-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
 
-define amdgpu_kernel void @test_mfma_loop_mixed_init(ptr addrspace(1) %arg, float %x) #0 {
+define amdgpu_kernel void @test_mfma_loop_mixed_init(ptr addrspace(1) %arg, float %x) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %init = bitcast i32 %tid to float
@@ -477,7 +477,7 @@ exit:
 ; GFX908-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
 
-define amdgpu_kernel void @test_mfma_loop_mfma_forward_init(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_loop_mfma_forward_init(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %mai.0 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> zeroinitializer, i32 0, i32 0, i32 0)
 
@@ -522,7 +522,7 @@ exit:
 ; GFX908-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
 
-define amdgpu_kernel void @test_mfma_loop_agpr_init(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_loop_agpr_init(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %mai.0 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> zeroinitializer, i32 0, i32 0, i32 0)
   %init = extractelement <32 x float> %mai.0, i32 0
@@ -600,7 +600,7 @@ exit:
 ; GFX908-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}]
 ; GFX90A-COUNT-8:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
 
-define amdgpu_kernel void @test_mfma_nested_loop_zeroinit(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_nested_loop_zeroinit(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   br label %for.cond.preheader
 
@@ -629,5 +629,3 @@ exit:
 
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
 declare i32 @llvm.amdgcn.workitem.id.x()
-
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }

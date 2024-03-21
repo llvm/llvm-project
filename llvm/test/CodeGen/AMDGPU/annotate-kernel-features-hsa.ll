@@ -4,23 +4,23 @@
 
 target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-declare i32 @llvm.amdgcn.workgroup.id.y() #0
-declare i32 @llvm.amdgcn.workgroup.id.z() #0
+declare i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workgroup.id.y() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workgroup.id.z() nounwind readnone speculatable
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.workitem.id.y() #0
-declare i32 @llvm.amdgcn.workitem.id.z() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workitem.id.z() nounwind readnone speculatable
 
-declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #0
+declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() nounwind readnone speculatable
+declare ptr addrspace(4) @llvm.amdgcn.queue.ptr() nounwind readnone speculatable
+declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() nounwind readnone speculatable
+declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() nounwind readnone speculatable
 
 declare i1 @llvm.amdgcn.is.shared(ptr nocapture) #2
 declare i1 @llvm.amdgcn.is.private(ptr nocapture) #2
 
-define amdgpu_kernel void @use_tgid_x(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_x(ptr addrspace(1) %ptr) nounwind {
 ; HSA-LABEL: define {{[^@]+}}@use_tgid_x
 ; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {
 ; HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -32,7 +32,7 @@ define amdgpu_kernel void @use_tgid_x(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tgid_y(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_y(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_tgid_y
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -50,7 +50,7 @@ define amdgpu_kernel void @use_tgid_y(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @multi_use_tgid_y(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @multi_use_tgid_y(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@multi_use_tgid_y
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -74,7 +74,7 @@ define amdgpu_kernel void @multi_use_tgid_y(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tgid_x_y(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_x_y(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_tgid_x_y
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -98,7 +98,7 @@ define amdgpu_kernel void @use_tgid_x_y(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tgid_z(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_z(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_tgid_z
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workgroup.id.z()
@@ -116,7 +116,7 @@ define amdgpu_kernel void @use_tgid_z(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tgid_x_z(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_x_z(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_tgid_x_z
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -140,7 +140,7 @@ define amdgpu_kernel void @use_tgid_x_z(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tgid_y_z(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_y_z(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_tgid_y_z
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -164,7 +164,7 @@ define amdgpu_kernel void @use_tgid_y_z(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tgid_x_y_z(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_x_y_z(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_tgid_x_y_z
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -194,7 +194,7 @@ define amdgpu_kernel void @use_tgid_x_y_z(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tidig_x(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tidig_x(ptr addrspace(1) %ptr) nounwind {
 ; HSA-LABEL: define {{[^@]+}}@use_tidig_x
 ; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -206,7 +206,7 @@ define amdgpu_kernel void @use_tidig_x(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tidig_y(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tidig_y(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_tidig_y
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
@@ -224,7 +224,7 @@ define amdgpu_kernel void @use_tidig_y(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tidig_z(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tidig_z(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_tidig_z
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
@@ -242,7 +242,7 @@ define amdgpu_kernel void @use_tidig_z(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tidig_x_tgid_x(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tidig_x_tgid_x(ptr addrspace(1) %ptr) nounwind {
 ; HSA-LABEL: define {{[^@]+}}@use_tidig_x_tgid_x
 ; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -258,7 +258,7 @@ define amdgpu_kernel void @use_tidig_x_tgid_x(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tidig_y_tgid_y(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tidig_y_tgid_y(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_tidig_y_tgid_y
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
@@ -282,7 +282,7 @@ define amdgpu_kernel void @use_tidig_y_tgid_y(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tidig_x_y_z(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tidig_x_y_z(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_tidig_x_y_z
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -312,7 +312,7 @@ define amdgpu_kernel void @use_tidig_x_y_z(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_all_workitems(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_all_workitems(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_all_workitems
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -360,7 +360,7 @@ define amdgpu_kernel void @use_all_workitems(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_dispatch_ptr(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_dispatch_ptr(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_dispatch_ptr
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[DISPATCH_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
@@ -381,7 +381,7 @@ define amdgpu_kernel void @use_dispatch_ptr(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_queue_ptr(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_queue_ptr(ptr addrspace(1) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_queue_ptr
 ; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[DISPATCH_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
@@ -402,7 +402,7 @@ define amdgpu_kernel void @use_queue_ptr(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_kernarg_segment_ptr(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_kernarg_segment_ptr(ptr addrspace(1) %ptr) nounwind {
 ; HSA-LABEL: define {{[^@]+}}@use_kernarg_segment_ptr
 ; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; HSA-NEXT:    [[DISPATCH_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -416,7 +416,7 @@ define amdgpu_kernel void @use_kernarg_segment_ptr(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_group_to_flat_addrspacecast(ptr addrspace(3) %ptr) #1 {
+define amdgpu_kernel void @use_group_to_flat_addrspacecast(ptr addrspace(3) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_group_to_flat_addrspacecast
 ; AKF_HSA-SAME: (ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(3) [[PTR]] to ptr
@@ -434,7 +434,7 @@ define amdgpu_kernel void @use_group_to_flat_addrspacecast(ptr addrspace(3) %ptr
   ret void
 }
 
-define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #1 {
+define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_private_to_flat_addrspacecast
 ; AKF_HSA-SAME: (ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
@@ -452,7 +452,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
   ret void
 }
 
-define amdgpu_kernel void @use_flat_to_group_addrspacecast(ptr %ptr) #1 {
+define amdgpu_kernel void @use_flat_to_group_addrspacecast(ptr %ptr) nounwind {
 ; HSA-LABEL: define {{[^@]+}}@use_flat_to_group_addrspacecast
 ; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
 ; HSA-NEXT:    [[FTOS:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(3)
@@ -464,7 +464,7 @@ define amdgpu_kernel void @use_flat_to_group_addrspacecast(ptr %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) #1 {
+define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) nounwind {
 ; HSA-LABEL: define {{[^@]+}}@use_flat_to_private_addrspacecast
 ; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
 ; HSA-NEXT:    [[FTOS:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
@@ -477,7 +477,7 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) #1 {
 }
 
 ; No-op addrspacecast should not use queue ptr
-define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %ptr) nounwind {
 ; HSA-LABEL: define {{[^@]+}}@use_global_to_flat_addrspacecast
 ; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
@@ -489,7 +489,7 @@ define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %pt
   ret void
 }
 
-define amdgpu_kernel void @use_constant_to_flat_addrspacecast(ptr addrspace(4) %ptr) #1 {
+define amdgpu_kernel void @use_constant_to_flat_addrspacecast(ptr addrspace(4) %ptr) nounwind {
 ; HSA-LABEL: define {{[^@]+}}@use_constant_to_flat_addrspacecast
 ; HSA-SAME: (ptr addrspace(4) [[PTR:%.*]]) #[[ATTR1]] {
 ; HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(4) [[PTR]] to ptr
@@ -501,7 +501,7 @@ define amdgpu_kernel void @use_constant_to_flat_addrspacecast(ptr addrspace(4) %
   ret void
 }
 
-define amdgpu_kernel void @use_flat_to_global_addrspacecast(ptr %ptr) #1 {
+define amdgpu_kernel void @use_flat_to_global_addrspacecast(ptr %ptr) nounwind {
 ; HSA-LABEL: define {{[^@]+}}@use_flat_to_global_addrspacecast
 ; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
 ; HSA-NEXT:    [[FTOS:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(1)
@@ -513,7 +513,7 @@ define amdgpu_kernel void @use_flat_to_global_addrspacecast(ptr %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_flat_to_constant_addrspacecast(ptr %ptr) #1 {
+define amdgpu_kernel void @use_flat_to_constant_addrspacecast(ptr %ptr) nounwind {
 ; HSA-LABEL: define {{[^@]+}}@use_flat_to_constant_addrspacecast
 ; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
 ; HSA-NEXT:    [[FTOS:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(4)
@@ -525,7 +525,7 @@ define amdgpu_kernel void @use_flat_to_constant_addrspacecast(ptr %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_is_shared(ptr %ptr) #1 {
+define amdgpu_kernel void @use_is_shared(ptr %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_is_shared
 ; AKF_HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[PTR]])
@@ -546,7 +546,7 @@ define amdgpu_kernel void @use_is_shared(ptr %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_is_private(ptr %ptr) #1 {
+define amdgpu_kernel void @use_is_private(ptr %ptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_is_private
 ; AKF_HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
@@ -567,7 +567,7 @@ define amdgpu_kernel void @use_is_private(ptr %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_alloca() #1 {
+define amdgpu_kernel void @use_alloca() nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_alloca
 ; AKF_HSA-SAME: () #[[ATTR2:[0-9]+]] {
 ; AKF_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
@@ -585,7 +585,7 @@ define amdgpu_kernel void @use_alloca() #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_alloca_non_entry_block() #1 {
+define amdgpu_kernel void @use_alloca_non_entry_block() nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_alloca_non_entry_block
 ; AKF_HSA-SAME: () #[[ATTR2]] {
 ; AKF_HSA-NEXT:  entry:
@@ -613,7 +613,7 @@ bb:
   ret void
 }
 
-define void @use_alloca_func() #1 {
+define void @use_alloca_func() nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_alloca_func
 ; AKF_HSA-SAME: () #[[ATTR2]] {
 ; AKF_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
@@ -630,9 +630,6 @@ define void @use_alloca_func() #1 {
   store i32 0, ptr addrspace(5) %alloca
   ret void
 }
-
-attributes #0 = { nounwind readnone speculatable }
-attributes #1 = { nounwind }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

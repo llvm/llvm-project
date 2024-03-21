@@ -29,7 +29,7 @@
 ; GCN-DAG: buffer_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24
 
 ; GCN: s_endpgm
-define amdgpu_kernel void @ds_reorder_vector_split(ptr addrspace(1) nocapture readonly %srcValues, ptr addrspace(1) nocapture readonly %offsets, ptr addrspace(1) nocapture %destBuffer, i32 %alignmentOffset, i32 %tmp, i32 %tmp1, i32 %x.i.12.i) #0 {
+define amdgpu_kernel void @ds_reorder_vector_split(ptr addrspace(1) nocapture readonly %srcValues, ptr addrspace(1) nocapture readonly %offsets, ptr addrspace(1) nocapture %destBuffer, i32 %alignmentOffset, i32 %tmp, i32 %tmp1, i32 %x.i.12.i) norecurse nounwind {
 entry:
   %tmp2 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp3 = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -38,7 +38,7 @@ entry:
   %tmp10 = add i32 %tmp3, %tmp6
   %tmp11 = mul i32 %tmp10, %tmp1
   %tmp9 = add i32 %tmp11, %tmp4
-  %x.i.i = tail call i32 @llvm.amdgcn.workgroup.id.x() #1
+  %x.i.i = tail call i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone
   %mul.26.i = mul i32 %x.i.12.i, %x.i.i
   %add.i = add i32 %tmp2, %mul.26.i
   %arrayidx = getelementptr [256 x [8 x <4 x i64>]], ptr addrspace(3) @sPrivateStorage, i32 0, i32 %tmp9, i32 %add.i
@@ -74,10 +74,7 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #1
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare i32 @llvm.amdgcn.workitem.id.y() #1
-declare i32 @llvm.amdgcn.workitem.id.z() #1
-
-attributes #0 = { norecurse nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.z() nounwind readnone

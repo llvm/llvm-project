@@ -24,6 +24,4 @@ bb8:                                              ; preds = %bb3, %bb
   ret void
 }
 ; Function Attrs: nounwind readnone speculatable
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone speculatable }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable

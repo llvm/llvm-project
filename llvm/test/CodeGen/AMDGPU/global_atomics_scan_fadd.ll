@@ -14,7 +14,7 @@
 
 declare float @div.float.value()
 
-define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_unsafe(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_unsafe(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX7LESS-LABEL: global_atomic_fadd_uni_address_uni_value_agent_scope_unsafe:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b64 s[2:3], exec
@@ -332,7 +332,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_align4_unsafe(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_align4_unsafe(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX7LESS-LABEL: global_atomic_fadd_uni_address_div_value_agent_scope_align4_unsafe:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s32, 0
@@ -1051,7 +1051,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_one_as_scope_unsafe_structfp(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_one_as_scope_unsafe_structfp(ptr addrspace(1) %ptr) strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX7LESS-LABEL: global_atomic_fadd_uni_address_uni_value_one_as_scope_unsafe_structfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
@@ -1510,7 +1510,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_one_as_scope
 }
 
 
-define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_one_as_scope_unsafe_structfp(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_one_as_scope_unsafe_structfp(ptr addrspace(1) %ptr) strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX7LESS-LABEL: global_atomic_fadd_uni_address_div_value_one_as_scope_unsafe_structfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s32, 0
@@ -2281,7 +2281,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_one_as_scope
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_strictfp(ptr addrspace(1) %ptr) #2{
+define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_strictfp(ptr addrspace(1) %ptr) strictfp{
 ; GFX7LESS-LABEL: global_atomic_fadd_uni_address_uni_value_agent_scope_strictfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
@@ -2740,7 +2740,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_
 }
 
 
-define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_unsafe(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_unsafe(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX7LESS-LABEL: global_atomic_fadd_uni_address_div_value_agent_scope_unsafe:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s32, 0
@@ -3460,7 +3460,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 }
 
 
-define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_unsafe_structfp(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_unsafe_structfp(ptr addrspace(1) %ptr) strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX7LESS-LABEL: global_atomic_fadd_uni_address_div_value_agent_scope_unsafe_structfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s32, 0
@@ -4179,7 +4179,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp(ptr addrspace(1) %ptr) #2 {
+define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp(ptr addrspace(1) %ptr) strictfp {
 ; GFX7LESS-LABEL: global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
@@ -4637,7 +4637,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scop
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp(ptr addrspace(1) %ptr) #2 {
+define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp(ptr addrspace(1) %ptr) strictfp {
 ; GFX7LESS-LABEL: global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s32, 0
@@ -5407,10 +5407,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scop
   %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue monotonic, align 4
   ret void
 }
-
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
-attributes #1 = { strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
-attributes #2 = { strictfp}
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

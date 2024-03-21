@@ -3,7 +3,7 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s -check-prefixes=VI
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mtriple=r600-- -mcpu=redwood -verify-machineinstrs < %s | FileCheck %s -check-prefixes=EG
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 define amdgpu_kernel void @ashr_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: ashr_v2i32:
@@ -821,7 +821,7 @@ define amdgpu_kernel void @v_ashr_32_i64(ptr addrspace(1) %out, ptr addrspace(1)
 ; EG-NEXT:     LSHR T1.X, PV.W, literal.x,
 ; EG-NEXT:     ASHR * T0.Y, T0.X, literal.y,
 ; EG-NEXT:    2(2.802597e-45), 31(4.344025e-44)
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i64, ptr addrspace(1) %out, i32 %tid
   %a = load i64, ptr addrspace(1) %gep.in
@@ -944,7 +944,7 @@ define amdgpu_kernel void @v_ashr_63_i64(ptr addrspace(1) %out, ptr addrspace(1)
 ; EG-NEXT:     LSHR T1.X, PV.W, literal.x,
 ; EG-NEXT:     MOV * T0.Y, PV.X,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i64, ptr addrspace(1) %out, i32 %tid
   %a = load i64, ptr addrspace(1) %gep.in
@@ -952,5 +952,3 @@ define amdgpu_kernel void @v_ashr_63_i64(ptr addrspace(1) %out, ptr addrspace(1)
   store i64 %result, ptr addrspace(1) %gep.out
   ret void
 }
-
-attributes #0 = { nounwind readnone }

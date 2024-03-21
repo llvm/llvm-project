@@ -2,7 +2,7 @@
 
 ; FUNC-LABEL: {{^}}s_add_i32:
 ; EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-define amdgpu_kernel void @s_add_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @s_add_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %b_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %a = load i32, ptr addrspace(1) %in
   %b = load i32, ptr addrspace(1) %b_ptr
@@ -78,7 +78,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v_add_i32:
-define amdgpu_kernel void @v_add_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_add_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i32 %tid
   %b_ptr = getelementptr i32, ptr addrspace(1) %gep, i32 1
@@ -90,7 +90,7 @@ define amdgpu_kernel void @v_add_i32(ptr addrspace(1) %out, ptr addrspace(1) %in
 }
 
 ; FUNC-LABEL: {{^}}v_add_imm_i32:
-define amdgpu_kernel void @v_add_imm_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_add_imm_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i32 %tid
   %b_ptr = getelementptr i32, ptr addrspace(1) %gep, i32 1
@@ -161,7 +161,4 @@ endif:
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable }
+declare i32 @llvm.r600.read.tidig.x() nounwind readnone speculatable

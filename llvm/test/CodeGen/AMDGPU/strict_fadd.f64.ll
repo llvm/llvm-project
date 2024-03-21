@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefix=GFX10 %s
 
-define double @v_constained_fadd_f64_fpexcept_strict(double %x, double %y) #0 {
+define double @v_constained_fadd_f64_fpexcept_strict(double %x, double %y) strictfp {
 ; GCN-LABEL: v_constained_fadd_f64_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -19,7 +19,7 @@ define double @v_constained_fadd_f64_fpexcept_strict(double %x, double %y) #0 {
   ret double %val
 }
 
-define double @v_constained_fadd_f64_fpexcept_ignore(double %x, double %y) #0 {
+define double @v_constained_fadd_f64_fpexcept_ignore(double %x, double %y) strictfp {
 ; GCN-LABEL: v_constained_fadd_f64_fpexcept_ignore:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -35,7 +35,7 @@ define double @v_constained_fadd_f64_fpexcept_ignore(double %x, double %y) #0 {
   ret double %val
 }
 
-define double @v_constained_fadd_f64_fpexcept_maytrap(double %x, double %y) #0 {
+define double @v_constained_fadd_f64_fpexcept_maytrap(double %x, double %y) strictfp {
 ; GCN-LABEL: v_constained_fadd_f64_fpexcept_maytrap:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -51,7 +51,7 @@ define double @v_constained_fadd_f64_fpexcept_maytrap(double %x, double %y) #0 {
   ret double %val
 }
 
-define <2 x double> @v_constained_fadd_v2f64_fpexcept_strict(<2 x double> %x, <2 x double> %y) #0 {
+define <2 x double> @v_constained_fadd_v2f64_fpexcept_strict(<2 x double> %x, <2 x double> %y) strictfp {
 ; GCN-LABEL: v_constained_fadd_v2f64_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -69,7 +69,7 @@ define <2 x double> @v_constained_fadd_v2f64_fpexcept_strict(<2 x double> %x, <2
   ret <2 x double> %val
 }
 
-define <2 x double> @v_constained_fadd_v2f64_fpexcept_ignore(<2 x double> %x, <2 x double> %y) #0 {
+define <2 x double> @v_constained_fadd_v2f64_fpexcept_ignore(<2 x double> %x, <2 x double> %y) strictfp {
 ; GCN-LABEL: v_constained_fadd_v2f64_fpexcept_ignore:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -87,7 +87,7 @@ define <2 x double> @v_constained_fadd_v2f64_fpexcept_ignore(<2 x double> %x, <2
   ret <2 x double> %val
 }
 
-define <2 x double> @v_constained_fadd_v2f64_fpexcept_maytrap(<2 x double> %x, <2 x double> %y) #0 {
+define <2 x double> @v_constained_fadd_v2f64_fpexcept_maytrap(<2 x double> %x, <2 x double> %y) strictfp {
 ; GCN-LABEL: v_constained_fadd_v2f64_fpexcept_maytrap:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -105,7 +105,7 @@ define <2 x double> @v_constained_fadd_v2f64_fpexcept_maytrap(<2 x double> %x, <
   ret <2 x double> %val
 }
 
-define <3 x double> @v_constained_fadd_v3f64_fpexcept_strict(<3 x double> %x, <3 x double> %y) #0 {
+define <3 x double> @v_constained_fadd_v3f64_fpexcept_strict(<3 x double> %x, <3 x double> %y) strictfp {
 ; GCN-LABEL: v_constained_fadd_v3f64_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -125,7 +125,7 @@ define <3 x double> @v_constained_fadd_v3f64_fpexcept_strict(<3 x double> %x, <3
   ret <3 x double> %val
 }
 
-define amdgpu_ps <2 x float> @s_constained_fadd_f64_fpexcept_strict(double inreg %x, double inreg %y) #0 {
+define amdgpu_ps <2 x float> @s_constained_fadd_f64_fpexcept_strict(double inreg %x, double inreg %y) strictfp {
 ; GCN-LABEL: s_constained_fadd_f64_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
@@ -142,9 +142,6 @@ define amdgpu_ps <2 x float> @s_constained_fadd_f64_fpexcept_strict(double inreg
   ret <2 x float> %cast
 }
 
-declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata) #1
-declare <2 x double> @llvm.experimental.constrained.fadd.v2f64(<2 x double>, <2 x double>, metadata, metadata) #1
-declare <3 x double> @llvm.experimental.constrained.fadd.v3f64(<3 x double>, <3 x double>, metadata, metadata) #1
-
-attributes #0 = { strictfp }
-attributes #1 = { inaccessiblememonly nounwind willreturn }
+declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata) inaccessiblememonly nounwind willreturn
+declare <2 x double> @llvm.experimental.constrained.fadd.v2f64(<2 x double>, <2 x double>, metadata, metadata) inaccessiblememonly nounwind willreturn
+declare <3 x double> @llvm.experimental.constrained.fadd.v3f64(<3 x double>, <3 x double>, metadata, metadata) inaccessiblememonly nounwind willreturn

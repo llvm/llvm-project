@@ -59,7 +59,7 @@ entry:
 define amdgpu_kernel void @test8(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) optnone noinline "amdgpu-implicitarg-num-bytes"="8" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -95,7 +95,7 @@ entry:
 define amdgpu_kernel void @test16(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #1 {
+    ptr addrspace(1) %b) optnone noinline "amdgpu-implicitarg-num-bytes"="16" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -134,7 +134,7 @@ entry:
 define amdgpu_kernel void @test24(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #2 {
+    ptr addrspace(1) %b) optnone noinline "amdgpu-implicitarg-num-bytes"="24" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -176,7 +176,7 @@ entry:
 define amdgpu_kernel void @test32(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #3 {
+    ptr addrspace(1) %b) optnone noinline "amdgpu-implicitarg-num-bytes"="32" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -224,7 +224,7 @@ entry:
 define amdgpu_kernel void @test48(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #4 {
+    ptr addrspace(1) %b) optnone noinline "amdgpu-implicitarg-num-bytes"="48" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -275,7 +275,7 @@ entry:
 define amdgpu_kernel void @test56(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #5 {
+    ptr addrspace(1) %b) optnone noinline "amdgpu-implicitarg-num-bytes"="56" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -290,12 +290,6 @@ entry:
 
 ; We don't have a use of llvm.amdgcn.implicitarg.ptr, so optnone to
 ; avoid optimizing out the implicit argument allocation.
-attributes #0 = { optnone noinline "amdgpu-implicitarg-num-bytes"="8" }
-attributes #1 = { optnone noinline "amdgpu-implicitarg-num-bytes"="16" }
-attributes #2 = { optnone noinline "amdgpu-implicitarg-num-bytes"="24" }
-attributes #3 = { optnone noinline "amdgpu-implicitarg-num-bytes"="32" }
-attributes #4 = { optnone noinline "amdgpu-implicitarg-num-bytes"="48" }
-attributes #5 = { optnone noinline "amdgpu-implicitarg-num-bytes"="56" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

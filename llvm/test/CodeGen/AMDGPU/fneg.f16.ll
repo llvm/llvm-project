@@ -5,7 +5,7 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx1100 -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
 ; FIXME: Should be able to do scalar op
-define amdgpu_kernel void @s_fneg_f16(ptr addrspace(1) %out, half %in) #0 {
+define amdgpu_kernel void @s_fneg_f16(ptr addrspace(1) %out, half %in) nounwind {
 ; CI-LABEL: s_fneg_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -61,7 +61,7 @@ define amdgpu_kernel void @s_fneg_f16(ptr addrspace(1) %out, half %in) #0 {
 
 ; FIXME: Should be able to use bit operations when illegal type as
 ; well.
-define amdgpu_kernel void @v_fneg_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_fneg_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: v_fneg_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
@@ -122,7 +122,7 @@ define amdgpu_kernel void @v_fneg_f16(ptr addrspace(1) %out, ptr addrspace(1) %i
   ret void
 }
 
-define amdgpu_kernel void @s_fneg_free_f16(ptr addrspace(1) %out, i16 %in) #0 {
+define amdgpu_kernel void @s_fneg_free_f16(ptr addrspace(1) %out, i16 %in) nounwind {
 ; CI-LABEL: s_fneg_free_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -177,7 +177,7 @@ define amdgpu_kernel void @s_fneg_free_f16(ptr addrspace(1) %out, i16 %in) #0 {
   ret void
 }
 
-define amdgpu_kernel void @v_fneg_fold_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_fneg_fold_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: v_fneg_fold_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -239,7 +239,7 @@ define amdgpu_kernel void @v_fneg_fold_f16(ptr addrspace(1) %out, ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @s_fneg_v2f16(ptr addrspace(1) %out, <2 x half> %in) #0 {
+define amdgpu_kernel void @s_fneg_v2f16(ptr addrspace(1) %out, <2 x half> %in) nounwind {
 ; CI-LABEL: s_fneg_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -293,7 +293,7 @@ define amdgpu_kernel void @s_fneg_v2f16(ptr addrspace(1) %out, <2 x half> %in) #
   ret void
 }
 
-define amdgpu_kernel void @s_fneg_v2f16_nonload(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @s_fneg_v2f16_nonload(ptr addrspace(1) %out) nounwind {
 ; CIVI-LABEL: s_fneg_v2f16_nonload:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -342,7 +342,7 @@ define amdgpu_kernel void @s_fneg_v2f16_nonload(ptr addrspace(1) %out) #0 {
   ret void
 }
 
-define amdgpu_kernel void @v_fneg_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_fneg_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: v_fneg_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
@@ -403,7 +403,7 @@ define amdgpu_kernel void @v_fneg_v2f16(ptr addrspace(1) %out, ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_kernel void @fneg_free_v2f16(ptr addrspace(1) %out, i32 %in) #0 {
+define amdgpu_kernel void @fneg_free_v2f16(ptr addrspace(1) %out, i32 %in) nounwind {
 ; CI-LABEL: fneg_free_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -458,7 +458,7 @@ define amdgpu_kernel void @fneg_free_v2f16(ptr addrspace(1) %out, i32 %in) #0 {
   ret void
 }
 
-define amdgpu_kernel void @v_fneg_fold_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_fneg_fold_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: v_fneg_fold_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -531,7 +531,7 @@ define amdgpu_kernel void @v_fneg_fold_v2f16(ptr addrspace(1) %out, ptr addrspac
   ret void
 }
 
-define amdgpu_kernel void @v_extract_fneg_fold_v2f16(ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_extract_fneg_fold_v2f16(ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: v_extract_fneg_fold_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -616,7 +616,7 @@ define amdgpu_kernel void @v_extract_fneg_fold_v2f16(ptr addrspace(1) %in) #0 {
   ret void
 }
 
-define amdgpu_kernel void @v_extract_fneg_no_fold_v2f16(ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_extract_fneg_no_fold_v2f16(ptr addrspace(1) %in) nounwind {
 ; CIVI-LABEL: v_extract_fneg_no_fold_v2f16:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -671,7 +671,4 @@ define amdgpu_kernel void @v_extract_fneg_no_fold_v2f16(ptr addrspace(1) %in) #0
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

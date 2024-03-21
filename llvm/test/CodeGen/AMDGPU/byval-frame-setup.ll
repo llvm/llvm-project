@@ -23,7 +23,7 @@
 
 ; GCN: [[BB1]]
 ; GCN: s_or_b64 exec, exec
-define hidden void @void_func_byval_struct_use_outside_entry_block(ptr addrspace(5) byval(%struct.ByValStruct) noalias nocapture align 4 %arg0, ptr addrspace(5) byval(%struct.ByValStruct) noalias nocapture align 4 %arg1, i1 %cond) #1 {
+define hidden void @void_func_byval_struct_use_outside_entry_block(ptr addrspace(5) byval(%struct.ByValStruct) noalias nocapture align 4 %arg0, ptr addrspace(5) byval(%struct.ByValStruct) noalias nocapture align 4 %arg1, i1 %cond) noinline norecurse nounwind {
 entry:
   br i1 %cond, label %bb0, label %bb1
 
@@ -40,11 +40,7 @@ bb0:
 bb1:
   ret void
 }
-declare hidden void @external_void_func_void() #0
+declare hidden void @external_void_func_void() nounwind
 
 declare void @llvm.lifetime.start.p5(i64, ptr addrspace(5) nocapture) #3
 declare void @llvm.lifetime.end.p5(i64, ptr addrspace(5) nocapture) #3
-
-attributes #0 = { nounwind }
-attributes #1 = { noinline norecurse nounwind }
-attributes #2 = { nounwind norecurse "frame-pointer"="all" }

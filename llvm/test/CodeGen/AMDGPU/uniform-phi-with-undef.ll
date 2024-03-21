@@ -8,7 +8,7 @@
 ; with %c (thus replacing %c2 with %c in this example).
 
 
-define amdgpu_ps float @uniform_phi_with_undef(float inreg %c, float %v, i32 %x, i32 %y) #0 {
+define amdgpu_ps float @uniform_phi_with_undef(float inreg %c, float %v, i32 %x, i32 %y) nounwind optnone noinline {
 ; GCN-LABEL: uniform_phi_with_undef:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_cmp_lt_i32_e64 s2, v2, v1
@@ -48,5 +48,3 @@ end:
   %r = fadd float %v2, %c2
   ret float %r
 }
-
-attributes #0 = { nounwind optnone noinline }

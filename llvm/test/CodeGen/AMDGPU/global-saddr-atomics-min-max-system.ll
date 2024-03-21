@@ -2732,5 +2732,3 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
   %unused = atomicrmw umin ptr addrspace(1) %gep1, i64 %data seq_cst
   ret void
 }
-
-attributes #0 = { argmemonly nounwind willreturn }

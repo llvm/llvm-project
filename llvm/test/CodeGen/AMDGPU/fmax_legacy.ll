@@ -6,7 +6,7 @@
 
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope --check-prefixes=EG,FUNC %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; FUNC-LABEL: {{^}}test_fmax_legacy_uge_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
@@ -20,8 +20,8 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_uge_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @test_fmax_legacy_uge_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
@@ -48,8 +48,8 @@ define amdgpu_kernel void @test_fmax_legacy_uge_f32(ptr addrspace(1) %out, ptr a
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[ADD_A]], [[ADD_B]]
 
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_uge_f32_nnan_src(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @test_fmax_legacy_uge_f32_nnan_src(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
@@ -75,8 +75,8 @@ define amdgpu_kernel void @test_fmax_legacy_uge_f32_nnan_src(ptr addrspace(1) %o
 
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_oge_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @test_fmax_legacy_oge_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
@@ -101,8 +101,8 @@ define amdgpu_kernel void @test_fmax_legacy_oge_f32(ptr addrspace(1) %out, ptr a
 
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_ugt_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @test_fmax_legacy_ugt_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
@@ -126,8 +126,8 @@ define amdgpu_kernel void @test_fmax_legacy_ugt_f32(ptr addrspace(1) %out, ptr a
 
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_ogt_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @test_fmax_legacy_ogt_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
@@ -152,8 +152,8 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_f32(ptr addrspace(1) %out, ptr a
 
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_ogt_v1f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @test_fmax_legacy_ogt_v1f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr <1 x float>, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr <1 x float>, ptr addrspace(1) %gep.0, i32 1
 
@@ -185,8 +185,8 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_v1f32(ptr addrspace(1) %out, ptr
 ; GCN-NONAN: v_max_f32_e32
 
 ; GCN-NOT: v_max
-define amdgpu_kernel void @test_fmax_legacy_ogt_v3f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @test_fmax_legacy_ogt_v3f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr <3 x float>, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr <3 x float>, ptr addrspace(1) %gep.0, i32 1
 
@@ -208,8 +208,8 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_v3f32(ptr addrspace(1) %out, ptr
 ; GCN-NOT: v_max_
 
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_ogt_f32_multi_use(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %in) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @test_fmax_legacy_ogt_f32_multi_use(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
@@ -222,6 +222,3 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_f32_multi_use(ptr addrspace(1) %
   store i1 %cmp, ptr addrspace(1) %out1
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

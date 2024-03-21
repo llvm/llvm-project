@@ -13,7 +13,7 @@
 ; GCN: ds_append [[RESULT:v[0-9]+]]{{$}}
 ; GCN-NOT: buffer_wbinvl1
 ; GCN: {{.*}}store{{.*}} [[RESULT]]
-define amdgpu_kernel void @ds_append_lds(ptr addrspace(3) %lds, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @ds_append_lds(ptr addrspace(3) %lds, ptr addrspace(1) %out) nounwind {
   %val = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %lds, i1 false)
   store i32 %val, ptr addrspace(1) %out
   ret void
@@ -25,7 +25,7 @@ define amdgpu_kernel void @ds_append_lds(ptr addrspace(3) %lds, ptr addrspace(1)
 ; GCN: ds_append [[RESULT:v[0-9]+]] offset:65532{{$}}
 ; GCN-NOT: buffer_wbinvl1
 ; GCN: {{.*}}store{{.*}} [[RESULT]]
-define amdgpu_kernel void @ds_append_lds_max_offset(ptr addrspace(3) %lds, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @ds_append_lds_max_offset(ptr addrspace(3) %lds, ptr addrspace(1) %out) nounwind {
   %gep = getelementptr inbounds i32, ptr addrspace(3) %lds, i32 16383
   %val = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %gep, i1 false)
   store i32 %val, ptr addrspace(1) %out
@@ -44,7 +44,7 @@ define amdgpu_kernel void @ds_append_lds_max_offset(ptr addrspace(3) %lds, ptr a
 
 ; GCN-NOT: buffer_wbinvl1
 ; GCN: {{.*}}store{{.*}} [[RESULT]]
-define amdgpu_kernel void @ds_append_no_fold_offset_si(ptr addrspace(4) %lds.ptr, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @ds_append_no_fold_offset_si(ptr addrspace(4) %lds.ptr, ptr addrspace(1) %out) nounwind {
   %lds = load ptr addrspace(3), ptr addrspace(4) %lds.ptr, align 4
   %gep = getelementptr inbounds i32, ptr addrspace(3) %lds, i32 4
   %val = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %gep, i1 false)
@@ -65,7 +65,7 @@ define amdgpu_kernel void @ds_append_no_fold_offset_si(ptr addrspace(4) %lds.ptr
 ; GCN: ds_append [[RESULT:v[0-9]+]]{{$}}
 ; GCN-NOT: buffer_wbinvl1
 ; GCN: {{.*}}store{{.*}} [[RESULT]]
-define amdgpu_kernel void @ds_append_lds_over_max_offset(ptr addrspace(3) %lds, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @ds_append_lds_over_max_offset(ptr addrspace(3) %lds, ptr addrspace(1) %out) nounwind {
   %gep = getelementptr inbounds i32, ptr addrspace(3) %lds, i32 16384
   %val = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %gep, i1 false)
   store i32 %val, ptr addrspace(1) %out
@@ -81,7 +81,7 @@ define amdgpu_kernel void @ds_append_lds_over_max_offset(ptr addrspace(3) %lds, 
 ; GCN: ds_append [[RESULT:v[0-9]+]]{{$}}
 ; GCN-NOT: buffer_wbinvl1
 ; GCN: {{.*}}store{{.*}} [[RESULT]]
-define void @ds_append_lds_vgpr_addr(ptr addrspace(3) %lds, ptr addrspace(1) %out) #0 {
+define void @ds_append_lds_vgpr_addr(ptr addrspace(3) %lds, ptr addrspace(1) %out) nounwind {
   %val = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %lds, i1 false)
   store i32 %val, ptr addrspace(1) %out
   ret void
@@ -93,7 +93,7 @@ define void @ds_append_lds_vgpr_addr(ptr addrspace(3) %lds, ptr addrspace(1) %ou
 ; GCN: ds_append [[RESULT:v[0-9]+]] gds{{$}}
 ; GCN-NOT: buffer_wbinvl1
 ; GCN: {{.*}}store{{.*}} [[RESULT]]
-define amdgpu_kernel void @ds_append_gds(ptr addrspace(2) %gds, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @ds_append_gds(ptr addrspace(2) %gds, ptr addrspace(1) %out) nounwind {
   %val = call i32 @llvm.amdgcn.ds.append.p2(ptr addrspace(2) %gds, i1 false)
   store i32 %val, ptr addrspace(1) %out
   ret void
@@ -105,7 +105,7 @@ define amdgpu_kernel void @ds_append_gds(ptr addrspace(2) %gds, ptr addrspace(1)
 ; GCN: ds_append [[RESULT:v[0-9]+]] offset:65532 gds{{$}}
 ; GCN-NOT: buffer_wbinvl1
 ; GCN: {{.*}}store{{.*}} [[RESULT]]
-define amdgpu_kernel void @ds_append_gds_max_offset(ptr addrspace(2) %gds, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @ds_append_gds_max_offset(ptr addrspace(2) %gds, ptr addrspace(1) %out) nounwind {
   %gep = getelementptr inbounds i32, ptr addrspace(2) %gds, i32 16383
   %val = call i32 @llvm.amdgcn.ds.append.p2(ptr addrspace(2) %gep, i1 false)
   store i32 %val, ptr addrspace(1) %out
@@ -114,7 +114,7 @@ define amdgpu_kernel void @ds_append_gds_max_offset(ptr addrspace(2) %gds, ptr a
 
 ; GCN-LABEL: {{^}}ds_append_gds_over_max_offset:
 ; GCN-NOT: buffer_wbinvl1
-define amdgpu_kernel void @ds_append_gds_over_max_offset(ptr addrspace(2) %gds, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @ds_append_gds_over_max_offset(ptr addrspace(2) %gds, ptr addrspace(1) %out) nounwind {
   %gep = getelementptr inbounds i32, ptr addrspace(2) %gds, i32 16384
   %val = call i32 @llvm.amdgcn.ds.append.p2(ptr addrspace(2) %gep, i1 false)
   store i32 %val, ptr addrspace(1) %out
@@ -130,7 +130,7 @@ define amdgpu_kernel void @ds_append_gds_over_max_offset(ptr addrspace(2) %gds, 
 ; GFX9-NOT: m0
 ; GCN: _store_dword
 ; GCN: ds_read_b32
-define amdgpu_kernel void @ds_append_lds_m0_restore(ptr addrspace(3) %lds, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @ds_append_lds_m0_restore(ptr addrspace(3) %lds, ptr addrspace(1) %out) nounwind {
   %val0 = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %lds, i1 false)
   store i32 %val0, ptr addrspace(1) %out
   %val1 = load volatile i32, ptr addrspace(3) %lds
@@ -142,14 +142,11 @@ define amdgpu_kernel void @ds_append_lds_m0_restore(ptr addrspace(3) %lds, ptr a
 ; GCN: s_load_dword [[PTR:s[0-9]+]]
 ; GCN: s_mov_b32 m0, [[PTR]]
 ; GCN: ds_append [[RESULT:v[0-9]+]] offset:65532{{$}}
-define amdgpu_kernel void @ds_append_lds_no_use(ptr addrspace(3) %lds, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @ds_append_lds_no_use(ptr addrspace(3) %lds, ptr addrspace(1) %out) nounwind {
   %gep = getelementptr inbounds i32, ptr addrspace(3) %lds, i32 16383
   %val = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %gep, i1 false)
   ret void
 }
 
-declare i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) nocapture, i1 immarg) #1
-declare i32 @llvm.amdgcn.ds.append.p2(ptr addrspace(2) nocapture, i1 immarg) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { argmemonly convergent nounwind }
+declare i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) nocapture, i1 immarg) argmemonly convergent nounwind
+declare i32 @llvm.amdgcn.ds.append.p2(ptr addrspace(2) nocapture, i1 immarg) argmemonly convergent nounwind

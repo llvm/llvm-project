@@ -2,13 +2,13 @@
 ; RUN: llc -global-isel -stop-after=irtranslator -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck -enable-var-scope %s
 
 ; amdgpu_gfx calling convention
-declare hidden amdgpu_gfx void @external_gfx_void_func_void() #0
-declare hidden amdgpu_gfx void @external_gfx_void_func_i32(i32) #0
-declare hidden amdgpu_gfx void @external_gfx_void_func_i32_inreg(i32 inreg) #0
-declare hidden amdgpu_gfx void @external_gfx_void_func_struct_i8_i32({ i8, i32 }) #0
-declare hidden amdgpu_gfx void @external_gfx_void_func_struct_i8_i32_inreg({ i8, i32 } inreg) #0
+declare hidden amdgpu_gfx void @external_gfx_void_func_void() nounwind
+declare hidden amdgpu_gfx void @external_gfx_void_func_i32(i32) nounwind
+declare hidden amdgpu_gfx void @external_gfx_void_func_i32_inreg(i32 inreg) nounwind
+declare hidden amdgpu_gfx void @external_gfx_void_func_struct_i8_i32({ i8, i32 }) nounwind
+declare hidden amdgpu_gfx void @external_gfx_void_func_struct_i8_i32_inreg({ i8, i32 } inreg) nounwind
 
-define amdgpu_gfx void @test_gfx_call_external_void_func_void() #0 {
+define amdgpu_gfx void @test_gfx_call_external_void_func_void() nounwind {
   ; CHECK-LABEL: name: test_gfx_call_external_void_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -22,7 +22,7 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_void() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_gfx_call_external_void_func_i32_imm(i32) #0 {
+define amdgpu_gfx void @test_gfx_call_external_void_func_i32_imm(i32) nounwind {
   ; CHECK-LABEL: name: test_gfx_call_external_void_func_i32_imm
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -41,7 +41,7 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_i32_imm(i32) #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_gfx_call_external_void_func_i32_imm_inreg(i32 inreg) #0 {
+define amdgpu_gfx void @test_gfx_call_external_void_func_i32_imm_inreg(i32 inreg) nounwind {
   ; CHECK-LABEL: name: test_gfx_call_external_void_func_i32_imm_inreg
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   liveins: $sgpr4
@@ -60,7 +60,7 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_i32_imm_inreg(i32 inreg
   ret void
 }
 
-define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32() #0 {
+define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32() nounwind {
   ; CHECK-LABEL: name: test_gfx_call_external_void_func_struct_i8_i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -86,7 +86,7 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32() #0 {
   ret void
 }
 
-define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32_inreg() #0 {
+define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32_inreg() nounwind {
   ; CHECK-LABEL: name: test_gfx_call_external_void_func_struct_i8_i32_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
@@ -111,7 +111,3 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32_inreg() #
   call amdgpu_gfx void @external_gfx_void_func_struct_i8_i32_inreg({ i8, i32 } inreg %val)
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind noinline }

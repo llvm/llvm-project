@@ -6,7 +6,7 @@
 ; SI-DAG: 0x2e12 (COMPUTE_PGM_RSRC1): 0xf0000{{$}}
 ; VI-DAG: 0x2e12 (COMPUTE_PGM_RSRC1): 0xf02c0{{$}}
 ; GFX9-DAG: 0x2e12 (COMPUTE_PGM_RSRC1): 0xf0000{{$}}
-define amdgpu_cs half @cs_amdpal(half %arg0) #0 {
+define amdgpu_cs half @cs_amdpal(half %arg0) "amdgpu-dx10-clamp"="false" {
   %add = fadd half %arg0, 1.0
   ret half %add
 }
@@ -15,7 +15,7 @@ define amdgpu_cs half @cs_amdpal(half %arg0) #0 {
 ; SI-DAG: 0x2cca (SPI_SHADER_PGM_RSRC1_ES): 0xf0000{{$}}
 ; VI-DAG: 0x2cca (SPI_SHADER_PGM_RSRC1_ES): 0xf02c0{{$}}
 ; GFX9-DAG: 0x2cca (SPI_SHADER_PGM_RSRC1_ES): 0xf0000{{$}}
-define amdgpu_es half @es_amdpal(half %arg0) #0 {
+define amdgpu_es half @es_amdpal(half %arg0) "amdgpu-dx10-clamp"="false" {
   %add = fadd half %arg0, 1.0
   ret half %add
 }
@@ -24,7 +24,7 @@ define amdgpu_es half @es_amdpal(half %arg0) #0 {
 ; SI-DAG: 0x2c8a (SPI_SHADER_PGM_RSRC1_GS): 0xf0000{{$}}
 ; VI-DAG: 0x2c8a (SPI_SHADER_PGM_RSRC1_GS): 0xf02c0{{$}}
 ; GFX9-DAG: 0x2c8a (SPI_SHADER_PGM_RSRC1_GS): 0xf0000{{$}}
-define amdgpu_gs half @gs_amdpal(half %arg0) #0 {
+define amdgpu_gs half @gs_amdpal(half %arg0) "amdgpu-dx10-clamp"="false" {
   %add = fadd half %arg0, 1.0
   ret half %add
 }
@@ -33,7 +33,7 @@ define amdgpu_gs half @gs_amdpal(half %arg0) #0 {
 ; SI-DAG: 0x2d0a (SPI_SHADER_PGM_RSRC1_HS): 0xf0000{{$}}
 ; VI-DAG: 0x2d0a (SPI_SHADER_PGM_RSRC1_HS): 0xf02c0{{$}}
 ; GFX9-DAG: 0x2d0a (SPI_SHADER_PGM_RSRC1_HS): 0xf0000{{$}}
-define amdgpu_hs half @hs_amdpal(half %arg0) #0 {
+define amdgpu_hs half @hs_amdpal(half %arg0) "amdgpu-dx10-clamp"="false" {
   %add = fadd half %arg0, 1.0
   ret half %add
 }
@@ -42,7 +42,7 @@ define amdgpu_hs half @hs_amdpal(half %arg0) #0 {
 ; SI-DAG: 0x2d4a (SPI_SHADER_PGM_RSRC1_LS): 0xf0000{{$}}
 ; VI-DAG: 0x2d4a (SPI_SHADER_PGM_RSRC1_LS): 0xf02c0{{$}}
 ; GFX9-DAG: 0x2d4a (SPI_SHADER_PGM_RSRC1_LS): 0xf0000{{$}}
-define amdgpu_ls half @ls_amdpal(half %arg0) #0 {
+define amdgpu_ls half @ls_amdpal(half %arg0) "amdgpu-dx10-clamp"="false" {
   %add = fadd half %arg0, 1.0
   ret half %add
 }
@@ -52,7 +52,7 @@ define amdgpu_ls half @ls_amdpal(half %arg0) #0 {
 ; SI-DAG:           0x2c0a (SPI_SHADER_PGM_RSRC1_PS): 0xf0000{{$}}
 ; VI-DAG:           0x2c0a (SPI_SHADER_PGM_RSRC1_PS): 0xf02c0{{$}}
 ; GFX9-DAG:         0x2c0a (SPI_SHADER_PGM_RSRC1_PS): 0xf0000{{$}}
-define amdgpu_ps half @ps_amdpal(half %arg0) #0 {
+define amdgpu_ps half @ps_amdpal(half %arg0) "amdgpu-dx10-clamp"="false" {
   %add = fadd half %arg0, 1.0
   ret half %add
 }
@@ -61,12 +61,10 @@ define amdgpu_ps half @ps_amdpal(half %arg0) #0 {
 ; SI-DAG: 0x2c4a (SPI_SHADER_PGM_RSRC1_VS): 0xf0000{{$}}
 ; VI-DAG: 0x2c4a (SPI_SHADER_PGM_RSRC1_VS): 0xf02c0{{$}}
 ; GFX9-DAG: 0x2c4a (SPI_SHADER_PGM_RSRC1_VS): 0xf0000{{$}}
-define amdgpu_vs half @vs_amdpal(half %arg0) #0 {
+define amdgpu_vs half @vs_amdpal(half %arg0) "amdgpu-dx10-clamp"="false" {
   %add = fadd half %arg0, 1.0
   ret half %add
 }
-
-attributes #0 = { "amdgpu-dx10-clamp"="false" }
 
 ; amdgpu.pal.metadata.msgpack represents this:
 ;

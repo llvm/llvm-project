@@ -49,7 +49,7 @@ define amdgpu_kernel void @fmul_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN: v_mul_f32
 ; GCN-NOT: v_mul_f32
 ; GCN: s_endpgm
-define amdgpu_kernel void @test_mul_2_k(ptr addrspace(1) %out, float %x) #0 {
+define amdgpu_kernel void @test_mul_2_k(ptr addrspace(1) %out, float %x) nounwind {
   %y = fmul float %x, 2.0
   %z = fmul float %y, 3.0
   store float %z, ptr addrspace(1) %out
@@ -61,7 +61,7 @@ define amdgpu_kernel void @test_mul_2_k(ptr addrspace(1) %out, float %x) #0 {
 ; GCN-NOT: v_mul_f32
 ; GCN-NOT: v_mad_f32
 ; GCN: s_endpgm
-define amdgpu_kernel void @test_mul_2_k_inv(ptr addrspace(1) %out, float %x) #0 {
+define amdgpu_kernel void @test_mul_2_k_inv(ptr addrspace(1) %out, float %x) nounwind {
   %y = fmul float %x, 3.0
   %z = fmul float %y, 2.0
   store float %z, ptr addrspace(1) %out
@@ -75,7 +75,7 @@ define amdgpu_kernel void @test_mul_2_k_inv(ptr addrspace(1) %out, float %x) #0 
 ; GCN: v_mul_f32
 ; GCN: v_mul_f32
 ; GCN-NOT: v_mul_f32
-define amdgpu_kernel void @test_mul_twouse(ptr addrspace(1) %out, float %x, float %y) #0 {
+define amdgpu_kernel void @test_mul_twouse(ptr addrspace(1) %out, float %x, float %y) nounwind {
   %a = fmul float %x, 5.0
   %b = fsub float -0.0, %a
   %c = fmul float %b, %y
@@ -83,5 +83,3 @@ define amdgpu_kernel void @test_mul_twouse(ptr addrspace(1) %out, float %x, floa
   store float %d, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }

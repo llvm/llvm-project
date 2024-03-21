@@ -279,18 +279,14 @@ END:
   ret float %r
 }
 
-declare void @llvm.amdgcn.struct.buffer.store.f32(float, <4 x i32>, i32, i32, i32, i32 immarg) #2
-declare void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32 immarg) #2
-declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32 immarg) #3
-declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #3
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #3
-declare float @llvm.amdgcn.wqm.f32(float) #3
-declare float @llvm.amdgcn.softwqm.f32(float) #3
-declare i32 @llvm.amdgcn.softwqm.i32(i32) #3
-declare float @llvm.amdgcn.strict.wwm.f32(float) #3
-declare float @llvm.amdgcn.wwm.f32(float) #3
-declare void @llvm.amdgcn.wqm.demote(i1) #1
-
-attributes #1 = { nounwind }
-attributes #2 = { nounwind readonly }
-attributes #3 = { nounwind readnone }
+declare void @llvm.amdgcn.struct.buffer.store.f32(float, <4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly
+declare void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly
+declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32 immarg) nounwind readnone
+declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readnone
+declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readnone
+declare float @llvm.amdgcn.wqm.f32(float) nounwind readnone
+declare float @llvm.amdgcn.softwqm.f32(float) nounwind readnone
+declare i32 @llvm.amdgcn.softwqm.i32(i32) nounwind readnone
+declare float @llvm.amdgcn.strict.wwm.f32(float) nounwind readnone
+declare float @llvm.amdgcn.wwm.f32(float) nounwind readnone
+declare void @llvm.amdgcn.wqm.demote(i1) nounwind

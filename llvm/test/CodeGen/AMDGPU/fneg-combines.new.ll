@@ -9,7 +9,7 @@
 ; fadd tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_add_f32(float %a, float %b) #0 {
+define float @v_fneg_add_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_add_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -27,7 +27,7 @@ define float @v_fneg_add_f32(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define { float, float } @v_fneg_add_store_use_add_f32(float %a, float %b) #0 {
+define { float, float } @v_fneg_add_store_use_add_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_add_store_use_add_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -41,7 +41,7 @@ define { float, float } @v_fneg_add_store_use_add_f32(float %a, float %b) #0 {
   ret { float, float } %insert.1
 }
 
-define { float, float } @v_fneg_add_multi_use_add_f32(float %a, float %b) #0 {
+define { float, float } @v_fneg_add_multi_use_add_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_add_multi_use_add_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -65,7 +65,7 @@ define { float, float } @v_fneg_add_multi_use_add_f32(float %a, float %b) #0 {
   ret { float, float } %insert.1
 }
 
-define float @v_fneg_add_fneg_x_f32(float %a, float %b) #0 {
+define float @v_fneg_add_fneg_x_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_add_fneg_x_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -84,7 +84,7 @@ define float @v_fneg_add_fneg_x_f32(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_add_x_fneg_f32(float %a, float %b) #0 {
+define float @v_fneg_add_x_fneg_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_add_x_fneg_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -103,7 +103,7 @@ define float @v_fneg_add_x_fneg_f32(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_add_fneg_fneg_f32(float %a, float %b) #0 {
+define float @v_fneg_add_fneg_fneg_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_add_fneg_fneg_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -123,7 +123,7 @@ define float @v_fneg_add_fneg_fneg_f32(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define { float, float } @v_fneg_add_store_use_fneg_x_f32(float %a, float %b) #0 {
+define { float, float } @v_fneg_add_store_use_fneg_x_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_add_store_use_fneg_x_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -148,7 +148,7 @@ define { float, float } @v_fneg_add_store_use_fneg_x_f32(float %a, float %b) #0 
   ret { float, float } %insert.1
 }
 
-define { float, float } @v_fneg_add_multi_use_fneg_x_f32(float %a, float %b, float %c) #0 {
+define { float, float } @v_fneg_add_multi_use_fneg_x_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_add_multi_use_fneg_x_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -176,7 +176,7 @@ define { float, float } @v_fneg_add_multi_use_fneg_x_f32(float %a, float %b, flo
 }
 
 ; This one asserted with -enable-no-signed-zeros-fp-math
-define amdgpu_ps float @fneg_fadd_0_f32(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) #0 {
+define amdgpu_ps float @fneg_fadd_0_f32(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: fneg_fadd_0_f32:
 ; SI-SAFE:       ; %bb.0: ; %.entry
 ; SI-SAFE-NEXT:    v_div_scale_f32 v0, s[2:3], s1, s1, 1.0
@@ -288,7 +288,7 @@ define amdgpu_ps float @fneg_fadd_0_f32(float inreg %tmp2, float inreg %tmp6, <4
 ; This is a workaround because -enable-no-signed-zeros-fp-math does not set up
 ; function attribute unsafe-fp-math automatically. Combine with the previous test
 ; when that is done.
-define amdgpu_ps float @fneg_fadd_0_nsz_f32(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) #2 {
+define amdgpu_ps float @fneg_fadd_0_nsz_f32(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) nounwind "unsafe-fp-math"="true" {
 ; SI-SAFE-LABEL: fneg_fadd_0_nsz_f32:
 ; SI-SAFE:       ; %bb.0: ; %.entry
 ; SI-SAFE-NEXT:    v_min_legacy_f32_e64 v0, 0, s0
@@ -335,7 +335,7 @@ define amdgpu_ps float @fneg_fadd_0_nsz_f32(float inreg %tmp2, float inreg %tmp6
   ret float %.i198
 }
 
-define double @v_fneg_add_f64(double %a, double %b) #0 {
+define double @v_fneg_add_f64(double %a, double %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_add_f64:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -353,7 +353,7 @@ define double @v_fneg_add_f64(double %a, double %b) #0 {
   ret double %fneg
 }
 
-define { double, double } @v_fneg_add_store_use_add_f64(double %a, double %b) #0 {
+define { double, double } @v_fneg_add_store_use_add_f64(double %a, double %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_add_store_use_add_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -368,7 +368,7 @@ define { double, double } @v_fneg_add_store_use_add_f64(double %a, double %b) #0
   ret { double, double } %insert.1
 }
 
-define { double, double } @v_fneg_add_multi_use_add_f64(double %a, double %b) #0 {
+define { double, double } @v_fneg_add_multi_use_add_f64(double %a, double %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_add_multi_use_add_f64:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -401,7 +401,7 @@ define { double, double } @v_fneg_add_multi_use_add_f64(double %a, double %b) #0
   ret { double, double } %insert.1
 }
 
-define double @v_fneg_add_fneg_x_f64(double %a, double %b) #0 {
+define double @v_fneg_add_fneg_x_f64(double %a, double %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_add_fneg_x_f64:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -420,7 +420,7 @@ define double @v_fneg_add_fneg_x_f64(double %a, double %b) #0 {
   ret double %fneg
 }
 
-define double @v_fneg_add_x_fneg_f64(double %a, double %b) #0 {
+define double @v_fneg_add_x_fneg_f64(double %a, double %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_add_x_fneg_f64:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -439,7 +439,7 @@ define double @v_fneg_add_x_fneg_f64(double %a, double %b) #0 {
   ret double %fneg
 }
 
-define double @v_fneg_add_fneg_fneg_f64(double %a, double %b) #0 {
+define double @v_fneg_add_fneg_fneg_f64(double %a, double %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_add_fneg_fneg_f64:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -459,7 +459,7 @@ define double @v_fneg_add_fneg_fneg_f64(double %a, double %b) #0 {
   ret double %fneg
 }
 
-define { double, double } @v_fneg_add_store_use_fneg_x_f64(double %a, double %b) #0 {
+define { double, double } @v_fneg_add_store_use_fneg_x_f64(double %a, double %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_add_store_use_fneg_x_f64:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -508,7 +508,7 @@ define { double, double } @v_fneg_add_store_use_fneg_x_f64(double %a, double %b)
   ret { double, double } %insert.1
 }
 
-define { double, double } @v_fneg_add_multi_use_fneg_x_f64(double %a, double %b, double %c) #0 {
+define { double, double } @v_fneg_add_multi_use_fneg_x_f64(double %a, double %b, double %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: v_fneg_add_multi_use_fneg_x_f64:
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -547,7 +547,7 @@ define { double, double } @v_fneg_add_multi_use_fneg_x_f64(double %a, double %b,
 }
 
 ; This one asserted with -enable-no-signed-zeros-fp-math
-define amdgpu_ps double @fneg_fadd_0_f64(double inreg %tmp2, double inreg %tmp6, <4 x i32> %arg) #0 {
+define amdgpu_ps double @fneg_fadd_0_f64(double inreg %tmp2, double inreg %tmp6, <4 x i32> %arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-SAFE-LABEL: fneg_fadd_0_f64:
 ; SI-SAFE:       ; %bb.0: ; %.entry
 ; SI-SAFE-NEXT:    v_div_scale_f64 v[0:1], s[4:5], s[2:3], s[2:3], 1.0
@@ -671,7 +671,7 @@ define amdgpu_ps double @fneg_fadd_0_f64(double inreg %tmp2, double inreg %tmp6,
 ; This is a workaround because -enable-no-signed-zeros-fp-math does not set up
 ; function attribute unsafe-fp-math automatically. Combine with the previous test
 ; when that is done.
-define amdgpu_ps double @fneg_fadd_0_nsz_f64(double inreg %tmp2, double inreg %tmp6, <4 x i32> %arg) #2 {
+define amdgpu_ps double @fneg_fadd_0_nsz_f64(double inreg %tmp2, double inreg %tmp6, <4 x i32> %arg) nounwind "unsafe-fp-math"="true" {
 ; GCN-SAFE-LABEL: fneg_fadd_0_nsz_f64:
 ; GCN-SAFE:       ; %bb.0: ; %.entry
 ; GCN-SAFE-NEXT:    v_cmp_ngt_f64_e64 s[2:3], s[0:1], 0
@@ -746,7 +746,7 @@ define amdgpu_ps double @fneg_fadd_0_nsz_f64(double inreg %tmp2, double inreg %t
 ; fmul tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_mul_f32(float %a, float %b) #0 {
+define float @v_fneg_mul_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -757,7 +757,7 @@ define float @v_fneg_mul_f32(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define { float, float } @v_fneg_mul_store_use_mul_f32(float %a, float %b) #0 {
+define { float, float } @v_fneg_mul_store_use_mul_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_store_use_mul_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -771,7 +771,7 @@ define { float, float } @v_fneg_mul_store_use_mul_f32(float %a, float %b) #0 {
   ret { float, float } %insert.1
 }
 
-define { float, float } @v_fneg_mul_multi_use_mul_f32(float %a, float %b) #0 {
+define { float, float } @v_fneg_mul_multi_use_mul_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_multi_use_mul_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -786,7 +786,7 @@ define { float, float } @v_fneg_mul_multi_use_mul_f32(float %a, float %b) #0 {
   ret { float, float } %insert.1
 }
 
-define float @v_fneg_mul_fneg_x_f32(float %a, float %b) #0 {
+define float @v_fneg_mul_fneg_x_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_fneg_x_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -798,7 +798,7 @@ define float @v_fneg_mul_fneg_x_f32(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_mul_x_fneg_f32(float %a, float %b) #0 {
+define float @v_fneg_mul_x_fneg_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_x_fneg_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -810,7 +810,7 @@ define float @v_fneg_mul_x_fneg_f32(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_mul_fneg_fneg_f32(float %a, float %b) #0 {
+define float @v_fneg_mul_fneg_fneg_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_fneg_fneg_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -823,7 +823,7 @@ define float @v_fneg_mul_fneg_fneg_f32(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define { float, float } @v_fneg_mul_store_use_fneg_x_f32(float %a, float %b) #0 {
+define { float, float } @v_fneg_mul_store_use_fneg_x_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_store_use_fneg_x_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -839,7 +839,7 @@ define { float, float } @v_fneg_mul_store_use_fneg_x_f32(float %a, float %b) #0 
   ret { float, float } %insert.1
 }
 
-define { float, float } @v_fneg_mul_multi_use_fneg_x_f32(float %a, float %b, float %c) #0 {
+define { float, float } @v_fneg_mul_multi_use_fneg_x_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_multi_use_fneg_x_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -860,7 +860,7 @@ define { float, float } @v_fneg_mul_multi_use_fneg_x_f32(float %a, float %b, flo
 ; fminnum tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_minnum_f32_ieee(float %a, float %b) #0 {
+define float @v_fneg_minnum_f32_ieee(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_minnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -873,7 +873,7 @@ define float @v_fneg_minnum_f32_ieee(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_minnum_f32_no_ieee(float %a, float %b) #4 {
+define float @v_fneg_minnum_f32_no_ieee(float %a, float %b) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_minnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -884,7 +884,7 @@ define float @v_fneg_minnum_f32_no_ieee(float %a, float %b) #4 {
   ret float %fneg
 }
 
-define float @v_fneg_self_minnum_f32_ieee(float %a) #0 {
+define float @v_fneg_self_minnum_f32_ieee(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_self_minnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -895,7 +895,7 @@ define float @v_fneg_self_minnum_f32_ieee(float %a) #0 {
   ret float %min.fneg
 }
 
-define float @v_fneg_self_minnum_f32_no_ieee(float %a) #4 {
+define float @v_fneg_self_minnum_f32_no_ieee(float %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_self_minnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -906,7 +906,7 @@ define float @v_fneg_self_minnum_f32_no_ieee(float %a) #4 {
   ret float %min.fneg
 }
 
-define float @v_fneg_posk_minnum_f32_ieee(float %a) #0 {
+define float @v_fneg_posk_minnum_f32_ieee(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_posk_minnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -918,7 +918,7 @@ define float @v_fneg_posk_minnum_f32_ieee(float %a) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_posk_minnum_f32_no_ieee(float %a) #4 {
+define float @v_fneg_posk_minnum_f32_no_ieee(float %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_posk_minnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -929,7 +929,7 @@ define float @v_fneg_posk_minnum_f32_no_ieee(float %a) #4 {
   ret float %fneg
 }
 
-define float @v_fneg_negk_minnum_f32_ieee(float %a) #0 {
+define float @v_fneg_negk_minnum_f32_ieee(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_negk_minnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -941,7 +941,7 @@ define float @v_fneg_negk_minnum_f32_ieee(float %a) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_negk_minnum_f32_no_ieee(float %a) #4 {
+define float @v_fneg_negk_minnum_f32_no_ieee(float %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_negk_minnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -952,7 +952,7 @@ define float @v_fneg_negk_minnum_f32_no_ieee(float %a) #4 {
   ret float %fneg
 }
 
-define float @v_fneg_0_minnum_f32(float %a) #0 {
+define float @v_fneg_0_minnum_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_0_minnum_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -964,7 +964,7 @@ define float @v_fneg_0_minnum_f32(float %a) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_neg0_minnum_f32_ieee(float %a) #0 {
+define float @v_fneg_neg0_minnum_f32_ieee(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_neg0_minnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -976,7 +976,7 @@ define float @v_fneg_neg0_minnum_f32_ieee(float %a) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_inv2pi_minnum_f32(float %a) #0 {
+define float @v_fneg_inv2pi_minnum_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_inv2pi_minnum_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -996,7 +996,7 @@ define float @v_fneg_inv2pi_minnum_f32(float %a) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_neg_inv2pi_minnum_f32(float %a) #0 {
+define float @v_fneg_neg_inv2pi_minnum_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_neg_inv2pi_minnum_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1015,7 +1015,7 @@ define float @v_fneg_neg_inv2pi_minnum_f32(float %a) #0 {
   ret float %fneg
 }
 
-define half @v_fneg_inv2pi_minnum_f16(half %a) #0 {
+define half @v_fneg_inv2pi_minnum_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_inv2pi_minnum_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1036,7 +1036,7 @@ define half @v_fneg_inv2pi_minnum_f16(half %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_neg_inv2pi_minnum_f16(half %a) #0 {
+define half @v_fneg_neg_inv2pi_minnum_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_neg_inv2pi_minnum_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1056,7 +1056,7 @@ define half @v_fneg_neg_inv2pi_minnum_f16(half %a) #0 {
   ret half %fneg
 }
 
-define double @v_fneg_inv2pi_minnum_f64(double %a) #0 {
+define double @v_fneg_inv2pi_minnum_f64(double %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_inv2pi_minnum_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1078,7 +1078,7 @@ define double @v_fneg_inv2pi_minnum_f64(double %a) #0 {
   ret double %fneg
 }
 
-define double @v_fneg_neg_inv2pi_minnum_f64(double %a) #0 {
+define double @v_fneg_neg_inv2pi_minnum_f64(double %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_neg_inv2pi_minnum_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1099,7 +1099,7 @@ define double @v_fneg_neg_inv2pi_minnum_f64(double %a) #0 {
   ret double %fneg
 }
 
-define float @v_fneg_neg0_minnum_f32_no_ieee(float %a) #4 {
+define float @v_fneg_neg0_minnum_f32_no_ieee(float %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_neg0_minnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1110,7 +1110,7 @@ define float @v_fneg_neg0_minnum_f32_no_ieee(float %a) #4 {
   ret float %fneg
 }
 
-define float @v_fneg_0_minnum_foldable_use_f32_ieee(float %a, float %b) #0 {
+define float @v_fneg_0_minnum_foldable_use_f32_ieee(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_0_minnum_foldable_use_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1124,7 +1124,7 @@ define float @v_fneg_0_minnum_foldable_use_f32_ieee(float %a, float %b) #0 {
   ret float %mul
 }
 
-define float @v_fneg_inv2pi_minnum_foldable_use_f32(float %a, float %b) #0 {
+define float @v_fneg_inv2pi_minnum_foldable_use_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_inv2pi_minnum_foldable_use_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1146,7 +1146,7 @@ define float @v_fneg_inv2pi_minnum_foldable_use_f32(float %a, float %b) #0 {
   ret float %mul
 }
 
-define float @v_fneg_0_minnum_foldable_use_f32_no_ieee(float %a, float %b) #4 {
+define float @v_fneg_0_minnum_foldable_use_f32_no_ieee(float %a, float %b) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_0_minnum_foldable_use_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1159,7 +1159,7 @@ define float @v_fneg_0_minnum_foldable_use_f32_no_ieee(float %a, float %b) #4 {
   ret float %mul
 }
 
-define { float, float } @v_fneg_minnum_multi_use_minnum_f32_ieee(float %a, float %b) #0 {
+define { float, float } @v_fneg_minnum_multi_use_minnum_f32_ieee(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_minnum_multi_use_minnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1176,7 +1176,7 @@ define { float, float } @v_fneg_minnum_multi_use_minnum_f32_ieee(float %a, float
   ret { float, float } %insert.1
 }
 
-define <2 x float> @v_fneg_minnum_multi_use_minnum_f32_no_ieee(float %a, float %b) #4 {
+define <2 x float> @v_fneg_minnum_multi_use_minnum_f32_no_ieee(float %a, float %b) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_minnum_multi_use_minnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1195,7 +1195,7 @@ define <2 x float> @v_fneg_minnum_multi_use_minnum_f32_no_ieee(float %a, float %
 ; fmaxnum tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_maxnum_f32_ieee(float %a, float %b) #0 {
+define float @v_fneg_maxnum_f32_ieee(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_maxnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1208,7 +1208,7 @@ define float @v_fneg_maxnum_f32_ieee(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_maxnum_f32_no_ieee(float %a, float %b) #4 {
+define float @v_fneg_maxnum_f32_no_ieee(float %a, float %b) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_maxnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1219,7 +1219,7 @@ define float @v_fneg_maxnum_f32_no_ieee(float %a, float %b) #4 {
   ret float %fneg
 }
 
-define float @v_fneg_self_maxnum_f32_ieee(float %a) #0 {
+define float @v_fneg_self_maxnum_f32_ieee(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_self_maxnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1230,7 +1230,7 @@ define float @v_fneg_self_maxnum_f32_ieee(float %a) #0 {
   ret float %max.fneg
 }
 
-define float @v_fneg_self_maxnum_f32_no_ieee(float %a) #4 {
+define float @v_fneg_self_maxnum_f32_no_ieee(float %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_self_maxnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1241,7 +1241,7 @@ define float @v_fneg_self_maxnum_f32_no_ieee(float %a) #4 {
   ret float %max.fneg
 }
 
-define float @v_fneg_posk_maxnum_f32_ieee(float %a) #0 {
+define float @v_fneg_posk_maxnum_f32_ieee(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_posk_maxnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1253,7 +1253,7 @@ define float @v_fneg_posk_maxnum_f32_ieee(float %a) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_posk_maxnum_f32_no_ieee(float %a) #4 {
+define float @v_fneg_posk_maxnum_f32_no_ieee(float %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_posk_maxnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1264,7 +1264,7 @@ define float @v_fneg_posk_maxnum_f32_no_ieee(float %a) #4 {
   ret float %fneg
 }
 
-define float @v_fneg_negk_maxnum_f32_ieee(float %a) #0 {
+define float @v_fneg_negk_maxnum_f32_ieee(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_negk_maxnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1276,7 +1276,7 @@ define float @v_fneg_negk_maxnum_f32_ieee(float %a) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_negk_maxnum_f32_no_ieee(float %a) #4 {
+define float @v_fneg_negk_maxnum_f32_no_ieee(float %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_negk_maxnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1287,7 +1287,7 @@ define float @v_fneg_negk_maxnum_f32_no_ieee(float %a) #4 {
   ret float %fneg
 }
 
-define float @v_fneg_0_maxnum_f32(float %a) #0 {
+define float @v_fneg_0_maxnum_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_0_maxnum_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1299,7 +1299,7 @@ define float @v_fneg_0_maxnum_f32(float %a) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_neg0_maxnum_f32_ieee(float %a) #0 {
+define float @v_fneg_neg0_maxnum_f32_ieee(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_neg0_maxnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1311,7 +1311,7 @@ define float @v_fneg_neg0_maxnum_f32_ieee(float %a) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_neg0_maxnum_f32_no_ieee(float %a) #4 {
+define float @v_fneg_neg0_maxnum_f32_no_ieee(float %a) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_neg0_maxnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1322,7 +1322,7 @@ define float @v_fneg_neg0_maxnum_f32_no_ieee(float %a) #4 {
   ret float %fneg
 }
 
-define float @v_fneg_0_maxnum_foldable_use_f32_ieee(float %a, float %b) #0 {
+define float @v_fneg_0_maxnum_foldable_use_f32_ieee(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_0_maxnum_foldable_use_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1336,7 +1336,7 @@ define float @v_fneg_0_maxnum_foldable_use_f32_ieee(float %a, float %b) #0 {
   ret float %mul
 }
 
-define float @v_fneg_0_maxnum_foldable_use_f32_no_ieee(float %a, float %b) #4 {
+define float @v_fneg_0_maxnum_foldable_use_f32_no_ieee(float %a, float %b) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_0_maxnum_foldable_use_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1349,7 +1349,7 @@ define float @v_fneg_0_maxnum_foldable_use_f32_no_ieee(float %a, float %b) #4 {
   ret float %mul
 }
 
-define { float, float } @v_fneg_maxnum_multi_use_maxnum_f32_ieee(float %a, float %b) #0 {
+define { float, float } @v_fneg_maxnum_multi_use_maxnum_f32_ieee(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_maxnum_multi_use_maxnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1366,7 +1366,7 @@ define { float, float } @v_fneg_maxnum_multi_use_maxnum_f32_ieee(float %a, float
   ret { float, float } %insert.1
 }
 
-define <2 x float> @v_fneg_maxnum_multi_use_maxnum_f32_no_ieee(float %a, float %b) #4 {
+define <2 x float> @v_fneg_maxnum_multi_use_maxnum_f32_no_ieee(float %a, float %b) nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_maxnum_multi_use_maxnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1385,7 +1385,7 @@ define <2 x float> @v_fneg_maxnum_multi_use_maxnum_f32_no_ieee(float %a, float %
 ; fma tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_fma_f32(float %a, float %b, float %c) #0 {
+define float @v_fneg_fma_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_fma_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1403,7 +1403,7 @@ define float @v_fneg_fma_f32(float %a, float %b, float %c) #0 {
   ret float %fneg
 }
 
-define { float, float } @v_fneg_fma_store_use_fma_f32(float %a, float %b, float %c) #0 {
+define { float, float } @v_fneg_fma_store_use_fma_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_fma_store_use_fma_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1417,7 +1417,7 @@ define { float, float } @v_fneg_fma_store_use_fma_f32(float %a, float %b, float 
   ret { float, float } %insert.1
 }
 
-define { float, float } @v_fneg_fma_multi_use_fma_f32(float %a, float %b, float %c) #0 {
+define { float, float } @v_fneg_fma_multi_use_fma_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_fma_multi_use_fma_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1440,7 +1440,7 @@ define { float, float } @v_fneg_fma_multi_use_fma_f32(float %a, float %b, float 
   ret { float, float } %insert.1
 }
 
-define float @v_fneg_fma_fneg_x_y_f32(float %a, float %b, float %c) #0 {
+define float @v_fneg_fma_fneg_x_y_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_fma_fneg_x_y_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1459,7 +1459,7 @@ define float @v_fneg_fma_fneg_x_y_f32(float %a, float %b, float %c) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_fma_x_fneg_y_f32(float %a, float %b, float %c) #0 {
+define float @v_fneg_fma_x_fneg_y_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_fma_x_fneg_y_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1478,7 +1478,7 @@ define float @v_fneg_fma_x_fneg_y_f32(float %a, float %b, float %c) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_fma_fneg_fneg_y_f32(float %a, float %b, float %c) #0 {
+define float @v_fneg_fma_fneg_fneg_y_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_fma_fneg_fneg_y_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1498,7 +1498,7 @@ define float @v_fneg_fma_fneg_fneg_y_f32(float %a, float %b, float %c) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_fma_fneg_x_fneg_f32(float %a, float %b, float %c) #0 {
+define float @v_fneg_fma_fneg_x_fneg_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_fma_fneg_x_fneg_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1518,7 +1518,7 @@ define float @v_fneg_fma_fneg_x_fneg_f32(float %a, float %b, float %c) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_fma_x_y_fneg_f32(float %a, float %b, float %c) #0 {
+define float @v_fneg_fma_x_y_fneg_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_fma_x_y_fneg_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1537,7 +1537,7 @@ define float @v_fneg_fma_x_y_fneg_f32(float %a, float %b, float %c) #0 {
   ret float %fneg
 }
 
-define { float, float } @v_fneg_fma_store_use_fneg_x_y_f32(float %a, float %b, float %c) #0 {
+define { float, float } @v_fneg_fma_store_use_fneg_x_y_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_fma_store_use_fneg_x_y_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1562,7 +1562,7 @@ define { float, float } @v_fneg_fma_store_use_fneg_x_y_f32(float %a, float %b, f
   ret { float, float } %insert.1
 }
 
-define { float, float } @v_fneg_fma_multi_use_fneg_x_y_f32(float %a, float %b, float %c, float %d) #0 {
+define { float, float } @v_fneg_fma_multi_use_fneg_x_y_f32(float %a, float %b, float %c, float %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_fma_multi_use_fneg_x_y_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1592,7 +1592,7 @@ define { float, float } @v_fneg_fma_multi_use_fneg_x_y_f32(float %a, float %b, f
 ; fmad tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_fmad_f32(float %a, float %b, float %c) #0 {
+define float @v_fneg_fmad_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_fmad_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1610,7 +1610,7 @@ define float @v_fneg_fmad_f32(float %a, float %b, float %c) #0 {
   ret float %fneg
 }
 
-define <4 x float> @v_fneg_fmad_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
+define <4 x float> @v_fneg_fmad_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_fmad_v4f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1637,7 +1637,7 @@ define <4 x float> @v_fneg_fmad_v4f32(<4 x float> %a, <4 x float> %b, <4 x float
   ret <4 x float> %fneg
 }
 
-define { float, float } @v_fneg_fmad_multi_use_fmad_f32(float %a, float %b, float %c) #0 {
+define { float, float } @v_fneg_fmad_multi_use_fmad_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_fmad_multi_use_fmad_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1664,7 +1664,7 @@ define { float, float } @v_fneg_fmad_multi_use_fmad_f32(float %a, float %b, floa
 ; fp_extend tests
 ; --------------------------------------------------------------------------------
 
-define double @v_fneg_fp_extend_f32_to_f64(float %a) #0 {
+define double @v_fneg_fp_extend_f32_to_f64(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_fp_extend_f32_to_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1675,7 +1675,7 @@ define double @v_fneg_fp_extend_f32_to_f64(float %a) #0 {
   ret double %fneg
 }
 
-define double @v_fneg_fp_extend_fneg_f32_to_f64(float %a) #0 {
+define double @v_fneg_fp_extend_fneg_f32_to_f64(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_fp_extend_fneg_f32_to_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1687,7 +1687,7 @@ define double @v_fneg_fp_extend_fneg_f32_to_f64(float %a) #0 {
   ret double %fneg
 }
 
-define { double, float } @v_fneg_fp_extend_store_use_fneg_f32_to_f64(float %a) #0 {
+define { double, float } @v_fneg_fp_extend_store_use_fneg_f32_to_f64(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_fp_extend_store_use_fneg_f32_to_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1703,7 +1703,7 @@ define { double, float } @v_fneg_fp_extend_store_use_fneg_f32_to_f64(float %a) #
   ret { double, float } %insert.1
 }
 
-define { double, double } @v_fneg_multi_use_fp_extend_fneg_f32_to_f64(float %a) #0 {
+define { double, double } @v_fneg_multi_use_fp_extend_fneg_f32_to_f64(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_multi_use_fp_extend_fneg_f32_to_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1718,7 +1718,7 @@ define { double, double } @v_fneg_multi_use_fp_extend_fneg_f32_to_f64(float %a) 
   ret { double, double } %insert.1
 }
 
-define { double, double } @v_fneg_multi_foldable_use_fp_extend_fneg_f32_to_f64(float %a) #0 {
+define { double, double } @v_fneg_multi_foldable_use_fp_extend_fneg_f32_to_f64(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_multi_foldable_use_fp_extend_fneg_f32_to_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1744,7 +1744,7 @@ define { double, double } @v_fneg_multi_foldable_use_fp_extend_fneg_f32_to_f64(f
 }
 
 ; FIXME: Source modifiers not folded for f16->f32
-define { float, float } @v_fneg_multi_use_fp_extend_fneg_f16_to_f32(half %a) #0 {
+define { float, float } @v_fneg_multi_use_fp_extend_fneg_f16_to_f32(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_multi_use_fp_extend_fneg_f16_to_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1765,7 +1765,7 @@ define { float, float } @v_fneg_multi_use_fp_extend_fneg_f16_to_f32(half %a) #0 
   ret { float, float } %insert.1
 }
 
-define { float, float } @v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f32(half %a) #0 {
+define { float, float } @v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f32(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1793,7 +1793,7 @@ define { float, float } @v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f32(hal
 ; fp_round tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_fp_round_f64_to_f32(double %a) #0 {
+define float @v_fneg_fp_round_f64_to_f32(double %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_fp_round_f64_to_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1804,7 +1804,7 @@ define float @v_fneg_fp_round_f64_to_f32(double %a) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_fp_round_fneg_f64_to_f32(double %a) #0 {
+define float @v_fneg_fp_round_fneg_f64_to_f32(double %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_fp_round_fneg_f64_to_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1816,7 +1816,7 @@ define float @v_fneg_fp_round_fneg_f64_to_f32(double %a) #0 {
   ret float %fneg
 }
 
-define { float, double } @v_fneg_fp_round_store_use_fneg_f64_to_f32(double %a) #0 {
+define { float, double } @v_fneg_fp_round_store_use_fneg_f64_to_f32(double %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_fp_round_store_use_fneg_f64_to_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1833,7 +1833,7 @@ define { float, double } @v_fneg_fp_round_store_use_fneg_f64_to_f32(double %a) #
   ret { float, double } %insert.1
 }
 
-define { float, double } @v_fneg_fp_round_multi_use_fneg_f64_to_f32(double %a, double %c) #0 {
+define { float, double } @v_fneg_fp_round_multi_use_fneg_f64_to_f32(double %a, double %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_fp_round_multi_use_fneg_f64_to_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1859,7 +1859,7 @@ define { float, double } @v_fneg_fp_round_multi_use_fneg_f64_to_f32(double %a, d
   ret { float, double } %insert.1
 }
 
-define half @v_fneg_fp_round_f32_to_f16(float %a) #0 {
+define half @v_fneg_fp_round_f32_to_f16(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_fp_round_f32_to_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1877,7 +1877,7 @@ define half @v_fneg_fp_round_f32_to_f16(float %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_fp_round_fneg_f32_to_f16(float %a) #0 {
+define half @v_fneg_fp_round_fneg_f32_to_f16(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_fp_round_fneg_f32_to_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1896,7 +1896,7 @@ define half @v_fneg_fp_round_fneg_f32_to_f16(float %a) #0 {
   ret half %fneg
 }
 
-define { float, float } @v_fneg_multi_use_fp_round_fneg_f64_to_f32(double %a) #0 {
+define { float, float } @v_fneg_multi_use_fp_round_fneg_f64_to_f32(double %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_multi_use_fp_round_fneg_f64_to_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1910,7 +1910,7 @@ define { float, float } @v_fneg_multi_use_fp_round_fneg_f64_to_f32(double %a) #0
   ret { float, float } %insert.1
 }
 
-define { half, float } @v_fneg_fp_round_store_use_fneg_f32_to_f16(float %a) #0 {
+define { half, float } @v_fneg_fp_round_store_use_fneg_f32_to_f16(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_fp_round_store_use_fneg_f32_to_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1935,7 +1935,7 @@ define { half, float } @v_fneg_fp_round_store_use_fneg_f32_to_f16(float %a) #0 {
   ret { half, float } %insert.1
 }
 
-define { half, float } @v_fneg_fp_round_multi_use_fneg_f32_to_f16(float %a, float %c) #0 {
+define { half, float } @v_fneg_fp_round_multi_use_fneg_f32_to_f16(float %a, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_fp_round_multi_use_fneg_f32_to_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1965,7 +1965,7 @@ define { half, float } @v_fneg_fp_round_multi_use_fneg_f32_to_f16(float %a, floa
 ; rcp tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_rcp_f32(float %a) #0 {
+define float @v_fneg_rcp_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_rcp_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1976,7 +1976,7 @@ define float @v_fneg_rcp_f32(float %a) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_rcp_fneg_f32(float %a) #0 {
+define float @v_fneg_rcp_fneg_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_rcp_fneg_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1988,7 +1988,7 @@ define float @v_fneg_rcp_fneg_f32(float %a) #0 {
   ret float %fneg
 }
 
-define void @v_fneg_rcp_store_use_fneg_f32(float %a, ptr addrspace(1) %ptr0, ptr addrspace(1) %ptr1) #0 {
+define void @v_fneg_rcp_store_use_fneg_f32(float %a, ptr addrspace(1) %ptr0, ptr addrspace(1) %ptr1) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_rcp_store_use_fneg_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2006,7 +2006,7 @@ define void @v_fneg_rcp_store_use_fneg_f32(float %a, ptr addrspace(1) %ptr0, ptr
   ret void
 }
 
-define { float, float } @v_fneg_rcp_multi_use_fneg_f32(float %a, float %c) #0 {
+define { float, float } @v_fneg_rcp_multi_use_fneg_f32(float %a, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_rcp_multi_use_fneg_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2024,7 +2024,7 @@ define { float, float } @v_fneg_rcp_multi_use_fneg_f32(float %a, float %c) #0 {
 }
 
 ; Test getNegatedExpression works for rcp nodes
-define float @v_negated_rcp_f32(float %arg0, float %arg1) #1 {
+define float @v_negated_rcp_f32(float %arg0, float %arg1) nounwind readnone {
 ; GCN-LABEL: v_negated_rcp_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2043,7 +2043,7 @@ define float @v_negated_rcp_f32(float %arg0, float %arg1) #1 {
 ; fmul_legacy tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_mul_legacy_f32(float %a, float %b) #0 {
+define float @v_fneg_mul_legacy_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_legacy_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2054,7 +2054,7 @@ define float @v_fneg_mul_legacy_f32(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define { float, float } @v_fneg_mul_legacy_store_use_mul_legacy_f32(float %a, float %b) #0 {
+define { float, float } @v_fneg_mul_legacy_store_use_mul_legacy_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_legacy_store_use_mul_legacy_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2068,7 +2068,7 @@ define { float, float } @v_fneg_mul_legacy_store_use_mul_legacy_f32(float %a, fl
   ret { float, float } %insert.1
 }
 
-define { float, float } @v_fneg_mul_legacy_multi_use_mul_legacy_f32(float %a, float %b) #0 {
+define { float, float } @v_fneg_mul_legacy_multi_use_mul_legacy_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_legacy_multi_use_mul_legacy_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2083,7 +2083,7 @@ define { float, float } @v_fneg_mul_legacy_multi_use_mul_legacy_f32(float %a, fl
   ret { float, float } %insert.1
 }
 
-define float @v_fneg_mul_legacy_fneg_x_f32(float %a, float %b) #0 {
+define float @v_fneg_mul_legacy_fneg_x_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_legacy_fneg_x_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2095,7 +2095,7 @@ define float @v_fneg_mul_legacy_fneg_x_f32(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_mul_legacy_x_fneg_f32(float %a, float %b) #0 {
+define float @v_fneg_mul_legacy_x_fneg_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_legacy_x_fneg_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2107,7 +2107,7 @@ define float @v_fneg_mul_legacy_x_fneg_f32(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_mul_legacy_fneg_fneg_f32(float %a, float %b) #0 {
+define float @v_fneg_mul_legacy_fneg_fneg_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_legacy_fneg_fneg_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2120,7 +2120,7 @@ define float @v_fneg_mul_legacy_fneg_fneg_f32(float %a, float %b) #0 {
   ret float %fneg
 }
 
-define { float, float } @v_fneg_mul_legacy_store_use_fneg_x_f32(float %a, float %b) #0 {
+define { float, float } @v_fneg_mul_legacy_store_use_fneg_x_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_legacy_store_use_fneg_x_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2137,7 +2137,7 @@ define { float, float } @v_fneg_mul_legacy_store_use_fneg_x_f32(float %a, float 
   ret { float, float } %insert.1
 }
 
-define { float, float } @v_fneg_mul_legacy_multi_use_fneg_x_f32(float %a, float %b, float %c) #0 {
+define { float, float } @v_fneg_mul_legacy_multi_use_fneg_x_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_mul_legacy_multi_use_fneg_x_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2158,7 +2158,7 @@ define { float, float } @v_fneg_mul_legacy_multi_use_fneg_x_f32(float %a, float 
 ; sin tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_sin_f32(float %a) #0 {
+define float @v_fneg_sin_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_sin_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2171,7 +2171,7 @@ define float @v_fneg_sin_f32(float %a) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_amdgcn_sin_f32(float %a) #0 {
+define float @v_fneg_amdgcn_sin_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_amdgcn_sin_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2186,7 +2186,7 @@ define float @v_fneg_amdgcn_sin_f32(float %a) #0 {
 ; ftrunc tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_trunc_f32(float %a) #0 {
+define float @v_fneg_trunc_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_trunc_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2201,7 +2201,7 @@ define float @v_fneg_trunc_f32(float %a) #0 {
 ; fround tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_round_f32(float %a) #0 {
+define float @v_fneg_round_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: v_fneg_round_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2235,7 +2235,7 @@ define float @v_fneg_round_f32(float %a) #0 {
 ; rint tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_rint_f32(float %a) #0 {
+define float @v_fneg_rint_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_rint_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2250,7 +2250,7 @@ define float @v_fneg_rint_f32(float %a) #0 {
 ; nearbyint tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_nearbyint_f32(float %a) #0 {
+define float @v_fneg_nearbyint_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_nearbyint_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2265,7 +2265,7 @@ define float @v_fneg_nearbyint_f32(float %a) #0 {
 ; fcanonicalize tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_canonicalize_f32(float %a) #0 {
+define float @v_fneg_canonicalize_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_canonicalize_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2280,7 +2280,7 @@ define float @v_fneg_canonicalize_f32(float %a) #0 {
 ; arithmetic.fence tests
 ; --------------------------------------------------------------------------------
 
-define float @v_fneg_arithmetic_fence_f32(float %a) #0 {
+define float @v_fneg_arithmetic_fence_f32(float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_arithmetic_fence_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    ;ARITH_FENCE
@@ -2292,7 +2292,7 @@ define float @v_fneg_arithmetic_fence_f32(float %a) #0 {
   ret float %fneg
 }
 
-define float @v_fneg_arithmetic_fence_fmul_f32(float %a, float %b) #0 {
+define float @v_fneg_arithmetic_fence_fmul_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_arithmetic_fence_fmul_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2310,7 +2310,7 @@ define float @v_fneg_arithmetic_fence_fmul_f32(float %a, float %b) #0 {
 ; vintrp tests
 ; --------------------------------------------------------------------------------
 
-define { float, float } @v_fneg_interp_p1_f32(float %a, float %b) #0 {
+define { float, float } @v_fneg_interp_p1_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_interp_p1_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2337,7 +2337,7 @@ define { float, float } @v_fneg_interp_p1_f32(float %a, float %b) #0 {
   ret { float, float } %insert.1
 }
 
-define { float, float } @v_fneg_interp_p2_f32(float %a, float %b) #0 {
+define { float, float } @v_fneg_interp_p2_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_interp_p2_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2372,7 +2372,7 @@ define { float, float } @v_fneg_interp_p2_f32(float %a, float %b) #0 {
 ; CopyToReg tests
 ; --------------------------------------------------------------------------------
 
-define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, float %c, i32 %d) #0 {
+define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, float %c, i32 %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; SI-LABEL: v_fneg_copytoreg_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2437,7 +2437,7 @@ endif:
 ; --------------------------------------------------------------------------------
 
 ; Can't fold into use, so should fold into source
-define float @v_fneg_inlineasm_f32(float %a, float %b, float %c, i32 %d) #0 {
+define float @v_fneg_inlineasm_f32(float %a, float %b, float %c, i32 %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_inlineasm_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2448,7 +2448,7 @@ define float @v_fneg_inlineasm_f32(float %a, float %b, float %c, i32 %d) #0 {
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %a, %b
   %fneg = fneg float %mul
-  call void asm sideeffect "; use $0", "v"(float %fneg) #0
+  call void asm sideeffect "; use $0", "v"(float %fneg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign"
   ret float %fneg
 }
 
@@ -2457,7 +2457,7 @@ define float @v_fneg_inlineasm_f32(float %a, float %b, float %c, i32 %d) #0 {
 ; --------------------------------------------------------------------------------
 
 ; Can't fold into use, so should fold into source
-define float @v_fneg_inlineasm_multi_use_src_f32(ptr addrspace(1) %out, float %a, float %b, float %c, i32 %d) #0 {
+define float @v_fneg_inlineasm_multi_use_src_f32(ptr addrspace(1) %out, float %a, float %b, float %c, i32 %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_inlineasm_multi_use_src_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2469,7 +2469,7 @@ define float @v_fneg_inlineasm_multi_use_src_f32(ptr addrspace(1) %out, float %a
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %a, %b
   %fneg = fneg float %mul
-  call void asm sideeffect "; use $0", "v"(float %fneg) #0
+  call void asm sideeffect "; use $0", "v"(float %fneg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign"
   ret float %mul
 }
 
@@ -2479,7 +2479,7 @@ define float @v_fneg_inlineasm_multi_use_src_f32(ptr addrspace(1) %out, float %a
 
 ; There are multiple users of the fneg that must use a VOP3
 ; instruction, so there is no penalty
-define { float, float } @multiuse_fneg_2_vop3_users_f32(float %a, float %b, float %c) #0 {
+define { float, float } @multiuse_fneg_2_vop3_users_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: multiuse_fneg_2_vop3_users_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2497,7 +2497,7 @@ define { float, float } @multiuse_fneg_2_vop3_users_f32(float %a, float %b, floa
 
 ; There are multiple users, but both require using a larger encoding
 ; for the modifier.
-define { float, float } @multiuse_fneg_2_vop2_users_f32(float %a, float %b, float %c) #0 {
+define { float, float } @multiuse_fneg_2_vop2_users_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: multiuse_fneg_2_vop2_users_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2514,7 +2514,7 @@ define { float, float } @multiuse_fneg_2_vop2_users_f32(float %a, float %b, floa
 }
 
 ; One user is VOP3 so has no cost to folding the modifier, the other does.
-define { float, float } @multiuse_fneg_vop2_vop3_users_f32(float %a, float %b, float %c) #0 {
+define { float, float } @multiuse_fneg_vop2_vop3_users_f32(float %a, float %b, float %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: multiuse_fneg_vop2_vop3_users_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2533,7 +2533,7 @@ define { float, float } @multiuse_fneg_vop2_vop3_users_f32(float %a, float %b, f
 
 ; The use of the fneg requires a code size increase, but folding into
 ; the source does not
-define { float, float } @free_fold_src_code_size_cost_use_f32(ptr addrspace(1) %out, float %a, float %b, float %c, float %d) #0 {
+define { float, float } @free_fold_src_code_size_cost_use_f32(ptr addrspace(1) %out, float %a, float %b, float %c, float %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-SAFE-LABEL: free_fold_src_code_size_cost_use_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2559,7 +2559,7 @@ define { float, float } @free_fold_src_code_size_cost_use_f32(ptr addrspace(1) %
   ret { float, float } %insert.1
 }
 
-define { double, double } @free_fold_src_code_size_cost_use_f64(double %a, double %b, double %c, double %d) #0 {
+define { double, double } @free_fold_src_code_size_cost_use_f64(double %a, double %b, double %c, double %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: free_fold_src_code_size_cost_use_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2579,7 +2579,7 @@ define { double, double } @free_fold_src_code_size_cost_use_f64(double %a, doubl
 
 ; %trunc.a has one fneg use, but it requires a code size increase and
 ; %the fneg can instead be folded for free into the fma.
-define float @one_use_cost_to_fold_into_src_f32(float %a, float %b, float %c, float %d) #0 {
+define float @one_use_cost_to_fold_into_src_f32(float %a, float %b, float %c, float %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: one_use_cost_to_fold_into_src_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2592,7 +2592,7 @@ define float @one_use_cost_to_fold_into_src_f32(float %a, float %b, float %c, fl
   ret float %fma0
 }
 
-define { float, float } @multi_use_cost_to_fold_into_src(float %a, float %b, float %c, float %d) #0 {
+define { float, float } @multi_use_cost_to_fold_into_src(float %a, float %b, float %c, float %d) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: multi_use_cost_to_fold_into_src:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2613,7 +2613,7 @@ define { float, float } @multi_use_cost_to_fold_into_src(float %a, float %b, flo
 ; undone by the generic combine to pull the fneg out of the fma if
 ; !isFNegFree. We were reporting false for v2f32 even though it will
 ; be split into f32 where it will be free.
-define <2 x float> @fneg_fma_fneg_dagcombine_loop(<2 x float> %arg, <2 x float> %arg1, <2 x float> %arg2) #0 {
+define <2 x float> @fneg_fma_fneg_dagcombine_loop(<2 x float> %arg, <2 x float> %arg1, <2 x float> %arg2) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: fneg_fma_fneg_dagcombine_loop:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2635,7 +2635,7 @@ bb:
 
 ; This expects denormal flushing, so can't turn this fmul into fneg
 ; TODO: Keeping this as fmul saves encoding size
-define float @nnan_fmul_neg1_to_fneg(float %x, float %y) #0 {
+define float @nnan_fmul_neg1_to_fneg(float %x, float %y) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: nnan_fmul_neg1_to_fneg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2673,7 +2673,7 @@ define float @denorm_snan_fmul_neg1_to_fneg(float %x, float %y) {
   ret float %add
 }
 
-define float @flush_snan_fmul_neg1_to_fneg(float %x, float %y) #0 {
+define float @flush_snan_fmul_neg1_to_fneg(float %x, float %y) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: flush_snan_fmul_neg1_to_fneg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3397,49 +3397,43 @@ bb:
   ret float %i1
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.fma.f32(float, float, float) #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare float @llvm.fma.f32(float, float, float) nounwind readnone
 declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)
-declare float @llvm.fmuladd.f32(float, float, float) #1
-declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) #1
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.sin.f32(float) #1
-declare float @llvm.trunc.f32(float) #1
-declare float @llvm.round.f32(float) #1
-declare float @llvm.rint.f32(float) #1
-declare float @llvm.nearbyint.f32(float) #1
-declare float @llvm.roundeven.f32(float) #1
-declare float @llvm.canonicalize.f32(float) #1
-declare float @llvm.arithmetic.fence.f32(float) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare double @llvm.minnum.f64(double, double) #1
-declare double @llvm.fma.f64(double, double, double) #1
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone
+declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
+declare float @llvm.fabs.f32(float) nounwind readnone
+declare float @llvm.sin.f32(float) nounwind readnone
+declare float @llvm.trunc.f32(float) nounwind readnone
+declare float @llvm.round.f32(float) nounwind readnone
+declare float @llvm.rint.f32(float) nounwind readnone
+declare float @llvm.nearbyint.f32(float) nounwind readnone
+declare float @llvm.roundeven.f32(float) nounwind readnone
+declare float @llvm.canonicalize.f32(float) nounwind readnone
+declare float @llvm.arithmetic.fence.f32(float) nounwind readnone
+declare float @llvm.minnum.f32(float, float) nounwind readnone
+declare float @llvm.maxnum.f32(float, float) nounwind readnone
+declare double @llvm.minnum.f64(double, double) nounwind readnone
+declare double @llvm.fma.f64(double, double, double) nounwind readnone
 
-declare float @llvm.amdgcn.sin.f32(float) #1
-declare float @llvm.amdgcn.rcp.f32(float) #1
-declare float @llvm.amdgcn.rcp.legacy(float) #1
-declare float @llvm.amdgcn.fmul.legacy(float, float) #1
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #0
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #0
+declare float @llvm.amdgcn.sin.f32(float) nounwind readnone
+declare float @llvm.amdgcn.rcp.f32(float) nounwind readnone
+declare float @llvm.amdgcn.rcp.legacy(float) nounwind readnone
+declare float @llvm.amdgcn.fmul.legacy(float, float) nounwind readnone
+declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign"
 
-declare half @llvm.fma.f16(half, half, half) #1
+declare half @llvm.fma.f16(half, half, half) nounwind readnone
 declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>)
-declare half @llvm.fmuladd.f16(half, half, half) #1
-declare <4 x half> @llvm.fmuladd.v4f16(<4 x half>, <4 x half>, <4 x half>) #1
-declare half @llvm.sin.f16(half) #1
-declare half @llvm.trunc.f16(half) #1
-declare half @llvm.round.f16(half) #1
-declare half @llvm.rint.f16(half) #1
-declare half @llvm.nearbyint.f16(half) #1
-declare half @llvm.canonicalize.f16(half) #1
-declare half @llvm.minnum.f16(half, half) #1
-declare half @llvm.maxnum.f16(half, half) #1
-declare half @llvm.amdgcn.sin.f16(half) #1
-declare half @llvm.amdgcn.rcp.f16(half) #1
-
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "unsafe-fp-math"="true" }
-attributes #3 = { nounwind "no-signed-zeros-fp-math"="true" }
-attributes #4 = { nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+declare half @llvm.fmuladd.f16(half, half, half) nounwind readnone
+declare <4 x half> @llvm.fmuladd.v4f16(<4 x half>, <4 x half>, <4 x half>) nounwind readnone
+declare half @llvm.sin.f16(half) nounwind readnone
+declare half @llvm.trunc.f16(half) nounwind readnone
+declare half @llvm.round.f16(half) nounwind readnone
+declare half @llvm.rint.f16(half) nounwind readnone
+declare half @llvm.nearbyint.f16(half) nounwind readnone
+declare half @llvm.canonicalize.f16(half) nounwind readnone
+declare half @llvm.minnum.f16(half, half) nounwind readnone
+declare half @llvm.maxnum.f16(half, half) nounwind readnone
+declare half @llvm.amdgcn.sin.f16(half) nounwind readnone
+declare half @llvm.amdgcn.rcp.f16(half) nounwind readnone

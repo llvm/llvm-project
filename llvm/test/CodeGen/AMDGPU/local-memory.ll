@@ -14,7 +14,7 @@
 ; GCN: ds_read_b32 v{{[0-9]+}}, v[[PTR]] offset:4
 
 ; R600: LDS_READ_RET
-define amdgpu_kernel void @load_i32_local_const_ptr(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @load_i32_local_const_ptr(ptr addrspace(1) %out, ptr addrspace(3) %in) nounwind {
 entry:
   %tmp0 = getelementptr [512 x i32], ptr addrspace(3) @lds, i32 0, i32 1
   %tmp1 = load i32, ptr addrspace(3) %tmp0
@@ -30,7 +30,7 @@ entry:
 ; R600: LDS_READ_RET
 ; GCN-DAG: ds_read_b32
 ; GCN-DAG: ds_read2_b32
-define amdgpu_kernel void @load_i32_v2i32_local(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @load_i32_v2i32_local(ptr addrspace(1) %out, ptr addrspace(3) %in) nounwind {
   %scalar = load i32, ptr addrspace(3) %in
   %vec_ptr = getelementptr <2 x i32>, ptr addrspace(3) %in, i32 2
   %vec0 = load <2 x i32>, ptr addrspace(3) %vec_ptr, align 4
@@ -39,5 +39,3 @@ define amdgpu_kernel void @load_i32_v2i32_local(ptr addrspace(1) %out, ptr addrs
   store <2 x i32> %vec, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }

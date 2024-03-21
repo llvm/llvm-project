@@ -30,6 +30,4 @@ main_body:
   ret void
 }
 
-declare void @llvm.amdgcn.struct.ptr.tbuffer.store.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg) #0
-
-attributes #0 = { nounwind willreturn writeonly }
+declare void @llvm.amdgcn.struct.ptr.tbuffer.store.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg) nounwind willreturn writeonly

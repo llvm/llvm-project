@@ -12,7 +12,7 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 ; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_madmk_f32 {{v[0-9]+}}, [[VA]], 0x41200000, [[VB]]
-define amdgpu_kernel void @madmk_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
+define amdgpu_kernel void @madmk_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
@@ -34,7 +34,7 @@ define amdgpu_kernel void @madmk_f32(ptr addrspace(1) noalias %out, ptr addrspac
 ; GCN-DAG: v_mac_f32_e32 [[VB]], 0x41200000, [[VA]]
 ; GCN-DAG: v_mac_f32_e32 [[VC]], 0x41200000, [[VA]]
 ; GCN: s_endpgm
-define amdgpu_kernel void @madmk_2_use_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
+define amdgpu_kernel void @madmk_2_use_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
   %in.gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
@@ -63,7 +63,7 @@ define amdgpu_kernel void @madmk_2_use_f32(ptr addrspace(1) noalias %out, ptr ad
 ; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mac_f32_e32 [[VB]], 4.0, [[VA]]
-define amdgpu_kernel void @madmk_inline_imm_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
+define amdgpu_kernel void @madmk_inline_imm_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
@@ -82,7 +82,7 @@ define amdgpu_kernel void @madmk_inline_imm_f32(ptr addrspace(1) noalias %out, p
 ; GCN-NOT: v_madmk_f32
 ; GCN: v_mac_f32_e32
 ; GCN: s_endpgm
-define amdgpu_kernel void @s_s_madmk_f32(ptr addrspace(1) noalias %out, [8 x i32], float %a, [8 x i32], float %b) #0 {
+define amdgpu_kernel void @s_s_madmk_f32(ptr addrspace(1) noalias %out, [8 x i32], float %a, [8 x i32], float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
@@ -98,7 +98,7 @@ define amdgpu_kernel void @s_s_madmk_f32(ptr addrspace(1) noalias %out, [8 x i32
 ; GCN: v_mov_b32_e32 [[VREG2:v[0-9]+]], [[SREG]]
 ; GCN: v_madmk_f32 {{v[0-9]+}}, [[VREG1]], 0x41200000, [[VREG2]]
 ; GCN: s_endpgm
-define amdgpu_kernel void @v_s_madmk_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, float %b) #0 {
+define amdgpu_kernel void @v_s_madmk_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
@@ -114,7 +114,7 @@ define amdgpu_kernel void @v_s_madmk_f32(ptr addrspace(1) noalias %out, ptr addr
 ; GCN-NOT: v_madmk_f32
 ; GCN: v_mac_f32_e32
 ; GCN: s_endpgm
-define amdgpu_kernel void @scalar_vector_madmk_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, float %a) #0 {
+define amdgpu_kernel void @scalar_vector_madmk_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, float %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
@@ -131,7 +131,7 @@ define amdgpu_kernel void @scalar_vector_madmk_f32(ptr addrspace(1) noalias %out
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN-DAG: s_mov_b32 [[SK:s[0-9]+]], 0x41200000
 ; GCN: v_mad_f32 {{v[0-9]+}}, |[[VA]]|, [[SK]], [[VB]]
-define amdgpu_kernel void @no_madmk_src0_modifier_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
+define amdgpu_kernel void @no_madmk_src0_modifier_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
@@ -152,7 +152,7 @@ define amdgpu_kernel void @no_madmk_src0_modifier_f32(ptr addrspace(1) noalias %
 ; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mad_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{[sv][0-9]+}}, |{{v[0-9]+}}|
-define amdgpu_kernel void @no_madmk_src2_modifier_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
+define amdgpu_kernel void @no_madmk_src2_modifier_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
@@ -174,7 +174,7 @@ define amdgpu_kernel void @no_madmk_src2_modifier_f32(ptr addrspace(1) noalias %
 ; GCN: v_mov_b32_e32 [[B:v[0-9]+]], 2.0
 ; GCN: v_madmk_f32 {{v[0-9]+}}, [[A]], 0x41200000, [[B]]
 
-define amdgpu_kernel void @madmk_add_inline_imm_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
+define amdgpu_kernel void @madmk_add_inline_imm_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
   %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
@@ -191,7 +191,7 @@ define amdgpu_kernel void @madmk_add_inline_imm_f32(ptr addrspace(1) noalias %ou
 ; SI: s_or_b64
 ; SI: s_xor_b64
 ; SI: v_mac_f32_e32 {{v[0-9]+}}, 0x472aee8c, {{v[0-9]+}}
-define amdgpu_kernel void @kill_madmk_verifier_error() #0 {
+define amdgpu_kernel void @kill_madmk_verifier_error() nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 bb:
   br label %bb2
 
@@ -200,7 +200,7 @@ bb1:                                              ; preds = %bb2
 
 bb2:                                              ; preds = %bb6, %bb
   %tmp = phi float [ undef, %bb ], [ %tmp8, %bb6 ]
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #1
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %f_tid = bitcast i32 %tid to float
   %tmp3 = fsub float %f_tid, %tmp
   %tmp5 = fcmp oeq float %tmp3, 1.000000e+04
@@ -212,7 +212,4 @@ bb6:                                              ; preds = %bb2
   br label %bb2
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone

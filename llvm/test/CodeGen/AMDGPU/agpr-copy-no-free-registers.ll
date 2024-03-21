@@ -4,7 +4,7 @@
 
 ; This testcase would fail on GFX908 due to not having a free VGPR available to
 ; copy between AGPRs.
-define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
+define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) "amdgpu-waves-per-eu"="6,6" {
 ; GFX908-LABEL: no_free_vgprs_at_agpr_to_agpr_copy:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -242,7 +242,7 @@ define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
 }
 
 ; Check that we do make use of v32 if there are no AGPRs present in the function
-define amdgpu_kernel void @no_agpr_no_reserve(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @no_agpr_no_reserve(ptr addrspace(1) %arg) "amdgpu-waves-per-eu"="6,6" {
 ; GFX908-LABEL: no_agpr_no_reserve:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -369,7 +369,7 @@ define amdgpu_kernel void @no_agpr_no_reserve(ptr addrspace(1) %arg) #0 {
 ; FIXME: This case is broken. The asm value passed in v32 is live
 ; through the range where the reserved def for the copy is introduced,
 ; clobbering the user value.
-define void @v32_asm_def_use(float %v0, float %v1) #0 {
+define void @v32_asm_def_use(float %v0, float %v1) "amdgpu-waves-per-eu"="6,6" {
 ; GFX908-LABEL: v32_asm_def_use:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -510,7 +510,7 @@ define void @v32_asm_def_use(float %v0, float %v1) #0 {
   ret void
 }
 
-define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg2, i64 %arg3, <2 x half> %arg4, <2 x half> %arg5) #3 {
+define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg2, i64 %arg3, <2 x half> %arg4, <2 x half> %arg5) "amdgpu-waves-per-eu"="7,7" {
 ; GFX908-LABEL: introduced_copy_to_sgpr:
 ; GFX908:       ; %bb.0: ; %bb
 ; GFX908-NEXT:    global_load_ushort v16, v[0:1], off glc
@@ -910,7 +910,7 @@ bb58:                                             ; preds = %bb51, %bb16
 
 ; This testcase would fail on GFX908 due to not having a free VGPR available to
 ; copy SGPR to AGPR.
-define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
+define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) "amdgpu-waves-per-eu"="6,6" {
 ; GFX908-LABEL: no_free_vgprs_at_sgpr_to_agpr_copy:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1149,10 +1149,5 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
   ret void
 }
 
-declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>, i32 immarg, i32 immarg, i32 immarg) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
-attributes #0 = { "amdgpu-waves-per-eu"="6,6" }
-attributes #1 = { convergent nounwind readnone willreturn }
-attributes #2 = { nounwind readnone willreturn }
-attributes #3 = { "amdgpu-waves-per-eu"="7,7" }
+declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>, i32 immarg, i32 immarg, i32 immarg) convergent nounwind readnone willreturn
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone willreturn

@@ -4,7 +4,7 @@
 
 @local_memory.local_mem = internal unnamed_addr addrspace(3) global [128 x i32] undef, align 4
 
-define amdgpu_kernel void @local_memory(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @local_memory(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: local_memory:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
@@ -25,7 +25,7 @@ define amdgpu_kernel void @local_memory(ptr addrspace(1) %out) #0 {
 ; GCN-NEXT:    buffer_store_dword v0, v[1:2], s[0:3], 0 addr64
 ; GCN-NEXT:    s_endpgm
 entry:
-  %y.i = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %y.i = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %arrayidx = getelementptr inbounds [128 x i32], ptr addrspace(3) @local_memory.local_mem, i32 0, i32 %y.i
   store i32 %y.i, ptr addrspace(3) %arrayidx, align 4
   %add = add nsw i32 %y.i, 1
@@ -43,7 +43,7 @@ entry:
 @local_memory_two_objects.local_mem1 = internal unnamed_addr addrspace(3) global [4 x i32] undef, align 4
 
 ; Check that the LDS size emitted correctly
-define amdgpu_kernel void @local_memory_two_objects(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @local_memory_two_objects(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: local_memory_two_objects:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
@@ -105,9 +105,5 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare void @llvm.amdgcn.s.barrier() #2
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { convergent nounwind }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare void @llvm.amdgcn.s.barrier() convergent nounwind

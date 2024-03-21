@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX11 %s
 
-define <2 x float> @v_repeat_divisor_f32_x2(float %x, float %y, float %D) #0 {
+define <2 x float> @v_repeat_divisor_f32_x2(float %x, float %y, float %D) "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX6-LABEL: v_repeat_divisor_f32_x2:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -101,7 +101,7 @@ define <2 x float> @v_repeat_divisor_f32_x2(float %x, float %y, float %D) #0 {
   ret <2 x float> %insert.1
 }
 
-define <2 x float> @v_repeat_divisor_f32_x2_arcp(float %x, float %y, float %D) #0 {
+define <2 x float> @v_repeat_divisor_f32_x2_arcp(float %x, float %y, float %D) "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX6-LABEL: v_repeat_divisor_f32_x2_arcp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -168,7 +168,7 @@ define <2 x float> @v_repeat_divisor_f32_x2_arcp(float %x, float %y, float %D) #
   ret <2 x float> %insert.1
 }
 
-define <2 x float> @v_repeat_divisor_f32_x2_arcp_daz(float %x, float %y, float %D) #1 {
+define <2 x float> @v_repeat_divisor_f32_x2_arcp_daz(float %x, float %y, float %D) "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: v_repeat_divisor_f32_x2_arcp_daz:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -241,7 +241,7 @@ define <2 x float> @v_repeat_divisor_f32_x2_arcp_daz(float %x, float %y, float %
   ret <2 x float> %insert.1
 }
 
-define <2 x half> @v_repeat_divisor_f16_x2_arcp(half %x, half %y, half %D) #0 {
+define <2 x half> @v_repeat_divisor_f16_x2_arcp(half %x, half %y, half %D) "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX6-LABEL: v_repeat_divisor_f16_x2_arcp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -292,7 +292,7 @@ define <2 x half> @v_repeat_divisor_f16_x2_arcp(half %x, half %y, half %D) #0 {
   ret <2 x half> %insert.1
 }
 
-define <2 x double> @v_repeat_divisor_f64_x2_arcp(double %x, double %y, double %D) #0 {
+define <2 x double> @v_repeat_divisor_f64_x2_arcp(double %x, double %y, double %D) "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX6-LABEL: v_repeat_divisor_f64_x2_arcp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -363,7 +363,7 @@ define <2 x double> @v_repeat_divisor_f64_x2_arcp(double %x, double %y, double %
   ret <2 x double> %insert.1
 }
 
-define <3 x float> @v_repeat_divisor_f32_x3_arcp(float %x, float %y, float %z, float %D) #0 {
+define <3 x float> @v_repeat_divisor_f32_x3_arcp(float %x, float %y, float %z, float %D) "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX6-LABEL: v_repeat_divisor_f32_x3_arcp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -435,7 +435,7 @@ define <3 x float> @v_repeat_divisor_f32_x3_arcp(float %x, float %y, float %z, f
   ret <3 x float> %insert.2
 }
 
-define <4 x float> @v_repeat_divisor_f32_x4_arcp(float %x, float %y, float %z, float %w, float %D) #0 {
+define <4 x float> @v_repeat_divisor_f32_x4_arcp(float %x, float %y, float %z, float %w, float %D) "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX6-LABEL: v_repeat_divisor_f32_x4_arcp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -512,7 +512,7 @@ define <4 x float> @v_repeat_divisor_f32_x4_arcp(float %x, float %y, float %z, f
   ret <4 x float> %insert.3
 }
 
-define <3 x half> @v_repeat_divisor_f16_x3_arcp(half %x, half %y, half %z, half %D) #0 {
+define <3 x half> @v_repeat_divisor_f16_x3_arcp(half %x, half %y, half %z, half %D) "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX6-LABEL: v_repeat_divisor_f16_x3_arcp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -570,7 +570,7 @@ define <3 x half> @v_repeat_divisor_f16_x3_arcp(half %x, half %y, half %z, half 
   ret <3 x half> %insert.2
 }
 
-define <4 x float> @v_repeat_divisor_v2f32_x2(<2 x float> %x, <2 x float> %y, <2 x float> %D) #0 {
+define <4 x float> @v_repeat_divisor_v2f32_x2(<2 x float> %x, <2 x float> %y, <2 x float> %D) "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX6-LABEL: v_repeat_divisor_v2f32_x2:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -677,7 +677,7 @@ define <4 x float> @v_repeat_divisor_v2f32_x2(<2 x float> %x, <2 x float> %y, <2
   ret <4 x float> %shuffle
 }
 
-define <2 x float> @v_repeat_divisor_f32_x2_ulp25(float %x, float %y, float %D) #0 {
+define <2 x float> @v_repeat_divisor_f32_x2_ulp25(float %x, float %y, float %D) "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX6-LABEL: v_repeat_divisor_f32_x2_ulp25:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -726,7 +726,7 @@ define <2 x float> @v_repeat_divisor_f32_x2_ulp25(float %x, float %y, float %D) 
   ret <2 x float> %insert.1
 }
 
-define <2 x float> @v_repeat_divisor_f32_x2_daz_ulp25(float %x, float %y, float %D) #1 {
+define <2 x float> @v_repeat_divisor_f32_x2_daz_ulp25(float %x, float %y, float %D) "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: v_repeat_divisor_f32_x2_daz_ulp25:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -758,7 +758,7 @@ define <2 x float> @v_repeat_divisor_f32_x2_daz_ulp25(float %x, float %y, float 
   ret <2 x float> %insert.1
 }
 
-define <4 x half> @v_repeat_divisor_v2f16_x2(<2 x half> %x, <2 x half> %y, <2 x half> %D) #0 {
+define <4 x half> @v_repeat_divisor_v2f16_x2(<2 x half> %x, <2 x half> %y, <2 x half> %D) "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX6-LABEL: v_repeat_divisor_v2f16_x2:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -830,7 +830,7 @@ define <4 x half> @v_repeat_divisor_v2f16_x2(<2 x half> %x, <2 x half> %y, <2 x 
   ret <4 x half> %shuffle
 }
 
-define <6 x half> @v_repeat_divisor_v3f16_x2(<3 x half> %x, <3 x half> %y, <3 x half> %D) #0 {
+define <6 x half> @v_repeat_divisor_v3f16_x2(<3 x half> %x, <3 x half> %y, <3 x half> %D) "denormal-fp-math-f32"="ieee,ieee" {
 ; GFX6-LABEL: v_repeat_divisor_v3f16_x2:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -935,9 +935,6 @@ define <6 x half> @v_repeat_divisor_v3f16_x2(<3 x half> %x, <3 x half> %y, <3 x 
   %shuffle = shufflevector <3 x half> %div0, <3 x half> %div1, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
   ret <6 x half> %shuffle
 }
-
-attributes #0 = { "denormal-fp-math-f32"="ieee,ieee" }
-attributes #1 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 
 !0 = !{float 2.5}
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:

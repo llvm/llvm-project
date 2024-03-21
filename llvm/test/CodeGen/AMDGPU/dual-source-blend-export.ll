@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GCN
 
 ; This is a slightly modified IR from real case to make it concise.
-define amdgpu_ps void @_amdgpu_ps_main(i32 inreg %PrimMask, <2 x float> %InterpCenter) #0 {
+define amdgpu_ps void @_amdgpu_ps_main(i32 inreg %PrimMask, <2 x float> %InterpCenter) nounwind {
 ; GCN-LABEL: _amdgpu_ps_main:
 ; GCN:       ; %bb.0: ; %.entry
 ; GCN-NEXT:    s_mov_b32 s1, exec_lo
@@ -88,16 +88,10 @@ define amdgpu_ps void @_amdgpu_ps_main(i32 inreg %PrimMask, <2 x float> %InterpC
   ret void
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #2
-declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #2
-declare i32 @llvm.amdgcn.mov.dpp8.i32(i32, i32 immarg) #3
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #4
-declare float @llvm.amdgcn.interp.inreg.p10(float, float, float) #1
-declare float @llvm.amdgcn.interp.inreg.p2(float, float, float) #1
-declare float @llvm.amdgcn.lds.param.load(i32 immarg, i32 immarg, i32) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable willreturn }
-attributes #2 = { nounwind readnone willreturn }
-attributes #3 = { convergent nounwind readnone willreturn }
-attributes #4 = { inaccessiblememonly nounwind willreturn writeonly }
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone willreturn
+declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) nounwind readnone willreturn
+declare i32 @llvm.amdgcn.mov.dpp8.i32(i32, i32 immarg) convergent nounwind readnone willreturn
+declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) inaccessiblememonly nounwind willreturn writeonly
+declare float @llvm.amdgcn.interp.inreg.p10(float, float, float) nounwind readnone speculatable willreturn
+declare float @llvm.amdgcn.interp.inreg.p2(float, float, float) nounwind readnone speculatable willreturn
+declare float @llvm.amdgcn.lds.param.load(i32 immarg, i32 immarg, i32) nounwind readnone speculatable willreturn

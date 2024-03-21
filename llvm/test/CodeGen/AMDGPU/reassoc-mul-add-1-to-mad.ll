@@ -3217,7 +3217,7 @@ define i64 @v_mul_934584645_add_8234599_i64(i64 %arg) {
   ret i64 %add
 }
 
-define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %i21, ptr addrspace(1) nocapture noundef writeonly align 4 %arg, i32 noundef %arg1) #1 {
+define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %i21, ptr addrspace(1) nocapture noundef writeonly align 4 %arg, i32 noundef %arg1) mustprogress nofree nosync nounwind willreturn memory(read, argmem: readwrite, inaccessiblemem: none) {
 ; GFX67-LABEL: compute_mad:
 ; GFX67:       ; %bb.0: ; %bb
 ; GFX67-NEXT:    s_load_dword s3, s[0:1], 0x6
@@ -3890,15 +3890,11 @@ entry:
   ret i64 %f
 }
 
-declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #2
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-declare align 4 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #2
-declare i32 @llvm.amdgcn.workgroup.id.x() #2
+declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare i32 @llvm.amdgcn.workitem.id.x() mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare align 4 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare i32 @llvm.amdgcn.workgroup.id.x() mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare i64 @llvm.amdgcn.mul.u24(i32, i32)
 declare i64 @llvm.amdgcn.mul.i24(i32, i32)
-
-attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-attributes #1 = { mustprogress nofree nosync nounwind willreturn memory(read, argmem: readwrite, inaccessiblemem: none) }
-attributes #2 = { mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !0 = !{i32 0, i32 1024}

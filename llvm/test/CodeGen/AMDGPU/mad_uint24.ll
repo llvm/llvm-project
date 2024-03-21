@@ -258,7 +258,7 @@ entry:
 ; GCN: v_mad_u32_u24
 ; GCN: v_mad_u32_u24
 ; GCN: v_mad_u32_u24
-define void @mad24_known_bits_destroyed(i32 %arg, <4 x i32> %arg1, <4 x i32> %arg2, <4 x i32> %arg3, i32 %arg4, i32 %arg5, i32 %arg6, ptr addrspace(1) %arg7, ptr addrspace(1) %arg8) #0 {
+define void @mad24_known_bits_destroyed(i32 %arg, <4 x i32> %arg1, <4 x i32> %arg2, <4 x i32> %arg3, i32 %arg4, i32 %arg5, i32 %arg6, ptr addrspace(1) %arg7, ptr addrspace(1) %arg8) norecurse nounwind {
 bb:
   %tmp = and i32 %arg4, 16777215
   %tmp9 = extractelement <4 x i32> %arg1, i64 1
@@ -316,5 +316,3 @@ bb19:                                             ; preds = %bb19, %bb
   %tmp55 = icmp eq i32 %tmp54, %arg6
   br i1 %tmp55, label %bb18, label %bb19
 }
-
-attributes #0 = { norecurse nounwind }

@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefixes=GCN,GFX10-WAVE32 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefixes=GCN,GFX11 %s
 
-define amdgpu_ps void @test_kill_depth_0_imm_pos() #0 {
+define amdgpu_ps void @test_kill_depth_0_imm_pos() nounwind {
 ; GCN-LABEL: test_kill_depth_0_imm_pos:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_endpgm
@@ -12,7 +12,7 @@ define amdgpu_ps void @test_kill_depth_0_imm_pos() #0 {
   ret void
 }
 
-define amdgpu_ps void @test_kill_depth_0_imm_neg() #0 {
+define amdgpu_ps void @test_kill_depth_0_imm_neg() nounwind {
 ; WAVE64-LABEL: test_kill_depth_0_imm_neg:
 ; WAVE64:       ; %bb.0:
 ; WAVE64-NEXT:    s_andn2_b64 exec, exec, exec
@@ -47,7 +47,7 @@ define amdgpu_ps void @test_kill_depth_0_imm_neg() #0 {
 }
 
 ; FIXME: Ideally only one early-exit would be emitted
-define amdgpu_ps void @test_kill_depth_0_imm_neg_x2() #0 {
+define amdgpu_ps void @test_kill_depth_0_imm_neg_x2() nounwind {
 ; WAVE64-LABEL: test_kill_depth_0_imm_neg_x2:
 ; WAVE64:       ; %bb.0:
 ; WAVE64-NEXT:    s_mov_b64 s[0:1], exec
@@ -99,7 +99,7 @@ define amdgpu_ps void @test_kill_depth_0_imm_neg_x2() #0 {
   ret void
 }
 
-define amdgpu_ps void @test_kill_depth_var(float %x) #0 {
+define amdgpu_ps void @test_kill_depth_var(float %x) nounwind {
 ; WAVE64-LABEL: test_kill_depth_var:
 ; WAVE64:       ; %bb.0:
 ; WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
@@ -138,7 +138,7 @@ define amdgpu_ps void @test_kill_depth_var(float %x) #0 {
 }
 
 ; FIXME: Ideally only one early-exit would be emitted
-define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
+define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) nounwind {
 ; SI-LABEL: test_kill_depth_var_x2_same:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_mov_b64 s[0:1], exec
@@ -214,7 +214,7 @@ define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
 }
 
 ; FIXME: Ideally only one early-exit would be emitted
-define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
+define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) nounwind {
 ; SI-LABEL: test_kill_depth_var_x2:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_mov_b64 s[0:1], exec
@@ -290,7 +290,7 @@ define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
   ret void
 }
 
-define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
+define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) nounwind {
 ; SI-LABEL: test_kill_depth_var_x2_instructions:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_mov_b64 s[0:1], exec
@@ -380,7 +380,7 @@ define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
 }
 
 ; FIXME: why does the skip depend on the asm length in the same block?
-define amdgpu_ps float @test_kill_control_flow(i32 inreg %arg) #0 {
+define amdgpu_ps float @test_kill_control_flow(i32 inreg %arg) nounwind {
 ; SI-LABEL: test_kill_control_flow:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_cmp_lg_u32 s0, 0
@@ -546,7 +546,7 @@ exit:
   ret float 1.0
 }
 
-define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
+define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) nounwind {
 ; SI-LABEL: test_kill_control_flow_remainder:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_cmp_lg_u32 s0, 0
@@ -759,7 +759,7 @@ exit:
   ret void
 }
 
-define amdgpu_ps float @test_kill_control_flow_return(i32 inreg %arg) #0 {
+define amdgpu_ps float @test_kill_control_flow_return(i32 inreg %arg) nounwind {
 ; SI-LABEL: test_kill_control_flow_return:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_cmp_eq_u32 s0, 1
@@ -933,7 +933,7 @@ exit:
   ret float %ret
 }
 
-define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
+define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) nounwind {
 ; SI-LABEL: test_kill_divergent_loop:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_mov_b64 s[0:1], exec
@@ -1140,7 +1140,7 @@ exit:
 }
 
 ; bug 28550
-define amdgpu_ps void @phi_use_def_before_kill(float inreg %x) #0 {
+define amdgpu_ps void @phi_use_def_before_kill(float inreg %x) nounwind {
 ; SI-LABEL: phi_use_def_before_kill:
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    v_add_f32_e64 v1, s0, 1.0
@@ -1292,7 +1292,7 @@ end:
   ret void
 }
 
-define amdgpu_ps void @no_skip_no_successors(float inreg %arg, float inreg %arg1) #0 {
+define amdgpu_ps void @no_skip_no_successors(float inreg %arg, float inreg %arg1) nounwind {
 ; SI-LABEL: no_skip_no_successors:
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    v_cmp_nge_f32_e64 s[4:5], s1, 0
@@ -1398,7 +1398,7 @@ bb7:                                              ; preds = %bb4
   ret void
 }
 
-define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2, float %arg3) #0 {
+define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2, float %arg3) nounwind {
 ; SI-LABEL: if_after_kill_block:
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    s_mov_b64 s[0:1], exec
@@ -1701,7 +1701,7 @@ live:
 
 export:
   %proxy = phi float [ undef, %kill ], [ %scale, %live ]
-  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 15, float %proxy, float %proxy, float %proxy, float %proxy, i1 immarg true, i1 immarg true) #3
+  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 15, float %proxy, float %proxy, float %proxy, float %proxy, i1 immarg true, i1 immarg true) inaccessiblememonly nounwind writeonly
   ret void
 }
 
@@ -1963,14 +1963,9 @@ bb.1:
   ret void
 }
 
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #3
-declare float @llvm.amdgcn.image.sample.l.2darray.f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare void @llvm.amdgcn.kill(i1) #0
+declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) inaccessiblememonly nounwind writeonly
+declare float @llvm.amdgcn.image.sample.l.2darray.f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare void @llvm.amdgcn.kill(i1) nounwind
 
 declare void @llvm.amdgcn.s.setreg(i32 immarg, i32)
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readonly }
-attributes #2 = { nounwind readnone speculatable }
-attributes #3 = { inaccessiblememonly nounwind writeonly }

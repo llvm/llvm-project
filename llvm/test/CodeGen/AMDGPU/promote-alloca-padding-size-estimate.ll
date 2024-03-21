@@ -32,7 +32,7 @@
 
 ; GCN-LABEL: {{^}}promote_alloca_size_order_0:
 ; GCN: .amdhsa_group_segment_fixed_size 1060
-define amdgpu_kernel void @promote_alloca_size_order_0(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in, i32 %idx) #0 {
+define amdgpu_kernel void @promote_alloca_size_order_0(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in, i32 %idx) nounwind "amdgpu-flat-work-group-size"="64,64" "amdgpu-waves-per-eu"="1,7" {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
   %tmp0 = load i32, ptr addrspace(1) %in, align 4
@@ -63,7 +63,7 @@ entry:
 
 ; GCN-LABEL: {{^}}promote_alloca_size_order_1:
 ; GCN: .amdhsa_group_segment_fixed_size 1072
-define amdgpu_kernel void @promote_alloca_size_order_1(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in, i32 %idx) #0 {
+define amdgpu_kernel void @promote_alloca_size_order_1(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in, i32 %idx) nounwind "amdgpu-flat-work-group-size"="64,64" "amdgpu-waves-per-eu"="1,7" {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
   %tmp0 = load i32, ptr addrspace(1) %in, align 4
@@ -100,7 +100,7 @@ entry:
 
 ; GCN-LABEL: {{^}}promote_alloca_align_pad_guess_over_limit:
 ; GCN: .amdhsa_group_segment_fixed_size 1060
-define amdgpu_kernel void @promote_alloca_align_pad_guess_over_limit(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in, i32 %idx) #0 {
+define amdgpu_kernel void @promote_alloca_align_pad_guess_over_limit(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in, i32 %idx) nounwind "amdgpu-flat-work-group-size"="64,64" "amdgpu-waves-per-eu"="1,7" {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
   %tmp0 = load i32, ptr addrspace(1) %in, align 4
@@ -125,8 +125,6 @@ entry:
 
   ret void
 }
-
-attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" "amdgpu-waves-per-eu"="1,7" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

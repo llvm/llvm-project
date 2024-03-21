@@ -104,7 +104,7 @@ define void @funcs_dyn_lds(ptr addrspace(3) %lds_ptr) {
 define amdgpu_kernel void @test_v5(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) optnone noinline {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -119,6 +119,4 @@ entry:
 !llvm.printf.fmts = !{!1, !2}
 !1 = !{!"1:1:4:%d\5Cn"}
 !2 = !{!"2:1:8:%g\5Cn"}
-
-attributes #0 = { optnone noinline }
 

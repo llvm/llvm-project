@@ -28,7 +28,7 @@
 
 ; EXTIMG:         define <4 x float> @needs_extimg
 ; NOEXTIMG-NOT:   define <4 x float> @needs_extimg
-define <4 x float> @needs_extimg(float noundef %0, float noundef %1, <8 x i32> noundef %2, <4 x i32> noundef %3) #0 {
+define <4 x float> @needs_extimg(float noundef %0, float noundef %1, <8 x i32> noundef %2, <4 x i32> noundef %3) "target-features"="+extended-image-insts" {
   %5 = tail call <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32(i32 noundef 15, float %0, float %1, <8 x i32> %2, <4 x i32> %3, i1 noundef false, i32 noundef 0, i32 noundef 0)
   ret <4 x float> %5
 }
@@ -43,5 +43,3 @@ define void @caller(float noundef %0, float noundef %1, <8 x i32> noundef %2, <4
 }
 
 declare <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg)
-
-attributes #0 = { "target-features"="+extended-image-insts" }

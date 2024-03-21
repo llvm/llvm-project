@@ -6,7 +6,7 @@
 ; SI: v_cvt_f32_u32_e32
 
 ; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW]}}, KC0[2].Z
-define amdgpu_kernel void @s_uint_to_fp_i32_to_f32(ptr addrspace(1) %out, i32 %in) #0 {
+define amdgpu_kernel void @s_uint_to_fp_i32_to_f32(ptr addrspace(1) %out, i32 %in) nounwind {
   %result = uitofp i32 %in to float
   store float %result, ptr addrspace(1) %out
   ret void
@@ -16,7 +16,7 @@ define amdgpu_kernel void @s_uint_to_fp_i32_to_f32(ptr addrspace(1) %out, i32 %i
 ; SI: v_cvt_f32_u32_e32 {{v[0-9]+}}, {{v[0-9]+$}}
 
 ; R600: INT_TO_FLT
-define amdgpu_kernel void @v_uint_to_fp_i32_to_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_uint_to_fp_i32_to_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
@@ -32,7 +32,7 @@ define amdgpu_kernel void @v_uint_to_fp_i32_to_f32(ptr addrspace(1) %out, ptr ad
 
 ; R600-DAG: UINT_TO_FLT * T{{[0-9]+\.[XYZW]}}, KC0[2].W
 ; R600-DAG: UINT_TO_FLT * T{{[0-9]+\.[XYZW]}}, KC0[3].X
-define amdgpu_kernel void @s_uint_to_fp_v2i32_to_v2f32(ptr addrspace(1) %out, <2 x i32> %in) #0 {
+define amdgpu_kernel void @s_uint_to_fp_v2i32_to_v2f32(ptr addrspace(1) %out, <2 x i32> %in) nounwind {
   %result = uitofp <2 x i32> %in to <2 x float>
   store <2 x float> %result, ptr addrspace(1) %out
   ret void
@@ -49,7 +49,7 @@ define amdgpu_kernel void @s_uint_to_fp_v2i32_to_v2f32(ptr addrspace(1) %out, <2
 ; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %value = load <4 x i32>, ptr addrspace(1) %in
   %result = uitofp <4 x i32> %value to <4 x float>
   store <4 x float> %result, ptr addrspace(1) %out
@@ -66,7 +66,7 @@ define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f32(ptr addrspace(1) %out, pt
 ; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-define amdgpu_kernel void @v_uint_to_fp_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_uint_to_fp_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <4 x i32>, ptr addrspace(1) %in, i32 %tid
   %out.gep = getelementptr <4 x float>, ptr addrspace(1) %out, i32 %tid
@@ -82,7 +82,7 @@ define amdgpu_kernel void @v_uint_to_fp_v4i32(ptr addrspace(1) %out, ptr addrspa
 ; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1.0, [[CMP]]
 ; SI: buffer_store_dword [[RESULT]],
 ; SI: s_endpgm
-define amdgpu_kernel void @s_uint_to_fp_i1_to_f32(ptr addrspace(1) %out, i32 %in) #0 {
+define amdgpu_kernel void @s_uint_to_fp_i1_to_f32(ptr addrspace(1) %out, i32 %in) nounwind {
   %cmp = icmp eq i32 %in, 0
   %fp = uitofp i1 %cmp to float
   store float %fp, ptr addrspace(1) %out
@@ -93,7 +93,7 @@ define amdgpu_kernel void @s_uint_to_fp_i1_to_f32(ptr addrspace(1) %out, i32 %in
 ; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1.0
 ; SI: buffer_store_dword [[RESULT]],
 ; SI: s_endpgm
-define amdgpu_kernel void @s_uint_to_fp_i1_to_f32_load(ptr addrspace(1) %out, i1 %in) #0 {
+define amdgpu_kernel void @s_uint_to_fp_i1_to_f32_load(ptr addrspace(1) %out, i1 %in) nounwind {
   %fp = uitofp i1 %in to float
   store float %fp, ptr addrspace(1) %out
   ret void
@@ -106,7 +106,7 @@ define amdgpu_kernel void @s_uint_to_fp_i1_to_f32_load(ptr addrspace(1) %out, i1
 ; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1.0
 ; SI: {{buffer|flat}}_store_dword {{.*}}[[RESULT]]
 ; SI: s_endpgm
-define amdgpu_kernel void @v_uint_to_fp_i1_f32_load(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_uint_to_fp_i1_f32_load(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i1, ptr addrspace(1) %in, i32 %tid
   %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
@@ -122,14 +122,11 @@ define amdgpu_kernel void @v_uint_to_fp_i1_f32_load(ptr addrspace(1) %out, ptr a
 ; R600: CNDE_INT
 ; R600: UINT_TO_FLT
 
-define amdgpu_kernel void @s_uint_to_fp_i64_to_f32(ptr addrspace(1) %out, i64 %in) #0 {
+define amdgpu_kernel void @s_uint_to_fp_i64_to_f32(ptr addrspace(1) %out, i64 %in) nounwind {
 entry:
   %cvt = uitofp i64 %in to float
   store float %cvt, ptr addrspace(1) %out
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

@@ -10,7 +10,7 @@
 
 define amdgpu_kernel void @sub_rev(ptr addrspace(1) %out, <4 x i32> %sgpr, i32 %cond) {
 entry:
-  %vgpr = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %vgpr = call i32 @llvm.amdgcn.workitem.id.x() readnone
   %tmp = icmp eq i32 %cond, 0
   br i1 %tmp, label %if, label %else
 
@@ -45,7 +45,4 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

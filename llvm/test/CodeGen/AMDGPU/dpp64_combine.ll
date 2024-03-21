@@ -11,7 +11,7 @@ define amdgpu_kernel void @dpp64_ceil(ptr addrspace(1) %arg, i64 %in1) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, ptr addrspace(1) %arg, i32 %id
   %load = load i64, ptr addrspace(1) %gep
-  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 %load, i32 337, i32 15, i32 15, i1 1) #0
+  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 %load, i32 337, i32 15, i32 15, i1 1) nounwind readnone convergent
   %tmp1 = bitcast i64 %tmp0 to double
   %round = tail call double @llvm.ceil.f64(double %tmp1)
   %tmp2 = bitcast double %round to i64
@@ -27,7 +27,7 @@ define amdgpu_kernel void @dpp64_rcp(ptr addrspace(1) %arg, i64 %in1) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, ptr addrspace(1) %arg, i32 %id
   %load = load i64, ptr addrspace(1) %gep
-  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 %load, i32 337, i32 15, i32 15, i1 1) #0
+  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 %load, i32 337, i32 15, i32 15, i1 1) nounwind readnone convergent
   %tmp1 = bitcast i64 %tmp0 to double
   %rcp = call double @llvm.amdgcn.rcp.f64(double %tmp1)
   %tmp2 = bitcast double %rcp to i64
@@ -42,7 +42,7 @@ define amdgpu_kernel void @dpp64_rcp_unsupported_ctl(ptr addrspace(1) %arg, i64 
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, ptr addrspace(1) %arg, i32 %id
   %load = load i64, ptr addrspace(1) %gep
-  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 %load, i32 1, i32 15, i32 15, i1 1) #0
+  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 %load, i32 1, i32 15, i32 15, i1 1) nounwind readnone convergent
   %tmp1 = bitcast i64 %tmp0 to double
   %rcp = fdiv fast double 1.0, %tmp1
   %tmp2 = bitcast double %rcp to i64
@@ -61,7 +61,7 @@ define amdgpu_kernel void @dpp64_div(ptr addrspace(1) %arg, i64 %in1) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, ptr addrspace(1) %arg, i32 %id
   %load = load i64, ptr addrspace(1) %gep
-  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 %load, i32 337, i32 15, i32 15, i1 1) #0
+  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 %load, i32 337, i32 15, i32 15, i1 1) nounwind readnone convergent
   %tmp1 = bitcast i64 %tmp0 to double
   %rcp = fdiv double 15.0, %tmp1
   %tmp2 = bitcast double %rcp to i64
@@ -70,8 +70,6 @@ define amdgpu_kernel void @dpp64_div(ptr addrspace(1) %arg, i64 %in1) {
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x()
-declare i64 @llvm.amdgcn.update.dpp.i64(i64, i64, i32, i32, i32, i1) #0
+declare i64 @llvm.amdgcn.update.dpp.i64(i64, i64, i32, i32, i32, i1) nounwind readnone convergent
 declare double @llvm.ceil.f64(double)
 declare double @llvm.amdgcn.rcp.f64(double)
-
-attributes #0 = { nounwind readnone convergent }

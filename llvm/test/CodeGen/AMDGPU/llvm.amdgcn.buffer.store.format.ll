@@ -95,10 +95,7 @@ main_body:
   ret void
 }
 
-declare void @llvm.amdgcn.buffer.store.format.f32(float, <4 x i32>, i32, i32, i1, i1) #0
-declare void @llvm.amdgcn.buffer.store.format.v2f32(<2 x float>, <4 x i32>, i32, i32, i1, i1) #0
-declare void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #0
-declare <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32>, i32, i32, i1, i1) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readonly }
+declare void @llvm.amdgcn.buffer.store.format.f32(float, <4 x i32>, i32, i32, i1, i1) nounwind
+declare void @llvm.amdgcn.buffer.store.format.v2f32(<2 x float>, <4 x i32>, i32, i32, i1, i1) nounwind
+declare void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) nounwind
+declare <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32>, i32, i32, i1, i1) nounwind readonly
