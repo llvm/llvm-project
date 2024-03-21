@@ -49,15 +49,16 @@ the lowering to FIR/HLFIR has been performed an OpenMP dialect specific pass for
 mappings, with one extra per pointer member in the descriptor that is supported on top of the original
 descriptor map operation. These pointers members are linked to the parent descriptor by adding them to 
 the member field of the original descriptor map operation, they are then inserted into the relevant map
-owning operation's (`omp.TargetOp`, `omp.DataOp` etc.) map operand list and in cases where the owning operation
-is `IsolatedFromAbove`, it also inserts them as `BlockArgs` to canonicalize the mappings and simplify lowering.
+owning operation's (`omp.TargetOp`, `omp.TargetDataOp` etc.) map operand list and in cases where the owning
+operation is `IsolatedFromAbove`, it also inserts them as `BlockArgs` to canonicalize the mappings and
+simplify lowering.
 
 An example transformation by the `OMPDescriptorMapInfoGenPass`:
 
 ```
 
 ...
-%12 = omp.map_info var_ptr(%1#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%11) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "arg_alloc"}
+%12 = omp.map.info var_ptr(%1#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%11) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "arg_alloc"}
 ...
 omp.target map_entries(%12 -> %arg1, %13 -> %arg2 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<i32>) {
     ^bb0(%arg1: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, %arg2: !fir.ref<i32>):
@@ -67,8 +68,8 @@ omp.target map_entries(%12 -> %arg1, %13 -> %arg2 : !fir.ref<!fir.box<!fir.ptr<!
 
 ...
 %12 = fir.box_offset %1#1 base_addr : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
-%13 = omp.map_info var_ptr(%1#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.array<?xi32>) var_ptr_ptr(%12 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%11) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
-%14 = omp.map_info var_ptr(%1#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) members(%13 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "arg_alloc"}
+%13 = omp.map.info var_ptr(%1#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.array<?xi32>) var_ptr_ptr(%12 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%11) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
+%14 = omp.map.info var_ptr(%1#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) members(%13 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "arg_alloc"}
 ...
 omp.target map_entries(%13 -> %arg1, %14 -> %arg2, %15 -> %arg3 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<i32>) {
     ^bb0(%arg1: !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, %arg2: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, %arg3: !fir.ref<i32>):
