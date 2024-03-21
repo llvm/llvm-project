@@ -2239,10 +2239,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return true;
     ICEArguments &= ~(1 << ArgNo);
   }
-
   // if the call has the elementwise attribute, then
   // make sure that an elementwise expr is emitted.
-  if (FDecl->hasAttr<ElementwiseBuiltinAliasAttr>()) {
+  if (FDecl->hasAttr<ElementwiseBuiltinAlias>()) {
     switch (FDecl->getNumParams()) {
     case 1: {
       if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
@@ -2253,7 +2252,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
               *this, TheCall->getArg(0)->getBeginLoc(), ArgTy, 1))
         return ExprError();
       break;
-    }
     case 2: {
       if (SemaBuiltinElementwiseMath(TheCall))
         return ExprError();
@@ -2272,321 +2270,319 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       break;
     }
     }
-  }
+    }
+
     FPOptions FPO;
-    switch (BuiltinID) {
-    case Builtin::BI__builtin_cpu_supports:
-    case Builtin::BI__builtin_cpu_is:
-      if (SemaBuiltinCpu(*this, Context.getTargetInfo(), TheCall,
-                         Context.getAuxTargetInfo(), BuiltinID))
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_cpu_supports:
+  case Builtin::BI__builtin_cpu_is:
+    if (SemaBuiltinCpu(*this, Context.getTargetInfo(), TheCall,
+                       Context.getAuxTargetInfo(), BuiltinID))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_cpu_init:
+    if (!Context.getTargetInfo().supportsCpuInit()) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+          << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+      return ExprError();
+    }
+    break;
+  case Builtin::BI__builtin___CFStringMakeConstantString:
+    // CFStringMakeConstantString is currently not implemented for GOFF (i.e.,
+    // on z/OS) and for XCOFF (i.e., on AIX). Emit unsupported
+    if (CheckBuiltinTargetNotInUnsupported(
+            *this, BuiltinID, TheCall,
+            {llvm::Triple::GOFF, llvm::Triple::XCOFF}))
+      return ExprError();
+    assert(TheCall->getNumArgs() == 1 &&
+           "Wrong # arguments to builtin CFStringMakeConstantString");
+    if (CheckObjCString(TheCall->getArg(0)))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_ms_va_start:
+  case Builtin::BI__builtin_stdarg_start:
+  case Builtin::BI__builtin_va_start:
+    if (SemaBuiltinVAStart(BuiltinID, TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__va_start: {
+    switch (Context.getTargetInfo().getTriple().getArch()) {
+    case llvm::Triple::aarch64:
+    case llvm::Triple::arm:
+    case llvm::Triple::thumb:
+      if (SemaBuiltinVAStartARMMicrosoft(TheCall))
         return ExprError();
       break;
-    case Builtin::BI__builtin_cpu_init:
-      if (!Context.getTargetInfo().supportsCpuInit()) {
-        Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
-            << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
-        return ExprError();
-      }
-      break;
-    case Builtin::BI__builtin___CFStringMakeConstantString:
-      // CFStringMakeConstantString is currently not implemented for GOFF (i.e.,
-      // on z/OS) and for XCOFF (i.e., on AIX). Emit unsupported
-      if (CheckBuiltinTargetNotInUnsupported(
-              *this, BuiltinID, TheCall,
-              {llvm::Triple::GOFF, llvm::Triple::XCOFF}))
-        return ExprError();
-      assert(TheCall->getNumArgs() == 1 &&
-             "Wrong # arguments to builtin CFStringMakeConstantString");
-      if (CheckObjCString(TheCall->getArg(0)))
-        return ExprError();
-      break;
-    case Builtin::BI__builtin_ms_va_start:
-    case Builtin::BI__builtin_stdarg_start:
-    case Builtin::BI__builtin_va_start:
+    default:
       if (SemaBuiltinVAStart(BuiltinID, TheCall))
         return ExprError();
       break;
-    case Builtin::BI__va_start: {
-      switch (Context.getTargetInfo().getTriple().getArch()) {
-      case llvm::Triple::aarch64:
-      case llvm::Triple::arm:
-      case llvm::Triple::thumb:
-        if (SemaBuiltinVAStartARMMicrosoft(TheCall))
-          return ExprError();
-        break;
-      default:
-        if (SemaBuiltinVAStart(BuiltinID, TheCall))
-          return ExprError();
-        break;
-      }
-      break;
     }
+    break;
+  }
 
-    // The acquire, release, and no fence variants are ARM and AArch64 only.
-    case Builtin::BI_interlockedbittestandset_acq:
-    case Builtin::BI_interlockedbittestandset_rel:
-    case Builtin::BI_interlockedbittestandset_nf:
-    case Builtin::BI_interlockedbittestandreset_acq:
-    case Builtin::BI_interlockedbittestandreset_rel:
-    case Builtin::BI_interlockedbittestandreset_nf:
-      if (CheckBuiltinTargetInSupported(
-              *this, BuiltinID, TheCall,
-              {llvm::Triple::arm, llvm::Triple::thumb, llvm::Triple::aarch64}))
-        return ExprError();
-      break;
+  // The acquire, release, and no fence variants are ARM and AArch64 only.
+  case Builtin::BI_interlockedbittestandset_acq:
+  case Builtin::BI_interlockedbittestandset_rel:
+  case Builtin::BI_interlockedbittestandset_nf:
+  case Builtin::BI_interlockedbittestandreset_acq:
+  case Builtin::BI_interlockedbittestandreset_rel:
+  case Builtin::BI_interlockedbittestandreset_nf:
+    if (CheckBuiltinTargetInSupported(
+            *this, BuiltinID, TheCall,
+            {llvm::Triple::arm, llvm::Triple::thumb, llvm::Triple::aarch64}))
+      return ExprError();
+    break;
 
-    // The 64-bit bittest variants are x64, ARM, and AArch64 only.
-    case Builtin::BI_bittest64:
-    case Builtin::BI_bittestandcomplement64:
-    case Builtin::BI_bittestandreset64:
-    case Builtin::BI_bittestandset64:
-    case Builtin::BI_interlockedbittestandreset64:
-    case Builtin::BI_interlockedbittestandset64:
-      if (CheckBuiltinTargetInSupported(*this, BuiltinID, TheCall,
-                                        {llvm::Triple::x86_64,
-                                         llvm::Triple::arm, llvm::Triple::thumb,
-                                         llvm::Triple::aarch64}))
-        return ExprError();
-      break;
+  // The 64-bit bittest variants are x64, ARM, and AArch64 only.
+  case Builtin::BI_bittest64:
+  case Builtin::BI_bittestandcomplement64:
+  case Builtin::BI_bittestandreset64:
+  case Builtin::BI_bittestandset64:
+  case Builtin::BI_interlockedbittestandreset64:
+  case Builtin::BI_interlockedbittestandset64:
+    if (CheckBuiltinTargetInSupported(*this, BuiltinID, TheCall,
+                                      {llvm::Triple::x86_64, llvm::Triple::arm,
+                                       llvm::Triple::thumb,
+                                       llvm::Triple::aarch64}))
+      return ExprError();
+    break;
 
-    case Builtin::BI__builtin_set_flt_rounds:
-      if (CheckBuiltinTargetInSupported(
-              *this, BuiltinID, TheCall,
-              {llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::arm,
-               llvm::Triple::thumb, llvm::Triple::aarch64}))
-        return ExprError();
-      break;
+  case Builtin::BI__builtin_set_flt_rounds:
+    if (CheckBuiltinTargetInSupported(*this, BuiltinID, TheCall,
+                                      {llvm::Triple::x86, llvm::Triple::x86_64,
+                                       llvm::Triple::arm, llvm::Triple::thumb,
+                                       llvm::Triple::aarch64}))
+      return ExprError();
+    break;
 
-    case Builtin::BI__builtin_isgreater:
-    case Builtin::BI__builtin_isgreaterequal:
-    case Builtin::BI__builtin_isless:
-    case Builtin::BI__builtin_islessequal:
-    case Builtin::BI__builtin_islessgreater:
-    case Builtin::BI__builtin_isunordered:
-      if (SemaBuiltinUnorderedCompare(TheCall, BuiltinID))
-        return ExprError();
+  case Builtin::BI__builtin_isgreater:
+  case Builtin::BI__builtin_isgreaterequal:
+  case Builtin::BI__builtin_isless:
+  case Builtin::BI__builtin_islessequal:
+  case Builtin::BI__builtin_islessgreater:
+  case Builtin::BI__builtin_isunordered:
+    if (SemaBuiltinUnorderedCompare(TheCall, BuiltinID))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_fpclassify:
+    if (SemaBuiltinFPClassification(TheCall, 6, BuiltinID))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_isfpclass:
+    if (SemaBuiltinFPClassification(TheCall, 2, BuiltinID))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_isfinite:
+  case Builtin::BI__builtin_isinf:
+  case Builtin::BI__builtin_isinf_sign:
+  case Builtin::BI__builtin_isnan:
+  case Builtin::BI__builtin_issignaling:
+  case Builtin::BI__builtin_isnormal:
+  case Builtin::BI__builtin_issubnormal:
+  case Builtin::BI__builtin_iszero:
+  case Builtin::BI__builtin_signbit:
+  case Builtin::BI__builtin_signbitf:
+  case Builtin::BI__builtin_signbitl:
+    if (SemaBuiltinFPClassification(TheCall, 1, BuiltinID))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_shufflevector:
+    return SemaBuiltinShuffleVector(TheCall);
+    // TheCall will be freed by the smart pointer here, but that's fine, since
+    // SemaBuiltinShuffleVector guts it, but then doesn't release it.
+  case Builtin::BI__builtin_prefetch:
+    if (SemaBuiltinPrefetch(TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_alloca_with_align:
+  case Builtin::BI__builtin_alloca_with_align_uninitialized:
+    if (SemaBuiltinAllocaWithAlign(TheCall))
+      return ExprError();
+    [[fallthrough]];
+  case Builtin::BI__builtin_alloca:
+  case Builtin::BI__builtin_alloca_uninitialized:
+    Diag(TheCall->getBeginLoc(), diag::warn_alloca)
+        << TheCall->getDirectCallee();
+    break;
+  case Builtin::BI__arithmetic_fence:
+    if (SemaBuiltinArithmeticFence(TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__assume:
+  case Builtin::BI__builtin_assume:
+    if (SemaBuiltinAssume(TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_assume_aligned:
+    if (SemaBuiltinAssumeAligned(TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_dynamic_object_size:
+  case Builtin::BI__builtin_object_size:
+    if (SemaBuiltinConstantArgRange(TheCall, 1, 0, 3))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_longjmp:
+    if (SemaBuiltinLongjmp(TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_setjmp:
+    if (SemaBuiltinSetjmp(TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_classify_type:
+    if (checkArgCount(*this, TheCall, 1)) return true;
+    TheCall->setType(Context.IntTy);
+    break;
+  case Builtin::BI__builtin_complex:
+    if (SemaBuiltinComplex(TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_constant_p: {
+    if (checkArgCount(*this, TheCall, 1)) return true;
+    ExprResult Arg = DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
+    if (Arg.isInvalid()) return true;
+    TheCall->setArg(0, Arg.get());
+    TheCall->setType(Context.IntTy);
+    break;
+  }
+  case Builtin::BI__builtin_launder:
+    return SemaBuiltinLaunder(*this, TheCall);
+  case Builtin::BI__sync_fetch_and_add:
+  case Builtin::BI__sync_fetch_and_add_1:
+  case Builtin::BI__sync_fetch_and_add_2:
+  case Builtin::BI__sync_fetch_and_add_4:
+  case Builtin::BI__sync_fetch_and_add_8:
+  case Builtin::BI__sync_fetch_and_add_16:
+  case Builtin::BI__sync_fetch_and_sub:
+  case Builtin::BI__sync_fetch_and_sub_1:
+  case Builtin::BI__sync_fetch_and_sub_2:
+  case Builtin::BI__sync_fetch_and_sub_4:
+  case Builtin::BI__sync_fetch_and_sub_8:
+  case Builtin::BI__sync_fetch_and_sub_16:
+  case Builtin::BI__sync_fetch_and_or:
+  case Builtin::BI__sync_fetch_and_or_1:
+  case Builtin::BI__sync_fetch_and_or_2:
+  case Builtin::BI__sync_fetch_and_or_4:
+  case Builtin::BI__sync_fetch_and_or_8:
+  case Builtin::BI__sync_fetch_and_or_16:
+  case Builtin::BI__sync_fetch_and_and:
+  case Builtin::BI__sync_fetch_and_and_1:
+  case Builtin::BI__sync_fetch_and_and_2:
+  case Builtin::BI__sync_fetch_and_and_4:
+  case Builtin::BI__sync_fetch_and_and_8:
+  case Builtin::BI__sync_fetch_and_and_16:
+  case Builtin::BI__sync_fetch_and_xor:
+  case Builtin::BI__sync_fetch_and_xor_1:
+  case Builtin::BI__sync_fetch_and_xor_2:
+  case Builtin::BI__sync_fetch_and_xor_4:
+  case Builtin::BI__sync_fetch_and_xor_8:
+  case Builtin::BI__sync_fetch_and_xor_16:
+  case Builtin::BI__sync_fetch_and_nand:
+  case Builtin::BI__sync_fetch_and_nand_1:
+  case Builtin::BI__sync_fetch_and_nand_2:
+  case Builtin::BI__sync_fetch_and_nand_4:
+  case Builtin::BI__sync_fetch_and_nand_8:
+  case Builtin::BI__sync_fetch_and_nand_16:
+  case Builtin::BI__sync_add_and_fetch:
+  case Builtin::BI__sync_add_and_fetch_1:
+  case Builtin::BI__sync_add_and_fetch_2:
+  case Builtin::BI__sync_add_and_fetch_4:
+  case Builtin::BI__sync_add_and_fetch_8:
+  case Builtin::BI__sync_add_and_fetch_16:
+  case Builtin::BI__sync_sub_and_fetch:
+  case Builtin::BI__sync_sub_and_fetch_1:
+  case Builtin::BI__sync_sub_and_fetch_2:
+  case Builtin::BI__sync_sub_and_fetch_4:
+  case Builtin::BI__sync_sub_and_fetch_8:
+  case Builtin::BI__sync_sub_and_fetch_16:
+  case Builtin::BI__sync_and_and_fetch:
+  case Builtin::BI__sync_and_and_fetch_1:
+  case Builtin::BI__sync_and_and_fetch_2:
+  case Builtin::BI__sync_and_and_fetch_4:
+  case Builtin::BI__sync_and_and_fetch_8:
+  case Builtin::BI__sync_and_and_fetch_16:
+  case Builtin::BI__sync_or_and_fetch:
+  case Builtin::BI__sync_or_and_fetch_1:
+  case Builtin::BI__sync_or_and_fetch_2:
+  case Builtin::BI__sync_or_and_fetch_4:
+  case Builtin::BI__sync_or_and_fetch_8:
+  case Builtin::BI__sync_or_and_fetch_16:
+  case Builtin::BI__sync_xor_and_fetch:
+  case Builtin::BI__sync_xor_and_fetch_1:
+  case Builtin::BI__sync_xor_and_fetch_2:
+  case Builtin::BI__sync_xor_and_fetch_4:
+  case Builtin::BI__sync_xor_and_fetch_8:
+  case Builtin::BI__sync_xor_and_fetch_16:
+  case Builtin::BI__sync_nand_and_fetch:
+  case Builtin::BI__sync_nand_and_fetch_1:
+  case Builtin::BI__sync_nand_and_fetch_2:
+  case Builtin::BI__sync_nand_and_fetch_4:
+  case Builtin::BI__sync_nand_and_fetch_8:
+  case Builtin::BI__sync_nand_and_fetch_16:
+  case Builtin::BI__sync_val_compare_and_swap:
+  case Builtin::BI__sync_val_compare_and_swap_1:
+  case Builtin::BI__sync_val_compare_and_swap_2:
+  case Builtin::BI__sync_val_compare_and_swap_4:
+  case Builtin::BI__sync_val_compare_and_swap_8:
+  case Builtin::BI__sync_val_compare_and_swap_16:
+  case Builtin::BI__sync_bool_compare_and_swap:
+  case Builtin::BI__sync_bool_compare_and_swap_1:
+  case Builtin::BI__sync_bool_compare_and_swap_2:
+  case Builtin::BI__sync_bool_compare_and_swap_4:
+  case Builtin::BI__sync_bool_compare_and_swap_8:
+  case Builtin::BI__sync_bool_compare_and_swap_16:
+  case Builtin::BI__sync_lock_test_and_set:
+  case Builtin::BI__sync_lock_test_and_set_1:
+  case Builtin::BI__sync_lock_test_and_set_2:
+  case Builtin::BI__sync_lock_test_and_set_4:
+  case Builtin::BI__sync_lock_test_and_set_8:
+  case Builtin::BI__sync_lock_test_and_set_16:
+  case Builtin::BI__sync_lock_release:
+  case Builtin::BI__sync_lock_release_1:
+  case Builtin::BI__sync_lock_release_2:
+  case Builtin::BI__sync_lock_release_4:
+  case Builtin::BI__sync_lock_release_8:
+  case Builtin::BI__sync_lock_release_16:
+  case Builtin::BI__sync_swap:
+  case Builtin::BI__sync_swap_1:
+  case Builtin::BI__sync_swap_2:
+  case Builtin::BI__sync_swap_4:
+  case Builtin::BI__sync_swap_8:
+  case Builtin::BI__sync_swap_16:
+    return SemaBuiltinAtomicOverloaded(TheCallResult);
+  case Builtin::BI__sync_synchronize:
+    Diag(TheCall->getBeginLoc(), diag::warn_atomic_implicit_seq_cst)
+        << TheCall->getCallee()->getSourceRange();
+    break;
+  case Builtin::BI__builtin_nontemporal_load:
+  case Builtin::BI__builtin_nontemporal_store:
+    return SemaBuiltinNontemporalOverloaded(TheCallResult);
+  case Builtin::BI__builtin_memcpy_inline: {
+    clang::Expr *SizeOp = TheCall->getArg(2);
+    // We warn about copying to or from `nullptr` pointers when `size` is
+    // greater than 0. When `size` is value dependent we cannot evaluate its
+    // value so we bail out.
+    if (SizeOp->isValueDependent())
       break;
-    case Builtin::BI__builtin_fpclassify:
-      if (SemaBuiltinFPClassification(TheCall, 6, BuiltinID))
-        return ExprError();
-      break;
-    case Builtin::BI__builtin_isfpclass:
-      if (SemaBuiltinFPClassification(TheCall, 2, BuiltinID))
-        return ExprError();
-      break;
-    case Builtin::BI__builtin_isfinite:
-    case Builtin::BI__builtin_isinf:
-    case Builtin::BI__builtin_isinf_sign:
-    case Builtin::BI__builtin_isnan:
-    case Builtin::BI__builtin_issignaling:
-    case Builtin::BI__builtin_isnormal:
-    case Builtin::BI__builtin_issubnormal:
-    case Builtin::BI__builtin_iszero:
-    case Builtin::BI__builtin_signbit:
-    case Builtin::BI__builtin_signbitf:
-    case Builtin::BI__builtin_signbitl:
-      if (SemaBuiltinFPClassification(TheCall, 1, BuiltinID))
-        return ExprError();
-      break;
-    case Builtin::BI__builtin_shufflevector:
-      return SemaBuiltinShuffleVector(TheCall);
-      // TheCall will be freed by the smart pointer here, but that's fine, since
-      // SemaBuiltinShuffleVector guts it, but then doesn't release it.
-    case Builtin::BI__builtin_prefetch:
-      if (SemaBuiltinPrefetch(TheCall))
-        return ExprError();
-      break;
-    case Builtin::BI__builtin_alloca_with_align:
-    case Builtin::BI__builtin_alloca_with_align_uninitialized:
-      if (SemaBuiltinAllocaWithAlign(TheCall))
-        return ExprError();
-      [[fallthrough]];
-    case Builtin::BI__builtin_alloca:
-    case Builtin::BI__builtin_alloca_uninitialized:
-      Diag(TheCall->getBeginLoc(), diag::warn_alloca)
-          << TheCall->getDirectCallee();
-      break;
-    case Builtin::BI__arithmetic_fence:
-      if (SemaBuiltinArithmeticFence(TheCall))
-        return ExprError();
-      break;
-    case Builtin::BI__assume:
-    case Builtin::BI__builtin_assume:
-      if (SemaBuiltinAssume(TheCall))
-        return ExprError();
-      break;
-    case Builtin::BI__builtin_assume_aligned:
-      if (SemaBuiltinAssumeAligned(TheCall))
-        return ExprError();
-      break;
-    case Builtin::BI__builtin_dynamic_object_size:
-    case Builtin::BI__builtin_object_size:
-      if (SemaBuiltinConstantArgRange(TheCall, 1, 0, 3))
-        return ExprError();
-      break;
-    case Builtin::BI__builtin_longjmp:
-      if (SemaBuiltinLongjmp(TheCall))
-        return ExprError();
-      break;
-    case Builtin::BI__builtin_setjmp:
-      if (SemaBuiltinSetjmp(TheCall))
-        return ExprError();
-      break;
-    case Builtin::BI__builtin_classify_type:
-      if (checkArgCount(*this, TheCall, 1))
-        return true;
-      TheCall->setType(Context.IntTy);
-      break;
-    case Builtin::BI__builtin_complex:
-      if (SemaBuiltinComplex(TheCall))
-        return ExprError();
-      break;
-    case Builtin::BI__builtin_constant_p: {
-      if (checkArgCount(*this, TheCall, 1))
-        return true;
-      ExprResult Arg = DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
-      if (Arg.isInvalid())
-        return true;
-      TheCall->setArg(0, Arg.get());
-      TheCall->setType(Context.IntTy);
-      break;
+    if (!SizeOp->EvaluateKnownConstInt(Context).isZero()) {
+      CheckNonNullArgument(*this, TheCall->getArg(0), TheCall->getExprLoc());
+      CheckNonNullArgument(*this, TheCall->getArg(1), TheCall->getExprLoc());
     }
-    case Builtin::BI__builtin_launder:
-      return SemaBuiltinLaunder(*this, TheCall);
-    case Builtin::BI__sync_fetch_and_add:
-    case Builtin::BI__sync_fetch_and_add_1:
-    case Builtin::BI__sync_fetch_and_add_2:
-    case Builtin::BI__sync_fetch_and_add_4:
-    case Builtin::BI__sync_fetch_and_add_8:
-    case Builtin::BI__sync_fetch_and_add_16:
-    case Builtin::BI__sync_fetch_and_sub:
-    case Builtin::BI__sync_fetch_and_sub_1:
-    case Builtin::BI__sync_fetch_and_sub_2:
-    case Builtin::BI__sync_fetch_and_sub_4:
-    case Builtin::BI__sync_fetch_and_sub_8:
-    case Builtin::BI__sync_fetch_and_sub_16:
-    case Builtin::BI__sync_fetch_and_or:
-    case Builtin::BI__sync_fetch_and_or_1:
-    case Builtin::BI__sync_fetch_and_or_2:
-    case Builtin::BI__sync_fetch_and_or_4:
-    case Builtin::BI__sync_fetch_and_or_8:
-    case Builtin::BI__sync_fetch_and_or_16:
-    case Builtin::BI__sync_fetch_and_and:
-    case Builtin::BI__sync_fetch_and_and_1:
-    case Builtin::BI__sync_fetch_and_and_2:
-    case Builtin::BI__sync_fetch_and_and_4:
-    case Builtin::BI__sync_fetch_and_and_8:
-    case Builtin::BI__sync_fetch_and_and_16:
-    case Builtin::BI__sync_fetch_and_xor:
-    case Builtin::BI__sync_fetch_and_xor_1:
-    case Builtin::BI__sync_fetch_and_xor_2:
-    case Builtin::BI__sync_fetch_and_xor_4:
-    case Builtin::BI__sync_fetch_and_xor_8:
-    case Builtin::BI__sync_fetch_and_xor_16:
-    case Builtin::BI__sync_fetch_and_nand:
-    case Builtin::BI__sync_fetch_and_nand_1:
-    case Builtin::BI__sync_fetch_and_nand_2:
-    case Builtin::BI__sync_fetch_and_nand_4:
-    case Builtin::BI__sync_fetch_and_nand_8:
-    case Builtin::BI__sync_fetch_and_nand_16:
-    case Builtin::BI__sync_add_and_fetch:
-    case Builtin::BI__sync_add_and_fetch_1:
-    case Builtin::BI__sync_add_and_fetch_2:
-    case Builtin::BI__sync_add_and_fetch_4:
-    case Builtin::BI__sync_add_and_fetch_8:
-    case Builtin::BI__sync_add_and_fetch_16:
-    case Builtin::BI__sync_sub_and_fetch:
-    case Builtin::BI__sync_sub_and_fetch_1:
-    case Builtin::BI__sync_sub_and_fetch_2:
-    case Builtin::BI__sync_sub_and_fetch_4:
-    case Builtin::BI__sync_sub_and_fetch_8:
-    case Builtin::BI__sync_sub_and_fetch_16:
-    case Builtin::BI__sync_and_and_fetch:
-    case Builtin::BI__sync_and_and_fetch_1:
-    case Builtin::BI__sync_and_and_fetch_2:
-    case Builtin::BI__sync_and_and_fetch_4:
-    case Builtin::BI__sync_and_and_fetch_8:
-    case Builtin::BI__sync_and_and_fetch_16:
-    case Builtin::BI__sync_or_and_fetch:
-    case Builtin::BI__sync_or_and_fetch_1:
-    case Builtin::BI__sync_or_and_fetch_2:
-    case Builtin::BI__sync_or_and_fetch_4:
-    case Builtin::BI__sync_or_and_fetch_8:
-    case Builtin::BI__sync_or_and_fetch_16:
-    case Builtin::BI__sync_xor_and_fetch:
-    case Builtin::BI__sync_xor_and_fetch_1:
-    case Builtin::BI__sync_xor_and_fetch_2:
-    case Builtin::BI__sync_xor_and_fetch_4:
-    case Builtin::BI__sync_xor_and_fetch_8:
-    case Builtin::BI__sync_xor_and_fetch_16:
-    case Builtin::BI__sync_nand_and_fetch:
-    case Builtin::BI__sync_nand_and_fetch_1:
-    case Builtin::BI__sync_nand_and_fetch_2:
-    case Builtin::BI__sync_nand_and_fetch_4:
-    case Builtin::BI__sync_nand_and_fetch_8:
-    case Builtin::BI__sync_nand_and_fetch_16:
-    case Builtin::BI__sync_val_compare_and_swap:
-    case Builtin::BI__sync_val_compare_and_swap_1:
-    case Builtin::BI__sync_val_compare_and_swap_2:
-    case Builtin::BI__sync_val_compare_and_swap_4:
-    case Builtin::BI__sync_val_compare_and_swap_8:
-    case Builtin::BI__sync_val_compare_and_swap_16:
-    case Builtin::BI__sync_bool_compare_and_swap:
-    case Builtin::BI__sync_bool_compare_and_swap_1:
-    case Builtin::BI__sync_bool_compare_and_swap_2:
-    case Builtin::BI__sync_bool_compare_and_swap_4:
-    case Builtin::BI__sync_bool_compare_and_swap_8:
-    case Builtin::BI__sync_bool_compare_and_swap_16:
-    case Builtin::BI__sync_lock_test_and_set:
-    case Builtin::BI__sync_lock_test_and_set_1:
-    case Builtin::BI__sync_lock_test_and_set_2:
-    case Builtin::BI__sync_lock_test_and_set_4:
-    case Builtin::BI__sync_lock_test_and_set_8:
-    case Builtin::BI__sync_lock_test_and_set_16:
-    case Builtin::BI__sync_lock_release:
-    case Builtin::BI__sync_lock_release_1:
-    case Builtin::BI__sync_lock_release_2:
-    case Builtin::BI__sync_lock_release_4:
-    case Builtin::BI__sync_lock_release_8:
-    case Builtin::BI__sync_lock_release_16:
-    case Builtin::BI__sync_swap:
-    case Builtin::BI__sync_swap_1:
-    case Builtin::BI__sync_swap_2:
-    case Builtin::BI__sync_swap_4:
-    case Builtin::BI__sync_swap_8:
-    case Builtin::BI__sync_swap_16:
-      return SemaBuiltinAtomicOverloaded(TheCallResult);
-    case Builtin::BI__sync_synchronize:
-      Diag(TheCall->getBeginLoc(), diag::warn_atomic_implicit_seq_cst)
-          << TheCall->getCallee()->getSourceRange();
+    break;
+  }
+  case Builtin::BI__builtin_memset_inline: {
+    clang::Expr *SizeOp = TheCall->getArg(2);
+    // We warn about filling to `nullptr` pointers when `size` is greater than
+    // 0. When `size` is value dependent we cannot evaluate its value so we bail
+    // out.
+    if (SizeOp->isValueDependent())
       break;
-    case Builtin::BI__builtin_nontemporal_load:
-    case Builtin::BI__builtin_nontemporal_store:
-      return SemaBuiltinNontemporalOverloaded(TheCallResult);
-    case Builtin::BI__builtin_memcpy_inline: {
-      clang::Expr *SizeOp = TheCall->getArg(2);
-      // We warn about copying to or from `nullptr` pointers when `size` is
-      // greater than 0. When `size` is value dependent we cannot evaluate its
-      // value so we bail out.
-      if (SizeOp->isValueDependent())
-        break;
-      if (!SizeOp->EvaluateKnownConstInt(Context).isZero()) {
-        CheckNonNullArgument(*this, TheCall->getArg(0), TheCall->getExprLoc());
-        CheckNonNullArgument(*this, TheCall->getArg(1), TheCall->getExprLoc());
-      }
-      break;
-    }
-    case Builtin::BI__builtin_memset_inline: {
-      clang::Expr *SizeOp = TheCall->getArg(2);
-      // We warn about filling to `nullptr` pointers when `size` is greater than
-      // 0. When `size` is value dependent we cannot evaluate its value so we
-      // bail out.
-      if (SizeOp->isValueDependent())
-        break;
-      if (!SizeOp->EvaluateKnownConstInt(Context).isZero())
-        CheckNonNullArgument(*this, TheCall->getArg(0), TheCall->getExprLoc());
-      break;
-    }
+    if (!SizeOp->EvaluateKnownConstInt(Context).isZero())
+      CheckNonNullArgument(*this, TheCall->getArg(0), TheCall->getExprLoc());
+    break;
+  }
 #define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) \
   case Builtin::BI##ID: \
@@ -3050,7 +3046,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
 
   return TheCallResult;
-  }
+}
 
 // Get the valid immediate range for the specified NEON type code.
 static unsigned RFT(unsigned t, bool shift = false, bool ForceQuad = false) {
