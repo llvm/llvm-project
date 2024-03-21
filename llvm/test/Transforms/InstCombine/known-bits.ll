@@ -550,8 +550,7 @@ define i8 @test_icmp_or(i8 %n, i8 %n2, i8 %other) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[N_OR]], 32
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
 ;
@@ -577,8 +576,7 @@ define i8 @test_icmp_or2(i8 %n, i8 %n2, i8 %other) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
 entry:
   %n_or = or i8 %n, %n2
@@ -650,8 +648,7 @@ define i8 @test_icmp_and(i8 %n, i8 %n2, i8 %other) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_AND]], -33
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 32
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
 ;
@@ -677,8 +674,7 @@ define i8 @test_icmp_and2(i8 %n, i8 %n2, i8 %other) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 32
 ;
 entry:
   %n_and = and i8 %n, %n2
