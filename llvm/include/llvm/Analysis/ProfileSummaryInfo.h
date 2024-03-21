@@ -41,7 +41,7 @@ class MachineFunction;
 // units. This would require making this depend on BFI.
 class ProfileSummaryInfo {
 private:
-  const Module *M;
+  const Module &M;
   std::unique_ptr<ProfileSummary> Summary;
   void computeThresholds();
   // Count thresholds to answer isHotCount and isColdCount queries.
@@ -61,11 +61,8 @@ private:
   mutable DenseMap<int, uint64_t> ThresholdCache;
 
 public:
-  ProfileSummaryInfo(const Module &M) : M(&M) { refresh(); }
+  ProfileSummaryInfo(const Module &M);
   ProfileSummaryInfo(ProfileSummaryInfo &&Arg) = default;
-
-  /// If no summary is present, attempt to refresh.
-  void refresh();
 
   /// Returns true if profile summary is available.
   bool hasProfileSummary() const { return Summary != nullptr; }

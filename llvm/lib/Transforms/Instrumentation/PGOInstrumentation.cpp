@@ -65,6 +65,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -1948,7 +1949,8 @@ static bool annotateAllFunctions(
     function_ref<TargetLibraryInfo &(Function &)> LookupTLI,
     function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI,
-    ProfileSummaryInfo *PSI, bool IsCS) {
+    function_ref<ProfileSummaryInfo *(Module &)> AbandonAndRefreshPSI,
+    bool IsCS) {
   LLVM_DEBUG(dbgs() << "Read in profile counters: ");
   auto &Ctx = M.getContext();
   // Read the counter array from file.
@@ -1991,7 +1993,7 @@ static bool annotateAllFunctions(
   M.setProfileSummary(PGOReader->getSummary(IsCS).getMD(M.getContext()),
                       IsCS ? ProfileSummary::PSK_CSInstr
                            : ProfileSummary::PSK_Instr);
-  PSI->refresh();
+  auto *PSI = AbandonAndRefreshPSI(M);
 
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
@@ -2157,10 +2159,16 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
     return &FAM.getResult<BlockFrequencyAnalysis>(F);
   };
 
-  auto *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
+  auto AbandonAndRefreshPSI = [&MAM](Module &M) {
+    PreservedAnalyses PA = PreservedAnalyses::all();
+    PA.abandon<ProfileSummaryAnalysis>();
+    MAM.invalidate(M, PA);
+    return &MAM.getResult<ProfileSummaryAnalysis>(M);
+  };
 
   if (!annotateAllFunctions(M, ProfileFileName, ProfileRemappingFileName, *FS,
-                            LookupTLI, LookupBPI, LookupBFI, PSI, IsCS))
+                            LookupTLI, LookupBPI, LookupBFI,
+                            AbandonAndRefreshPSI, IsCS))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
