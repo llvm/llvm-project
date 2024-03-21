@@ -102,8 +102,8 @@ static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   if (Target.getName() == "X86") {
     DisassemblerTables Tables;
 
-    ArrayRef<const CodeGenInstruction*> numberedInstructions =
-      Target.getInstructionsByEnumValue();
+    ArrayRef<const CodeGenInstruction *> numberedInstructions =
+        Target.getInstructionsByEnumValue();
 
     for (unsigned i = 0, e = numberedInstructions.size(); i != e; ++i)
       RecognizableInstr::processInstr(Tables, *numberedInstructions[i], i);
@@ -130,6 +130,8 @@ static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
     PredicateNamespace = "ARM";
   EmitDecoder(Records, OS, PredicateNamespace);
 }
+
+cl::OptionCategory DisassemblerEmitterCat("Options for -gen-disassembler");
 
 static TableGen::Emitter::Opt X("gen-disassembler", EmitDisassembler,
                                 "Generate disassembler");

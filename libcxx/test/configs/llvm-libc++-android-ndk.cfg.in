@@ -16,7 +16,7 @@ config.substitutions.append(('%{flags}',
     '--sysroot @CMAKE_SYSROOT@' if '@CMAKE_SYSROOT@' else ''
 ))
 
-compile_flags = '-nostdinc++ -I %{include} -I %{target-include} -I %{libcxx}/test/support'
+compile_flags = '-nostdinc++ -I %{include-dir} -I %{target-include-dir} -I %{libcxx-dir}/test/support'
 if re.match(r'i686-linux-android(21|22|23)$', config.target_triple):
     # 32-bit x86 Android has a bug where the stack is sometimes misaligned.
     # The problem appears limited to versions before Android N (API 24) and only
@@ -31,7 +31,7 @@ config.substitutions.append(('%{compile_flags}', compile_flags))
 # libc++_shared.so because older Bionic dynamic loaders don't support rpath
 # lookup.
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib} -lc++_shared'
+    '-nostdlib++ -L %{lib-dir} -lc++_shared'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor}' +

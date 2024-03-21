@@ -27,6 +27,7 @@ namespace XCOFF {
 
 constexpr size_t FileNamePadSize = 6;
 constexpr size_t NameSize = 8;
+constexpr size_t AuxFileEntNameSize = 14;
 constexpr size_t FileHeaderSize32 = 20;
 constexpr size_t FileHeaderSize64 = 24;
 constexpr size_t AuxFileHeaderSize32 = 72;

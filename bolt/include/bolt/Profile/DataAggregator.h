@@ -225,10 +225,6 @@ private:
   /// Aggregation statistics
   uint64_t NumInvalidTraces{0};
   uint64_t NumLongRangeTraces{0};
-  /// Specifies how many samples were recorded in cold areas if we are dealing
-  /// with profiling data collected in a bolted binary. For LBRs, incremented
-  /// for the source of the branch to avoid counting cold activity twice (one
-  /// for source and another for destination).
   uint64_t NumColdSamples{0};
 
   /// Looks into system PATH for Linux Perf and set up the aggregator to use it
@@ -250,9 +246,13 @@ private:
   BinaryFunction *getBinaryFunctionContainingAddress(uint64_t Address) const;
 
   /// Retrieve the location name to be used for samples recorded in \p Func.
-  /// If doing BAT translation, link cold parts to the hot part names (used by
-  /// the original binary) and return true as second member.
-  std::pair<StringRef, bool> getLocationName(const BinaryFunction &Func) const;
+  /// If doing BAT translation, link cold parts to the hot part  names (used by
+  /// the original binary).  \p Count specifies how many samples were recorded
+  /// at that location, so we can tally total activity in cold areas if we are
+  /// dealing with profiling data collected in a bolted binary. For LBRs,
+  /// \p Count should only be used for the source of the branch to avoid
+  /// counting cold activity twice (one for source and another for destination).
+  StringRef getLocationName(BinaryFunction &Func, uint64_t Count);
 
   /// Semantic actions - parser hooks to interpret parsed perf samples
   /// Register a sample (non-LBR mode), i.e. a new hit at \p Address

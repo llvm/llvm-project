@@ -93,9 +93,16 @@ void mapSymbolAttributes(AbstractConverter &, const semantics::SymbolRef &,
 /// Instantiate the variables that appear in the specification expressions
 /// of the result of a function call. The instantiated variables are added
 /// to \p symMap.
-void mapCallInterfaceSymbols(AbstractConverter &,
-                             const Fortran::lower::CallerInterface &caller,
-                             SymMap &symMap);
+void mapCallInterfaceSymbolsForResult(
+    AbstractConverter &, const Fortran::lower::CallerInterface &caller,
+    SymMap &symMap);
+
+/// Instantiate the variables that appear in the specification expressions
+/// of a dummy argument of a procedure call. The instantiated variables are
+/// added to \p symMap.
+void mapCallInterfaceSymbolsForDummyArgument(
+    AbstractConverter &, const Fortran::lower::CallerInterface &caller,
+    SymMap &symMap, const Fortran::semantics::Symbol &dummySymbol);
 
 // TODO: consider saving the initial expression symbol dependence analysis in
 // in the PFT variable and dealing with the dependent symbols instantiation in
@@ -136,6 +143,12 @@ translateSymbolAttributes(mlir::MLIRContext *mlirContext,
                           const Fortran::semantics::Symbol &sym,
                           fir::FortranVariableFlagsEnum extraFlags =
                               fir::FortranVariableFlagsEnum::None);
+
+/// Translate the CUDA Fortran attributes of \p sym into the FIR CUDA attribute
+/// representation.
+fir::CUDADataAttributeAttr
+translateSymbolCUDADataAttribute(mlir::MLIRContext *mlirContext,
+                                 const Fortran::semantics::Symbol &sym);
 
 /// Map a symbol to a given fir::ExtendedValue. This will generate an
 /// hlfir.declare when lowering to HLFIR and map the hlfir.declare result to the

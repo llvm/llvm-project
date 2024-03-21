@@ -40,6 +40,11 @@ static llvm::Type* X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
     return llvm::Type::getX86_MMXTy(CGF.getLLVMContext());
   }
 
+  if (Constraint == "k") {
+    llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGF.getLLVMContext());
+    return llvm::FixedVectorType::get(Int1Ty, Ty->getScalarSizeInBits());
+  }
+
   // No operation needed
   return Ty;
 }
@@ -3013,6 +3018,10 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   Ty = getContext().getCanonicalType(Ty);
   ABIArgInfo AI = classifyArgumentType(Ty, 0, neededInt, neededSSE,
                                        /*isNamedArg*/false);
+
+  // Empty records are ignored for parameter passing purposes.
+  if (AI.isIgnore())
+    return CGF.CreateMemTemp(Ty);
 
   // AMD64-ABI 3.5.7p5: Step 1. Determine whether type may be passed
   // in the registers. If not go to step 7.

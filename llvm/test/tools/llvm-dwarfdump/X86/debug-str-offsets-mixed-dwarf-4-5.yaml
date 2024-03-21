@@ -1,0 +1,57 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-dwarfdump -debug-str-offsets -verify %t.o | FileCheck %s
+
+# CHECK: Verifying .debug_str_offsets...
+# CHECK: No errors
+
+# Check that when mixing standard DWARF 4 debug information with standard DWARF
+# 5 debug information, the verifier correctly interprets the debug_str_offsets
+# section as a standards-conforming DWARF 5 section.
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_str:
+    - 'cu1'
+    - 'cu2'
+  debug_str_offsets:
+    - Offsets:
+        - 0x0
+  debug_abbrev:
+    - Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x2
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strx1
+            - Attribute:       DW_AT_str_offsets_base
+              Form:            DW_FORM_sec_offset
+  debug_info:
+    - Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x4
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AbbrOffset:      0x0
+      AddrSize:        8
+      AbbrevTableID:   0
+      Entries:
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x0
+            - Value:           0x8 # str offsets base

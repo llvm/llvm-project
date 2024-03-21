@@ -13,7 +13,6 @@
 // UNSUPPORTED: no-filesystem
 
 // XFAIL: availability-fp_to_chars-missing
-// XFAIL: availability-print-missing
 
 // Bionic has minimal locale support, investigate this later.
 // XFAIL: LIBCXX-ANDROID-FIXME

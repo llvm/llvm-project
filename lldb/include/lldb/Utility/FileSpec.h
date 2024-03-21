@@ -13,7 +13,6 @@
 #include <optional>
 #include <string>
 
-#include "lldb/Utility/Checksum.h"
 #include "lldb/Utility/ConstString.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -72,12 +71,8 @@ public:
   /// \param[in] style
   ///     The style of the path
   ///
-  /// \param[in] checksum
-  ///     The MD5 checksum of the path.
-  ///
   /// \see FileSpec::SetFile (const char *path)
-  explicit FileSpec(llvm::StringRef path, Style style = Style::native,
-                    const Checksum &checksum = {});
+  explicit FileSpec(llvm::StringRef path, Style style = Style::native);
 
   explicit FileSpec(llvm::StringRef path, const llvm::Triple &triple);
 
@@ -367,11 +362,7 @@ public:
   ///
   /// \param[in] style
   ///     The style for the given path.
-  ///
-  /// \param[in] checksum
-  ///     The checksum for the given path.
-  void SetFile(llvm::StringRef path, Style style,
-               const Checksum &checksum = {});
+  void SetFile(llvm::StringRef path, Style style);
 
   /// Change the file specified with a new path.
   ///
@@ -414,19 +405,13 @@ public:
   ///   The lifetime of the StringRefs is tied to the lifetime of the FileSpec.
   std::vector<llvm::StringRef> GetComponents() const;
 
-  /// Return the checksum for this FileSpec or all zeros if there is none.
-  const Checksum &GetChecksum() const { return m_checksum; };
-
 protected:
   // Convenience method for setting the file without changing the style.
   void SetFile(llvm::StringRef path);
 
   /// Called anytime m_directory or m_filename is changed to clear any cached
   /// state in this object.
-  void PathWasModified() {
-    m_checksum = Checksum();
-    m_absolute = Absolute::Calculate;
-  }
+  void PathWasModified() { m_absolute = Absolute::Calculate; }
 
   enum class Absolute : uint8_t {
     Calculate,
@@ -439,9 +424,6 @@ protected:
 
   /// The unique'd filename path.
   ConstString m_filename;
-
-  /// The optional MD5 checksum of the file.
-  Checksum m_checksum;
 
   /// Cache whether this path is absolute.
   mutable Absolute m_absolute = Absolute::Calculate;

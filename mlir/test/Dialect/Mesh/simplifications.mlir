@@ -1,7 +1,7 @@
 // RUN: mlir-opt -test-mesh-simplifications %s | FileCheck %s
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = 4x2)
-mesh.cluster @mesh1(rank = 1, dim_sizes = 4)
+mesh.mesh @mesh0(shape = 4x2)
+mesh.mesh @mesh1(shape = 4)
 
 // Checks that `all_reduce(x) + all_reduce(y)` gets transformed to
 // `all_reduce(x + y)`.

@@ -339,5 +339,33 @@ TEST(VerifierTest, SwitchInst) {
   EXPECT_TRUE(verifyFunction(*F));
 }
 
+TEST(VerifierTest, CrossFunctionRef) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F1 = Function::Create(FTy, Function::ExternalLinkage, "foo1", M);
+  Function *F2 = Function::Create(FTy, Function::ExternalLinkage, "foo2", M);
+  BasicBlock *Entry1 = BasicBlock::Create(C, "entry", F1);
+  BasicBlock *Entry2 = BasicBlock::Create(C, "entry", F2);
+  Type *I32 = Type::getInt32Ty(C);
+
+  Value *Alloca = new AllocaInst(I32, 0, "alloca", Entry1);
+  ReturnInst::Create(C, Entry1);
+
+  Instruction *Store = new StoreInst(ConstantInt::get(I32, 0), Alloca, Entry2);
+  ReturnInst::Create(C, Entry2);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyModule(M, &ErrorOS));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with("Referring to an instruction in another function!"));
+
+  // Explicitly erase the store to avoid a use-after-free when the module is
+  // destroyed.
+  Store->eraseFromParent();
+}
+
 } // end anonymous namespace
 } // end namespace llvm

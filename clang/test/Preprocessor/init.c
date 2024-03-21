@@ -93,6 +93,70 @@
 // C99-NOT: __GXX_WEAK__
 // C99-NOT: __cplusplus
 //
+// RUN: %clang_cc1 -std=c17 -triple=x86_64-pc-win32 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C17-FMT %s
+// RUN: %clang_cc1 -std=c23 -triple=x86_64-pc-win32 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C23-FMT %s
+//
+// C17-FMT-NOT: __SIZE_FMTB__
+// C17-FMT-NOT: __SIZE_FMTb__
+// C17-FMT-NOT: __UINT8_FMTB__
+// C17-FMT-NOT: __UINT8_FMTb__
+// C17-FMT-NOT: __UINT16_FMTB__
+// C17-FMT-NOT: __UINT16_FMTb__
+// C17-FMT-NOT: __UINT32_FMTB__
+// C17-FMT-NOT: __UINT32_FMTb__
+// C17-FMT-NOT: __UINT64_FMTB__
+// C17-FMT-NOT: __UINT64_FMTb__
+// C17-FMT-NOT: __UINTMAX_FMTB__
+// C17-FMT-NOT: __UINTMAX_FMTb__
+// C17-FMT-NOT: __UINTPTR_FMTB__
+// C17-FMT-NOT: __UINTPTR_FMTb__
+// C17-FMT-NOT: __UINT_FAST16_FMTB__
+// C17-FMT-NOT: __UINT_FAST16_FMTb__
+// C17-FMT-NOT: __UINT_FAST32_FMTB__
+// C17-FMT-NOT: __UINT_FAST32_FMTb__
+// C17-FMT-NOT: __UINT_FAST64_FMTB__
+// C17-FMT-NOT: __UINT_FAST64_FMTb__
+// C17-FMT-NOT: __UINT_FAST8_FMTB__
+// C17-FMT-NOT: __UINT_FAST8_FMTb__
+// C17-FMT-NOT: __UINT_LEAST16_FMTB__
+// C17-FMT-NOT: __UINT_LEAST16_FMTb__
+// C17-FMT-NOT: __UINT_LEAST32_FMTB__
+// C17-FMT-NOT: __UINT_LEAST32_FMTb__
+// C17-FMT-NOT: __UINT_LEAST64_FMTB__
+// C17-FMT-NOT: __UINT_LEAST64_FMTb__
+// C17-FMT-NOT: __UINT_LEAST8_FMTB__
+// C17-FMT-NOT: __UINT_LEAST8_FMTb__
+// C23-FMT: #define __SIZE_FMTB__ "llB"
+// C23-FMT: #define __SIZE_FMTb__ "llb"
+// C23-FMT: #define __UINT16_FMTB__ "hB"
+// C23-FMT: #define __UINT16_FMTb__ "hb"
+// C23-FMT: #define __UINT32_FMTB__ "B"
+// C23-FMT: #define __UINT32_FMTb__ "b"
+// C23-FMT: #define __UINT64_FMTB__ "llB"
+// C23-FMT: #define __UINT64_FMTb__ "llb"
+// C23-FMT: #define __UINT8_FMTB__ "hhB"
+// C23-FMT: #define __UINT8_FMTb__ "hhb"
+// C23-FMT: #define __UINTMAX_FMTB__ "llB"
+// C23-FMT: #define __UINTMAX_FMTb__ "llb"
+// C23-FMT: #define __UINTPTR_FMTB__ "llB"
+// C23-FMT: #define __UINTPTR_FMTb__ "llb"
+// C23-FMT: #define __UINT_FAST16_FMTB__ "hB"
+// C23-FMT: #define __UINT_FAST16_FMTb__ "hb"
+// C23-FMT: #define __UINT_FAST32_FMTB__ "B"
+// C23-FMT: #define __UINT_FAST32_FMTb__ "b"
+// C23-FMT: #define __UINT_FAST64_FMTB__ "llB"
+// C23-FMT: #define __UINT_FAST64_FMTb__ "llb"
+// C23-FMT: #define __UINT_FAST8_FMTB__ "hhB"
+// C23-FMT: #define __UINT_FAST8_FMTb__ "hhb"
+// C23-FMT: #define __UINT_LEAST16_FMTB__ "hB"
+// C23-FMT: #define __UINT_LEAST16_FMTb__ "hb"
+// C23-FMT: #define __UINT_LEAST32_FMTB__ "B"
+// C23-FMT: #define __UINT_LEAST32_FMTb__ "b"
+// C23-FMT: #define __UINT_LEAST64_FMTB__ "llB"
+// C23-FMT: #define __UINT_LEAST64_FMTb__ "llb"
+// C23-FMT: #define __UINT_LEAST8_FMTB__ "hhB"
+// C23-FMT: #define __UINT_LEAST8_FMTb__ "hhb"
+//
 //
 // RUN: %clang_cc1 -std=c11 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s
 // RUN: %clang_cc1 -std=c1x -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s

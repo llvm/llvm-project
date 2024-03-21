@@ -24,10 +24,10 @@ Introduction
 
 }];
 
-  string Program = "flang";
+  string Program = "Flang";
   list<string> VisibilityMask = ["FlangOption"];
   list<string> IgnoreFlags = ["HelpHidden", "Unsupported", "Ignored"];
 }
 
-
+#define GENERATING_DOCS
 include "Options.td"

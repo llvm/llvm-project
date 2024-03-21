@@ -528,10 +528,14 @@ entry:
 ; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; This transformation should really happen only for stress mode.
-; OPT-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
-; OPT-NEXT: [[ZEXTB:%[a-zA-Z_0-9-]+]] = zext i32 %b to i64
-; OPT-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = add nuw i64 [[ZEXT64]], [[ZEXTB]]
-; OPT-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = trunc i64 [[IDX64]] to i32
+; STRESS-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
+; STRESS-NEXT: [[ZEXTB:%[a-zA-Z_0-9-]+]] = zext i32 %b to i64
+; STRESS-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = add nuw i64 [[ZEXT64]], [[ZEXTB]]
+; STRESS-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = trunc i64 [[IDX64]] to i32
+;
+; NONSTRESS-NEXT: [[ZEXT32:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
+; NONSTRESS-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nuw i32 [[ZEXT32]], %b
+; NONSTRESS-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = zext i32 [[RES32]] to i64
 ;
 ; DISABLE-NEXT: [[ZEXT32:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
 ; DISABLE-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nuw i32 [[ZEXT32]], %b
@@ -583,9 +587,13 @@ entry:
 ; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; This transformation should really happen only for stress mode.
-; OPT-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
-; OPT-NEXT: [[ZEXTB:%[a-zA-Z_0-9-]+]] = zext i32 %b to i64
-; OPT-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = add nuw i64 [[ZEXT64]], [[ZEXTB]]
+; STRESS-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
+; STRESS-NEXT: [[ZEXTB:%[a-zA-Z_0-9-]+]] = zext i32 %b to i64
+; STRESS-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = add nuw i64 [[ZEXT64]], [[ZEXTB]]
+;
+; NONSTRESS-NEXT: [[ZEXT32:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
+; NONSTRESS-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nuw i32 [[ZEXT32]], %b
+; NONSTRESS-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = zext i32 [[RES32]] to i64
 ;
 ; DISABLE-NEXT: [[ZEXT32:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
 ; DISABLE-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nuw i32 [[ZEXT32]], %b

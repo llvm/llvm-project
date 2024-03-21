@@ -3038,7 +3038,7 @@ ProgramStateRef RangeConstraintManager::setRange(ProgramStateRef State,
 
 //===------------------------------------------------------------------------===
 // assumeSymX methods: protected interface for RangeConstraintManager.
-//===------------------------------------------------------------------------===/
+//===------------------------------------------------------------------------===
 
 // The syntax for ranges below is mathematical, using [x, y] for closed ranges
 // and (x, y) for open ranges. These ranges are modular, corresponding with
@@ -3270,6 +3270,10 @@ void RangeConstraintManager::printJson(raw_ostream &Out, ProgramStateRef State,
 void RangeConstraintManager::printValue(raw_ostream &Out, ProgramStateRef State,
                                         SymbolRef Sym) {
   const RangeSet RS = getRange(State, Sym);
+  if (RS.isEmpty()) {
+    Out << "<empty rangeset>";
+    return;
+  }
   Out << RS.getBitWidth() << (RS.isUnsigned() ? "u:" : "s:");
   RS.dump(Out);
 }

@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1200 -start-before=amdgpu-unify-divergent-exit-nodes --verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SDAG %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1200 -start-before=amdgpu-unify-divergent-exit-nodes --verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-GISEL %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -start-before=amdgpu-unify-divergent-exit-nodes --verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SDAG %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1200 -start-before=amdgpu-unify-divergent-exit-nodes --verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-GISEL %s
 
 ; --------------------------------------------------------------------------------
 ; fminimum tests

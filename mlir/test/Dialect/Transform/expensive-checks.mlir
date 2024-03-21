@@ -25,7 +25,7 @@ module attributes {transform.with_named_sequence} {
         // expected-note @below {{invalidated by this transform op that consumes its operand #0}}
         test_consume_operand %1 : !transform.any_op
         // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}
-        test_print_remark_at_operand %0, "remark" : !transform.any_op
+        transform.debug.emit_remark_at %0, "remark" : !transform.any_op
       }
     }
     transform.yield
@@ -64,7 +64,7 @@ module attributes {transform.with_named_sequence} {
         %2 = replicate num(%0) %1 : !transform.any_op, !transform.any_op
         // expected-error @below {{a handle passed as operand #0 and consumed by this operation points to a payload entity more than once}}
         test_consume_operand %2 : !transform.any_op
-        test_print_remark_at_operand %0, "remark" : !transform.any_op
+        transform.debug.emit_remark_at %0, "remark" : !transform.any_op
       }
     }
     transform.yield
@@ -370,7 +370,7 @@ module attributes {transform.with_named_sequence} {
     // expected-note @below {{invalidated by this transform op that consumes its operand #0}}
     transform.test_consume_operand %0 : !transform.any_op
     // expected-error @below {{uses a handle associated with empty payload and invalidated by a previously executed transform op}}
-    transform.test_print_remark_at_operand %0, "remark" : !transform.any_op
+    transform.debug.emit_remark_at %0, "remark" : !transform.any_op
     transform.yield
   }
 }

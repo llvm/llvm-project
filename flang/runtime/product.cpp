@@ -123,7 +123,8 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(ProductReal10)(const Descriptor &x,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 10>>{x},
       "PRODUCT");
 }
-#elif LDBL_MANT_DIG == 113
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(ProductReal16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 16>(x, source, line, dim, mask,
@@ -154,7 +155,8 @@ void RTDEF(CppProductComplex10)(CppTypeFor<TypeCategory::Complex, 10> &result,
       mask, ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 10>>{x},
       "PRODUCT");
 }
-#elif LDBL_MANT_DIG == 113
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 void RTDEF(CppProductComplex16)(CppTypeFor<TypeCategory::Complex, 16> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {

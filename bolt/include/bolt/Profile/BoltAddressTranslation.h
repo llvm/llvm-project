@@ -16,6 +16,7 @@
 #include <map>
 #include <optional>
 #include <system_error>
+#include <unordered_map>
 
 namespace llvm {
 class raw_ostream;
@@ -85,7 +86,7 @@ public:
 
   /// Read the serialized address translation tables and load them internally
   /// in memory. Return a parse error if failed.
-  std::error_code parse(StringRef Buf);
+  std::error_code parse(raw_ostream &OS, StringRef Buf);
 
   /// Dump the parsed address translation tables
   void dump(raw_ostream &OS);
@@ -114,16 +115,38 @@ public:
   /// Save function and basic block hashes used for metadata dump.
   void saveMetadata(BinaryContext &BC);
 
-  /// True if a given \p Address is a function with translation table entry.
-  bool isBATFunction(uint64_t Address) const { return Maps.count(Address); }
+  /// Returns BB hash by function output address (after BOLT) and basic block
+  /// input offset.
+  size_t getBBHash(uint64_t FuncOutputAddress, uint32_t BBInputOffset) const;
 
   /// Returns BF hash by function output address (after BOLT).
   size_t getBFHash(uint64_t OutputAddress) const;
 
-  /// Returns the vector with input offsets and hashes of basic blocks in a
-  /// given function.
-  std::vector<std::pair<uint32_t, size_t>>
-  getBFBlocks(uint64_t OutputAddress) const;
+  /// True if a given \p Address is a function with translation table entry.
+  bool isBATFunction(uint64_t Address) const { return Maps.count(Address); }
+
+  /// Returns BB index by function output address (after BOLT) and basic block
+  /// input offset.
+  unsigned getBBIndex(uint64_t FuncOutputAddress, uint32_t BBInputOffset) const;
+
+  using BBHashMap = std::map<uint32_t, std::pair<unsigned, size_t>>;
+  /// Return a mapping from basic block input offset to hash and block index for a given function.
+  const BBHashMap &getBBHashMap(uint64_t OutputAddress) const {
+    return FuncHashes.at(OutputAddress).second;
+  }
+
+  static unsigned getBBIndex(const BBHashMap &BBMap, uint32_t BBInputOffset) {
+    return BBMap.at(BBInputOffset).first;
+  }
+
+  static size_t getBBHash(const BBHashMap &BBMap, uint32_t BBInputOffset) {
+    return BBMap.at(BBInputOffset).second;
+  }
+
+  /// Returns the maximum BB index for a given function.
+  size_t getNumBasicBlocks(uint64_t OutputAddress) const {
+    return NumBasicBlocksMap.at(OutputAddress);
+  }
 
 private:
   /// Helper to update \p Map by inserting one or more BAT entries reflecting
@@ -131,7 +154,7 @@ private:
   /// emitted for the start of the BB. More entries may be emitted to cover
   /// the location of calls or any instruction that may change control flow.
   void writeEntriesForBB(MapTy &Map, const BinaryBasicBlock &BB,
-                         uint64_t FuncAddress, uint64_t FuncInputAddress);
+                         uint64_t FuncAddress);
 
   /// Write the serialized address translation table for a function.
   template <bool Cold>
@@ -154,8 +177,11 @@ private:
 
   std::map<uint64_t, MapTy> Maps;
 
-  using BBHashMap = std::unordered_map<uint32_t, size_t>;
+  /// Map basic block input offset to a basic block index and hash pair.
   std::unordered_map<uint64_t, std::pair<size_t, BBHashMap>> FuncHashes;
+
+  /// Map a function to its basic blocks count
+  std::unordered_map<uint64_t, size_t> NumBasicBlocksMap;
 
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;

@@ -826,7 +826,7 @@ public:
     Version = utostr(major) + "." + utostr(minor);
     if (update != 0)
       Version += "." + utostr(update);
-    return std::string(std::string(Version.str()));
+    return std::string(std::string(Version));
   }
 
   /// If the input path is a .dSYM bundle (as created by the dsymutil tool),

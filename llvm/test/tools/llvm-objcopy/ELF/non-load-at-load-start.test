@@ -1,0 +1,118 @@
+## When the offset of a non-PT_LOAD segment (e.g. PT_INTERP) equals the offset
+## of a PT_LOAD segment, set the parent of the segment with a smaller alignment
+## to the segment with a larger alignment, ensuring that the offset is correctly
+## aligned.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t2
+# RUN: llvm-readelf -Sl %t2 | FileCheck %s
+
+# CHECK:       [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+# CHECK-NEXT:  [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0
+# CHECK-NEXT:  [ 1] .text             PROGBITS        0000000000201000 001000 000001 00      0   0  4
+# CHECK-NEXT:  [ 2] .interp           PROGBITS        0000000000202000 002000 00001c 00      0   0  1
+# CHECK-NEXT:  [ 3] .rodata           PROGBITS        0000000000202020 002020 000001 00      0   0  1
+# CHECK-NEXT:  [ 4] .tdata            PROGBITS        0000000000203000 003000 000001 00      0   0 4096
+# CHECK-NEXT:  [ 5] .relro_padding    NOBITS          0000000000203001 003001 000fff 00      0   0  1
+# CHECK-NEXT:  [ 6] .strtab           STRTAB          0000000000000000 003001 000001 00      0   0  1
+# CHECK-NEXT:  [ 7] .shstrtab         STRTAB          0000000000000000 003002 00003f 00      0   0  1
+
+# CHECK:     Program Headers:
+# CHECK-NEXT:  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK-NEXT:  PHDR           0x000040 0x0000000000200040 0x0000000000200040 0x0001c0 0x0001c0     0x8
+# CHECK-NEXT:  INTERP         0x002000 0x0000000000202000 0x0000000000202000 0x00001c 0x00001c     0x1
+# CHECK-NEXT:      [Requesting program interpreter: ]
+# CHECK-NEXT:  LOAD           0x000000 0x0000000000200000 0x0000000000200000 0x000200 0x000200     0x1000
+# CHECK-NEXT:  LOAD           0x001000 0x0000000000201000 0x0000000000201000 0x000001 0x000001     0x1000
+# CHECK-NEXT:  LOAD           0x002000 0x0000000000202000 0x0000000000202000 0x000021 0x000021     0x1000
+# CHECK-NEXT:  TLS            0x003000 0x0000000000203000 0x0000000000203000 0x000001 0x001000     0x1000
+# CHECK-NEXT:  GNU_RELRO      0x003000 0x0000000000203000 0x0000000000203000 0x000001 0x001000     0x1000
+# CHECK-NEXT:  LOAD           0x003000 0x0000000000203000 0x0000000000203000 0x000001 0x001000     0x1000
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_PHDR
+    VAddr:           0x200040
+    Align:           0x8
+    Offset:          0x40
+    FileSize:        0x1c0
+    MemSize:         0x1c0
+  - Type:            PT_INTERP
+    FirstSec:        .interp
+    LastSec:         .interp
+    ## The address equals the address of its containing PT_LOAD.
+    VAddr:           0x202000
+    Offset:          0x2000
+  - Type:            PT_LOAD
+    VAddr:           0x200000
+    Align:           0x1000
+    Offset:          0x0
+    FileSize:        0x200
+    MemSize:         0x200
+  - Type:            PT_LOAD
+    FirstSec:        .text
+    LastSec:         .text
+    VAddr:           0x201000
+    Align:           0x1000
+    Offset:          0x1000
+  - Type:            PT_LOAD
+    FirstSec:        .interp
+    LastSec:         .rodata
+    VAddr:           0x202000
+    Align:           0x1000
+    Offset:          0x2000
+  ## Intentionally place PT_TLS/PT_GNU_RELRO before PT_LOAD to test that we
+  ## correctly set parent segments.
+  - Type:            PT_TLS
+    FirstSec:        .tdata
+    LastSec:         .relro_padding
+    VAddr:           0x203000
+    Align:           0x1000
+    Offset:          0x3000
+  - Type:            PT_GNU_RELRO
+    FirstSec:        .tdata
+    LastSec:         .relro_padding
+    VAddr:           0x203000
+    Align:           0x1000
+    Offset:          0x3000
+  - Type:            PT_LOAD
+    FirstSec:        .tdata
+    LastSec:         .relro_padding
+    VAddr:           0x203000
+    Align:           0x1000
+    Offset:          0x3000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Address:         0x201000
+    AddressAlign:    0x4
+    Offset:          0x1000
+    Content:         C3
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Address:         0x202000
+    AddressAlign:    0x1
+    Offset:          0x2000
+    Size:            0x1C
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Address:         0x202020
+    AddressAlign:    0x1
+    Offset:          0x2020
+    Size:            1
+  - Name:            .tdata
+    Type:            SHT_PROGBITS
+    Address:         0x203000
+    AddressAlign:    0x1000
+    Offset:          0x3000
+    Size:            1
+  - Name:            .relro_padding
+    Type:            SHT_NOBITS
+    Address:         0x203001
+    AddressAlign:    0x1
+    Size:            0xFFF

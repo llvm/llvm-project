@@ -64,6 +64,12 @@ public:
   explicit _LIBCPP_HIDE_FROM_ABI simd(_Generator&& __g) noexcept
       : __s_(_Impl::__generate(std::forward<_Generator>(__g))) {}
 
+  // load constructor
+  template <class _Up, class _Flags, enable_if_t<__is_vectorizable_v<_Up> && is_simd_flag_type_v<_Flags>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI simd(const _Up* __mem, _Flags) {
+    _Impl::__load(__s_, _Flags::template __apply<simd>(__mem));
+  }
+
   // scalar access [simd.subscr]
   _LIBCPP_HIDE_FROM_ABI reference operator[](size_t __i) noexcept { return reference(__s_, __i); }
   _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const noexcept { return __s_.__get(__i); }

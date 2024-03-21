@@ -1,6 +1,6 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI  %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=cypress < %s | FileCheck -enable-var-scope -check-prefix=EG %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI  %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=r600 -mcpu=cypress < %s | FileCheck -enable-var-scope -check-prefix=EG %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 

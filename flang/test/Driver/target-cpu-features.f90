@@ -30,13 +30,18 @@
 ! RUN: | FileCheck %s -check-prefix=CHECK-AMDGPU-R600
 
 ! CHECK-A57: "-fc1" "-triple" "aarch64-unknown-linux-gnu"
-! CHECK-A57-SAME: "-target-cpu" "cortex-a57" "-target-feature" "+v8a" "-target-feature" "+aes" "-target-feature" "+crc" "-target-feature" "+fp-armv8" "-target-feature" "+sha2" "-target-feature" "+neon"
+! CHECK-A57-SAME: "-target-cpu" "cortex-a57"
+! CHECK-A57-SAME: "-target-feature" "+v8a" "-target-feature" "+aes" "-target-feature" "+crc" "-target-feature" "+fp-armv8" "-target-feature" "+sha2" "-target-feature" "+neon"
 
 ! CHECK-A76: "-fc1" "-triple" "aarch64-unknown-linux-gnu"
-! CHECK-A76-SAME: "-target-cpu" "cortex-a76" "-target-feature" "+v8.2a" "-target-feature" "+aes" "-target-feature" "+crc" "-target-feature" "+dotprod" "-target-feature" "+fp-armv8" "-target-feature" "+fullfp16" "-target-feature" "+lse" "-target-feature" "+ras" "-target-feature" "+rcpc" "-target-feature" "+rdm" "-target-feature" "+sha2" "-target-feature" "+neon" "-target-feature" "+ssbs"
+! CHECK-A76-SAME: "-target-cpu" "cortex-a76"
+! CHECK-A76-SAME: "-target-feature" "+v8.2a" "-target-feature" "+aes" "-target-feature" "+crc" "-target-feature" "+dotprod" "-target-feature" "+fp-armv8" "-target-feature" "+fullfp16" "-target-feature" "+lse" "-target-feature" "+ras" "-target-feature" "+rcpc" "-target-feature" "+rdm" "-target-feature" "+sha2" "-target-feature" "+neon" "-target-feature" "+ssbs"
 
 ! CHECK-ARMV9: "-fc1" "-triple" "aarch64-unknown-linux-gnu"
-! CHECK-ARMV9-SAME: "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9a" "-target-feature" "+sve" "-target-feature" "+sve2"
+! CHECK-ARMV9-SAME: "-target-cpu" "generic"
+! CHECK-ARMV9-SAME: "-target-feature" "+v9a"
+! CHECK-ARMV9-SAME: "-target-feature" "+sve"
+! CHECK-ARMV9-SAME: "-target-feature" "+sve2"
 
 ! CHECK-NO-A57: "-fc1" "-triple" "x86_64-unknown-linux-gnu"
 ! CHECK-NO-A57-NOT: cortex-a57

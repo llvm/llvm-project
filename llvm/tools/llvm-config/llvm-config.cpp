@@ -359,18 +359,18 @@ int main(int argc, char **argv) {
     {
       SmallString<256> Path(LLVM_INSTALL_INCLUDEDIR);
       sys::fs::make_absolute(ActivePrefix, Path);
-      ActiveIncludeDir = std::string(Path.str());
+      ActiveIncludeDir = std::string(Path);
     }
     {
       SmallString<256> Path(LLVM_TOOLS_INSTALL_DIR);
       sys::fs::make_absolute(ActivePrefix, Path);
-      ActiveBinDir = std::string(Path.str());
+      ActiveBinDir = std::string(Path);
     }
     ActiveLibDir = ActivePrefix + "/lib" + LLVM_LIBDIR_SUFFIX;
     {
       SmallString<256> Path(LLVM_INSTALL_PACKAGE_DIR);
       sys::fs::make_absolute(ActivePrefix, Path);
-      ActiveCMakeDir = std::string(Path.str());
+      ActiveCMakeDir = std::string(Path);
     }
     ActiveIncludeOption = "-I" + ActiveIncludeDir;
   }

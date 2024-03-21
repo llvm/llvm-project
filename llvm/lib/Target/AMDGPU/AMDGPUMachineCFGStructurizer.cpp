@@ -1721,7 +1721,7 @@ void AMDGPUMachineCFGStructurizer::insertMergePHI(MachineBasicBlock *IfBB,
                                             unsigned CodeSourceRegister,
                                             bool IsUndefIfSource) {
   // If this is the function exit block, we don't need a phi.
-  if (MergeBB->succ_begin() == MergeBB->succ_end()) {
+  if (MergeBB->succ_empty()) {
     return;
   }
   LLVM_DEBUG(dbgs() << "Merge PHI (" << printMBBReference(*MergeBB)
@@ -2292,7 +2292,7 @@ MachineBasicBlock *AMDGPUMachineCFGStructurizer::createIfRegion(
             MachineOperand::CreateReg(Reg, false, false, true);
         ArrayRef<MachineOperand> Cond(RegOp);
         LLVM_DEBUG(dbgs() << "RegionExitReg: ");
-        LLVM_DEBUG(Cond[0].print(dbgs(), TRI));
+        LLVM_DEBUG(RegOp.print(dbgs(), TRI));
         LLVM_DEBUG(dbgs() << "\n");
         TII->insertBranch(*RegionExit, CurrentRegion->getEntry(), RegionExit,
                           Cond, DebugLoc());
@@ -2796,10 +2796,7 @@ AMDGPUMachineCFGStructurizer::initializeSelectRegisters(MRT *MRT, unsigned Selec
 
 static void checkRegOnlyPHIInputs(MachineFunction &MF) {
   for (auto &MBBI : MF) {
-    for (MachineBasicBlock::instr_iterator I = MBBI.instr_begin(),
-                                           E = MBBI.instr_end();
-         I != E; ++I) {
-      MachineInstr &Instr = *I;
+    for (MachineInstr &Instr : MBBI.instrs()) {
       if (Instr.isPHI()) {
         int numPreds = getPHINumInputs(Instr);
         for (int i = 0; i < numPreds; ++i) {

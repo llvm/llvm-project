@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// UNSUPPORTED: target={{.*-windows.*}}, target={{.*-darwin.*}}, target={{.*}}-aix{{.*}}
+// UNSUPPORTED: target={{.*-windows.*}}, target={{.*}}-macosx{{.*}}, target={{.*-darwin.*}}, target={{.*}}-aix{{.*}}
 
 // Generate dummy fat object
 // RUN: %clang -O0 -target %itanium_abi_triple %s -c -o %t.host.o

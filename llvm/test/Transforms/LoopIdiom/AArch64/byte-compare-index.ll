@@ -2,6 +2,9 @@
 ; RUN: opt -aarch64-lit -aarch64-lit-verify -verify-dom-info -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s
 ; RUN: opt -aarch64-lit -simplifycfg -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s --check-prefix=LOOP-DEL
 ; RUN: opt -aarch64-lit -mtriple aarch64-unknown-linux-gnu -S < %s | FileCheck %s --check-prefix=NO-TRANSFORM
+; RUN: opt -p aarch64-lit -aarch64-lit-verify -verify-dom-info -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s
+; RUN: opt -passes='function(loop(aarch64-lit)),simplifycfg' -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s --check-prefix=LOOP-DEL
+; RUN: opt -p aarch64-lit -mtriple aarch64-unknown-linux-gnu -S < %s | FileCheck %s --check-prefix=NO-TRANSFORM
 
 define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 %len, i32 %extra, i32 %n) {
 ; CHECK-LABEL: define i32 @compare_bytes_simple(
@@ -780,7 +783,7 @@ define i32 @compare_bytes_extra_cmp(ptr %a, ptr %b, i32 %len, i32 %n, i32 %x) {
 ; CHECK-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[MISMATCH_END]] ], [ [[MISMATCH_RESULT]], [[WHILE_BODY:%.*]] ]
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[LEN_ADDR]], 1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[MISMATCH_RESULT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[MISMATCH_RESULT]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
@@ -788,11 +791,14 @@ define i32 @compare_bytes_extra_cmp(ptr %a, ptr %b, i32 %len, i32 %n, i32 %x) {
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP46:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
 ; CHECK-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP45]], [[TMP46]]
-; CHECK-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END]]
+; CHECK-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END_LOOPEXIT]]
 ; CHECK:       byte.compare:
+; CHECK-NEXT:    br label [[WHILE_END_LOOPEXIT]]
+; CHECK:       while.end.loopexit:
+; CHECK-NEXT:    [[INC_LCSSA1:%.*]] = phi i32 [ [[MISMATCH_RESULT]], [[WHILE_COND]] ], [ [[MISMATCH_RESULT]], [[WHILE_BODY]] ], [ [[MISMATCH_RESULT]], [[BYTE_COMPARE]] ]
 ; CHECK-NEXT:    br label [[WHILE_END]]
 ; CHECK:       while.end:
-; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[MISMATCH_RESULT]], [[WHILE_BODY]] ], [ [[MISMATCH_RESULT]], [[WHILE_COND]] ], [ [[X]], [[ENTRY:%.*]] ], [ [[MISMATCH_RESULT]], [[BYTE_COMPARE]] ]
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ [[INC_LCSSA1]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    ret i32 [[INC_LCSSA]]
 ;
 ; LOOP-DEL-LABEL: define i32 @compare_bytes_extra_cmp(
@@ -884,7 +890,7 @@ define i32 @compare_bytes_extra_cmp(ptr %a, ptr %b, i32 %len, i32 %n, i32 %x) {
 ; NO-TRANSFORM-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[PH]] ], [ [[INC:%.*]], [[WHILE_BODY:%.*]] ]
 ; NO-TRANSFORM-NEXT:    [[INC]] = add i32 [[LEN_ADDR]], 1
 ; NO-TRANSFORM-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
-; NO-TRANSFORM-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]]
+; NO-TRANSFORM-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
 ; NO-TRANSFORM:       while.body:
 ; NO-TRANSFORM-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INC]] to i64
 ; NO-TRANSFORM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
@@ -892,9 +898,12 @@ define i32 @compare_bytes_extra_cmp(ptr %a, ptr %b, i32 %len, i32 %n, i32 %x) {
 ; NO-TRANSFORM-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
 ; NO-TRANSFORM-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
 ; NO-TRANSFORM-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
-; NO-TRANSFORM-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END]]
+; NO-TRANSFORM-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END_LOOPEXIT]]
+; NO-TRANSFORM:       while.end.loopexit:
+; NO-TRANSFORM-NEXT:    [[INC_LCSSA1:%.*]] = phi i32 [ [[INC]], [[WHILE_COND]] ], [ [[INC]], [[WHILE_BODY]] ]
+; NO-TRANSFORM-NEXT:    br label [[WHILE_END]]
 ; NO-TRANSFORM:       while.end:
-; NO-TRANSFORM-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[WHILE_BODY]] ], [ [[INC]], [[WHILE_COND]] ], [ [[X]], [[ENTRY:%.*]] ]
+; NO-TRANSFORM-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ [[INC_LCSSA1]], [[WHILE_END_LOOPEXIT]] ]
 ; NO-TRANSFORM-NEXT:    ret i32 [[INC_LCSSA]]
 ;
 entry:
@@ -908,7 +917,7 @@ while.cond:
   %len.addr = phi i32 [ %len, %ph ], [ %inc, %while.body ]
   %inc = add i32 %len.addr, 1
   %cmp.not = icmp eq i32 %inc, %n
-  br i1 %cmp.not, label %while.end, label %while.body
+  br i1 %cmp.not, label %while.end.loopexit, label %while.body
 
 while.body:
   %idxprom = zext i32 %inc to i64
@@ -917,10 +926,14 @@ while.body:
   %arrayidx2 = getelementptr inbounds i8, ptr %b, i64 %idxprom
   %1 = load i8, ptr %arrayidx2
   %cmp.not2 = icmp eq i8 %0, %1
-  br i1 %cmp.not2, label %while.cond, label %while.end
+  br i1 %cmp.not2, label %while.cond, label %while.end.loopexit
+
+while.end.loopexit:
+  %inc.lcssa1 = phi i32 [ %inc, %while.cond ], [ %inc, %while.body ]
+  br label %while.end
 
 while.end:
-  %inc.lcssa = phi i32 [ %inc, %while.body ], [ %inc, %while.cond ], [ %x, %entry ]
+  %inc.lcssa = phi i32 [ %x, %entry ], [ %inc.lcssa1, %while.end.loopexit ]
   ret i32 %inc.lcssa
 }
 
@@ -1187,6 +1200,100 @@ while.end:
   %final_ptr = phi ptr [ %c, %while.body ], [ %d, %while.cond ]
   store i32 %inc.lcssa, ptr %final_ptr
   ret i32 %inc.lcssa
+}
+
+
+; Similar to @compare_bytes_simple, except in the while.end block we have an extra PHI
+; with unique values for each incoming block from the loop.
+define i32 @compare_bytes_simple3(ptr %a, ptr %b, ptr %c, i32 %d, i32 %len, i32 %n) {
+; CHECK-LABEL: define i32 @compare_bytes_simple3(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[D:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
+; CHECK:       while.cond:
+; CHECK-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[INC:%.*]], [[WHILE_BODY:%.*]] ]
+; CHECK-NEXT:    [[INC]] = add i32 [[LEN_ADDR]], 1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
+; CHECK:       while.body:
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INC]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END]]
+; CHECK:       while.end:
+; CHECK-NEXT:    [[FINAL_VAL:%.*]] = phi i32 [ [[D]], [[WHILE_BODY]] ], [ [[INC]], [[WHILE_COND]] ]
+; CHECK-NEXT:    store i32 [[FINAL_VAL]], ptr [[C]], align 4
+; CHECK-NEXT:    ret i32 [[FINAL_VAL]]
+;
+; LOOP-DEL-LABEL: define i32 @compare_bytes_simple3(
+; LOOP-DEL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[D:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; LOOP-DEL-NEXT:  entry:
+; LOOP-DEL-NEXT:    br label [[WHILE_COND:%.*]]
+; LOOP-DEL:       while.cond:
+; LOOP-DEL-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[INC:%.*]], [[WHILE_BODY:%.*]] ]
+; LOOP-DEL-NEXT:    [[INC]] = add i32 [[LEN_ADDR]], 1
+; LOOP-DEL-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; LOOP-DEL-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
+; LOOP-DEL:       while.body:
+; LOOP-DEL-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INC]] to i64
+; LOOP-DEL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
+; LOOP-DEL-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; LOOP-DEL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
+; LOOP-DEL-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; LOOP-DEL-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
+; LOOP-DEL-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END]]
+; LOOP-DEL:       while.end:
+; LOOP-DEL-NEXT:    [[FINAL_VAL:%.*]] = phi i32 [ [[D]], [[WHILE_BODY]] ], [ [[INC]], [[WHILE_COND]] ]
+; LOOP-DEL-NEXT:    store i32 [[FINAL_VAL]], ptr [[C]], align 4
+; LOOP-DEL-NEXT:    ret i32 [[FINAL_VAL]]
+;
+; NO-TRANSFORM-LABEL: define i32 @compare_bytes_simple3(
+; NO-TRANSFORM-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[D:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) {
+; NO-TRANSFORM-NEXT:  entry:
+; NO-TRANSFORM-NEXT:    br label [[WHILE_COND:%.*]]
+; NO-TRANSFORM:       while.cond:
+; NO-TRANSFORM-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[INC:%.*]], [[WHILE_BODY:%.*]] ]
+; NO-TRANSFORM-NEXT:    [[INC]] = add i32 [[LEN_ADDR]], 1
+; NO-TRANSFORM-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; NO-TRANSFORM-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
+; NO-TRANSFORM:       while.body:
+; NO-TRANSFORM-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INC]] to i64
+; NO-TRANSFORM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
+; NO-TRANSFORM-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; NO-TRANSFORM-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
+; NO-TRANSFORM-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; NO-TRANSFORM-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
+; NO-TRANSFORM-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END]]
+; NO-TRANSFORM:       while.end:
+; NO-TRANSFORM-NEXT:    [[FINAL_VAL:%.*]] = phi i32 [ [[D]], [[WHILE_BODY]] ], [ [[INC]], [[WHILE_COND]] ]
+; NO-TRANSFORM-NEXT:    store i32 [[FINAL_VAL]], ptr [[C]], align 4
+; NO-TRANSFORM-NEXT:    ret i32 [[FINAL_VAL]]
+;
+entry:
+  br label %while.cond
+
+while.cond:
+  %len.addr = phi i32 [ %len, %entry ], [ %inc, %while.body ]
+  %inc = add i32 %len.addr, 1
+  %cmp.not = icmp eq i32 %inc, %n
+  br i1 %cmp.not, label %while.end, label %while.body
+
+while.body:
+  %idxprom = zext i32 %inc to i64
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  %0 = load i8, ptr %arrayidx
+  %arrayidx2 = getelementptr inbounds i8, ptr %b, i64 %idxprom
+  %1 = load i8, ptr %arrayidx2
+  %cmp.not2 = icmp eq i8 %0, %1
+  br i1 %cmp.not2, label %while.cond, label %while.end
+
+while.end:
+  %final_val = phi i32 [ %d, %while.body ], [ %inc, %while.cond ]
+  store i32 %final_val, ptr %c
+  ret i32 %final_val
 }
 
 
