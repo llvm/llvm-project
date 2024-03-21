@@ -219,6 +219,9 @@ def grlenimm : Operand<GRLenVT>;
 def imm32 : Operand<GRLenVT> {
   let ParserMatchClass = ImmAsmOperand<"", 32, "">;
 }
+def imm64 : Operand<i64> {
+  let ParserMatchClass = ImmAsmOperand<"", 64, "">;
+}
 
 def uimm1 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>{
   let ParserMatchClass = UImmAsmOperand<1>;
@@ -2179,7 +2182,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in {
 def PseudoLI_W : Pseudo<(outs GPR:$rd), (ins imm32:$imm), [],
                         "li.w", "$rd, $imm">;
-def PseudoLI_D : Pseudo<(outs GPR:$rd), (ins grlenimm:$imm), [],
+def PseudoLI_D : Pseudo<(outs GPR:$rd), (ins imm64:$imm), [],
                         "li.d", "$rd, $imm">, Requires<[IsLA64]>;
 }
 

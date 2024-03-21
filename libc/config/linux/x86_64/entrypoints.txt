@@ -180,6 +180,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
     libc.src.stdlib.srand
+    libc.src.stdlib.strfromf
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
     libc.src.stdlib.strtol
@@ -197,6 +198,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdio.h entrypoints
     libc.src.stdio.remove
+    libc.src.stdio.rename
     libc.src.stdio.sprintf
     libc.src.stdio.snprintf
     libc.src.stdio.fprintf
@@ -429,12 +431,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nextafter
     libc.src.math.nextafterf
     libc.src.math.nextafterl
-    libc.src.math.nexttoward
-    libc.src.math.nexttowardf
-    libc.src.math.nexttowardl
     libc.src.math.nextdown
     libc.src.math.nextdownf
     libc.src.math.nextdownl
+    libc.src.math.nexttoward
+    libc.src.math.nexttowardf
+    libc.src.math.nexttowardl
     libc.src.math.nextup
     libc.src.math.nextupf
     libc.src.math.nextupl

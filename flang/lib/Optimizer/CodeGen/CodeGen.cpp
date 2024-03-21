@@ -410,8 +410,8 @@ protected:
       mlir::ConversionPatternRewriter &rewriter) const {
     auto thisPt = rewriter.saveInsertionPoint();
     mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
-    if (mlir::isa<mlir::omp::ReductionDeclareOp>(parentOp)) {
-      // ReductionDeclareOp has multiple child regions. We want to get the first
+    if (mlir::isa<mlir::omp::DeclareReductionOp>(parentOp)) {
+      // DeclareReductionOp has multiple child regions. We want to get the first
       // block of whichever of those regions we are currently in
       mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
       rewriter.setInsertionPointToStart(&parentRegion->front());

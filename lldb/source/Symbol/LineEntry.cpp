@@ -14,10 +14,8 @@
 using namespace lldb_private;
 
 LineEntry::LineEntry()
-    : range(), file_sp(std::make_shared<SupportFile>()),
-      original_file_sp(std::make_shared<SupportFile>()),
-      is_start_of_statement(0), is_start_of_basic_block(0), is_prologue_end(0),
-      is_epilogue_begin(0), is_terminal_entry(0) {}
+    : range(), is_start_of_statement(0), is_start_of_basic_block(0),
+      is_prologue_end(0), is_epilogue_begin(0), is_terminal_entry(0) {}
 
 void LineEntry::Clear() {
   range.Clear();
@@ -37,7 +35,7 @@ bool LineEntry::IsValid() const {
 }
 
 bool LineEntry::DumpStopContext(Stream *s, bool show_fullpaths) const {
-  const FileSpec &file = GetFile();
+  const FileSpec &file = file_sp->GetSpecOnly();
   if (file) {
     if (show_fullpaths)
       file.Dump(s->AsRawOstream());
@@ -70,7 +68,7 @@ bool LineEntry::Dump(Stream *s, Target *target, bool show_file,
       return false;
   }
   if (show_file)
-    *s << ", file = " << file_sp->GetSpecOnly();
+    *s << ", file = " << GetFile();
   if (line)
     s->Printf(", line = %u", line);
   if (column)
@@ -106,7 +104,7 @@ bool LineEntry::GetDescription(Stream *s, lldb::DescriptionLevel level,
                  Address::DumpStyleFileAddress);
     }
 
-    *s << ": " << file_sp->GetSpecOnly();
+    *s << ": " << GetFile();
 
     if (line) {
       s->Printf(":%u", line);

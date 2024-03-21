@@ -20,7 +20,6 @@ namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
-  using Sign = fputil::Sign;
 
   constexpr double FINAL_SIGN[2] = {1.0, -1.0};
   constexpr double SIGNED_PI_OVER_2[2] = {0x1.921fb54442d18p0,
@@ -37,8 +36,10 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
     double const_term = 0.0;
     if (LIBC_UNLIKELY(x_abs >= 0x4180'0000)) {
       // atan(+-Inf) = +-pi/2.
-      if (x_bits.is_inf())
-        return static_cast<float>(SIGNED_PI_OVER_2[sign.is_neg()]);
+      if (x_bits.is_inf()) {
+        volatile double sign_pi_over_2 = SIGNED_PI_OVER_2[sign.is_neg()];
+        return static_cast<float>(sign_pi_over_2);
+      }
       if (x_bits.is_nan())
         return x;
       // x >= 16

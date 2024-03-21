@@ -5042,8 +5042,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
 
   // If Op can't create undef/poison and none of its operands are undef/poison
   // then Op is never undef/poison.
-  // NOTE: TargetNodes should handle this in themselves in
-  // isGuaranteedNotToBeUndefOrPoisonForTargetNode.
+  // NOTE: TargetNodes can handle this in themselves in
+  // isGuaranteedNotToBeUndefOrPoisonForTargetNode or let
+  // TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode handle it.
   return !canCreateUndefOrPoison(Op, PoisonOnly, /*ConsiderFlags*/ true,
                                  Depth) &&
          all_of(Op->ops(), [&](SDValue V) {
@@ -9594,6 +9595,10 @@ SDValue SelectionDAG::simplifyShift(SDValue X, SDValue Y) {
   };
   if (ISD::matchUnaryPredicate(Y, isShiftTooBig, true))
     return getUNDEF(X.getValueType());
+
+  // shift i1/vXi1 X, Y --> X (any non-zero shift amount is undefined).
+  if (X.getValueType().getScalarType() == MVT::i1)
+    return X;
 
   return SDValue();
 }
