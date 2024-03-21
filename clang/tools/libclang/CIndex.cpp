@@ -2122,7 +2122,7 @@ public:
   void VisitBlockExpr(const BlockExpr *B);
   void VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   void VisitCompoundStmt(const CompoundStmt *S);
-  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) { /* Do nothing. */
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) { /* Do nothing. */ 
   }
   void VisitMSDependentExistsStmt(const MSDependentExistsStmt *S);
   void VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E);
@@ -9726,4 +9726,32 @@ enum CXUnaryOperatorKind clang_getCursorUnaryOperatorKind(CXCursor cursor) {
   }
 
   return CXUnaryOperator_Invalid;
+}
+
+enum CXCallExprKind clang_getCursorCallExprKind(CXCursor cursor) {
+  if (clang_isExpression(cursor.kind)) {
+    const Expr *expr = getCursorExpr(cursor);
+
+    switch (expr->getStmtClass()) {
+    case Stmt::CallExprClass:
+      return CXCallExpr_Default;
+    case Stmt::CXXOperatorCallExprClass:
+      return CXCallExpr_CXXOperatorCallExpr;
+    case Stmt::CXXMemberCallExprClass:
+      return CXCallExpr_CXXMemberCallExpr;
+    case Stmt::CUDAKernelCallExprClass:
+      return CXCallExpr_CUDAKernelCallExpr;
+    case Stmt::CXXConstructExprClass:
+      return CXCallExpr_CXXConstructExpr;
+    case Stmt::CXXInheritedCtorInitExprClass:
+      return CXCallExpr_CXXInheritedCtorInitExpr;
+    case Stmt::CXXTemporaryObjectExprClass:
+      return CXCallExpr_CXXTemporaryObjectExpr;
+    case Stmt::CXXUnresolvedConstructExprClass:
+      return CXCallExpr_CXXUnresolvedConstructExpr;
+    case Stmt::UserDefinedLiteralClass:
+      return CXCallExpr_UserDefinedLiteral;
+    }
+  }
+  return CXCallExpr_Invalid;
 }

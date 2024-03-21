@@ -6664,6 +6664,52 @@ CINDEX_LINKAGE enum CXUnaryOperatorKind
 clang_getCursorUnaryOperatorKind(CXCursor cursor);
 
 /**
+ * Describes the kind of CallExpr.
+ */
+enum CXCallExprKind {
+  /** Not a CallExpr. */
+  CXCallExpr_Invalid = 0,
+  /** Simple C function call. */
+  CXCallExpr_Default,
+  /** Call to overloaded operator using operator syntax. */
+  CXCallExpr_CXXOperatorCallExpr,
+  /**
+   * Call to a member function written with member call syntax or
+   * normal function-call syntax within a member function.
+   */
+  CXCallExpr_CXXMemberCallExpr,
+  /** Call to a CUDA kernel function. */
+  CXCallExpr_CUDAKernelCallExpr,
+  /** Call to a C++ constructor. */
+  CXCallExpr_CXXConstructExpr,
+  /**
+   * Call to an inherited base class constructor from an
+   * inheriting constructor. Implicitly forwards arguments.
+   */
+  CXCallExpr_CXXInheritedCtorInitExpr,
+  /**
+   * C++ functional cast expression building a temporary object.
+   */
+  CXCallExpr_CXXTemporaryObjectExpr,
+  /**
+   * Explicit type conversion using functional notation, unresolved
+   * due to type-dependency.
+   */
+  CXCallExpr_CXXUnresolvedConstructExpr,
+  /**
+   * Call to a user-defined literal.
+   */
+  CXCallExpr_UserDefinedLiteral,
+};
+
+/**
+ *  Retrieve the detailed kind of a call expression.
+ *
+ *  If this cursor is not a CallExpr then returns Invalid.
+ */
+CINDEX_LINKAGE enum CXCallExprKind clang_getCursorCallExprKind(CXCursor cursor);
+
+/**
  * @}
  */
 

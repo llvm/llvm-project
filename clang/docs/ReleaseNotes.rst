@@ -509,6 +509,8 @@ clang-format
 libclang
 --------
 
+- Added ``CXCallExprKind`` and ``clang_getCursorCallExprKind``.
+
 Static Analyzer
 ---------------
 

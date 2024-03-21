@@ -1172,6 +1172,30 @@ TEST_F(LibclangParseTest, UnaryOperator) {
   });
 }
 
+TEST_F(LibclangParseTest, CallExpr){
+  std::string Main = "main.cpp";
+  const char testSource[] = R"cpp(
+struct X{
+  int operator+(int) const;
+};
+
+int x = X() + 1;
+)cpp";
+  WriteFile(Main, testSource);
+  ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0, nullptr,
+                                       0, TUFlags);
+
+  Traverse([](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
+    if (cursor.kind == CXCursor_CallExpr) {
+      EXPECT_EQ(clang_getCursorCallExprKind(cursor),
+                CXCallExpr_CXXOperatorCallExpr);
+      return CXChildVisit_Break;
+    }
+
+    return CXChildVisit_Recurse;
+  });
+}
+
 TEST_F(LibclangParseTest, VisitStaticAssertDecl_noMessage) {
   const char testSource[] = R"cpp(static_assert(true))cpp";
   std::string fileName = "main.cpp";
