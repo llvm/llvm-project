@@ -59,8 +59,8 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
 
 # Linalg Dialect in MLIR.
-/mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache
+/mlir/include/mlir/Dialect/Linalg/* @dcaballe @nicolasvasilache
+/mlir/lib/Dialect/Linalg/* @dcaballe @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
@@ -77,14 +77,14 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/**/*SME* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*SVE* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*VectorInterfaces* @dcaballe @nicolasvasilache
-/mlir/**/*VectorToSCF* @banach-space @dcaballe @nicolasvasilache @matthias-springer
+/mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
 /mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
-/mlir/include/mlir/Dialect/Vector @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/**/*EmulateNarrowType* @hanhanW
+/mlir/include/mlir/Dialect/Vector/* @dcaballe @nicolasvasilache
+/mlir/lib/Dialect/Vector/* @dcaballe @nicolasvasilache
 /mlir/lib/Dialect/Vector/Transforms/* @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
+/mlir/**/*EmulateNarrowType* @dcaballe @hanhanW
 
 # Presburger library in MLIR
 /mlir/**/*Presburger* @Groverkss @Superty
