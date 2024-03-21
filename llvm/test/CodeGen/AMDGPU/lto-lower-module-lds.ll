@@ -38,7 +38,7 @@
 ; CHECK: ModulePass Manager
 ; CHECK:   Lower uses of LDS variables from non-kernel functions
 
-@lds = internal unnamed_addr addrspace(3) global i32 undef, align 4
+@lds = internal unnamed_addr addrspace(3) global i32 poison, align 4
 
 define amdgpu_kernel void @test() {
 entry:
