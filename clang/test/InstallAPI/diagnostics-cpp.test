@@ -22,8 +22,7 @@ CHECK-NEXT: CPP.h:6:7: error: dynamic library symbol '(weak-def) Bar::init()' is
 CHECK-NEXT:   int init();
 CHECK-NEXT:       ^
 CHECK-NEXT: warning: violations found for arm64
-CHECK-NEXT: error: no declaration found for exported symbol 'int foo<unsigned int>(unsigned int)' in dyn
-amic library
+CHECK-NEXT: error: no declaration found for exported symbol 'int foo<unsigned int>(unsigned int)' in dynamic library
 
 //--- inputs.json.in
 {

@@ -519,24 +519,27 @@ void DylibVerifier::VerifierContext::emitDiag(
 // header files because they can be generated as part of an implementation
 // file.
 // InstallAPI doesn't warn about weak-defined RTTI, because this doesn't affect
-// linking and so can be ignored in text files.
+// static linking and so can be ignored for text-api files.
 static bool shouldIgnoreCpp(StringRef Name, bool IsWeakDef) {
   return (IsWeakDef &&
           (Name.starts_with("__ZTI") || Name.starts_with("__ZTS")));
 }
 void DylibVerifier::visitSymbolInDylib(const Record &R, SymbolContext &SymCtx) {
+  // Undefined symbols should not be in InstallAPI generated text-api files.
   if (R.isUndefined()) {
     updateState(Result::Valid);
     return;
   }
+
+  // Internal symbols should not be in InstallAPI generated text-api files.
   if (R.isInternal()) {
     updateState(Result::Valid);
     return;
   }
 
-  const StringRef SymbolName(SymCtx.SymbolName);
   // Allow zippered symbols with potentially mismatching availability
-  // between macOS and macCatalyst in the final text file.
+  // between macOS and macCatalyst in the final text-api file.
+  const StringRef SymbolName(SymCtx.SymbolName);
   if (const Symbol *Sym = Exports->findSymbol(SymCtx.Kind, SymCtx.SymbolName,
                                               SymCtx.ObjCIFKind)) {
     if (Sym->hasArchitecture(Ctx.Target.Arch)) {
@@ -552,6 +555,9 @@ void DylibVerifier::visitSymbolInDylib(const Record &R, SymbolContext &SymCtx) {
 
   // All checks at the point classify as some kind of violation that should be
   // reported.
+
+  // Regardless of verification mode, error out on mismatched special linker
+  // symbols.
   if (SymbolName.starts_with("$ld$")) {
     Ctx.emitDiag([&]() {
       Ctx.Diag->Report(diag::err_header_symbol_missing)
@@ -561,6 +567,7 @@ void DylibVerifier::visitSymbolInDylib(const Record &R, SymbolContext &SymCtx) {
     return;
   }
 
+  // Missing declarations for exported symbols are hard errors on Pedantic mode.
   if (Mode == VerificationMode::Pedantic) {
     Ctx.emitDiag([&]() {
       Ctx.Diag->Report(diag::err_header_symbol_missing)
@@ -570,6 +577,8 @@ void DylibVerifier::visitSymbolInDylib(const Record &R, SymbolContext &SymCtx) {
     return;
   }
 
+  // Missing declarations for exported symbols are warnings on ErrorsAndWarnings
+  // mode.
   if (Mode == VerificationMode::ErrorsAndWarnings) {
     Ctx.emitDiag([&]() {
       Ctx.Diag->Report(diag::warn_header_symbol_missing)
@@ -579,6 +588,8 @@ void DylibVerifier::visitSymbolInDylib(const Record &R, SymbolContext &SymCtx) {
     return;
   }
 
+  // Missing declarations are dropped for ErrorsOnly mode. It is the last
+  // remaining mode.
   updateState(Result::Ignore);
   return;
 }
