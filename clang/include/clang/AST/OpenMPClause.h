@@ -6050,6 +6050,11 @@ public:
     return getTrailingObjects<Expr *>()[2 * varlist_size()];
   }
 
+  /// Fetches Expr * of iterator modifier.
+  Expr *getIteratorModifier() const {
+    return getTrailingObjects<Expr *>()[2 * varlist_size()];
+  }
+
   /// Fetches mapping kind for the clause.
   OpenMPMapClauseKind getMapType() const LLVM_READONLY { return MapType; }
 
