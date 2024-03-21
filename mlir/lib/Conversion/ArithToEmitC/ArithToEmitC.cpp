@@ -55,6 +55,50 @@ public:
   }
 };
 
+template <typename ArithOp, typename EmitCOp>
+class IntegerOpConversion final : public OpConversionPattern<ArithOp> {
+public:
+  using OpConversionPattern<ArithOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ArithOp op, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type type = this->getTypeConverter()->convertType(op.getType());
+    if (!isa_and_nonnull<IntegerType, IndexType>(type)) {
+      return rewriter.notifyMatchFailure(op, "expected integer type");
+    }
+
+    Value lhs = adaptor.getLhs();
+    Value rhs = adaptor.getRhs();
+    Type arithmeticType = type;
+    if ((type.isSignlessInteger() || type.isSignedInteger()) &&
+        !bitEnumContainsAll(op.getOverflowFlags(),
+                            arith::IntegerOverflowFlags::nsw)) {
+      // If the C type is signed and the op doesn't guarantee "No Signed Wrap",
+      // we compute in unsigned integers to avoid UB.
+      arithmeticType = rewriter.getIntegerType(type.getIntOrFloatBitWidth(),
+                                               /*isSigned=*/false);
+    }
+    if (arithmeticType != type) {
+      lhs = rewriter.template create<emitc::CastOp>(op.getLoc(), arithmeticType,
+                                                    lhs);
+      rhs = rewriter.template create<emitc::CastOp>(op.getLoc(), arithmeticType,
+                                                    rhs);
+    }
+
+    Value result = rewriter.template create<EmitCOp>(op.getLoc(),
+                                                     arithmeticType, lhs, rhs);
+
+    if (arithmeticType != type) {
+      result =
+          rewriter.template create<emitc::CastOp>(op.getLoc(), type, result);
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 class SelectOpConversion : public OpConversionPattern<arith::SelectOp> {
 public:
   using OpConversionPattern<arith::SelectOp>::OpConversionPattern;
@@ -96,9 +140,9 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     ArithOpConversion<arith::DivFOp, emitc::DivOp>,
     ArithOpConversion<arith::MulFOp, emitc::MulOp>,
     ArithOpConversion<arith::SubFOp, emitc::SubOp>,
-    ArithOpConversion<arith::AddIOp, emitc::AddOp>,
-    ArithOpConversion<arith::MulIOp, emitc::MulOp>,
-    ArithOpConversion<arith::SubIOp, emitc::SubOp>,
+    IntegerOpConversion<arith::AddIOp, emitc::AddOp>,
+    IntegerOpConversion<arith::MulIOp, emitc::MulOp>,
+    IntegerOpConversion<arith::SubIOp, emitc::SubOp>,
     SelectOpConversion
   >(typeConverter, ctx);
   // clang-format on
