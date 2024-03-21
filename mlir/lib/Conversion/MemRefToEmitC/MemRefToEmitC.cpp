@@ -41,6 +41,9 @@ struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
     }
 
     auto resultTy = getTypeConverter()->convertType(op.getType());
+    if (!resultTy) {
+      return rewriter.notifyMatchFailure(op.getLoc(), "cannot convert type");
+    }
     auto noInit = emitc::OpaqueAttr::get(getContext(), "");
     rewriter.replaceOpWithNewOp<emitc::VariableOp>(op, resultTy, noInit);
     return success();
