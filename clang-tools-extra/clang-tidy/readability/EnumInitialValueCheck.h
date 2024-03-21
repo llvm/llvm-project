@@ -13,8 +13,8 @@
 
 namespace clang::tidy::readability {
 
-/// Detects explicit initialization of a part of enumerators in an enumeration, and
-/// relying on compiler to initialize the others.
+/// Detects explicit initialization of a part of enumerators in an enumeration,
+/// and relying on compiler to initialize the others.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/enum-initial-value.html

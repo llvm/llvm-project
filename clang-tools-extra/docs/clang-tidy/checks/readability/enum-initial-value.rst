@@ -16,6 +16,7 @@ In an enumeration, the following three cases are accepted.
 3. all of enumerators are explicit initialized.
 
 .. code-block:: c++
+
   // valid, none of enumerators are initialized.
   enum A {
     e0,
