@@ -48,7 +48,7 @@ namespace I {
   
   namespace A2 = A1;
 
-  namespace A3::extra::specifiers = A2;  // expected-error {{unexpected nested name specifier}}
+  namespace A3::extra::specifiers = A2;  // expected-error {{alias must be a single identifier}}
 }
 
 int f() {

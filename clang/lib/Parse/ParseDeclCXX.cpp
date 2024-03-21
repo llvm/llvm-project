@@ -141,7 +141,10 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
       return nullptr;
     }
     if (!ExtraNSs.empty()) {
-      Diag(IdentLoc, diag::err_unexpected_qualified_namespace_alias);
+      Diag(ExtraNSs.front().NamespaceLoc,
+           diag::err_unexpected_qualified_namespace_alias)
+          << SourceRange(ExtraNSs.front().NamespaceLoc,
+                         ExtraNSs.back().IdentLoc);
       SkipUntil(tok::semi);
       return nullptr;
     }
