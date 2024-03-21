@@ -796,10 +796,10 @@ def G_FMAXNUM : GenericInstruction {
 }
 
 // FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimumNumber or
-// maximumNumber on two values, following the IEEE-754 2019
-// definition. This differs from FMINNUM/FMAXNUM in the handling of
-// signaling NaNs. If one input is a signaling NaN, returns a quiet
-// NaN. These treat -0 as ordered less than +0.
+// maximumNumber on two values. This differs from FMINNUM/FMAXNUM in
+// the handling of signaling NaNs. If one input is a signaling NaN,
+// returns a quiet NaN (as per IEEE-754 2008). These treat -0 as
+// ordered less than +0 (as-per IEEE-754 2019).
 def G_FMINNUM_IEEE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);

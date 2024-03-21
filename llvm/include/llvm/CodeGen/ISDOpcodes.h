@@ -972,10 +972,15 @@ enum NodeType {
   FMAXNUM,
 
   /// FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimumNumber or
-  /// maximumNumber on two values, following the IEEE-754 2019 definition. This
-  /// differs from FMINNUM/FMAXNUM in the handling of signaling NaNs. If one
-  /// input is a signaling NaN, returns a quiet NaN. These treat -0 as ordered
-  /// less than +0.
+  /// maximumNumber on two values, following IEEE-754 definitions. This differs
+  /// from FMINNUM/FMAXNUM in the handling of signaling NaNs, and signed zero.
+  ///
+  /// If one input is a signaling NaN, returns a quiet NaN. This matches
+  /// IEEE-754 2008's minnum/maxnum for signaling NaNs (which differs from //
+  /// 2019).
+  ///
+  /// These treat -0 / as ordered less than +0, matching the behavior of
+  /// IEEE-754 2019's minimumNumber/maximumNumber
   FMINNUM_IEEE,
   FMAXNUM_IEEE,
 
