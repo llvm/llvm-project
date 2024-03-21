@@ -3717,12 +3717,11 @@ private:
           builder.getContext(), fir::CUDADataTransferKind::HostDevice);
       // device = host
       if (!rhs.isVariable()) {
-        auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, rhs);
-        builder.create<hlfir::AssignOp>(loc, rhs, temp, false, false);
-        builder.create<fir::CUDADataTransferOp>(loc, temp, lhs,
+        auto associate = hlfir::genAssociateExpr(
+            loc, builder, rhs, rhs.getType(), ".cuf_host_tmp");
+        builder.create<fir::CUDADataTransferOp>(loc, associate.getBase(), lhs,
                                                 transferKindAttr);
-        if (mlir::isa<fir::HeapType>(temp.getType()))
-          builder.create<fir::FreeMemOp>(loc, temp);
+        builder.create<hlfir::EndAssociateOp>(loc, associate);
       } else {
         builder.create<fir::CUDADataTransferOp>(loc, rhs, lhs,
                                                 transferKindAttr);
