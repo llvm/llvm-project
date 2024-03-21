@@ -136,8 +136,7 @@ define { i32, i1 } @fold_with_distjoin_or(i32 %x) {
 
 define { i32, i1 } @fold_with_disjoint_or2(i32 %x) {
 ; CHECK-LABEL: @fold_with_disjoint_or2(
-; CHECK-NEXT:    [[A:%.*]] = or disjoint i32 [[X:%.*]], 100
-; CHECK-NEXT:    [[B:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[A]], i32 27)
+; CHECK-NEXT:    [[B:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X:%.*]], i32 127)
 ; CHECK-NEXT:    ret { i32, i1 } [[B]]
 ;
   %a = or disjoint i32 %x, 100
