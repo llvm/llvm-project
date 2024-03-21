@@ -198,8 +198,9 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       if (!P.Info.has_value())
         continue;
       mcdxbc::PSVRuntimeInfo PSV;
-      memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v2::RuntimeInfo));
+      memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v3::RuntimeInfo));
       PSV.Resources = P.Info->Resources;
+      PSV.EntryName = P.Info->EntryName;
 
       for (auto El : P.Info->SigInputElements)
         PSV.InputElements.push_back(mcdxbc::PSVSignatureElement{
