@@ -502,6 +502,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_sign",
+    hdrs = ["src/__support/sign.h"],
+    deps = [
+        ":__support_macros_properties_types",
+    ],
+)
+
+libc_support_library(
     name = "__support_uint128",
     hdrs = ["src/__support/UInt128.h"],
     deps = [
@@ -734,6 +742,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
+        ":__support_sign",
         ":__support_cpp_type_traits",
         ":__support_libc_assert",
         ":__support_macros_attributes",
