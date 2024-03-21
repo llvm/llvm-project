@@ -147,6 +147,17 @@ void Exceptions() {
     throw; // expected-error{{invalid throw out of OpenACC Compute Construct}}
   }
 
+#pragma acc serial
+  for(int i = 0; i < 5; ++i) {
+    throw; // expected-error{{invalid throw out of OpenACC Compute Construct}}
+  }
+
+#pragma acc kernels
+  for(int i = 0; i < 5; ++i) {
+    throw; // expected-error{{invalid throw out of OpenACC Compute Construct}}
+  }
+
+
 #pragma acc parallel
   for(int i = 0; i < 5; ++i) {
     try {

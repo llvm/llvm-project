@@ -95,6 +95,16 @@ void lambda_value_capture_copy(T&& t) {
   [&,t]() { T other = std::forward<T>(t); };
 }
 
+template <typename X>
+void use(const X &x) {}
+
+template <typename X, typename Y>
+void foo(X &&x, Y &&y) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: forwarding reference parameter 'y' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+    use(std::forward<X>(x));
+    use(y);
+}
+
 } // namespace positive_cases
 
 namespace negative_cases {

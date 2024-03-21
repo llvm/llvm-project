@@ -4573,7 +4573,7 @@ bool AMDGPUInstructionSelector::checkFlatScratchSVSSwizzleBug(
   // voffset to (soffset + inst_offset).
   auto VKnown = KB->getKnownBits(VAddr);
   auto SKnown = KnownBits::computeForAddSub(
-      true, false, KB->getKnownBits(SAddr),
+      /*Add=*/true, /*NSW=*/false, /*NUW=*/false, KB->getKnownBits(SAddr),
       KnownBits::makeConstant(APInt(32, ImmOffset)));
   uint64_t VMax = VKnown.getMaxValue().getZExtValue();
   uint64_t SMax = SKnown.getMaxValue().getZExtValue();

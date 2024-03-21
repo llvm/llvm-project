@@ -94,34 +94,35 @@ struct Atan2OpConversion : public OpConversionPattern<complex::Atan2Op> {
 
     auto type = cast<ComplexType>(op.getType());
     Type elementType = type.getElementType();
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
 
     Value lhs = adaptor.getLhs();
     Value rhs = adaptor.getRhs();
 
-    Value rhsSquared = b.create<complex::MulOp>(type, rhs, rhs);
-    Value lhsSquared = b.create<complex::MulOp>(type, lhs, lhs);
+    Value rhsSquared = b.create<complex::MulOp>(type, rhs, rhs, fmf);
+    Value lhsSquared = b.create<complex::MulOp>(type, lhs, lhs, fmf);
     Value rhsSquaredPlusLhsSquared =
-        b.create<complex::AddOp>(type, rhsSquared, lhsSquared);
+        b.create<complex::AddOp>(type, rhsSquared, lhsSquared, fmf);
     Value sqrtOfRhsSquaredPlusLhsSquared =
-        b.create<complex::SqrtOp>(type, rhsSquaredPlusLhsSquared);
+        b.create<complex::SqrtOp>(type, rhsSquaredPlusLhsSquared, fmf);
 
     Value zero =
         b.create<arith::ConstantOp>(elementType, b.getZeroAttr(elementType));
     Value one = b.create<arith::ConstantOp>(elementType,
                                             b.getFloatAttr(elementType, 1));
     Value i = b.create<complex::CreateOp>(type, zero, one);
-    Value iTimesLhs = b.create<complex::MulOp>(i, lhs);
-    Value rhsPlusILhs = b.create<complex::AddOp>(rhs, iTimesLhs);
+    Value iTimesLhs = b.create<complex::MulOp>(i, lhs, fmf);
+    Value rhsPlusILhs = b.create<complex::AddOp>(rhs, iTimesLhs, fmf);
 
-    Value divResult =
-        b.create<complex::DivOp>(rhsPlusILhs, sqrtOfRhsSquaredPlusLhsSquared);
-    Value logResult = b.create<complex::LogOp>(divResult);
+    Value divResult = b.create<complex::DivOp>(
+        rhsPlusILhs, sqrtOfRhsSquaredPlusLhsSquared, fmf);
+    Value logResult = b.create<complex::LogOp>(divResult, fmf);
 
     Value negativeOne = b.create<arith::ConstantOp>(
         elementType, b.getFloatAttr(elementType, -1));
     Value negativeI = b.create<complex::CreateOp>(type, zero, negativeOne);
 
-    rewriter.replaceOpWithNewOp<complex::MulOp>(op, negativeI, logResult);
+    rewriter.replaceOpWithNewOp<complex::MulOp>(op, negativeI, logResult, fmf);
     return success();
   }
 };
@@ -844,6 +845,7 @@ struct SqrtOpConversion : public OpConversionPattern<complex::SqrtOp> {
     auto type = cast<ComplexType>(op.getType());
     Type elementType = type.getElementType();
     Value arg = adaptor.getComplex();
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
 
     Value zero =
         b.create<arith::ConstantOp>(elementType, b.getZeroAttr(elementType));
@@ -851,14 +853,14 @@ struct SqrtOpConversion : public OpConversionPattern<complex::SqrtOp> {
     Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
     Value imag = b.create<complex::ImOp>(elementType, adaptor.getComplex());
 
-    Value absLhs = b.create<math::AbsFOp>(real);
-    Value absArg = b.create<complex::AbsOp>(elementType, arg);
-    Value addAbs = b.create<arith::AddFOp>(absLhs, absArg);
+    Value absLhs = b.create<math::AbsFOp>(real, fmf);
+    Value absArg = b.create<complex::AbsOp>(elementType, arg, fmf);
+    Value addAbs = b.create<arith::AddFOp>(absLhs, absArg, fmf);
 
     Value half = b.create<arith::ConstantOp>(elementType,
                                              b.getFloatAttr(elementType, 0.5));
-    Value halfAddAbs = b.create<arith::MulFOp>(addAbs, half);
-    Value sqrtAddAbs = b.create<math::SqrtOp>(halfAddAbs);
+    Value halfAddAbs = b.create<arith::MulFOp>(addAbs, half, fmf);
+    Value sqrtAddAbs = b.create<math::SqrtOp>(halfAddAbs, fmf);
 
     Value realIsNegative =
         b.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, real, zero);
@@ -868,7 +870,7 @@ struct SqrtOpConversion : public OpConversionPattern<complex::SqrtOp> {
     Value resultReal = sqrtAddAbs;
 
     Value imagDivTwoResultReal = b.create<arith::DivFOp>(
-        imag, b.create<arith::AddFOp>(resultReal, resultReal));
+        imag, b.create<arith::AddFOp>(resultReal, resultReal, fmf), fmf);
 
     Value negativeResultReal = b.create<arith::NegFOp>(resultReal);
 
@@ -881,7 +883,7 @@ struct SqrtOpConversion : public OpConversionPattern<complex::SqrtOp> {
     resultReal = b.create<arith::SelectOp>(
         realIsNegative,
         b.create<arith::DivFOp>(
-            imag, b.create<arith::AddFOp>(resultImag, resultImag)),
+            imag, b.create<arith::AddFOp>(resultImag, resultImag, fmf), fmf),
         resultReal);
 
     Value realIsZero =

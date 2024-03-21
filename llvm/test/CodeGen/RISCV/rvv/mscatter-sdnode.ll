@@ -1831,3 +1831,18 @@ define void @mscatter_baseidx_nxv16i16_nxv16f64(<vscale x 8 x double> %val0, <vs
   call void @llvm.masked.scatter.nxv16f64.nxv16p0(<vscale x 16 x double> %v1, <vscale x 16 x ptr> %ptrs, i32 8, <vscale x 16 x i1> %m)
   ret void
 }
+
+define void @mscatter_baseidx_zext_nxv1i1_nxv1i8(<vscale x 1 x i8> %val, ptr %base, <vscale x 1 x i1> %idxs, <vscale x 1 x i1> %m) {
+; CHECK-LABEL: mscatter_baseidx_zext_nxv1i1_nxv1i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsoxei8.v v8, (a0), v10, v0.t
+; CHECK-NEXT:    ret
+  %eidxs = zext <vscale x 1 x i1> %idxs to <vscale x 1 x i8>
+  %ptrs = getelementptr inbounds i8, ptr %base, <vscale x 1 x i8> %eidxs
+  call void @llvm.masked.scatter.nxv1i8.nxv1p0(<vscale x 1 x i8> %val, <vscale x 1 x ptr> %ptrs, i32 1, <vscale x 1 x i1> %m)
+  ret void
+}

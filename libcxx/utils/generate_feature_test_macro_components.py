@@ -1118,7 +1118,6 @@ feature_test_macros = [
                 "c++26": 202306  # P2495R3 Interfacing stringstreams with string_view
             },
             "headers": ["sstream"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_stacktrace",

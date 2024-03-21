@@ -1205,7 +1205,8 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
 
       // Otherwise, Create the new PHI node for this user.
       EltPHI = PHINode::Create(Ty, PN->getNumIncomingValues(),
-                               PN->getName()+".off"+Twine(Offset), PN);
+                               PN->getName() + ".off" + Twine(Offset),
+                               PN->getIterator());
       assert(EltPHI->getType() != PN->getType() &&
              "Truncate didn't shrink phi?");
 

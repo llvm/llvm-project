@@ -875,8 +875,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CharLiteralConstant &x) {
 MaybeExpr ExpressionAnalyzer::Analyze(
     const parser::HollerithLiteralConstant &x) {
   int kind{GetDefaultKind(TypeCategory::Character)};
-  auto value{x.v};
-  return AnalyzeString(std::move(value), kind);
+  auto result{AnalyzeString(std::string{x.v}, kind)};
+  if (auto *constant{UnwrapConstantValue<Ascii>(result)}) {
+    constant->set_wasHollerith(true);
+  }
+  return result;
 }
 
 // .TRUE. and .FALSE. of various kinds
@@ -1299,7 +1302,8 @@ static NamedEntity IgnoreAnySubscripts(Designator<SomeDerived> &&designator) {
       std::move(designator.u));
 }
 
-// Components of parent derived types are explicitly represented as such.
+// Components, but not bindings, of parent derived types are explicitly
+// represented as such.
 std::optional<Component> ExpressionAnalyzer::CreateComponent(DataRef &&base,
     const Symbol &component, const semantics::Scope &scope,
     bool C919bAlreadyEnforced) {
@@ -1307,7 +1311,8 @@ std::optional<Component> ExpressionAnalyzer::CreateComponent(DataRef &&base,
       base.Rank() > 0) { // C919b
     Say("An allocatable or pointer component reference must be applied to a scalar base"_err_en_US);
   }
-  if (&component.owner() == &scope) {
+  if (&component.owner() == &scope ||
+      component.has<semantics::ProcBindingDetails>()) {
     return Component{std::move(base), component};
   }
   if (const Symbol *typeSymbol{scope.GetSymbol()}) {

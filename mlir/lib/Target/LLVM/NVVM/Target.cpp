@@ -22,6 +22,7 @@
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -431,7 +432,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
   return SmallVector<char, 0>(fatbin.begin(), fatbin.end());
 }
 
-#if MLIR_NVPTXCOMPILER_ENABLED == 1
+#if MLIR_ENABLE_NVPTXCOMPILER
 #include "nvPTXCompiler.h"
 
 #define RETURN_ON_NVPTXCOMPILER_ERROR(expr)                                    \
@@ -510,7 +511,7 @@ NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
   RETURN_ON_NVPTXCOMPILER_ERROR(nvPTXCompilerDestroy(&compiler));
   return binary;
 }
-#endif // MLIR_NVPTXCOMPILER_ENABLED == 1
+#endif // MLIR_ENABLE_NVPTXCOMPILER
 
 std::optional<SmallVector<char, 0>>
 NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
@@ -556,12 +557,12 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
     return SmallVector<char, 0>(bin.begin(), bin.end());
   }
 
-    // Compile to binary.
-#if MLIR_NVPTXCOMPILER_ENABLED == 1
+  // Compile to binary.
+#if MLIR_ENABLE_NVPTXCOMPILER
   return compileToBinaryNVPTX(*serializedISA);
 #else
   return compileToBinary(*serializedISA);
-#endif // MLIR_NVPTXCOMPILER_ENABLED == 1
+#endif // MLIR_ENABLE_NVPTXCOMPILER
 }
 #endif // MLIR_ENABLE_CUDA_CONVERSIONS
 

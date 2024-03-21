@@ -205,9 +205,9 @@ LIBC_INLINE MemcmpReturnType cmp_neq_uint64_t(uint64_t a, uint64_t b) {
 // Loads bytes from memory (possibly unaligned) and materializes them as
 // type.
 template <typename T> LIBC_INLINE T load(CPtr ptr) {
-  T Out;
-  memcpy_inline<sizeof(T)>(&Out, ptr);
-  return Out;
+  T out;
+  memcpy_inline<sizeof(T)>(&out, ptr);
+  return out;
 }
 
 // Stores a value of type T in memory (possibly unaligned).
@@ -228,12 +228,12 @@ LIBC_INLINE ValueType load_aligned(CPtr src) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
   const ValueType value = load<T>(assume_aligned<sizeof(T)>(src));
   if constexpr (sizeof...(TS) > 0) {
-    constexpr size_t shift = sizeof(T) * 8;
+    constexpr size_t SHIFT = sizeof(T) * 8;
     const ValueType next = load_aligned<ValueType, TS...>(src + sizeof(T));
     if constexpr (Endian::IS_LITTLE)
-      return value | (next << shift);
+      return value | (next << SHIFT);
     else if constexpr (Endian::IS_BIG)
-      return (value << shift) | next;
+      return (value << SHIFT) | next;
     else
       static_assert(cpp::always_false<T>, "Invalid endianness");
   } else {
@@ -261,16 +261,16 @@ LIBC_INLINE auto load64_aligned(CPtr src, size_t offset) {
 template <typename ValueType, typename T, typename... TS>
 LIBC_INLINE void store_aligned(ValueType value, Ptr dst) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
-  constexpr size_t shift = sizeof(T) * 8;
+  constexpr size_t SHIFT = sizeof(T) * 8;
   if constexpr (Endian::IS_LITTLE) {
     store<T>(assume_aligned<sizeof(T)>(dst), value & ~T(0));
     if constexpr (sizeof...(TS) > 0)
-      store_aligned<ValueType, TS...>(value >> shift, dst + sizeof(T));
+      store_aligned<ValueType, TS...>(value >> SHIFT, dst + sizeof(T));
   } else if constexpr (Endian::IS_BIG) {
     constexpr size_t OFFSET = (0 + ... + sizeof(TS));
     store<T>(assume_aligned<sizeof(T)>(dst + OFFSET), value & ~T(0));
     if constexpr (sizeof...(TS) > 0)
-      store_aligned<ValueType, TS...>(value >> shift, dst);
+      store_aligned<ValueType, TS...>(value >> SHIFT, dst);
   } else {
     static_assert(cpp::always_false<T>, "Invalid endianness");
   }
@@ -336,13 +336,10 @@ LIBC_INLINE void align_to_next_boundary(T1 *__restrict &p1, T2 *__restrict &p2,
 
 template <size_t SIZE> struct AlignHelper {
   LIBC_INLINE AlignHelper(CPtr ptr)
-      : offset_(distance_to_next_aligned<SIZE>(ptr)) {}
+      : offset(distance_to_next_aligned<SIZE>(ptr)) {}
 
-  LIBC_INLINE bool not_aligned() const { return offset_ != SIZE; }
-  LIBC_INLINE uintptr_t offset() const { return offset_; }
-
-private:
-  uintptr_t offset_;
+  LIBC_INLINE bool not_aligned() const { return offset != SIZE; }
+  uintptr_t offset;
 };
 
 LIBC_INLINE void prefetch_for_write(CPtr dst) {

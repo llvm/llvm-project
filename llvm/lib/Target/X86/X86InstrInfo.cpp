@@ -2491,12 +2491,12 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI->removeOperand(3);
     break;
   }
-  case X86::PCLMULQDQrr:
-  case X86::VPCLMULQDQrr:
-  case X86::VPCLMULQDQYrr:
-  case X86::VPCLMULQDQZrr:
-  case X86::VPCLMULQDQZ128rr:
-  case X86::VPCLMULQDQZ256rr: {
+  case X86::PCLMULQDQrri:
+  case X86::VPCLMULQDQrri:
+  case X86::VPCLMULQDQYrri:
+  case X86::VPCLMULQDQZrri:
+  case X86::VPCLMULQDQZ128rri:
+  case X86::VPCLMULQDQZ256rri: {
     // SRC1 64bits = Imm[0] ? SRC1[127:64] : SRC1[63:0]
     // SRC2 64bits = Imm[4] ? SRC2[127:64] : SRC2[63:0]
     unsigned Imm = MI.getOperand(3).getImm();
@@ -2573,11 +2573,11 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI->getOperand(3).setImm(
         X86::getSwappedVPCOMImm(MI.getOperand(3).getImm() & 0x7));
     break;
-  case X86::VCMPSDZrr:
-  case X86::VCMPSSZrr:
+  case X86::VCMPSDZrri:
+  case X86::VCMPSSZrri:
   case X86::VCMPPDZrri:
   case X86::VCMPPSZrri:
-  case X86::VCMPSHZrr:
+  case X86::VCMPSHZrri:
   case X86::VCMPPHZrri:
   case X86::VCMPPHZ128rri:
   case X86::VCMPPHZ256rri:
@@ -2637,9 +2637,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI = CloneIfNew(MI);
     WorkingMI->setDesc(get(Opc));
     break;
-  case X86::CMOV16rr:
-  case X86::CMOV32rr:
-  case X86::CMOV64rr: {
+  CASE_ND(CMOV16rr)
+  CASE_ND(CMOV32rr)
+  CASE_ND(CMOV64rr) {
     WorkingMI = CloneIfNew(MI);
     unsigned OpNo = MI.getDesc().getNumOperands() - 1;
     X86::CondCode CC = static_cast<X86::CondCode>(MI.getOperand(OpNo).getImm());
@@ -2820,21 +2820,21 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
     return false;
 
   switch (MI.getOpcode()) {
-  case X86::CMPSDrr:
-  case X86::CMPSSrr:
+  case X86::CMPSDrri:
+  case X86::CMPSSrri:
   case X86::CMPPDrri:
   case X86::CMPPSrri:
-  case X86::VCMPSDrr:
-  case X86::VCMPSSrr:
+  case X86::VCMPSDrri:
+  case X86::VCMPSSrri:
   case X86::VCMPPDrri:
   case X86::VCMPPSrri:
   case X86::VCMPPDYrri:
   case X86::VCMPPSYrri:
-  case X86::VCMPSDZrr:
-  case X86::VCMPSSZrr:
+  case X86::VCMPSDZrri:
+  case X86::VCMPSSZrri:
   case X86::VCMPPDZrri:
   case X86::VCMPPSZrri:
-  case X86::VCMPSHZrr:
+  case X86::VCMPSHZrri:
   case X86::VCMPPHZrri:
   case X86::VCMPPHZ128rri:
   case X86::VCMPPHZ256rri:
@@ -3120,7 +3120,8 @@ bool X86InstrInfo::hasCommutePreference(MachineInstr &MI, bool &Commute) const {
 
 int X86::getCondSrcNoFromDesc(const MCInstrDesc &MCID) {
   unsigned Opcode = MCID.getOpcode();
-  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode)))
+  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode) ||
+        X86::isCFCMOVCC(Opcode)))
     return -1;
   // Assume that condition code is always the last use operand.
   unsigned NumUses = MCID.getNumOperands() - MCID.getNumDefs();
@@ -3149,6 +3150,11 @@ X86::CondCode X86::getCondFromSETCC(const MachineInstr &MI) {
 X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
   return X86::isCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
                                        : X86::COND_INVALID;
+}
+
+X86::CondCode X86::getCondFromCFCMov(const MachineInstr &MI) {
+  return X86::isCFCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
+                                         : X86::COND_INVALID;
 }
 
 /// Return the inverse of the specified condition,
@@ -3312,16 +3318,21 @@ X86::getX86ConditionCode(CmpInst::Predicate Predicate) {
 }
 
 /// Return a cmov opcode for the given register size in bytes, and operand type.
-unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand) {
+unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand,
+                            bool HasNDD) {
   switch (RegBytes) {
   default:
     llvm_unreachable("Illegal register size!");
+#define GET_ND_IF_ENABLED(OPC) (HasNDD ? OPC##_ND : OPC)
   case 2:
-    return HasMemoryOperand ? X86::CMOV16rm : X86::CMOV16rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV16rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV16rr);
   case 4:
-    return HasMemoryOperand ? X86::CMOV32rm : X86::CMOV32rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV32rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV32rr);
   case 8:
-    return HasMemoryOperand ? X86::CMOV64rm : X86::CMOV64rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV64rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV64rr);
   }
 }
 
@@ -3443,6 +3454,11 @@ static bool isX87Reg(unsigned Reg) {
 
 /// check if the instruction is X87 instruction
 bool X86::isX87Instruction(MachineInstr &MI) {
+  // Call defs X87 register, so we special case it here because
+  // otherwise calls are incorrectly flagged as x87 instructions
+  // as a result.
+  if (MI.isCall())
+    return false;
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
@@ -4042,8 +4058,9 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   const TargetRegisterClass &RC = *MRI.getRegClass(DstReg);
   assert(Cond.size() == 1 && "Invalid Cond array");
-  unsigned Opc = X86::getCMovOpcode(TRI.getRegSizeInBits(RC) / 8,
-                                    false /*HasMemoryOperand*/);
+  unsigned Opc =
+      X86::getCMovOpcode(TRI.getRegSizeInBits(RC) / 8,
+                         false /*HasMemoryOperand*/, Subtarget.hasNDD());
   BuildMI(MBB, I, DL, get(Opc), DstReg)
       .addReg(FalseReg)
       .addReg(TrueReg)
@@ -4514,7 +4531,7 @@ bool X86InstrInfo::preservesZeroValueInReg(
 
 bool X86InstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &MemOp, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   const MCInstrDesc &Desc = MemOp.getDesc();
   int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
@@ -7505,9 +7522,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::ADDSSrr_Int:
     case X86::VADDSSrr_Int:
     case X86::VADDSSZrr_Int:
-    case X86::CMPSSrr_Int:
-    case X86::VCMPSSrr_Int:
-    case X86::VCMPSSZrr_Int:
+    case X86::CMPSSrri_Int:
+    case X86::VCMPSSrri_Int:
+    case X86::VCMPSSZrri_Int:
     case X86::DIVSSrr_Int:
     case X86::VDIVSSrr_Int:
     case X86::VDIVSSZrr_Int:
@@ -7528,7 +7545,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VSUBSSZrr_Int:
     case X86::VADDSSZrr_Intk:
     case X86::VADDSSZrr_Intkz:
-    case X86::VCMPSSZrr_Intk:
+    case X86::VCMPSSZrri_Intk:
     case X86::VDIVSSZrr_Intk:
     case X86::VDIVSSZrr_Intkz:
     case X86::VMAXSSZrr_Intk:
@@ -7674,9 +7691,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::ADDSDrr_Int:
     case X86::VADDSDrr_Int:
     case X86::VADDSDZrr_Int:
-    case X86::CMPSDrr_Int:
-    case X86::VCMPSDrr_Int:
-    case X86::VCMPSDZrr_Int:
+    case X86::CMPSDrri_Int:
+    case X86::VCMPSDrri_Int:
+    case X86::VCMPSDZrri_Int:
     case X86::DIVSDrr_Int:
     case X86::VDIVSDrr_Int:
     case X86::VDIVSDZrr_Int:
@@ -7697,7 +7714,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VSUBSDZrr_Int:
     case X86::VADDSDZrr_Intk:
     case X86::VADDSDZrr_Intkz:
-    case X86::VCMPSDZrr_Intk:
+    case X86::VCMPSDZrri_Intk:
     case X86::VDIVSDZrr_Intk:
     case X86::VDIVSDZrr_Intkz:
     case X86::VMAXSDZrr_Intk:
@@ -7809,7 +7826,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     // instruction isn't scalar (SH).
     switch (UserOpc) {
     case X86::VADDSHZrr_Int:
-    case X86::VCMPSHZrr_Int:
+    case X86::VCMPSHZrri_Int:
     case X86::VDIVSHZrr_Int:
     case X86::VMAXSHZrr_Int:
     case X86::VMINSHZrr_Int:
@@ -7817,7 +7834,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VSUBSHZrr_Int:
     case X86::VADDSHZrr_Intk:
     case X86::VADDSHZrr_Intkz:
-    case X86::VCMPSHZrr_Intk:
+    case X86::VCMPSHZrri_Intk:
     case X86::VDIVSHZrr_Intk:
     case X86::VDIVSHZrr_Intkz:
     case X86::VMAXSHZrr_Intk:
@@ -10560,15 +10577,15 @@ bool X86InstrInfo::getMachineCombinerPatterns(
     bool DoRegPressureReduce) const {
   unsigned Opc = Root.getOpcode();
   switch (Opc) {
-  default:
-    return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
-                                                       DoRegPressureReduce);
   case X86::VPDPWSSDrr:
   case X86::VPDPWSSDrm:
   case X86::VPDPWSSDYrr:
   case X86::VPDPWSSDYrm: {
-    Patterns.push_back(MachineCombinerPattern::DPWSSD);
-    return true;
+    if (!Subtarget.hasFastDPWSSD()) {
+      Patterns.push_back(MachineCombinerPattern::DPWSSD);
+      return true;
+    }
+    break;
   }
   case X86::VPDPWSSDZ128r:
   case X86::VPDPWSSDZ128m:
@@ -10576,11 +10593,15 @@ bool X86InstrInfo::getMachineCombinerPatterns(
   case X86::VPDPWSSDZ256m:
   case X86::VPDPWSSDZr:
   case X86::VPDPWSSDZm: {
-    if (Subtarget.hasBWI())
+   if (Subtarget.hasBWI() && !Subtarget.hasFastDPWSSD()) {
       Patterns.push_back(MachineCombinerPattern::DPWSSD);
-    return true;
+      return true;
+    }
+    break;
   }
   }
+  return TargetInstrInfo::getMachineCombinerPatterns(Root,
+                                                     Patterns, DoRegPressureReduce);
 }
 
 static void

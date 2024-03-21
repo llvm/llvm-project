@@ -53,10 +53,13 @@ public:
   /// \param Linkage The linkage of symbol.
   /// \param GV The kind of global.
   /// \param Flags The flags that describe attributes of the symbol.
+  /// \param Inlined Whether declaration is inlined, only applicable to
+  /// functions.
   /// \return The non-owning pointer to added record in slice.
   GlobalRecord *addGlobal(StringRef Name, RecordLinkage Linkage,
                           GlobalRecord::Kind GV,
-                          SymbolFlags Flags = SymbolFlags::None);
+                          SymbolFlags Flags = SymbolFlags::None,
+                          bool Inlined = false);
 
   /// Add ObjC Class record.
   ///

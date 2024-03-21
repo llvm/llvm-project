@@ -139,6 +139,20 @@
 // RUN:   -o "target variable a" \
 // RUN:   -b %t | FileCheck %s
 
+// Now move the .debug and .dwp file into another directory so that we can use
+// the target.debug-file-search-paths setting to search for the files.
+// RUN: mkdir -p %t-debug-info-dir
+// RUN: mv %t.dwp %t-debug-info-dir
+// RUN: mv %t.debug %t-debug-info-dir
+// RUN: %lldb \
+// RUN:   -O "log enable dwarf split" \
+// RUN:   -O "setting set target.debug-file-search-paths '%t-debug-info-dir'" \
+// RUN:   -o "target variable a" \
+// RUN:   -b %t | FileCheck %s
+// RUN:
+
+// Now move the .debug and .dwp file into another directory so that we can use
+// the target.debug-file-search-paths setting to search for the files.
 // CHECK: Searching for DWP using:
 // CHECK: Found DWP file:
 // CHECK: (A) a = (x = 47)

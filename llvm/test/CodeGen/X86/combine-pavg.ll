@@ -18,6 +18,22 @@ define <16 x i8> @combine_pavgb_self(<16 x i8> %a0) {
   ret <16 x i8> %1
 }
 
+define <16 x i8> @combine_pavgb_zero(<16 x i8> %a0) {
+; SSE-LABEL: combine_pavgb_zero:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pavgb %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_pavgb_zero:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpavgb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> zeroinitializer, <16 x i8> %a0)
+  ret <16 x i8> %1
+}
+
 define <16 x i8> @combine_pavgw_knownbits(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2, <8 x i16> %a3) {
 ; SSE-LABEL: combine_pavgw_knownbits:
 ; SSE:       # %bb.0:

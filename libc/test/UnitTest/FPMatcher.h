@@ -17,7 +17,7 @@
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 namespace LIBC_NAMESPACE {
 namespace testing {
@@ -63,7 +63,6 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
 template <typename T> struct FPTest : public Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
   static constexpr StorageType STORAGE_MAX =
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
   static constexpr T zero = FPBits::zero(Sign::POS).get_val();
@@ -92,7 +91,7 @@ template <typename T> struct FPTest : public Test {
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;                            \
   using StorageType = typename FPBits::StorageType;                            \
-  using Sign = LIBC_NAMESPACE::fputil::Sign;                                   \
+                                                                               \
   static constexpr StorageType STORAGE_MAX =                                   \
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();                 \
   const T zero = FPBits::zero(Sign::POS).get_val();                            \
@@ -102,8 +101,10 @@ template <typename T> struct FPTest : public Test {
   const T inf = FPBits::inf(Sign::POS).get_val();                              \
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();                          \
   const T min_normal = FPBits::min_normal().get_val();                         \
-  const T max_normal = FPBits::max_normal().get_val();                         \
-  const T min_denormal = FPBits::min_subnormal().get_val();                    \
+  const T max_normal = FPBits::max_normal(Sign::POS).get_val();                \
+  const T neg_max_normal = FPBits::max_normal(Sign::NEG).get_val();            \
+  const T min_denormal = FPBits::min_subnormal(Sign::POS).get_val();           \
+  const T neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();       \
   const T max_denormal = FPBits::max_subnormal().get_val();
 
 #define EXPECT_FP_EQ(expected, actual)                                         \

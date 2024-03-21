@@ -3391,12 +3391,25 @@ void ModuleVisitor::ApplyDefaultAccess() {
   const auto *moduleDetails{
       DEREF(currScope().symbol()).detailsIf<ModuleDetails>()};
   CHECK(moduleDetails);
+  Attr defaultAttr{
+      DEREF(moduleDetails).isDefaultPrivate() ? Attr::PRIVATE : Attr::PUBLIC};
   for (auto &pair : currScope()) {
     Symbol &symbol{*pair.second};
     if (!symbol.attrs().HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
-      SetImplicitAttr(symbol,
-          DEREF(moduleDetails).isDefaultPrivate() ? Attr::PRIVATE
-                                                  : Attr::PUBLIC);
+      Attr attr{defaultAttr};
+      if (auto *generic{symbol.detailsIf<GenericDetails>()}) {
+        if (generic->derivedType()) {
+          // If a generic interface has a derived type of the same
+          // name that has an explicit accessibility attribute, then
+          // the generic must have the same accessibility.
+          if (generic->derivedType()->attrs().test(Attr::PUBLIC)) {
+            attr = Attr::PUBLIC;
+          } else if (generic->derivedType()->attrs().test(Attr::PRIVATE)) {
+            attr = Attr::PRIVATE;
+          }
+        }
+      }
+      SetImplicitAttr(symbol, attr);
     }
   }
 }
@@ -4419,7 +4432,7 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
         CHECK(context().HasError(genericSymbol));
       }
     }
-    set_inheritFromParent(false);
+    set_inheritFromParent(hasModulePrefix);
   }
   if (Symbol * found{FindSymbol(name)};
       found && found->has<HostAssocDetails>()) {
@@ -4983,7 +4996,8 @@ Symbol &DeclarationVisitor::DeclareProcEntity(
           "The interface for procedure '%s' has already been declared"_err_en_US);
       context().SetError(symbol);
     } else if (interface) {
-      details->set_procInterface(*interface);
+      details->set_procInterfaces(
+          *interface, BypassGeneric(interface->GetUltimate()));
       if (interface->test(Symbol::Flag::Function)) {
         symbol.set(Symbol::Flag::Function);
       } else if (interface->test(Symbol::Flag::Subroutine)) {
@@ -5658,10 +5672,10 @@ void DeclarationVisitor::Post(const parser::ProcInterface &x) {
 }
 void DeclarationVisitor::Post(const parser::ProcDecl &x) {
   const auto &name{std::get<parser::Name>(x.t)};
-  const Symbol *procInterface{nullptr};
-  if (interfaceName_ && interfaceName_->symbol) {
-    procInterface = &BypassGeneric(*interfaceName_->symbol);
-  }
+  // Don't use BypassGeneric or GetUltimate on this symbol, they can
+  // lead to unusable names in module files.
+  const Symbol *procInterface{
+      interfaceName_ ? interfaceName_->symbol : nullptr};
   auto attrs{HandleSaveName(name.source, GetAttrs())};
   DerivedTypeDetails *dtDetails{nullptr};
   if (Symbol * symbol{currScope().symbol()}) {
@@ -6624,10 +6638,9 @@ void DeclarationVisitor::CheckExplicitInterface(const parser::Name &name) {
   if (const Symbol * symbol{name.symbol}) {
     const Symbol &ultimate{symbol->GetUltimate()};
     if (!context().HasError(*symbol) && !context().HasError(ultimate) &&
-        !ultimate.HasExplicitInterface()) {
+        !BypassGeneric(ultimate).HasExplicitInterface()) {
       Say(name,
-          "'%s' must be an abstract interface or a procedure with "
-          "an explicit interface"_err_en_US,
+          "'%s' must be an abstract interface or a procedure with an explicit interface"_err_en_US,
           symbol->name());
     }
   }
@@ -8447,7 +8460,6 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   misparsedStmtFuncFound_ = false;
   funcResultStack().CompleteFunctionResultType();
   CheckImports();
-  bool inModule{currScope().kind() == Scope::Kind::Module};
   for (auto &pair : currScope()) {
     auto &symbol{*pair.second};
     if (NeedsExplicitType(symbol)) {
@@ -8461,13 +8473,6 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     }
     if (symbol.has<GenericDetails>()) {
       CheckGenericProcedures(symbol);
-    }
-    if (inModule && symbol.attrs().test(Attr::EXTERNAL) &&
-        !symbol.test(Symbol::Flag::Function) &&
-        !symbol.test(Symbol::Flag::Subroutine)) {
-      // in a module, external proc without return type is subroutine
-      symbol.set(
-          symbol.GetType() ? Symbol::Flag::Function : Symbol::Flag::Subroutine);
     }
     if (!symbol.has<HostAssocDetails>()) {
       CheckPossibleBadForwardRef(symbol);
@@ -8990,8 +8995,18 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
   }
   EndScopeForNode(node);
   // Ensure that every object entity has a type.
+  bool inModule{node.GetKind() == ProgramTree::Kind::Module ||
+      node.GetKind() == ProgramTree::Kind::Submodule};
   for (auto &pair : *node.scope()) {
-    ApplyImplicitRules(*pair.second);
+    Symbol &symbol{*pair.second};
+    if (inModule && symbol.attrs().test(Attr::EXTERNAL) &&
+        !symbol.test(Symbol::Flag::Function) &&
+        !symbol.test(Symbol::Flag::Subroutine)) {
+      // in a module, external proc without return type is subroutine
+      symbol.set(
+          symbol.GetType() ? Symbol::Flag::Function : Symbol::Flag::Subroutine);
+    }
+    ApplyImplicitRules(symbol);
   }
 }
 

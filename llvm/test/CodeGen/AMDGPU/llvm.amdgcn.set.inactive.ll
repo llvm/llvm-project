@@ -100,7 +100,6 @@ define amdgpu_kernel void @set_inactive_scc(ptr addrspace(1) %out, i32 %in, <4 x
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0
-; GCN-NEXT:    s_mov_b64 s[2:3], 0
 ; GCN-NEXT:    s_cbranch_execnz .LBB4_2
 ; GCN-NEXT:  .LBB4_4: ; %.zero
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000

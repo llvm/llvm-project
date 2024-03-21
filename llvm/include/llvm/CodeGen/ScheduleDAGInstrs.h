@@ -20,7 +20,7 @@
 #include "llvm/ADT/SparseMultiSet.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/identity.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -263,7 +263,7 @@ namespace llvm {
     MachineInstr *FirstDbgValue = nullptr;
 
     /// Set of live physical registers for updating kill flags.
-    LivePhysRegs LiveRegs;
+    LiveRegUnits LiveRegs;
 
   public:
     explicit ScheduleDAGInstrs(MachineFunction &mf,

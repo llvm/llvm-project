@@ -210,7 +210,7 @@ define void @no_combine_for_non_bool_truncate(<4 x i32> %vec, ptr %out) {
 ; CHECK-LABEL: no_combine_for_non_bool_truncate:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    xtn.8b v0, v0
+; CHECK-NEXT:    uzp1.8b v0, v0, v0
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 

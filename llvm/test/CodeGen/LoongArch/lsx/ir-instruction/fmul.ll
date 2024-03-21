@@ -4,9 +4,9 @@
 define void @fmul_v4f32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: fmul_v4f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfmul.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfmul.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -20,9 +20,9 @@ entry:
 define void @fmul_v2f64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: fmul_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfmul.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfmul.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

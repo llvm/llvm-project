@@ -2701,8 +2701,8 @@ Error DWARFLinker::link() {
   // This Dwarf string pool which is used for emission. It must be used
   // serially as the order of calling getStringOffset matters for
   // reproducibility.
-  OffsetsStringPool DebugStrPool(StringsTranslator, true);
-  OffsetsStringPool DebugLineStrPool(StringsTranslator, false);
+  OffsetsStringPool DebugStrPool(true);
+  OffsetsStringPool DebugLineStrPool(false);
   DebugDieValuePool StringOffsetPool;
 
   // ODR Contexts for the optimize.
@@ -2935,7 +2935,7 @@ Error DWARFLinker::link() {
     }
     EmitLambda();
   } else {
-    ThreadPool Pool(hardware_concurrency(2));
+    DefaultThreadPool Pool(hardware_concurrency(2));
     Pool.async(AnalyzeAll);
     Pool.async(CloneAll);
     Pool.wait();
