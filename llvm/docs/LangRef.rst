@@ -11049,9 +11049,10 @@ Syntax:
 
 ::
 
-      <result> = getelementptr <ty>, ptr <ptrval>{, [inrange] <ty> <idx>}*
-      <result> = getelementptr inbounds <ty>, ptr <ptrval>{, [inrange] <ty> <idx>}*
-      <result> = getelementptr <ty>, <N x ptr> <ptrval>, [inrange] <vector index type> <idx>
+      <result> = getelementptr <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr inbounds <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr inrange(S,E) <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr <ty>, <N x ptr> <ptrval>, <vector index type> <idx>
 
 Overview:
 """""""""
@@ -11196,16 +11197,15 @@ These rules are based on the assumption that no allocated object may cross
 the unsigned address space boundary, and no allocated object may be larger
 than half the pointer index type space.
 
-If the ``inrange`` keyword is present before any index, loading from or
+If the ``inrange(Start, End)`` attribute is present, loading from or
 storing to any pointer derived from the ``getelementptr`` has undefined
-behavior if the load or store would access memory outside of the bounds of
-the element selected by the index marked as ``inrange``. The result of a
-pointer comparison or ``ptrtoint`` (including ``ptrtoint``-like operations
+behavior if the load or store would access memory outside the half-open range
+``[Start, End)`` from the ``getelementptr`` expression result. The result of
+a pointer comparison or ``ptrtoint`` (including ``ptrtoint``-like operations
 involving memory) involving a pointer derived from a ``getelementptr`` with
 the ``inrange`` keyword is undefined, with the exception of comparisons
-in the case where both operands are in the range of the element selected
-by the ``inrange`` keyword, inclusive of the address one past the end of
-that element. Note that the ``inrange`` keyword is currently only allowed
+in the case where both operands are in the closed range ``[Start, End]``.
+Note that the ``inrange`` keyword is currently only allowed
 in constant ``getelementptr`` expressions.
 
 The getelementptr instruction is often confusing. For some more insight
@@ -14574,6 +14574,63 @@ The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
 integer element type. The argument types must match each other, and the return
 type must match the argument type.
 
+.. _int_scmp:
+
+'``llvm.scmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.scmp`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i2 @llvm.scmp.i2.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return ``-1`` if ``%a`` is signed less than ``%b``, ``0`` if they are equal, and 
+``1`` if ``%a`` is signed greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must be at least as wide as ``i2``, to hold the three possible return values.
+
+.. _int_ucmp:
+
+'``llvm.ucmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.ucmp`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i2 @llvm.ucmp.i2.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return ``-1`` if ``%a`` is unsigned less than ``%b``, ``0`` if they are equal, and 
+``1`` if ``%a`` is unsigned greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must be at least as wide as ``i2``, to hold the three possible return values.
 
 .. _int_memcpy:
 

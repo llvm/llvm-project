@@ -234,8 +234,8 @@ TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
   EXPECT_TRUE(DbgDeclare->isKillLocation());
 }
 
-// Duplicate of above test, but in DPValue representation.
-TEST(MetadataTest, DeleteInstUsedByDPValue) {
+// Duplicate of above test, but in DbgVariableRecord representation.
+TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
@@ -267,26 +267,26 @@ TEST(MetadataTest, DeleteInstUsedByDPValue) {
   Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
   M->convertToNewDbgValues();
 
-  // Find the DPValues using %b.
+  // Find the DbgVariableRecords using %b.
   SmallVector<DbgValueInst *, 2> DVIs;
-  SmallVector<DPValue *, 2> DPVs;
-  findDbgValues(DVIs, &I, &DPVs);
-  ASSERT_EQ(DPVs.size(), 2u);
+  SmallVector<DbgVariableRecord *, 2> DVRs;
+  findDbgValues(DVIs, &I, &DVRs);
+  ASSERT_EQ(DVRs.size(), 2u);
 
-  // Delete %b. The DPValue should now point to undef.
+  // Delete %b. The DbgVariableRecord should now point to undef.
   I.eraseFromParent();
-  EXPECT_EQ(DPVs[0]->getNumVariableLocationOps(), 1u);
-  EXPECT_TRUE(isa<UndefValue>(DPVs[0]->getVariableLocationOp(0)));
-  EXPECT_TRUE(DPVs[0]->isKillLocation());
-  EXPECT_EQ(DPVs[1]->getNumVariableLocationOps(), 2u);
-  EXPECT_TRUE(isa<UndefValue>(DPVs[1]->getVariableLocationOp(1)));
-  EXPECT_TRUE(DPVs[1]->isKillLocation());
+  EXPECT_EQ(DVRs[0]->getNumVariableLocationOps(), 1u);
+  EXPECT_TRUE(isa<UndefValue>(DVRs[0]->getVariableLocationOp(0)));
+  EXPECT_TRUE(DVRs[0]->isKillLocation());
+  EXPECT_EQ(DVRs[1]->getNumVariableLocationOps(), 2u);
+  EXPECT_TRUE(isa<UndefValue>(DVRs[1]->getVariableLocationOp(1)));
+  EXPECT_TRUE(DVRs[1]->isKillLocation());
   UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 // Ensure that the order of dbg.value intrinsics returned by findDbgValues, and
-// their corresponding DPValue representation, are consistent.
-TEST(MetadataTest, OrderingOfDPValues) {
+// their corresponding DbgVariableRecord representation, are consistent.
+TEST(MetadataTest, OrderingOfDbgVariableRecords) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
@@ -319,10 +319,10 @@ TEST(MetadataTest, OrderingOfDPValues) {
   Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
 
   SmallVector<DbgValueInst *, 2> DVIs;
-  SmallVector<DPValue *, 2> DPVs;
-  findDbgValues(DVIs, &I, &DPVs);
+  SmallVector<DbgVariableRecord *, 2> DVRs;
+  findDbgValues(DVIs, &I, &DVRs);
   ASSERT_EQ(DVIs.size(), 2u);
-  ASSERT_EQ(DPVs.size(), 0u);
+  ASSERT_EQ(DVRs.size(), 0u);
 
   // The correct order of dbg.values is given by their use-list, which becomes
   // the reverse order of creation. Thus the dbg.values should come out as
@@ -332,17 +332,17 @@ TEST(MetadataTest, OrderingOfDPValues) {
   DILocalVariable *Var1 = DVIs[1]->getVariable();
   EXPECT_TRUE(Var1->getName() == "foo");
 
-  // Now try again, but in DPValue form.
+  // Now try again, but in DbgVariableRecord form.
   DVIs.clear();
 
   M->convertToNewDbgValues();
-  findDbgValues(DVIs, &I, &DPVs);
+  findDbgValues(DVIs, &I, &DVRs);
   ASSERT_EQ(DVIs.size(), 0u);
-  ASSERT_EQ(DPVs.size(), 2u);
+  ASSERT_EQ(DVRs.size(), 2u);
 
-  Var0 = DPVs[0]->getVariable();
+  Var0 = DVRs[0]->getVariable();
   EXPECT_TRUE(Var0->getName() == "bar");
-  Var1 = DPVs[1]->getVariable();
+  Var1 = DVRs[1]->getVariable();
   EXPECT_TRUE(Var1->getName() == "foo");
 
   M->convertFromNewDbgValues();
@@ -861,9 +861,9 @@ TEST(AssignmentTrackingTest, InstrMethods) {
   }
 }
 
-// Test some very straight-forward operations on DPValues -- these are
+// Test some very straight-forward operations on DbgVariableRecords -- these are
 // dbg.values that have been converted to a non-instruction format.
-TEST(MetadataTest, ConvertDbgToDPValue) {
+TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
@@ -900,7 +900,7 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
   const DIExpression *Expr = nullptr;
   const DILocation *Loc = nullptr;
   const Metadata *MLoc = nullptr;
-  DPValue *DPV1 = nullptr;
+  DbgVariableRecord *DVR1 = nullptr;
   {
     DbgValueInst *DPI = dyn_cast<DbgValueInst>(&I);
     ASSERT_TRUE(DPI);
@@ -909,17 +909,18 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
     Loc = DPI->getDebugLoc().get();
     MLoc = DPI->getRawLocation();
 
-    // Test the creation of a DPValue and it's conversion back to a dbg.value.
-    DPV1 = new DPValue(DPI);
-    EXPECT_EQ(DPV1->getVariable(), Var);
-    EXPECT_EQ(DPV1->getExpression(), Expr);
-    EXPECT_EQ(DPV1->getDebugLoc().get(), Loc);
-    EXPECT_EQ(DPV1->getRawLocation(), MLoc);
+    // Test the creation of a DbgVariableRecord and it's conversion back to a
+    // dbg.value.
+    DVR1 = new DbgVariableRecord(DPI);
+    EXPECT_EQ(DVR1->getVariable(), Var);
+    EXPECT_EQ(DVR1->getExpression(), Expr);
+    EXPECT_EQ(DVR1->getDebugLoc().get(), Loc);
+    EXPECT_EQ(DVR1->getRawLocation(), MLoc);
 
     // Erase dbg.value,
     DPI->eraseFromParent();
-    // Re-create from DPV1, inserting at front.
-    DPV1->createDebugIntrinsic(&*M,
+    // Re-create from DVR1, inserting at front.
+    DVR1->createDebugIntrinsic(&*M,
                                &M->getFunction("f")->getEntryBlock().front());
 
     Instruction *NewDPI = &M->getFunction("f")->getEntryBlock().front();
@@ -931,112 +932,116 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
     EXPECT_EQ(DPI2->getRawLocation(), MLoc);
   }
 
-  // Fetch the second dbg.value, convert it to a DPValue,
+  // Fetch the second dbg.value, convert it to a DbgVariableRecord,
   BasicBlock::iterator It = M->getFunction("f")->getEntryBlock().begin();
   It = std::next(std::next(It));
   DbgValueInst *DPI3 = dyn_cast<DbgValueInst>(It);
   ASSERT_TRUE(DPI3);
-  DPValue *DPV2 = new DPValue(DPI3);
+  DbgVariableRecord *DVR2 = new DbgVariableRecord(DPI3);
 
   // These dbg.values are supposed to refer to different values.
-  EXPECT_NE(DPV1->getRawLocation(), DPV2->getRawLocation());
+  EXPECT_NE(DVR1->getRawLocation(), DVR2->getRawLocation());
 
-  // Try manipulating DPValues and markers in the exit block.
+  // Try manipulating DbgVariableRecords and markers in the exit block.
   BasicBlock *ExitBlock = &*std::next(M->getFunction("f")->getEntryBlock().getIterator());
   Instruction *FirstInst = &ExitBlock->front();
   Instruction *RetInst = &*std::next(FirstInst->getIterator());
 
-  // Set-up DPMarkers in this block.
+  // Set-up DbgMarkers in this block.
   ExitBlock->IsNewDbgInfoFormat = true;
   ExitBlock->createMarker(FirstInst);
   ExitBlock->createMarker(RetInst);
 
-  // Insert DbgRecords into markers, order should come out DPV2, DPV1.
-  FirstInst->DbgMarker->insertDbgRecord(DPV1, false);
-  FirstInst->DbgMarker->insertDbgRecord(DPV2, true);
+  // Insert DbgRecords into markers, order should come out DVR2, DVR1.
+  FirstInst->DebugMarker->insertDbgRecord(DVR1, false);
+  FirstInst->DebugMarker->insertDbgRecord(DVR2, true);
   unsigned int ItCount = 0;
-  for (DbgRecord &Item : FirstInst->DbgMarker->getDbgRecordRange()) {
-    EXPECT_TRUE((&Item == DPV2 && ItCount == 0) ||
-              (&Item == DPV1 && ItCount == 1));
-    EXPECT_EQ(Item.getMarker(), FirstInst->DbgMarker);
+  for (DbgRecord &Item : FirstInst->DebugMarker->getDbgRecordRange()) {
+    EXPECT_TRUE((&Item == DVR2 && ItCount == 0) ||
+                (&Item == DVR1 && ItCount == 1));
+    EXPECT_EQ(Item.getMarker(), FirstInst->DebugMarker);
     ++ItCount;
   }
 
-  // Clone them onto the second marker -- should allocate new DPVs.
-  RetInst->DbgMarker->cloneDebugInfoFrom(FirstInst->DbgMarker, std::nullopt, false);
-  EXPECT_EQ(RetInst->DbgMarker->StoredDbgRecords.size(), 2u);
+  // Clone them onto the second marker -- should allocate new DVRs.
+  RetInst->DebugMarker->cloneDebugInfoFrom(FirstInst->DebugMarker, std::nullopt,
+                                           false);
+  EXPECT_EQ(RetInst->DebugMarker->StoredDbgRecords.size(), 2u);
   ItCount = 0;
   // Check these things store the same information; but that they're not the same
   // objects.
-  for (DPValue &Item : filterDbgVars(RetInst->DbgMarker->getDbgRecordRange())) {
-    EXPECT_TRUE((Item.getRawLocation() == DPV2->getRawLocation() && ItCount == 0) ||
-                (Item.getRawLocation() == DPV1->getRawLocation() && ItCount == 1));
+  for (DbgVariableRecord &Item :
+       filterDbgVars(RetInst->DebugMarker->getDbgRecordRange())) {
+    EXPECT_TRUE(
+        (Item.getRawLocation() == DVR2->getRawLocation() && ItCount == 0) ||
+        (Item.getRawLocation() == DVR1->getRawLocation() && ItCount == 1));
 
-    EXPECT_EQ(Item.getMarker(), RetInst->DbgMarker);
-    EXPECT_NE(&Item, DPV1);
-    EXPECT_NE(&Item, DPV2);
+    EXPECT_EQ(Item.getMarker(), RetInst->DebugMarker);
+    EXPECT_NE(&Item, DVR1);
+    EXPECT_NE(&Item, DVR2);
     ++ItCount;
   }
 
-  RetInst->DbgMarker->dropDbgRecords();
-  EXPECT_EQ(RetInst->DbgMarker->StoredDbgRecords.size(), 0u);
+  RetInst->DebugMarker->dropDbgRecords();
+  EXPECT_EQ(RetInst->DebugMarker->StoredDbgRecords.size(), 0u);
 
-  // Try cloning one single DPValue.
-  auto DIIt = std::next(FirstInst->DbgMarker->getDbgRecordRange().begin());
-  RetInst->DbgMarker->cloneDebugInfoFrom(FirstInst->DbgMarker, DIIt, false);
-  EXPECT_EQ(RetInst->DbgMarker->StoredDbgRecords.size(), 1u);
-  // The second DPValue should have been cloned; it should have the same values
-  // as DPV1.
-  EXPECT_EQ(cast<DPValue>(RetInst->DbgMarker->StoredDbgRecords.begin())
-                ->getRawLocation(),
-            DPV1->getRawLocation());
+  // Try cloning one single DbgVariableRecord.
+  auto DIIt = std::next(FirstInst->DebugMarker->getDbgRecordRange().begin());
+  RetInst->DebugMarker->cloneDebugInfoFrom(FirstInst->DebugMarker, DIIt, false);
+  EXPECT_EQ(RetInst->DebugMarker->StoredDbgRecords.size(), 1u);
+  // The second DbgVariableRecord should have been cloned; it should have the
+  // same values as DVR1.
+  EXPECT_EQ(
+      cast<DbgVariableRecord>(RetInst->DebugMarker->StoredDbgRecords.begin())
+          ->getRawLocation(),
+      DVR1->getRawLocation());
   // We should be able to drop individual DbgRecords.
-  RetInst->DbgMarker->dropOneDbgRecord(
-      &*RetInst->DbgMarker->StoredDbgRecords.begin());
+  RetInst->DebugMarker->dropOneDbgRecord(
+      &*RetInst->DebugMarker->StoredDbgRecords.begin());
 
-  // "Aborb" a DPMarker: this means pretend that the instruction it's attached
+  // "Aborb" a DbgMarker: this means pretend that the instruction it's attached
   // to is disappearing so it needs to be transferred into "this" marker.
-  RetInst->DbgMarker->absorbDebugValues(*FirstInst->DbgMarker, true);
-  EXPECT_EQ(RetInst->DbgMarker->StoredDbgRecords.size(), 2u);
-  // Should be the DPV1 and DPV2 objects.
+  RetInst->DebugMarker->absorbDebugValues(*FirstInst->DebugMarker, true);
+  EXPECT_EQ(RetInst->DebugMarker->StoredDbgRecords.size(), 2u);
+  // Should be the DVR1 and DVR2 objects.
   ItCount = 0;
-  for (DbgRecord &Item : RetInst->DbgMarker->getDbgRecordRange()) {
-    EXPECT_TRUE((&Item == DPV2 && ItCount == 0) ||
-              (&Item == DPV1 && ItCount == 1));
-    EXPECT_EQ(Item.getMarker(), RetInst->DbgMarker);
+  for (DbgRecord &Item : RetInst->DebugMarker->getDbgRecordRange()) {
+    EXPECT_TRUE((&Item == DVR2 && ItCount == 0) ||
+                (&Item == DVR1 && ItCount == 1));
+    EXPECT_EQ(Item.getMarker(), RetInst->DebugMarker);
     ++ItCount;
   }
 
-  // Finally -- there are two DPValues left over. If we remove evrything in the
-  // basic block, then they should sink down into the "TrailingDbgRecords"
-  // container for dangling debug-info. Future facilities will restore them
-  // back when a terminator is inserted.
-  FirstInst->DbgMarker->removeMarker();
+  // Finally -- there are two DbgVariableRecords left over. If we remove
+  // evrything in the basic block, then they should sink down into the
+  // "TrailingDbgRecords" container for dangling debug-info. Future facilities
+  // will restore them back when a terminator is inserted.
+  FirstInst->DebugMarker->removeMarker();
   FirstInst->eraseFromParent();
-  RetInst->DbgMarker->removeMarker();
+  RetInst->DebugMarker->removeMarker();
   RetInst->eraseFromParent();
 
-  DPMarker *EndMarker = ExitBlock->getTrailingDbgRecords();
+  DbgMarker *EndMarker = ExitBlock->getTrailingDbgRecords();
   ASSERT_NE(EndMarker, nullptr);
   EXPECT_EQ(EndMarker->StoredDbgRecords.size(), 2u);
-  // Test again that it's those two DPValues, DPV1 and DPV2.
+  // Test again that it's those two DbgVariableRecords, DVR1 and DVR2.
   ItCount = 0;
   for (DbgRecord &Item : EndMarker->getDbgRecordRange()) {
-    EXPECT_TRUE((&Item == DPV2 && ItCount == 0) ||
-              (&Item == DPV1 && ItCount == 1));
+    EXPECT_TRUE((&Item == DVR2 && ItCount == 0) ||
+                (&Item == DVR1 && ItCount == 1));
     EXPECT_EQ(Item.getMarker(), EndMarker);
     ++ItCount;
   }
 
-  // Cleanup the trailing DPValue records and marker.
+  // Cleanup the trailing DbgVariableRecord records and marker.
   EndMarker->eraseFromParent();
 
-  // The record of those trailing DPValues would dangle and cause an assertion
-  // failure if it lived until the end of the LLVMContext.
+  // The record of those trailing DbgVariableRecords would dangle and cause an
+  // assertion failure if it lived until the end of the LLVMContext.
   ExitBlock->deleteTrailingDbgRecords();
 }
 
-TEST(MetadataTest, DPValueConversionRoutines) {
+TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   LLVMContext C;
 
   // For the purpose of this test, set and un-set the command line option
@@ -1073,14 +1078,14 @@ TEST(MetadataTest, DPValueConversionRoutines) {
 )");
 
   // Check that the conversion routines and utilities between dbg.value
-  // debug-info format and DPValues works.
+  // debug-info format and DbgVariableRecords works.
   Function *F = M->getFunction("f");
   BasicBlock *BB1 = &F->getEntryBlock();
   // First instruction should be a dbg.value.
   EXPECT_TRUE(isa<DbgValueInst>(BB1->front()));
   EXPECT_FALSE(BB1->IsNewDbgInfoFormat);
-  // Validating the block for DPValues / DPMarkers shouldn't fail -- there's
-  // no data stored right now.
+  // Validating the block for DbgVariableRecords / DbgMarkers shouldn't fail --
+  // there's no data stored right now.
   bool BrokenDebugInfo = false;
   bool Error = verifyModule(*M, &errs(), &BrokenDebugInfo);
   EXPECT_FALSE(Error);
@@ -1103,38 +1108,39 @@ TEST(MetadataTest, DPValueConversionRoutines) {
     for (auto &I : BB)
       EXPECT_FALSE(isa<DbgValueInst>(I));
 
-  // There should be a DPMarker on each of the two instructions in the entry
-  // block, each containing one DPValue.
+  // There should be a DbgMarker on each of the two instructions in the entry
+  // block, each containing one DbgVariableRecord.
   EXPECT_EQ(BB1->size(), 2u);
   Instruction *FirstInst = &BB1->front();
   Instruction *SecondInst = FirstInst->getNextNode();
-  ASSERT_TRUE(FirstInst->DbgMarker);
-  ASSERT_TRUE(SecondInst->DbgMarker);
-  EXPECT_NE(FirstInst->DbgMarker, SecondInst->DbgMarker);
-  EXPECT_EQ(FirstInst, FirstInst->DbgMarker->MarkedInstr);
-  EXPECT_EQ(SecondInst, SecondInst->DbgMarker->MarkedInstr);
+  ASSERT_TRUE(FirstInst->DebugMarker);
+  ASSERT_TRUE(SecondInst->DebugMarker);
+  EXPECT_NE(FirstInst->DebugMarker, SecondInst->DebugMarker);
+  EXPECT_EQ(FirstInst, FirstInst->DebugMarker->MarkedInstr);
+  EXPECT_EQ(SecondInst, SecondInst->DebugMarker->MarkedInstr);
 
-  EXPECT_EQ(FirstInst->DbgMarker->StoredDbgRecords.size(), 1u);
-  DPValue *DPV1 =
-      cast<DPValue>(&*FirstInst->DbgMarker->getDbgRecordRange().begin());
-  EXPECT_EQ(DPV1->getMarker(), FirstInst->DbgMarker);
+  EXPECT_EQ(FirstInst->DebugMarker->StoredDbgRecords.size(), 1u);
+  DbgVariableRecord *DVR1 = cast<DbgVariableRecord>(
+      &*FirstInst->DebugMarker->getDbgRecordRange().begin());
+  EXPECT_EQ(DVR1->getMarker(), FirstInst->DebugMarker);
   // Should point at %a, an argument.
-  EXPECT_TRUE(isa<Argument>(DPV1->getVariableLocationOp(0)));
+  EXPECT_TRUE(isa<Argument>(DVR1->getVariableLocationOp(0)));
 
-  EXPECT_EQ(SecondInst->DbgMarker->StoredDbgRecords.size(), 1u);
-  DPValue *DPV2 =
-      cast<DPValue>(&*SecondInst->DbgMarker->getDbgRecordRange().begin());
-  EXPECT_EQ(DPV2->getMarker(), SecondInst->DbgMarker);
+  EXPECT_EQ(SecondInst->DebugMarker->StoredDbgRecords.size(), 1u);
+  DbgVariableRecord *DVR2 = cast<DbgVariableRecord>(
+      &*SecondInst->DebugMarker->getDbgRecordRange().begin());
+  EXPECT_EQ(DVR2->getMarker(), SecondInst->DebugMarker);
   // Should point at FirstInst.
-  EXPECT_EQ(DPV2->getVariableLocationOp(0), FirstInst);
+  EXPECT_EQ(DVR2->getVariableLocationOp(0), FirstInst);
 
-  // There should be no DPValues / DPMarkers in the second block, but it should
-  // be marked as being in the new format.
+  // There should be no DbgVariableRecords / DbgMarkers in the second block, but
+  // it should be marked as being in the new format.
   BasicBlock *BB2 = BB1->getNextNode();
   EXPECT_TRUE(BB2->IsNewDbgInfoFormat);
   for (auto &Inst : *BB2)
     // Either there should be no marker, or it should be empty.
-    EXPECT_TRUE(!Inst.DbgMarker || Inst.DbgMarker->StoredDbgRecords.empty());
+    EXPECT_TRUE(!Inst.DebugMarker ||
+                Inst.DebugMarker->StoredDbgRecords.empty());
 
   // Validating the first block should continue to not be a problem,
   Error = verifyModule(*M, &errs(), &BrokenDebugInfo);
@@ -1143,17 +1149,17 @@ TEST(MetadataTest, DPValueConversionRoutines) {
   // But if we were to break something, it should be able to fire. Don't attempt
   // to comprehensively test the validator, it's a smoke-test rather than a
   // "proper" verification pass.
-  DPV1->setMarker(nullptr);
+  DVR1->setMarker(nullptr);
   // A marker pointing the wrong way should be an error.
   Error = verifyModule(*M, &errs(), &BrokenDebugInfo);
   EXPECT_FALSE(Error);
   EXPECT_TRUE(BrokenDebugInfo);
-  DPV1->setMarker(FirstInst->DbgMarker);
+  DVR1->setMarker(FirstInst->DebugMarker);
 
-  DILocalVariable *DLV1 = DPV1->getVariable();
-  DIExpression *Expr1 = DPV1->getExpression();
-  DILocalVariable *DLV2 = DPV2->getVariable();
-  DIExpression *Expr2 = DPV2->getExpression();
+  DILocalVariable *DLV1 = DVR1->getVariable();
+  DIExpression *Expr1 = DVR1->getExpression();
+  DILocalVariable *DLV2 = DVR2->getVariable();
+  DIExpression *Expr2 = DVR2->getExpression();
 
   // Convert everything back to the "old" format and ensure it's right.
   M->convertFromNewDbgValues();

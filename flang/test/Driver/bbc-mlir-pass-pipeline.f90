@@ -38,9 +38,12 @@ end program
 ! CHECK-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! CHECK-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
+! CHECK-NEXT: Pipeline Collection : ['func.func', 'omp.declare_reduction']
 ! CHECK-NEXT: 'func.func' Pipeline
 ! CHECK-NEXT:   PolymorphicOpConversion
-! CHECK-NEXT:   CFGConversion
+! CHECK-NEXT:   CFGConversionOnFunc
+! CHECK-NEXT: 'omp.declare_reduction' Pipeline
+! CHECK-NEXT:   CFGConversionOnReduction
 
 ! CHECK-NEXT: SCFToControlFlow
 ! CHECK-NEXT: Canonicalizer

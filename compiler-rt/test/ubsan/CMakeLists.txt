@@ -23,9 +23,7 @@ macro(add_ubsan_testsuite test_mode sanitizer arch lld thinlto)
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
     ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
   list(APPEND UBSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND UBSAN_TEST_DEPS ${sanitizer})
-  endif()
+  list(APPEND UBSAN_TEST_DEPS ${sanitizer})
 endmacro()
 
 macro(add_ubsan_testsuites test_mode sanitizer arch)

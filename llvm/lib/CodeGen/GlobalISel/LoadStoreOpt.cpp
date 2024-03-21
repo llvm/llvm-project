@@ -117,12 +117,8 @@ bool GISelAddressing::aliasIsKnownForLoadStore(const MachineInstr &MI1,
   if (!BasePtr0.BaseReg.isValid() || !BasePtr1.BaseReg.isValid())
     return false;
 
-  LocationSize Size1 = LdSt1->getMemSize() != MemoryLocation::UnknownSize
-                           ? LdSt1->getMemSize()
-                           : LocationSize::beforeOrAfterPointer();
-  LocationSize Size2 = LdSt2->getMemSize() != MemoryLocation::UnknownSize
-                           ? LdSt2->getMemSize()
-                           : LocationSize::beforeOrAfterPointer();
+  LocationSize Size1 = LdSt1->getMemSize();
+  LocationSize Size2 = LdSt2->getMemSize();
 
   int64_t PtrDiff;
   if (BasePtr0.BaseReg == BasePtr1.BaseReg) {
@@ -214,14 +210,9 @@ bool GISelAddressing::instMayAlias(const MachineInstr &MI,
         Offset = 0;
       }
 
-      TypeSize Size = LS->getMMO().getMemoryType().getSizeInBytes();
-      return {LS->isVolatile(),
-              LS->isAtomic(),
-              BaseReg,
-              Offset /*base offset*/,
-              Size.isScalable() ? LocationSize::beforeOrAfterPointer()
-                                : LocationSize::precise(Size),
-              &LS->getMMO()};
+      LocationSize Size = LS->getMMO().getSize();
+      return {LS->isVolatile(),       LS->isAtomic(), BaseReg,
+              Offset /*base offset*/, Size,           &LS->getMMO()};
     }
     // FIXME: support recognizing lifetime instructions.
     // Default.

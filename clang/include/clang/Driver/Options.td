@@ -1046,29 +1046,28 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
   BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
 
-def fcx_limited_range : Joined<["-"], "fcx-limited-range">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Basic algebraic expansions of complex arithmetic operations "
-           "involving are enabled.">;
-
-def fno_cx_limited_range : Joined<["-"], "fno-cx-limited-range">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Basic algebraic expansions of complex arithmetic operations "
-           "involving are disabled.">;
-
-def fcx_fortran_rules : Joined<["-"], "fcx-fortran-rules">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Range reduction is enabled for complex arithmetic operations.">;
-
-def fno_cx_fortran_rules : Joined<["-"], "fno-cx-fortran-rules">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Range reduction is disabled for complex arithmetic operations.">;
+def fcomplex_arithmetic_EQ : Joined<["-"], "fcomplex-arithmetic=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  Values<"full,improved,promoted,basic">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>;
 
 def complex_range_EQ : Joined<["-"], "complex-range=">, Group<f_Group>,
   Visibility<[CC1Option]>,
-  Values<"full,limited,fortran">, NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["CX_Full", "CX_Limited", "CX_Fortran"]>,
+  Values<"full,improved,promoted,basic">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>,
   MarshallingInfoEnum<LangOpts<"ComplexRange">, "CX_Full">;
+
+defm cx_limited_range: BoolOptionWithoutMarshalling<"f", "cx-limited-range",
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Basic algebraic expansions of "
+  "complex arithmetic operations involving are enabled.">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Basic algebraic expansions "
+  "of complex arithmetic operations involving are disabled.">>;
+
+defm cx_fortran_rules: BoolOptionWithoutMarshalling<"f", "cx-fortran-rules",
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Range reduction is enabled for "
+  "complex arithmetic operations.">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Range reduction is disabled "
+  "for complex arithmetic operations">>;
 
 // OpenCL-only Options
 def cl_opt_disable : Flag<["-"], "cl-opt-disable">, Group<opencl_Group>,
@@ -4704,9 +4703,9 @@ def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
     " (RISC-V only)")>;
 
 def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_Group>,
-  HelpText<"Allow memory accesses to be unaligned (AArch32 only)">;
+  HelpText<"Allow memory accesses to be unaligned (AArch32/MIPSr6 only)">;
 def mno_unaligned_access : Flag<["-"], "mno-unaligned-access">, Group<m_Group>,
-  HelpText<"Force all memory accesses to be aligned (AArch32 only)">;
+  HelpText<"Force all memory accesses to be aligned (AArch32/MIPSr6 only)">;
 def munaligned_symbols : Flag<["-"], "munaligned-symbols">, Group<m_Group>,
   HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
 def mno_unaligned_symbols : Flag<["-"], "mno-unaligned-symbols">, Group<m_Group>,
@@ -5398,6 +5397,9 @@ def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
   Visibility<[ClangOption, CLOption]>;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">,
+  Visibility<[ClangOption, CLOption]>;
+def print_std_module_manifest_path : Flag<["-", "--"], "print-library-module-manifest-path">,
+  HelpText<"Print the path for the C++ Standard library module manifest">,
   Visibility<[ClangOption, CLOption]>;
 def print_targets : Flag<["-", "--"], "print-targets">,
   HelpText<"Print the registered targets">,
@@ -6437,11 +6439,6 @@ def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
 def flang_deprecated_no_hlfir : Flag<["-"], "flang-deprecated-no-hlfir">,
   Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Do not use HLFIR lowering (deprecated)">;
-
-def flang_experimental_polymorphism : Flag<["-"], "flang-experimental-polymorphism">,
-  Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Enable Fortran 2003 polymorphism (experimental)">;
-
 
 //===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption
