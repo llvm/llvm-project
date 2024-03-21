@@ -332,6 +332,20 @@ CallBase *CallBase::Create(CallBase *CB, ArrayRef<OperandBundleDef> Bundles,
   }
 }
 
+CallBase *CallBase::Create(CallBase *CB, ArrayRef<OperandBundleDef> Bundles,
+                           BasicBlock *InsertAtEnd) {
+  switch (CB->getOpcode()) {
+  case Instruction::Call:
+    return CallInst::Create(cast<CallInst>(CB), Bundles, InsertAtEnd);
+  case Instruction::Invoke:
+    return InvokeInst::Create(cast<InvokeInst>(CB), Bundles, InsertAtEnd);
+  case Instruction::CallBr:
+    return CallBrInst::Create(cast<CallBrInst>(CB), Bundles, InsertAtEnd);
+  default:
+    llvm_unreachable("Unknown CallBase sub-class!");
+  }
+}
+
 CallBase *CallBase::Create(CallBase *CI, OperandBundleDef OpB,
                            Instruction *InsertPt) {
   SmallVector<OperandBundleDef, 2> OpDefs;
@@ -342,6 +356,18 @@ CallBase *CallBase::Create(CallBase *CI, OperandBundleDef OpB,
   }
   OpDefs.emplace_back(OpB);
   return CallBase::Create(CI, OpDefs, InsertPt);
+}
+
+CallBase *CallBase::Create(CallBase *CI, OperandBundleDef OpB,
+                           BasicBlock *InsertAtEnd) {
+  SmallVector<OperandBundleDef, 2> OpDefs;
+  for (unsigned i = 0, e = CI->getNumOperandBundles(); i < e; ++i) {
+    auto ChildOB = CI->getOperandBundleAt(i);
+    if (ChildOB.getTagName() != OpB.getTag())
+      OpDefs.emplace_back(ChildOB);
+  }
+  OpDefs.emplace_back(OpB);
+  return CallBase::Create(CI, OpDefs, InsertAtEnd);
 }
 
 
@@ -637,6 +663,23 @@ CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
   return CreateNew ? Create(CB, Bundles, InsertPt) : CB;
 }
 
+CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
+                                        BasicBlock *InsertAtEnd) {
+  SmallVector<OperandBundleDef, 1> Bundles;
+  bool CreateNew = false;
+
+  for (unsigned I = 0, E = CB->getNumOperandBundles(); I != E; ++I) {
+    auto Bundle = CB->getOperandBundleAt(I);
+    if (Bundle.getTagID() == ID) {
+      CreateNew = true;
+      continue;
+    }
+    Bundles.emplace_back(Bundle);
+  }
+
+  return CreateNew ? Create(CB, Bundles, InsertAtEnd) : CB;
+}
+
 bool CallBase::hasReadingOperandBundles() const {
   // Implementation note: this is a conservative implementation of operand
   // bundle semantics, where *any* non-assume operand bundle (other than
@@ -829,6 +872,20 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   return NewCI;
 }
 
+CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
+                           BasicBlock *InsertAtEnd) {
+  std::vector<Value *> Args(CI->arg_begin(), CI->arg_end());
+
+  auto *NewCI = CallInst::Create(CI->getFunctionType(), CI->getCalledOperand(),
+                                 Args, OpB, CI->getName(), InsertAtEnd);
+  NewCI->setTailCallKind(CI->getTailCallKind());
+  NewCI->setCallingConv(CI->getCallingConv());
+  NewCI->SubclassOptionalData = CI->SubclassOptionalData;
+  NewCI->setAttributes(CI->getAttributes());
+  NewCI->setDebugLoc(CI->getDebugLoc());
+  return NewCI;
+}
+
 // Update profile weight for call instruction by scaling it using the ratio
 // of S/T. The meaning of "branch_weights" meta data for call instruction is
 // transfered to represent call count.
@@ -966,6 +1023,20 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
   return NewII;
 }
 
+InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
+                               BasicBlock *InsertAtEnd) {
+  std::vector<Value *> Args(II->arg_begin(), II->arg_end());
+
+  auto *NewII = InvokeInst::Create(
+      II->getFunctionType(), II->getCalledOperand(), II->getNormalDest(),
+      II->getUnwindDest(), Args, OpB, II->getName(), InsertAtEnd);
+  NewII->setCallingConv(II->getCallingConv());
+  NewII->SubclassOptionalData = II->SubclassOptionalData;
+  NewII->setAttributes(II->getAttributes());
+  NewII->setDebugLoc(II->getDebugLoc());
+  return NewII;
+}
+
 LandingPadInst *InvokeInst::getLandingPadInst() const {
   return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());
 }
@@ -1047,6 +1118,21 @@ CallBrInst *CallBrInst::Create(CallBrInst *CBI, ArrayRef<OperandBundleDef> OpB,
   auto *NewCBI = CallBrInst::Create(
       CBI->getFunctionType(), CBI->getCalledOperand(), CBI->getDefaultDest(),
       CBI->getIndirectDests(), Args, OpB, CBI->getName(), InsertPt);
+  NewCBI->setCallingConv(CBI->getCallingConv());
+  NewCBI->SubclassOptionalData = CBI->SubclassOptionalData;
+  NewCBI->setAttributes(CBI->getAttributes());
+  NewCBI->setDebugLoc(CBI->getDebugLoc());
+  NewCBI->NumIndirectDests = CBI->NumIndirectDests;
+  return NewCBI;
+}
+
+CallBrInst *CallBrInst::Create(CallBrInst *CBI, ArrayRef<OperandBundleDef> OpB,
+                               BasicBlock *InsertAtEnd) {
+  std::vector<Value *> Args(CBI->arg_begin(), CBI->arg_end());
+
+  auto *NewCBI = CallBrInst::Create(
+      CBI->getFunctionType(), CBI->getCalledOperand(), CBI->getDefaultDest(),
+      CBI->getIndirectDests(), Args, OpB, CBI->getName(), InsertAtEnd);
   NewCBI->setCallingConv(CBI->getCallingConv());
   NewCBI->SubclassOptionalData = CBI->SubclassOptionalData;
   NewCBI->setAttributes(CBI->getAttributes());
@@ -3955,6 +4041,17 @@ CastInst *CastInst::CreateBitOrPointerCast(Value *S, Type *Ty,
     return Create(Instruction::IntToPtr, S, Ty, Name, InsertBefore);
 
   return Create(Instruction::BitCast, S, Ty, Name, InsertBefore);
+}
+
+CastInst *CastInst::CreateBitOrPointerCast(Value *S, Type *Ty,
+                                           const Twine &Name,
+                                           BasicBlock *InsertAtEnd) {
+  if (S->getType()->isPointerTy() && Ty->isIntegerTy())
+    return Create(Instruction::PtrToInt, S, Ty, Name, InsertAtEnd);
+  if (S->getType()->isIntegerTy() && Ty->isPointerTy())
+    return Create(Instruction::IntToPtr, S, Ty, Name, InsertAtEnd);
+
+  return Create(Instruction::BitCast, S, Ty, Name, InsertAtEnd);
 }
 
 CastInst *CastInst::CreateIntegerCast(Value *C, Type *Ty, bool isSigned,

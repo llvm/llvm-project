@@ -60,11 +60,11 @@ protected:
     Op<0>() = V;
   }
   UnaryInstruction(Type *Ty, unsigned iType, Value *V,
-                   Instruction *IB = nullptr)
+                   Instruction *IB)
     : Instruction(Ty, iType, &Op<0>(), 1, IB) {
     Op<0>() = V;
   }
-  UnaryInstruction(Type *Ty, unsigned iType, Value *V, BasicBlock *IAE)
+  UnaryInstruction(Type *Ty, unsigned iType, Value *V, BasicBlock *IAE = nullptr)
     : Instruction(Ty, iType, &Op<0>(), 1, IAE) {
     Op<0>() = V;
   }
@@ -132,16 +132,16 @@ public:
   /// Instruction is allowed to be a dereferenced end iterator.
   ///
   static UnaryOperator *Create(UnaryOps Op, Value *S,
-                               const Twine &Name = Twine(),
-                               Instruction *InsertBefore = nullptr);
+                               const Twine &Name,
+                               Instruction *InsertBefore);
 
   /// Construct a unary instruction, given the opcode and an operand.
   /// Also automatically insert this instruction to the end of the
   /// BasicBlock specified.
   ///
   static UnaryOperator *Create(UnaryOps Op, Value *S,
-                               const Twine &Name,
-                               BasicBlock *InsertAtEnd);
+                               const Twine &Name = Twine(),
+                               BasicBlock *InsertAtEnd = nullptr);
 
   /// These methods just forward to Create, and are useful when you
   /// statically know what type of instruction you're going to create.  These
@@ -180,9 +180,18 @@ public:
 
   static UnaryOperator *
   CreateWithCopiedFlags(UnaryOps Opc, Value *V, Instruction *CopyO,
-                        const Twine &Name = "",
-                        Instruction *InsertBefore = nullptr) {
+                        const Twine &Name,
+                        Instruction *InsertBefore) {
     UnaryOperator *UO = Create(Opc, V, Name, InsertBefore);
+    UO->copyIRFlags(CopyO);
+    return UO;
+  }
+
+  static UnaryOperator *
+  CreateWithCopiedFlags(UnaryOps Opc, Value *V, Instruction *CopyO,
+                        const Twine &Name = "",
+                        BasicBlock *InsertAtEnd = nullptr) {
+    UnaryOperator *UO = Create(Opc, V, Name, InsertAtEnd);
     UO->copyIRFlags(CopyO);
     return UO;
   }
@@ -195,10 +204,17 @@ public:
   }
 
   static UnaryOperator *CreateFNegFMF(Value *Op, Instruction *FMFSource,
-                                      const Twine &Name = "",
-                                      Instruction *InsertBefore = nullptr) {
+                                      const Twine &Name,
+                                      Instruction *InsertBefore) {
     return CreateWithCopiedFlags(Instruction::FNeg, Op, FMFSource, Name,
                                  InsertBefore);
+  }
+
+  static UnaryOperator *CreateFNegFMF(Value *Op, Instruction *FMFSource,
+                                      const Twine &Name = "",
+                                      BasicBlock *InsertAtEnd = nullptr) {
+    return CreateWithCopiedFlags(Instruction::FNeg, Op, FMFSource, Name,
+                                 InsertAtEnd);
   }
 
   UnaryOps getOpcode() const {
@@ -256,15 +272,15 @@ public:
   /// Instruction is allowed to be a dereferenced end iterator.
   ///
   static BinaryOperator *Create(BinaryOps Op, Value *S1, Value *S2,
-                                const Twine &Name = Twine(),
-                                Instruction *InsertBefore = nullptr);
+                                const Twine &Name,
+                                Instruction *InsertBefore);
 
   /// Construct a binary instruction, given the opcode and the two
   /// operands.  Also automatically insert this instruction to the end of the
   /// BasicBlock specified.
   ///
   static BinaryOperator *Create(BinaryOps Op, Value *S1, Value *S2,
-                                const Twine &Name, BasicBlock *InsertAtEnd);
+                                const Twine &Name = Twine(), BasicBlock *InsertAtEnd = nullptr);
 
   /// These methods just forward to Create, and are useful when you
   /// statically know what type of instruction you're going to create.  These
@@ -304,9 +320,18 @@ public:
 
   static BinaryOperator *
   CreateWithCopiedFlags(BinaryOps Opc, Value *V1, Value *V2, Value *CopyO,
-                        const Twine &Name = "",
-                        Instruction *InsertBefore = nullptr) {
+                        const Twine &Name,
+                        Instruction *InsertBefore) {
     BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);
+    BO->copyIRFlags(CopyO);
+    return BO;
+  }
+
+  static BinaryOperator *
+  CreateWithCopiedFlags(BinaryOps Opc, Value *V1, Value *V2, Value *CopyO,
+                        const Twine &Name = "",
+                        BasicBlock *InsertAtEnd = nullptr) {
+    BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertAtEnd);
     BO->copyIRFlags(CopyO);
     return BO;
   }
@@ -472,22 +497,22 @@ public:
                                    BasicBlock *InsertAtEnd = nullptr);
   static BinaryOperator *CreateNSWNeg(Value *Op, const Twine &Name,
                                       BasicBlock::iterator InsertBefore);
-  static BinaryOperator *CreateNSWNeg(Value *Op, const Twine &Name = "",
-                                      Instruction *InsertBefore = nullptr);
   static BinaryOperator *CreateNSWNeg(Value *Op, const Twine &Name,
-                                      BasicBlock *InsertAtEnd);
+                                      Instruction *InsertBefore);
+  static BinaryOperator *CreateNSWNeg(Value *Op, const Twine &Name = "",
+                                      BasicBlock *InsertAtEnd = nullptr);
   static BinaryOperator *CreateNUWNeg(Value *Op, const Twine &Name,
                                       BasicBlock::iterator InsertBefore);
-  static BinaryOperator *CreateNUWNeg(Value *Op, const Twine &Name = "",
-                                      Instruction *InsertBefore = nullptr);
   static BinaryOperator *CreateNUWNeg(Value *Op, const Twine &Name,
-                                      BasicBlock *InsertAtEnd);
+                                      Instruction *InsertBefore);
+  static BinaryOperator *CreateNUWNeg(Value *Op, const Twine &Name = "",
+                                      BasicBlock *InsertAtEnd = nullptr);
   static BinaryOperator *CreateNot(Value *Op, const Twine &Name,
                                    BasicBlock::iterator InsertBefore);
-  static BinaryOperator *CreateNot(Value *Op, const Twine &Name = "",
-                                   Instruction *InsertBefore = nullptr);
   static BinaryOperator *CreateNot(Value *Op, const Twine &Name,
-                                   BasicBlock *InsertAtEnd);
+                                   Instruction *InsertBefore);
+  static BinaryOperator *CreateNot(Value *Op, const Twine &Name = "",
+                                   BasicBlock *InsertAtEnd = nullptr);
 
   BinaryOps getOpcode() const {
     return static_cast<BinaryOps>(Instruction::getOpcode());
@@ -587,13 +612,13 @@ protected:
   }
   /// Constructor with insert-before-instruction semantics for subclasses
   CastInst(Type *Ty, unsigned iType, Value *S,
-           const Twine &NameStr = "", Instruction *InsertBefore = nullptr)
+           const Twine &NameStr, Instruction *InsertBefore)
     : UnaryInstruction(Ty, iType, S, InsertBefore) {
     setName(NameStr);
   }
   /// Constructor with insert-at-end-of-block semantics for subclasses
   CastInst(Type *Ty, unsigned iType, Value *S,
-           const Twine &NameStr, BasicBlock *InsertAtEnd)
+           const Twine &NameStr = "", BasicBlock *InsertAtEnd = nullptr)
     : UnaryInstruction(Ty, iType, S, InsertAtEnd) {
     setName(NameStr);
   }
@@ -622,8 +647,8 @@ public:
     Instruction::CastOps,    ///< The opcode of the cast instruction
     Value *S,                ///< The value to be casted (operand 0)
     Type *Ty,          ///< The type to which cast should be made
-    const Twine &Name = "", ///< Name for the instruction
-    Instruction *InsertBefore = nullptr ///< Place to insert the instruction
+    const Twine &Name, ///< Name for the instruction
+    Instruction *InsertBefore ///< Place to insert the instruction
   );
   /// Provides a way to construct any of the CastInst subclasses using an
   /// opcode instead of the subclass's constructor. The opcode must be in the
@@ -635,8 +660,8 @@ public:
     Instruction::CastOps,    ///< The opcode for the cast instruction
     Value *S,                ///< The value to be casted (operand 0)
     Type *Ty,          ///< The type to which operand is casted
-    const Twine &Name, ///< The name for the instruction
-    BasicBlock *InsertAtEnd  ///< The block to insert the instruction into
+    const Twine &Name = "", ///< The name for the instruction
+    BasicBlock *InsertAtEnd = nullptr  ///< The block to insert the instruction into
   );
 
   /// Create a ZExt or BitCast cast instruction
@@ -651,16 +676,16 @@ public:
   static CastInst *CreateZExtOrBitCast(
     Value *S,                ///< The value to be casted (operand 0)
     Type *Ty,          ///< The type to which cast should be made
-    const Twine &Name = "", ///< Name for the instruction
-    Instruction *InsertBefore = nullptr ///< Place to insert the instruction
+    const Twine &Name, ///< Name for the instruction
+    Instruction *InsertBefore ///< Place to insert the instruction
   );
 
   /// Create a ZExt or BitCast cast instruction
   static CastInst *CreateZExtOrBitCast(
     Value *S,                ///< The value to be casted (operand 0)
     Type *Ty,          ///< The type to which operand is casted
-    const Twine &Name, ///< The name for the instruction
-    BasicBlock *InsertAtEnd  ///< The block to insert the instruction into
+    const Twine &Name = "", ///< The name for the instruction
+    BasicBlock *InsertAtEnd = nullptr  ///< The block to insert the instruction into
   );
 
   /// Create a SExt or BitCast cast instruction
@@ -675,24 +700,24 @@ public:
   static CastInst *CreateSExtOrBitCast(
     Value *S,                ///< The value to be casted (operand 0)
     Type *Ty,          ///< The type to which cast should be made
-    const Twine &Name = "", ///< Name for the instruction
-    Instruction *InsertBefore = nullptr ///< Place to insert the instruction
+    const Twine &Name, ///< Name for the instruction
+    Instruction *InsertBefore ///< Place to insert the instruction
   );
 
   /// Create a SExt or BitCast cast instruction
   static CastInst *CreateSExtOrBitCast(
     Value *S,                ///< The value to be casted (operand 0)
     Type *Ty,          ///< The type to which operand is casted
-    const Twine &Name, ///< The name for the instruction
-    BasicBlock *InsertAtEnd  ///< The block to insert the instruction into
+    const Twine &Name = "", ///< The name for the instruction
+    BasicBlock *InsertAtEnd = nullptr  ///< The block to insert the instruction into
   );
 
   /// Create a BitCast AddrSpaceCast, or a PtrToInt cast instruction.
   static CastInst *CreatePointerCast(
     Value *S,                ///< The pointer value to be casted (operand 0)
     Type *Ty,          ///< The type to which operand is casted
-    const Twine &Name, ///< The name for the instruction
-    BasicBlock *InsertAtEnd  ///< The block to insert the instruction into
+    const Twine &Name = "", ///< The name for the instruction
+    BasicBlock *InsertAtEnd = nullptr  ///< The block to insert the instruction into
   );
 
   /// Create a BitCast, AddrSpaceCast or a PtrToInt cast instruction.
@@ -707,16 +732,16 @@ public:
   static CastInst *CreatePointerCast(
     Value *S,                ///< The pointer value to be casted (operand 0)
     Type *Ty,          ///< The type to which cast should be made
-    const Twine &Name = "", ///< Name for the instruction
-    Instruction *InsertBefore = nullptr ///< Place to insert the instruction
+    const Twine &Name, ///< Name for the instruction
+    Instruction *InsertBefore ///< Place to insert the instruction
   );
 
   /// Create a BitCast or an AddrSpaceCast cast instruction.
   static CastInst *CreatePointerBitCastOrAddrSpaceCast(
     Value *S,                ///< The pointer value to be casted (operand 0)
     Type *Ty,          ///< The type to which operand is casted
-    const Twine &Name, ///< The name for the instruction
-    BasicBlock *InsertAtEnd  ///< The block to insert the instruction into
+    const Twine &Name = "", ///< The name for the instruction
+    BasicBlock *InsertAtEnd = nullptr  ///< The block to insert the instruction into
   );
 
   /// Create a BitCast or an AddrSpaceCast cast instruction.
@@ -731,8 +756,8 @@ public:
   static CastInst *CreatePointerBitCastOrAddrSpaceCast(
     Value *S,                ///< The pointer value to be casted (operand 0)
     Type *Ty,          ///< The type to which cast should be made
-    const Twine &Name = "", ///< Name for the instruction
-    Instruction *InsertBefore = nullptr ///< Place to insert the instruction
+    const Twine &Name, ///< Name for the instruction
+    Instruction *InsertBefore ///< Place to insert the instruction
   );
 
   /// Create a BitCast, a PtrToInt, or an IntToPTr cast instruction.
@@ -757,8 +782,21 @@ public:
   static CastInst *CreateBitOrPointerCast(
     Value *S,                ///< The pointer value to be casted (operand 0)
     Type *Ty,          ///< The type to which cast should be made
+    const Twine &Name, ///< Name for the instruction
+    Instruction *InsertBefore ///< Place to insert the instruction
+  );
+
+  /// Create a BitCast, a PtrToInt, or an IntToPTr cast instruction.
+  ///
+  /// If the value is a pointer type and the destination an integer type,
+  /// creates a PtrToInt cast. If the value is an integer type and the
+  /// destination a pointer type, creates an IntToPtr cast. Otherwise, creates
+  /// a bitcast.
+  static CastInst *CreateBitOrPointerCast(
+    Value *S,                ///< The pointer value to be casted (operand 0)
+    Type *Ty,          ///< The type to which cast should be made
     const Twine &Name = "", ///< Name for the instruction
-    Instruction *InsertBefore = nullptr ///< Place to insert the instruction
+    BasicBlock *InsertAtEnd = nullptr ///< Place to insert the instruction
   );
 
   /// Create a ZExt, BitCast, or Trunc for int -> int casts.
@@ -775,8 +813,8 @@ public:
     Value *S,                ///< The pointer value to be casted (operand 0)
     Type *Ty,          ///< The type to which cast should be made
     bool isSigned,           ///< Whether to regard S as signed or not
-    const Twine &Name = "", ///< Name for the instruction
-    Instruction *InsertBefore = nullptr ///< Place to insert the instruction
+    const Twine &Name, ///< Name for the instruction
+    Instruction *InsertBefore ///< Place to insert the instruction
   );
 
   /// Create a ZExt, BitCast, or Trunc for int -> int casts.
@@ -784,8 +822,8 @@ public:
     Value *S,                ///< The integer value to be casted (operand 0)
     Type *Ty,          ///< The integer type to which operand is casted
     bool isSigned,           ///< Whether to regard S as signed or not
-    const Twine &Name, ///< The name for the instruction
-    BasicBlock *InsertAtEnd  ///< The block to insert the instruction into
+    const Twine &Name = "", ///< The name for the instruction
+    BasicBlock *InsertAtEnd = nullptr  ///< The block to insert the instruction into
   );
 
   /// Create an FPExt, BitCast, or FPTrunc for fp -> fp casts
@@ -800,16 +838,16 @@ public:
   static CastInst *CreateFPCast(
     Value *S,                ///< The floating point value to be casted
     Type *Ty,          ///< The floating point type to cast to
-    const Twine &Name = "", ///< Name for the instruction
-    Instruction *InsertBefore = nullptr ///< Place to insert the instruction
+    const Twine &Name, ///< Name for the instruction
+    Instruction *InsertBefore ///< Place to insert the instruction
   );
 
   /// Create an FPExt, BitCast, or FPTrunc for fp -> fp casts
   static CastInst *CreateFPCast(
     Value *S,                ///< The floating point value to be casted
     Type *Ty,          ///< The floating point type to cast to
-    const Twine &Name, ///< The name for the instruction
-    BasicBlock *InsertAtEnd  ///< The block to insert the instruction into
+    const Twine &Name = "", ///< The name for the instruction
+    BasicBlock *InsertAtEnd = nullptr  ///< The block to insert the instruction into
   );
 
   /// Create a Trunc or BitCast cast instruction
@@ -824,16 +862,16 @@ public:
   static CastInst *CreateTruncOrBitCast(
     Value *S,                ///< The value to be casted (operand 0)
     Type *Ty,          ///< The type to which cast should be made
-    const Twine &Name = "", ///< Name for the instruction
-    Instruction *InsertBefore = nullptr ///< Place to insert the instruction
+    const Twine &Name, ///< Name for the instruction
+    Instruction *InsertBefore ///< Place to insert the instruction
   );
 
   /// Create a Trunc or BitCast cast instruction
   static CastInst *CreateTruncOrBitCast(
     Value *S,                ///< The value to be casted (operand 0)
     Type *Ty,          ///< The type to which operand is casted
-    const Twine &Name, ///< The name for the instruction
-    BasicBlock *InsertAtEnd  ///< The block to insert the instruction into
+    const Twine &Name = "", ///< The name for the instruction
+    BasicBlock *InsertAtEnd = nullptr  ///< The block to insert the instruction into
   );
 
   /// Check whether a bitcast between these types is valid
@@ -1021,13 +1059,13 @@ protected:
           Instruction *FlagsSource = nullptr);
 
   CmpInst(Type *ty, Instruction::OtherOps op, Predicate pred,
-          Value *LHS, Value *RHS, const Twine &Name = "",
-          Instruction *InsertBefore = nullptr,
+          Value *LHS, Value *RHS, const Twine &Name,
+          Instruction *InsertBefore,
           Instruction *FlagsSource = nullptr);
 
   CmpInst(Type *ty, Instruction::OtherOps op, Predicate pred,
-          Value *LHS, Value *RHS, const Twine &Name,
-          BasicBlock *InsertAtEnd);
+          Value *LHS, Value *RHS, const Twine &Name = "",
+          BasicBlock *InsertAtEnd = nullptr);
 
 public:
   // allocate space for exactly two operands
@@ -1048,15 +1086,15 @@ public:
   /// Create a CmpInst
   static CmpInst *Create(OtherOps Op,
                          Predicate predicate, Value *S1,
-                         Value *S2, const Twine &Name = "",
-                         Instruction *InsertBefore = nullptr);
+                         Value *S2, const Twine &Name,
+                         Instruction *InsertBefore);
 
   /// Construct a compare instruction, given the opcode, the predicate and the
   /// two operands.  Also automatically insert this instruction to the end of
   /// the BasicBlock specified.
   /// Create a CmpInst
   static CmpInst *Create(OtherOps Op, Predicate predicate, Value *S1,
-                         Value *S2, const Twine &Name, BasicBlock *InsertAtEnd);
+                         Value *S2, const Twine &Name = "", BasicBlock *InsertAtEnd = nullptr);
 
   /// Get the opcode casted to the right type
   OtherOps getOpcode() const {
@@ -1513,7 +1551,16 @@ public:
   /// the operand bundles for the new instruction are set to the operand bundles
   /// in \p Bundles.
   static CallBase *Create(CallBase *CB, ArrayRef<OperandBundleDef> Bundles,
-                          Instruction *InsertPt = nullptr);
+                          Instruction *InsertPt);
+
+  /// Create a clone of \p CB with a different set of operand bundles and
+  /// insert it at the end of  \p InsertAtEnd.
+  ///
+  /// The returned call instruction is identical \p CB in every way except that
+  /// the operand bundles for the new instruction are set to the operand bundles
+  /// in \p Bundles.
+  static CallBase *Create(CallBase *CB, ArrayRef<OperandBundleDef> Bundles,
+                          BasicBlock *InsertAtEnd = nullptr);
 
   /// Create a clone of \p CB with the operand bundle with the tag matching
   /// \p Bundle's tag replaced with Bundle, and insert it before \p InsertPt.
@@ -1530,12 +1577,26 @@ public:
   /// the specified operand bundle has been replaced.
   static CallBase *Create(CallBase *CB,
                           OperandBundleDef Bundle,
-                          Instruction *InsertPt = nullptr);
+                          Instruction *InsertPt);
+
+  /// Create a clone of \p CB with the operand bundle with the tag matching
+  /// \p Bundle's tag replaced with Bundle, and insert it at the end of \p InsertAtEnd.
+  ///
+  /// The returned call instruction is identical \p CI in every way except that
+  /// the specified operand bundle has been replaced.
+  static CallBase *Create(CallBase *CB,
+                          OperandBundleDef Bundle,
+                          BasicBlock *InsertAtEnd = nullptr);
 
   /// Create a clone of \p CB with operand bundle \p OB added.
   static CallBase *addOperandBundle(CallBase *CB, uint32_t ID,
                                     OperandBundleDef OB,
-                                    Instruction *InsertPt = nullptr);
+                                    Instruction *InsertPt);
+
+  /// Create a clone of \p CB with operand bundle \p OB added.
+  static CallBase *addOperandBundle(CallBase *CB, uint32_t ID,
+                                    OperandBundleDef OB,
+                                    BasicBlock *InsertAtEnd = nullptr);
 
   /// Create a clone of \p CB with operand bundle \p OB added.
   static CallBase *addOperandBundle(CallBase *CB, uint32_t ID,
@@ -1544,7 +1605,11 @@ public:
 
   /// Create a clone of \p CB with operand bundle \p ID removed.
   static CallBase *removeOperandBundle(CallBase *CB, uint32_t ID,
-                                       Instruction *InsertPt = nullptr);
+                                       Instruction *InsertPt);
+
+  /// Create a clone of \p CB with operand bundle \p ID removed.
+  static CallBase *removeOperandBundle(CallBase *CB, uint32_t ID,
+                                       BasicBlock *InsertAtEnd = nullptr);
 
   /// Create a clone of \p CB with operand bundle \p ID removed.
   static CallBase *removeOperandBundle(CallBase *CB, uint32_t ID,

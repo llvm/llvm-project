@@ -1012,9 +1012,9 @@ protected:
   Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
               InstListType::iterator InsertBefore);
   Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
-              Instruction *InsertBefore = nullptr);
+              Instruction *InsertBefore);
   Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
-              BasicBlock *InsertAtEnd);
+              BasicBlock *InsertAtEnd = nullptr);
 
 private:
   /// Create a copy of this instruction.
