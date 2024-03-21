@@ -7,8 +7,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.basic_operations
 )
 
 add_entrypoint_object(
@@ -20,8 +19,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.basic_operations
 )
 
 add_entrypoint_object(
@@ -33,8 +31,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.basic_operations
 )
 
 add_entrypoint_object(
@@ -46,8 +43,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.basic_operations
 )
 
 add_entrypoint_object(
