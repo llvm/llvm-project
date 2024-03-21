@@ -428,10 +428,10 @@ LLVM_17 {
     clang_getCursorUnaryOperatorKind;
 };
 
-LLVM_18 {
+LLVM_19 {
   global:
     clang_getCursorCallExprKind;
-}
+};
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol
 # version, please update the example to depend on the version you added.
