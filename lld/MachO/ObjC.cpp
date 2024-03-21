@@ -790,7 +790,7 @@ void ObjcCategoryMerger::emitAndLinkProtocolList(
       infoCategoryWriter.catPtrListInfo.align);
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
   listSec->live = true;
-  allInputSections.push_back(listSec);
+  addInputSection(listSec);
 
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
@@ -848,7 +848,7 @@ void ObjcCategoryMerger::emitAndLinkPointerList(
       infoCategoryWriter.catPtrListInfo.align);
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
   listSec->live = true;
-  allInputSections.push_back(listSec);
+  addInputSection(listSec);
 
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
@@ -889,7 +889,7 @@ ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCateogryName,
                                bodyData, infoCategoryWriter.catListInfo.align);
   newCatList->parent = infoCategoryWriter.catListInfo.outputSection;
   newCatList->live = true;
-  allInputSections.push_back(newCatList);
+  addInputSection(newCatList);
 
   newCatList->parent = infoCategoryWriter.catListInfo.outputSection;
 
@@ -927,7 +927,7 @@ Defined *ObjcCategoryMerger::emitCategoryBody(const std::string &name,
                                bodyData, infoCategoryWriter.catBodyInfo.align);
   newBodySec->parent = infoCategoryWriter.catBodyInfo.outputSection;
   newBodySec->live = true;
-  allInputSections.push_back(newBodySec);
+  addInputSection(newBodySec);
 
   std::string symName =
       objc::symbol_names::category + baseClassName + "_$_(" + name + ")";
@@ -1132,7 +1132,7 @@ void ObjcCategoryMerger::generateCatListForNonErasedCategories(
           infoCategoryWriter.catListInfo.align);
       listSec->parent = infoCategoryWriter.catListInfo.outputSection;
       listSec->live = true;
-      allInputSections.push_back(listSec);
+      addInputSection(listSec);
 
       std::string slotSymName = "<__objc_catlist slot for category ";
       slotSymName += nonErasedCatBody->getName();
