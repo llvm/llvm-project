@@ -10,7 +10,7 @@ define amdgpu_gfx void @example(<4 x i32> inreg %rsrc, ptr addrspace(5) %src, i3
 ; CHECK-NEXT:    scratch_load_b32 v2, v0, off
 ; CHECK-NEXT:    scratch_load_b32 v3, v3, off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_b64 v[2:3], v1, s[4:7], 0 offen
+; CHECK-NEXT:    buffer_store_b64 v[2:3], v1, s[0:3], 0 offen
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 
   %x0 = load i32, ptr addrspace(5) %src
