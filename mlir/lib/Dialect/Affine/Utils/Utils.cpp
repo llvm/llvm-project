@@ -1792,8 +1792,7 @@ MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType) {
   MLIRContext *context = memrefType.getContext();
   for (unsigned d = 0; d < newRank; ++d) {
     // Check if this dimension is dynamic.
-    if (bool isDynDim =
-            isNormalizedMemRefDynamicDim(d, layoutMap, memrefTypeDynDims)) {
+    if (isNormalizedMemRefDynamicDim(d, layoutMap, memrefTypeDynDims)) {
       newShape[d] = ShapedType::kDynamic;
       continue;
     }
