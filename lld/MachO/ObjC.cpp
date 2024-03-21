@@ -1221,9 +1221,10 @@ void ObjcCategoryMerger::doCleanup() { generatedSectionData.clear(); }
 
 StringRef ObjcCategoryMerger::newStringData(const char *str) {
   uint32_t len = strlen(str);
-  auto &data = newSectionData(len + 1);
+  uint32_t bufSize = len + 1;
+  auto &data = newSectionData(bufSize);
   char *strData = reinterpret_cast<char *>(data.data());
-  strncpy(strData, str, len);
+  strncpy(strData, str, bufSize);
   return StringRef(strData, len);
 }
 
