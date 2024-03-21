@@ -92,6 +92,9 @@ public:
   uint64_t GetSwiftMetadataCacheExpirationDays();
   FileSpec GetSwiftMetadataCachePath() const;
   bool SetSwiftMetadataCachePath(const FileSpec &path);
+
+  AutoBool GetSwiftEnableCxxInterop() const;
+  AutoBool GetSwiftEnableFullDwarfDebugging() const;
   // END SWIFT
 
   FileSpec GetClangModulesCachePath() const;

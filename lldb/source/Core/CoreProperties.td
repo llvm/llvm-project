@@ -54,6 +54,16 @@ let Definition = "modulelist" in {
     Global,
     DefaultUnsignedValue<7>,
     Desc<"The expiration time in days for a Swift reflection cache file. When a file hasn't been accessed for the specified amount of days, it is removed from the cache. A value of 0 disables the expiration-based pruning.">;
+  def SwiftEnableCxxInterop: Property<"swift-enable-cxx-interop", "Enum">,
+    Global,
+    DefaultEnumValue<"llvm::to_underlying(AutoBool::Auto)">,
+    EnumValues<"OptionEnumValues(g_enable_swift_cxx_interop_values)">,
+    Desc<"Passes the -enable-cxx-interop flag to the swift compiler.">;
+  def SwiftEnableFullDwarfDebugging: Property<"swift-enable-full-dwarf-debugging", "Enum">,
+    Global,
+    DefaultEnumValue<"llvm::to_underlying(AutoBool::Auto)">,
+    EnumValues<"OptionEnumValues(g_enable_full_dwarf_debugging)">,
+    Desc<"Read full debug information from DWARF for Swift debugging. By default LLDB will use DWARF debug information if it cannot use reflection metadata.">;
 // END SWIFT
   def SymLinkPaths: Property<"debug-info-symlink-paths", "FileSpecList">,
     Global,

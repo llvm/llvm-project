@@ -174,7 +174,8 @@ public:
 
   std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>>
   getFieldRecords() override {
-    assert(Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging() !=
+    assert(ModuleList::GetGlobalModuleListProperties()
+                   .GetSwiftEnableFullDwarfDebugging() !=
                lldb_private::AutoBool::False &&
            "Full DWARF debugging for Swift is disabled!");
 
@@ -332,7 +333,8 @@ public:
 std::unique_ptr<swift::reflection::BuiltinTypeDescriptorBase>
 DWARFASTParserSwift::getBuiltinTypeDescriptor(
     const swift::reflection::TypeRef *TR) {
-  assert(Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging() !=
+  assert(ModuleList::GetGlobalModuleListProperties()
+                 .GetSwiftEnableFullDwarfDebugging() !=
              lldb_private::AutoBool::False &&
          "Full DWARF debugging for Swift is disabled!");
 
@@ -374,7 +376,8 @@ DWARFASTParserSwift::getBuiltinTypeDescriptor(
 std::unique_ptr<swift::reflection::MultiPayloadEnumDescriptorBase>
 DWARFASTParserSwift::getMultiPayloadEnumDescriptor(
     const swift::reflection::TypeRef *TR) {
-  assert(Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging() !=
+  assert(ModuleList::GetGlobalModuleListProperties()
+                 .GetSwiftEnableFullDwarfDebugging() !=
              lldb_private::AutoBool::False &&
          "Full DWARF debugging for Swift is disabled!");
 
@@ -480,7 +483,8 @@ NodePointer DWARFASTParserSwift::GetCanonicalDemangleTree(DWARFDIE &die) {
 
 std::unique_ptr<swift::reflection::FieldDescriptorBase>
 DWARFASTParserSwift::getFieldDescriptor(const swift::reflection::TypeRef *TR) {
-  assert(Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging() !=
+  assert(ModuleList::GetGlobalModuleListProperties()
+                 .GetSwiftEnableFullDwarfDebugging() !=
              lldb_private::AutoBool::False &&
          "Full DWARF debugging for Swift is disabled!");
 

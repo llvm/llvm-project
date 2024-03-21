@@ -1169,7 +1169,7 @@ bool Module::IsSwiftCxxInteropEnabled() {
     break;
   }
   AutoBool interop_enabled =
-      Target::GetGlobalProperties().GetEnableSwiftCxxInterop();
+    ModuleList::GetGlobalModuleListProperties().GetSwiftEnableCxxInterop();
   switch (interop_enabled) {
   case AutoBool::True:
     m_is_swift_cxx_interop_enabled = eLazyBoolYes;
