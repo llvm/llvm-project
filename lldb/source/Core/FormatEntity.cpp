@@ -57,6 +57,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <cctype>
@@ -659,20 +660,24 @@ static char ConvertValueObjectStyleToChar(
 }
 
 static bool DumpValueWithLLVMFormat(Stream &s, llvm::StringRef options,
-                                    ValueObject &target) {
+                                    ValueObject &valobj) {
   std::string formatted;
   std::string llvm_format = ("{0:" + options + "}").str();
 
-  auto type_info = target.GetTypeInfo();
-  if (type_info & eTypeIsInteger) {
+  // Options supported by format_provider<T> for integral arithmetic types.
+  // See table in FormatProviders.h.
+  llvm::Regex int_format{"x[-+]?\\d*|n|d", llvm::Regex::IgnoreCase};
+
+  auto type_info = valobj.GetTypeInfo();
+  if (type_info & eTypeIsInteger && int_format.match(options)) {
     if (type_info & eTypeIsSigned) {
       bool success = false;
-      auto integer = target.GetValueAsSigned(0, &success);
+      auto integer = valobj.GetValueAsSigned(0, &success);
       if (success)
         formatted = llvm::formatv(llvm_format.data(), integer);
     } else {
       bool success = false;
-      auto integer = target.GetValueAsUnsigned(0, &success);
+      auto integer = valobj.GetValueAsUnsigned(0, &success);
       if (success)
         formatted = llvm::formatv(llvm_format.data(), integer);
     }

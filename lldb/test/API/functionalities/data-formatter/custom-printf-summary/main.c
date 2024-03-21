@@ -7,7 +7,7 @@ struct Bytes {
 };
 
 int main() {
-  struct Bytes bytes = {0x10, 0x01};
+  struct Bytes bytes = {0x30, 0x01};
   (void)bytes;
   printf("break here\n");
 }
