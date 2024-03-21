@@ -104,6 +104,7 @@ static_library("MCTargetDesc") {
     "AMDGPUMCAsmInfo.cpp",
     "AMDGPUMCCodeEmitter.cpp",
     "AMDGPUMCExpr.cpp",
+    "AMDGPUMCKernelDescriptor.cpp",
     "AMDGPUMCTargetDesc.cpp",
     "AMDGPUTargetStreamer.cpp",
     "R600InstPrinter.cpp",
