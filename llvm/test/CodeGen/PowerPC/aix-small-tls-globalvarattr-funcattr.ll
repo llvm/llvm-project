@@ -12,7 +12,6 @@
 @mySmallLocalExecTLS3 = internal thread_local(localexec) global [3000 x i64] zeroinitializer, align 8
 @mySmallLocalExecTLS4 = internal thread_local(localexec) global [3000 x i64] zeroinitializer, align 8 #0
 @mySmallLocalExecTLS5 = thread_local(localexec) global [3000 x i64] zeroinitializer, align 8 #0
-@mySmallLocalExecTLS = thread_local(localexec) local_unnamed_addr global [7800 x i64] zeroinitializer, align 8 #0
 declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull)
 
 ; All accesses use a "faster" local-exec sequence directly off the thread pointer.
