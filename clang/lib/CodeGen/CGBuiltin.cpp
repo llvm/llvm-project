@@ -26,6 +26,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -1052,6 +1053,128 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   return Builder.CreateSelect(Cmp, Res, ConstantInt::get(ResType, 0, IsSigned));
 }
 
+namespace {
+
+struct ObjectSizeVisitor
+    : public ConstStmtVisitor<ObjectSizeVisitor, const Expr *> {
+  const Expr *Visit(const Expr *E) {
+    return ConstStmtVisitor<ObjectSizeVisitor, const Expr *>::Visit(E);
+  }
+
+  const Expr *VisitStmt(const Stmt *S) { return nullptr; }
+
+  const Expr *VisitDeclRefExpr(const DeclRefExpr *E) { return E; }
+  const Expr *VisitMemberExpr(const MemberExpr *E) { return E; }
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) { return E; }
+
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitParenExpr(const ParenExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+};
+
+} // end anonymous namespace
+
+/// tryToCalculateSubObjectSize - It may be possible to calculate the
+/// sub-object size of an array and skip the generation of the llvm.objectsize
+/// intrinsic. This avoids the complication in conveying the sub-object's
+/// information to the backend. This calculation works for an N-dimentional
+/// array.
+///
+/// Note that this function supports only Row-Major arrays. The generalized
+/// calculation of the offset of an element in Row-Major form:
+///
+///                     .-          -.
+///               d     |    d       |
+///              ---    |  -----     |
+///     offset = \      |   | |      |
+///              /      |   | |  N_j |  m_i
+///              ---    |   | |      |
+///             i = 1   | j = i + 1  |
+///                     `-          -'
+///
+/// where d is the number of dimensions; m_i is the index of an element in
+/// dimension i; and N_i is the size of dimention i.
+///
+/// Examples:
+///     2D: offset = m_2 + (N_2 * m_1)
+///     3D: offset = m_3 + (N_3 * m_2) + (N_3 * N_2 * m_1)
+llvm::Value *
+CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
+                                             llvm::IntegerType *ResType) {
+  if ((Type & 0x01) != 1)
+    // Only support sub-object calculation.
+    return nullptr;
+
+  const Expr *ObjectBase = ObjectSizeVisitor().Visit(E);
+  if (!ObjectBase)
+    return nullptr;
+
+  // Collect the sizes and indices from the array.
+  ASTContext &Ctx = getContext();
+  SmallVector<std::pair<Value *, Value *>, 4> Dims;
+  while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(ObjectBase)) {
+    const Expr *Base = ASE;
+    const Expr *Idx = ASE->getIdx();
+
+    if (Idx->HasSideEffects(Ctx))
+      return nullptr;
+
+    uint64_t BaseSize = Ctx.getTypeSizeInChars(Base->getType()).getQuantity();
+    Value *IdxSize = EmitScalarExpr(Idx);
+
+    Dims.emplace_back(std::make_pair(
+        Builder.CreateIntCast(Builder.getInt64(BaseSize), ResType,
+                              /*isSigned=*/true),
+        Builder.CreateIntCast(IdxSize, ResType, /*isSigned=*/true)));
+
+    ObjectBase = ASE->getBase()->IgnoreParenImpCasts();
+  }
+
+  if (Dims.empty())
+    return nullptr;
+
+  // Rerun the visitor to find the base object: MemberExpr or DeclRefExpr.
+  ObjectBase = ObjectSizeVisitor().Visit(ObjectBase);
+  if (!ObjectBase)
+    return nullptr;
+
+  if (const auto *ME = dyn_cast<MemberExpr>(ObjectBase)) {
+    const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+        getLangOpts().getStrictFlexArraysLevel();
+    const ValueDecl *Field = ME->getMemberDecl();
+    if (Decl::isFlexibleArrayMemberLike(
+            Ctx, Field, Field->getType(), StrictFlexArraysLevel,
+            /*IgnoreTemplateOrMacroSubstitution=*/true))
+      // FIXME: Support flexible array members?
+      return nullptr;
+  }
+
+  uint64_t ObjectSize =
+      Ctx.getTypeSizeInChars(ObjectBase->getType()).getQuantity();
+
+  // Generate the calculation.
+  Value *Offset = Builder.CreateMul(Dims.front().first, Dims.front().second);
+  for (auto Dim : llvm::drop_begin(Dims))
+    Offset =
+        Builder.CreateAdd(Offset, Builder.CreateMul(Dim.first, Dim.second));
+
+  Value *Res =
+      Builder.CreateSub(Builder.CreateIntCast(Builder.getInt64(ObjectSize),
+                                              ResType, /*isSigned=*/true),
+                        Offset);
+  return Builder.CreateSelect(Builder.CreateIsNotNeg(Res), Res,
+                              ConstantInt::get(ResType, 0, /*isSigned=*/true));
+}
+
 /// Returns a Value corresponding to the size of the given expression.
 /// This Value may be either of the following:
 ///   - A llvm::Argument (if E is a param with the pass_object_size attribute on
@@ -1084,18 +1207,21 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
     }
   }
 
-  if (IsDynamic) {
-    // Emit special code for a flexible array member with the "counted_by"
-    // attribute.
-    if (Value *V = emitFlexibleArrayMemberSize(E, Type, ResType))
-      return V;
-  }
-
   // LLVM can't handle Type=3 appropriately, and __builtin_object_size shouldn't
   // evaluate E for side-effects. In either case, we shouldn't lower to
   // @llvm.objectsize.
   if (Type == 3 || (!EmittedE && E->HasSideEffects(getContext())))
     return getDefaultBuiltinObjectSizeResult(Type, ResType);
+
+  if (IsDynamic) {
+    // Emit special code for a flexible array member with the "counted_by"
+    // attribute.
+    if (Value *V = emitFlexibleArrayMemberSize(E, Type, ResType))
+      return V;
+
+    if (Value *V = tryToCalculateSubObjectSize(E, Type, ResType))
+      return V;
+  }
 
   Value *Ptr = EmittedE ? EmittedE : EmitScalarExpr(E);
   assert(Ptr->getType()->isPointerTy() &&
