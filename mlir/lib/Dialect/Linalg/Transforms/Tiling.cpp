@@ -371,8 +371,8 @@ static FailureOr<ForallTilingResult> tileToForallOpImpl(
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op.getOperation());
   if (linalgOp) {
     // Check if tiling is thread safe and print a warning if not.
-    SmallVector<bool> tilingSafety = safeToTileToForall(
-        b.getContext(), linalgOp, numThreads);
+    SmallVector<bool> tilingSafety =
+        safeToTileToForall(b.getContext(), linalgOp, numThreads);
     for (size_t i = 0; i < tilingSafety.size(); i++)
       if (!tilingSafety[i])
         op.emitWarning() << "tiling is not thread safe at axis #" << i;
