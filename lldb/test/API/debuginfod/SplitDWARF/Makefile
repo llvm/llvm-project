@@ -18,8 +18,7 @@ C_SOURCES := main.c
 # * The .uuid file (for a little easier testing code)
 #   Produced here in the rule below
 
-MAKE_DWO := YES
-MERGE_DWOS := YES
+MAKE_DWP := YES
 SPLIT_DEBUG_SYMBOLS := YES
 SAVE_FULL_DEBUG_BINARY := YES
 GEN_GNU_BUILD_ID := YES
