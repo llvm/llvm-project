@@ -615,7 +615,7 @@ void OutputSection::finalize() {
     return;
   }
 
-  if (!config->copyRelocs || (type != SHT_RELA && type != SHT_REL))
+  if (!config->copyRelocs || !isStaticRelSecType(type))
     return;
 
   // Skip if 'first' is synthetic, i.e. not a section created by --emit-relocs.
@@ -750,7 +750,7 @@ std::array<uint8_t, 4> OutputSection::getFiller() {
 
 void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
   assert(config->writeAddends && config->checkDynamicRelocs);
-  assert(type == SHT_REL || type == SHT_RELA);
+  assert(isStaticRelSecType(type));
   SmallVector<InputSection *, 0> storage;
   ArrayRef<InputSection *> sections = getInputSections(*this, storage);
   parallelFor(0, sections.size(), [&](size_t i) {
