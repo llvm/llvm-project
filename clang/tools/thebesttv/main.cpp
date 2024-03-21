@@ -79,6 +79,10 @@ getCompilationDatabase(fs::path buildPath) {
     std::unique_ptr<CompilationDatabase> cb =
         CompilationDatabase::autoDetectFromDirectory(buildPath.string(),
                                                      errorMsg);
+    // FIXME: 在 npe/input.json 下会报错
+    // #include "clang/Tooling/JSONCompilationDatabase.h"
+    // JSONCompilationDatabase::loadFromFile(
+    //     buildPath.string(), errorMsg, JSONCommandLineSyntax::AutoDetect);
     if (!cb) {
         llvm::errs() << "Error while trying to load a compilation database:\n"
                      << errorMsg << "Running without flags.\n";
