@@ -88,7 +88,7 @@ entry:
   ret void
 }
 
-; GFX9_10 can use a signed immediate byte offset but not without sgpr[offset]
+; GFX9+ can use a signed immediate byte offset but not without sgpr[offset]
 ; GCN-LABEL: {{^}}smrd6:
 ; SICIVI: s_add_u32 s{{[0-9]}}, s{{[0-9]}}, -4
 ; SICIVI: s_load_dword s{{[0-9]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0

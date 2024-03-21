@@ -440,6 +440,86 @@ define amdgpu_ps void @test_s_load_u16_divergent(ptr addrspace(4) inreg %in, i32
   ret void
 }
 
+define amdgpu_kernel void @test_s_load_no_neg_offset(ptr addrspace(1) %out, ptr addrspace(4) %ptr) #0 {
+; DAG-LABEL: test_s_load_no_neg_offset:
+; DAG:       ; %bb.0: ; %entry
+; DAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; DAG-NEXT:    s_wait_kmcnt 0x0
+; DAG-NEXT:    s_sub_nc_u64 s[2:3], s[2:3], 4
+; DAG-NEXT:    s_load_b32 s2, s[2:3], 0x0
+; DAG-NEXT:    s_wait_kmcnt 0x0
+; DAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; DAG-NEXT:    global_store_b32 v0, v1, s[0:1]
+; DAG-NEXT:    s_nop 0
+; DAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; DAG-NEXT:    s_endpgm
+;
+; GISEL-LABEL: test_s_load_no_neg_offset:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_sub_nc_u64 s[2:3], s[2:3], 4
+; GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GISEL-NEXT:    s_nop 0
+; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GISEL-NEXT:    s_endpgm
+entry:
+  %tmp = getelementptr i32, ptr addrspace(4) %ptr, i64 -1
+  %tmp1 = load i32, ptr addrspace(4) %tmp
+  store i32 %tmp1, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps float @test_s_load_sgpr_offset_with_neg_imm_offset(ptr addrspace(1) inreg %sbase, i32 inreg %soffset) {
+; GCN-LABEL: test_s_load_sgpr_offset_with_neg_imm_offset:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_or_b32 s2, s2, 24
+; GCN-NEXT:    s_load_u8 s0, s[0:1], s2 offset:-0x18
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    ; return to shader part epilog
+  %1 = or i32 %soffset, 24
+  %zext.offset = zext i32 %1 to i64
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -24
+  %load = load i8, ptr addrspace(1) %gep1
+  %zext = zext i8 %load to i32
+  %to.vgpr = bitcast i32 %zext to float
+  ret float %to.vgpr
+}
+
+define amdgpu_ps float @test_s_load_no_neg_imm_offset(ptr addrspace(1) inreg %sbase, i32 inreg %soffset) {
+; DAG-LABEL: test_s_load_no_neg_imm_offset:
+; DAG:       ; %bb.0:
+; DAG-NEXT:    s_sub_nc_u64 s[0:1], s[0:1], 24
+; DAG-NEXT:    s_or_b32 s2, s2, 16
+; DAG-NEXT:    s_load_u8 s0, s[0:1], s2 offset:0x0
+; DAG-NEXT:    s_wait_kmcnt 0x0
+; DAG-NEXT:    v_mov_b32_e32 v0, s0
+; DAG-NEXT:    ; return to shader part epilog
+;
+; GISEL-LABEL: test_s_load_no_neg_imm_offset:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_or_b32 s2, s2, 16
+; GISEL-NEXT:    s_sub_nc_u64 s[0:1], s[0:1], 24
+; GISEL-NEXT:    s_load_u8 s0, s[0:1], s2 offset:0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-NEXT:    ; return to shader part epilog
+  %1 = or i32 %soffset, 16
+  %zext.offset = zext i32 %1 to i64
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -24
+  %load = load i8, ptr addrspace(1) %gep1
+  %zext = zext i8 %load to i32
+  %to.vgpr = bitcast i32 %zext to float
+  ret float %to.vgpr
+}
+
 define amdgpu_ps void @s_buffer_load_byte_imm_offset(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out) {
 ; GCN-LABEL: s_buffer_load_byte_imm_offset:
 ; GCN:       ; %bb.0: ; %main_body

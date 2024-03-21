@@ -1730,7 +1730,8 @@ define amdgpu_ps float @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr a
 ;
 ; GFX12-LABEL: global_load_saddr_i8_zext_uniform_offset_immoffset:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_u8 s0, s[2:3], s4 offset:-0x18
+; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[2:3], 24
+; GFX12-NEXT:    s_load_u8 s0, s[0:1], s4 offset:0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog

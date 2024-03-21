@@ -1419,15 +1419,16 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], -1, 0 :: (load (s32), addrspace 4)
+    ; GFX10-NEXT: [[S_SUB_U:%[0-9]+]]:sreg_64 = S_SUB_U64_PSEUDO [[COPY]], 1, implicit-def $scc
+    ; GFX10-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[S_SUB_U]], 0, 0 :: (load (s32), addrspace 4)
     ; GFX10-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_IMM]]
     ;
     ; GFX11-LABEL: name: load_constant_s32_from_4_gep_negative_1
     ; GFX11: liveins: $sgpr0_sgpr1
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX11-NEXT: [[S_SUB_U64_:%[0-9]+]]:sreg_64 = S_SUB_U64 [[COPY]], 1
-    ; GFX11-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[S_SUB_U64_]], 0, 0 :: (load (s32), addrspace 4)
+    ; GFX11-NEXT: [[S_SUB_U:%[0-9]+]]:sreg_64 = S_SUB_U64_PSEUDO [[COPY]], 1, implicit-def $scc
+    ; GFX11-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[S_SUB_U]], 0, 0 :: (load (s32), addrspace 4)
     ; GFX11-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_IMM]]
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_CONSTANT i64 -1
@@ -1497,15 +1498,16 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], -524288, 0 :: (load (s32), addrspace 4)
+    ; GFX10-NEXT: [[S_SUB_U:%[0-9]+]]:sreg_64 = S_SUB_U64_PSEUDO [[COPY]], 524288, implicit-def $scc
+    ; GFX10-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[S_SUB_U]], 0, 0 :: (load (s32), addrspace 4)
     ; GFX10-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_IMM]]
     ;
     ; GFX11-LABEL: name: load_constant_s32_from_4_gep_negative_524288
     ; GFX11: liveins: $sgpr0_sgpr1
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX11-NEXT: [[S_SUB_U64_:%[0-9]+]]:sreg_64 = S_SUB_U64 [[COPY]], 524288
-    ; GFX11-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[S_SUB_U64_]], 0, 0 :: (load (s32), addrspace 4)
+    ; GFX11-NEXT: [[S_SUB_U:%[0-9]+]]:sreg_64 = S_SUB_U64_PSEUDO [[COPY]], 524288, implicit-def $scc
+    ; GFX11-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[S_SUB_U]], 0, 0 :: (load (s32), addrspace 4)
     ; GFX11-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_IMM]]
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_CONSTANT i64 -524288

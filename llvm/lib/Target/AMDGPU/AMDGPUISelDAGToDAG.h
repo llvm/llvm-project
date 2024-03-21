@@ -190,17 +190,17 @@ private:
   bool SelectScratchSVAddr(SDNode *N, SDValue Addr, SDValue &VAddr,
                            SDValue &SAddr, SDValue &Offset) const;
 
-  bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue *SOffset,
-                        SDValue *Offset, bool Imm32Only = false,
-                        bool IsBuffer = false) const;
+  bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue *SBase,
+                        SDValue *SOffset, SDValue *Offset,
+                        bool Imm32Only = false, bool IsBuffer = false,
+                        bool HasSOffset = false) const;
   SDValue Expand32BitAddress(SDValue Addr) const;
   bool SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase, SDValue *SOffset,
                             SDValue *Offset, bool Imm32Only = false,
-                            bool IsBuffer = false, bool IsPrefetch = false,
+                            bool IsBuffer = false,
                             bool HasSOffset = false) const;
   bool SelectSMRD(SDValue Addr, SDValue &SBase, SDValue *SOffset,
-                  SDValue *Offset, bool Imm32Only = false,
-                  bool IsPrefetch = false) const;
+                  SDValue *Offset, bool Imm32Only = false) const;
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
   bool SelectSMRDImm32(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
   bool SelectSMRDSgpr(SDValue Addr, SDValue &SBase, SDValue &SOffset) const;
@@ -263,6 +263,7 @@ private:
                                 SDValue &SrcMods) const;
   bool SelectVOP3PMadMixMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
+  bool subtractOffsetFromBase(SDValue *SBase, SDValue *Offset) const;
   SDValue getHi16Elt(SDValue In) const;
 
   SDValue getMaterializedScalarImm32(int64_t Val, const SDLoc &DL) const;
