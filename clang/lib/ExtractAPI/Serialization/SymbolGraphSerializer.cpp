@@ -208,6 +208,7 @@ StringRef getLanguageName(Language Lang) {
   case Language::Unknown:
   case Language::Asm:
   case Language::LLVM_IR:
+  case Language::CIR:
     llvm_unreachable("Unsupported language kind");
   }
 
