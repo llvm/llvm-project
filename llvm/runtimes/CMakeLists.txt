@@ -435,7 +435,7 @@ if(runtimes)
       list(APPEND extra_deps "flang-new")
     endif()
     foreach(dep opt llvm-link llvm-extract clang clang-offload-packager)
-      if(TARGET ${dep} AND OPENMP_ENABLE_LIBOMPTARGET)
+      if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
@@ -531,7 +531,7 @@ if(runtimes)
       check_apple_target(${name} runtime)
 
       runtime_register_target(${name}
-        DEPENDS ${builtins_dep_name} ${hdrgen_deps}
+        DEPENDS ${builtins_dep_name} ${extra_deps}
         CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${libc_cmake_args}
         EXTRA_ARGS TARGET_TRIPLE ${name})
     endforeach()
