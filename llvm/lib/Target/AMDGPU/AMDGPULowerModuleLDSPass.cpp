@@ -459,9 +459,9 @@ public:
     //      so we don't have anything to do.
     //    - No variables are absolute.
     std::optional<bool> HasAbsoluteGVs;
-    for (auto Map : {direct_map_kernel, indirect_map_kernel}) {
-      for (auto [Fn, GVs] : Map) {
-        for (auto GV : GVs) {
+    for (auto &Map : {direct_map_kernel, indirect_map_kernel}) {
+      for (auto &[Fn, GVs] : Map) {
+        for (auto *GV : GVs) {
           bool IsAbsolute = GV->isAbsoluteSymbolRef();
           if (HasAbsoluteGVs.has_value()) {
             if (*HasAbsoluteGVs != IsAbsolute) {
