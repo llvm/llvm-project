@@ -455,6 +455,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-lldemit:llvm");
   if (args.hasArg(OPT_lto_emit_asm))
     add("-lldemit:asm");
+  if (auto *arg = args.getLastArg(OPT_lto_sample_profile))
+    add("-lto-sample-profile:" + StringRef(arg->getValue()));
 
   if (auto *a = args.getLastArg(OPT_thinlto_cache_dir))
     add("-lldltocache:" + StringRef(a->getValue()));
