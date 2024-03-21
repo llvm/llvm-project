@@ -4018,23 +4018,17 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
   }
 
-  // max(a,b) - min(a,b) --> abd(a,b)
-  auto MatchSubMaxMin = [&](unsigned Max, unsigned Min, unsigned Abd) {
-    if (N0.getOpcode() != Max || N1.getOpcode() != Min)
-      return SDValue();
-    if ((N0.getOperand(0) != N1.getOperand(0) ||
-         N0.getOperand(1) != N1.getOperand(1)) &&
-        (N0.getOperand(0) != N1.getOperand(1) ||
-         N0.getOperand(1) != N1.getOperand(0)))
-      return SDValue();
-    if (!hasOperation(Abd, VT))
-      return SDValue();
-    return DAG.getNode(Abd, DL, VT, N0.getOperand(0), N0.getOperand(1));
-  };
-  if (SDValue R = MatchSubMaxMin(ISD::SMAX, ISD::SMIN, ISD::ABDS))
-    return R;
-  if (SDValue R = MatchSubMaxMin(ISD::UMAX, ISD::UMIN, ISD::ABDU))
-    return R;
+  // smax(a,b) - smin(a,b) --> abds(a,b)
+  if (hasOperation(ISD::ABDS, VT)  && 
+      sd_match(N0, m_SMax(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_SMin(m_Specific(A), m_Specific(B))))
+    return DAG.getNode(ISD::ABDS, DL, VT, A, B);
+
+  // umax(a,b) - umin(a,b) --> abdu(a,b)
+  if (hasOperation(ISD::ABDU, VT)  && 
+      sd_match(N0, m_UMax(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_UMin(m_Specific(A), m_Specific(B))))
+    return DAG.getNode(ISD::ABDU, DL, VT, A, B);
 
   return SDValue();
 }
