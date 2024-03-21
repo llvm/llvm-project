@@ -573,7 +573,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
 }
 
 let RegInfos = RegInfoByHwMode<[RV32, RV64],
-                               [RegInfo<64, 64, 64>, RegInfo<128, 128, 128>]>,
+                               [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>,
     DecoderMethod = "DecodeGPRPairRegisterClass" in
 def GPRPair : RegisterClass<"RISCV", [XLenPairFVT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
