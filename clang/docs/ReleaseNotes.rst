@@ -37,6 +37,9 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- Setting the deprecated CMake variable ``GCC_INSTALL_PREFIX`` (which sets the
+  default ``--gcc-toolchain=``) now leads to a fatal error.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -265,6 +268,9 @@ Improvements to Clang's diagnostics
 - Clang no longer warns when the ``bitand`` operator is used with boolean
   operands, distinguishing it from potential typographical errors or unintended
   bitwise operations. Fixes #GH77601.
+
+- Clang now correctly diagnoses no arguments to a variadic macro parameter as a C23/C++20 extension.
+  Fixes #GH84495.
 
 Improvements to Clang's time-trace
 ----------------------------------

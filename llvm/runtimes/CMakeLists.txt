@@ -441,6 +441,15 @@ if(runtimes)
     if("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
       set(AMDGPU_ARCH_DEP amdgpu-arch)
     endif()
+    if (${LLVM_TOOL_FLANG_BUILD})
+      message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang-new")
+      set(LIBOMP_FORTRAN_MODULES_COMPILER "${CMAKE_BINARY_DIR}/bin/flang-new")
+      set(LIBOMP_MODULES_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+      # TODO: This is a workaround until flang becomes a first-class project
+      # in llvm/CMakeList.txt.  Until then, this line ensures that flang-new is
+      # built before "openmp" is built as a runtime project.
+      list(APPEND extra_deps "flang-new")
+    endif()
     foreach(dep opt llvm-link llvm-extract clang clang-offload-packager rocm-device-libs offload-arch amdgcn_hostexec_services ${HSA_DEP} ${AMDGPU_ARCH_DEP})
       if(TARGET ${dep} AND OPENMP_ENABLE_LIBOMPTARGET)
         list(APPEND extra_deps ${dep})
