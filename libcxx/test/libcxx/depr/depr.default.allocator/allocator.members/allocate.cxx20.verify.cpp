@@ -6,21 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
 // <memory>
 
 // allocator:
-// pointer address(reference x) const;
-// const_pointer address(const_reference x) const;
+// T* allocate(size_t n, const void* hint);
 
-// Deprecated in C++17
-
-// REQUIRES: c++17
+// Removed in C++20.
 
 #include <memory>
 
 void f() {
-  int x = 0;
   std::allocator<int> a;
-
-  (void)a.address(x); // expected-warning {{'address' is deprecated}}
+  a.allocate(3, nullptr); // expected-error {{too many arguments to function call}}
 }
