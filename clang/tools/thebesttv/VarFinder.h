@@ -25,18 +25,22 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
         return found;
     }
 
-    bool findMatch(const Stmt *S, const NamedDecl *decl,
-                   const SourceLocation &loc) {
+    bool sourceLocationMatches(const SourceLocation &loc) {
         std::unique_ptr<Location> pLoc =
             Location::fromSourceLocation(*Context, loc);
         if (!pLoc)
             return false;
 
-        bool match = (*pLoc) == targetLoc;
-        if (match)
-            found = decl->getNameAsString();
+        return (*pLoc) == targetLoc;
+    }
 
-        return match;
+    bool findMatch(const Stmt *S, const NamedDecl *decl,
+                   const SourceLocation &loc) {
+        if (sourceLocationMatches(loc)) {
+            found = decl->getNameAsString();
+            return true;
+        }
+        return false;
     }
 
     bool VisitDeclStmt(DeclStmt *ds) {
