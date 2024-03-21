@@ -4857,11 +4857,9 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
     if (Subtarget->hasScalarAddSub64()) {
       unsigned Opc = IsAdd ? AMDGPU::S_ADD_U64 : AMDGPU::S_SUB_U64;
-      // clang-format off
       BuildMI(*BB, MI, DL, TII->get(Opc), Dest.getReg())
         .add(Src0)
         .add(Src1);
-      // clang-format on
     } else {
       const SIRegisterInfo *TRI = ST.getRegisterInfo();
       const TargetRegisterClass *BoolRC = TRI->getBoolRC();
