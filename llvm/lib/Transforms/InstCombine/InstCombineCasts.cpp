@@ -740,15 +740,10 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     Constant *C2;
     if (match(Src, m_OneUse(m_LShr(m_Shl(m_Power2(C1), m_Value(X)),
                                    m_ImmConstant(C2))))) {
-      Constant *Width = ConstantInt::get(
-          SrcTy, APInt(SrcWidth, SrcTy->getScalarSizeInBits()));
-      if (ConstantExpr::getICmp(ICmpInst::ICMP_UGE, C2, Width)->isNullValue()) {
-        // iff C1 is pow2 and C2 < BitWidth:
-        // trunc ((C1 << X) >> C2) to i1 -> X == (C2-cttz(C1))
-        Constant *Log2C1 = ConstantInt::get(SrcTy, C1->exactLogBase2());
-        Constant *CmpC = ConstantExpr::getSub(C2, Log2C1);
-        return new ICmpInst(ICmpInst::ICMP_EQ, X, CmpC);
-      }
+      // trunc ((C1 << X) >> C2) to i1 --> X == (C2-cttz(C1)), where C1 is pow2
+      Constant *Log2C1 = ConstantInt::get(SrcTy, C1->exactLogBase2());
+      Constant *CmpC = ConstantExpr::getSub(C2, Log2C1);
+      return new ICmpInst(ICmpInst::ICMP_EQ, X, CmpC);
     }
 
     Constant *C;
