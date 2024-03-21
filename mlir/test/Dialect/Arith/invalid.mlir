@@ -215,6 +215,14 @@ func.func @func_with_ops() {
 
 // -----
 
+func.func @func_with_ops() {
+^bb0:
+  // expected-error@+1 {{op failed to verify that result type has i1 element type and same shape as operands}}
+  %c = arith.constant dense<[0, 1]> : vector<[2] x i32>
+}
+
+// -----
+
 func.func @invalid_cmp_shape(%idx : () -> ()) {
   // expected-error@+1 {{'lhs' must be signless-integer-like, but got '() -> ()'}}
   %cmp = arith.cmpi eq, %idx, %idx : () -> ()
