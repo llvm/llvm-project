@@ -1,9 +1,9 @@
 // RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs-from-loops bufferize-function-boundaries test-analysis-only" -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs-from-loops bufferize-function-boundaries test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs-from-loops bufferize-function-boundaries test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs-from-loops bufferize-function-boundaries test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs-from-loops bufferize-function-boundaries test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs-from-loops bufferize-function-boundaries test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs-from-loops bufferize-function-boundaries test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
 // CHECK-LABEL: func @scf_for_yield_only
 func.func @scf_for_yield_only(
