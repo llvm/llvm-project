@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/linux/unistd-macros.h"
+#include "include/llvm-libc-macros/linux/sys-stat-macros.h"
 #include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/rename.h"
