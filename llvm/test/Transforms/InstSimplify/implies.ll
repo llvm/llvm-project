@@ -155,7 +155,13 @@ define i1 @test9(i32 %length.i, i32 %i) {
 
 define i1 @test10(i32 %length.i, i32 %x.full) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[X_FULL:%.*]], -65536
+; CHECK-NEXT:    [[LARGE:%.*]] = or i32 [[X]], 100
+; CHECK-NEXT:    [[SMALL:%.*]] = or i32 [[X]], 90
+; CHECK-NEXT:    [[KNOWN:%.*]] = icmp ult i32 [[LARGE]], [[LENGTH_I:%.*]]
+; CHECK-NEXT:    [[TO_PROVE:%.*]] = icmp ult i32 [[SMALL]], [[LENGTH_I]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[KNOWN]], [[TO_PROVE]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %x = and i32 %x.full, 4294901760  ;; 4294901760 == 0xffff0000
   %large = or i32 %x, 100
@@ -229,7 +235,13 @@ define i1 @test13(i32 %length.i, i32 %x) {
 
 define i1 @test14(i32 %length.i, i32 %x.full) {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[X_FULL:%.*]], -61681
+; CHECK-NEXT:    [[LARGE:%.*]] = or i32 [[X]], 8224
+; CHECK-NEXT:    [[SMALL:%.*]] = or i32 [[X]], 4112
+; CHECK-NEXT:    [[KNOWN:%.*]] = icmp ult i32 [[LARGE]], [[LENGTH_I:%.*]]
+; CHECK-NEXT:    [[TO_PROVE:%.*]] = icmp ult i32 [[SMALL]], [[LENGTH_I]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[KNOWN]], [[TO_PROVE]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %x = and i32 %x.full, 4294905615  ;; 4294905615 == 0xffff0f0f
   %large = or i32 %x, 8224 ;; == 0x2020
