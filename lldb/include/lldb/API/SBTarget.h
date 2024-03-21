@@ -42,7 +42,8 @@ public:
     eBroadcastBitModulesLoaded = (1 << 1),
     eBroadcastBitModulesUnloaded = (1 << 2),
     eBroadcastBitWatchpointChanged = (1 << 3),
-    eBroadcastBitSymbolsLoaded = (1 << 4)
+    eBroadcastBitSymbolsLoaded = (1 << 4),
+    eBroadcastBitSymbolsChanged = (1 << 5),
   };
 
   // Constructors
