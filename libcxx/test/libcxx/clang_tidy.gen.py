@@ -8,7 +8,7 @@
 
 # Run our custom libc++ clang-tidy checks on all public headers.
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 sys.path.append(sys.argv[1])
@@ -27,8 +27,8 @@ for header in public_headers:
 {lit_header_restrictions.get(header, '')}
 
 // TODO: run clang-tidy with modules enabled once they are supported
-// RUN{BLOCKLIT}: %{{clang-tidy}} %s --warnings-as-errors=* -header-filter=.* --checks='-*,libcpp-*' --load=%{{test-tools}}/clang_tidy_checks/libcxx-tidy.plugin -- %{{compile_flags}} -fno-modules
-// RUN{BLOCKLIT}: %{{clang-tidy}} %s --warnings-as-errors=* -header-filter=.* --config-file=%{{libcxx}}/.clang-tidy -- -Wweak-vtables %{{compile_flags}} -fno-modules
+// RUN{BLOCKLIT}: %{{clang-tidy}} %s --warnings-as-errors=* -header-filter=.* --checks='-*,libcpp-*' --load=%{{test-tools-dir}}/clang_tidy_checks/libcxx-tidy.plugin -- %{{compile_flags}} -fno-modules
+// RUN{BLOCKLIT}: %{{clang-tidy}} %s --warnings-as-errors=* -header-filter=.* --config-file=%{{libcxx-dir}}/.clang-tidy -- -Wweak-vtables %{{compile_flags}} -fno-modules
 
 #include <{header}>
 """)

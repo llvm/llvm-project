@@ -38,7 +38,7 @@ static constexpr Builtin::Info BuiltinInfo[] = {
   {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANGS},
 #define LIBBUILTIN(ID, TYPE, ATTRS, HEADER, LANGS)                             \
   {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, LANGS},
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
 };
 
 const Builtin::Info &Builtin::Context::getRecord(unsigned ID) const {

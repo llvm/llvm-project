@@ -29,11 +29,11 @@
 
 define void @foo() #0 !dbg !8 {
 entry:
-  %p = alloca i32*, align 8
-  call void @llvm.dbg.declare(metadata i32** %p, metadata !11, metadata !DIExpression()), !dbg !14
-  %0 = load i32*, i32** %p, align 8, !dbg !15
-  %incdec.ptr = getelementptr inbounds i32, i32* %0, i32 1, !dbg !15
-  store i32* %incdec.ptr, i32** %p, align 8, !dbg !15
+  %p = alloca ptr, align 8
+  call void @llvm.dbg.declare(metadata ptr %p, metadata !11, metadata !DIExpression()), !dbg !14
+  %0 = load ptr, ptr %p, align 8, !dbg !15
+  %incdec.ptr = getelementptr inbounds i32, ptr %0, i32 1, !dbg !15
+  store ptr %incdec.ptr, ptr %p, align 8, !dbg !15
   call void @foo(), !dbg !16
   ret void, !dbg !17
 }
@@ -42,11 +42,11 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 define void @bar() #0 !dbg !18 {
 entry:
-  %p = alloca i32*, align 8
-  call void @llvm.dbg.declare(metadata i32** %p, metadata !19, metadata !DIExpression()), !dbg !20
-  %0 = load i32*, i32** %p, align 8, !dbg !21
-  %incdec.ptr = getelementptr inbounds i32, i32* %0, i32 1, !dbg !21
-  store i32* %incdec.ptr, i32** %p, align 8, !dbg !21
+  %p = alloca ptr, align 8
+  call void @llvm.dbg.declare(metadata ptr %p, metadata !19, metadata !DIExpression()), !dbg !20
+  %0 = load ptr, ptr %p, align 8, !dbg !21
+  %incdec.ptr = getelementptr inbounds i32, ptr %0, i32 1, !dbg !21
+  store ptr %incdec.ptr, ptr %p, align 8, !dbg !21
   call void @foo(), !dbg !22
   ret void, !dbg !23
 }

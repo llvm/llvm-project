@@ -33,6 +33,17 @@ public:
                        /// string mode.
   };
 
+  /// Struct to store information for color highlighting in the stream.
+  struct HighlightSettings {
+    llvm::StringRef pattern; ///< Regex pattern for highlighting.
+    llvm::StringRef prefix;  ///< ANSI color code to start colorization.
+    llvm::StringRef suffix;  ///< ANSI color code to end colorization.
+
+    HighlightSettings(llvm::StringRef p, llvm::StringRef pre,
+                      llvm::StringRef suf)
+        : pattern(p), prefix(pre), suffix(suf) {}
+  };
+
   /// Utility class for counting the bytes that were written to a stream in a
   /// certain time span.
   ///
@@ -260,10 +271,9 @@ public:
   ///     The ANSI color code to end colorization. This is
   ///     environment-dependent.
 
-  void PutCStringColorHighlighted(llvm::StringRef text,
-                                  llvm::StringRef pattern = "",
-                                  llvm::StringRef prefix = "",
-                                  llvm::StringRef suffix = "");
+  void PutCStringColorHighlighted(
+      llvm::StringRef text,
+      std::optional<HighlightSettings> settings = std::nullopt);
 
   /// Output and End of Line character to the stream.
   size_t EOL();

@@ -166,7 +166,7 @@ define <vscale x 8 x half> @extract_f16(<vscale x 8 x half> %zd, <vscale x 8 x i
   ret <vscale x 8 x half> %z0
 }
 
-define <vscale x 8 x bfloat> @extract_bf16(<vscale x 8 x bfloat> %zd, <vscale x 8 x i1> %pg, i32 %tileslice, <vscale x 8 x bfloat> *%ptr) {
+define <vscale x 8 x bfloat> @extract_bf16(<vscale x 8 x bfloat> %zd, <vscale x 8 x i1> %pg, i32 %tileslice, ptr %ptr) {
 ; CHECK-LABEL: extract_bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.d, z0.d

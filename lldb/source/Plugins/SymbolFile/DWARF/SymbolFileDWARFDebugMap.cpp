@@ -598,10 +598,10 @@ CompUnitSP SymbolFileDWARFDebugMap::ParseCompileUnitAtIndex(uint32_t cu_idx) {
         // User zero as the ID to match the compile unit at offset zero in each
         // .o file.
         lldb::user_id_t cu_id = 0;
-        cu_info.compile_units_sps.push_back(
-            std::make_shared<CompileUnit>(
-                m_objfile_sp->GetModule(), nullptr, so_file_spec, cu_id,
-                eLanguageTypeUnknown, eLazyBoolCalculate));
+        cu_info.compile_units_sps.push_back(std::make_shared<CompileUnit>(
+            m_objfile_sp->GetModule(), nullptr,
+            std::make_shared<SupportFile>(so_file_spec), cu_id,
+            eLanguageTypeUnknown, eLazyBoolCalculate));
         cu_info.id_to_index_map.insert({0, 0});
         SetCompileUnitAtIndex(cu_idx, cu_info.compile_units_sps[0]);
         // If there's a symbol file also register all the extra compile units.
@@ -615,7 +615,8 @@ CompUnitSP SymbolFileDWARFDebugMap::ParseCompileUnitAtIndex(uint32_t cu_idx) {
               if (dwarf_cu->GetID() == 0)
                 continue;
               cu_info.compile_units_sps.push_back(std::make_shared<CompileUnit>(
-                  m_objfile_sp->GetModule(), nullptr, so_file_spec,
+                  m_objfile_sp->GetModule(), nullptr,
+                  std::make_shared<SupportFile>(so_file_spec),
                   dwarf_cu->GetID(), eLanguageTypeUnknown, eLazyBoolCalculate));
               cu_info.id_to_index_map.insert(
                   {dwarf_cu->GetID(), cu_info.compile_units_sps.size() - 1});

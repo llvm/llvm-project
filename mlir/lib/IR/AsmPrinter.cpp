@@ -74,11 +74,9 @@ MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
 /// Parse a type list.
 /// This is out-of-line to work-around https://github.com/llvm/llvm-project/issues/62918
 ParseResult AsmParser::parseTypeList(SmallVectorImpl<Type> &result) {
-    return parseCommaSeparatedList(
-        [&]() { return parseType(result.emplace_back()); });
-  }
-
-
+  return parseCommaSeparatedList(
+      [&]() { return parseType(result.emplace_back()); });
+}
 
 //===----------------------------------------------------------------------===//
 // DialectAsmPrinter
@@ -183,6 +181,10 @@ struct AsmPrinterOptions {
       llvm::cl::desc("Print with local scope and inline information (eliding "
                      "aliases for attributes, types, and locations")};
 
+  llvm::cl::opt<bool> skipRegionsOpt{
+      "mlir-print-skip-regions", llvm::cl::init(false),
+      llvm::cl::desc("Skip regions when printing ops.")};
+
   llvm::cl::opt<bool> printValueUsers{
       "mlir-print-value-users", llvm::cl::init(false),
       llvm::cl::desc(
@@ -217,6 +219,7 @@ OpPrintingFlags::OpPrintingFlags()
   printGenericOpFormFlag = clOptions->printGenericOpFormOpt;
   assumeVerifiedFlag = clOptions->assumeVerifiedOpt;
   printLocalScope = clOptions->printLocalScopeOpt;
+  skipRegionsFlag = clOptions->skipRegionsOpt;
   printValueUsersFlag = clOptions->printValueUsers;
 }
 
@@ -1092,7 +1095,7 @@ std::pair<size_t, size_t> AliasInitializer::visitImpl(
 }
 
 void AliasInitializer::markAliasNonDeferrable(size_t aliasIndex) {
-  auto it = std::next(aliases.begin(), aliasIndex);
+  auto *it = std::next(aliases.begin(), aliasIndex);
 
   // If already marked non-deferrable stop the recursion.
   // All children should already be marked non-deferrable as well.
@@ -1187,7 +1190,7 @@ void AliasState::initialize(
 }
 
 LogicalResult AliasState::getAlias(Attribute attr, raw_ostream &os) const {
-  auto it = attrTypeToAlias.find(attr.getAsOpaquePointer());
+  const auto *it = attrTypeToAlias.find(attr.getAsOpaquePointer());
   if (it == attrTypeToAlias.end())
     return failure();
   it->second.print(os);
@@ -1195,7 +1198,7 @@ LogicalResult AliasState::getAlias(Attribute attr, raw_ostream &os) const {
 }
 
 LogicalResult AliasState::getAlias(Type ty, raw_ostream &os) const {
-  auto it = attrTypeToAlias.find(ty.getAsOpaquePointer());
+  const auto *it = attrTypeToAlias.find(ty.getAsOpaquePointer());
   if (it == attrTypeToAlias.end())
     return failure();
 
@@ -1891,9 +1894,6 @@ static OpPrintingFlags verifyOpAndAdjustFlags(Operation *op,
   if (printerFlags.shouldPrintGenericOpForm() ||
       printerFlags.shouldAssumeVerified())
     return printerFlags;
-
-  LLVM_DEBUG(llvm::dbgs() << DEBUG_TYPE << ": Verifying operation: "
-                          << op->getName() << "\n");
 
   // Ignore errors emitted by the verifier. We check the thread id to avoid
   // consuming other threads' errors.
@@ -3744,6 +3744,37 @@ void Attribute::print(raw_ostream &os, AsmState &state, bool elideType) const {
 void Attribute::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
+}
+
+void Attribute::printStripped(raw_ostream &os, AsmState &state) const {
+  if (!*this) {
+    os << "<<NULL ATTRIBUTE>>";
+    return;
+  }
+
+  AsmPrinter::Impl subPrinter(os, state.getImpl());
+  if (succeeded(subPrinter.printAlias(*this)))
+    return;
+
+  auto &dialect = this->getDialect();
+  uint64_t posPrior = os.tell();
+  DialectAsmPrinter printer(subPrinter);
+  dialect.printAttribute(*this, printer);
+  if (posPrior != os.tell())
+    return;
+
+  // Fallback to printing with prefix if the above failed to write anything
+  // to the output stream.
+  print(os, state);
+}
+void Attribute::printStripped(raw_ostream &os) const {
+  if (!*this) {
+    os << "<<NULL ATTRIBUTE>>";
+    return;
+  }
+
+  AsmState state(getContext());
+  printStripped(os, state);
 }
 
 void Type::print(raw_ostream &os) const {

@@ -1233,8 +1233,12 @@ define double @fneg_f64_bitcast_build_vector_v4bf16_to_f64(bfloat %elt0, bfloat 
 ; GFX7-LABEL: fneg_f64_bitcast_build_vector_v4bf16_to_f64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; GFX7-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; GFX7-NEXT:    v_mul_f32_e32 v2, 1.0, v2
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; GFX7-NEXT:    v_alignbit_b32 v2, v3, v2, 16
 ; GFX7-NEXT:    v_alignbit_b32 v0, v1, v0, 16
 ; GFX7-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2

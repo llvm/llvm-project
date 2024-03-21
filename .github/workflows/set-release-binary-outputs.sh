@@ -8,14 +8,8 @@ if [ -z "$GITHUB_OUTPUT" ]; then
   echo "Writing output variables to $GITHUB_OUTPUT"
 fi
 
-github_user=$1
-tag=$2
-upload=$3
-
-if [[ "$github_user" != "tstellar" && "$github_user" != "tru" ]]; then
-  echo "ERROR: User not allowed: $github_user"
-  exit 1
-fi
+tag=$1
+upload=$2
 
 if echo $tag | grep -e '^[0-9a-f]\+$'; then
   # This is a plain commit.

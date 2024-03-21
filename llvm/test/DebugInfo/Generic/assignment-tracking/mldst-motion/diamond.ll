@@ -1,5 +1,7 @@
 ; RUN: opt -passes=mldst-motion -S %s -o - \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=mldst-motion -S %s -o - \
+; RUN: | FileCheck %s
 
 ;; $ cat test.cpp
 ;; int cond;
@@ -33,8 +35,8 @@ define dso_local void @_Z3funv() !dbg !11 {
 entry:
   %a = alloca [4 x i32], align 16, !DIAssignID !19
   call void @llvm.dbg.assign(metadata i1 undef, metadata !15, metadata !DIExpression(), metadata !19, metadata ptr %a, metadata !DIExpression()), !dbg !20
-  call void @llvm.lifetime.start.p0i8(i64 16, ptr nonnull %a) #4, !dbg !21
-  %0 = load i32, i32* @cond, align 4, !dbg !22
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %a) #4, !dbg !21
+  %0 = load i32, ptr @cond, align 4, !dbg !22
   %tobool.not = icmp eq i32 %0, 0, !dbg !22
   br i1 %tobool.not, label %if.else, label %if.then, !dbg !28
 
@@ -53,13 +55,13 @@ if.else:                                          ; preds = %entry
 if.end:                                           ; preds = %if.else, %if.then
   %arraydecay = getelementptr inbounds [4 x i32], ptr %a, i64 0, i64 0, !dbg !35
   call void @_Z3escPi(ptr noundef nonnull %arraydecay), !dbg !36
-  call void @llvm.lifetime.end.p0i8(i64 16, ptr nonnull %a) #4, !dbg !37
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %a) #4, !dbg !37
   ret void, !dbg !37
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
-declare !dbg !38 dso_local void @_Z3escPi(i32* noundef)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare !dbg !38 dso_local void @_Z3escPi(ptr noundef)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!2}

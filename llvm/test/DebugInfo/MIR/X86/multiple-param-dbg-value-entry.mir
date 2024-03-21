@@ -29,7 +29,7 @@
     call void @llvm.dbg.value(metadata i32 %q, metadata !16, metadata !DIExpression()), !dbg !18
     call void @llvm.dbg.value(metadata i32 %r, metadata !17, metadata !DIExpression()), !dbg !18
     %add = add nsw i32 %p, 1, !dbg !18
-    store i32 %add, i32* @global, align 4, !dbg !18
+    store i32 %add, ptr @global, align 4, !dbg !18
     tail call void asm sideeffect "", "~{edi},~{esi},~{edx},~{dirflag},~{fpsr},~{flags}"(), !dbg !18, !srcloc !19
     ret i32 123, !dbg !18
   }

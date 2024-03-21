@@ -529,7 +529,8 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
                                       /*alignment=*/0);
   for (auto [index, arg] : llvm::enumerate(args)) {
     Value ptr = rewriter.create<LLVM::GEPOp>(
-        loc, ptrType, structType, tempAlloc, ArrayRef<LLVM::GEPArg>{0, index});
+        loc, ptrType, structType, tempAlloc,
+        ArrayRef<LLVM::GEPArg>{0, static_cast<int32_t>(index)});
     rewriter.create<LLVM::StoreOp>(loc, arg, ptr);
   }
   std::array<Value, 2> printfArgs = {stringStart, tempAlloc};

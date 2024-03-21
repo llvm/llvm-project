@@ -3,6 +3,7 @@
 
 declare void @use(i32)
 declare void @use_i8(i8)
+declare void @use_i1(i1)
 
 ; a & (a ^ b) --> a & ~b
 
@@ -112,7 +113,7 @@ define i32 @and_xor_not_common_op_extrause(i32 %a, i32 %b, ptr %dst) {
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], ptr [[DST:%.*]]) {
 ; CHECK-NEXT:    [[B2:%.*]] = xor i32 [[B]], -1
 ; CHECK-NEXT:    store i32 [[B2]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[T4:%.*]] = and i32 [[A]], [[B]]
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[B]], [[A]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %b2 = xor i32 %b, -1
@@ -4779,4 +4780,33 @@ define i32 @canonicalize_logic_first_constexpr_nuw(i32 %x) {
   %a = add nuw i32 ptrtoint (ptr @g to i32), 48
   %r = and i32 %a, -10
   ret i32 %r
+}
+
+define i1 @test_and_xor_freely_invertable(i32 %x, i32 %y, i1 %z) {
+; CHECK-LABEL: define {{[^@]+}}@test_and_xor_freely_invertable
+; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]], i1 [[Z:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[Z]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp = icmp sgt i32 %x, %y
+  %xor = xor i1 %cmp, %z
+  %and = and i1 %xor, %z
+  ret i1 %and
+}
+
+define i1 @test_and_xor_freely_invertable_multiuse(i32 %x, i32 %y, i1 %z) {
+; CHECK-LABEL: define {{[^@]+}}@test_and_xor_freely_invertable_multiuse
+; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]], i1 [[Z:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[TMP1]], [[Z]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp = icmp sgt i32 %x, %y
+  call void @use_i1(i1 %cmp)
+  %xor = xor i1 %cmp, %z
+  %and = and i1 %xor, %z
+  ret i1 %and
 }

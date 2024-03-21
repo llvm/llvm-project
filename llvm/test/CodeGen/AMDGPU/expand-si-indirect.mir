@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -start-before=twoaddressinstruction %s -o - | FileCheck %s -check-prefix=GCN
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-before=twoaddressinstruction %s -o - | FileCheck %s -check-prefix=GCN
 
 # Wait to sxpand SI_INDIRECT sequences that use VGPR indexing until after
 # register allocation. We don’t want to reschedule the mode switching or to

@@ -25,8 +25,8 @@ define void @local_var_mf8() {
 ; RV64IV-NEXT:    ret
   %local0 = alloca <vscale x 1 x i8>
   %local1 = alloca <vscale x 1 x i8>
-  load volatile <vscale x 1 x i8>, <vscale x 1 x i8>* %local0
-  load volatile <vscale x 1 x i8>, <vscale x 1 x i8>* %local1
+  load volatile <vscale x 1 x i8>, ptr %local0
+  load volatile <vscale x 1 x i8>, ptr %local1
   ret void
 }
 
@@ -52,8 +52,8 @@ define void @local_var_m1() {
 ; RV64IV-NEXT:    ret
   %local0 = alloca <vscale x 8 x i8>
   %local1 = alloca <vscale x 8 x i8>
-  load volatile <vscale x 8 x i8>, <vscale x 8 x i8>* %local0
-  load volatile <vscale x 8 x i8>, <vscale x 8 x i8>* %local1
+  load volatile <vscale x 8 x i8>, ptr %local0
+  load volatile <vscale x 8 x i8>, ptr %local1
   ret void
 }
 
@@ -80,8 +80,8 @@ define void @local_var_m2() {
 ; RV64IV-NEXT:    ret
   %local0 = alloca <vscale x 16 x i8>
   %local1 = alloca <vscale x 16 x i8>
-  load volatile <vscale x 16 x i8>, <vscale x 16 x i8>* %local0
-  load volatile <vscale x 16 x i8>, <vscale x 16 x i8>* %local1
+  load volatile <vscale x 16 x i8>, ptr %local0
+  load volatile <vscale x 16 x i8>, ptr %local1
   ret void
 }
 
@@ -114,8 +114,8 @@ define void @local_var_m4() {
 ; RV64IV-NEXT:    ret
   %local0 = alloca <vscale x 32 x i8>
   %local1 = alloca <vscale x 32 x i8>
-  load volatile <vscale x 32 x i8>, <vscale x 32 x i8>* %local0
-  load volatile <vscale x 32 x i8>, <vscale x 32 x i8>* %local1
+  load volatile <vscale x 32 x i8>, ptr %local0
+  load volatile <vscale x 32 x i8>, ptr %local1
   ret void
 }
 
@@ -148,8 +148,8 @@ define void @local_var_m8() {
 ; RV64IV-NEXT:    ret
   %local0 = alloca <vscale x 64 x i8>
   %local1 = alloca <vscale x 64 x i8>
-  load volatile <vscale x 64 x i8>, <vscale x 64 x i8>* %local0
-  load volatile <vscale x 64 x i8>, <vscale x 64 x i8>* %local1
+  load volatile <vscale x 64 x i8>, ptr %local0
+  load volatile <vscale x 64 x i8>, ptr %local1
   ret void
 }
 
@@ -180,10 +180,10 @@ define void @local_var_m2_mix_local_scalar() {
   %local0 = alloca <vscale x 16 x i8>
   %local1 = alloca <vscale x 16 x i8>
   %local_scalar1 = alloca i32
-  load volatile i32, i32* %local_scalar0
-  load volatile <vscale x 16 x i8>, <vscale x 16 x i8>* %local0
-  load volatile <vscale x 16 x i8>, <vscale x 16 x i8>* %local1
-  load volatile i32, i32* %local_scalar1
+  load volatile i32, ptr %local_scalar0
+  load volatile <vscale x 16 x i8>, ptr %local0
+  load volatile <vscale x 16 x i8>, ptr %local1
+  load volatile i32, ptr %local_scalar1
   ret void
 }
 
@@ -231,9 +231,9 @@ define void @local_var_m2_with_varsize_object(i64 %n) {
   %1 = alloca i8, i64 %n
   %2 = alloca <vscale x 16 x i8>
   %3 = alloca <vscale x 16 x i8>
-  call void @notdead(i8* %1, <vscale x 16 x i8>* %2)
-  load volatile <vscale x 16 x i8>, <vscale x 16 x i8>* %2
-  load volatile <vscale x 16 x i8>, <vscale x 16 x i8>* %3
+  call void @notdead(ptr %1, ptr %2)
+  load volatile <vscale x 16 x i8>, ptr %2
+  load volatile <vscale x 16 x i8>, ptr %3
   ret void
 }
 
@@ -289,11 +289,11 @@ define void @local_var_m2_with_bp(i64 %n) {
   %local0 = alloca <vscale x 16 x i8>
   %local1 = alloca <vscale x 16 x i8>
   %local_scalar1 = alloca i32
-  call void @notdead2(i8* %1, i32* %2, <vscale x 16 x i8>* %local0)
-  load volatile i32, i32* %local_scalar0
-  load volatile <vscale x 16 x i8>, <vscale x 16 x i8>* %local0
-  load volatile <vscale x 16 x i8>, <vscale x 16 x i8>* %local1
-  load volatile i32, i32* %local_scalar1
+  call void @notdead2(ptr %1, ptr %2, ptr %local0)
+  load volatile i32, ptr %local_scalar0
+  load volatile <vscale x 16 x i8>, ptr %local0
+  load volatile <vscale x 16 x i8>, ptr %local1
+  load volatile i32, ptr %local_scalar1
   ret void
 }
 
@@ -318,5 +318,5 @@ define i64 @fixed_object(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6,
   ret i64 %8
 }
 
-declare void @notdead(i8*, <vscale x 16 x i8>*)
-declare void @notdead2(i8*, i32*, <vscale x 16 x i8>*)
+declare void @notdead(ptr, ptr)
+declare void @notdead2(ptr, ptr, ptr)

@@ -64,6 +64,11 @@ same allocatable.
 #define FORTRAN_RUNTIME_STAT_MOVE_ALLOC_SAME_ALLOCATABLE 109
 
 #if 0
+Additional status code for a bad pointer DEALLOCATE.
+#endif
+#define FORTRAN_RUNTIME_STAT_BAD_POINTER_DEALLOCATION 110
+
+#if 0
 ieee_class_type values
 The sequence is that of F18 Clause 17.2p3, but nothing depends on that.
 #endif

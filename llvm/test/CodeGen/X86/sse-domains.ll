@@ -17,7 +17,7 @@ define void @f(ptr nocapture %p, i32 %n) nounwind uwtable ssp {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    addq $16, %rdi
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [127,127,127,127]
+; CHECK-NEXT:    pmovsxbd {{.*#+}} xmm0 = [127,127,127,127]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_1: ## %while.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1

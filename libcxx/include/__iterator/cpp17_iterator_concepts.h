@@ -14,10 +14,8 @@
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_copy_constructible.h>
-#include <__type_traits/is_default_constructible.h>
-#include <__type_traits/is_move_constructible.h>
 #include <__type_traits/is_signed.h>
 #include <__type_traits/is_void.h>
 #include <__utility/as_const.h>
@@ -28,6 +26,9 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 #if _LIBCPP_STD_VER >= 20
 
@@ -181,5 +182,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  define _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(iter_t)
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ITERATOR_CPP17_ITERATOR_CONCEPTS_H

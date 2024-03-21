@@ -16,7 +16,34 @@
 // ---------------------------------------------------------------------------
 // Various definitions copied from OpenMP RTL
 
-extern void __tgt_register_requires(int64_t);
+typedef struct {
+  void *addr;
+  char *name;
+  size_t size;
+  int32_t flags;
+  int32_t data;
+} __tgt_offload_entry;
+
+enum Flags {
+  OMP_REGISTER_REQUIRES = 0x10,
+};
+
+typedef struct {
+  void *ImageStart;
+  void *ImageEnd;
+  __tgt_offload_entry *EntriesBegin;
+  __tgt_offload_entry *EntriesEnd;
+} __tgt_device_image;
+
+typedef struct {
+  int32_t NumDeviceImages;
+  __tgt_device_image *DeviceImages;
+  __tgt_offload_entry *HostEntriesBegin;
+  __tgt_offload_entry *HostEntriesEnd;
+} __tgt_bin_desc;
+
+void __tgt_register_lib(__tgt_bin_desc *Desc);
+void __tgt_unregister_lib(__tgt_bin_desc *Desc);
 
 // End of definitions copied from OpenMP RTL.
 // ---------------------------------------------------------------------------
@@ -28,10 +55,16 @@ void run_reg_requires() {
 
   // This is the 2nd time this function is called so it should print SUCCESS if
   // REQ is compatible with `1` and otherwise cause an error.
-  __tgt_register_requires(1);
-  __tgt_register_requires(REQ);
+  __tgt_offload_entry entries[] = {{NULL, "", 0, OMP_REGISTER_REQUIRES, 1},
+                                   {NULL, "", 0, OMP_REGISTER_REQUIRES, REQ}};
+  __tgt_device_image image = {NULL, NULL, &entries[0], &entries[1] + 1};
+  __tgt_bin_desc bin = {1, &image, &entries[0], &entries[1] + 1};
+
+  __tgt_register_lib(&bin);
 
   printf("SUCCESS");
+
+  __tgt_unregister_lib(&bin);
 
   // clang-format off
   // GOOD: SUCCESS

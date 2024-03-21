@@ -1419,32 +1419,50 @@ void ELFState<ELFT>::writeSectionContent(
       CBA.write(E.Feature);
       SHeader.sh_size += 2;
     }
-
-    if (Section.PGOAnalyses) {
-      if (E.Version < 2)
-        WithColor::warning()
-            << "unsupported SHT_LLVM_BB_ADDR_MAP version when using PGO: "
-            << static_cast<int>(E.Version) << "; must use version >= 2";
+    auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(E.Feature);
+    bool MultiBBRangeFeatureEnabled = false;
+    if (!FeatureOrErr)
+      WithColor::warning() << toString(FeatureOrErr.takeError());
+    else
+      MultiBBRangeFeatureEnabled = FeatureOrErr->MultiBBRange;
+    bool MultiBBRange =
+        MultiBBRangeFeatureEnabled ||
+        (E.NumBBRanges.has_value() && E.NumBBRanges.value() != 1) ||
+        (E.BBRanges && E.BBRanges->size() != 1);
+    if (MultiBBRange && !MultiBBRangeFeatureEnabled)
+      WithColor::warning() << "feature value(" << E.Feature
+                           << ") does not support multiple BB ranges.";
+    if (MultiBBRange) {
+      // Write the number of basic block ranges, which is overridden by the
+      // 'NumBBRanges' field when specified.
+      uint64_t NumBBRanges =
+          E.NumBBRanges.value_or(E.BBRanges ? E.BBRanges->size() : 0);
+      SHeader.sh_size += CBA.writeULEB128(NumBBRanges);
     }
-
-    // Write the address of the function.
-    CBA.write<uintX_t>(E.Address, ELFT::TargetEndianness);
-    // Write number of BBEntries (number of basic blocks in the function). This
-    // is overridden by the 'NumBlocks' YAML field when specified.
-    uint64_t NumBlocks =
-        E.NumBlocks.value_or(E.BBEntries ? E.BBEntries->size() : 0);
-    SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
-    // Write all BBEntries.
-    if (E.BBEntries) {
-      for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *E.BBEntries) {
+    if (!E.BBRanges)
+      continue;
+    uint64_t TotalNumBlocks = 0;
+    for (const ELFYAML::BBAddrMapEntry::BBRangeEntry &BBR : *E.BBRanges) {
+      // Write the base address of the range.
+      CBA.write<uintX_t>(BBR.BaseAddress, ELFT::TargetEndianness);
+      // Write number of BBEntries (number of basic blocks in this basic block
+      // range). This is overridden by the 'NumBlocks' YAML field when
+      // specified.
+      uint64_t NumBlocks =
+          BBR.NumBlocks.value_or(BBR.BBEntries ? BBR.BBEntries->size() : 0);
+      SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
+      // Write all BBEntries in this BBRange.
+      if (!BBR.BBEntries)
+        continue;
+      for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
+        ++TotalNumBlocks;
         if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
           SHeader.sh_size += CBA.writeULEB128(BBE.ID);
-        SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset) +
-                           CBA.writeULEB128(BBE.Size) +
-                           CBA.writeULEB128(BBE.Metadata);
+        SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset);
+        SHeader.sh_size += CBA.writeULEB128(BBE.Size);
+        SHeader.sh_size += CBA.writeULEB128(BBE.Metadata);
       }
     }
-
     if (!PGOAnalyses)
       continue;
     const ELFYAML::PGOAnalysisMapEntry &PGOEntry = PGOAnalyses->at(Idx);
@@ -1456,11 +1474,11 @@ void ELFState<ELFT>::writeSectionContent(
       continue;
 
     const auto &PGOBBEntries = PGOEntry.PGOBBEntries.value();
-    if (!E.BBEntries || E.BBEntries->size() != PGOBBEntries.size()) {
+    if (TotalNumBlocks != PGOBBEntries.size()) {
       WithColor::warning() << "PBOBBEntries must be the same length as "
                               "BBEntries in SHT_LLVM_BB_ADDR_MAP.\n"
                            << "Mismatch on function with address: "
-                           << E.Address;
+                           << E.getFunctionAddress();
       continue;
     }
 
@@ -1469,8 +1487,10 @@ void ELFState<ELFT>::writeSectionContent(
         SHeader.sh_size += CBA.writeULEB128(*PGOBBE.BBFreq);
       if (PGOBBE.Successors) {
         SHeader.sh_size += CBA.writeULEB128(PGOBBE.Successors->size());
-        for (const auto &[ID, BrProb] : *PGOBBE.Successors)
-          SHeader.sh_size += CBA.writeULEB128(ID) + CBA.writeULEB128(BrProb);
+        for (const auto &[ID, BrProb] : *PGOBBE.Successors) {
+          SHeader.sh_size += CBA.writeULEB128(ID);
+          SHeader.sh_size += CBA.writeULEB128(BrProb);
+        }
       }
     }
   }
