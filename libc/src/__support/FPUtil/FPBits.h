@@ -526,6 +526,10 @@ public:
                        Significand::msb() | (Significand::msb() >> 1) |
                            Significand(v)));
   }
+  LIBC_INLINE static constexpr RetT get_canonical_val(Sign sign = Sign::POS,
+                                                      StorageType v = 0) {
+    return RetT(encode(sign, Exponent::min(), Significand(v)));
+  }
 
   // Observers
   LIBC_INLINE constexpr bool is_zero() const { return exp_sig_bits() == 0; }

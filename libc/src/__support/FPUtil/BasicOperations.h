@@ -13,6 +13,7 @@
 #include "FPBits.h"
 
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/UInt128.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
@@ -76,11 +77,12 @@ LIBC_INLINE T fdim(T x, T y) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T canonicalize(T &cx, const T &x) {
+LIBC_INLINE int canonicalize(T &cx, const T &x) {
   FPBits<T> sx(x);
   if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
     cx = FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa()).get_val();
     raise_except_if_required(FE_INVALID);
+    return 1;
   } else if constexpr (get_fp_type<T>() == FPType::X86_Binary80) {
     // All the pseudo and unnormal numbers are not canonical.
     // More precisely :
@@ -95,7 +97,7 @@ LIBC_INLINE T canonicalize(T &cx, const T &x) {
     // All Other  |   Zero     | Anything  | Unnormal, Value =
     //  Values    |            |           | (−1)**s × m × 2**−16382
     bool bit63 = sx.get_implicit_bit();
-    FPBits<T>::StorageType mantissa = sx.get_explicit_mantissa();
+    UInt128 mantissa = sx.get_explicit_mantissa();
     bool bit62 = mantissa & (1ULL << 62);
     bool bit61 = mantissa & (1ULL << 61);
     int exponent = sx.get_biased_exponent();
@@ -110,9 +112,9 @@ LIBC_INLINE T canonicalize(T &cx, const T &x) {
         cx = FPBits<T>::signaling_nan().get_val();
       }
     } else if (exponent == 0 && bit63) {
-      cx = FPBits<T>::encode(sx.sign(), Exponent::min(), mantissa).get_val();
+      cx = FPBits<T>::get_canonical_val(sx.sign(), mantissa).get_val();
     } else if (!bit63) {
-      cx = FPBits<T>::encode(sx.sign(), Exponent::min(), mantissa).get_val();
+      cx = FPBits<T>::get_canonical_val(sx.sign(), mantissa).get_val();
     } else {
       cx = x;
     }
