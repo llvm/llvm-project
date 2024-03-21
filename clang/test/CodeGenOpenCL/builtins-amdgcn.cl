@@ -601,13 +601,13 @@ void test_get_local_id(int d, global int *out)
 }
 
 // CHECK-LABEL: @test_get_workgroup_size(
-// CHECK: call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 4
+// CHECK: call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 12
 // CHECK: load i16, ptr addrspace(4) %{{.*}}, align 4, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 6
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 14
 // CHECK: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 8
-// CHECK: load i16, ptr addrspace(4) %{{.*}}, align 4, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 16
+// CHECK: load i16, ptr addrspace(4) %{{.*}}, align 8, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
 void test_get_workgroup_size(int d, global int *out)
 {
 	switch (d) {
@@ -830,6 +830,25 @@ void test_atomic_inc_dec(local uint *lptr, global uint *gptr, uint val) {
 
   // CHECK: atomicrmw volatile udec_wrap ptr addrspace(1) %gptr, i32 %val seq_cst, align 4
   res = __builtin_amdgcn_atomic_dec32((volatile global uint*)gptr, val, __ATOMIC_SEQ_CST, "");
+}
+
+// CHECK-LABEL test_wavefrontsize(
+unsigned test_wavefrontsize() {
+
+  // CHECK: call i32 @llvm.amdgcn.wavefrontsize()
+  return __builtin_amdgcn_wavefrontsize();
+}
+
+// CHECK-LABEL test_get_fpenv(
+unsigned long test_get_fpenv() {
+  // CHECK: call i64 @llvm.get.fpenv.i64()
+  return __builtin_amdgcn_get_fpenv();
+}
+
+// CHECK-LABEL test_set_fpenv(
+void test_set_fpenv(unsigned long env) {
+  // CHECK: call void @llvm.set.fpenv.i64(i64 %[[ENV:.+]])
+  __builtin_amdgcn_set_fpenv(env);
 }
 
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}

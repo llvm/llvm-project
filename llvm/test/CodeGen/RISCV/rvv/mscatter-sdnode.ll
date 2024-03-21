@@ -1755,9 +1755,9 @@ define void @mscatter_nxv16f64(<vscale x 8 x double> %val0, <vscale x 8 x double
 define void @mscatter_baseidx_nxv16i8_nxv16f64(<vscale x 8 x double> %val0, <vscale x 8 x double> %val1, ptr %base, <vscale x 16 x i8> %idxs, <vscale x 16 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_nxv16i8_nxv16f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vl2r.v v2, (a1)
+; RV32-NEXT:    vl2r.v v6, (a1)
 ; RV32-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
-; RV32-NEXT:    vsext.vf4 v24, v2
+; RV32-NEXT:    vsext.vf4 v24, v6
 ; RV32-NEXT:    vsll.vi v24, v24, 3
 ; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v24, v0.t
@@ -1771,12 +1771,12 @@ define void @mscatter_baseidx_nxv16i8_nxv16f64(<vscale x 8 x double> %val0, <vsc
 ;
 ; RV64-LABEL: mscatter_baseidx_nxv16i8_nxv16f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vl2r.v v2, (a1)
+; RV64-NEXT:    vl2r.v v6, (a1)
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; RV64-NEXT:    vsext.vf8 v24, v2
+; RV64-NEXT:    vsext.vf8 v24, v6
 ; RV64-NEXT:    vsll.vi v24, v24, 3
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v24, v0.t
-; RV64-NEXT:    vsext.vf8 v8, v3
+; RV64-NEXT:    vsext.vf8 v8, v7
 ; RV64-NEXT:    vsll.vi v8, v8, 3
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    srli a1, a1, 3
@@ -1829,5 +1829,20 @@ define void @mscatter_baseidx_nxv16i16_nxv16f64(<vscale x 8 x double> %val0, <vs
   %v0 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> undef, <vscale x 8 x double> %val0, i64 0)
   %v1 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> %v0, <vscale x 8 x double> %val1, i64 8)
   call void @llvm.masked.scatter.nxv16f64.nxv16p0(<vscale x 16 x double> %v1, <vscale x 16 x ptr> %ptrs, i32 8, <vscale x 16 x i1> %m)
+  ret void
+}
+
+define void @mscatter_baseidx_zext_nxv1i1_nxv1i8(<vscale x 1 x i8> %val, ptr %base, <vscale x 1 x i1> %idxs, <vscale x 1 x i1> %m) {
+; CHECK-LABEL: mscatter_baseidx_zext_nxv1i1_nxv1i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsoxei8.v v8, (a0), v10, v0.t
+; CHECK-NEXT:    ret
+  %eidxs = zext <vscale x 1 x i1> %idxs to <vscale x 1 x i8>
+  %ptrs = getelementptr inbounds i8, ptr %base, <vscale x 1 x i8> %eidxs
+  call void @llvm.masked.scatter.nxv1i8.nxv1p0(<vscale x 1 x i8> %val, <vscale x 1 x ptr> %ptrs, i32 1, <vscale x 1 x i1> %m)
   ret void
 }

@@ -10,15 +10,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OpenMP/OMPT/Interface.h"
 #include "omptarget.h"
 #include "private.h"
 
 #include "Shared/Profile.h"
 
+#ifdef OMPT_SUPPORT
+using namespace llvm::omp::target::ompt;
+#endif
+
 EXTERN void __tgt_target_data_begin(int64_t DeviceId, int32_t ArgNum,
                                     void **ArgsBase, void **Args,
                                     int64_t *ArgSizes, int64_t *ArgTypes) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   __tgt_target_data_begin_mapper(nullptr, DeviceId, ArgNum, ArgsBase, Args,
                                  ArgSizes, ArgTypes, nullptr, nullptr);
 }
@@ -30,7 +36,7 @@ EXTERN void __tgt_target_data_begin_nowait(int64_t DeviceId, int32_t ArgNum,
                                            int32_t NoAliasDepNum,
                                            void *NoAliasDepList) {
   TIMESCOPE();
-
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   __tgt_target_data_begin_mapper(nullptr, DeviceId, ArgNum, ArgsBase, Args,
                                  ArgSizes, ArgTypes, nullptr, nullptr);
 }
@@ -39,6 +45,7 @@ EXTERN void __tgt_target_data_end(int64_t DeviceId, int32_t ArgNum,
                                   void **ArgsBase, void **Args,
                                   int64_t *ArgSizes, int64_t *ArgTypes) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   __tgt_target_data_end_mapper(nullptr, DeviceId, ArgNum, ArgsBase, Args,
                                ArgSizes, ArgTypes, nullptr, nullptr);
 }
@@ -47,6 +54,7 @@ EXTERN void __tgt_target_data_update(int64_t DeviceId, int32_t ArgNum,
                                      void **ArgsBase, void **Args,
                                      int64_t *ArgSizes, int64_t *ArgTypes) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   __tgt_target_data_update_mapper(nullptr, DeviceId, ArgNum, ArgsBase, Args,
                                   ArgSizes, ArgTypes, nullptr, nullptr);
 }
@@ -56,7 +64,7 @@ EXTERN void __tgt_target_data_update_nowait(
     int64_t *ArgSizes, int64_t *ArgTypes, int32_t DepNum, void *DepList,
     int32_t NoAliasDepNum, void *NoAliasDepList) {
   TIMESCOPE();
-
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   __tgt_target_data_update_mapper(nullptr, DeviceId, ArgNum, ArgsBase, Args,
                                   ArgSizes, ArgTypes, nullptr, nullptr);
 }
@@ -68,7 +76,7 @@ EXTERN void __tgt_target_data_end_nowait(int64_t DeviceId, int32_t ArgNum,
                                          int32_t NoAliasDepNum,
                                          void *NoAliasDepList) {
   TIMESCOPE();
-
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   __tgt_target_data_end_mapper(nullptr, DeviceId, ArgNum, ArgsBase, Args,
                                ArgSizes, ArgTypes, nullptr, nullptr);
 }
@@ -78,6 +86,7 @@ EXTERN int __tgt_target_mapper(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                                int64_t *ArgSizes, int64_t *ArgTypes,
                                map_var_info_t *ArgNames, void **ArgMappers) {
   TIMESCOPE_WITH_IDENT(Loc);
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   KernelArgsTy KernelArgs{1,        ArgNum,   ArgsBase,   Args, ArgSizes,
                           ArgTypes, ArgNames, ArgMappers, 0};
   return __tgt_target_kernel(Loc, DeviceId, -1, -1, HostPtr, &KernelArgs);
@@ -87,6 +96,7 @@ EXTERN int __tgt_target(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
                         void **ArgsBase, void **Args, int64_t *ArgSizes,
                         int64_t *ArgTypes) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return __tgt_target_mapper(nullptr, DeviceId, HostPtr, ArgNum, ArgsBase, Args,
                              ArgSizes, ArgTypes, nullptr, nullptr);
 }
@@ -96,7 +106,7 @@ EXTERN int __tgt_target_nowait(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
                                int64_t *ArgTypes, int32_t DepNum, void *DepList,
                                int32_t NoAliasDepNum, void *NoAliasDepList) {
   TIMESCOPE();
-
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return __tgt_target_mapper(nullptr, DeviceId, HostPtr, ArgNum, ArgsBase, Args,
                              ArgSizes, ArgTypes, nullptr, nullptr);
 }
@@ -107,7 +117,7 @@ EXTERN int __tgt_target_nowait_mapper(
     map_var_info_t *ArgNames, void **ArgMappers, int32_t DepNum, void *DepList,
     int32_t NoAliasDepNum, void *NoAliasDepList) {
   TIMESCOPE_WITH_IDENT(Loc);
-
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return __tgt_target_mapper(Loc, DeviceId, HostPtr, ArgNum, ArgsBase, Args,
                              ArgSizes, ArgTypes, ArgNames, ArgMappers);
 }
@@ -120,7 +130,7 @@ EXTERN int __tgt_target_teams_mapper(ident_t *Loc, int64_t DeviceId,
                                      void **ArgMappers, int32_t NumTeams,
                                      int32_t ThreadLimit) {
   TIMESCOPE_WITH_IDENT(Loc);
-
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   KernelArgsTy KernelArgs{1,        ArgNum,   ArgsBase,   Args, ArgSizes,
                           ArgTypes, ArgNames, ArgMappers, 0};
   return __tgt_target_kernel(Loc, DeviceId, NumTeams, ThreadLimit, HostPtr,
@@ -132,6 +142,7 @@ EXTERN int __tgt_target_teams(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
                               int64_t *ArgTypes, int32_t NumTeams,
                               int32_t ThreadLimit) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return __tgt_target_teams_mapper(nullptr, DeviceId, HostPtr, ArgNum, ArgsBase,
                                    Args, ArgSizes, ArgTypes, nullptr, nullptr,
                                    NumTeams, ThreadLimit);
@@ -145,7 +156,7 @@ EXTERN int __tgt_target_teams_nowait(int64_t DeviceId, void *HostPtr,
                                      void *DepList, int32_t NoAliasDepNum,
                                      void *NoAliasDepList) {
   TIMESCOPE();
-
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return __tgt_target_teams_mapper(nullptr, DeviceId, HostPtr, ArgNum, ArgsBase,
                                    Args, ArgSizes, ArgTypes, nullptr, nullptr,
                                    NumTeams, ThreadLimit);
@@ -158,7 +169,7 @@ EXTERN int __tgt_target_teams_nowait_mapper(
     int32_t ThreadLimit, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList) {
   TIMESCOPE_WITH_IDENT(Loc);
-
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return __tgt_target_teams_mapper(Loc, DeviceId, HostPtr, ArgNum, ArgsBase,
                                    Args, ArgSizes, ArgTypes, ArgNames,
                                    ArgMappers, NumTeams, ThreadLimit);
@@ -182,6 +193,7 @@ EXTERN int __tgt_target_kernel_nowait(ident_t *Loc, int64_t DeviceId,
                                       int32_t NoAliasDepNum,
                                       void *NoAliasDepList) {
   TIMESCOPE_WITH_IDENT(Loc);
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return __tgt_target_kernel(Loc, DeviceId, NumTeams, ThreadLimit, HostPtr,
                              KernelArgs);
 }

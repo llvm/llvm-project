@@ -49,8 +49,8 @@ define void @masked_gather_v8i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    ld1b { z0.d }, p0/z, [z0.d]
 ; VBITS_GE_256-NEXT:    ld1b { z1.d }, p0/z, [z1.d]
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
-; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
+; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    uzp1 z1.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    uzp1 v0.8b, v1.8b, v0.8b
 ; VBITS_GE_256-NEXT:    str d0, [x0]
@@ -153,8 +153,8 @@ define void @masked_gather_v8i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
 ; VBITS_GE_256-NEXT:    ld1h { z1.d }, p0/z, [z1.d]
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
-; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
+; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    uzp1 z1.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    mov v1.d[1], v0.d[0]
 ; VBITS_GE_256-NEXT:    str q1, [x0]

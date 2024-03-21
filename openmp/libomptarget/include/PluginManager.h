@@ -58,10 +58,6 @@ struct PluginAdaptorTy {
   /// user.
   int32_t getNumberOfUserDevices() const { return NumberOfUserDevices; }
 
-  /// Add all offload entries described by \p DI to the devices managed by this
-  /// plugin.
-  void addOffloadEntries(DeviceImageTy &DI);
-
   /// RTL index, index is the number of devices of other RTLs that were
   /// registered before, i.e. the OpenMP index of the first device to be
   /// registered with this RTL.
@@ -73,7 +69,7 @@ struct PluginAdaptorTy {
   /// Access to the shared object file representing the plugin.
   std::unique_ptr<llvm::sys::DynamicLibrary> LibraryHandler;
 
-#define PLUGIN_API_HANDLE(NAME, MANDATORY)                                     \
+#define PLUGIN_API_HANDLE(NAME)                                                \
   using NAME##_ty = decltype(__tgt_rtl_##NAME);                                \
   NAME##_ty *NAME = nullptr;
 
@@ -118,8 +114,10 @@ struct PluginManager {
   // Unregister a shared library from all RTLs.
   void unregisterLib(__tgt_bin_desc *Desc);
 
-  void addDeviceImage(__tgt_bin_desc &TgtBinDesc, __tgt_device_image &TgtDeviceImage) {
-    DeviceImages.emplace_back(std::make_unique<DeviceImageTy>(TgtBinDesc, TgtDeviceImage));
+  void addDeviceImage(__tgt_bin_desc &TgtBinDesc,
+                      __tgt_device_image &TgtDeviceImage) {
+    DeviceImages.emplace_back(
+        std::make_unique<DeviceImageTy>(TgtBinDesc, TgtDeviceImage));
   }
 
   /// Return the device presented to the user as device \p DeviceNo if it is
@@ -209,6 +207,12 @@ private:
   /// Devices associated with plugins, accesses to the container are exclusive.
   ProtectedObj<DeviceContainerTy> Devices;
 };
+
+/// Initialize the plugin manager and OpenMP runtime.
+void initRuntime();
+
+/// Deinitialize the plugin and delete it.
+void deinitRuntime();
 
 extern PluginManager *PM;
 

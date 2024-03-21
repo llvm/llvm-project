@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -390,6 +391,13 @@ public:
   /// and having the thread call the SystemRuntime again.
   virtual bool ThreadHasQueueInformation() const { return false; }
 
+  /// GetStackFrameCount can be expensive.  Stacks can get very deep, and they
+  /// require memory reads for each frame.  So only use GetStackFrameCount when 
+  /// you need to know the depth of the stack.  When iterating over frames, its
+  /// better to generate the frames one by one with GetFrameAtIndex, and when
+  /// that returns NULL, you are at the end of the stack.  That way your loop
+  /// will only do the work it needs to, without forcing lldb to realize
+  /// StackFrames you weren't going to look at.
   virtual uint32_t GetStackFrameCount() {
     return GetStackFrameList()->GetNumFrames();
   }
@@ -1155,13 +1163,20 @@ public:
 
   void CalculatePublicStopInfo();
 
-  // Ask the thread subclass to set its stop info.
-  //
-  // Thread subclasses should call Thread::SetStopInfo(...) with the reason the
-  // thread stopped.
-  //
-  // \return
-  //      True if Thread::SetStopInfo(...) was called, false otherwise.
+  /// Ask the thread subclass to set its stop info.
+  ///
+  /// Thread subclasses should call Thread::SetStopInfo(...) with the reason the
+  /// thread stopped.
+  ///
+  /// A thread that is sitting at a breakpoint site, but has not yet executed
+  /// the breakpoint instruction, should have a breakpoint-hit StopInfo set.
+  /// When execution is resumed, any thread sitting at a breakpoint site will
+  /// instruction-step over the breakpoint instruction silently, and we will
+  /// never record this breakpoint as being hit, updating the hit count,
+  /// possibly executing breakpoint commands or conditions.
+  ///
+  /// \return
+  ///      True if Thread::SetStopInfo(...) was called, false otherwise.
   virtual bool CalculateStopInfo() = 0;
 
   // Gets the temporary resume state for a thread.
@@ -1218,6 +1233,16 @@ public:
   lldb::ThreadSP GetCurrentExceptionBacktrace();
 
   lldb::ValueObjectSP GetSiginfoValue();
+
+  /// Request the pc value the thread had when previously stopped.
+  ///
+  /// When the thread performs execution, it copies the current RegisterContext
+  /// GetPC() value.  This method returns that value, if it is available.
+  ///
+  /// \return
+  ///     The PC value before execution was resumed.  May not be available;
+  ///     an empty std::optional is returned in that case.
+  std::optional<lldb::addr_t> GetPreviousFrameZeroPC();
 
 protected:
   friend class ThreadPlan;
@@ -1299,6 +1324,9 @@ protected:
                                            ///populated after a thread stops.
   lldb::StackFrameListSP m_prev_frames_sp; ///< The previous stack frames from
                                            ///the last time this thread stopped.
+  std::optional<lldb::addr_t>
+      m_prev_framezero_pc; ///< Frame 0's PC the last
+                           /// time this thread was stopped.
   int m_resume_signal; ///< The signal that should be used when continuing this
                        ///thread.
   lldb::StateType m_resume_state; ///< This state is used to force a thread to

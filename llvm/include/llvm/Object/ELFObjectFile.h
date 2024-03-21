@@ -60,6 +60,7 @@ class ELFObjectFileBase : public ObjectFile {
 
   SubtargetFeatures getMIPSFeatures() const;
   SubtargetFeatures getARMFeatures() const;
+  SubtargetFeatures getHexagonFeatures() const;
   Expected<SubtargetFeatures> getRISCVFeatures() const;
   SubtargetFeatures getLoongArchFeatures() const;
 
@@ -103,6 +104,8 @@ public:
 
   virtual uint16_t getEMachine() const = 0;
 
+  virtual uint8_t getEIdentABIVersion() const = 0;
+
   std::vector<ELFPltEntry> getPltEntries() const;
 
   /// Returns a vector containing a symbol version for each dynamic symbol.
@@ -110,11 +113,12 @@ public:
   Expected<std::vector<VersionEntry>> readDynsymVersions() const;
 
   /// Returns a vector of all BB address maps in the object file. When
-  // `TextSectionIndex` is specified, only returns the BB address maps
-  // corresponding to the section with that index. When `PGOAnalyses`is
-  // specified, the vector is cleared then filled with extra PGO data.
-  // `PGOAnalyses` will always be the same length as the return value on
-  // success, otherwise it is empty.
+  /// `TextSectionIndex` is specified, only returns the BB address maps
+  /// corresponding to the section with that index. When `PGOAnalyses`is
+  /// specified (PGOAnalyses is not nullptr), the vector is cleared then filled
+  /// with extra PGO data. `PGOAnalyses` will always be the same length as the
+  /// return value when it is requested assuming no error occurs. Upon failure,
+  /// `PGOAnalyses` will be emptied.
   Expected<std::vector<BBAddrMap>>
   readBBAddrMap(std::optional<unsigned> TextSectionIndex = std::nullopt,
                 std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr) const;
@@ -250,6 +254,7 @@ ELFObjectFileBase::symbols() const {
 template <class ELFT> class ELFObjectFile : public ELFObjectFileBase {
   uint16_t getEMachine() const override;
   uint16_t getEType() const override;
+  uint8_t getEIdentABIVersion() const override;
   uint64_t getSymbolSize(DataRefImpl Sym) const override;
 
 public:
@@ -385,25 +390,38 @@ protected:
   }
 
   Error getBuildAttributes(ELFAttributeParser &Attributes) const override {
+    uint32_t Type;
+    switch (getEMachine()) {
+    case ELF::EM_ARM:
+      Type = ELF::SHT_ARM_ATTRIBUTES;
+      break;
+    case ELF::EM_RISCV:
+      Type = ELF::SHT_RISCV_ATTRIBUTES;
+      break;
+    case ELF::EM_HEXAGON:
+      Type = ELF::SHT_HEXAGON_ATTRIBUTES;
+      break;
+    default:
+      return Error::success();
+    }
+
     auto SectionsOrErr = EF.sections();
     if (!SectionsOrErr)
       return SectionsOrErr.takeError();
-
     for (const Elf_Shdr &Sec : *SectionsOrErr) {
-      if (Sec.sh_type == ELF::SHT_ARM_ATTRIBUTES ||
-          Sec.sh_type == ELF::SHT_RISCV_ATTRIBUTES) {
-        auto ErrorOrContents = EF.getSectionContents(Sec);
-        if (!ErrorOrContents)
-          return ErrorOrContents.takeError();
+      if (Sec.sh_type != Type)
+        continue;
+      auto ErrorOrContents = EF.getSectionContents(Sec);
+      if (!ErrorOrContents)
+        return ErrorOrContents.takeError();
 
-        auto Contents = ErrorOrContents.get();
-        if (Contents[0] != ELFAttrs::Format_Version || Contents.size() == 1)
-          return Error::success();
+      auto Contents = ErrorOrContents.get();
+      if (Contents[0] != ELFAttrs::Format_Version || Contents.size() == 1)
+        return Error::success();
 
-        if (Error E = Attributes.parse(Contents, ELFT::TargetEndianness))
-          return E;
-        break;
-      }
+      if (Error E = Attributes.parse(Contents, ELFT::TargetEndianness))
+        return E;
+      break;
     }
     return Error::success();
   }
@@ -642,6 +660,10 @@ uint16_t ELFObjectFile<ELFT>::getEMachine() const {
 
 template <class ELFT> uint16_t ELFObjectFile<ELFT>::getEType() const {
   return EF.getHeader().e_type;
+}
+
+template <class ELFT> uint8_t ELFObjectFile<ELFT>::getEIdentABIVersion() const {
+  return EF.getHeader().e_ident[ELF::EI_ABIVERSION];
 }
 
 template <class ELFT>

@@ -203,7 +203,7 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
           if (CII->getInfo().isPreSplit()) {
             assert(F.isPresplitCoroutine() &&
                    "The frontend uses Swtich-Resumed ABI should emit "
-                   "\"coroutine.presplit\" attribute for the coroutine.");
+                   "\"presplitcoroutine\" attribute for the coroutine.");
             setCannotDuplicate(CII);
             CII->setCoroutineSelf();
             CoroId = cast<CoroIdInst>(&I);

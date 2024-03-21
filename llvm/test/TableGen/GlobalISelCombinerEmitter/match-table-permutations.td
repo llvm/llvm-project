@@ -196,8 +196,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:         GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
-// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GIMT_Encode2(GICXXCustomAction_CombineApplyGICombiner0),
+// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_Done,
 // CHECK-NEXT:       // Label 1: @99
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 2*/ GIMT_Encode4(199), // Rule ID 6 //
@@ -239,8 +239,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:         GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
-// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GIMT_Encode2(GICXXCustomAction_CombineApplyGICombiner0),
+// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_Done,
 // CHECK-NEXT:       // Label 2: @199
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4(299), // Rule ID 5 //
@@ -282,8 +282,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:         GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
-// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GIMT_Encode2(GICXXCustomAction_CombineApplyGICombiner0),
+// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_Done,
 // CHECK-NEXT:       // Label 3: @299
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(409), // Rule ID 4 //
@@ -329,8 +329,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:         GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
-// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GIMT_Encode2(GICXXCustomAction_CombineApplyGICombiner0),
+// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_Done,
 // CHECK-NEXT:       // Label 4: @409
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4(509), // Rule ID 3 //
@@ -372,8 +372,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:         GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
-// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GIMT_Encode2(GICXXCustomAction_CombineApplyGICombiner0),
+// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_Done,
 // CHECK-NEXT:       // Label 5: @509
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(619), // Rule ID 2 //
@@ -419,8 +419,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:         GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
-// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GIMT_Encode2(GICXXCustomAction_CombineApplyGICombiner0),
+// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_Done,
 // CHECK-NEXT:       // Label 6: @619
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4(729), // Rule ID 1 //
@@ -466,8 +466,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:         GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
-// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GIMT_Encode2(GICXXCustomAction_CombineApplyGICombiner0),
+// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_Done,
 // CHECK-NEXT:       // Label 7: @729
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4(849), // Rule ID 0 //
@@ -517,8 +517,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:         GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
-// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GIMT_Encode2(GICXXCustomAction_CombineApplyGICombiner0),
+// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_Done,
 // CHECK-NEXT:       // Label 8: @849
 // CHECK-NEXT:       GIM_Reject,

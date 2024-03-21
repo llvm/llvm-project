@@ -120,7 +120,7 @@ public:
   bool checkFunction(BinaryFunction &BF, DataflowInfoManager &DInfo,
                      RegAnalysis &RA, StokeFuncInfo &FuncInfo);
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 } // namespace bolt

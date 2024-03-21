@@ -43,7 +43,7 @@ int bar() { return weak; }
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --linker-path=/usr/bin/ld -- %t.o %t.a -o a.out 2>&1 \
+// RUN:   --linker-path=/usr/bin/ld %t.o %t.a -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LIBRARY-RESOLVES
 
 // LIBRARY-RESOLVES: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
@@ -65,7 +65,7 @@ int bar() { return weak; }
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --linker-path=/usr/bin/ld -- %t.o %t.a -o a.out 2>&1 \
+// RUN:   --linker-path=/usr/bin/ld %t.o %t.a -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LIBRARY-GLOBAL
 
 // LIBRARY-GLOBAL: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
@@ -88,7 +88,7 @@ int bar() { return weak; }
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --linker-path=/usr/bin/ld -- %t.o %t.a -o a.out 2>&1 \
+// RUN:   --linker-path=/usr/bin/ld %t.o %t.a -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LIBRARY-GLOBAL-NONE
 
 // LIBRARY-GLOBAL-NONE-NOT: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
@@ -109,7 +109,7 @@ int bar() { return weak; }
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --linker-path=/usr/bin/ld -- %t.o %t.a -o a.out 2>&1 \
+// RUN:   --linker-path=/usr/bin/ld %t.o %t.a -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LIBRARY-WEAK
 
 // LIBRARY-WEAK: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030
@@ -131,7 +131,7 @@ int bar() { return weak; }
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --linker-path=/usr/bin/ld -- %t.o %t.a -o a.out 2>&1 \
+// RUN:   --linker-path=/usr/bin/ld %t.o %t.a -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LIBRARY-HIDDEN
 
 // LIBRARY-HIDDEN: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030
@@ -154,7 +154,7 @@ int bar() { return weak; }
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --linker-path=/usr/bin/ld -- %t.o %t.a %t.a -o a.out 2>&1 \
+// RUN:   --linker-path=/usr/bin/ld %t.o %t.a %t.a -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LIBRARY-GLOBAL-DEFINED
 
 // LIBRARY-GLOBAL-DEFINED: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
@@ -178,7 +178,7 @@ int bar() { return weak; }
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --linker-path=/usr/bin/ld -- %t.o --whole-archive %t.a -o a.out 2>&1 \
+// RUN:   --linker-path=/usr/bin/ld %t.o --whole-archive %t.a -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LIBRARY-WHOLE-ARCHIVE
 
 // LIBRARY-WHOLE-ARCHIVE: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o

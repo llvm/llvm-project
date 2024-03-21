@@ -24,7 +24,7 @@ define void @storeA(ptr %a.ptr) {
 define void @storeB(ptr %b.ptr) {
 ; CHECK-LABEL: @storeB(
 ; CHECK-NEXT:    store ptr null, ptr [[B_PTR:%.*]], align 8
-; CHECK-NEXT:    [[B_PTR_REPACK1:%.*]] = getelementptr inbounds [[B:%.*]], ptr [[B_PTR]], i64 0, i32 1
+; CHECK-NEXT:    [[B_PTR_REPACK1:%.*]] = getelementptr inbounds i8, ptr [[B_PTR]], i64 8
 ; CHECK-NEXT:    store i64 42, ptr [[B_PTR_REPACK1]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -76,14 +76,14 @@ define void @storeArrayOfB(ptr %ab.ptr, [2 x %B] %ab) {
 ; CHECK-NEXT:    [[AB_ELT:%.*]] = extractvalue [2 x %B] [[AB:%.*]], 0
 ; CHECK-NEXT:    [[AB_ELT_ELT:%.*]] = extractvalue [[B:%.*]] [[AB_ELT]], 0
 ; CHECK-NEXT:    store ptr [[AB_ELT_ELT]], ptr [[AB_PTR:%.*]], align 8
-; CHECK-NEXT:    [[AB_PTR_REPACK3:%.*]] = getelementptr inbounds [[B]], ptr [[AB_PTR]], i64 0, i32 1
+; CHECK-NEXT:    [[AB_PTR_REPACK3:%.*]] = getelementptr inbounds i8, ptr [[AB_PTR]], i64 8
 ; CHECK-NEXT:    [[AB_ELT_ELT4:%.*]] = extractvalue [[B]] [[AB_ELT]], 1
 ; CHECK-NEXT:    store i64 [[AB_ELT_ELT4]], ptr [[AB_PTR_REPACK3]], align 8
-; CHECK-NEXT:    [[AB_PTR_REPACK1:%.*]] = getelementptr inbounds [2 x %B], ptr [[AB_PTR]], i64 0, i64 1
+; CHECK-NEXT:    [[AB_PTR_REPACK1:%.*]] = getelementptr inbounds i8, ptr [[AB_PTR]], i64 16
 ; CHECK-NEXT:    [[AB_ELT2:%.*]] = extractvalue [2 x %B] [[AB]], 1
 ; CHECK-NEXT:    [[AB_ELT2_ELT:%.*]] = extractvalue [[B]] [[AB_ELT2]], 0
 ; CHECK-NEXT:    store ptr [[AB_ELT2_ELT]], ptr [[AB_PTR_REPACK1]], align 8
-; CHECK-NEXT:    [[AB_PTR_REPACK1_REPACK5:%.*]] = getelementptr inbounds [2 x %B], ptr [[AB_PTR]], i64 0, i64 1, i32 1
+; CHECK-NEXT:    [[AB_PTR_REPACK1_REPACK5:%.*]] = getelementptr inbounds i8, ptr [[AB_PTR]], i64 24
 ; CHECK-NEXT:    [[AB_ELT2_ELT6:%.*]] = extractvalue [[B]] [[AB_ELT2]], 1
 ; CHECK-NEXT:    store i64 [[AB_ELT2_ELT6]], ptr [[AB_PTR_REPACK1_REPACK5]], align 8
 ; CHECK-NEXT:    ret void
@@ -106,7 +106,7 @@ define %B @loadB(ptr %b.ptr) {
 ; CHECK-LABEL: @loadB(
 ; CHECK-NEXT:    [[DOTUNPACK:%.*]] = load ptr, ptr [[B_PTR:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue [[B:%.*]] poison, ptr [[DOTUNPACK]], 0
-; CHECK-NEXT:    [[DOTELT1:%.*]] = getelementptr inbounds [[B]], ptr [[B_PTR]], i64 0, i32 1
+; CHECK-NEXT:    [[DOTELT1:%.*]] = getelementptr inbounds i8, ptr [[B_PTR]], i64 8
 ; CHECK-NEXT:    [[DOTUNPACK2:%.*]] = load i64, ptr [[DOTELT1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [[B]] [[TMP1]], i64 [[DOTUNPACK2]], 1
 ; CHECK-NEXT:    ret [[B]] [[TMP2]]
@@ -162,9 +162,9 @@ define { %A } @structOfA(ptr %sa.ptr) {
 define %B @structB(ptr %b.ptr) {
 ; CHECK-LABEL: @structB(
 ; CHECK-NEXT:    store ptr null, ptr [[B_PTR:%.*]], align 8
-; CHECK-NEXT:    [[B_PTR_REPACK1:%.*]] = getelementptr inbounds [[B:%.*]], ptr [[B_PTR]], i64 0, i32 1
+; CHECK-NEXT:    [[B_PTR_REPACK1:%.*]] = getelementptr inbounds i8, ptr [[B_PTR]], i64 8
 ; CHECK-NEXT:    store i64 42, ptr [[B_PTR_REPACK1]], align 8
-; CHECK-NEXT:    ret [[B]] { ptr null, i64 42 }
+; CHECK-NEXT:    ret [[B:%.*]] { ptr null, i64 42 }
 ;
   store %B { ptr null, i64 42 }, ptr %b.ptr, align 8
   %1 = load %B, ptr %b.ptr, align 8
@@ -175,14 +175,14 @@ define [2 x %B] @loadArrayOfB(ptr %ab.ptr) {
 ; CHECK-LABEL: @loadArrayOfB(
 ; CHECK-NEXT:    [[DOTUNPACK_UNPACK:%.*]] = load ptr, ptr [[AB_PTR:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue [[B:%.*]] poison, ptr [[DOTUNPACK_UNPACK]], 0
-; CHECK-NEXT:    [[DOTUNPACK_ELT3:%.*]] = getelementptr inbounds [[B]], ptr [[AB_PTR]], i64 0, i32 1
+; CHECK-NEXT:    [[DOTUNPACK_ELT3:%.*]] = getelementptr inbounds i8, ptr [[AB_PTR]], i64 8
 ; CHECK-NEXT:    [[DOTUNPACK_UNPACK4:%.*]] = load i64, ptr [[DOTUNPACK_ELT3]], align 8
 ; CHECK-NEXT:    [[DOTUNPACK5:%.*]] = insertvalue [[B]] [[TMP1]], i64 [[DOTUNPACK_UNPACK4]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [2 x %B] poison, [[B]] [[DOTUNPACK5]], 0
-; CHECK-NEXT:    [[DOTELT1:%.*]] = getelementptr inbounds [2 x %B], ptr [[AB_PTR]], i64 0, i64 1
+; CHECK-NEXT:    [[DOTELT1:%.*]] = getelementptr inbounds i8, ptr [[AB_PTR]], i64 16
 ; CHECK-NEXT:    [[DOTUNPACK2_UNPACK:%.*]] = load ptr, ptr [[DOTELT1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue [[B]] poison, ptr [[DOTUNPACK2_UNPACK]], 0
-; CHECK-NEXT:    [[DOTUNPACK2_ELT6:%.*]] = getelementptr inbounds [2 x %B], ptr [[AB_PTR]], i64 0, i64 1, i32 1
+; CHECK-NEXT:    [[DOTUNPACK2_ELT6:%.*]] = getelementptr inbounds i8, ptr [[AB_PTR]], i64 24
 ; CHECK-NEXT:    [[DOTUNPACK2_UNPACK7:%.*]] = load i64, ptr [[DOTUNPACK2_ELT6]], align 8
 ; CHECK-NEXT:    [[DOTUNPACK28:%.*]] = insertvalue [[B]] [[TMP3]], i64 [[DOTUNPACK2_UNPACK7]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue [2 x %B] [[TMP2]], [[B]] [[DOTUNPACK28]], 1
@@ -207,7 +207,7 @@ define [2000 x %B] @loadLargeArrayOfB(ptr %ab.ptr) {
 ; Make sure that we do not increase alignment of packed struct element
 define i32 @packed_alignment(ptr dereferenceable(9) %s) {
 ; CHECK-LABEL: @packed_alignment(
-; CHECK-NEXT:    [[TV_ELT1:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[S:%.*]], i64 0, i32 1, i32 1
+; CHECK-NEXT:    [[TV_ELT1:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 5
 ; CHECK-NEXT:    [[TV_UNPACK2:%.*]] = load i32, ptr [[TV_ELT1]], align 1
 ; CHECK-NEXT:    ret i32 [[TV_UNPACK2]]
 ;
@@ -222,38 +222,38 @@ define i32 @packed_alignment(ptr dereferenceable(9) %s) {
 define void @check_alignment(ptr %u, ptr %v) {
 ; CHECK-LABEL: @check_alignment(
 ; CHECK-NEXT:    [[DOTUNPACK:%.*]] = load i8, ptr [[U:%.*]], align 8
-; CHECK-NEXT:    [[DOTELT1:%.*]] = getelementptr inbounds [[STRUCT_U:%.*]], ptr [[U]], i64 0, i32 1
+; CHECK-NEXT:    [[DOTELT1:%.*]] = getelementptr inbounds i8, ptr [[U]], i64 1
 ; CHECK-NEXT:    [[DOTUNPACK2:%.*]] = load i8, ptr [[DOTELT1]], align 1
-; CHECK-NEXT:    [[DOTELT3:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[U]], i64 0, i32 2
+; CHECK-NEXT:    [[DOTELT3:%.*]] = getelementptr inbounds i8, ptr [[U]], i64 2
 ; CHECK-NEXT:    [[DOTUNPACK4:%.*]] = load i8, ptr [[DOTELT3]], align 2
-; CHECK-NEXT:    [[DOTELT5:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[U]], i64 0, i32 3
+; CHECK-NEXT:    [[DOTELT5:%.*]] = getelementptr inbounds i8, ptr [[U]], i64 3
 ; CHECK-NEXT:    [[DOTUNPACK6:%.*]] = load i8, ptr [[DOTELT5]], align 1
-; CHECK-NEXT:    [[DOTELT7:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[U]], i64 0, i32 4
+; CHECK-NEXT:    [[DOTELT7:%.*]] = getelementptr inbounds i8, ptr [[U]], i64 4
 ; CHECK-NEXT:    [[DOTUNPACK8:%.*]] = load i8, ptr [[DOTELT7]], align 4
-; CHECK-NEXT:    [[DOTELT9:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[U]], i64 0, i32 5
+; CHECK-NEXT:    [[DOTELT9:%.*]] = getelementptr inbounds i8, ptr [[U]], i64 5
 ; CHECK-NEXT:    [[DOTUNPACK10:%.*]] = load i8, ptr [[DOTELT9]], align 1
-; CHECK-NEXT:    [[DOTELT11:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[U]], i64 0, i32 6
+; CHECK-NEXT:    [[DOTELT11:%.*]] = getelementptr inbounds i8, ptr [[U]], i64 6
 ; CHECK-NEXT:    [[DOTUNPACK12:%.*]] = load i8, ptr [[DOTELT11]], align 2
-; CHECK-NEXT:    [[DOTELT13:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[U]], i64 0, i32 7
+; CHECK-NEXT:    [[DOTELT13:%.*]] = getelementptr inbounds i8, ptr [[U]], i64 7
 ; CHECK-NEXT:    [[DOTUNPACK14:%.*]] = load i8, ptr [[DOTELT13]], align 1
-; CHECK-NEXT:    [[DOTELT15:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[U]], i64 0, i32 8
+; CHECK-NEXT:    [[DOTELT15:%.*]] = getelementptr inbounds i8, ptr [[U]], i64 8
 ; CHECK-NEXT:    [[DOTUNPACK16:%.*]] = load i64, ptr [[DOTELT15]], align 8
 ; CHECK-NEXT:    store i8 [[DOTUNPACK]], ptr [[V:%.*]], align 8
-; CHECK-NEXT:    [[V_REPACK17:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[V]], i64 0, i32 1
+; CHECK-NEXT:    [[V_REPACK17:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 1
 ; CHECK-NEXT:    store i8 [[DOTUNPACK2]], ptr [[V_REPACK17]], align 1
-; CHECK-NEXT:    [[V_REPACK19:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[V]], i64 0, i32 2
+; CHECK-NEXT:    [[V_REPACK19:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 2
 ; CHECK-NEXT:    store i8 [[DOTUNPACK4]], ptr [[V_REPACK19]], align 2
-; CHECK-NEXT:    [[V_REPACK21:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[V]], i64 0, i32 3
+; CHECK-NEXT:    [[V_REPACK21:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 3
 ; CHECK-NEXT:    store i8 [[DOTUNPACK6]], ptr [[V_REPACK21]], align 1
-; CHECK-NEXT:    [[V_REPACK23:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[V]], i64 0, i32 4
+; CHECK-NEXT:    [[V_REPACK23:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 4
 ; CHECK-NEXT:    store i8 [[DOTUNPACK8]], ptr [[V_REPACK23]], align 4
-; CHECK-NEXT:    [[V_REPACK25:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[V]], i64 0, i32 5
+; CHECK-NEXT:    [[V_REPACK25:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 5
 ; CHECK-NEXT:    store i8 [[DOTUNPACK10]], ptr [[V_REPACK25]], align 1
-; CHECK-NEXT:    [[V_REPACK27:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[V]], i64 0, i32 6
+; CHECK-NEXT:    [[V_REPACK27:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 6
 ; CHECK-NEXT:    store i8 [[DOTUNPACK12]], ptr [[V_REPACK27]], align 2
-; CHECK-NEXT:    [[V_REPACK29:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[V]], i64 0, i32 7
+; CHECK-NEXT:    [[V_REPACK29:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 7
 ; CHECK-NEXT:    store i8 [[DOTUNPACK14]], ptr [[V_REPACK29]], align 1
-; CHECK-NEXT:    [[V_REPACK31:%.*]] = getelementptr inbounds [[STRUCT_U]], ptr [[V]], i64 0, i32 8
+; CHECK-NEXT:    [[V_REPACK31:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 8
 ; CHECK-NEXT:    store i64 [[DOTUNPACK16]], ptr [[V_REPACK31]], align 8
 ; CHECK-NEXT:    ret void
 ;

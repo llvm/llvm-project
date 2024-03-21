@@ -139,7 +139,7 @@ define float @t6(ptr%a0) {
 ; X32-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X32-SSE2-NEXT:    xorps %xmm1, %xmm1
 ; X32-SSE2-NEXT:    cmpeqss %xmm0, %xmm1
-; X32-SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X32-SSE2-NEXT:    movss {{.*#+}} xmm2 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X32-SSE2-NEXT:    andps %xmm1, %xmm2
 ; X32-SSE2-NEXT:    andnps %xmm0, %xmm1
 ; X32-SSE2-NEXT:    orps %xmm2, %xmm1
@@ -154,7 +154,7 @@ define float @t6(ptr%a0) {
 ; X64-SSSE3-NEXT:    movshdup {{.*#+}} xmm1 = mem[1,1,3,3]
 ; X64-SSSE3-NEXT:    xorps %xmm0, %xmm0
 ; X64-SSSE3-NEXT:    cmpeqss %xmm1, %xmm0
-; X64-SSSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X64-SSSE3-NEXT:    movss {{.*#+}} xmm2 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-SSSE3-NEXT:    andps %xmm0, %xmm2
 ; X64-SSSE3-NEXT:    andnps %xmm1, %xmm0
 ; X64-SSSE3-NEXT:    orps %xmm2, %xmm0
@@ -239,7 +239,7 @@ define float @PR43971_1(ptr%a0) nounwind {
 ; X32-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X32-SSE2-NEXT:    xorps %xmm1, %xmm1
 ; X32-SSE2-NEXT:    cmpeqss %xmm0, %xmm1
-; X32-SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X32-SSE2-NEXT:    movss {{.*#+}} xmm2 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X32-SSE2-NEXT:    andps %xmm1, %xmm2
 ; X32-SSE2-NEXT:    andnps %xmm0, %xmm1
 ; X32-SSE2-NEXT:    orps %xmm2, %xmm1
@@ -253,7 +253,7 @@ define float @PR43971_1(ptr%a0) nounwind {
 ; X64-SSSE3-NEXT:    movshdup {{.*#+}} xmm1 = mem[1,1,3,3]
 ; X64-SSSE3-NEXT:    xorps %xmm0, %xmm0
 ; X64-SSSE3-NEXT:    cmpeqss %xmm1, %xmm0
-; X64-SSSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X64-SSSE3-NEXT:    movss {{.*#+}} xmm2 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-SSSE3-NEXT:    andps %xmm0, %xmm2
 ; X64-SSSE3-NEXT:    andnps %xmm1, %xmm0
 ; X64-SSSE3-NEXT:    orps %xmm2, %xmm0

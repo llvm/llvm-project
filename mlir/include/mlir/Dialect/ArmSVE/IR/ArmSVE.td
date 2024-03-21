@@ -49,6 +49,12 @@ def SVBoolMask : VectorWithTrailingDimScalableOfSizeAndType<
 def SVEPredicateMask : VectorWithTrailingDimScalableOfSizeAndType<
   [16, 8, 4, 2, 1], [I1]>;
 
+// A constraint for a 1-D scalable vector of `length`.
+class Scalable1DVectorOfLength<int length, list<Type> elementTypes> : ShapedContainerType<
+  elementTypes, And<[IsVectorOfShape<[length]>, IsVectorTypeWithAnyDimScalablePred]>,
+  "a 1-D scalable vector with length " # length,
+  "::mlir::VectorType">;
+
 //===----------------------------------------------------------------------===//
 // ArmSVE op definitions
 //===----------------------------------------------------------------------===//
@@ -59,14 +65,15 @@ class ArmSVE_Op<string mnemonic, list<Trait> traits = []> :
 class ArmSVE_IntrOp<string mnemonic,
                     list<Trait> traits = [],
                     list<int> overloadedOperands = [],
-                    list<int> overloadedResults = []> :
+                    list<int> overloadedResults = [],
+                    int numResults = 1> :
   LLVM_IntrOpBase</*Dialect dialect=*/ArmSVE_Dialect,
                   /*string opName=*/"intr." # mnemonic,
                   /*string enumName=*/"aarch64_sve_" # !subst(".", "_", mnemonic),
                   /*list<int> overloadedResults=*/overloadedResults,
                   /*list<int> overloadedOperands=*/overloadedOperands,
                   /*list<Trait> traits=*/traits,
-                  /*int numResults=*/1>;
+                  /*int numResults=*/numResults>;
 
 class ArmSVE_IntrBinaryOverloadedOp<string mnemonic,
                                     list<Trait> traits = []>:
@@ -320,6 +327,121 @@ def ConvertToSvboolOp : ArmSVE_Op<"convert_to_svbool",
   let assemblyFormat = "$source attr-dict `:` type($source)";
 }
 
+// Inputs valid for the multi-vector zips (not including the 128-bit element zipqs)
+def ZipInputVectorType : AnyTypeOf<[
+  Scalable1DVectorOfLength<2, [I64, F64]>,
+  Scalable1DVectorOfLength<4, [I32, F32]>,
+  Scalable1DVectorOfLength<8, [I16, F16, BF16]>,
+  Scalable1DVectorOfLength<16, [I8]>],
+  "an SVE vector with element size <= 64-bit">;
+
+def ZipX2Op  : ArmSVE_Op<"zip.x2", [
+  Pure,
+  AllTypesMatch<["sourceV1", "sourceV2", "resultV1", "resultV2"]>]
+> {
+  let summary = "Multi-vector two-way zip op";
+
+  let description = [{
+    This operation interleaves elements from two input SVE vectors, returning
+    two new SVE vectors (`resultV1` and `resultV2`), which contain the low and
+    high halves of the result respectively.
+
+    Example:
+    ```mlir
+    // sourceV1 = [ A1, A2, A3, ... An ]
+    // sourceV2 = [ B1, B2, B3, ... Bn ]
+    // (resultV1, resultV2) = [ A1, B1, A2, B2, A3, B3, ... An, Bn ]
+    %resultV1, %resultV2 = arm_sve.zip.x2 %sourceV1, %sourceV2 : vector<[16]xi8>
+    ```
+
+    Note: This requires SME 2 (`+sme2` in LLVM target features)
+
+    [Source](https://developer.arm.com/documentation/ddi0602/2023-12/SME-Instructions/ZIP--two-registers---Interleave-elements-from-two-vectors-?lang=en)
+  }];
+
+  let arguments = (ins ZipInputVectorType:$sourceV1,
+                       ZipInputVectorType:$sourceV2);
+
+  let results = (outs ZipInputVectorType:$resultV1,
+                      ZipInputVectorType:$resultV2);
+
+  let builders = [
+    OpBuilder<(ins "Value":$v1, "Value":$v2), [{
+      build($_builder, $_state, v1.getType(), v1.getType(), v1, v2);
+  }]>];
+
+  let assemblyFormat = "$sourceV1 `,` $sourceV2 attr-dict `:` type($sourceV1)";
+
+  let extraClassDeclaration = [{
+    VectorType getVectorType() {
+      return ::llvm::cast<VectorType>(getSourceV1().getType());
+    }
+  }];
+}
+
+def ZipX4Op  : ArmSVE_Op<"zip.x4", [
+  Pure,
+  AllTypesMatch<[
+    "sourceV1", "sourceV2", "sourceV3", "sourceV4",
+    "resultV1", "resultV2", "resultV3", "resultV4"]>]
+> {
+  let summary = "Multi-vector four-way zip op";
+
+  let description = [{
+    This operation interleaves elements from four input SVE vectors, returning
+    four new SVE vectors, each of which contain a quarter of the result. The
+    first quarter will be in `resultV1`, second in `resultV2`, third in
+    `resultV3`, and fourth in `resultV4`.
+
+    ```mlir
+    // sourceV1 = [ A1, A2, ... An ]
+    // sourceV2 = [ B1, B2, ... Bn ]
+    // sourceV3 = [ C1, C2, ... Cn ]
+    // sourceV4 = [ D1, D2, ... Dn ]
+    // (resultV1, resultV2, resultV3, resultV4)
+    //   = [ A1, B1, C1, D1, A2, B2, C2, D2, ... An, Bn, Cn, Dn ]
+    %resultV1, %resultV2, %resultV3, %resultV4 = arm_sve.zip.x4
+      %sourceV1, %sourceV2, %sourceV3, %sourceV4 : vector<[16]xi8>
+    ```
+
+    **Warning:** The result of this op is undefined for 64-bit elements on
+    hardware with less than 256-bit vectors!
+
+    Note: This requires SME 2 (`+sme2` in LLVM target features)
+
+    [Source](https://developer.arm.com/documentation/ddi0602/2023-12/SME-Instructions/ZIP--four-registers---Interleave-elements-from-four-vectors-?lang=en)
+  }];
+
+  let arguments = (ins ZipInputVectorType:$sourceV1,
+                       ZipInputVectorType:$sourceV2,
+                       ZipInputVectorType:$sourceV3,
+                       ZipInputVectorType:$sourceV4);
+
+  let results = (outs ZipInputVectorType:$resultV1,
+                      ZipInputVectorType:$resultV2,
+                      ZipInputVectorType:$resultV3,
+                      ZipInputVectorType:$resultV4);
+
+  let builders = [
+    OpBuilder<(ins "Value":$v1, "Value":$v2, "Value":$v3, "Value":$v4), [{
+      build($_builder, $_state,
+        v1.getType(), v1.getType(),
+        v1.getType(), v1.getType(),
+        v1, v2, v3, v4);
+  }]>];
+
+  let assemblyFormat = [{
+    $sourceV1 `,` $sourceV2 `,` $sourceV3 `,` $sourceV4 attr-dict
+      `:` type($sourceV1)
+  }];
+
+  let extraClassDeclaration = [{
+    VectorType getVectorType() {
+      return ::llvm::cast<VectorType>(getSourceV1().getType());
+    }
+  }];
+}
+
 def ScalableMaskedAddIOp : ScalableMaskedIOp<"masked.addi", "addition",
                                              [Commutative]>;
 
@@ -409,5 +531,25 @@ def ConvertToSvboolIntrOp :
     /*overloadedOperands=*/[0],
     /*overloadedResults=*/[]>,
     Arguments<(ins SVEPredicate:$mask)>;
+
+// Note: This multi-vector intrinsic requires SME2.
+def ZipX2IntrOp : ArmSVE_IntrOp<"zip.x2",
+    /*traits=*/[],
+    /*overloadedOperands=*/[0],
+    /*overloadedResults=*/[],
+    /*numResults=*/2>,
+    Arguments<(ins Arg<AnyScalableVector, "v1">:$v1,
+                   Arg<AnyScalableVector, "v2">:$v2)>;
+
+// Note: This multi-vector intrinsic requires SME2.
+def ZipX4IntrOp : ArmSVE_IntrOp<"zip.x4",
+    /*traits=*/[],
+    /*overloadedOperands=*/[0],
+    /*overloadedResults=*/[],
+    /*numResults=*/4>,
+    Arguments<(ins Arg<AnyScalableVector, "v1">:$v1,
+                   Arg<AnyScalableVector, "v2">:$v2,
+                   Arg<AnyScalableVector, "v3">:$v3,
+                   Arg<AnyScalableVector, "v3">:$v4)>;
 
 #endif // ARMSVE_OPS

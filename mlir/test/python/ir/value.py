@@ -3,7 +3,6 @@
 import gc
 from mlir.ir import *
 from mlir.dialects import func
-from mlir.dialects._ods_common import SubClassValueT
 
 
 def run(f):
@@ -167,28 +166,15 @@ def testValuePrintAsOperand():
             print(value2)
 
             topFn = func.FuncOp("test", ([i32, i32], []))
-            entry_block1 = Block.create_at_start(topFn.operation.regions[0], [i32, i32])
+            entry_block = Block.create_at_start(topFn.operation.regions[0], [i32, i32])
 
-            with InsertionPoint(entry_block1):
+            with InsertionPoint(entry_block):
                 value3 = Operation.create("custom.op3", results=[i32]).results[0]
                 # CHECK: Value(%[[VAL3:.*]] = "custom.op3"() : () -> i32)
                 print(value3)
                 value4 = Operation.create("custom.op4", results=[i32]).results[0]
                 # CHECK: Value(%[[VAL4:.*]] = "custom.op4"() : () -> i32)
                 print(value4)
-
-                f = func.FuncOp("test", ([i32, i32], []))
-                entry_block2 = Block.create_at_start(f.operation.regions[0], [i32, i32])
-                with InsertionPoint(entry_block2):
-                    value5 = Operation.create("custom.op5", results=[i32]).results[0]
-                    # CHECK: Value(%[[VAL5:.*]] = "custom.op5"() : () -> i32)
-                    print(value5)
-                    value6 = Operation.create("custom.op6", results=[i32]).results[0]
-                    # CHECK: Value(%[[VAL6:.*]] = "custom.op6"() : () -> i32)
-                    print(value6)
-
-                    func.ReturnOp([])
-
                 func.ReturnOp([])
 
         # CHECK: %[[VAL1]]
@@ -215,20 +201,10 @@ def testValuePrintAsOperand():
         # CHECK: %1
         print(value4.get_name(use_local_scope=True))
 
-        # CHECK: %[[VAL5]]
-        print(value5.get_name())
-        # CHECK: %[[VAL6]]
-        print(value6.get_name())
-
         # CHECK: %[[ARG0:.*]]
-        print(entry_block1.arguments[0].get_name())
+        print(entry_block.arguments[0].get_name())
         # CHECK: %[[ARG1:.*]]
-        print(entry_block1.arguments[1].get_name())
-
-        # CHECK: %[[ARG2:.*]]
-        print(entry_block2.arguments[0].get_name())
-        # CHECK: %[[ARG3:.*]]
-        print(entry_block2.arguments[1].get_name())
+        print(entry_block.arguments[1].get_name())
 
         # CHECK: module {
         # CHECK:   %[[VAL1]] = "custom.op1"() : () -> i32
@@ -236,11 +212,6 @@ def testValuePrintAsOperand():
         # CHECK:   func.func @test(%[[ARG0]]: i32, %[[ARG1]]: i32) {
         # CHECK:     %[[VAL3]] = "custom.op3"() : () -> i32
         # CHECK:     %[[VAL4]] = "custom.op4"() : () -> i32
-        # CHECK:     func @test(%[[ARG2]]: i32, %[[ARG3]]: i32) {
-        # CHECK:       %[[VAL5]] = "custom.op5"() : () -> i32
-        # CHECK:       %[[VAL6]] = "custom.op6"() : () -> i32
-        # CHECK:       return
-        # CHECK:     }
         # CHECK:     return
         # CHECK:   }
         # CHECK: }
@@ -298,7 +269,7 @@ def testValueCasters():
             return super().__str__().replace(Value.__name__, NOPBlockArg.__name__)
 
     @register_value_caster(IntegerType.static_typeid)
-    def cast_int(v) -> SubClassValueT:
+    def cast_int(v) -> Value:
         print("in caster", v.__class__.__name__)
         if isinstance(v, OpResult):
             return NOPResult(v)

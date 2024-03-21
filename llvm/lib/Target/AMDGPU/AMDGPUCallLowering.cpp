@@ -474,7 +474,7 @@ static void allocateHSAUserSGPRs(CCState &CCInfo,
 
   const Module *M = MF.getFunction().getParent();
   if (UserSGPRInfo.hasQueuePtr() &&
-      AMDGPU::getCodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5) {
+      AMDGPU::getAMDHSACodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5) {
     Register QueuePtrReg = Info.addQueuePtr(TRI);
     MF.addLiveIn(QueuePtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(QueuePtrReg);
@@ -632,10 +632,6 @@ bool AMDGPUCallLowering::lowerFormalArguments(
 
     const bool InReg = Arg.hasAttribute(Attribute::InReg);
 
-    // SGPR arguments to functions not implemented.
-    if (!IsGraphics && InReg)
-      return false;
-
     if (Arg.hasAttribute(Attribute::SwiftSelf) ||
         Arg.hasAttribute(Attribute::SwiftError) ||
         Arg.hasAttribute(Attribute::Nest))
@@ -721,6 +717,13 @@ bool AMDGPUCallLowering::lowerFormalArguments(
     TLI.allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
   }
 
+  if (!IsEntryFunc) {
+    if (!Subtarget.enableFlatScratch())
+      CCInfo.AllocateReg(Info->getScratchRSrcReg());
+    if (!IsGraphics)
+      TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
+  }
+
   IncomingValueAssigner Assigner(AssignFn);
   if (!determineAssignments(Assigner, SplitArgs, CCInfo))
     return false;
@@ -732,13 +735,8 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   uint64_t StackSize = Assigner.StackSize;
 
   // Start adding system SGPRs.
-  if (IsEntryFunc) {
+  if (IsEntryFunc)
     TLI.allocateSystemSGPRs(CCInfo, MF, *Info, CC, IsGraphics);
-  } else {
-    if (!Subtarget.enableFlatScratch())
-      CCInfo.AllocateReg(Info->getScratchRSrcReg());
-    TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
-  }
 
   // When we tail call, we need to check if the callee's arguments will fit on
   // the caller's stack. So, whenever we lower formal arguments, we should keep
@@ -1306,6 +1304,9 @@ bool AMDGPUCallLowering::lowerTailCall(
   if (!handleAssignments(Handler, OutArgs, CCInfo, ArgLocs, MIRBuilder))
     return false;
 
+  if (Info.ConvergenceCtrlToken) {
+    MIB.addUse(Info.ConvergenceCtrlToken, RegState::Implicit);
+  }
   handleImplicitCallArguments(MIRBuilder, MIB, ST, *FuncInfo, CalleeCC,
                               ImplicitArgRegs);
 
@@ -1488,6 +1489,9 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
+  if (Info.ConvergenceCtrlToken) {
+    MIB.addUse(Info.ConvergenceCtrlToken, RegState::Implicit);
+  }
   handleImplicitCallArguments(MIRBuilder, MIB, ST, *MFI, Info.CallConv,
                               ImplicitArgRegs);
 

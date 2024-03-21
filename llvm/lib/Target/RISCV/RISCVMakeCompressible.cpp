@@ -143,19 +143,35 @@ static bool isCompressedReg(Register Reg) {
 // Return true if MI is a load for which there exists a compressed version.
 static bool isCompressibleLoad(const MachineInstr &MI) {
   const RISCVSubtarget &STI = MI.getMF()->getSubtarget<RISCVSubtarget>();
-  const unsigned Opcode = MI.getOpcode();
 
-  return Opcode == RISCV::LW || (!STI.is64Bit() && Opcode == RISCV::FLW) ||
-         Opcode == RISCV::LD || Opcode == RISCV::FLD;
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case RISCV::LW:
+  case RISCV::LD:
+    return STI.hasStdExtCOrZca();
+  case RISCV::FLW:
+    return !STI.is64Bit() && STI.hasStdExtCOrZcfOrZce();
+  case RISCV::FLD:
+    return STI.hasStdExtCOrZcd();
+  }
 }
 
 // Return true if MI is a store for which there exists a compressed version.
 static bool isCompressibleStore(const MachineInstr &MI) {
   const RISCVSubtarget &STI = MI.getMF()->getSubtarget<RISCVSubtarget>();
-  const unsigned Opcode = MI.getOpcode();
 
-  return Opcode == RISCV::SW || (!STI.is64Bit() && Opcode == RISCV::FSW) ||
-         Opcode == RISCV::SD || Opcode == RISCV::FSD;
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case RISCV::SW:
+  case RISCV::SD:
+    return STI.hasStdExtCOrZca();
+  case RISCV::FSW:
+    return !STI.is64Bit() && STI.hasStdExtCOrZcfOrZce();
+  case RISCV::FSD:
+    return STI.hasStdExtCOrZcd();
+  }
 }
 
 // Find a single register and/or large offset which, if compressible, would
@@ -324,8 +340,7 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
   const RISCVInstrInfo &TII = *STI.getInstrInfo();
 
   // This optimization only makes sense if compressed instructions are emitted.
-  // FIXME: Support Zca, Zcf, Zcd granularity.
-  if (!STI.hasStdExtC())
+  if (!STI.hasStdExtCOrZca())
     return false;
 
   for (MachineBasicBlock &MBB : Fn) {

@@ -500,6 +500,23 @@ void AffineScopeOp::print(OpAsmPrinter &p) {
 }
 
 //===----------------------------------------------------------------------===//
+// Test OptionalCustomAttrOp
+//===----------------------------------------------------------------------===//
+
+static OptionalParseResult parseOptionalCustomParser(AsmParser &p,
+                                                     IntegerAttr &result) {
+  if (succeeded(p.parseOptionalKeyword("foo")))
+    return p.parseAttribute(result);
+  return {};
+}
+
+static void printOptionalCustomParser(AsmPrinter &p, Operation *,
+                                      IntegerAttr result) {
+  p << "foo ";
+  p.printAttribute(result);
+}
+
+//===----------------------------------------------------------------------===//
 // Test removing op with inner ops.
 //===----------------------------------------------------------------------===//
 
@@ -1319,6 +1336,21 @@ static bool parseSumProperty(OpAsmParser &parser, int64_t &second,
 static void printSumProperty(OpAsmPrinter &printer, Operation *op,
                              int64_t second, int64_t first) {
   printer << second << " = " << (second + first);
+}
+
+//===----------------------------------------------------------------------===//
+// Tensor/Buffer Ops
+//===----------------------------------------------------------------------===//
+
+void ReadBufferOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // The buffer operand is read.
+  effects.emplace_back(MemoryEffects::Read::get(), getBuffer(),
+                       SideEffects::DefaultResource::get());
+  // The buffer contents are dumped.
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       SideEffects::DefaultResource::get());
 }
 
 //===----------------------------------------------------------------------===//

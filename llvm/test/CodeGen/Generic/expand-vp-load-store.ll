@@ -127,7 +127,7 @@ define <vscale x 1 x i64> @vpload_nxv1i64_allones_mask(ptr %ptr, i32 zeroext %ev
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr [[PTR:%.*]], i32 1, <vscale x 1 x i1> [[TMP2]], <vscale x 1 x i64> poison)
 ; CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP3]]
 ;
-  %load = call <vscale x 1 x i64> @llvm.vp.load.nxv1i64.p0(ptr %ptr, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer), i32 %evl)
+  %load = call <vscale x 1 x i64> @llvm.vp.load.nxv1i64.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i64> %load
 }
 
@@ -140,7 +140,7 @@ define <vscale x 1 x i64> @vpload_nxv1i64_allones_mask_vscale(ptr %ptr) {
 ;
   %vscale = call i32 @llvm.vscale.i32()
   %vlmax = mul nuw i32 %vscale, 1
-  %load = call <vscale x 1 x i64> @llvm.vp.load.nxv1i64.p0(ptr %ptr, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer), i32 %vlmax)
+  %load = call <vscale x 1 x i64> @llvm.vp.load.nxv1i64.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %vlmax)
   ret <vscale x 1 x i64> %load
 }
 
@@ -179,7 +179,7 @@ define void @vpstore_nxv1i64_allones_mask(<vscale x 1 x i64> %val, ptr %ptr, i32
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv1i64.p0(<vscale x 1 x i64> [[VAL:%.*]], ptr [[PTR:%.*]], i32 1, <vscale x 1 x i1> [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.vp.store.nxv1i64.p0(<vscale x 1 x i64> %val, ptr %ptr, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer), i32 %evl)
+  call void @llvm.vp.store.nxv1i64.p0(<vscale x 1 x i64> %val, ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret void
 }
 
@@ -192,7 +192,7 @@ define void @vpstore_nxv1i64_allones_mask_vscale(<vscale x 1 x i64> %val, ptr %p
 ;
   %vscale = call i32 @llvm.vscale.i32()
   %vlmax = mul nuw i32 %vscale, 1
-  call void @llvm.vp.store.nxv1i64.p0(<vscale x 1 x i64> %val, ptr %ptr, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer), i32 %vlmax)
+  call void @llvm.vp.store.nxv1i64.p0(<vscale x 1 x i64> %val, ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %vlmax)
   ret void
 }
 

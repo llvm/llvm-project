@@ -3,106 +3,106 @@
 
 ; ST1B
 
-define void @st1b_lower_bound(<vscale x 16 x i8> %data, <vscale x 16 x i8>* %a) {
+define void @st1b_lower_bound(<vscale x 16 x i8> %data, ptr %a) {
 ; CHECK-LABEL: st1b_lower_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0, #-8, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %a, i64 -8
-  store <vscale x 16 x i8> %data, <vscale x 16 x i8>* %base
+  %base = getelementptr <vscale x 16 x i8>, ptr %a, i64 -8
+  store <vscale x 16 x i8> %data, ptr %base
   ret void
 }
 
-define void @st1b_inbound(<vscale x 16 x i8> %data, <vscale x 16 x i8>* %a) {
+define void @st1b_inbound(<vscale x 16 x i8> %data, ptr %a) {
 ; CHECK-LABEL: st1b_inbound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %a, i64 1
-  store <vscale x 16 x i8> %data, <vscale x 16 x i8>* %base
+  %base = getelementptr <vscale x 16 x i8>, ptr %a, i64 1
+  store <vscale x 16 x i8> %data, ptr %base
   ret void
 }
 
-define void @st1b_upper_bound(<vscale x 16 x i8> %data, <vscale x 16 x i8>* %a) {
+define void @st1b_upper_bound(<vscale x 16 x i8> %data, ptr %a) {
 ; CHECK-LABEL: st1b_upper_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0, #7, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %a, i64 7
-  store <vscale x 16 x i8> %data, <vscale x 16 x i8>* %base
+  %base = getelementptr <vscale x 16 x i8>, ptr %a, i64 7
+  store <vscale x 16 x i8> %data, ptr %base
   ret void
 }
 
-define void @st1b_out_of_upper_bound(<vscale x 16 x i8> %data, <vscale x 16 x i8>* %a) {
+define void @st1b_out_of_upper_bound(<vscale x 16 x i8> %data, ptr %a) {
 ; CHECK-LABEL: st1b_out_of_upper_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    rdvl x8, #8
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x8]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %a, i64 8
-  store <vscale x 16 x i8> %data, <vscale x 16 x i8>* %base
+  %base = getelementptr <vscale x 16 x i8>, ptr %a, i64 8
+  store <vscale x 16 x i8> %data, ptr %base
   ret void
 }
 
-define void @st1b_out_of_lower_bound(<vscale x 16 x i8> %data, <vscale x 16 x i8>* %a) {
+define void @st1b_out_of_lower_bound(<vscale x 16 x i8> %data, ptr %a) {
 ; CHECK-LABEL: st1b_out_of_lower_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    rdvl x8, #-9
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x8]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %a, i64 -9
-  store <vscale x 16 x i8> %data, <vscale x 16 x i8>* %base
+  %base = getelementptr <vscale x 16 x i8>, ptr %a, i64 -9
+  store <vscale x 16 x i8> %data, ptr %base
   ret void
 }
 
 ; ST1H
 
-define void @st1h_inbound(<vscale x 8 x i16> %data, <vscale x 8 x i16>* %a) {
+define void @st1h_inbound(<vscale x 8 x i16> %data, ptr %a) {
 ; CHECK-LABEL: st1h_inbound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0, #-6, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x i16>, <vscale x 8 x i16>* %a, i64 -6
-  store <vscale x 8 x i16> %data, <vscale x 8 x i16>* %base
+  %base = getelementptr <vscale x 8 x i16>, ptr %a, i64 -6
+  store <vscale x 8 x i16> %data, ptr %base
   ret void
 }
 
 ; ST1W
 
-define void @st1w_inbound(<vscale x 4 x i32> %data, <vscale x 4 x i32>* %a) {
+define void @st1w_inbound(<vscale x 4 x i32> %data, ptr %a) {
 ; CHECK-LABEL: st1w_inbound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0, #2, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %a, i64 2
-  store <vscale x 4 x i32> %data, <vscale x 4 x i32>* %base
+  %base = getelementptr <vscale x 4 x i32>, ptr %a, i64 2
+  store <vscale x 4 x i32> %data, ptr %base
   ret void
 }
 
 ; ST1D
 
-define void @st1d_inbound(<vscale x 2 x i64> %data, <vscale x 2 x i64>* %a) {
+define void @st1d_inbound(<vscale x 2 x i64> %data, ptr %a) {
 ; CHECK-LABEL: st1d_inbound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0, #5, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %a, i64 5
-  store <vscale x 2 x i64> %data, <vscale x 2 x i64>* %base
+  %base = getelementptr <vscale x 2 x i64>, ptr %a, i64 5
+  store <vscale x 2 x i64> %data, ptr %base
   ret void
 }
 
 
 ; Splat stores of unpacked FP scalable vectors
 
-define void @store_nxv2f32(<vscale x 2 x float>* %out) {
+define void @store_nxv2f32(ptr %out) {
 ; CHECK-LABEL: store_nxv2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
@@ -111,11 +111,11 @@ define void @store_nxv2f32(<vscale x 2 x float>* %out) {
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 2 x float> undef, float 1.0, i32 0
   %splat = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
-  store <vscale x 2 x float> %splat, <vscale x 2 x float>* %out
+  store <vscale x 2 x float> %splat, ptr %out
   ret void
 }
 
-define void @store_nxv4f16(<vscale x 4 x half>* %out) {
+define void @store_nxv4f16(ptr %out) {
 ; CHECK-LABEL: store_nxv4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
@@ -124,13 +124,13 @@ define void @store_nxv4f16(<vscale x 4 x half>* %out) {
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 4 x half> undef, half 1.0, i32 0
   %splat = shufflevector <vscale x 4 x half> %ins, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
-  store <vscale x 4 x half> %splat, <vscale x 4 x half>* %out
+  store <vscale x 4 x half> %splat, ptr %out
   ret void
 }
 
 ; Splat stores of unusual FP scalable vector types
 
-define void @store_nxv6f32(<vscale x 6 x float>* %out) {
+define void @store_nxv6f32(ptr %out) {
 ; CHECK-LABEL: store_nxv6f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
@@ -141,11 +141,11 @@ define void @store_nxv6f32(<vscale x 6 x float>* %out) {
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 6 x float> undef, float 1.0, i32 0
   %splat = shufflevector <vscale x 6 x float> %ins, <vscale x 6 x float> undef, <vscale x 6 x i32> zeroinitializer
-  store <vscale x 6 x float> %splat, <vscale x 6 x float>* %out
+  store <vscale x 6 x float> %splat, ptr %out
   ret void
 }
 
-define void @store_nxv12f16(<vscale x 12 x half>* %out) {
+define void @store_nxv12f16(ptr %out) {
 ; CHECK-LABEL: store_nxv12f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
@@ -156,6 +156,6 @@ define void @store_nxv12f16(<vscale x 12 x half>* %out) {
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 12 x half> undef, half 1.0, i32 0
   %splat = shufflevector <vscale x 12 x half> %ins, <vscale x 12 x half> undef, <vscale x 12 x i32> zeroinitializer
-  store <vscale x 12 x half> %splat, <vscale x 12 x half>* %out
+  store <vscale x 12 x half> %splat, ptr %out
   ret void
 }

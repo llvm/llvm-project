@@ -152,13 +152,7 @@ public:
               diag::warn_target_unsupported_branch_protection_attribute)
               << Arch;
         } else {
-          static const char *SignReturnAddrStr[] = {"none", "non-leaf", "all"};
-          assert(static_cast<unsigned>(BPI.SignReturnAddr) <= 2 &&
-                 "Unexpected SignReturnAddressScopeKind");
-          Fn->addFnAttr(
-              "sign-return-address",
-              SignReturnAddrStr[static_cast<int>(BPI.SignReturnAddr)]);
-
+          Fn->addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
           Fn->addFnAttr("branch-target-enforcement",
                         BPI.BranchTargetEnforcement ? "true" : "false");
         }

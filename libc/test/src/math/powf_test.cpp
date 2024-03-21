@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/powf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
 #include <errno.h>
 #include <stdint.h>
@@ -72,7 +72,7 @@ TEST_F(LlvmLibcPowfTest, InFloatRange) {
         if (isnan(y) || isinf(y))
           continue;
 
-        libc_errno = 0;
+        LIBC_NAMESPACE::libc_errno = 0;
         float result = LIBC_NAMESPACE::powf(x, y);
         ++cc;
         if (isnan(result) || isinf(result))

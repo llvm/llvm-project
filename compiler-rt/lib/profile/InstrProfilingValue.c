@@ -62,10 +62,15 @@ __llvm_profile_set_num_value_sites(__llvm_profile_data *Data,
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
 #endif
   *((uint16_t *)&Data->NumValueSites[ValueKind]) = NumValueSites;
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
 #endif
 }
 

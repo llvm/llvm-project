@@ -18,6 +18,8 @@
 
 namespace fir {
 
+class LLVMTypeConverter;
+
 struct NameUniquer;
 
 #define GEN_PASS_DECL_FIRTOLLVMLOWERING
@@ -79,6 +81,14 @@ std::unique_ptr<mlir::Pass> createLLVMDialectToLLVMPass(
 /// use function pointers and thunks.
 std::unique_ptr<mlir::Pass> createBoxedProcedurePass();
 std::unique_ptr<mlir::Pass> createBoxedProcedurePass(bool useThunks);
+
+/// Populate the given list with patterns that convert from FIR to LLVM.
+void populateFIRToLLVMConversionPatterns(fir::LLVMTypeConverter &converter,
+                                         mlir::RewritePatternSet &patterns,
+                                         fir::FIRToLLVMPassOptions &options);
+
+/// Populate the pattern set with the PreCGRewrite patterns.
+void populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

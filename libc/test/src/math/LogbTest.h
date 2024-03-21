@@ -11,7 +11,7 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
@@ -75,7 +75,7 @@ public:
     constexpr StorageType COUNT = 100'000;
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = static_cast<T>(FPBits(v));
+      T x = FPBits(v).get_val();
       if (isnan(x) || isinf(x) || x == 0.0l)
         continue;
 

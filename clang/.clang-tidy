@@ -1,5 +1,5 @@
 # Note that the readability-identifier-naming check is disabled, there are too
 # many violations in the codebase and they create too much noise in clang-tidy
 # results.
-Checks: '-readability-identifier-naming, -misc-include*'
+Checks: '-readability-identifier-naming'
 InheritParentConfig: true

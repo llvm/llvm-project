@@ -18,9 +18,10 @@ A list of non-standard directives supported by Flang
   The directive allow actual arguments that would otherwise be diagnosed
   as incompatible in type (T), kind (K), rank (R), CUDA device (D), or
   managed (M) status.  The letter (A) is a shorthand for all of these,
-  and is the default when no letters appear.  The letter (C) is a legacy
-  no-op.  For example, if one wanted to call a "set all bytes to zero"
-  utility that could be applied to arrays of any type or rank:
+  and is the default when no letters appear.  The letter (C) checks for
+  contiguity for example allowing an element of an assumed-shape array to be
+  passed as a dummy argument. For example, if one wanted to call a "set all
+  bytes to zero" utility that could be applied to arrays of any type or rank:
 ```
   interface
     subroutine clear(arr,bytes)
@@ -29,3 +30,9 @@ A list of non-standard directives supported by Flang
     end
   end interface
 ```
+* `!dir$ assume_aligned desginator:alignment`, where designator is a variable,
+  maybe with array indices, and alignment is what the compiler should assume the
+  alignment to be. E.g A:64 or B(1,1,1):128. The alignment should be a power of 2,
+  and is limited to 256.
+  [This directive is currently recognised by the parser, but not
+  handled by the other parts of the compiler].
