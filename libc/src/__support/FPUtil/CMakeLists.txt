@@ -81,6 +81,7 @@ add_header_library(
     BasicOperations.h
   DEPENDS
     .fp_bits
+    .fenv_impl
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
 )

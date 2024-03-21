@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_BASICOPERATIONS_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_BASICOPERATIONS_H
 
+#include "FEnvImpl.h"
 #include "FPBits.h"
 
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
@@ -80,8 +80,7 @@ LIBC_INLINE T canonicalize(T *cx, const T *x) {
   }
   FPBits<T> sx(*x);
   if (sx.is_signaling_nan()) {
-    T temp = FPBits<T>::quiet_nan().get_val();
-    *cx = &temp;
+    *cx = FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa());
     raise_except_if_required(FE_INVALID);
   } else {
     *cx = *x;
