@@ -360,9 +360,9 @@ foreach intr = AMDGPUMFMAIntrinsics90A in
 def : SourceOfDivergence<intr>;
 foreach intr = AMDGPUMFMAIntrinsics940 in
 def : SourceOfDivergence<intr>;
-foreach intr = AMDGPUMFMAIntrinsicsGFX11 in
+foreach intr = AMDGPUWMMAIntrinsicsGFX11 in
 def : SourceOfDivergence<intr>;
-foreach intr = AMDGPUMFMAIntrinsicsGFX12 in
+foreach intr = AMDGPUWMMAIntrinsicsGFX12 in
 def : SourceOfDivergence<intr>;
 
 def : SourceOfDivergence<int_amdgcn_global_load_tr>;

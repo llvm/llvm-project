@@ -2654,7 +2654,7 @@ class AMDGPUWmmaIntrinsicIU<LLVMType AB, LLVMType CD> :
 // The tied versions of the f16/bf16 wmma intrinsics tie the destination matrix registers to the input accumulator registers.
 // The content of the other 16-bit half is preserved from the input.
 
-defset list<Intrinsic> AMDGPUMFMAIntrinsicsGFX11 = {
+defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX11 = {
 def int_amdgcn_wmma_f16_16x16x16_f16_tied   : AMDGPUWmmaIntrinsicOPSEL<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_bf16_16x16x16_bf16_tied : AMDGPUWmmaIntrinsicOPSEL<llvm_anyint_ty, llvm_anyint_ty>;
 
@@ -2723,7 +2723,7 @@ class AMDGPUSWmmacIntrinsicIUIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType I
     [IntrNoMem, IntrConvergent, IntrWillReturn, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>]
 >;
 
-defset list<Intrinsic> AMDGPUMFMAIntrinsicsGFX12 = {
+defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX12 = {
 // WMMA (Wave Matrix Multiply-Accumulate) intrinsics
 //
 // These operations perform a matrix multiplication and accumulation of
