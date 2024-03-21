@@ -3090,13 +3090,19 @@ bool X86DAGToDAGISel::selectLEAAddr(SDValue N,
 bool X86DAGToDAGISel::selectTLSADDRAddr(SDValue N, SDValue &Base,
                                         SDValue &Scale, SDValue &Index,
                                         SDValue &Disp, SDValue &Segment) {
-  assert(N.getOpcode() == ISD::TargetGlobalTLSAddress);
-  auto *GA = cast<GlobalAddressSDNode>(N);
+  assert(N.getOpcode() == ISD::TargetGlobalTLSAddress ||
+         N.getOpcode() == ISD::TargetExternalSymbol);
 
   X86ISelAddressMode AM;
-  AM.GV = GA->getGlobal();
-  AM.Disp += GA->getOffset();
-  AM.SymbolFlags = GA->getTargetFlags();
+  if (auto *GA = dyn_cast<GlobalAddressSDNode>(N)) {
+    AM.GV = GA->getGlobal();
+    AM.Disp += GA->getOffset();
+    AM.SymbolFlags = GA->getTargetFlags();
+  } else {
+    auto *SA = cast<ExternalSymbolSDNode>(N);
+    AM.ES = SA->getSymbol();
+    AM.SymbolFlags = SA->getTargetFlags();
+  }
 
   if (Subtarget->is32Bit()) {
     AM.Scale = 1;

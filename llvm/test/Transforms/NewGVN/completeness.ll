@@ -6,9 +6,12 @@ define i32 @test1(i32, ptr) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
-; CHECK:         br label [[TMP6:%.*]]
-; CHECK:         br label [[TMP6]]
-; CHECK:         [[PHIOFOPS:%.*]] = phi i32 [ 105, [[TMP5]] ], [ 75, [[TMP4]] ]
+; CHECK:       4:
+; CHECK-NEXT:    br label [[TMP6:%.*]]
+; CHECK:       5:
+; CHECK-NEXT:    br label [[TMP6]]
+; CHECK:       6:
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i32 [ 105, [[TMP5]] ], [ 75, [[TMP4]] ]
 ; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 5, [[TMP4]] ], [ 7, [[TMP5]] ]
 ; CHECK-NEXT:    ret i32 [[PHIOFOPS]]
 ;
@@ -31,9 +34,12 @@ define i32 @test1b(i32, ptr) {
 ; CHECK-LABEL: @test1b(
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
-; CHECK:         br label [[TMP6:%.*]]
-; CHECK:         br label [[TMP6]]
-; CHECK:         [[PHIOFOPS1:%.*]] = phi i32 [ 105, [[TMP5]] ], [ 75, [[TMP4]] ]
+; CHECK:       4:
+; CHECK-NEXT:    br label [[TMP6:%.*]]
+; CHECK:       5:
+; CHECK-NEXT:    br label [[TMP6]]
+; CHECK:       6:
+; CHECK-NEXT:    [[PHIOFOPS1:%.*]] = phi i32 [ 105, [[TMP5]] ], [ 75, [[TMP4]] ]
 ; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i32 [ 1575, [[TMP5]] ], [ 1125, [[TMP4]] ]
 ; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 5, [[TMP4]] ], [ 7, [[TMP5]] ]
 ; CHECK-NEXT:    ret i32 [[PHIOFOPS]]
@@ -58,9 +64,12 @@ define i32 @test2(i32) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]]
-; CHECK:         br label [[TMP5:%.*]]
-; CHECK:         br label [[TMP5]]
-; CHECK:         [[DOT01:%.*]] = phi i32 [ 3, [[TMP3]] ], [ 2, [[TMP4]] ]
+; CHECK:       3:
+; CHECK-NEXT:    br label [[TMP5:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    br label [[TMP5]]
+; CHECK:       5:
+; CHECK-NEXT:    [[DOT01:%.*]] = phi i32 [ 3, [[TMP3]] ], [ 2, [[TMP4]] ]
 ; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 2, [[TMP3]] ], [ 3, [[TMP4]] ]
 ; CHECK-NEXT:    ret i32 5
 ;
@@ -158,9 +167,12 @@ define i32 @test4(i32, ptr, ptr noalias, ptr noalias) {
 ; CHECK-NEXT:    store i32 7, ptr [[TMP3:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP7:%.*]]
-; CHECK:         br label [[TMP8:%.*]]
-; CHECK:         br label [[TMP8]]
-; CHECK:         [[DOT01:%.*]] = phi i32 [ 5, [[TMP6]] ], [ 7, [[TMP7]] ]
+; CHECK:       6:
+; CHECK-NEXT:    br label [[TMP8:%.*]]
+; CHECK:       7:
+; CHECK-NEXT:    br label [[TMP8]]
+; CHECK:       8:
+; CHECK-NEXT:    [[DOT01:%.*]] = phi i32 [ 5, [[TMP6]] ], [ 7, [[TMP7]] ]
 ; CHECK-NEXT:    [[DOT0:%.*]] = phi ptr [ [[TMP2]], [[TMP6]] ], [ [[TMP3]], [[TMP7]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOT0]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul nsw i32 [[TMP9]], 15
@@ -287,19 +299,19 @@ bb28:                                             ; preds = %bb27, %bb
 define i8 @test6(ptr %addr) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry-block:
-; CHECK-NEXT:    br label %main-loop
+; CHECK-NEXT:    br label [[MAIN_LOOP:%.*]]
 ; CHECK:       main-loop:
-; CHECK-NEXT:    [[PHIOFOPS1:%.*]] = phi i1 [ true, %entry-block ], [ false, [[CORE:%.*]] ]
-; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i1 [ false, %entry-block ], [ true, [[CORE]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ 0, %entry-block ], [ 1, [[CORE]] ]
-; CHECK-NEXT:    store volatile i8 0, ptr [[ADDR:%.*]]
-; CHECK-NEXT:    br i1 [[PHIOFOPS1]], label %busy-wait-phi-0, label [[EXIT:%.*]]
+; CHECK-NEXT:    [[PHIOFOPS1:%.*]] = phi i1 [ true, [[ENTRY_BLOCK:%.*]] ], [ false, [[CORE:%.*]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i1 [ false, [[ENTRY_BLOCK]] ], [ true, [[CORE]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ 0, [[ENTRY_BLOCK]] ], [ 1, [[CORE]] ]
+; CHECK-NEXT:    store volatile i8 0, ptr [[ADDR:%.*]], align 1
+; CHECK-NEXT:    br i1 [[PHIOFOPS1]], label [[BUSY_WAIT_PHI_0:%.*]], label [[EXIT:%.*]]
 ; CHECK:       busy-wait-phi-0:
-; CHECK-NEXT:    [[LOAD:%.*]] = load volatile i8, ptr [[ADDR]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load volatile i8, ptr [[ADDR]], align 1
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[LOAD]], 0
-; CHECK-NEXT:    br i1 [[ICMP]], label %busy-wait-phi-0, label [[CORE]]
+; CHECK-NEXT:    br i1 [[ICMP]], label [[BUSY_WAIT_PHI_0]], label [[CORE]]
 ; CHECK:       core:
-; CHECK-NEXT:    br i1 [[PHIOFOPS]], label [[TRAP:%.*]], label %main-loop
+; CHECK-NEXT:    br i1 [[PHIOFOPS]], label [[TRAP:%.*]], label [[MAIN_LOOP]]
 ; CHECK:       trap:
 ; CHECK-NEXT:    ret i8 1
 ; CHECK:       exit:
@@ -507,13 +519,13 @@ declare ptr @wombat()
 define void @test12(ptr %p) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr %p
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[TMP]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB2:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    br i1 true, label [[BB6:%.*]], label [[BB7]]
+; CHECK-NEXT:    br i1 true, label [[BB6:%.*]], label [[BB7:%.*]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    br label [[BB7]]
 ; CHECK:       bb7:
@@ -551,7 +563,7 @@ define void @test13() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP:%.*]] = load i8, ptr null
+; CHECK-NEXT:    [[TMP:%.*]] = load i8, ptr null, align 1
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i8 [ [[TMP]], [[BB1]] ], [ [[TMP10:%.*]], [[BB3]] ]
@@ -560,7 +572,7 @@ define void @test13() {
 ; CHECK-NEXT:    [[TMP6]] = getelementptr i8, ptr [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext i8 [[PHIOFOPS]] to i32
 ; CHECK-NEXT:    [[TMP9]] = mul i32 [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10]] = load i8, ptr [[TMP6]]
+; CHECK-NEXT:    [[TMP10]] = load i8, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i8 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[BB12:%.*]], label [[BB3]]
 ; CHECK:       bb12:

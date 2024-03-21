@@ -279,11 +279,12 @@ Q: How to build an OpenMP offload capable compiler with an outdated host compile
 
 Enabling the OpenMP runtime will perform a two-stage build for you.
 If your host compiler is different from your system-wide compiler, you may need
-to set the CMake variable `GCC_INSTALL_PREFIX` so clang will be able to find the
-correct GCC toolchain in the second stage of the build.
+to set ``CMAKE_{C,CXX}_FLAGS`` like
+``--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/12`` so that clang will be
+able to find the correct GCC toolchain in the second stage of the build.
 
 For example, if your system-wide GCC installation is too old to build LLVM and
-you would like to use a newer GCC, set the CMake variable `GCC_INSTALL_PREFIX`
+you would like to use a newer GCC, set ``--gcc-install-dir=``
 to inform clang of the GCC installation you would like to use in the second stage.
 
 Q: How can I include OpenMP offloading support in my CMake project?

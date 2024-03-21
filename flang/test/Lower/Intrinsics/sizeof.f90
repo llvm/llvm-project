@@ -1,5 +1,5 @@
 ! Test SIZEOF lowering for polymorphic entities.
-! RUN: bbc -emit-hlfir --polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 integer(8) function test1(x)
   class(*) :: x
