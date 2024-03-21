@@ -125,7 +125,8 @@ class PSVRuntimeInfo {
   uint32_t Size;
   using InfoStruct =
       std::variant<std::monostate, dxbc::PSV::v0::RuntimeInfo,
-                   dxbc::PSV::v1::RuntimeInfo, dxbc::PSV::v2::RuntimeInfo>;
+                   dxbc::PSV::v1::RuntimeInfo, dxbc::PSV::v2::RuntimeInfo,
+                   dxbc::PSV::v3::RuntimeInfo>;
   InfoStruct BasicInfo;
   ResourceArray Resources;
   StringRef StringTable;
@@ -151,9 +152,11 @@ public:
   ResourceArray getResources() const { return Resources; }
 
   uint32_t getVersion() const {
-    return Size >= sizeof(dxbc::PSV::v2::RuntimeInfo)
-               ? 2
-               : (Size >= sizeof(dxbc::PSV::v1::RuntimeInfo) ? 1 : 0);
+    return Size >= sizeof(dxbc::PSV::v3::RuntimeInfo)
+               ? 3
+               : (Size >= sizeof(dxbc::PSV::v2::RuntimeInfo)     ? 2
+                  : (Size >= sizeof(dxbc::PSV::v1::RuntimeInfo)) ? 1
+                                                                 : 0);
   }
 
   uint32_t getResourceStride() const { return Resources.Stride; }
@@ -161,6 +164,11 @@ public:
   const InfoStruct &getInfo() const { return BasicInfo; }
 
   template <typename T> const T *getInfoAs() const {
+    if (const auto *P = std::get_if<dxbc::PSV::v3::RuntimeInfo>(&BasicInfo))
+      return static_cast<const T *>(P);
+    if (std::is_same<T, dxbc::PSV::v3::RuntimeInfo>::value)
+      return nullptr;
+
     if (const auto *P = std::get_if<dxbc::PSV::v2::RuntimeInfo>(&BasicInfo))
       return static_cast<const T *>(P);
     if (std::is_same<T, dxbc::PSV::v2::RuntimeInfo>::value)
