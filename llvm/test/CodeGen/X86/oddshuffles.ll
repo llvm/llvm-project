@@ -2369,6 +2369,31 @@ define void @PR41097() {
   ret void
 }
 
+; FIXME - should use INSERTPS
+define <2 x float> @PR86068(<2 x float> %0, <2 x float> %1) {
+; SSE2-LABEL: PR86068:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[1,1]
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: PR86068:
+; SSE42:       # %bb.0: # %entry
+; SSE42-NEXT:    movshdup {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE42-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: PR86068:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
+; AVX-NEXT:    retq
+entry:
+  %3 = shufflevector <2 x float> %1, <2 x float> poison, <2 x i32> <i32 1, i32 poison>
+  %4 = shufflevector <2 x float> %3, <2 x float> %0, <2 x i32> <i32 0, i32 3>
+  ret <2 x float> %4
+}
+
 define void @D107009(ptr %input, ptr %output) {
 ; SSE-LABEL: D107009:
 ; SSE:       # %bb.0:
