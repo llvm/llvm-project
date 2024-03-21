@@ -10,7 +10,9 @@
 #include "AMDGPU.h"
 #include "AMDGPUAsmUtils.h"
 #include "AMDKernelCodeT.h"
+#include "MCTargetDesc/AMDGPUMCKernelDescriptor.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -19,6 +21,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -1214,44 +1217,64 @@ void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
   }
 }
 
-amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
-    const MCSubtargetInfo *STI) {
+MCKernelDescriptor getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI,
+                                                    MCContext &Ctx) {
   IsaVersion Version = getIsaVersion(STI->getCPU());
 
-  amdhsa::kernel_descriptor_t KD;
-  memset(&KD, 0, sizeof(KD));
+  MCKernelDescriptor KD;
+  const MCExpr *ZeroMCExpr = MCConstantExpr::create(0, Ctx);
+  const MCExpr *OneMCExpr = MCConstantExpr::create(1, Ctx);
 
-  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                  amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64,
-                  amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE);
-  if (Version.Major >= 12) {
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN, 0);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_DISABLE_PERF, 0);
-  } else {
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP, 1);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, 1);
+  KD.group_segment_fixed_size = ZeroMCExpr;
+  KD.private_segment_fixed_size = ZeroMCExpr;
+  KD.compute_pgm_rsrc1 = ZeroMCExpr;
+  KD.compute_pgm_rsrc2 = ZeroMCExpr;
+  KD.compute_pgm_rsrc3 = ZeroMCExpr;
+  KD.kernarg_size = ZeroMCExpr;
+  KD.kernel_code_properties = ZeroMCExpr;
+  KD.kernarg_preload = ZeroMCExpr;
+
+  MCKernelDescriptor::bits_set(
+      KD.compute_pgm_rsrc1,
+      MCConstantExpr::create(amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE, Ctx),
+      amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64_SHIFT,
+      amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64, Ctx);
+  if (Version.Major < 12) {
+    MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc1, OneMCExpr,
+        amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP_SHIFT,
+        amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP, Ctx);
+    MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc1, OneMCExpr,
+        amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE_SHIFT,
+        amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, Ctx);
   }
-  AMDHSA_BITS_SET(KD.compute_pgm_rsrc2,
-                  amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, 1);
+  MCKernelDescriptor::bits_set(
+      KD.compute_pgm_rsrc2, OneMCExpr,
+      amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X_SHIFT,
+      amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, Ctx);
   if (Version.Major >= 10) {
-    AMDHSA_BITS_SET(KD.kernel_code_properties,
-                    amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
-                    STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1 : 0);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE,
-                    STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, 1);
+    if (STI->getFeatureBits().test(FeatureWavefrontSize32))
+      MCKernelDescriptor::bits_set(
+          KD.kernel_code_properties, OneMCExpr,
+          amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_SHIFT,
+          amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32, Ctx);
+    if (!STI->getFeatureBits().test(FeatureCuMode))
+      MCKernelDescriptor::bits_set(
+          KD.compute_pgm_rsrc1, OneMCExpr,
+          amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE_SHIFT,
+          amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE, Ctx);
+
+    MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc1, OneMCExpr,
+        amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED_SHIFT,
+        amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, Ctx);
   }
-  if (AMDGPU::isGFX90A(*STI)) {
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc3,
-                    amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
-                    STI->getFeatureBits().test(FeatureTgSplit) ? 1 : 0);
-  }
+  if (AMDGPU::isGFX90A(*STI) && STI->getFeatureBits().test(FeatureTgSplit))
+    MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc3, OneMCExpr,
+        amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT,
+        amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT, Ctx);
   return KD;
 }
 
@@ -1296,6 +1319,42 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
   }
 
   return Ints;
+}
+
+SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
+                                             unsigned Size) {
+  assert(Size > 2);
+  SmallVector<unsigned> Default(Size, 0);
+
+  Attribute A = F.getFnAttribute(Name);
+  if (!A.isStringAttribute())
+    return Default;
+
+  SmallVector<unsigned> Vals(Size, 0);
+
+  LLVMContext &Ctx = F.getContext();
+
+  StringRef S = A.getValueAsString();
+  unsigned i = 0;
+  for (; !S.empty() && i < Size; i++) {
+    std::pair<StringRef, StringRef> Strs = S.split(',');
+    unsigned IntVal;
+    if (Strs.first.trim().getAsInteger(0, IntVal)) {
+      Ctx.emitError("can't parse integer attribute " + Strs.first + " in " +
+                    Name);
+      return Default;
+    }
+    Vals[i] = IntVal;
+    S = Strs.second;
+  }
+
+  if (!S.empty() || i < Size) {
+    Ctx.emitError("attribute " + Name +
+                  " has incorrect number of integers; expected " +
+                  llvm::utostr(Size));
+    return Default;
+  }
+  return Vals;
 }
 
 unsigned getVmcntBitMask(const IsaVersion &Version) {
@@ -3016,6 +3075,11 @@ bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
 
 bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
   return hasAny64BitVGPROperands(OpDesc);
+}
+
+unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
+  // Currently this is 128 for all subtargets
+  return 128;
 }
 
 } // namespace AMDGPU

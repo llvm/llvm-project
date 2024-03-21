@@ -278,6 +278,13 @@ def Inliner : Pass<"inline"> {
     Option<"maxInliningIterations", "max-iterations", "unsigned",
            /*default=*/"4",
            "Maximum number of iterations when inlining within an SCC">,
+    Option<"inliningThreshold", "inlining-threshold", "unsigned",
+           /*default=*/"-1U",
+           "If the ratio between the number of the operations "
+           "in the callee and the number of the operations "
+           "in the caller exceeds this value (in percentage), "
+           "then the callee is not inlined even if it is legal "
+           "to inline it">,
   ];
 }
 

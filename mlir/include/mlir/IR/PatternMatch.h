@@ -648,7 +648,10 @@ public:
     for (auto it : llvm::zip(from, to))
       replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
   }
-  void replaceAllUsesWith(Operation *from, ValueRange to) {
+  // Note: This function cannot be called `replaceAllUsesWith` because the
+  // overload resolution, when called with an op that can be implicitly
+  // converted to a Value, would be ambiguous.
+  void replaceAllOpUsesWith(Operation *from, ValueRange to) {
     replaceAllUsesWith(from->getResults(), to);
   }
 
@@ -662,9 +665,12 @@ public:
   void replaceUsesWithIf(ValueRange from, ValueRange to,
                          function_ref<bool(OpOperand &)> functor,
                          bool *allUsesReplaced = nullptr);
-  void replaceUsesWithIf(Operation *from, ValueRange to,
-                         function_ref<bool(OpOperand &)> functor,
-                         bool *allUsesReplaced = nullptr) {
+  // Note: This function cannot be called `replaceOpUsesWithIf` because the
+  // overload resolution, when called with an op that can be implicitly
+  // converted to a Value, would be ambiguous.
+  void replaceOpUsesWithIf(Operation *from, ValueRange to,
+                           function_ref<bool(OpOperand &)> functor,
+                           bool *allUsesReplaced = nullptr) {
     replaceUsesWithIf(from->getResults(), to, functor, allUsesReplaced);
   }
 
@@ -672,9 +678,9 @@ public:
   /// the listener about every in-place op modification (for every use that was
   /// replaced). The optional `allUsesReplaced` flag is set to "true" if all
   /// uses were replaced.
-  void replaceUsesWithinBlock(Operation *op, ValueRange newValues, Block *block,
-                              bool *allUsesReplaced = nullptr) {
-    replaceUsesWithIf(
+  void replaceOpUsesWithinBlock(Operation *op, ValueRange newValues,
+                                Block *block, bool *allUsesReplaced = nullptr) {
+    replaceOpUsesWithIf(
         op, newValues,
         [block](OpOperand &use) {
           return block->getParentOp()->isProperAncestor(use.getOwner());
@@ -730,6 +736,8 @@ protected:
       : OpBuilder(ctx, listener) {}
   explicit RewriterBase(const OpBuilder &otherBuilder)
       : OpBuilder(otherBuilder) {}
+  explicit RewriterBase(Operation *op, OpBuilder::Listener *listener = nullptr)
+      : OpBuilder(op, listener) {}
   virtual ~RewriterBase();
 
 private:
@@ -750,6 +758,8 @@ public:
   explicit IRRewriter(MLIRContext *ctx, OpBuilder::Listener *listener = nullptr)
       : RewriterBase(ctx, listener) {}
   explicit IRRewriter(const OpBuilder &builder) : RewriterBase(builder) {}
+  explicit IRRewriter(Operation *op, OpBuilder::Listener *listener = nullptr)
+      : RewriterBase(op, listener) {}
 };
 
 //===----------------------------------------------------------------------===//
