@@ -122,6 +122,9 @@ public:
   /// Returns BF hash by function output address (after BOLT).
   size_t getBFHash(uint64_t OutputAddress) const;
 
+  /// True if a given \p Address is a function with translation table entry.
+  bool isBATFunction(uint64_t Address) const { return Maps.count(Address); }
+
 private:
   /// Helper to update \p Map by inserting one or more BAT entries reflecting
   /// \p BB for function located at \p FuncAddress. At least one entry will be
