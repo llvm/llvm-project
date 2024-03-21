@@ -2135,7 +2135,8 @@ static Instruction *foldSelectShuffleOfSelectShuffle(ShuffleVectorInst &Shuf) {
   return new ShuffleVectorInst(X, Y, NewMask);
 }
 
-static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
+static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
+                                                const SimplifyQuery &SQ) {
   assert(Shuf.isSelect() && "Must have select-equivalent shuffle");
 
   // Are we shuffling together some value and that same value after it has been
@@ -2159,6 +2160,19 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
   if (!IdC)
     return nullptr;
 
+  Value *X = Op0IsBinop ? Op1 : Op0;
+
+  // Prevent folding in the case the non-binop operand might have NaN values.
+  // If X can have NaN elements then we have that the floating point math
+  // operation in the transformed code may not preserve the exact NaN
+  // bit-pattern -- e.g. `fadd sNaN, 0.0 -> qNaN`.
+  // This makes the transformation incorrect since the original program would
+  // have preserved the exact NaN bit-pattern.
+  // Avoid the folding if X can have NaN elements.
+  if (Shuf.getType()->getElementType()->isFloatingPointTy() &&
+      !isKnownNeverNaN(X, 0, SQ))
+    return nullptr;
+
   // Shuffle identity constants into the lanes that return the original value.
   // Example: shuf (mul X, {-1,-2,-3,-4}), X, {0,5,6,3} --> mul X, {-1,1,1,-4}
   // Example: shuf X, (add X, {-1,-2,-3,-4}), {0,1,6,7} --> add X, {0,0,-3,-4}
@@ -2175,7 +2189,6 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
 
   // shuf (bop X, C), X, M --> bop X, C'
   // shuf X, (bop X, C), M --> bop X, C'
-  Value *X = Op0IsBinop ? Op1 : Op0;
   Instruction *NewBO = BinaryOperator::Create(BOpcode, X, NewC);
   NewBO->copyIRFlags(BO);
 
@@ -2241,7 +2254,8 @@ Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
   if (Instruction *I = foldSelectShuffleOfSelectShuffle(Shuf))
     return I;
 
-  if (Instruction *I = foldSelectShuffleWith1Binop(Shuf))
+  if (Instruction *I = foldSelectShuffleWith1Binop(
+          Shuf, getSimplifyQuery().getWithInstruction(&Shuf)))
     return I;
 
   BinaryOperator *B0, *B1;
