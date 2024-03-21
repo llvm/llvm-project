@@ -107,3 +107,20 @@ func.func @expression_with_address_taken(%arg0: i32, %arg1: i32, %arg2: !emitc.p
   %d = emitc.cmp lt, %c, %arg2 :(!emitc.ptr<i32>, !emitc.ptr<i32>) -> i1
   return %d : i1
 }
+
+// CHECK-LABEL: func.func @no_nested_expression(
+// CHECK-SAME:      %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32) -> i1 {
+// CHECK:         %[[VAL_2:.*]] = emitc.expression : i1 {
+// CHECK:           %[[VAL_3:.*]] = emitc.cmp lt, %[[VAL_0]], %[[VAL_1]] : (i32, i32) -> i1
+// CHECK:           emitc.yield %[[VAL_3]] : i1
+// CHECK:         }
+// CHECK:         return %[[VAL_2]] : i1
+// CHECK:       }
+
+func.func @no_nested_expression(%arg0: i32, %arg1: i32) -> i1 {
+  %a = emitc.expression : i1 {
+    %b = emitc.cmp lt, %arg0, %arg1 :(i32, i32) -> i1
+    emitc.yield %b : i1
+  }
+  return %a : i1
+}
