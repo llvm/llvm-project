@@ -341,9 +341,10 @@ TEST(InterpreterTest, Value) {
   EXPECT_FALSE(V1.isManuallyAlloc());
 
   Value V1b;
-  llvm::cantFail(Interp->ParseAndExecute("char x = 42;"));
+  llvm::cantFail(Interp->ParseAndExecute("char c = 42;"));
   llvm::cantFail(Interp->ParseAndExecute("c", &V1b));
-  EXPECT_TRUE(V1b.getKind() == Value::K_Char_S);
+  EXPECT_TRUE(V1b.getKind() == Value::K_Char_S ||
+              V1b.getKind() == Value::K_Char_U);
 
   Value V2;
   llvm::cantFail(Interp->ParseAndExecute("double y = 3.14;"));
