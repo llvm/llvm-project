@@ -37,6 +37,9 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- Setting the deprecated CMake variable ``GCC_INSTALL_PREFIX`` (which sets the
+  default ``--gcc-toolchain=``) now leads to a fatal error.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
