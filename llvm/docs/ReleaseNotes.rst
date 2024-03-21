@@ -175,6 +175,10 @@ Changes to the LLVM tools
   ``--set-symbols-visibility`` options for ELF input to change the
   visibility of symbols.
 
+* llvm-objcopy now supports ``--skip-symbol`` and ``--skip-symbols`` options
+  for ELF input to skip the specified symbols when executing other options
+  that can change a symbol's name, binding or visibility.
+
 Changes to LLDB
 ---------------------------------
 
