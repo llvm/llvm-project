@@ -317,9 +317,9 @@ TEST(ValueTest, replaceUsesOutsideBlock) {
   ASSERT_TRUE(Ret->getOperand(0) == cast<Value>(B));
 }
 
-TEST(ValueTest, replaceUsesOutsideBlockDPValue) {
+TEST(ValueTest, replaceUsesOutsideBlockDbgVariableRecord) {
   // Check that Value::replaceUsesOutsideBlock(New, BB) replaces uses outside
-  // BB, including DPValues.
+  // BB, including DbgVariableRecords.
   const auto *IR = R"(
     define i32 @f() !dbg !6 {
     entry:
@@ -379,14 +379,16 @@ TEST(ValueTest, replaceUsesOutsideBlockDPValue) {
   EXPECT_TRUE(Branch->hasDbgRecords());
   EXPECT_TRUE(Ret->hasDbgRecords());
 
-  DPValue *DPV1 = cast<DPValue>(&*Branch->getDbgRecordRange().begin());
-  DPValue *DPV2 = cast<DPValue>(&*Ret->getDbgRecordRange().begin());
+  DbgVariableRecord *DVR1 =
+      cast<DbgVariableRecord>(&*Branch->getDbgRecordRange().begin());
+  DbgVariableRecord *DVR2 =
+      cast<DbgVariableRecord>(&*Ret->getDbgRecordRange().begin());
 
   A->replaceUsesOutsideBlock(B, Entry);
   // These users are in Entry so shouldn't be changed.
-  EXPECT_TRUE(DPV1->getVariableLocationOp(0) == cast<Value>(A));
+  EXPECT_TRUE(DVR1->getVariableLocationOp(0) == cast<Value>(A));
   // These users are outside Entry so should be changed.
-  EXPECT_TRUE(DPV2->getVariableLocationOp(0) == cast<Value>(B));
+  EXPECT_TRUE(DVR2->getVariableLocationOp(0) == cast<Value>(B));
   UseNewDbgInfoFormat = OldDbgValueMode;
 }
 

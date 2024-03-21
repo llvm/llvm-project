@@ -19,8 +19,6 @@
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
-#include <memory>
-#include <optional>
 #include <unordered_set>
 
 namespace clang {
@@ -155,7 +153,11 @@ namespace format {
   TYPE(TableGenDAGArgCloser)                                                   \
   TYPE(TableGenDAGArgListColon)                                                \
   TYPE(TableGenDAGArgListComma)                                                \
+  TYPE(TableGenDAGArgListCommaToBreak)                                         \
   TYPE(TableGenDAGArgOpener)                                                   \
+  TYPE(TableGenDAGArgOpenerToBreak)                                            \
+  TYPE(TableGenDAGArgOperatorID)                                               \
+  TYPE(TableGenDAGArgOperatorToBreak)                                          \
   TYPE(TableGenListCloser)                                                     \
   TYPE(TableGenListOpener)                                                     \
   TYPE(TableGenMultiLineString)                                                \

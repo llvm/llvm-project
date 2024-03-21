@@ -9,14 +9,11 @@
 #include "SubprocessMemory.h"
 #include "Error.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Threading.h"
 #include <cerrno>
 
 #ifdef __linux__
 #include <fcntl.h>
 #include <sys/mman.h>
-#include <sys/syscall.h>
 #include <unistd.h>
 #endif
 
@@ -29,10 +26,8 @@ Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
   // Add the PID to the shared memory name so that if we're running multiple
   // processes at the same time, they won't interfere with each other.
   // This comes up particularly often when running the exegesis tests with
-  // llvm-lit. Additionally add the TID so that downstream consumers
-  // using multiple threads don't run into conflicts.
-  std::string AuxiliaryMemoryName =
-      formatv("/{0}auxmem{1}", get_threadid(), ProcessID);
+  // llvm-lit
+  std::string AuxiliaryMemoryName = "/auxmem" + std::to_string(ProcessID);
   int AuxiliaryMemoryFD = shm_open(AuxiliaryMemoryName.c_str(),
                                    O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   if (AuxiliaryMemoryFD == -1)
@@ -52,8 +47,8 @@ Error SubprocessMemory::addMemoryDefinition(
     pid_t ProcessPID) {
   SharedMemoryNames.reserve(MemoryDefinitions.size());
   for (auto &[Name, MemVal] : MemoryDefinitions) {
-    std::string SharedMemoryName =
-        formatv("/{0}t{1}memdef{2}", ProcessPID, get_threadid(), MemVal.Index);
+    std::string SharedMemoryName = "/" + std::to_string(ProcessPID) + "memdef" +
+                                   std::to_string(MemVal.Index);
     SharedMemoryNames.push_back(SharedMemoryName);
     int SharedMemoryFD =
         shm_open(SharedMemoryName.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -87,9 +82,8 @@ Error SubprocessMemory::addMemoryDefinition(
 
 Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
     std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-    pid_t ParentPID, uint64_t ParentTID, int CounterFileDescriptor) {
-  std::string AuxiliaryMemoryName =
-      formatv("/{0}auxmem{1}", ParentTID, ParentPID);
+    pid_t ParentPID, int CounterFileDescriptor) {
+  std::string AuxiliaryMemoryName = "/auxmem" + std::to_string(ParentPID);
   int AuxiliaryMemoryFileDescriptor =
       shm_open(AuxiliaryMemoryName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
   if (AuxiliaryMemoryFileDescriptor == -1)
@@ -103,8 +97,8 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
     return make_error<Failure>("Mapping auxiliary memory failed");
   AuxiliaryMemoryMapping[0] = CounterFileDescriptor;
   for (auto &[Name, MemVal] : MemoryDefinitions) {
-    std::string MemoryValueName =
-        formatv("/{0}t{1}memdef{2}", ParentPID, ParentTID, MemVal.Index);
+    std::string MemoryValueName = "/" + std::to_string(ParentPID) + "memdef" +
+                                  std::to_string(MemVal.Index);
     AuxiliaryMemoryMapping[AuxiliaryMemoryOffset + MemVal.Index] =
         shm_open(MemoryValueName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
     if (AuxiliaryMemoryMapping[AuxiliaryMemoryOffset + MemVal.Index] == -1)
@@ -139,7 +133,7 @@ Error SubprocessMemory::addMemoryDefinition(
 
 Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
     std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-    pid_t ParentPID, uint64_t ParentTID, int CounterFileDescriptor) {
+    pid_t ParentPID, int CounterFileDescriptor) {
   return make_error<Failure>(
       "setupAuxiliaryMemoryInSubprocess is only supported on Linux");
 }

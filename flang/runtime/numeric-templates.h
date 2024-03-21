@@ -122,11 +122,18 @@ template <typename T> struct ABSTy {
   static constexpr RT_API_ATTRS T compute(T x) { return std::abs(x); }
 };
 
+// Suppress the warnings about calling __host__-only
+// 'long double' std::frexp, from __device__ code.
+RT_DIAG_PUSH
+RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
+
 template <typename T> struct FREXPTy {
   static constexpr RT_API_ATTRS T compute(T x, int *e) {
     return std::frexp(x, e);
   }
 };
+
+RT_DIAG_POP
 
 template <typename T> struct ILOGBTy {
   static constexpr RT_API_ATTRS int compute(T x) { return std::ilogb(x); }

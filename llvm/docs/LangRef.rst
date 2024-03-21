@@ -11049,9 +11049,10 @@ Syntax:
 
 ::
 
-      <result> = getelementptr <ty>, ptr <ptrval>{, [inrange] <ty> <idx>}*
-      <result> = getelementptr inbounds <ty>, ptr <ptrval>{, [inrange] <ty> <idx>}*
-      <result> = getelementptr <ty>, <N x ptr> <ptrval>, [inrange] <vector index type> <idx>
+      <result> = getelementptr <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr inbounds <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr inrange(S,E) <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr <ty>, <N x ptr> <ptrval>, <vector index type> <idx>
 
 Overview:
 """""""""
@@ -11196,16 +11197,15 @@ These rules are based on the assumption that no allocated object may cross
 the unsigned address space boundary, and no allocated object may be larger
 than half the pointer index type space.
 
-If the ``inrange`` keyword is present before any index, loading from or
+If the ``inrange(Start, End)`` attribute is present, loading from or
 storing to any pointer derived from the ``getelementptr`` has undefined
-behavior if the load or store would access memory outside of the bounds of
-the element selected by the index marked as ``inrange``. The result of a
-pointer comparison or ``ptrtoint`` (including ``ptrtoint``-like operations
+behavior if the load or store would access memory outside the half-open range
+``[Start, End)`` from the ``getelementptr`` expression result. The result of
+a pointer comparison or ``ptrtoint`` (including ``ptrtoint``-like operations
 involving memory) involving a pointer derived from a ``getelementptr`` with
 the ``inrange`` keyword is undefined, with the exception of comparisons
-in the case where both operands are in the range of the element selected
-by the ``inrange`` keyword, inclusive of the address one past the end of
-that element. Note that the ``inrange`` keyword is currently only allowed
+in the case where both operands are in the closed range ``[Start, End]``.
+Note that the ``inrange`` keyword is currently only allowed
 in constant ``getelementptr`` expressions.
 
 The getelementptr instruction is often confusing. For some more insight
@@ -14574,6 +14574,63 @@ The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
 integer element type. The argument types must match each other, and the return
 type must match the argument type.
 
+.. _int_scmp:
+
+'``llvm.scmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.scmp`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i2 @llvm.scmp.i2.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return ``-1`` if ``%a`` is signed less than ``%b``, ``0`` if they are equal, and 
+``1`` if ``%a`` is signed greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must be at least as wide as ``i2``, to hold the three possible return values.
+
+.. _int_ucmp:
+
+'``llvm.ucmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.ucmp`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i2 @llvm.ucmp.i2.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return ``-1`` if ``%a`` is unsigned less than ``%b``, ``0`` if they are equal, and 
+``1`` if ``%a`` is unsigned greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must be at least as wide as ``i2``, to hold the three possible return values.
 
 .. _int_memcpy:
 
@@ -27639,47 +27696,114 @@ constant `true`. However it is always correct to replace
 it with any other `i1` value. Any pass can
 freely do it if it can benefit from non-default lowering.
 
-'``llvm.experimental.hot``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.allow.ubsan.check``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
 ::
 
-      declare i1 @llvm.experimental.hot()
+      declare i1 @llvm.allow.ubsan.check(i8 immarg %kind)
 
 Overview:
 """""""""
 
-This intrinsic returns ``true`` iff it's known that containing basic block is
-hot in profile.
+This intrinsic returns ``true`` if and only if the compiler opted to enable the
+ubsan check in the current basic block.
 
-When used with profile based optimization allows to change program behaviour
-depending on the code hotness.
+Rules to allow ubsan checks are not part of the intrinsic declaration, and
+controlled by compiler options.
+
+This intrinsic is the ubsan specific version of ``@llvm.allow.runtime.check()``.
 
 Arguments:
 """"""""""
 
-None.
+An integer describing the kind of ubsan check guarded by the intrinsic.
 
 Semantics:
 """"""""""
 
-The intrinsic ``@llvm.experimental.hot()`` returns either ``true`` or ``false``,
-depending on profile used. Expresion is evaluated as ``true`` iff profile and
-summary are available and profile counter for the block reach hotness threshold.
+The intrinsic ``@llvm.allow.ubsan.check()`` returns either ``true`` or
+``false``, depending on compiler options. 
+
 For each evaluation of a call to this intrinsic, the program must be valid and
 correct both if it returns ``true`` and if it returns ``false``.
 
 When used in a branch condition, it allows us to choose between
-two alternative correct solutions for the same problem, like
-in example below:
+two alternative correct solutions for the same problem. 
+
+If the intrinsic is evaluated as ``true``, program must check ubsan condition,
+and report if needed. If the intrinsic is evaluated as ``false``, program must
+avoid checking ubsan condition and assume it passed.
+
+Example:
 
 .. code-block:: text
 
-    %cond = call i1 @llvm.experimental.hot()
-    br i1 %cond, label %fast_path, label %slow_path
+    %allow = call i1 @llvm.allow.ubsan.check(i8 5)
+    %not.allow = xor i1 %allow, true
+    %cond = or i1 %ubcheck, %not.allow
+    br i1 %cond, label %cont, label %trap
+
+  cont:
+    ; Proceed
+
+  trap:
+    call void @llvm.ubsantrap(i8 5)
+    unreachable
+
+
+'``llvm.allow.runtime.check``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i1 @llvm.allow.runtime.check(metadata %kind)
+
+Overview:
+"""""""""
+
+This intrinsic returns ``true`` if and only if the compiler opted to enable
+runtime checks in the current basic block.
+
+Rules to allow runtime checks are not part of the intrinsic declaration, and
+controlled by compiler options.
+
+This intrinsic is non-ubsan specific version of ``@llvm.allow.ubsan.check()``.
+
+Arguments:
+""""""""""
+
+A string identifying the kind of runtime check guarded by the intrinsic. The
+string can be used to control rules to allow checks.
+
+Semantics:
+""""""""""
+
+The intrinsic ``@llvm.allow.ubsan.check()`` returns either ``true`` or
+``false``, depending on compiler options. 
+
+For each evaluation of a call to this intrinsic, the program must be valid and
+correct both if it returns ``true`` and if it returns ``false``.
+
+When used in a branch condition, it allows us to choose between
+two alternative correct solutions for the same problem. 
+
+If the intrinsic is evaluated as ``true``, program should execute a guarded
+checks. If the intrinsic is evaluated as ``false``, the program should avoid any
+unnecessary checks.
+
+Example:
+
+.. code-block:: text
+
+    %allow = call i1 @llvm.allow.runtime.check(metadata !"my_check")
+    br i1 %allow, label %fast_path, label %slow_path
 
   fast_path:
     ; Omit diagnostics.

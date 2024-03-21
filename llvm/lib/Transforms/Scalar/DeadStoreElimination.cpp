@@ -526,7 +526,8 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   // returned by getAssignmentMarkers so save a copy of the markers to iterate
   // over.
   auto LinkedRange = at::getAssignmentMarkers(Inst);
-  SmallVector<DPValue *> LinkedDPVAssigns = at::getDPVAssignmentMarkers(Inst);
+  SmallVector<DbgVariableRecord *> LinkedDVRAssigns =
+      at::getDVRAssignmentMarkers(Inst);
   SmallVector<DbgAssignIntrinsic *> Linked(LinkedRange.begin(),
                                            LinkedRange.end());
   auto InsertAssignForOverlap = [&](auto *Assign) {
@@ -554,7 +555,7 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
     NewAssign->setKillAddress();
   };
   for_each(Linked, InsertAssignForOverlap);
-  for_each(LinkedDPVAssigns, InsertAssignForOverlap);
+  for_each(LinkedDVRAssigns, InsertAssignForOverlap);
 }
 
 static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
@@ -759,6 +760,8 @@ namespace {
 bool isNoopIntrinsic(Instruction *I) {
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
+    case Intrinsic::allow_runtime_check:
+    case Intrinsic::allow_ubsan_check:
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
     case Intrinsic::invariant_end:
