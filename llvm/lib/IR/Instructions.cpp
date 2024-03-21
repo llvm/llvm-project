@@ -370,7 +370,6 @@ CallBase *CallBase::Create(CallBase *CI, OperandBundleDef OpB,
   return CallBase::Create(CI, OpDefs, InsertAtEnd);
 }
 
-
 Function *CallBase::getCaller() { return getParent()->getParent(); }
 
 unsigned CallBase::getNumSubclassExtraOperandsDynamic() const {
