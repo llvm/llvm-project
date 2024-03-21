@@ -226,18 +226,18 @@ ProgramStateRef ProgramState::killBinding(Loc LV) const {
   return makeWithStore(newStore);
 }
 
-/// FieldRegions are expected to be wrapped by an ElementRegion as a canonical
-/// representation. See f8643a9b31c4029942f67d4534c9139b45173504 why.
-SVal ProgramState::wrapSymbolicRegion(SVal Base) const {
-  const auto *SymbolicBase =
-      dyn_cast_or_null<SymbolicRegion>(Base.getAsRegion());
-
-  if (!SymbolicBase)
-    return Base;
+/// SymbolicRegions are expected to be wrapped by an ElementRegion as a
+/// canonical representation. As a canonical representation, SymbolicRegions
+/// should be wrapped by ElementRegions before getting a FieldRegion.
+/// See f8643a9b31c4029942f67d4534c9139b45173504 why.
+SVal ProgramState::wrapSymbolicRegion(SVal Val) const {
+  const auto *BaseReg = dyn_cast_or_null<SymbolicRegion>(Val.getAsRegion());
+  if (!BaseReg)
+    return Val;
 
   StoreManager &SM = getStateManager().getStoreManager();
-  QualType ElemTy = SymbolicBase->getPointeeStaticType();
-  return loc::MemRegionVal{SM.GetElementZeroRegion(SymbolicBase, ElemTy)};
+  QualType ElemTy = BaseReg->getPointeeStaticType();
+  return loc::MemRegionVal{SM.GetElementZeroRegion(BaseReg, ElemTy)};
 }
 
 ProgramStateRef
