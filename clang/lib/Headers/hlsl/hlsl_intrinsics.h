@@ -99,7 +99,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double2 abs(double2);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double3 abs(double3);
-_HLSL_ELEMENTWISE_BUILTIN_ALIAS(__builtin_elementwise_abs)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double4 abs(double4);
 
 //===----------------------------------------------------------------------===//
@@ -251,7 +251,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
 double2 ceil(double2);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
 double3 ceil(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
+_HLSL_ELEMENTWISE_BUILTIN_ALIAS(__builtin_ceil)
 double4 ceil(double4);
 
 //===----------------------------------------------------------------------===//
