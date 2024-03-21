@@ -127,6 +127,7 @@ CallStackMap readStackInfo(const char *Ptr) {
         endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
 
     SmallVector<uint64_t> CallStack;
+    CallStack.reserve(NumPCs);
     for (uint64_t J = 0; J < NumPCs; J++) {
       CallStack.push_back(
           endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr));
