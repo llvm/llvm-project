@@ -793,7 +793,7 @@ void StubHelperSection::setUp() {
 
   in.imageLoaderCache->parent =
       ConcatOutputSection::getOrCreateForInput(in.imageLoaderCache);
-  inputSections.push_back(in.imageLoaderCache);
+  addInputSection(in.imageLoaderCache);
   // Since this isn't in the symbol table or in any input file, the noDeadStrip
   // argument doesn't matter.
   dyldPrivate =
@@ -855,7 +855,7 @@ ConcatInputSection *ObjCSelRefsSection::makeSelRef(StringRef methname) {
                                 /*addend=*/static_cast<int64_t>(methnameOffset),
                                 /*referent=*/in.objcMethnameSection->isec});
   objcSelref->parent = ConcatOutputSection::getOrCreateForInput(objcSelref);
-  inputSections.push_back(objcSelref);
+  addInputSection(objcSelref);
   objcSelref->isFinal = true;
   methnameToSelref[CachedHashStringRef(methname)] = objcSelref;
   return objcSelref;
