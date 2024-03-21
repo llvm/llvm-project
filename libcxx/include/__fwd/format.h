@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FWD_FORMAT_H
 #define _LIBCPP___FWD_FORMAT_H
 
-#include <__availability>
 #include <__config>
 #include <__iterator/concepts.h>
 
