@@ -413,9 +413,7 @@ define i1 @and_mask1_eq(i32 %conv) {
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[CONV]], 3
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[AND1]], 0
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %and = and i32 %conv, 1
@@ -440,9 +438,7 @@ define i1 @and_mask1_ne(i32 %conv) {
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[CONV]], 3
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[AND1]], 0
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %and = and i32 %conv, 1
@@ -514,8 +510,6 @@ else:
   ret i1 %cmp1
 }
 
-; TODO: %cmp1 can be folded into false.
-
 define i1 @and_mask4(i32 %conv) {
 ; CHECK-LABEL: @and_mask4(
 ; CHECK-NEXT:  entry:
@@ -525,9 +519,7 @@ define i1 @and_mask4(i32 %conv) {
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[CONV]], 7
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[AND1]], 0
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %and = and i32 %conv, 4

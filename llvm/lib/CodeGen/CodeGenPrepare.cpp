@@ -2314,7 +2314,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
 
   // Bail if the value is never zero.
   Use &Op = CountZeros->getOperandUse(0);
-  if (isKnownNonZero(Op, *DL))
+  if (isKnownNonZero(Op, /*Depth=*/0, SimplifyQuery(*DL)))
     return false;
 
   // The intrinsic will be sunk behind a compare against zero and branch.
