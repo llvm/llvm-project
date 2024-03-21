@@ -11,12 +11,8 @@
 // allocator:
 // size_type max_size() const throw();
 
-//  In C++20, parts of std::allocator<T> have been removed.
-//  However, for backwards compatibility, if _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
-//  is defined before including <memory>, then removed members will be restored.
-
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// In C++20, parts of std::allocator<T> have been removed.
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <memory>
 #include <limits>
@@ -27,11 +23,10 @@
 
 int new_called = 0;
 
-int main(int, char**)
-{
-    const std::allocator<int> a;
-    std::size_t M = a.max_size();
-    assert(M > 0xFFFF && M <= (std::numeric_limits<std::size_t>::max() / sizeof(int)));
+int main(int, char**) {
+  const std::allocator<int> a;
+  std::size_t M = a.max_size(); // expected-error {{no member}}
+  assert(M > 0xFFFF && M <= (std::numeric_limits<std::size_t>::max() / sizeof(int)));
 
   return 0;
 }
