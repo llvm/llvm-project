@@ -68,10 +68,17 @@ public:
       return failure();
     }
 
-    // Check iterator types for contract.
+    // Check iterator types for contract. All iterators except inner-most
+    // dimension must be parallel.
     auto iteratorTypes = op.getIteratorTypesArray();
     if (iteratorTypes.size() > 3 || iteratorTypes[iteratorTypes.size() - 1] !=
                                         vector::IteratorType::reduction) {
+      return failure();
+    }
+    if (llvm::any_of(ArrayRef<vector::IteratorType>(iteratorTypes).drop_back(1),
+                     [](vector::IteratorType iteratorType) {
+                       return iteratorType != vector::IteratorType::parallel;
+                     })) {
       return failure();
     }
 
@@ -117,11 +124,11 @@ public:
         loc, op.getResultType(), rewriter.getZeroAttr(op.getResultType()));
 
     SmallVector<int64_t> unrolledSize = *op.getShapeForUnroll();
-    SmallVector<int64_t> smmlaShape{isVecmat ? 1 : 2, 2, 8};
-    SmallVector<int64_t> loopOrder{0, 1, 2};
-    if (unrolledSize.size() == 2) {
-      smmlaShape = {2, 8};
-      loopOrder = {0, 1};
+    SmallVector<int64_t> smmlaShape{2, 8};
+    SmallVector<int64_t> loopOrder{0, 1};
+    if (unrolledSize.size() == 3) {
+      smmlaShape.insert(smmlaShape.begin(), isVecmat ? 1 : 2);
+      loopOrder.push_back(2);
     }
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(unrolledSize, smmlaShape, loopOrder)) {
@@ -150,30 +157,40 @@ public:
       Value tiledAcc =
           extractOperand(op.getAcc(), accPermutationMap, accOffsets);
 
+      auto inputElementType =
+          tiledLhs.getType().cast<ShapedType>().getElementType();
+      auto accElementType =
+          tiledAcc.getType().cast<ShapedType>().getElementType();
+      auto inputExpandedType = VectorType::get({2, 8}, inputElementType);
+      auto outputExpandedType = VectorType::get({2, 2}, accElementType);
+
       // With vecmat, tiled LHS and ACC will contain only one of 2 necessary
-      // rows along dimM. Broadcast both to the full width
+      // rows along dimM. Expand their shapes to match the smmla op.
       if (isVecmat) {
-        auto lhsBroadcastType = VectorType::get(
-            {2, 8}, tiledLhs.getType().cast<ShapedType>().getElementType());
-        tiledLhs = rewriter.create<vector::BroadcastOp>(loc, lhsBroadcastType,
-                                                        tiledLhs);
-        auto accBroadcastType = VectorType::get(
-            {2, 2}, tiledAcc.getType().cast<ShapedType>().getElementType());
-        tiledAcc = rewriter.create<vector::BroadcastOp>(loc, accBroadcastType,
-                                                        tiledAcc);
+        auto expandForSMMLA = [&](Value tiledOperand,
+                                  VectorType expandedTypeType) {
+          auto emptyOperand = rewriter.create<arith::ConstantOp>(
+              loc, expandedTypeType, rewriter.getZeroAttr(expandedTypeType));
+          SmallVector<int64_t> offsets(
+              emptyOperand.getType().cast<ShapedType>().getRank(), 0);
+          SmallVector<int64_t> strides(
+              tiledOperand.getType().cast<ShapedType>().getRank(), 1);
+          return rewriter.createOrFold<vector::InsertStridedSliceOp>(
+              loc, tiledOperand, emptyOperand, offsets, strides);
+        };
+        tiledLhs = expandForSMMLA(tiledLhs, inputExpandedType);
+        tiledAcc = expandForSMMLA(tiledAcc, outputExpandedType);
       }
 
       // Collapse tiled operands to 1D vectors required by smmla intrinsic
-      auto collapsedInputType = VectorType::get(
-          tiledLhs.getType().cast<ShapedType>().getNumElements(),
-          tiledLhs.getType().cast<ShapedType>().getElementType());
+      auto collapsedInputType =
+          VectorType::get(inputExpandedType.getNumElements(), inputElementType);
       auto collapsedLhs = rewriter.createOrFold<vector::ShapeCastOp>(
           tiledLhs.getLoc(), collapsedInputType, tiledLhs);
       auto collapsedRhs = rewriter.createOrFold<vector::ShapeCastOp>(
           tiledRhs.getLoc(), collapsedInputType, tiledRhs);
-      auto collapsedOutputType = VectorType::get(
-          tiledAcc.getType().cast<ShapedType>().getNumElements(),
-          tiledAcc.getType().cast<ShapedType>().getElementType());
+      auto collapsedOutputType =
+          VectorType::get(outputExpandedType.getNumElements(), accElementType);
       auto collapsedRes = rewriter.createOrFold<vector::ShapeCastOp>(
           tiledAcc.getLoc(), collapsedOutputType, tiledAcc);
 
