@@ -75,6 +75,7 @@ LIBC_INLINE T fdim(T x, T y) {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T canonicalize(T *cx, const T *x) {
+  if constexpr (get_fp_type<T>() == FPType::X86_Binary80) {}
   FPBits<T> sx(*x);
   if (sx.is_signaling_nan()) {
     *cx = FPBits<T>::quiet_nan();
