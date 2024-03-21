@@ -17,6 +17,7 @@
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_FLOAT128
 #include "src/__support/math_extras.h"             // mask_trailing_ones
+#include "src/__support/sign.h"                    // Sign
 
 #include <stdint.h>
 
@@ -31,32 +32,6 @@ enum class FPType {
   IEEE754_Binary128,
   X86_Binary80,
 };
-
-// A type to interact with floating point type signs.
-// This may be moved outside of 'fputil' if useful.
-struct Sign {
-  LIBC_INLINE constexpr bool is_pos() const { return !is_negative; }
-  LIBC_INLINE constexpr bool is_neg() const { return is_negative; }
-
-  LIBC_INLINE friend constexpr bool operator==(Sign a, Sign b) {
-    return a.is_negative == b.is_negative;
-  }
-  LIBC_INLINE friend constexpr bool operator!=(Sign a, Sign b) {
-    return !(a == b);
-  }
-
-  static const Sign POS;
-  static const Sign NEG;
-
-private:
-  LIBC_INLINE constexpr explicit Sign(bool is_negative)
-      : is_negative(is_negative) {}
-
-  bool is_negative;
-};
-
-LIBC_INLINE_VAR constexpr Sign Sign::NEG = Sign(true);
-LIBC_INLINE_VAR constexpr Sign Sign::POS = Sign(false);
 
 // The classes hierarchy is as follows:
 //

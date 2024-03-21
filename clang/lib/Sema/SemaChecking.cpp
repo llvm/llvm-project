@@ -2399,6 +2399,48 @@ static bool SemaBuiltinPopcountg(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+/// Checks that __builtin_{clzg,ctzg} was called with a first argument, which is
+/// an unsigned integer, and an optional second argument, which is promoted to
+/// an 'int'.
+static bool SemaBuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
+  if (checkArgCountRange(S, TheCall, 1, 2))
+    return true;
+
+  ExprResult Arg0Res = S.DefaultLvalueConversion(TheCall->getArg(0));
+  if (Arg0Res.isInvalid())
+    return true;
+
+  Expr *Arg0 = Arg0Res.get();
+  TheCall->setArg(0, Arg0);
+
+  QualType Arg0Ty = Arg0->getType();
+
+  if (!Arg0Ty->isUnsignedIntegerType()) {
+    S.Diag(Arg0->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+        << 1 << /*unsigned integer ty*/ 7 << Arg0Ty;
+    return true;
+  }
+
+  if (TheCall->getNumArgs() > 1) {
+    ExprResult Arg1Res = S.UsualUnaryConversions(TheCall->getArg(1));
+    if (Arg1Res.isInvalid())
+      return true;
+
+    Expr *Arg1 = Arg1Res.get();
+    TheCall->setArg(1, Arg1);
+
+    QualType Arg1Ty = Arg1->getType();
+
+    if (!Arg1Ty->isSpecificBuiltinType(BuiltinType::Int)) {
+      S.Diag(Arg1->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 2 << /*'int' ty*/ 8 << Arg1Ty;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -3185,6 +3227,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_popcountg:
     if (SemaBuiltinPopcountg(*this, TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_clzg:
+  case Builtin::BI__builtin_ctzg:
+    if (SemaBuiltinCountZeroBitsGeneric(*this, TheCall))
       return ExprError();
     break;
   }
@@ -5484,6 +5531,16 @@ bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
                                   checkFloatorHalf);
 }
 
+bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
+  auto checkDoubleVector = [](clang::QualType PassedType) -> bool {
+    if (const auto *VecTy = PassedType->getAs<VectorType>())
+      return VecTy->getElementType()->isDoubleType();
+    return false;
+  };
+  return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy,
+                                  checkDoubleVector);
+}
+
 void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
                                 QualType ReturnType) {
   auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
@@ -5519,6 +5576,8 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckVectorElementCallArgs(this, TheCall))
       return true;
     if (SemaBuiltinVectorToScalarMath(TheCall))
+      return true;
+    if (CheckNoDoubleVectors(this, TheCall))
       return true;
     break;
   }

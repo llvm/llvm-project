@@ -357,14 +357,13 @@ private:
   bool instrumentStack(memtag::StackInfo &Info, Value *StackTag, Value *UARTag,
                        const DominatorTree &DT, const PostDominatorTree &PDT,
                        const LoopInfo &LI);
-  Value *readRegister(IRBuilder<> &IRB, StringRef Name);
   bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
   Value *getStackBaseTag(IRBuilder<> &IRB);
   Value *getAllocaTag(IRBuilder<> &IRB, Value *StackTag, unsigned AllocaNo);
   Value *getUARTag(IRBuilder<> &IRB);
 
-  Value *getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty);
+  Value *getHwasanThreadSlotPtr(IRBuilder<> &IRB);
   Value *applyTagMask(IRBuilder<> &IRB, Value *OldTag);
   unsigned retagMask(unsigned AllocaNo);
 
@@ -373,8 +372,7 @@ private:
   void instrumentGlobal(GlobalVariable *GV, uint8_t Tag);
   void instrumentGlobals();
 
-  Value *getPC(IRBuilder<> &IRB);
-  Value *getFP(IRBuilder<> &IRB);
+  Value *getCachedFP(IRBuilder<> &IRB);
   Value *getFrameRecordInfo(IRBuilder<> &IRB);
 
   void instrumentPersonalityFunctions();
@@ -410,8 +408,8 @@ private:
   ShadowMapping Mapping;
 
   Type *VoidTy = Type::getVoidTy(M.getContext());
-  Type *IntptrTy;
-  PointerType *PtrTy;
+  Type *IntptrTy = M.getDataLayout().getIntPtrType(M.getContext());
+  PointerType *PtrTy = PointerType::getUnqual(M.getContext());
   Type *Int8Ty = Type::getInt8Ty(M.getContext());
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
@@ -449,7 +447,7 @@ private:
 
   Value *ShadowBase = nullptr;
   Value *StackBaseTag = nullptr;
-  Value *CachedSP = nullptr;
+  Value *CachedFP = nullptr;
   GlobalValue *ThreadPtrGlobal = nullptr;
 };
 
@@ -594,8 +592,6 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
 /// inserts a call to __hwasan_init to the module's constructor list.
 void HWAddressSanitizer::initializeModule() {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
-  auto &DL = M.getDataLayout();
-
   TargetTriple = Triple(M.getTargetTriple());
 
   // x86_64 currently has two modes:
@@ -613,8 +609,6 @@ void HWAddressSanitizer::initializeModule() {
 
   C = &(M.getContext());
   IRBuilder<> IRB(*C);
-  IntptrTy = IRB.getIntPtrTy(DL);
-  PtrTy = IRB.getPtrTy();
 
   HwasanCtorFunction = nullptr;
 
@@ -1163,10 +1157,10 @@ Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
   // Extract some entropy from the stack pointer for the tags.
   // Take bits 20..28 (ASLR entropy) and xor with bits 0..8 (these differ
   // between functions).
-  Value *StackPointerLong = getFP(IRB);
+  Value *FramePointerLong = getCachedFP(IRB);
   Value *StackTag =
-      applyTagMask(IRB, IRB.CreateXor(StackPointerLong,
-                                      IRB.CreateLShr(StackPointerLong, 20)));
+      applyTagMask(IRB, IRB.CreateXor(FramePointerLong,
+                                      IRB.CreateLShr(FramePointerLong, 20)));
   StackTag->setName("hwasan.stack.base.tag");
   return StackTag;
 }
@@ -1180,9 +1174,9 @@ Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
 }
 
 Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB) {
-  Value *StackPointerLong = getFP(IRB);
+  Value *FramePointerLong = getCachedFP(IRB);
   Value *UARTag =
-      applyTagMask(IRB, IRB.CreateLShr(StackPointerLong, PointerTagShift));
+      applyTagMask(IRB, IRB.CreateLShr(FramePointerLong, PointerTagShift));
 
   UARTag->setName("hwasan.uar.tag");
   return UARTag;
@@ -1225,57 +1219,31 @@ Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
   return UntaggedPtrLong;
 }
 
-Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  if (TargetTriple.isAArch64() && TargetTriple.isAndroid()) {
-    // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
-    // in Bionic's libc/private/bionic_tls.h.
-    Function *ThreadPointerFunc =
-        Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
-    return IRB.CreateConstGEP1_32(Int8Ty, IRB.CreateCall(ThreadPointerFunc),
-                                  0x30);
-  }
-  if (ThreadPtrGlobal)
-    return ThreadPtrGlobal;
-
-  return nullptr;
+Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB) {
+  if (TargetTriple.isAArch64() && TargetTriple.isAndroid())
+    return memtag::getAndroidSanitizerSlotPtr(IRB);
+  return ThreadPtrGlobal;
 }
 
-Value *HWAddressSanitizer::getPC(IRBuilder<> &IRB) {
-  if (TargetTriple.getArch() == Triple::aarch64)
-    return readRegister(IRB, "pc");
-  return IRB.CreatePtrToInt(IRB.GetInsertBlock()->getParent(), IntptrTy);
-}
-
-Value *HWAddressSanitizer::getFP(IRBuilder<> &IRB) {
-  if (!CachedSP) {
-    // FIXME: use addressofreturnaddress (but implement it in aarch64 backend
-    // first).
-    Function *F = IRB.GetInsertBlock()->getParent();
-    Module *M = F->getParent();
-    auto *GetStackPointerFn = Intrinsic::getDeclaration(
-        M, Intrinsic::frameaddress,
-        IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()));
-    CachedSP = IRB.CreatePtrToInt(
-        IRB.CreateCall(GetStackPointerFn, {Constant::getNullValue(Int32Ty)}),
-        IntptrTy);
-  }
-  return CachedSP;
+Value *HWAddressSanitizer::getCachedFP(IRBuilder<> &IRB) {
+  if (!CachedFP)
+    CachedFP = memtag::getFP(IRB);
+  return CachedFP;
 }
 
 Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
   // Prepare ring buffer data.
-  Value *PC = getPC(IRB);
-  Value *SP = getFP(IRB);
+  Value *PC = memtag::getPC(TargetTriple, IRB);
+  Value *FP = getCachedFP(IRB);
 
-  // Mix SP and PC.
+  // Mix FP and PC.
   // Assumptions:
   // PC is 0x0000PPPPPPPPPPPP  (48 bits are meaningful, others are zero)
-  // SP is 0xsssssssssssSSSS0  (4 lower bits are zero)
-  // We only really need ~20 lower non-zero bits (SSSS), so we mix like this:
-  //       0xSSSSPPPPPPPPPPPP
-  SP = IRB.CreateShl(SP, 44);
-  return IRB.CreateOr(PC, SP);
+  // FP is 0xfffffffffffFFFF0  (4 lower bits are zero)
+  // We only really need ~20 lower non-zero bits (FFFF), so we mix like this:
+  //       0xFFFFPPPPPPPPPPPP
+  FP = IRB.CreateShl(FP, 44);
+  return IRB.CreateOr(PC, FP);
 }
 
 void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
@@ -1293,7 +1261,7 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
 
   auto getThreadLongMaybeUntagged = [&]() {
     if (!SlotPtr)
-      SlotPtr = getHwasanThreadSlotPtr(IRB, IntptrTy);
+      SlotPtr = getHwasanThreadSlotPtr(IRB);
     if (!ThreadLong)
       ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
     // Extract the address field from ThreadLong. Unnecessary on AArch64 with
@@ -1360,23 +1328,14 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   }
 }
 
-Value *HWAddressSanitizer::readRegister(IRBuilder<> &IRB, StringRef Name) {
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  Function *ReadRegister =
-      Intrinsic::getDeclaration(M, Intrinsic::read_register, IntptrTy);
-  MDNode *MD = MDNode::get(*C, {MDString::get(*C, Name)});
-  Value *Args[] = {MetadataAsValue::get(*C, MD)};
-  return IRB.CreateCall(ReadRegister, Args);
-}
-
 bool HWAddressSanitizer::instrumentLandingPads(
     SmallVectorImpl<Instruction *> &LandingPadVec) {
   for (auto *LP : LandingPadVec) {
     IRBuilder<> IRB(LP->getNextNonDebugInstruction());
     IRB.CreateCall(
         HwasanHandleVfork,
-        {readRegister(IRB, (TargetTriple.getArch() == Triple::x86_64) ? "rsp"
-                                                                      : "sp")});
+        {memtag::readRegister(
+            IRB, (TargetTriple.getArch() == Triple::x86_64) ? "rsp" : "sp")});
   }
   return true;
 }
@@ -1385,8 +1344,8 @@ static DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
   return dyn_cast<DbgAssignIntrinsic>(DVI);
 }
 
-static DPValue *DynCastToDbgAssign(DPValue *DPV) {
-  return DPV->isDbgAssign() ? DPV : nullptr;
+static DbgVariableRecord *DynCastToDbgAssign(DbgVariableRecord *DVR) {
+  return DVR->isDbgAssign() ? DVR : nullptr;
 }
 
 bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
@@ -1445,7 +1404,8 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     });
 
     // Helper utility for adding DW_OP_LLVM_tag_offset to debug-info records,
-    // abstracted over whether they're intrinsic-stored or DPValue stored.
+    // abstracted over whether they're intrinsic-stored or DbgVariableRecord
+    // stored.
     auto AnnotateDbgRecord = [&](auto *DPtr) {
       // Prepend "tag_offset, N" to the dwarf expression.
       // Tag offset logically applies to the alloca pointer, and it makes sense
@@ -1640,7 +1600,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   ShadowBase = nullptr;
   StackBaseTag = nullptr;
-  CachedSP = nullptr;
+  CachedFP = nullptr;
 }
 
 void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {

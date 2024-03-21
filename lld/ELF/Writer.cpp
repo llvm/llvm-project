@@ -796,7 +796,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
         continue;
       for (InputSectionBase *s : isd->sections) {
         // Relocations are not using REL[A] section symbols.
-        if (s->type == SHT_REL || s->type == SHT_RELA)
+        if (isStaticRelSecType(s->type))
           continue;
 
         // Unlike other synthetic sections, mergeable output sections contain
@@ -3045,20 +3045,20 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
     // section while doing it.
     parallel::TaskGroup tg;
     for (OutputSection *sec : outputSections)
-      if (sec->type == SHT_REL || sec->type == SHT_RELA)
+      if (isStaticRelSecType(sec->type))
         sec->writeTo<ELFT>(Out::bufferStart + sec->offset, tg);
   }
   {
     parallel::TaskGroup tg;
     for (OutputSection *sec : outputSections)
-      if (sec->type != SHT_REL && sec->type != SHT_RELA)
+      if (!isStaticRelSecType(sec->type))
         sec->writeTo<ELFT>(Out::bufferStart + sec->offset, tg);
   }
 
   // Finally, check that all dynamic relocation addends were written correctly.
   if (config->checkDynamicRelocs && config->writeAddends) {
     for (OutputSection *sec : outputSections)
-      if (sec->type == SHT_REL || sec->type == SHT_RELA)
+      if (isStaticRelSecType(sec->type))
         sec->checkDynRelAddends(Out::bufferStart);
   }
 }
