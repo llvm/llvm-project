@@ -322,15 +322,13 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         __formatter::__format_year(__sstr, __t.tm_year + 1900);
         break;
 
-      case _CharT('F'): {
-        int __year = __t.tm_year + 1900;
-        if (__year < 1000) {
-          __formatter::__format_year(__sstr, __year);
-          __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "-{:02}-{:02}"), __t.tm_mon + 1, __t.tm_mday);
-        } else
-          __facet.put(
-              {__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
-      } break;
+      case _CharT('F'):
+        // Depending on the platform's libc the range of supported years is
+        // limited. Intead of of testing all conditions use the internal
+        // implementation unconditionally.
+        __formatter::__format_year(__sstr, __t.tm_year + 1900);
+        __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "-{:02}-{:02}"), __t.tm_mon + 1, __t.tm_mday);
+        break;
 
       case _CharT('z'):
         __formatter::__format_zone_offset(__sstr, __z.__offset, false);
