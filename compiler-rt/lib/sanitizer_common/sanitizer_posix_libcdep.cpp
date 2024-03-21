@@ -216,7 +216,7 @@ static void MaybeInstallSigaction(int signum,
 
   struct sigaction sigact;
   internal_memset(&sigact, 0, sizeof(sigact));
-  sigact.sa_sigaction = (sa_sigaction_t)(void (*)(void))handler;
+  sigact.sa_sigaction = (sa_sigaction_t)handler;
   // Do not block the signal from being received in that signal's handler.
   // Clients are responsible for handling this correctly.
   sigact.sa_flags = SA_SIGINFO | SA_NODEFER;
