@@ -722,7 +722,7 @@ func.func @tile_thread_safety6(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: ten
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %forall, %tiled_generic = transform.structured.tile_using_forall %0 num_threads [2, 4, 8]
+    %forall, %tiled_generic = transform.structured.tile_using_forall %0 num_threads [2, 0, 8]
           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }

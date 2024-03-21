@@ -304,41 +304,25 @@ static void calculateTileOffsetsAndSizes(
   }
 }
 
-/// Returns a vector of bools representing if, for the given axis, `op` can be
-/// tiled by without incurring in a race condition and thus it is thread-safe to
-/// do the tiling. This is checked by iterating over the affine map represented
-/// by the tiling sizes (which is derived from `numThreads` or
-/// `nominalTileSizes`) and ensuring that the corresponding iterator type is
-/// not "reduction". If it is, then we know that such dimension is unsafe to
-/// tile.
-SmallVector<bool>
-safeToTileToForall(mlir::MLIRContext *ctx, LinalgOp linalgOp,
-                   ArrayRef<OpFoldResult> numThreads,
-                   std::optional<ArrayRef<OpFoldResult>> nominalTileSizes,
-                   int numDims) {
-  ArrayRef<OpFoldResult> tilingValues =
-      nominalTileSizes.has_value() ? *nominalTileSizes : numThreads;
-  int minTile = nominalTileSizes.has_value() ? 0 : 1;
+/// Returns a vector of bools representing if, for each axis, `op` can be tiled
+/// without incurring in a race condition and thus it is thread-safe to do the
+/// tiling. This is checked by iterating over numThreads and ensuring that the
+/// corresponding iterator type is "parallel". If it is not, then we know that
+/// such dimension is unsafe to tile.
+SmallVector<bool> safeToTileToForall(mlir::MLIRContext *ctx, LinalgOp linalgOp,
+                                     ArrayRef<OpFoldResult> numThreads) {
+  auto iterators = linalgOp.getIteratorTypesArray();
+  SmallVector<bool> safeToTile(numThreads.size(), true);
 
-  SmallVector<bool> safeToTile(tilingValues.size(), true);
-  SmallVector<AffineExpr> dimExprs;
-  dimExprs.reserve(numDims);
-  for (unsigned i = 0, e = tilingValues.size(); i != e; i++) {
-    if (auto attr = llvm::dyn_cast_if_present<Attribute>(tilingValues[i])) {
-      if (cast<IntegerAttr>(attr).getValue().getSExtValue() > minTile)
-        dimExprs.push_back(mlir::getAffineDimExpr(i, ctx));
+  for (unsigned i = 0, e = numThreads.size(); i != e; i++) {
+    if (auto attr = llvm::dyn_cast_if_present<Attribute>(numThreads[i])) {
+      if (cast<IntegerAttr>(attr).getValue().getSExtValue() > 1) {
+        safeToTile[i] = iterators[i] == utils::IteratorType::parallel;
+      }
     } else {
-      dimExprs.push_back(mlir::getAffineDimExpr(i, ctx));
+      safeToTile[i] = iterators[i] == utils::IteratorType::parallel;
     }
   }
-
-  auto iterators = linalgOp.getIteratorTypesArray();
-  for (AffineExpr r : dimExprs) {
-    unsigned int axis = cast<AffineDimExpr>(r).getPosition();
-    if (iterators[axis] == utils::IteratorType::reduction)
-      safeToTile[axis] = false;
-  }
-
   return safeToTile;
 }
 
@@ -387,9 +371,8 @@ static FailureOr<ForallTilingResult> tileToForallOpImpl(
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op.getOperation());
   if (linalgOp) {
     // Check if tiling is thread safe and print a warning if not.
-    SmallVector<bool> tilingSafety =
-        safeToTileToForall(b.getContext(), linalgOp, numThreads,
-                           nominalTileSizes, loopRanges.size());
+    SmallVector<bool> tilingSafety = safeToTileToForall(
+        b.getContext(), linalgOp, numThreads);
     for (size_t i = 0; i < tilingSafety.size(); i++)
       if (!tilingSafety[i])
         op.emitWarning() << "tiling is not thread safe at axis #" << i;
