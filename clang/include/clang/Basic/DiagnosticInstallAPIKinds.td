@@ -26,6 +26,7 @@ def warn_library_hidden_symbol : Warning<"declaration has external linkage, but 
 def warn_header_hidden_symbol : Warning<"symbol exported in dynamic library, but marked hidden in declaration '%0'">, InGroup<InstallAPIViolation>;
 def err_header_hidden_symbol : Error<"symbol exported in dynamic library, but marked hidden in declaration '%0'">;
 def err_header_symbol_missing : Error<"no declaration found for exported symbol '%0' in dynamic library">;
+def warn_header_symbol_missing : Warning<"no declaration was found for exported symbol '%0' in dynamic library">, InGroup<InstallAPIViolation>;
 def warn_header_availability_mismatch : Warning<"declaration '%0' is marked %select{available|unavailable}1,"
   " but symbol is %select{not |}2exported in dynamic library">, InGroup<InstallAPIViolation>;
 def err_header_availability_mismatch : Error<"declaration '%0' is marked %select{available|unavailable}1,"
