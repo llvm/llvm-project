@@ -13,8 +13,6 @@ add_mlir_conversion_library(MLIRMemRefToEmitC
 
   LINK_LIBS PUBLIC
   MLIREmitCDialect
-  MLIRFuncDialect
-  MLIRFuncTransforms
   MLIRMemRefDialect
   MLIRTransforms
   )

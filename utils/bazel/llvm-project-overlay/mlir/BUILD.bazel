@@ -8197,8 +8197,6 @@ cc_library(
     deps = [
         ":ConversionPassIncGen",
         ":EmitCDialect",
-        ":FuncDialect",
-        ":FuncTransforms",
         ":MemRefDialect",
         ":IR",
         ":Pass",
