@@ -31,10 +31,67 @@ namespace Fortran::runtime::io {
 
 class UnitMap;
 class ChildIo;
+class ExternalFileUnit;
+
+// Predefined file units.
+extern ExternalFileUnit *defaultInput; // unit 5
+extern ExternalFileUnit *defaultOutput; // unit 6
+extern ExternalFileUnit *errorOutput; // unit 0 extension
+
+#if defined(RT_USE_PSEUDO_FILE_UNIT)
+// A flavor of OpenFile class that pretends to be a terminal,
+// and only provides basic buffering of the output
+// in an internal buffer, and Write's the output
+// using std::printf(). Since it does not rely on file system
+// APIs, it can be used to implement external output
+// for offload devices.
+class PseudoOpenFile {
+public:
+  using FileOffset = std::int64_t;
+
+  const char *path() const { return nullptr; }
+  std::size_t pathLength() const { return 0; }
+  void set_path(OwningPtr<char> &&, std::size_t bytes) {}
+  bool mayRead() const { return false; }
+  bool mayWrite() const { return true; }
+  bool mayPosition() const { return false; }
+  bool mayAsynchronous() const { return false; }
+  void set_mayAsynchronous(bool yes);
+  // Pretend to be a terminal to force the output
+  // at the end of IO statement.
+  bool isTerminal() const { return true; }
+  bool isWindowsTextFile() const { return false; }
+  Fortran::common::optional<FileOffset> knownSize() const;
+  bool IsConnected() const { return false; }
+  void Open(OpenStatus, Fortran::common::optional<Action>, Position,
+      IoErrorHandler &);
+  void Predefine(int fd) {}
+  void Close(CloseStatus, IoErrorHandler &);
+  std::size_t Read(FileOffset, char *, std::size_t minBytes,
+      std::size_t maxBytes, IoErrorHandler &);
+  std::size_t Write(FileOffset, const char *, std::size_t, IoErrorHandler &);
+  void Truncate(FileOffset, IoErrorHandler &);
+  int ReadAsynchronously(FileOffset, char *, std::size_t, IoErrorHandler &);
+  int WriteAsynchronously(
+      FileOffset, const char *, std::size_t, IoErrorHandler &);
+  void Wait(int id, IoErrorHandler &);
+  void WaitAll(IoErrorHandler &);
+  Position InquirePosition() const;
+};
+#endif // defined(RT_USE_PSEUDO_FILE_UNIT)
+
+#if !defined(RT_USE_PSEUDO_FILE_UNIT)
+using OpenFileClass = OpenFile;
+using FileFrameClass = FileFrame<ExternalFileUnit>;
+#else // defined(RT_USE_PSEUDO_FILE_UNIT)
+using OpenFileClass = PseudoOpenFile;
+// Use not so big buffer for the pseudo file unit frame.
+using FileFrameClass = FileFrame<ExternalFileUnit, 1024>;
+#endif // defined(RT_USE_PSEUDO_FILE_UNIT)
 
 class ExternalFileUnit : public ConnectionState,
-                         public OpenFile,
-                         public FileFrame<ExternalFileUnit> {
+                         public OpenFileClass,
+                         public FileFrameClass {
 public:
   static constexpr int maxAsyncIds{64 * 16};
 
