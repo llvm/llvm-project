@@ -37,7 +37,7 @@ bool LineEntry::IsValid() const {
 }
 
 bool LineEntry::DumpStopContext(Stream *s, bool show_fullpaths) const {
-  const FileSpec &file = GetFile();
+  const FileSpec &file = file_sp->GetSpecOnly();
   if (file) {
     if (show_fullpaths)
       file.Dump(s->AsRawOstream());
@@ -70,7 +70,7 @@ bool LineEntry::Dump(Stream *s, Target *target, bool show_file,
       return false;
   }
   if (show_file)
-    *s << ", file = " << file_sp->GetSpecOnly();
+    *s << ", file = " << GetFile();
   if (line)
     s->Printf(", line = %u", line);
   if (column)
@@ -106,7 +106,7 @@ bool LineEntry::GetDescription(Stream *s, lldb::DescriptionLevel level,
                  Address::DumpStyleFileAddress);
     }
 
-    *s << ": " << file_sp->GetSpecOnly();
+    *s << ": " << GetFile();
 
     if (line) {
       s->Printf(":%u", line);

@@ -279,6 +279,30 @@ module {
     %si = tensor.extract %li[] : tensor<i64>
     vector.print %si : i64
 
+    // TODO: This check is no longer needed once the codegen path uses the
+    // buffer deallocation pass. "dealloc_tensor" turn into a no-op in the
+    // codegen path.
+    %has_runtime = sparse_tensor.has_runtime_library
+    scf.if %has_runtime {
+      // sparse_tensor.assemble copies buffers when running with the runtime
+      // library. Deallocations are not needed when running in codegen mode.
+      bufferization.dealloc_tensor %s4 : tensor<10x10xf64, #SortedCOO>
+      bufferization.dealloc_tensor %s5 : tensor<10x10xf64, #SortedCOOI32>
+      bufferization.dealloc_tensor %csr : tensor<2x2xf64, #CSR>
+      bufferization.dealloc_tensor %bs : tensor<2x10x10xf64, #BCOO>
+    }
+
+    bufferization.dealloc_tensor %li : tensor<i64>
+    bufferization.dealloc_tensor %od : tensor<3xf64>
+    bufferization.dealloc_tensor %op : tensor<2xi32>
+    bufferization.dealloc_tensor %oi : tensor<3x2xi32>
+    bufferization.dealloc_tensor %d_csr : tensor<4xf64>
+    bufferization.dealloc_tensor %p_csr : tensor<3xi32>
+    bufferization.dealloc_tensor %i_csr : tensor<3xi32>
+    bufferization.dealloc_tensor %bod : tensor<6xf64>
+    bufferization.dealloc_tensor %bop : tensor<4xindex>
+    bufferization.dealloc_tensor %boi : tensor<6x2xindex>
+
     return
   }
 }

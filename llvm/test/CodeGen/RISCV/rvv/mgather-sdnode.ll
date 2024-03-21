@@ -2136,18 +2136,17 @@ define <vscale x 32 x i8> @mgather_baseidx_nxv32i8(ptr %base, <vscale x 32 x i8>
 ; RV64-NEXT:    vluxei64.v v13, (a0), v24, v0.t
 ; RV64-NEXT:    srli a1, a1, 2
 ; RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vslidedown.vx v8, v16, a1
+; RV64-NEXT:    vslidedown.vx v0, v16, a1
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV64-NEXT:    vsext.vf8 v16, v10
+; RV64-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; RV64-NEXT:    vluxei64.v v14, (a0), v16, v0.t
 ; RV64-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vslidedown.vx v0, v8, a2
+; RV64-NEXT:    vslidedown.vx v0, v0, a2
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vsext.vf8 v16, v11
 ; RV64-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
 ; RV64-NEXT:    vluxei64.v v15, (a0), v16, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV64-NEXT:    vsext.vf8 v16, v10
-; RV64-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
-; RV64-NEXT:    vmv1r.v v0, v8
-; RV64-NEXT:    vluxei64.v v14, (a0), v16, v0.t
 ; RV64-NEXT:    vmv4r.v v8, v12
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i8, ptr %base, <vscale x 32 x i8> %idxs

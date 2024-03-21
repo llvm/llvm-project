@@ -388,14 +388,15 @@ bool InterleavedAccessImpl::replaceBinOpShuffles(
       return Idx < (int)cast<FixedVectorType>(BIOp0Ty)->getNumElements();
     }));
 
+    BasicBlock::iterator insertPos = SVI->getIterator();
     auto *NewSVI1 =
         new ShuffleVectorInst(BI->getOperand(0), PoisonValue::get(BIOp0Ty),
-                              Mask, SVI->getName(), SVI);
+                              Mask, SVI->getName(), insertPos);
     auto *NewSVI2 = new ShuffleVectorInst(
         BI->getOperand(1), PoisonValue::get(BI->getOperand(1)->getType()), Mask,
-        SVI->getName(), SVI);
+        SVI->getName(), insertPos);
     BinaryOperator *NewBI = BinaryOperator::CreateWithCopiedFlags(
-        BI->getOpcode(), NewSVI1, NewSVI2, BI, BI->getName(), SVI);
+        BI->getOpcode(), NewSVI1, NewSVI2, BI, BI->getName(), insertPos);
     SVI->replaceAllUsesWith(NewBI);
     LLVM_DEBUG(dbgs() << "  Replaced: " << *BI << "\n    And   : " << *SVI
                       << "\n  With    : " << *NewSVI1 << "\n    And   : "

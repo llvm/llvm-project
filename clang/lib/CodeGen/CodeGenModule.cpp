@@ -145,6 +145,8 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
       Kind = AArch64ABIKind::DarwinPCS;
     else if (Triple.isOSWindows())
       return createWindowsAArch64TargetCodeGenInfo(CGM, AArch64ABIKind::Win64);
+    else if (Target.getABI() == "aapcs-soft")
+      Kind = AArch64ABIKind::AAPCSSoft;
 
     return createAArch64TargetCodeGenInfo(CGM, Kind);
   }
@@ -3447,6 +3449,9 @@ bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
       // Implicit template instantiations may change linkage if they are later
       // explicitly instantiated, so they should not be emitted eagerly.
       return false;
+    // Defer until all versions have been semantically checked.
+    if (FD->hasAttr<TargetVersionAttr>() && !FD->isMultiVersion())
+      return false;
   }
   if (const auto *VD = dyn_cast<VarDecl>(Global)) {
     if (Context.getInlineVariableDefinitionKind(VD) ==
@@ -3995,10 +4000,13 @@ void CodeGenModule::EmitMultiVersionFunctionDefinition(GlobalDecl GD,
         EmitGlobalFunctionDefinition(GD.getWithMultiVersionIndex(I), nullptr);
     // Ensure that the resolver function is also emitted.
     GetOrCreateMultiVersionResolver(GD);
-  } else if (FD->hasAttr<TargetVersionAttr>()) {
-    GetOrCreateMultiVersionResolver(GD);
   } else
     EmitGlobalFunctionDefinition(GD, GV);
+
+  // Defer the resolver emission until we can reason whether the TU
+  // contains a default target version implementation.
+  if (FD->isTargetVersionMultiVersion())
+    AddDeferredMultiVersionResolverToEmit(GD);
 }
 
 void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
@@ -4091,10 +4099,11 @@ void CodeGenModule::emitMultiVersionFunctions() {
     const auto *FD = cast<FunctionDecl>(GD.getDecl());
     assert(FD && "Expected a FunctionDecl");
 
+    bool EmitResolver = !FD->isTargetVersionMultiVersion();
     SmallVector<CodeGenFunction::MultiVersionResolverOption, 10> Options;
     if (FD->isTargetMultiVersion()) {
       getContext().forEachMultiversionedFunctionVersion(
-          FD, [this, &GD, &Options](const FunctionDecl *CurFD) {
+          FD, [this, &GD, &Options, &EmitResolver](const FunctionDecl *CurFD) {
             GlobalDecl CurGD{
                 (CurFD->isDefined() ? CurFD->getDefinition() : CurFD)};
             StringRef MangledName = getMangledName(CurGD);
@@ -4120,6 +4129,9 @@ void CodeGenModule::emitMultiVersionFunctions() {
                                    TA->getArchitecture(), Feats);
             } else {
               const auto *TVA = CurFD->getAttr<TargetVersionAttr>();
+              if (CurFD->isUsed() || (TVA->isDefaultVersion() &&
+                                      CurFD->doesThisDeclarationHaveABody()))
+                EmitResolver = true;
               llvm::SmallVector<StringRef, 8> Feats;
               TVA->getFeatures(Feats);
               Options.emplace_back(cast<llvm::Function>(Func),
@@ -4175,22 +4187,27 @@ void CodeGenModule::emitMultiVersionFunctions() {
       continue;
     }
 
+    if (!EmitResolver)
+      continue;
+
     llvm::Constant *ResolverConstant = GetOrCreateMultiVersionResolver(GD);
     if (auto *IFunc = dyn_cast<llvm::GlobalIFunc>(ResolverConstant)) {
       ResolverConstant = IFunc->getResolver();
       if (FD->isTargetClonesMultiVersion() ||
           FD->isTargetVersionMultiVersion()) {
-        const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
-        llvm::FunctionType *DeclTy = getTypes().GetFunctionType(FI);
         std::string MangledName = getMangledNameImpl(
             *this, GD, FD, /*OmitMultiVersionMangling=*/true);
-        // In prior versions of Clang, the mangling for ifuncs incorrectly
-        // included an .ifunc suffix. This alias is generated for backward
-        // compatibility. It is deprecated, and may be removed in the future.
-        auto *Alias = llvm::GlobalAlias::create(
-            DeclTy, 0, getMultiversionLinkage(*this, GD),
-            MangledName + ".ifunc", IFunc, &getModule());
-        SetCommonAttributes(FD, Alias);
+        if (!GetGlobalValue(MangledName + ".ifunc")) {
+          const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
+          llvm::FunctionType *DeclTy = getTypes().GetFunctionType(FI);
+          // In prior versions of Clang, the mangling for ifuncs incorrectly
+          // included an .ifunc suffix. This alias is generated for backward
+          // compatibility. It is deprecated, and may be removed in the future.
+          auto *Alias = llvm::GlobalAlias::create(
+              DeclTy, 0, getMultiversionLinkage(*this, GD),
+              MangledName + ".ifunc", IFunc, &getModule());
+          SetCommonAttributes(FD, Alias);
+        }
       }
     }
     llvm::Function *ResolverFunc = cast<llvm::Function>(ResolverConstant);
@@ -4347,6 +4364,20 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
   }
 }
 
+/// Adds a declaration to the list of multi version functions if not present.
+void CodeGenModule::AddDeferredMultiVersionResolverToEmit(GlobalDecl GD) {
+  const auto *FD = cast<FunctionDecl>(GD.getDecl());
+  assert(FD && "Not a FunctionDecl?");
+
+  if (FD->isTargetVersionMultiVersion()) {
+    std::string MangledName =
+        getMangledNameImpl(*this, GD, FD, /*OmitMultiVersionMangling=*/true);
+    if (!DeferredResolversToEmit.insert(MangledName).second)
+      return;
+  }
+  MultiVersionFuncs.push_back(GD);
+}
+
 /// If a dispatcher for the specified mangled name is not in the module, create
 /// and return an llvm Function with the specified type.
 llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
@@ -4386,7 +4417,7 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   // The resolver needs to be created. For target and target_clones, defer
   // creation until the end of the TU.
   if (FD->isTargetMultiVersion() || FD->isTargetClonesMultiVersion())
-    MultiVersionFuncs.push_back(GD);
+    AddDeferredMultiVersionResolverToEmit(GD);
 
   // For cpu_specific, don't create an ifunc yet because we don't know if the
   // cpu_dispatch will be emitted in this translation unit.

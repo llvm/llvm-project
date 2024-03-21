@@ -12,6 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "WhitespaceManager.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include <algorithm>
 
 namespace clang {
 namespace format {
