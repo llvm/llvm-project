@@ -513,6 +513,11 @@ void BoltAddressTranslation::saveMetadata(BinaryContext &BC) {
   }
 }
 
+unsigned BoltAddressTranslation::getBBIndex(uint64_t FuncOutputAddress,
+                                            uint32_t BBInputOffset) const {
+  return FuncHashes.at(FuncOutputAddress).second.at(BBInputOffset).first;
+}
+
 size_t BoltAddressTranslation::getBBHash(uint64_t FuncOutputAddress,
                                          uint32_t BBInputOffset) const {
   return FuncHashes.at(FuncOutputAddress).second.at(BBInputOffset).second;
@@ -520,11 +525,6 @@ size_t BoltAddressTranslation::getBBHash(uint64_t FuncOutputAddress,
 
 size_t BoltAddressTranslation::getBFHash(uint64_t OutputAddress) const {
   return FuncHashes.at(OutputAddress).first;
-}
-
-unsigned BoltAddressTranslation::getBBIndex(uint64_t FuncOutputAddress,
-                                            uint32_t BBInputOffset) const {
-  return FuncHashes.at(FuncOutputAddress).second.at(BBInputOffset).first;
 }
 
 } // namespace bolt
