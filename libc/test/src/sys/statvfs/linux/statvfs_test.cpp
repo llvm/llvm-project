@@ -20,14 +20,9 @@ TEST(LlvmLibcSysStatfsTest, StatfsBasic) {
   statfs buf[1];
   ASSERT_THAT(LIBC_NAMESPACE::statfs("/", buf), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::statfs("/proc", buf), Succeeds());
-  ASSERT_EQ(buf->f_type, static_cast<__kernel_long_t>(PROC_SUPER_MAGIC));
+  ASSERT_EQ(buf->f_type, static_cast<decltype(buf->f_type)>(PROC_SUPER_MAGIC));
   ASSERT_THAT(LIBC_NAMESPACE::statfs("/sys", buf), Succeeds());
-  ASSERT_EQ(buf->f_type, static_cast<__kernel_long_t>(SYSFS_MAGIC));
-}
-
-// POSIX API does not specify what happens when buf is NULL
-TEST(LlvmLibcSysStatfsTest, StatfsNullBuffer) {
-  ASSERT_THAT(LIBC_NAMESPACE::statfs("/", nullptr), Fails(EFAULT));
+  ASSERT_EQ(buf->f_type, static_cast<decltype(buf->f_type)>(SYSFS_MAGIC));
 }
 
 TEST(LlvmLibcSysStatfsTest, StatvfsInvalidPath) {

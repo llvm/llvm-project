@@ -7,7 +7,7 @@ add_header_library(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.CPP.optional
-    libc.include.sys.syscall
+    libc.include.sys_syscall
 )
 
 add_entrypoint_object(

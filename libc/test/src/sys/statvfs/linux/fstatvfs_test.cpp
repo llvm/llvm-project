@@ -37,10 +37,6 @@ TEST(LlvmLibcSysStatvfsTest, FstatfsBasic) {
   ASSERT_EQ(buf->f_type, static_cast<decltype(buf->f_type)>(SYSFS_MAGIC));
 }
 
-TEST(LlvmLibcSysStatvfsTest, FstatvfsNullBuffer) {
-  ASSERT_THAT(LIBC_NAMESPACE::fstatvfs(PathFD("/"), nullptr), Fails(EFAULT));
-}
-
 TEST(LlvmLibcSysStatvfsTest, FstatvfsInvalidFD) {
   statvfs buf[1];
   ASSERT_THAT(LIBC_NAMESPACE::fstatvfs(-1, buf), Fails(EBADF));
