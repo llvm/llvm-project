@@ -8,6 +8,7 @@
 
 # RUN: llvm-dwarfdump --show-form --verbose --debug-addr %t.bolt > %t.txt
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
+# RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
 
 # This test checks that we correctly handle DW_AT_low_pc [DW_FORM_addrx] that is part of DW_TAG_label.
 
@@ -35,16 +36,14 @@
 # POSTCHECK-NEXT: DW_AT_name
 # POSTCHECK-NEXT: DW_AT_decl_file
 # POSTCHECK-NEXT: DW_AT_decl_line
-# POSTCHECK-NEXT:
 # POSTCHECK-NEXT:DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000002)
-# POSTCHECK-SAME: [0x[[#ADDR]]
+# POSTCHECK-SAME: 0x[[#ADDR]]
 # POSTCHECK: DW_TAG_label
 # POSTCHECK-NEXT: DW_AT_name
 # POSTCHECK-NEXT: DW_AT_decl_file
 # POSTCHECK-NEXT: DW_AT_decl_line
-# POSTCHECK-NEXT:
 # POSTCHECK-NEXT:DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000003)
-# POSTCHECK-SAME: [0x[[#ADDR2]]
+# POSTCHECK-SAME: 0x[[#ADDR2]]
 
 # clang++ main.cpp -g -S
 # int main() {
