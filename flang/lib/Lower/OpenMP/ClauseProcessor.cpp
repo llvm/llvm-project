@@ -208,6 +208,25 @@ addUseDeviceClause(Fortran::lower::AbstractConverter &converter,
     useDeviceSymbols.push_back(object.id());
 }
 
+static void convertLoopBounds(Fortran::lower::AbstractConverter &converter,
+                              mlir::Location loc,
+                              llvm::SmallVectorImpl<mlir::Value> &lowerBound,
+                              llvm::SmallVectorImpl<mlir::Value> &upperBound,
+                              llvm::SmallVectorImpl<mlir::Value> &step,
+                              std::size_t loopVarTypeSize) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  // The types of lower bound, upper bound, and step are converted into the
+  // type of the loop variable if necessary.
+  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
+  for (unsigned it = 0; it < (unsigned)lowerBound.size(); it++) {
+    lowerBound[it] =
+        firOpBuilder.createConvert(loc, loopVarType, lowerBound[it]);
+    upperBound[it] =
+        firOpBuilder.createConvert(loc, loopVarType, upperBound[it]);
+    step[it] = firOpBuilder.createConvert(loc, loopVarType, step[it]);
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
@@ -217,8 +236,7 @@ bool ClauseProcessor::processCollapse(
     llvm::SmallVectorImpl<mlir::Value> &lowerBound,
     llvm::SmallVectorImpl<mlir::Value> &upperBound,
     llvm::SmallVectorImpl<mlir::Value> &step,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv,
-    std::size_t &loopVarTypeSize) const {
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv) const {
   bool found = false;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
@@ -236,7 +254,7 @@ bool ClauseProcessor::processCollapse(
     found = true;
   }
 
-  loopVarTypeSize = 0;
+  std::size_t loopVarTypeSize = 0;
   do {
     Fortran::lower::pft::Evaluation *doLoop =
         &doConstructEval->getFirstNestedEvaluation();
@@ -266,6 +284,9 @@ bool ClauseProcessor::processCollapse(
     doConstructEval =
         &*std::next(doConstructEval->getNestedEvaluations().begin());
   } while (collapseValue > 0);
+
+  convertLoopBounds(converter, currentLocation, lowerBound, upperBound, step,
+                    loopVarTypeSize);
 
   return found;
 }
@@ -902,17 +923,39 @@ bool ClauseProcessor::processMap(
 
 bool ClauseProcessor::processReduction(
     mlir::Location currentLocation,
-    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
-    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *reductionSymbols)
-    const {
+    llvm::SmallVectorImpl<mlir::Value> &outReductionVars,
+    llvm::SmallVectorImpl<mlir::Type> &outReductionTypes,
+    llvm::SmallVectorImpl<mlir::Attribute> &outReductionDeclSymbols,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+        *outReductionSymbols) const {
   return findRepeatableClause<omp::clause::Reduction>(
       [&](const omp::clause::Reduction &clause,
           const Fortran::parser::CharBlock &) {
+        // Use local lists of reductions to prevent variables from other
+        // already-processed reduction clauses from impacting this reduction.
+        // For example, the whole `reductionVars` array is queried to decide
+        // whether to do the reduction byref.
+        llvm::SmallVector<mlir::Value> reductionVars;
+        llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
+        llvm::SmallVector<const Fortran::semantics::Symbol *> reductionSymbols;
         ReductionProcessor rp;
         rp.addDeclareReduction(currentLocation, converter, clause,
                                reductionVars, reductionDeclSymbols,
-                               reductionSymbols);
+                               outReductionSymbols ? &reductionSymbols
+                                                   : nullptr);
+
+        // Copy local lists into the output.
+        llvm::copy(reductionVars, std::back_inserter(outReductionVars));
+        llvm::copy(reductionDeclSymbols,
+                   std::back_inserter(outReductionDeclSymbols));
+        if (outReductionSymbols)
+          llvm::copy(reductionSymbols,
+                     std::back_inserter(*outReductionSymbols));
+
+        outReductionTypes.reserve(outReductionTypes.size() +
+                                  reductionVars.size());
+        llvm::transform(reductionVars, std::back_inserter(outReductionTypes),
+                        [](mlir::Value v) { return v.getType(); });
       });
 }
 
