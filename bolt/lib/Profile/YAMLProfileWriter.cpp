@@ -25,6 +25,25 @@ extern llvm::cl::opt<bool> ProfileUseDFS;
 namespace llvm {
 namespace bolt {
 
+/// Set CallSiteInfo destination fields from \p Symbol and return a target
+/// BinaryFunction for that symbol.
+static const BinaryFunction *setCSIDestination(const BinaryContext &BC,
+                                               yaml::bolt::CallSiteInfo &CSI,
+                                               const MCSymbol *Symbol) {
+  CSI.DestId = 0; // designated for unknown functions
+  CSI.EntryDiscriminator = 0;
+  if (Symbol) {
+    uint64_t EntryID = 0;
+    if (const BinaryFunction *const Callee =
+            BC.getFunctionForSymbol(Symbol, &EntryID)) {
+      CSI.DestId = Callee->getFunctionNumber();
+      CSI.EntryDiscriminator = EntryID;
+      return Callee;
+    }
+  }
+  return nullptr;
+}
+
 yaml::bolt::BinaryFunctionProfile
 YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS) {
   yaml::bolt::BinaryFunctionProfile YamlBF;
@@ -78,32 +97,15 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS) {
         if (!ICSP)
           continue;
         for (const IndirectCallProfile &CSP : ICSP.get()) {
-          StringRef TargetName = "";
-          CSI.DestId = 0; // designated for unknown functions
-          CSI.EntryDiscriminator = 0;
-          if (CSP.Symbol) {
-            const BinaryFunction *Callee = BC.getFunctionForSymbol(CSP.Symbol);
-            if (Callee) {
-              CSI.DestId = Callee->getFunctionNumber();
-              TargetName = Callee->getOneName();
-            }
-          }
+          const BinaryFunction *Callee = setCSIDestination(BC, CSI, CSP.Symbol);
           CSI.Count = CSP.Count;
           CSI.Mispreds = CSP.Mispreds;
-          CSTargets.emplace_back(TargetName, CSI);
+          if (CSI.Count && Callee)
+            CSTargets.emplace_back(Callee->getOneName(), CSI);
         }
       } else { // direct call or a tail call
-        uint64_t EntryID = 0;
-        CSI.DestId = 0;
-        StringRef TargetName = "";
         const MCSymbol *CalleeSymbol = BC.MIB->getTargetSymbol(Instr);
-        const BinaryFunction *const Callee =
-            BC.getFunctionForSymbol(CalleeSymbol, &EntryID);
-        if (Callee) {
-          CSI.DestId = Callee->getFunctionNumber();
-          CSI.EntryDiscriminator = EntryID;
-          TargetName = Callee->getOneName();
-        }
+        const BinaryFunction *Callee = setCSIDestination(BC, CSI, CalleeSymbol);
 
         auto getAnnotationWithDefault = [&](const MCInst &Inst, StringRef Ann) {
           return BC.MIB->getAnnotationWithDefault(Instr, Ann, 0ull);
@@ -115,8 +117,8 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS) {
           CSI.Count = getAnnotationWithDefault(Instr, "Count");
         }
 
-        if (CSI.Count)
-          CSTargets.emplace_back(TargetName, CSI);
+        if (CSI.Count && Callee)
+          CSTargets.emplace_back(Callee->getOneName(), CSI);
       }
       // Sort targets in a similar way to getBranchData, see Location::operator<
       llvm::sort(CSTargets, [](const auto &RHS, const auto &LHS) {
