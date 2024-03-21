@@ -1,4 +1,4 @@
-// RUN: not clang-format %s -style=LLVM -fail-on-incomplete-format
-// RUN: clang-format %s -style=LLVM
-int a(
+// RUN: not clang-format -style=LLVM -fail-on-incomplete-format %s
+// RUN: clang-format -style=LLVM %s
 
+int a(
