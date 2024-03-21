@@ -1172,7 +1172,7 @@ TEST_F(LibclangParseTest, UnaryOperator) {
   });
 }
 
-TEST_F(LibclangParseTest, CallExpr){
+TEST_F(LibclangParseTest, clang_getCursorCallExprKind) {
   std::string Main = "main.cpp";
   const char testSource[] = R"cpp(
 struct X{
