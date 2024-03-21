@@ -374,7 +374,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, s32, sXLen)
       .lowerForCartesianProduct({s32, sXLen, p0}, {p0});
 
-  getActionDefinitionsBuilder(G_VSCALE).customFor({sXLen});
+  getActionDefinitionsBuilder(G_VSCALE)
+      .clampScalar(0, sXLen, sXLen)
+      .customFor({sXLen});
 
   getLegacyLegalizerInfo().computeTables();
 }
@@ -507,7 +509,9 @@ bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
   // vscale as VLENB / 8.
   static_assert(RISCV::RVVBitsPerBlock == 64, "Unexpected bits per block!");
   if (STI.getRealMinVLen() < RISCV::RVVBitsPerBlock)
-    report_fatal_error("Support for VLEN==32 is incomplete.");
+    // Support for VLEN==32 is incomplete.
+    return false;
+
   // We assume VLENB is a multiple of 8. We manually choose the best shift
   // here because SimplifyDemandedBits isn't always able to simplify it.
   uint64_t Val = MI.getOperand(1).getCImm()->getZExtValue();
