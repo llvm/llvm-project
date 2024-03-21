@@ -62,36 +62,11 @@ namespace fir {
 
 // TODO: This should really be recovered from the specified target.
 static constexpr unsigned defaultAlign = 8;
-// static constexpr unsigned defaultAddressSpace = 0u;
 
 /// `fir.box` attribute values as defined for CFI_attribute_t in
 /// flang/ISO_Fortran_binding.h.
 static constexpr unsigned kAttrPointer = CFI_attribute_pointer;
 static constexpr unsigned kAttrAllocatable = CFI_attribute_allocatable;
-
-// static inline unsigned
-// getAllocaAddressSpace(mlir::ConversionPatternRewriter &rewriter) {
-//   mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
-//   assert(parentOp != nullptr &&
-//          "expected insertion block to have parent operation");
-//   if (auto module = parentOp->getParentOfType<mlir::ModuleOp>())
-//     if (mlir::Attribute addrSpace =
-//             mlir::DataLayout(module).getAllocaMemorySpace())
-//       return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
-//   return defaultAddressSpace;
-// }
-
-// static inline unsigned
-// getProgramAddressSpace(mlir::ConversionPatternRewriter &rewriter) {
-//   mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
-//   assert(parentOp != nullptr &&
-//          "expected insertion block to have parent operation");
-//   if (auto module = parentOp->getParentOfType<mlir::ModuleOp>())
-//     if (mlir::Attribute addrSpace =
-//             mlir::DataLayout(module).getProgramMemorySpace())
-//       return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
-//   return defaultAddressSpace;
-// }
 
 static inline mlir::Type getLlvmPtrType(mlir::MLIRContext *context,
                                         unsigned addressSpace = 0) {
