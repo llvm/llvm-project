@@ -71,7 +71,7 @@ public:
     return lhs.base() <= rhs.base();
   }
 
-  LIBC_INLINE constexpr iterator_type base() const { current; }
+  LIBC_INLINE constexpr iterator_type base() const { return current; }
 
   LIBC_INLINE constexpr reference operator*() const {
     Iter tmp = current;
