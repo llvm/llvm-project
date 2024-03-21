@@ -16,6 +16,7 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/Heatmap.h"
+#include "bolt/Profile/YAMLProfileWriter.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -85,6 +86,7 @@ MaxSamples("max-samples",
   cl::cat(AggregatorCategory));
 
 extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
+extern cl::opt<std::string> SaveProfile;
 
 cl::opt<bool> ReadPreAggregated(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
@@ -594,10 +596,21 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
     convertBranchData(Function);
   }
 
-  if (opts::AggregateOnly &&
-      opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata) {
-    if (std::error_code EC = writeAggregatedFile(opts::OutputFilename))
-      report_error("cannot create output data file", EC);
+  if (opts::AggregateOnly) {
+    if (opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata)
+      if (std::error_code EC = writeAggregatedFile(opts::OutputFilename))
+        report_error("cannot create output data file", EC);
+
+    // BAT YAML is handled by DataAggregator since normal YAML output requires
+    // CFG which is not available in BAT mode.
+    if (usesBAT()) {
+      if (opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML)
+        if (std::error_code EC = writeBATYAML(BC, opts::OutputFilename))
+          report_error("cannot create output data file", EC);
+      if (!opts::SaveProfile.empty())
+        if (std::error_code EC = writeBATYAML(BC, opts::SaveProfile))
+          report_error("cannot create output data file", EC);
+    }
   }
 
   return Error::success();
@@ -2255,6 +2268,53 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
   outs() << "PERF2BOLT: wrote " << BranchValues << " objects and " << MemValues
          << " memory objects to " << OutputFilename << "\n";
 
+  return std::error_code();
+}
+
+std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
+                                             StringRef OutputFilename) const {
+  std::error_code EC;
+  raw_fd_ostream OutFile(OutputFilename, EC, sys::fs::OpenFlags::OF_None);
+  if (EC)
+    return EC;
+
+  yaml::bolt::BinaryProfile BP;
+
+  // Fill out the header info.
+  BP.Header.Version = 1;
+  BP.Header.FileName = std::string(BC.getFilename());
+  std::optional<StringRef> BuildID = BC.getFileBuildID();
+  BP.Header.Id = BuildID ? std::string(*BuildID) : "<unknown>";
+  BP.Header.Origin = std::string(getReaderName());
+  // Only the input binary layout order is supported.
+  BP.Header.IsDFSOrder = false;
+  // FIXME: Need to match hash function used to produce BAT hashes.
+  BP.Header.HashFunction = HashFunction::Default;
+
+  ListSeparator LS(",");
+  raw_string_ostream EventNamesOS(BP.Header.EventNames);
+  for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames)
+    EventNamesOS << LS << EventEntry.first().str();
+
+  BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
+                                           : BinaryFunction::PF_LBR;
+
+  if (!opts::BasicAggregation) {
+    // Convert profile for functions not covered by BAT
+    for (auto &BFI : BC.getBinaryFunctions()) {
+      BinaryFunction &Function = BFI.second;
+      if (!Function.hasProfile())
+        continue;
+      if (BAT->isBATFunction(Function.getAddress()))
+        continue;
+      BP.Functions.emplace_back(
+          YAMLProfileWriter::convert(Function, /*UseDFS=*/false));
+    }
+  }
+
+  // Write the profile.
+  yaml::Output Out(OutFile, nullptr, 0);
+  Out << BP;
   return std::error_code();
 }
 

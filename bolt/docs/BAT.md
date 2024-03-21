@@ -14,9 +14,8 @@ binary onto the original binary.
 # Usage
 `--enable-bat` flag controls the generation of BAT section. Sampled profile
 needs to be passed along with the optimized binary containing BAT section to
-`perf2bolt` which reads BAT section and produces fdata profile for the original
-binary. Note that YAML profile generation is not supported since BAT doesn't
-contain the metadata for input functions.
+`perf2bolt` which reads BAT section and produces profile for the original
+binary.
 
 # Internals
 ## Section contents
