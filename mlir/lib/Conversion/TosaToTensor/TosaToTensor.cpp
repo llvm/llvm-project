@@ -24,69 +24,180 @@
 using namespace mlir;
 using namespace tosa;
 
-static Value getIndexConstant(OpBuilder& builder, Location loc, int64_t index) {
-  return builder.create<arith::ConstantIndexOp>(loc, index);
+namespace {
+
+// Infer the result type of 'tensor.expand_shape' in the collapse-expand
+// pair emitted for a 'tosa.reshape' op.
+TensorType inferReshapedType(TypedValue<TensorType> input,
+                             ArrayRef<int64_t> newShape) {
+  // Check if the input is static, and if so, get its total size
+  bool inputIsStatic = input.getType().hasStaticShape();
+  int64_t totalSize = inputIsStatic ? input.getType().getNumElements() : -1;
+ 
+  // Compute result shape
+  bool resultIsStatic = true;
+  auto resultShape = llvm::map_to_vector(newShape, [&](int64_t size) -> int64_t {
+    // If this is not a placeholder, do not change it
+    if (size >= 0)
+      return size;
+
+    // If we do not know the total size of the tensor, keep this dimension
+    // dynamic in the result shape.
+    if (!inputIsStatic) {
+      resultIsStatic = false;
+      return ShapedType::kDynamic;
+    }
+
+    // Calculate the product of all elements in 'newShape' except for the -1
+    // placeholder, which we discard by negating the result.
+    int64_t totalSizeNoPlaceholder = -std::accumulate(
+        newShape.begin(), newShape.end(), 1, std::multiplies());
+
+    // If there is a 0 component in 'newShape', resolve the placeholder as 0.
+    if (totalSizeNoPlaceholder == 0)
+      return 0;
+
+    // Resolve the placeholder as the quotient between the total tensor size and
+    // the product of all other sizes.
+    return totalSize / totalSizeNoPlaceholder;
+  });
+
+  // A syntactic restriction in 'tensor.expand_shape' forbids a dynamically
+  // shaped input from being reshaped into a statically shaped result. We may
+  // simply turn the first result dimension dynamic to address this.
+  if (!inputIsStatic && resultIsStatic)
+    resultShape[0] = ShapedType::kDynamic;
+  
+  // The 'tensor.expand_shape' op also forbids a statically shaped input from
+  // being reshaped into a dynamically shaped result, but the placeholder
+  // inference algorithm above guarantees that this will never be the case.
+  assert(!inputIsStatic || resultIsStatic);
+
+  // Create result type
+  return input.getType().clone(resultShape);
 }
 
-// Return the total size of the given input tensor.
-static Value getTensorSize(OpBuilder& builder, Location loc, TypedValue<TensorType> input) {
-  // If the input tensor is statically shaped, return its size as a constant.
-  if (input.getType().hasStaticShape()) {
-    auto shape = input.getType().getShape();
-    auto size = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies());
-    return getIndexConstant(builder, loc, size);
+// Infer the result type of 'tensor.collapse_shape' in the collapse-expand
+// pair emitted for a 'tosa.reshape' op.
+TensorType inferIntermediateType(TensorType lhsType, TensorType rhsType) {
+  auto lhsShape = lhsType.getShape();
+  auto rhsShape = rhsType.getShape();
+
+  if (ShapedType::isDynamicShape(lhsShape) || ShapedType::isDynamicShape(rhsShape))
+    return lhsType.clone({ShapedType::kDynamic});
+
+  if (lhsShape.empty() || rhsShape.empty())
+    return lhsType.clone({});
+
+  SmallVector<int64_t> intermediateShape;
+  unsigned currLhsDim = 0, currRhsDim = 0;
+  while (currLhsDim < lhsShape.size() && currRhsDim < rhsShape.size()) {
+    int64_t rhsSize = rhsShape[currRhsDim];
+    int64_t lhsSize = lhsShape[currLhsDim];
+    while (lhsSize != rhsSize && currLhsDim < lhsShape.size() &&
+           currRhsDim < rhsShape.size()) {
+      if (lhsSize < rhsSize) {
+        currLhsDim++;
+        if (currLhsDim < lhsShape.size()) {
+          lhsSize *= lhsShape[currLhsDim];
+        }
+      } else {
+        currRhsDim++;
+        if (currRhsDim < rhsShape.size()) {
+          rhsSize *= rhsShape[currRhsDim];
+        }
+      }
+    }
+    if (lhsSize == rhsSize) {
+      intermediateShape.push_back(lhsSize);
+    }
+    currRhsDim++;
+    currLhsDim++;
   }
 
-  // When the input tensor has at least one dynamic dimension, collapse it into
-  // a 1D tensor and get its size.
-  auto rank = input.getType().getRank();
-  auto elementType = input.getType().getElementType();
-  auto collapsedType = RankedTensorType::get({ShapedType::kDynamic}, elementType);
-  auto reassociationIndices = SmallVector<ReassociationIndices>{
-    llvm::to_vector(llvm::seq<int64_t>(rank))
-  };
-  auto collapsed = builder.create<tensor::CollapseShapeOp>(
-      loc, collapsedType, input, reassociationIndices);
-  return builder.create<tensor::DimOp>(loc, collapsed, 0);
+  // Static shapes are guaranteed to be compatible by the op verifier, so all
+  // leftover dimensions should be 1.
+  for (; currLhsDim < lhsShape.size(); currLhsDim++) {
+    assert(lhsShape[currLhsDim] == 1);
+  }
+  for (; currRhsDim < rhsShape.size(); currRhsDim++) {
+    assert(rhsShape[currRhsDim] == 1);
+  }
+  
+  return lhsType.clone(intermediateShape);
 }
 
-// Compute the dimension size of the result tensor corresponding to the
-// placeholder value set to -1 in the 'new_shape' attribute of a 'tosa.reshape'
-// op. Argument 'index' indicates the position of the -1 placeholder.
-static Value getReshapePlaceholderDimSize(OpBuilder &builder,
-                                          tosa::ReshapeOp reshape,
-                                          int64_t index) {
-  auto loc = reshape.getLoc();
-  auto input = reshape.getInput1();
-  auto newShape = reshape.getNewShape();
-  auto resultType = reshape.getResult().getType();
+SmallVector<ReassociationExprs>
+createReassociationMapForCollapse(OpBuilder &builder,
+                                  ArrayRef<int64_t> srcShape,
+                                  ArrayRef<int64_t> dstShape) {
+  if (ShapedType::isDynamicShape(srcShape) || ShapedType::isDynamicShape(dstShape)) {
+    assert(dstShape.size() == 1);
+    SmallVector<AffineExpr, 2> exprs;
+    for (int64_t i = 0, s = srcShape.size(); i < s; ++i)
+      exprs.push_back(builder.getAffineDimExpr(i));
+    return {exprs};
+  }
 
-  // If the corresponding dimension in the result type is static, take the
-  // dimension size from there.
-  assert(newShape[index] == -1);
-  if (!resultType.isDynamicDim(index))
-    return getIndexConstant(builder, loc, resultType.getDimSize(index));
+  if (dstShape.empty())
+    return {};
 
-  // Calculate the product of all dimensions in the new shape. We expect to have
-  // exactly one size set to -1, so we can discard this component by just
-  // negating the final product.
-  auto newSizeLiteral = -std::accumulate(newShape.begin(), newShape.end(), 1,
-                                         std::multiplies<int64_t>());
-  assert(newSizeLiteral >= 0);
-  auto newSize = builder.create<arith::ConstantIndexOp>(loc, newSizeLiteral);
+  SmallVector<ReassociationExprs> reassociationMap(dstShape.size());
+  unsigned currSrcDim = 0, currDstDim = 0;
+  while (currSrcDim < srcShape.size() && currDstDim < dstShape.size()) {
+    int64_t dstSize = dstShape[currDstDim];
+    int64_t srcSize = srcShape[currSrcDim];
+    while (srcSize < dstSize && currSrcDim < srcShape.size()) {
+      reassociationMap[currDstDim].push_back(
+          builder.getAffineDimExpr(currSrcDim++));
+      srcSize *= srcShape[currSrcDim];
+    }
+    if (srcSize == dstSize) {
+      reassociationMap[currDstDim].push_back(
+          builder.getAffineDimExpr(currSrcDim++));
+      // If the next dim in collapsedShape is not 1, treat subsequent dims in
+      // expandedShape which are 1 to be collapsed.
+      if (currDstDim == dstShape.size() - 1 || dstShape[currDstDim + 1] != 1) {
+        while (currSrcDim < srcShape.size() && srcShape[currSrcDim] == 1) {
+          reassociationMap[currDstDim].push_back(
+              builder.getAffineDimExpr(currSrcDim++));
+        }
+      }
+    }
+    currDstDim++;
+  }
 
-  // Avoid a division by zero. If any of the given dimension sizes was set to
-  // zero, set the placeholder size to zero, too.
-  if (newSizeLiteral == 0)
-    return newSize;
-
-  // The size of the placeholder dimension is the size of the input tensor
-  // divided by all non-placeholder dimension sizes.
-  auto inputSize = getTensorSize(builder, loc, input);
-  return builder.createOrFold<arith::DivUIOp>(loc, inputSize, newSize);
+  // If the source and target shapes are compatible, both iterators must have
+  // reached the end. This condition is guaranteed by the op verifier for
+  // static shapes.
+  assert(currSrcDim == srcShape.size() && currDstDim == dstShape.size());
+  return reassociationMap;
 }
 
-namespace {
+// Create a tensor.collapse_shape op that reshapes the input into the given
+// result type. Both 'returnType' and 'input' must be statically shaped.
+TypedValue<TensorType> createCollapse(OpBuilder &builder, Location loc,
+                                      TensorType resultType,
+                                      TypedValue<TensorType> input) {
+  auto reassociationMap = createReassociationMapForCollapse(
+      builder, input.getType().getShape(), resultType.getShape());
+  auto result = builder.createOrFold<tensor::CollapseShapeOp>(
+      loc, resultType, input, reassociationMap);
+  return cast<TypedValue<TensorType>>(result);
+}
+
+// Create a tensor.expand_shape op that reshapes the input into the given result
+// type. Both 'returnType' and 'input' must be statically shaped.
+TypedValue<TensorType> createExpand(OpBuilder &builder, Location loc,
+                                    TensorType resultType,
+                                    TypedValue<TensorType> input) {
+  // Emit tensor.expand_shape op
+  auto reassociationMap = createReassociationMapForCollapse(
+      builder, resultType.getShape(), input.getType().getShape());
+  auto result = builder.createOrFold<tensor::ExpandShapeOp>(
+      loc, resultType, input, reassociationMap);
+  return cast<TypedValue<TensorType>>(result);
+}
 
 class ReshapeConverter : public OpConversionPattern<tosa::ReshapeOp> {
 public:
@@ -96,21 +207,21 @@ public:
   matchAndRewrite(tosa::ReshapeOp reshape, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     auto loc = reshape.getLoc();
+    auto resultType = reshape.getResult().getType();
     auto input = reshape.getInput1();
+    auto newShape = reshape.getNewShape();
 
-    // Create list of values for new shape
-    SmallVector<Value> newShapeVector(reshape.getNewShape().size());
-    for (auto [index, size] : llvm::enumerate(reshape.getNewShape())) {
-      newShapeVector[index] = size == -1 ?
-          getReshapePlaceholderDimSize(rewriter, reshape, index) :
-          getIndexConstant(rewriter, loc, size);
-    }
+    // Infer the result types for the subsequently emitted ops.
+    auto reshapedType = inferReshapedType(input, newShape);
+    auto intermediateType = inferIntermediateType(input.getType(), reshapedType);
 
-    // Reshape tensor
-    auto newShapeTensor = rewriter.createOrFold<tensor::FromElementsOp>(
-        loc, newShapeVector);
-    rewriter.replaceOpWithNewOp<tensor::ReshapeOp>(
-        reshape, reshape.getResult().getType(), input, newShapeTensor);
+    // Emit collaspe-expand pair
+    auto collapsed = createCollapse(rewriter, loc, intermediateType, input);
+    auto expanded = createExpand(rewriter, loc, reshapedType, collapsed);
+
+    // Cast to final result type if needed
+    auto result = rewriter.createOrFold<tensor::CastOp>(loc, resultType, expanded);
+    rewriter.replaceOp(reshape, result);
     return success();
   }
 };

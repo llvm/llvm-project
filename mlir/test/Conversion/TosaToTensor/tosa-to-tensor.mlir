@@ -2,215 +2,281 @@
 
 // -----
 
-// CHECK-LABEL: @test_reshape_downrank
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]
-func.func @test_reshape_downrank(%arg0: tensor<2x3xf32>) -> tensor<6xf32> {
-  // CHECK: %[[SHAPE:.+]] = arith.constant dense<6> : tensor<1xindex>
-  // CHECK: %[[RESHAPE:.+]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<2x3xf32>, tensor<1xindex>) -> tensor<6xf32>
-  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 6>} : (tensor<2x3xf32>) -> tensor<6xf32>
-
-  // CHECK: return %[[RESHAPE]] : tensor<6xf32>
-  return %0 : tensor<6xf32>
+// CHECK-LABEL: test_reshape_0d_same_s2s_explicit
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<f32>
+// CHECK: return %[[ARG_0]] : tensor<f32>
+func.func @test_reshape_0d_same_s2s_explicit(%arg0: tensor<f32>) -> tensor<f32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64>} : (tensor<f32>) -> tensor<f32>
+  return %0 : tensor<f32>
 }
 
 // -----
 
-// CHECK-LABEL: @test_reshape_downrank_dyn
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]
-func.func @test_reshape_downrank_dyn(%arg0: tensor<2x?xf32>) -> tensor<?xf32> {
-  // CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
+// CHECK-LABEL: test_reshape_1d_up_d2d_auto
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<?xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.expand_shape %[[ARG_0]] {{\[\[}}0, 1]] : tensor<?xf32> into tensor<2x?xf32>
+// CHECK: return %[[VAL_0]] : tensor<2x?xf32>
+func.func @test_reshape_1d_up_d2d_auto(%arg0: tensor<?xf32>) -> tensor<2x?xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1>} : (tensor<?xf32>) -> tensor<2x?xf32>
+  return %0 : tensor<2x?xf32>
+}
 
-  // CHECK-DAG: %[[COLLAPSED:.+]] = tensor.collapse_shape %[[ARG0]] {{[\[]}}[0, 1]] : tensor<2x?xf32> into tensor<?xf32>
-  // CHECK-DAG: %[[SIZE:.+]] = tensor.dim %[[COLLAPSED]], %[[C0]] : tensor<?xf32>
+// -----
 
-  // CHECK-DAG: %[[SHAPE:.+]] = tensor.from_elements %[[SIZE]] : tensor<1xindex>
-  // CHECK-DAG: %[[RESHAPED:.+]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<2x?xf32>, tensor<1xindex>) -> tensor<?xf32>
+// CHECK-LABEL: test_reshape_1d_up_s2s_explicit
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<6xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.expand_shape %[[ARG_0]] {{\[\[}}0, 1]] : tensor<6xf32> into tensor<2x3xf32>
+// CHECK: return %[[VAL_0]] : tensor<2x3xf32>
+func.func @test_reshape_1d_up_s2s_explicit(%arg0: tensor<6xf32>) -> tensor<2x3xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, 3>} : (tensor<6xf32>) -> tensor<2x3xf32>
+  return %0 : tensor<2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_2d_down_d2d_auto
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<2x?xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1]] : tensor<2x?xf32> into tensor<?xf32>
+// CHECK: return %[[VAL_0]] : tensor<?xf32>
+func.func @test_reshape_2d_down_d2d_auto(%arg0: tensor<2x?xf32>) -> tensor<?xf32> {
   %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: -1>} : (tensor<2x?xf32>) -> tensor<?xf32>
-
-  // CHECK: return %[[RESHAPED]] : tensor<?xf32>
   return %0 : tensor<?xf32>
 }
 
 // -----
 
-// CHECK-LABEL: @test_reshape_uprank
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]
-func.func @test_reshape_uprank(%arg0: tensor<6xf32>) -> tensor<2x3xf32> {
-  // CHECK: %[[SHAPE:.+]] = arith.constant dense<[2, 3]> : tensor<2xindex>
-  // CHECK: %[[RESHAPE:.+]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<6xf32>, tensor<2xindex>) -> tensor<2x3xf32>
-  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, 3>} : (tensor<6xf32>) -> tensor<2x3xf32>
-  // CHECK: return %[[RESHAPE]] : tensor<2x3xf32>
-  return %0 : tensor<2x3xf32>
+// CHECK-LABEL: test_reshape_2d_down_s2s_explicit
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<2x3xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1]] : tensor<2x3xf32> into tensor<6xf32>
+// CHECK: return %[[VAL_0]] : tensor<6xf32>
+func.func @test_reshape_2d_down_s2s_explicit(%arg0: tensor<2x3xf32>) -> tensor<6xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 6>} : (tensor<2x3xf32>) -> tensor<6xf32>
+  return %0 : tensor<6xf32>
 }
 
 // -----
 
-// CHECK-LABEL: @test_reshape_uprank_dyn
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]
-func.func @test_reshape_uprank_dyn(%arg0: tensor<?xf32>) -> tensor<2x?xf32> {
-  // CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[C2:.+]] = arith.constant 2 : index
-  // CHECK-DAG: %[[C2_0:.+]] = arith.constant 2 : index
-
-  // CHECK-DAG: %[[COLLAPSED:.+]] = tensor.collapse_shape %[[ARG0]] {{[\[]}}[0]] : tensor<?xf32> into tensor<?xf32>
-  // CHECK-DAG: %[[SIZE:.+]] = tensor.dim %[[COLLAPSED]], %[[C0]] : tensor<?xf32>
-  // CHECK-DAG: %[[PLACEHOLDER:.+]] = arith.divui %[[SIZE]], %[[C2_0]] : index
-
-  // CHECK: %[[SHAPE:.+]] = tensor.from_elements %[[C2]], %[[PLACEHOLDER]] : tensor<2xindex>
-  // CHECK: %[[RESHAPED:.+]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<?xf32>, tensor<2xindex>) -> tensor<2x?xf32>
-  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1>} : (tensor<?xf32>) -> tensor<2x?xf32>
-  
-  // CHECK: return %[[RESHAPED]] : tensor<2x?xf32>
-  return %0 : tensor<2x?xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @test_reshape_samerank
-// CHECK-SAME: (%[[ARG0:.*]]: tensor<3x2xf32>)
-func.func @test_reshape_samerank(%arg0: tensor<3x2xf32>) -> tensor<2x3xf32> {
-  // CHECK: %[[SHAPE:.*]] = arith.constant dense<[2, 3]> : tensor<2xindex>
-  // CHECK: %[[RESHAPED:.*]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<3x2xf32>, tensor<2xindex>) -> tensor<2x3xf32>
-  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, 3>} : (tensor<3x2xf32>) -> tensor<2x3xf32>
-  
-  // CHECK: return %[[RESHAPED]] : tensor<2x3xf32>
-  return %0 : tensor<2x3xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @test_reshape_samerank_dyn
-// CHECK-SAME: (%[[ARG0:.*]]: tensor<?x2xf32>)
-func.func @test_reshape_samerank_dyn(%arg0: tensor<?x2xf32>) -> tensor<2x?xf32> {
-  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-  // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
-  // CHECK-DAG: %[[C2_0:.*]] = arith.constant 2 : index
-
-  // CHECK-DAG: %[[COLLAPSED:.*]] = tensor.collapse_shape %[[ARG0]] {{\[\[}}0, 1]] : tensor<?x2xf32> into tensor<?xf32>
-  // CHECK-DAG: %[[SIZE:.*]] = tensor.dim %[[COLLAPSED]], %[[C0]] : tensor<?xf32>
-  // CHECK-DAG: %[[PLACEHOLDER:.*]] = arith.divui %[[SIZE]], %[[C2_0]] : index
-
-  // CHECK-DAG: %[[SHAPE:.*]] = tensor.from_elements %[[C2]], %[[PLACEHOLDER]] : tensor<2xindex>
-  // CHECK-DAG: %[[RESHAPED:.*]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<?x2xf32>, tensor<2xindex>) -> tensor<2x?xf32>
+// CHECK-LABEL: test_reshape_2d_same_d2d_auto
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<?x2xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1]] : tensor<?x2xf32> into tensor<?xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1]] : tensor<?xf32> into tensor<2x?xf32>
+// CHECK: return %[[VAL_1]] : tensor<2x?xf32>
+func.func @test_reshape_2d_same_d2d_auto(%arg0: tensor<?x2xf32>) -> tensor<2x?xf32> {
   %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1>} : (tensor<?x2xf32>) -> tensor<2x?xf32>
-
-  // CHECK: return %[[RESHAPED]] : tensor<2x?xf32>
   return %0 : tensor<2x?xf32>
 }
 
 // -----
 
-// CHECK-LABEL: @test_reshape_downrank_6d
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
-func.func @test_reshape_downrank_6d(%arg0: tensor<1x2x3x5x7x11xf32>) -> tensor<6x5x77xf32> {
-  // CHECK: %[[SHAPE:.*]] = arith.constant dense<[6, 5, 77]> : tensor<3xindex>
-  // CHECK: %[[RESHAPED:.*]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<1x2x3x5x7x11xf32>, tensor<3xindex>) -> tensor<6x5x77xf32>
-  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 6, 5, 77>} : (tensor<1x2x3x5x7x11xf32>) -> tensor<6x5x77xf32>
-  
-  // CHECK: return %[[RESHAPED]] : tensor<6x5x77xf32>
-  return %0 : tensor<6x5x77xf32>
+// CHECK-LABEL: test_reshape_2d_same_s2d_auto
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<2x4xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1]] : tensor<2x4xf32> into tensor<8xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1]] : tensor<8xf32> into tensor<4x2xf32>
+// CHECK: %[[VAL_2:.*]] = tensor.cast %[[VAL_1]] : tensor<4x2xf32> to tensor<?x2xf32>
+// CHECK: return %[[VAL_2]] : tensor<?x2xf32>
+func.func @test_reshape_2d_same_s2d_auto(%arg0: tensor<2x4xf32>) -> tensor<?x2xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: -1, 2>} : (tensor<2x4xf32>) -> tensor<?x2xf32>
+  return %0 : tensor<?x2xf32>
 }
 
 // -----
 
-// CHECK-LABEL: @test_reshape_downrank_6d_dyn
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
-func.func @test_reshape_downrank_6d_dyn(%arg0: tensor<1x2x?x5x7x11xf32>) -> tensor<?x5x77xf32> {
-  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-  // CHECK-DAG: %[[C5:.*]] = arith.constant 5 : index
-  // CHECK-DAG: %[[C77:.*]] = arith.constant 77 : index
-  // CHECK-DAG: %[[C385:.*]] = arith.constant 385 : index
+// CHECK-LABEL: test_reshape_2d_same_s2d_explicit
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<2x4xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1]] : tensor<2x4xf32> into tensor<8xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1]] : tensor<8xf32> into tensor<4x2xf32>
+// CHECK: %[[VAL_2:.*]] = tensor.cast %[[VAL_1]] : tensor<4x2xf32> to tensor<?x2xf32>
+// CHECK: return %[[VAL_2]] : tensor<?x2xf32>
+func.func @test_reshape_2d_same_s2d_explicit(%arg0: tensor<2x4xf32>) -> tensor<?x2xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 4, 2>} : (tensor<2x4xf32>) -> tensor<?x2xf32>
+  return %0 : tensor<?x2xf32>
+}
 
-  // CHECK-DAG: %[[COLLAPSED:.*]] = tensor.collapse_shape %[[ARG0]] {{\[\[}}0, 1, 2, 3, 4, 5]] : tensor<1x2x?x5x7x11xf32> into tensor<?xf32>
-  // CHECK-DAG: %[[SIZE:.*]] = tensor.dim %[[COLLAPSED]], %[[C0]] : tensor<?xf32>
-  // CHECK-DAG: %[[PLACEHOLDER:.*]] = arith.divui %[[SIZE]], %[[C385]] : index
+// -----
 
-  // CHECK-DAG: %[[SHAPE:.*]] = tensor.from_elements %[[PLACEHOLDER]], %[[C5]], %[[C77]] : tensor<3xindex>
-  // CHECK-DAG: %[[RESHAPED:.*]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<1x2x?x5x7x11xf32>, tensor<3xindex>) -> tensor<?x5x77xf32>
+// CHECK-LABEL: test_reshape_2d_same_s2s_explicit
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<3x2xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1]] : tensor<3x2xf32> into tensor<6xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1]] : tensor<6xf32> into tensor<2x3xf32>
+// CHECK: return %[[VAL_1]] : tensor<2x3xf32>
+func.func @test_reshape_2d_same_s2s_explicit(%arg0: tensor<3x2xf32>) -> tensor<2x3xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, 3>} : (tensor<3x2xf32>) -> tensor<2x3xf32>
+  return %0 : tensor<2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_3d_same_d2d_auto_empty
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<3x2x?xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1, 2]] : tensor<3x2x?xf32> into tensor<?xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] : tensor<?xf32> into tensor<0x3x?xf32>
+// CHECK: %[[VAL_2:.*]] = tensor.cast %[[VAL_1]] : tensor<0x3x?xf32> to tensor<?x?x?xf32>
+// CHECK: return %[[VAL_2]] : tensor<?x?x?xf32>
+func.func @test_reshape_3d_same_d2d_auto_empty(%arg0: tensor<3x2x?xf32>) -> tensor<?x?x?xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 0, 3, -1>} : (tensor<3x2x?xf32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_3d_same_d2d_auto
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<2x?x?xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1, 2]] : tensor<2x?x?xf32> into tensor<?xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] : tensor<?xf32> into tensor<2x?x4xf32>
+// CHECK: %[[VAL_2:.*]] = tensor.cast %[[VAL_1]] : tensor<2x?x4xf32> to tensor<?x?x?xf32>
+// CHECK: return %[[VAL_2]] : tensor<?x?x?xf32>
+func.func @test_reshape_3d_same_d2d_auto(%arg0: tensor<2x?x?xf32>) -> tensor<?x?x?xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1, 4>} : (tensor<2x?x?xf32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_3d_same_d2d_auto_identity
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<?x3x4xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1, 2]] : tensor<?x3x4xf32> into tensor<?xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] : tensor<?xf32> into tensor<2x3x?xf32>
+// CHECK: return %[[VAL_1]] : tensor<2x3x?xf32>
+func.func @test_reshape_3d_same_d2d_auto_identity(%arg0: tensor<?x3x4xf32>) -> tensor<2x3x?xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, 3, -1>} : (tensor<?x3x4xf32>) -> tensor<2x3x?xf32>
+  return %0 : tensor<2x3x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_3d_same_d2d_explicit_empty
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<3x2x?xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1, 2]] : tensor<3x2x?xf32> into tensor<?xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] : tensor<?xf32> into tensor<?x3x2xf32>
+// CHECK: %[[VAL_2:.*]] = tensor.cast %[[VAL_1]] : tensor<?x3x2xf32> to tensor<?x?x?xf32>
+// CHECK: return %[[VAL_2]] : tensor<?x?x?xf32>
+func.func @test_reshape_3d_same_d2d_explicit_empty(%arg0: tensor<3x2x?xf32>) -> tensor<?x?x?xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 0, 3, 2>} : (tensor<3x2x?xf32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_3d_same_d2d_explicit
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1, 2]] : tensor<?x?x?xf32> into tensor<?xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] : tensor<?xf32> into tensor<?x3x4xf32>
+// CHECK: %[[VAL_2:.*]] = tensor.cast %[[VAL_1]] : tensor<?x3x4xf32> to tensor<?x?x?xf32>
+// CHECK: return %[[VAL_2]] : tensor<?x?x?xf32>
+func.func @test_reshape_3d_same_d2d_explicit(%arg0: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, 3, 4>} : (tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_3d_same_d2d_explicit_identity
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<?x3x4xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.cast %[[ARG_0]] : tensor<?x3x4xf32> to tensor<2x3x?xf32>
+// CHECK: return %[[VAL_0]] : tensor<2x3x?xf32>
+func.func @test_reshape_3d_same_d2d_explicit_identity(%arg0: tensor<?x3x4xf32>) -> tensor<2x3x?xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, 3, 4>} : (tensor<?x3x4xf32>) -> tensor<2x3x?xf32>
+  return %0 : tensor<2x3x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_3d_same_d2s_auto
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1, 2]] : tensor<?x?x?xf32> into tensor<?xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] : tensor<?xf32> into tensor<2x?x4xf32>
+// CHECK: %[[VAL_2:.*]] = tensor.cast %[[VAL_1]] : tensor<2x?x4xf32> to tensor<2x3x4xf32>
+// CHECK: return %[[VAL_2]] : tensor<2x3x4xf32>
+func.func @test_reshape_3d_same_d2s_auto(%arg0: tensor<?x?x?xf32>) -> tensor<2x3x4xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1, 4>} : (tensor<?x?x?xf32>) -> tensor<2x3x4xf32>
+  return %0 : tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_3d_same_d2s_explicit
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1, 2]] : tensor<?x?x?xf32> into tensor<?xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] : tensor<?xf32> into tensor<?x3x4xf32>
+// CHECK: %[[VAL_2:.*]] = tensor.cast %[[VAL_1]] : tensor<?x3x4xf32> to tensor<2x3x4xf32>
+// CHECK: return %[[VAL_2]] : tensor<2x3x4xf32>
+func.func @test_reshape_3d_same_d2s_explicit(%arg0: tensor<?x?x?xf32>) -> tensor<2x3x4xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, 3, 4>} : (tensor<?x?x?xf32>) -> tensor<2x3x4xf32>
+  return %0 : tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_3d_same_s2s_explicit_identity
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<2x3x4xf32>
+// CHECK: return %[[ARG_0]] : tensor<2x3x4xf32>
+func.func @test_reshape_3d_same_s2s_explicit_identity(%arg0: tensor<2x3x4xf32>) -> tensor<2x3x4xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, 3, 4>} : (tensor<2x3x4xf32>) -> tensor<2x3x4xf32>
+  return %0 : tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_3d_up_d2s_explicit
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1, 2]] : tensor<?x?x?xf32> into tensor<?xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2, 3]] : tensor<?xf32> into tensor<?x3x2x1xf32>
+// CHECK: %[[VAL_2:.*]] = tensor.cast %[[VAL_1]] : tensor<?x3x2x1xf32> to tensor<1x3x2x1xf32>
+// CHECK: return %[[VAL_2]] : tensor<1x3x2x1xf32>
+func.func @test_reshape_3d_up_d2s_explicit(%input: tensor<?x?x?xf32>) -> tensor<1x3x2x1xf32> {
+  %0 = tosa.reshape %input {new_shape = array<i64: 1, 3, 2, 1>} : (tensor<?x?x?xf32>) -> tensor<1x3x2x1xf32>
+  return %0 : tensor<1x3x2x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_5d_down_d2d_auto
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<?x?x?x2x3xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1, 2, 3, 4]] : tensor<?x?x?x2x3xf32> into tensor<?xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] : tensor<?xf32> into tensor<?x2x3xf32>
+// CHECK: return %[[VAL_1]] : tensor<?x2x3xf32>
+func.func @test_reshape_5d_down_d2d_auto(%arg0: tensor<?x?x?x2x3xf32>) -> tensor<?x2x3xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: -1, 2, 3>} : (tensor<?x?x?x2x3xf32>) -> tensor<?x2x3xf32>
+  return %0 : tensor<?x2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_6d_down_d2d_auto
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<1x2x?x5x7x11xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1, 2, 3, 4, 5]] : tensor<1x2x?x5x7x11xf32> into tensor<?xf32>
+// CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] : tensor<?xf32> into tensor<?x5x77xf32>
+// CHECK: return %[[VAL_1]] : tensor<?x5x77xf32>
+func.func @test_reshape_6d_down_d2d_auto(%arg0: tensor<1x2x?x5x7x11xf32>) -> tensor<?x5x77xf32> {
   %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: -1, 5, 77>} : (tensor<1x2x?x5x7x11xf32>) -> tensor<?x5x77xf32>
-
-  // CHECK: return %[[RESHAPED]] : tensor<?x5x77xf32>
   return %0 : tensor<?x5x77xf32>
 }
 
 // -----
 
-// CHECK-LABEL: test_reshape_zero
-// CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]+]]: tensor<3x2x?xf32>
-func.func @test_reshape_zero(%arg0: tensor<3x2x?xf32>) -> tensor<?x?x?xf32> {
-  // CHECK: %[[SHAPE:.*]] = arith.constant dense<[0, 3, 0]> : tensor<3xindex>
-  // CHECK: %[[RESHAPED:.*]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<3x2x?xf32>, tensor<3xindex>) -> tensor<?x?x?xf32>
-  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 0, 3, -1>} : (tensor<3x2x?xf32>) -> tensor<?x?x?xf32>
-  
-  // CHECK: return %[[RESHAPED]] : tensor<?x?x?xf32>
-  return %0 : tensor<?x?x?xf32>
+// CHECK-LABEL: test_reshape_6d_down_s2s_auto
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<1x2x3x5x7x11xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1, 2], [3], [4, 5]] : tensor<1x2x3x5x7x11xf32> into tensor<6x5x77xf32>
+// CHECK: return %[[VAL_0]] : tensor<6x5x77xf32>
+func.func @test_reshape_6d_down_s2s_auto(%arg0: tensor<1x2x3x5x7x11xf32>) -> tensor<6x5x77xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 6, 5, -1>} : (tensor<1x2x3x5x7x11xf32>) -> tensor<6x5x77xf32>
+  return %0 : tensor<6x5x77xf32>
 }
 
 // -----
 
-// CHECK-LABEL: test_reshape_dynamic_to_static
-// CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
-func.func @test_reshape_dynamic_to_static(%arg0: tensor<?x?x?xf32>) -> tensor<2x3x4xf32> {
-  // CHECK: %[[SHAPE:.*]] = arith.constant dense<[2, 3, 4]> : tensor<3xindex>
-  // CHECK: %[[RESHAPED:.*]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<?x?x?xf32>, tensor<3xindex>) -> tensor<2x3x4xf32>
-  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, 3, 4>} : (tensor<?x?x?xf32>) -> tensor<2x3x4xf32>
-  
-  // CHECK: return %[[RESHAPED]] : tensor<2x3x4xf32>
-  return %0 : tensor<2x3x4xf32>
+// CHECK-LABEL: test_reshape_6d_down_s2s_explicit
+// CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<1x2x3x5x7x11xf32>
+// CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1, 2], [3], [4, 5]] : tensor<1x2x3x5x7x11xf32> into tensor<6x5x77xf32>
+// CHECK: return %[[VAL_0]] : tensor<6x5x77xf32>
+func.func @test_reshape_6d_down_s2s_explicit(%arg0: tensor<1x2x3x5x7x11xf32>) -> tensor<6x5x77xf32> {
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 6, 5, 77>} : (tensor<1x2x3x5x7x11xf32>) -> tensor<6x5x77xf32>
+  return %0 : tensor<6x5x77xf32>
 }
 
 // -----
 
-// CHECK-LABEL: test_reshape_dynamic_to_static_placeholder
-// CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
-func.func @test_reshape_dynamic_to_static_placeholder(%arg0: tensor<?x?x?xf32>) -> tensor<2x3x4xf32> {
-  // CHECK: %[[SHAPE:.*]] = arith.constant dense<[2, 3, 4]> : tensor<3xindex>
-  // CHECK: %[[RESHAPED:.*]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<?x?x?xf32>, tensor<3xindex>) -> tensor<2x3x4xf32>
-  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1, 4>} : (tensor<?x?x?xf32>) -> tensor<2x3x4xf32>
-  
-  // CHECK: return %[[RESHAPED]] : tensor<2x3x4xf32>
-  return %0 : tensor<2x3x4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: test_reshape_dynamic_to_dynamic
-// CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
-func.func @test_reshape_dynamic_to_dynamic(%arg0: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
-  // CHECK: %[[SHAPE:.*]] = arith.constant dense<[2, 3, 4]> : tensor<3xindex>
-  // CHECK: %[[RESHAPED:.*]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<?x?x?xf32>, tensor<3xindex>) -> tensor<?x?x?xf32>
-  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, 3, 4>} : (tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-
-  // CHECK: return %[[RESHAPED]] : tensor<?x?x?xf32>
-  return %0 : tensor<?x?x?xf32>
-}
-
-// -----
-
-// CHECK-LABEL: test_reshape_dynamic_to_dynamic_placeholder
-// CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
-func.func @test_reshape_dynamic_to_dynamic_placeholder(%arg0: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
-  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-  // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
-  // CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
-  // CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
-
-  // CHECK-DAG: %[[COLLAPSED:.*]] = tensor.collapse_shape %[[ARG0]] {{\[\[}}0, 1, 2]] : tensor<?x?x?xf32> into tensor<?xf32>
-  // CHECK-DAG: %[[SIZE:.*]] = tensor.dim %[[COLLAPSED]], %[[C0]] : tensor<?xf32>
-  // CHECK-DAG: %[[PLACEHOLDER:.*]] = arith.divui %[[SIZE]], %[[C8]] : index
-
-  // CHECK-DAG: %[[SHAPE:.*]] = tensor.from_elements %[[C2]], %[[PLACEHOLDER]], %[[C4]] : tensor<3xindex>
-  // CHECK-DAG: %[[RESHAPED:.*]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<?x?x?xf32>, tensor<3xindex>) -> tensor<?x?x?xf32>
-  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1, 4>} : (tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-  
-  // CHECK: return %[[RESHAPED]] : tensor<?x?x?xf32>
-  return %0 : tensor<?x?x?xf32>
-}
-
-
-// -----
-
-// CHECK-LABLE: func @slice
+// CHECK-LABEL: func @slice
 func.func @slice(%arg0: tensor<6xf32>) ->() {
   // CHECK: [[SLICE:%.+]] = tensor.extract_slice %arg0[2] [1] [1]
   %0 = "tosa.slice"(%arg0) {start = array<i64: 2>, size = array<i64: 1>} : (tensor<6xf32>)  -> (tensor<1xf32>)
