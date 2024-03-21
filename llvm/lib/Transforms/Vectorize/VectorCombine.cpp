@@ -135,6 +135,14 @@ private:
 };
 } // namespace
 
+/// Return the source operand of a potentially bitcasted value. If there is no
+/// bitcast, return the input value itself.
+static Value *peekThroughBitcasts(Value *V) {
+  while (auto *BitCast = dyn_cast<BitCastInst>(V))
+    V = BitCast->getOperand(0);
+  return V;
+}
+
 static bool canWidenLoad(LoadInst *Load, const TargetTransformInfo &TTI) {
   // Do not widen load if atomic/volatile or under asan/hwasan/memtag/tsan.
   // The widened load may load data from dirty regions or create data races
@@ -751,8 +759,8 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
 
   // bitcast (shuf V0, V1, MaskC) --> shuf (bitcast V0), (bitcast V1), MaskC'
   ++NumShufOfBitcast;
-  Value *CastV0 = Builder.CreateBitCast(V0, NewShuffleTy);
-  Value *CastV1 = Builder.CreateBitCast(V1, NewShuffleTy);
+  Value *CastV0 = Builder.CreateBitCast(peekThroughBitcasts(V0), NewShuffleTy);
+  Value *CastV1 = Builder.CreateBitCast(peekThroughBitcasts(V1), NewShuffleTy);
   Value *Shuf = Builder.CreateShuffleVector(CastV0, CastV1, NewMask);
   replaceValue(I, *Shuf);
   return true;
