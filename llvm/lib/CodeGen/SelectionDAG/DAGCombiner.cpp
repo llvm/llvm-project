@@ -23447,9 +23447,7 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SmallVector<SDValue, 8> Ops;
-
   EVT SVT = EVT::getIntegerVT(*DAG.getContext(), OpVT.getSizeInBits());
-  SDValue ScalarUndef = DAG.getNode(ISD::UNDEF, DL, SVT);
 
   // Keep track of what we encounter.
   bool AnyInteger = false;
@@ -23459,7 +23457,7 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
         !Op.getOperand(0).getValueType().isVector())
       Ops.push_back(Op.getOperand(0));
     else if (ISD::UNDEF == Op.getOpcode())
-      Ops.push_back(ScalarUndef);
+      Ops.push_back(DAG.getNode(ISD::UNDEF, DL, SVT));
     else
       return SDValue();
 
@@ -23479,13 +23477,12 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
   // Replace UNDEFs by another scalar UNDEF node, of the final desired type.
   if (AnyFP) {
     SVT = EVT::getFloatingPointVT(OpVT.getSizeInBits());
-    ScalarUndef = DAG.getNode(ISD::UNDEF, DL, SVT);
     if (AnyInteger) {
       for (SDValue &Op : Ops) {
         if (Op.getValueType() == SVT)
           continue;
         if (Op.isUndef())
-          Op = ScalarUndef;
+          Op = DAG.getNode(ISD::UNDEF, DL, SVT);
         else
           Op = DAG.getBitcast(SVT, Op);
       }
