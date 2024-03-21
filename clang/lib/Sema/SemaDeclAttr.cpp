@@ -5952,6 +5952,35 @@ static void handleBuiltinAliasAttr(Sema &S, Decl *D,
   D->addAttr(::new (S.Context) BuiltinAliasAttr(S.Context, AL, Ident));
 }
 
+static void handleElementwiseBuiltinAliasAttr(Sema &S, Decl *D,
+                                              const ParsedAttr &AL) {
+  if (!AL.isArgIdent(0)) {
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
+        << AL << 1 << AANT_ArgumentIdentifier;
+    return;
+  }
+
+  IdentifierInfo *Ident = AL.getArgAsIdent(0)->Ident;
+  unsigned BuiltinID = Ident->getBuiltinID();
+  StringRef AliasName = cast<FunctionDecl>(D)->getIdentifier()->getName();
+
+  bool IsAArch64 = S.Context.getTargetInfo().getTriple().isAArch64();
+  bool IsARM = S.Context.getTargetInfo().getTriple().isARM();
+  bool IsRISCV = S.Context.getTargetInfo().getTriple().isRISCV();
+  bool IsHLSL = S.Context.getLangOpts().HLSL;
+  if ((IsAArch64 && !ArmSveAliasValid(S.Context, BuiltinID, AliasName)) ||
+      (IsARM && !ArmMveAliasValid(BuiltinID, AliasName) &&
+       !ArmCdeAliasValid(BuiltinID, AliasName)) ||
+      (IsRISCV && !RISCVAliasValid(BuiltinID, AliasName)) ||
+      (!IsAArch64 && !IsARM && !IsRISCV && !IsHLSL)) {
+    S.Diag(AL.getLoc(), diag::err_attribute_elementwise_builtin_alias) << AL;
+    return;
+  }
+
+  D->addAttr(::new (S.Context)
+                 ElementwiseBuiltinAliasAttr(S.Context, AL, Ident));
+}
+
 static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!AL.hasParsedType()) {
     S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
@@ -9852,7 +9881,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleBuiltinAliasAttr(S, D, AL);
     break;
   case ParsedAttr::AT_ElementwiseBuiltinAlias:
-    handleBuiltinAliasAttr(S, D, AL);
+    handleElementwiseBuiltinAliasAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_PreferredType:
