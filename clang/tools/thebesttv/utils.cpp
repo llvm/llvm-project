@@ -83,8 +83,15 @@ void dumpStmt(const ASTContext &Context, const Stmt *S) {
 }
 
 std::unique_ptr<Location>
-Location::fromSourceLocation(const ASTContext &Context,
-                             const SourceLocation &loc) {
+Location::fromSourceLocation(const ASTContext &Context, SourceLocation loc) {
+    /**
+     * Special handling for macro expansion location.
+     *
+     * Taken from SourceLocation::print() in clang/lib/Basic/SourceLocation.cpp
+     */
+    if (loc.isMacroID())
+        loc = Context.getSourceManager().getExpansionLoc(loc);
+
     FullSourceLoc FullLocation = Context.getFullLoc(loc);
     if (FullLocation.isInvalid() || !FullLocation.hasManager())
         return nullptr;

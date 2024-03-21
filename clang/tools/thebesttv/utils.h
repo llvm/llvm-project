@@ -81,7 +81,7 @@ struct Location {
     }
 
     static std::unique_ptr<Location>
-    fromSourceLocation(const ASTContext &Context, const SourceLocation &loc);
+    fromSourceLocation(const ASTContext &Context, SourceLocation loc);
 };
 
 struct NamedLocation : public Location {
