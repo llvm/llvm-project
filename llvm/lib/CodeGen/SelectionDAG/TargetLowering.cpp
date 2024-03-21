@@ -3790,7 +3790,8 @@ bool TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   return !canCreateUndefOrPoisonForTargetNode(Op, DemandedElts, DAG, PoisonOnly,
                                               /*ConsiderFlags*/ true, Depth) &&
          all_of(Op->ops(), [&](SDValue V) {
-           return DAG.isGuaranteedNotToBeUndefOrPoison(V, PoisonOnly, Depth + 1);
+           return DAG.isGuaranteedNotToBeUndefOrPoison(V, PoisonOnly,
+                                                       Depth + 1);
          });
 }
 
