@@ -21,7 +21,7 @@ public:
   typedef T (*FromfpFunc)(T, int, unsigned int);
 
   void testSpecialNumbersNonzeroWidth(FromfpFunc func) {
-    for (int rnd : MATH_ROUNDING_DIRECTIONS) {
+    for (int rnd : MATH_ROUNDING_DIRECTIONS_INCLUDING_UNKNOWN) {
       EXPECT_FP_EQ(zero, func(zero, rnd, 32U));
       EXPECT_FP_EQ(neg_zero, func(neg_zero, rnd, 32U));
 
@@ -33,7 +33,7 @@ public:
   }
 
   void testSpecialNumbersZeroWidth(FromfpFunc func) {
-    for (int rnd : MATH_ROUNDING_DIRECTIONS) {
+    for (int rnd : MATH_ROUNDING_DIRECTIONS_INCLUDING_UNKNOWN) {
       EXPECT_FP_EQ(aNaN, func(zero, rnd, 0U));
       EXPECT_FP_EQ(aNaN, func(neg_zero, rnd, 0U));
 
@@ -45,7 +45,7 @@ public:
   }
 
   void testRoundedNumbersWithinRange(FromfpFunc func) {
-    for (int rnd : MATH_ROUNDING_DIRECTIONS) {
+    for (int rnd : MATH_ROUNDING_DIRECTIONS_INCLUDING_UNKNOWN) {
       EXPECT_FP_EQ(T(1.0), func(T(1.0), rnd, 2U));
       EXPECT_FP_EQ(T(-1.0), func(T(-1.0), rnd, 1U));
       EXPECT_FP_EQ(T(10.0), func(T(10.0), rnd, 5U));
@@ -56,7 +56,7 @@ public:
   }
 
   void testRoundedNumbersOutsideRange(FromfpFunc func) {
-    for (int rnd : MATH_ROUNDING_DIRECTIONS) {
+    for (int rnd : MATH_ROUNDING_DIRECTIONS_INCLUDING_UNKNOWN) {
       EXPECT_FP_EQ(aNaN, func(T(1.0), rnd, 1U));
       EXPECT_FP_EQ(aNaN, func(T(10.0), rnd, 4U));
       EXPECT_FP_EQ(aNaN, func(T(-10.0), rnd, 4U));
@@ -288,6 +288,78 @@ public:
     EXPECT_FP_EQ(aNaN, func(T(5.75), FP_INT_TONEAREST, 3U));
     EXPECT_FP_EQ(aNaN, func(T(-5.75), FP_INT_TONEAREST, 3U));
   }
+
+  void testFractionsToNearestFallbackWithinRange(FromfpFunc func) {
+    EXPECT_FP_EQ(T(0.0), func(T(0.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
+    EXPECT_FP_EQ(T(-0.0), func(T(-0.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
+    EXPECT_FP_EQ(T(0.0), func(T(0.115), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
+    EXPECT_FP_EQ(T(-0.0), func(T(-0.115), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
+    EXPECT_FP_EQ(T(1.0), func(T(0.715), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
+    EXPECT_FP_EQ(T(-1.0), func(T(-0.715), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
+    EXPECT_FP_EQ(T(1.0), func(T(1.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
+    EXPECT_FP_EQ(T(-1.0), func(T(-1.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
+    EXPECT_FP_EQ(T(2.0), func(T(1.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
+    EXPECT_FP_EQ(T(-2.0), func(T(-1.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
+    EXPECT_FP_EQ(T(2.0), func(T(1.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
+    EXPECT_FP_EQ(T(-2.0), func(T(-1.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
+    EXPECT_FP_EQ(T(10.0), func(T(10.32), UNKNOWN_MATH_ROUNDING_DIRECTION, 5U));
+    EXPECT_FP_EQ(T(-10.0),
+                 func(T(-10.32), UNKNOWN_MATH_ROUNDING_DIRECTION, 5U));
+    EXPECT_FP_EQ(T(11.0), func(T(10.65), UNKNOWN_MATH_ROUNDING_DIRECTION, 5U));
+    EXPECT_FP_EQ(T(-11.0),
+                 func(T(-10.65), UNKNOWN_MATH_ROUNDING_DIRECTION, 5U));
+    EXPECT_FP_EQ(T(1234.0),
+                 func(T(1234.38), UNKNOWN_MATH_ROUNDING_DIRECTION, 12U));
+    EXPECT_FP_EQ(T(-1234.0),
+                 func(T(-1234.38), UNKNOWN_MATH_ROUNDING_DIRECTION, 12U));
+    EXPECT_FP_EQ(T(1235.0),
+                 func(T(1234.96), UNKNOWN_MATH_ROUNDING_DIRECTION, 12U));
+    EXPECT_FP_EQ(T(-1235.0),
+                 func(T(-1234.96), UNKNOWN_MATH_ROUNDING_DIRECTION, 12U));
+
+    EXPECT_FP_EQ(T(2.0), func(T(2.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
+    EXPECT_FP_EQ(T(-2.0), func(T(-2.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
+    EXPECT_FP_EQ(T(2.0), func(T(2.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
+    EXPECT_FP_EQ(T(-2.0), func(T(-2.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
+    EXPECT_FP_EQ(T(3.0), func(T(2.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
+    EXPECT_FP_EQ(T(-3.0), func(T(-2.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
+    EXPECT_FP_EQ(T(5.0), func(T(5.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 4U));
+    EXPECT_FP_EQ(T(-5.0), func(T(-5.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 4U));
+    EXPECT_FP_EQ(T(6.0), func(T(5.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 4U));
+    EXPECT_FP_EQ(T(-6.0), func(T(-5.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 4U));
+    EXPECT_FP_EQ(T(6.0), func(T(5.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 4U));
+    EXPECT_FP_EQ(T(-6.0), func(T(-5.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 4U));
+  }
+
+  void testFractionsToNearestFallbackOutsideRange(FromfpFunc func) {
+    EXPECT_FP_EQ(aNaN, func(T(0.715), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
+    EXPECT_FP_EQ(aNaN, func(T(1.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
+    EXPECT_FP_EQ(aNaN, func(T(1.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
+    EXPECT_FP_EQ(aNaN, func(T(-1.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
+    EXPECT_FP_EQ(aNaN, func(T(1.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
+    EXPECT_FP_EQ(aNaN, func(T(-1.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
+    EXPECT_FP_EQ(aNaN, func(T(10.32), UNKNOWN_MATH_ROUNDING_DIRECTION, 4U));
+    EXPECT_FP_EQ(aNaN, func(T(-10.32), UNKNOWN_MATH_ROUNDING_DIRECTION, 4U));
+    EXPECT_FP_EQ(aNaN, func(T(10.65), UNKNOWN_MATH_ROUNDING_DIRECTION, 4U));
+    EXPECT_FP_EQ(aNaN, func(T(-10.65), UNKNOWN_MATH_ROUNDING_DIRECTION, 4U));
+    EXPECT_FP_EQ(aNaN, func(T(1234.38), UNKNOWN_MATH_ROUNDING_DIRECTION, 11U));
+    EXPECT_FP_EQ(aNaN, func(T(-1234.38), UNKNOWN_MATH_ROUNDING_DIRECTION, 11U));
+    EXPECT_FP_EQ(aNaN, func(T(1234.96), UNKNOWN_MATH_ROUNDING_DIRECTION, 11U));
+    EXPECT_FP_EQ(aNaN, func(T(-1234.96), UNKNOWN_MATH_ROUNDING_DIRECTION, 11U));
+
+    EXPECT_FP_EQ(aNaN, func(T(2.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
+    EXPECT_FP_EQ(aNaN, func(T(-2.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
+    EXPECT_FP_EQ(aNaN, func(T(2.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
+    EXPECT_FP_EQ(aNaN, func(T(-2.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
+    EXPECT_FP_EQ(aNaN, func(T(2.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
+    EXPECT_FP_EQ(aNaN, func(T(-2.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
+    EXPECT_FP_EQ(aNaN, func(T(5.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
+    EXPECT_FP_EQ(aNaN, func(T(-5.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
+    EXPECT_FP_EQ(aNaN, func(T(5.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
+    EXPECT_FP_EQ(aNaN, func(T(-5.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
+    EXPECT_FP_EQ(aNaN, func(T(5.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
+    EXPECT_FP_EQ(aNaN, func(T(-5.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
+  }
 };
 
 #define LIST_FROMFP_TESTS(T, func)                                             \
@@ -333,6 +405,12 @@ public:
   }                                                                            \
   TEST_F(LlvmLibcFromfpTest, FractionsToNearestOutsideRange) {                 \
     testFractionsToNearestOutsideRange(&func);                                 \
+  }                                                                            \
+  TEST_F(LlvmLibcFromfpTest, FractionsToNearestFallbackWithinRange) {          \
+    testFractionsToNearestFallbackWithinRange(&func);                          \
+  }                                                                            \
+  TEST_F(LlvmLibcFromfpTest, FractionsToNearestFallbackOutsideRange) {         \
+    testFractionsToNearestFallbackOutsideRange(&func);                         \
   }
 
 #endif // LIBC_TEST_SRC_MATH_SMOKE_FROMFPTEST_H

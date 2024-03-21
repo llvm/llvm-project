@@ -107,11 +107,12 @@ template <typename T> struct FPTest : public Test {
   const T min_denormal = FPBits::min_subnormal(Sign::POS).get_val();           \
   const T neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();       \
   const T max_denormal = FPBits::max_subnormal().get_val();                    \
-  static constexpr LIBC_NAMESPACE::cpp::array<int, 5>                          \
-      MATH_ROUNDING_DIRECTIONS = {                                             \
+  static constexpr int UNKNOWN_MATH_ROUNDING_DIRECTION = 99;                   \
+  static constexpr LIBC_NAMESPACE::cpp::array<int, 6>                          \
+      MATH_ROUNDING_DIRECTIONS_INCLUDING_UNKNOWN = {                           \
           FP_INT_UPWARD,     FP_INT_DOWNWARD,                                  \
           FP_INT_TOWARDZERO, FP_INT_TONEARESTFROMZERO,                         \
-          FP_INT_TONEAREST,                                                    \
+          FP_INT_TONEAREST,  UNKNOWN_MATH_ROUNDING_DIRECTION,                  \
   };
 
 #define EXPECT_FP_EQ(expected, actual)                                         \
