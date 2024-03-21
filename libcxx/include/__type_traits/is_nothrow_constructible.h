@@ -10,6 +10,8 @@
 #define _LIBCPP___TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H
 
 #include <__config>
+#include <__type_traits/add_lvalue_reference.h>
+#include <__type_traits/add_rvalue_reference.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_reference.h>
@@ -64,6 +66,55 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp[_Ns]>
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp, class... _Args>
 inline constexpr bool is_nothrow_constructible_v = is_nothrow_constructible<_Tp, _Args...>::value;
+#endif
+
+// TODO: remove this implementation once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106611 is fixed
+#ifdef _LIBCPP_COMPILER_GCC
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_nothrow_copy_constructible
+    : public is_nothrow_constructible<_Tp, __add_lvalue_reference_t<const _Tp> > {};
+
+#else // _LIBCPP_COMPILER_GCC
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_nothrow_copy_constructible
+    : public integral_constant< bool, __is_nothrow_constructible(_Tp, __add_lvalue_reference_t<const _Tp>)> {};
+
+#endif // _LIBCPP_COMPILER_GCC
+
+#if _LIBCPP_STD_VER >= 17
+template <class _Tp>
+inline constexpr bool is_nothrow_copy_constructible_v = is_nothrow_copy_constructible<_Tp>::value;
+#endif
+
+// TODO: remove this implementation once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106611 is fixed
+#ifndef _LIBCPP_COMPILER_GCC
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_nothrow_move_constructible
+    : public integral_constant<bool, __is_nothrow_constructible(_Tp, __add_rvalue_reference_t<_Tp>)> {};
+
+#else // _LIBCPP_COMPILER_GCC
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_nothrow_move_constructible
+    : public is_nothrow_constructible<_Tp, __add_rvalue_reference_t<_Tp> > {};
+
+#endif // _LIBCPP_COMPILER_GCC
+
+#if _LIBCPP_STD_VER >= 17
+template <class _Tp>
+inline constexpr bool is_nothrow_move_constructible_v = is_nothrow_move_constructible<_Tp>::value;
+#endif
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_nothrow_default_constructible
+    : public integral_constant<bool, __is_nothrow_constructible(_Tp)> {};
+
+#if _LIBCPP_STD_VER >= 17
+template <class _Tp>
+inline constexpr bool is_nothrow_default_constructible_v = __is_nothrow_constructible(_Tp);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

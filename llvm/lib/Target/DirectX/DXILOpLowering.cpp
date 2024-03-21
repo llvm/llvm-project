@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILConstants.h"
+#include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
@@ -31,7 +32,6 @@ using namespace llvm::dxil;
 
 static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
   IRBuilder<> B(M.getContext());
-  Value *DXILOpArg = B.getInt32(static_cast<unsigned>(DXILOp));
   DXILOpBuilder DXILB(M, B);
   Type *OverloadTy = DXILB.getOverloadTy(DXILOp, F.getFunctionType());
   for (User *U : make_early_inc_range(F.users())) {
@@ -39,11 +39,9 @@ static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
     if (!CI)
       continue;
 
-    SmallVector<Value *> Args;
-    Args.emplace_back(DXILOpArg);
-    Args.append(CI->arg_begin(), CI->arg_end());
     B.SetInsertPoint(CI);
-    CallInst *DXILCI = DXILB.createDXILOpCall(DXILOp, OverloadTy, CI->args());
+    CallInst *DXILCI = DXILB.createDXILOpCall(DXILOp, F.getReturnType(),
+                                              OverloadTy, CI->args());
 
     CI->replaceAllUsesWith(DXILCI);
     CI->eraseFromParent();
@@ -94,9 +92,12 @@ public:
   DXILOpLoweringLegacy() : ModulePass(ID) {}
 
   static char ID; // Pass identification.
+  void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+    // Specify the passes that your pass depends on
+    AU.addRequired<DXILIntrinsicExpansionLegacy>();
+  }
 };
 char DXILOpLoweringLegacy::ID = 0;
-
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering",

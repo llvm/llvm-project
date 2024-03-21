@@ -187,10 +187,7 @@ entry:
 define <8 x bfloat> @insertzero_v4bf16(<4 x bfloat> %a) {
 ; CHECK-LABEL: insertzero_v4bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi d4, #0000000000000000
-; CHECK-NEXT:    movi d5, #0000000000000000
-; CHECK-NEXT:    movi d6, #0000000000000000
-; CHECK-NEXT:    movi d7, #0000000000000000
+; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x bfloat> %a, <4 x bfloat> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

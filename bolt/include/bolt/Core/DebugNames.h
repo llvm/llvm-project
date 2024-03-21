@@ -36,6 +36,9 @@ public:
   bool isTU() const { return DWARF5AccelTableData::isTU(); }
   std::optional<unsigned> getSecondUnitID() const { return SecondUnitID; }
 
+  void setPatchOffset(uint64_t PatchOffset) { OffsetVal = PatchOffset; }
+  uint64_t getPatchOffset() const { return std::get<uint64_t>(OffsetVal); }
+
 private:
   std::optional<unsigned> SecondUnitID;
 };
@@ -49,10 +52,12 @@ public:
       Abbrev->~DebugNamesAbbrev();
   }
   /// Add DWARF5 Accelerator table entry.
-  /// Input is DWARFUnit being processed, DIE that belongs to it, and potential
-  /// SkeletonCU if the Unit comes from a DWO section.
-  void addAccelTableEntry(DWARFUnit &Unit, const DIE &Die,
-                          const std::optional<uint64_t> &DWOID);
+  /// Input is DWARFUnit being processed, DIE that belongs to it, potential
+  /// DWOID if the Unit comes from a DWO section, and potential parent entry.
+  std::optional<BOLTDWARF5AccelTableData *>
+  addAccelTableEntry(DWARFUnit &Unit, const DIE &Die,
+                     const std::optional<uint64_t> &DWOID,
+                     std::optional<BOLTDWARF5AccelTableData *> &Parent);
   /// Set current unit being processed.
   void setCurrentUnit(DWARFUnit &Unit, const uint64_t UnitStartOffset);
   /// Emit Accelerator table.
@@ -121,6 +126,8 @@ private:
   llvm::DenseMap<llvm::hash_code, uint64_t> StrCacheToOffsetMap;
   // Contains DWO ID to CUList Index.
   llvm::DenseMap<uint64_t, uint32_t> CUOffsetsToPatch;
+  // Contains a map of Entry ID to Entry relative offset.
+  llvm::DenseMap<uint64_t, uint32_t> EntryRelativeOffsets;
   /// Adds Unit to either CUList, LocalTUList or ForeignTUList.
   /// Input Unit being processed, and DWO ID if Unit is being processed comes
   /// from a DWO section.
@@ -143,7 +150,7 @@ private:
   /// Write Entries.
   void writeEntries();
   /// Write an Entry.
-  void writeEntry(const BOLTDWARF5AccelTableData &Entry);
+  void writeEntry(BOLTDWARF5AccelTableData &Entry);
   /// Write augmentation_string for BOLT.
   void writeAugmentationString();
   /// Emit out Header for DWARF5 Accelerator table.

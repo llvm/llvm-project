@@ -443,6 +443,10 @@ def OpBitcast : UnOp<"OpBitcast", 124>;
 def OpPtrCastToCrossWorkgroupINTEL : UnOp<"OpPtrCastToCrossWorkgroupINTEL", 5934>;
 def OpCrossWorkgroupCastToPtrINTEL : UnOp<"OpCrossWorkgroupCastToPtrINTEL", 5938>;
 
+// SPV_INTEL_bfloat16_conversion
+def OpConvertFToBF16INTEL : UnOp<"OpConvertFToBF16INTEL", 6116>;
+def OpConvertBF16ToFINTEL : UnOp<"OpConvertBF16ToFINTEL", 6117>;
+
 // 3.42.12 Composite Instructions
 
 def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),

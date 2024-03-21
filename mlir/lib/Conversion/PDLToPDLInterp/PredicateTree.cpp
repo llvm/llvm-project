@@ -272,8 +272,7 @@ static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
     allPositions.push_back(inputs.lookup(arg));
 
   // Push the constraint to the furthest position.
-  Position *pos = *std::max_element(allPositions.begin(), allPositions.end(),
-                                    comparePosDepth);
+  Position *pos = *llvm::max_element(allPositions, comparePosDepth);
   ResultRange results = op.getResults();
   PredicateBuilder::Predicate pred = builder.getConstraint(
       op.getName(), allPositions, SmallVector<Type>(results.getTypes()),

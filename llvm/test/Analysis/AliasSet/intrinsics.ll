@@ -1,9 +1,8 @@
-; RUN: opt -passes=print-alias-sets -S -o - < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=print-alias-sets -S -o - < %s 2>&1 | FileCheck %s --implicit-check-not="Unknown instructions"
 
 ; CHECK: Alias sets for function 'test1':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Memory locations: (ptr %a, LocationSize::precise(1))
-; CHECK-NOT: 1 Unknown instruction
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Memory locations: (ptr %b, LocationSize::precise(1))
 define void @test1(i32 %c) {
 entry:
@@ -64,7 +63,6 @@ entry:
 ; CHECK: Alias sets for function 'test5':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Memory locations: (ptr %a, LocationSize::precise(1))
-; CHECK-NOT: 1 Unknown instruction
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Memory locations: (ptr %b, LocationSize::precise(1))
 define void @test5() {
 entry:

@@ -85,16 +85,21 @@ bool isReassociationValid(ArrayRef<AffineMap> reassociation,
 template <typename ReshapeOpTy, typename InverseReshapeOpTy>
 static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
                                   ArrayRef<Attribute> operands) {
-  // Fold producer-consumer reshape ops that where the operand type of the
+
+  if (reshapeOp.getSrcType() == reshapeOp.getType())
+    return reshapeOp.getSrc();
+
+  // Fold producer-consumer reshape ops where the operand type of the
   // producer is same as the return type of the consumer.
   auto reshapeSrcOp =
       reshapeOp.getSrc().template getDefiningOp<InverseReshapeOpTy>();
   if (reshapeSrcOp && reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
     return reshapeSrcOp.getSrc();
+
   // Reshape of a constant can be replaced with a new constant.
-  if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front())) {
+  if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front()))
     return elements.reshape(cast<ShapedType>(reshapeOp.getResult().getType()));
-  }
+
   return nullptr;
 }
 
@@ -103,41 +108,36 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
 template <typename Op, typename T>
 static LogicalResult verifyReshapeLikeTypes(Op op, T expandedType,
                                             T collapsedType, bool isExpansion) {
+
   unsigned expandedRank = expandedType.getRank();
   unsigned collapsedRank = collapsedType.getRank();
   if (expandedRank < collapsedRank)
-    return op.emitOpError("expected the type ")
-           << expandedType
-           << " to have higher rank than the type = " << collapsedType;
-  if (expandedRank == 0)
-    return op.emitOpError("expected non-zero memref ranks");
-  if (expandedRank == collapsedRank)
-    return op.emitOpError("expected to collapse or expand dims");
+    return op.emitOpError("expected the expanded type, ")
+           << expandedType << " to have a higher (or same) rank "
+           << "than the collapsed type, " << collapsedType << '.';
 
-  if (collapsedRank == 0) {
-    // If collapsed rank is 0, then expanded type must be static shaped and of
-    // sizes 1.
-    if (llvm::any_of(expandedType.getShape(),
-                     [](int64_t dim) -> bool { return dim != 1; }))
-      return op.emitOpError("invalid to reshape tensor/memref with non-unit "
-                            "extent dimensions to zero-rank tensor/memref");
-    return success();
-  }
   if (collapsedRank != op.getReassociation().size())
-    return op.emitOpError("expected rank of the collapsed type(")
-           << collapsedRank << ") to be the number of reassociation maps("
-           << op.getReassociation().size() << ")";
+    return op.emitOpError("expected collapsed rank (")
+           << collapsedRank << ") to equal the number of reassociation maps ("
+           << op.getReassociation().size() << ").";
+
   auto maps = op.getReassociationMaps();
   for (auto it : llvm::enumerate(maps))
     if (it.value().getNumDims() != expandedRank)
       return op.emitOpError("expected reassociation map #")
-             << it.index() << " of same rank as expanded memref("
-             << expandedRank << "), but got " << it.value().getNumDims();
+             << it.index() << " to have size equal to the expanded rank ("
+             << expandedRank << "), but it is  " << it.value().getNumDims()
+             << '.';
+
   int invalidIdx = 0;
   if (!isReassociationValid(maps, &invalidIdx))
     return op.emitOpError("expected reassociation map #")
-           << invalidIdx << " to be valid and contiguous";
-  return verifyReshapeLikeShapes(op, collapsedType, expandedType, isExpansion);
+           << invalidIdx << " to be valid and contiguous.";
+
+  return reshapeLikeShapesAreCompatible(
+      [&](const Twine &msg) { return op->emitOpError(msg); },
+      collapsedType.getShape(), expandedType.getShape(),
+      op.getReassociationIndices(), isExpansion);
 }
 
 /// Verify that shapes of the reshaped types using following rules
@@ -152,16 +152,6 @@ LogicalResult reshapeLikeShapesAreCompatible(
     function_ref<LogicalResult(const Twine &)> emitError,
     ArrayRef<int64_t> collapsedShape, ArrayRef<int64_t> expandedShape,
     ArrayRef<ReassociationIndices> reassociationMaps, bool isExpandingReshape);
-
-template <typename OpTy>
-static LogicalResult verifyReshapeLikeShapes(OpTy op, ShapedType collapsedType,
-                                             ShapedType expandedType,
-                                             bool isExpandingReshape) {
-  return reshapeLikeShapesAreCompatible(
-      [&](const Twine &msg) { return op->emitOpError(msg); },
-      collapsedType.getShape(), expandedType.getShape(),
-      op.getReassociationIndices(), isExpandingReshape);
-}
 
 /// Returns true iff the type is a MemRefType and has a non-identity layout.
 bool hasNonIdentityLayout(Type type);

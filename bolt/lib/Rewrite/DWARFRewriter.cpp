@@ -283,10 +283,9 @@ public:
   DIEStreamer(DIEBuilder *DIEBldr, DWARFRewriter &Rewriter,
               DWARFLinkerBase::OutputFileType OutFileType,
               raw_pwrite_stream &OutFile,
-              std::function<StringRef(StringRef Input)> Translator,
               DWARFLinkerBase::MessageHandlerTy Warning)
-      : DwarfStreamer(OutFileType, OutFile, Translator, Warning),
-        DIEBldr(DIEBldr), Rewriter(Rewriter){};
+      : DwarfStreamer(OutFileType, OutFile, Warning), DIEBldr(DIEBldr),
+        Rewriter(Rewriter){};
 
   using DwarfStreamer::emitCompileUnitHeader;
 
@@ -469,7 +468,6 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
 
   std::unique_ptr<DIEStreamer> Streamer = std::make_unique<DIEStreamer>(
       &DIEBldr, Rewriter, DWARFLinkerBase::OutputFileType::Object, OutFile,
-      [](StringRef Input) -> StringRef { return Input; },
       [&](const Twine &Warning, StringRef Context, const DWARFDie *) {});
   Error Err = Streamer->init(TheTriple, Swift5ReflectionSegmentName);
   if (Err)
@@ -784,7 +782,7 @@ void DWARFRewriter::updateDebugInfo() {
     }
   } else {
     // Update unit debug info in parallel
-    ThreadPool &ThreadPool = ParallelUtilities::getThreadPool();
+    ThreadPoolInterface &ThreadPool = ParallelUtilities::getThreadPool();
     for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units())
       ThreadPool.async(processUnitDIE, CU.get(), &DIEBlder);
     ThreadPool.wait();

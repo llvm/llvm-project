@@ -327,8 +327,12 @@ struct TestPatternDriver
 struct DumpNotifications : public RewriterBase::Listener {
   void notifyBlockInserted(Block *block, Region *previous,
                            Region::iterator previousIt) override {
-    llvm::outs() << "notifyBlockInserted into "
-                 << block->getParentOp()->getName() << ": ";
+    llvm::outs() << "notifyBlockInserted";
+    if (block->getParentOp()) {
+      llvm::outs() << " into " << block->getParentOp()->getName() << ": ";
+    } else {
+      llvm::outs() << " into unknown op: ";
+    }
     if (previous == nullptr) {
       llvm::outs() << "was unlinked\n";
     } else {
@@ -341,7 +345,9 @@ struct DumpNotifications : public RewriterBase::Listener {
     if (!previous.isSet()) {
       llvm::outs() << ", was unlinked\n";
     } else {
-      if (previous.getPoint() == previous.getBlock()->end()) {
+      if (!previous.getPoint().getNodePtr()) {
+        llvm::outs() << ", was linked, exact position unknown\n";
+      } else if (previous.getPoint() == previous.getBlock()->end()) {
         llvm::outs() << ", was last in block\n";
       } else {
         llvm::outs() << ", previous = " << previous.getPoint()->getName()
@@ -349,8 +355,17 @@ struct DumpNotifications : public RewriterBase::Listener {
       }
     }
   }
+  void notifyBlockErased(Block *block) override {
+    llvm::outs() << "notifyBlockErased\n";
+  }
   void notifyOperationErased(Operation *op) override {
     llvm::outs() << "notifyOperationErased: " << op->getName() << "\n";
+  }
+  void notifyOperationModified(Operation *op) override {
+    llvm::outs() << "notifyOperationModified: " << op->getName() << "\n";
+  }
+  void notifyOperationReplaced(Operation *op, ValueRange values) override {
+    llvm::outs() << "notifyOperationReplaced: " << op->getName() << "\n";
   }
 };
 
@@ -1152,8 +1167,12 @@ struct TestLegalizePatternDriver
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
       DenseSet<Operation *> unlegalizedOps;
-      if (failed(applyPartialConversion(
-              getOperation(), target, std::move(patterns), &unlegalizedOps))) {
+      ConversionConfig config;
+      DumpNotifications dumpNotifications;
+      config.listener = &dumpNotifications;
+      config.unlegalizedOps = &unlegalizedOps;
+      if (failed(applyPartialConversion(getOperation(), target,
+                                        std::move(patterns), config))) {
         getOperation()->emitRemark() << "applyPartialConversion failed";
       }
       // Emit remarks for each legalizable operation.
@@ -1169,8 +1188,11 @@ struct TestLegalizePatternDriver
         return (bool)op->getAttrOfType<UnitAttr>("test.dynamically_legal");
       });
 
+      ConversionConfig config;
+      DumpNotifications dumpNotifications;
+      config.listener = &dumpNotifications;
       if (failed(applyFullConversion(getOperation(), target,
-                                     std::move(patterns)))) {
+                                     std::move(patterns), config))) {
         getOperation()->emitRemark() << "applyFullConversion failed";
       }
       return;
@@ -1181,8 +1203,10 @@ struct TestLegalizePatternDriver
 
     // Analyze the convertible operations.
     DenseSet<Operation *> legalizedOps;
+    ConversionConfig config;
+    config.legalizableOps = &legalizedOps;
     if (failed(applyAnalysisConversion(getOperation(), target,
-                                       std::move(patterns), legalizedOps)))
+                                       std::move(patterns), config)))
       return signalPassFailure();
 
     // Emit remarks for each legalizable operation.
@@ -1805,8 +1829,10 @@ struct TestMergeBlocksPatternDriver
         });
 
     DenseSet<Operation *> unlegalizedOps;
+    ConversionConfig config;
+    config.unlegalizedOps = &unlegalizedOps;
     (void)applyPartialConversion(getOperation(), target, std::move(patterns),
-                                 &unlegalizedOps);
+                                 config);
     for (auto *op : unlegalizedOps)
       op->emitRemark() << "op '" << op->getName() << "' is not legalizable";
   }
@@ -1830,7 +1856,7 @@ struct TestSelectiveOpReplacementPattern : public OpRewritePattern<TestCastOp> {
     OperandRange operands = op.getOperands();
 
     // Replace non-terminator uses with the first operand.
-    rewriter.replaceOpWithIf(op, operands[0], [](OpOperand &operand) {
+    rewriter.replaceUsesWithIf(op, operands[0], [](OpOperand &operand) {
       return operand.getOwner()->hasTrait<OpTrait::IsTerminator>();
     });
     // Replace everything else with the second operand if the operation isn't

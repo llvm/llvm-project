@@ -46,7 +46,11 @@ struct MemprofMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const;
 };
 
+#if SANITIZER_APPLE
 constexpr uptr kAllocatorSpace = 0x600000000000ULL;
+#else
+constexpr uptr kAllocatorSpace = 0x500000000000ULL;
+#endif
 constexpr uptr kAllocatorSize = 0x40000000000ULL; // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
 template <typename AddressSpaceViewTy>

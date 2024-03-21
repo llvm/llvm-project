@@ -62,6 +62,8 @@ STATISTIC(NumUnscaledPairCreated,
           "Number of load/store from unscaled generated");
 STATISTIC(NumZeroStoresPromoted, "Number of narrow zero stores promoted");
 STATISTIC(NumLoadsFromStoresPromoted, "Number of loads from stores promoted");
+STATISTIC(NumFailedAlignmentCheck, "Number of load/store pair transformation "
+                                   "not passed the alignment check");
 
 DEBUG_COUNTER(RegRenamingCounter, DEBUG_TYPE "-reg-renaming",
               "Controls which pairs are considered for renaming");
@@ -2337,9 +2339,6 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   MachineBasicBlock::iterator Paired =
       findMatchingInsn(MBBI, Flags, LdStLimit, /* FindNarrowMerge = */ false);
   if (Paired != E) {
-    ++NumPairCreated;
-    if (TII->hasUnscaledLdStOffset(MI))
-      ++NumUnscaledPairCreated;
     // Keeping the iterator straight is a pain, so we let the merge routine tell
     // us what the next instruction is after it's done mucking about.
     auto Prev = std::prev(MBBI);
@@ -2349,24 +2348,31 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
     MachineMemOperand *MemOp =
         MI.memoperands_empty() ? nullptr : MI.memoperands().front();
 
-    // Get the needed alignments to check them if
-    // ldp-aligned-only/stp-aligned-only features are opted.
-    uint64_t MemAlignment = MemOp ? MemOp->getAlign().value() : -1;
-    uint64_t TypeAlignment = MemOp ? Align(MemOp->getSize()).value() : -1;
+    // If a load/store arrives and ldp/stp-aligned-only feature is opted, check
+    // that the alignment of the source pointer is at least double the alignment
+    // of the type.
+    if ((MI.mayLoad() && Subtarget->hasLdpAlignedOnly()) ||
+        (MI.mayStore() && Subtarget->hasStpAlignedOnly())) {
+      // If there is no size/align information, cancel the transformation.
+      if (!MemOp || !MemOp->getMemoryType().isValid()) {
+        NumFailedAlignmentCheck++;
+        return false;
+      }
 
-    // If a load arrives and ldp-aligned-only feature is opted, check that the
-    // alignment of the source pointer is at least double the alignment of the
-    // type.
-    if (MI.mayLoad() && Subtarget->hasLdpAlignedOnly() && MemOp &&
-        MemAlignment < 2 * TypeAlignment)
-      return false;
+      // Get the needed alignments to check them if
+      // ldp-aligned-only/stp-aligned-only features are opted.
+      uint64_t MemAlignment = MemOp->getAlign().value();
+      uint64_t TypeAlignment = Align(MemOp->getSize().getValue()).value();
 
-    // If a store arrives and stp-aligned-only feature is opted, check that the
-    // alignment of the source pointer is at least double the alignment of the
-    // type.
-    if (MI.mayStore() && Subtarget->hasStpAlignedOnly() && MemOp &&
-        MemAlignment < 2 * TypeAlignment)
-      return false;
+      if (MemAlignment < 2 * TypeAlignment) {
+        NumFailedAlignmentCheck++;
+        return false;
+      }
+    }
+
+    ++NumPairCreated;
+    if (TII->hasUnscaledLdStOffset(MI))
+      ++NumUnscaledPairCreated;
 
     MBBI = mergePairedInsns(MBBI, Paired, Flags);
     // Collect liveness info for instructions between Prev and the new position

@@ -93,12 +93,13 @@ ValueProfNode *__llvm_profile_end_vnodes(void) { return &VNodesEnd; }
 ValueProfNode *CurrentVNode = &VNodesStart + 1;
 ValueProfNode *EndVNode = &VNodesEnd;
 
-/* lld-link provides __buildid symbol which ponits to the 16 bytes build id when
+/* lld-link provides __buildid symbol which points to the 16 bytes build id when
  * using /build-id flag. https://lld.llvm.org/windows_support.html#lld-flags */
 #define BUILD_ID_LEN 16
-COMPILER_RT_WEAK uint8_t __buildid[BUILD_ID_LEN];
+COMPILER_RT_WEAK uint8_t __buildid[BUILD_ID_LEN] = {0};
 COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
-  if (*__buildid) {
+  static const uint8_t zeros[BUILD_ID_LEN] = {0};
+  if (memcmp(__buildid, zeros, BUILD_ID_LEN) != 0) {
     if (Writer &&
         lprofWriteOneBinaryId(Writer, BUILD_ID_LEN, __buildid, 0) == -1)
       return -1;
