@@ -15,6 +15,15 @@
 namespace llvm {
 namespace memprof {
 
+// The versions of the indexed MemProf format
+enum MemProfVersion {
+  // Version 0: This version didn't have a version field have a version in the
+  // header.
+  MemProfVersion0 = 0,
+  // Version 1: Added a version field to the header.
+  MemProfVersion1 = 1,
+};
+
 enum class Meta : uint64_t {
   Start = 0,
 #define MIBEntryDef(NameTag, Name, Type) NameTag,

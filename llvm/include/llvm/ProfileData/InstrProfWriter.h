@@ -75,11 +75,16 @@ private:
   // deployment of newer versions of llvm-profdata.
   bool WritePrevVersion = false;
 
+  // The version we should use to write MemProf in.
+  memprof::MemProfVersion MemProfVersionRequested;
+
 public:
   InstrProfWriter(bool Sparse = false,
                   uint64_t TemporalProfTraceReservoirSize = 0,
                   uint64_t MaxTemporalProfTraceLength = 0,
-                  bool WritePrevVersion = false);
+                  bool WritePrevVersion = false,
+                  memprof::MemProfVersion MemProfVersionRequested =
+                      memprof::MemProfVersion0);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
