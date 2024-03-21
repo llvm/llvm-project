@@ -6426,14 +6426,15 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
     case bitc::FUNC_CODE_DEBUG_RECORD_LABEL: {
-      // DPLabels are placed after the Instructions that they are attached to.
+      // DbgLabelRecords are placed after the Instructions that they are
+      // attached to.
       Instruction *Inst = getLastInstruction();
       if (!Inst)
         return error("Invalid dbg record: missing instruction");
       DILocation *DIL = cast<DILocation>(getFnMetadataByID(Record[0]));
       DILabel *Label = cast<DILabel>(getFnMetadataByID(Record[1]));
       Inst->getParent()->insertDbgRecordBefore(
-          new DPLabel(Label, DebugLoc(DIL)), Inst->getIterator());
+          new DbgLabelRecord(Label, DebugLoc(DIL)), Inst->getIterator());
       continue; // This isn't an instruction.
     }
     case bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE:
