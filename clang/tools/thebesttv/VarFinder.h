@@ -77,6 +77,17 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
     }
 
     /**
+     * Handle NULL macro.
+     */
+    bool VisitGNUNullExpr(GNUNullExpr *gne) {
+        if (sourceLocationMatches(gne->getBeginLoc())) {
+            found = "NULL";
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Handle integer literal (mostly 0).
      */
     bool VisitIntegerLiteral(IntegerLiteral *il) {
