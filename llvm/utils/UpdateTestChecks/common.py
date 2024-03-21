@@ -430,36 +430,81 @@ def collect_original_check_lines(ti: TestInfo, prefix_set: set):
     result[func_name][prefix] is filled with a list of right-hand-sides of check
     lines.
     """
-    result = {}
 
+    # We need to detect check lines, and associate them with the correct functions and prefixes.
+    # There are two formats how IR and check lines are combined. In the standard format,
+    # they are interleaved, and it suffices to parse IR function definitions in order to keep
+    # track of the current function:
+    #
+    #    define i32 @func1(i32 %x) {
+    #    ; CHECK-LABEL: define i32 @func1(
+    #    ; CHECK-NEXT:    /* check lines */
+    #    ;
+    #      %1 = /* IR body of @func1 */
+    #
+    #    define i32 @func2(i32 %x) {
+    #    ; CHECK-LABEL: define i32 @func2(
+    #    ; CHECK-NEXT:    /* check lines */
+    #    ;
+    #      %1 = /* IR body of @func2 */
+    #
+    # However, with --include-generated-funcs, check lines are separate from IR function bodies,
+    # and we also need to parse CHECK lines of function definitions:
+    #
+    #    define i32 @func1(i32 %x) {
+    #      /* IR body */
+    #
+    #    define i32 @func2(..) {
+    #      /* IR body */
+    #
+    #    ; CHECK-LABEL: define i32 @func1
+    #    ; CHECK-NEXT /* check lines for func1 */
+    #
+    #    ; CHECK-LABEL: define i32 @func2
+    #    ; CHECK-NEXT /* check lines for func2 */
+
+    result = collections.defaultdict(dict)
     current_function = None
+
+    def update_current_function(line):
+        m = IR_FUNCTION_RE.match(line)
+        if m is None:
+            return
+        func_name = m.group(1)
+        if ti.args.function is not None and func_name != ti.args.function:
+            # When filtering on a specific function, skip all others.
+            return
+
+        nonlocal current_function
+        current_function = result[func_name]
+
     for input_line_info in ti.ro_iterlines():
         input_line = input_line_info.line
-        if current_function is not None:
-            if input_line == "":
-                continue
-            if input_line.lstrip().startswith(";"):
-                m = CHECK_RE.match(input_line)
-                if (
-                    m is not None
-                    and m.group(1) in prefix_set
-                    and m.group(2) not in ["LABEL", "SAME"]
-                ):
-                    if m.group(1) not in current_function:
-                        current_function[m.group(1)] = []
-                    current_function[m.group(1)].append(input_line[m.end() :].strip())
-                continue
+        if input_line == "":
+            continue
+        m = None
+        if input_line.lstrip().startswith(";"):
+            m = CHECK_RE.match(input_line)
+            if m is not None and m.group(2) == "LABEL":
+                # Update current_function if the current line is a CHECK of a function definition
+                line_remainder = input_line[len(m.group(0)) :]
+                update_current_function(line_remainder)
+        else:
             current_function = None
 
-        m = IR_FUNCTION_RE.match(input_line)
-        if m is not None:
-            func_name = m.group(1)
-            if ti.args.function is not None and func_name != ti.args.function:
-                # When filtering on a specific function, skip all others.
-                continue
+        if current_function is not None:
+            if (
+                m is not None
+                and m.group(1) in prefix_set
+                and m.group(2) not in ["LABEL", "SAME"]
+            ):
+                if m.group(1) not in current_function:
+                    current_function[m.group(1)] = []
+                current_function[m.group(1)].append(input_line[m.end() :].strip())
+            continue
 
-            assert func_name not in result
-            current_function = result[func_name] = {}
+        # Update current_function if the current line is an IR function definition
+        update_current_function(input_line)
 
     return result
 
