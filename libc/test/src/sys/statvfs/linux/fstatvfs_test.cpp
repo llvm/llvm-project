@@ -28,7 +28,7 @@ struct PathFD {
   operator int() const { return fd; }
 };
 
-TEST(LlvmLibcSysStatfsTest, FstatfsBasic) {
+TEST(LlvmLibcSysStatvfsTest, FstatfsBasic) {
   statfs buf[1];
   ASSERT_THAT(LIBC_NAMESPACE::fstatfs(PathFD("/"), buf), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::fstatfs(PathFD("/proc"), buf), Succeeds());
@@ -37,11 +37,11 @@ TEST(LlvmLibcSysStatfsTest, FstatfsBasic) {
   ASSERT_EQ(buf->f_type, static_cast<decltype(buf->f_type)>(SYSFS_MAGIC));
 }
 
-TEST(LlvmLibcSysStatfsTest, FstatfsNullBuffer) {
+TEST(LlvmLibcSysStatvfsTest, FstatvfsNullBuffer) {
   ASSERT_THAT(LIBC_NAMESPACE::fstatvfs(PathFD("/"), nullptr), Fails(EFAULT));
 }
 
-TEST(LlvmLibcSysStatfsTest, FstatfsInvalidFD) {
+TEST(LlvmLibcSysStatvfsTest, FstatvfsInvalidFD) {
   statvfs buf[1];
   ASSERT_THAT(LIBC_NAMESPACE::fstatvfs(-1, buf), Fails(EBADF));
 }

@@ -25,11 +25,12 @@ TEST(LlvmLibcSysStatfsTest, StatfsBasic) {
   ASSERT_EQ(buf->f_type, static_cast<__kernel_long_t>(SYSFS_MAGIC));
 }
 
+// POSIX API does not specify what happens when buf is NULL
 TEST(LlvmLibcSysStatfsTest, StatfsNullBuffer) {
   ASSERT_THAT(LIBC_NAMESPACE::statfs("/", nullptr), Fails(EFAULT));
 }
 
-TEST(LlvmLibcSysStatfsTest, InvalidPath) {
+TEST(LlvmLibcSysStatfsTest, StatvfsInvalidPath) {
   statvfs buf[1];
   ASSERT_THAT(LIBC_NAMESPACE::statvfs("", buf), Fails(ENOENT));
   ASSERT_THAT(LIBC_NAMESPACE::statvfs("/nonexistent", buf), Fails(ENOENT));
@@ -38,7 +39,7 @@ TEST(LlvmLibcSysStatfsTest, InvalidPath) {
   ASSERT_THAT(LIBC_NAMESPACE::statvfs(nullptr, buf), Fails(EFAULT));
 }
 
-TEST(LlvmLibcSysStatfsTest, NameTooLong) {
+TEST(LlvmLibcSysStatfsTest, StatvfsNameTooLong) {
   statvfs buf[1];
   ASSERT_THAT(LIBC_NAMESPACE::statvfs("/", buf), Succeeds());
   char *name = static_cast<char *>(__builtin_alloca(buf->f_namemax + 3));
