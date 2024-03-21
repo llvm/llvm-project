@@ -464,9 +464,8 @@ Expected<ArrayRef<uint8_t>>
 GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
   if (SectionDataCache.count(Sec.d.a)) {
     auto &Buf = SectionDataCache[Sec.d.a];
-    return ArrayRef<uint8_t>(Buf.second.get(), Buf.first);
+    return ArrayRef<uint8_t>(Buf);
   }
-
   uint64_t SectionSize = getSectionSize(Sec);
   uint32_t DefEsdId = getSectionDefEsdId(Sec);
 
@@ -478,10 +477,7 @@ GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
     ESDRecord::getFillByteValue(EdEsdRecord, FillByte);
 
   // Initialize section with fill byte.
-  auto DataPtr =
-      std::make_pair(SectionSize, std::make_unique<uint8_t[]>(SectionSize));
-  uint8_t *Data = DataPtr.second.get();
-  memset(Data, FillByte, SectionSize);
+  SmallVector<uint8_t> Data(SectionSize, FillByte);
 
   // Replace section with content from text records.
   for (const uint8_t *TxtRecordInt : TextPtrs) {
@@ -507,11 +503,12 @@ GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
     if (Error Err = TXTRecord::getData(TxtRecordPtr, CompleteData))
       return std::move(Err);
     assert(CompleteData.size() == TxtDataSize && "Wrong length of data");
-    memcpy(Data + TxtDataOffset, CompleteData.data(), TxtDataSize);
+    std::copy(CompleteData.data(), CompleteData.data() + TxtDataSize,
+              Data.begin() + TxtDataOffset);
   }
-
+  auto DataPtr = Data;
   SectionDataCache[Sec.d.a] = std::move(DataPtr);
-  return ArrayRef<uint8_t>(Data, SectionSize);
+  return ArrayRef<uint8_t>(Data);
 }
 
 uint64_t GOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
