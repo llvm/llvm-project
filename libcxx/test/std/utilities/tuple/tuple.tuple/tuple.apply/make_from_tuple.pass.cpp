@@ -197,10 +197,7 @@ void test_noexcept() {
 
 namespace LWG3528 {
 template <class T, class Tuple>
-auto test(T&&, Tuple&& t)
-    -> decltype(std::__make_from_tuple_impl<T>(
-                    t, typename std::__make_tuple_indices< std::tuple_size_v<std::remove_reference_t<Tuple>>>::type{}),
-                uint8_t()) {
+auto test(T&&, Tuple&& t) -> decltype(std::make_from_tuple<T>(t), uint8_t()) {
   return 0;
 }
 template <class T, class Tuple>
