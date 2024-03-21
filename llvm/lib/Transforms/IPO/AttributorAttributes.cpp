@@ -5190,6 +5190,12 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
   } else if (auto *LI = dyn_cast<LoadInst>(I)) {
     if (LI->getPointerOperand() == UseV)
       MA = LI->getAlign();
+  } else if (auto *AI = dyn_cast<AtomicRMWInst>(I)) {
+    if (AI->getPointerOperand() == UseV)
+      MA = AI->getAlign();
+  } else if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I)) {
+    if (AI->getPointerOperand() == UseV)
+      MA = AI->getAlign();
   }
 
   if (!MA || *MA <= QueryingAA.getKnownAlign())
