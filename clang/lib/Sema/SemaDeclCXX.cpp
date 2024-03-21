@@ -9738,7 +9738,8 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMember CSM,
     return false;
   CXXRecordDecl *RD = MD->getParent();
   assert(!RD->isDependentType() && "do deletion after instantiation");
-  if (!LangOpts.CPlusPlus11 || RD->isInvalidDecl())
+  if (!LangOpts.CPlusPlus || (!LangOpts.CPlusPlus11 && !RD->isLambda()) ||
+      RD->isInvalidDecl())
     return false;
 
   // C++11 [expr.lambda.prim]p19:

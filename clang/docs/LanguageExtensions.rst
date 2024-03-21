@@ -1459,40 +1459,45 @@ More information could be found `here <https://clang.llvm.org/docs/Modules.html>
 Language Extensions Back-ported to Previous Standards
 =====================================================
 
-====================================== ================================ ============= =============
-Feature                                Feature Test Macro               Introduced In Backported To
-====================================== ================================ ============= =============
-variadic templates                     __cpp_variadic_templates         C++11         C++03
-Alias templates                        __cpp_alias_templates            C++11         C++03
-Non-static data member initializers    __cpp_nsdmi                      C++11         C++03
-Range-based ``for`` loop               __cpp_range_based_for            C++11         C++03
-RValue references                      __cpp_rvalue_references          C++11         C++03
-Attributes                             __cpp_attributes                 C++11         C++03
-variable templates                     __cpp_variable_templates         C++14         C++03
-Binary literals                        __cpp_binary_literals            C++14         C++03
-Relaxed constexpr                      __cpp_constexpr                  C++14         C++11
-``if constexpr``                       __cpp_if_constexpr               C++17         C++11
-fold expressions                       __cpp_fold_expressions           C++17         C++03
-Lambda capture of \*this by value      __cpp_capture_star_this          C++17         C++11
-Attributes on enums                    __cpp_enumerator_attributes      C++17         C++03
-Guaranteed copy elision                __cpp_guaranteed_copy_elision    C++17         C++03
-Hexadecimal floating literals          __cpp_hex_float                  C++17         C++03
-``inline`` variables                   __cpp_inline_variables           C++17         C++03
-Attributes on namespaces               __cpp_namespace_attributes       C++17         C++11
-Structured bindings                    __cpp_structured_bindings        C++17         C++03
-template template arguments            __cpp_template_template_args     C++17         C++03
-``static operator[]``                  __cpp_multidimensional_subscript C++20         C++03
-Designated initializers                __cpp_designated_initializers    C++20         C++03
-Conditional ``explicit``               __cpp_conditional_explicit       C++20         C++03
-``using enum``                         __cpp_using_enum                 C++20         C++03
-``if consteval``                       __cpp_if_consteval               C++23         C++20
-``static operator()``                  __cpp_static_call_operator       C++23         C++03
-Attributes on Lambda-Expressions                                        C++23         C++11
--------------------------------------- -------------------------------- ------------- -------------
-Designated initializers (N494)                                          C99           C89
-Array & element qualification (N2607)                                   C23           C89
-Attributes (N2335)                                                      C23           C89
-====================================== ================================ ============= =============
+============================================ ================================ ============= =============
+Feature                                      Feature Test Macro               Introduced In Backported To
+============================================ ================================ ============= =============
+variadic templates                           __cpp_variadic_templates         C++11         C++03
+Alias templates                              __cpp_alias_templates            C++11         C++03
+Non-static data member initializers          __cpp_nsdmi                      C++11         C++03
+Range-based ``for`` loop                     __cpp_range_based_for            C++11         C++03
+RValue references                            __cpp_rvalue_references          C++11         C++03
+Attributes                                   __cpp_attributes                 C++11         C++03
+Lambdas                                      __cpp_lambdas                    C++11         C++03
+Generalized lambda captures                  __cpp_init_captures              C++14         C++03
+Generic lambda expressions                   __cpp_generic_lambdas            C++14         C++03
+variable templates                           __cpp_variable_templates         C++14         C++03
+Binary literals                              __cpp_binary_literals            C++14         C++03
+Relaxed constexpr                            __cpp_constexpr                  C++14         C++11
+Pack expansion in generalized lambda-capture __cpp_init_captures              C++17         C++03
+``if constexpr``                             __cpp_if_constexpr               C++17         C++11
+fold expressions                             __cpp_fold_expressions           C++17         C++03
+Lambda capture of \*this by value            __cpp_capture_star_this          C++17         C++03
+Attributes on enums                          __cpp_enumerator_attributes      C++17         C++03
+Guaranteed copy elision                      __cpp_guaranteed_copy_elision    C++17         C++03
+Hexadecimal floating literals                __cpp_hex_float                  C++17         C++03
+``inline`` variables                         __cpp_inline_variables           C++17         C++03
+Attributes on namespaces                     __cpp_namespace_attributes       C++17         C++11
+Structured bindings                          __cpp_structured_bindings        C++17         C++03
+template template arguments                  __cpp_template_template_args     C++17         C++03
+Familiar template syntax for generic lambdas __cpp_generic_lambdas            C++20         C++03
+``static operator[]``                        __cpp_multidimensional_subscript C++20         C++03
+Designated initializers                      __cpp_designated_initializers    C++20         C++03
+Conditional ``explicit``                     __cpp_conditional_explicit       C++20         C++03
+``using enum``                               __cpp_using_enum                 C++20         C++03
+``if consteval``                             __cpp_if_consteval               C++23         C++20
+``static operator()``                        __cpp_static_call_operator       C++23         C++03
+Attributes on Lambda-Expressions                                              C++23         C++11
+-------------------------------------------- -------------------------------- ------------- -------------
+Designated initializers (N494)                                                C99           C89
+Array & element qualification (N2607)                                         C23           C89
+Attributes (N2335)                                                            C23           C89
+============================================ ================================ ============= =============
 
 Type Trait Primitives
 =====================
