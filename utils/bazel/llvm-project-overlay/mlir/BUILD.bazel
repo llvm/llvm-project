@@ -3765,6 +3765,7 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":ShapedOpInterfaces",
+        ":SideEffectInterfaces",
         ":ViewLikeInterface",
         ":XeGPUIncGen",
         "//llvm:Core",
