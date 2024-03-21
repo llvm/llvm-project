@@ -363,7 +363,7 @@ private:
   Value *getAllocaTag(IRBuilder<> &IRB, Value *StackTag, unsigned AllocaNo);
   Value *getUARTag(IRBuilder<> &IRB);
 
-  Value *getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty);
+  Value *getHwasanThreadSlotPtr(IRBuilder<> &IRB);
   Value *applyTagMask(IRBuilder<> &IRB, Value *OldTag);
   unsigned retagMask(unsigned AllocaNo);
 
@@ -1219,20 +1219,10 @@ Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
   return UntaggedPtrLong;
 }
 
-Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  if (TargetTriple.isAArch64() && TargetTriple.isAndroid()) {
-    // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
-    // in Bionic's libc/private/bionic_tls.h.
-    Function *ThreadPointerFunc =
-        Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
-    return IRB.CreateConstGEP1_32(Int8Ty, IRB.CreateCall(ThreadPointerFunc),
-                                  0x30);
-  }
-  if (ThreadPtrGlobal)
-    return ThreadPtrGlobal;
-
-  return nullptr;
+Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB) {
+  if (TargetTriple.isAArch64() && TargetTriple.isAndroid())
+    return memtag::getAndroidSanitizerSlotPtr(IRB);
+  return ThreadPtrGlobal;
 }
 
 Value *HWAddressSanitizer::getCachedFP(IRBuilder<> &IRB) {
@@ -1271,7 +1261,7 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
 
   auto getThreadLongMaybeUntagged = [&]() {
     if (!SlotPtr)
-      SlotPtr = getHwasanThreadSlotPtr(IRB, IntptrTy);
+      SlotPtr = getHwasanThreadSlotPtr(IRB);
     if (!ThreadLong)
       ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
     // Extract the address field from ThreadLong. Unnecessary on AArch64 with
