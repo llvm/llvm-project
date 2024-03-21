@@ -18,6 +18,6 @@
 #include <memory>
 
 void f() {
-    std::allocator<int> a;
-    a.allocate(3, nullptr); // expected-error {{too many arguments to function call}}
+  std::allocator<int> a;
+  a.allocate(3, nullptr); // expected-error {{too many arguments to function call}}
 }

@@ -20,61 +20,58 @@
 
 int A_constructed = 0;
 
-struct A
-{
-    int data;
-    A() {++A_constructed;}
+struct A {
+  int data;
+  A() { ++A_constructed; }
 
-    A(const A&) {++A_constructed;}
+  A(const A&) { ++A_constructed; }
 
-    explicit A(int) {++A_constructed;}
-    A(int, int*) {++A_constructed;}
+  explicit A(int) { ++A_constructed; }
+  A(int, int*) { ++A_constructed; }
 
-    ~A() {--A_constructed;}
+  ~A() { --A_constructed; }
 };
 
 int move_only_constructed = 0;
 
-class move_only
-{
-    move_only(const move_only&) = delete;
-    move_only& operator=(const move_only&)= delete;
+class move_only {
+  move_only(const move_only&)            = delete;
+  move_only& operator=(const move_only&) = delete;
 
 public:
-    move_only(move_only&&) {++move_only_constructed;}
-    move_only& operator=(move_only&&) {return *this;}
+  move_only(move_only&&) { ++move_only_constructed; }
+  move_only& operator=(move_only&&) { return *this; }
 
-    move_only() {++move_only_constructed;}
-    ~move_only() {--move_only_constructed;}
+  move_only() { ++move_only_constructed; }
+  ~move_only() { --move_only_constructed; }
 
 public:
-    int data; // unused other than to make sizeof(move_only) == sizeof(int).
-              // but public to suppress "-Wunused-private-field"
+  int data; // unused other than to make sizeof(move_only) == sizeof(int).
+            // but public to suppress "-Wunused-private-field"
 };
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     std::allocator<A> a;
     A* ap = a.allocate(3);
-    a.construct(ap); // expected-error {{no member}}
-    a.destroy(ap); // expected-error {{no member}}
-    a.construct(ap, A()); // expected-error {{no member}}
-    a.destroy(ap); // expected-error {{no member}}
-    a.construct(ap, 5); // expected-error {{no member}}
-    a.destroy(ap); // expected-error {{no member}}
+    a.construct(ap);             // expected-error {{no member}}
+    a.destroy(ap);               // expected-error {{no member}}
+    a.construct(ap, A());        // expected-error {{no member}}
+    a.destroy(ap);               // expected-error {{no member}}
+    a.construct(ap, 5);          // expected-error {{no member}}
+    a.destroy(ap);               // expected-error {{no member}}
     a.construct(ap, 5, (int*)0); // expected-error {{no member}}
-    a.destroy(ap); // expected-error {{no member}}
+    a.destroy(ap);               // expected-error {{no member}}
     a.deallocate(ap, 3);
   }
-    {
+  {
     std::allocator<move_only> a;
     move_only* ap = a.allocate(3);
-    a.construct(ap); // expected-error {{no member}}
-    a.destroy(ap); // expected-error {{no member}}
+    a.construct(ap);              // expected-error {{no member}}
+    a.destroy(ap);                // expected-error {{no member}}
     a.construct(ap, move_only()); // expected-error {{no member}}
-    a.destroy(ap); // expected-error {{no member}}
+    a.destroy(ap);                // expected-error {{no member}}
     a.deallocate(ap, 3);
-    }
+  }
   return 0;
 }

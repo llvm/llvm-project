@@ -23,11 +23,10 @@
 
 int new_called = 0;
 
-int main(int, char**)
-{
-    const std::allocator<int> a;
-    std::size_t M = a.max_size(); // expected-error {{no member}}
-    assert(M > 0xFFFF && M <= (std::numeric_limits<std::size_t>::max() / sizeof(int)));
+int main(int, char**) {
+  const std::allocator<int> a;
+  std::size_t M = a.max_size(); // expected-error {{no member}}
+  assert(M > 0xFFFF && M <= (std::numeric_limits<std::size_t>::max() / sizeof(int)));
 
   return 0;
 }

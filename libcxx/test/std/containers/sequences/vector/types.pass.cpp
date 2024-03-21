@@ -49,14 +49,22 @@ test()
 //  blindly pulling typedefs out of the allocator. This is why we can't call
 //  test<int, min_allocator<int>>() below.
     static_assert((std::is_same<typename C::value_type, T>::value), "");
-    static_assert((std::is_same<typename C::value_type, typename std::allocator_traits<Allocator>::value_type>::value), "");
+    static_assert(
+        (std::is_same<typename C::value_type, typename std::allocator_traits<Allocator>::value_type>::value), "");
     static_assert((std::is_same<typename C::allocator_type, Allocator>::value), "");
-    static_assert((std::is_same<typename C::size_type, typename std::allocator_traits<Allocator>::size_type>::value), "");
-    static_assert((std::is_same<typename C::difference_type, typename std::allocator_traits<Allocator>::difference_type>::value), "");
-    static_assert((std::is_same<typename C::reference, typename std::allocator_traits<Allocator>::value_type&>::value), "");
-    static_assert((std::is_same<typename C::const_reference, const typename std::allocator_traits<Allocator>::value_type&>::value), "");
+    static_assert(
+        (std::is_same<typename C::size_type, typename std::allocator_traits<Allocator>::size_type>::value), "");
+    static_assert(
+        (std::is_same<typename C::difference_type, typename std::allocator_traits<Allocator>::difference_type>::value),
+        "");
+    static_assert(
+        (std::is_same<typename C::reference, typename std::allocator_traits<Allocator>::value_type&>::value), "");
+    static_assert((std::is_same<typename C::const_reference,
+                                const typename std::allocator_traits<Allocator>::value_type&>::value),
+                  "");
     static_assert((std::is_same<typename C::pointer, typename std::allocator_traits<Allocator>::pointer>::value), "");
-    static_assert((std::is_same<typename C::const_pointer, typename std::allocator_traits<Allocator>::const_pointer>::value), "");
+    static_assert(
+        (std::is_same<typename C::const_pointer, typename std::allocator_traits<Allocator>::const_pointer>::value), "");
 
     static_assert((std::is_signed<typename C::difference_type>::value), "");
     static_assert((std::is_unsigned<typename C::size_type>::value), "");
