@@ -31,6 +31,47 @@ class FunctionAccumulator : public RecursiveASTVisitor<FunctionAccumulator> {
     }
 };
 
+void deduplicateCompilationDatabase(fs::path path) {
+    std::ifstream ifs(path);
+    ordered_json input = ordered_json::parse(ifs);
+    ifs.close();
+
+    bool hasDuplicate = false;
+    std::set<std::string> visitedFiles;
+    ordered_json output;
+    for (auto &cmd : input) {
+        std::string file = cmd["file"];
+        if (visitedFiles.find(file) != visitedFiles.end()) {
+            llvm::errs() << "Duplicate entry for file: " << file << "\n";
+            hasDuplicate = true;
+            continue;
+        }
+        visitedFiles.insert(file);
+        output.push_back(cmd);
+    }
+
+    if (!hasDuplicate) {
+        llvm::errs() << "No duplicate entries found in " << path << "\n";
+        return;
+    }
+
+    llvm::errs() << "Found duplicate entries in " << path << "\n";
+    {
+        fs::path backup = path.string() + ".bk";
+        llvm::errs() << "Backing up to " << backup << "\n";
+        std::ofstream o(backup);
+        o << input.dump(4, ' ', false, json::error_handler_t::replace)
+          << std::endl;
+        o.close();
+    }
+    {
+        std::ofstream o(path);
+        o << output.dump(4, ' ', false, json::error_handler_t::replace)
+          << std::endl;
+        o.close();
+    }
+}
+
 std::unique_ptr<CompilationDatabase>
 getCompilationDatabase(fs::path buildPath) {
     llvm::errs() << "Getting compilation database from: " << buildPath << "\n";
@@ -412,6 +453,7 @@ int main(int argc, const char **argv) {
     fs::path compile_commands =
         fs::canonical(input["compile_commands"].template get<std::string>());
     llvm::errs() << "compile_commands: " << compile_commands << "\n";
+    deduplicateCompilationDatabase(compile_commands);
     Global.cb = getCompilationDatabase(compile_commands);
 
     // print all files in compilation database
