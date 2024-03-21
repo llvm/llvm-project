@@ -30,6 +30,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <map>
 #include <optional>
 #include <unordered_map>
@@ -2309,6 +2310,52 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         continue;
       BP.Functions.emplace_back(
           YAMLProfileWriter::convert(Function, /*UseDFS=*/false));
+    }
+
+    for (const auto &KV : NamesToBranches) {
+      const StringRef FuncName = KV.first;
+      const FuncBranchData &Branches = KV.second;
+      yaml::bolt::BinaryFunctionProfile YamlBF;
+      BinaryData *BD = BC.getBinaryDataByName(FuncName);
+      assert(BD);
+      uint64_t FuncAddress = BD->getAddress();
+      if (!BAT->isBATFunction(FuncAddress))
+        continue;
+      // Filter out cold fragments
+      if (!BD->getSectionName().equals(BC.getMainCodeSectionName()))
+        continue;
+      BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
+      assert(BF);
+      YamlBF.Name = FuncName.str();
+      YamlBF.Id = BF->getFunctionNumber();
+      YamlBF.Hash = BAT->getBFHash(FuncAddress);
+      YamlBF.ExecCount = BF->getKnownExecutionCount();
+      YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
+      const auto &BlockMap = BAT->getBBHashMap(FuncAddress);
+
+      auto addBBProfile = [&](yaml::bolt::BinaryBasicBlockProfile &YamlBB,
+          uint64_t Offset) {
+        if (!Branches.IntraIndex.contains(Offset))
+          return;
+        for (const auto &[SuccOffset, SuccIdx] :
+             Branches.IntraIndex.at(Offset)) {
+          const llvm::bolt::BranchInfo &BI = Branches.Data.at(SuccIdx);
+          yaml::bolt::SuccessorInfo SI;
+          SI.Index = BAT->getBBIndex(BlockMap, SuccOffset);
+          SI.Count = BI.Branches;
+          SI.Mispreds = BI.Mispreds;
+          YamlBB.Successors.emplace_back(SI);
+        }
+      };
+
+      for (const auto &[Offset, Val] : BlockMap) {
+        yaml::bolt::BinaryBasicBlockProfile YamlBB;
+        std::tie(YamlBB.Index, YamlBB.Hash) = Val;
+        addBBProfile(YamlBB, Offset);
+        if (YamlBB.ExecCount || !YamlBB.Successors.empty())
+          YamlBF.Blocks.emplace_back(YamlBB);
+      }
+      BP.Functions.emplace_back(YamlBF);
     }
   }
 
