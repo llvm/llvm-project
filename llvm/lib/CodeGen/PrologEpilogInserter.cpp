@@ -478,7 +478,7 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
     for (auto &CS : CSI) {
       // If the target has spilled this register to another register, we don't
       // need to allocate a stack slot.
-      if (CS.isSpilledToReg())
+      if (CS.isSpilledToReg() || CS.isHandledByTarget())
         continue;
 
       MCRegister Reg = CS.getReg();
@@ -604,6 +604,8 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
   MachineBasicBlock::iterator I = SaveBlock.begin();
   if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CS : CSI) {
+      if (CS.isHandledByTarget())
+        continue;
       // Insert the spill to the stack frame.
       MCRegister Reg = CS.getReg();
 
@@ -634,6 +636,9 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
 
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
+      if (CI.isHandledByTarget())
+        continue;
+
       MCRegister Reg = CI.getReg();
       if (CI.isSpilledToReg()) {
         BuildMI(RestoreBlock, I, DebugLoc(), TII.get(TargetOpcode::COPY), Reg)
