@@ -20,7 +20,9 @@ int main(int argc, char *argv[]) {
   const int N = num_blocks * block_size;
   int *data = (int *)malloc(N * sizeof(int));
 
-  // CHECK: "PluginInterface" device 0 info: Launching kernel __omp_offloading_{{.*}} with 64 blocks and 64 threads in SPMD mode
+  // clang-format off
+// CHECK: {{.*}} device 0 info: Launching kernel __omp_offloading_{{.*}} with 64 blocks and 64 threads in SPMD mode
+  // clang-format on
 
 #pragma omp target teams ompx_bare num_teams(num_blocks) thread_limit(block_size) map(from: data[0:N])
   {

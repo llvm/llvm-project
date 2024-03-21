@@ -49,7 +49,7 @@ int main() {
 
   // clang-format off
   // CHECK: omptarget --> Looking up mapping(HstPtrBegin=[[DAT_HST_PTR_BASE]], Size=288)...
-  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 288 with host pointer [[DAT_HST_PTR_BASE]].
+  // CHECK: {{.*}} --> MemoryManagerTy::allocate: size 288 with host pointer [[DAT_HST_PTR_BASE]].
   // CHECK: omptarget --> Creating new map entry with HstPtrBase=[[DAT_HST_PTR_BASE]], HstPtrBegin=[[DAT_HST_PTR_BASE]], TgtAllocBegin=[[DAT_DEVICE_PTR_BASE:0x.*]], TgtPtrBegin=[[DAT_DEVICE_PTR_BASE]], Size=288, DynRefCount=1, HoldRefCount=0, Name=unknown
   // CHECK: omptarget --> Moving 288 bytes (hst:[[DAT_HST_PTR_BASE]]) -> (tgt:[[DAT_DEVICE_PTR_BASE]])
   // clang-format on
@@ -57,7 +57,7 @@ int main() {
   /// Second argument is dat.datum:
   // clang-format off
   // CHECK: omptarget --> Looking up mapping(HstPtrBegin=[[DATUM_HST_PTR_BASE]], Size=40)...
-  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 40 with host pointer [[DATUM_HST_PTR_BASE]].
+  // CHECK: {{.*}} --> MemoryManagerTy::allocate: size 40 with host pointer [[DATUM_HST_PTR_BASE]].
   // CHECK: omptarget --> Creating new map entry with HstPtrBase=[[DATUM_HST_PTR_BASE]], HstPtrBegin=[[DATUM_HST_PTR_BASE]], TgtAllocBegin=[[DATUM_DEVICE_PTR_BASE:0x.*]], TgtPtrBegin=[[DATUM_DEVICE_PTR_BASE]], Size=40, DynRefCount=1, HoldRefCount=0, Name=unknown
   // CHECK: omptarget --> Moving 40 bytes (hst:[[DATUM_HST_PTR_BASE]]) -> (tgt:[[DATUM_DEVICE_PTR_BASE]])
   // clang-format on
@@ -65,7 +65,7 @@ int main() {
   /// Third argument is dat.more_datum:
   // clang-format off
   // CHECK: omptarget --> Looking up mapping(HstPtrBegin=[[MORE_DATUM_HST_PTR_BEGIN]], Size=80)...
-  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 80 with host pointer [[MORE_DATUM_HST_PTR_BEGIN]].
+  // CHECK: {{.*}} --> MemoryManagerTy::allocate: size 80 with host pointer [[MORE_DATUM_HST_PTR_BEGIN]].
   // CHECK: omptarget --> Creating new map entry with HstPtrBase=[[MORE_DATUM_HST_PTR_BEGIN]], HstPtrBegin=[[MORE_DATUM_HST_PTR_BEGIN]], TgtAllocBegin=[[MORE_DATUM_DEVICE_PTR_BEGIN:0x.*]], TgtPtrBegin=[[MORE_DATUM_DEVICE_PTR_BEGIN]], Size=80, DynRefCount=1, HoldRefCount=0, Name=unknown
   // CHECK: omptarget --> Moving 80 bytes (hst:[[MORE_DATUM_HST_PTR_BEGIN]]) -> (tgt:[[MORE_DATUM_DEVICE_PTR_BEGIN]])
   // clang-format on
