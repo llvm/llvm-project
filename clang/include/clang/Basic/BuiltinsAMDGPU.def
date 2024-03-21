@@ -256,10 +256,10 @@ TARGET_BUILTIN(__builtin_amdgcn_sudot4, "iIbiIbiiIb", "nc", "dot8-insts")
 TARGET_BUILTIN(__builtin_amdgcn_sdot8, "SiSiSiSiIb", "nc", "dot1-insts")
 TARGET_BUILTIN(__builtin_amdgcn_udot8, "UiUiUiUiIb", "nc", "dot7-insts")
 TARGET_BUILTIN(__builtin_amdgcn_sudot8, "iIbiIbiiIb", "nc", "dot8-insts")
-TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_fp8_bf8, "fUiUif", "nc", "gfx12-insts")
-TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_bf8_fp8, "fUiUif", "nc", "gfx12-insts")
-TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_fp8_fp8, "fUiUif", "nc", "gfx12-insts")
-TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_bf8_bf8, "fUiUif", "nc", "gfx12-insts")
+TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_fp8_bf8, "fUiUif", "nc", "dot11-insts")
+TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_bf8_fp8, "fUiUif", "nc", "dot11-insts")
+TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_fp8_fp8, "fUiUif", "nc", "dot11-insts")
+TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_bf8_bf8, "fUiUif", "nc", "dot11-insts")
 
 //===----------------------------------------------------------------------===//
 // GFX10+ only builtins.
@@ -324,6 +324,9 @@ BUILTIN(__builtin_amdgcn_read_exec_lo, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_read_exec_hi, "Ui", "nc")
 
 BUILTIN(__builtin_amdgcn_endpgm, "v", "nr")
+
+BUILTIN(__builtin_amdgcn_get_fpenv, "WUi", "n")
+BUILTIN(__builtin_amdgcn_set_fpenv, "vWUi", "n")
 
 //===----------------------------------------------------------------------===//
 // R600-NI only builtins.

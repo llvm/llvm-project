@@ -155,4 +155,4 @@ attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willre
 !41 = !DILocalVariable(name: "dummy", arg: 3, scope: !34, file: !1, line: 49, type: !5)
 !42 = !DILocalVariable(name: "dummy", arg: 4, scope: !34, file: !1, line: 49, type: !5)
 !43 = !DILocation(line: 49, column: 9, scope: !34)
-!44 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!44 = !{i32 1, !"amdhsa_code_object_version", i32 500}

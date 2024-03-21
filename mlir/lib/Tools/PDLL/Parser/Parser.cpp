@@ -1968,6 +1968,8 @@ FailureOr<ast::Expr *> Parser::parseNegatedExpr() {
   FailureOr<ast::Expr *> identifierExpr = parseIdentifierExpr();
   if (failed(identifierExpr))
     return failure();
+  if (!curToken.is(Token::l_paren))
+    return emitError("expected `(` after function name");
   return parseCallExpr(*identifierExpr, /*isNegated = */ true);
 }
 

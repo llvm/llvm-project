@@ -42,7 +42,9 @@ typedef vector<uint16_t, 2> uint16_t2;
 typedef vector<uint16_t, 3> uint16_t3;
 typedef vector<uint16_t, 4> uint16_t4;
 #endif
-
+typedef vector<bool, 2> bool2;
+typedef vector<bool, 3> bool3;
+typedef vector<bool, 4> bool4;
 typedef vector<int, 2> int2;
 typedef vector<int, 3> int3;
 typedef vector<int, 4> int4;

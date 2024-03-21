@@ -1408,7 +1408,7 @@ protected:
     if (m_options.m_verbose) {
       addr_t code_mask = process->GetCodeAddressMask();
       addr_t data_mask = process->GetDataAddressMask();
-      if (code_mask != 0) {
+      if (code_mask != LLDB_INVALID_ADDRESS_MASK) {
         int bits = std::bitset<64>(~code_mask).count();
         result.AppendMessageWithFormat(
             "Addressable code address mask: 0x%" PRIx64 "\n", code_mask);

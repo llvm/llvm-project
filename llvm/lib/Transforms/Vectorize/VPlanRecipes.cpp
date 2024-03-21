@@ -198,24 +198,21 @@ void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
          "Insertion position not in any VPBasicBlock");
-  Parent = InsertPos->getParent();
-  Parent->getRecipeList().insert(InsertPos->getIterator(), this);
+  InsertPos->getParent()->insert(this, InsertPos->getIterator());
 }
 
 void VPRecipeBase::insertBefore(VPBasicBlock &BB,
                                 iplist<VPRecipeBase>::iterator I) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(I == BB.end() || I->getParent() == &BB);
-  Parent = &BB;
-  BB.getRecipeList().insert(I, this);
+  BB.insert(this, I);
 }
 
 void VPRecipeBase::insertAfter(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
          "Insertion position not in any VPBasicBlock");
-  Parent = InsertPos->getParent();
-  Parent->getRecipeList().insertAfter(InsertPos->getIterator(), this);
+  InsertPos->getParent()->insert(this, std::next(InsertPos->getIterator()));
 }
 
 void VPRecipeBase::removeFromParent() {
@@ -313,6 +310,12 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     Value *VIVElem0 = State.get(getOperand(0), VPIteration(Part, 0));
     // Get the original loop tripcount.
     Value *ScalarTC = State.get(getOperand(1), VPIteration(Part, 0));
+
+    // If this part of the active lane mask is scalar, generate the CMP directly
+    // to avoid unnecessary extracts.
+    if (State.VF.isScalar())
+      return Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, VIVElem0, ScalarTC,
+                               Name);
 
     auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
     auto *PredTy = VectorType::get(Int1Ty, State.VF);

@@ -857,10 +857,11 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                   "\"(%s) %s\" is not an array type",
                   valobj_sp->GetTypeName().AsCString("<invalid type>"),
                   var_expr_path_strm.GetData());
-            } else if (
-                static_cast<uint32_t>(child_index) >=
-                synthetic
-                    ->GetNumChildren() /* synthetic does not have that many values */) {
+            } else if (static_cast<uint32_t>(child_index) >=
+                       synthetic
+                           ->GetNumChildrenIgnoringErrors() /* synthetic does
+                                                                not have that
+                                                                many values */) {
               valobj_sp->GetExpressionPath(var_expr_path_strm);
               error.SetErrorStringWithFormat(
                   "array index %ld is not valid for \"(%s) %s\"", child_index,
@@ -929,10 +930,9 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                 "\"(%s) %s\" is not an array type",
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
                 var_expr_path_strm.GetData());
-          } else if (
-              static_cast<uint32_t>(child_index) >=
-              synthetic
-                  ->GetNumChildren() /* synthetic does not have that many values */) {
+          } else if (static_cast<uint32_t>(child_index) >=
+                     synthetic->GetNumChildrenIgnoringErrors() /* synthetic
+                                     does not have that many values */) {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
             error.SetErrorStringWithFormat(
                 "array index %ld is not valid for \"(%s) %s\"", child_index,
@@ -1397,7 +1397,8 @@ ValueObjectSP GetValueForOffset(StackFrame &frame, ValueObjectSP &parent,
     return parent;
   }
 
-  for (int ci = 0, ce = parent->GetNumChildren(); ci != ce; ++ci) {
+  for (int ci = 0, ce = parent->GetNumChildrenIgnoringErrors(); ci != ce;
+       ++ci) {
     ValueObjectSP child_sp = parent->GetChildAtIndex(ci);
 
     if (!child_sp) {
@@ -1921,7 +1922,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
 
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-                  m_sc.line_entry.file, start_line, m_sc.line_entry.column,
+                  m_sc.line_entry.GetFile(), start_line, m_sc.line_entry.column,
                   source_lines_before, source_lines_after, "->", &strm);
           if (num_lines != 0)
             have_source = true;

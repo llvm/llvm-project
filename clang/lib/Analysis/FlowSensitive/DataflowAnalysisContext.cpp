@@ -288,8 +288,8 @@ void DataflowAnalysisContext::dumpFlowCondition(Atom Token,
   }
 }
 
-const ControlFlowContext *
-DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
+const AdornedCFG *
+DataflowAnalysisContext::getAdornedCFG(const FunctionDecl *F) {
   // Canonicalize the key:
   F = F->getDefinition();
   if (F == nullptr)
@@ -299,10 +299,10 @@ DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
     return &It->second;
 
   if (F->doesThisDeclarationHaveABody()) {
-    auto CFCtx = ControlFlowContext::build(*F);
+    auto ACFG = AdornedCFG::build(*F);
     // FIXME: Handle errors.
-    assert(CFCtx);
-    auto Result = FunctionContexts.insert({F, std::move(*CFCtx)});
+    assert(ACFG);
+    auto Result = FunctionContexts.insert({F, std::move(*ACFG)});
     return &Result.first->second;
   }
 
