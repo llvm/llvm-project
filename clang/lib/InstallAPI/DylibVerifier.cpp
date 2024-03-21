@@ -553,7 +553,7 @@ void DylibVerifier::visitSymbolInDylib(const Record &R, SymbolContext &SymCtx) {
     return;
   }
 
-  // All checks at the point classify as some kind of violation that should be
+  // All checks at this point classify as some kind of violation that should be
   // reported.
 
   // Regardless of verification mode, error out on mismatched special linker
