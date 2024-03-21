@@ -242,10 +242,8 @@ inline RT_API_ATTRS T RealMod(
         IS_MODULO ? "MODULO with P==0" : "MOD with P==0");
   }
   if (ISNANTy<T>::compute(a) || ISNANTy<T>::compute(p) ||
-      ISINFTy<T>::compute(a)) {
+      ISINFTy<T>::compute(a) || ISINFTy<T>::compute(p)) {
     return QNANTy<T>::compute();
-  } else if (ISINFTy<T>::compute(p)) {
-    return a;
   }
   T aAbs{ABSTy<T>::compute(a)};
   T pAbs{ABSTy<T>::compute(p)};
