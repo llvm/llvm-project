@@ -20,13 +20,12 @@ define i1 @pr84653(i32 %x) {
 ; CHECK-ZBB-LABEL: pr84653:
 ; CHECK-ZBB:       # %bb.0:
 ; CHECK-ZBB-NEXT:    sext.w a1, a0
-; CHECK-ZBB-NEXT:    sgtz a2, a1
-; CHECK-ZBB-NEXT:    lui a3, 524288
-; CHECK-ZBB-NEXT:    addi a3, a3, -1
-; CHECK-ZBB-NEXT:    xor a0, a0, a3
+; CHECK-ZBB-NEXT:    lui a2, 524288
+; CHECK-ZBB-NEXT:    addi a2, a2, -1
+; CHECK-ZBB-NEXT:    xor a0, a0, a2
 ; CHECK-ZBB-NEXT:    sext.w a0, a0
+; CHECK-ZBB-NEXT:    max a0, a0, zero
 ; CHECK-ZBB-NEXT:    slt a0, a0, a1
-; CHECK-ZBB-NEXT:    and a0, a2, a0
 ; CHECK-ZBB-NEXT:    ret
   %cmp1 = icmp sgt i32 %x, 0
   %sub = sub nsw i32 2147483647, %x  ; 0x7fffffff
@@ -52,12 +51,11 @@ define i1 @pr85190(i64 %a) {
 ; CHECK-ZBB-LABEL: pr85190:
 ; CHECK-ZBB:       # %bb.0:
 ; CHECK-ZBB-NEXT:    ori a1, a0, 7
-; CHECK-ZBB-NEXT:    slti a2, a0, 0
-; CHECK-ZBB-NEXT:    li a3, -1
-; CHECK-ZBB-NEXT:    slli a3, a3, 63
-; CHECK-ZBB-NEXT:    sub a3, a3, a1
-; CHECK-ZBB-NEXT:    slt a0, a0, a3
-; CHECK-ZBB-NEXT:    and a0, a2, a0
+; CHECK-ZBB-NEXT:    li a2, -1
+; CHECK-ZBB-NEXT:    slli a2, a2, 63
+; CHECK-ZBB-NEXT:    sub a2, a2, a1
+; CHECK-ZBB-NEXT:    min a1, a2, zero
+; CHECK-ZBB-NEXT:    slt a0, a0, a1
 ; CHECK-ZBB-NEXT:    ret
   %or = or i64 %a, 7
   %cmp1 = icmp slt i64 %a, 0
@@ -83,13 +81,12 @@ define i1 @select_to_or(i32 %x) {
 ; CHECK-ZBB-LABEL: select_to_or:
 ; CHECK-ZBB:       # %bb.0:
 ; CHECK-ZBB-NEXT:    sext.w a1, a0
-; CHECK-ZBB-NEXT:    sgtz a2, a1
-; CHECK-ZBB-NEXT:    lui a3, 524288
-; CHECK-ZBB-NEXT:    addi a3, a3, -1
-; CHECK-ZBB-NEXT:    xor a0, a0, a3
+; CHECK-ZBB-NEXT:    lui a2, 524288
+; CHECK-ZBB-NEXT:    addi a2, a2, -1
+; CHECK-ZBB-NEXT:    xor a0, a0, a2
 ; CHECK-ZBB-NEXT:    sext.w a0, a0
+; CHECK-ZBB-NEXT:    min a0, a0, zero
 ; CHECK-ZBB-NEXT:    slt a0, a0, a1
-; CHECK-ZBB-NEXT:    or a0, a2, a0
 ; CHECK-ZBB-NEXT:    ret
   %cmp1 = icmp sgt i32 %x, 0
   %sub = sub nsw i32 2147483647, %x  ; 0x7fffffff

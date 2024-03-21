@@ -7,7 +7,6 @@
 define dso_local i32 @test_vst2_lane_u8([2 x <8 x i8>] %vectors.coerce) local_unnamed_addr {
 ; CHECK-LABEL:   test_vst2_lane_u8:
 ; CHECK:         st2 { v[[V1:[0-9]+]].b, v[[V2:[0-9]+]].b }[6], [x8]
-; CHECK-NEXT:    umov w[[W1:[0-9]+]], v[[V12:[0-9]+]].b[6]
 ; CHECK-NEXT:    ldrb w[[W2:[0-9]+]], [sp, #12]
 ; CHECK-NEXT:    ldrb w[[W2:[0-9]+]], [sp, #13]
 entry:
