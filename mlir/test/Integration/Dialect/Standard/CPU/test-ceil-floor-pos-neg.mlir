@@ -108,17 +108,26 @@ func.func @entry() {
 
 // -----
 
-func.func @non_inline_function() -> (i64, i64) {
+func.func @non_inline_function() -> (i64, i64, i64, i64, i64, i64) {
   %MIN_INT_MINUS_ONE = arith.constant -9223372036854775807 : i64
   %NEG_ONE = arith.constant -1 : i64
-  return %MIN_INT_MINUS_ONE, %NEG_ONE : i64, i64
+  %MIN_INT = arith.constant -9223372036854775808 : i64
+  %ONE = arith.constant 1 : i64
+  %MAX_INT = arith.constant 9223372036854775807 : i64
+  return %MIN_INT_MINUS_ONE, %NEG_ONE, %MIN_INT, %ONE, %MAX_INT, %NEG_ONE : i64, i64, i64, i64, i64, i64
 }
 
 func.func @main() {
-  %0:2 = call @non_inline_function() : () -> (i64, i64)
+  %0:6 = call @non_inline_function() : () -> (i64, i64, i64, i64, i64, i64)
   %1 = arith.floordivsi %0#0, %0#1 : i64
+  %2 = arith.floordivsi %0#2, %0#3 : i64
+  %3 = arith.floordivsi %0#4, %0#5 : i64
   vector.print %1 : i64
+  vector.print %2 : i64
+  vector.print %3 : i64
   return
 }
 
 // SCHECK: 9223372036854775807
+// SCHECK: -9223372036854775808
+// SCHECK: -9223372036854775807
