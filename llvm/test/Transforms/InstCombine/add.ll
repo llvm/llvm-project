@@ -3988,9 +3988,8 @@ define i32 @add_reduce_sqr_sum_varC_invalid2(i32 %a, i32 %b) {
 
 define i32 @fold_sext_addition_or_disjoint(i8 %x) {
 ; CHECK-LABEL: @fold_sext_addition_or_disjoint(
-; CHECK-NEXT:    [[XX:%.*]] = or disjoint i8 [[X:%.*]], 12
-; CHECK-NEXT:    [[SE:%.*]] = sext i8 [[XX]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[SE]], 1234
+; CHECK-NEXT:    [[SE:%.*]] = sext i8 [[XX:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[SE]], 1246
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xx = or disjoint i8 %x, 12
@@ -4014,9 +4013,8 @@ define i32 @fold_sext_addition_fail(i8 %x) {
 
 define i32 @fold_zext_addition_or_disjoint(i8 %x) {
 ; CHECK-LABEL: @fold_zext_addition_or_disjoint(
-; CHECK-NEXT:    [[XX:%.*]] = or disjoint i8 [[X:%.*]], 12
-; CHECK-NEXT:    [[SE:%.*]] = zext i8 [[XX]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SE]], 1234
+; CHECK-NEXT:    [[SE:%.*]] = zext i8 [[XX:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SE]], 1246
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xx = or disjoint i8 %x, 12
@@ -4027,10 +4025,9 @@ define i32 @fold_zext_addition_or_disjoint(i8 %x) {
 
 define i32 @fold_zext_addition_or_disjoint2(i8 %x) {
 ; CHECK-LABEL: @fold_zext_addition_or_disjoint2(
-; CHECK-NEXT:    [[XX:%.*]] = or disjoint i8 [[X:%.*]], 18
+; CHECK-NEXT:    [[XX:%.*]] = add nuw i8 [[X:%.*]], 4
 ; CHECK-NEXT:    [[SE:%.*]] = zext i8 [[XX]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[SE]], -14
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[SE]]
 ;
   %xx = or disjoint i8 %x, 18
   %se = zext i8 %xx to i32
