@@ -1810,3 +1810,29 @@ define i6 @udiv_distribute_mul_nsw_add_nuw(i6 %x) {
   %div = udiv i6 %add, 3
   ret i6 %div
 }
+
+define i32 @fold_disjoint_or_over_sdiv(i32 %x) {
+; CHECK-LABEL: @fold_disjoint_or_over_sdiv(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[MUL]], 81
+; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[OR]], 9
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %mul = mul nsw i32 %x, 9
+  %or = or disjoint i32 %mul, 81
+  %r = sdiv i32 %or, 9
+  ret i32 %r
+}
+
+define i32 @fold_disjoint_or_over_udiv(i32 %x) {
+; CHECK-LABEL: @fold_disjoint_or_over_udiv(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[MUL]], 81
+; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[OR]], 9
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %mul = mul nuw i32 %x, 9
+  %or = or disjoint i32 %mul, 81
+  %r = udiv i32 %or, 9
+  ret i32 %r
+}
