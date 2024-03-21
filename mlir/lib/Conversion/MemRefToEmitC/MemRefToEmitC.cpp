@@ -57,8 +57,20 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
   matchAndRewrite(memref::LoadOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
 
-    rewriter.replaceOpWithNewOp<emitc::SubscriptOp>(op, operands.getMemref(),
-                                                    operands.getIndices());
+    auto resultTy = getTypeConverter()->convertType(op.getType());
+    if (!resultTy) {
+      return rewriter.notifyMatchFailure(op.getLoc(), "cannot convert type");
+    }
+
+    auto subscript = rewriter.create<emitc::SubscriptOp>(
+        op.getLoc(), operands.getMemref(), operands.getIndices());
+
+    auto noInit = emitc::OpaqueAttr::get(getContext(), "");
+    auto var =
+        rewriter.create<emitc::VariableOp>(op.getLoc(), resultTy, noInit);
+
+    rewriter.create<emitc::AssignOp>(op.getLoc(), var, subscript);
+    rewriter.replaceOp(op, var);
     return success();
   }
 };
