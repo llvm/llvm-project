@@ -1813,7 +1813,7 @@ define double @fpext(float nofpclass(inf nan) %arg) {
 define float @atomicrmw_fadd(ptr %ptr, float nofpclass(inf nan) %val) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define float @atomicrmw_fadd
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull dereferenceable(4) [[PTR:%.*]], float nofpclass(nan inf) [[VAL:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: (ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[PTR:%.*]], float nofpclass(nan inf) [[VAL:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    [[RESULT:%.*]] = atomicrmw fadd ptr [[PTR]], float [[VAL]] seq_cst, align 4
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
