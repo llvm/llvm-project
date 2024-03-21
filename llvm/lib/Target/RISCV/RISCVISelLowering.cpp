@@ -17041,23 +17041,6 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   return 1;
 }
 
-bool RISCVTargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
-    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-    bool PoisonOnly, unsigned Depth) const {
-
-  // TODO: Add more target nodes.
-  switch (Op.getOpcode()) {
-  case RISCVISD::SELECT_CC:
-    if (!Op.getValueType().isInteger())
-      return false;
-    return all_of(Op->ops(), [&](SDValue V) {
-      return DAG.isGuaranteedNotToBeUndefOrPoison(V, PoisonOnly, Depth + 1);
-    });
-  }
-  return TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
-      Op, DemandedElts, DAG, PoisonOnly, Depth);
-}
-
 bool RISCVTargetLowering::canCreateUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
     bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
