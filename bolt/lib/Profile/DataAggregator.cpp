@@ -30,7 +30,6 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <map>
 #include <optional>
 #include <unordered_map>

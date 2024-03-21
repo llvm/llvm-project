@@ -44,6 +44,7 @@ void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
                     << " Val: " << Twine::utohexstr(BBInputOffset) << "\n");
   LLVM_DEBUG(dbgs() << formatv(" Hash: {0:x}\n",
                                getBBHash(HotFuncAddress, BBInputOffset)));
+  (void)HotFuncAddress;
   LLVM_DEBUG(dbgs() << formatv(" Index: {0}\n",
                                getBBIndex(HotFuncAddress, BBInputOffset)));
   // In case of conflicts (same Key mapping to different Vals), the last
