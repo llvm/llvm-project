@@ -1218,14 +1218,6 @@ public:
     return nullptr;
   }
 
-  /// Return MCSymbol that represents a target of this instruction at a given
-  /// operand number \p OpNum. If there's no symbol associated with
-  /// the operand - return nullptr.
-  virtual MCSymbol *getTargetSymbol(MCInst &Inst, unsigned OpNum = 0) const {
-    return const_cast<MCSymbol *>(
-        getTargetSymbol(const_cast<const MCInst &>(Inst), OpNum));
-  }
-
   /// Return MCSymbol extracted from a target expression
   virtual const MCSymbol *getTargetSymbol(const MCExpr *Expr) const {
     return &cast<const MCSymbolRefExpr>(Expr)->getSymbol();

@@ -1384,13 +1384,13 @@ Error LinuxKernelRewriter::readPCIFixupTable() {
 }
 
 /// Runtime code modification used by static keys is the most ubiquitous
-/// self-modifying feature of the Linux kernel. The idea is to to eliminate
-/// the condition check and associated conditional jump on a hot path if that
+/// self-modifying feature of the Linux kernel. The idea is to eliminate the
+/// condition check and associated conditional jump on a hot path if that
 /// condition (based on a boolean value of a static key) does not change often.
-/// Whenever they condition changes, the kernel runtime modifies all code
-/// paths associated with that key flipping the code between nop and
-/// (unconditional) jump. The information about the code is stored in a static
-/// key jump table and contains the list of entries of the following type from
+/// Whenever the condition changes, the kernel runtime modifies all code paths
+/// associated with that key flipping the code between nop and (unconditional)
+/// jump. The information about the code is stored in a static key jump table
+/// and contains the list of entries of the following type from
 /// include/linux/jump_label.h:
 //
 ///   struct jump_entry {
