@@ -287,15 +287,22 @@ getPointerDataLayoutEntry(DataLayoutEntryListRef params, LLVMPointerType type,
     }
   }
   if (currentEntry) {
-    return *extractPointerSpecValue(currentEntry, pos) /
-           (pos == PtrDLEntryPos::Size ? 1 : kBitsInByte);
+    std::optional<uint64_t> value = extractPointerSpecValue(currentEntry, pos);
+    // If the optional `PtrDLEntryPos::Index` entry is not available, use the
+    // pointer size as the index bitwidth.
+    if (!value && pos == PtrDLEntryPos::Index)
+      value = extractPointerSpecValue(currentEntry, PtrDLEntryPos::Size);
+    bool isSizeOrIndex =
+        pos == PtrDLEntryPos::Size || pos == PtrDLEntryPos::Index;
+    return *value / (isSizeOrIndex ? 1 : kBitsInByte);
   }
 
   // If not found, and this is the pointer to the default memory space, assume
   // 64-bit pointers.
   if (type.getAddressSpace() == 0) {
-    return pos == PtrDLEntryPos::Size ? kDefaultPointerSizeBits
-                                      : kDefaultPointerAlignment;
+    bool isSizeOrIndex =
+        pos == PtrDLEntryPos::Size || pos == PtrDLEntryPos::Index;
+    return isSizeOrIndex ? kDefaultPointerSizeBits : kDefaultPointerAlignment;
   }
 
   return std::nullopt;
@@ -330,6 +337,16 @@ LLVMPointerType::getPreferredAlignment(const DataLayout &dataLayout,
     return *alignment;
 
   return dataLayout.getTypePreferredAlignment(get(getContext()));
+}
+
+std::optional<uint64_t>
+LLVMPointerType::getIndexBitwidth(const DataLayout &dataLayout,
+                                  DataLayoutEntryListRef params) const {
+  if (std::optional<uint64_t> indexBitwidth =
+          getPointerDataLayoutEntry(params, *this, PtrDLEntryPos::Index))
+    return *indexBitwidth;
+
+  return dataLayout.getTypeIndexBitwidth(get(getContext()));
 }
 
 bool LLVMPointerType::areCompatible(DataLayoutEntryListRef oldLayout,
