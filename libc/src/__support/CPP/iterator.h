@@ -20,7 +20,6 @@ namespace cpp {
 template <typename T> struct iterator_traits;
 template <typename T> struct iterator_traits<T *> {
   using reference = T &;
-  using value_type = T;
 };
 
 template <typename Iter> class reverse_iterator {
@@ -28,8 +27,6 @@ template <typename Iter> class reverse_iterator {
 
 public:
   using reference = typename iterator_traits<Iter>::reference;
-  using value_type = typename iterator_traits<Iter>::value_type;
-  using iterator_type = Iter;
 
   LIBC_INLINE reverse_iterator() : current() {}
   LIBC_INLINE constexpr explicit reverse_iterator(Iter it) : current(it) {}
@@ -40,38 +37,6 @@ public:
                              int> = 0>
   LIBC_INLINE constexpr explicit reverse_iterator(const Other &it)
       : current(it) {}
-
-  LIBC_INLINE friend constexpr bool operator==(const reverse_iterator &lhs,
-                                               const reverse_iterator &rhs) {
-    return lhs.base() == rhs.base();
-  }
-
-  LIBC_INLINE friend constexpr bool operator!=(const reverse_iterator &lhs,
-                                               const reverse_iterator &rhs) {
-    return lhs.base() != rhs.base();
-  }
-
-  LIBC_INLINE friend constexpr bool operator<(const reverse_iterator &lhs,
-                                              const reverse_iterator &rhs) {
-    return lhs.base() > rhs.base();
-  }
-
-  LIBC_INLINE friend constexpr bool operator<=(const reverse_iterator &lhs,
-                                               const reverse_iterator &rhs) {
-    return lhs.base() >= rhs.base();
-  }
-
-  LIBC_INLINE friend constexpr bool operator>(const reverse_iterator &lhs,
-                                              const reverse_iterator &rhs) {
-    return lhs.base() < rhs.base();
-  }
-
-  LIBC_INLINE friend constexpr bool operator>=(const reverse_iterator &lhs,
-                                               const reverse_iterator &rhs) {
-    return lhs.base() <= rhs.base();
-  }
-
-  LIBC_INLINE constexpr iterator_type base() const { current; }
 
   LIBC_INLINE constexpr reference operator*() const {
     Iter tmp = current;
