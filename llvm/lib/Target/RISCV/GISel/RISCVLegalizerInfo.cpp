@@ -184,8 +184,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
-      all(sameSize(0, 1),
-          LegalityPredicates::any(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+      all(LegalityPredicates::any(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
                                   typeIsLegalBoolVec(0, BoolVecTys, ST)),
           LegalityPredicates::any(typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST),
                                   typeIsLegalBoolVec(1, BoolVecTys, ST))));
