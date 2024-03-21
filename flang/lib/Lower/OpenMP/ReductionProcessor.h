@@ -108,7 +108,7 @@ public:
   /// Creates an OpenMP reduction declaration and inserts it into the provided
   /// symbol table. The declaration has a constant initializer with the neutral
   /// value `initValue`, and the reduction combiner carried over from `reduce`.
-  /// TODO: Generalize this for non-integer types, add atomic region.
+  /// TODO: add atomic region.
   static mlir::omp::ReductionDeclareOp
   createReductionDecl(fir::FirOpBuilder &builder,
                       llvm::StringRef reductionOpName,
