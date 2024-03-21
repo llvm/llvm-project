@@ -216,7 +216,8 @@ struct __fn {
     requires constructible_from<decay_t<_Pred>, _Pred>
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto
   operator()(_Pred&& __pred) noexcept(is_nothrow_constructible_v<decay_t<_Pred>, _Pred>) {
-    return __range_adaptor_closure_t(std::__bind_back(operator(), std::forward<_Pred>(__pred)));
+    constexpr auto __self = __fn{};
+    return __range_adaptor_closure_t(std::__bind_back(__self, std::forward<_Pred>(__pred)));
   }
 };
 } // namespace __chunk_by
