@@ -44,6 +44,7 @@ void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
                     << " Val: " << Twine::utohexstr(BBInputOffset) << "\n");
   LLVM_DEBUG(dbgs() << formatv(" Hash: {0:x}\n",
                                getBBHash(HotFuncAddress, BBInputOffset)));
+  (void)HotFuncAddress;
   // In case of conflicts (same Key mapping to different Vals), the last
   // update takes precedence. Of course it is not ideal to have conflicts and
   // those happen when we have an empty BB that either contained only
