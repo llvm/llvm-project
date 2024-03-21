@@ -735,9 +735,6 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   if (DestWidth == 1) {
     Value *Zero = Constant::getNullValue(SrcTy);
 
-    // For vectors, we do not canonicalize all truncs to icmp, so optimize
-    // patterns that would be covered within visitICmpInst.
-
     Value *X;
     const APInt *C1;
     Constant *C2;
