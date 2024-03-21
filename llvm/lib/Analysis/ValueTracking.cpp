@@ -8390,8 +8390,7 @@ bool llvm::matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
 
 /// Return true if "icmp Pred LHS RHS" is always true.
 static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
-                            const Value *RHS, const DataLayout &DL,
-                            unsigned Depth) {
+                            const Value *RHS, const DataLayout &DL) {
   if (ICmpInst::isTrueWhenEqual(Pred) && LHS == RHS)
     return true;
 
@@ -8403,8 +8402,26 @@ static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
     const APInt *C;
 
     // LHS s<= LHS +_{nsw} C   if C >= 0
-    if (match(RHS, m_NSWAdd(m_Specific(LHS), m_APInt(C))))
+    // LHS s<= LHS | C         if C >= 0
+    if (match(RHS, m_NSWAdd(m_Specific(LHS), m_APInt(C))) ||
+        match(RHS, m_Or(m_Specific(LHS), m_APInt(C))))
       return !C->isNegative();
+
+    // LHS s<= smax(LHS, V) for any V
+    if (match(RHS, m_c_SMax(m_Specific(LHS), m_Value())))
+      return true;
+
+    // smin(RHS, V) s<= RHS for any V
+    if (match(LHS, m_c_SMin(m_Specific(RHS), m_Value())))
+      return true;
+
+    // Match A to (X +_{nsw} CA) and B to (X +_{nsw} CB)
+    const Value *X;
+    const APInt *CLHS, *CRHS;
+    if (match(LHS, m_NSWAddLike(m_Value(X), m_APInt(CLHS))) &&
+        match(RHS, m_NSWAddLike(m_Specific(X), m_APInt(CRHS))))
+      return CLHS->sle(*CRHS);
+
     return false;
   }
 
@@ -8414,34 +8431,36 @@ static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
         cast<OverflowingBinaryOperator>(RHS)->hasNoUnsignedWrap())
       return true;
 
+    // LHS u<= LHS | V for any V
+    if (match(RHS, m_c_Or(m_Specific(LHS), m_Value())))
+      return true;
+
+    // LHS u<= umax(LHS, V) for any V
+    if (match(RHS, m_c_UMax(m_Specific(LHS), m_Value())))
+      return true;
+
     // RHS >> V u<= RHS for any V
     if (match(LHS, m_LShr(m_Specific(RHS), m_Value())))
       return true;
 
+    // RHS u/ C_ugt_1 u<= RHS
+    const APInt *C;
+    if (match(LHS, m_UDiv(m_Specific(RHS), m_APInt(C))) && C->ugt(1))
+      return true;
+
+    // RHS & V u<= RHS for any V
+    if (match(LHS, m_c_And(m_Specific(RHS), m_Value())))
+      return true;
+
+    // umin(RHS, V) u<= RHS for any V
+    if (match(LHS, m_c_UMin(m_Specific(RHS), m_Value())))
+      return true;
+
     // Match A to (X +_{nuw} CA) and B to (X +_{nuw} CB)
-    auto MatchNUWAddsToSameValue = [&](const Value *A, const Value *B,
-                                       const Value *&X,
-                                       const APInt *&CA, const APInt *&CB) {
-      if (match(A, m_NUWAdd(m_Value(X), m_APInt(CA))) &&
-          match(B, m_NUWAdd(m_Specific(X), m_APInt(CB))))
-        return true;
-
-      // If X & C == 0 then (X | C) == X +_{nuw} C
-      if (match(A, m_Or(m_Value(X), m_APInt(CA))) &&
-          match(B, m_Or(m_Specific(X), m_APInt(CB)))) {
-        KnownBits Known(CA->getBitWidth());
-        computeKnownBits(X, Known, DL, Depth + 1, /*AC*/ nullptr,
-                         /*CxtI*/ nullptr, /*DT*/ nullptr);
-        if (CA->isSubsetOf(Known.Zero) && CB->isSubsetOf(Known.Zero))
-          return true;
-      }
-
-      return false;
-    };
-
     const Value *X;
     const APInt *CLHS, *CRHS;
-    if (MatchNUWAddsToSameValue(LHS, RHS, X, CLHS, CRHS))
+    if (match(LHS, m_NUWAddLike(m_Value(X), m_APInt(CLHS))) &&
+        match(RHS, m_NUWAddLike(m_Specific(X), m_APInt(CRHS))))
       return CLHS->ule(*CRHS);
 
     return false;
@@ -8454,36 +8473,36 @@ static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
 static std::optional<bool>
 isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
                       const Value *ARHS, const Value *BLHS, const Value *BRHS,
-                      const DataLayout &DL, unsigned Depth) {
+                      const DataLayout &DL) {
   switch (Pred) {
   default:
     return std::nullopt;
 
   case CmpInst::ICMP_SLT:
   case CmpInst::ICMP_SLE:
-    if (isTruePredicate(CmpInst::ICMP_SLE, BLHS, ALHS, DL, Depth) &&
-        isTruePredicate(CmpInst::ICMP_SLE, ARHS, BRHS, DL, Depth))
+    if (isTruePredicate(CmpInst::ICMP_SLE, BLHS, ALHS, DL) &&
+        isTruePredicate(CmpInst::ICMP_SLE, ARHS, BRHS, DL))
       return true;
     return std::nullopt;
 
   case CmpInst::ICMP_SGT:
   case CmpInst::ICMP_SGE:
-    if (isTruePredicate(CmpInst::ICMP_SLE, ALHS, BLHS, DL, Depth) &&
-        isTruePredicate(CmpInst::ICMP_SLE, BRHS, ARHS, DL, Depth))
+    if (isTruePredicate(CmpInst::ICMP_SLE, ALHS, BLHS, DL) &&
+        isTruePredicate(CmpInst::ICMP_SLE, BRHS, ARHS, DL))
       return true;
     return std::nullopt;
 
   case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_ULE:
-    if (isTruePredicate(CmpInst::ICMP_ULE, BLHS, ALHS, DL, Depth) &&
-        isTruePredicate(CmpInst::ICMP_ULE, ARHS, BRHS, DL, Depth))
+    if (isTruePredicate(CmpInst::ICMP_ULE, BLHS, ALHS, DL) &&
+        isTruePredicate(CmpInst::ICMP_ULE, ARHS, BRHS, DL))
       return true;
     return std::nullopt;
 
   case CmpInst::ICMP_UGT:
   case CmpInst::ICMP_UGE:
-    if (isTruePredicate(CmpInst::ICMP_ULE, ALHS, BLHS, DL, Depth) &&
-        isTruePredicate(CmpInst::ICMP_ULE, BRHS, ARHS, DL, Depth))
+    if (isTruePredicate(CmpInst::ICMP_ULE, ALHS, BLHS, DL) &&
+        isTruePredicate(CmpInst::ICMP_ULE, BRHS, ARHS, DL))
       return true;
     return std::nullopt;
   }
@@ -8527,7 +8546,7 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
                                               CmpInst::Predicate RPred,
                                               const Value *R0, const Value *R1,
                                               const DataLayout &DL,
-                                              bool LHSIsTrue, unsigned Depth) {
+                                              bool LHSIsTrue) {
   Value *L0 = LHS->getOperand(0);
   Value *L1 = LHS->getOperand(1);
 
@@ -8574,7 +8593,7 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
     return LPred == RPred;
 
   if (LPred == RPred)
-    return isImpliedCondOperands(LPred, L0, L1, R0, R1, DL, Depth);
+    return isImpliedCondOperands(LPred, L0, L1, R0, R1, DL);
 
   return std::nullopt;
 }
@@ -8636,8 +8655,7 @@ llvm::isImpliedCondition(const Value *LHS, CmpInst::Predicate RHSPred,
   // Both LHS and RHS are icmps.
   const ICmpInst *LHSCmp = dyn_cast<ICmpInst>(LHS);
   if (LHSCmp)
-    return isImpliedCondICmps(LHSCmp, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue,
-                              Depth);
+    return isImpliedCondICmps(LHSCmp, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue);
 
   /// The LHS should be an 'or', 'and', or a 'select' instruction.  We expect
   /// the RHS to be an icmp.
