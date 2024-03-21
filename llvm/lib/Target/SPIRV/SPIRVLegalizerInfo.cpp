@@ -113,6 +113,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       v3s32, v3s64, v4s1,  v4s8,  v4s16,  v4s32,  v4s64, v8s1, v8s8, v8s16,
       v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
 
+  auto allVectors = {v2s1,  v2s8,   v2s16,  v2s32, v2s64, v3s1,  v3s8,
+                     v3s16, v3s32,  v3s64,  v4s1,  v4s8,  v4s16, v4s32,
+                     v4s64, v8s1,   v8s8,   v8s16, v8s32, v8s64, v16s1,
+                     v16s8, v16s16, v16s32, v16s64};
+
   auto allScalarsAndVectors = {
       s1,   s8,   s16,   s32,   s64,   v2s1,  v2s8,  v2s16,  v2s32,  v2s64,
       v3s1, v3s8, v3s16, v3s32, v3s64, v4s1,  v4s8,  v4s16,  v4s32,  v4s64,
@@ -144,7 +149,27 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).alwaysLegal();
 
   // TODO: add proper rules for vectors legalization.
-  getActionDefinitionsBuilder({G_BUILD_VECTOR, G_SHUFFLE_VECTOR}).alwaysLegal();
+  getActionDefinitionsBuilder(
+      {G_BUILD_VECTOR, G_SHUFFLE_VECTOR, G_SPLAT_VECTOR})
+      .alwaysLegal();
+
+  // Vector Reduction Operations
+  getActionDefinitionsBuilder(
+      {G_VECREDUCE_SMIN, G_VECREDUCE_SMAX, G_VECREDUCE_UMIN, G_VECREDUCE_UMAX,
+       G_VECREDUCE_ADD, G_VECREDUCE_MUL, G_VECREDUCE_FMUL, G_VECREDUCE_FMIN,
+       G_VECREDUCE_FMAX, G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUM,
+       G_VECREDUCE_OR, G_VECREDUCE_AND, G_VECREDUCE_XOR})
+      .legalFor(allVectors)
+      .scalarize(1)
+      .lower();
+
+  getActionDefinitionsBuilder({G_VECREDUCE_SEQ_FADD, G_VECREDUCE_SEQ_FMUL})
+      .scalarize(2)
+      .lower();
+
+  // Merge/Unmerge
+  // TODO: add proper legalization rules.
+  getActionDefinitionsBuilder(G_UNMERGE_VALUES).alwaysLegal();
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE})
       .legalIf(all(typeInSet(0, allWritablePtrs), typeInSet(1, allPtrs)));
@@ -177,12 +202,9 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_PHI).legalFor(allPtrsScalarsAndVectors);
 
-  getActionDefinitionsBuilder(G_BITCAST).legalIf(all(
-      typeInSet(0, allPtrsScalarsAndVectors),
-      typeInSet(1, allPtrsScalarsAndVectors),
-      LegalityPredicate(([=](const LegalityQuery &Query) {
-        return Query.Types[0].getSizeInBits() == Query.Types[1].getSizeInBits();
-      }))));
+  getActionDefinitionsBuilder(G_BITCAST).legalIf(
+      all(typeInSet(0, allPtrsScalarsAndVectors),
+          typeInSet(1, allPtrsScalarsAndVectors)));
 
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE}).alwaysLegal();
 

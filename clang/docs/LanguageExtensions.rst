@@ -13,6 +13,7 @@ Clang Language Extensions
    BlockLanguageSpec
    Block-ABI-Apple
    AutomaticReferenceCounting
+   PointerAuthentication
    MatrixTypes
 
 Introduction
@@ -1458,40 +1459,45 @@ More information could be found `here <https://clang.llvm.org/docs/Modules.html>
 Language Extensions Back-ported to Previous Standards
 =====================================================
 
-====================================== ================================ ============= =============
-Feature                                Feature Test Macro               Introduced In Backported To
-====================================== ================================ ============= =============
-variadic templates                     __cpp_variadic_templates         C++11         C++03
-Alias templates                        __cpp_alias_templates            C++11         C++03
-Non-static data member initializers    __cpp_nsdmi                      C++11         C++03
-Range-based ``for`` loop               __cpp_range_based_for            C++11         C++03
-RValue references                      __cpp_rvalue_references          C++11         C++03
-Attributes                             __cpp_attributes                 C++11         C++03
-variable templates                     __cpp_variable_templates         C++14         C++03
-Binary literals                        __cpp_binary_literals            C++14         C++03
-Relaxed constexpr                      __cpp_constexpr                  C++14         C++11
-``if constexpr``                       __cpp_if_constexpr               C++17         C++11
-fold expressions                       __cpp_fold_expressions           C++17         C++03
-Lambda capture of \*this by value      __cpp_capture_star_this          C++17         C++11
-Attributes on enums                    __cpp_enumerator_attributes      C++17         C++03
-Guaranteed copy elision                __cpp_guaranteed_copy_elision    C++17         C++03
-Hexadecimal floating literals          __cpp_hex_float                  C++17         C++03
-``inline`` variables                   __cpp_inline_variables           C++17         C++03
-Attributes on namespaces               __cpp_namespace_attributes       C++17         C++11
-Structured bindings                    __cpp_structured_bindings        C++17         C++03
-template template arguments            __cpp_template_template_args     C++17         C++03
-``static operator[]``                  __cpp_multidimensional_subscript C++20         C++03
-Designated initializers                __cpp_designated_initializers    C++20         C++03
-Conditional ``explicit``               __cpp_conditional_explicit       C++20         C++03
-``using enum``                         __cpp_using_enum                 C++20         C++03
-``if consteval``                       __cpp_if_consteval               C++23         C++20
-``static operator()``                  __cpp_static_call_operator       C++23         C++03
-Attributes on Lambda-Expressions                                        C++23         C++11
--------------------------------------- -------------------------------- ------------- -------------
-Designated initializers (N494)                                          C99           C89
-Array & element qualification (N2607)                                   C23           C89
-Attributes (N2335)                                                      C23           C89
-====================================== ================================ ============= =============
+============================================ ================================ ============= =============
+Feature                                      Feature Test Macro               Introduced In Backported To
+============================================ ================================ ============= =============
+variadic templates                           __cpp_variadic_templates         C++11         C++03
+Alias templates                              __cpp_alias_templates            C++11         C++03
+Non-static data member initializers          __cpp_nsdmi                      C++11         C++03
+Range-based ``for`` loop                     __cpp_range_based_for            C++11         C++03
+RValue references                            __cpp_rvalue_references          C++11         C++03
+Attributes                                   __cpp_attributes                 C++11         C++03
+Lambdas                                      __cpp_lambdas                    C++11         C++03
+Generalized lambda captures                  __cpp_init_captures              C++14         C++03
+Generic lambda expressions                   __cpp_generic_lambdas            C++14         C++03
+variable templates                           __cpp_variable_templates         C++14         C++03
+Binary literals                              __cpp_binary_literals            C++14         C++03
+Relaxed constexpr                            __cpp_constexpr                  C++14         C++11
+Pack expansion in generalized lambda-capture __cpp_init_captures              C++17         C++03
+``if constexpr``                             __cpp_if_constexpr               C++17         C++11
+fold expressions                             __cpp_fold_expressions           C++17         C++03
+Lambda capture of \*this by value            __cpp_capture_star_this          C++17         C++03
+Attributes on enums                          __cpp_enumerator_attributes      C++17         C++03
+Guaranteed copy elision                      __cpp_guaranteed_copy_elision    C++17         C++03
+Hexadecimal floating literals                __cpp_hex_float                  C++17         C++03
+``inline`` variables                         __cpp_inline_variables           C++17         C++03
+Attributes on namespaces                     __cpp_namespace_attributes       C++17         C++11
+Structured bindings                          __cpp_structured_bindings        C++17         C++03
+template template arguments                  __cpp_template_template_args     C++17         C++03
+Familiar template syntax for generic lambdas __cpp_generic_lambdas            C++20         C++03
+``static operator[]``                        __cpp_multidimensional_subscript C++20         C++03
+Designated initializers                      __cpp_designated_initializers    C++20         C++03
+Conditional ``explicit``                     __cpp_conditional_explicit       C++20         C++03
+``using enum``                               __cpp_using_enum                 C++20         C++03
+``if consteval``                             __cpp_if_consteval               C++23         C++20
+``static operator()``                        __cpp_static_call_operator       C++23         C++03
+Attributes on Lambda-Expressions                                              C++23         C++11
+-------------------------------------------- -------------------------------- ------------- -------------
+Designated initializers (N494)                                                C99           C89
+Array & element qualification (N2607)                                         C23           C89
+Attributes (N2335)                                                            C23           C89
+============================================ ================================ ============= =============
 
 Type Trait Primitives
 =====================
@@ -2799,6 +2805,34 @@ counter's true frequency will need to be provided by the user.
 
 Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.
 
+``__builtin_cpu_supports``
+--------------------------
+
+**Syntax**:
+
+.. code-block:: c++
+
+  int __builtin_cpu_supports(const char *features);
+
+**Example of Use:**:
+
+.. code-block:: c++
+
+  if (__builtin_cpu_supports("sve"))
+    sve_code();
+
+**Description**:
+
+The ``__builtin_cpu_supports`` function detects if the run-time CPU supports
+features specified in string argument. It returns a positive integer if all
+features are supported and 0 otherwise. Feature names are target specific. On
+AArch64 features are combined using ``+`` like this
+``__builtin_cpu_supports("flagm+sha3+lse+rcpc2+fcma+memtag+bti+sme2")``.
+If a feature name is not supported, Clang will issue a warning and replace
+builtin by the constant 0.
+
+Query for this feature with ``__has_builtin(__builtin_cpu_supports)``.
+
 ``__builtin_dump_struct``
 -------------------------
 
@@ -3415,6 +3449,21 @@ Query for this feature with ``__has_builtin(__builtin_debugtrap)``.
 
 Query for this feature with ``__has_builtin(__builtin_trap)``.
 
+``__builtin_arm_trap``
+----------------------
+
+``__builtin_arm_trap`` is an AArch64 extension to ``__builtin_trap`` which also accepts a compile-time constant value, encoded directly into the trap instruction for later inspection.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_arm_trap(const unsigned short payload)
+
+**Description**
+
+``__builtin_arm_trap`` is lowered to the ``llvm.aarch64.break`` builtin, and then to ``brk #payload``.
+
 ``__builtin_nondeterministic_value``
 ------------------------------------
 
@@ -3503,6 +3552,47 @@ argument can be of any unsigned integer type.
 ``__builtin_popcountg`` is meant to be a type-generic alternative to the
 ``__builtin_popcount{,l,ll}`` builtins, with support for other integer types,
 such as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
+
+``__builtin_clzg`` and ``__builtin_ctzg``
+-----------------------------------------
+
+``__builtin_clzg`` (respectively ``__builtin_ctzg``) returns the number of
+leading (respectively trailing) 0 bits in the first argument. The first argument
+can be of any unsigned integer type.
+
+If the first argument is 0 and an optional second argument of ``int`` type is
+provided, then the second argument is returned. If the first argument is 0, but
+only one argument is provided, then the behavior is undefined.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  int __builtin_clzg(type x[, int fallback])
+  int __builtin_ctzg(type x[, int fallback])
+
+**Examples**:
+
+.. code-block:: c++
+
+  unsigned int x = 1;
+  int x_lz = __builtin_clzg(x);
+  int x_tz = __builtin_ctzg(x);
+
+  unsigned long y = 2;
+  int y_lz = __builtin_clzg(y);
+  int y_tz = __builtin_ctzg(y);
+
+  unsigned _BitInt(128) z = 4;
+  int z_lz = __builtin_clzg(z);
+  int z_tz = __builtin_ctzg(z);
+
+**Description**:
+
+``__builtin_clzg`` (respectively ``__builtin_ctzg``) is meant to be a
+type-generic alternative to the ``__builtin_clz{,l,ll}`` (respectively
+``__builtin_ctz{,l,ll}``) builtins, with support for other integer types, such
+as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 
 Multiprecision Arithmetic Builtins
 ----------------------------------
@@ -4274,6 +4364,10 @@ Note that these intrinsics are implemented as motion barriers that block
 reordering of memory accesses and side effect instructions. Other instructions
 like simple arithmetic may be reordered around the intrinsic. If you expect to
 have no reordering at all, use inline assembly instead.
+
+Pointer Authentication
+^^^^^^^^^^^^^^^^^^^^^^
+See :doc:`PointerAuthentication`.
 
 X86/X86-64 Language Extensions
 ------------------------------
@@ -5350,6 +5444,7 @@ The following builtin intrinsics can be used in constant expressions:
 * ``__builtin_popcount``
 * ``__builtin_popcountl``
 * ``__builtin_popcountll``
+* ``__builtin_popcountg``
 * ``__builtin_rotateleft8``
 * ``__builtin_rotateleft16``
 * ``__builtin_rotateleft32``

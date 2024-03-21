@@ -12,12 +12,16 @@ class FPMathTemplate : Template<["float", "double", "long double"],
                                 ["f",     "",       "l"]>;
 
 class FPMathWithF16Template :
-    Template<["float", "double", "long double", "__fp16", "__float128"],
-             ["f",     "",       "l",           "f16",    "f128"]>;
+    Template<["float", "double", "long double", "__fp16"],
+             ["f",     "",       "l",           "f16"]>;
 
 class FPMathWithF16F128Template :
     Template<["float", "double", "long double", "__fp16", "__float128"],
              ["f",     "",       "l",           "f16",    "f128"]>;
+
+class FPMathWithF128Template :
+    Template<["float", "double", "long double", "__float128"],
+             ["f",     "",       "l",           "f128"]>;
 
 class F16F128MathTemplate : Template<["__fp16", "__float128"],
                                      ["f16",    "f128"]>;
@@ -253,16 +257,28 @@ def FrexpF16F128 : F16F128MathTemplate, Builtin {
   let Prototype = "T(T, int*)";
 }
 
-def HugeVal : Builtin, FPMathWithF16F128Template {
+def HugeVal : Builtin, FPMathWithF128Template {
   let Spellings = ["__builtin_huge_val"];
   let Attributes = [NoThrow, Const, Constexpr];
   let Prototype = "T()";
 }
 
-def Inf : Builtin, FPMathWithF16F128Template {
+def HugeValF16 : Builtin {
+       let Spellings = ["__builtin_huge_valf16"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "_Float16()";
+}
+
+def Inf : Builtin, FPMathWithF128Template {
   let Spellings = ["__builtin_inf"];
   let Attributes = [NoThrow, Const, Constexpr];
   let Prototype = "T()";
+}
+
+def InfF16 : Builtin {
+  let Spellings = ["__builtin_inff16"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "_Float16()";
 }
 
 def LdexpF16F128 : F16F128MathTemplate, Builtin {
@@ -660,7 +676,11 @@ def Clz : Builtin, BitShort_Int_Long_LongLongTemplate {
   let Prototype = "int(unsigned T)";
 }
 
-// FIXME: Add int clzimax(uintmax_t)
+def Clzg : Builtin {
+  let Spellings = ["__builtin_clzg"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "int(...)";
+}
 
 def Ctz : Builtin, BitShort_Int_Long_LongLongTemplate {
   let Spellings = ["__builtin_ctz"];
@@ -668,7 +688,11 @@ def Ctz : Builtin, BitShort_Int_Long_LongLongTemplate {
   let Prototype = "int(unsigned T)";
 }
 
-// FIXME: Add int ctzimax(uintmax_t)
+def Ctzg : Builtin {
+  let Spellings = ["__builtin_ctzg"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "int(...)";
+}
 
 def FFS : Builtin, BitInt_Long_LongLongTemplate {
   let Spellings = ["__builtin_ffs"];
@@ -690,7 +714,7 @@ def Popcount : Builtin, BitInt_Long_LongLongTemplate {
 
 def Popcountg : Builtin {
   let Spellings = ["__builtin_popcountg"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
   let Prototype = "int(...)";
 }
 
@@ -1550,7 +1574,7 @@ def SyncBoolCompareAndSwap : Builtin {
 def SyncBoolCompareAndSwapN : Builtin, SyncBuiltinsTemplate {
   let Spellings = ["__sync_bool_compare_and_swap_"];
   let Attributes = [CustomTypeChecking, NoThrow];
-  let Prototype = "T(T volatile*, T, ...)";
+  let Prototype = "bool(T volatile*, T, T, ...)";
 }
 
 def SyncValCompareAndSwap : Builtin {
@@ -1562,7 +1586,7 @@ def SyncValCompareAndSwap : Builtin {
 def SynLockValCompareAndSwapN : Builtin, SyncBuiltinsTemplate {
   let Spellings = ["__sync_val_compare_and_swap_"];
   let Attributes = [CustomTypeChecking, NoThrow];
-  let Prototype = "T(T volatile*, T, ...)";
+  let Prototype = "T(T volatile*, T, T, ...)";
 }
 
 def SyncLockTestAndSet : Builtin {
@@ -1577,16 +1601,16 @@ def SynLockLockTestAndSetN : Builtin, SyncBuiltinsTemplate {
   let Prototype = "T(T volatile*, T, ...)";
 }
 
-def SyncLockReleaseN : Builtin {
+def SyncLockRelease : Builtin {
   let Spellings = ["__sync_lock_release"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def SynLockReleaseN : Builtin, SyncBuiltinsTemplate {
+def SyncLockReleaseN : Builtin, SyncBuiltinsTemplate {
   let Spellings = ["__sync_lock_release_"];
   let Attributes = [CustomTypeChecking, NoThrow];
-  let Prototype = "T(T volatile*, T, ...)";
+  let Prototype = "void(T volatile*, ...)";
 }
 
 def SyncSwap : Builtin {
@@ -2569,6 +2593,13 @@ def Abort : LibBuiltin<"stdlib.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
+def Abs : IntMathTemplate, LibBuiltin<"stdlib.h"> {
+  let Spellings = ["abs"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "T(T)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
 def Calloc : LibBuiltin<"stdlib.h"> {
   let Spellings = ["calloc"];
   let Prototype = "void*(size_t, size_t)";
@@ -3085,38 +3116,38 @@ def MemAlign : GNULibBuiltin<"malloc.h"> {
 
 // POSIX string.h
 
-def MemcCpy : GNULibBuiltin<"stdlib.h"> {
+def MemcCpy : GNULibBuiltin<"string.h"> {
   let Spellings = ["memccpy"];
   let Prototype = "void*(void*, void const*, int, size_t)";
 }
 
-def MempCpy : GNULibBuiltin<"stdlib.h"> {
+def MempCpy : GNULibBuiltin<"string.h"> {
   let Spellings = ["mempcpy"];
   let Prototype = "void*(void*, void const*, size_t)";
 }
 
-def StpCpy : GNULibBuiltin<"stdlib.h"> {
+def StpCpy : GNULibBuiltin<"string.h"> {
   let Spellings = ["stpcpy"];
   let Attributes = [NoThrow];
   let Prototype = "char*(char*, char const*)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
-def StpnCpy : GNULibBuiltin<"stdlib.h"> {
+def StpnCpy : GNULibBuiltin<"string.h"> {
   let Spellings = ["stpncpy"];
   let Attributes = [NoThrow];
   let Prototype = "char*(char*, char const*, size_t)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
-def StrDup : GNULibBuiltin<"stdlib.h"> {
+def StrDup : GNULibBuiltin<"string.h"> {
   let Spellings = ["strdup"];
   let Attributes = [NoThrow];
   let Prototype = "char*(char const*)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
-def StrnDup : GNULibBuiltin<"stdlib.h"> {
+def StrnDup : GNULibBuiltin<"string.h"> {
   let Spellings = ["strndup"];
   let Attributes = [NoThrow];
   let Prototype = "char*(char const*, size_t)";
@@ -3286,22 +3317,22 @@ def ObjcEnumerationMutation : ObjCLibBuiltin<"objc/runtime.h"> {
   let Prototype = "void(id)";
 }
 
-def ObjcReadWeak : ObjCLibBuiltin<"objc/message.h"> {
+def ObjcReadWeak : ObjCLibBuiltin<"objc/objc-auto.h"> {
   let Spellings = ["objc_read_weak"];
   let Prototype = "id(id*)";
 }
 
-def ObjcAssignWeak : ObjCLibBuiltin<"objc/message.h"> {
+def ObjcAssignWeak : ObjCLibBuiltin<"objc/objc-auto.h"> {
   let Spellings = ["objc_assign_weak"];
   let Prototype = "id(id, id*)";
 }
 
-def ObjcAssignIvar : ObjCLibBuiltin<"objc/message.h"> {
+def ObjcAssignIvar : ObjCLibBuiltin<"objc/objc-auto.h"> {
   let Spellings = ["objc_assign_ivar"];
   let Prototype = "id(id, id, ptrdiff_t)";
 }
 
-def ObjcAssignGlobal : ObjCLibBuiltin<"objc/message.h"> {
+def ObjcAssignGlobal : ObjCLibBuiltin<"objc/objc-auto.h"> {
   let Spellings = ["objc_assign_global"];
   let Prototype = "id(id, id*)";
 }
@@ -3368,13 +3399,6 @@ def Atan2 : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["atan2"];
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T, T)";
-  let AddBuiltinPrefixedAlias = 1;
-}
-
-def Abs : IntMathTemplate, LibBuiltin<"math.h"> {
-  let Spellings = ["abs"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "T(T)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
@@ -3996,8 +4020,16 @@ def BlockObjectDispose : LibBuiltin<"blocks.h"> {
 }
 // FIXME: Also declare NSConcreteGlobalBlock and NSConcreteStackBlock.
 
+def __Addressof : LangBuiltin<"CXX_LANG"> {
+  let Spellings = ["__addressof"];
+  let Attributes = [FunctionWithoutBuiltinPrefix, NoThrow, Const,
+                    IgnoreSignature, Constexpr];
+  let Prototype = "void*(void&)";
+  let Namespace = "std";
+}
+
 def Addressof : CxxLibBuiltin<"memory"> {
-  let Spellings = ["addressof", "__addressof"];
+  let Spellings = ["addressof"];
   let Attributes = [NoThrow, Const, IgnoreSignature, RequireDeclaration,
                     Constexpr];
   let Prototype = "void*(void&)";
@@ -4036,7 +4068,7 @@ def Move : CxxLibBuiltin<"utility"> {
   let Namespace = "std";
 }
 
-def MoveIfNsoexcept : CxxLibBuiltin<"memory"> {
+def MoveIfNsoexcept : CxxLibBuiltin<"utility"> {
   let Spellings = ["move_if_noexcept"];
   let Attributes = [NoThrow, Const, IgnoreSignature, RequireDeclaration,
                     Constexpr];
@@ -4330,6 +4362,43 @@ def CoroSuspend : CoroLangBuiltin {
   let Prototype = "char(_Constant bool)";
 }
 
+// Pointer authentication builtins.
+def PtrauthStrip : Builtin {
+  let Spellings = ["__builtin_ptrauth_strip"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "void*(void*,int)";
+}
+
+def PtrauthBlendDiscriminator : Builtin {
+  let Spellings = ["__builtin_ptrauth_blend_discriminator"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "size_t(void*,int)";
+}
+
+def PtrauthSignUnauthenticated : Builtin {
+  let Spellings = ["__builtin_ptrauth_sign_unauthenticated"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "void*(void*,int,void*)";
+}
+
+def PtrauthSignGenericData : Builtin {
+  let Spellings = ["__builtin_ptrauth_sign_generic_data"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "size_t(void*,void*)";
+}
+
+def PtrauthAuthAndResign : Builtin {
+  let Spellings = ["__builtin_ptrauth_auth_and_resign"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*,int,void*,int,void*)";
+}
+
+def PtrauthAuth : Builtin {
+  let Spellings = ["__builtin_ptrauth_auth"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*,int,void*)";
+}
+
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
 // We need the generic prototype, since the packet type could be anything.
 def ReadPipe : OCLPipeLangBuiltin {
@@ -4518,10 +4587,22 @@ def GetDeviceSideMangledName : LangBuiltin<"CUDA_LANG"> {
 }
 
 // HLSL
+def HLSLAny : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_any"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(...)";
+}
+
 def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
   let Prototype = "unsigned int(bool)";
+}
+
+def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_clamp"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
 }
 
 def HLSLCreateHandle : LangBuiltin<"HLSL_LANG"> {
@@ -4542,8 +4623,32 @@ def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_isinf"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_lerp"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLMad : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_mad"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLRcp : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_rcp"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLRSqrt : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_rsqrt"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

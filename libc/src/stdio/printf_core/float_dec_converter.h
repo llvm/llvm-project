@@ -12,6 +12,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/UInt.h" // is_big_int_v
 #include "src/__support/float_to_string.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/libc_assert.h"
@@ -33,7 +34,8 @@ using ExponentString =
 
 // Returns true if value is divisible by 2^p.
 template <typename T>
-LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T> || is_big_int_v<T>,
+                                       bool>
 multiple_of_power_of_2(T value, uint32_t p) {
   return (value & ((T(1) << p) - 1)) == 0;
 }
@@ -46,7 +48,7 @@ constexpr uint32_t MAX_BLOCK = 999999999;
 constexpr char DECIMAL_POINT = '.';
 
 LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
-                                               fputil::Sign sign) {
+                                               Sign sign) {
   switch (fputil::quick_get_round()) {
   case FE_TONEAREST:
     // Round to nearest, if it's exactly halfway then round to even.
@@ -76,7 +78,8 @@ LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
 }
 
 template <typename T>
-LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T> || is_big_int_v<T>,
+                                       bool>
 zero_after_digits(int32_t base_2_exp, int32_t digits_after_point, T mantissa,
                   const int32_t mant_width) {
   const int32_t required_twos = -base_2_exp - digits_after_point - 1;
