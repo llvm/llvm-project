@@ -1106,11 +1106,20 @@ using ostream = basic_ostream<char>;
 extern std::ostream cout;
 
 ostream &operator<<(ostream &, const string &);
-
 #if __cplusplus >= 202002L
 template <class T>
 ostream &operator<<(ostream &, const std::unique_ptr<T> &);
 #endif
+
+template <class CharT>
+class basic_istream;
+
+using istream = basic_istream<char>;
+
+extern std::istream cin;
+
+istream &getline(istream &, string &, char);
+istream &getline(istream &, string &);
 } // namespace std
 
 #ifdef TEST_INLINABLE_ALLOCATORS
