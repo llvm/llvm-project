@@ -108,6 +108,7 @@ cc_binary(
         "//mlir:ArithToLLVM",
         "//mlir:BuiltinToLLVMIRTranslation",
         "//mlir:BytecodeReader",
+        "//mlir:CallOpInterfaces",
         "//mlir:CastInterfaces",
         "//mlir:ControlFlowToLLVM",
         "//mlir:ExecutionEngine",
