@@ -1192,16 +1192,16 @@ void FastISel::handleDbgInfo(const Instruction *II) {
     flushLocalValueMap();
     recomputeInsertPt();
 
-    if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-      assert(DPL->getLabel() && "Missing label");
+    if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+      assert(DLR->getLabel() && "Missing label");
       if (!FuncInfo.MF->getMMI().hasDebugInfo()) {
-        LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DPL << "\n");
+        LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DLR << "\n");
         continue;
       }
 
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DPL->getDebugLoc(),
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DLR->getDebugLoc(),
               TII.get(TargetOpcode::DBG_LABEL))
-          .addMetadata(DPL->getLabel());
+          .addMetadata(DLR->getLabel());
       continue;
     }
 
