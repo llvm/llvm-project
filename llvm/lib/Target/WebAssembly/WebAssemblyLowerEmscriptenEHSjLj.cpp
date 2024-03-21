@@ -1267,12 +1267,11 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   DebugLoc FirstDL = getOrCreateDebugLoc(&*Entry->begin(), F.getSubprogram());
   SplitBlock(Entry, &*Entry->getFirstInsertionPt());
 
-  Instruction *FunctionInvocationId;
   IRB.SetInsertPoint(Entry->getTerminator()->getIterator());
   // This alloca'ed pointer is used by the runtime to identify function
   // invocations. It's just for pointer comparisons. It will never be
   // dereferenced.
-  FunctionInvocationId =
+  Instruction *FunctionInvocationId =
       IRB.CreateAlloca(IRB.getInt32Ty(), nullptr, "functionInvocationId");
   FunctionInvocationId->setDebugLoc(FirstDL);
 
