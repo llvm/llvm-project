@@ -162,6 +162,10 @@ cl::opt<ProfileFormatKind> ProfileFormat(
                clEnumValN(PF_YAML, "yaml", "dense YAML representation")),
     cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
+cl::opt<std::string> SaveProfile("w",
+                                 cl::desc("save recorded profile to a file"),
+                                 cl::cat(BoltOutputCategory));
+
 cl::opt<bool> SplitEH("split-eh", cl::desc("split C++ exception handling code"),
                       cl::Hidden, cl::cat(BoltOptCategory));
 
