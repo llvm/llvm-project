@@ -234,6 +234,7 @@ protected:
   bool HasForceStoreSC0SC1 = false;
 
   bool RequiresCOV6 = false;
+  bool UseBlockVGPROpsForCSR = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1200,6 +1201,8 @@ public:
   bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
+
+  bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 

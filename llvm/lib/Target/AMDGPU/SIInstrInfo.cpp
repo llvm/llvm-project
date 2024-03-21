@@ -5604,6 +5604,16 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
                                    IsAllocatable);
 }
 
+const TargetRegisterClass *
+SIInstrInfo::getRegClassForBlockOp(const TargetRegisterInfo *TRI,
+                                   const MachineFunction &MF) const {
+  const MCInstrDesc &ScratchStoreBlockOp =
+      get(AMDGPU::SCRATCH_STORE_BLOCK_SADDR);
+  int VDataIdx = AMDGPU::getNamedOperandIdx(ScratchStoreBlockOp.getOpcode(),
+                                            AMDGPU::OpName::vdata);
+  return getRegClass(ScratchStoreBlockOp, VDataIdx, TRI, MF);
+}
+
 const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
                                                       unsigned OpNo) const {
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
