@@ -24,6 +24,7 @@
 #include <__chrono/ostream.h>
 #include <__chrono/parser_std_format_spec.h>
 #include <__chrono/statically_widen.h>
+#include <__chrono/sys_info.h>
 #include <__chrono/system_clock.h>
 #include <__chrono/time_point.h>
 #include <__chrono/weekday.h>
@@ -185,10 +186,11 @@ __format_zone_offset(basic_stringstream<_CharT>& __sstr, chrono::seconds __offse
 
   chrono::hh_mm_ss __hms{__offset};
   std::ostreambuf_iterator<_CharT> __out_it{__sstr};
+  // Note HMS does not allow formatting hours > 23, but the offset is not limited to 24H.
+  std::format_to(__out_it, _LIBCPP_STATICALLY_WIDEN(_CharT, "{:02}"), __hms.hours().count());
   if (__modifier)
-    std::format_to(__out_it, _LIBCPP_STATICALLY_WIDEN(_CharT, "{:%H:%M}"), __hms);
-  else
-    std::format_to(__out_it, _LIBCPP_STATICALLY_WIDEN(_CharT, "{:%H%M}"), __hms);
+    __sstr << _CharT(':');
+  std::format_to(__out_it, _LIBCPP_STATICALLY_WIDEN(_CharT, "{:02}"), __hms.minutes().count());
 }
 
 // Helper to store the time zone information needed for formatting.
@@ -202,6 +204,12 @@ struct _LIBCPP_HIDE_FROM_ABI __time_zone {
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI __time_zone __convert_to_time_zone([[maybe_unused]] const _Tp& __value) {
   __time_zone __result;
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+  if constexpr (same_as<_Tp, chrono::sys_info>) {
+    __result.__offset = __value.offset;
+    __result.__abbrev = __value.abbrev;
+  }
+#  endif
   return __result;
 }
 
@@ -409,6 +417,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_ok(const _Tp& __value) {
     return __value.weekday().ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+  else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+#  endif
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -449,6 +461,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_name_ok(const _Tp& __value) {
     return __value.weekday().ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+  else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+#  endif
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -489,6 +505,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __date_ok(const _Tp& __value) {
     return __value.ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+  else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+#  endif
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -529,6 +549,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __month_name_ok(const _Tp& __value) {
     return __value.month().ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+  else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+#  endif
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -858,6 +882,20 @@ public:
     return _Base::__parse(__ctx, __format_spec::__fields_chrono, __format_spec::__flags::__time);
   }
 };
+
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+template <__fmt_char_type _CharT>
+struct formatter<chrono::sys_info, _CharT> : public __formatter_chrono<_CharT> {
+public:
+  using _Base = __formatter_chrono<_CharT>;
+
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    return _Base::__parse(__ctx, __format_spec::__fields_chrono, __format_spec::__flags::__time_zone);
+  }
+};
+#  endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+
 #endif // if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD

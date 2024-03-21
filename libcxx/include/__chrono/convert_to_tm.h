@@ -20,6 +20,7 @@
 #include <__chrono/month_weekday.h>
 #include <__chrono/monthday.h>
 #include <__chrono/statically_widen.h>
+#include <__chrono/sys_info.h>
 #include <__chrono/system_clock.h>
 #include <__chrono/time_point.h>
 #include <__chrono/weekday.h>
@@ -171,6 +172,10 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
       if (__value.hours().count() > std::numeric_limits<decltype(__result.tm_hour)>::max())
         std::__throw_format_error("Formatting hh_mm_ss, encountered an hour overflow");
     __result.tm_hour = __value.hours().count();
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+  } else if constexpr (same_as<_ChronoT, chrono::sys_info>) {
+    // Has no time information.
+#  endif
   } else
     static_assert(sizeof(_ChronoT) == 0, "Add the missing type specialization");
 

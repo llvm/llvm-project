@@ -19,6 +19,7 @@
 #include <__chrono/month_weekday.h>
 #include <__chrono/monthday.h>
 #include <__chrono/statically_widen.h>
+#include <__chrono/sys_info.h>
 #include <__chrono/system_clock.h>
 #include <__chrono/weekday.h>
 #include <__chrono/year.h>
@@ -261,6 +262,25 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const hh_mm_ss<_Duration> __hms) {
   return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%T}"), __hms);
 }
+
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+
+template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const sys_info& __info) {
+  // __info.abbrev is always std::basic_string<char>.
+  // Since these strings typically are short the conversion should be cheap.
+  std::basic_string<_CharT> __abbrev{__info.abbrev.begin(), __info.abbrev.end()};
+  return __os << std::format(
+             _LIBCPP_STATICALLY_WIDEN(_CharT, "[{:%F %T}, {:%F %T}) {:%T} {:%Q%q} {}"),
+             __info.begin,
+             __info.end,
+             hh_mm_ss{__info.offset},
+             __info.save,
+             __abbrev);
+}
+
+#  endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
 
 } // namespace chrono
 
