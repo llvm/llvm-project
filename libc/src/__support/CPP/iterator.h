@@ -52,22 +52,22 @@ public:
 
   LIBC_INLINE friend constexpr bool operator<(const reverse_iterator &lhs,
                                               const reverse_iterator &rhs) {
-    return lhs.base() < rhs.base();
+    return lhs.base() > rhs.base();
   }
 
   LIBC_INLINE friend constexpr bool operator<=(const reverse_iterator &lhs,
                                                const reverse_iterator &rhs) {
-    return lhs.base() <= rhs.base();
+    return lhs.base() >= rhs.base();
   }
 
   LIBC_INLINE friend constexpr bool operator>(const reverse_iterator &lhs,
                                               const reverse_iterator &rhs) {
-    return lhs.base() > rhs.base();
+    return lhs.base() < rhs.base();
   }
 
   LIBC_INLINE friend constexpr bool operator>=(const reverse_iterator &lhs,
                                                const reverse_iterator &rhs) {
-    return lhs.base() >= rhs.base();
+    return lhs.base() <= rhs.base();
   }
 
   LIBC_INLINE constexpr iterator_type base() const { current; }
