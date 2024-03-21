@@ -3262,6 +3262,17 @@ libc_function(
     ],
 )
 
+libc_function(
+    name = "rename",
+    srcs = ["src/stdio/linux/rename.cpp"],
+    hdrs = ["src/stdio/rename.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
 ############################### sys/stat targets ###############################
 
 libc_function(
