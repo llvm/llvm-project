@@ -424,10 +424,7 @@ define i32 @fptosi_select(i1 %cond) {
 define i32 @mul_pos_zero_convert(i32 %a) {
 ; CHECK-LABEL: @mul_pos_zero_convert(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FP:%.*]] = sitofp i32 [[A:%.*]] to float
-; CHECK-NEXT:    [[RET:%.*]] = fmul float [[FP]], 0.000000e+00
-; CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[RET]] to i32
-; CHECK-NEXT:    ret i32 [[CONV]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %fp = sitofp i32 %a to float
