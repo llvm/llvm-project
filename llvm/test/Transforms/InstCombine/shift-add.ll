@@ -778,8 +778,7 @@ define <3 x i32> @add3_i96(<3 x i32> %0, <3 x i32> %1) {
 
 define i8 @shl_fold_or_disjoint_cnt(i8 %x) {
 ; CHECK-LABEL: @shl_fold_or_disjoint_cnt(
-; CHECK-NEXT:    [[A:%.*]] = or disjoint i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[R:%.*]] = shl i8 2, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 16, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = or disjoint i8 %x, 3
@@ -789,8 +788,7 @@ define i8 @shl_fold_or_disjoint_cnt(i8 %x) {
 
 define <2 x i8> @ashr_fold_or_disjoint_cnt(<2 x i8> %x) {
 ; CHECK-LABEL: @ashr_fold_or_disjoint_cnt(
-; CHECK-NEXT:    [[A:%.*]] = or disjoint <2 x i8> [[X:%.*]], <i8 3, i8 1>
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> <i8 2, i8 3>, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> <i8 0, i8 1>, [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = or disjoint <2 x i8> %x, <i8 3, i8 1>
@@ -800,9 +798,7 @@ define <2 x i8> @ashr_fold_or_disjoint_cnt(<2 x i8> %x) {
 
 define <2 x i8> @lshr_fold_or_disjoint_cnt_out_of_bounds(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_fold_or_disjoint_cnt_out_of_bounds(
-; CHECK-NEXT:    [[A:%.*]] = or disjoint <2 x i8> [[X:%.*]], <i8 3, i8 8>
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> <i8 2, i8 3>, [[A]]
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %a = or disjoint <2 x i8> %x, <i8 3, i8 8>
   %r = lshr <2 x i8> <i8 2, i8 3>, %a
