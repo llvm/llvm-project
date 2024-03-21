@@ -41,6 +41,7 @@ enum class Language : uint8_t {
   RenderScript,
   HIP,
   HLSL,
+  CIR,
   ///@}
 };
 StringRef languageToString(Language L);
