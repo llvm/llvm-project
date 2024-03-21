@@ -77,12 +77,45 @@ LIBC_INLINE T fdim(T x, T y) {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T canonicalize(T &cx, const T &x) {
-  if constexpr (get_fp_type<T>() == FPType::X86_Binary80) {
-  }
   FPBits<T> sx(x);
   if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
-    cx = FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa());
+    cx = FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa()).get_val();
     raise_except_if_required(FE_INVALID);
+  } else if constexpr (get_fp_type<T>() == FPType::X86_Binary80) {
+    // All the pseudo and unnormal numbers are not canonical.
+    // More precisely :
+    // Exponent   |       Significand      | Meaning
+    //            | Bits 63-62 | Bits 61-0 |
+    // All Ones   |     00     |    Zero   | Pseudo Infinity, Value = Infinty
+    // All Ones   |     00     |  Non-Zero | Pseudo NaN, Value = SNaN
+    // All Ones   |     01     | Anything  | Pseudo NaN, Value = SNaN
+    //            |   Bit 63   | Bits 62-0 |
+    // All zeroes |   One      | Anything  | Pseudo Denormal, Value =
+    //            |            |           | (−1)**s × m × 2**−16382
+    // All Other  |   Zero     | Anything  | Unnormal, Value =
+    //  Values    |            |           | (−1)**s × m × 2**−16382
+    bool bit63 = sx.get_implicit_bit();
+    FPBits<T>::StorageType mantissa = sx.get_explicit_mantissa();
+    bool bit62 = mantissa & (1ULL << 62);
+    bool bit61 = mantissa & (1ULL << 61);
+    int exponent = sx.get_biased_exponent();
+    if (exponent == 0x7FFF) {
+      if (!bit63 && !bit62) {
+        if (!bit61) {
+          cx = FPBits<T>::inf().get_val();
+        } else {
+          cx = FPBits<T>::signaling_nan().get_val();
+        }
+      } else if (!bit63 && bit62) {
+        cx = FPBits<T>::signaling_nan().get_val();
+      }
+    } else if (exponent == 0 && bit63) {
+      cx = FPBits<T>::encode(sx.sign(), Exponent::min(), mantissa).get_val();
+    } else if (!bit63) {
+      cx = FPBits<T>::encode(sx.sign(), Exponent::min(), mantissa).get_val();
+    } else {
+      cx = x;
+    }
   } else {
     cx = x;
   }
