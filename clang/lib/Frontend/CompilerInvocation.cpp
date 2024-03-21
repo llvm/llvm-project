@@ -4284,6 +4284,14 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
               << ShaderModel << T.getOSName() << T.str();
         }
+        // validate that if fnative-half-type is given, that
+        // the language standard is at least hlsl2021, and that
+        // the target shader model is at least 6.2
+        if (Args.getLastArg(OPT_fnative_half_type)) {
+          if (!(Opts.LangStd >= LangStandard::lang_hlsl2021 &&
+                T.getOSVersion() >= VersionTuple(6, 2)))
+            Diags.Report(diag::err_drv_hlsl_enable_16bit_types_option_invalid);
+        }
       } else if (T.isSPIRVLogical()) {
         if (!T.isVulkanOS() || T.getVulkanVersion() == VersionTuple(0)) {
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
@@ -4291,18 +4299,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         }
       } else {
         llvm_unreachable("expected DXIL or SPIR-V target");
-      }
-      // validate that if fnative-half-type is given, that
-      // the language standard is at least hlsl2021, and that
-      // the target shader model is at least 6.2
-      if (Args.getLastArg(OPT_fnative_half_type)) {
-        bool LangStdArgIsValid = Opts.LangStd >= LangStandard::lang_hlsl2021;
-        bool TPArgIsValid = T.getOSVersion() >= VersionTuple(6, 2);
-
-        // if the HLSL Version is not at least 2021, or the shader model is not
-        // at least 6.2, then enable-16bit-types is an invalid flag.
-        if (!(LangStdArgIsValid && TPArgIsValid))
-          Diags.Report(diag::err_drv_hlsl_enable_16bit_types_option_invalid);
       }
     } else
       Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();
