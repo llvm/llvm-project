@@ -74,6 +74,3 @@ declare void @free(ptr)
 attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
 attributes #2 = { nounwind }
-
-; EH: LLVM ERROR: Emscripten EH/SjLj does not support multivalue returns
-; SJLJ: LLVM ERROR: Emscripten EH/SjLj does not support multivalue returns
