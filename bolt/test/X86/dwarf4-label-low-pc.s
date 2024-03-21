@@ -9,7 +9,7 @@
 # RUN: llvm-objdump -d %t.bolt >> %t.txt
 # RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks that we correctly handle DW_AT_low_pc [DW_FORM_addr] that is part of DW_TAG_label.
+## This test checks that we correctly handle DW_AT_low_pc [DW_FORM_addr] that is part of DW_TAG_label.
 
 # PRECHECK: version = 0x0004
 # PRECHECK: DW_TAG_label
@@ -38,17 +38,17 @@
 # POSTCHECK: [[ADDR]]: 8b 45 f8
 # POSTCHECK: [[ADDR2]]: 8b 45 f8
 
-# clang++ main.cpp -g2 -gdwarf-4 -S
-# int main() {
-#   int a = 4;
-#   if (a == 5)
-#     goto LABEL1;
-#   else
-#     goto LABEL2;
-#   LABEL1:a++;
-#   LABEL2:a--;
-#   return 0;
-# }
+## clang++ main.cpp -g2 -gdwarf-4 -S
+## int main() {
+##   int a = 4;
+##   if (a == 5)
+##     goto LABEL1;
+##   else
+##     goto LABEL2;
+##   LABEL1:a++;
+##   LABEL2:a--;
+##   return 0;
+## }
 
 		.text
 	.file	"main.cpp"
