@@ -140,6 +140,11 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
       SkipUntil(tok::semi);
       return nullptr;
     }
+    if (!ExtraNSs.empty()) {
+      Diag(IdentLoc, diag::err_unexpected_qualified_namespace_alias);
+      SkipUntil(tok::semi);
+      return nullptr;
+    }
     if (attrLoc.isValid())
       Diag(attrLoc, diag::err_unexpected_namespace_attributes_alias);
     if (InlineLoc.isValid())
