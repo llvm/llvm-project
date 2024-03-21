@@ -679,6 +679,9 @@ void TypeSystemClang::CreateASTContext() {
   m_diagnostic_consumer_up = std::make_unique<NullDiagnosticConsumer>();
   m_ast_up->getDiagnostics().setClient(m_diagnostic_consumer_up.get(), false);
 
+  // AST nodes will be dumped with color
+  m_ast_up->getDiagnostics().setShowColors(true);
+
   // This can be NULL if we don't know anything about the architecture or if
   // the target for an architecture isn't enabled in the llvm/clang that we
   // built

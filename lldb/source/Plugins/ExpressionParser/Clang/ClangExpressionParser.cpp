@@ -732,6 +732,9 @@ ClangExpressionParser::ClangExpressionParser(
   // A value of 0 means no limit for both LLDB and Clang.
   m_compiler->getDiagnostics().setErrorLimit(target_sp->GetExprErrorLimit());
 
+  // AST nodes will be dumped with color
+  m_compiler->getDiagnostics().setShowColors(true);
+
   if (auto *target_info = TargetInfo::CreateTargetInfo(
           m_compiler->getDiagnostics(),
           m_compiler->getInvocation().getTargetOpts())) {
