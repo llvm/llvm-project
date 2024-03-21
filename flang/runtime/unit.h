@@ -31,6 +31,12 @@ namespace Fortran::runtime::io {
 
 class UnitMap;
 class ChildIo;
+class ExternalFileUnit;
+
+// Predefined file units.
+extern ExternalFileUnit *defaultInput; // unit 5
+extern ExternalFileUnit *defaultOutput; // unit 6
+extern ExternalFileUnit *errorOutput; // unit 0 extension
 
 #if defined(RT_USE_PSEUDO_FILE_UNIT)
 // A flavor of OpenFile class that pretends to be a terminal,
