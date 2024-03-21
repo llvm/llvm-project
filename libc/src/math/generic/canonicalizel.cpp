@@ -14,7 +14,7 @@ namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, canonicalizel,
                    (long double *cx, const long double *x)) {
-  return fputil::canonicalize(&cx, &x);
+  return fputil::canonicalize(*cx, *x);
 }
 
 } // namespace LIBC_NAMESPACE
