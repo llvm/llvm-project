@@ -305,7 +305,32 @@ static bool isCommutative(Instruction *I) {
   if (auto *Cmp = dyn_cast<CmpInst>(I))
     return Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
-    return BO->isCommutative();
+    return BO->isCommutative() ||
+           (BO->getOpcode() == Instruction::Sub &&
+            !BO->hasNUsesOrMore(UsesLimit) &&
+            all_of(BO->uses(),
+                   [](const Use &U) {
+                     // Commutative, if icmp eq/ne sub, 0
+                     ICmpInst::Predicate Pred;
+                     if (match(U.getUser(),
+                               m_ICmp(Pred, m_Specific(U.get()), m_Zero())) &&
+                         (Pred == ICmpInst::ICMP_EQ ||
+                          Pred == ICmpInst::ICMP_NE))
+                       return true;
+                     // Commutative, if abs(sub, flag).
+                     if (U.getOperandNo() != 0)
+                       return false;
+                     const auto *IC = dyn_cast<IntrinsicInst>(U.getUser());
+                     return IC && IC->getIntrinsicID() == Intrinsic::abs;
+                   })) ||
+           (BO->getOpcode() == Instruction::FSub &&
+            !BO->hasNUsesOrMore(UsesLimit) &&
+            all_of(BO->uses(), [](const Use &U) {
+              if (U.getOperandNo() != 0)
+                return false;
+              const auto *IC = dyn_cast<IntrinsicInst>(U.getUser());
+              return IC && IC->getIntrinsicID() == Intrinsic::fabs;
+            }));
   // TODO: This should check for generic Instruction::isCommutative(), but
   //       we need to confirm that the caller code correctly handles Intrinsics
   //       for example (does not have 2 operands).
@@ -6671,7 +6696,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       // Sort operands of the instructions so that each side is more likely to
       // have the same opcode.
-      if (isa<BinaryOperator>(VL0) && VL0->isCommutative()) {
+      if (isa<BinaryOperator>(VL0) && isCommutative(VL0)) {
         ValueList Left, Right;
         reorderInputsAccordingToOpcode(VL, Left, Right, *TLI, *DL, *SE, *this);
         TE->setOperand(0, Left);
@@ -12318,7 +12343,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Value *V = Builder.CreateBinOp(
           static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS,
           RHS);
-      propagateIRFlags(V, E->Scalars, VL0, !MinBWs.contains(E));
+      propagateIRFlags(V, E->Scalars, VL0,
+                       !MinBWs.contains(E) &&
+                           (ShuffleOrOp != Instruction::Sub ||
+                            none_of(E->Scalars, [](Value *V) {
+                              return isCommutative(cast<Instruction>(V));
+                            })));
       if (auto *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
 
@@ -12612,8 +12642,24 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           },
           Mask, &OpScalars, &AltScalars);
 
-      propagateIRFlags(V0, OpScalars);
-      propagateIRFlags(V1, AltScalars);
+      propagateIRFlags(V0, OpScalars, VL0,
+                       !isa<BinaryOperator>(VL0) ||
+                           (!MinBWs.contains(E) &&
+                            (E->getOpcode() != Instruction::Sub ||
+                             none_of(E->Scalars, [](Value *V) {
+                               auto *I = cast<Instruction>(V);
+                               return I->getOpcode() == Instruction::Sub &&
+                                      isCommutative(cast<Instruction>(V));
+                             }))));
+      propagateIRFlags(V1, AltScalars, E->getAltOp(),
+                       !isa<BinaryOperator>(VL0) ||
+                           (!MinBWs.contains(E) &&
+                            (E->getAltOpcode() != Instruction::Sub ||
+                             none_of(E->Scalars, [](Value *V) {
+                               auto *I = cast<Instruction>(V);
+                               return I->getOpcode() == Instruction::Sub &&
+                                      isCommutative(cast<Instruction>(V));
+                             }))));
 
       Value *V = Builder.CreateShuffleVector(V0, V1, Mask);
       if (auto *I = dyn_cast<Instruction>(V)) {
