@@ -2910,7 +2910,8 @@ static inline const char *__kmp_cpuinfo_get_envvar() {
 }
 
 // Parse /proc/cpuinfo (or an alternate file in the same format) to obtain the
-// affinity map.
+// affinity map. On AIX, the map is obtained through system SRAD (Scheduler
+// Resource Allocation Domain).
 static bool __kmp_affinity_create_cpuinfo_map(int *line,
                                               kmp_i18n_id_t *const msg_id) {
   *msg_id = kmp_i18n_null;

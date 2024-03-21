@@ -416,6 +416,8 @@ class KMPNativeAffinity : public KMPAffinity {
       KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
                   "Illegal get affinity operation when not capable");
 
+      (void)abort_on_error;
+
       // Set the mask with all CPUs that are available.
       for (int i = 0; i < __kmp_xproc; ++i)
         KMP_CPU_SET(i, this);
