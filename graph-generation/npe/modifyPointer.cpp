@@ -1,11 +1,12 @@
 #include "A.h"
+#include <cstddef>
 
 int a;
 int *getPtr() {
     if (a > 0) {
         return &a;
     }
-    return nullptr;
+    return NULL;
 }
 
 void modifyPointer(A *&ptr) {

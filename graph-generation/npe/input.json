@@ -8,7 +8,7 @@
                 {
                     "type": "source",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
-                    "line": 8,
+                    "line": 9,
                     "column": 12
                 },
                 {

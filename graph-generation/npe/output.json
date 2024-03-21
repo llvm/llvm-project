@@ -8,31 +8,21 @@
                 {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
-                    "beginLine": 8,
+                    "beginLine": 9,
                     "beginColumn": 5,
-                    "endLine": 8,
-                    "endColumn": 19,
-                    "content": "return nullptr",
+                    "endLine": 9,
+                    "endColumn": 16,
+                    "content": "return NULL",
                     "stmtKind": "ReturnStmt"
                 },
                 {
                     "type": "exit",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
-                    "beginLine": 4,
+                    "beginLine": 5,
                     "beginColumn": 1,
-                    "endLine": 9,
+                    "endLine": 10,
                     "endColumn": 2,
-                    "content": "int *getPtr() {\n    if (a > 0) {\n        return &a;\n    }\n    return nullptr;\n}"
-                },
-                {
-                    "type": "stmt",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
-                    "beginLine": 12,
-                    "beginColumn": 5,
-                    "endLine": 12,
-                    "endColumn": 25,
-                    "content": "ptr->data = getPtr()",
-                    "stmtKind": "BinaryOperator"
+                    "content": "int *getPtr() {\n    if (a > 0) {\n        return &a;\n    }\n    return NULL;\n}"
                 },
                 {
                     "type": "stmt",
@@ -40,6 +30,16 @@
                     "beginLine": 13,
                     "beginColumn": 5,
                     "endLine": 13,
+                    "endColumn": 25,
+                    "content": "ptr->data = getPtr()",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 14,
+                    "beginColumn": 5,
+                    "endLine": 14,
                     "endColumn": 11,
                     "content": "return",
                     "stmtKind": "ReturnStmt"
@@ -47,9 +47,9 @@
                 {
                     "type": "exit",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
-                    "beginLine": 11,
+                    "beginLine": 12,
                     "beginColumn": 1,
-                    "endLine": 14,
+                    "endLine": 15,
                     "endColumn": 2,
                     "content": "void modifyPointer(A *&ptr) {\n    ptr->data = getPtr(); // source\n    return;\n}"
                 },
