@@ -213,7 +213,8 @@ define i32 @ctz_and_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vsca
 ; CHECK-LABEL: ctz_and_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    cmpne p2.b, p1/z, z0.b, z1.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cntp x0, p0, p0.b
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0

@@ -7,8 +7,8 @@
 define i8 @test(ptr %p) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl (%rdi), %eax
-; CHECK-NEXT:    orb 1(%rdi), %al
+; CHECK-NEXT:    movzbl 1(%rdi), %eax
+; CHECK-NEXT:    orb (%rdi), %al
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    addb %al, %al
 ; CHECK-NEXT:    retq

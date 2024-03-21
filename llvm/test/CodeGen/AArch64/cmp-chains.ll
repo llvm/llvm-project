@@ -6,21 +6,14 @@
 
 ; (x0 < x1) && (x2 > x3)
 define i32 @cmp_and2(i32 %0, i32 %1, i32 %2, i32 %3) {
-; SDISEL-LABEL: cmp_and2:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmp w0, w1
-; SDISEL-NEXT:    ccmp w2, w3, #0, lo
-; SDISEL-NEXT:    cset w0, hi
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: cmp_and2:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    cmp w0, w1
-; GISEL-NEXT:    cset w8, lo
-; GISEL-NEXT:    cmp w2, w3
-; GISEL-NEXT:    cset w9, hi
-; GISEL-NEXT:    and w0, w8, w9
-; GISEL-NEXT:    ret
+; CHECK-LABEL: cmp_and2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, w1
+; CHECK-NEXT:    cset w8, lo
+; CHECK-NEXT:    cmp w2, w3
+; CHECK-NEXT:    cset w9, hi
+; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ret
   %5 = icmp ult i32 %0, %1
   %6 = icmp ugt i32 %2, %3
   %7 = select i1 %5, i1 %6, i1 false
@@ -30,25 +23,17 @@ define i32 @cmp_and2(i32 %0, i32 %1, i32 %2, i32 %3) {
 
 ; (x0 < x1) && (x2 > x3) && (x4 != x5)
 define i32 @cmp_and3(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5) {
-; SDISEL-LABEL: cmp_and3:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmp w0, w1
-; SDISEL-NEXT:    ccmp w2, w3, #0, lo
-; SDISEL-NEXT:    ccmp w4, w5, #4, hi
-; SDISEL-NEXT:    cset w0, ne
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: cmp_and3:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    cmp w0, w1
-; GISEL-NEXT:    cset w8, lo
-; GISEL-NEXT:    cmp w2, w3
-; GISEL-NEXT:    cset w9, hi
-; GISEL-NEXT:    cmp w4, w5
-; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    cset w9, ne
-; GISEL-NEXT:    and w0, w8, w9
-; GISEL-NEXT:    ret
+; CHECK-LABEL: cmp_and3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, w1
+; CHECK-NEXT:    cset w8, lo
+; CHECK-NEXT:    cmp w2, w3
+; CHECK-NEXT:    cset w9, hi
+; CHECK-NEXT:    cmp w4, w5
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    cset w9, ne
+; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ret
   %7 = icmp ult i32 %0, %1
   %8 = icmp ugt i32 %2, %3
   %9 = select i1 %7, i1 %8, i1 false
@@ -60,29 +45,20 @@ define i32 @cmp_and3(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5) {
 
 ; (x0 < x1) && (x2 > x3) && (x4 != x5) && (x6 == x7)
 define i32 @cmp_and4(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7) {
-; SDISEL-LABEL: cmp_and4:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmp w2, w3
-; SDISEL-NEXT:    ccmp w0, w1, #2, hi
-; SDISEL-NEXT:    ccmp w4, w5, #4, lo
-; SDISEL-NEXT:    ccmp w6, w7, #0, ne
-; SDISEL-NEXT:    cset w0, eq
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: cmp_and4:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    cmp w2, w3
-; GISEL-NEXT:    cset w8, hi
-; GISEL-NEXT:    cmp w0, w1
-; GISEL-NEXT:    cset w9, lo
-; GISEL-NEXT:    cmp w4, w5
-; GISEL-NEXT:    cset w10, ne
-; GISEL-NEXT:    cmp w6, w7
-; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    cset w11, eq
-; GISEL-NEXT:    and w9, w10, w11
-; GISEL-NEXT:    and w0, w8, w9
-; GISEL-NEXT:    ret
+; CHECK-LABEL: cmp_and4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w2, w3
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    cmp w0, w1
+; CHECK-NEXT:    cset w9, lo
+; CHECK-NEXT:    cmp w4, w5
+; CHECK-NEXT:    cset w10, ne
+; CHECK-NEXT:    cmp w6, w7
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    cset w11, eq
+; CHECK-NEXT:    and w9, w10, w11
+; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ret
   %9 = icmp ugt i32 %2, %3
   %10 = icmp ult i32 %0, %1
   %11 = select i1 %9, i1 %10, i1 false
@@ -96,22 +72,15 @@ define i32 @cmp_and4(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32
 
 ; (x0 < x1) || (x2 > x3)
 define i32 @cmp_or2(i32 %0, i32 %1, i32 %2, i32 %3) {
-; SDISEL-LABEL: cmp_or2:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmp w0, w1
-; SDISEL-NEXT:    ccmp w2, w3, #0, hs
-; SDISEL-NEXT:    cset w0, ne
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: cmp_or2:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    cmp w0, w1
-; GISEL-NEXT:    cset w8, lo
-; GISEL-NEXT:    cmp w2, w3
-; GISEL-NEXT:    cset w9, ne
-; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    and w0, w8, #0x1
-; GISEL-NEXT:    ret
+; CHECK-LABEL: cmp_or2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, w1
+; CHECK-NEXT:    cset w8, lo
+; CHECK-NEXT:    cmp w2, w3
+; CHECK-NEXT:    cset w9, ne
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
   %5 = icmp ult i32 %0, %1
   %6 = icmp ne i32 %2, %3
   %7 = select i1 %5, i1 true, i1 %6
@@ -121,26 +90,18 @@ define i32 @cmp_or2(i32 %0, i32 %1, i32 %2, i32 %3) {
 
 ; (x0 < x1) || (x2 > x3) || (x4 != x5)
 define i32 @cmp_or3(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5) {
-; SDISEL-LABEL: cmp_or3:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmp w0, w1
-; SDISEL-NEXT:    ccmp w2, w3, #2, hs
-; SDISEL-NEXT:    ccmp w4, w5, #0, ls
-; SDISEL-NEXT:    cset w0, ne
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: cmp_or3:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    cmp w0, w1
-; GISEL-NEXT:    cset w8, lo
-; GISEL-NEXT:    cmp w2, w3
-; GISEL-NEXT:    cset w9, hi
-; GISEL-NEXT:    cmp w4, w5
-; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    cset w9, ne
-; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    and w0, w8, #0x1
-; GISEL-NEXT:    ret
+; CHECK-LABEL: cmp_or3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, w1
+; CHECK-NEXT:    cset w8, lo
+; CHECK-NEXT:    cmp w2, w3
+; CHECK-NEXT:    cset w9, hi
+; CHECK-NEXT:    cmp w4, w5
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    cset w9, ne
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
   %7 = icmp ult i32 %0, %1
   %8 = icmp ugt i32 %2, %3
   %9 = select i1 %7, i1 true, i1 %8
@@ -152,30 +113,21 @@ define i32 @cmp_or3(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5) {
 
 ; (x0 < x1) || (x2 > x3) || (x4 != x5) || (x6 == x7)
 define i32 @cmp_or4(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7) {
-; SDISEL-LABEL: cmp_or4:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmp w0, w1
-; SDISEL-NEXT:    ccmp w2, w3, #2, hs
-; SDISEL-NEXT:    ccmp w4, w5, #0, ls
-; SDISEL-NEXT:    ccmp w6, w7, #4, eq
-; SDISEL-NEXT:    cset w0, eq
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: cmp_or4:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    cmp w0, w1
-; GISEL-NEXT:    cset w8, lo
-; GISEL-NEXT:    cmp w2, w3
-; GISEL-NEXT:    cset w9, hi
-; GISEL-NEXT:    cmp w4, w5
-; GISEL-NEXT:    cset w10, ne
-; GISEL-NEXT:    cmp w6, w7
-; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    cset w11, eq
-; GISEL-NEXT:    orr w9, w10, w11
-; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    and w0, w8, #0x1
-; GISEL-NEXT:    ret
+; CHECK-LABEL: cmp_or4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, w1
+; CHECK-NEXT:    cset w8, lo
+; CHECK-NEXT:    cmp w2, w3
+; CHECK-NEXT:    cset w9, hi
+; CHECK-NEXT:    cmp w4, w5
+; CHECK-NEXT:    cset w10, ne
+; CHECK-NEXT:    cmp w6, w7
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    cset w11, eq
+; CHECK-NEXT:    orr w9, w10, w11
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
   %9 = icmp ult i32 %0, %1
   %10 = icmp ugt i32 %2, %3
   %11 = select i1 %9, i1 true, i1 %10
@@ -242,5 +194,3 @@ define i32 @true_or3(i32 %0, i32 %1, i32 %2) {
   %9 = zext i1 %8 to i32
   ret i32 %9
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}

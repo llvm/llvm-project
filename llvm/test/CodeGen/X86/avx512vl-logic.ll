@@ -1079,9 +1079,9 @@ define <4 x i64> @ternlog_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y) {
 define <4 x i32> @ternlog_maskz_or_and_mask(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %mask) {
 ; CHECK-LABEL: ternlog_maskz_or_and_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm2
-; CHECK-NEXT:    vpsrad $31, %xmm3, %xmm0
-; CHECK-NEXT:    vpternlogd $224, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vpternlogd $236, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
+; CHECK-NEXT:    vpsrad $31, %xmm3, %xmm1
+; CHECK-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %m = icmp slt <4 x i32> %mask, zeroinitializer
   %a = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
@@ -1093,9 +1093,9 @@ define <4 x i32> @ternlog_maskz_or_and_mask(<4 x i32> %x, <4 x i32> %y, <4 x i32
 define <8 x i32> @ternlog_maskz_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y, <8 x i32> %mask) {
 ; CHECK-LABEL: ternlog_maskz_or_and_mask_ymm:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm3
-; CHECK-NEXT:    vpsrad $31, %ymm2, %ymm0
-; CHECK-NEXT:    vpternlogd $224, %ymm1, %ymm3, %ymm0
+; CHECK-NEXT:    vpternlogd $236, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-NEXT:    vpsrad $31, %ymm2, %ymm1
+; CHECK-NEXT:    vpand %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %m = icmp slt <8 x i32> %mask, zeroinitializer
   %a = and <8 x i32> %x, <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
@@ -1107,9 +1107,9 @@ define <8 x i32> @ternlog_maskz_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y, <8 x
 define <2 x i64> @ternlog_maskz_xor_and_mask(<2 x i64> %x, <2 x i64> %y, <2 x i64> %mask) {
 ; CHECK-LABEL: ternlog_maskz_xor_and_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm3
-; CHECK-NEXT:    vpsraq $63, %xmm2, %xmm0
-; CHECK-NEXT:    vpternlogq $96, %xmm1, %xmm3, %xmm0
+; CHECK-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm0
+; CHECK-NEXT:    vpsraq $63, %xmm2, %xmm1
+; CHECK-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %m = icmp slt <2 x i64> %mask, zeroinitializer
   %a = and <2 x i64> %x, <i64 1099511627775, i64 1099511627775>
@@ -1121,9 +1121,9 @@ define <2 x i64> @ternlog_maskz_xor_and_mask(<2 x i64> %x, <2 x i64> %y, <2 x i6
 define <4 x i64> @ternlog_maskz_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y, <4 x i64> %mask) {
 ; CHECK-LABEL: ternlog_maskz_xor_and_mask_ymm:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm3
-; CHECK-NEXT:    vpsraq $63, %ymm2, %ymm0
-; CHECK-NEXT:    vpternlogq $96, %ymm1, %ymm3, %ymm0
+; CHECK-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
+; CHECK-NEXT:    vpsraq $63, %ymm2, %ymm1
+; CHECK-NEXT:    vpand %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %m = icmp slt <4 x i64> %mask, zeroinitializer
   %a = and <4 x i64> %x, <i64 72057594037927935, i64 72057594037927935, i64 72057594037927935, i64 72057594037927935>

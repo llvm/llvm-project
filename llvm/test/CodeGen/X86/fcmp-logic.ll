@@ -371,8 +371,8 @@ define i1 @f32cmp3(float %x, float %y, float %z, float %w) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm4, %xmm4
 ; SSE2-NEXT:    xorps %xmm5, %xmm5
-; SSE2-NEXT:    cmpltps %xmm1, %xmm5
-; SSE2-NEXT:    cmpltps %xmm0, %xmm4
+; SSE2-NEXT:    cmpltps %xmm0, %xmm5
+; SSE2-NEXT:    cmpltps %xmm1, %xmm4
 ; SSE2-NEXT:    orps %xmm5, %xmm4
 ; SSE2-NEXT:    movd %xmm4, %ecx
 ; SSE2-NEXT:    ucomiss %xmm2, %xmm3
@@ -383,8 +383,8 @@ define i1 @f32cmp3(float %x, float %y, float %z, float %w) {
 ; AVX1-LABEL: f32cmp3:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vcmpltps %xmm1, %xmm4, %xmm1
 ; AVX1-NEXT:    vcmpltps %xmm0, %xmm4, %xmm0
+; AVX1-NEXT:    vcmpltps %xmm1, %xmm4, %xmm1
 ; AVX1-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %ecx
 ; AVX1-NEXT:    vucomiss %xmm2, %xmm3
@@ -397,9 +397,9 @@ define i1 @f32cmp3(float %x, float %y, float %z, float %w) {
 ; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; AVX512-NEXT:    vcmpltps %zmm1, %zmm4, %k0
-; AVX512-NEXT:    vcmpltps %zmm0, %zmm4, %k1
-; AVX512-NEXT:    korw %k0, %k1, %k0
+; AVX512-NEXT:    vcmpltps %zmm0, %zmm4, %k0
+; AVX512-NEXT:    vcmpltps %zmm1, %zmm4, %k1
+; AVX512-NEXT:    korw %k1, %k0, %k0
 ; AVX512-NEXT:    kmovw %k0, %ecx
 ; AVX512-NEXT:    vucomiss %xmm2, %xmm3
 ; AVX512-NEXT:    seta %al

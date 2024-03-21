@@ -236,7 +236,8 @@ define %"class.std::complex" @complex_mul_predicated_x2_v2f64(ptr %a, ptr %b, pt
 ; CHECK-NEXT:    mov z7.d, z0.d
 ; CHECK-NEXT:    add x9, x9, x11
 ; CHECK-NEXT:    add x8, x8, x12
-; CHECK-NEXT:    cmpne p1.d, p1/z, z2.d, #0
+; CHECK-NEXT:    cmpne p2.d, p0/z, z2.d, #0
+; CHECK-NEXT:    and p1.b, p1/z, p1.b, p2.b
 ; CHECK-NEXT:    zip2 p3.d, p1.d, p1.d
 ; CHECK-NEXT:    zip1 p2.d, p1.d, p1.d
 ; CHECK-NEXT:    whilelo p1.d, x9, x10

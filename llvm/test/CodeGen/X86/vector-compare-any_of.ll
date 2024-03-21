@@ -1426,9 +1426,11 @@ define i1 @select_v2i8(ptr %s0, ptr %s1) {
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[0,0,1,1,4,5,6,7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; SSE2-NEXT:    movmskpd %xmm0, %eax
-; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movmskpd %xmm0, %ecx
+; SSE2-NEXT:    movl %ecx, %eax
+; SSE2-NEXT:    andb $2, %al
+; SSE2-NEXT:    shrb %al
+; SSE2-NEXT:    orb %cl, %al
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: select_v2i8:
@@ -1436,9 +1438,11 @@ define i1 @select_v2i8(ptr %s0, ptr %s1) {
 ; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; SSE42-NEXT:    pcmpeqq %xmm0, %xmm1
-; SSE42-NEXT:    movmskpd %xmm1, %eax
-; SSE42-NEXT:    testl %eax, %eax
-; SSE42-NEXT:    setne %al
+; SSE42-NEXT:    movmskpd %xmm1, %ecx
+; SSE42-NEXT:    movl %ecx, %eax
+; SSE42-NEXT:    andb $2, %al
+; SSE42-NEXT:    shrb %al
+; SSE42-NEXT:    orb %cl, %al
 ; SSE42-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: select_v2i8:
@@ -1446,8 +1450,11 @@ define i1 @select_v2i8(ptr %s0, ptr %s1) {
 ; AVX1OR2-NEXT:    vpmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX1OR2-NEXT:    vpmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX1OR2-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vtestpd %xmm0, %xmm0
-; AVX1OR2-NEXT:    setne %al
+; AVX1OR2-NEXT:    vmovmskpd %xmm0, %ecx
+; AVX1OR2-NEXT:    movl %ecx, %eax
+; AVX1OR2-NEXT:    andb $2, %al
+; AVX1OR2-NEXT:    shrb %al
+; AVX1OR2-NEXT:    orb %cl, %al
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: select_v2i8:
@@ -1457,9 +1464,11 @@ define i1 @select_v2i8(ptr %s0, ptr %s1) {
 ; AVX512-NEXT:    movzwl (%rsi), %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
+; AVX512-NEXT:    kshiftrw $1, %k0, %k1
+; AVX512-NEXT:    kmovd %k1, %ecx
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    testb $3, %al
-; AVX512-NEXT:    setne %al
+; AVX512-NEXT:    orb %cl, %al
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    retq
   %v0 = load <2 x i8>, ptr %s0, align 1
   %v1 = load <2 x i8>, ptr %s1, align 1

@@ -909,9 +909,9 @@ define <8 x i64> @ternlog_xor_and_mask(<8 x i64> %x, <8 x i64> %y) {
 define <16 x i32> @ternlog_maskz_or_and_mask(<16 x i32> %x, <16 x i32> %y, <16 x i32> %mask) {
 ; ALL-LABEL: ternlog_maskz_or_and_mask:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm3
-; ALL-NEXT:    vpsrad $31, %zmm2, %zmm0
-; ALL-NEXT:    vpternlogd $224, %zmm1, %zmm3, %zmm0
+; ALL-NEXT:    vpternlogd $236, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm0
+; ALL-NEXT:    vpsrad $31, %zmm2, %zmm1
+; ALL-NEXT:    vpandd %zmm0, %zmm1, %zmm0
 ; ALL-NEXT:    retq
   %m = icmp slt <16 x i32> %mask, zeroinitializer
   %a = and <16 x i32> %x, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
@@ -923,9 +923,9 @@ define <16 x i32> @ternlog_maskz_or_and_mask(<16 x i32> %x, <16 x i32> %y, <16 x
 define <8 x i64> @ternlog_maskz_xor_and_mask(<8 x i64> %x, <8 x i64> %y, <8 x i64> %mask) {
 ; ALL-LABEL: ternlog_maskz_xor_and_mask:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm3
-; ALL-NEXT:    vpsraq $63, %zmm2, %zmm0
-; ALL-NEXT:    vpternlogq $96, %zmm1, %zmm3, %zmm0
+; ALL-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm0
+; ALL-NEXT:    vpsraq $63, %zmm2, %zmm1
+; ALL-NEXT:    vpandq %zmm0, %zmm1, %zmm0
 ; ALL-NEXT:    retq
   %m = icmp slt <8 x i64> %mask, zeroinitializer
   %a = and <8 x i64> %x, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>

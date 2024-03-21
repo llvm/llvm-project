@@ -396,8 +396,8 @@ define <16 x i32> @test19(<16 x i32> %x, <16 x i32> %x1, ptr %y.ptr) nounwind {
 define <16 x i32> @test20(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1, <16 x i32> %y1) nounwind {
 ; CHECK-LABEL: test20:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1 ## encoding: [0x62,0xf1,0x7d,0x48,0x76,0xc9]
-; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 {%k1} ## encoding: [0x62,0xf1,0x6d,0x49,0x76,0xcb]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 ## encoding: [0x62,0xf1,0x6d,0x48,0x76,0xcb]
+; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1 {%k1} ## encoding: [0x62,0xf1,0x7d,0x49,0x76,0xc9]
 ; CHECK-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x49,0x64,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask1 = icmp eq <16 x i32> %x1, %y1
@@ -410,8 +410,8 @@ define <16 x i32> @test20(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1, <16 x i3
 define <8 x i64> @test21(<8 x i64> %x, <8 x i64> %y, <8 x i64> %x1, <8 x i64> %y1) nounwind {
 ; CHECK-LABEL: test21:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpcmpleq %zmm1, %zmm0, %k1 ## encoding: [0x62,0xf3,0xfd,0x48,0x1f,0xc9,0x02]
-; CHECK-NEXT:    vpcmpnltq %zmm3, %zmm2, %k1 {%k1} ## encoding: [0x62,0xf3,0xed,0x49,0x1f,0xcb,0x05]
+; CHECK-NEXT:    vpcmpnltq %zmm3, %zmm2, %k1 ## encoding: [0x62,0xf3,0xed,0x48,0x1f,0xcb,0x05]
+; CHECK-NEXT:    vpcmpleq %zmm1, %zmm0, %k1 {%k1} ## encoding: [0x62,0xf3,0xfd,0x49,0x1f,0xc9,0x02]
 ; CHECK-NEXT:    vpblendmq %zmm0, %zmm2, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xed,0x49,0x64,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask1 = icmp sge <8 x i64> %x1, %y1

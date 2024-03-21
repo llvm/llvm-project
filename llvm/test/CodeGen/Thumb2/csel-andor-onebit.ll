@@ -179,10 +179,10 @@ define i32 @t5(i32 %f.0, i32 %call) {
 ; CHECK-NEXT:    cset r1, ne
 ; CHECK-NEXT:    cmp r0, #13
 ; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    and.w r2, r0, r1
-; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    eor r0, r0, #1
-; CHECK-NEXT:    orrs r0, r2
+; CHECK-NEXT:    orr.w r2, r0, r1
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    orn r0, r0, r2
+; CHECK-NEXT:    and r0, r0, #1
 ; CHECK-NEXT:    bx lr
 entry:
   %tobool1.i = icmp ne i32 %call, 0

@@ -59,11 +59,11 @@ define <8 x float> @select_or_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %c, <8 x f
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllw $15, %xmm2, %xmm2
 ; CHECK-NEXT:    vpmovw2m %xmm2, %k0
-; CHECK-NEXT:    vpsllw $15, %xmm1, %xmm1
-; CHECK-NEXT:    vpmovw2m %xmm1, %k1
 ; CHECK-NEXT:    vpsllw $15, %xmm0, %xmm0
+; CHECK-NEXT:    vpmovw2m %xmm0, %k1
+; CHECK-NEXT:    vpsllw $15, %xmm1, %xmm0
 ; CHECK-NEXT:    vpmovw2m %xmm0, %k2
-; CHECK-NEXT:    kandnb %k1, %k2, %k1
+; CHECK-NEXT:    kandnb %k2, %k1, %k1
 ; CHECK-NEXT:    korb %k1, %k0, %k1
 ; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vmovaps %ymm3, %ymm0 {%k1}
@@ -98,9 +98,9 @@ define <8 x float> @select_or_v8i1_2(i8 %m1, i8 %m2, i8 %m3, <8 x float> %d) {
 define <8 x float> @select_or_v8i1_3(<8 x i16> %m1, <8 x i16> %m2, <8 x i16> %m3, <8 x float> %d) {
 ; CHECK-LABEL: select_or_v8i1_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpcmpneqw %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm0, %k1
 ; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k0
-; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm0, %k1 {%k1}
+; CHECK-NEXT:    vpcmpneqw %xmm1, %xmm0, %k1 {%k1}
 ; CHECK-NEXT:    korb %k1, %k0, %k1
 ; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vmovaps %ymm3, %ymm0 {%k1}

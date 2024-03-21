@@ -178,13 +178,13 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $136, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    orl %edi, %eax
-; X86-NEXT:    movl %ebp, %ecx
-; X86-NEXT:    orl %esi, %ecx
+; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    movl %edx, %edi
 ; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    sete %bl
@@ -195,30 +195,27 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    orb %bl, %al
 ; X86-NEXT:    movb %al, (%esp) # 1-byte Spill
-; X86-NEXT:    bsrl %edi, %edx
+; X86-NEXT:    bsrl %esi, %edx
 ; X86-NEXT:    xorl $31, %edx
-; X86-NEXT:    bsrl %esi, %ecx
+; X86-NEXT:    bsrl %edi, %ecx
 ; X86-NEXT:    xorl $31, %ecx
 ; X86-NEXT:    addl $32, %ecx
-; X86-NEXT:    testl %edi, %edi
-; X86-NEXT:    movl %edi, %ebx
+; X86-NEXT:    testl %esi, %esi
 ; X86-NEXT:    cmovnel %edx, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bsrl %eax, %edx
 ; X86-NEXT:    xorl $31, %edx
-; X86-NEXT:    bsrl %ebp, %ebp
-; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    bsrl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl %esi, %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    xorl $31, %ebp
 ; X86-NEXT:    addl $32, %ebp
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    cmovnel %edx, %ebp
 ; X86-NEXT:    addl $64, %ebp
-; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    orl %ebx, %edx
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    cmovnel %ecx, %ebp
 ; X86-NEXT:    bsrl %esi, %edx
-; X86-NEXT:    movl %esi, %ebx
 ; X86-NEXT:    xorl $31, %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bsrl %eax, %ecx
@@ -235,15 +232,16 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    testl %edi, %edi
 ; X86-NEXT:    cmovnel %esi, %edx
 ; X86-NEXT:    addl $64, %edx
-; X86-NEXT:    orl %ebx, %eax
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    cmovnel %ecx, %edx
 ; X86-NEXT:    subl %edx, %ebp
 ; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    sbbl %edx, %edx
 ; X86-NEXT:    movl $0, %esi
 ; X86-NEXT:    sbbl %esi, %esi
-; X86-NEXT:    movl $0, %edi
-; X86-NEXT:    sbbl %edi, %edi
+; X86-NEXT:    movl $0, %ebx
+; X86-NEXT:    sbbl %ebx, %ebx
 ; X86-NEXT:    movl $127, %ecx
 ; X86-NEXT:    cmpl %ebp, %ecx
 ; X86-NEXT:    movl $0, %ecx
@@ -251,7 +249,7 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sbbl %esi, %ecx
 ; X86-NEXT:    movl $0, %ecx
-; X86-NEXT:    sbbl %edi, %ecx
+; X86-NEXT:    sbbl %ebx, %ecx
 ; X86-NEXT:    setb %cl
 ; X86-NEXT:    orb (%esp), %cl # 1-byte Folded Reload
 ; X86-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -260,18 +258,19 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    orl %esi, %eax
 ; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    orl %edi, %edx
+; X86-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    orl %ebx, %edx
 ; X86-NEXT:    orl %eax, %edx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    testb %cl, %cl
-; X86-NEXT:    movl %ebx, %edx
-; X86-NEXT:    movl $0, %edi
-; X86-NEXT:    cmovnel %edi, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl $0, %ebx
+; X86-NEXT:    cmovnel %ebx, %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    cmovnel %edi, %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    cmovnel %edi, %ebp
+; X86-NEXT:    cmovnel %ebx, %esi
+; X86-NEXT:    movl %edi, %ebp
+; X86-NEXT:    cmovnel %ebx, %ebp
+; X86-NEXT:    movl $0, %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    cmovnel %edi, %ebx
 ; X86-NEXT:    orb %cl, %al

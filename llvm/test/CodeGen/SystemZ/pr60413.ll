@@ -13,114 +13,91 @@ declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #0
 define dso_local void @m() local_unnamed_addr #1 {
 ; CHECK-LABEL: m:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stmg %r12, %r15, 96(%r15)
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
 ; CHECK-NEXT:    aghi %r15, -168
-; CHECK-NEXT:    llhrl %r2, f+4
-; CHECK-NEXT:    sll %r2, 8
-; CHECK-NEXT:    larl %r1, f
-; CHECK-NEXT:    ic %r2, 6(%r1)
-; CHECK-NEXT:    larl %r1, e
-; CHECK-NEXT:    lb %r0, 3(%r1)
-; CHECK-NEXT:    clfi %r2, 128
+; CHECK-NEXT:    lhrl %r1, f+4
+; CHECK-NEXT:    sll %r1, 8
+; CHECK-NEXT:    larl %r2, f
+; CHECK-NEXT:    ic %r1, 6(%r2)
+; CHECK-NEXT:    larl %r2, e
+; CHECK-NEXT:    lb %r0, 3(%r2)
+; CHECK-NEXT:    vlvgp %v0, %r1, %r1
+; CHECK-NEXT:    nilh %r1, 255
+; CHECK-NEXT:    chi %r1, 128
 ; CHECK-NEXT:    ipm %r1
 ; CHECK-NEXT:    risbg %r1, %r1, 63, 191, 36
-; CHECK-NEXT:    vlvgp %v1, %r2, %r0
-; CHECK-NEXT:    vlvgf %v1, %r2, 0
-; CHECK-NEXT:    vlvgf %v1, %r2, 2
-; CHECK-NEXT:    vlvgp %v0, %r0, %r2
-; CHECK-NEXT:    vlvgp %v2, %r2, %r2
-; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2d
-; CHECK-NEXT:    nilh %r2, 255
-; CHECK-NEXT:    chi %r2, 128
-; CHECK-NEXT:    ipm %r2
-; CHECK-NEXT:    risbg %r2, %r2, 63, 191, 36
-; CHECK-NEXT:    vlvgf %v0, %r0, 0
-; CHECK-NEXT:    vlvgf %v0, %r0, 2
-; CHECK-NEXT:    vrepf %v2, %v2, 1
-; CHECK-NEXT:    vgbm %v3, 30583
-; CHECK-NEXT:    vn %v0, %v0, %v3
-; CHECK-NEXT:    vn %v1, %v1, %v3
-; CHECK-NEXT:    vn %v2, %v2, %v3
-; CHECK-NEXT:    vrepif %v3, 127
-; CHECK-NEXT:    vchlf %v1, %v1, %v3
-; CHECK-NEXT:    vlgvf %r12, %v1, 0
-; CHECK-NEXT:    vchlf %v2, %v2, %v3
-; CHECK-NEXT:    vlgvf %r4, %v2, 1
-; CHECK-NEXT:    nilf %r4, 1
-; CHECK-NEXT:    vlgvf %r5, %v2, 0
-; CHECK-NEXT:    risbg %r3, %r5, 48, 176, 15
-; CHECK-NEXT:    rosbg %r3, %r4, 32, 49, 14
-; CHECK-NEXT:    vlgvf %r14, %v2, 2
-; CHECK-NEXT:    nilf %r14, 1
-; CHECK-NEXT:    rosbg %r3, %r14, 32, 50, 13
-; CHECK-NEXT:    vlgvf %r13, %v2, 3
-; CHECK-NEXT:    nilf %r13, 1
-; CHECK-NEXT:    rosbg %r3, %r13, 32, 51, 12
-; CHECK-NEXT:    rosbg %r3, %r12, 52, 52, 11
-; CHECK-NEXT:    vlgvf %r12, %v1, 1
-; CHECK-NEXT:    rosbg %r3, %r12, 53, 53, 10
-; CHECK-NEXT:    vlgvf %r12, %v1, 2
-; CHECK-NEXT:    rosbg %r3, %r12, 54, 54, 9
-; CHECK-NEXT:    vlgvf %r12, %v1, 3
-; CHECK-NEXT:    rosbg %r3, %r12, 55, 55, 8
-; CHECK-NEXT:    vchlf %v0, %v0, %v3
-; CHECK-NEXT:    vlgvf %r12, %v0, 0
-; CHECK-NEXT:    rosbg %r3, %r12, 56, 56, 7
-; CHECK-NEXT:    vlgvf %r12, %v0, 1
-; CHECK-NEXT:    rosbg %r3, %r12, 57, 57, 6
-; CHECK-NEXT:    vlgvf %r12, %v0, 2
-; CHECK-NEXT:    rosbg %r3, %r12, 58, 58, 5
-; CHECK-NEXT:    vlgvf %r12, %v0, 3
-; CHECK-NEXT:    rosbg %r3, %r12, 59, 59, 4
+; CHECK-NEXT:    vrepf %v0, %v0, 1
+; CHECK-NEXT:    vgbm %v1, 30583
+; CHECK-NEXT:    vn %v0, %v0, %v1
+; CHECK-NEXT:    vrepif %v1, 127
+; CHECK-NEXT:    vchlf %v0, %v0, %v1
+; CHECK-NEXT:    vlgvf %r3, %v0, 1
+; CHECK-NEXT:    nilf %r3, 1
+; CHECK-NEXT:    vlgvf %r4, %v0, 0
+; CHECK-NEXT:    risbg %r2, %r4, 48, 176, 15
+; CHECK-NEXT:    rosbg %r2, %r3, 32, 49, 14
+; CHECK-NEXT:    vlgvf %r5, %v0, 2
 ; CHECK-NEXT:    nilf %r5, 1
-; CHECK-NEXT:    rosbg %r3, %r5, 32, 60, 3
-; CHECK-NEXT:    rosbg %r3, %r4, 32, 61, 2
-; CHECK-NEXT:    rosbg %r3, %r14, 32, 62, 1
-; CHECK-NEXT:    or %r3, %r13
-; CHECK-NEXT:    vlgvb %r5, %v0, 1
-; CHECK-NEXT:    vlgvb %r4, %v0, 0
-; CHECK-NEXT:    risbg %r4, %r4, 48, 176, 15
-; CHECK-NEXT:    rosbg %r4, %r5, 49, 49, 14
-; CHECK-NEXT:    vlgvb %r5, %v0, 2
-; CHECK-NEXT:    rosbg %r4, %r5, 50, 50, 13
-; CHECK-NEXT:    vlgvb %r5, %v0, 3
-; CHECK-NEXT:    rosbg %r4, %r5, 51, 51, 12
-; CHECK-NEXT:    vlgvb %r5, %v0, 4
-; CHECK-NEXT:    rosbg %r4, %r5, 52, 52, 11
-; CHECK-NEXT:    vlgvb %r5, %v0, 5
-; CHECK-NEXT:    rosbg %r4, %r5, 53, 53, 10
-; CHECK-NEXT:    vlgvb %r5, %v0, 6
-; CHECK-NEXT:    rosbg %r4, %r5, 54, 54, 9
-; CHECK-NEXT:    vlgvb %r5, %v0, 7
-; CHECK-NEXT:    rosbg %r4, %r5, 55, 55, 8
-; CHECK-NEXT:    vlgvb %r5, %v0, 8
-; CHECK-NEXT:    rosbg %r4, %r5, 56, 56, 7
-; CHECK-NEXT:    vlgvb %r5, %v0, 9
-; CHECK-NEXT:    rosbg %r4, %r5, 57, 57, 6
-; CHECK-NEXT:    vlgvb %r5, %v0, 10
-; CHECK-NEXT:    rosbg %r4, %r5, 58, 58, 5
-; CHECK-NEXT:    vlgvb %r5, %v0, 11
-; CHECK-NEXT:    rosbg %r4, %r5, 59, 59, 4
-; CHECK-NEXT:    vlgvb %r5, %v0, 12
-; CHECK-NEXT:    rosbg %r4, %r5, 60, 60, 3
-; CHECK-NEXT:    vlgvb %r5, %v0, 13
-; CHECK-NEXT:    rosbg %r4, %r5, 61, 61, 2
-; CHECK-NEXT:    vlgvb %r5, %v0, 14
-; CHECK-NEXT:    rosbg %r4, %r5, 62, 62, 1
-; CHECK-NEXT:    vlgvb %r5, %v0, 15
-; CHECK-NEXT:    rosbg %r4, %r5, 63, 63, 0
-; CHECK-NEXT:    xilf %r4, 4294967295
-; CHECK-NEXT:    or %r4, %r3
-; CHECK-NEXT:    tmll %r4, 65535
-; CHECK-NEXT:    ipm %r3
-; CHECK-NEXT:    afi %r3, -268435456
-; CHECK-NEXT:    srl %r3, 31
+; CHECK-NEXT:    rosbg %r2, %r5, 32, 50, 13
+; CHECK-NEXT:    vlgvf %r14, %v0, 3
+; CHECK-NEXT:    nilf %r14, 1
+; CHECK-NEXT:    rosbg %r2, %r14, 32, 51, 12
+; CHECK-NEXT:    nilf %r4, 1
+; CHECK-NEXT:    rosbg %r2, %r4, 32, 52, 11
+; CHECK-NEXT:    rosbg %r2, %r3, 32, 53, 10
+; CHECK-NEXT:    rosbg %r2, %r5, 32, 54, 9
+; CHECK-NEXT:    rosbg %r2, %r14, 32, 55, 8
+; CHECK-NEXT:    rosbg %r2, %r4, 32, 56, 7
+; CHECK-NEXT:    rosbg %r2, %r3, 32, 57, 6
+; CHECK-NEXT:    rosbg %r2, %r5, 32, 58, 5
+; CHECK-NEXT:    rosbg %r2, %r14, 32, 59, 4
+; CHECK-NEXT:    rosbg %r2, %r4, 32, 60, 3
+; CHECK-NEXT:    rosbg %r2, %r3, 32, 61, 2
+; CHECK-NEXT:    rosbg %r2, %r5, 32, 62, 1
+; CHECK-NEXT:    or %r2, %r14
+; CHECK-NEXT:    vlgvb %r4, %v0, 1
+; CHECK-NEXT:    vlgvb %r3, %v0, 0
+; CHECK-NEXT:    risbg %r3, %r3, 48, 176, 15
+; CHECK-NEXT:    rosbg %r3, %r4, 49, 49, 14
+; CHECK-NEXT:    vlgvb %r4, %v0, 2
+; CHECK-NEXT:    rosbg %r3, %r4, 50, 50, 13
+; CHECK-NEXT:    vlgvb %r4, %v0, 3
+; CHECK-NEXT:    rosbg %r3, %r4, 51, 51, 12
+; CHECK-NEXT:    vlgvb %r4, %v0, 4
+; CHECK-NEXT:    rosbg %r3, %r4, 52, 52, 11
+; CHECK-NEXT:    vlgvb %r4, %v0, 5
+; CHECK-NEXT:    rosbg %r3, %r4, 53, 53, 10
+; CHECK-NEXT:    vlgvb %r4, %v0, 6
+; CHECK-NEXT:    rosbg %r3, %r4, 54, 54, 9
+; CHECK-NEXT:    vlgvb %r4, %v0, 7
+; CHECK-NEXT:    rosbg %r3, %r4, 55, 55, 8
+; CHECK-NEXT:    vlgvb %r4, %v0, 8
+; CHECK-NEXT:    rosbg %r3, %r4, 56, 56, 7
+; CHECK-NEXT:    vlgvb %r4, %v0, 9
+; CHECK-NEXT:    rosbg %r3, %r4, 57, 57, 6
+; CHECK-NEXT:    vlgvb %r4, %v0, 10
+; CHECK-NEXT:    rosbg %r3, %r4, 58, 58, 5
+; CHECK-NEXT:    vlgvb %r4, %v0, 11
+; CHECK-NEXT:    rosbg %r3, %r4, 59, 59, 4
+; CHECK-NEXT:    vlgvb %r4, %v0, 12
+; CHECK-NEXT:    rosbg %r3, %r4, 60, 60, 3
+; CHECK-NEXT:    vlgvb %r4, %v0, 13
+; CHECK-NEXT:    rosbg %r3, %r4, 61, 61, 2
+; CHECK-NEXT:    vlgvb %r4, %v0, 14
+; CHECK-NEXT:    rosbg %r3, %r4, 62, 62, 1
+; CHECK-NEXT:    vlgvb %r4, %v0, 15
+; CHECK-NEXT:    rosbg %r3, %r4, 63, 63, 0
+; CHECK-NEXT:    xilf %r3, 4294967295
+; CHECK-NEXT:    or %r3, %r2
+; CHECK-NEXT:    tmll %r3, 65535
+; CHECK-NEXT:    ipm %r2
+; CHECK-NEXT:    afi %r2, -268435456
+; CHECK-NEXT:    srl %r2, 31
 ; CHECK-NEXT:    nr %r2, %r1
-; CHECK-NEXT:    nr %r2, %r3
 ; CHECK-NEXT:    nr %r2, %r0
 ; CHECK-NEXT:    larl %r1, g
 ; CHECK-NEXT:    stc %r2, 0(%r1)
-; CHECK-NEXT:    lmg %r12, %r15, 264(%r15)
+; CHECK-NEXT:    lmg %r14, %r15, 280(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %n = alloca i32, align 4
