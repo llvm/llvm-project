@@ -119,3 +119,8 @@ clang/test/AST/Interp/ @tbaederr
 
 # Bazel build system.
 /utils/bazel/ @rupprecht
+
+# InstallAPI and TextAPI
+/llvm/**/TextAPI/ @cyndyishida
+/clang/**/InstallAPI/ @cyndyishida
+/clang/tools/clang-installapi/ @cyndyishida
