@@ -54,8 +54,14 @@ endif()
 # Install plugin under the lib destination folder.
 install(TARGETS omptarget.rtl.${machine}
         LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+
+if(NOT DEFINED CMAKE_INSTALL_RPATH)
+  set_target_properties(omptarget.rtl.amdgpu PROPERTIES
+    INSTALL_RPATH "$ORIGIN")
+endif()
+
 set_target_properties(omptarget.rtl.${machine} PROPERTIES
-  INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
+  BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
   POSITION_INDEPENDENT_CODE ON
   CXX_VISIBILITY_PRESET protected)
 

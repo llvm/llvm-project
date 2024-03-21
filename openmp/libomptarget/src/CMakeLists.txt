@@ -38,6 +38,9 @@ add_llvm_library(omptarget
   LINK_LIBS
   PUBLIC
   omp
+
+  NO_INSTALL_RPATH
+  BUILDTREE_ONLY
 )
 target_include_directories(omptarget PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
 
@@ -102,10 +105,13 @@ list(TRANSFORM LIBOMPTARGET_PLUGINS_TO_LOAD APPEND "\"")
 list(JOIN LIBOMPTARGET_PLUGINS_TO_LOAD "," ENABLED_OFFLOAD_PLUGINS)
 target_compile_definitions(omptarget PRIVATE ENABLED_OFFLOAD_PLUGINS=${ENABLED_OFFLOAD_PLUGINS})
 
+if(NOT DEFINED CMAKE_INSTALL_RPATH)
+  set_target_properties(omptarget PROPERTIES INSTALL_RPATH "$ORIGIN")
+endif()
+
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.
 set_target_properties(omptarget PROPERTIES
                       POSITION_INDEPENDENT_CODE ON
-                      INSTALL_RPATH "$ORIGIN"
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 install(TARGETS omptarget LIBRARY COMPONENT omptarget DESTINATION "${OPENMP_INSTALL_LIBDIR}")
