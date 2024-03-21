@@ -2241,7 +2241,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
   // if the call has the elementwise attribute, then
   // make sure that an elementwise expr is emitted.
-  if (FDecl->hasAttr<ElementwiseBuiltinAlias>()) {
+  if (FDecl->hasAttr<ElementwiseBuiltinAliasAttr>()) {
     switch (FDecl->getNumParams()) {
     case 1: {
       if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
@@ -2252,6 +2252,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
               *this, TheCall->getArg(0)->getBeginLoc(), ArgTy, 1))
         return ExprError();
       break;
+    }
     case 2: {
       if (SemaBuiltinElementwiseMath(TheCall))
         return ExprError();
@@ -2270,9 +2271,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       break;
     }
     }
-    }
+  }
 
-    FPOptions FPO;
+  FPOptions FPO;
   switch (BuiltinID) {
   case Builtin::BI__builtin_cpu_supports:
   case Builtin::BI__builtin_cpu_is:
