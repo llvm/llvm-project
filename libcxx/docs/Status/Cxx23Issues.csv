@@ -295,7 +295,7 @@
 "`3847 <https://wg21.link/LWG3847>`__","``ranges::to`` can still return views","February 2023","|Complete|","17.0","|ranges|"
 "`3862 <https://wg21.link/LWG3862>`__","``basic_const_iterator``'s ``common_type`` specialization is underconstrained","February 2023","","",""
 "`3865 <https://wg21.link/LWG3865>`__","Sorting a range of ``pairs``","February 2023","|Complete|","17.0","|ranges|"
-"`3869 <https://wg21.link/LWG3869>`__","Deprecate ``std::errc`` constants related to UNIX STREAMS","February 2023","","",""
+"`3869 <https://wg21.link/LWG3869>`__","Deprecate ``std::errc`` constants related to UNIX STREAMS","February 2023","|Complete|","19.0",""
 "`3870 <https://wg21.link/LWG3870>`__","Remove ``voidify``","February 2023","","",""
 "`3871 <https://wg21.link/LWG3871>`__","Adjust note about ``terminate``","February 2023","","",""
 "`3872 <https://wg21.link/LWG3872>`__","``basic_const_iterator`` should have custom ``iter_move``","February 2023","","",""
