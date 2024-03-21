@@ -13,6 +13,8 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
+
 
 namespace LIBC_NAMESPACE {
 namespace fputil {
@@ -79,7 +81,9 @@ LIBC_INLINE T canonicalize(T *cx, const T *x) {
   }
   FPBits<T> sx(*x);
   if (sx.is_signaling_nan()) {
-    *cx = FPBits<T>::quiet_nan();
+    T temp = FPBits<T>::quiet_nan().get_val();
+    *cx = &temp;
+    raise_except_if_required(FE_INVALID);
   } else {
     *cx = *x;
   }
