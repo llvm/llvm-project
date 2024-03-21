@@ -9,7 +9,7 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-@inline(never)
+
 func testit(_ a: Int8) -> Int8 {
   return a + 1
 }
