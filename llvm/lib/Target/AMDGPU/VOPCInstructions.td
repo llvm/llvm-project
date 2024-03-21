@@ -408,7 +408,7 @@ def VOPC_I64_I64 : VOPC_NoSdst_Profile<[Write64Bit], i64>;
 
 multiclass VOPC_F16 <string opName, SDPatternOperator cond = COND_NULL,
                      string revOp = opName> {
-  let OtherPredicates = [NotHasTrue16BitInsts, Has16BitInsts]  in {
+  let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
     defm NAME : VOPC_Pseudos <opName, VOPC_I1_F16_F16, cond, revOp, 0>;
   }
   let OtherPredicates = [HasTrue16BitInsts] in {
@@ -424,7 +424,7 @@ multiclass VOPC_F64 <string opName, SDPatternOperator cond = COND_NULL, string r
 
 multiclass VOPC_I16 <string opName, SDPatternOperator cond = COND_NULL,
                      string revOp = opName> {
-  let OtherPredicates = [NotHasTrue16BitInsts, Has16BitInsts]  in {
+  let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
     defm NAME : VOPC_Pseudos <opName, VOPC_I1_I16_I16, cond, revOp, 0>;
   }
   let OtherPredicates = [HasTrue16BitInsts] in {
@@ -439,7 +439,7 @@ multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string r
   VOPC_Pseudos <opName, VOPC_I1_I64_I64, cond, revOp, 0>;
 
 multiclass VOPCX_F16<string opName, string revOp = opName> {
-  let OtherPredicates = [NotHasTrue16BitInsts, Has16BitInsts]  in {
+  let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
     defm NAME : VOPCX_Pseudos <opName, VOPC_I1_F16_F16, VOPC_F16_F16, COND_NULL, revOp>;
   }
   let OtherPredicates = [HasTrue16BitInsts] in {
@@ -454,7 +454,7 @@ multiclass VOPCX_F64 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_F64_F64, VOPC_F64_F64, COND_NULL, revOp>;
 
 multiclass VOPCX_I16<string opName, string revOp = opName> {
-  let OtherPredicates = [NotHasTrue16BitInsts, Has16BitInsts]  in {
+  let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
     defm NAME : VOPCX_Pseudos <opName, VOPC_I1_I16_I16, VOPC_I16_I16, COND_NULL, revOp>;
   }
   let OtherPredicates = [HasTrue16BitInsts] in {
@@ -940,7 +940,7 @@ def VOPC_F32_I32 : VOPC_Class_NoSdst_Profile<[Write32Bit], f32>;
 def VOPC_F64_I32 : VOPC_Class_NoSdst_Profile<[Write64Bit], f64>;
 
 multiclass VOPC_CLASS_F16 <string opName> {
-  let OtherPredicates = [NotHasTrue16BitInsts, Has16BitInsts]  in {
+  let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
     defm NAME : VOPC_Class_Pseudos <opName, VOPC_I1_F16_I16, 0>;
   }
   let OtherPredicates = [HasTrue16BitInsts] in {
@@ -949,7 +949,7 @@ multiclass VOPC_CLASS_F16 <string opName> {
 }
 
 multiclass VOPCX_CLASS_F16 <string opName> {
-  let OtherPredicates = [NotHasTrue16BitInsts, Has16BitInsts]  in {
+  let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
     defm NAME : VOPCX_Class_Pseudos <opName, VOPC_I1_F16_I16, VOPC_F16_I16>;
   }
   let OtherPredicates = [HasTrue16BitInsts] in {

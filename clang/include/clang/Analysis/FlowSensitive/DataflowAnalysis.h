@@ -22,7 +22,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
@@ -54,10 +54,9 @@ namespace dataflow {
 ///                         Environment &Env)` - applies the analysis transfer
 ///    function for a given edge from a CFG block of a conditional statement.
 ///
-///  `Derived` can optionally override the following members:
-///   * `bool merge(QualType, const Value &, const Value &, Value &,
-///     Environment &)` -  joins distinct values. This could be a strict
-///     lattice join or a more general widening operation.
+///  `Derived` can optionally override the virtual functions in the
+///  `Environment::ValueModel` interface (which is an indirect base class of
+///  this class).
 ///
 ///  `LatticeT` is a bounded join-semilattice that is used by `Derived` and must
 ///  provide the following public members:
@@ -196,8 +195,7 @@ template <typename AnalysisT>
 llvm::Expected<std::vector<
     std::optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
 runDataflowAnalysis(
-    const ControlFlowContext &CFCtx, AnalysisT &Analysis,
-    const Environment &InitEnv,
+    const AdornedCFG &ACFG, AnalysisT &Analysis, const Environment &InitEnv,
     std::function<void(const CFGElement &, const DataflowAnalysisState<
                                                typename AnalysisT::Lattice> &)>
         PostVisitCFG = nullptr,
@@ -219,7 +217,7 @@ runDataflowAnalysis(
   }
 
   auto TypeErasedBlockStates = runTypeErasedDataflowAnalysis(
-      CFCtx, Analysis, InitEnv, PostVisitCFGClosure, MaxBlockVisits);
+      ACFG, Analysis, InitEnv, PostVisitCFGClosure, MaxBlockVisits);
   if (!TypeErasedBlockStates)
     return TypeErasedBlockStates.takeError();
 
@@ -281,8 +279,7 @@ llvm::Expected<llvm::SmallVector<Diagnostic>> diagnoseFunction(
         Diagnoser,
     std::int64_t MaxSATIterations = 1'000'000'000,
     std::int32_t MaxBlockVisits = 20'000) {
-  llvm::Expected<ControlFlowContext> Context =
-      ControlFlowContext::build(FuncDecl);
+  llvm::Expected<AdornedCFG> Context = AdornedCFG::build(FuncDecl);
   if (!Context)
     return Context.takeError();
 

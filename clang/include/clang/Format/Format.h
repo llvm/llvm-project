@@ -154,9 +154,9 @@ struct FormatStyle {
   /// For example, to align across empty lines and not across comments, either
   /// of these work.
   /// \code
-  ///   AlignConsecutiveMacros: AcrossEmptyLines
+  ///   <option-name>: AcrossEmptyLines
   ///
-  ///   AlignConsecutiveMacros:
+  ///   <option-name>:
   ///     Enabled: true
   ///     AcrossEmptyLines: true
   ///     AcrossComments: false
@@ -413,6 +413,26 @@ struct FormatStyle {
   /// \endcode
   /// \version 17
   ShortCaseStatementsAlignmentStyle AlignConsecutiveShortCaseStatements;
+
+  /// Style of aligning consecutive TableGen cond operator colons.
+  /// Align the colons of cases inside !cond operators.
+  /// \code
+  ///   !cond(!eq(size, 1) : 1,
+  ///         !eq(size, 16): 1,
+  ///         true         : 0)
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenCondOperatorColons;
+
+  /// Style of aligning consecutive TableGen definition colons.
+  /// This aligns the inheritance colons of consecutive definitions.
+  /// \code
+  ///   def Def       : Parent {}
+  ///   def DefDef    : Parent {}
+  ///   def DefDefDef : Parent {}
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenDefinitionColons;
 
   /// Different styles for aligning escaped newlines.
   enum EscapedNewlineAlignmentStyle : int8_t {
@@ -3771,7 +3791,8 @@ struct FormatStyle {
   /// \version 17
   RemoveParenthesesStyle RemoveParentheses;
 
-  /// Remove semicolons after the closing brace of a non-empty function.
+  /// Remove semicolons after the closing braces of functions and
+  /// constructors/destructors.
   /// \warning
   ///  Setting this option to ``true`` could lead to incorrect code formatting
   ///  due to clang-format's lack of complete semantic information. As such,
@@ -4707,6 +4728,60 @@ struct FormatStyle {
   /// \version 8
   std::vector<std::string> StatementMacros;
 
+  /// Works only when TableGenBreakInsideDAGArg is not DontBreak.
+  /// The string list needs to consist of identifiers in TableGen.
+  /// If any identifier is specified, this limits the line breaks by
+  /// TableGenBreakInsideDAGArg option only on DAGArg values beginning with
+  /// the specified identifiers.
+  ///
+  /// For example the configuration,
+  /// \code{.yaml}
+  ///   TableGenBreakInsideDAGArg: BreakAll
+  ///   TableGenBreakingDAGArgOperators: ['ins', 'outs']
+  /// \endcode
+  ///
+  /// makes the line break only occurs inside DAGArgs beginning with the
+  /// specified identifiers 'ins' and 'outs'.
+  ///
+  /// \code
+  ///   let DAGArgIns = (ins
+  ///       i32:$src1,
+  ///       i32:$src2
+  ///   );
+  ///   let DAGArgOtherID = (other i32:$other1, i32:$other2);
+  ///   let DAGArgBang = (!cast<SomeType>("Some") i32:$src1, i32:$src2)
+  /// \endcode
+  /// \version 19
+  std::vector<std::string> TableGenBreakingDAGArgOperators;
+
+  /// Different ways to control the format inside TableGen DAGArg.
+  enum DAGArgStyle : int8_t {
+    /// Never break inside DAGArg.
+    /// \code
+    ///   let DAGArgIns = (ins i32:$src1, i32:$src2);
+    /// \endcode
+    DAS_DontBreak,
+    /// Break inside DAGArg after each list element but for the last.
+    /// This aligns to the first element.
+    /// \code
+    ///   let DAGArgIns = (ins i32:$src1,
+    ///                        i32:$src2);
+    /// \endcode
+    DAS_BreakElements,
+    /// Break inside DAGArg after the operator and the all elements.
+    /// \code
+    ///   let DAGArgIns = (ins
+    ///       i32:$src1,
+    ///       i32:$src2
+    ///   );
+    /// \endcode
+    DAS_BreakAll,
+  };
+
+  /// The styles of the line break inside the DAGArg in TableGen.
+  /// \version 19
+  DAGArgStyle TableGenBreakInsideDAGArg;
+
   /// The number of columns used for tab stops.
   /// \version 3.7
   unsigned TabWidth;
@@ -4804,6 +4879,10 @@ struct FormatStyle {
            AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
            AlignConsecutiveShortCaseStatements ==
                R.AlignConsecutiveShortCaseStatements &&
+           AlignConsecutiveTableGenCondOperatorColons ==
+               R.AlignConsecutiveTableGenCondOperatorColons &&
+           AlignConsecutiveTableGenDefinitionColons ==
+               R.AlignConsecutiveTableGenDefinitionColons &&
            AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&
@@ -4955,9 +5034,12 @@ struct FormatStyle {
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            Standard == R.Standard &&
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
-           StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
-           TypeNames == R.TypeNames && TypenameMacros == R.TypenameMacros &&
-           UseTab == R.UseTab &&
+           StatementMacros == R.StatementMacros &&
+           TableGenBreakingDAGArgOperators ==
+               R.TableGenBreakingDAGArgOperators &&
+           TableGenBreakInsideDAGArg == R.TableGenBreakInsideDAGArg &&
+           TabWidth == R.TabWidth && TypeNames == R.TypeNames &&
+           TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;

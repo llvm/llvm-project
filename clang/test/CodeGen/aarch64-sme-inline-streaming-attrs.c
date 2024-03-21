@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -target-feature +sme -verify -DTEST_NONE %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -target-feature +sme -verify -DTEST_COMPATIBLE %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -target-feature +sme -verify -DTEST_STREAMING %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -target-feature +sme -verify -DTEST_LOCALLY %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -verify -DTEST_NONE %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -verify -DTEST_COMPATIBLE %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -verify -DTEST_STREAMING %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -verify -DTEST_LOCALLY %s
 
 #define __ai __attribute__((always_inline))
 __ai void inlined_fn(void) {}

@@ -131,26 +131,107 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
   ret void
 }
 
-; FIXME:
-; define half @f16_return(float %arg) #0 {
-;   %fptrunc = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
-;   ret half %fptrunc
-; }
+ define half @f16_return(float %arg) #0 {
+; NOFP16-LABEL: f16_return:
+; NOFP16:       // %bb.0:
+; NOFP16-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NOFP16-NEXT:    .cfi_def_cfa_offset 16
+; NOFP16-NEXT:    .cfi_offset w30, -16
+; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NOFP16-NEXT:    ret
+   %fptrunc = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
+   ret half %fptrunc
+ }
 
-; define <2 x half> @v2f16_return(<2 x float> %arg) #0 {
-;   %fptrunc = call <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(<2 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
-;   ret <2 x half> %fptrunc
-; }
+ define <2 x half> @v2f16_return(<2 x float> %arg) #0 {
+; NOFP16-LABEL: v2f16_return:
+; NOFP16:       // %bb.0:
+; NOFP16-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
+; NOFP16-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; NOFP16-NEXT:    .cfi_def_cfa_offset 32
+; NOFP16-NEXT:    .cfi_offset w19, -8
+; NOFP16-NEXT:    .cfi_offset w20, -16
+; NOFP16-NEXT:    .cfi_offset w30, -32
+; NOFP16-NEXT:    mov w19, w0
+; NOFP16-NEXT:    mov w0, w1
+; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    mov w20, w0
+; NOFP16-NEXT:    mov w0, w19
+; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    mov w1, w20
+; NOFP16-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; NOFP16-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; NOFP16-NEXT:    ret
+   %fptrunc = call <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(<2 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
+   ret <2 x half> %fptrunc
+ }
 
-; define <3 x half> @v3f16_return(<3 x float> %arg) #0 {
-;   %fptrunc = call <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f32(<3 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
-;   ret <3 x half> %fptrunc
-; }
+ define <3 x half> @v3f16_return(<3 x float> %arg) #0 {
+; NOFP16-LABEL: v3f16_return:
+; NOFP16:       // %bb.0:
+; NOFP16-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
+; NOFP16-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; NOFP16-NEXT:    .cfi_def_cfa_offset 32
+; NOFP16-NEXT:    .cfi_offset w19, -8
+; NOFP16-NEXT:    .cfi_offset w20, -16
+; NOFP16-NEXT:    .cfi_offset w21, -24
+; NOFP16-NEXT:    .cfi_offset w30, -32
+; NOFP16-NEXT:    mov w20, w0
+; NOFP16-NEXT:    mov w0, w2
+; NOFP16-NEXT:    mov w19, w1
+; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    mov w21, w0
+; NOFP16-NEXT:    mov w0, w19
+; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    mov w19, w0
+; NOFP16-NEXT:    mov w0, w20
+; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    mov w1, w19
+; NOFP16-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; NOFP16-NEXT:    mov w2, w21
+; NOFP16-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
+; NOFP16-NEXT:    ret
+   %fptrunc = call <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f32(<3 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
+   ret <3 x half> %fptrunc
+ }
 
-; define <4 x half> @v4f16_return(<4 x float> %arg) #0 {
-;   %fptrunc = call <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
-;   ret <4 x half> %fptrunc
-; }
+ define <4 x half> @v4f16_return(<4 x float> %arg) #0 {
+; NOFP16-LABEL: v4f16_return:
+; NOFP16:       // %bb.0:
+; NOFP16-NEXT:    str x30, [sp, #-48]! // 8-byte Folded Spill
+; NOFP16-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
+; NOFP16-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; NOFP16-NEXT:    .cfi_def_cfa_offset 48
+; NOFP16-NEXT:    .cfi_offset w19, -8
+; NOFP16-NEXT:    .cfi_offset w20, -16
+; NOFP16-NEXT:    .cfi_offset w21, -24
+; NOFP16-NEXT:    .cfi_offset w22, -32
+; NOFP16-NEXT:    .cfi_offset w30, -48
+; NOFP16-NEXT:    mov w21, w0
+; NOFP16-NEXT:    mov w0, w3
+; NOFP16-NEXT:    mov w19, w2
+; NOFP16-NEXT:    mov w20, w1
+; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    mov w22, w0
+; NOFP16-NEXT:    mov w0, w19
+; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    mov w19, w0
+; NOFP16-NEXT:    mov w0, w20
+; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    mov w20, w0
+; NOFP16-NEXT:    mov w0, w21
+; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    mov w1, w20
+; NOFP16-NEXT:    mov w2, w19
+; NOFP16-NEXT:    mov w3, w22
+; NOFP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; NOFP16-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
+; NOFP16-NEXT:    ldr x30, [sp], #48 // 8-byte Folded Reload
+; NOFP16-NEXT:    ret
+   %fptrunc = call <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
+   ret <4 x half> %fptrunc
+ }
 
 ; FIXME:
 ; define void @outgoing_f16_arg(ptr %ptr) #0 {

@@ -835,6 +835,19 @@ def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
   return fp16SrcZerosHighBits(N->getOpcode());
 }]>;
 
+def is_canonicalized : PatLeaf<(fAny srcvalue:$src), [{
+  const SITargetLowering &Lowering =
+      *static_cast<const SITargetLowering *>(getTargetLowering());
+  return Lowering.isCanonicalized(*CurDAG, SDValue(N, 0));
+}]> {
+  let GISelPredicateCode = [{
+    const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
+        MF.getSubtarget().getTargetLowering());
+    const MachineOperand &Dst = MI.getOperand(0);
+    assert(Dst.isDef());
+    return TLI->isCanonicalized(Dst.getReg(), MF);
+   }];
+}
 
 //===----------------------------------------------------------------------===//
 // MUBUF/SMEM Patterns
@@ -2591,11 +2604,6 @@ class Commutable_REV <string revOp, bit isOrig> {
   bit IsOrig = isOrig;
 }
 
-class AtomicNoRet <string noRetOp, bit isRet> {
-  string NoRetOp = noRetOp;
-  bit IsRet = isRet;
-}
-
 //===----------------------------------------------------------------------===//
 // Interpolation opcodes
 //===----------------------------------------------------------------------===//
@@ -2764,15 +2772,6 @@ def getIfAddr64Inst : InstrMapping {
   let ColFields = ["IsAddr64"];
   let KeyCol = ["1"];
   let ValueCols = [["1"]];
-}
-
-// Maps an atomic opcode to its returnless version.
-def getAtomicNoRetOp : InstrMapping {
-  let FilterClass = "AtomicNoRet";
-  let RowFields = ["NoRetOp"];
-  let ColFields = ["IsRet"];
-  let KeyCol = ["1"];
-  let ValueCols = [["0"]];
 }
 
 // Maps a GLOBAL to its SADDR form.

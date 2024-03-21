@@ -38,14 +38,15 @@ func.func @main() {
   %5 = arith.constant 5 : index
 
   %alloca = memref.alloca() : memref<1xf32>
-  %alloc = memref.alloc(%4) : memref<?x4xf32>
+  %alloca_4 = memref.alloca() : memref<4x4xf32>
+  %alloca_4_dyn = memref.cast %alloca_4 : memref<4x4xf32> to memref<?x4xf32>
 
   // Offset is out-of-bounds
   //      CHECK: ERROR: Runtime op verification failed
   // CHECK-NEXT: "memref.subview"
   // CHECK-NEXT: ^ subview is out-of-bounds of the base memref
   // CHECK-NEXT: Location: loc({{.*}})
-  func.call @subview_dynamic_rank_reduce(%alloc, %5, %5, %1) : (memref<?x4xf32>, index, index, index) -> ()
+  func.call @subview_dynamic_rank_reduce(%alloca_4_dyn, %5, %5, %1) : (memref<?x4xf32>, index, index, index) -> ()
 
   // Offset is out-of-bounds
   //      CHECK: ERROR: Runtime op verification failed
@@ -66,23 +67,23 @@ func.func @main() {
   // CHECK-NEXT: "memref.subview"
   // CHECK-NEXT: ^ subview is out-of-bounds of the base memref
   // CHECK-NEXT: Location: loc({{.*}})
-  func.call @subview_dynamic(%alloc, %0, %5, %1) : (memref<?x4xf32>, index, index, index) -> ()
+  func.call @subview_dynamic(%alloca_4_dyn, %0, %5, %1) : (memref<?x4xf32>, index, index, index) -> ()
 
   // Stride is out-of-bounds
   //      CHECK: ERROR: Runtime op verification failed
   // CHECK-NEXT: "memref.subview"
   // CHECK-NEXT: ^ subview is out-of-bounds of the base memref
   // CHECK-NEXT: Location: loc({{.*}})
-  func.call @subview_dynamic(%alloc, %0, %4, %4) : (memref<?x4xf32>, index, index, index) -> ()
+  func.call @subview_dynamic(%alloca_4_dyn, %0, %4, %4) : (memref<?x4xf32>, index, index, index) -> ()
 
   // CHECK-NOT: ERROR: Runtime op verification failed
   func.call @subview(%alloca, %0) : (memref<1xf32>, index) -> ()
 
   // CHECK-NOT: ERROR: Runtime op verification failed
-  func.call @subview_dynamic(%alloc, %0, %4, %1) : (memref<?x4xf32>, index, index, index) -> ()
+  func.call @subview_dynamic(%alloca_4_dyn, %0, %4, %1) : (memref<?x4xf32>, index, index, index) -> ()
 
   // CHECK-NOT: ERROR: Runtime op verification failed
-  func.call @subview_dynamic_rank_reduce(%alloc, %0, %1, %0) : (memref<?x4xf32>, index, index, index) -> ()
+  func.call @subview_dynamic_rank_reduce(%alloca_4_dyn, %0, %1, %0) : (memref<?x4xf32>, index, index, index) -> ()
 
 
   return

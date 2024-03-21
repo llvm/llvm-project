@@ -12,11 +12,13 @@ COPY --from=stage2-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 # Need to install curl for hendrikmuhs/ccache-action
 # Need nodejs for some of the GitHub actions.
 # Need perl-modules for clang analyzer tests.
+# Need git for SPIRV-Tools tests.
 RUN apt-get update && \
     apt-get install -y \
     binutils \
     cmake \
     curl \
+    git \
     libstdc++-11-dev \
     ninja-build \
     nodejs \

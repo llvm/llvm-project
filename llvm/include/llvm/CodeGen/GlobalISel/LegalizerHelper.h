@@ -281,6 +281,10 @@ private:
                                          MachineInstr &MI,
                                          LostDebugLocObserver &LocObserver);
 
+  MachineInstrBuilder
+  getNeutralElementForVecReduce(unsigned Opcode, MachineIRBuilder &MIRBuilder,
+                                LLT Ty);
+
 public:
   /// Return the alignment to use for a stack temporary object with the given
   /// type.
@@ -425,6 +429,7 @@ public:
   LegalizeResult lowerDIVREM(MachineInstr &MI);
   LegalizeResult lowerAbsToAddXor(MachineInstr &MI);
   LegalizeResult lowerAbsToMaxNeg(MachineInstr &MI);
+  LegalizeResult lowerAbsToCNeg(MachineInstr &MI);
   LegalizeResult lowerVectorReduction(MachineInstr &MI);
   LegalizeResult lowerMemcpyInline(MachineInstr &MI);
   LegalizeResult lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);

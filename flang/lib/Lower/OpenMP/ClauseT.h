@@ -24,14 +24,13 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 
 namespace tomp {
 
 template <typename T>
-using ListT = std::vector<T>;
+using ListT = llvm::SmallVector<T, 0>;
 
 // A specialization of ObjectT<Id, Expr> must provide the following definitions:
 // {

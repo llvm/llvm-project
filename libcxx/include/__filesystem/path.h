@@ -14,9 +14,8 @@
 #include <__algorithm/replace_copy.h>
 #include <__availability>
 #include <__config>
-#include <__functional/hash.h>
 #include <__functional/unary_function.h>
-#include <__fwd/hash.h>
+#include <__fwd/functional.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/decay.h>

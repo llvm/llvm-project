@@ -456,8 +456,7 @@ struct ExtractSubstringHelper {
   }
 };
 
-template <typename A>
-std::optional<Substring> ExtractSubstring(const A &x) {
+template <typename A> std::optional<Substring> ExtractSubstring(const A &x) {
   return ExtractSubstringHelper::visit(x);
 }
 
@@ -1125,7 +1124,7 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
     const std::optional<characteristics::Procedure> &lhsProcedure,
     const characteristics::Procedure *rhsProcedure,
     const SpecificIntrinsic *specificIntrinsic, std::string &whyNotCompatible,
-    std::optional<std::string> &warning);
+    std::optional<std::string> &warning, bool ignoreImplicitVsExplicit);
 
 // Scalar constant expansion
 class ScalarConstantExpander {
@@ -1226,6 +1225,20 @@ std::optional<bool> AreEquivalentInInterface(
 bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
+
+/// Check if any of the symbols part of the expression has a cuda data
+/// attribute.
+inline bool HasCUDAAttrs(const Expr<SomeType> &expr) {
+  for (const Symbol &sym : CollectSymbols(expr)) {
+    if (const auto *details =
+            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+      if (details->cudaDataAttr()) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 } // namespace Fortran::evaluate
 

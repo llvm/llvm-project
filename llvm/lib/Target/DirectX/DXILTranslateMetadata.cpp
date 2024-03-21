@@ -53,8 +53,8 @@ bool DXILTranslateMetadata::runOnModule(Module &M) {
       getAnalysis<DXILResourceWrapper>().getDXILResource();
   Res.write(M);
 
-  const uint64_t Flags =
-      (uint64_t)(getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags());
+  const uint64_t Flags = static_cast<uint64_t>(
+      getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags());
   dxil::createEntryMD(M, Flags);
 
   return false;

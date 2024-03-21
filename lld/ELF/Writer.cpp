@@ -261,6 +261,9 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
   Undefined(sym.file, sym.getName(), binding, sym.stOther, sym.type,
             /*discardedSecIdx=*/map.lookup(sym.section))
       .overwrite(sym);
+  // Eliminate from the symbol table, otherwise we would leave an undefined
+  // symbol if the symbol is unreferenced in the absence of GC.
+  sym.isUsedInRegularObj = false;
 }
 
 // If all references to a DSO happen to be weak, the DSO is not added to
@@ -793,7 +796,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
         continue;
       for (InputSectionBase *s : isd->sections) {
         // Relocations are not using REL[A] section symbols.
-        if (s->type == SHT_REL || s->type == SHT_RELA)
+        if (isStaticRelSecType(s->type))
           continue;
 
         // Unlike other synthetic sections, mergeable output sections contain
@@ -2057,8 +2060,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
           if (sym->dsoDefined)
             continue;
           if (sym->isUndefined() && !sym->isWeak()) {
-            diagnose("undefined reference due to --no-allow-shlib-undefined: " +
-                     toString(*sym) + "\n>>> referenced by " + toString(file));
+            diagnose("undefined reference: " + toString(*sym) +
+                     "\n>>> referenced by " + toString(file) +
+                     " (disallowed by --no-allow-shlib-undefined)");
           } else if (sym->isDefined() && sym->computeBinding() == STB_LOCAL) {
             diagnose("non-exported symbol '" + toString(*sym) + "' in '" +
                      toString(sym->file) + "' is referenced by DSO '" +
@@ -3041,20 +3045,20 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
     // section while doing it.
     parallel::TaskGroup tg;
     for (OutputSection *sec : outputSections)
-      if (sec->type == SHT_REL || sec->type == SHT_RELA)
+      if (isStaticRelSecType(sec->type))
         sec->writeTo<ELFT>(Out::bufferStart + sec->offset, tg);
   }
   {
     parallel::TaskGroup tg;
     for (OutputSection *sec : outputSections)
-      if (sec->type != SHT_REL && sec->type != SHT_RELA)
+      if (!isStaticRelSecType(sec->type))
         sec->writeTo<ELFT>(Out::bufferStart + sec->offset, tg);
   }
 
   // Finally, check that all dynamic relocation addends were written correctly.
   if (config->checkDynamicRelocs && config->writeAddends) {
     for (OutputSection *sec : outputSections)
-      if (sec->type == SHT_REL || sec->type == SHT_RELA)
+      if (isStaticRelSecType(sec->type))
         sec->checkDynRelAddends(Out::bufferStart);
   }
 }
