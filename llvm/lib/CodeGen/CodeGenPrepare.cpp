@@ -2462,8 +2462,10 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       break;
     case Intrinsic::assume:
       llvm_unreachable("llvm.assume should have been removed already");
+    case Intrinsic::allow_runtime_check:
+    case Intrinsic::allow_ubsan_check:
     case Intrinsic::experimental_widenable_condition: {
-      // Give up on future widening oppurtunties so that we can fold away dead
+      // Give up on future widening opportunities so that we can fold away dead
       // paths and merge blocks before going into block-local instruction
       // selection.
       if (II->use_empty()) {
