@@ -483,5 +483,57 @@ if.else:
   ret i64 13
 }
 
+define i1 @test_icmp_or_distjoint(i8 %n, i1 %other) {
+; CHECK-LABEL: @test_icmp_or_distjoint(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or disjoint i8 [[N:%.*]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_OR]], -111
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[N]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
+;
+entry:
+  %n_or = or disjoint i8 %n, 16
+  %cmp = icmp ugt i8 %n_or, 145
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = icmp slt i8 %n, 0
+  ret i1 %r
+
+if.else:
+  ret i1 %other
+}
+
+define i1 @test_icmp_or_fail_missing_disjoint(i8 %n, i1 %other) {
+; CHECK-LABEL: @test_icmp_or_fail_missing_disjoint(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or i8 [[N:%.*]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_OR]], -111
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[N]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
+;
+entry:
+  %n_or = or i8 %n, 16
+  %cmp = icmp ugt i8 %n_or, 145
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = icmp slt i8 %n, 0
+  ret i1 %r
+
+if.else:
+  ret i1 %other
+}
+
+
+
 declare void @use(i1)
 declare void @sink(i8)
