@@ -19,6 +19,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -393,6 +394,13 @@ FPClassTest CallBase::getParamNoFPClass(unsigned i) const {
   if (const Function *F = getCalledFunction())
     Mask |= F->getAttributes().getParamNoFPClass(i);
   return Mask;
+}
+
+std::optional<ConstantRange> CallBase::getRange() const {
+  const Attribute RangeAttr = getRetAttr(llvm::Attribute::Range);
+  if (RangeAttr.isValid())
+    return RangeAttr.getRange();
+  return std::nullopt;
 }
 
 bool CallBase::isReturnNonNull() const {
