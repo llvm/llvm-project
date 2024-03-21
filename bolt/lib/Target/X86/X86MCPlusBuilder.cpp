@@ -336,6 +336,9 @@ public:
   }
 
   bool isUnsupportedBranch(const MCInst &Inst) const override {
+    if (isDynamicBranch(Inst))
+      return true;
+
     switch (Inst.getOpcode()) {
     default:
       return false;
@@ -2728,6 +2731,7 @@ public:
 
   void createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
                           MCContext *Ctx) const override {
+    Inst.clear();
     Inst.setOpcode(X86::JMP_1);
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(
@@ -2770,6 +2774,15 @@ public:
   void createCondBranch(MCInst &Inst, const MCSymbol *Target, unsigned CC,
                         MCContext *Ctx) const override {
     Inst.setOpcode(X86::JCC_1);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createExpr(
+        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx)));
+    Inst.addOperand(MCOperand::createImm(CC));
+  }
+
+  void createLongCondBranch(MCInst &Inst, const MCSymbol *Target, unsigned CC,
+                            MCContext *Ctx) const override {
+    Inst.setOpcode(X86::JCC_4);
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(
         MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx)));
