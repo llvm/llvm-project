@@ -205,16 +205,17 @@ namespace views {
 namespace __chunk_by {
 struct __fn {
   template <class _Range, class _Pred>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range, _Pred&& __pred)
-      noexcept(noexcept(/**/ chunk_by_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred))))
-          -> decltype(/*--*/ chunk_by_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred))) {
-    return /*-------------*/ chunk_by_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred));
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(
+      _Range&& __range,
+      _Pred&& __pred) noexcept(noexcept(chunk_by_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred))))
+      -> decltype(/*-----------------*/ chunk_by_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred))) {
+    return /*------------------------*/ chunk_by_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred));
   }
 
   template <class _Pred>
     requires constructible_from<decay_t<_Pred>, _Pred>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Pred&& __pred)
-      noexcept(is_nothrow_constructible_v<decay_t<_Pred>, _Pred>) {
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  operator()(_Pred&& __pred) noexcept(is_nothrow_constructible_v<decay_t<_Pred>, _Pred>) {
     return __range_adaptor_closure_t(std::__bind_back(operator(), std::forward<_Pred>(__pred)));
   }
 };
