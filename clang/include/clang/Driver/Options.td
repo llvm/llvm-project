@@ -3497,6 +3497,10 @@ def fopenmp_assume_no_nested_parallelism : Flag<["-"], "fopenmp-assume-no-nested
   HelpText<"Assert no nested parallel regions in the GPU">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoNestedParallelism">>;
 
+def fopenmp_globalize_to_global_space : Flag<["-"], "fopenmp-globalize-to-global-space">,
+  HelpText<"Globalize to global space for the globalized variables">,
+  MarshallingInfoFlag<LangOpts<"OpenMPGlobalizeToGlobalSpace">>;
+
 } // let Group = f_Group
 } // let Visibility = [ClangOption, CC1Option, FC1Option]
 } // let Flags = [NoArgumentUnused, HelpHidden]

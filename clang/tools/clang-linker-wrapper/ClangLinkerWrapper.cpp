@@ -137,6 +137,13 @@ static constexpr OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
+/// Host RPC module that will be shared to the corresponding pass.
+Module *HostModule = nullptr;
+/// We only need to generate the host RPC module once.
+bool IsHostModuleGenerated = false;
+/// Host RPC object file.
+StringRef HostRPCObjFile;
+
 class WrapperOptTable : public opt::GenericOptTable {
 public:
   WrapperOptTable() : opt::GenericOptTable(InfoTable) {}
@@ -614,10 +621,12 @@ std::vector<std::string> getTargetFeatures(ArrayRef<OffloadFile> InputFiles) {
   return UnifiedFeatures;
 }
 
-template <typename ModuleHook = function_ref<bool(size_t, const Module &)>>
+template <typename PreHookTy = function_ref<bool(size_t, const Module &)>,
+          typename PostHookTy = function_ref<bool(size_t, const Module &)>>
 std::unique_ptr<lto::LTO> createLTO(
     const ArgList &Args, const std::vector<std::string> &Features,
-    ModuleHook Hook = [](size_t, const Module &) { return true; }) {
+    PreHookTy PreHook = [](size_t, const Module &) { return true; },
+    PostHookTy PostHook = [](size_t, const Module &) { return true; }) {
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   // We need to remove AMD's target-id from the processor if present.
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ).split(":").first;
@@ -672,10 +681,10 @@ std::unique_ptr<lto::LTO> createLTO(
       return true;
     };
   }
-  Conf.PostOptModuleHook = Hook;
-  Conf.CGFileType = (Triple.isNVPTX() || SaveTemps)
-                        ? CodeGenFileType::AssemblyFile
-                        : CodeGenFileType::ObjectFile;
+
+  Conf.PreOptModuleHook = PreHook;
+  Conf.PostOptModuleHook = PostHook;
+  Conf.CGFileType = Triple.isNVPTX() ? CodeGenFileType::AssemblyFile : CodeGenFileType::ObjectFile;
 
   // TODO: Handle remark files
   Conf.HasWholeProgramVisibility = Args.hasArg(OPT_whole_program);
@@ -689,6 +698,58 @@ bool isValidCIdentifier(StringRef S) {
   return !S.empty() && (isAlpha(S[0]) || S[0] == '_') &&
          llvm::all_of(llvm::drop_begin(S),
                       [](char C) { return C == '_' || isAlnum(C); });
+}
+
+bool writeHostModule(std::string &FileName) {
+  if (!HostModule)
+    return false;
+  if (HostModule->getFunctionList().empty())
+    return false;
+
+  auto HostTriple = HostModule->getTargetTriple();
+  FileName =
+      sys::path::filename(ExecutableName).str() + "-host-rpc-" + HostTriple;
+  auto TempFileOrErr = createOutputFile(FileName, "bc");
+  if (!TempFileOrErr)
+    reportError(TempFileOrErr.takeError());
+  int FD = -1;
+  if (std::error_code EC = sys::fs::openFileForWrite(*TempFileOrErr, FD))
+    reportError(errorCodeToError(EC));
+
+  auto Out = std::make_unique<llvm::raw_fd_ostream>(FD, true);
+  WriteBitcodeToFile(*HostModule, *Out);
+
+  return true;
+}
+
+std::unique_ptr<lto::LTO> createHostRPCLTO(StringRef HostTriple) {
+  const llvm::Triple Triple(HostTriple);
+  lto::Config Conf;
+  lto::ThinBackend Backend;
+  Backend =
+      lto::createInProcessThinBackend(llvm::heavyweight_hardware_concurrency());
+
+  // TODO: host arch?
+  // Conf.CPU = Arch.str();
+  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
+
+  // TODO: host features?
+  // Conf.MAttrs = Features;
+  Conf.CGOptLevel = *CodeGenOpt::getLevel(3);
+  Conf.OptLevel = 3;
+  Conf.UseDefaultPipeline = true;
+  Conf.DefaultTriple = Triple.getTriple();
+
+  LTOError = false;
+  Conf.DiagHandler = diagnosticHandler;
+
+  Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
+  Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
+  Conf.CGFileType = CodeGenFileType::ObjectFile;
+
+  Conf.HasWholeProgramVisibility = false;
+
+  return std::make_unique<lto::LTO>(std::move(Conf), Backend);
 }
 
 Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
@@ -776,14 +837,51 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     BitcodeOutput.push_back(*TempFileOrErr);
     return false;
   };
+  auto AddHostModuleAddr = [&](size_t, const Module &M) {
+    if (!HostModule)
+      return true;
+
+    Module &CM = const_cast<Module &>(M);
+    auto *MD = CM.getOrInsertNamedMetadata("llvm.hostrpc.hostmodule");
+    MD->clearOperands();
+    MD->addOperand(MDTuple::get(
+        CM.getContext(), {ConstantAsMetadata::get(ConstantInt::get(
+                             Type::getInt64Ty(CM.getContext()),
+                             reinterpret_cast<uintptr_t>(HostModule)))}));
+    return true;
+  };
 
   // We assume visibility of the whole program if every input file was bitcode.
   auto Features = getTargetFeatures(BitcodeInputFiles);
-  auto LTOBackend = Args.hasArg(OPT_embed_bitcode) ||
-                            Args.hasArg(OPT_builtin_bitcode_EQ) ||
-                            Args.hasArg(OPT_clang_backend)
-                        ? createLTO(Args, Features, OutputBitcode)
-                        : createLTO(Args, Features);
+    auto LTOBackend =
+      Args.hasArg(OPT_embed_bitcode)
+          ? createLTO(Args, Features, AddHostModuleAddr, OutputBitcode)
+          : createLTO(Args, Features, AddHostModuleAddr);
+
+  LLVMContext &Ctx = LTOBackend->getContext();
+  StringRef HostTriple =
+      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple());
+  std::unique_ptr<Module> HostModulePtr;
+  if (!IsHostModuleGenerated) {
+    HostModulePtr = std::make_unique<Module>(
+        sys::path::filename(ExecutableName).str() + "-host-rpc.bc", Ctx);
+    HostModule = HostModulePtr.get();
+    HostModulePtr->setTargetTriple(HostTriple);
+
+    std::string Msg;
+    const Target *T =
+        TargetRegistry::lookupTarget(HostModule->getTargetTriple(), Msg);
+    if (!T)
+      return createStringError(inconvertibleErrorCode(), Msg);
+    auto Options =
+        codegen::InitTargetOptionsFromCodeGenFlags(llvm::Triple(HostTriple));
+    StringRef CPU = "";
+    StringRef Features = "";
+    std::unique_ptr<TargetMachine> TM(
+        T->createTargetMachine(HostTriple, CPU, Features, Options, Reloc::PIC_,
+                               HostModule->getCodeModel()));
+    HostModule->setDataLayout(TM->createDataLayout());
+  }
 
   // We need to resolve the symbols so the LTO backend knows which symbols need
   // to be kept or can be internalized. This is a simplified symbol resolution
@@ -876,6 +974,57 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
 
   if (Error Err = LTOBackend->run(AddStream))
     return Err;
+
+  std::string HostModuleTempFile;
+  bool ValidHostModule = writeHostModule(HostModuleTempFile);
+  // Reset the HostModule pointer.
+  HostModulePtr.reset();
+  HostModule = nullptr;
+  // TODO: this is really redundant code.
+  if (ValidHostModule) {
+    auto HostLTO = createHostRPCLTO(HostTriple);
+
+    std::string HostBitCodeFile = HostModuleTempFile + ".bc";
+    auto BufferOrError = MemoryBuffer::getFile(HostBitCodeFile);
+    if (!BufferOrError)
+      reportError(createFileError(HostBitCodeFile, BufferOrError.getError()));
+    Expected<std::unique_ptr<lto::InputFile>> BitcodeFileOrErr =
+        llvm::lto::InputFile::create(*BufferOrError.get());
+    if (!BitcodeFileOrErr)
+      return BitcodeFileOrErr.takeError();
+
+    const auto Symbols = (*BitcodeFileOrErr)->symbols();
+    SmallVector<lto::SymbolResolution, 16> Resolutions(Symbols.size());
+    size_t Idx = 0;
+    for (auto &Sym : Symbols) {
+      (void)Sym;
+      lto::SymbolResolution &Res = Resolutions[Idx++];
+      Res.ExportDynamic = true;
+      Res.VisibleToRegularObj = true;
+      Res.LinkerRedefined = false;
+      Res.Prevailing = true;
+    }
+    if (Error Err = HostLTO->add(std::move(*BitcodeFileOrErr), Resolutions))
+      return Err;
+
+    auto RPCAddStream =
+        [&](size_t Task,
+            const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
+      int FD = -1;
+      auto TempFileOrErr = createOutputFile(
+          sys::path::filename(ExecutableName) + "-host-rpc-" + HostTriple, "o");
+      if (!TempFileOrErr)
+        reportError(TempFileOrErr.takeError());
+      HostRPCObjFile = *TempFileOrErr;
+      if (std::error_code EC = sys::fs::openFileForWrite(*TempFileOrErr, FD))
+        reportError(errorCodeToError(EC));
+      return std::make_unique<CachedFileStream>(
+          std::make_unique<llvm::raw_fd_ostream>(FD, true));
+    };
+
+    if (Error Err = HostLTO->run(RPCAddStream))
+      return Err;
+  }
 
   if (LTOError)
     return createStringError(inconvertibleErrorCode(),
@@ -1244,6 +1393,9 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
       return OutputOrErr.takeError();
     WrappedOutput.push_back(*OutputOrErr);
   }
+
+  if (!HostRPCObjFile.empty())
+    WrappedOutput.push_back(HostRPCObjFile);
 
   return WrappedOutput;
 }

@@ -6519,6 +6519,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-fopenmp-offload-mandatory");
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
         CmdArgs.push_back("-fopenmp-force-usm");
+      if (Args.hasArg(options::OPT_fopenmp_globalize_to_global_space))
+        CmdArgs.push_back("-fopenmp-globalize-to-global-space");
       break;
     default:
       // By default, if Clang doesn't know how to generate useful OpenMP code

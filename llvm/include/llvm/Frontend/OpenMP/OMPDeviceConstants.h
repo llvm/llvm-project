@@ -25,6 +25,19 @@ enum OMPTgtExecModeFlags : unsigned char {
       OMP_TGT_EXEC_MODE_GENERIC | OMP_TGT_EXEC_MODE_SPMD
 };
 
+enum OMPTgtHostRPCArgType {
+  // No need to copy.
+  OMP_HOST_RPC_ARG_SCALAR = 0,
+  OMP_HOST_RPC_ARG_PTR = 1,
+  // Copy to device.
+  OMP_HOST_RPC_ARG_COPY_TO = OMP_HOST_RPC_ARG_PTR | (1 << 1),
+  // Copy to device.
+  OMP_HOST_RPC_ARG_COPY_FROM = OMP_HOST_RPC_ARG_PTR | (1 << 2),
+  // Copy to and from device.
+  OMP_HOST_RPC_ARG_COPY_TOFROM =
+      OMP_HOST_RPC_ARG_COPY_TO | OMP_HOST_RPC_ARG_COPY_FROM,
+};
+
 } // end namespace omp
 } // end namespace llvm
 
