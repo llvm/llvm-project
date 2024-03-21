@@ -359,8 +359,8 @@ bool Float2IntPass::validateAndTransform() {
 
     // The number of bits required is the maximum of the upper and
     // lower limits, plus one so it can be signed.
-    unsigned MinBW = std::max(R.getLower().getSignificantBits(),
-                              R.getUpper().getSignificantBits()) +
+    unsigned MinBW = std::max(R.getSignedMin().getSignificantBits(),
+                              R.getSignedMax().getSignificantBits()) +
                      1;
     LLVM_DEBUG(dbgs() << "F2I: MinBitwidth=" << MinBW << ", R: " << R << "\n");
 
