@@ -240,6 +240,15 @@ LONG test_InterlockedAdd(LONG volatile *Addend, LONG Value) {
 // CHECK-ARM-ARM64: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %Addend, i32 %Value seq_cst, align 4
 // CHECK-ARM-ARM64: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %Value
 // CHECK-ARM-ARM64: ret i32 %[[NEWVAL:[0-9]+]]
+
+__int64 test_InterlockedAdd64(__int64 volatile *Addend, __int64 Value) {
+  return _InterlockedAdd64(Addend, Value);
+}
+
+// CHECK-ARM-ARM64: define{{.*}}i64 @test_InterlockedAdd64(ptr{{[a-z_ ]*}}%Addend, i64 noundef %Value) {{.*}} {
+// CHECK-ARM-ARM64: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %Addend, i64 %Value seq_cst, align 8
+// CHECK-ARM-ARM64: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %Value
+// CHECK-ARM-ARM64: ret i64 %[[NEWVAL:[0-9]+]]
 #endif
 
 #if defined(__arm__) || defined(__aarch64__)

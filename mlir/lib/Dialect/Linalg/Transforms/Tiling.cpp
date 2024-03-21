@@ -358,7 +358,7 @@ static FailureOr<ForallTilingResult> tileToForallOpImpl(
 
   // 3. Clone the tileable op and update its destination operands to use the
   // output bbArgs of the ForallOp.
-  ArrayRef<BlockArgument> destBbArgs = forallOp.getOutputBlockArguments();
+  ArrayRef<BlockArgument> destBbArgs = forallOp.getRegionIterArgs();
   Operation *tiledOp = nullptr;
   SmallVector<Value> tiledValues;
   {
@@ -695,7 +695,7 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
   // 4. Clone the tileable op and update its destination operands to use the
   // output bbArgs of the ForallOp.
   SmallVector<Value> tilingResults;
-  ArrayRef<BlockArgument> destBbArgs = forallOp.getOutputBlockArguments();
+  ArrayRef<BlockArgument> destBbArgs = forallOp.getRegionIterArgs();
   {
     // 4.a. RAII guard, inserting within forallOp, before terminator.
     OpBuilder::InsertionGuard g(b);
@@ -722,7 +722,7 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
     // We cannot use a IRMapping here because it can replace
     // different OpOperands with the same value.
     Operation *clonedOp = b.clone(*op.getOperation());
-    b.updateRootInPlace(clonedOp, [&]() {
+    b.modifyOpInPlace(clonedOp, [&]() {
       for (auto [initOperandPtr, tiledInitValue] : llvm::zip_equal(
                cast<DestinationStyleOpInterface>(clonedOp).getDpsInitsMutable(),
                tiledDpsInitOperands)) {

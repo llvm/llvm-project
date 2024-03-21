@@ -44,22 +44,22 @@ entry:
 }
 
 ; CHECK-LABEL: test_fp:
-define void @test_fp(fp128* %a) nounwind {
+define void @test_fp(ptr %a) nounwind {
 entry:
 ; CHECK: __atomic_exchange_16
 ; CHECK32: __atomic_exchange
-  %0 = atomicrmw xchg fp128* %a, fp128 0xL00000000000000004000900000000000 seq_cst
+  %0 = atomicrmw xchg ptr %a, fp128 0xL00000000000000004000900000000000 seq_cst
 ; CHECK: __atomic_compare_exchange_16
 ; CHECK32: __atomic_compare_exchange
-  %1 = atomicrmw fadd fp128* %a, fp128 0xL00000000000000004000900000000000 seq_cst
+  %1 = atomicrmw fadd ptr %a, fp128 0xL00000000000000004000900000000000 seq_cst
 ; CHECK: __atomic_compare_exchange_16
 ; CHECK32: __atomic_compare_exchange
-  %2 = atomicrmw fsub fp128* %a, fp128 0xL00000000000000004000900000000000 seq_cst
+  %2 = atomicrmw fsub ptr %a, fp128 0xL00000000000000004000900000000000 seq_cst
 ; CHECK: __atomic_load_16
 ; CHECK32: __atomic_load
-  %3 = load atomic fp128, fp128* %a seq_cst, align 16
+  %3 = load atomic fp128, ptr %a seq_cst, align 16
 ; CHECK: __atomic_store_16
 ; CHECK32: __atomic_store
-  store atomic fp128 %3, fp128* %a seq_cst, align 16
+  store atomic fp128 %3, ptr %a seq_cst, align 16
   ret void
 }

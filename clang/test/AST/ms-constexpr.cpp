@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.33 -std=c++20 -ast-dump -verify %s | FileCheck %s
+// RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.33 -std=c++20 -ast-dump -verify %s -fexperimental-new-constant-interpreter | FileCheck %s
 // expected-no-diagnostics
 
 // CHECK: used f1 'bool ()'

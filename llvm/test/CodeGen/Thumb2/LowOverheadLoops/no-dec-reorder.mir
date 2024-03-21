@@ -2,68 +2,68 @@
 # RUN: llc -mtriple=thumbv8.1m.main -run-pass=arm-cp-islands %s -o - --verify-machineinstrs | FileCheck %s
 
 --- |
-  %struct.head_s = type { %struct.head_s*, %struct.data_s* }
+  %struct.head_s = type { ptr, ptr }
   %struct.data_s = type { i16, i16 }
 
-  define dso_local arm_aapcscc %struct.head_s* @search(%struct.head_s* readonly %list, %struct.data_s* nocapture readonly %info) local_unnamed_addr {
+  define dso_local arm_aapcscc ptr @search(ptr readonly %list, ptr nocapture readonly %info) local_unnamed_addr {
   entry:
-    %idx = getelementptr inbounds %struct.data_s, %struct.data_s* %info, i32 0, i32 1
-    %tmp = load i16, i16* %idx, align 2
+    %idx = getelementptr inbounds %struct.data_s, ptr %info, i32 0, i32 1
+    %tmp = load i16, ptr %idx, align 2
     %cmp = icmp sgt i16 %tmp, -1
     br i1 %cmp, label %while.cond.preheader, label %while.cond9.preheader
 
   while.cond9.preheader:                            ; preds = %entry
-    %0 = icmp eq %struct.head_s* %list, null
+    %0 = icmp eq ptr %list, null
     br i1 %0, label %return, label %land.rhs11.lr.ph
 
   land.rhs11.lr.ph:                                 ; preds = %while.cond9.preheader
-    %data16143 = bitcast %struct.data_s* %info to i16*
-    %tmp1 = load i16, i16* %data16143, align 2
+    %data16143 = bitcast ptr %info to ptr
+    %tmp1 = load i16, ptr %data16143, align 2
     %conv15 = sext i16 %tmp1 to i32
     br label %land.rhs11
 
   while.cond.preheader:                             ; preds = %entry
-    %1 = icmp eq %struct.head_s* %list, null
+    %1 = icmp eq ptr %list, null
     br i1 %1, label %return, label %land.rhs.preheader
 
   land.rhs.preheader:                               ; preds = %while.cond.preheader
     br label %land.rhs
 
   while.body:                                       ; preds = %land.rhs
-    %next4 = bitcast %struct.head_s* %list.addr.033 to %struct.head_s**
-    %tmp4 = load %struct.head_s*, %struct.head_s** %next4, align 4
-    %tobool = icmp eq %struct.head_s* %tmp4, null
+    %next4 = bitcast ptr %list.addr.033 to ptr
+    %tmp4 = load ptr, ptr %next4, align 4
+    %tobool = icmp eq ptr %tmp4, null
     br i1 %tobool, label %return, label %land.rhs
 
   land.rhs:                                         ; preds = %land.rhs.preheader, %while.body
-    %list.addr.033 = phi %struct.head_s* [ %tmp4, %while.body ], [ %list, %land.rhs.preheader ]
-    %info2 = getelementptr inbounds %struct.head_s, %struct.head_s* %list.addr.033, i32 0, i32 1
-    %tmp2 = load %struct.data_s*, %struct.data_s** %info2, align 4
-    %idx3 = getelementptr inbounds %struct.data_s, %struct.data_s* %tmp2, i32 0, i32 1
-    %tmp3 = load i16, i16* %idx3, align 2
+    %list.addr.033 = phi ptr [ %tmp4, %while.body ], [ %list, %land.rhs.preheader ]
+    %info2 = getelementptr inbounds %struct.head_s, ptr %list.addr.033, i32 0, i32 1
+    %tmp2 = load ptr, ptr %info2, align 4
+    %idx3 = getelementptr inbounds %struct.data_s, ptr %tmp2, i32 0, i32 1
+    %tmp3 = load i16, ptr %idx3, align 2
     %cmp7 = icmp eq i16 %tmp3, %tmp
     br i1 %cmp7, label %return, label %while.body
 
   while.body19:                                     ; preds = %land.rhs11
-    %next205 = bitcast %struct.head_s* %list.addr.136 to %struct.head_s**
-    %tmp8 = load %struct.head_s*, %struct.head_s** %next205, align 4
-    %tobool10 = icmp eq %struct.head_s* %tmp8, null
+    %next205 = bitcast ptr %list.addr.136 to ptr
+    %tmp8 = load ptr, ptr %next205, align 4
+    %tobool10 = icmp eq ptr %tmp8, null
     br i1 %tobool10, label %return, label %land.rhs11
 
   land.rhs11:                                       ; preds = %while.body19, %land.rhs11.lr.ph
-    %list.addr.136 = phi %struct.head_s* [ %list, %land.rhs11.lr.ph ], [ %tmp8, %while.body19 ]
-    %info12 = getelementptr inbounds %struct.head_s, %struct.head_s* %list.addr.136, i32 0, i32 1
-    %tmp5 = load %struct.data_s*, %struct.data_s** %info12, align 4
-    %data166 = bitcast %struct.data_s* %tmp5 to i16*
-    %tmp6 = load i16, i16* %data166, align 2
+    %list.addr.136 = phi ptr [ %list, %land.rhs11.lr.ph ], [ %tmp8, %while.body19 ]
+    %info12 = getelementptr inbounds %struct.head_s, ptr %list.addr.136, i32 0, i32 1
+    %tmp5 = load ptr, ptr %info12, align 4
+    %data166 = bitcast ptr %tmp5 to ptr
+    %tmp6 = load i16, ptr %data166, align 2
     %2 = and i16 %tmp6, 255
     %and = zext i16 %2 to i32
     %cmp16 = icmp eq i32 %and, %conv15
     br i1 %cmp16, label %return, label %while.body19
 
   return:                                           ; preds = %land.rhs11, %while.body19, %land.rhs, %while.body, %while.cond.preheader, %while.cond9.preheader
-    %retval.0 = phi %struct.head_s* [ null, %while.cond.preheader ], [ null, %while.cond9.preheader ], [ null, %while.body ], [ %list.addr.033, %land.rhs ], [ null, %while.body19 ], [ %list.addr.136, %land.rhs11 ]
-    ret %struct.head_s* %retval.0
+    %retval.0 = phi ptr [ null, %while.cond.preheader ], [ null, %while.cond9.preheader ], [ null, %while.body ], [ %list.addr.033, %land.rhs ], [ null, %while.body19 ], [ %list.addr.136, %land.rhs11 ]
+    ret ptr %retval.0
   }
 
 ...

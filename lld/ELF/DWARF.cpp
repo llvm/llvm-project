@@ -38,11 +38,11 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
                 .Case(".debug_addr", &addrSection)
                 .Case(".debug_gnu_pubnames", &gnuPubnamesSection)
                 .Case(".debug_gnu_pubtypes", &gnuPubtypesSection)
+                .Case(".debug_line", &lineSection)
                 .Case(".debug_loclists", &loclistsSection)
                 .Case(".debug_ranges", &rangesSection)
                 .Case(".debug_rnglists", &rnglistsSection)
                 .Case(".debug_str_offsets", &strOffsetsSection)
-                .Case(".debug_line", &lineSection)
                 .Default(nullptr)) {
       m->Data = toStringRef(sec->contentMaybeDecompress());
       m->sec = sec;

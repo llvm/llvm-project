@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
 declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #0

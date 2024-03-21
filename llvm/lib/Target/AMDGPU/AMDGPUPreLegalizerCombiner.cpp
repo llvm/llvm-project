@@ -106,8 +106,6 @@ bool AMDGPUPreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
     return true;
 
   switch (MI.getOpcode()) {
-  case TargetOpcode::G_CONCAT_VECTORS:
-    return Helper.tryCombineConcatVectors(MI);
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return Helper.tryCombineShuffleVector(MI);
   }

@@ -1901,6 +1901,7 @@ void ASTStmtWriter::VisitCXXNewExpr(CXXNewExpr *E) {
   Record.push_back(E->isGlobalNew());
   Record.push_back(E->passAlignment());
   Record.push_back(E->doesUsualArrayDeleteWantSize());
+  Record.push_back(E->CXXNewExprBits.HasInitializer);
   Record.push_back(E->CXXNewExprBits.StoredInitializationStyle);
 
   Record.AddDeclRef(E->getOperatorNew());
@@ -2150,6 +2151,19 @@ void ASTStmtWriter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
     Record.push_back(E->getPackLength());
   }
   Code = serialization::EXPR_SIZEOF_PACK;
+}
+
+void ASTStmtWriter::VisitPackIndexingExpr(PackIndexingExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->TransformedExpressions);
+  Record.AddSourceLocation(E->getEllipsisLoc());
+  Record.AddSourceLocation(E->getRSquareLoc());
+  Record.AddStmt(E->getPackIdExpression());
+  Record.AddStmt(E->getIndexExpr());
+  Record.push_back(E->TransformedExpressions);
+  for (Expr *Sub : E->getExpressions())
+    Record.AddStmt(Sub);
+  Code = serialization::EXPR_PACK_INDEXING;
 }
 
 void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
@@ -2822,6 +2836,27 @@ void ASTStmtWriter::VisitOMPTargetParallelGenericLoopDirective(
     OMPTargetParallelGenericLoopDirective *D) {
   VisitOMPLoopDirective(D);
   Code = serialization::STMT_OMP_TARGET_PARALLEL_GENERIC_LOOP_DIRECTIVE;
+}
+
+//===----------------------------------------------------------------------===//
+// OpenACC Constructs/Directives.
+//===----------------------------------------------------------------------===//
+void ASTStmtWriter::VisitOpenACCConstructStmt(OpenACCConstructStmt *S) {
+  Record.writeEnum(S->Kind);
+  Record.AddSourceRange(S->Range);
+  // TODO OpenACC: Serialize Clauses.
+}
+
+void ASTStmtWriter::VisitOpenACCAssociatedStmtConstruct(
+    OpenACCAssociatedStmtConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+  Record.AddStmt(S->getAssociatedStmt());
+}
+
+void ASTStmtWriter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCAssociatedStmtConstruct(S);
+  Code = serialization::STMT_OPENACC_COMPUTE_CONSTRUCT;
 }
 
 //===----------------------------------------------------------------------===//

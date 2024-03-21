@@ -19,7 +19,13 @@ def : PfmCountersDefaultBinding<DefaultPfmCounters>;
 
 // Intel X86 Counters.
 defvar DefaultIntelPfmValidationCounters = [
-  PfmValidationCounter<InstructionRetired, "INSTRUCTIONS_RETIRED">
+  PfmValidationCounter<InstructionRetired, "INSTRUCTIONS_RETIRED">,
+  PfmValidationCounter<L1DCacheLoadMiss, "MEM_LOAD_UOPS_RETIRED:L1_MISS">,
+  PfmValidationCounter<L1ICacheLoadMiss, "L1-ICACHE-LOAD-MISSES">,
+  PfmValidationCounter<DataTLBLoadMiss, "DTLB_LOAD_MISSES:MISS_CAUSES_A_WALK">,
+  PfmValidationCounter<DataTLBStoreMiss, "DTLB_STORE_MISSES:MISS_CAUSES_A_WALK">,
+  PfmValidationCounter<InstructionTLBLoadMiss, "ITLB_MISSES:MISS_CAUSES_A_WALK">,
+  PfmValidationCounter<BranchPredictionMiss, "BRANCH-MISSES">
 ];
 
 def PentiumPfmCounters : ProcPfmCounters {
@@ -200,7 +206,13 @@ def : PfmCountersBinding<"tigerlake", IceLakePfmCounters>;
 
 // AMD X86 Counters.
 defvar DefaultAMDPfmValidationCounters = [
-  PfmValidationCounter<InstructionRetired, "RETIRED_INSTRUCTIONS">
+  PfmValidationCounter<InstructionRetired, "RETIRED_INSTRUCTIONS">,
+  PfmValidationCounter<L1DCacheLoadMiss, "L1-DCACHE-LOAD-MISSES">,
+  PfmValidationCounter<L1DCacheStoreMiss, "L1-DCACHE-STORE-MISSES">,
+  PfmValidationCounter<L1ICacheLoadMiss, "L1-ICACHE-LOAD-MISSES">,
+  PfmValidationCounter<DataTLBLoadMiss, "DTLB-LOAD-MISSES">,
+  PfmValidationCounter<InstructionTLBLoadMiss, "ITLB-LOAD-MISSES">,
+  PfmValidationCounter<BranchPredictionMiss, "BRANCH-MISSES">
 ];
 
 // Set basic counters for AMD cpus that we know libpfm4 supports.

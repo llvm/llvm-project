@@ -721,7 +721,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     DeadSucc->removePredecessor(Src, /* KeepOneInputPHIs */ true);
 
     // Replace the conditional branch with an unconditional one.
-    BranchInst::Create(Dest, Term);
+    BranchInst::Create(Dest, Term->getIterator());
     Term->eraseFromParent();
 
     DTUpdates.emplace_back(DominatorTree::Delete, Src, DeadSucc);

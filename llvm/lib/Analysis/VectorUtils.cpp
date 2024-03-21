@@ -1012,6 +1012,31 @@ bool llvm::maskIsAllOneOrUndef(Value *Mask) {
   return true;
 }
 
+bool llvm::maskContainsAllOneOrUndef(Value *Mask) {
+  assert(isa<VectorType>(Mask->getType()) &&
+         isa<IntegerType>(Mask->getType()->getScalarType()) &&
+         cast<IntegerType>(Mask->getType()->getScalarType())->getBitWidth() ==
+             1 &&
+         "Mask must be a vector of i1");
+
+  auto *ConstMask = dyn_cast<Constant>(Mask);
+  if (!ConstMask)
+    return false;
+  if (ConstMask->isAllOnesValue() || isa<UndefValue>(ConstMask))
+    return true;
+  if (isa<ScalableVectorType>(ConstMask->getType()))
+    return false;
+  for (unsigned
+           I = 0,
+           E = cast<FixedVectorType>(ConstMask->getType())->getNumElements();
+       I != E; ++I) {
+    if (auto *MaskElt = ConstMask->getAggregateElement(I))
+      if (MaskElt->isAllOnesValue() || isa<UndefValue>(MaskElt))
+        return true;
+  }
+  return false;
+}
+
 /// TODO: This is a lot like known bits, but for
 /// vectors.  Is there something we can common this with?
 APInt llvm::possiblyDemandedEltsInMask(Value *Mask) {
@@ -1458,95 +1483,4 @@ void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
                  [](std::pair<int, Instruction *> p) { return p.second; });
   propagateMetadata(NewInst, VL);
 }
-}
-
-void VFABI::getVectorVariantNames(
-    const CallInst &CI, SmallVectorImpl<std::string> &VariantMappings) {
-  const StringRef S = CI.getFnAttr(VFABI::MappingsAttrName).getValueAsString();
-  if (S.empty())
-    return;
-
-  SmallVector<StringRef, 8> ListAttr;
-  S.split(ListAttr, ",");
-
-  for (const auto &S : SetVector<StringRef>(ListAttr.begin(), ListAttr.end())) {
-    std::optional<VFInfo> Info =
-        VFABI::tryDemangleForVFABI(S, CI.getFunctionType());
-    if (Info && CI.getModule()->getFunction(Info->VectorName)) {
-      LLVM_DEBUG(dbgs() << "VFABI: Adding mapping '" << S << "' for " << CI
-                        << "\n");
-      VariantMappings.push_back(std::string(S));
-    } else
-      LLVM_DEBUG(dbgs() << "VFABI: Invalid mapping '" << S << "'\n");
-  }
-}
-
-FunctionType *VFABI::createFunctionType(const VFInfo &Info,
-                                        const FunctionType *ScalarFTy) {
-  // Create vector parameter types
-  SmallVector<Type *, 8> VecTypes;
-  ElementCount VF = Info.Shape.VF;
-  int ScalarParamIndex = 0;
-  for (auto VFParam : Info.Shape.Parameters) {
-    if (VFParam.ParamKind == VFParamKind::GlobalPredicate) {
-      VectorType *MaskTy =
-          VectorType::get(Type::getInt1Ty(ScalarFTy->getContext()), VF);
-      VecTypes.push_back(MaskTy);
-      continue;
-    }
-
-    Type *OperandTy = ScalarFTy->getParamType(ScalarParamIndex++);
-    if (VFParam.ParamKind == VFParamKind::Vector)
-      OperandTy = VectorType::get(OperandTy, VF);
-    VecTypes.push_back(OperandTy);
-  }
-
-  auto *RetTy = ScalarFTy->getReturnType();
-  if (!RetTy->isVoidTy())
-    RetTy = VectorType::get(RetTy, VF);
-  return FunctionType::get(RetTy, VecTypes, false);
-}
-
-bool VFShape::hasValidParameterList() const {
-  for (unsigned Pos = 0, NumParams = Parameters.size(); Pos < NumParams;
-       ++Pos) {
-    assert(Parameters[Pos].ParamPos == Pos && "Broken parameter list.");
-
-    switch (Parameters[Pos].ParamKind) {
-    default: // Nothing to check.
-      break;
-    case VFParamKind::OMP_Linear:
-    case VFParamKind::OMP_LinearRef:
-    case VFParamKind::OMP_LinearVal:
-    case VFParamKind::OMP_LinearUVal:
-      // Compile time linear steps must be non-zero.
-      if (Parameters[Pos].LinearStepOrPos == 0)
-        return false;
-      break;
-    case VFParamKind::OMP_LinearPos:
-    case VFParamKind::OMP_LinearRefPos:
-    case VFParamKind::OMP_LinearValPos:
-    case VFParamKind::OMP_LinearUValPos:
-      // The runtime linear step must be referring to some other
-      // parameters in the signature.
-      if (Parameters[Pos].LinearStepOrPos >= int(NumParams))
-        return false;
-      // The linear step parameter must be marked as uniform.
-      if (Parameters[Parameters[Pos].LinearStepOrPos].ParamKind !=
-          VFParamKind::OMP_Uniform)
-        return false;
-      // The linear step parameter can't point at itself.
-      if (Parameters[Pos].LinearStepOrPos == int(Pos))
-        return false;
-      break;
-    case VFParamKind::GlobalPredicate:
-      // The global predicate must be the unique. Can be placed anywhere in the
-      // signature.
-      for (unsigned NextPos = Pos + 1; NextPos < NumParams; ++NextPos)
-        if (Parameters[NextPos].ParamKind == VFParamKind::GlobalPredicate)
-          return false;
-      break;
-    }
-  }
-  return true;
-}
+} // namespace llvm

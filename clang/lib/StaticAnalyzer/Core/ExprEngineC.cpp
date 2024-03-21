@@ -520,7 +520,8 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       // Various C++ casts that are not handled yet.
       case CK_ToUnion:
       case CK_MatrixCast:
-      case CK_VectorSplat: {
+      case CK_VectorSplat:
+      case CK_HLSLVectorTruncation: {
         QualType resultType = CastE->getType();
         if (CastE->isGLValue())
           resultType = getContext().getPointerType(resultType);

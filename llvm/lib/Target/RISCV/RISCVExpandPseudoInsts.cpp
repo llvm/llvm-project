@@ -423,6 +423,10 @@ private:
   bool expandLoadTLSGDAddress(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI,
                               MachineBasicBlock::iterator &NextMBBI);
+  bool expandLoadTLSDescAddress(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                MachineBasicBlock::iterator &NextMBBI);
+
 #ifndef NDEBUG
   unsigned getInstSizeInBytes(const MachineFunction &MF) const {
     unsigned Size = 0;
@@ -481,6 +485,8 @@ bool RISCVPreRAExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return expandLoadTLSIEAddress(MBB, MBBI, NextMBBI);
   case RISCV::PseudoLA_TLS_GD:
     return expandLoadTLSGDAddress(MBB, MBBI, NextMBBI);
+  case RISCV::PseudoLA_TLSDESC:
+    return expandLoadTLSDescAddress(MBB, MBBI, NextMBBI);
   }
   return false;
 }
@@ -545,6 +551,51 @@ bool RISCVPreRAExpandPseudo::expandLoadTLSGDAddress(
     MachineBasicBlock::iterator &NextMBBI) {
   return expandAuipcInstPair(MBB, MBBI, NextMBBI, RISCVII::MO_TLS_GD_HI,
                              RISCV::ADDI);
+}
+
+bool RISCVPreRAExpandPseudo::expandLoadTLSDescAddress(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  MachineFunction *MF = MBB.getParent();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+
+  const auto &STI = MF->getSubtarget<RISCVSubtarget>();
+  unsigned SecondOpcode = STI.is64Bit() ? RISCV::LD : RISCV::LW;
+
+  Register FinalReg = MI.getOperand(0).getReg();
+  Register DestReg =
+      MF->getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
+  Register ScratchReg =
+      MF->getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
+
+  MachineOperand &Symbol = MI.getOperand(1);
+  Symbol.setTargetFlags(RISCVII::MO_TLSDESC_HI);
+  MCSymbol *AUIPCSymbol = MF->getContext().createNamedTempSymbol("tlsdesc_hi");
+
+  MachineInstr *MIAUIPC =
+      BuildMI(MBB, MBBI, DL, TII->get(RISCV::AUIPC), ScratchReg).add(Symbol);
+  MIAUIPC->setPreInstrSymbol(*MF, AUIPCSymbol);
+
+  BuildMI(MBB, MBBI, DL, TII->get(SecondOpcode), DestReg)
+      .addReg(ScratchReg)
+      .addSym(AUIPCSymbol, RISCVII::MO_TLSDESC_LOAD_LO);
+
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADDI), RISCV::X10)
+      .addReg(ScratchReg)
+      .addSym(AUIPCSymbol, RISCVII::MO_TLSDESC_ADD_LO);
+
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::PseudoTLSDESCCall), RISCV::X5)
+      .addReg(DestReg)
+      .addImm(0)
+      .addSym(AUIPCSymbol, RISCVII::MO_TLSDESC_CALL);
+
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), FinalReg)
+      .addReg(RISCV::X10)
+      .addReg(RISCV::X4);
+
+  MI.eraseFromParent();
+  return true;
 }
 
 } // end of anonymous namespace

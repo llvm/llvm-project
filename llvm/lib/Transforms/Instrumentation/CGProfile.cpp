@@ -44,8 +44,8 @@ addModuleFlags(Module &M,
   return true;
 }
 
-static bool runCGProfilePass(
-    Module &M, FunctionAnalysisManager &FAM) {
+static bool runCGProfilePass(Module &M, FunctionAnalysisManager &FAM,
+                             bool InLTO) {
   MapVector<std::pair<Function *, Function *>, uint64_t> Counts;
   InstrProfSymtab Symtab;
   auto UpdateCounts = [&](TargetTransformInfo &TTI, Function *F,
@@ -59,7 +59,7 @@ static bool runCGProfilePass(
     Count = SaturatingAdd(Count, NewCount);
   };
   // Ignore error here.  Indirect calls are ignored if this fails.
-  (void)(bool) Symtab.create(M);
+  (void)(bool)Symtab.create(M, InLTO);
   for (auto &F : M) {
     // Avoid extra cost of running passes for BFI when the function doesn't have
     // entry count.
@@ -101,7 +101,7 @@ static bool runCGProfilePass(
 PreservedAnalyses CGProfilePass::run(Module &M, ModuleAnalysisManager &MAM) {
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  runCGProfilePass(M, FAM);
+  runCGProfilePass(M, FAM, InLTO);
 
   return PreservedAnalyses::all();
 }

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-vgpr-index-mode -run-pass=greedy -stress-regalloc=16 -o - %s | FileCheck -check-prefixes=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -amdgpu-vgpr-index-mode -run-pass=greedy -stress-regalloc=16 -o - %s | FileCheck -check-prefixes=GCN %s
 
 # An interval for a register that was partially defined was split, creating
 # a new use (a COPY) which was reached by the undef point. In particular,

@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=juniper < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=juniper < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; === WIDTH ==================================================================
 ; 9 implicit args = 9 dwords to first image argument.

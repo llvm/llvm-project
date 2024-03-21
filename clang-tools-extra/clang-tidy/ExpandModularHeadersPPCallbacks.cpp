@@ -100,7 +100,7 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
                                               /*OwnsHeaderSearch=*/false);
   PP->Initialize(Compiler.getTarget(), Compiler.getAuxTarget());
   InitializePreprocessor(*PP, *PO, Compiler.getPCHContainerReader(),
-                         Compiler.getFrontendOpts());
+                         Compiler.getFrontendOpts(), Compiler.getCodeGenOpts());
   ApplyHeaderSearchOptions(*HeaderInfo, *HSO, LangOpts,
                            Compiler.getTarget().getTriple());
 }
@@ -166,12 +166,12 @@ void ExpandModularHeadersPPCallbacks::InclusionDirective(
     SourceLocation DirectiveLoc, const Token &IncludeToken,
     StringRef IncludedFilename, bool IsAngled, CharSourceRange FilenameRange,
     OptionalFileEntryRef IncludedFile, StringRef SearchPath,
-    StringRef RelativePath, const Module *Imported,
+    StringRef RelativePath, const Module *SuggestedModule, bool ModuleImported,
     SrcMgr::CharacteristicKind FileType) {
-  if (Imported) {
+  if (ModuleImported) {
     serialization::ModuleFile *MF =
         Compiler.getASTReader()->getModuleManager().lookup(
-            *Imported->getASTFile());
+            *SuggestedModule->getASTFile());
     handleModuleFile(MF);
   }
   parseToLocation(DirectiveLoc);

@@ -9,13 +9,13 @@
     ret void
   }
 
-  define i8* @ptr_mask(i8* %in) { ret i8* undef }
+  define ptr @ptr_mask(ptr %in) { ret ptr undef }
 
   @var_local = global i8 0
-  define i8* @global_local() { ret i8* undef }
+  define ptr @global_local() { ret ptr undef }
 
   @var_got = external global i8
-  define i8* @global_got() { ret i8* undef }
+  define ptr @global_got() { ret ptr undef }
 
   define void @icmp() { ret void }
   define void @fcmp() { ret void }

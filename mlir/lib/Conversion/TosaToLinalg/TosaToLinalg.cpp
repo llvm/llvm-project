@@ -61,10 +61,8 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   if (isa<tosa::AbsOp>(op) && isa<IntegerType>(elementTy)) {
     auto zero = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getZeroAttr(elementTy));
-    auto cmp = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt,
-                                              args[0], zero);
     auto neg = rewriter.create<arith::SubIOp>(loc, zero, args[0]);
-    return rewriter.create<arith::SelectOp>(loc, cmp, args[0], neg);
+    return rewriter.create<arith::MaxSIOp>(loc, args[0], neg);
   }
 
   // tosa::AddOp
@@ -348,9 +346,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   }
 
   if (isa<tosa::MaximumOp>(op) && elementTy.isSignlessInteger()) {
-    auto predicate = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::sgt, args[0], args[1]);
-    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::MaxSIOp>(loc, args[0], args[1]);
   }
 
   // tosa::MinimumOp
@@ -359,9 +355,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   }
 
   if (isa<tosa::MinimumOp>(op) && elementTy.isSignlessInteger()) {
-    auto predicate = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::slt, args[0], args[1]);
-    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::MinSIOp>(loc, args[0], args[1]);
   }
 
   // tosa::CeilOp
@@ -390,23 +384,23 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
   if (isa<tosa::ClampOp>(op) && isa<IntegerType>(elementTy)) {
     auto intTy = cast<IntegerType>(elementTy);
-    int32_t min = static_cast<int32_t>(
-        cast<IntegerAttr>(op->getAttr("min_int")).getValue().getSExtValue());
-    int32_t max = static_cast<int32_t>(
-        cast<IntegerAttr>(op->getAttr("max_int")).getValue().getSExtValue());
+    int64_t min =
+        cast<IntegerAttr>(op->getAttr("min_int")).getValue().getSExtValue();
+    int64_t max =
+        cast<IntegerAttr>(op->getAttr("max_int")).getValue().getSExtValue();
 
     if (intTy.isUnsignedInteger()) {
-      min = std::max<int32_t>(min, 0);
-      max = std::min<int32_t>(
+      min = std::max(min, (int64_t)0);
+      max = std::min(
           max,
           APInt::getMaxValue(intTy.getIntOrFloatBitWidth()).getSExtValue());
     } else {
-      min = std::max<int32_t>(
-          min, APInt::getSignedMinValue(intTy.getIntOrFloatBitWidth())
-                   .getSExtValue());
-      max = std::min<int32_t>(
-          max, APInt::getSignedMaxValue(intTy.getIntOrFloatBitWidth())
-                   .getSExtValue());
+      min =
+          std::max(min, APInt::getSignedMinValue(intTy.getIntOrFloatBitWidth())
+                            .getSExtValue());
+      max =
+          std::min(max, APInt::getSignedMaxValue(intTy.getIntOrFloatBitWidth())
+                            .getSExtValue());
     }
 
     auto minVal = rewriter.create<arith::ConstantIntOp>(
@@ -480,23 +474,88 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     }
 
     if (arith::FPToSIOp::areCastCompatible(srcTy, dstTy)) {
-      auto intMin = rewriter.create<arith::ConstantOp>(
+      auto rounded = rewriter.create<math::RoundEvenOp>(loc, args[0]);
+
+      const auto &fltSemantics = cast<FloatType>(srcTy).getFloatSemantics();
+      // Check whether neither int min nor int max can be represented in the
+      // input floating-point type due to too short exponent range.
+      if (static_cast<int>(dstTy.getIntOrFloatBitWidth()) - 1 >
+          APFloat::semanticsMaxExponent(fltSemantics)) {
+        // Use cmp + select to replace infinites by int min / int max. Other
+        // integral values can be represented in the integer space.
+        auto conv = rewriter.create<arith::FPToSIOp>(loc, dstTy, rounded);
+        auto posInf = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getFloatAttr(getElementTypeOrSelf(srcTy),
+                                       APFloat::getInf(fltSemantics)));
+        auto negInf = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getFloatAttr(
+                     getElementTypeOrSelf(srcTy),
+                     APFloat::getInf(fltSemantics, /*Negative=*/true)));
+        auto overflow = rewriter.create<arith::CmpFOp>(
+            loc, arith::CmpFPredicate::UEQ, rounded, posInf);
+        auto underflow = rewriter.create<arith::CmpFOp>(
+            loc, arith::CmpFPredicate::UEQ, rounded, negInf);
+        auto intMin = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getIntegerAttr(
+                     getElementTypeOrSelf(dstTy),
+                     APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())));
+        auto intMax = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getIntegerAttr(
+                     getElementTypeOrSelf(dstTy),
+                     APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())));
+        auto maxClamped =
+            rewriter.create<arith::SelectOp>(loc, overflow, intMax, conv);
+        return rewriter.create<arith::SelectOp>(loc, underflow, intMin,
+                                                maxClamped);
+      }
+
+      auto intMinFP = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getFloatAttr(
                    getElementTypeOrSelf(srcTy),
                    APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())
                        .getSExtValue()));
 
-      auto intMax = rewriter.create<arith::ConstantOp>(
+      // Check whether the mantissa has enough bits to represent int max.
+      if (cast<FloatType>(srcTy).getFPMantissaWidth() >=
+          dstTy.getIntOrFloatBitWidth() - 1) {
+        // Int min can also be represented since it is a power of two and thus
+        // consists of a single leading bit. Therefore we can clamp the input
+        // in the floating-point domain.
+
+        auto intMaxFP = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getFloatAttr(
+                     getElementTypeOrSelf(srcTy),
+                     APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
+                         .getSExtValue()));
+
+        Value clamped =
+            clampFloatHelper(loc, rounded, intMinFP, intMaxFP, rewriter);
+        return rewriter.create<arith::FPToSIOp>(loc, dstTy, clamped);
+      }
+
+      // Due to earlier check we know exponant range is big enough to represent
+      // int min. We can therefore rely on int max + 1 being representable as
+      // well because it's just int min with a positive sign. So clamp the min
+      // value and compare against that to select the max int value if needed.
+      auto intMaxPlusOneFP = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getFloatAttr(
                    getElementTypeOrSelf(srcTy),
                    APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
-                       .getSExtValue()));
+                           .getSExtValue() +
+                       1));
 
-      auto rounded = rewriter.create<math::RoundEvenOp>(loc, args[0]);
-
-      auto clamped = clampFloatHelper(loc, rounded, intMin, intMax, rewriter);
-
-      return rewriter.create<arith::FPToSIOp>(loc, dstTy, clamped);
+      auto intMax = rewriter.create<arith::ConstantOp>(
+          loc, rewriter.getIntegerAttr(
+                   getElementTypeOrSelf(dstTy),
+                   APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())));
+      auto minClampedFP =
+          rewriter.create<arith::MaximumFOp>(loc, rounded, intMinFP);
+      auto minClamped =
+          rewriter.create<arith::FPToSIOp>(loc, dstTy, minClampedFP);
+      auto overflow = rewriter.create<arith::CmpFOp>(
+          loc, arith::CmpFPredicate::UGE, rounded, intMaxPlusOneFP);
+      return rewriter.create<arith::SelectOp>(loc, overflow, intMax,
+                                              minClamped);
     }
 
     // Casting to boolean, integers need to only be checked as not-equal to
@@ -935,9 +994,7 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
   }
 
   if (isa<tosa::ReduceMinOp>(op) && isa<IntegerType>(elementTy)) {
-    auto predicate = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::slt, args[0], args[1]);
-    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::MinSIOp>(loc, args[0], args[1]);
   }
 
   if (isa<tosa::ReduceMaxOp>(op) && isa<FloatType>(elementTy)) {
@@ -945,9 +1002,7 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
   }
 
   if (isa<tosa::ReduceMaxOp>(op) && isa<IntegerType>(elementTy)) {
-    auto predicate = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::sgt, args[0], args[1]);
-    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::MaxSIOp>(loc, args[0], args[1]);
   }
 
   if (isa<tosa::ReduceAllOp>(op) && elementTy.isInteger(1))
@@ -1945,7 +2000,8 @@ public:
     }
 
     bool didEncounterError = false;
-    auto maps = AffineMap::inferFromExprList({srcExprs, dstExprs, dstExprs});
+    auto maps = AffineMap::inferFromExprList({srcExprs, dstExprs, dstExprs},
+                                             rewriter.getContext());
     auto linalgOp = rewriter.create<linalg::GenericOp>(
         loc, ArrayRef<Type>({resultTy, resultMaxTy}), input,
         ValueRange({filledTensorIdx, filledTensorMax}), maps, iteratorTypes,
@@ -2286,9 +2342,11 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
         createZeroTensor(rewriter, loc, outputType, dynamicSizes)};
 
     // Indexing maps for input and output tensors
-    auto indexingMaps = AffineMap::inferFromExprList(llvm::ArrayRef{
-        affineDimsExpr(rewriter, 0, 3, 4), affineDimsExpr(rewriter, 0, 1, 2),
-        affineDimsExpr(rewriter, 0, 1, 2)});
+    auto indexingMaps = AffineMap::inferFromExprList(
+        llvm::ArrayRef{affineDimsExpr(rewriter, 0, 3, 4),
+                       affineDimsExpr(rewriter, 0, 1, 2),
+                       affineDimsExpr(rewriter, 0, 1, 2)},
+        rewriter.getContext());
 
     // Width and height dimensions of the original input.
     auto dimH = rewriter.createOrFold<tensor::DimOp>(loc, input, 1);
@@ -2398,7 +2456,8 @@ struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
         ArrayRef{RFFT2dConverter::affineDimsExpr(rewriter, 0, 3, 4),
                  RFFT2dConverter::affineDimsExpr(rewriter, 0, 3, 4),
                  RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2),
-                 RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2)});
+                 RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2)},
+        rewriter.getContext());
 
     // Width and height dimensions of the original input.
     auto dimH = rewriter.createOrFold<tensor::DimOp>(loc, input_real, 1);

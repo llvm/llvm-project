@@ -73,7 +73,7 @@ body:             |
   bb.5:
     %31:_(s32) = G_PHI %25(s32), %bb.3, %29(s32), %bb.4
     G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %28(s64)
-    G_STORE %31(s32), %32(p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    G_STORE %31(s32), %32(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
     S_ENDPGM 0
 
 ...

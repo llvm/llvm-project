@@ -134,17 +134,17 @@ def Arith_FastMathAttr :
 }
 
 //===----------------------------------------------------------------------===//
-// IntegerOverflowFlags
+// Arith_IntegerOverflowFlags
 //===----------------------------------------------------------------------===//
 
-def IOFnone : I32BitEnumAttrCaseNone<"none">;
-def IOFnsw  : I32BitEnumAttrCaseBit<"nsw", 0>;
-def IOFnuw  : I32BitEnumAttrCaseBit<"nuw", 1>;
+def Arith_IOFnone : I32BitEnumAttrCaseNone<"none">;
+def Arith_IOFnsw  : I32BitEnumAttrCaseBit<"nsw", 0>;
+def Arith_IOFnuw  : I32BitEnumAttrCaseBit<"nuw", 1>;
 
-def IntegerOverflowFlags : I32BitEnumAttr<
+def Arith_IntegerOverflowFlags : I32BitEnumAttr<
     "IntegerOverflowFlags",
     "Integer overflow arith flags",
-    [IOFnone, IOFnsw, IOFnuw]> {
+    [Arith_IOFnone, Arith_IOFnsw, Arith_IOFnuw]> {
   let separator = ", ";
   let cppNamespace = "::mlir::arith";
   let genSpecializedAttr = 0;
@@ -152,7 +152,7 @@ def IntegerOverflowFlags : I32BitEnumAttr<
 }
 
 def Arith_IntegerOverflowAttr :
-    EnumAttr<Arith_Dialect, IntegerOverflowFlags, "overflow"> {
+    EnumAttr<Arith_Dialect, Arith_IntegerOverflowFlags, "overflow"> {
   let assemblyFormat = "`<` $value `>`";
 }
 

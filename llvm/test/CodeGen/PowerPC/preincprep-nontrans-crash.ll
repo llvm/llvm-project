@@ -15,7 +15,7 @@ define void @ety2_() #0 {
 ; CHECK-LABEL: @ety2_
 
 L.entry:
-  %0 = load i32, i32* undef, align 4
+  %0 = load i32, ptr undef, align 4
   %1 = sext i32 %0 to i64
   %2 = shl nsw i64 %1, 3
   %3 = add nsw i64 %2, 8
@@ -50,11 +50,11 @@ L.LB1_769:                                        ; preds = %L.LB1_432
   %9 = mul i64 %8, %1
   %10 = add i64 %9, %7
   %11 = shl i64 %10, 3
-  %12 = getelementptr i8, i8* undef, i64 %11
+  %12 = getelementptr i8, ptr undef, i64 %11
   %13 = mul nsw i64 %6, %1
   %14 = add i64 %7, %13
   %15 = shl i64 %14, 3
-  %16 = getelementptr i8, i8* undef, i64 %15
+  %16 = getelementptr i8, ptr undef, i64 %15
   br i1 undef, label %L.LB1_662, label %L.LB1_662.prol
 
 L.LB1_662.prol:                                   ; preds = %L.LB1_662.prol, %L.LB1_769
@@ -65,24 +65,24 @@ L.LB1_662:                                        ; preds = %L.LB1_437.2, %L.LB1
   %indvars.iv19 = phi i64 [ %indvars.iv.next20.3, %L.LB1_437.2 ], [ 0, %L.LB1_769 ], [ %indvars.iv.next20.prol, %L.LB1_662.prol ]
   %indvars.iv.next20 = add nuw nsw i64 %indvars.iv19, 1
   %17 = mul i64 %indvars.iv.next20, %3
-  %18 = getelementptr i8, i8* %16, i64 %17
-  %19 = bitcast i8* %18 to double*
-  store double 0.000000e+00, double* %19, align 8
+  %18 = getelementptr i8, ptr %16, i64 %17
+  %19 = bitcast ptr %18 to ptr
+  store double 0.000000e+00, ptr %19, align 8
   %indvars.iv.next20.1 = add nsw i64 %indvars.iv19, 2
   %20 = mul i64 %indvars.iv.next20.1, %3
   br i1 undef, label %L.LB1_437.2, label %L.LB1_824.2
 
 L.LB1_427:                                        ; preds = %L.LB1_425
-  %21 = load i64, i64* bitcast (i8* getelementptr inbounds (%struct.BSS1.0.9.28.39.43.46.47.54.56.57.64.65.69.71.144, %struct.BSS1.0.9.28.39.43.46.47.54.56.57.64.65.69.71.144* @.BSS1, i64 0, i32 0, i64 8) to i64*), align 8
+  %21 = load i64, ptr getelementptr inbounds (%struct.BSS1.0.9.28.39.43.46.47.54.56.57.64.65.69.71.144, ptr @.BSS1, i64 0, i32 0, i64 8), align 8
   br label %L.LB1_425
 
 L.LB1_805:                                        ; preds = %L.LB1_816
   ret void
 
 L.LB1_824.2:                                      ; preds = %L.LB1_662
-  %22 = getelementptr i8, i8* %12, i64 %20
-  %23 = bitcast i8* %22 to double*
-  store double 0.000000e+00, double* %23, align 8
+  %22 = getelementptr i8, ptr %12, i64 %20
+  %23 = bitcast ptr %22 to ptr
+  store double 0.000000e+00, ptr %23, align 8
   br label %L.LB1_437.2
 
 L.LB1_437.2:                                      ; preds = %L.LB1_824.2, %L.LB1_662

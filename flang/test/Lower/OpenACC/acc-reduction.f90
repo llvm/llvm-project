@@ -1,34 +1,35 @@
 ! This test checks lowering of OpenACC reduction clause.
 
-! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK
+! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
-! CHECK-LABEL: acc.reduction.recipe @reduction_max_ref_UxUxf32 : !fir.ref<!fir.array<?x?xf32>> reduction_operator <max> init {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<?x?xf32>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index):
+! CHECK-LABEL: acc.reduction.recipe @reduction_max_box_UxUxf32 : !fir.box<!fir.array<?x?xf32>> reduction_operator <max> init {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?x?xf32>>):
 ! CHECK:   %[[CST:.*]] = arith.constant -1.401300e-45 : f32
-! CHECK:   %[[SHAPE:.*]] = fir.shape %arg1, %arg2 : (index, index) -> !fir.shape<2>
-! CHECK:   %[[TEMP:.*]] = fir.alloca !fir.array<?x?xf32>, %arg1, %arg2
-! CHECK:   %[[DECL:.*]]:2 = hlfir.declare %[[TEMP]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+! CHECK:   %[[DIMS0:.*]]:3 = fir.box_dims %[[ARG0]], %c0{{.*}} : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
+! CHECK:   %[[DIMS1:.*]]:3 = fir.box_dims %[[ARG0]], %c1 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
+! CHECK:   %[[SHAPE:.*]] = fir.shape %[[DIMS0]]#1, %[[DIMS1]]#1 : (index, index) -> !fir.shape<2>
+! CHECK:   %[[TEMP:.*]] = fir.allocmem !fir.array<?x?xf32>, %[[DIMS0]]#1, %[[DIMS1]]#1 {bindc_name = ".tmp", uniq_name = ""} 
+! CHECK:   %[[DECL:.*]]:2 = hlfir.declare %[[TEMP]](%[[SHAPE]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.heap<!fir.array<?x?xf32>>)
 ! CHECK:   hlfir.assign %[[CST]] to %[[DECL]]#0 : f32, !fir.box<!fir.array<?x?xf32>>
 ! CHECK:   acc.yield %[[DECL]]#0 : !fir.box<!fir.array<?x?xf32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[V1:.*]]: !fir.ref<!fir.array<?x?xf32>>, %[[V2:.*]]: !fir.ref<!fir.array<?x?xf32>>, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[STEP0:.*]]: index, %[[LB1:.*]]: index, %[[UB1:.*]]: index, %[[STEP1:.*]]: index):
+! CHECK: ^bb0(%[[V1:.*]]: !fir.box<!fir.array<?x?xf32>>, %[[V2:.*]]: !fir.box<!fir.array<?x?xf32>>, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[STEP0:.*]]: index, %[[LB1:.*]]: index, %[[UB1:.*]]: index, %[[STEP1:.*]]: index):
+ 
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
-! CHECK:   %[[DECL_V1:.*]]:2 = hlfir.declare %[[V1]](%[[SHAPE]]) {uniq_name = ""} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
-! CHECK:   %[[DECL_V2:.*]]:2 = hlfir.declare %[[V2]](%[[SHAPE]]) {uniq_name = ""} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
-! CHECK:   %[[DES_V1:.*]] = hlfir.designate %[[DECL_V1]]#0 (%arg2:%arg3:%arg4, %arg5:%arg6:%arg7)  shape %10 : (!fir.box<!fir.array<?x?xf32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
-! CHECK:   %[[DES_V2:.*]] = hlfir.designate %[[DECL_V2]]#0 (%arg2:%arg3:%arg4, %arg5:%arg6:%arg7)  shape %10 : (!fir.box<!fir.array<?x?xf32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
+! CHECK:   %[[DES_V1:.*]] = hlfir.designate %[[V1]] (%[[LB0]]:%[[UB0]]:%[[STEP0]], %[[LB1]]:%[[UB1]]:%[[STEP1]])  shape %[[SHAPE]] : (!fir.box<!fir.array<?x?xf32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
+! CHECK:   %[[DES_V2:.*]] = hlfir.designate %[[V2]] (%[[LB0]]:%[[UB0]]:%[[STEP0]], %[[LB1]]:%[[UB1]]:%[[STEP1]])  shape %[[SHAPE]] : (!fir.box<!fir.array<?x?xf32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK:   %[[ELEMENTAL:.*]] = hlfir.elemental %[[SHAPE]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xf32> {
 ! CHECK:   ^bb0(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index):
-! CHECK:     %[[D1:.*]] = hlfir.designate %13 (%[[ARG0]], %[[ARG1]])  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
-! CHECK:     %[[D2:.*]] = hlfir.designate %14 (%[[ARG0]], %[[ARG1]])  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
+! CHECK:     %[[D1:.*]] = hlfir.designate %[[DES_V1]] (%[[ARG0]], %[[ARG1]])  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
+! CHECK:     %[[D2:.*]] = hlfir.designate %[[DES_V2]] (%[[ARG0]], %[[ARG1]])  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
 ! CHECK:     %[[LOAD1:.*]] = fir.load %[[D1]] : !fir.ref<f32>
 ! CHECK:     %[[LOAD2:.*]] = fir.load %[[D2]] : !fir.ref<f32>
 ! CHECK:     %[[CMP:.*]] = arith.cmpf ogt, %[[LOAD1]], %[[LOAD2]] {{.*}} : f32
 ! CHECK:     %[[SELECT:.*]] = arith.select %[[CMP]], %[[LOAD1]], %[[LOAD2]] : f32
 ! CHECK:     hlfir.yield_element %[[SELECT]] : f32
 ! CHECK:   }
-! CHECK:   hlfir.assign %[[ELEMENTAL]] to %[[DECL_V1]]#0 : !hlfir.expr<?x?xf32>, !fir.box<!fir.array<?x?xf32>>
-! CHECK:   acc.yield %[[V1]] : !fir.ref<!fir.array<?x?xf32>>
+! CHECK:   hlfir.assign %[[ELEMENTAL]] to %[[V1]] : !hlfir.expr<?x?xf32>, !fir.box<!fir.array<?x?xf32>>
+! CHECK:   acc.yield %[[V1]] : !fir.box<!fir.array<?x?xf32>>
 ! CHECK: }
 
 ! CHECK-LABEL: acc.reduction.recipe @reduction_max_box_ptr_Uxf32 : !fir.box<!fir.ptr<!fir.array<?xf32>>> reduction_operator <max> init {
@@ -703,8 +704,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_int(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#1 : !fir.ref<i32>) -> !fir.ref<i32> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_add_ref_i32 -> %[[RED_B]] : !fir.ref<i32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) -> !fir.ref<i32> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_add_ref_i32 -> %[[RED_B]] : !fir.ref<i32>)
 
 subroutine acc_reduction_add_int_array_1d(a, b)
   integer :: a(100)
@@ -719,8 +720,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_int_array_1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#1 : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_add_section_ext100_ref_100xi32 -> %[[RED_B]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_add_section_ext100_ref_100xi32 -> %[[RED_B]] : !fir.ref<!fir.array<100xi32>>)
 
 subroutine acc_reduction_add_int_array_2d(a, b)
   integer :: a(100, 10), b(100, 10)
@@ -737,9 +738,9 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_int_array_2d(
 ! CHECK-SAME:  %[[ARG0:.*]]: !fir.ref<!fir.array<100x10xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xi32>> {fir.bindc_name = "b"}) {
 ! CHECK:       %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK:       %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#1 : !fir.ref<!fir.array<100x10xi32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_add_section_ext100xext10_ref_100x10xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xi32>>) {
-! CHECK: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>]}
+! CHECK:       %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100x10xi32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_add_section_ext100xext10_ref_100x10xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xi32>>)
+! CHECK: } attributes {collapse = [2]{{.*}}
 
 subroutine acc_reduction_add_int_array_3d(a, b)
   integer :: a(100, 10, 2), b(100, 10, 2)
@@ -758,9 +759,9 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_int_array_3d(
 ! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<100x10x2xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10x2xi32>> {fir.bindc_name = "b"})
 ! CHECK: %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#1 : !fir.ref<!fir.array<100x10x2xi32>>) bounds(%{{.*}}, %{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10x2xi32>> {name = "b"}
-! CHECK: acc.loop reduction(@reduction_add_section_ext100xext10xext2_ref_100x10x2xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10x2xi32>>)
-! CHECK: } attributes {collapse = [3], collapseDeviceType = [#acc.device_type<none>]}
+! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100x10x2xi32>>) bounds(%{{.*}}, %{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10x2xi32>> {name = "b"}
+! CHECK: acc.loop {{.*}} reduction(@reduction_add_section_ext100xext10xext2_ref_100x10x2xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10x2xi32>>)
+! CHECK: } attributes {collapse = [3]{{.*}}
 
 subroutine acc_reduction_add_float(a, b)
   real :: a(100), b
@@ -775,8 +776,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_float(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<f32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#1 : !fir.ref<f32>) -> !fir.ref<f32> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_add_ref_f32 -> %[[RED_B]] : !fir.ref<f32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<f32>) -> !fir.ref<f32> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_add_ref_f32 -> %[[RED_B]] : !fir.ref<f32>)
 
 subroutine acc_reduction_add_float_array_1d(a, b)
   real :: a(100), b(100)
@@ -791,8 +792,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_float_array_1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "b"})
 ! CHECK: %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK: %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#1 : !fir.ref<!fir.array<100xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_add_section_ext100_ref_100xf32 -> %[[RED_B]] : !fir.ref<!fir.array<100xf32>>)
+! CHECK: %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_add_section_ext100_ref_100xf32 -> %[[RED_B]] : !fir.ref<!fir.array<100xf32>>)
 
 subroutine acc_reduction_mul_int(a, b)
   integer :: a(100)
@@ -807,8 +808,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_int(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#1 : !fir.ref<i32>) -> !fir.ref<i32> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_mul_ref_i32 -> %[[RED_B]] : !fir.ref<i32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) -> !fir.ref<i32> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_mul_ref_i32 -> %[[RED_B]] : !fir.ref<i32>)
 
 subroutine acc_reduction_mul_int_array_1d(a, b)
   integer :: a(100)
@@ -823,8 +824,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_int_array_1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#1 : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_mul_section_ext100_ref_100xi32 -> %[[RED_B]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_mul_section_ext100_ref_100xi32 -> %[[RED_B]] : !fir.ref<!fir.array<100xi32>>)
 
 subroutine acc_reduction_mul_float(a, b)
   real :: a(100), b
@@ -839,8 +840,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_float(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<f32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#1 : !fir.ref<f32>) -> !fir.ref<f32> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_mul_ref_f32 -> %[[RED_B]] : !fir.ref<f32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<f32>) -> !fir.ref<f32> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_mul_ref_f32 -> %[[RED_B]] : !fir.ref<f32>)
 
 subroutine acc_reduction_mul_float_array_1d(a, b)
   real :: a(100), b(100)
@@ -855,8 +856,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_float_array_1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#1 : !fir.ref<!fir.array<100xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_mul_section_ext100_ref_100xf32 -> %[[RED_B]] : !fir.ref<!fir.array<100xf32>>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_mul_section_ext100_ref_100xf32 -> %[[RED_B]] : !fir.ref<!fir.array<100xf32>>)
 
 subroutine acc_reduction_min_int(a, b)
   integer :: a(100)
@@ -871,8 +872,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_min_int(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#1 : !fir.ref<i32>) -> !fir.ref<i32> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_min_ref_i32 -> %[[RED_B]] : !fir.ref<i32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) -> !fir.ref<i32> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_min_ref_i32 -> %[[RED_B]] : !fir.ref<i32>)
 
 subroutine acc_reduction_min_int_array_1d(a, b)
   integer :: a(100), b(100)
@@ -887,8 +888,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_min_int_array_1d(
 ! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "b"})
 ! CHECK: %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#1 : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {name = "b"}
-! CHECK: acc.loop reduction(@reduction_min_section_ext100_ref_100xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {name = "b"}
+! CHECK: acc.loop {{.*}} reduction(@reduction_min_section_ext100_ref_100xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100xi32>>)
 
 subroutine acc_reduction_min_float(a, b)
   real :: a(100), b
@@ -903,8 +904,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_min_float(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<f32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#1 : !fir.ref<f32>) -> !fir.ref<f32> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_min_ref_f32 -> %[[RED_B]] : !fir.ref<f32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<f32>) -> !fir.ref<f32> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_min_ref_f32 -> %[[RED_B]] : !fir.ref<f32>)
 
 subroutine acc_reduction_min_float_array2d(a, b)
   real :: a(100, 10), b(100, 10)
@@ -921,9 +922,9 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_min_float_array2d(
 ! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<100x10xf32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xf32>> {fir.bindc_name = "b"})
 ! CHECK: %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#1 : !fir.ref<!fir.array<100x10xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xf32>> {name = "b"}
-! CHECK: acc.loop reduction(@reduction_min_section_ext100xext10_ref_100x10xf32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xf32>>)
-! CHECK: attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>]}
+! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100x10xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xf32>> {name = "b"}
+! CHECK: acc.loop {{.*}} reduction(@reduction_min_section_ext100xext10_ref_100x10xf32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xf32>>)
+! CHECK: attributes {collapse = [2]{{.*}}
 
 subroutine acc_reduction_max_int(a, b)
   integer :: a(100)
@@ -938,8 +939,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_int(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#1 : !fir.ref<i32>) -> !fir.ref<i32> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_max_ref_i32 -> %[[RED_B]] : !fir.ref<i32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) -> !fir.ref<i32> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_max_ref_i32 -> %[[RED_B]] : !fir.ref<i32>)
 
 subroutine acc_reduction_max_int_array2d(a, b)
   integer :: a(100, 10), b(100, 10)
@@ -956,8 +957,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_int_array2d(
 ! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<100x10xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xi32>> {fir.bindc_name = "b"})
 ! CHECK: %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#1 : !fir.ref<!fir.array<100x10xi32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
-! CHECK: acc.loop reduction(@reduction_max_section_ext100xext10_ref_100x10xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xi32>>)
+! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100x10xi32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
+! CHECK: acc.loop {{.*}} reduction(@reduction_max_section_ext100xext10_ref_100x10xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xi32>>)
 
 subroutine acc_reduction_max_float(a, b)
   real :: a(100), b
@@ -972,8 +973,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_float(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<f32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#1 : !fir.ref<f32>) -> !fir.ref<f32> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_max_ref_f32 -> %[[RED_B]] : !fir.ref<f32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<f32>) -> !fir.ref<f32> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_max_ref_f32 -> %[[RED_B]] : !fir.ref<f32>)
 
 subroutine acc_reduction_max_float_array1d(a, b)
   real :: a(100), b(100)
@@ -988,8 +989,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_float_array1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK:       %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#1 : !fir.ref<!fir.array<100xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_max_section_ext100_ref_100xf32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100xf32>>) {
+! CHECK:       %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(@reduction_max_section_ext100_ref_100xf32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100xf32>>)
 
 subroutine acc_reduction_iand()
   integer :: i
@@ -1030,7 +1031,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_and()
 ! CHECK: %[[L:.*]] = fir.alloca !fir.logical<4> {bindc_name = "l", uniq_name = "_QFacc_reduction_andEl"}
 ! CHECK: %[[DECLL:.*]]:2 = hlfir.declare %[[L]]
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLL]]#1 : !fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>> {name = "l"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLL]]#0 : !fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>> {name = "l"}
 ! CHECK: acc.parallel reduction(@reduction_land_ref_l32 -> %[[RED]] : !fir.ref<!fir.logical<4>>)
 
 subroutine acc_reduction_or()
@@ -1093,7 +1094,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_alloc()
 ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "i", uniq_name = "_QFacc_reduction_add_allocEi"}
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ALLOCA]]
-! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#1 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[BOX_ADDR]] : !fir.heap<i32>) -> !fir.heap<i32> {name = "i"}
 ! CHECK: acc.parallel reduction(@reduction_add_heap_i32 -> %[[RED]] : !fir.heap<i32>)
@@ -1107,7 +1108,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_pointer(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "i"})
 ! CHECK: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
-! CHECK: %[[LOAD:.*]] = fir.load %[[DECLARG0]]#1 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK: %[[LOAD:.*]] = fir.load %[[DECLARG0]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[BOX_ADDR]] : !fir.ptr<i32>) -> !fir.ptr<i32> {name = "i"}
 ! CHECK: acc.parallel reduction(@reduction_add_ptr_i32 -> %[[RED]] : !fir.ptr<i32>)
@@ -1126,7 +1127,7 @@ end subroutine
 ! CHECK: %[[LB:.*]] = arith.constant 10 : index
 ! CHECK: %[[UB:.*]] = arith.constant 19 : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[C100]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#1 : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xi32>> {name = "a(11:20)"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xi32>> {name = "a(11:20)"}
 ! CHECK: acc.parallel reduction(@reduction_add_section_lb10.ub19_ref_100xi32 -> %[[RED]] : !fir.ref<!fir.array<100xi32>>)
 
 subroutine acc_reduction_add_dynamic_extent_add(a)
@@ -1163,7 +1164,7 @@ end subroutine
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"})
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFacc_reduction_add_dynamic_extent_add_with_sectionEa"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c3{{.*}} : index) extent(%{{.*}}#1 : index) stride(%{{.*}}#2 : index) startIdx(%{{.*}} : index) {strideInBytes = true}
-! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[DECL]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[DECL]]#0 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xi32>> {name = "a(2:4)"}
 ! CHECK: acc.parallel reduction(@reduction_add_section_lb1.ub3_box_Uxi32 -> %[[RED]] : !fir.ref<!fir.array<?xi32>>)
 
@@ -1176,7 +1177,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_allocatable(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {fir.bindc_name = "a"})
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFacc_reduction_add_allocatableEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
-! CHECK: %[[BOX:.*]] = fir.load %[[DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[BOX:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}}#1 : index) stride(%{{.*}}#2 : index) startIdx(%{{.*}}#0 : index) {strideInBytes = true}
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>)   bounds(%6) -> !fir.heap<!fir.array<?xf32>> {name = "a"}
@@ -1191,7 +1192,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_pointer_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "a"})
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFacc_reduction_add_pointer_arrayEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
-! CHECK: %[[BOX:.*]] = fir.load %[[DECL]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK: %[[BOX:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}}#1 : index) stride(%{{.*}}#2 : index) startIdx(%{{.*}}#0 : index) {strideInBytes = true}
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[BOX_ADDR]] : !fir.ptr<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ptr<!fir.array<?xf32>> {name = "a"}
@@ -1207,5 +1208,6 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_dynamic_extent_max(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"}, %{{.*}}: !fir.ref<i32> {fir.bindc_name = "n"})
 ! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) {uniq_name = "_QFacc_reduction_max_dynamic_extent_maxEa"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL_A]]#1 : !fir.ref<!fir.array<?x?xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<?x?xf32>> {name = "a"}
-! CHECK: acc.parallel reduction(@reduction_max_ref_UxUxf32 -> %[[RED]] : !fir.ref<!fir.array<?x?xf32>>)
+! CHECK: %[[ADDR:.*]] = fir.box_addr %[[DECL_A]]#0 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[ADDR]] : !fir.ref<!fir.array<?x?xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<?x?xf32>> {name = "a"}
+! CHECK: acc.parallel reduction(@reduction_max_box_UxUxf32 -> %[[RED]] : !fir.ref<!fir.array<?x?xf32>>)

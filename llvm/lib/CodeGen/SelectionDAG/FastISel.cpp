@@ -59,12 +59,12 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -1181,35 +1181,51 @@ bool FastISel::selectCall(const User *I) {
 }
 
 void FastISel::handleDbgInfo(const Instruction *II) {
-  if (!II->hasDbgValues())
+  if (!II->hasDbgRecords())
     return;
 
   // Clear any metadata.
   MIMD = MIMetadata();
 
   // Reverse order of debug records, because fast-isel walks through backwards.
-  for (DPValue &DPV : llvm::reverse(II->getDbgValueRange())) {
+  for (DbgRecord &DR : llvm::reverse(II->getDbgRecordRange())) {
     flushLocalValueMap();
     recomputeInsertPt();
 
+    if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+      assert(DLR->getLabel() && "Missing label");
+      if (!FuncInfo.MF->getMMI().hasDebugInfo()) {
+        LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DLR << "\n");
+        continue;
+      }
+
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DLR->getDebugLoc(),
+              TII.get(TargetOpcode::DBG_LABEL))
+          .addMetadata(DLR->getLabel());
+      continue;
+    }
+
+    DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
+
     Value *V = nullptr;
-    if (!DPV.hasArgList())
-      V = DPV.getVariableLocationOp(0);
+    if (!DVR.hasArgList())
+      V = DVR.getVariableLocationOp(0);
 
     bool Res = false;
-    if (DPV.getType() == DPValue::LocationType::Value) {
-      Res = lowerDbgValue(V, DPV.getExpression(), DPV.getVariable(),
-                          DPV.getDebugLoc());
+    if (DVR.getType() == DbgVariableRecord::LocationType::Value ||
+        DVR.getType() == DbgVariableRecord::LocationType::Assign) {
+      Res = lowerDbgValue(V, DVR.getExpression(), DVR.getVariable(),
+                          DVR.getDebugLoc());
     } else {
-      assert(DPV.getType() == DPValue::LocationType::Declare);
-      if (FuncInfo.PreprocessedDPVDeclares.contains(&DPV))
+      assert(DVR.getType() == DbgVariableRecord::LocationType::Declare);
+      if (FuncInfo.PreprocessedDVRDeclares.contains(&DVR))
         continue;
-      Res = lowerDbgDeclare(V, DPV.getExpression(), DPV.getVariable(),
-                            DPV.getDebugLoc());
+      Res = lowerDbgDeclare(V, DVR.getExpression(), DVR.getVariable(),
+                            DVR.getDebugLoc());
     }
 
     if (!Res)
-      LLVM_DEBUG(dbgs() << "Dropping debug-info for " << DPV << "\n";);
+      LLVM_DEBUG(dbgs() << "Dropping debug-info for " << DVR << "\n";);
   }
 }
 
@@ -1393,6 +1409,13 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
 
     return true;
   }
+  case Intrinsic::dbg_assign:
+    // A dbg.assign is a dbg.value with more information, typically produced
+    // during optimisation. If one reaches fastisel then something odd has
+    // happened (such as an optimised function being always-inlined into an
+    // optnone function). We will not be using the extra information in the
+    // dbg.assign in that case, just use its dbg.value fields.
+    LLVM_FALLTHROUGH;
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst *DI = cast<DbgValueInst>(II);
@@ -2210,15 +2233,12 @@ Register FastISel::fastEmitZExtFromI1(MVT VT, unsigned Op0) {
 /// might result in multiple MBB's for one BB.  As such, the start of the
 /// BB might correspond to a different MBB than the end.
 bool FastISel::handlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
-  const Instruction *TI = LLVMBB->getTerminator();
-
   SmallPtrSet<MachineBasicBlock *, 4> SuccsHandled;
   FuncInfo.OrigNumPHINodesToUpdate = FuncInfo.PHINodesToUpdate.size();
 
   // Check successor nodes' PHI nodes that expect a constant to be available
   // from this block.
-  for (unsigned succ = 0, e = TI->getNumSuccessors(); succ != e; ++succ) {
-    const BasicBlock *SuccBB = TI->getSuccessor(succ);
+  for (const BasicBlock *SuccBB : successors(LLVMBB)) {
     if (!isa<PHINode>(SuccBB->begin()))
       continue;
     MachineBasicBlock *SuccMBB = FuncInfo.MBBMap[SuccBB];

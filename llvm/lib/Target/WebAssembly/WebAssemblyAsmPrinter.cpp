@@ -125,8 +125,9 @@ static char getInvokeSig(wasm::ValType VT) {
     return 'F';
   case wasm::ValType::EXTERNREF:
     return 'X';
+  default:
+    llvm_unreachable("Unhandled wasm::ValType enum");
   }
-  llvm_unreachable("Unhandled wasm::ValType enum");
 }
 
 // Given the wasm signature, generate the invoke name in the format JS glue code
@@ -263,7 +264,7 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
     Params.push_back(AddrType);
   } else { // Function symbols
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-    getLibcallSignature(Subtarget, Name, Returns, Params);
+    WebAssembly::getLibcallSignature(Subtarget, Name, Returns, Params);
   }
   auto Signature = std::make_unique<wasm::WasmSignature>(std::move(Returns),
                                                          std::move(Params));

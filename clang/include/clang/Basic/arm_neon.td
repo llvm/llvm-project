@@ -1354,9 +1354,9 @@ let isScalarNarrowShift = 1 in {
   // Signed/Unsigned Saturating Rounded Shift Right Narrow (Immediate)
   def SCALAR_SQRSHRN_N: SInst<"vqrshrn_n", "(1<)1I", "SsSiSlSUsSUiSUl">;
   // Signed Saturating Shift Right Unsigned Narrow (Immediate)
-  def SCALAR_SQSHRUN_N: SInst<"vqshrun_n", "(1<)1I", "SsSiSl">;
+  def SCALAR_SQSHRUN_N: SInst<"vqshrun_n", "(1<U)1I", "SsSiSl">;
   // Signed Saturating Rounded Shift Right Unsigned Narrow (Immediate)
-  def SCALAR_SQRSHRUN_N: SInst<"vqrshrun_n", "(1<)1I", "SsSiSl">;
+  def SCALAR_SQRSHRUN_N: SInst<"vqrshrun_n", "(1<U)1I", "SsSiSl">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

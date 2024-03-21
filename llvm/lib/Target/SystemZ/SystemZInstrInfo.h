@@ -228,9 +228,9 @@ public:
   explicit SystemZInstrInfo(SystemZSubtarget &STI);
 
   // Override TargetInstrInfo.
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
   bool isStackSlotCopy(const MachineInstr &MI, int &DestFrameIndex,
                        int &SrcFrameIndex) const override;
@@ -254,7 +254,7 @@ public:
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
                     Register FalseReg) const override;
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
+  bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
   bool isPredicable(const MachineInstr &MI) const override;
   bool isProfitableToIfCvt(MachineBasicBlock &MBB, unsigned NumCycles,

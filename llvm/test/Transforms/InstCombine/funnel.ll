@@ -559,3 +559,79 @@ define i8 @unmasked_shlop_masked_shift_amount(i16 %x, i16 %y, i16 %shamt) {
   %t8 = trunc i16 %t7 to i8
   ret i8 %t8
 }
+
+define i32 @test_rotl_and_neg(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @test_rotl_and_neg(
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shl = shl i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 31
+  %shr = lshr i32 %x, %and
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
+
+define i32 @test_rotl_and_neg_commuted(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @test_rotl_and_neg_commuted(
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shl = shl i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 31
+  %shr = lshr i32 %x, %and
+  %or = or i32 %shr, %shl
+  ret i32 %or
+}
+
+define i32 @test_rotr_and_neg(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @test_rotr_and_neg(
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 [[X]], i32 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shr = lshr i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 31
+  %shl = shl i32 %x, %and
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
+
+; Negative tests
+
+; Only work for rotation patterns
+define i32 @test_fshl_and_neg(i32 %x, i32 %y, i32 %shamt) {
+; CHECK-LABEL: @test_fshl_and_neg(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[SHAMT]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEG]], 31
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[Y:%.*]], [[AND]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shl = shl i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 31
+  %shr = lshr i32 %y, %and
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
+
+define i32 @test_rotl_and_neg_wrong_mask(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @test_rotl_and_neg_wrong_mask(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[SHAMT]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEG]], 15
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], [[AND]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shl = shl i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 15
+  %shr = lshr i32 %x, %and
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}

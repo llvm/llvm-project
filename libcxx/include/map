@@ -574,7 +574,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__algorithm/equal.h>
 #include <__algorithm/lexicographical_compare.h>
 #include <__algorithm/lexicographical_compare_three_way.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__availability>
 #include <__config>
 #include <__functional/binary_function.h>
@@ -616,6 +616,9 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -800,7 +803,7 @@ public:
     return *this;
   }
 
-  template <class _ValueTp, class = __enable_if_t<__is_same_uncvref<_ValueTp, value_type>::value> >
+  template <class _ValueTp, __enable_if_t<__is_same_uncvref<_ValueTp, value_type>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI __value_type& operator=(_ValueTp&& __v) {
     __ref() = std::forward<_ValueTp>(__v);
     return *this;
@@ -1173,12 +1176,12 @@ public:
     return __tree_.__emplace_hint_unique(__p.__i_, std::forward<_Args>(__args)...);
   }
 
-  template <class _Pp, class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
+  template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_Pp&& __p) {
     return __tree_.__insert_unique(std::forward<_Pp>(__p));
   }
 
-  template <class _Pp, class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
+  template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __pos, _Pp&& __p) {
     return __tree_.__insert_unique(__pos.__i_, std::forward<_Pp>(__p));
   }
@@ -1855,12 +1858,12 @@ public:
     return __tree_.__emplace_hint_multi(__p.__i_, std::forward<_Args>(__args)...);
   }
 
-  template <class _Pp, class = __enable_if_t<is_constructible<value_type, _Pp>::value>>
+  template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(_Pp&& __p) {
     return __tree_.__insert_multi(std::forward<_Pp>(__p));
   }
 
-  template <class _Pp, class = __enable_if_t<is_constructible<value_type, _Pp>::value>>
+  template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __pos, _Pp&& __p) {
     return __tree_.__insert_multi(__pos.__i_, std::forward<_Pp>(__p));
   }
@@ -2181,6 +2184,8 @@ using multimap _LIBCPP_AVAILABILITY_PMR =
 } // namespace pmr
 _LIBCPP_END_NAMESPACE_STD
 #endif
+
+_LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <concepts>

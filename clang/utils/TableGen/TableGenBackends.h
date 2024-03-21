@@ -53,8 +53,8 @@ void EmitClangAttrSubjectMatchRuleList(llvm::RecordKeeper &Records,
                                        llvm::raw_ostream &OS);
 void EmitClangAttrPCHRead(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangAttrPCHWrite(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitClangAttrTokenKinds(llvm::RecordKeeper &Records,
-                             llvm::raw_ostream &OS);
+void EmitClangRegularKeywordAttributeInfo(llvm::RecordKeeper &Records,
+                                          llvm::raw_ostream &OS);
 void EmitClangAttrHasAttrImpl(llvm::RecordKeeper &Records,
                               llvm::raw_ostream &OS);
 void EmitClangAttrSpellingListIndex(llvm::RecordKeeper &Records,
@@ -74,6 +74,8 @@ void EmitClangAttrTextNodeDump(llvm::RecordKeeper &Records,
 void EmitClangAttrNodeTraverse(llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
 void EmitClangAttrDocTable(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+
+void EmitClangBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitClangDiagsDefs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS,
                         const std::string &Component);

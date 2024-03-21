@@ -213,9 +213,8 @@ Check for undefined results of binary operators.
 
 core.VLASize (C)
 """"""""""""""""
-Check for declarations of Variable Length Arrays of undefined or zero size.
-
- Check for declarations of VLA of undefined or zero size.
+Check for declarations of Variable Length Arrays (VLA) of undefined, zero or negative
+size.
 
 .. code-block:: c
 
@@ -228,6 +227,28 @@ Check for declarations of Variable Length Arrays of undefined or zero size.
    int x = 0;
    int vla2[x]; // warn: zero size
  }
+
+
+The checker also gives warning if the `TaintPropagation` checker is switched on
+and an unbound, attacker controlled (tainted) value is used to define
+the size of the VLA.
+
+.. code-block:: c
+
+ void taintedVLA(void) {
+   int x;
+   scanf("%d", &x);
+   int vla[x]; // Declared variable-length array (VLA) has tainted (attacker controlled) size, that can be 0 or negative
+ }
+
+ void taintedVerfieidVLA(void) {
+   int x;
+   scanf("%d", &x);
+   if (x<1)
+     return;
+   int vla[x]; // no-warning. The analyzer can prove that x must be positive.
+ }
+
 
 .. _core-uninitialized-ArraySubscript:
 
@@ -1299,10 +1320,23 @@ range of the argument.
 
 **Parameters**
 
-The checker models functions (and emits diagnostics) from the C standard by
-default. The ``ModelPOSIX`` option enables modeling (and emit diagnostics) of
-additional functions that are defined in the POSIX standard. This option is
-disabled by default.
+The ``ModelPOSIX`` option controls if functions from the POSIX standard are
+recognized by the checker.
+
+With ``ModelPOSIX=true``, many POSIX functions are modeled according to the
+`POSIX standard`_. This includes ranges of parameters and possible return
+values. Furthermore the behavior related to ``errno`` in the POSIX case is
+often that ``errno`` is set only if a function call fails, and it becomes
+undefined after a successful function call.
+
+With ``ModelPOSIX=false``, this checker follows the C99 language standard and
+only models the functions that are described there. It is possible that the
+same functions are modeled differently in the two cases because differences in
+the standards. The C standard specifies less aspects of the functions, for
+example exact ``errno`` behavior is often unspecified (and not modeled by the
+checker).
+
+Default value of the option is ``true``.
 
 .. _osx-checkers:
 
@@ -1888,28 +1922,6 @@ the locking/unlocking of ``mtx_t`` mutexes.
  {
    mtx_lock(&mtx1);
    mtx_lock(&mtx1); // warn: This lock has already been acquired
- }
-
-.. _alpha-core-CallAndMessageUnInitRefArg:
-
-alpha.core.CallAndMessageUnInitRefArg (C,C++, ObjC)
-"""""""""""""""""""""""""""""""""""""""""""""""""""
-Check for logical errors for function calls and Objective-C
-message expressions (e.g., uninitialized arguments, null function pointers, and pointer to undefined variables).
-
-.. code-block:: c
-
- void test(void) {
-   int t;
-   int &p = t;
-   int &s = p;
-   int &q = s;
-   foo(q); // warn
- }
-
- void test(void) {
-   int x;
-   foo(&x); // warn
  }
 
 .. _alpha-core-CastSize:

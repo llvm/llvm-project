@@ -5,7 +5,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; SCALABLE INSERTED INTO SCALABLE TESTS
 
-define <vscale x 8 x i8> @vec_scalable_subvec_scalable_idx_zero_i8(<vscale x 8 x i8>* %a, <vscale x 4 x i8>* %b) #0 {
+define <vscale x 8 x i8> @vec_scalable_subvec_scalable_idx_zero_i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_scalable_idx_zero_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
@@ -15,13 +15,13 @@ define <vscale x 8 x i8> @vec_scalable_subvec_scalable_idx_zero_i8(<vscale x 8 x
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
 ; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
 ; CHECK-NEXT:    ret
-  %vec = load <vscale x 8 x i8>, <vscale x 8 x i8>* %a
-  %subvec = load <vscale x 4 x i8>, <vscale x 4 x i8>* %b
+  %vec = load <vscale x 8 x i8>, ptr %a
+  %subvec = load <vscale x 4 x i8>, ptr %b
   %ins = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.nxv4i8(<vscale x 8 x i8> %vec, <vscale x 4 x i8> %subvec, i64 0)
   ret <vscale x 8 x i8> %ins
 }
 
-define <vscale x 8 x i8> @vec_scalable_subvec_scalable_idx_nonzero_i8(<vscale x 8 x i8>* %a, <vscale x 4 x i8>* %b) #0 {
+define <vscale x 8 x i8> @vec_scalable_subvec_scalable_idx_nonzero_i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_scalable_idx_nonzero_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
@@ -31,13 +31,13 @@ define <vscale x 8 x i8> @vec_scalable_subvec_scalable_idx_nonzero_i8(<vscale x 
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %vec = load <vscale x 8 x i8>, <vscale x 8 x i8>* %a
-  %subvec = load <vscale x 4 x i8>, <vscale x 4 x i8>* %b
+  %vec = load <vscale x 8 x i8>, ptr %a
+  %subvec = load <vscale x 4 x i8>, ptr %b
   %ins = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.nxv4i8(<vscale x 8 x i8> %vec, <vscale x 4 x i8> %subvec, i64 4)
   ret <vscale x 8 x i8> %ins
 }
 
-define <vscale x 4 x i16> @vec_scalable_subvec_scalable_idx_zero_i16(<vscale x 4 x i16>* %a, <vscale x 2 x i16>* %b) #0 {
+define <vscale x 4 x i16> @vec_scalable_subvec_scalable_idx_zero_i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_scalable_idx_zero_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
@@ -47,13 +47,13 @@ define <vscale x 4 x i16> @vec_scalable_subvec_scalable_idx_zero_i16(<vscale x 4
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
 ; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
 ; CHECK-NEXT:    ret
-  %vec = load <vscale x 4 x i16>, <vscale x 4 x i16>* %a
-  %subvec = load <vscale x 2 x i16>, <vscale x 2 x i16>* %b
+  %vec = load <vscale x 4 x i16>, ptr %a
+  %subvec = load <vscale x 2 x i16>, ptr %b
   %ins = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.nxv2i16(<vscale x 4 x i16> %vec, <vscale x 2 x i16> %subvec, i64 0)
   ret <vscale x 4 x i16> %ins
 }
 
-define <vscale x 4 x i16> @vec_scalable_subvec_scalable_idx_nonzero_i16(<vscale x 4 x i16>* %a, <vscale x 2 x i16>* %b) #0 {
+define <vscale x 4 x i16> @vec_scalable_subvec_scalable_idx_nonzero_i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_scalable_idx_nonzero_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
@@ -63,15 +63,15 @@ define <vscale x 4 x i16> @vec_scalable_subvec_scalable_idx_nonzero_i16(<vscale 
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %vec = load <vscale x 4 x i16>, <vscale x 4 x i16>* %a
-  %subvec = load <vscale x 2 x i16>, <vscale x 2 x i16>* %b
+  %vec = load <vscale x 4 x i16>, ptr %a
+  %subvec = load <vscale x 2 x i16>, ptr %b
   %ins = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.nxv2i16(<vscale x 4 x i16> %vec, <vscale x 2 x i16> %subvec, i64 2)
   ret <vscale x 4 x i16> %ins
 }
 
 ; FIXED INSERTED INTO SCALABLE TESTS
 
-define <vscale x 8 x i8> @vec_scalable_subvec_fixed_idx_zero_i8(<vscale x 8 x i8>* %a, <8 x i8>* %b) #0 {
+define <vscale x 8 x i8> @vec_scalable_subvec_fixed_idx_zero_i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_fixed_idx_zero_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
@@ -81,13 +81,13 @@ define <vscale x 8 x i8> @vec_scalable_subvec_fixed_idx_zero_i8(<vscale x 8 x i8
 ; CHECK-NEXT:    ld1b { z1.h }, p0/z, [x0]
 ; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %vec = load <vscale x 8 x i8>, <vscale x 8 x i8>* %a
-  %subvec = load <8 x i8>, <8 x i8>* %b
+  %vec = load <vscale x 8 x i8>, ptr %a
+  %subvec = load <8 x i8>, ptr %b
   %ins = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v8i8(<vscale x 8 x i8> %vec, <8 x i8> %subvec, i64 0)
   ret <vscale x 8 x i8> %ins
 }
 
-define <vscale x 8 x i8> @vec_scalable_subvec_fixed_idx_nonzero_i8(<vscale x 8 x i8>* %a, <8 x i8>* %b) #0 {
+define <vscale x 8 x i8> @vec_scalable_subvec_fixed_idx_nonzero_i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_fixed_idx_nonzero_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -109,13 +109,13 @@ define <vscale x 8 x i8> @vec_scalable_subvec_fixed_idx_nonzero_i8(<vscale x 8 x
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %vec = load <vscale x 8 x i8>, <vscale x 8 x i8>* %a
-  %subvec = load <8 x i8>, <8 x i8>* %b
+  %vec = load <vscale x 8 x i8>, ptr %a
+  %subvec = load <8 x i8>, ptr %b
   %ins = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v8i8(<vscale x 8 x i8> %vec, <8 x i8> %subvec, i64 8)
   ret <vscale x 8 x i8> %ins
 }
 
-define <vscale x 4 x i16> @vec_scalable_subvec_fixed_idx_zero_i16(<vscale x 4 x i16>* %a, <4 x i16>* %b) #0 {
+define <vscale x 4 x i16> @vec_scalable_subvec_fixed_idx_zero_i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_fixed_idx_zero_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
@@ -125,13 +125,13 @@ define <vscale x 4 x i16> @vec_scalable_subvec_fixed_idx_zero_i16(<vscale x 4 x 
 ; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x0]
 ; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %vec = load <vscale x 4 x i16>, <vscale x 4 x i16>* %a
-  %subvec = load <4 x i16>, <4 x i16>* %b
+  %vec = load <vscale x 4 x i16>, ptr %a
+  %subvec = load <4 x i16>, ptr %b
   %ins = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v4i16(<vscale x 4 x i16> %vec, <4 x i16> %subvec, i64 0)
   ret <vscale x 4 x i16> %ins
 }
 
-define <vscale x 4 x i16> @vec_scalable_subvec_fixed_idx_nonzero_i16(<vscale x 4 x i16>* %a, <4 x i16>* %b) #0 {
+define <vscale x 4 x i16> @vec_scalable_subvec_fixed_idx_nonzero_i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_fixed_idx_nonzero_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -153,13 +153,13 @@ define <vscale x 4 x i16> @vec_scalable_subvec_fixed_idx_nonzero_i16(<vscale x 4
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %vec = load <vscale x 4 x i16>, <vscale x 4 x i16>* %a
-  %subvec = load <4 x i16>, <4 x i16>* %b
+  %vec = load <vscale x 4 x i16>, ptr %a
+  %subvec = load <4 x i16>, ptr %b
   %ins = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v4i16(<vscale x 4 x i16> %vec, <4 x i16> %subvec, i64 4)
   ret <vscale x 4 x i16> %ins
 }
 
-define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_zero_i32(<vscale x 2 x i32>* %a, <2 x i32>* %b) #0 {
+define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_zero_i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_fixed_idx_zero_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
@@ -169,13 +169,13 @@ define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_zero_i32(<vscale x 2 x 
 ; CHECK-NEXT:    ld1w { z1.d }, p0/z, [x0]
 ; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %vec = load <vscale x 2 x i32>, <vscale x 2 x i32>* %a
-  %subvec = load <2 x i32>, <2 x i32>* %b
+  %vec = load <vscale x 2 x i32>, ptr %a
+  %subvec = load <2 x i32>, ptr %b
   %ins = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v2i32(<vscale x 2 x i32> %vec, <2 x i32> %subvec, i64 0)
   ret <vscale x 2 x i32> %ins
 }
 
-define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_nonzero_i32(<vscale x 2 x i32>* %a, <2 x i32>* %b) #0 {
+define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_nonzero_i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_fixed_idx_nonzero_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -197,13 +197,13 @@ define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_nonzero_i32(<vscale x 2
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %vec = load <vscale x 2 x i32>, <vscale x 2 x i32>* %a
-  %subvec = load <2 x i32>, <2 x i32>* %b
+  %vec = load <vscale x 2 x i32>, ptr %a
+  %subvec = load <2 x i32>, ptr %b
   %ins = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v2i32(<vscale x 2 x i32> %vec, <2 x i32> %subvec, i64 2)
   ret <vscale x 2 x i32> %ins
 }
 
-define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_nonzero_large_i32(<vscale x 2 x i32>* %a, <8 x i32>* %b) #1 {
+define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_nonzero_large_i32(ptr %a, ptr %b) #1 {
 ; CHECK-LABEL: vec_scalable_subvec_fixed_idx_nonzero_large_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -218,8 +218,8 @@ define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_nonzero_large_i32(<vsca
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %vec = load <vscale x 2 x i32>, <vscale x 2 x i32>* %a
-  %subvec = load <8 x i32>, <8 x i32>* %b
+  %vec = load <vscale x 2 x i32>, ptr %a
+  %subvec = load <8 x i32>, ptr %b
   %ins = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> %vec, <8 x i32> %subvec, i64 8)
   ret <vscale x 2 x i32> %ins
 }

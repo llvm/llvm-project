@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -35,6 +34,7 @@
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -1778,12 +1778,9 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
         .addImm(8);
 
     // Now reference the 8-bit subreg of the result.
-    BuildMI(*I.getParent(), I, I.getDebugLoc(),
-            TII.get(TargetOpcode::SUBREG_TO_REG))
-        .addDef(DstReg)
-        .addImm(0)
-        .addReg(ResultSuperReg)
-        .addImm(X86::sub_8bit);
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
+            DstReg)
+        .addReg(ResultSuperReg, 0, X86::sub_8bit);
   } else {
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
             DstReg)

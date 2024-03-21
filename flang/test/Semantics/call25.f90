@@ -1,4 +1,4 @@
-! RUN: not %flang -fsyntax-only 2>&1 %s | FileCheck %s
+! RUN: not %flang -fsyntax-only -pedantic 2>&1 %s | FileCheck %s
 module m
  contains
   subroutine subr1(f)
