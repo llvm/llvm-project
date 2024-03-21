@@ -9,7 +9,7 @@
 #include "src/unistd/sysconf.h"
 #include "test/UnitTest/Test.h"
 
-#include <unistd.h>
+#include "include/llvm-libc-macros/linux/unistd-macros.h"
 
 TEST(LlvmLibcSysconfTest, PagesizeTest) {
   long pagesize = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);

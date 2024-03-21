@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/linux/unistd-macros.h"
 #include "src/errno/libc_errno.h"
 #include "src/sys/mman/mlock.h"
 #include "src/sys/mman/mmap.h"

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/linux/unistd-macros.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/errno/libc_errno.h"
 #include "src/sys/mman/madvise.h"
@@ -29,7 +30,6 @@
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
-#include <unistd.h>
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 

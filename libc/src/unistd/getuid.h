@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_GETUID_H
 #define LLVM_LIBC_SRC_UNISTD_GETUID_H
 
-#include <unistd.h>
+#include "include/llvm-libc-types/uid_t.h"
 
 namespace LIBC_NAMESPACE {
 

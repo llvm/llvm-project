@@ -8,10 +8,12 @@
 
 #include "src/unistd/readlinkat.h"
 
+#include "include/llvm-libc-types/size_t.h"
+#include "include/llvm-libc-types/ssize_t.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-
 #include "src/errno/libc_errno.h"
+
 #include <fcntl.h>
 #include <sys/syscall.h> // For syscall numbers.
 

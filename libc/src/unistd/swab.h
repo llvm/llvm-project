@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_SWAB_H
 #define LLVM_LIBC_SRC_UNISTD_SWAB_H
 
-#include <unistd.h> // For ssize_t
+#include "include/llvm-libc-types/ssize_t.h"
 
 namespace LIBC_NAMESPACE {
 

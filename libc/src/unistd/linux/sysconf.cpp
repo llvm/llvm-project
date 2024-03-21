@@ -8,12 +8,11 @@
 
 #include "src/unistd/sysconf.h"
 
+#include "include/llvm-libc-macros/linux/unistd-macros.h"
 #include "src/__support/common.h"
-
 #include "src/errno/libc_errno.h"
 #include "src/sys/auxv/getauxval.h"
 #include <sys/auxv.h>
-#include <unistd.h>
 
 namespace LIBC_NAMESPACE {
 

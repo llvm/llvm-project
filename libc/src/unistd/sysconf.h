@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_SYSCONF_H
 #define LLVM_LIBC_SRC_UNISTD_SYSCONF_H
 
-#include <unistd.h>
-
 namespace LIBC_NAMESPACE {
 
 long sysconf(int name);
