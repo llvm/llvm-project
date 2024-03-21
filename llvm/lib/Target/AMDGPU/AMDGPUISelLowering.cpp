@@ -816,6 +816,9 @@ EVT AMDGPUTargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
                                               ISD::NodeType ExtendKind) const {
   assert(!VT.isVector() && "only scalar expected");
 
+  if (VT == MVT::i1)
+    return MVT::i1;
+
   // Round to the next multiple of 32-bits.
   unsigned Size = VT.getSizeInBits();
   if (Size <= 32)

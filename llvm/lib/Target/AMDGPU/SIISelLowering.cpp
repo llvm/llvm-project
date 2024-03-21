@@ -3240,11 +3240,13 @@ SDValue SITargetLowering::LowerCallResult(
       Chain = Val.getValue(1);
       InGlue = Val.getValue(2);
 
-      // For i1 return value allocated to an SGPR, we want the dst reg for the
-      // above CopyFromReg not to be of VReg_1 when emitting machine code.
-      // This requires creating an addional CopyToReg followed by another
+      // For i1 return value allocated to an SGPR, the following is a
+      // workaround before SILowerI1Copies is fixed. Basically we want the
+      // dst reg for the above CopyFromReg not to be of the VReg_1 class
+      // when emitting machine code. This workaround creats an addional
+      // CopyToReg with a new virtual register, followed by another
       // CopyFromReg.
-      if (RVLocs.size() == 1 && VA.getLocVT() == MVT::i1) {
+      if (VA.getLocVT() == MVT::i1) {
         const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
         MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
 
@@ -16019,7 +16021,14 @@ static bool isCopyFromRegForI1Return(const SDNode *N) {
   SDNode *N2 = N1->getOperand(0).getNode();
   if (N2->getOpcode() != ISD::CopyFromReg)
     return false;
-  SDNode *N3 = N2->getOperand(0).getNode();
+
+  // Possibly multiple CopyFromReg nodes before getting to CALLSEQ_END,
+  // e.g., when the return value is an array.
+  SDNode *N3 = N2;
+  do {
+    N3 = N3->getOperand(0).getNode();
+  } while (N3->getOpcode() == ISD::CopyFromReg);
+
   if (N3->getOpcode() != ISD::CALLSEQ_END)
     return false;
   return true;

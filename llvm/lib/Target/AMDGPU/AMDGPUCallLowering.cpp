@@ -73,7 +73,7 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     if (TRI->isSGPRReg(MRI, PhysReg)) {
       LLT Ty = MRI.getType(ExtReg);
       LLT S32 = LLT::scalar(32);
-      if (Ty != S32) {
+      if (Ty != S32 && Ty != LLT::scalar(64)) {
         // FIXME: We should probably support readfirstlane intrinsics with all
         // legal 32-bit types.
         assert(Ty.getSizeInBits() == 32);
@@ -88,6 +88,9 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
                                         {MRI.getType(ExtReg)})
                         .addReg(ExtReg);
       ExtReg = ToSGPR.getReg(0);
+      if (VA.getLocVT() == MVT::i1 &&
+          MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64())
+        ExtReg = MIRBuilder.buildAnyExt(LLT::scalar(64), ExtReg).getReg(0);
     }
 
     MIRBuilder.buildCopy(PhysReg, ExtReg);
@@ -127,10 +130,9 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
       unsigned CopyToBits = 32;
 
       // When function return type is i1, it may be in a 64b register.
-      if (VA.getLocVT() == MVT::i1) {
-        if (MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64())
-          CopyToBits = 64;
-      }
+      if (VA.getLocVT() == MVT::i1 &&
+          MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64())
+        CopyToBits = 64;
 
       auto Copy = MIRBuilder.buildCopy(LLT::scalar(CopyToBits), PhysReg);
 
