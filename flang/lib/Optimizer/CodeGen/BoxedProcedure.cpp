@@ -69,17 +69,20 @@ public:
       return false;
     }
     if (auto recTy = ty.dyn_cast<RecordType>()) {
-      if (llvm::is_contained(visitedTypes, recTy))
-        return false;
+      auto visited = visitedTypes.find(ty);
+      if (visited != visitedTypes.end())
+        return visited->second;
+      [[maybe_unused]] auto newIt = visitedTypes.try_emplace(ty, false);
+      assert(newIt.second && "expected ty to not be in the map");
       bool result = false;
-      visitedTypes.push_back(recTy);
       for (auto t : recTy.getTypeList()) {
         if (needsConversion(t.second)) {
           result = true;
           break;
         }
       }
-      visitedTypes.pop_back();
+      // newIt may have been invalidated.
+      visitedTypes.find(ty)->second = result;
       return result;
     }
     if (auto boxTy = ty.dyn_cast<BaseBoxType>())
@@ -140,9 +143,7 @@ public:
       if (rec.isFinalized())
         return rec;
       auto it = convertedTypes.try_emplace(ty, rec);
-      if (!it.second) {
-        llvm::errs() << "failed\n" << ty << "\n";
-      }
+      assert(it.second && "expected ty to not be in the map");
       std::vector<RecordType::TypePair> ps = ty.getLenParamList();
       std::vector<RecordType::TypePair> cs;
       for (auto t : ty.getTypeList()) {
@@ -171,11 +172,11 @@ public:
   void setLocation(mlir::Location location) { loc = location; }
 
 private:
-  llvm::SmallVector<mlir::Type> visitedTypes;
-  // Map to deal with recursive derived types (avoid infinite loops).
+  // Maps to deal with recursive derived types (avoid infinite loops).
   // Caching is also beneficial for apps with big types (dozens of
   // components and or parent types), so the lifetime of the cache
   // is the whole pass.
+  llvm::DenseMap<mlir::Type, bool> visitedTypes;
   llvm::DenseMap<mlir::Type, mlir::Type> convertedTypes;
   mlir::Location loc;
 };
