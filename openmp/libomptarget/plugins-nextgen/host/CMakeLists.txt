@@ -100,7 +100,7 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64$")
        "aarch64-unknown-linux-gnu" "aarch64-unknown-linux-gnu-LTO")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "s390x$")
-  target_compile_definitions(omptarget.rtl.${machine} TARGET_ELF_ID=EM_S390)
+  target_compile_definitions(omptarget.rtl.${machine} PRIVATE TARGET_ELF_ID=EM_S390)
   target_compile_definitions(omptarget.rtl.${machine} PRIVATE
       LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE="s390x-ibm-linux-gnu")
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS 
