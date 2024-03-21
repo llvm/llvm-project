@@ -5409,6 +5409,11 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     return SplitBB;
   }
   default:
+    if (TII->isImage(MI) || TII->isMUBUF(MI)) {
+      if (!MI.mayStore())
+        AddMemOpInit(MI);
+      return BB;
+    }
     return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   }
 }
@@ -15084,7 +15089,7 @@ void SITargetLowering::AddMemOpInit(MachineInstr &MI) const {
         TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
     if (DstSize < InitIdx)
       return;
-  } else if (TII->isMUBUF(MI) && AMDGPU::getMUBUFHasTFE(MI.getOpcode())) {
+  } else if (TII->isMUBUF(MI) && AMDGPU::getMUBUFTfe(MI.getOpcode())) {
     InitIdx = TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
   } else {
     return;
@@ -15191,10 +15196,6 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     return;
   }
 
-  if (TII->isImage(MI) || TII->isMUBUF(MI)) {
-    if (!MI.mayStore())
-      AddMemOpInit(MI);
-  }
   if (TII->isImage(MI))
     TII->enforceOperandRCAlignment(MI, AMDGPU::OpName::vaddr);
 }

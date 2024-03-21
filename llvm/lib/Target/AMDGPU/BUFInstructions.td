@@ -324,7 +324,7 @@ class MUBUF_Pseudo <string opName, dag outs, dag ins,
   Instruction BaseOpcode = !cast<Instruction>(MUBUFGetBaseOpcode<NAME>.ret);
   let MUBUF = 1;
   let AsmMatchConverter = "cvtMubuf";
-  let hasPostISelHook = 1;
+  let usesCustomInserter = 1;
 }
 
 class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
@@ -332,7 +332,6 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
-  let hasPostISelHook = 1;
 
   let VM_CNT = 1;
   let EXP_CNT = 1;

@@ -526,7 +526,7 @@ LLVM_READONLY
 bool getMUBUFIsBufferInv(unsigned Opc);
 
 LLVM_READONLY
-bool getMUBUFHasTFE(unsigned Opc);
+bool getMUBUFTfe(unsigned Opc);
 
 LLVM_READONLY
 bool getSMEMIsBuffer(unsigned Opc);

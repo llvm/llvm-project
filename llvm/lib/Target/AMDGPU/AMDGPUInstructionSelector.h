@@ -126,8 +126,6 @@ private:
   bool selectSBarrier(MachineInstr &MI) const;
   bool selectDSBvhStackIntrinsic(MachineInstr &MI) const;
 
-  void zeroTfeResult(Register DataOut, MachineBasicBlock *MBB,
-                     MachineInstrBuilder &MIB) const;
   bool selectImageIntrinsic(MachineInstr &MI,
                             const AMDGPU::ImageDimIntrinsicInfo *Intr) const;
   bool selectG_INTRINSIC_W_SIDE_EFFECTS(MachineInstr &I) const;
@@ -146,7 +144,6 @@ private:
   bool selectG_EXTRACT_VECTOR_ELT(MachineInstr &I) const;
   bool selectG_INSERT_VECTOR_ELT(MachineInstr &I) const;
   bool selectBufferLoadLds(MachineInstr &MI) const;
-  bool selectBufferLoadTfe(MachineInstr &MI) const;
   bool selectGlobalLoadLds(MachineInstr &MI) const;
   bool selectBVHIntrinsic(MachineInstr &I) const;
   bool selectSMFMACIntrin(MachineInstr &I) const;

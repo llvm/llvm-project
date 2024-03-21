@@ -467,7 +467,7 @@ bool getMUBUFIsBufferInv(unsigned Opc) {
   return Info ? Info->IsBufferInv : false;
 }
 
-bool getMUBUFHasTFE(unsigned Opc) {
+bool getMUBUFTfe(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
   return Info ? Info->tfe : false;
 }
