@@ -707,6 +707,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<ConstCharPtr>]
           >,
           FunctionSpec<
+              "rename",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
+          >,
+          FunctionSpec<
               "setbuf",
               RetValSpec<VoidType>,
               [ArgSpec<FILERestrictedPtr>, ArgSpec<CharRestrictedPtr>]
