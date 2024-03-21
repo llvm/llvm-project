@@ -1015,7 +1015,7 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
         // lui a0, 523264
         // fmv.w.x fa0, a0
         Type *DstTy = Ty->getScalarType();
-        const unsigned EltTyBits = DL.getTypeSizeInBits(DstTy);
+        const unsigned EltTyBits = DstTy->getScalarSizeInBits();
         Type *SrcTy = IntegerType::getIntNTy(DstTy->getContext(), EltTyBits);
         ExtraCost = 1 +
                     getCastInstrCost(Instruction::UIToFP, DstTy, SrcTy,
