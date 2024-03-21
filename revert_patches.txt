@@ -81,10 +81,6 @@ ee08d9cba561 AMDGPU: Remove global/flat atomic fadd intrinics (#97051)
 Revert: breaks build of hipCUB
 commit 55783bd0 [HIP] fix host min/max in header (#82956)
 ---
-Revert :breaks hip catch tests.
-1de7e6c8cba2 [clang] move -Wcast-function-type under -Wextra (#77178)
-999d4f840777 Split -Wcast-function-type into a separate group (#86131)   
----
 Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpAndBinOp` to work for more binops" (3rd Try)"
     Backup fix for SWDEV-454675
     This reverts commit 54ec8bcaf85e3a3341c97640331d58e24ac0d2cd.
