@@ -11,28 +11,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "io-error.h"
 #include "tools.h"
-#include "unit.h"
-#include <cstdio>
 
 #if defined(RT_USE_PSEUDO_FILE_UNIT)
 
+#include "io-error.h"
+#include "unit.h"
+#include <cstdio>
+
 namespace Fortran::runtime::io {
 
-void FlushOutputOnCrash(const Terminator &terminator) {}
+void FlushOutputOnCrash(const Terminator &) {}
 
-ExternalFileUnit *ExternalFileUnit::LookUp(int unit) {
+ExternalFileUnit *ExternalFileUnit::LookUp(int) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
-    int unit, const Terminator &, bool &wasExtant) {
+    int, const Terminator &, bool &) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
-    Direction direction, Fortran::common::optional<bool> isUnformatted,
+    Direction direction, Fortran::common::optional<bool>,
     const Terminator &terminator) {
   if (direction != Direction::Output) {
     terminator.Crash("ExternalFileUnit only supports output IO");
@@ -40,39 +41,35 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
   return New<ExternalFileUnit>{terminator}(unit).release();
 }
 
-ExternalFileUnit *ExternalFileUnit::LookUp(
-    const char *path, std::size_t pathLen) {
+ExternalFileUnit *ExternalFileUnit::LookUp(const char *, std::size_t) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-ExternalFileUnit &ExternalFileUnit::CreateNew(int unit, const Terminator &) {
+ExternalFileUnit &ExternalFileUnit::CreateNew(int, const Terminator &) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-ExternalFileUnit *ExternalFileUnit::LookUpForClose(int unit) {
+ExternalFileUnit *ExternalFileUnit::LookUpForClose(int) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-ExternalFileUnit &ExternalFileUnit::NewUnit(
-    const Terminator &, bool forChildIo) {
+ExternalFileUnit &ExternalFileUnit::NewUnit(const Terminator &, bool) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
 bool ExternalFileUnit::OpenUnit(Fortran::common::optional<OpenStatus> status,
-    Fortran::common::optional<Action> action, Position position,
-    OwningPtr<char> &&newPath, std::size_t newPathLength, Convert convert,
+    Fortran::common::optional<Action>, Position, OwningPtr<char> &&,
+    std::size_t, Convert, IoErrorHandler &handler) {
+  handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+}
+
+void ExternalFileUnit::OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
+    Fortran::common::optional<Action>, Position, Convert convert,
     IoErrorHandler &handler) {
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-void ExternalFileUnit::OpenAnonymousUnit(
-    Fortran::common::optional<OpenStatus> status,
-    Fortran::common::optional<Action> action, Position position,
-    Convert convert, IoErrorHandler &handler) {
-  handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
-}
-
-void ExternalFileUnit::CloseUnit(CloseStatus status, IoErrorHandler &handler) {
+void ExternalFileUnit::CloseUnit(CloseStatus, IoErrorHandler &handler) {
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
@@ -88,15 +85,15 @@ Iostat ExternalFileUnit::SetDirection(Direction direction) {
   return IostatOk;
 }
 
-void ExternalFileUnit::CloseAll(IoErrorHandler &handler) {}
+void ExternalFileUnit::CloseAll(IoErrorHandler &) {}
 
-void ExternalFileUnit::FlushAll(IoErrorHandler &handler) {}
+void ExternalFileUnit::FlushAll(IoErrorHandler &) {}
 
 int ExternalFileUnit::GetAsynchronousId(IoErrorHandler &handler) {
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-bool ExternalFileUnit::Wait(int id) {
+bool ExternalFileUnit::Wait(int) {
   Terminator{__FILE__, __LINE__}.Crash("unsupported");
 }
 
@@ -120,8 +117,8 @@ void PseudoOpenFile::Close(CloseStatus, IoErrorHandler &handler) {
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-std::size_t PseudoOpenFile::Read(FileOffset, char *, std::size_t minBytes,
-    std::size_t maxBytes, IoErrorHandler &handler) {
+std::size_t PseudoOpenFile::Read(
+    FileOffset, char *, std::size_t, std::size_t, IoErrorHandler &handler) {
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
@@ -153,7 +150,7 @@ int PseudoOpenFile::WriteAsynchronously(
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-void PseudoOpenFile::Wait(int id, IoErrorHandler &handler) {
+void PseudoOpenFile::Wait(int, IoErrorHandler &handler) {
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 

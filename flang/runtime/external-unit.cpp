@@ -1,4 +1,4 @@
-//===-- runtime/unit.cpp --------------------------------------------------===//
+//===-- runtime/external-unit.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,15 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "tools.h"
+
+#if !defined(RT_USE_PSEUDO_FILE_UNIT)
+
 #include "io-error.h"
 #include "lock.h"
-#include "tools.h"
 #include "unit-map.h"
 #include "unit.h"
 #include <cstdio>
 #include <limits>
-
-#if !defined(RT_USE_PSEUDO_FILE_UNIT)
 
 namespace Fortran::runtime::io {
 
