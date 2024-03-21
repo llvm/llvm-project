@@ -7,8 +7,7 @@ define i1 @or_implies_sle(i8 %x, i8 %y, i1 %other) {
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp sgt i8 [[OR]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[F:%.*]], label [[T:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       F:
 ; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
 ;
@@ -49,9 +48,7 @@ define i1 @or_distjoint_implies_ule(i8 %x, i8 %y, i1 %other) {
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ugt i8 [[X2]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[F:%.*]], label [[T:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[X1:%.*]] = or disjoint i8 [[X]], 23
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X1]], [[Y]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       F:
 ; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
 ;
@@ -121,9 +118,7 @@ define i1 @src_or_distjoint_implies_sle(i8 %x, i8 %y, i1 %other) {
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp sgt i8 [[X2]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[F:%.*]], label [[T:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[X1:%.*]] = or disjoint i8 [[X]], 23
-; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[X1]], [[Y]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       F:
 ; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
 ;
@@ -169,9 +164,7 @@ define i1 @src_addnsw_implies_sle(i8 %x, i8 %y, i1 %other) {
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp sgt i8 [[X2]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[F:%.*]], label [[T:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[X1:%.*]] = add nsw i8 [[X]], 23
-; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[X1]], [[Y]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       F:
 ; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
 ;
@@ -216,9 +209,7 @@ define i1 @src_and_implies_ult(i8 %x, i8 %y, i8 %z, i1 %other) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i8 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Z]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], [[Z]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       F:
 ; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
 ;
@@ -280,8 +271,7 @@ define i1 @src_or_implies_ule(i8 %x, i8 %y, i8 %z, i1 %other) {
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ugt i8 [[OR]], [[Z:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[F:%.*]], label [[T:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[Z]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       F:
 ; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
 ;
@@ -322,9 +312,7 @@ define i1 @src_udiv_implies_ult(i8 %x, i8 %z, i1 %other) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i8 [[Z:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[AND:%.*]] = udiv i8 [[X]], 3
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[AND]], [[Z]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       F:
 ; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
 ;
@@ -345,9 +333,7 @@ define i1 @src_udiv_implies_ult2(i8 %x, i8 %z, i1 %other) {
 ; CHECK:       T:
 ; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
 ; CHECK:       F:
-; CHECK-NEXT:    [[AND:%.*]] = udiv i8 [[X]], 3
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[AND]], [[Z]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cond = icmp ule i8 %z, %x
   br i1 %cond, label %T, label %F
@@ -403,8 +389,7 @@ define i1 @src_umax_implies_ule(i8 %x, i8 %y, i8 %z, i1 %other) {
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ugt i8 [[UM]], [[Z:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[F:%.*]], label [[T:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[Z]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       F:
 ; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
 ;
@@ -424,8 +409,7 @@ define i1 @src_smax_implies_sle(i8 %x, i8 %y, i8 %z, i1 %other) {
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp sgt i8 [[UM]], [[Z:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[F:%.*]], label [[T:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[X]], [[Z]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       F:
 ; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
 ;
