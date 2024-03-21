@@ -106,13 +106,13 @@ bool lldb_private::formatters::LibcxxFunctionSummaryProvider(
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::Lambda:
     stream.Printf(
         " Lambda in File %s at Line %u",
-        callable_info.callable_line_entry.file.GetFilename().GetCString(),
+        callable_info.callable_line_entry.GetFile().GetFilename().GetCString(),
         callable_info.callable_line_entry.line);
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::CallableObject:
     stream.Printf(
         " Function in File %s at Line %u",
-        callable_info.callable_line_entry.file.GetFilename().GetCString(),
+        callable_info.callable_line_entry.GetFile().GetFilename().GetCString(),
         callable_info.callable_line_entry.line);
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::FreeOrMemberFunction:
