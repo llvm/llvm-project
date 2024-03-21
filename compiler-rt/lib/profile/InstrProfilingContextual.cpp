@@ -218,14 +218,10 @@ int __llvm_ctx_profile_dump(const char* Filename) {
     auto *Root = AllContextRoots[I];
     __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> TakenLock(
         &Root->Taken);
-    size_t NrMemUnits = 0;
-    size_t Allocated = 0;
-    for (auto *Mem = Root->FirstMemBlock; Mem; Mem = Mem->next()) {
-      ++NrMemUnits;
-      Allocated += reinterpret_cast<uint64_t>(Mem->pos()) -
-                    reinterpret_cast<uint64_t>(Mem);
+    if (!validate(Root)) {
+      PROF_ERR("Contextual Profile is %s\n", "invalid");
+      return 1;
     }
-    auto Valid = validate(Root);
   }
 
   if (!Filename) {

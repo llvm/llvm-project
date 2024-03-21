@@ -336,6 +336,10 @@ bool shouldInstrumentEntryBB() {
          PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
 }
 
+bool isValueProfilingDisabled() {
+  return DisableValueProfiling ||
+         PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+}
 // Return a string describing the branch condition that can be
 // used in static branch probability heuristics:
 static std::string getBranchCondString(Instruction *TI) {
@@ -884,30 +888,32 @@ static void instrumentOneFunc(
   unsigned NumCounters =
       InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
 
-  auto *CSIntrinsic =
-      Intrinsic::getDeclaration(M, Intrinsic::instrprof_callsite);
-  auto Visit = [&](llvm::function_ref<void(CallBase * CB)> Visitor) {
-    for (auto &BB : F)
-      for (auto &Instr : BB)
-        if (auto *CS = dyn_cast<CallBase>(&Instr)) {
-          if ((CS->getCalledFunction() &&
-               CS->getCalledFunction()->isIntrinsic()) ||
-              dyn_cast<InlineAsm>(CS->getCalledOperand()))
-            continue;
-          Visitor(CS);
-        }
-  };
-  uint32_t TotalNrCallsites = 0;
-  Visit([&TotalNrCallsites](auto *) { ++TotalNrCallsites; });
-  uint32_t CallsiteIndex = 0;
+  if (PGOCtxProfLoweringPass::isContextualIRPGOEnabled()) {
+    auto *CSIntrinsic =
+        Intrinsic::getDeclaration(M, Intrinsic::instrprof_callsite);
+    auto Visit = [&](llvm::function_ref<void(CallBase * CB)> Visitor) {
+      for (auto &BB : F)
+        for (auto &Instr : BB)
+          if (auto *CS = dyn_cast<CallBase>(&Instr)) {
+            if ((CS->getCalledFunction() &&
+                 CS->getCalledFunction()->isIntrinsic()) ||
+                dyn_cast<InlineAsm>(CS->getCalledOperand()))
+              continue;
+            Visitor(CS);
+          }
+    };
+    uint32_t TotalNrCallsites = 0;
+    Visit([&TotalNrCallsites](auto *) { ++TotalNrCallsites; });
+    uint32_t CallsiteIndex = 0;
 
-  Visit([&](auto *CB){
-    IRBuilder<> Builder(CB);
-    Builder.CreateCall(CSIntrinsic,
-                       {Name, CFGHash, Builder.getInt32(TotalNrCallsites),
-                        Builder.getInt32(CallsiteIndex++),
-                        CB->getCalledOperand()});
-  });
+    Visit([&](auto *CB) {
+      IRBuilder<> Builder(CB);
+      Builder.CreateCall(CSIntrinsic,
+                         {Name, CFGHash, Builder.getInt32(TotalNrCallsites),
+                          Builder.getInt32(CallsiteIndex++),
+                          CB->getCalledOperand()});
+    });
+  }
 
   uint32_t I = 0;
   if (PGOTemporalInstrumentation) {
@@ -940,7 +946,7 @@ static void instrumentOneFunc(
                                        FuncInfo.FunctionHash);
   assert(I == NumCounters);
 
-  if (DisableValueProfiling)
+  if (isValueProfilingDisabled())
     return;
 
   NumOfPGOICall += FuncInfo.ValueSites[IPVK_IndirectCallTarget].size();
@@ -1701,7 +1707,7 @@ void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
 
 // Traverse all valuesites and annotate the instructions for all value kind.
 void PGOUseFunc::annotateValueSites() {
-  if (DisableValueProfiling)
+  if (isValueProfilingDisabled())
     return;
 
   // Create the PGOFuncName meta data.
