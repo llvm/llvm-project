@@ -123,7 +123,7 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
     }
   }
 
-  if (Ctx.Verifier->getState() == DylibVerifier::Result::Invalid)
+  if (Ctx.Verifier->verifyRemainingSymbols() == DylibVerifier::Result::Invalid)
     return EXIT_FAILURE;
 
   // After symbols have been collected, prepare to write output.

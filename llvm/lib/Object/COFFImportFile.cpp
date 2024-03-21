@@ -626,8 +626,11 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
                          MachineTypes Machine, bool MinGW,
                          ArrayRef<COFFShortExport> NativeExports) {
 
-  MachineTypes NativeMachine =
-      isArm64EC(Machine) ? IMAGE_FILE_MACHINE_ARM64 : Machine;
+  MachineTypes NativeMachine = Machine;
+  if (isArm64EC(Machine)) {
+    NativeMachine = IMAGE_FILE_MACHINE_ARM64;
+    Machine = IMAGE_FILE_MACHINE_ARM64EC;
+  }
 
   std::vector<NewArchiveMember> Members;
   ObjectFactory OF(llvm::sys::path::filename(ImportName), NativeMachine);
