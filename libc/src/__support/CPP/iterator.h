@@ -29,6 +29,7 @@ template <typename Iter> class reverse_iterator {
 public:
   using reference = typename iterator_traits<Iter>::reference;
   using value_type = typename iterator_traits<Iter>::value_type;
+  using iterator_type = Iter;
 
   LIBC_INLINE reverse_iterator() : current() {}
   LIBC_INLINE constexpr explicit reverse_iterator(Iter it) : current(it) {}
