@@ -465,9 +465,16 @@ def err_embedded_directive : Error<
 def ext_embedded_directive : Extension<
   "embedding a directive within macro arguments has undefined behavior">,
   InGroup<DiagGroup<"embedded-directive">>;
-def ext_missing_varargs_arg : Extension<
-  "must specify at least one argument for '...' parameter of variadic macro">,
-  InGroup<GNUZeroVariadicMacroArguments>;
+def ext_c_missing_varargs_arg : Extension<
+  "passing no argument for the '...' parameter of a variadic macro is "
+  "a C23 extension">, InGroup<C23>;
+def ext_cxx_missing_varargs_arg : Extension<
+  "passing no argument for the '...' parameter of a variadic macro is "
+  "a C++20 extension">, InGroup<CXX20>;
+def warn_c17_compat_missing_varargs_arg : Warning<
+  "passing no argument for the '...' parameter of a variadic macro is "
+  "incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def warn_cxx17_compat_missing_varargs_arg : Warning<
   "passing no argument for the '...' parameter of a variadic macro is "
   "incompatible with C++ standards before C++20">,
