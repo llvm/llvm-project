@@ -7,10 +7,6 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1164 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1132 %s
 
-declare i1 @llvm.amdgcn.wqm.vote(i1)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32, ptr addrspace(8), i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg)
-
 ; Show what the atomic optimization pass will do for raw buffers.
 
 define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspace(8) inreg %inout) {

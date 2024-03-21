@@ -1496,5 +1496,3 @@ bb:
   %load = load volatile <4 x i32>, ptr addrspace(5) %arg, align 1
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

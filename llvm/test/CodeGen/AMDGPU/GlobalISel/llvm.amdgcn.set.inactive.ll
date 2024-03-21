@@ -93,8 +93,4 @@ define amdgpu_kernel void @set_inactive_scc(ptr addrspace(1) %out, i32 %in, <4 x
   ret void
 }
 
-declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #0
-declare i64 @llvm.amdgcn.set.inactive.i64(i64, i64) #0
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32)
-
 attributes #0 = { convergent readnone }

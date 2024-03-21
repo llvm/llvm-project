@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck %s
 
-declare i32 @llvm.amdgcn.ds.bpermute(i32, i32) #0
-
 ; CHECK-LABEL: {{^}}ds_bpermute:
 ; CHECK: ds_bpermute_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @ds_bpermute(ptr addrspace(1) %out, i32 %index, i32 %src) nounwind {

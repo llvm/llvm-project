@@ -3,7 +3,6 @@
 
 ; Since this intrinsic is exposed as a constant after isel, use it to
 ; defeat the DAG's compare with constant canonicalizations.
-declare i32 @llvm.amdgcn.groupstaticsize() #1
 
 @lds = addrspace(3) global [512 x i32] undef, align 4
 

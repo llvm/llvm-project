@@ -12,9 +12,6 @@
 @lds.8 = internal addrspace(3) global [64 x float] poison, align 16
 @lds.9 = internal addrspace(3) global [64 x float] poison, align 16
 
-declare void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) nocapture, i32 %size, i32 %voffset, i32 %soffset, i32 %offset, i32 %aux)
-declare void @llvm.amdgcn.global.load.lds(ptr addrspace(1) nocapture %gptr, ptr addrspace(3) nocapture %lptr, i32 %size, i32 %offset, i32 %aux)
-
 ; GCN-LABEL: {{^}}buffer_load_lds_dword_2_arrays:
 ; GCN-COUNT-4: buffer_load_dword
 ; GCN: s_waitcnt vmcnt(2)
@@ -150,5 +147,3 @@ main_body:
   store float %val.9, ptr addrspace(1) %out.gep.9
   ret void
 }
-
-declare void @llvm.amdgcn.wave.barrier()

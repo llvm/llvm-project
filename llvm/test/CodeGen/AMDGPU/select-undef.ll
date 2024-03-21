@@ -40,8 +40,6 @@ define void @select_undef_n2(ptr addrspace(1) %a, i32 %c) {
   ret void
 }
 
-declare float @llvm.amdgcn.rcp.f32(float)
-
 
 ; Make sure the vector undef isn't lowered into 0s.
 ; GCN-LABEL: {{^}}undef_v6f32:

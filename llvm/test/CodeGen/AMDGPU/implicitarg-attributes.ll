@@ -89,9 +89,3 @@ join:                                             ; preds = %new, %old
   %tmp16 = atomicrmw add ptr addrspace(1) %add.ptr3, i32 15 syncscope("agent-one-as") monotonic, align 4
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-
-declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-
-declare i32 @llvm.amdgcn.workgroup.id.x()

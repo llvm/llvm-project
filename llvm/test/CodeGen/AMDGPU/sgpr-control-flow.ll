@@ -222,6 +222,4 @@ endif:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 attributes #0 = { readnone }

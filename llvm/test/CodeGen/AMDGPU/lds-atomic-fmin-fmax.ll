@@ -13,11 +13,6 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=G_GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=G_GFX11 %s
 
-declare float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) nocapture, float, i32, i32, i1)
-declare float @llvm.amdgcn.ds.fmax.f32(ptr addrspace(3) nocapture, float, i32, i32, i1)
-declare double @llvm.amdgcn.ds.fmin.f64(ptr addrspace(3) nocapture, double, i32, i32, i1)
-declare double @llvm.amdgcn.ds.fmax.f64(ptr addrspace(3) nocapture, double, i32, i32, i1)
-
 
 define amdgpu_kernel void @lds_ds_fmin(ptr addrspace(5) %out, ptr addrspace(3) %ptrf, i32 %idx) {
 ; SI-LABEL: lds_ds_fmin:

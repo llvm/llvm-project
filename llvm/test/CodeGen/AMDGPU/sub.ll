@@ -4,8 +4,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
-
 define amdgpu_kernel void @s_sub_i32(ptr addrspace(1) %out, i32 %a, i32 %b) {
 ; GFX6-LABEL: s_sub_i32:
 ; GFX6:       ; %bb.0:

@@ -7,8 +7,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX1164 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX1132 %s
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 @local_var32 = addrspace(3) global i32 undef, align 4
 @local_var64 = addrspace(3) global i64 undef, align 8
 

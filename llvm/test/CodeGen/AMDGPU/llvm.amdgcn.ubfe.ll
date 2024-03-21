@@ -1732,7 +1732,5 @@ define amdgpu_kernel void @shl_lshr(ptr addrspace(1) %out, i32 %a) #0 {
   ret void
 }
 
-declare i32 @llvm.amdgcn.ubfe.i32(i32, i32, i32) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

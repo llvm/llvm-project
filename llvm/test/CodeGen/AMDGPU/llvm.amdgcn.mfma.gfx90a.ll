@@ -1,15 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX90A %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX940 %s
 
-declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x4bf16.1k(<4 x i16>, <4 x i16>, <32 x float>, i32, i32, i32)
-declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x4bf16.1k(<4 x i16>, <4 x i16>, <16 x float>, i32, i32, i32)
-declare <4 x float> @llvm.amdgcn.mfma.f32.4x4x4bf16.1k(<4 x i16>, <4 x i16>, <4 x float>, i32, i32, i32)
-declare <16 x float> @llvm.amdgcn.mfma.f32.32x32x8bf16.1k(<4 x i16>, <4 x i16>, <16 x float>, i32, i32, i32)
-declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x16bf16.1k(<4 x i16>, <4 x i16>, <4 x float>, i32, i32, i32)
-declare <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double, double, <4 x double>, i32, i32, i32)
-declare double @llvm.amdgcn.mfma.f64.4x4x4f64(double, double, double, i32, i32, i32)
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 ; GCN-LABEL: {{^}}test_mfma_f32_32x32x4bf16_1k:
 ; GCN-DAG:     s_load_dwordx16
 ; GCN-DAG:     s_load_dwordx16

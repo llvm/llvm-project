@@ -671,7 +671,5 @@ define amdgpu_kernel void @v_extract_fneg_no_fold_v2f16(ptr addrspace(1) %in) #0
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

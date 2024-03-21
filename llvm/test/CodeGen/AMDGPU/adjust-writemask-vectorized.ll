@@ -10,5 +10,3 @@ main_body:
   %r = fadd <4 x float> %v, %a
   ret <4 x float> %r
 }
-
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)

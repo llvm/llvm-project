@@ -2,8 +2,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 ; RUN: llc -global-isel -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GISEL %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 define amdgpu_kernel void @v_pack_b32_v2f16(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
 ; GCN-LABEL: v_pack_b32_v2f16:
 ; GCN:       ; %bb.0:
@@ -245,8 +243,6 @@ define amdgpu_kernel void @v_pack_b32.fneg(ptr addrspace(1) %in0, ptr addrspace(
   call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
   ret void
 }
-
-declare half @llvm.fabs.f16(half) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

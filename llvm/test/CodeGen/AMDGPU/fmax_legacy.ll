@@ -6,8 +6,6 @@
 
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope --check-prefixes=EG,FUNC %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 ; FUNC-LABEL: {{^}}test_fmax_legacy_uge_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]

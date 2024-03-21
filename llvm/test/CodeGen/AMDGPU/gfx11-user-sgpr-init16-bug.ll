@@ -182,15 +182,6 @@ define amdgpu_kernel void @all_inputs() {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-declare i32 @llvm.amdgcn.workgroup.id.y() #0
-declare i32 @llvm.amdgcn.workgroup.id.z() #0
-declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #0
-declare align 4 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
-declare align 4 ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
-declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #0
-declare i64 @llvm.amdgcn.dispatch.id() #0
-
 attributes #0 = { nounwind readnone speculatable willreturn }
 
 !llvm.module.flags = !{!0}

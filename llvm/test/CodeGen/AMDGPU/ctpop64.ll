@@ -2,17 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
-declare i64 @llvm.ctpop.i64(i64) nounwind readnone
-declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>) nounwind readnone
-declare <4 x i64> @llvm.ctpop.v4i64(<4 x i64>) nounwind readnone
-declare <8 x i64> @llvm.ctpop.v8i64(<8 x i64>) nounwind readnone
-declare <16 x i64> @llvm.ctpop.v16i64(<16 x i64>) nounwind readnone
-
-declare i65 @llvm.ctpop.i65(i65) nounwind readnone
-declare i128 @llvm.ctpop.i128(i128) nounwind readnone
-
 define amdgpu_kernel void @s_ctpop_i64(ptr addrspace(1) noalias %out, [8 x i32], i64 %val) nounwind {
 ; SI-LABEL: s_ctpop_i64:
 ; SI:       ; %bb.0:

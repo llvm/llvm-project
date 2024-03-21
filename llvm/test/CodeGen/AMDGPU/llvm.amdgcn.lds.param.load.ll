@@ -49,8 +49,5 @@ main_body:
   ret void
 }
 
-declare float @llvm.amdgcn.lds.param.load(i32, i32, i32) #1
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32)
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

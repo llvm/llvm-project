@@ -106,6 +106,4 @@ define float @v_fdot2_inline_literal_c(<2 x half> %a, <2 x half> %b) {
   ret float %ret
 }
 
-declare float @llvm.amdgcn.fdot2(<2 x half>, <2 x half>, float, i1 immarg) #0
-
 attributes #0 = { nounwind readnone speculatable }

@@ -49,5 +49,3 @@ define void @test_waitcnt_builtin_non_kernel() {
   call void @llvm.amdgcn.s.waitcnt(i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.s.waitcnt(i32)

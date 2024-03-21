@@ -67,7 +67,3 @@ end:
   %ret = add i32 %x3, %y
   ret i32 %ret
 }
-
-declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32)
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg)
-declare i32 @llvm.amdgcn.strict.wwm.i32(i32)

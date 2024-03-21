@@ -182,12 +182,6 @@ ret:
   ret void
 }
 
-declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #1
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
-declare float @llvm.amdgcn.wqm.f32(float) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 

@@ -30,6 +30,3 @@ bb:
   call void @llvm.amdgcn.raw.buffer.store.v2i32(<2 x i32> %i6, <4 x i32> zeroinitializer, i32 0, i32 0, i32 0)
   ret <2 x i32> %i6
 }
-
-declare <2 x i32> @llvm.amdgcn.raw.buffer.load.v2i32(<4 x i32>, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.buffer.store.v2i32(<2 x i32>, <4 x i32>, i32, i32, i32 immarg)

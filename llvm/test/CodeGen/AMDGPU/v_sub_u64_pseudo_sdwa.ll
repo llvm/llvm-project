@@ -48,6 +48,3 @@ bb:
   store i64 %tmp9, ptr addrspace(1) %tmp7, align 8
   ret void
 }
-
-
-declare i32 @llvm.amdgcn.workitem.id.x()

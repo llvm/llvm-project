@@ -56,5 +56,3 @@ bb:
   store volatile i32 0, ptr addrspace(1) undef
   ret void
 }
-
-declare void @llvm.amdgcn.end.cf.i32(i32 %val)

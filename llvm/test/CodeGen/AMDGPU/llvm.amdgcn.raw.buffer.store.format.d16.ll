@@ -74,8 +74,3 @@ main_body:
   call void @llvm.amdgcn.raw.buffer.store.format.v4f16(<4 x half> %data, <4 x i32> %rsrc, i32 %voffset, i32 0, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.raw.buffer.store.format.f16(half, <4 x i32>, i32, i32, i32)
-declare void @llvm.amdgcn.raw.buffer.store.format.v2f16(<2 x half>, <4 x i32>, i32, i32, i32)
-declare void @llvm.amdgcn.raw.buffer.store.format.v3f16(<3 x half>, <4 x i32>, i32, i32, i32)
-declare void @llvm.amdgcn.raw.buffer.store.format.v4f16(<4 x half>, <4 x i32>, i32, i32, i32)

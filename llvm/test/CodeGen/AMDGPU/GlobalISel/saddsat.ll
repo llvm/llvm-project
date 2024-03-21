@@ -6313,34 +6313,4 @@ define amdgpu_ps <2 x i128> @s_saddsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
   ret <2 x i128> %result
 }
 
-declare i7 @llvm.sadd.sat.i7(i7, i7) #0
-declare i8 @llvm.sadd.sat.i8(i8, i8) #0
-declare <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8>, <2 x i8>) #0
-declare <4 x i8> @llvm.sadd.sat.v4i8(<4 x i8>, <4 x i8>) #0
-
-declare i16 @llvm.sadd.sat.i16(i16, i16) #0
-declare <2 x i16> @llvm.sadd.sat.v2i16(<2 x i16>, <2 x i16>) #0
-declare <3 x i16> @llvm.sadd.sat.v3i16(<3 x i16>, <3 x i16>) #0
-declare <4 x i16> @llvm.sadd.sat.v4i16(<4 x i16>, <4 x i16>) #0
-declare <5 x i16> @llvm.sadd.sat.v5i16(<5 x i16>, <5 x i16>) #0
-declare <6 x i16> @llvm.sadd.sat.v6i16(<6 x i16>, <6 x i16>) #0
-declare <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16>, <8 x i16>) #0
-
-declare i24 @llvm.sadd.sat.i24(i24, i24) #0
-
-declare i32 @llvm.sadd.sat.i32(i32, i32) #0
-declare <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32>, <2 x i32>) #0
-declare <3 x i32> @llvm.sadd.sat.v3i32(<3 x i32>, <3 x i32>) #0
-declare <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32>, <4 x i32>) #0
-declare <5 x i32> @llvm.sadd.sat.v5i32(<5 x i32>, <5 x i32>) #0
-declare <16 x i32> @llvm.sadd.sat.v16i32(<16 x i32>, <16 x i32>) #0
-
-declare i48 @llvm.sadd.sat.i48(i48, i48) #0
-
-declare i64 @llvm.sadd.sat.i64(i64, i64) #0
-declare <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64>, <2 x i64>) #0
-
-declare i128 @llvm.sadd.sat.i128(i128, i128) #0
-declare <2 x i128> @llvm.sadd.sat.v2i128(<2 x i128>, <2 x i128>) #0
-
 attributes #0 = { nounwind readnone speculatable willreturn }

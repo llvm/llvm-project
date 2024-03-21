@@ -6,8 +6,6 @@
 ; -amdgpu-scalar-ir-passes=false flag, because InstSimplify would constant
 ; fold these functions otherwise.
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
 ; GCN-LABEL: {{^}}v_test_umed3_r_i_i_constant_order_i32:
 ; GCN: v_max_u32_e32 v{{[0-9]+}}, 17, v{{[0-9]+}}
 ; GCN: v_min_u32_e32 v{{[0-9]+}}, 12, v{{[0-9]+}}

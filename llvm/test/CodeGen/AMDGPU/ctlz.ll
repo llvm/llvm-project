@@ -6,20 +6,6 @@
 ; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s -enable-var-scope --check-prefix=GFX10-GISEL
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck %s -enable-var-scope --check-prefix=GFX11
 
-declare i7 @llvm.ctlz.i7(i7, i1) nounwind readnone
-declare i8 @llvm.ctlz.i8(i8, i1) nounwind readnone
-declare i16 @llvm.ctlz.i16(i16, i1) nounwind readnone
-
-declare i32 @llvm.ctlz.i32(i32, i1) nounwind readnone
-declare <2 x i32> @llvm.ctlz.v2i32(<2 x i32>, i1) nounwind readnone
-declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1) nounwind readnone
-
-declare i64 @llvm.ctlz.i64(i64, i1) nounwind readnone
-declare <2 x i64> @llvm.ctlz.v2i64(<2 x i64>, i1) nounwind readnone
-declare <4 x i64> @llvm.ctlz.v4i64(<4 x i64>, i1) nounwind readnone
-
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
 define amdgpu_kernel void @s_ctlz_i32(ptr addrspace(1) noalias %out, i32 %val) nounwind {
 ; SI-LABEL: s_ctlz_i32:
 ; SI:       ; %bb.0:

@@ -777,7 +777,3 @@ define i32 @zext_fptrunc_fma_f16(float %x, float %y, float %z) {
   %zext = zext i16 %cast to i32
   ret i32 %zext
 }
-
-declare half @llvm.amdgcn.div.fixup.f16(half, half, half)
-declare half @llvm.fma.f16(half, half, half)
-declare float @llvm.fma.f32(float, float, float)

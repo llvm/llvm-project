@@ -13,5 +13,3 @@ define amdgpu_vs void @test() {
   call amdgpu_gfx void %1()
   ret void
 }
-
-declare i64 @llvm.amdgcn.s.getpc()

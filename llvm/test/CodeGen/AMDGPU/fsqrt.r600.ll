@@ -234,9 +234,5 @@ define amdgpu_kernel void @recip_sqrt(ptr addrspace(1) %out, float %src) nounwin
   ret void
 }
 
-declare float @llvm.sqrt.f32(float %in) #0
-declare <2 x float> @llvm.sqrt.v2f32(<2 x float> %in) #0
-declare <4 x float> @llvm.sqrt.v4f32(<4 x float> %in) #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind "unsafe-fp-math"="true" }

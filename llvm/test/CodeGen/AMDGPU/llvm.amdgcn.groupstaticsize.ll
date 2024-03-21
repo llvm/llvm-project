@@ -66,8 +66,5 @@ define amdgpu_kernel void @large_groupstaticsize(ptr addrspace(1) %size, i32 %id
   ret void
 }
 
-declare i32 @llvm.amdgcn.groupstaticsize() #1
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

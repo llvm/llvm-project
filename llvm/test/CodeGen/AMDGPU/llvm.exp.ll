@@ -7451,17 +7451,6 @@ define float @v_exp_f32_contract_nnan_ninf(float %in) {
   ret float %result
 }
 
-declare float @llvm.fabs.f32(float) #2
-declare float @llvm.exp.f32(float) #2
-declare <2 x float> @llvm.exp.v2f32(<2 x float>) #2
-declare <3 x float> @llvm.exp.v3f32(<3 x float>) #2
-declare <4 x float> @llvm.exp.v4f32(<4 x float>) #2
-declare half @llvm.fabs.f16(half) #2
-declare half @llvm.exp.f16(half) #2
-declare <2 x half> @llvm.exp.v2f16(<2 x half>) #2
-declare <3 x half> @llvm.exp.v3f16(<3 x half>) #2
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #2
-
 attributes #0 = { "denormal-fp-math-f32"="ieee,preserve-sign" }
 attributes #1 = { "denormal-fp-math-f32"="dynamic,dynamic" }
 attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

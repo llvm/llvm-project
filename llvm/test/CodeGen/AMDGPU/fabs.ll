@@ -108,6 +108,3 @@ define amdgpu_kernel void @bitpreserve_fabsf_f32(ptr addrspace(1) %out, float %i
 }
 
 declare float @fabsf(float) readnone
-declare float @llvm.fabs.f32(float) readnone
-declare <2 x float> @llvm.fabs.v2f32(<2 x float>) readnone
-declare <4 x float> @llvm.fabs.v4f32(<4 x float>) readnone

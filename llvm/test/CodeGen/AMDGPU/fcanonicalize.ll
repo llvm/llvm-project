@@ -5,21 +5,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
 
-declare float @llvm.fabs.f32(float) #0
-declare float @llvm.canonicalize.f32(float) #0
-declare <2 x float> @llvm.canonicalize.v2f32(<2 x float>) #0
-declare <3 x float> @llvm.canonicalize.v3f32(<3 x float>) #0
-declare <4 x float> @llvm.canonicalize.v4f32(<4 x float>) #0
-declare <8 x float> @llvm.canonicalize.v8f32(<8 x float>) #0
-declare double @llvm.fabs.f64(double) #0
-declare double @llvm.canonicalize.f64(double) #0
-declare <2 x double> @llvm.canonicalize.v2f64(<2 x double>) #0
-declare <3 x double> @llvm.canonicalize.v3f64(<3 x double>) #0
-declare <4 x double> @llvm.canonicalize.v4f64(<4 x double>) #0
-declare half @llvm.canonicalize.f16(half) #0
-declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) #0
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 define amdgpu_kernel void @v_test_canonicalize_var_f32(ptr addrspace(1) %out) #1 {
 ; GFX678-LABEL: v_test_canonicalize_var_f32:
 ; GFX678:       ; %bb.0:

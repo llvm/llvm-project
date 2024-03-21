@@ -24,12 +24,6 @@
 
 target triple = "amdgcn--"
 
-
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.fmuladd.f32(float, float, float) #1
-declare half @llvm.fmuladd.f16(half, half, half) #1
-declare float @llvm.fabs.f32(float) #1
-
 ; GCN-LABEL: {{^}}fmuladd_f32:
 ; GCN-FLUSH-MAD: v_mac_f32_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 ; GCN-FLUSH-FMAC: v_fmac_f32_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}

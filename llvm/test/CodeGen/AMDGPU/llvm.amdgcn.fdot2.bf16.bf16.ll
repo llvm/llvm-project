@@ -3,8 +3,6 @@
 ; FIXME: GlobalIsel doesn't support BF16 for now.
 ; xUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GFX11,GISEL-GFX11
 
-declare bfloat @llvm.amdgcn.fdot2.bf16.bf16(<2 x bfloat> %a, <2 x bfloat> %b, bfloat %c)
-
 define amdgpu_kernel void @test_llvm_amdgcn_fdot2_bf16_bf16(
 ; GFX11-LABEL: test_llvm_amdgcn_fdot2_bf16_bf16:
 ; GFX11:       ; %bb.0: ; %entry
@@ -93,5 +91,3 @@ entry:
   store bfloat %r.val, ptr addrspace(1) %r
   ret void
 }
-
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1)

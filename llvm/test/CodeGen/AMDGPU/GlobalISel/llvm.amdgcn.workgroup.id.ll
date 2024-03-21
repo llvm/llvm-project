@@ -3,10 +3,6 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,MESA3D %s
 ; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,MESA3D %s
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-declare i32 @llvm.amdgcn.workgroup.id.y() #0
-declare i32 @llvm.amdgcn.workgroup.id.z() #0
-
 ; ALL-LABEL: {{^}}test_workgroup_id_x:
 
 ; MESA3D: .amd_kernel_code_t

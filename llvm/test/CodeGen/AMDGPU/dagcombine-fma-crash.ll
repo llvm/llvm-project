@@ -112,5 +112,3 @@ bb:
   %ret = fadd float %i10, %i13
   ret float %ret
 }
-
-declare float @llvm.maxnum.f32(float, float)

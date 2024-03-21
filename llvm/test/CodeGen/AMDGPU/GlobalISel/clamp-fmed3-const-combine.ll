@@ -189,10 +189,6 @@ define float @test_fmed3_maybe_SNaN_input_ieee_true_dx10clamp_true(float %a) #2 
   ret float %fmed
 }
 
-declare half @llvm.amdgcn.fmed3.f16(half, half, half)
-declare float @llvm.amdgcn.fmed3.f32(float, float, float)
-declare float @llvm.minnum.f32(float, float)
-
 attributes #0 = {"amdgpu-ieee"="true"}
 attributes #1 = {"amdgpu-ieee"="false"}
 attributes #2 = {"amdgpu-ieee"="true" "amdgpu-dx10-clamp"="true"}

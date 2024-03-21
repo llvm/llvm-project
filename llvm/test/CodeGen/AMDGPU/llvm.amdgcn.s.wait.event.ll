@@ -13,6 +13,4 @@ entry:
   ret void
 }
 
-declare void @llvm.amdgcn.s.wait.event.export.ready() #0
-
 attributes #0 = { nounwind }

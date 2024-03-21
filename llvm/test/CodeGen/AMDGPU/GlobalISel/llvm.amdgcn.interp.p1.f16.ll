@@ -111,6 +111,4 @@ define amdgpu_ps float @interp_f16_sgpr_i(float inreg %i,i32 inreg %m0) #0 {
   ret float %res
 }
 
-declare float @llvm.amdgcn.interp.p1.f16(float, i32 immarg, i32 immarg, i1 immarg, i32) #0
-
 attributes #0 = { nounwind readnone speculatable }

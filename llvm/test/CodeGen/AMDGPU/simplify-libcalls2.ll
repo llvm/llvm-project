@@ -13,10 +13,6 @@ define void @foo(i32 %i) {
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
-declare void @llvm.dbg.value(metadata, metadata, metadata)
-
 !llvm.module.flags = !{!1}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !DIFile(filename: "1", directory: "1"))

@@ -1,8 +1,6 @@
 ; RUN: llc -O0 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -O0 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare void @llvm.amdgcn.s.barrier() nounwind convergent
-
 ; GCN-LABEL: {{^}}main:
 define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
 main_body:

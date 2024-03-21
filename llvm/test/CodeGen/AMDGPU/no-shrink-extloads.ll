@@ -1,7 +1,5 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
 ; Make sure we don't turn the 32-bit argument load into a 16-bit
 ; load. There aren't extending scalar lods, so that would require
 ; using a buffer_load instruction.

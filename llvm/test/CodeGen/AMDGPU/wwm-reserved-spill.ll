@@ -1391,18 +1391,4 @@ define amdgpu_gfx <32 x i32> @strict_wwm_callee_saves(<32 x i32> inreg %keep, pt
   ret <32 x i32> %keep
 }
 
-declare i32 @llvm.amdgcn.strict.wwm.i32(i32)
-declare i64 @llvm.amdgcn.strict.wwm.i64(i64)
-declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32)
-declare i64 @llvm.amdgcn.set.inactive.i64(i64, i64)
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1)
-declare <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.v2f32(ptr addrspace(8), i32, i32, i32)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32, i32)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32)
-declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32)
-declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i32)
-
 attributes #0 = { "amdgpu-waves-per-eu"="5,5" }

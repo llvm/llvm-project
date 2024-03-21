@@ -825,8 +825,3 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   call void @llvm.amdgcn.raw.tbuffer.store.f16(half %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 4)
   ret void
 }
-
-declare void @llvm.amdgcn.raw.tbuffer.store.f16(half, <4 x i32>, i32, i32, i32 immarg, i32 immarg)
-declare void @llvm.amdgcn.raw.tbuffer.store.v2f16(<2 x half>, <4 x i32>, i32, i32, i32 immarg, i32 immarg)
-declare void @llvm.amdgcn.raw.tbuffer.store.v3f16(<3 x half>, <4 x i32>, i32, i32, i32 immarg, i32 immarg)
-declare void @llvm.amdgcn.raw.tbuffer.store.v4f16(<4 x half>, <4 x i32>, i32, i32, i32 immarg, i32 immarg)

@@ -87,8 +87,6 @@ define hidden void @ptr_arg_in_memory(<32 x i32>, ptr %arg3) #0 !dbg !31 {
   ret void, !dbg !36
 }
 
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
-
 attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!0}

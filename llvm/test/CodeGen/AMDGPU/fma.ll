@@ -9,12 +9,6 @@
 ; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=caicos -verify-machineinstrs < %s
 ; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=turks -verify-machineinstrs < %s
 
-declare float @llvm.fma.f32(float, float, float) nounwind readnone
-declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>) nounwind readnone
-declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
-
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
 ; FUNC-LABEL: {{^}}fma_f32:
 ; SI: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}
 ; GFX906: v_fmac_f32_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}

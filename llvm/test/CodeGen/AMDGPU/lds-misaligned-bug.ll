@@ -253,5 +253,3 @@ bb:
   store <4 x i32> %v8, ptr %gep, align 8
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

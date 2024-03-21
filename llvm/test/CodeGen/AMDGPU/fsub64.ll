@@ -1,8 +1,6 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
-declare double @llvm.fabs.f64(double) #0
-
 ; SI-LABEL: {{^}}fsub_f64:
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fsub_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,

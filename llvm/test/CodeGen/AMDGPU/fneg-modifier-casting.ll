@@ -1597,7 +1597,4 @@ bb5:                                              ; preds = %bb, %.entry
   ret void
 }
 
-
-declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32 immarg) #0
-
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }

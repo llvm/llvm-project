@@ -114,7 +114,5 @@ define amdgpu_kernel void @commute_s_addk_i32(ptr addrspace(1) %out, i32 %b) #0 
   ret void
 }
 
-declare i32 @llvm.amdgcn.groupstaticsize() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

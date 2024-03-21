@@ -137,8 +137,3 @@ define amdgpu_ps void @s_test_minmax_f16(half inreg %a, half inreg %b, half inre
   store half %sminmax, ptr addrspace(1) %out
   ret void
 }
-
-declare half @llvm.minimum.f16(half, half)
-declare half @llvm.maximum.f16(half, half)
-declare float @llvm.minimum.f32(float, float)
-declare float @llvm.maximum.f32(float, float)

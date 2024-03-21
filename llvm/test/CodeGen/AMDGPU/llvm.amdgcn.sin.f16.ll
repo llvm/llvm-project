@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
-declare half @llvm.amdgcn.sin.f16(half %a)
-
 ; GCN-LABEL: {{^}}sin_f16
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; VI:  v_sin_f16_e32 v[[R_F16:[0-9]+]], v[[A_F16]]

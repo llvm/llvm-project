@@ -64,9 +64,5 @@ define i64 @s_memtime_caller() {
   ret i64 %t
 }
 
-
-declare i64 @llvm.amdgcn.s.memrealtime()
-declare i64 @llvm.amdgcn.s.memtime()
-
 attributes #0 = { "target-features"="+s-memrealtime"}
 attributes #1 = { "target-features"="+s-memtime-inst"}

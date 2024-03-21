@@ -81,10 +81,4 @@ bb1897:                                           ; preds = %bb1789, %bb1787
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f32(i32 immarg, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg)
-declare float @llvm.amdgcn.fmed3.f32(float, float, float)
-declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i32, i32 immarg)
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg)
-declare <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32>, i32, i32 immarg)
-
 attributes #0 = { "target-features"=",+wavefrontsize64,+cumode" }

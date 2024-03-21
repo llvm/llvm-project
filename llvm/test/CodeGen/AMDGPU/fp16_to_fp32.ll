@@ -5,8 +5,6 @@
 ; RUN: llc -mtriple=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefixes=CYPRESS %s
 ; RUN: llc -mtriple=r600 -mcpu=cayman -verify-machineinstrs < %s | FileCheck -check-prefixes=CAYMAN %s
 
-declare float @llvm.convert.from.fp16.f32(i16) nounwind readnone
-
 define amdgpu_kernel void @test_convert_fp16_to_fp32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; GFX6-LABEL: test_convert_fp16_to_fp32:
 ; GFX6:       ; %bb.0:

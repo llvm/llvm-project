@@ -701,6 +701,4 @@ define amdgpu_kernel void @widen_i16_global_invariant_load(ptr addrspace(1) %arg
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 !0 = !{}

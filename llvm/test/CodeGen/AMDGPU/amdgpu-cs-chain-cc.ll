@@ -925,12 +925,6 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_dont_realign_stack(i32 %idx) {
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 32
   ret void
 }
-
-declare void @llvm.amdgcn.cs.chain.v2i32(ptr, i32, <2 x i32>, <2 x i32>, i32, ...)
-declare void @llvm.amdgcn.cs.chain.v3i32(ptr, i32, <3 x i32>, <3 x i32>, i32, ...)
-declare void @llvm.amdgcn.cs.chain.v4i32(ptr, i32, <4 x i32>, <4 x i32>, i32, ...)
 declare amdgpu_cs_chain void @chain_callee_2(<2 x i32> inreg, <2 x i32>)
 declare amdgpu_cs_chain void @chain_callee(<3 x i32> inreg, <3 x i32>)
 declare amdgpu_cs_chain void @chain_callee_4(<4 x i32> inreg, <4 x i32>)
-declare i32 @llvm.amdgcn.set.inactive(i32, i32)
-declare i32 @llvm.amdgcn.wwm(i32)

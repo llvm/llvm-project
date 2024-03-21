@@ -45,6 +45,4 @@ define amdgpu_kernel void @xor_zext(ptr addrspace(1) %out, ptr addrspace(1) %in)
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #1 = { nounwind readnone }

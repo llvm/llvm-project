@@ -330,7 +330,5 @@ define amdgpu_kernel void @v_test_umin3_ult_i64(ptr addrspace(1) %out, ptr addrs
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }

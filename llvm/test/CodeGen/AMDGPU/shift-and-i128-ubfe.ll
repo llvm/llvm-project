@@ -159,9 +159,5 @@ define amdgpu_kernel void @v_uextract_bit_34_100_i128(ptr addrspace(1) %out, ptr
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

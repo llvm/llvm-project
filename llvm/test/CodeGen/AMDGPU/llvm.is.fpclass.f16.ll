@@ -3207,11 +3207,6 @@ entry:
   ret i1 %0
 }
 
-declare i1 @llvm.is.fpclass.f16(half, i32)
-declare <2 x i1> @llvm.is.fpclass.v2f16(<2 x half>, i32)
-declare <3 x i1> @llvm.is.fpclass.v3f16(<3 x half>, i32)
-declare <4 x i1> @llvm.is.fpclass.v4f16(<4 x half>, i32)
-
 ; Assume DAZ
 attributes #0 = { "denormal-fp-math"="ieee,preserve-sign" }
 

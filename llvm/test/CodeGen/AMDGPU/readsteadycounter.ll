@@ -4,8 +4,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,GFX1100
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,GFX1100
 
-declare i64 @llvm.readsteadycounter() #0
-
 ; GCN-LABEL: {{^}}test_readsteadycounter:
 ; GFX700: s_mov_b32 s[[REG:[0-9]+]], 0
 ; GFX900: s_memrealtime s[[[LO:[0-9]+]]:[[HI:[0-9]+]]]

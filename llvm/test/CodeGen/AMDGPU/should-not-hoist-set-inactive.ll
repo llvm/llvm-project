@@ -68,8 +68,3 @@ bb4:
 bb5:
   ret void
 }
-
-declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32)
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg)
-declare i32 @llvm.amdgcn.strict.wwm.i32(i32)
-declare i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i32 immarg)

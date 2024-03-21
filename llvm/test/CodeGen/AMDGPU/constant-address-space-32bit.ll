@@ -311,12 +311,8 @@ main_body:
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #6
 
 ; Function Attrs: nounwind readonly
-declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #7
-
-declare float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32, i32) #7
 
 !0 = !{}
 

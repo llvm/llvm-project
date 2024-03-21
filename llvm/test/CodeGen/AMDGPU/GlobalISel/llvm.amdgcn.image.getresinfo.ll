@@ -697,17 +697,5 @@ main_body:
   ret <4 x float> %r
 }
 
-declare <4 x float> @llvm.amdgcn.image.getresinfo.1d.v4f32.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <3 x float> @llvm.amdgcn.image.getresinfo.1d.v3f32.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <2 x float> @llvm.amdgcn.image.getresinfo.1d.v2f32.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #1
-declare float @llvm.amdgcn.image.getresinfo.1d.f32.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.getresinfo.2d.v4f32.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.getresinfo.3d.v4f32.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.getresinfo.cube.v4f32.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.getresinfo.1darray.v4f32.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.getresinfo.2darray.v4f32.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.getresinfo.2dmsaa.v4f32.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.getresinfo.2darraymsaa.v4f32.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

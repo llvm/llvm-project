@@ -118,13 +118,6 @@ define amdgpu_kernel void @max_10_sgprs() #0 {
 ;  ret void
 ;}
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #1
-declare i32 @llvm.amdgcn.workgroup.id.y() #1
-declare i32 @llvm.amdgcn.workgroup.id.z() #1
-declare i64 @llvm.amdgcn.dispatch.id() #1
-declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #1
-declare ptr addrspace(4) @llvm.amdgcn.queue.ptr() #1
-
 attributes #0 = { nounwind "amdgpu-num-sgpr"="14" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "amdgpu-num-sgpr"="12" }

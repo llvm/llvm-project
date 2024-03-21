@@ -326,10 +326,3 @@ entry:
   ret float %ret
 }
 
-declare float @llvm.amdgcn.dot4.f32.fp8.bf8(i32 %a, i32 %b, float %c)
-declare float @llvm.amdgcn.dot4.f32.bf8.fp8(i32 %a, i32 %b, float %c)
-declare float @llvm.amdgcn.dot4.f32.fp8.fp8(i32 %a, i32 %b, float %c)
-declare float @llvm.amdgcn.dot4.f32.bf8.bf8(i32 %a, i32 %b, float %c)
-
-declare float @llvm.fabs.f32(float %a)
-

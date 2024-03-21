@@ -472,12 +472,3 @@ define i64 @v_saddsat_i64(i64 %lhs, i64 %rhs) {
   %result = call i64 @llvm.sadd.sat.i64(i64 %lhs, i64 %rhs)
   ret i64 %result
 }
-
-declare i8 @llvm.sadd.sat.i8(i8, i8) #0
-declare i16 @llvm.sadd.sat.i16(i16, i16) #0
-declare <2 x i16> @llvm.sadd.sat.v2i16(<2 x i16>, <2 x i16>) #0
-declare <3 x i16> @llvm.sadd.sat.v3i16(<3 x i16>, <3 x i16>) #0
-declare <4 x i16> @llvm.sadd.sat.v4i16(<4 x i16>, <4 x i16>) #0
-declare i32 @llvm.sadd.sat.i32(i32, i32) #0
-declare <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32>, <2 x i32>) #0
-declare i64 @llvm.sadd.sat.i64(i64, i64) #0

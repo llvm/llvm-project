@@ -3215,30 +3215,3 @@ define amdgpu_ps float @s_buffer_load_f32_offset_add_imm_vgpr_sgpr(<4 x i32> inr
   %val = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 %offset, i32 0)
   ret float %val
 }
-
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg)
-declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32 immarg)
-declare <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32>, i32, i32 immarg)
-declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i32 immarg)
-declare <8 x i32> @llvm.amdgcn.s.buffer.load.v8i32(<4 x i32>, i32, i32 immarg)
-declare <16 x i32> @llvm.amdgcn.s.buffer.load.v16i32(<4 x i32>, i32, i32 immarg)
-
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32      immarg)
-declare <2 x float> @llvm.amdgcn.s.buffer.load.v2f32(<4 x i32>, i32, i32 immarg)
-declare <3 x float> @llvm.amdgcn.s.buffer.load.v3f32(<4 x i32>, i32, i32 immarg)
-declare <4 x float> @llvm.amdgcn.s.buffer.load.v4f32(<4 x i32>, i32, i32 immarg)
-declare <8 x float> @llvm.amdgcn.s.buffer.load.v8f32(<4 x i32>, i32, i32 immarg)
-declare <16 x float> @llvm.amdgcn.s.buffer.load.v16f32(<4 x i32>, i32, i32 immarg)
-
-declare i96 @llvm.amdgcn.s.buffer.load.i96(<4 x i32>, i32, i32 immarg)
-declare i256 @llvm.amdgcn.s.buffer.load.i256(<4 x i32>, i32, i32 immarg)
-declare i512 @llvm.amdgcn.s.buffer.load.i512(<4 x i32>, i32, i32 immarg)
-
-declare <16 x i16> @llvm.amdgcn.s.buffer.load.v16i16(<4 x i32>, i32, i32 immarg)
-declare <32 x i16> @llvm.amdgcn.s.buffer.load.v32i16(<4 x i32>, i32, i32 immarg)
-
-declare <4 x i64> @llvm.amdgcn.s.buffer.load.v4i64(<4 x i32>, i32, i32 immarg)
-declare <8 x i64> @llvm.amdgcn.s.buffer.load.v8i64(<4 x i32>, i32, i32 immarg)
-
-declare <4 x ptr addrspace(1)> @llvm.amdgcn.s.buffer.load.v4p1(<4 x i32>, i32, i32 immarg)
-declare <8 x ptr addrspace(1)> @llvm.amdgcn.s.buffer.load.v8p1(<4 x i32>, i32, i32 immarg)

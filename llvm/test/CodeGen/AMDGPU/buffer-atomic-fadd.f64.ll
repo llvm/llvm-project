@@ -437,9 +437,3 @@ define amdgpu_ps double @buffer_ptr_atomic_fadd_f64_bothen_rtn(double %val, ptr 
   %ret = call double @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f64(double %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret double %ret
 }
-
-declare double @llvm.amdgcn.raw.buffer.atomic.fadd.f64(double, <4 x i32>, i32, i32, i32 immarg)
-declare double @llvm.amdgcn.struct.buffer.atomic.fadd.f64(double, <4 x i32>, i32, i32, i32, i32 immarg)
-
-declare double @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f64(double, ptr addrspace(8), i32, i32, i32 immarg)
-declare double @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f64(double, ptr addrspace(8), i32, i32, i32, i32 immarg)

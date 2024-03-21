@@ -211,5 +211,3 @@ inner_loop:                                     ; preds = %LeafBlock, %LeafBlock
 return:
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

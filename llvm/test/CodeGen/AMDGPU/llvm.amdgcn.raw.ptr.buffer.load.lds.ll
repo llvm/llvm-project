@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN
 
-declare void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) nocapture, i32 %size, i32 %voffset, i32 %soffset, i32 %offset, i32 %aux)
-
 define amdgpu_ps float @buffer_load_lds_dword(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) inreg %lds) {
 ; GCN-LABEL: buffer_load_lds_dword:
 ; GCN:       ; %bb.0: ; %main_body

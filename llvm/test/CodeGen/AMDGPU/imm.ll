@@ -1846,6 +1846,4 @@ main_body:
   ret void
 }
 
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-
 attributes #0 = { nounwind }

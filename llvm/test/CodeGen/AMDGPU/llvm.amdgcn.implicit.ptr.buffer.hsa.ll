@@ -16,7 +16,5 @@ define void @test_func(ptr addrspace(1) %out) #1 {
   ret void
 }
 
-declare ptr addrspace(4) @llvm.amdgcn.implicit.buffer.ptr() #0
-
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind  }

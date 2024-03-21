@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgcn < %s | FileCheck --check-prefixes=GCN,GCN-FMF,GCN-SAFE %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
 ; Test that the -enable-no-signed-zeros-fp-math flag works
 
 ; GCN-LABEL: {{^}}fneg_fsub_f32_fmf:

@@ -63,10 +63,4 @@ define amdgpu_kernel void @ballot_test(half %x, half %y) {
   ret void
 }
 
-declare i64 @llvm.amdgcn.icmp.i64.i16(i16, i16, i32 immarg) #0
-
-declare i64 @llvm.amdgcn.fcmp.i64.f16(half, half, i32 immarg) #0
-
-declare i64 @llvm.amdgcn.ballot.i64(i1) #0
-
 attributes #0 = { convergent nounwind readnone willreturn }

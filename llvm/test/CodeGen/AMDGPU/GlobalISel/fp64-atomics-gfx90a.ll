@@ -2,26 +2,6 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck %s -check-prefix=GFX90A
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GFX940
 
-declare double @llvm.amdgcn.struct.buffer.atomic.fadd.f64(double, <4 x i32>, i32, i32, i32, i32 immarg)
-declare double @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f64(double, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare double @llvm.amdgcn.raw.buffer.atomic.fadd.f64(double, <4 x i32>, i32, i32, i32 immarg)
-declare double @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f64(double, ptr addrspace(8), i32, i32, i32 immarg)
-declare double @llvm.amdgcn.struct.buffer.atomic.fmin.f64(double, <4 x i32>, i32, i32, i32, i32 immarg)
-declare double @llvm.amdgcn.struct.ptr.buffer.atomic.fmin.f64(double, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare double @llvm.amdgcn.raw.buffer.atomic.fmin.f64(double, <4 x i32>, i32, i32, i32 immarg)
-declare double @llvm.amdgcn.raw.ptr.buffer.atomic.fmin.f64(double, ptr addrspace(8), i32, i32, i32 immarg)
-declare double @llvm.amdgcn.struct.buffer.atomic.fmax.f64(double, <4 x i32>, i32, i32, i32, i32 immarg)
-declare double @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f64(double, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare double @llvm.amdgcn.raw.buffer.atomic.fmax.f64(double, <4 x i32>, i32, i32, i32 immarg)
-declare double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double, ptr addrspace(8), i32, i32, i32 immarg)
-declare double @llvm.amdgcn.global.atomic.fadd.f64.p1.f64(ptr addrspace(1) %ptr, double %data)
-declare double @llvm.amdgcn.global.atomic.fmin.f64.p1.f64(ptr addrspace(1) %ptr, double %data)
-declare double @llvm.amdgcn.global.atomic.fmax.f64.p1.f64(ptr addrspace(1) %ptr, double %data)
-declare double @llvm.amdgcn.flat.atomic.fadd.f64.p0.f64(ptr %ptr, double %data)
-declare double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %ptr, double %data)
-declare double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %ptr, double %data)
-declare double @llvm.amdgcn.ds.fadd.f64(ptr addrspace(3) nocapture, double, i32, i32, i1)
-
 define amdgpu_kernel void @raw_buffer_atomic_add_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_buffer_atomic_add_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body

@@ -186,8 +186,6 @@ define amdgpu_kernel void @test_indirect_call() !dbg !9 {
 ; STDERR-NEXT: remark: foo.cl:74:0:     VGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:74:0:     LDS Size [bytes/block]: 0
 
-declare void @llvm.memset.p5.i64(ptr addrspace(5) nocapture readonly, i8, i64, i1 immarg)
-
 define amdgpu_kernel void @test_indirect_w_static_stack() !dbg !10 {
   %alloca = alloca <10 x i64>, align 16, addrspace(5)
   call void @llvm.memset.p5.i64(ptr addrspace(5) %alloca, i8 0, i64 40, i1 false)

@@ -1,8 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
 
-declare void @llvm.amdgcn.s.setprio(i16)
-declare <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float, float, <4 x float>, i32, i32, i32)
-
 ; GCN-LABEL: {{^}}test_mfma_f32_4x4x1f32:
 ; GCN: s_setprio 1
 ; GCN: v_mfma

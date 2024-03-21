@@ -180,8 +180,6 @@ define amdgpu_ps void @ps_ieee_mode_off() #2 {
   ret void
 }
 
-declare float @llvm.minnum.f32(float, float) #3
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "amdgpu-ieee"="true" }
 attributes #2 = { nounwind "amdgpu-ieee"="false" }

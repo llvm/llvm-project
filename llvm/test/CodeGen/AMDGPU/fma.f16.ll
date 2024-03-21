@@ -6,9 +6,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX11,GFX11-SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX11,GFX11-GISEL
 
-declare half @llvm.fma.f16(half, half, half)
-declare half @llvm.maxnum.f16(half, half)
-
 define half @test_fma(half %x, half %y, half %z) {
 ; GFX9-LABEL: test_fma:
 ; GFX9:       ; %bb.0:

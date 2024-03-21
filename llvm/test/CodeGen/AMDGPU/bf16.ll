@@ -16960,8 +16960,6 @@ define bfloat @v_fdiv_bf16(bfloat %a, bfloat %b) {
   ret bfloat %op
 }
 
-declare bfloat @llvm.fabs.bf16(bfloat)
-
 define bfloat @v_fabs_bf16(bfloat %a) {
 ; GCN-LABEL: v_fabs_bf16:
 ; GCN:       ; %bb.0:
@@ -17099,8 +17097,6 @@ define bfloat @v_fneg_bf16(bfloat %a) {
   %op = fneg bfloat %a
   ret bfloat %op
 }
-
-declare i32 @llvm.amdgcn.readfirstlane(i32)
 
 ; FIXME: readfirstlane hack for other bugs
 define amdgpu_ps i32 @s_fneg_bf16(bfloat inreg %a) {
@@ -17263,14 +17259,6 @@ define amdgpu_ps i32 @s_fneg_fabs_bf16(bfloat inreg %a) {
   %readlane = call i32 @llvm.amdgcn.readfirstlane(i32 %zext)
   ret i32 %readlane
 }
-
-declare bfloat @llvm.minnum.bf16(bfloat, bfloat)
-declare <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat>, <2 x bfloat>)
-declare <3 x bfloat> @llvm.minnum.v3bf16(<3 x bfloat>, <3 x bfloat>)
-declare <4 x bfloat> @llvm.minnum.v4bf16(<4 x bfloat>, <4 x bfloat>)
-declare <8 x bfloat> @llvm.minnum.v8bf16(<8 x bfloat>, <8 x bfloat>)
-declare <16 x bfloat> @llvm.minnum.v16bf16(<16 x bfloat>, <16 x bfloat>)
-declare <32 x bfloat> @llvm.minnum.v32bf16(<32 x bfloat>, <32 x bfloat>)
 
 define bfloat @v_minnum_bf16(bfloat %a, bfloat %b) {
 ; GCN-LABEL: v_minnum_bf16:
@@ -20816,15 +20804,6 @@ define <32 x bfloat> @v_minnum_v32bf16(<32 x bfloat> %a, <32 x bfloat> %b) {
   ret <32 x bfloat> %op
 }
 
-
-declare bfloat @llvm.maxnum.bf16(bfloat, bfloat)
-declare <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat>, <2 x bfloat>)
-declare <3 x bfloat> @llvm.maxnum.v3bf16(<3 x bfloat>, <3 x bfloat>)
-declare <4 x bfloat> @llvm.maxnum.v4bf16(<4 x bfloat>, <4 x bfloat>)
-declare <8 x bfloat> @llvm.maxnum.v8bf16(<8 x bfloat>, <8 x bfloat>)
-declare <16 x bfloat> @llvm.maxnum.v16bf16(<16 x bfloat>, <16 x bfloat>)
-declare <32 x bfloat> @llvm.maxnum.v32bf16(<32 x bfloat>, <32 x bfloat>)
-
 define bfloat @v_maxnum_bf16(bfloat %a, bfloat %b) {
 ; GCN-LABEL: v_maxnum_bf16:
 ; GCN:       ; %bb.0:
@@ -24369,8 +24348,6 @@ define <32 x bfloat> @v_maxnum_v32bf16(<32 x bfloat> %a, <32 x bfloat> %b) {
   ret <32 x bfloat> %op
 }
 
-declare bfloat @llvm.sqrt.bf16(bfloat)
-
 define bfloat @v_sqrt_bf16(bfloat %a) {
 ; GCN-LABEL: v_sqrt_bf16:
 ; GCN:       ; %bb.0:
@@ -24554,8 +24531,6 @@ define bfloat @v_sqrt_bf16(bfloat %a) {
   ret bfloat %op
 }
 
-declare bfloat @llvm.ldexp.bf16.i32(bfloat, i32)
-
 define bfloat @v_ldexp_bf16_i32(bfloat %a, i32 %b) {
 ; GCN-LABEL: v_ldexp_bf16_i32:
 ; GCN:       ; %bb.0:
@@ -24635,8 +24610,6 @@ define bfloat @v_ldexp_bf16_i32(bfloat %a, i32 %b) {
   ret bfloat %op
 }
 
-declare { bfloat, i16 } @llvm.frexp.bf16.i16(bfloat)
-
 define { bfloat, i16 } @v_frexp_bf16_i16(bfloat %a) {
 ; GCN-LABEL: v_frexp_bf16_i16:
 ; GCN:       ; %bb.0:
@@ -24708,11 +24681,6 @@ define { bfloat, i16 } @v_frexp_bf16_i16(bfloat %a) {
   %op = call { bfloat, i16 } @llvm.frexp.bf16.i16(bfloat %a)
   ret { bfloat, i16 } %op
 }
-
-
-declare bfloat @llvm.log.bf16(bfloat)
-declare bfloat @llvm.log2.bf16(bfloat)
-declare bfloat @llvm.log10.bf16(bfloat)
 
 define bfloat @v_log_bf16(bfloat %a) {
 ; GCN-LABEL: v_log_bf16:
@@ -25195,10 +25163,6 @@ define bfloat @v_log10_bf16(bfloat %a) {
   ret bfloat %op
 }
 
-declare bfloat @llvm.exp.bf16(bfloat)
-declare bfloat @llvm.exp2.bf16(bfloat)
-declare bfloat @llvm.exp10.bf16(bfloat)
-
 define bfloat @v_exp_bf16(bfloat %a) {
 ; GCN-LABEL: v_exp_bf16:
 ; GCN:       ; %bb.0:
@@ -25680,8 +25644,6 @@ define bfloat @v_exp10_bf16(bfloat %a) {
   ret bfloat %op
 }
 
-declare bfloat @llvm.ceil.bf16(bfloat)
-
 define bfloat @v_ceil_bf16(bfloat %a) {
 ; GCN-LABEL: v_ceil_bf16:
 ; GCN:       ; %bb.0:
@@ -25760,8 +25722,6 @@ define bfloat @v_ceil_bf16(bfloat %a) {
   %op = call bfloat @llvm.ceil.bf16(bfloat %a)
   ret bfloat %op
 }
-
-declare bfloat @llvm.trunc.bf16(bfloat)
 
 define bfloat @v_trunc_bf16(bfloat %a) {
 ; GCN-LABEL: v_trunc_bf16:
@@ -25842,8 +25802,6 @@ define bfloat @v_trunc_bf16(bfloat %a) {
   ret bfloat %op
 }
 
-declare bfloat @llvm.rint.bf16(bfloat)
-
 define bfloat @v_rint_bf16(bfloat %a) {
 ; GCN-LABEL: v_rint_bf16:
 ; GCN:       ; %bb.0:
@@ -25923,8 +25881,6 @@ define bfloat @v_rint_bf16(bfloat %a) {
   ret bfloat %op
 }
 
-declare bfloat @llvm.nearbyint.bf16(bfloat)
-
 define bfloat @v_nearbyint_bf16(bfloat %a) {
 ; GCN-LABEL: v_nearbyint_bf16:
 ; GCN:       ; %bb.0:
@@ -26003,8 +25959,6 @@ define bfloat @v_nearbyint_bf16(bfloat %a) {
   %op = call bfloat @llvm.nearbyint.bf16(bfloat %a)
   ret bfloat %op
 }
-
-declare bfloat @llvm.round.bf16(bfloat)
 
 define bfloat @v_round_bf16(bfloat %a) {
 ; GCN-LABEL: v_round_bf16:
@@ -26121,8 +26075,6 @@ define bfloat @v_round_bf16(bfloat %a) {
   ret bfloat %op
 }
 
-declare bfloat @llvm.roundeven.bf16(bfloat)
-
 define bfloat @v_roundeven_bf16(bfloat %a) {
 ; GCN-LABEL: v_roundeven_bf16:
 ; GCN:       ; %bb.0:
@@ -26201,8 +26153,6 @@ define bfloat @v_roundeven_bf16(bfloat %a) {
   %op = call bfloat @llvm.roundeven.bf16(bfloat %a)
   ret bfloat %op
 }
-
-declare bfloat @llvm.floor.bf16(bfloat)
 
 define bfloat @v_floor_bf16(bfloat %a) {
 ; GCN-LABEL: v_floor_bf16:
@@ -26283,8 +26233,6 @@ define bfloat @v_floor_bf16(bfloat %a) {
   ret bfloat %op
 }
 
-declare bfloat @llvm.canonicalize.bf16(bfloat)
-
 define bfloat @v_canonicalize_bf16(bfloat %a) {
 ; GCN-LABEL: v_canonicalize_bf16:
 ; GCN:       ; %bb.0:
@@ -26361,8 +26309,6 @@ define bfloat @v_canonicalize_bf16(bfloat %a) {
   %op = call bfloat @llvm.canonicalize.bf16(bfloat %a)
   ret bfloat %op
 }
-
-declare bfloat @llvm.arithmetic.fence.bf16(bfloat)
 
 ; FIXME: Promotion broken
 ; define bfloat @v_arithmetic_fence_bf16(bfloat %a) {
@@ -27269,8 +27215,6 @@ define i1 @v_fcmp_true_bf16(bfloat %a, bfloat %b) {
   ret i1 %op
 }
 
-declare bfloat @llvm.copysign.bf16(bfloat, bfloat)
-
 define bfloat @v_copysign_bf16_bf16(bfloat %mag, bfloat %sign) {
 ; GCN-LABEL: v_copysign_bf16_bf16:
 ; GCN:       ; %bb.0:
@@ -27919,8 +27863,6 @@ define amdgpu_ps i32 @s_copysign_bf16_f16(bfloat inreg %mag, half inreg %sign.f1
   ret i32 %readlane
 }
 
-declare float @llvm.copysign.f32(float, float)
-
 define float @v_copysign_f32_bf16(float %mag, bfloat %sign.bf16) {
 ; GCN-LABEL: v_copysign_f32_bf16:
 ; GCN:       ; %bb.0:
@@ -28028,8 +27970,6 @@ define amdgpu_ps i32 @s_copysign_f32_bf16(float inreg %mag, bfloat inreg %sign.b
   %readlane = call i32 @llvm.amdgcn.readfirstlane(i32 %cast)
   ret i32 %readlane
 }
-
-declare half @llvm.copysign.f16(half, half)
 
 define half @v_copysign_f16_bf16(half %mag, bfloat %sign.bf16) {
 ; GCN-LABEL: v_copysign_f16_bf16:
@@ -28157,8 +28097,6 @@ define amdgpu_ps i32 @s_copysign_f16_bf16(half inreg %mag, bfloat inreg %sign.bf
   %readlane = call i32 @llvm.amdgcn.readfirstlane(i32 %zext)
   ret i32 %readlane
 }
-
-declare double @llvm.copysign.f64(double, double)
 
 define double @v_copysign_f64_bf16(double %mag, bfloat %sign.bf16) {
 ; GCN-LABEL: v_copysign_f64_bf16:
@@ -38712,11 +38650,6 @@ define <32 x bfloat> @v_vselect_v32bf16(<32 x i1> %cond, <32 x bfloat> %a, <32 x
   ret <32 x bfloat> %op
 }
 
-declare bfloat @llvm.fma.bf16(bfloat, bfloat, bfloat)
-declare <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat>, <2 x bfloat>, <2 x bfloat>)
-declare <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat>, <3 x bfloat>, <3 x bfloat>)
-declare <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat>, <4 x bfloat>, <4 x bfloat>)
-
 define bfloat @v_fma_bf16(bfloat %a, bfloat %b, bfloat %c) {
 ; GCN-LABEL: v_fma_bf16:
 ; GCN:       ; %bb.0:
@@ -39396,11 +39329,6 @@ define <4 x bfloat> @v_fma_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat>
   %op = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat> %c)
   ret <4 x bfloat> %op
 }
-
-declare bfloat @llvm.fmuladd.bf16(bfloat, bfloat, bfloat)
-declare <2 x bfloat> @llvm.fmuladd.v2bf16(<2 x bfloat>, <2 x bfloat>, <2 x bfloat>)
-declare <3 x bfloat> @llvm.fmuladd.v3bf16(<3 x bfloat>, <3 x bfloat>, <3 x bfloat>)
-declare <4 x bfloat> @llvm.fmuladd.v4bf16(<4 x bfloat>, <4 x bfloat>, <4 x bfloat>)
 
 define bfloat @v_fmuladd_bf16(bfloat %a, bfloat %b, bfloat %c) {
 ; GCN-LABEL: v_fmuladd_bf16:

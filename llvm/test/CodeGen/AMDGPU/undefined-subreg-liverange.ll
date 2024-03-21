@@ -123,7 +123,5 @@ define amdgpu_kernel void @partially_undef_copy() #0 {
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

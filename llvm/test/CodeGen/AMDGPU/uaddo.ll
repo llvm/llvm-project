@@ -876,13 +876,6 @@ define amdgpu_cs void @sv_uaddo_i128(ptr addrspace(1) %out, i128 inreg %a, i128 
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare { i16, i1 } @llvm.uadd.with.overflow.i16(i16, i16) #1
-declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32) #1
-declare { i64, i1 } @llvm.uadd.with.overflow.i64(i64, i64) #1
-declare { i128, i1 } @llvm.uadd.with.overflow.i128(i128, i128) #1
-declare { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
-
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

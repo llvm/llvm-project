@@ -594,7 +594,6 @@ bb:
 }
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.fmuladd.f32(float, float, float) #0
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" }

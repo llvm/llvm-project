@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare i32 @llvm.amdgcn.sad.u16(i32, i32, i32) #0
-
 ; GCN-LABEL: {{^}}v_sad_u16:
 ; GCN: v_sad_u16 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 define amdgpu_kernel void @v_sad_u16(ptr addrspace(1) %out, i32 %src) {

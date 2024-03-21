@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=+wavefrontsize32,-wavefrontsize64 -global-isel=1 -verify-machineinstrs < %s | FileCheck  -check-prefixes=GFX11,GISEL %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=+wavefrontsize32,-wavefrontsize64 -global-isel=0 -verify-machineinstrs < %s | FileCheck  -check-prefixes=GFX11,SDAG %s
 
-declare i1 @llvm.amdgcn.inverse.ballot(i32)
-
 ; Test ballot(0)
 define amdgpu_cs void @constant_false_inverse_ballot(ptr addrspace(1) %out) {
 ; GFX11-LABEL: constant_false_inverse_ballot:

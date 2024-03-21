@@ -2918,37 +2918,6 @@ define void @callee_no_stack_with_call() #1 {
   ret void
 }
 
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare float @llvm.fabs.f32(float)
-declare { float, i1 } @llvm.amdgcn.div.scale.f32(float, float, i1)
-declare { double, i1 } @llvm.amdgcn.div.scale.f64(double, double, i1)
-declare float @llvm.amdgcn.div.fmas.f32(float, float, float, i1)
-declare double @llvm.amdgcn.div.fmas.f64(double, double, double, i1)
-declare i1 @llvm.amdgcn.class.f32(float, i32)
-declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32)
-declare i64 @llvm.amdgcn.set.inactive.i64(i64, i64)
-declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32)
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
-declare float @llvm.amdgcn.strict.wwm.f32(float)
-declare float @llvm.amdgcn.wwm.f32(float)
-declare i32 @llvm.amdgcn.wqm.i32(i32)
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32)
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32)
-declare float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32)
-declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32)
-declare i64 @llvm.amdgcn.fcmp.i64.f32(float, float, i32)
-declare i64 @llvm.amdgcn.icmp.i64.i32(i32, i32, i32)
-declare i32 @llvm.amdgcn.fcmp.i32.f32(float, float, i32)
-declare i32 @llvm.amdgcn.icmp.i32.i32(i32, i32, i32)
-declare void @llvm.amdgcn.kill(i1)
-declare i1 @llvm.amdgcn.wqm.vote(i1)
-declare i1 @llvm.amdgcn.ps.live()
-declare i64 @llvm.cttz.i64(i64, i1)
-declare i32 @llvm.cttz.i32(i32, i1)
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #5
-
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readnone optnone noinline }

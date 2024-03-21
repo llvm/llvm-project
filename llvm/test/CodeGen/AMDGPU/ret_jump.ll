@@ -108,22 +108,16 @@ ret.bb:                                          ; preds = %else, %main_body
 }
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.fabs.f32(float) #1
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.sqrt.f32(float) #1
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.floor.f32(float) #1
 
 attributes #0 = { "InitialPSInputAddr"="36983" }
 attributes #1 = { nounwind readnone }

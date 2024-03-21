@@ -5,11 +5,6 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
 
-declare half @llvm.maxnum.f16(half %a, half %b)
-declare <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> %b)
-declare <3 x half> @llvm.maxnum.v3f16(<3 x half> %a, <3 x half> %b)
-declare <4 x half> @llvm.maxnum.v4f16(<4 x half> %a, <4 x half> %b)
-
 define amdgpu_kernel void @maxnum_f16(
 ; SI-LABEL: maxnum_f16:
 ; SI:       ; %bb.0: ; %entry

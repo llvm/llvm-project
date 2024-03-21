@@ -417,5 +417,3 @@ define amdgpu_kernel void @v_test_umax_ugt_v2i16(ptr addrspace(1) %out, ptr addr
   store <2 x i16> %val, ptr addrspace(1) %outgep, align 4
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

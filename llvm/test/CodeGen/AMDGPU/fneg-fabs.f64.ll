@@ -93,6 +93,3 @@ define amdgpu_kernel void @fneg_fabs_v4f64(ptr addrspace(1) %out, <4 x double> %
 }
 
 declare double @fabs(double) readnone
-declare double @llvm.fabs.f64(double) readnone
-declare <2 x double> @llvm.fabs.v2f64(<2 x double>) readnone
-declare <4 x double> @llvm.fabs.v4f64(<4 x double>) readnone

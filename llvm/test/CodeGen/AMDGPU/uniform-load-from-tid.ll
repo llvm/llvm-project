@@ -151,8 +151,6 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 !0 = !{i32 64, i32 1, i32 1}
 !1 = !{i32 65, i32 2, i32 1}
 !2 = !{i32 64, i32 1, i32 2}

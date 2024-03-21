@@ -518,8 +518,6 @@ bb18:                                             ; preds = %bb17, %bb10
   br label %bb2
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 declare hidden float @spam()
 
 !llvm.module.flags = !{!0}

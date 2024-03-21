@@ -7,5 +7,3 @@ define amdgpu_gs void @test_fptrunc_round_legalization(double %a, i32 %data0, <4
   store half %res, ptr addrspace(1) %out, align 4
   ret void
 }
-
-declare half @llvm.fptrunc.round.f64(double, metadata)

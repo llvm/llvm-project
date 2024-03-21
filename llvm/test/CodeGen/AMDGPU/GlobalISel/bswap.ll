@@ -677,14 +677,5 @@ define i64 @v_bswap_i48(i64 %src) {
   ret i64 %zext
 }
 
-declare i16 @llvm.bswap.i16(i16) #1
-declare <2 x i16> @llvm.bswap.v2i16(<2 x i16>) #1
-declare <3 x i16> @llvm.bswap.v3i16(<3 x i16>) #1
-declare i32 @llvm.bswap.i32(i32) #1
-declare <2 x i32> @llvm.bswap.v2i32(<2 x i32>) #1
-declare i64 @llvm.bswap.i64(i64) #1
-declare <2 x i64> @llvm.bswap.v2i64(<2 x i64>) #1
-declare i48 @llvm.bswap.i48(i48) #1
-
 attributes #0 = { convergent nounwind readnone }
 attributes #1 = { nounwind readnone speculatable willreturn }

@@ -14,7 +14,5 @@ bb:
   ret void
 }
 
-declare float @llvm.fmuladd.f32(float, float, float) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }

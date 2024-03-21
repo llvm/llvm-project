@@ -756,9 +756,5 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_stack_yz() 
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.workitem.id.y() #0
-declare i32 @llvm.amdgcn.workitem.id.z() #0
-
 attributes #0 = { nounwind readnone speculatable "amdgpu-flat-work-group-size"="1,512" }
 attributes #1 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" }

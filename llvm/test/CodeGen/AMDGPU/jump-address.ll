@@ -46,5 +46,3 @@ IF13:                                             ; preds = %ELSE
   %23 = fadd float 0x3FF8000000000000, %22
   br label %ENDIF
 }
-
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

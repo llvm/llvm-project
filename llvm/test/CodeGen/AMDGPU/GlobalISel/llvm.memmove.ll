@@ -2,8 +2,6 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-- -verify-machineinstrs -mem-intrinsic-expand-size=3 %s -o - | FileCheck -check-prefix=LOOP %s
 ; RUN: llc -global-isel -mtriple=amdgcn-- -verify-machineinstrs -mem-intrinsic-expand-size=5 %s -o - | FileCheck -check-prefix=UNROLL %s
 
-declare void @llvm.memmove.p1.p1.i32(ptr addrspace(1), ptr addrspace(1), i32, i1)
-
 define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src) {
 ; LOOP-LABEL: memmove_p1i8:
 ; LOOP:       ; %bb.0:

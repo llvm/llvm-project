@@ -1049,7 +1049,5 @@ define <2 x i16> @add_inline_imm_1_0(<2 x i16> %x) {
   ret <2 x i16> %y
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

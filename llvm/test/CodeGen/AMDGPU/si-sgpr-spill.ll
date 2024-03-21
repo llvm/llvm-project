@@ -1664,29 +1664,6 @@ ELSE214:                                          ; preds = %ELSE211
   br label %ENDIF209
 }
 
-declare float @llvm.exp2.f32(float) #1
-declare float @llvm.ceil.f32(float) #1
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.pow.f32(float, float) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare float @llvm.amdgcn.rsq.f32(float) #1
-declare float @llvm.amdgcn.cubeid(float, float, float) #1
-declare float @llvm.amdgcn.cubesc(float, float, float) #1
-declare float @llvm.amdgcn.cubetc(float, float, float) #1
-declare float @llvm.amdgcn.cubema(float, float, float) #1
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #1
-declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f32(i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind readonly }

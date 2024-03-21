@@ -1,9 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
-declare void @llvm.amdgcn.s.dcache.inv.vol() #0
-declare void @llvm.amdgcn.s.waitcnt(i32) #0
-
 ; GCN-LABEL: {{^}}test_s_dcache_inv_vol:
 ; GCN-NEXT: ; %bb.0:
 ; CI-NEXT: s_dcache_inv_vol ; encoding: [0x00,0x00,0x40,0xc7]

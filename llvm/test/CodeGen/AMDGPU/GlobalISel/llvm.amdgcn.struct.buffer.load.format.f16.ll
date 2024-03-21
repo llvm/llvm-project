@@ -518,10 +518,4 @@ define amdgpu_ps half @struct_buffer_load_format_i16__sgpr_rsrc__vgpr_vindex__vg
   ret half %fval
 }
 
-declare half @llvm.amdgcn.struct.buffer.load.format.f16(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare <2 x half> @llvm.amdgcn.struct.buffer.load.format.v2f16(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare <3 x half> @llvm.amdgcn.struct.buffer.load.format.v3f16(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare <4 x half> @llvm.amdgcn.struct.buffer.load.format.v4f16(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare i16 @llvm.amdgcn.struct.buffer.load.format.i16(<4 x i32>, i32, i32, i32, i32 immarg) #0
-
 attributes #0 = { nounwind readonly }

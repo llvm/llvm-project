@@ -128,15 +128,5 @@ define amdgpu_cs void @test_cvt_sr_fp8_f32_byte2(i32 %a, i32 %r, i32 %old, ptr a
   ret void
 }
 
-declare float @llvm.amdgcn.cvt.f32.bf8(i32, i32)
-declare float @llvm.amdgcn.cvt.f32.fp8(i32, i32)
-declare i32 @llvm.amdgcn.cvt.pk.bf8.f32(float, float, i32, i1)
-declare i32 @llvm.amdgcn.cvt.pk.fp8.f32(float, float, i32, i1)
-declare i32 @llvm.amdgcn.cvt.sr.bf8.f32(float, i32, i32, i32)
-declare i32 @llvm.amdgcn.cvt.sr.fp8.f32(float, i32, i32, i32)
-
-declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.mov.dpp8.i32(i32, i32) #1
-
 attributes #0 = { nounwind convergent }
 attributes #1 = { nounwind readnone convergent }

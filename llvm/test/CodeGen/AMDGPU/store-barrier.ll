@@ -37,7 +37,6 @@ bb:
 }
 
 ; Function Attrs: convergent nounwind
-declare void @llvm.amdgcn.s.barrier() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }

@@ -100,4 +100,3 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.x() #0

@@ -1,10 +1,6 @@
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn -mcpu=tahiti -mattr=-promote-alloca < %s | FileCheck -check-prefix=SI-ALLOCA -check-prefix=SI %s
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn -mcpu=tahiti -mattr=+promote-alloca < %s | FileCheck -check-prefix=SI-PROMOTE -check-prefix=SI %s
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #1
-declare void @llvm.amdgcn.s.barrier() #2
-
 ; The required pointer calculations for the alloca'd actually requires
 ; an add and won't be folded into the addressing, which fails with a
 ; 64-bit pointer add. This should work since private pointers should

@@ -104,9 +104,5 @@ main_body:
   ret void
 }
 
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32) #0
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

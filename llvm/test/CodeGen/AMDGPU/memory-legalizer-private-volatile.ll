@@ -614,5 +614,3 @@ entry:
   store volatile i32 %val, ptr addrspace(5) %out.gep
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

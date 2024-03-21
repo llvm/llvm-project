@@ -45,7 +45,5 @@ define void @shl_base_global_ptr_global_atomic_fadd(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-declare float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) nocapture, float) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind willreturn }

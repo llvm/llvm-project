@@ -206,9 +206,3 @@ define amdgpu_kernel void @independent_offsets(ptr addrspace(8) %a) {
 
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-
-declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg)
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr readnone nocapture, i16, i32, i32)

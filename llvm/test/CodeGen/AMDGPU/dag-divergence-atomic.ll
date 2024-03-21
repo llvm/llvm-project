@@ -901,22 +901,3 @@ define protected amdgpu_kernel void @buffer.ptr.atomic.fmax(ptr addrspace(8) %rs
   store float 1.0, ptr addrspace(1) %p1
   ret void
 }
-
-declare double @llvm.amdgcn.global.atomic.fmin.f64.p1.f64(ptr addrspace(1), double)
-declare double @llvm.amdgcn.global.atomic.fmax.f64.p1.f64(ptr addrspace(1), double)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.swap.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.sub.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.smin.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.smax.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.umin.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.umax.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.and.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.or.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.xor.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.inc.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.dec.i32(i32, ptr addrspace(8), i32, i32, i32)
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32, i32, ptr addrspace(8), i32, i32, i32)
-declare float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float, ptr addrspace(8), i32, i32, i32)
-declare double @llvm.amdgcn.raw.ptr.buffer.atomic.fmin.f64(double, ptr addrspace(8), i32, i32, i32)
-declare double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double, ptr addrspace(8), i32, i32, i32)

@@ -3,10 +3,6 @@
 
 ; FIXME: Enable for VI.
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-declare float @llvm.amdgcn.div.fmas.f32(float, float, float, i1) nounwind readnone
-declare double @llvm.amdgcn.div.fmas.f64(double, double, double, i1) nounwind readnone
-
 ; GCN-LABEL: {{^}}test_div_fmas_f32:
 ; SI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x13
 ; SI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x1c

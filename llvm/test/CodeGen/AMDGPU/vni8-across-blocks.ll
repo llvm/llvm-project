@@ -1982,5 +1982,3 @@ bb.2:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-

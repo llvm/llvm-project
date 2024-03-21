@@ -344,9 +344,4 @@ define <4 x float> @raw_buffer_load_format_v4f32__sgpr_rsrc__vgpr_voffset__sgpr_
   ret <4 x float> %val
 }
 
-declare float @llvm.amdgcn.raw.buffer.load.format.f32(<4 x i32>, i32, i32, i32 immarg) #0
-declare <2 x float> @llvm.amdgcn.raw.buffer.load.format.v2f32(<4 x i32>, i32, i32, i32 immarg) #0
-declare <3 x float> @llvm.amdgcn.raw.buffer.load.format.v3f32(<4 x i32>, i32, i32, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32 immarg) #0
-
 attributes #0 = { nounwind readonly }

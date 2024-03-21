@@ -264,7 +264,3 @@ define void @v_fneg_maximum_multi_use_maximum_f32(ptr addrspace(1) %out, ptr add
   store volatile float %use1, ptr addrspace(1) %out
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare float @llvm.minimum.f32(float, float)
-declare float @llvm.maximum.f32(float, float)

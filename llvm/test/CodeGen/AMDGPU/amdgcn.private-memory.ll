@@ -6,9 +6,6 @@
 ; RUN: llc -mattr=-promote-alloca -verify-machineinstrs -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCN,GCN-ALLOCA %s
 
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
-
 ; Make sure we don't overwrite workitem information with private memory
 
 ; GCN-LABEL: {{^}}work_item_info:

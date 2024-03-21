@@ -2,16 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,CIVI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
-declare i32 @llvm.amdgcn.atomic.dec.i32.p1(ptr addrspace(1) nocapture, i32, i32, i32, i1) #2
-declare i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) nocapture, i32, i32, i32, i1) #2
-declare i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr nocapture, i32, i32, i32, i1) #2
-
-declare i64 @llvm.amdgcn.atomic.dec.i64.p1(ptr addrspace(1) nocapture, i64, i32, i32, i1) #2
-declare i64 @llvm.amdgcn.atomic.dec.i64.p3(ptr addrspace(3) nocapture, i64, i32, i32, i1) #2
-declare i64 @llvm.amdgcn.atomic.dec.i64.p0(ptr nocapture, i64, i32, i32, i1) #2
-
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 ; GCN-LABEL: {{^}}lds_atomic_dec_ret_i32:
 ; CIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0

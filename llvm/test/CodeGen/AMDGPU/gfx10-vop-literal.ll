@@ -60,6 +60,3 @@ define amdgpu_kernel void @test_bfe_2lit_v(ptr addrspace(1) %p) {
   store i32 %bfe, ptr addrspace(1) %ptr, align 4
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare i32 @llvm.amdgcn.ubfe.i32(i32, i32, i32)

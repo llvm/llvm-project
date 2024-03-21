@@ -8,9 +8,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11-FLUSH %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -denormal-fp-math=ieee -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11-DENORM %s
 
-declare half @llvm.fmuladd.f16(half %a, half %b, half %c)
-declare <2 x half> @llvm.fmuladd.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)
-
 define amdgpu_kernel void @fmuladd_f16(
 ; SI-LABEL: fmuladd_f16:
 ; SI:       ; %bb.0:

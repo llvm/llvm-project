@@ -5,9 +5,6 @@
 
 ; ERR: error: <unknown>:0:0: in function test_export_compr_zeroes_v2f16 void (): intrinsic not supported on subtarget
 
-declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
-declare void @llvm.amdgcn.exp.compr.v2i16(i32, i32, <2 x i16>, <2 x i16>, i1, i1) #0
-
 ; GCN-LABEL: {{^}}test_export_compr_zeroes_v2f16:
 ; GCN: exp mrt0 off, off, off, off compr{{$}}
 ; GCN: exp mrt0 off, off, off, off done compr{{$}}

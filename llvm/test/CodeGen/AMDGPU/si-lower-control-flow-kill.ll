@@ -68,6 +68,4 @@ endif:
   ret void
 }
 
-declare void @llvm.amdgcn.kill(i1) #0
-
 attributes #0 = { nounwind }

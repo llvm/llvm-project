@@ -609,11 +609,6 @@ entry:
   ret <2 x half> %res
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare half @llvm.maxnum.f16(half, half) #1
-declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>)
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { nounwind "no-nans-fp-math"="true" }

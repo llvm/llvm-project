@@ -4,8 +4,6 @@
 
 ; Callee must preserve the VGPR modified by writelane even if it is marked Caller-saved.
 
-declare i32 @llvm.amdgcn.writelane(i32, i32, i32)
-
 define void @sgpr_spill_writelane() {
 ; GCN-LABEL: sgpr_spill_writelane:
 ; GCN:       ; %bb.0:

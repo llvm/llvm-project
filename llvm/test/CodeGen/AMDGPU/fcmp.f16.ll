@@ -2803,7 +2803,5 @@ entry:
   ret void
 }
 
-declare half @llvm.fabs.f16(half) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

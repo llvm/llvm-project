@@ -34,6 +34,3 @@ define amdgpu_kernel void @testv(ptr addrspace(1) %out, <4 x float> inreg %vx) #
    store <4 x float> %cos, ptr addrspace(1) %out
    ret void
 }
-
-declare float @llvm.cos.f32(float) readnone
-declare <4 x float> @llvm.cos.v4f32(<4 x float>) readnone

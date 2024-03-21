@@ -23,7 +23,4 @@ define amdgpu_ps void @test(<8 x i32> inreg %load, <8 x i32> inreg %store) {
   ret void
 }
 
-declare float @llvm.amdgcn.image.load.1d.f32.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg)
-declare void @llvm.amdgcn.image.store.1d.f32.i32(float, i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg)
-
 !0 = !{}

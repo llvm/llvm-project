@@ -5,11 +5,6 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10PLUS,GFX10 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10PLUS,GFX11 %s
 
-declare half @llvm.minnum.f16(half %a, half %b)
-declare <2 x half> @llvm.minnum.v2f16(<2 x half> %a, <2 x half> %b)
-declare <3 x half> @llvm.minnum.v3f16(<3 x half> %a, <3 x half> %b)
-declare <4 x half> @llvm.minnum.v4f16(<4 x half> %a, <4 x half> %b)
-
 define amdgpu_kernel void @minnum_f16_ieee(
 ; SI-LABEL: minnum_f16_ieee:
 ; SI:       ; %bb.0: ; %entry

@@ -79,5 +79,3 @@ entry:
   store volatile ptr %ret1, ptr addrspace(1) undef
   ret void
 }
-
-declare ptr @llvm.returnaddress(i32) nounwind readnone

@@ -45,9 +45,6 @@ define void @gws_caller(i32 %val0, i32 %val1) {
   ret void
 }
 
-declare void @llvm.amdgcn.ds.gws.barrier(i32, i32) #1
-declare void @llvm.amdgcn.ds.gws.init(i32, i32) #2
-
 
 attributes #0 = { "target-features"="+gws"}
 attributes #1 = { convergent inaccessiblememonly nounwind }

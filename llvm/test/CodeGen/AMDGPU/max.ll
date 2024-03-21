@@ -991,7 +991,5 @@ define amdgpu_kernel void @test_imax_sge_i64(ptr addrspace(1) %out, i64 %a, i64 
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

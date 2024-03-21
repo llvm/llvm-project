@@ -22,7 +22,4 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
-declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #0
-
 attributes #0 = { nounwind readnone }

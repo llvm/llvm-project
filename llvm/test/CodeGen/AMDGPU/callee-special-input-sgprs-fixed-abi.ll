@@ -568,15 +568,6 @@ define hidden void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-declare i32 @llvm.amdgcn.workgroup.id.y() #0
-declare i32 @llvm.amdgcn.workgroup.id.z() #0
-declare noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
-declare noalias ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #0
-declare noalias ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #0
-declare i64 @llvm.amdgcn.dispatch.id() #0
-declare noalias ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
-
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind noinline }
 attributes #2 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="0" }

@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
 
-declare i32 @llvm.amdgcn.udot8(i32 %a, i32 %b, i32 %c, i1 %clamp)
-
 ; GCN-LABEL: {{^}}test_llvm_amdgcn_udot8_clamp
 ; GFX9:   v_dot8_u32_u4 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
 ; GFX10:  v_dot8_u32_u4 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}

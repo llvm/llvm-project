@@ -9,9 +9,6 @@
 ; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s -check-prefix=G_GFX10
 ; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs | FileCheck %s -check-prefix=G_GFX1030
 
-declare double @llvm.amdgcn.raw.buffer.atomic.fmin.f64(double, <4 x i32>, i32, i32, i32 immarg)
-declare double @llvm.amdgcn.raw.buffer.atomic.fmax.f64(double, <4 x i32>, i32, i32, i32 immarg)
-
 
 define amdgpu_kernel void @raw_buffer_atomic_min_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
 ; SI-LABEL: raw_buffer_atomic_min_noret_f64:

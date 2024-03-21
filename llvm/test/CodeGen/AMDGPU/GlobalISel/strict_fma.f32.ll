@@ -95,10 +95,4 @@ define <2 x float> @v_constained_fma_v2f32_fpexcept_strict_fneg_fneg(<2 x float>
   ret <2 x float> %val
 }
 
-declare float @llvm.fabs.f32(float)
-declare float @llvm.experimental.constrained.fma.f32(float, float, float, metadata, metadata)
-declare <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float>, <2 x float>, <2 x float>, metadata, metadata)
-declare <3 x float> @llvm.experimental.constrained.fma.v3f32(<3 x float>, <3 x float>, <3 x float>, metadata, metadata)
-declare <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float>, <4 x float>, <4 x float>, metadata, metadata)
-
 attributes #0 = { strictfp }

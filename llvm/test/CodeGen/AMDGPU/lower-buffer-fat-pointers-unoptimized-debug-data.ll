@@ -83,7 +83,6 @@ define float @debug_stash_pointer(ptr addrspace(8) %buf, i32 %idx, ptr addrspace
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 

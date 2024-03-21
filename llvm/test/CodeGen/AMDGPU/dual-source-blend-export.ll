@@ -88,14 +88,6 @@ define amdgpu_ps void @_amdgpu_ps_main(i32 inreg %PrimMask, <2 x float> %InterpC
   ret void
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #2
-declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #2
-declare i32 @llvm.amdgcn.mov.dpp8.i32(i32, i32 immarg) #3
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #4
-declare float @llvm.amdgcn.interp.inreg.p10(float, float, float) #1
-declare float @llvm.amdgcn.interp.inreg.p2(float, float, float) #1
-declare float @llvm.amdgcn.lds.param.load(i32 immarg, i32 immarg, i32) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable willreturn }
 attributes #2 = { nounwind readnone willreturn }

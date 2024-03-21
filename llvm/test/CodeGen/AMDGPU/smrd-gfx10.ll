@@ -37,6 +37,4 @@ main_body:
   ret float %r
 }
 
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32)
-
 !0 = !{}

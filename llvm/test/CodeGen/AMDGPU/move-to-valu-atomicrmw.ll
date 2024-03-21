@@ -8,8 +8,6 @@
 ; Check that moving the pointer out of the resource descriptor to
 ; vaddr works for atomics.
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 define amdgpu_kernel void @atomic_max_i32(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %x, i32 %y) #0 {
 ; GCN-LABEL: atomic_max_i32:
 ; GCN:       ; %bb.0:

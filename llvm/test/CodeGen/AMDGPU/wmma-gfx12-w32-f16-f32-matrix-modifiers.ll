@@ -483,17 +483,3 @@ bb:
   store <8 x half> %res, ptr addrspace(1) %out
   ret void
 }
-
-declare <8 x half> @llvm.fabs.v8f16(<8 x half>)
-declare <8 x float> @llvm.fabs.v8f32(<8 x float>)
-declare float @llvm.fabs.f32(float)
-
-declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v8f32.v8f16(<8 x half>, <8 x half>, <8 x float>)
-declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v8f32.v8i16(<8 x i16>, <8 x i16>, <8 x float>)
-declare <8 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v8f16.v8f16(<8 x half>, <8 x half>, <8 x half>, i1 immarg)
-declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.fp8.v8f32.v2i32(<2 x i32>, <2 x i32>, <8 x float>)
-declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.bf8.v8f32.v2i32(<2 x i32>, <2 x i32>, <8 x float>)
-declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.fp8.v8f32.v2i32(<2 x i32>, <2 x i32>, <8 x float>)
-declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.bf8.v8f32.v2i32(<2 x i32>, <2 x i32>, <8 x float>)
-declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v8f32.v8f16.v16f16.i16(<8 x half>, <16 x half>, <8 x float>, i16)
-declare <8 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v8f16.v8f16.v16f16.i16(<8 x half>, <16 x half>, <8 x half>, i16)

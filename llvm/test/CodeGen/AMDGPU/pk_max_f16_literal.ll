@@ -137,6 +137,3 @@ bb:
   store <2 x half> %tmp4, ptr addrspace(1) %tmp2, align 4
   ret void
 }
-
-declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>)
-declare i32 @llvm.amdgcn.workitem.id.x()

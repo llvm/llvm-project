@@ -2,12 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,GFX678 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
-declare double @llvm.minnum.f64(double, double) #0
-declare <2 x double> @llvm.minnum.v2f64(<2 x double>, <2 x double>) #0
-declare <4 x double> @llvm.minnum.v4f64(<4 x double>, <4 x double>) #0
-declare <8 x double> @llvm.minnum.v8f64(<8 x double>, <8 x double>) #0
-declare <16 x double> @llvm.minnum.v16f64(<16 x double>, <16 x double>) #0
-
 ; GCN-LABEL: {{^}}test_fmin_f64_ieee_noflush:
 ; GCN: s_load_dwordx2 [[A:s\[[0-9]+:[0-9]+\]]]
 ; GCN: s_load_dwordx2 [[B:s\[[0-9]+:[0-9]+\]]]

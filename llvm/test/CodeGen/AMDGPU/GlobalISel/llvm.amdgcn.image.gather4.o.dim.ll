@@ -539,17 +539,4 @@ main_body:
   ret <4 x float> %v
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.o.2d.v4f32.f32(i32 immarg, i32, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.o.2d.v4f32.f32(i32 immarg, i32, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.cl.o.2d.v4f32.f32(i32 immarg, i32, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.cl.o.2d.v4f32.f32(i32 immarg, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.b.o.2d.v4f32.f32.f32(i32 immarg, i32, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.b.o.2d.v4f32.f32.f32(i32 immarg, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.b.cl.o.2d.v4f32.f32.f32(i32 immarg, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.o.2d.v4f32.f32.f32(i32 immarg, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.l.o.2d.v4f32.f32(i32 immarg, i32, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2d.v4f32.f32(i32 immarg, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.lz.o.2d.v4f32.f32(i32 immarg, i32, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.gather4.c.lz.o.2d.v4f32.f32(i32 immarg, i32, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
-
 attributes #0 = { nounwind readonly }

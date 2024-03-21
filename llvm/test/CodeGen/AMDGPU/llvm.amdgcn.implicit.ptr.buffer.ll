@@ -27,7 +27,5 @@ define amdgpu_cs i32 @test_cs() #1 {
   ret i32 %value
 }
 
-declare ptr addrspace(4) @llvm.amdgcn.implicit.buffer.ptr() #0
-
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind }

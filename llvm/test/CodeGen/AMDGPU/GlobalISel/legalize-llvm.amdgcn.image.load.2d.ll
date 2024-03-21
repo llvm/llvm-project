@@ -793,13 +793,4 @@ define amdgpu_ps <4 x float> @image_load_tfe_v4f32_dmask_0000(<8 x i32> inreg %r
   ret <4 x float> %tex
 }
 
-declare float @llvm.amdgcn.image.load.2d.f32.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare <2 x float> @llvm.amdgcn.image.load.2d.v2f32.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare <3 x float> @llvm.amdgcn.image.load.2d.v3f32.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare { float, i32 } @llvm.amdgcn.image.load.2d.sl_f32i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare { <2 x float>, i32 } @llvm.amdgcn.image.load.2d.sl_v2f32i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare { <3 x float>, i32 } @llvm.amdgcn.image.load.2d.sl_v3f32i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare { <4 x float>, i32 } @llvm.amdgcn.image.load.2d.sl_v4f32i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-
 attributes #0 = { nounwind readonly }

@@ -15,7 +15,5 @@ define amdgpu_kernel void @getreg_callsite_attributes() {
   ret void
 }
 
-declare i32 @llvm.amdgcn.s.getreg(i32) #0
-
 attributes #0 = { nounwind readonly inaccessiblememonly }
 attributes #1 = { nounwind readnone }

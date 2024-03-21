@@ -43,9 +43,6 @@ bb:
   ret float %tmp9
 }
 
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
-declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32, i32, <8 x i32>, i32, i32) #2
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind readonly }

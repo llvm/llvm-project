@@ -322,13 +322,4 @@ define amdgpu_cs void @struct_ptr_buffer_load_format_i32_tfe(ptr addrspace(8) in
   ret void
 }
 
-declare float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare <2 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v2f32(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare <3 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v3f32(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare i32 @llvm.amdgcn.struct.ptr.buffer.load.format.i32(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare { <4 x i32>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v4i32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare { <3 x i32>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v3i32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-declare { i32, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_i32i32s(ptr addrspace(8), i32, i32, i32, i32 immarg) #0
-
 attributes #0 = { nounwind readonly }

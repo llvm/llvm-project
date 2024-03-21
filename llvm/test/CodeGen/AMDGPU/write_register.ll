@@ -1,9 +1,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=bonaire -enable-misched=0 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=bonaire -enable-misched=0 -verify-machineinstrs < %s | FileCheck %s
 
-declare void @llvm.write_register.i32(metadata, i32) #0
-declare void @llvm.write_register.i64(metadata, i64) #0
-
 ; CHECK-LABEL: {{^}}test_write_m0:
 define amdgpu_kernel void @test_write_m0(i32 %val) #0 {
   call void @llvm.write_register.i32(metadata !0, i32 0)
@@ -88,8 +85,6 @@ define amdgpu_kernel void @test_write_exec_hi(i32 %val) #0 {
   call void @llvm.amdgcn.wave.barrier() #1
   ret void
 }
-
-declare void @llvm.amdgcn.wave.barrier() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }

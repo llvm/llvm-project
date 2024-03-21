@@ -3,11 +3,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=SIVI,VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11 %s
 
-declare double @llvm.copysign.f64(double, double) #0
-declare <2 x double> @llvm.copysign.v2f64(<2 x double>, <2 x double>) #0
-declare <3 x double> @llvm.copysign.v3f64(<3 x double>, <3 x double>) #0
-declare <4 x double> @llvm.copysign.v4f64(<4 x double>, <4 x double>) #0
-
 define amdgpu_kernel void @s_test_copysign_f64(ptr addrspace(1) %out, [8 x i32], double %mag, [8 x i32], double %sign) {
 ; SI-LABEL: s_test_copysign_f64:
 ; SI:       ; %bb.0:

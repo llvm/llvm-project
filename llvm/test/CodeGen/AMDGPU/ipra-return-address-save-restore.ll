@@ -14,16 +14,12 @@
 %struct.MicrofacetExtra = type { <3 x float>, <3 x float>, <3 x float>, float, [12 x i8] }
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
-declare float @llvm.fmuladd.f32(float, float, float) #0
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
-declare <3 x float> @llvm.fmuladd.v3f32(<3 x float>, <3 x float>, <3 x float>) #0
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
-declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) #0
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p5(i64 immarg, ptr addrspace(5) nocapture) #1
 
 ; Function Attrs: norecurse
 define internal fastcc void @svm_node_closure_bsdf(ptr addrspace(1) %sd, ptr %stack, <4 x i32> %node, ptr %offset, i32 %0, i8 %trunc, float %1, float %2, float %mul80, i1 %cmp412.old, <4 x i32> %3, float %4, i32 %5, i1 %cmp440, i1 %cmp442, i1 %or.cond1306, float %.op, ptr addrspace(1) %arrayidx.i.i2202, ptr addrspace(1) %retval.0.i.i22089, ptr addrspace(1) %retval.1.i221310, i1 %cmp575, ptr addrspace(1) %num_closure_left.i2215, i32 %6, i1 %cmp.i2216, i32 %7, i64 %idx.ext.i2223, i32 %sub5.i2221) #2 {
@@ -199,13 +195,10 @@ kernel_set_buffer_pointers.exit:
 }
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
-declare float @llvm.fabs.f32(float) #0
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
-declare float @llvm.maxnum.f32(float, float) #0
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare float @llvm.amdgcn.fmed3.f32(float, float, float) #3
 
 attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }

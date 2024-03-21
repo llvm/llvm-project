@@ -57,8 +57,6 @@ end:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind noinline }
 attributes #2 = { nounwind readnone speculatable }

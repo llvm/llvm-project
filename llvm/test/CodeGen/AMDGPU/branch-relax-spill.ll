@@ -1937,6 +1937,4 @@ bb3:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-
 attributes #0 = { nounwind }

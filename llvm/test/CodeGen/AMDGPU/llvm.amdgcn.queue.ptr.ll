@@ -13,8 +13,6 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out) {
   ret void
 }
 
-declare noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
-
 attributes #0 = { nounwind readnone }
 
 !llvm.module.flags = !{!0}

@@ -89,11 +89,6 @@ define i32 @test_memset(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocaptur
   ret i32 %add
 }
 
-declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64, i1 immarg)
-declare void @llvm.memcpy.inline.p1.p1.i64(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64, i1 immarg)
-declare void @llvm.memmove.p1.p1.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg)
-declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture writeonly, i8, i64, i1 immarg)
-
 !0 = distinct !{!0, !"bax"}
 !1 = distinct !{!1, !0, !"bax: %p"}
 !2 = !{!1}

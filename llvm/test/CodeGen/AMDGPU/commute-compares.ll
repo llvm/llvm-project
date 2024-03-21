@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -amdgpu-sdwa-peephole=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 ; --------------------------------------------------------------------------------
 ; i32 compares
 ; --------------------------------------------------------------------------------

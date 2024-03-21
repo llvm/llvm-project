@@ -948,8 +948,5 @@ define amdgpu_kernel void @sext_in_reg_i2_bfe_offset_1(ptr addrspace(1) %out, pt
   ret void
 }
 
-declare i32 @llvm.amdgcn.sbfe.i32(i32, i32, i32) #1
-declare i64 @llvm.amdgcn.sbfe.i64(i64, i32, i32) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

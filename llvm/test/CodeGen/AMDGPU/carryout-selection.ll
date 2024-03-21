@@ -2938,18 +2938,6 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
   ret void
 }
 
-
-
-declare { i64, i1 } @llvm.uadd.with.overflow.i64(i64, i64) #1
-
-declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32) #1
-
-declare { i64, i1 } @llvm.usub.with.overflow.i64(i64, i64) #1
-
-declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32) #1
-
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 

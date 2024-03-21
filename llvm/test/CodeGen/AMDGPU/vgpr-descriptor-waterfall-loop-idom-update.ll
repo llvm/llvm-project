@@ -80,6 +80,4 @@ bb0:
   br label %bb0
 }
 
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg) #0
-
 attributes #0 = { nounwind memory(argmem: write) }

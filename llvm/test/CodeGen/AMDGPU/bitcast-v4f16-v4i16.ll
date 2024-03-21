@@ -27,9 +27,5 @@ define amdgpu_ps void @test_to_half(ptr addrspace(8) inreg, <4 x i16> inreg) #0 
   ret void
 }
 
-declare <4 x half> @llvm.amdgcn.wqm.v4f16(<4 x half>) #1
-declare <4 x i16> @llvm.amdgcn.wqm.v4i16(<4 x i16>) #1
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32, i32) #0
-
 attributes #0 = { nounwind memory(argmem: write) }
 attributes #1 = { nounwind readonly }

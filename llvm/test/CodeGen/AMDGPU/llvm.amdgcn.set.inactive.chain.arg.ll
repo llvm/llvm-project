@@ -781,11 +781,6 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_last_vgpr(ptr addrspace(1) %
   store i32 %wwm, ptr addrspace(1) %out
   ret void
 }
-
-declare i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32, i32) #0
-declare i64 @llvm.amdgcn.set.inactive.chain.arg.i64(i64, i64) #0
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg)
-declare i32 @llvm.amdgcn.strict.wwm.i32(i32)
 declare amdgpu_gfx void @gfx_callee(<12 x i32>)
 
 attributes #0 = { convergent readnone willreturn nocallback nofree}

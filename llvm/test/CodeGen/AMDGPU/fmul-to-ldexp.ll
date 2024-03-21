@@ -8,14 +8,6 @@
 
 ; Test fmul by power of 2 which is better emitted as ldexp
 
-declare half @llvm.fabs.f16(half)
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>)
-declare float @llvm.fabs.f32(float)
-declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
-declare double @llvm.fabs.f64(double)
-declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
-declare i32 @llvm.amdgcn.readfirstlane(i32)
-
 define float @v_mul_42_f32(float %x) {
 ; GCN-LABEL: v_mul_42_f32:
 ; GCN:       ; %bb.0:
@@ -7245,9 +7237,5 @@ define double @v_mul_fabs_8_f64(double %x) {
   %mul = fmul double %fabs.x, 8.0
   ret double %mul
 }
-
-declare half @llvm.experimental.constrained.fmul.f16(half, half, metadata, metadata)
-declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
-declare double @llvm.experimental.constrained.fmul.f64(double, double, metadata, metadata)
 
 attributes #0 = { strictfp }

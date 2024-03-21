@@ -3,15 +3,6 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -o - < %s | FileCheck %s --check-prefixes=GFX,GFX8
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -o - < %s | FileCheck %s --check-prefixes=GFX,GFX10
 
-declare i16 @llvm.abs.i16(i16, i1)
-declare i32 @llvm.abs.i32(i32, i1)
-declare i64 @llvm.abs.i64(i64, i1)
-declare <2 x i8> @llvm.abs.v2i8(<2 x i8>, i1)
-declare <3 x i8> @llvm.abs.v3i8(<3 x i8>, i1)
-declare <2 x i16> @llvm.abs.v2i16(<2 x i16>, i1)
-declare <3 x i16> @llvm.abs.v3i16(<3 x i16>, i1)
-declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)
-
 define amdgpu_cs i16 @abs_sgpr_i16(i16 inreg %arg) {
 ; GFX-LABEL: abs_sgpr_i16:
 ; GFX:       ; %bb.0:

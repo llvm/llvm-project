@@ -472,6 +472,3 @@ entry:
   store float 0.000000e+00, ptr %p3, align 4
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare void @llvm.amdgcn.s.barrier()

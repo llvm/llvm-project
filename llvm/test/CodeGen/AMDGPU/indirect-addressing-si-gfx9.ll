@@ -83,7 +83,4 @@ define amdgpu_kernel void @insertelement_with_call(ptr addrspace(1) %ptr, i32 %i
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare void @llvm.amdgcn.s.barrier() #2
-
 attributes #0 = { nounwind }

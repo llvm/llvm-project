@@ -11,12 +11,6 @@
 ; beneficial even without fp32 denormals, but they do require no-infs-fp-math
 ; for correctness.
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare double @llvm.fabs.f64(double) #0
-declare double @llvm.fma.f64(double, double, double) #0
-declare float @llvm.fma.f32(float, float, float) #0
-declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>) #0
-
 ; (fadd (fmul x, y), z) -> (fma x, y, z)
 define amdgpu_kernel void @combine_to_fma_f64_0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
 ; SI-LABEL: combine_to_fma_f64_0:

@@ -586,9 +586,6 @@ define float @v_mul_legacy_f32_2.0_swap(float %b) {
   ret float %result
 }
 
-declare float @llvm.fabs.f32(float) #0
-declare float @llvm.amdgcn.fmul.legacy(float, float) #1
-
 attributes #0 = { nounwind readnone speculatable willreturn }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { "denormal-fp-math-f32"="preserve-sign" }

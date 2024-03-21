@@ -4,9 +4,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-FAKE16 %s
 
-declare half @llvm.floor.f16(half %a)
-declare <2 x half> @llvm.floor.v2f16(<2 x half> %a)
-
 define amdgpu_kernel void @floor_f16(
 ; SI-LABEL: floor_f16:
 ; SI:       ; %bb.0: ; %entry

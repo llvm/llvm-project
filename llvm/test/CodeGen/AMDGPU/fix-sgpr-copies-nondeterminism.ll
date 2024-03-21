@@ -48,5 +48,3 @@ bb4:
   call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %i10, <4 x i32> zeroinitializer, i32 0, i32 0, i32 0, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32 immarg)

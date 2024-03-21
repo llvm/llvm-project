@@ -23,8 +23,3 @@ if.then.i62.i:                                    ; preds = %if.else.i, %if.then
   call void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) align 4 undef, ptr addrspace(5) align 16 %alloca, i64 128, i1 false)
   ret void
 }
-
-declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture readonly, i8, i32, i1 immarg)
-declare void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg)
-
-declare void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg)

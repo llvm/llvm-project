@@ -3358,7 +3358,5 @@ define i32 @mul_pow2_plus_1(i32 %val) {
   ret i32 %mul
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone}

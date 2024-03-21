@@ -38,12 +38,9 @@ define amdgpu_kernel void @floor_v4f32(ptr addrspace(1) %out, <4 x float> %in) {
 }
 
 ; Function Attrs: nounwind readonly
-declare float @llvm.floor.f32(float) #0
 
 ; Function Attrs: nounwind readonly
-declare <2 x float> @llvm.floor.v2f32(<2 x float>) #0
 
 ; Function Attrs: nounwind readonly
-declare <4 x float> @llvm.floor.v4f32(<4 x float>) #0
 
 attributes #0 = { nounwind readnone }

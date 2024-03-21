@@ -4,8 +4,6 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
 ; FUNC-LABEL: {{^}}u32_mad24:
 ; EG: MULLO_INT
 ; SI: s_mul_i32

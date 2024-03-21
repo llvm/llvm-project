@@ -4,14 +4,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -enable-var-scope --check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -enable-var-scope --check-prefixes=GFX11 %s
 
-declare half @llvm.copysign.f16(half, half) #0
-declare float @llvm.copysign.f32(float, float) #0
-declare double @llvm.copysign.f64(double, double) #0
-declare <2 x half> @llvm.copysign.v2f16(<2 x half>, <2 x half>) #0
-declare <3 x half> @llvm.copysign.v3f16(<3 x half>, <3 x half>) #0
-declare <4 x half> @llvm.copysign.v4f16(<4 x half>, <4 x half>) #0
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 define amdgpu_kernel void @s_copysign_f16(ptr addrspace(1) %arg_out, half %mag, half %sign) {
 ; SI-LABEL: s_copysign_f16:
 ; SI:       ; %bb.0:

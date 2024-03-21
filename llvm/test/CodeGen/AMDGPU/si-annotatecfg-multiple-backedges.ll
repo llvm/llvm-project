@@ -58,4 +58,3 @@ loop_exit:
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare i32 @llvm.amdgcn.workitem.id.x()

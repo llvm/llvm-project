@@ -197,6 +197,3 @@ define amdgpu_kernel void @cos_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
   store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
-
-declare half @llvm.cos.f16(half %a)
-declare <2 x half> @llvm.cos.v2f16(<2 x half> %a)

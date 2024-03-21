@@ -850,4 +850,3 @@ entry:
 }
 
 !0 = !{i32 1}
-declare i32 @llvm.amdgcn.workitem.id.x()

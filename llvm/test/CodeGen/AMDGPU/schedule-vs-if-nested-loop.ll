@@ -126,5 +126,3 @@ ENDIF19:                                          ; preds = %ENDIF16
   %97 = fadd float %temp4.0, 1.000000e+00
   br label %LOOP
 }
-
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

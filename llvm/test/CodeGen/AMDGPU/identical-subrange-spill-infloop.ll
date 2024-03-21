@@ -452,13 +452,6 @@ bb50:                                             ; preds = %bb50, %bb48
   br label %bb50
 }
 
-declare i64 @llvm.amdgcn.s.getpc() #1
-declare <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #2
-declare float @llvm.amdgcn.image.sample.lz.2d.f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #2
-declare <2 x float> @llvm.amdgcn.image.sample.lz.2d.v2f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #2
-declare void @llvm.amdgcn.raw.buffer.store.v3i32(<3 x i32>, <4 x i32>, i32, i32, i32 immarg) #3
-declare void @llvm.amdgcn.raw.buffer.store.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32 immarg) #3
-
 attributes #0 = { "amdgpu-waves-per-eu"="10,10" }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(read) }

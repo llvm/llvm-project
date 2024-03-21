@@ -20,6 +20,3 @@ define amdgpu_kernel void @bfe_divergent(i32 %val, ptr addrspace(1) %out) {
   ret void
 }
 
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-

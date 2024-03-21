@@ -2,17 +2,6 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -global-isel=0 -verify-machineinstrs | FileCheck %s -check-prefix=GFX12-SDAG
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -global-isel=1 -verify-machineinstrs | FileCheck %s -check-prefix=GFX12-GISEL
 
-declare <2 x half> @llvm.amdgcn.struct.buffer.atomic.fadd.v2f16(<2 x half>, <4 x i32>, i32, i32, i32, i32 immarg)
-declare <2 x bfloat> @llvm.amdgcn.struct.buffer.atomic.fadd.v2bf16(<2 x bfloat>, <4 x i32>, i32, i32, i32, i32 immarg)
-declare <2 x half> @llvm.amdgcn.raw.buffer.atomic.fadd.v2f16(<2 x half>, <4 x i32>, i32, i32, i32)
-declare <2 x bfloat> @llvm.amdgcn.raw.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, <4 x i32> %rsrc, i32, i32, i32)
-declare <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1) %ptr, <2 x half> %data)
-declare <2 x i16> @llvm.amdgcn.global.atomic.fadd.v2bf16.p1(ptr addrspace(1) %ptr, <2 x i16> %data)
-declare <2 x half> @llvm.amdgcn.ds.fadd.v2f16(ptr addrspace(3) %ptr, <2 x half> %data, i32, i32, i1)
-declare <2 x i16> @llvm.amdgcn.ds.fadd.v2bf16(ptr addrspace(3) %ptr, <2 x i16> %data)
-declare <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p0.v2f16(ptr %ptr, <2 x half> %data)
-declare <2 x i16> @llvm.amdgcn.flat.atomic.fadd.v2bf16.p0(ptr %ptr, <2 x i16> %data)
-
 define amdgpu_kernel void @local_atomic_fadd_v2f16_noret(ptr addrspace(3) %ptr, <2 x half> %data) {
 ; GFX12-SDAG-LABEL: local_atomic_fadd_v2f16_noret:
 ; GFX12-SDAG:       ; %bb.0:

@@ -237,9 +237,3 @@ main_body:
   %unused = call <4 x bfloat> @llvm.amdgcn.image.atomic.pk.add.bf16.1d.v4bf16.v4bf16(<4 x bfloat> %data, i32 %s, <8 x i32> %rsrc, i32 0, i32 2)
   ret float 1.0
 }
-
-
-declare <2 x half> @llvm.amdgcn.image.atomic.pk.add.f16.1d.v2f16.v2f16(<2 x half>, i32, <8 x i32>, i32, i32)
-declare <4 x half> @llvm.amdgcn.image.atomic.pk.add.f16.1d.v4f16.v4f16(<4 x half>, i32, <8 x i32>, i32, i32)
-declare <2 x bfloat> @llvm.amdgcn.image.atomic.pk.add.bf16.1d.v2bf16.v2bf16(<2 x bfloat>, i32, <8 x i32>, i32, i32)
-declare <4 x bfloat> @llvm.amdgcn.image.atomic.pk.add.bf16.1d.v4bf16.v4bf16(<4 x bfloat>, i32, <8 x i32>, i32, i32)

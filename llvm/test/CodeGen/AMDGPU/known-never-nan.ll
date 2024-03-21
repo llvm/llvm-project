@@ -41,10 +41,4 @@ define float @fma_not_fmaxnm_maybe_nan(i32 %i1, i32 %i2, i32 %i3) #0 {
   ret float %val
 }
 
-declare float @llvm.fma.f32(float, float, float) nounwind readnone
-declare float @llvm.amdgcn.fmad.ftz.f32(float, float, float)
-
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float)
-declare half @llvm.canonicalize.f16(half)
-
 attributes #0 = { nounwind "no-signed-zeros-fp-math"="true" "target-features"="+mad-mac-f32-insts" }

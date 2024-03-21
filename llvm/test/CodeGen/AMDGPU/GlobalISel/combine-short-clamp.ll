@@ -3,9 +3,6 @@
 ; RUN: llc -global-isel -mcpu=gfx1010 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10 %s
 ; RUN: llc -global-isel -mcpu=gfx1100 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10 %s
 
-declare i64 @llvm.smax.i64(i64, i64)
-declare i64 @llvm.smin.i64(i64, i64)
-
 ; GCN-LABEL: {{^}}v_clamp_i64_i16
 ; GFX678: v_cvt_pk_i16_i32_e32 [[A:v[0-9]+]], [[A]], [[B:v[0-9]+]]
 ; GFX9: v_cvt_pk_i16_i32 [[A:v[0-9]+]], [[A]], [[B:v[0-9]+]]

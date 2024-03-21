@@ -23,5 +23,3 @@ entry:
   store volatile i64 %break, ptr addrspace(1) undef
   ret void
 }
-
-declare i64 @llvm.amdgcn.if.break.i64(i1, i64)

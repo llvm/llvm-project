@@ -81,14 +81,3 @@ main_body:
   ret <3 x float> %data
 }
 
-declare <3 x float> @llvm.amdgcn.buffer.load.format.v3f32(<4 x i32>, i32, i32, i1, i1) #0
-declare <3 x float> @llvm.amdgcn.buffer.load.v3f32(<4 x i32>, i32, i32, i1, i1) #0
-declare <3 x float> @llvm.amdgcn.raw.buffer.load.format.v3f32(<4 x i32>, i32, i32, i32) #0
-declare <3 x float> @llvm.amdgcn.raw.buffer.load.v3f32(<4 x i32>, i32, i32, i32) #0
-declare <3 x float> @llvm.amdgcn.struct.buffer.load.format.v3f32(<4 x i32>, i32, i32, i32, i32) #0
-declare <3 x float> @llvm.amdgcn.struct.buffer.load.v3f32(<4 x i32>, i32, i32, i32, i32) #0
-declare <3 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v3f32(ptr addrspace(8), i32, i32, i32) #0
-declare <3 x float> @llvm.amdgcn.raw.ptr.buffer.load.v3f32(ptr addrspace(8), i32, i32, i32) #0
-declare <3 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v3f32(ptr addrspace(8), i32, i32, i32, i32) #0
-declare <3 x float> @llvm.amdgcn.struct.ptr.buffer.load.v3f32(ptr addrspace(8), i32, i32, i32, i32) #0
-

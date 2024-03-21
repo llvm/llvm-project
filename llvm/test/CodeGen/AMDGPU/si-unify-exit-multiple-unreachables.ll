@@ -2,9 +2,6 @@
 ; RUN: llc < %s -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -stop-after=amdgpu-unify-divergent-exit-nodes | FileCheck %s --check-prefix=UNIFY
 ; RUN: llc < %s -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -verify-machineinstrs | FileCheck %s
 
-declare void @llvm.trap()
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 define amdgpu_kernel void @kernel(i32 %a, ptr addrspace(1) %x, i32 noundef %n) {
 ; This used to bypass the structurization process because structurizer is unable to
 ; handle multiple-exits CFG. This should be correctly structurized.

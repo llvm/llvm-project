@@ -674,9 +674,4 @@ entry:
   ret float %add
 }
 
-declare float @llvm.fmuladd.f32(float, float, float) #0
-declare float @llvm.fma.f32(float, float, float) #0
-declare half @llvm.fmuladd.f16(half, half, half) #0
-declare half @llvm.fma.f16(half, half, half) #0
-
 attributes #0 = { nounwind readnone speculatable }

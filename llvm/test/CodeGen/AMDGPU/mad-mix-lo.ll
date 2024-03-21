@@ -2504,32 +2504,5 @@ define half @mixlo_fptrunc_neg_src_mod(float %a, float %b) #0 {
   ret half %trunc
 }
 
-declare float @llvm.fabs.f32(float) #1
-
-declare half @llvm.minnum.f16(half, half) #1
-declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) #1
-declare <3 x half> @llvm.minnum.v3f16(<3 x half>, <3 x half>) #1
-declare <4 x half> @llvm.minnum.v4f16(<4 x half>, <4 x half>) #1
-
-declare half @llvm.maxnum.f16(half, half) #1
-declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>) #1
-declare <3 x half> @llvm.maxnum.v3f16(<3 x half>, <3 x half>) #1
-declare <4 x half> @llvm.maxnum.v4f16(<4 x half>, <4 x half>) #1
-
-declare float @llvm.minnum.f32(float, float) #1
-declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>) #1
-declare <3 x float> @llvm.minnum.v3f32(<3 x float>, <3 x float>) #1
-declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>) #1
-
-declare float @llvm.maxnum.f32(float, float) #1
-declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>) #1
-declare <3 x float> @llvm.maxnum.v3f32(<3 x float>, <3 x float>) #1
-declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>) #1
-
-declare float @llvm.fmuladd.f32(float, float, float) #1
-declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>) #1
-declare <3 x float> @llvm.fmuladd.v3f32(<3 x float>, <3 x float>, <3 x float>) #1
-declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) #1
-
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone speculatable }

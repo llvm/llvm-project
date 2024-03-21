@@ -384,5 +384,3 @@ bb6:
   tail call void @llvm.amdgcn.s.sleep(i32 0)
   br i1 %tmp3, label %bb1, label %bb2
 }
-
-declare void @llvm.amdgcn.s.sleep(i32)

@@ -33,5 +33,3 @@ define amdgpu_ps <2 x half> @flat_atomic_fadd_v2f16_rtn_intrinsic(ptr %ptr, <2 x
   %ret = call <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p1.v2f16(ptr %ptr, <2 x half> %data)
   ret <2 x half> %ret
 }
-
-declare <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p1.v2f16(ptr, <2 x half>)

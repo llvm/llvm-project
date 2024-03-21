@@ -55,7 +55,5 @@ define amdgpu_kernel void @test_aligned_to_eight(i64 %eight)  {
 ; CHECK-NEXT:         .kernarg_segment_size: 264
 ; CHECK-LABEL:        .name:           test_aligned_to_eight
 
-declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

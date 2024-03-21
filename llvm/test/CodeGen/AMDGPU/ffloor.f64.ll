@@ -2,14 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
 
-declare double @llvm.fabs.f64(double %Val)
-declare double @llvm.floor.f64(double) nounwind readnone
-declare <2 x double> @llvm.floor.v2f64(<2 x double>) nounwind readnone
-declare <3 x double> @llvm.floor.v3f64(<3 x double>) nounwind readnone
-declare <4 x double> @llvm.floor.v4f64(<4 x double>) nounwind readnone
-declare <8 x double> @llvm.floor.v8f64(<8 x double>) nounwind readnone
-declare <16 x double> @llvm.floor.v16f64(<16 x double>) nounwind readnone
-
 ; FUNC-LABEL: {{^}}ffloor_f64:
 ; CI: v_floor_f64_e32
 ; SI: v_fract_f64_e32

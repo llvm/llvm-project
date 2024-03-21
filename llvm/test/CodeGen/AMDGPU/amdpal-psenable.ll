@@ -28,7 +28,4 @@ define amdgpu_ps void @amdpal_psenable(i32 inreg, i32 inreg, i32 inreg, i32 inre
   ret void
 }
 
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #2
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #2
-
 attributes #6 = { nounwind "InitialPSInputAddr"="2" }

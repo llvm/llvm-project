@@ -2,13 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI --check-prefix=FUNC %s
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG --check-prefix=FUNC %s
 
-declare float @llvm.trunc.f32(float) nounwind readnone
-declare <2 x float> @llvm.trunc.v2f32(<2 x float>) nounwind readnone
-declare <3 x float> @llvm.trunc.v3f32(<3 x float>) nounwind readnone
-declare <4 x float> @llvm.trunc.v4f32(<4 x float>) nounwind readnone
-declare <8 x float> @llvm.trunc.v8f32(<8 x float>) nounwind readnone
-declare <16 x float> @llvm.trunc.v16f32(<16 x float>) nounwind readnone
-
 ; FUNC-LABEL: {{^}}ftrunc_f32:
 ; EG: TRUNC
 ; SI: v_trunc_f32_e32

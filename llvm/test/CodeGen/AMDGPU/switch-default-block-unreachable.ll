@@ -54,8 +54,6 @@ define void @test(i1 %c0) #1 {
   exit:                                             ; preds = %switch.blk
     ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @func(i32)#0
 
 attributes #0 = { nounwind readnone }

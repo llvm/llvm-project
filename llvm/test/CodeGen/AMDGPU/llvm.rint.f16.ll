@@ -4,9 +4,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX89,GFX9 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11 %s
 
-declare half @llvm.rint.f16(half %a)
-declare <2 x half> @llvm.rint.v2f16(<2 x half> %a)
-
 define amdgpu_kernel void @rint_f16(
 ; SI-LABEL: rint_f16:
 ; SI:       ; %bb.0: ; %entry

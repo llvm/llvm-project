@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -global-isel=0 < %s | FileCheck -check-prefixes=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -global-isel=1 < %s | FileCheck -check-prefixes=GCN %s
 
-declare void @llvm.amdgcn.s.sleep.var(i32)
-
 define void @test_s_sleep_var1(i32 %arg) {
 ; GCN-LABEL: test_s_sleep_var1:
 ; GCN:       ; %bb.0:

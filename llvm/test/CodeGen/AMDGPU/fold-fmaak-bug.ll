@@ -1,8 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefix GFX10
 
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float)
-declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg)
-
 ; Check that this constant is not folded into the v_fmaak_f32 instruction.
 ; GFX10-LABEL: _amdgpu_ps_main:
 ; GFX10: v_mov_b32_e32 v1, 0x40490fdb

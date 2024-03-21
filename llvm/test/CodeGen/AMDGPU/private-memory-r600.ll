@@ -3,8 +3,6 @@
 ; RUN: opt -S -mtriple=r600-unknown-unknown -mcpu=redwood -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=OPT %s
 target datalayout = "A5"
 
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
-
 ; FUNC-LABEL: {{^}}mova_same_clause:
 
 ; R600: LDS_WRITE

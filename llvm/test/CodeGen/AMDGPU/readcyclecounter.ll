@@ -11,8 +11,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 
-declare i64 @llvm.readcyclecounter() #0
-
 ; GCN-LABEL: {{^}}test_readcyclecounter:
 ; MEMTIME-DAG: s_memtime s{{\[[0-9]+:[0-9]+\]}}
 ; GCN-DAG:     s_load_{{dwordx2|b64}}

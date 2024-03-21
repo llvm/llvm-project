@@ -472,8 +472,3 @@ main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.3d.v4f32.f32.f32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %drdh, float %dsdv, float %dtdv, float %drdv, float %s, float %t, float %r, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
 }
-
-declare <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32.f32(i32, float, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.3d.v4f32.f32.f32(i32, float, float, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.3d.v4f32.f32.f32(i32, float, float, float, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.3d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)

@@ -857,6 +857,3 @@ bb:
   %umulo = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %i, i64 4)
   ret { i64, i1 } %umulo
 }
-
-declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64)
-declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64)

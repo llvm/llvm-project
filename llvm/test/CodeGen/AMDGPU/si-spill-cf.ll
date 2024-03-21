@@ -492,13 +492,5 @@ ELSE2824:                                         ; preds = %ELSE2821
   br label %ENDIF2795
 }
 
-declare float @llvm.floor.f32(float) #1
-declare float @llvm.sqrt.f32(float) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

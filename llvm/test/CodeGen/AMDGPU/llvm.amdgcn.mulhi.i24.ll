@@ -11,5 +11,3 @@ define i32 @basic(i32 %a, i32 %b) {
   %mul = call i32 @llvm.amdgcn.mulhi.i24(i32 %a, i32 %b)
   ret i32 %mul
 }
-
-declare i32 @llvm.amdgcn.mulhi.i24(i32, i32)

@@ -394,10 +394,6 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-declare void @llvm.amdgcn.sched.group.barrier(i32, i32, i32) #1
-declare <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half>, <16 x half> , <16 x half>, i1 immarg) #1
-
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="1,32" }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readnone speculatable }

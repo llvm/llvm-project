@@ -61,7 +61,4 @@ main_body:
   ret float 0.0
 }
 
-declare void @llvm.amdgcn.kill(i1) #1
-declare i1 @llvm.amdgcn.wqm.vote(i1)
-
 attributes #1 = { nounwind }

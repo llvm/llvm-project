@@ -1506,6 +1506,4 @@ define amdgpu_ps void @test_minus_2047(i32 inreg %var.mode) {
 ;   ret void
 ; }
 
-declare void @llvm.amdgcn.s.setreg(i32 immarg, i32) #0
-
 attributes #0 = { nounwind }

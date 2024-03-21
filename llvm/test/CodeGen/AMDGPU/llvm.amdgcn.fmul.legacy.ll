@@ -102,9 +102,6 @@ define amdgpu_kernel void @test_mad_legacy_fneg_f32(ptr addrspace(1) %out, float
   ret void
 }
 
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.amdgcn.fmul.legacy(float, float) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "denormal-fp-math"="preserve-sign" }

@@ -362,10 +362,5 @@ main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 16777212, i32 0, i32 63, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.raw.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.tbuffer.store.v2i32(<2 x i32>, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.tbuffer.store.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) #0
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

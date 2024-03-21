@@ -170,9 +170,6 @@ define amdgpu_kernel void @sin_v4f32(ptr addrspace(1) %out, <4 x float> %vx) #1 
    ret void
 }
 
-declare float @llvm.sin.f32(float) #0
-declare <4 x float> @llvm.sin.v4f32(<4 x float>) #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind "unsafe-fp-math"="false" }
 attributes #2 = { nounwind "unsafe-fp-math"="true" }

@@ -1371,19 +1371,6 @@ entry:
   store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
-declare void @llvm.amdgcn.s.barrier() #1
-declare void @llvm.amdgcn.s.barrier.wait(i16) #1
-declare void @llvm.amdgcn.s.barrier.signal(i32) #1
-declare void @llvm.amdgcn.s.barrier.signal.var(i32) #1
-declare i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32) #1
-declare i1 @llvm.amdgcn.s.barrier.signal.isfirst.var(i32) #1
-declare void @llvm.amdgcn.s.barrier.init(i32, i32) #1
-declare void @llvm.amdgcn.s.barrier.join(i32) #1
-declare i1 @llvm.amdgcn.s.barrier.leave() #1
-declare void @llvm.amdgcn.s.wakeup.barrier(i32) #1
-declare i32 @llvm.amdgcn.s.get.barrier.state(i32) #1
-declare i32 @llvm.amdgcn.s.get.barrier.state.var(i32) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
 
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }

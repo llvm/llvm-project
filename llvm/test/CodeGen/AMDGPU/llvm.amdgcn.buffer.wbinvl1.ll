@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
-declare void @llvm.amdgcn.buffer.wbinvl1() #0
-
 ; GCN-LABEL: {{^}}test_buffer_wbinvl1:
 ; GCN-NEXT: ; %bb.0:
 ; SI-NEXT: buffer_wbinvl1 ; encoding: [0x00,0x00,0xc4,0xe1,0x00,0x00,0x00,0x00]

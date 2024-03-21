@@ -62,7 +62,5 @@ bb:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 attributes #0 = { "amdgpu-max-memory-clause"="1" }
 

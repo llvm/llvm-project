@@ -189,12 +189,6 @@ define amdgpu_kernel void @get_work_group_size_z_reqd(ptr addrspace(1) %out) #0 
   ret void
 }
 
-
-declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #1
-declare i32 @llvm.amdgcn.workgroup.id.x() #1
-declare i32 @llvm.amdgcn.workgroup.id.y() #1
-declare i32 @llvm.amdgcn.workgroup.id.z() #1
-
 !llvm.module.flags = !{!1}
 
 attributes #0 = { nounwind "uniform-work-group-size"="true" }

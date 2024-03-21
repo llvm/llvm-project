@@ -561,6 +561,3 @@ entry:
   %res = extractelement <4 x half> %rdx.minmax.select3, i32 0
   ret half %res
 }
-
-declare <4 x half> @llvm.minnum.v4f16(<4 x half>, <4 x half>)
-declare <4 x half> @llvm.maxnum.v4f16(<4 x half>, <4 x half>)

@@ -45,5 +45,3 @@ endif:
   %r = bitcast i32 %v to float
   ret float %r
 }
-
-declare i32 @llvm.amdgcn.ds.ordered.swap(ptr addrspace(2) nocapture, i32, i32, i32, i1, i32, i1, i1)

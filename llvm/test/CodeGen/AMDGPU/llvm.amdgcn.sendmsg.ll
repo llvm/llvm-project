@@ -161,7 +161,4 @@ end:
   ret void
 }
 
-declare void @llvm.amdgcn.s.sendmsg(i32, i32) #0
-declare void @llvm.amdgcn.s.sendmsghalt(i32, i32) #0
-
 attributes #0 = { nounwind }

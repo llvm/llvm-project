@@ -3,9 +3,6 @@
 
 ; GFX908: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(s32) = G_AMDGPU_BUFFER_ATOMIC_FADD %{{[0-9]+}}:vgpr, %{{[0-9]+}}:sgpr(<4 x s32>), %{{[0-9]+}}:vgpr(s32), %{{[0-9]+}}:vgpr, %{{[0-9]+}}:sgpr, 0, 0, -1 :: (volatile dereferenceable load store (s32) on %ir.rsrc.load, align 1, addrspace 8) (in function: buffer_atomic_add_f32_rtn)
 
-declare float @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f32(float, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare <2 x half> @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.v2f16(<2 x half>, ptr addrspace(8), i32, i32, i32, i32 immarg)
-
 
 ; GFX90A-LABEL: {{^}}buffer_atomic_add_f32_rtn:
 ; GFX90A: buffer_atomic_add_f32 v{{[0-9]+}}, v[{{[0-9:]+}}], s[{{[0-9:]+}}], s{{[0-9]+}} idxen offen glc

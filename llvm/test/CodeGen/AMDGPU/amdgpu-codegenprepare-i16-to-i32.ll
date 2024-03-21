@@ -678,8 +678,6 @@ define amdgpu_kernel void @select_sle_i3(i3 %a, i3 %b) {
   store volatile i3 %sel, ptr addrspace(1) undef
   ret void
 }
-
-declare i3 @llvm.bitreverse.i3(i3)
 define amdgpu_kernel void @bitreverse_i3(i3 %a) {
 ; SI-LABEL: @bitreverse_i3(
 ; SI-NEXT:    [[BREV:%.*]] = call i3 @llvm.bitreverse.i3(i3 [[A:%.*]])
@@ -1436,8 +1434,6 @@ define amdgpu_kernel void @select_sle_i16(i16 %a, i16 %b) {
   ret void
 }
 
-declare i16 @llvm.bitreverse.i16(i16)
-
 define amdgpu_kernel void @bitreverse_i16(i16 %a) {
 ; SI-LABEL: @bitreverse_i16(
 ; SI-NEXT:    [[BREV:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[A:%.*]])
@@ -2133,8 +2129,6 @@ define amdgpu_kernel void @select_sle_3xi15(<3 x i15> %a, <3 x i15> %b) {
   store volatile <3 x i15> %sel, ptr addrspace(1) undef
   ret void
 }
-
-declare <3 x i15> @llvm.bitreverse.v3i15(<3 x i15>)
 define amdgpu_kernel void @bitreverse_3xi15(<3 x i15> %a) {
 ; SI-LABEL: @bitreverse_3xi15(
 ; SI-NEXT:    [[BREV:%.*]] = call <3 x i15> @llvm.bitreverse.v3i15(<3 x i15> [[A:%.*]])
@@ -2830,8 +2824,6 @@ define amdgpu_kernel void @select_sle_3xi16(<3 x i16> %a, <3 x i16> %b) {
   store volatile <3 x i16> %sel, ptr addrspace(1) undef
   ret void
 }
-
-declare <3 x i16> @llvm.bitreverse.v3i16(<3 x i16>)
 
 define amdgpu_kernel void @bitreverse_3xi16(<3 x i16> %a) {
 ; SI-LABEL: @bitreverse_3xi16(

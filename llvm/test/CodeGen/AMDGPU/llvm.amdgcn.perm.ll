@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -global-isel -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare i32 @llvm.amdgcn.perm(i32, i32, i32) #0
-
 ; GCN-LABEL: {{^}}v_perm_b32_v_v_v:
 ; GCN: v_perm_b32 v{{[0-9]+}}, v0, v1, v2
 define amdgpu_ps void @v_perm_b32_v_v_v(i32 %src1, i32 %src2, i32 %src3, ptr addrspace(1) %out) #1 {

@@ -22,5 +22,3 @@ define amdgpu_kernel void @ds_ordered_add_4dw(ptr addrspace(2) inreg %gds, ptr a
   store i32 %val, ptr addrspace(1) %out
   ret void
 }
-
-declare i32 @llvm.amdgcn.ds.ordered.add(ptr addrspace(2) nocapture, i32, i32, i32, i1, i32, i1, i1)

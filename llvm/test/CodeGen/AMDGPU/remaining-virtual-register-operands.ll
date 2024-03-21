@@ -24,9 +24,6 @@ define amdgpu_kernel void @alloc_failure_with_split_vregs(float %v0, float %v1) 
   ret void
 }
 
-declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>, i32 immarg, i32 immarg, i32 immarg) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
 attributes #0 = { "amdgpu-waves-per-eu"="10,10" }
 attributes #1 = { convergent nounwind readnone willreturn }
 attributes #2 = { nounwind readnone speculatable willreturn }

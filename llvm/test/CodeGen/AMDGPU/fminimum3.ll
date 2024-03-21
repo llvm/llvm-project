@@ -91,8 +91,3 @@ define amdgpu_kernel void @no_fminimum3_olt_0_f64(ptr addrspace(1) %out, ptr add
   store double %f1, ptr addrspace(1) %out, align 4
   ret void
 }
-
-declare double @llvm.minimum.f64(double, double)
-declare float @llvm.minimum.f32(float, float)
-declare half @llvm.minimum.f16(half, half)
-declare <2 x half> @llvm.minimum.v2f16(<2 x half>, <2 x half>)

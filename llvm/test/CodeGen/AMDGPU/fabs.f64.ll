@@ -1,11 +1,6 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
 declare double @fabs(double) readnone
-declare double @llvm.fabs.f64(double) readnone
-declare <2 x double> @llvm.fabs.v2f64(<2 x double>) readnone
-declare <4 x double> @llvm.fabs.v4f64(<4 x double>) readnone
 
 ; FUNC-LABEL: {{^}}v_fabs_f64:
 ; SI: v_and_b32

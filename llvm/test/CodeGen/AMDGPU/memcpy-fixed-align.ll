@@ -54,6 +54,4 @@ define void @memcpy_fixed_align(ptr addrspace(5)  %dst, ptr addrspace(1) %src) {
   ret void
 }
 
-declare void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64, i1 immarg) #0
-
 attributes #0 = { argmemonly nounwind willreturn }

@@ -75,7 +75,3 @@ entry:
   tail call void @llvm.memcpy.p0.p0.i32(ptr %d, ptr %s, i32 %N8, i1 false)
   ret void
 }
-
-declare void @llvm.lifetime.start.p5(i64 immarg, ptr addrspace(5) nocapture)
-declare void @llvm.lifetime.end.p5(i64 immarg, ptr addrspace(5) nocapture)
-declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1)

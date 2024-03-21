@@ -143,16 +143,4 @@ entry:
   ret void
 }
 
-declare i32 @llvm.r600.read.ngroups.x() #0
-declare i32 @llvm.r600.read.ngroups.y() #0
-declare i32 @llvm.r600.read.ngroups.z() #0
-
-declare i32 @llvm.r600.read.global.size.x() #0
-declare i32 @llvm.r600.read.global.size.y() #0
-declare i32 @llvm.r600.read.global.size.z() #0
-
-declare i32 @llvm.r600.read.local.size.x() #0
-declare i32 @llvm.r600.read.local.size.y() #0
-declare i32 @llvm.r600.read.local.size.z() #0
-
 attributes #0 = { readnone }

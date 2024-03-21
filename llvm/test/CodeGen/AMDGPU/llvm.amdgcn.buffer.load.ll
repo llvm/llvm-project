@@ -466,11 +466,4 @@ define amdgpu_ps float @no_fold_fi_reg_soffset(<4 x i32> inreg %rsrc, i32 inreg 
   ret float %ret.val
 }
 
-declare float @llvm.amdgcn.buffer.load.f32(<4 x i32>, i32, i32, i1, i1) #0
-declare <2 x float> @llvm.amdgcn.buffer.load.v2f32(<4 x i32>, i32, i32, i1, i1) #0
-declare <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32>, i32, i32, i1, i1) #0
-declare i8 @llvm.amdgcn.buffer.load.i8(<4 x i32>, i32, i32, i1, i1) #0
-declare i16 @llvm.amdgcn.buffer.load.i16(<4 x i32>, i32, i32, i1, i1) #0
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-
 attributes #0 = { nounwind readonly }

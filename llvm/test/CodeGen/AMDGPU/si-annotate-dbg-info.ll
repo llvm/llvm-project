@@ -93,7 +93,6 @@ exit:                                             ; preds = %loop
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 

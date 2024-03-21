@@ -740,10 +740,6 @@ done:
   ret void
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
-declare i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) nocapture, i1 immarg) #3
-declare i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) nocapture, i1 immarg) #3
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind argmemonly }

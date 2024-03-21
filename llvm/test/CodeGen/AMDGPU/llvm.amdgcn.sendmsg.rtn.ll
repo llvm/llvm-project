@@ -177,6 +177,3 @@ define amdgpu_kernel void @test_get_99999_i64(ptr addrspace(1) %out) {
   store i64 %ret, ptr addrspace(1) %out
   ret void
 }
-
-declare i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32)
-declare i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32)

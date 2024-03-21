@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
 ; FUNC-LABEL: {{^}}sextload_i1_to_i32_trunc_cmp_eq_0:
 ; SI: buffer_load_ubyte [[LOAD:v[0-9]+]]
 ; SI: v_and_b32_e32 [[TMP:v[0-9]+]], 1, [[LOAD]]

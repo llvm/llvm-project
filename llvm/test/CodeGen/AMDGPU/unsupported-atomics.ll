@@ -25,4 +25,3 @@ define fastcc void @fadd_test(ptr addrspace(1) nocapture noundef %0, float nound
   %3 = tail call float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) noundef %0, float noundef %1)
   ret void
 }
-declare float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) nocapture, float)

@@ -307,20 +307,5 @@ define amdgpu_ps void @raw_ptr_buffer_store_x1_offset_swizzled_not_merged(ptr ad
   ret void
 }
 
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8), i32, i32, i32) #1
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f16(half, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f16(<2 x half>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f16(<4 x half>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i16(<2 x i16>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4i16(<4 x i16>, ptr addrspace(8), i32, i32, i32) #0
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

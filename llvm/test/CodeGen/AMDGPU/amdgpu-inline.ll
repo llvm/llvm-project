@@ -170,8 +170,6 @@ bb.2:
   store float %c, ptr addrspace(1) %a
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare float @_Z3sinf(float) #1
 declare void @forbid_sroa(ptr addrspace(5) nocapture %p)
 

@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare <4 x i32> @llvm.amdgcn.mqsad.u32.u8(i64, i32, <4 x i32>) #0
-
 ; GCN-LABEL: {{^}}v_mqsad_u32_u8_inline_integer_immediate:
 ; GCN-DAG: v_mov_b32_e32 v0, v2
 ; GCN-DAG: v_mov_b32_e32 v1, v3

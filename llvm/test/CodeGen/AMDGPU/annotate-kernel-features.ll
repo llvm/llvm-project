@@ -2,21 +2,9 @@
 ; RUN: opt -S -mtriple=amdgcn-unknown-unknown -amdgpu-annotate-kernel-features < %s | FileCheck -check-prefixes=CHECK,AKF_CHECK %s
 ; RUN: opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-attributor < %s | FileCheck -check-prefixes=CHECK,ATTRIBUTOR_CHECK %s
 
-declare i32 @llvm.r600.read.tgid.x() #0
-declare i32 @llvm.r600.read.tgid.y() #0
-declare i32 @llvm.r600.read.tgid.z() #0
-
-declare i32 @llvm.r600.read.tidig.x() #0
-declare i32 @llvm.r600.read.tidig.y() #0
-declare i32 @llvm.r600.read.tidig.z() #0
-
-declare i32 @llvm.r600.read.local.size.x() #0
-declare i32 @llvm.r600.read.local.size.y() #0
-declare i32 @llvm.r600.read.local.size.z() #0
-
 define amdgpu_kernel void @use_tgid_x(ptr addrspace(1) %ptr) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@use_tgid_x
-; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.x()
 ; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; CHECK-NEXT:    ret void
@@ -28,13 +16,13 @@ define amdgpu_kernel void @use_tgid_x(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tgid_y(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_y
-; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; AKF_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.y()
 ; AKF_CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tgid_y
-; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR2:[0-9]+]] {
+; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.y()
 ; ATTRIBUTOR_CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; ATTRIBUTOR_CHECK-NEXT:    ret void
@@ -46,7 +34,7 @@ define amdgpu_kernel void @use_tgid_y(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @multi_use_tgid_y(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@multi_use_tgid_y
-; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.y()
 ; AKF_CHECK-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
 ; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
@@ -54,7 +42,7 @@ define amdgpu_kernel void @multi_use_tgid_y(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@multi_use_tgid_y
-; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR2]] {
+; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.y()
 ; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
@@ -70,7 +58,7 @@ define amdgpu_kernel void @multi_use_tgid_y(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tgid_x_y(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_y
-; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
 ; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
 ; AKF_CHECK-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -78,7 +66,7 @@ define amdgpu_kernel void @use_tgid_x_y(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_y
-; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR2]] {
+; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
 ; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -94,13 +82,13 @@ define amdgpu_kernel void @use_tgid_x_y(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tgid_z(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_z
-; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; AKF_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.z()
 ; AKF_CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tgid_z
-; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
+; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR2:[0-9]+]] {
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.z()
 ; ATTRIBUTOR_CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; ATTRIBUTOR_CHECK-NEXT:    ret void
@@ -112,7 +100,7 @@ define amdgpu_kernel void @use_tgid_z(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tgid_x_z(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_z
-; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
 ; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.z()
 ; AKF_CHECK-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -120,7 +108,7 @@ define amdgpu_kernel void @use_tgid_x_z(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_z
-; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3]] {
+; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR2]] {
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.z()
 ; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -136,7 +124,7 @@ define amdgpu_kernel void @use_tgid_x_z(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tgid_y_z(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_y_z
-; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.y()
 ; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.z()
 ; AKF_CHECK-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -144,7 +132,7 @@ define amdgpu_kernel void @use_tgid_y_z(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tgid_y_z
-; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR4:[0-9]+]] {
+; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.y()
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.z()
 ; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -160,7 +148,7 @@ define amdgpu_kernel void @use_tgid_y_z(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tgid_x_y_z(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_y_z
-; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
 ; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
 ; AKF_CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tgid.z()
@@ -170,7 +158,7 @@ define amdgpu_kernel void @use_tgid_x_y_z(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_y_z
-; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR4]] {
+; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3]] {
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tgid.z()
@@ -190,7 +178,7 @@ define amdgpu_kernel void @use_tgid_x_y_z(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tidig_x(ptr addrspace(1) %ptr) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@use_tidig_x
-; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.x()
 ; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; CHECK-NEXT:    ret void
@@ -202,13 +190,13 @@ define amdgpu_kernel void @use_tidig_x(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tidig_y(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tidig_y
-; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; AKF_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.y()
 ; AKF_CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tidig_y
-; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR5:[0-9]+]] {
+; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR4:[0-9]+]] {
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.y()
 ; ATTRIBUTOR_CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; ATTRIBUTOR_CHECK-NEXT:    ret void
@@ -220,13 +208,13 @@ define amdgpu_kernel void @use_tidig_y(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tidig_z(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tidig_z
-; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; AKF_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.z()
 ; AKF_CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tidig_z
-; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR6:[0-9]+]] {
+; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR5:[0-9]+]] {
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.z()
 ; ATTRIBUTOR_CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; ATTRIBUTOR_CHECK-NEXT:    ret void
@@ -238,7 +226,7 @@ define amdgpu_kernel void @use_tidig_z(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tidig_x_tgid_x(ptr addrspace(1) %ptr) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@use_tidig_x_tgid_x
-; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
 ; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.x()
 ; CHECK-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -254,7 +242,7 @@ define amdgpu_kernel void @use_tidig_x_tgid_x(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tidig_y_tgid_y(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tidig_y_tgid_y
-; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.y()
 ; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
 ; AKF_CHECK-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -262,7 +250,7 @@ define amdgpu_kernel void @use_tidig_y_tgid_y(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tidig_y_tgid_y
-; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR7:[0-9]+]] {
+; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR6:[0-9]+]] {
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.y()
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
 ; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -278,7 +266,7 @@ define amdgpu_kernel void @use_tidig_y_tgid_y(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tidig_x_y_z(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tidig_x_y_z
-; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
 ; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tidig.y()
 ; AKF_CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tidig.z()
@@ -288,7 +276,7 @@ define amdgpu_kernel void @use_tidig_x_y_z(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tidig_x_y_z
-; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR8:[0-9]+]] {
+; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR7:[0-9]+]] {
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tidig.y()
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tidig.z()
@@ -308,7 +296,7 @@ define amdgpu_kernel void @use_tidig_x_y_z(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_all_workitems(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_all_workitems
-; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
 ; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tidig.y()
 ; AKF_CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tidig.z()
@@ -324,7 +312,7 @@ define amdgpu_kernel void @use_all_workitems(ptr addrspace(1) %ptr) #1 {
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_all_workitems
-; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR9:[0-9]+]] {
+; ATTRIBUTOR_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR8:[0-9]+]] {
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tidig.y()
 ; ATTRIBUTOR_CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tidig.z()
@@ -356,7 +344,7 @@ define amdgpu_kernel void @use_all_workitems(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_get_local_size_x(ptr addrspace(1) %ptr) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@use_get_local_size_x
-; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.local.size.x()
 ; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; CHECK-NEXT:    ret void
@@ -368,7 +356,7 @@ define amdgpu_kernel void @use_get_local_size_x(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_get_local_size_y(ptr addrspace(1) %ptr) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@use_get_local_size_y
-; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.local.size.y()
 ; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; CHECK-NEXT:    ret void
@@ -380,7 +368,7 @@ define amdgpu_kernel void @use_get_local_size_y(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_get_local_size_z(ptr addrspace(1) %ptr) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@use_get_local_size_z
-; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.local.size.z()
 ; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; CHECK-NEXT:    ret void
@@ -393,17 +381,18 @@ define amdgpu_kernel void @use_get_local_size_z(ptr addrspace(1) %ptr) #1 {
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
 
-; AKF_CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; AKF_CHECK: attributes #[[ATTR1]] = { nounwind }
 ;.
-; ATTRIBUTOR_CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR2]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR3]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR4]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR5]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR6]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR7]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR8]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR9]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" "uniform-work-group-size"="false" }
+; AKF_CHECK: attributes #[[ATTR0]] = { nounwind }
+; AKF_CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+;.
+; ATTRIBUTOR_CHECK: attributes #[[ATTR0]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR2]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR3]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR4]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR5]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR6]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR7]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR8]] = { nounwind "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.

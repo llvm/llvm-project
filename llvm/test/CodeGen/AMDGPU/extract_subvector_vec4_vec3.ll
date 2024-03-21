@@ -31,6 +31,3 @@ main_body:
   call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> %tmp29, ptr addrspace(8) undef, i32 undef, i32 0, i32 0) #3
   ret void
 }
-
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32>, ptr addrspace(8), i32, i32, i32 immarg)
-declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8), i32, i32, i32 immarg)

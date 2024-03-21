@@ -458,15 +458,3 @@ bb:
   store <4 x float> %res3, ptr addrspace(1) %out3
   ret void
 }
-
-declare <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v4f32.v4f16.v8f16.v4f32.i8(<4 x half>, <8 x half>, <4 x float>, i8)
-declare <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v4f32.v4i16.v8i16.v4f32.i8(<4 x i16>, <8 x i16>, <4 x float>, i8)
-declare <4 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v4f16.v4f16.v8f16.v4f16.i8(<4 x half>, <8 x half>, <4 x half>, i8)
-declare <4 x i16> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v4i16.v4i16.v8i16.v4i16.i8(<4 x i16>, <8 x i16>, <4 x i16>, i8)
-declare <4 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu8.v4i32.i32.v2i32.v4i32.i8(i1 immarg, i32, i1 immarg, <2 x i32>, <4 x i32>, i8 %Index, i1 immarg)
-declare <4 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu4.v4i32.i32.i32.v4i32.i16(i1 immarg, i32, i1 immarg, i32, <4 x i32>, i16 %Index, i1 immarg)
-declare <4 x i32> @llvm.amdgcn.swmmac.i32.16x16x64.iu4.v4i32.i32.v2i32.v4i32.i16(i1 immarg, i32, i1 immarg, <2 x i32>, <4 x i32>, i16 %Index, i1 immarg)
-declare <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.fp8.v4f32.i32.v2i32.v4f32.i8(i32, <2 x i32>, <4 x float>, i8)
-declare <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.bf8.v4f32.i32.v2i32.v4f32.i8(i32, <2 x i32>, <4 x float>, i8)
-declare <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.fp8.v4f32.i32.v2i32.v4f32.i8(i32, <2 x i32>, <4 x float>, i8)
-declare <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.bf8.v4f32.i32.v2i32.v4f32.i8(i32, <2 x i32>, <4 x float>, i8)

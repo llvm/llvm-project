@@ -262,8 +262,6 @@ bb.1:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 attributes #0 = { nounwind readnone speculatable }
 
 !llvm.module.flags = !{!0}

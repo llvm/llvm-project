@@ -3,8 +3,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX8 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 
-declare double @llvm.convert.from.fp16.f64(i16) nounwind readnone
-
 define amdgpu_kernel void @test_convert_fp16_to_fp64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; GFX6-LABEL: test_convert_fp16_to_fp64:
 ; GFX6:       ; %bb.0:

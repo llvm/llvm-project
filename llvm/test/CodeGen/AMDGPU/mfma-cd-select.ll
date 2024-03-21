@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck --enable-var-scope --check-prefixes=GCN,GFX90A %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck --enable-var-scope --check-prefixes=GCN,GFX90A %s
 
-declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
-
 ; GCN-LABEL: {{^}}test_mfma_f32_32x32x1f32_vgpr:
 ; GFX908: v_mfma_f32_32x32x1{{.*}} a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9:]+}}, a[{{[0-9:]+}}]
 ; GFX90A: v_mfma_f32_32x32x1{{.*}} v[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9:]+}}, v[{{[0-9:]+}}]

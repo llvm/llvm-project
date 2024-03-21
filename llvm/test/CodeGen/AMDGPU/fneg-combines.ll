@@ -2811,30 +2811,6 @@ define amdgpu_kernel void @v_fneg_negk_select_f32(ptr addrspace(1) %out, ptr add
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.fma.f32(float, float, float) #1
-declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)
-declare float @llvm.fmuladd.f32(float, float, float) #1
-declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) #1
-declare float @llvm.sin.f32(float) #1
-declare float @llvm.trunc.f32(float) #1
-declare float @llvm.round.f32(float) #1
-declare float @llvm.rint.f32(float) #1
-declare float @llvm.nearbyint.f32(float) #1
-declare float @llvm.canonicalize.f32(float) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare half @llvm.minnum.f16(half, half) #1
-declare double @llvm.minnum.f64(double, double) #1
-declare double @llvm.fma.f64(double, double, double) #1
-
-declare float @llvm.amdgcn.sin.f32(float) #1
-declare float @llvm.amdgcn.rcp.f32(float) #1
-declare float @llvm.amdgcn.rcp.legacy(float) #1
-declare float @llvm.amdgcn.fmul.legacy(float, float) #1
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #0
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #0
-
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "unsafe-fp-math"="true" }

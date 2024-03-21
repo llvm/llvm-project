@@ -1048,11 +1048,6 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #1
-declare i32 @llvm.amdgcn.workgroup.id.y() #1
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare i32 @llvm.amdgcn.workitem.id.y() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { convergent nounwind }

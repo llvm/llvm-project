@@ -92,5 +92,3 @@ entry:
   store i64 %0, ptr addrspace(1) undef
   ret void
 }
-
-declare i64 @llvm.amdgcn.s.getpc()

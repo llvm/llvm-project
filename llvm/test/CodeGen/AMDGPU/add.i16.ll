@@ -142,7 +142,5 @@ define amdgpu_kernel void @v_test_add_i16_sext_to_i64(ptr addrspace(1) %out, ptr
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

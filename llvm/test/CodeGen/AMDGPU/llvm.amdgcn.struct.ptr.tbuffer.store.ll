@@ -501,12 +501,6 @@ main_body:
   ret void
 }
 
-declare void @llvm.amdgcn.struct.ptr.tbuffer.store.i32(i32, ptr addrspace(8), i32, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.ptr.tbuffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.ptr.tbuffer.store.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.ptr.tbuffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32, i32) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }
 

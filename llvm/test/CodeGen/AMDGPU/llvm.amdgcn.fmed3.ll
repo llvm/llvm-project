@@ -99,8 +99,5 @@ define amdgpu_kernel void @test_fneg_fmed3_r_inv2pi_0_foldable_user(ptr addrspac
   ret void
 }
 
-declare float @llvm.amdgcn.fmed3.f32(float, float, float) #0
-declare float @llvm.fabs.f32(float) #0
-
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

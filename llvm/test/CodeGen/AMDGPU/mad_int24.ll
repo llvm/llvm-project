@@ -117,5 +117,3 @@ bb6:                                              ; preds = %bb6, %bb
   %tmp28 = icmp eq i32 %tmp27, %arg1
   br i1 %tmp28, label %bb5, label %bb6
 }
-
-declare i32 @llvm.amdgcn.mul.i24(i32, i32)

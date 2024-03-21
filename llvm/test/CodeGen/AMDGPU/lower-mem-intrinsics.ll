@@ -6,29 +6,6 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -pre-isel-intrinsic-lowering -mem-intrinsic-expand-size=1024 %s | FileCheck -check-prefixes=OPT,MAX1024 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -pre-isel-intrinsic-lowering -mem-intrinsic-expand-size=0 %s | FileCheck -check-prefixes=OPT,ALL %s
 
-declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) nocapture, ptr addrspace(1) nocapture readonly, i64, i1) #1
-declare void @llvm.memcpy.p1.p3.i32(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i32, i1) #1
-declare void @llvm.memcpy.p3.p1.i32(ptr addrspace(3) nocapture, ptr addrspace(1) nocapture readonly, i32, i1) #1
-declare void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) nocapture, ptr addrspace(5) nocapture readonly, i32, i1) #1
-declare void @llvm.memcpy.p3.p3.i32(ptr addrspace(3) nocapture, ptr addrspace(3) nocapture readonly, i32, i1) #1
-
-declare void @llvm.memmove.p1.p1.i64(ptr addrspace(1) nocapture, ptr addrspace(1) nocapture readonly, i64, i1) #1
-declare void @llvm.memmove.p1.p3.i32(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i32, i1) #1
-declare void @llvm.memmove.p5.p5.i32(ptr addrspace(5) nocapture, ptr addrspace(5) nocapture readonly, i32, i1) #1
-declare void @llvm.memmove.p3.p5.i32(ptr addrspace(3) nocapture, ptr addrspace(5) nocapture readonly, i32, i1) #1
-declare void @llvm.memmove.p5.p3.i32(ptr addrspace(5) nocapture, ptr addrspace(3) nocapture readonly, i32, i1) #1
-declare void @llvm.memmove.p0.p1.i64(ptr nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p1.p0.i64(ptr addrspace(1) nocapture writeonly, ptr nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p5.p1.i64(ptr addrspace(5) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p1.p5.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p0.p5.i64(ptr nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p5.p0.i64(ptr addrspace(5) nocapture writeonly, ptr nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p1.p999.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(999) nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p999.p1.i64(ptr addrspace(999) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #1
-declare void @llvm.memmove.p999.p998.i64(ptr addrspace(999) nocapture writeonly, ptr addrspace(998) nocapture readonly, i64, i1 immarg) #1
-
-declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture, i8, i64, i1) #1
-
 ; Test the upper bound for sizes to leave
 define amdgpu_kernel void @max_size_small_static_memcpy_caller0(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; MAX1024-LABEL: @max_size_small_static_memcpy_caller0(
@@ -266,7 +243,7 @@ define amdgpu_kernel void @memcpy_multi_use_one_function(ptr addrspace(1) %dst0,
 ; OPT-NEXT:    [[TMP3:%.*]] = sub i64 [[N]], [[TMP2]]
 ; OPT-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP1]], 0
 ; OPT-NEXT:    br i1 [[TMP4]], label [[LOOP_MEMCPY_EXPANSION2:%.*]], label [[LOOP_MEMCPY_RESIDUAL_HEADER5:%.*]]
-; OPT:       loop-memcpy-expansion2:
+; OPT:       loop-memcpy-expansion:
 ; OPT-NEXT:    [[LOOP_INDEX3:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP8:%.*]], [[LOOP_MEMCPY_EXPANSION2]] ]
 ; OPT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX3]]
 ; OPT-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP5]], align 1
@@ -275,7 +252,7 @@ define amdgpu_kernel void @memcpy_multi_use_one_function(ptr addrspace(1) %dst0,
 ; OPT-NEXT:    [[TMP8]] = add i64 [[LOOP_INDEX3]], 1
 ; OPT-NEXT:    [[TMP9:%.*]] = icmp ult i64 [[TMP8]], [[TMP1]]
 ; OPT-NEXT:    br i1 [[TMP9]], label [[LOOP_MEMCPY_EXPANSION2]], label [[LOOP_MEMCPY_RESIDUAL_HEADER5]]
-; OPT:       loop-memcpy-residual4:
+; OPT:       loop-memcpy-residual:
 ; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX6:%.*]] = phi i64 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER5]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL4:%.*]] ]
 ; OPT-NEXT:    [[TMP10:%.*]] = add i64 [[TMP3]], [[RESIDUAL_LOOP_INDEX6]]
 ; OPT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[TMP10]]
@@ -285,13 +262,13 @@ define amdgpu_kernel void @memcpy_multi_use_one_function(ptr addrspace(1) %dst0,
 ; OPT-NEXT:    [[TMP14]] = add i64 [[RESIDUAL_LOOP_INDEX6]], 1
 ; OPT-NEXT:    [[TMP15:%.*]] = icmp ult i64 [[TMP14]], [[TMP2]]
 ; OPT-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL4]], label [[POST_LOOP_MEMCPY_EXPANSION1:%.*]]
-; OPT:       post-loop-memcpy-expansion1:
+; OPT:       post-loop-memcpy-expansion:
 ; OPT-NEXT:    [[TMP16:%.*]] = lshr i64 [[M:%.*]], 4
 ; OPT-NEXT:    [[TMP17:%.*]] = and i64 [[M]], 15
 ; OPT-NEXT:    [[TMP18:%.*]] = sub i64 [[M]], [[TMP17]]
 ; OPT-NEXT:    [[TMP19:%.*]] = icmp ne i64 [[TMP16]], 0
 ; OPT-NEXT:    br i1 [[TMP19]], label [[LOOP_MEMCPY_EXPANSION:%.*]], label [[LOOP_MEMCPY_RESIDUAL_HEADER:%.*]]
-; OPT:       loop-memcpy-expansion:
+; OPT:       loop-memcpy-expansion2:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[POST_LOOP_MEMCPY_EXPANSION1]] ], [ [[TMP23:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
 ; OPT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[LOOP_INDEX]]
 ; OPT-NEXT:    [[TMP21:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP20]], align 1
@@ -300,7 +277,7 @@ define amdgpu_kernel void @memcpy_multi_use_one_function(ptr addrspace(1) %dst0,
 ; OPT-NEXT:    [[TMP23]] = add i64 [[LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP24:%.*]] = icmp ult i64 [[TMP23]], [[TMP16]]
 ; OPT-NEXT:    br i1 [[TMP24]], label [[LOOP_MEMCPY_EXPANSION]], label [[LOOP_MEMCPY_RESIDUAL_HEADER]]
-; OPT:       loop-memcpy-residual:
+; OPT:       loop-memcpy-residual4:
 ; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP29:%.*]], [[LOOP_MEMCPY_RESIDUAL:%.*]] ]
 ; OPT-NEXT:    [[TMP25:%.*]] = add i64 [[TMP18]], [[RESIDUAL_LOOP_INDEX]]
 ; OPT-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[TMP25]]
@@ -310,14 +287,14 @@ define amdgpu_kernel void @memcpy_multi_use_one_function(ptr addrspace(1) %dst0,
 ; OPT-NEXT:    [[TMP29]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP30:%.*]] = icmp ult i64 [[TMP29]], [[TMP17]]
 ; OPT-NEXT:    br i1 [[TMP30]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
-; OPT:       post-loop-memcpy-expansion:
+; OPT:       post-loop-memcpy-expansion1:
 ; OPT-NEXT:    ret void
 ; OPT:       loop-memcpy-residual-header:
-; OPT-NEXT:    [[TMP31:%.*]] = icmp ne i64 [[TMP17]], 0
-; OPT-NEXT:    br i1 [[TMP31]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION]]
+; OPT-NEXT:    [[TMP31:%.*]] = icmp ne i64 [[TMP2]], 0
+; OPT-NEXT:    br i1 [[TMP31]], label [[LOOP_MEMCPY_RESIDUAL4]], label [[POST_LOOP_MEMCPY_EXPANSION1]]
 ; OPT:       loop-memcpy-residual-header5:
-; OPT-NEXT:    [[TMP32:%.*]] = icmp ne i64 [[TMP2]], 0
-; OPT-NEXT:    br i1 [[TMP32]], label [[LOOP_MEMCPY_RESIDUAL4]], label [[POST_LOOP_MEMCPY_EXPANSION1]]
+; OPT-NEXT:    [[TMP32:%.*]] = icmp ne i64 [[TMP17]], 0
+; OPT-NEXT:    br i1 [[TMP32]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION]]
 ;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dst0, ptr addrspace(1) %src, i64 %n, i1 false)
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dst1, ptr addrspace(1) %src, i64 %m, i1 false)
@@ -1772,8 +1749,6 @@ entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr %arrayidx, ptr %x, i64 %spec.select, i1 false)
   ret void
 }
-
-declare i64 @llvm.umin.i64(i64, i64)
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }

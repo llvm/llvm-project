@@ -6,9 +6,6 @@
 ; RUN: llc -O0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GCN,WAVE64,WAVE64-O0 %s
 ; RUN: llc -O0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 -amdgpu-prealloc-sgpr-spill-vgprs=1 < %s | FileCheck -check-prefixes=GCN,WAVE32,WAVE32-WWM-PREALLOC %s
 
-declare ptr addrspace(5) @llvm.stacksave.p5()
-declare void @llvm.stackrestore.p5(ptr addrspace(5))
-
 define hidden void @stack_passed_argument([32 x i32], i32) {
 ; GCN-LABEL: stack_passed_argument:
 ; GCN:       ; %bb.0:

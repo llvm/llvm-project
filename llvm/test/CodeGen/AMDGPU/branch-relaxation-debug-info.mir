@@ -47,9 +47,6 @@
     ret void
   }
 
-  declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #2
-  declare void @llvm.dbg.value(metadata, metadata, metadata) #0
-
   attributes #0 = { nounwind readnone speculatable willreturn }
   attributes #1 = { nounwind writeonly }
   attributes #2 = { nounwind readnone speculatable willreturn }

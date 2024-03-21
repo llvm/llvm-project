@@ -1,9 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare double @llvm.fabs.f64(double) #1
-
 ; SI-LABEL: {{^}}fp_to_uint_i32_f64:
 ; SI: v_cvt_u32_f64_e32
 define amdgpu_kernel void @fp_to_uint_i32_f64(ptr addrspace(1) %out, double %in) {

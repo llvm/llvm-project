@@ -251,7 +251,4 @@ define amdgpu_ps float @raw_ptr_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr
   ret float %cast
 }
 
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32, ptr addrspace(8), i32, i32, i32 immarg) #0
-declare i64 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i64(i64, ptr addrspace(8), i32, i32, i32 immarg) #0
-
 attributes #0 = { nounwind }

@@ -10,6 +10,3 @@ define amdgpu_cs void @_amdgpu_cs_main(i32 %0) {
   call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %spec.select.3, ptr addrspace(8) zeroinitializer, i32 0, i32 0, i32 0)
   ret void
 }
-
-declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8), i32, i32, i32 immarg)

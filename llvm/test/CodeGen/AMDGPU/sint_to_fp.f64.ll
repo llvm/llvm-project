@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
 define amdgpu_kernel void @sint_to_fp_i32_to_f64(ptr addrspace(1) %out, i32 %in) {
 ; CI-LABEL: sint_to_fp_i32_to_f64:
 ; CI:       ; %bb.0:

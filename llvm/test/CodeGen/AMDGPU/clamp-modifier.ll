@@ -1603,27 +1603,6 @@ define <2 x half> @v_clamp_cvt_pkrtz_src_v2f16_denorm(float %a, float %b) #0 {
   ret <2 x half> %clamp
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.floor.f32(float) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare float @llvm.amdgcn.fmed3.f32(float, float, float) #1
-declare double @llvm.fabs.f64(double) #1
-declare double @llvm.minnum.f64(double, double) #1
-declare double @llvm.maxnum.f64(double, double) #1
-declare half @llvm.fabs.f16(half) #1
-declare half @llvm.minnum.f16(half, half) #1
-declare half @llvm.maxnum.f16(half, half) #1
-declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) #1
-declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>) #1
-declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>) #1
-declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>) #1
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
-
-
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
-
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "denormal-fp-math-f32"="ieee.ieee" }

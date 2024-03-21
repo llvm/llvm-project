@@ -10,8 +10,6 @@
 
 ;--- stacksave-error.ll
 
-declare ptr @llvm.stacksave.p0()
-
 ; ERR-SAVE-SDAG: LLVM ERROR: Cannot select: {{.+}}: i64,ch = stacksave
 ; ERR-SAVE-GISEL: LLVM ERROR: unable to legalize instruction: %{{[0-9]+}}:_(p0) = G_STACKSAVE (in function: func_store_stacksave)
 define void @func_store_stacksave() {
@@ -21,8 +19,6 @@ define void @func_store_stacksave() {
 }
 
 ;--- stackrestore-error.ll
-
-declare void @llvm.stackrestore.p0(ptr)
 
 ; ERR-RESTORE-SDAG: LLVM ERROR: Cannot select: {{.+}}: ch = stackrestore {{.+}}, {{.+}}
 ; ERR-RESTORE-GISEL: LLVM ERROR: unable to legalize instruction: G_STACKRESTORE %{{[0-9]+}}:_(p0) (in function: func_stacksave_sgpr)

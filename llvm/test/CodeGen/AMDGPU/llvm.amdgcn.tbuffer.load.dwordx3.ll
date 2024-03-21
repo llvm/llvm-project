@@ -34,7 +34,3 @@ main_body:
     ret <3 x float> %vdata.f
 }
 
-declare <3 x i32> @llvm.amdgcn.raw.tbuffer.load.v3i32(<4 x i32>, i32, i32, i32, i32)
-declare <3 x i32> @llvm.amdgcn.struct.tbuffer.load.v3i32(<4 x i32>, i32, i32, i32, i32, i32)
-declare <3 x i32> @llvm.amdgcn.tbuffer.load.v3i32(<4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
-

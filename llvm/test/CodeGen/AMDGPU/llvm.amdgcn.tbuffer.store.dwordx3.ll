@@ -29,7 +29,3 @@ main_body:
   ret void
 }
 
-declare void @llvm.amdgcn.raw.tbuffer.store.v3i32(<3 x i32>, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.struct.tbuffer.store.v3i32(<3 x i32>, <4 x i32>, i32, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.tbuffer.store.v3i32(<3 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1) #0
-

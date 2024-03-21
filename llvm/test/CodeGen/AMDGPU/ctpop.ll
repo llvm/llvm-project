@@ -2,14 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=FUNC -check-prefix=VI %s
 ; RUN: llc -mtriple=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
 
-declare i32 @llvm.ctpop.i32(i32) nounwind readnone
-declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>) nounwind readnone
-declare <4 x i32> @llvm.ctpop.v4i32(<4 x i32>) nounwind readnone
-declare <8 x i32> @llvm.ctpop.v8i32(<8 x i32>) nounwind readnone
-declare <16 x i32> @llvm.ctpop.v16i32(<16 x i32>) nounwind readnone
-
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
 ; FUNC-LABEL: {{^}}s_ctpop_i32:
 ; GCN: s_load_dword [[SVAL:s[0-9]+]],
 ; GCN: s_bcnt1_i32_b32 [[SRESULT:s[0-9]+]], [[SVAL]]

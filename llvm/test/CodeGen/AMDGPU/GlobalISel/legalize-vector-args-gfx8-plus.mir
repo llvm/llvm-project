@@ -28,9 +28,6 @@
     %fma = call <5 x half> @llvm.maxnum.v5f16(<5 x half> %a, <5 x half> %b)
     ret <5 x half> %fma
   }
-
-  declare <4 x half> @llvm.fma.v4f16(<4 x half>, <4 x half>, <4 x half>)
-  declare <5 x half> @llvm.maxnum.v5f16(<5 x half>, <5 x half>)
 ...
 
 ---

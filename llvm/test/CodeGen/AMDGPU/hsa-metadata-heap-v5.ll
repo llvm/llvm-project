@@ -26,7 +26,6 @@ define void @function5(ptr addrspace(4) %ptr, ptr %sink) #2 {
 }
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #1
 
 ; CHECK: amdhsa.kernels:
 ; CHECK:  - .args:

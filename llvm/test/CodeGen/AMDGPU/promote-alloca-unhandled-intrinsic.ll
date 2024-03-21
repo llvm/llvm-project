@@ -3,8 +3,6 @@
 ; This is just an arbitrary intrinisic that shouldn't be
 ; handled to ensure it doesn't crash.
 
-declare void @llvm.stackrestore.p5(ptr addrspace(5)) #2
-
 ; CHECK-LABEL: @try_promote_unhandled_intrinsic(
 ; CHECK: alloca
 ; CHECK: call void @llvm.stackrestore.p5(ptr addrspace(5) %tmp)

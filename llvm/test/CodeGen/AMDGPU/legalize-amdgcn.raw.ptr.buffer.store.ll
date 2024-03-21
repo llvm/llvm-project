@@ -2124,15 +2124,3 @@ define void @raw_ptr_buffer_store__vgpr_rsrc__vgpr_val__5000_voffset__sgpr_soffs
   call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %val, ptr addrspace(8) %rsrc, i32 5000, i32 %soffset, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8, ptr addrspace(8), i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16, ptr addrspace(8), i32, i32, i32 immarg)
-
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f16(half, ptr addrspace(8), i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f16(<2 x half>, ptr addrspace(8), i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f16(<4 x half>, ptr addrspace(8), i32, i32, i32 immarg)
-
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v3f32(<3 x float>, ptr addrspace(8), i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32 immarg)

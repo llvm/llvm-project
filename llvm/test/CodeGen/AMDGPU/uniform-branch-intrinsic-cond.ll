@@ -22,6 +22,4 @@ else:
   ret float %r
 }
 
-declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32 immarg) #0
-
 attributes #0 = { nounwind memory(argmem: read) }

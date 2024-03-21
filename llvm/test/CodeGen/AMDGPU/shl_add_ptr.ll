@@ -6,9 +6,6 @@
 ; multiple uses. This is relevant to accessing 2 separate, adjacent
 ; LDS globals.
 
-
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 @lds0 = addrspace(3) global [512 x float] undef, align 4
 @lds1 = addrspace(3) global [512 x float] undef, align 4
 

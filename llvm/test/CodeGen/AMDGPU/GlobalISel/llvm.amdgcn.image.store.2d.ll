@@ -816,9 +816,4 @@ define amdgpu_ps void @image_store_f32_dmask_1111(<8 x i32> inreg %rsrc, i32 inr
   ret void
 }
 
-declare void @llvm.amdgcn.image.store.2d.f32.i32(float, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare void @llvm.amdgcn.image.store.2d.v2f32.i32(<2 x float>, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare void @llvm.amdgcn.image.store.2d.v3f32.i32(<3 x float>, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float>, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-
 attributes #0 = { nounwind writeonly }

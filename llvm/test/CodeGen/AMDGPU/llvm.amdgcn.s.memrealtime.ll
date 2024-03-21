@@ -3,8 +3,6 @@
 
 ; ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.s.memrealtime
 
-declare i64 @llvm.amdgcn.s.memrealtime() #0
-
 ; GCN-LABEL: {{^}}test_s_memrealtime:
 ; GCN-DAG: s_memrealtime s{{\[[0-9]+:[0-9]+\]}}
 ; GCN-DAG: s_load_dwordx2

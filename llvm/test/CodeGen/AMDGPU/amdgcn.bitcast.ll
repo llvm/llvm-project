@@ -288,8 +288,6 @@ define amdgpu_kernel void @v2i32_to_v4f16(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.s.buffer.load.v4f32(<4 x i32>, i32, i32 immarg)
-
 ; CHECK-LABEL: {{^}}bitcast_v4f32_to_v2i64:
 ; CHECK: s_buffer_load_{{dwordx4|b128}}
 define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
@@ -298,8 +296,6 @@ define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
   %div = udiv <2 x i64> %cast, %arg
   ret <2 x i64> %div
 }
-
-declare half @llvm.canonicalize.f16(half)
 
 ; CHECK-LABEL: {{^}}bitcast_f32_to_v1i32:
 define amdgpu_kernel void @bitcast_f32_to_v1i32(ptr addrspace(1) %out) {

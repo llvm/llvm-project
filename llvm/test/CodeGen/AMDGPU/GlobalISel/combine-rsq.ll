@@ -216,6 +216,3 @@ define amdgpu_cs float @sqrt_rcp_contract(float inreg %arg1) {
   %b = call contract float @llvm.sqrt.f32(float %a)
   ret float %b
 }
-
-declare float @llvm.sqrt.f32(float)
-declare float @llvm.amdgcn.rcp.f32(float)

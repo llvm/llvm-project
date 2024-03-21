@@ -53,7 +53,4 @@ define amdgpu_ps void @global_fadd_saddr_v2f16_nortn_neg128(ptr addrspace(1) inr
   ret void
 }
 
-declare float @llvm.amdgcn.global.atomic.fadd.f32.p1(ptr addrspace(1) nocapture, float) #0
-declare <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1(ptr addrspace(1) nocapture, <2 x half>) #0
-
 attributes #0 = { argmemonly nounwind willreturn }

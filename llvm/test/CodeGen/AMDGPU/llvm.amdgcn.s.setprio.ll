@@ -4,8 +4,6 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -show-mc-encoding -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx90a -show-mc-encoding -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 %s
 
-declare void @llvm.amdgcn.s.setprio(i16) #0
-
 define void @test_llvm_amdgcn_s_setprio() #0 {
 ; GFX9-LABEL: test_llvm_amdgcn_s_setprio:
 ; GFX9:       ; %bb.0:

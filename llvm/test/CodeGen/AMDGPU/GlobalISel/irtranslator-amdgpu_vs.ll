@@ -103,6 +103,4 @@ define amdgpu_vs i32 @non_void_ret() {
   ret i32 0
 }
 
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1)  #0
-
 attributes #0 = { nounwind }

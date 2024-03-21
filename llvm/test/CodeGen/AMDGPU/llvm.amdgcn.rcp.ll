@@ -1,13 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
 
-declare float @llvm.amdgcn.rcp.f32(float) #0
-declare double @llvm.amdgcn.rcp.f64(double) #0
-
-declare double @llvm.amdgcn.sqrt.f64(double) #0
-declare float @llvm.amdgcn.sqrt.f32(float) #0
-declare double @llvm.sqrt.f64(double) #0
-declare float @llvm.sqrt.f32(float) #0
-
 ; FUNC-LABEL: {{^}}rcp_undef_f32:
 ; SI: v_mov_b32_e32 [[NAN:v[0-9]+]], 0x7fc00000
 ; SI-NOT: [[NAN]]

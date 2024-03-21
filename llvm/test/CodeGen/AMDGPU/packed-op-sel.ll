@@ -685,7 +685,5 @@ bb:
   ret void
 }
 
-declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

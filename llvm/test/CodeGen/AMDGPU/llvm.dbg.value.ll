@@ -33,8 +33,6 @@ bb:
   ret void, !dbg !14
 }
 
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
 attributes #0 = { nounwind  }
 attributes #1 = { nounwind readnone }
 

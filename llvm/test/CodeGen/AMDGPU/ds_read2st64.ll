@@ -294,8 +294,5 @@ define amdgpu_kernel void @byte_size_only_divisible_64_read2_f64(ptr addrspace(1
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare i32 @llvm.amdgcn.workitem.id.y() #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

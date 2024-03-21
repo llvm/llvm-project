@@ -4,20 +4,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=CI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
-declare half @llvm.fabs.f16(half) #0
-declare half @llvm.canonicalize.f16(half) #0
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #0
-declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) #0
-declare <3 x half> @llvm.canonicalize.v3f16(<3 x half>) #0
-declare <4 x half> @llvm.canonicalize.v4f16(<4 x half>) #0
-declare <6 x half> @llvm.canonicalize.v6f16(<6 x half>) #0
-declare <8 x half> @llvm.canonicalize.v8f16(<8 x half>) #0
-declare <12 x half> @llvm.canonicalize.v12f16(<12 x half>) #0
-declare <16 x half> @llvm.canonicalize.v16f16(<16 x half>) #0
-declare <32 x half> @llvm.canonicalize.v32f16(<32 x half>) #0
-declare <64 x half> @llvm.canonicalize.v64f16(<64 x half>) #0
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_undef_value_f16:
 ; VI:       ; %bb.0:

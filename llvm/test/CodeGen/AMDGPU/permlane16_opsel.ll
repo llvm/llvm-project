@@ -3,11 +3,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 --stop-after=amdgpu-isel -verify-machineinstrs < %s | FileCheck -check-prefixes=SDAG,SDAG-GFX11 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 --stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -check-prefixes=GISEL %s
 
-declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1)
-declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1, i1)
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare i32 @llvm.amdgcn.workitem.id.y()
-
 define amdgpu_kernel void @v_permlane16_b32_vss(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
   ; SDAG: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}, 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; GISEL: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec

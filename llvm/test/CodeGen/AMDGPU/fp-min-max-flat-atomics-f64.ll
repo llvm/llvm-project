@@ -2,9 +2,6 @@
 ; RUN: llc < %s -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s -check-prefixes=GFX10,GFX10-SDAG
 ; RUN: llc < %s -global-isel=1 -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s -check-prefixes=GFX10,GFX10-GISEL
 
-declare double @llvm.amdgcn.flat.atomic.fmin.f64.p1.f64(ptr %ptr, double %data)
-declare double @llvm.amdgcn.flat.atomic.fmax.f64.p1.f64(ptr %ptr, double %data)
-
 define amdgpu_cs void @flat_atomic_fmin_f64_noret(ptr %ptr, double %data) {
 ; GFX10-LABEL: flat_atomic_fmin_f64_noret:
 ; GFX10:       ; %bb.0:

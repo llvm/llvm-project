@@ -2,11 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -mattr=-wavefrontsize32,+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12-SDAG-W64 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -mattr=-wavefrontsize32,+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12-GISEL-W64 %s
 
-declare i32 @llvm.amdgcn.global.load.tr.i32.p1(ptr addrspace(1))
-declare <4 x i16> @llvm.amdgcn.global.load.tr.v4i16.p1(ptr addrspace(1))
-declare <4 x half> @llvm.amdgcn.global.load.tr.v4f16.p1(ptr addrspace(1))
-declare <4 x bfloat> @llvm.amdgcn.global.load.tr.v4bf16.p1(ptr addrspace(1))
-
 define amdgpu_kernel void @global_load_tr_b64(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
 ; GFX12-SDAG-W64-LABEL: global_load_tr_b64:
 ; GFX12-SDAG-W64:       ; %bb.0: ; %entry

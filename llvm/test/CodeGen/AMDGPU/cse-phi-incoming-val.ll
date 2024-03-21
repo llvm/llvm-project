@@ -36,7 +36,6 @@ bb10:                                             ; preds = %bb9, %bb5, %bb3, %b
 }
 
 ; Function Attrs: inaccessiblememonly nounwind
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { inaccessiblememonly nounwind }

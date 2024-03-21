@@ -8,7 +8,5 @@ define amdgpu_kernel void @test_mul_i24(ptr addrspace(1) %out, i32 %src1, i32 %s
   ret void
 }
 
-declare i32 @llvm.amdgcn.mul.i24(i32, i32) #0
-
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind }

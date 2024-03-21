@@ -17,7 +17,5 @@ define amdgpu_vs void @test1(i32 %v) #0 {
   ret void
 }
 
-declare void @llvm.amdgcn.raw.ptr.tbuffer.store.i32(i32, ptr addrspace(8), i32, i32, i32 immarg, i32 immarg) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind willreturn writeonly }

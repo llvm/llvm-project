@@ -5,5 +5,3 @@ define amdgpu_kernel void @f() {
   call void @llvm.amdgcn.unreachable()
   ret void
 }
-
-declare void @llvm.amdgcn.unreachable()

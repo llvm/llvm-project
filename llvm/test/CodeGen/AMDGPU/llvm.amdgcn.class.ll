@@ -1,11 +1,5 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI %s
 
-declare i1 @llvm.amdgcn.class.f32(float, i32) #1
-declare i1 @llvm.amdgcn.class.f64(double, i32) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.fabs.f32(float) #1
-declare double @llvm.fabs.f64(double) #1
-
 ; SI-LABEL: {{^}}test_class_f32:
 ; SI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x13
 ; SI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x1c

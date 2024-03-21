@@ -4892,6 +4892,3 @@ bb:
   call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %alloca2) #0
   ret void
 }
-
-declare void @llvm.memset.p5.i64(ptr addrspace(5) nocapture writeonly, i8, i64, i1 immarg)
-declare i32 @llvm.amdgcn.workitem.id.x()

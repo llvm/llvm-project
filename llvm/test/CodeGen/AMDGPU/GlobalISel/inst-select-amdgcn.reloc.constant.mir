@@ -6,8 +6,6 @@
   define void @reloc_constant_sgpr32() { ret void }
   define void @reloc_constant_vgpr32() { ret void }
 
-  declare i32 @llvm.amdgcn.reloc.constant(metadata)
-
   !0 = !{!"arst"}
 
 ...

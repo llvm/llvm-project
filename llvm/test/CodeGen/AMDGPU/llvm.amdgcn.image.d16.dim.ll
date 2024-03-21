@@ -168,22 +168,6 @@ main_body:
   ret void
 }
 
-declare half @llvm.amdgcn.image.load.2d.f16.i32(i32, i32, i32, <8 x i32>, i32, i32) #1
-declare <2 x half> @llvm.amdgcn.image.load.2d.v2f16.i32(i32, i32, i32, <8 x i32>, i32, i32) #1
-declare <3 x half> @llvm.amdgcn.image.load.2d.v3f16.i32(i32, i32, i32, <8 x i32>, i32, i32) #1
-declare <4 x half> @llvm.amdgcn.image.load.2d.v4f16.i32(i32, i32, i32, <8 x i32>, i32, i32) #1
-declare <4 x half> @llvm.amdgcn.image.load.mip.2d.v4f16.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #1
-declare <2 x half> @llvm.amdgcn.image.load.3d.v2f16.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #1
-declare <3 x half> @llvm.amdgcn.image.load.3d.v3f16.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #1
-
-declare void @llvm.amdgcn.image.store.2d.f16.i32(half, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.2d.v2f16.i32(<2 x half>, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.2d.v3f16.i32(<3 x half>, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.2d.v4f16.i32(<4 x half>, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.mip.1d.v4f16.i32(<4 x half>, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.3d.v2f16.i32(<2 x half>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.3d.v3f16.i32(<3 x half>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }
 attributes #2 = { nounwind readnone }

@@ -2,8 +2,6 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -verify-machineinstrs -mem-intrinsic-expand-size=3 %s -o - | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel -mtriple=amdgcn -verify-machineinstrs -mem-intrinsic-expand-size=5 %s -o - | FileCheck -check-prefix=GCN %s
 
-declare void @llvm.memcpy.inline.p1.p1.i32(ptr addrspace(1), ptr addrspace(1), i32, i1 immarg)
-
 define amdgpu_cs void @test(ptr addrspace(1) %dst, ptr addrspace(1) %src) {
 ; GCN-LABEL: test:
 ; GCN:       ; %bb.0:

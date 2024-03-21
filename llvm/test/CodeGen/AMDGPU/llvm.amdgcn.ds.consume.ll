@@ -144,8 +144,5 @@ define amdgpu_kernel void @ds_consume_lds_no_use(ptr addrspace(3) %lds, ptr addr
   ret void
 }
 
-declare i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) nocapture, i1 immarg) #1
-declare i32 @llvm.amdgcn.ds.consume.p2(ptr addrspace(2) nocapture, i1 immarg) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly convergent nounwind }

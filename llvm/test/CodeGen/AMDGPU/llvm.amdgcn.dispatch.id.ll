@@ -1,8 +1,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel -mtriple=amdgcn--amdhsa < %s | FileCheck -check-prefix=GCN %s
 
-declare i64 @llvm.amdgcn.dispatch.id() #1
-
 ; GCN-LABEL: {{^}}dispatch_id:
 
 ; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s6

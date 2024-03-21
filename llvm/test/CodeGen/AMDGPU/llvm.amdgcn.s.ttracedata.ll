@@ -2,9 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL %s
 
-declare void @llvm.amdgcn.s.ttracedata(i32)
-declare void @llvm.amdgcn.s.ttracedata.imm(i16)
-
 define amdgpu_cs void @ttracedata_c() {
 ; GFX11-LABEL: ttracedata_c:
 ; GFX11:       ; %bb.0:

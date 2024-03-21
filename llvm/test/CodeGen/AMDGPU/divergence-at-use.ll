@@ -40,5 +40,3 @@ exit:
   %old = atomicrmw add ptr addrspace(3) %gep, i32 %x acq_rel
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

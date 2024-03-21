@@ -99,5 +99,3 @@ bb3:
   store volatile i32 %cnd0, ptr addrspace(1) %arg
   ret void
 }
-
-declare void @llvm.amdgcn.s.sleep(i32 immarg)

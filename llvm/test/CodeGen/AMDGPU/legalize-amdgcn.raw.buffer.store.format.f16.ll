@@ -600,7 +600,3 @@ define void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   call void @llvm.amdgcn.raw.buffer.store.format.v4f16(<4 x half> %val, <4 x i32> %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.raw.buffer.store.format.f16(half, <4 x i32>, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.buffer.store.format.v2f16(<2 x half>, <4 x i32>, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.buffer.store.format.v4f16(<4 x half>, <4 x i32>, i32, i32, i32 immarg)

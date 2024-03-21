@@ -133,9 +133,6 @@ entry:
   ret void
 }
 
-
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #1 = { nounwind readnone }
 
 !8 = !{!9, !9, i64 0}

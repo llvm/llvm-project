@@ -1794,15 +1794,3 @@ define void @raw_buffer_store__vgpr_rsrc__vgpr_val__5000_voffset__sgpr_soffset_o
   call void @llvm.amdgcn.raw.buffer.store.f32(float %val, <4 x i32> %rsrc, i32 5000, i32 %soffset, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.raw.buffer.store.i8(i8, <4 x i32>, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.buffer.store.i16(i16, <4 x i32>, i32, i32, i32 immarg)
-
-declare void @llvm.amdgcn.raw.buffer.store.f16(half, <4 x i32>, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.buffer.store.v2f16(<2 x half>, <4 x i32>, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.buffer.store.v4f16(<4 x half>, <4 x i32>, i32, i32, i32 immarg)
-
-declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.buffer.store.v2f32(<2 x float>, <4 x i32>, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.buffer.store.v3f32(<3 x float>, <4 x i32>, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32 immarg)

@@ -9,11 +9,6 @@
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(ulong node_ptr, float ray_extent, float3 ray_origin, float3 ray_dir, float3 ray_inv_dir, uint4 texture_descr)
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(ulong node_ptr, float ray_extent, float3 ray_origin, half3 ray_dir, half3 ray_inv_dir, uint4 texture_descr)
 
-declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32, float, <3 x float>, <3 x float>, <3 x float>, <4 x i32>)
-declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32, float, <3 x float>, <3 x half>, <3 x half>, <4 x i32>)
-declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64, float, <3 x float>, <3 x float>, <3 x float>, <4 x i32>)
-declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64, float, <3 x float>, <3 x half>, <3 x half>, <4 x i32>)
-
 ; ERR: in function image_bvh_intersect_ray{{.*}}intrinsic not supported on subtarget
 ; Arguments are flattened to represent the actual VGPR_A layout, so we have no
 ; extra moves in the generated kernel.
@@ -523,5 +518,3 @@ main_body:
   store <4 x i32> %v, ptr undef
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

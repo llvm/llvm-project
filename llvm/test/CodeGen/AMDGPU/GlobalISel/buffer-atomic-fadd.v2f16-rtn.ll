@@ -163,9 +163,3 @@ define amdgpu_ps <2 x half> @buffer_ptr_atomic_fadd_v2f16_bothen_rtn(<2 x half> 
   %ret = call <2 x half> @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.v2f16(<2 x half> %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 2)
   ret <2 x half> %ret
 }
-
-declare <2 x half> @llvm.amdgcn.raw.buffer.atomic.fadd.v2f16(<2 x half>, <4 x i32>, i32, i32, i32 immarg)
-declare <2 x half> @llvm.amdgcn.struct.buffer.atomic.fadd.v2f16(<2 x half>, <4 x i32>, i32, i32, i32, i32 immarg)
-
-declare <2 x half> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2f16(<2 x half>, ptr addrspace(8), i32, i32, i32 immarg)
-declare <2 x half> @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.v2f16(<2 x half>, ptr addrspace(8), i32, i32, i32, i32 immarg)

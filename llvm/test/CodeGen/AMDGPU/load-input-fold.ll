@@ -95,12 +95,8 @@ main_body:
 }
 
 ; Function Attrs: readnone
-declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
 
 ; Function Attrs: nounwind readonly
-declare float @llvm.pow.f32(float, float) #3
-
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
 attributes #1 = { readnone }
 attributes #2 = { readonly }

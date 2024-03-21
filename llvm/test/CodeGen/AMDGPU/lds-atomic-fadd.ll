@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
-declare float @llvm.amdgcn.ds.fadd.f32(ptr addrspace(3) nocapture, float, i32, i32, i1)
-
 ; GCN-LABEL: {{^}}lds_ds_fadd:
 ; VI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0

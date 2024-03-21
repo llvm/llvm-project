@@ -15,5 +15,3 @@ entry:
   store float %r.val, ptr addrspace(1) %r
   ret void
 }
-
-declare float @llvm.pow.f32(float ,float ) readonly

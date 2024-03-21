@@ -20,5 +20,3 @@ define amdgpu_kernel void @store_typed_rat11(<4 x i32> %data, <4 x i32> %index) 
   call void @llvm.r600.rat.store.typed(<4 x i32> %data, <4 x i32> %index, i32 11)
   ret void
 }
-
-declare void @llvm.r600.rat.store.typed(<4 x i32>, <4 x i32>, i32)

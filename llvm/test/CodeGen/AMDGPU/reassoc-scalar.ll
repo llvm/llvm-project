@@ -124,6 +124,3 @@ bb:
   store volatile i32 1, ptr addrspace(1) %add2, align 4
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare i32 @llvm.amdgcn.workitem.id.y()

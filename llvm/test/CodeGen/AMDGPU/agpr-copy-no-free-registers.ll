@@ -1149,9 +1149,6 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
   ret void
 }
 
-declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>, i32 immarg, i32 immarg, i32 immarg) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
 attributes #0 = { "amdgpu-waves-per-eu"="6,6" }
 attributes #1 = { convergent nounwind readnone willreturn }
 attributes #2 = { nounwind readnone willreturn }

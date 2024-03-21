@@ -1963,13 +1963,6 @@ bb.1:
   ret void
 }
 
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #3
-declare float @llvm.amdgcn.image.sample.l.2darray.f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare void @llvm.amdgcn.kill(i1) #0
-
-declare void @llvm.amdgcn.s.setreg(i32 immarg, i32)
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }
 attributes #2 = { nounwind readnone speculatable }

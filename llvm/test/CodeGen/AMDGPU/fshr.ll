@@ -6,19 +6,6 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s -check-prefixes=GFX10
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck %s -check-prefixes=GFX11
 
-declare i32 @llvm.fshr.i32(i32, i32, i32)
-declare <2 x i32> @llvm.fshr.v2i32(<2 x i32>, <2 x i32>, <2 x i32>)
-declare <3 x i32> @llvm.fshr.v3i32(<3 x i32>, <3 x i32>, <3 x i32>)
-declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
-declare i16 @llvm.fshr.i16(i16, i16, i16)
-declare <2 x i16> @llvm.fshr.v2i16(<2 x i16>, <2 x i16>, <2 x i16>)
-declare <3 x i16> @llvm.fshr.v3i16(<3 x i16>, <3 x i16>, <3 x i16>)
-declare <4 x i16> @llvm.fshr.v4i16(<4 x i16>, <4 x i16>, <4 x i16>)
-declare i64 @llvm.fshr.i64(i64, i64, i64)
-declare <2 x i64> @llvm.fshr.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
-declare i24 @llvm.fshr.i24(i24, i24, i24)
-declare <2 x i24> @llvm.fshr.v2i24(<2 x i24>, <2 x i24>, <2 x i24>)
-
 define amdgpu_kernel void @fshr_i32(ptr addrspace(1) %in, i32 %x, i32 %y, i32 %z) {
 ; SI-LABEL: fshr_i32:
 ; SI:       ; %bb.0: ; %entry

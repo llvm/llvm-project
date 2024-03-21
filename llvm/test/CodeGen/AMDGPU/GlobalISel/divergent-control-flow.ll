@@ -250,5 +250,3 @@ bb4:
 bb9:
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()

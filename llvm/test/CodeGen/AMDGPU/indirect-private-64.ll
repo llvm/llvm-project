@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -mattr=-promote-alloca,+max-private-element-size-16 -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -mattr=+promote-alloca -disable-promote-alloca-to-vector -verify-machineinstrs < %s | FileCheck --check-prefixes=CI-PROMOTE,SI %s
 
-declare void @llvm.amdgcn.s.barrier() #0
-
 ; SI-LABEL: {{^}}private_access_f64_alloca:
 
 ; SI-ALLOCA16: buffer_store_dwordx2

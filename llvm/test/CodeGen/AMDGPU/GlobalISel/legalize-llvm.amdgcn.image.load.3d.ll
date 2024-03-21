@@ -103,7 +103,4 @@ define amdgpu_ps float @image_load_3d_tfe_f32(<8 x i32> inreg %rsrc, i32 %s, i32
   ret float %tex
 }
 
-declare float @llvm.amdgcn.image.load.3d.f32.i32(i32 immarg, i32, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare { float, i32 } @llvm.amdgcn.image.load.3d.sl_f32i32s.i32(i32 immarg, i32, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-
 attributes #0 = { nounwind readonly }

@@ -180,6 +180,3 @@ entry:
   %tmp1 = load i64, ptr addrspace(5) %private_iptr, align 8
   ret i64 %tmp1
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare i32 @llvm.amdgcn.workitem.id.y()

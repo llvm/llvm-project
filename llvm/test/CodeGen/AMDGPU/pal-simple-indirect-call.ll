@@ -64,7 +64,6 @@ define amdgpu_cs void @test_simple_indirect_call() {
 }
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare i64 @llvm.amdgcn.s.getpc() #0
 
 attributes #0 = { nounwind readnone speculatable willreturn }
 ;.

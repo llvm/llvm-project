@@ -592,41 +592,6 @@ bb.0:
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32>, i32, i32, i1, i1) #0
-declare void @llvm.amdgcn.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #1
-declare <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32>, i32, i32, i1, i1) #0
-declare void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i1) #2
-declare i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32, i32, <4 x i32>, i32, i32, i1) #2
-declare float @llvm.amdgcn.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i1) #2
-declare <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32>, i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i32) #2
-declare i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32, i32, <4 x i32>, i32, i32, i32) #2
-declare void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32) #2
-declare void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i32) #2
-declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8), i32, i32, i32) #3
-declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32) #3
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32, ptr addrspace(8), i32, i32, i32) #5
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32, i32, ptr addrspace(8), i32, i32, i32) #5
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32) #4
-declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32) #4
-
-
-declare <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32>, i32, i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i32, i32) #2
-declare i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32, i32, <4 x i32>, i32, i32, i32, i32) #2
-declare void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) #2
-declare void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) #2
-
-declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8), i32, i32, i32, i32) #3
-declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32, i32) #3
-declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32, ptr addrspace(8), i32, i32, i32, i32) #5
-declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32, i32, ptr addrspace(8), i32, i32, i32, i32) #5
-declare void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32) #4
-declare void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32) #4
-
 
 attributes #0 = { nounwind readonly }
 attributes #1 = { nounwind writeonly }

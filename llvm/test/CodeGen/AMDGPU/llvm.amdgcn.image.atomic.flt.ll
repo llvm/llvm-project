@@ -34,7 +34,3 @@ main_body:
   %v = call float @llvm.amdgcn.image.atomic.add.flt.1d.f32.f32(float %data, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret float %v
 }
-
-declare float @llvm.amdgcn.image.atomic.add.flt.1d.f32.f32(float, i32, <8 x i32>, i32, i32)
-declare float @llvm.amdgcn.image.atomic.min.flt.1d.f32.f32(float, i32, <8 x i32>, i32, i32)
-declare float @llvm.amdgcn.image.atomic.max.flt.1d.f32.f32(float, i32, <8 x i32>, i32, i32)

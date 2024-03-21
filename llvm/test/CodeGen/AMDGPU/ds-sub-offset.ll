@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 @lds.obj = addrspace(3) global [256 x i32] undef, align 4
 
 define amdgpu_kernel void @write_ds_sub0_offset0_global() #0 {
@@ -651,8 +649,6 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_p1() #
   store i64 123, ptr addrspace(3) %ptr, align 4
   ret void
 }
-
-declare float @llvm.amdgcn.div.fmas.f32(float, float, float, i1)
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

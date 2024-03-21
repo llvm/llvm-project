@@ -215,15 +215,5 @@ define float @v_constained_sqrt_f32_fpexcept_strict(float %x) #0 {
   ret float %val
 }
 
-declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata) #1
-declare <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float>, <2 x float>, metadata, metadata) #1
-declare <3 x float> @llvm.experimental.constrained.fadd.v3f32(<3 x float>, <3 x float>, metadata, metadata) #1
-declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata) #1
-declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata) #1
-declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata) #1
-declare float @llvm.experimental.constrained.frem.f32(float, float, metadata, metadata) #1
-declare float @llvm.experimental.constrained.fma.f32(float, float, float, metadata, metadata) #1
-declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata) #1
-
 attributes #0 = { strictfp }
 attributes #1 = { inaccessiblememonly nounwind willreturn }

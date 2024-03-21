@@ -1527,15 +1527,6 @@ entry:
 
 declare void @void_func_void() #3
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #1
-declare i32 @llvm.amdgcn.workgroup.id.y() #1
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare i32 @llvm.amdgcn.workitem.id.y() #1
-
-declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) nounwind readnone
-
-declare void @llvm.amdgcn.s.barrier() #2
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { convergent nounwind }

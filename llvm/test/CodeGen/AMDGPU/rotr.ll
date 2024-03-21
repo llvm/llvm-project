@@ -233,8 +233,6 @@ entry:
   ret void
 }
 
-declare i16 @llvm.fshr.i16(i16, i16, i16)
-
 define void @test_rotr_i16(ptr addrspace(1) nocapture readonly %sourceA, ptr addrspace(1) nocapture readonly %sourceB, ptr addrspace(1) nocapture %destValues) {
 ; R600-LABEL: test_rotr_i16:
 ; R600:       ; %bb.0: ; %entry

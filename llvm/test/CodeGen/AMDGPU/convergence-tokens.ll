@@ -110,11 +110,5 @@ define void @tail_call_void_func_void() #0 {
 declare hidden void @external_void_func_void() #0
 declare i32 @foo(i32 %x) #0
 
-declare i32 @llvm.amdgcn.readfirstlane(i32) #0
-
-declare token @llvm.experimental.convergence.entry()
-declare token @llvm.experimental.convergence.anchor()
-declare token @llvm.experimental.convergence.loop()
-
 attributes #0 = { nounwind readnone convergent }
 attributes #1 = { nounwind }

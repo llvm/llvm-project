@@ -1,7 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn-- -o - %s | FileCheck %s
 
-declare float @llvm.fma.f32(float, float, float)
-
 ; This checks that rematerialization support of the coalescer does not
 ; unnecessarily widen the register class. Without those fixes > 20 VGprs
 ; are used here

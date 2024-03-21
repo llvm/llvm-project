@@ -67,15 +67,5 @@ define amdgpu_kernel void @amdgcn_queue_ptr_requires_queue_ptr(ptr addrspace(1) 
   ret void
 }
 
-
-declare noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr()
-declare noalias ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-declare i64 @llvm.amdgcn.dispatch.id()
-declare noalias ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-declare i1 @llvm.amdgcn.is.shared(ptr)
-declare i1 @llvm.amdgcn.is.private(ptr)
-declare void @llvm.trap()
-declare void @llvm.debugtrap()
-
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

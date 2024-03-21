@@ -1811,13 +1811,3 @@ define float @v_pow_f32_fneg_rhs(float %x, float %y) {
   %pow = call float @llvm.pow.f32(float %x, float %neg.y)
   ret float %pow
 }
-
-declare half @llvm.pow.f16(half, half)
-declare float @llvm.pow.f32(float, float)
-declare double @llvm.pow.f64(double, double)
-
-declare half @llvm.fabs.f16(half)
-declare float @llvm.fabs.f32(float)
-
-declare <2 x half> @llvm.pow.v2f16(<2 x half>, <2 x half>)
-declare <2 x float> @llvm.pow.v2f32(<2 x float>, <2 x float>)

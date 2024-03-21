@@ -35,5 +35,3 @@ entry:                                             ; preds = %1009
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
-
-declare i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8), i32, i32, i32 immarg)

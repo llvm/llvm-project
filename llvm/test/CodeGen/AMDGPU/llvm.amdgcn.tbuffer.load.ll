@@ -102,8 +102,3 @@ define amdgpu_vs float @buffer_load_x(<4 x i32> inreg %rsrc) {
     %vdata.f = bitcast i32 %vdata to float
     ret float %vdata.f
 }
-
-declare i32 @llvm.amdgcn.tbuffer.load.i32(<4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
-declare <2 x i32> @llvm.amdgcn.tbuffer.load.v2i32(<4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
-declare <4 x i32> @llvm.amdgcn.tbuffer.load.v4i32(<4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
-declare <4 x float> @llvm.amdgcn.tbuffer.load.v4f32(<4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)

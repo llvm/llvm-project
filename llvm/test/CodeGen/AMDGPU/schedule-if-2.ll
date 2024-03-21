@@ -89,6 +89,4 @@ IF23:                                             ; preds = %ELSE
 
 declare float @fabsf(float) #0
 
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
-
 attributes #0 = { readonly }

@@ -136,6 +136,3 @@ define amdgpu_kernel void @store_global_atomic_system(ptr addrspace(1) %ptr) {
   store atomic float 1.000000e+00, ptr addrspace(1) %ptr monotonic, align 4
   ret void
 }
-
-
-declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1)

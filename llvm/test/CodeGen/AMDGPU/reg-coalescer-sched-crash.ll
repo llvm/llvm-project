@@ -4,8 +4,6 @@
 ; The register coalescer introduces a verifier error which later
 ; results in a crash during scheduling.
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 define amdgpu_kernel void @reg_coalescer_breaks_dead(ptr addrspace(1) nocapture readonly %arg, i32 %arg1, i32 %arg2, i32 %arg3, i1 %c0) #1 {
 bb:
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()

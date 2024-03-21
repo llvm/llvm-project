@@ -86,6 +86,4 @@ define amdgpu_ps double @flat_atomic_fadd_f64_rtn_atomicrmw(ptr %ptr, double %da
   ret double %ret
 }
 
-declare double @llvm.amdgcn.flat.atomic.fadd.f64.p1.f64(ptr, double)
-
 attributes #0 = {"amdgpu-unsafe-fp-atomics"="true" }

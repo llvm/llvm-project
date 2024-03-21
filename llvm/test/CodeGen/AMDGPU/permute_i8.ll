@@ -665,9 +665,6 @@ bb:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
-
 ; Not combined to perm due to non-vectorized use, non-divergent
 define hidden void @add(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %elt, ptr addrspace(1) %out0) {
 ; GFX10-LABEL: add:
@@ -2792,8 +2789,6 @@ define hidden void @extract3744(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
   ret void
 }
 
-declare i32 @llvm.amdgcn.perm(i32, i32, i32)
-
 define hidden void @extract_perm_3744(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr addrspace(1) %out0) {
 ; GFX10-LABEL: extract_perm_3744:
 ; GFX10:       ; %bb.0:
@@ -2880,9 +2875,6 @@ define hidden void @extract1347_v2i16(ptr addrspace(1) %in0, ptr addrspace(1) %i
   store i32 %res, ptr addrspace(1) %out0, align 4
   ret void
 }
-
-
-declare i16 @llvm.fshr.i16(i16, i16, i16)
 
 define hidden void @fshri16_8(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr addrspace(1) %out0) {
 ; GFX10-LABEL: fshri16_8:
@@ -3083,8 +3075,6 @@ define hidden void @fshri16_88(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
   store i32 %res, ptr addrspace(1) %out0, align 4
   ret void
 }
-
-declare i16 @llvm.fshl.i16(i16, i16, i16)
 
 define hidden void @fshli16_1347(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr addrspace(1) %out0) {
 ; GFX10-LABEL: fshli16_1347:

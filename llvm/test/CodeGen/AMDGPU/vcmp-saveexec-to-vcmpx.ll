@@ -161,5 +161,3 @@ after:
 end:
   ret i32 %a
 }
-
-declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) #0

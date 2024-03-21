@@ -201,12 +201,3 @@ bb:
   %i5 = fadd contract float %i4, %i1
   ret float %i5
 }
-
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg)
-declare float @llvm.minnum.f32(float, float)
-declare float @llvm.maxnum.f32(float, float)
-declare half @llvm.minnum.f16(half, half)
-declare half @llvm.maxnum.f16(half, half)
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float)
-declare float @llvm.fma.f32(float, float, float) nounwind readnone
-declare half @llvm.fma.f16(half, half, half) nounwind readnone

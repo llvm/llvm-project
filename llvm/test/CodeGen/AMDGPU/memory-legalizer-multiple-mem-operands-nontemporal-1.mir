@@ -29,25 +29,18 @@
   }
 
   ; Function Attrs: convergent nounwind
-  declare { i1, i64 } @llvm.amdgcn.if(i1) #1
 
   ; Function Attrs: convergent nounwind
-  declare { i1, i64 } @llvm.amdgcn.else(i64) #1
 
   ; Function Attrs: convergent nounwind readnone
-  declare i64 @llvm.amdgcn.break(i64) #2
 
   ; Function Attrs: convergent nounwind readnone
-  declare i64 @llvm.amdgcn.if.break(i1, i64) #2
 
   ; Function Attrs: convergent nounwind readnone
-  declare i64 @llvm.amdgcn.else.break(i64, i64) #2
 
   ; Function Attrs: convergent nounwind
-  declare i1 @llvm.amdgcn.loop(i64) #1
 
   ; Function Attrs: convergent nounwind
-  declare void @llvm.amdgcn.end.cf(i64) #1
 
   attributes #0 = { "target-cpu"="gfx803" }
   attributes #1 = { convergent nounwind }

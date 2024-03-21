@@ -4741,21 +4741,6 @@ define <2 x half> @fadd_select_fneg_fneg_v2f16(i32 %arg0, <2 x half> %x, <2 x ha
   ret <2 x half> %add
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare half @llvm.sin.f16(half) #1
-declare half @llvm.trunc.f16(half) #1
-declare half @llvm.round.f16(half) #1
-declare half @llvm.rint.f16(half) #1
-declare half @llvm.nearbyint.f16(half) #1
-declare half @llvm.roundeven.f16(half) #1
-declare half @llvm.canonicalize.f16(half) #1
-declare half @llvm.minnum.f16(half, half) #1
-declare half @llvm.maxnum.f16(half, half) #1
-declare half @llvm.fma.f16(half, half, half) #1
-declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>)
-declare half @llvm.fmuladd.f16(half, half, half) #1
-declare <4 x half> @llvm.fmuladd.v4f16(<4 x half>, <4 x half>, <4 x half>) #1
-
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "unsafe-fp-math"="true" }

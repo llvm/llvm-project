@@ -2,9 +2,6 @@
 ; RUN: llc < %s -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck %s -check-prefixes=GFX12,GFX12-SDAG
 ; RUN: llc < %s -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck %s -check-prefixes=GFX12,GFX12-GISEL
 
-declare float @llvm.amdgcn.global.atomic.fmin.num.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
-declare float @llvm.amdgcn.global.atomic.fmax.num.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
-
 define amdgpu_cs void @global_atomic_fmin_num_f32_noret(ptr addrspace(1) %ptr, float %data) {
 ; GFX12-LABEL: global_atomic_fmin_num_f32_noret:
 ; GFX12:       ; %bb.0:

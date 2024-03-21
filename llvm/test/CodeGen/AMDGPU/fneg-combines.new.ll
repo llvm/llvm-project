@@ -3397,47 +3397,6 @@ bb:
   ret float %i1
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.fma.f32(float, float, float) #1
-declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)
-declare float @llvm.fmuladd.f32(float, float, float) #1
-declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) #1
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.sin.f32(float) #1
-declare float @llvm.trunc.f32(float) #1
-declare float @llvm.round.f32(float) #1
-declare float @llvm.rint.f32(float) #1
-declare float @llvm.nearbyint.f32(float) #1
-declare float @llvm.roundeven.f32(float) #1
-declare float @llvm.canonicalize.f32(float) #1
-declare float @llvm.arithmetic.fence.f32(float) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare double @llvm.minnum.f64(double, double) #1
-declare double @llvm.fma.f64(double, double, double) #1
-
-declare float @llvm.amdgcn.sin.f32(float) #1
-declare float @llvm.amdgcn.rcp.f32(float) #1
-declare float @llvm.amdgcn.rcp.legacy(float) #1
-declare float @llvm.amdgcn.fmul.legacy(float, float) #1
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #0
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #0
-
-declare half @llvm.fma.f16(half, half, half) #1
-declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>)
-declare half @llvm.fmuladd.f16(half, half, half) #1
-declare <4 x half> @llvm.fmuladd.v4f16(<4 x half>, <4 x half>, <4 x half>) #1
-declare half @llvm.sin.f16(half) #1
-declare half @llvm.trunc.f16(half) #1
-declare half @llvm.round.f16(half) #1
-declare half @llvm.rint.f16(half) #1
-declare half @llvm.nearbyint.f16(half) #1
-declare half @llvm.canonicalize.f16(half) #1
-declare half @llvm.minnum.f16(half, half) #1
-declare half @llvm.maxnum.f16(half, half) #1
-declare half @llvm.amdgcn.sin.f16(half) #1
-declare half @llvm.amdgcn.rcp.f16(half) #1
-
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "unsafe-fp-math"="true" }

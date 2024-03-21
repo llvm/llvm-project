@@ -40,6 +40,3 @@ define ptr addrspace(3) @ptrmask_local_i32(ptr addrspace(3) %ptr, i32 %mask) {
 ;   %masked = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %ptr, <2 x i64> %mask)
 ;   ret <2 x ptr> %masked
 ; }
-
-declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
-declare ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3), i32)

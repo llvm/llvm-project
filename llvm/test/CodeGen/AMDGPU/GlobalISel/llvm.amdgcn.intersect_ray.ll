@@ -9,12 +9,6 @@
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(ulong node_ptr, float ray_extent, float3 ray_origin, float3 ray_dir, float3 ray_inv_dir, uint4 texture_descr)
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(ulong node_ptr, float ray_extent, float3 ray_origin, half3 ray_dir, half3 ray_inv_dir, uint4 texture_descr)
 
-declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32, float, <3 x float>, <3 x float>, <3 x float>, <4 x i32>)
-declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32, float, <3 x float>, <3 x half>, <3 x half>, <4 x i32>)
-declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64, float, <3 x float>, <3 x float>, <3 x float>, <4 x i32>)
-declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64, float, <3 x float>, <3 x half>, <3 x half>, <4 x i32>)
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 define amdgpu_ps <4 x float> @image_bvh_intersect_ray(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> inreg %tdescr) {
 ; GCN-LABEL: image_bvh_intersect_ray:
 ; GCN:       ; %bb.0:

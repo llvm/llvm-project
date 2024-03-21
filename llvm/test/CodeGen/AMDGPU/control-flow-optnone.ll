@@ -49,7 +49,5 @@ bb14:                                             ; preds = %bb13, %bb9
   br i1 %tmp15, label %bb8.loopexit, label %bb9
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #0 = { nounwind optnone noinline }
 attributes #1 = { nounwind readnone speculatable }

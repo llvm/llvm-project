@@ -55,5 +55,3 @@ main_body:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %a, float %b, float undef, float undef, i1 true, i1 true)
   ret void
 }
-
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1)

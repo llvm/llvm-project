@@ -220,9 +220,4 @@ define float @v_constained_fmul_f32_fpexcept_strict_fneg_fabs_lhs(float %x, floa
   ret float %val
 }
 
-declare float @llvm.fabs.f32(float)
-declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
-declare <2 x float> @llvm.experimental.constrained.fmul.v2f32(<2 x float>, <2 x float>, metadata, metadata)
-declare <3 x float> @llvm.experimental.constrained.fmul.v3f32(<3 x float>, <3 x float>, metadata, metadata)
-
 attributes #0 = { strictfp }

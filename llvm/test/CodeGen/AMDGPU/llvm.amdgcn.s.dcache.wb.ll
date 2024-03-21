@@ -1,8 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -show-mc-encoding < %s | FileCheck -check-prefix=VI %s
 
-declare void @llvm.amdgcn.s.dcache.wb() #0
-declare void @llvm.amdgcn.s.waitcnt(i32) #0
-
 ; VI-LABEL: {{^}}test_s_dcache_wb:
 ; VI-NEXT: ; %bb.0:
 ; VI-NEXT: s_dcache_wb ; encoding: [0x00,0x00,0x84,0xc0,0x00,0x00,0x00,0x00]

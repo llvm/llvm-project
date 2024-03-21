@@ -57,5 +57,3 @@ define amdgpu_gfx void @test_wave_id_callable(ptr addrspace(1) %out) {
   store i32 %waveid, ptr addrspace(1) %out
   ret void
 }
-
-declare i32 @llvm.amdgcn.wave.id()

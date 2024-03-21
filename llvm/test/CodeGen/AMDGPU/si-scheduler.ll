@@ -47,12 +47,6 @@ main_body:
   ret void
 }
 
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
-declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind readonly }
@@ -87,4 +81,3 @@ bb6:                                              ; preds = %.entry
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg) #1

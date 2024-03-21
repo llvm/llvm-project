@@ -12,10 +12,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11DAGISEL,GFX1132DAGISEL %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=1 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11GISEL,GFX1132GISEL %s
 
-
-declare i32 @llvm.amdgcn.wave.reduce.umin.i32(i32, i32 immarg)
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 define amdgpu_kernel void @uniform_value(ptr addrspace(1) %out, i32 %in) {
 ; GFX8DAGISEL-LABEL: uniform_value:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry

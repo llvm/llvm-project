@@ -132,5 +132,3 @@ bb21:
   store float %i15, ptr %ptr, align 4
   ret void
 }
-
-declare float @llvm.fabs.f32(float)

@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope %s
 
-declare i32 @llvm.amdgcn.readfirstlane(i32) #0
-
 ; CHECK-LABEL: {{^}}test_readfirstlane:
 ; CHECK: v_readfirstlane_b32 s{{[0-9]+}}, v2
 define void @test_readfirstlane(ptr addrspace(1) %out, i32 %src) #1 {

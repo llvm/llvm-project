@@ -286,8 +286,5 @@ define amdgpu_ps <2 x float> @s_floor_f64_fneg_fabs(double inreg %x) {
   ret <2 x float> %cast
 }
 
-declare double @llvm.floor.f64(double) #0
-declare double @llvm.fabs.f64(double) #0
-
 attributes #0 = { nounwind readnone speculatable willreturn }
 attributes #1 = { "amdgpu-ieee"="false" }

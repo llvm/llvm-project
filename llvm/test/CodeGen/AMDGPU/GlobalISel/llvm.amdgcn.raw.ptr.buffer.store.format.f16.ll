@@ -571,7 +571,3 @@ define amdgpu_ps void @raw_ptr_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_vo
   call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f16(<4 x half> %val, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
   ret void
 }
-
-declare void @llvm.amdgcn.raw.ptr.buffer.store.format.f16(half, ptr addrspace(8), i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v2f16(<2 x half>, ptr addrspace(8), i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f16(<4 x half>, ptr addrspace(8), i32, i32, i32 immarg)

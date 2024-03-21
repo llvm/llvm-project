@@ -22,6 +22,4 @@ define amdgpu_kernel void @gws_sema_p_offset0(i32 %val) #0 {
   ret void
 }
 
-declare void @llvm.amdgcn.ds.gws.sema.p(i32) #0
-
 attributes #0 = { convergent inaccessiblememonly nounwind }

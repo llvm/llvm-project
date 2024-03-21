@@ -1,8 +1,6 @@
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck --check-prefix=DOORBELL %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck --check-prefix=DOORBELL %s
 
-declare void @llvm.trap() #0
-
 ; DOORBELL:      .amdhsa_kernel trap
 ; DOORBELL-NEXT:     .amdhsa_group_segment_fixed_size 0
 ; DOORBELL-NEXT:     .amdhsa_private_segment_fixed_size 0

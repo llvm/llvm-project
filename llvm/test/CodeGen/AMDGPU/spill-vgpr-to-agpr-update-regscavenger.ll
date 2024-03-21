@@ -88,5 +88,3 @@ bb.4:                                                ; preds = %bb.3
 bb.5:                                                ; preds = %bb.3
   ret void
 }
-
-declare i32 @llvm.amdgcn.readfirstlane(i32)

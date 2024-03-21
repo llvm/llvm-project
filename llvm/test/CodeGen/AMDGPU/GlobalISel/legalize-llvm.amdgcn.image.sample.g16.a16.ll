@@ -404,7 +404,3 @@ main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f16.f16(i32 15, half %dsdh, half %dtdh, half %drdh, half %dsdv, half %dtdv, half %drdv, half %s, half %t, half %r, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
 }
-
-declare <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f16.f16(i32, half,  half,  half, <8 x i32>, <4 x i32>, i1, i32, i32)
-declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f16.f16(i32, half,  half,  half,  half,  half,  half, <8 x i32>, <4 x i32>, i1, i32, i32)
-declare <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f16.f16(i32, half,  half,  half,  half,  half,  half,  half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32)

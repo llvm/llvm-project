@@ -2145,11 +2145,6 @@ define <2 x half> @v_neg_rsq_v2f16(<2 x half> %a) {
   ret <2 x half> %fdiv
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-declare half @llvm.sqrt.f16(half) #2
-declare half @llvm.fabs.f16(half) #2
-declare <2 x half> @llvm.sqrt.v2f16(<2 x half>) #2
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "unsafe-fp-math"="true" }

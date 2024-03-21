@@ -204,8 +204,3 @@ define i32 @test_non_inline_constant_i32(i32 %a) {
   %smed = call i32 @llvm.smin.i32(i32 %smax, i32 65)
   ret i32 %smed
 }
-
-declare i32 @llvm.smin.i32(i32, i32)
-declare i32 @llvm.smax.i32(i32, i32)
-declare <2 x i16> @llvm.smin.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.smax.v2i16(<2 x i16>, <2 x i16>)

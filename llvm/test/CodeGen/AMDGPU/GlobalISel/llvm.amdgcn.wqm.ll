@@ -77,10 +77,4 @@ define amdgpu_ps <3 x float> @wqm_v3f32(<3 x float> %val) {
   ret <3 x float> %ret
 }
 
-declare i1 @llvm.amdgcn.wqm.i1(i1) #0
-declare float @llvm.amdgcn.wqm.f32(float) #0
-declare <2 x half> @llvm.amdgcn.wqm.v2f16(<2 x half>) #0
-declare <3 x float> @llvm.amdgcn.wqm.v3f32(<3 x float>) #0
-declare double @llvm.amdgcn.wqm.f64(double) #0
-
 attributes #0 = { nounwind readnone speculatable }

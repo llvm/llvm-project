@@ -384,21 +384,6 @@ define void @debugtrap_requires_queue() #0 {
   unreachable
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare i32 @llvm.amdgcn.workitem.id.y()
-declare i32 @llvm.amdgcn.workitem.id.z()
-declare i32 @llvm.amdgcn.workgroup.id.x()
-declare i32 @llvm.amdgcn.workgroup.id.y()
-declare i32 @llvm.amdgcn.workgroup.id.z()
-declare noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr()
-declare noalias ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-declare i64 @llvm.amdgcn.dispatch.id()
-declare noalias ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-declare i1 @llvm.amdgcn.is.shared(ptr)
-declare i1 @llvm.amdgcn.is.private(ptr)
-declare void @llvm.trap()
-declare void @llvm.debugtrap()
-
 attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" }
 
 !llvm.module.flags = !{!0}

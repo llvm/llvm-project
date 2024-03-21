@@ -26,7 +26,5 @@ define amdgpu_kernel void @readnone_s_getreg_test(ptr addrspace(1) %out) { ; sim
   ret void
 }
 
-declare i32 @llvm.amdgcn.s.getreg(i32 immarg) #0
-
 attributes #0 = { nounwind readonly }
 attributes #1 = { nounwind readnone }

@@ -1,9 +1,6 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX90A %s
 ; RUN: not --crash llc -global-isel < %s -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs 2>&1 | FileCheck %s -check-prefix=GFX908
 
-declare float @llvm.amdgcn.raw.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i32 immarg)
-declare <2 x half> @llvm.amdgcn.raw.buffer.atomic.fadd.v2f16(<2 x half>, <4 x i32>, i32, i32, i32 immarg)
-
 ; GFX908: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(s32) = G_AMDGPU_BUFFER_ATOMIC_FADD %{{[0-9]+}}:vgpr, %{{[0-9]+}}:sgpr(<4 x s32>), %{{[0-9]+}}:vgpr(s32), %{{[0-9]+}}:vgpr, %{{[0-9]+}}:sgpr, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8) (in function: buffer_atomic_add_f32_rtn)
 
 ; GFX90A-LABEL: {{^}}buffer_atomic_add_f32_rtn:

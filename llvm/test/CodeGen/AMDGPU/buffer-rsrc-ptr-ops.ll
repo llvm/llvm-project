@@ -108,6 +108,3 @@ main_body:
   store %fat_buffer_struct %arg, ptr addrspace(1) %dest.next
   ret void
 }
-
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8), i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32 immarg)

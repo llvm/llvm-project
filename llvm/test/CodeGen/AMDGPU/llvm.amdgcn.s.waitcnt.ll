@@ -43,10 +43,5 @@ define amdgpu_ps void @test3(<8 x i32> inreg %rsrc, i32 %c) {
   ret void
 }
 
-declare void @llvm.amdgcn.s.waitcnt(i32) #0
-
-declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32, i32, <8 x i32>, i32, i32) #1
-declare void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float>, i32, i32, <8 x i32>, i32, i32) #0
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

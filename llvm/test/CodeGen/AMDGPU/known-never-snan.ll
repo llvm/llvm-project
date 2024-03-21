@@ -642,31 +642,6 @@ define float @v_test_known_not_snan_cubeid_input_fmed3_r_i_i_f32(float %a, float
   ret float %med
 }
 
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.sin.f32(float) #1
-declare float @llvm.cos.f32(float) #1
-declare float @llvm.exp2.f32(float) #1
-declare float @llvm.trunc.f32(float) #1
-declare float @llvm.floor.f32(float) #1
-declare float @llvm.ceil.f32(float) #1
-declare float @llvm.round.f32(float) #1
-declare float @llvm.rint.f32(float) #1
-declare float @llvm.nearbyint.f32(float) #1
-declare float @llvm.canonicalize.f32(float) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare float @llvm.copysign.f32(float, float) #1
-declare float @llvm.fma.f32(float, float, float) #1
-declare float @llvm.fmuladd.f32(float, float, float) #1
-declare float @llvm.ldexp.f32.i32(float, i32) #1
-declare float @llvm.amdgcn.fmul.legacy(float, float) #1
-declare float @llvm.amdgcn.fmed3.f32(float, float, float) #1
-declare float @llvm.amdgcn.frexp.mant.f32(float) #1
-declare float @llvm.amdgcn.rcp.f32(float) #1
-declare float @llvm.amdgcn.rsq.f32(float) #1
-declare float @llvm.amdgcn.fract.f32(float) #1
-declare float @llvm.amdgcn.cubeid(float, float, float) #0
-
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone speculatable }
 

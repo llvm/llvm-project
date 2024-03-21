@@ -5,8 +5,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s --check-prefix=GFX10
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s --check-prefix=GFX900-GISEL
 
-declare void @llvm.amdgcn.global.load.lds(ptr addrspace(1) nocapture %gptr, ptr addrspace(3) nocapture %lptr, i32 %size, i32 %offset, i32 %aux)
-
 define amdgpu_ps void @global_load_lds_dword_vaddr(ptr addrspace(1) nocapture %gptr, ptr addrspace(3) nocapture %lptr) {
 ; GFX900-LABEL: global_load_lds_dword_vaddr:
 ; GFX900:       ; %bb.0: ; %main_body

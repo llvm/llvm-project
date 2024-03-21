@@ -258,6 +258,5 @@ define amdgpu_kernel void @test_preload_hint_kernel_incompatible_attributes(ptr 
 }
 
 declare void @func(ptr) #0
-declare void @llvm.amdgcn.set.prio(i16)
 
 attributes #0 = { nounwind }

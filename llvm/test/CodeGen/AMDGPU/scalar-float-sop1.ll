@@ -163,12 +163,3 @@ define amdgpu_vs half @frint_f16(half inreg %val) {
   %res = call half @llvm.rint.f16(half %val)
   ret half %res
 }
-
-declare float @llvm.ceil.f32(float)
-declare float @llvm.floor.f32(float)
-declare float @llvm.trunc.f32(float)
-declare float @llvm.rint.f32(float)
-declare half @llvm.ceil.f16(half)
-declare half @llvm.floor.f16(half)
-declare half @llvm.trunc.f16(half)
-declare half @llvm.rint.f16(half)

@@ -2622,14 +2622,6 @@ define float @v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo(i32 %src0.arg, 
   ret float %result
 }
 
-declare half @llvm.fabs.f16(half) #2
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #2
-declare float @llvm.fabs.f32(float) #2
-declare float @llvm.minnum.f32(float, float) #2
-declare float @llvm.maxnum.f32(float, float) #2
-declare float @llvm.fmuladd.f32(float, float, float) #2
-declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>) #2
-
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
 attributes #2 = { nounwind readnone speculatable }

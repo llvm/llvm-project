@@ -307,9 +307,6 @@ define amdgpu_kernel void @kernel_implicitarg_no_struct_align_padding(<16 x i32>
 ; HSA-NEXT:    .kernarg_segment_size: 120
 ; HSA-LABEL:   .name:           kernel_implicitarg_no_struct_align_padding
 
-declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #2
-declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #2
-
 attributes #0 = { nounwind noinline }
 attributes #1 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="48" }
 attributes #2 = { nounwind readnone speculatable }

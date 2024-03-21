@@ -148,6 +148,4 @@ define i32 @v_udot4_fnegv2f16_a(<2 x half> %a, i32 %b, i32 %c) {
   ret i32 %r
 }
 
-declare i32 @llvm.amdgcn.udot4(i32, i32, i32, i1 immarg) #0
-
 attributes #0 = { nounwind readnone speculatable }

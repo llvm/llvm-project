@@ -129,20 +129,4 @@ main_body:
   ret float %out
 }
 
-declare i32 @llvm.amdgcn.raw.buffer.atomic.swap.i32(i32, <4 x i32>, i32, i32, i32) #0
-declare float @llvm.amdgcn.raw.buffer.atomic.swap.f32(float, <4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.sub.i32(i32, <4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.smin.i32(i32, <4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.umin.i32(i32, <4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.smax.i32(i32, <4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.umax.i32(i32, <4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.and.i32(i32, <4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.or.i32(i32, <4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.xor.i32(i32, <4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.inc.i32(i32, <4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.dec.i32(i32, <4 x i32>, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32, i32, <4 x i32>, i32, i32, i32) #0
-declare i64 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i64(i64, i64, <4 x i32>, i32, i32, i32) #0
-
 attributes #0 = { nounwind }

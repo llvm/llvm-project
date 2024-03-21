@@ -2,8 +2,6 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-- -verify-machineinstrs -mem-intrinsic-expand-size=3 %s -o - | FileCheck -check-prefix=LOOP %s
 ; RUN: llc -global-isel -mtriple=amdgcn-- -verify-machineinstrs -mem-intrinsic-expand-size=5 %s -o - | FileCheck -check-prefix=UNROLL %s
 
-declare void @llvm.memset.p1.i32(ptr addrspace(1), i8, i32, i1)
-
 define amdgpu_cs void @memset_p1i8(ptr addrspace(1) %dst, i8 %val) {
 ; LOOP-LABEL: memset_p1i8:
 ; LOOP:       ; %bb.0: ; %loadstoreloop.preheader

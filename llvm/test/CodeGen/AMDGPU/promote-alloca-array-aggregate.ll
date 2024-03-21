@@ -295,11 +295,6 @@ define amdgpu_vs void @promote_memcpy_inline_aggr() #0 {
   ret void
 }
 
-declare void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
-declare void @llvm.memcpy.p1.p5.i32(ptr addrspace(1) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
-declare void @llvm.memcpy.inline.p5.p5.i32(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
-declare void @llvm.memmove.p5.p5.i32(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
-
 @tmp_g = external addrspace(1) global { [4 x double], <2 x double>, <3 x double>, <4 x double> }
 @frag_color = external addrspace(1) global <4 x float>
 

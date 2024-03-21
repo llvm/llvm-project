@@ -15,10 +15,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-DENORM,GFX11-DENORM-STRICT %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-DENORM,GFX11-DENORM-CONTRACT %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare half @llvm.fmuladd.f16(half, half, half) #1
-declare half @llvm.fabs.f16(half) #1
-
 define amdgpu_kernel void @fmuladd_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; VI-FLUSH-LABEL: fmuladd_f16:
 ; VI-FLUSH:       ; %bb.0:

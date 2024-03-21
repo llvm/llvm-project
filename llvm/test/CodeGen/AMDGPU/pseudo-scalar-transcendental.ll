@@ -338,20 +338,3 @@ define amdgpu_cs half @srcmods_neg_f16(half inreg %src) {
   %result = call half @llvm.log2.f16(half %neg)
   ret half %result
 }
-
-declare half @llvm.exp2.f16(half)
-declare float @llvm.exp2.f32(float)
-declare half @llvm.amdgcn.exp2.f16(half)
-declare float @llvm.amdgcn.exp2.f32(float)
-declare half @llvm.log2.f16(half)
-declare float @llvm.log2.f32(float)
-declare half @llvm.amdgcn.log.f16(half)
-declare float @llvm.amdgcn.log.f32(float)
-declare half @llvm.amdgcn.rcp.f16(half)
-declare float @llvm.amdgcn.rcp.f32(float)
-declare half @llvm.sqrt.f16(half)
-declare float @llvm.sqrt.f32(float)
-declare half @llvm.amdgcn.sqrt.f16(half)
-declare float @llvm.amdgcn.sqrt.f32(float)
-declare half @llvm.fabs.f16(half)
-declare float @llvm.fabs.f32(float)

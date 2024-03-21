@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
 
-declare i32 @llvm.amdgcn.s.get.waveid.in.workgroup() #0
-
 ; GCN-LABEL: {{^}}test_s_get_waveid_in_workgroup:
 ; GFX10: global_store_dword
 ; GFX10: s_get_waveid_in_workgroup [[DEST:s[0-9]+]]

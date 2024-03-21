@@ -3190,10 +3190,5 @@ define i1 @test153(double %arg1, double %arg2, double %arg3) {
   ret i1 %or1
 }
 
-declare double @llvm.canonicalize.f64(double)
-declare float @llvm.canonicalize.f32(float)
-declare half @llvm.canonicalize.f16(half)
-declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>)
-
 attributes #0 = { nounwind "amdgpu-ieee"="false" }
 attributes #1 = { nounwind "unsafe-fp-math"="true" "no-nans-fp-math"="true" }

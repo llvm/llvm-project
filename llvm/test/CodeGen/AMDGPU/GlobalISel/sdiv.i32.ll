@@ -75,7 +75,6 @@ define i32 @v_sdiv_i32(i32 %num, i32 %den) {
 }
 
 ; FIXME: This is a workaround for not handling uniform VGPR case.
-declare i32 @llvm.amdgcn.readfirstlane(i32)
 
 define amdgpu_ps i32 @s_sdiv_i32(i32 inreg %num, i32 inreg %den) {
 ; GISEL-LABEL: s_sdiv_i32:

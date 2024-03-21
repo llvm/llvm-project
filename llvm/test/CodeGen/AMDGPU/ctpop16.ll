@@ -3,14 +3,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI %s
 ; RUN: llc -mtriple=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=EG %s
 
-declare i16 @llvm.ctpop.i16(i16) nounwind readnone
-declare <2 x i16> @llvm.ctpop.v2i16(<2 x i16>) nounwind readnone
-declare <4 x i16> @llvm.ctpop.v4i16(<4 x i16>) nounwind readnone
-declare <8 x i16> @llvm.ctpop.v8i16(<8 x i16>) nounwind readnone
-declare <16 x i16> @llvm.ctpop.v16i16(<16 x i16>) nounwind readnone
-
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
 define amdgpu_kernel void @s_ctpop_i16(ptr addrspace(1) noalias %out, i16 %val) nounwind {
 ; SI-LABEL: s_ctpop_i16:
 ; SI:       ; %bb.0:

@@ -675,8 +675,6 @@ entry:
   ret void
 }
 
-declare void @llvm.amdgcn.s.barrier() #2
-
 attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind "no-signed-zeros-fp-math"="true" "denormal-fp-math"="preserve-sign,preserve-sign" }
 attributes #2 = { nounwind convergent }
