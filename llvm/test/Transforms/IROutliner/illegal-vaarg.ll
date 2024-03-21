@@ -19,7 +19,7 @@ define i32 @func1(i32 %a, double %b, ptr %v, ...) nounwind {
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[A:%.*]], ptr [[A_ADDR]], double [[B:%.*]], ptr [[B_ADDR]])
 ; CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[AP]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = va_arg ptr [[AP]], i32
-; CHECK-NEXT:    call void @llvm.va_copy.p0.p0(ptr [[V:%.*]], ptr [[AP]])
+; CHECK-NEXT:    call void @llvm.va_copy.p0(ptr [[V:%.*]], ptr [[AP]])
 ; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[AP]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[TMP_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_1(i32 [[TMP0]], ptr [[C]], ptr [[TMP_LOC]])
@@ -54,7 +54,7 @@ define i32 @func2(i32 %a, double %b, ptr %v, ...) nounwind {
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[A:%.*]], ptr [[A_ADDR]], double [[B:%.*]], ptr [[B_ADDR]])
 ; CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[AP]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = va_arg ptr [[AP]], i32
-; CHECK-NEXT:    call void @llvm.va_copy.p0.p0(ptr [[V:%.*]], ptr [[AP]])
+; CHECK-NEXT:    call void @llvm.va_copy.p0(ptr [[V:%.*]], ptr [[AP]])
 ; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[AP]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[TMP_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_1(i32 [[TMP0]], ptr [[C]], ptr [[TMP_LOC]])

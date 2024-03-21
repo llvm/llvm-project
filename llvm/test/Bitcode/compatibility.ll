@@ -1654,7 +1654,7 @@ define void @instructions.va_arg(ptr %v, ...) {
   ; CHECK: va_arg ptr %ap, i32
 
   call void @llvm.va_copy(ptr %v, ptr %ap)
-  ; CHECK: call void @llvm.va_copy.p0.p0(ptr %v, ptr %ap)
+  ; CHECK: call void @llvm.va_copy.p0(ptr %v, ptr %ap)
 
   call void @llvm.va_end(ptr %ap)
   ; CHECK: call void @llvm.va_end.p0(ptr %ap)

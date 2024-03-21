@@ -703,7 +703,7 @@ class MSBuiltin<string name> {
 def int_vastart : DefaultAttrsIntrinsic<[],
                                         [llvm_anyptr_ty], [], "llvm.va_start">;
 def int_vacopy  : DefaultAttrsIntrinsic<[],
-                                        [llvm_anyptr_ty, llvm_anyptr_ty], [],
+                                        [llvm_anyptr_ty, LLVMMatchType<0>], [],
                                         "llvm.va_copy">;
 def int_vaend   : DefaultAttrsIntrinsic<[],
                                         [llvm_anyptr_ty], [], "llvm.va_end">;

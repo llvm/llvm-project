@@ -25,7 +25,7 @@ struct x {
 // CHECK-NEXT:    call void @llvm.va_start.p4(ptr addrspace(4) [[AP_ASCAST]])
 // CHECK-NEXT:    [[TMP0:%.*]] = va_arg ptr addrspace(4) [[AP_ASCAST]], ptr
 // CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 8 [[T_ASCAST]], ptr align 8 [[TMP0]], i64 16, i1 false)
-// CHECK-NEXT:    call void @llvm.va_copy.p4.p4(ptr addrspace(4) [[AP2_ASCAST]], ptr addrspace(4) [[AP_ASCAST]])
+// CHECK-NEXT:    call void @llvm.va_copy.p4(ptr addrspace(4) [[AP2_ASCAST]], ptr addrspace(4) [[AP_ASCAST]])
 // CHECK-NEXT:    [[TMP1:%.*]] = va_arg ptr addrspace(4) [[AP2_ASCAST]], i32
 // CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(4) [[VARET_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[VARET_ASCAST]], align 4

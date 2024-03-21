@@ -44,7 +44,7 @@ void operator delete(void*);
 // CHECK:       cond.true11:
 // CHECK-NEXT:    [[ARRAYDECAY12:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[L]], i64 0, i64 0
 // CHECK-NEXT:    [[ARRAYDECAY13:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[L2]], i64 0, i64 0
-// CHECK-NEXT:    call void @llvm.va_copy.p0.p0(ptr [[ARRAYDECAY12]], ptr [[ARRAYDECAY13]])
+// CHECK-NEXT:    call void @llvm.va_copy.p0(ptr [[ARRAYDECAY12]], ptr [[ARRAYDECAY13]])
 // CHECK-NEXT:    br label [[COND_END15:%.*]]
 // CHECK:       cond.false14:
 // CHECK-NEXT:    br label [[COND_END15]]

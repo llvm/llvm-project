@@ -799,7 +799,7 @@ Value *CodeGenFunction::EmitVAStartEnd(Value *ArgValue, bool IsStart) {
 /// Checks if using the result of __builtin_object_size(p, @p From) in place of
 /// __builtin_object_size(p, @p To) is correct
 static bool areBOSTypesCompatible(int From, int To) {
-  // Note: Our __builtin_object_size implementation currently treats Type=0 and
+  // Note: Our __builtin_object_size implementation currently treats Type=0 andV
   // Type=2 identically. Encoding this implementation detail here may make
   // improving __builtin_object_size difficult in the future, so it's omitted.
   return From == To || (From == 0 && To == 1) || (From == 3 && To == 2);
@@ -3019,8 +3019,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_va_copy: {
     Value *DstPtr = EmitVAListRef(E->getArg(0)).getPointer();
     Value *SrcPtr = EmitVAListRef(E->getArg(1)).getPointer();
-    Builder.CreateCall(CGM.getIntrinsic(Intrinsic::vacopy,
-                                        {DstPtr->getType(), SrcPtr->getType()}),
+    Builder.CreateCall(CGM.getIntrinsic(Intrinsic::vacopy, {DstPtr->getType()}),
                        {DstPtr, SrcPtr});
     return RValue::get(nullptr);
   }

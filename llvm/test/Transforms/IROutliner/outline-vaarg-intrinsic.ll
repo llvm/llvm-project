@@ -84,7 +84,7 @@ entry:
 ; CHECK-NEXT:  newFuncRoot:
 ; CHECK-NEXT:    br label [[ENTRY_TO_OUTLINE:%.*]]
 ; CHECK:       entry_to_outline:
-; CHECK-NEXT:    call void @llvm.va_copy.p0.p0(ptr [[TMP0]], ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.va_copy.p0(ptr [[TMP0]], ptr [[TMP1]])
 ; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[TMP3]], align 4
