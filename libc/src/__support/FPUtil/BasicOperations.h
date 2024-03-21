@@ -14,6 +14,7 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 namespace LIBC_NAMESPACE {
 namespace fputil {
@@ -79,7 +80,7 @@ LIBC_INLINE T canonicalize(T *cx, const T *x) {
   if constexpr (get_fp_type<T>() == FPType::X86_Binary80) {
   }
   FPBits<T> sx(*x);
-  if (sx.is_signaling_nan()) {
+  if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
     *cx = FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa());
     raise_except_if_required(FE_INVALID);
   } else {
