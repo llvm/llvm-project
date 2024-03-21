@@ -64,6 +64,17 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
             return false;
         return true;
     }
+
+    /**
+     * Handle C++ nullptr literal.
+     */
+    bool VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *nple) {
+        if (sourceLocationMatches(nple->getBeginLoc())) {
+            found = "nullptr";
+            return false;
+        }
+        return true;
+    }
 };
 
 #endif
