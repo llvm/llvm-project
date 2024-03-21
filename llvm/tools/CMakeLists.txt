@@ -44,11 +44,11 @@ endif()
 
 # Projects supported via LLVM_EXTERNAL_*_SOURCE_DIR need to be explicitly
 # specified.
-add_llvm_external_project(clang)
 add_llvm_external_project(lld)
 add_llvm_external_project(lldb)
 add_llvm_external_project(mlir)
-# Flang depends on mlir, so place it afterward
+# ClangIR and Flang depends on mlir, so place them afterwards
+add_llvm_external_project(clang)
 add_llvm_external_project(flang)
 add_llvm_external_project(bolt)
 
