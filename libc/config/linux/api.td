@@ -264,5 +264,5 @@ def SearchAPI : PublicAPI<"search.h"> {
 }
 
 def SysStatvfsAPI : PublicAPI<"sys/statvfs.h"> {
-  let Types = ["struct statvfs"];
+  let Types = ["fsblkcnt_t", "fsfilcnt_t", "struct statvfs"];
 }
