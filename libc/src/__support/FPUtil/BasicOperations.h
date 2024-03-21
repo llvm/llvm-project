@@ -12,9 +12,8 @@
 #include "FPBits.h"
 
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/common.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
-
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
 namespace fputil {
