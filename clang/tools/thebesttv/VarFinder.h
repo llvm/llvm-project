@@ -75,6 +75,17 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
         }
         return true;
     }
+
+    /**
+     * Handle integer literal (mostly 0).
+     */
+    bool VisitIntegerLiteral(IntegerLiteral *il) {
+        if (sourceLocationMatches(il->getBeginLoc())) {
+            found = "(INTEGER_LITERAL)";
+            return false;
+        }
+        return true;
+    }
 };
 
 #endif
