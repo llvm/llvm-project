@@ -109,6 +109,7 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   alignConsecutiveBitFields();
   alignConsecutiveAssignments();
   if (Style.isTableGen()) {
+    alignConsecutiveTableGenBreakingDAGArgColons();
     alignConsecutiveTableGenCondOperatorColons();
     alignConsecutiveTableGenDefinitions();
   }
@@ -976,6 +977,11 @@ void WhitespaceManager::alignConsecutiveShortCaseStatements() {
 
   AlignMatchingTokenSequence(StartOfSequence, EndOfSequence, MinColumn, Matches,
                              Changes);
+}
+
+void WhitespaceManager::alignConsecutiveTableGenBreakingDAGArgColons() {
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenBreakingDAGArgColons,
+                         TT_TableGenDAGArgListColonToAlign);
 }
 
 void WhitespaceManager::alignConsecutiveTableGenCondOperatorColons() {
