@@ -42,15 +42,15 @@ func.func @permutation_with_mask_scalable(%2: memref<?x?xf32>, %dim_1: index, %d
 }
 
 // CHECK:           func.func @permutation_with_mask_transfer_write_scalable(
-// CHECK-SAME:        %[[VAL_0:.*]]: vector<4x[8]xi16>,
-// CHECK-SAME:        %[[VAL_1:.*]]: memref<1x4x?x1x1x1x1xi16>,
-// CHECK-SAME:        %[[VAL_2:.*]]: vector<4x[8]xi1>) {
-// CHECK:             %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:             %[[VAL_4:.*]] = vector.broadcast %[[VAL_0]] : vector<4x[8]xi16> to vector<1x1x1x1x4x[8]xi16>
-// CHECK:             %[[VAL_5:.*]] = vector.broadcast %[[VAL_2]] : vector<4x[8]xi1> to vector<1x1x1x1x4x[8]xi1>
-// CHECK:             %[[VAL_6:.*]] = vector.transpose %[[VAL_5]], [4, 5, 0, 1, 2, 3] : vector<1x1x1x1x4x[8]xi1> to vector<4x[8]x1x1x1x1xi1>
-// CHECK:             %[[VAL_7:.*]] = vector.transpose %[[VAL_4]], [4, 5, 0, 1, 2, 3] : vector<1x1x1x1x4x[8]xi16> to vector<4x[8]x1x1x1x1xi16>
-// CHECK:             vector.transfer_write %[[VAL_7]], %[[VAL_1]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_6]] {in_bounds = [true, true, true, true, true, true]} : vector<4x[8]x1x1x1x1xi16>, memref<1x4x?x1x1x1x1xi16>
+// CHECK-SAME:        %[[ARG_0:.*]]: vector<4x[8]xi16>,
+// CHECK-SAME:        %[[ARG_1:.*]]: memref<1x4x?x1x1x1x1xi16>,
+// CHECK-SAME:        %[[MASK:.*]]: vector<4x[8]xi1>) {
+// CHECK:             %[[C0:.*]] = arith.constant 0 : index
+// CHECK:             %[[BCAST_1:.*]] = vector.broadcast %[[ARG_0]] : vector<4x[8]xi16> to vector<1x1x1x1x4x[8]xi16>
+// CHECK:             %[[BCAST_2:.*]] = vector.broadcast %[[MASK]] : vector<4x[8]xi1> to vector<1x1x1x1x4x[8]xi1>
+// CHECK:             %[[TRANSPOSE_1:.*]] = vector.transpose %[[BCAST_2]], [4, 5, 0, 1, 2, 3] : vector<1x1x1x1x4x[8]xi1> to vector<4x[8]x1x1x1x1xi1>
+// CHECK:             %[[TRANSPOSE_2:.*]] = vector.transpose %[[BCAST_1]], [4, 5, 0, 1, 2, 3] : vector<1x1x1x1x4x[8]xi16> to vector<4x[8]x1x1x1x1xi16>
+// CHECK:             vector.transfer_write %[[TRANSPOSE_2]], %[[ARG_1]]{{\[}}%[[C0]], %[[C0]], %[[C0]], %[[C0]], %[[C0]], %[[C0]], %[[C0]]], %[[TRANSPOSE_1]] {in_bounds = [true, true, true, true, true, true]} : vector<4x[8]x1x1x1x1xi16>, memref<1x4x?x1x1x1x1xi16>
 // CHECK:             return
 func.func @permutation_with_mask_transfer_write_scalable(%arg0: vector<4x[8]xi16>, %arg1: memref<1x4x?x1x1x1x1xi16>, %mask:  vector<4x[8]xi1>){
      %c0 = arith.constant 0 : index
