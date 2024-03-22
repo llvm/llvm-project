@@ -110,9 +110,13 @@ struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
   }
 };
 
-/// Expands FloorDivSIOp (n, m) into
-///   1)  x = (m<0) ? 1 : -1
-///   2)  return (n*m<0) ? - ((-n+x) / m) -1 : n / m
+/// Expands FloorDivSIOp (x, y) into
+/// z = x / y
+/// if (z * y != x && (x < 0) != (y < 0)) {
+///   return  z - 1;
+/// } else {
+///   return z;
+/// }
 struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(arith::FloorDivSIOp op,
@@ -121,41 +125,29 @@ struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
     Type type = op.getType();
     Value a = op.getLhs();
     Value b = op.getRhs();
-    Value plusOne = createConst(loc, type, 1, rewriter);
+
+    Value quotient = rewriter.create<arith::DivSIOp>(loc, a, b);
+    Value product = rewriter.create<arith::MulIOp>(loc, quotient, b);
+    Value notEqualDivisor = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ne, a, product);
     Value zero = createConst(loc, type, 0, rewriter);
-    Value minusOne = createConst(loc, type, -1, rewriter);
-    // Compute x = (b<0) ? 1 : -1.
-    Value compare =
-        rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, b, zero);
-    Value x = rewriter.create<arith::SelectOp>(loc, compare, plusOne, minusOne);
-    // Compute negative res: -1 - ((x-a)/b).
-    Value xMinusA = rewriter.create<arith::SubIOp>(loc, x, a);
-    Value xMinusADivB = rewriter.create<arith::DivSIOp>(loc, xMinusA, b);
-    Value negRes = rewriter.create<arith::SubIOp>(loc, minusOne, xMinusADivB);
-    // Compute positive res: a/b.
-    Value posRes = rewriter.create<arith::DivSIOp>(loc, a, b);
-    // Result is (a*b<0) ? negative result : positive result.
-    // Note, we want to avoid using a*b because of possible overflow.
-    // The case that matters are a>0, a==0, a<0, b>0 and b<0. We do
-    // not particuliarly care if a*b<0 is true or false when b is zero
-    // as this will result in an illegal divide. So `a*b<0` can be reformulated
-    // as `(a>0 && b<0) || (a>0 && b<0)' or `(a>0 && b<0) || (a>0 && b<=0)'.
-    // We pick the first expression here.
+
     Value aNeg =
         rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, a, zero);
-    Value aPos =
-        rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt, a, zero);
     Value bNeg =
         rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, b, zero);
-    Value bPos =
-        rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt, b, zero);
-    Value firstTerm = rewriter.create<arith::AndIOp>(loc, aNeg, bPos);
-    Value secondTerm = rewriter.create<arith::AndIOp>(loc, aPos, bNeg);
-    Value compareRes =
-        rewriter.create<arith::OrIOp>(loc, firstTerm, secondTerm);
-    // Perform substitution and return success.
-    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, compareRes, negRes,
-                                                 posRes);
+
+    Value signOpposite = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ne, aNeg, bNeg);
+    Value cond =
+        rewriter.create<arith::AndIOp>(loc, notEqualDivisor, signOpposite);
+
+    Value minusOne = createConst(loc, type, -1, rewriter);
+    Value quotientMinusOne =
+        rewriter.create<arith::AddIOp>(loc, quotient, minusOne);
+
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cond, quotientMinusOne,
+                                                 quotient);
     return success();
   }
 };

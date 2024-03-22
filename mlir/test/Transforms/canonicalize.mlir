@@ -989,6 +989,15 @@ func.func @tensor_arith.floordivsi_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5x
   return %res : tensor<4x5xi32>
 }
 
+// CHECK-LABEL: func @arith.floordivsi_by_one_overflow
+func.func @arith.floordivsi_by_one_overflow() -> i64 {
+  %neg_one = arith.constant -1 : i64
+  %min_int = arith.constant -9223372036854775808 : i64
+  // CHECK: arith.floordivsi
+  %poision = arith.floordivsi %min_int, %neg_one : i64
+  return %poision : i64
+}
+
 // -----
 
 // CHECK-LABEL: func @arith.ceildivsi_by_one
