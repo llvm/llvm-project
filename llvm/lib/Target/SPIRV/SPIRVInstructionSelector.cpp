@@ -1666,8 +1666,7 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
     MRI->setType(WrapReg, LLT::pointer(0, 32));
     GR.assignSPIRVTypeToVReg(OpType, WrapReg, *MF);
     MachineBasicBlock &BB = *I.getParent();
-    Result = BuildMI(BB, I, I.getDebugLoc(),
-                     TII.get(SPIRV::OpSpecConstantOp))
+    Result = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSpecConstantOp))
                  .addDef(WrapReg)
                  .addUse(GR.getSPIRVTypeID(OpType))
                  .addImm(static_cast<uint32_t>(SPIRV::Opcode::Bitcast))
