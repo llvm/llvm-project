@@ -26,7 +26,12 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
 #include <system_error>
+
+#if defined(_AIX)
+#define CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+#endif
 
 using namespace clang;
 namespace {
@@ -43,6 +48,10 @@ struct LLVMInitRAII {
   LLVMInitRAII() {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
+    LLVMInitializeARMTarget();
+    LLVMInitializeARMTargetInfo();
+    LLVMInitializeARMTargetMC();
+    LLVMInitializeARMAsmPrinter();
   }
   ~LLVMInitRAII() { llvm::llvm_shutdown(); }
 } LLVMInit;
@@ -76,7 +85,7 @@ private:
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
 };
 
-#ifdef _AIX
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
 TEST(InterpreterExtensionsTest, DISABLED_ExecutorCreateReset) {
 #else
 TEST(InterpreterExtensionsTest, ExecutorCreateReset) {
@@ -176,31 +185,25 @@ public:
   llvm::Error CreateExecutor() { return Interpreter::CreateExecutor(); }
 };
 
-static void initArmTarget() {
-  static llvm::once_flag F;
-  llvm::call_once(F, [] {
-    LLVMInitializeARMTarget();
-    LLVMInitializeARMTargetInfo();
-    LLVMInitializeARMTargetMC();
-    LLVMInitializeARMAsmPrinter();
-  });
-}
-
-llvm::llvm_shutdown_obj Shutdown;
-
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(InterpreterExtensionsTest, DISABLED_DefaultCrossJIT) {
+#else
 TEST(InterpreterExtensionsTest, DefaultCrossJIT) {
+#endif
   IncrementalCompilerBuilder CB;
   CB.SetTargetTriple("armv6-none-eabi");
   auto CI = cantFail(CB.CreateCpp());
   llvm::Error ErrOut = llvm::Error::success();
   CustomJBInterpreter Interp(std::move(CI), ErrOut);
   cantFail(std::move(ErrOut));
-
-  initArmTarget();
   cantFail(Interp.CreateExecutor());
 }
 
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(InterpreterExtensionsTest, DISABLED_CustomCrossJIT) {
+#else
 TEST(InterpreterExtensionsTest, CustomCrossJIT) {
+#endif
   std::string TargetTriple = "armv6-none-eabi";
 
   IncrementalCompilerBuilder CB;
@@ -214,7 +217,6 @@ TEST(InterpreterExtensionsTest, CustomCrossJIT) {
   LLJIT *JIT = nullptr;
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> Objs;
   Interp.setCustomJITBuilderCreator([&]() {
-    initArmTarget();
     auto JTMB = JITTargetMachineBuilder(llvm::Triple(TargetTriple));
     JTMB.setCPU("cortex-m0plus");
     auto JB = std::make_unique<LLJITBuilder>();

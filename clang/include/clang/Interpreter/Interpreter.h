@@ -29,7 +29,6 @@
 
 namespace llvm {
 namespace orc {
-class JITTargetMachineBuilder;
 class LLJIT;
 class LLJITBuilder;
 class ThreadSafeContext;
