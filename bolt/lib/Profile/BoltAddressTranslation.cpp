@@ -196,6 +196,10 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
       // Function hash
       LLVM_DEBUG(dbgs() << "Hash: " << formatv("{0:x}\n", FuncHashPair.first));
       OS.write(reinterpret_cast<char *>(&FuncHashPair.first), 8);
+      // Number of basic blocks
+      size_t NumBasicBlocks = FuncHashPair.second.size();
+      LLVM_DEBUG(dbgs() << "Basic blocks: " << NumBasicBlocks << '\n');
+      encodeULEB128(NumBasicBlocks, OS);
     }
     encodeULEB128(NumEntries, OS);
     // For hot fragments only: encode the number of equal offsets
@@ -293,6 +297,12 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
       const size_t FuncHash = DE.getU64(&Offset, &Err);
       FuncHashes[Address].first = FuncHash;
       LLVM_DEBUG(dbgs() << formatv("{0:x}: hash {1:x}\n", Address, FuncHash));
+      // Number of basic blocks
+      const size_t NumBasicBlocks = DE.getULEB128(&Offset, &Err);
+      NumBasicBlocksMap.emplace(Address, NumBasicBlocks);
+      LLVM_DEBUG(dbgs() << formatv("{0:x}: #bbs {1}, {2} bytes\n", Address,
+                                   NumBasicBlocks,
+                                   getULEB128Size(NumBasicBlocks)));
     }
     const uint32_t NumEntries = DE.getULEB128(&Offset, &Err);
     // Equal offsets, hot fragments only.
