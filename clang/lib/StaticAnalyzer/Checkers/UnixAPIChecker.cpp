@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "llvm/ADT/STLExtras.h"
@@ -41,8 +42,7 @@ enum class OpenVariant {
 namespace {
 
 class UnixAPIMisuseChecker
-    : public Checker<check::PreStmt<CallExpr>,
-                     check::ASTDecl<TranslationUnitDecl>> {
+    : public Checker<check::PreCall, check::ASTDecl<TranslationUnitDecl>> {
   const BugType BT_open{this, "Improper use of 'open'", categories::UnixAPI};
   const BugType BT_pthreadOnce{this, "Improper use of 'pthread_once'",
                                categories::UnixAPI};
@@ -52,14 +52,14 @@ public:
   void checkASTDecl(const TranslationUnitDecl *TU, AnalysisManager &Mgr,
                     BugReporter &BR) const;
 
-  void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
+  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 
-  void CheckOpen(CheckerContext &C, const CallExpr *CE) const;
-  void CheckOpenAt(CheckerContext &C, const CallExpr *CE) const;
-  void CheckPthreadOnce(CheckerContext &C, const CallExpr *CE) const;
+  void CheckOpen(CheckerContext &C, const CallEvent &Call) const;
+  void CheckOpenAt(CheckerContext &C, const CallEvent &Call) const;
+  void CheckPthreadOnce(CheckerContext &C, const CallEvent &Call) const;
 
-  void CheckOpenVariant(CheckerContext &C,
-                        const CallExpr *CE, OpenVariant Variant) const;
+  void CheckOpenVariant(CheckerContext &C, const CallEvent &Call,
+                        OpenVariant Variant) const;
 
   void ReportOpenBug(CheckerContext &C, ProgramStateRef State, const char *Msg,
                      SourceRange SR) const;
@@ -113,9 +113,9 @@ void UnixAPIMisuseChecker::checkASTDecl(const TranslationUnitDecl *TU,
 // "open" (man 2 open)
 //===----------------------------------------------------------------------===/
 
-void UnixAPIMisuseChecker::checkPreStmt(const CallExpr *CE,
+void UnixAPIMisuseChecker::checkPreCall(const CallEvent &Call,
                                         CheckerContext &C) const {
-  const FunctionDecl *FD = C.getCalleeDecl(CE);
+  const FunctionDecl *FD = dyn_cast_if_present<FunctionDecl>(Call.getDecl());
   if (!FD || FD->getKind() != Decl::Function)
     return;
 
@@ -130,13 +130,13 @@ void UnixAPIMisuseChecker::checkPreStmt(const CallExpr *CE,
     return;
 
   if (FName == "open")
-    CheckOpen(C, CE);
+    CheckOpen(C, Call);
 
   else if (FName == "openat")
-    CheckOpenAt(C, CE);
+    CheckOpenAt(C, Call);
 
   else if (FName == "pthread_once")
-    CheckPthreadOnce(C, CE);
+    CheckPthreadOnce(C, Call);
 }
 void UnixAPIMisuseChecker::ReportOpenBug(CheckerContext &C,
                                          ProgramStateRef State,
@@ -152,17 +152,17 @@ void UnixAPIMisuseChecker::ReportOpenBug(CheckerContext &C,
 }
 
 void UnixAPIMisuseChecker::CheckOpen(CheckerContext &C,
-                                     const CallExpr *CE) const {
-  CheckOpenVariant(C, CE, OpenVariant::Open);
+                                     const CallEvent &Call) const {
+  CheckOpenVariant(C, Call, OpenVariant::Open);
 }
 
 void UnixAPIMisuseChecker::CheckOpenAt(CheckerContext &C,
-                                       const CallExpr *CE) const {
-  CheckOpenVariant(C, CE, OpenVariant::OpenAt);
+                                       const CallEvent &Call) const {
+  CheckOpenVariant(C, Call, OpenVariant::OpenAt);
 }
 
 void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
-                                            const CallExpr *CE,
+                                            const CallEvent &Call,
                                             OpenVariant Variant) const {
   // The index of the argument taking the flags open flags (O_RDONLY,
   // O_WRONLY, O_CREAT, etc.),
@@ -191,11 +191,11 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
 
   ProgramStateRef state = C.getState();
 
-  if (CE->getNumArgs() < MinArgCount) {
+  if (Call.getNumArgs() < MinArgCount) {
     // The frontend should issue a warning for this case. Just return.
     return;
-  } else if (CE->getNumArgs() == MaxArgCount) {
-    const Expr *Arg = CE->getArg(CreateModeArgIndex);
+  } else if (Call.getNumArgs() == MaxArgCount) {
+    const Expr *Arg = Call.getArgExpr(CreateModeArgIndex);
     QualType QT = Arg->getType();
     if (!QT->isIntegerType()) {
       SmallString<256> SBuf;
@@ -209,7 +209,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
                     Arg->getSourceRange());
       return;
     }
-  } else if (CE->getNumArgs() > MaxArgCount) {
+  } else if (Call.getNumArgs() > MaxArgCount) {
     SmallString<256> SBuf;
     llvm::raw_svector_ostream OS(SBuf);
     OS << "Call to '" << VariantName << "' with more than " << MaxArgCount
@@ -217,7 +217,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
 
     ReportOpenBug(C, state,
                   SBuf.c_str(),
-                  CE->getArg(MaxArgCount)->getSourceRange());
+                  Call.getArgExpr(MaxArgCount)->getSourceRange());
     return;
   }
 
@@ -226,8 +226,8 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   }
 
   // Now check if oflags has O_CREAT set.
-  const Expr *oflagsEx = CE->getArg(FlagsArgIndex);
-  const SVal V = C.getSVal(oflagsEx);
+  const Expr *oflagsEx = Call.getArgExpr(FlagsArgIndex);
+  const SVal V = Call.getArgSVal(FlagsArgIndex);
   if (!isa<NonLoc>(V)) {
     // The case where 'V' can be a location can only be due to a bad header,
     // so in this case bail out.
@@ -253,7 +253,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   if (!(trueState && !falseState))
     return;
 
-  if (CE->getNumArgs() < MaxArgCount) {
+  if (Call.getNumArgs() < MaxArgCount) {
     SmallString<256> SBuf;
     llvm::raw_svector_ostream OS(SBuf);
     OS << "Call to '" << VariantName << "' requires a "
@@ -271,18 +271,18 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
 //===----------------------------------------------------------------------===//
 
 void UnixAPIMisuseChecker::CheckPthreadOnce(CheckerContext &C,
-                                      const CallExpr *CE) const {
+                                            const CallEvent &Call) const {
 
   // This is similar to 'CheckDispatchOnce' in the MacOSXAPIChecker.
   // They can possibly be refactored.
 
-  if (CE->getNumArgs() < 1)
+  if (Call.getNumArgs() < 1)
     return;
 
   // Check if the first argument is stack allocated.  If so, issue a warning
   // because that's likely to be bad news.
   ProgramStateRef state = C.getState();
-  const MemRegion *R = C.getSVal(CE->getArg(0)).getAsRegion();
+  const MemRegion *R = Call.getArgSVal(0).getAsRegion();
   if (!R || !isa<StackSpaceRegion>(R->getMemorySpace()))
     return;
 
@@ -304,7 +304,7 @@ void UnixAPIMisuseChecker::CheckPthreadOnce(CheckerContext &C,
 
   auto report =
       std::make_unique<PathSensitiveBugReport>(BT_pthreadOnce, os.str(), N);
-  report->addRange(CE->getArg(0)->getSourceRange());
+  report->addRange(Call.getArgExpr(0)->getSourceRange());
   C.emitReport(std::move(report));
 }
 
