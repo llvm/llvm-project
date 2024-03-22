@@ -42,10 +42,9 @@ body:             |
     ; CHECK-LABEL: name: test_fold_repeating_constant_store
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $x8 = MOVZXi 49370, 0
-    ; CHECK-NEXT: renamable $x8 = MOVKXi $x8, 320, 16
-    ; CHECK-NEXT: renamable $x8 = ORRXrs $x8, $x8, 32
-    ; CHECK-NEXT: STRXui killed renamable $x8, killed renamable $x0, 0
+    ; CHECK-NEXT: $w8 = MOVZWi 49370, 0
+    ; CHECK-NEXT: $w8 = MOVKWi $w8, 320, 16
+    ; CHECK-NEXT: STPWi killed renamable $w8, killed renamable $w8, killed renamable $x0, 0
     ; CHECK-NEXT: RET undef $lr
     renamable $x8 = MOVi64imm 90284035103834330
     STRXui killed renamable $x8, killed renamable $x0, 0
@@ -60,10 +59,9 @@ body:             |
     ; CHECK-LABEL: name: test_fold_repeating_constant_store_neg
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $x8 = MOVZXi 320, 0
-    ; CHECK-NEXT: renamable $x8 = MOVKXi $x8, 49370, 16
-    ; CHECK-NEXT: renamable $x8 = ORRXrs $x8, $x8, 32
-    ; CHECK-NEXT: STRXui killed renamable $x8, killed renamable $x0, 0
+    ; CHECK-NEXT: $w8 = MOVZWi 320, 0
+    ; CHECK-NEXT: $w8 = MOVKWi $w8, 49370, 16
+    ; CHECK-NEXT: STPWi killed renamable $w8, killed renamable $w8, killed renamable $x0, 0
     ; CHECK-NEXT: RET undef $lr
     renamable $x8 = MOVi64imm -4550323095879417536
     STRXui killed renamable $x8, killed renamable $x0, 0
