@@ -68,6 +68,22 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
+template <typename SubPattern_t> struct AllowReassoc_match {
+  SubPattern_t SubPattern;
+
+  AllowReassoc_match(const SubPattern_t &SP) : SubPattern(SP) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    auto *I = dyn_cast<FPMathOperator>(V);
+    return I && I->hasAllowReassoc() && SubPattern.match(I);
+  }
+};
+
+template <typename T>
+inline AllowReassoc_match<T> m_AllowReassoc(const T &SubPattern) {
+  return SubPattern;
+}
+
 template <typename Class> struct class_match {
   template <typename ITy> bool match(ITy *V) { return isa<Class>(V); }
 };
@@ -1301,6 +1317,26 @@ inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Add>,
                         DisjointOr_match<LHS, RHS>>
 m_AddLike(const LHS &L, const RHS &R) {
   return m_CombineOr(m_Add(L, R), m_DisjointOr(L, R));
+}
+
+/// Match either "add nsw" or "or disjoint"
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                              OverflowingBinaryOperator::NoSignedWrap>,
+    DisjointOr_match<LHS, RHS>>
+m_NSWAddLike(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_NSWAdd(L, R), m_DisjointOr(L, R));
+}
+
+/// Match either "add nuw" or "or disjoint"
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                              OverflowingBinaryOperator::NoUnsignedWrap>,
+    DisjointOr_match<LHS, RHS>>
+m_NUWAddLike(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_NUWAdd(L, R), m_DisjointOr(L, R));
 }
 
 //===----------------------------------------------------------------------===//

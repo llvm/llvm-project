@@ -1312,23 +1312,30 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
    List AMDGPU intrinsics.
 
+.. _amdgpu_metadata:
+
 LLVM IR Metadata
-------------------
+================
 
-The AMDGPU backend implements the following LLVM IR metadata.
+The AMDGPU backend implements the following target custom LLVM IR
+metadata.
 
-.. table:: AMDGPU LLVM IR Metadata
-  :name: amdgpu-llvm-ir-metadata-table
+.. _amdgpu_last_use:
 
-  ==============================================   ==========================================================
-  LLVM IR Metadata                                   Description
-  ==============================================   ==========================================================
-  !amdgpu.last.use                                 Sets TH_LOAD_LU temporal hint on load instructions that support it.
-                                                   Takes priority over nontemporal hint (TH_LOAD_NT).
-  ==============================================   ==========================================================
+'``amdgpu.last.use``' Metadata
+------------------------------
+
+Sets TH_LOAD_LU temporal hint on load instructions that support it.
+Takes priority over nontemporal hint (TH_LOAD_NT). This takes no
+arguments.
+
+.. code-block:: llvm
+
+  %val = load i32, ptr %in, align 4, !amdgpu.last.use !{}
+
 
 LLVM IR Attributes
-------------------
+==================
 
 The AMDGPU backend supports the following LLVM IR attributes.
 
@@ -1447,10 +1454,15 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              CLANG attribute [CLANG-ATTR]_. Clang only emits this attribute when all
                                              the three numbers are >= 1.
 
+     "amdgpu-no-agpr"                        Indicates the function will not require allocating AGPRs. This is only
+                                             relevant on subtargets with AGPRs. The behavior is undefined if a
+                                             function which requires AGPRs is reached through any function marked
+                                             with this attribute.
+
      ======================================= ==========================================================
 
 Calling Conventions
--------------------
+===================
 
 The AMDGPU backend supports the following calling conventions:
 
@@ -1545,6 +1557,25 @@ The AMDGPU backend supports the following calling conventions:
 
      =============================== ==========================================================
 
+AMDGPU MCExpr
+-------------
+
+As part of the AMDGPU MC layer, AMDGPU provides the following target specific
+``MCExpr``\s.
+
+  .. table:: AMDGPU MCExpr types:
+     :name: amdgpu-mcexpr-table
+
+     =================== ================= ========================================================
+     MCExpr              Operands          Return value
+     =================== ================= ========================================================
+     ``max(arg, ...)``   1 or more         Variadic signed operation that returns the maximum
+                                           value of all its arguments.
+
+     ``or(arg, ...)``    1 or more         Variadic signed operation that returns the bitwise-or
+                                           result of all its arguments.
+
+     =================== ================= ========================================================
 
 .. _amdgpu-elf-code-object:
 

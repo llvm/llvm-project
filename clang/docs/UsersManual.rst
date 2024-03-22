@@ -1847,19 +1847,50 @@ floating point semantic models: precise (the default), strict, and fast.
    * ``16`` - Forces ``_Float16`` operations to be emitted without using excess
      precision arithmetic.
 
+.. option:: -fcomplex-arithmetic=<value>:
+
+   This option specifies the implementation for complex multiplication and division.
+
+   Valid values are: ``basic``, ``improved``, ``full`` and ``promoted``.
+
+   * ``basic`` Implementation of complex division and multiplication using
+     algebraic formulas at source precision. No special handling to avoid
+     overflow. NaN and infinite values are not handled.
+   * ``improved`` Implementation of complex division using the Smith algorithm
+     at source precision. Smith's algorithm for complex division.
+     See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8 (1962).
+     This value offers improved handling for overflow in intermediate
+     calculations, but overflow may occur. NaN and infinite values are not
+     handled in some cases.
+   * ``full`` Implementation of complex division and multiplication using a
+     call to runtime library functions (generally the case, but the BE might
+     sometimes replace the library call if it knows enough about the potential
+     range of the inputs). Overflow and non-finite values are handled by the
+     library implementation. For the case of multiplication overflow will occur in
+     accordance with normal floating-point rules. This is the default value.
+   * ``promoted`` Implementation of complex division using algebraic formulas at
+     higher precision. Overflow is handled. Non-finite values are handled in some
+     cases. If the target does not have native support for a higher precision
+     data type, the implementation for the complex operation using the Smith
+     algorithm will be used. Overflow may still occur in some cases. NaN and
+     infinite values are not handled.
+
 .. option:: -fcx-limited-range:
 
-   This option enables the naive mathematical formulas for complex division and
-   multiplication with no NaN checking of results. The default is
-   ``-fno-cx-limited-range``, but this option is enabled by the ``-ffast-math``
+   This option is aliased to ``-fcomplex-arithmetic=basic``. It enables the
+   naive mathematical formulas for complex division and multiplication with no
+   NaN checking of results. The default is ``-fno-cx-limited-range`` aliased to
+   ``-fcomplex-arithmetic=full``. This option is enabled by the ``-ffast-math``
    option.
 
 .. option:: -fcx-fortran-rules:
 
-   This option enables the naive mathematical formulas for complex
-   multiplication and enables application of Smith's algorithm for complex
-   division. See SMITH, R. L. Algorithm 116: Complex division. Commun.
-   ACM 5, 8 (1962). The default is ``-fno-cx-fortran-rules``.
+   This option is aliased to ``-fcomplex-arithmetic=improved``. It enables the
+   naive mathematical formulas for complex multiplication and enables application
+   of Smith's algorithm for complex division. See SMITH, R. L. Algorithm 116:
+   Complex division. Commun. ACM 5, 8 (1962).
+   The default is ``-fno-cx-fortran-rules`` aliased to
+   ``-fcomplex-arithmetic=full``.
 
 .. _floating-point-environment:
 
@@ -4227,7 +4258,68 @@ Clang expects the GCC executable "gcc.exe" compiled for
 
 AIX
 ^^^
+TOC Data Transformation
+"""""""""""""""""""""""
+TOC data transformation is off by default (``-mno-tocdata``).
+When ``-mtocdata`` is specified, the TOC data transformation will be applied to
+all suitable variables with static storage duration, including static data
+members of classes and block-scope static variables (if not marked as exceptions,
+see further below).
 
+Suitable variables must:
+
+-  have complete types
+-  be independently generated (i.e., not placed in a pool)
+-  be at most as large as a pointer
+-  not be aligned more strictly than a pointer
+-  not be structs containing flexible array members
+-  not have internal linkage
+-  not have aliases
+-  not have section attributes
+-  not be thread local storage
+
+The TOC data transformation results in the variable, not its address,
+being placed in the TOC. This eliminates the need to load the address of the
+variable from the TOC.
+
+Note:
+If the TOC data transformation is applied to a variable whose definition
+is imported, the linker will generate fixup code for reading or writing to the
+variable.
+
+When multiple toc-data options are used, the last option used has the affect.
+For example: -mno-tocdata=g5,g1 -mtocdata=g1,g2 -mno-tocdata=g2 -mtocdata=g3,g4
+results in -mtocdata=g1,g3,g4
+
+Names of variables not having external linkage will be ignored.
+
+**Options:**
+
+.. option:: -mno-tocdata
+
+  This is the default behaviour. Only variables explicitly specified with
+  ``-mtocdata=`` will have the TOC data transformation applied.
+
+.. option:: -mtocdata
+
+  Apply the TOC data transformation to all suitable variables with static
+  storage duration (including static data members of classes and block-scope
+  static variables) that are not explicitly specified with ``-mno-tocdata=``.
+
+.. option:: -mno-tocdata=
+
+  Can be used in conjunction with ``-mtocdata`` to mark the comma-separated
+  list of external linkage variables, specified using their mangled names, as
+  exceptions to ``-mtocdata``.
+
+.. option:: -mtocdata=
+
+  Apply the TOC data transformation to the comma-separated list of external
+  linkage variables, specified using their mangled names, if they are suitable.
+  Emit diagnostics for all unsuitable variables specified.
+
+Default Visibility Export Mapping
+"""""""""""""""""""""""""""""""""
 The ``-mdefault-visibility-export-mapping=`` option can be used to control
 mapping of default visibility to an explicit shared object export
 (i.e. XCOFF exported visibility). Three values are provided for the option:

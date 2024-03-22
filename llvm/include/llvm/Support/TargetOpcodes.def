@@ -727,6 +727,9 @@ HANDLE_TARGET_OPCODE(G_BR)
 /// Generic branch to jump table entry.
 HANDLE_TARGET_OPCODE(G_BRJT)
 
+/// Generic vscale.
+HANDLE_TARGET_OPCODE(G_VSCALE)
+
 /// Generic insert subvector.
 HANDLE_TARGET_OPCODE(G_INSERT_SUBVECTOR)
 

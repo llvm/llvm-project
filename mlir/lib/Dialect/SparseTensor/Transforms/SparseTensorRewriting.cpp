@@ -817,7 +817,8 @@ public:
           reshapeCvs(builder, loc, expandReass, collapsedSizes, collapsedDcvs,
                      dstSizes, dstDcvs);
 
-          auto t = builder.create<InsertOp>(loc, v, reduc.front(), dstDcvs);
+          auto t =
+              builder.create<tensor::InsertOp>(loc, v, reduc.front(), dstDcvs);
           builder.create<sparse_tensor::YieldOp>(loc, t);
         });
 
@@ -901,7 +902,8 @@ public:
           SmallVector<Value> dstDcvs;
           reshapeCvs(builder, loc, op.getReassociationIndices(), srcSizes,
                      srcDcvs, dstSizes, dstDcvs);
-          auto t = builder.create<InsertOp>(loc, v, reduc.front(), dstDcvs);
+          auto t =
+              builder.create<tensor::InsertOp>(loc, v, reduc.front(), dstDcvs);
           builder.create<sparse_tensor::YieldOp>(loc, t);
         });
 

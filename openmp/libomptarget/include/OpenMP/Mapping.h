@@ -424,7 +424,8 @@ typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
                                    map_var_info_t *, void **, AsyncInfoTy &,
                                    bool);
 
-void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device);
+void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device,
+                               bool toStdOut = false);
 
 int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                     void **ArgsBase, void **Args, int64_t *ArgSizes,

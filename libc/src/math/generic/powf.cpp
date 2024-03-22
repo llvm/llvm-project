@@ -424,7 +424,7 @@ LIBC_INLINE bool larger_exponent(double a, double b) {
 double powf_double_double(int idx_x, double dx, double y6, double lo6_hi,
                           const DoubleDouble &exp2_hi_mid) {
   using DoubleBits = typename fputil::FPBits<double>;
-  using Sign = fputil::Sign;
+
   // Perform a second range reduction step:
   //   idx2 = round(2^14 * (dx  + 2^-8)) = round ( dx * 2^14 + 2^6)
   //   dx2 = (1 + dx) * r2 - 1
@@ -513,7 +513,7 @@ double powf_double_double(int idx_x, double dx, double y6, double lo6_hi,
 LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   using FloatBits = typename fputil::FPBits<float>;
   using DoubleBits = typename fputil::FPBits<double>;
-  using Sign = fputil::Sign;
+
   FloatBits xbits(x), ybits(y);
 
   uint32_t x_u = xbits.uintval();

@@ -59,8 +59,8 @@ entry:
   ret i64 %8
 }
 
-define i64 @rldimi_intrinsic(i64 %a) {
-; CHECK-LABEL: rldimi_intrinsic:
+define i64 @rldimi4(i64 %a) {
+; CHECK-LABEL: rldimi4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    rldimi 3, 3, 8, 0
 ; CHECK-NEXT:    rldimi 3, 3, 16, 0
@@ -70,6 +70,73 @@ define i64 @rldimi_intrinsic(i64 %a) {
   %r2 = call i64 @llvm.ppc.rldimi(i64 %r1, i64 %r1, i32 16, i64 -65536)
   %r3 = call i64 @llvm.ppc.rldimi(i64 %r2, i64 %r2, i32 32, i64 -4294967296)
   ret i64 %r3
+}
+
+define i64 @rldimi5(i64 %a, i64 %b) {
+; CHECK-LABEL: rldimi5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rldimi 4, 3, 8, 40
+; CHECK-NEXT:    mr 3, 4
+; CHECK-NEXT:    blr
+  %r = call i64 @llvm.ppc.rldimi(i64 %a, i64 %b, i32 8, i64 16776960) ; 0xffff << 8
+  ret i64 %r
+}
+
+define i64 @rldimi6(i64 %a, i64 %b) {
+; CHECK-LABEL: rldimi6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rotldi 3, 3, 1
+; CHECK-NEXT:    rldimi 4, 3, 7, 41
+; CHECK-NEXT:    mr 3, 4
+; CHECK-NEXT:    blr
+  %r = call i64 @llvm.ppc.rldimi(i64 %a, i64 %b, i32 8, i64 8388480) ; 0xffff << 7
+  ret i64 %r
+}
+
+define i64 @rldimi7(i64 %a, i64 %b) {
+; CHECK-LABEL: rldimi7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rotldi 3, 3, 63
+; CHECK-NEXT:    rldimi 4, 3, 9, 39
+; CHECK-NEXT:    mr 3, 4
+; CHECK-NEXT:    blr
+  %r = call i64 @llvm.ppc.rldimi(i64 %a, i64 %b, i32 8, i64 33553920) ; 0xffff << 9
+  ret i64 %r
+}
+
+define i64 @rldimi8(i64 %a, i64 %b) {
+; CHECK-LABEL: rldimi8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mr 3, 4
+; CHECK-NEXT:    blr
+  %r = call i64 @llvm.ppc.rldimi(i64 %a, i64 %b, i32 0, i64 0)
+  ret i64 %r
+}
+
+define i64 @rldimi9(i64 %a, i64 %b) {
+; CHECK-LABEL: rldimi9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mr 3, 4
+; CHECK-NEXT:    blr
+  %r = call i64 @llvm.ppc.rldimi(i64 %a, i64 %b, i32 63, i64 0)
+  ret i64 %r
+}
+
+define i64 @rldimi10(i64 %a, i64 %b) {
+; CHECK-LABEL: rldimi10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    blr
+  %r = call i64 @llvm.ppc.rldimi(i64 %a, i64 %b, i32 0, i64 -1)
+  ret i64 %r
+}
+
+define i64 @rldimi11(i64 %a, i64 %b) {
+; CHECK-LABEL: rldimi11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rotldi 3, 3, 8
+; CHECK-NEXT:    blr
+  %r = call i64 @llvm.ppc.rldimi(i64 %a, i64 %b, i32 8, i64 -1)
+  ret i64 %r
 }
 
 declare i64 @llvm.ppc.rldimi(i64, i64, i32 immarg, i64 immarg)
