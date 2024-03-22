@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_SPARSETENSOR_IR_SPARSETENSORINTERFACES_H_
 
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OpImplementation.h"
 
 namespace mlir {
 class PatternRewriter;
@@ -20,6 +21,7 @@ class StageWithSortSparseOp;
 namespace detail {
 LogicalResult stageWithSortImpl(sparse_tensor::StageWithSortSparseOp op,
                                 PatternRewriter &rewriter, Value &tmpBufs);
+
 } // namespace detail
 } // namespace sparse_tensor
 } // namespace mlir

@@ -20,8 +20,14 @@ namespace mlir {
 
 namespace sparse_tensor {
 
-bool isCollapsableIterations(LoopLikeOpInterface parent,
-                             LoopLikeOpInterface node) {
+struct CollapseSpaceInfo {
+  ExtractIterSpaceOp space;
+  // Coiteration as well (if make sense)?
+  IterateOp loop;
+  SmallVector<SparseCollapsableOp> collapseOps;
+};
+
+bool isCollapsableLoops(LoopLikeOpInterface parent, LoopLikeOpInterface node) {
   auto pIterArgs = parent.getRegionIterArgs();
   auto nInitArgs = node.getInits();
   if (pIterArgs.size() != nInitArgs.size())
@@ -44,43 +50,81 @@ bool isCollapsableIterations(LoopLikeOpInterface parent,
   return yieldEq && iterArgEq;
 }
 
-bool legalToCollapse(ExtractIterSpaceOp parent, ExtractIterSpaceOp node) {
-  auto pItOp = llvm::dyn_cast<IterateOp>(parent->getParentOp());
-  auto nItOp = llvm::dyn_cast<IterateOp>(node->getParentOp());
+bool legalToCollapse(SmallVectorImpl<CollapseSpaceInfo> &toCollapse,
+                     ExtractIterSpaceOp curSpace) {
+
+  auto getIterateOpOverSpace = [](ExtractIterSpaceOp space) -> IterateOp {
+    Value spaceVal = space.getResultSpace();
+    if (spaceVal.hasOneUse())
+      return llvm::dyn_cast<IterateOp>(*spaceVal.getUsers().begin());
+    return nullptr;
+  };
+
+  if (toCollapse.empty()) {
+    // Collapse root.
+    if (auto itOp = getIterateOpOverSpace(curSpace)) {
+      CollapseSpaceInfo &info = toCollapse.emplace_back();
+      info.space = curSpace;
+      info.loop = itOp;
+      // No operations need to be collapsed at the root level;
+      info.collapseOps = {};
+      return true;
+    }
+    return false;
+  }
+
+  auto parent = toCollapse.back().space;
+  auto pItOp = toCollapse.back().loop;
+  auto nItOp = getIterateOpOverSpace(curSpace);
 
   // Can only collapse spaces extracted from the same tensor.
-  if (parent.getTensor() != node.getTensor() || !parent->hasOneUse())
+  if (parent.getTensor() != curSpace.getTensor())
     return false;
 
   // Can only collapse consecutive simple iteration on one tensor (i.e., no
   // coiteration).
-  if (!nItOp || nItOp.getIterSpace() != parent.getResult() ||
-      nItOp->getBlock() != parent->getBlock())
+  if (!nItOp || nItOp->getBlock() != curSpace->getBlock() ||
+      pItOp.getIterator() != curSpace.getParentIter() ||
+      curSpace->getParentOp() != pItOp.getOperation())
     return false;
 
-  if (pItOp && !isCollapsableIterations(pItOp, nItOp))
+  if (pItOp && !isCollapsableLoops(pItOp, nItOp))
     return false;
 
   // TODO: Make sure all other operations in the same basic block as `node` can
   // be collapsed and sink into the collapsed iteration (through Interfaces
   // defined in TD files).
+  SmallVector<SparseCollapsableOp> collapsableOps;
+  for (Operation &op : *pItOp.getBody()) {
+    if (&op == curSpace.getOperation() || &op == nItOp.getOperation() ||
+        &op == pItOp.getBody()->getTerminator())
+      continue;
+    // All other ops in parent loop need to be collapsable.
+    auto collapsableOp = llvm::dyn_cast<SparseCollapsableOp>(&op);
+    if (!collapsableOp)
+      return false;
+    collapsableOps.push_back(collapsableOp);
+  }
+
+  CollapseSpaceInfo &info = toCollapse.emplace_back();
+  info.space = curSpace;
+  info.loop = nItOp;
+  info.collapseOps = std::move(collapsableOps);
   return true;
 }
 
-void collapseSparseSpace(ArrayRef<ExtractIterSpaceOp> toCollapse) {
+void collapseSparseSpace(SmallVectorImpl<CollapseSpaceInfo> &toCollapse) {
   if (toCollapse.size() < 2)
     return;
 
-  ExtractIterSpaceOp root = toCollapse.front();
-  ExtractIterSpaceOp leaf = toCollapse.back();
+  ExtractIterSpaceOp root = toCollapse.front().space;
+  ExtractIterSpaceOp leaf = toCollapse.back().space;
   Location loc = root.getLoc();
 
-  if (!leaf->hasOneUse())
-    return;
-  assert(root->hasOneUse());
+  assert(root->hasOneUse() && leaf->hasOneUse());
 
   // Insert collapsed operation at the same scope as root operation.
-  OpBuilder builder(toCollapse.front());
+  OpBuilder builder(root);
 
   // Construct the collapsed iteration space.
   auto collapsedSpace = builder.create<ExtractIterSpaceOp>(
@@ -88,19 +132,29 @@ void collapseSparseSpace(ArrayRef<ExtractIterSpaceOp> toCollapse) {
       leaf.getHiLvl());
 
   auto rItOp = llvm::cast<IterateOp>(*root->getUsers().begin());
-  auto pItOp = llvm::cast<IterateOp>(leaf->getParentOp());
-
-  // This could either be IterateOp or (TODO: in the future) CoIterateOp.
-  auto loop = llvm::dyn_cast<IterateOp>(*leaf->getUsers().begin());
-  if (!loop || !isCollapsableIterations(pItOp, loop))
-    return;
+  auto innermost = toCollapse.back().loop;
 
   IRMapping mapper;
   mapper.map(leaf, collapsedSpace.getResultSpace());
-  for (auto z : llvm::zip_equal(loop.getInitArgs(), rItOp.getInitArgs()))
+  for (auto z : llvm::zip_equal(innermost.getInitArgs(), rItOp.getInitArgs()))
     mapper.map(std::get<0>(z), std::get<1>(z));
 
-  auto cloned = llvm::cast<IterateOp>(builder.clone(*loop, mapper));
+  auto cloned = llvm::cast<IterateOp>(builder.clone(*innermost, mapper));
+  builder.setInsertionPointToStart(cloned.getBody());
+  SmallVector<Operation *> loops =
+      llvm::map_to_vector(toCollapse, [](CollapseSpaceInfo &info) {
+        return info.loop.getOperation();
+      });
+
+  for (const CollapseSpaceInfo &info : toCollapse) {
+    for (SparseCollapsableOp op : info.collapseOps) {
+      ValueRange colVals = op.collaspeOpInto(builder, loops, cloned);
+      for (auto [o, r] : llvm::zip(op->getResults(), colVals))
+        o.replaceAllUsesWith(r);
+      op.erase();
+    }
+  }
+
   cloned.getIterator().setType(collapsedSpace.getType().getIteratorType());
 
   rItOp.replaceAllUsesWith(cloned.getResults());
@@ -124,18 +178,13 @@ struct SparseSpaceCollapsePass
     // %space2 = extract_space %t2 ...
     // sparse_tensor.iterate(%sp1) ...
     //
-    SmallVector<ExtractIterSpaceOp> toCollapse;
+    SmallVector<CollapseSpaceInfo> toCollapse;
     func->walk([&](ExtractIterSpaceOp op) {
-      if (toCollapse.empty()) {
-        // Root space to collapse.
-        toCollapse.push_back(op);
-      } else {
-        if (legalToCollapse(toCollapse.back(), op)) {
-          toCollapse.push_back(op);
-        } else {
-          collapseSparseSpace(toCollapse);
-          toCollapse.clear();
-        }
+      if (!legalToCollapse(toCollapse, op)) {
+        // if not legal to collapse one more space, collapse the existing ones
+        // and clear.
+        collapseSparseSpace(toCollapse);
+        toCollapse.clear();
       }
     });
 

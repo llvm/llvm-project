@@ -1970,17 +1970,82 @@ static ParseResult parseLevelRange(OpAsmParser &parser, IntegerAttr &lvlLoAttr,
   } else {
     lvlHi = lvlLo + 1;
   }
+
+  if (lvlHi <= lvlLo)
+    parser.emitError(parser.getNameLoc(),
+                     "expect larger level upper bound than lower bound");
+
   lvlLoAttr = IntegerAttr::get(parser.getBuilder().getIndexType(), lvlLo);
   lvlHiAttr = IntegerAttr::get(parser.getBuilder().getIndexType(), lvlHi);
   return success();
 }
 
-static void printLevelRange(OpAsmPrinter &p, ExtractIterSpaceOp op,
-                            IntegerAttr lvlLo, IntegerAttr lvlHi) {
-  if (op.getLoLvl() + 1 == op.getHiLvl())
-    p << op.getLoLvl();
+static void printLevelRange(OpAsmPrinter &p, Operation *, IntegerAttr lvlLo,
+                            IntegerAttr lvlHi) {
+  unsigned lo = lvlLo.getValue().getZExtValue();
+  unsigned hi = lvlHi.getValue().getZExtValue();
+  if (lo + 1 == hi)
+    p << lo;
   else
-    p << op.getLoLvl() << " to " << op.getHiLvl();
+    p << lo << " to " << hi;
+}
+
+ParseResult
+parseSparseSpaceLoop(OpAsmParser &parser, OperationState &state,
+                     SmallVectorImpl<OpAsmParser::Argument> &iterators,
+                     SmallVectorImpl<OpAsmParser::Argument> &iterArgs) {
+  SmallVector<OpAsmParser::UnresolvedOperand> spaces;
+  SmallVector<OpAsmParser::UnresolvedOperand> initArgs;
+  // Parses "%iters, ... in %spaces, ..."
+  if (parser.parseArgumentList(iterators) || parser.parseKeyword("in") ||
+      parser.parseOperandList(spaces))
+    return failure();
+
+  if (iterators.size() != spaces.size())
+    return parser.emitError(
+        parser.getNameLoc(),
+        "mismatch in number of sparse iterators and sparse spaces");
+
+  bool hasIterArgs = succeeded(parser.parseOptionalKeyword("iter_args"));
+  if (hasIterArgs)
+    if (parser.parseAssignmentList(iterArgs, initArgs))
+      return failure();
+
+  SmallVector<Type> iterSpaceTps;
+  // parse ": sparse_tensor.iter_space -> ret"
+  if (parser.parseColon() || parser.parseTypeList(iterSpaceTps))
+    return failure();
+  if (iterSpaceTps.size() != spaces.size())
+    return parser.emitError(parser.getNameLoc(),
+                            "mismatch in number of iteration space operands "
+                            "and iteration space types");
+
+  for (auto [it, tp] : llvm::zip_equal(iterators, iterSpaceTps)) {
+    IterSpaceType spaceTp = llvm::dyn_cast<IterSpaceType>(tp);
+    if (!spaceTp)
+      return parser.emitError(parser.getNameLoc(),
+                              "expected sparse_tensor.iter_space type for "
+                              "iteration space operands");
+    it.type = spaceTp.getIteratorType();
+  }
+
+  if (hasIterArgs)
+    if (parser.parseArrowTypeList(state.types))
+      return failure();
+
+  // Resolves input operands.
+  if (parser.resolveOperands(spaces, iterSpaceTps, parser.getNameLoc(),
+                             state.operands))
+    return failure();
+
+  if (hasIterArgs) {
+    for (auto [it, init, tp] : llvm::zip(iterArgs, initArgs, state.types)) {
+      it.type = tp;
+      if (parser.resolveOperand(init, tp, state.operands))
+        return failure();
+    }
+  }
+  return success();
 }
 
 LogicalResult ExtractIterSpaceOp::inferReturnTypes(
@@ -2025,60 +2090,45 @@ LogicalResult ExtractIterSpaceOp::verify() {
   return success();
 }
 
+ValueRange CoordinateOp::collaspeOpInto(OpBuilder &builder,
+                                        ArrayRef<Operation *> loops,
+                                        Operation *collapsed) {
+  assert(llvm::all_of(loops,
+                      [](Operation *l) { return llvm::isa<IterateOp>(l); }));
+  auto finalLoop = llvm::cast<IterateOp>(collapsed);
+  SmallVector<Type> retTps(finalLoop.getIterSpace().getType().getSpaceDim(),
+                           builder.getIndexType());
+  auto collapsedCoords =
+      builder.create<CoordinateOp>(getLoc(), retTps, finalLoop.getIterator());
+
+  for (Operation *l : loops) {
+    if (getIterator().getParentBlock()->getParentOp() == l) {
+      auto space = llvm::cast<IterateOp>(l)
+                       .getIterSpace()
+                       .getDefiningOp<ExtractIterSpaceOp>();
+
+      return collapsedCoords.getResults().slice(space.getLoLvl(),
+                                                space.getSpaceDim());
+    }
+  }
+  llvm_unreachable(
+      "Can not find the corresponding iterate space for the collapsable op.");
+}
+
 ParseResult IterateOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::Argument iterator;
   OpAsmParser::UnresolvedOperand iterSpace;
 
-  // Parses %iters in %spaces
-  if (parser.parseArgument(iterator) || parser.parseKeyword("in") ||
-      parser.parseOperand(iterSpace)) {
+  SmallVector<OpAsmParser::Argument> iters, iterArgs;
+  if (parseSparseSpaceLoop(parser, result, iters, iterArgs))
     return failure();
-  }
+  if (iters.size() != 1)
+    return parser.emitError(parser.getNameLoc(),
+                            "expected only one iterator/iteration space");
 
-  // Parse the optional initial iteration arguments.
-  SmallVector<OpAsmParser::Argument> regionArgs;
-  SmallVector<OpAsmParser::UnresolvedOperand> operands;
-  // Region arguments starts with iterators and follows by optional
-  // user-provided iter_args.
-  regionArgs.push_back(iterator);
-  bool hasIterArgs = succeeded(parser.parseOptionalKeyword("iter_args"));
-  if (hasIterArgs)
-    if (parser.parseAssignmentList(regionArgs, operands))
-      return failure();
-
-  // parse ": sparse_tensor.iter_space -> ret"
-  Type iterSpaceTps;
-  if (parser.parseColon() || parser.parseType(iterSpaceTps))
-    return failure();
-  if (hasIterArgs)
-    if (parser.parseArrowTypeList(result.types))
-      return failure();
-
-  if (regionArgs.size() != result.types.size() + 1) {
-    return parser.emitError(
-        parser.getNameLoc(),
-        "mismatch in number of loop-carried values and defined values");
-  }
-
-  // Resolves input operands.
-  if (parser.resolveOperand(iterSpace, iterSpaceTps, result.operands))
-    return failure();
-
-  if (hasIterArgs) {
-    for (auto argOperandType :
-         llvm::zip(llvm::drop_begin(regionArgs), operands, result.types)) {
-      Type type = std::get<2>(argOperandType);
-      std::get<0>(argOperandType).type = type;
-      if (parser.resolveOperand(std::get<1>(argOperandType), type,
-                                result.operands))
-        return failure();
-    }
-  }
-
+  iters.append(iterArgs);
   Region *body = result.addRegion();
-  regionArgs.front().type =
-      iterSpaceTps.cast<IterSpaceType>().getIteratorType();
-  if (parser.parseRegion(*body, regionArgs))
+  if (parser.parseRegion(*body, iters))
     return failure();
 
   IterateOp::ensureTerminator(*body, parser.getBuilder(), result.location);
@@ -2112,7 +2162,6 @@ static void printInitializationList(OpAsmPrinter &p,
 
 void IterateOp::print(OpAsmPrinter &p) {
   p << " " << getIterator() << " in " << getIterSpace();
-
   printInitializationList(p, getRegionIterArgs(), getInitArgs(), " iter_args");
 
   p << " : " << getIterSpace().getType() << " ";
