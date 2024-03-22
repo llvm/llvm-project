@@ -1,7 +1,6 @@
 ; RUN: opt -S -passes=gvn-hoist < %s | FileCheck %s 
 
-; Function Attrs: noinline nounwind uwtable
-define dso_local void @func(i32 noundef %a, ptr noundef %b) #0 !dbg !10 {
+define dso_local void @func(i32 noundef %a, ptr noundef %b) !dbg !10 {
 ; Check the merged debug location of hoisted GEP
 ; CHECK: entry
 ; CHECK: %{{[a-zA-Z0-9_]*}} = getelementptr {{.*}} !dbg [[MERGED_DL:![0-9]+]]
@@ -27,10 +26,10 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3, !4, !5, !6, !7, !8}
