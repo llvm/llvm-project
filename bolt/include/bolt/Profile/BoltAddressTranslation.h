@@ -162,6 +162,9 @@ private:
   using BBHashMap = std::unordered_map<uint32_t, std::pair<unsigned, size_t>>;
   std::unordered_map<uint64_t, std::pair<size_t, BBHashMap>> FuncHashes;
 
+  /// Map a function to its basic blocks count
+  std::unordered_map<uint64_t, size_t> NumBasicBlocksMap;
+
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;
 
