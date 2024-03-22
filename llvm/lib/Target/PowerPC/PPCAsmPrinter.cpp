@@ -2845,9 +2845,9 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
 }
 
 void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
-  // It's not necessary to emit the label when we have individual
-  // function in its own csect.
-  if (!TM.getFunctionSections())
+  // For functions without user defined section, it's not necessary to emit the
+  // label when we have individual function in its own csect.
+  if (!TM.getFunctionSections() || MF->getFunction().hasSection())
     PPCAsmPrinter::emitFunctionEntryLabel();
 
   // Emit aliasing label for function entry point label.
