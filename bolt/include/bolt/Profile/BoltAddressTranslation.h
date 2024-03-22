@@ -122,10 +122,6 @@ public:
   /// Returns BF hash by function output address (after BOLT).
   size_t getBFHash(uint64_t OutputAddress) const;
 
-  /// Returns BB index by function output address (after BOLT) and basic block
-  /// input offset.
-  unsigned getBBIndex(uint64_t FuncOutputAddress, uint32_t BBInputOffset) const;
-
   /// True if a given \p Address is a function with translation table entry.
   bool isBATFunction(uint64_t Address) const { return Maps.count(Address); }
 
@@ -158,8 +154,7 @@ private:
 
   std::map<uint64_t, MapTy> Maps;
 
-  /// Map basic block input offset to a basic block index and hash pair.
-  using BBHashMap = std::unordered_map<uint32_t, std::pair<unsigned, size_t>>;
+  using BBHashMap = std::unordered_map<uint32_t, size_t>;
   std::unordered_map<uint64_t, std::pair<size_t, BBHashMap>> FuncHashes;
 
   /// Links outlined cold bocks to their original function
