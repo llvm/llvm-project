@@ -217,8 +217,8 @@ template <typename T> using ListT = type::ListT<T>;
 template <typename I, typename E> using ObjectT = type::ObjectT<I, E>;
 template <typename I, typename E> using ObjectListT = type::ObjectListT<I, E>;
 
-template <typename T, typename I, typename E> using IteratorT =
-    type::IteratorT<T, I, E>;
+template <typename T, typename I, typename E>
+using IteratorT = type::IteratorT<T, I, E>;
 
 template <
     typename ContainerTy, typename FunctionTy,
@@ -1000,7 +1000,8 @@ struct WriteT {
 
 // ---
 
-template <typename T, typename I, typename E> using ExtensionClausesT =
+template <typename T, typename I, typename E>
+using ExtensionClausesT =
     std::variant<OmpxAttributeT<T, I, E>, OmpxBareT<T, I, E>,
                  OmpxDynCgroupMemT<T, I, E>>;
 
@@ -1016,11 +1017,13 @@ using EmptyClausesT = std::variant<
     UnknownT<T, I, E>, UntiedT<T, I, E>, UseT<T, I, E>, WeakT<T, I, E>,
     WriteT<T, I, E>>;
 
-template <typename T, typename I, typename E> using IncompleteClausesT =
+template <typename T, typename I, typename E>
+using IncompleteClausesT =
     std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>, MatchT<T, I, E>,
                  OtherwiseT<T, I, E>, WhenT<T, I, E>>;
 
-template <typename T, typename I, typename E> using TupleClausesT =
+template <typename T, typename I, typename E>
+using TupleClausesT =
     std::variant<AffinityT<T, I, E>, AlignedT<T, I, E>, AllocateT<T, I, E>,
                  DefaultmapT<T, I, E>, DeviceT<T, I, E>, DistScheduleT<T, I, E>,
                  DoacrossT<T, I, E>, FromT<T, I, E>, GrainsizeT<T, I, E>,
@@ -1029,8 +1032,8 @@ template <typename T, typename I, typename E> using TupleClausesT =
                  NumTasksT<T, I, E>, OrderT<T, I, E>, ReductionT<T, I, E>,
                  ScheduleT<T, I, E>, TaskReductionT<T, I, E>, ToT<T, I, E>>;
 
-template <typename T, typename I, typename E> using UnionClausesT =
-    std::variant<DependT<T, I, E>>;
+template <typename T, typename I, typename E>
+using UnionClausesT = std::variant<DependT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using WrapperClausesT = std::variant<
@@ -1051,15 +1054,15 @@ using WrapperClausesT = std::variant<
     UniformT<T, I, E>, UpdateT<T, I, E>, UseDeviceAddrT<T, I, E>,
     UseDevicePtrT<T, I, E>, UsesAllocatorsT<T, I, E>>;
 
-template <typename T, typename I, typename E> using UnionOfAllClausesT =
-    typename type::Union<            //
-        EmptyClausesT<T, I, E>,      //
-        ExtensionClausesT<T, I, E>,  //
-        IncompleteClausesT<T, I, E>, //
-        TupleClausesT<T, I, E>,      //
-        UnionClausesT<T, I, E>,      //
-        WrapperClausesT<T, I, E>     //
-        >::type;
+template <typename T, typename I, typename E>
+using UnionOfAllClausesT = typename type::Union< //
+    EmptyClausesT<T, I, E>,                      //
+    ExtensionClausesT<T, I, E>,                  //
+    IncompleteClausesT<T, I, E>,                 //
+    TupleClausesT<T, I, E>,                      //
+    UnionClausesT<T, I, E>,                      //
+    WrapperClausesT<T, I, E>                     //
+    >::type;
 
 } // namespace clause
 
