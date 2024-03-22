@@ -738,8 +738,8 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     Value *X;
     const APInt *C1;
     Constant *C2;
-    if (match(Src, m_OneUse(m_LShr(m_Shl(m_Power2(C1), m_Value(X)),
-                                   m_ImmConstant(C2))))) {
+    if (match(Src, m_OneUse(m_Shr(m_Shl(m_Power2(C1), m_Value(X)),
+                                  m_ImmConstant(C2))))) {
       // trunc ((C1 << X) >> C2) to i1 --> X == (C2-cttz(C1)), where C1 is pow2
       Constant *Log2C1 = ConstantInt::get(SrcTy, C1->exactLogBase2());
       Constant *CmpC = ConstantExpr::getSub(C2, Log2C1);
