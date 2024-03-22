@@ -4,6 +4,7 @@
 // RUN: %clang_analyze_cc1 -triple=hexagon -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
 
 #include "Inputs/system-header-simulator.h"
+#include "Inputs/system-header-simulator-for-malloc.h"
 #include "Inputs/system-header-simulator-for-valist.h"
 
 void clang_analyzer_eval(int);
@@ -375,4 +376,76 @@ void fflush_on_open_failed_stream(void) {
     return;
   }
   fclose(F);
+}
+
+void getline_null_file() {
+  char *buffer = NULL;
+  size_t n = 0;
+  getline(&buffer, &n, NULL); // expected-warning {{Stream pointer might be NULL}}
+}
+
+void getdelim_null_file() {
+  char *buffer = NULL;
+  size_t n = 0;
+  getdelim(&buffer, &n, '\n', NULL); // expected-warning {{Stream pointer might be NULL}}
+}
+
+void getline_buffer_on_error() {
+  FILE *file = fopen("file.txt", "r");
+  if (file == NULL) {
+    return;
+  }
+
+  char *line = NULL;
+  size_t len = 0;
+  if (getline(&line, &len, file) == -1) {
+    if (line[0] == '\0') {} // expected-warning {{The left operand of '==' is a garbage value}}
+  } else {
+    if (line[0] == '\0') {} // no warning
+  }
+
+  free(line);
+  fclose(file);
+}
+
+void getline_ret_value() {
+  FILE *file = fopen("file.txt", "r");
+  if (file == NULL) {
+    return;
+  }
+
+  size_t n = 0;
+  char *buffer = NULL;
+  ssize_t r = getline(&buffer, &n, file);
+
+  if (r > -1) {
+    // The return value does *not* include the terminating null byte.
+    // The buffer must be large enough to include it.
+    clang_analyzer_eval(n > r); // expected-warning{{TRUE}}
+    clang_analyzer_eval(buffer != NULL);  // expected-warning{{TRUE}}
+  }
+
+  fclose(file);
+  free(buffer);
+}
+
+
+void getline_buffer_size_negative() {
+  FILE *file = fopen("file.txt", "r");
+  if (file == NULL) {
+    return;
+  }
+
+  size_t n = -1;
+  clang_analyzer_eval((ssize_t)n >= 0); // expected-warning{{FALSE}}
+  char *buffer = NULL;
+  ssize_t r = getline(&buffer, &n, file);
+
+  if (r > -1) {
+    clang_analyzer_eval((ssize_t)n > r); // expected-warning{{TRUE}}
+    clang_analyzer_eval(buffer != NULL);  // expected-warning{{TRUE}}
+  }
+
+  free(buffer);
+  fclose(file);
 }
