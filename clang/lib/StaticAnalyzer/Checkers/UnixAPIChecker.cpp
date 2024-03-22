@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -44,9 +45,22 @@ namespace {
 class UnixAPIMisuseChecker
     : public Checker<check::PreCall, check::ASTDecl<TranslationUnitDecl>> {
   const BugType BT_open{this, "Improper use of 'open'", categories::UnixAPI};
+  const BugType BT_getline{this, "Improper use of getdelim",
+                           categories::UnixAPI};
   const BugType BT_pthreadOnce{this, "Improper use of 'pthread_once'",
                                categories::UnixAPI};
+  const BugType BT_ArgumentNull{this, "NULL pointer", categories::UnixAPI};
   mutable std::optional<uint64_t> Val_O_CREAT;
+
+  ProgramStateRef
+  EnsurePtrNotNull(SVal PtrVal, const Expr *PtrExpr, CheckerContext &C,
+                   ProgramStateRef State, const StringRef PtrDescr,
+                   std::optional<std::reference_wrapper<const BugType>> BT =
+                       std::nullopt) const;
+
+  ProgramStateRef EnsureGetdelimBufferAndSizeCorrect(
+      SVal LinePtrPtrSVal, SVal SizePtrSVal, const Expr *LinePtrPtrExpr,
+      const Expr *SizePtrExpr, CheckerContext &C, ProgramStateRef State) const;
 
 public:
   void checkASTDecl(const TranslationUnitDecl *TU, AnalysisManager &Mgr,
@@ -56,6 +70,7 @@ public:
 
   void CheckOpen(CheckerContext &C, const CallEvent &Call) const;
   void CheckOpenAt(CheckerContext &C, const CallEvent &Call) const;
+  void CheckGetDelim(CheckerContext &C, const CallEvent &Call) const;
   void CheckPthreadOnce(CheckerContext &C, const CallEvent &Call) const;
 
   void CheckOpenVariant(CheckerContext &C, const CallEvent &Call,
@@ -94,6 +109,30 @@ private:
 };
 
 } // end anonymous namespace
+
+ProgramStateRef UnixAPIMisuseChecker::EnsurePtrNotNull(
+    SVal PtrVal, const Expr *PtrExpr, CheckerContext &C, ProgramStateRef State,
+    const StringRef PtrDescr,
+    std::optional<std::reference_wrapper<const BugType>> BT) const {
+  const auto Ptr = PtrVal.getAs<DefinedSVal>();
+  if (!Ptr)
+    return State;
+
+  const auto [PtrNotNull, PtrNull] = State->assume(*Ptr);
+  if (!PtrNotNull && PtrNull) {
+    if (ExplodedNode *N = C.generateErrorNode(PtrNull)) {
+      auto R = std::make_unique<PathSensitiveBugReport>(
+          BT.value_or(std::cref(BT_ArgumentNull)),
+          (PtrDescr + " pointer might be NULL.").str(), N);
+      if (PtrExpr)
+        bugreporter::trackExpressionValue(N, PtrExpr, *R);
+      C.emitReport(std::move(R));
+    }
+    return nullptr;
+  }
+
+  return PtrNotNull;
+}
 
 void UnixAPIMisuseChecker::checkASTDecl(const TranslationUnitDecl *TU,
                                         AnalysisManager &Mgr,
@@ -137,6 +176,9 @@ void UnixAPIMisuseChecker::checkPreCall(const CallEvent &Call,
 
   else if (FName == "pthread_once")
     CheckPthreadOnce(C, Call);
+
+  else if (is_contained({"getdelim", "getline"}, FName))
+    CheckGetDelim(C, Call);
 }
 void UnixAPIMisuseChecker::ReportOpenBug(CheckerContext &C,
                                          ProgramStateRef State,
@@ -215,8 +257,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
     OS << "Call to '" << VariantName << "' with more than " << MaxArgCount
        << " arguments";
 
-    ReportOpenBug(C, state,
-                  SBuf.c_str(),
+    ReportOpenBug(C, state, SBuf.c_str(),
                   Call.getArgExpr(MaxArgCount)->getSourceRange());
     return;
   }
@@ -264,6 +305,93 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
                   SBuf.c_str(),
                   oflagsEx->getSourceRange());
   }
+}
+
+//===----------------------------------------------------------------------===//
+// getdelim and getline
+//===----------------------------------------------------------------------===//
+
+ProgramStateRef UnixAPIMisuseChecker::EnsureGetdelimBufferAndSizeCorrect(
+    SVal LinePtrPtrSVal, SVal SizePtrSVal, const Expr *LinePtrPtrExpr,
+    const Expr *SizePtrExpr, CheckerContext &C, ProgramStateRef State) const {
+  static constexpr llvm::StringLiteral SizeGreaterThanBufferSize =
+      "The buffer from the first argument is smaller than the size "
+      "specified by the second parameter";
+  static constexpr llvm::StringLiteral SizeUndef =
+      "The buffer from the first argument is not NULL, but the size specified "
+      "by the second parameter is undefined.";
+
+  auto EmitBugReport = [this, &C, SizePtrExpr, LinePtrPtrExpr](
+                           ProgramStateRef BugState, StringRef ErrMsg) {
+    if (ExplodedNode *N = C.generateErrorNode(BugState)) {
+      auto R = std::make_unique<PathSensitiveBugReport>(BT_getline, ErrMsg, N);
+      bugreporter::trackExpressionValue(N, SizePtrExpr, *R);
+      bugreporter::trackExpressionValue(N, LinePtrPtrExpr, *R);
+      C.emitReport(std::move(R));
+    }
+  };
+
+  // We have a pointer to a pointer to the buffer, and a pointer to the size.
+  // We want what they point at.
+  auto LinePtrSVal = getPointeeVal(LinePtrPtrSVal, State)->getAs<DefinedSVal>();
+  auto NSVal = getPointeeVal(SizePtrSVal, State);
+  if (!LinePtrSVal || !NSVal || NSVal->isUnknown())
+    return nullptr;
+
+  assert(LinePtrPtrExpr && SizePtrExpr);
+
+  const auto [LinePtrNotNull, LinePtrNull] = State->assume(*LinePtrSVal);
+  if (LinePtrNotNull && !LinePtrNull) {
+    // If `*lineptr` is not null, but `*n` is undefined, there is UB.
+    if (NSVal->isUndef()) {
+      EmitBugReport(LinePtrNotNull, SizeUndef);
+      return nullptr;
+    }
+
+    // If it is defined, and known, its size must be less than or equal to
+    // the buffer size.
+    auto NDefSVal = NSVal->getAs<DefinedSVal>();
+    auto &SVB = C.getSValBuilder();
+    auto LineBufSize =
+        getDynamicExtent(LinePtrNotNull, LinePtrSVal->getAsRegion(), SVB);
+    auto LineBufSizeGtN = SVB.evalBinOp(LinePtrNotNull, BO_GE, LineBufSize,
+                                        *NDefSVal, SVB.getConditionType())
+                              .getAs<DefinedOrUnknownSVal>();
+    if (!LineBufSizeGtN)
+      return LinePtrNotNull;
+    if (auto LineBufSizeOk = LinePtrNotNull->assume(*LineBufSizeGtN, true))
+      return LineBufSizeOk;
+
+    EmitBugReport(LinePtrNotNull, SizeGreaterThanBufferSize);
+    return nullptr;
+  }
+  return State;
+}
+
+void UnixAPIMisuseChecker::CheckGetDelim(CheckerContext &C,
+                                         const CallEvent &Call) const {
+  ProgramStateRef State = C.getState();
+
+  // The parameter `n` must not be NULL.
+  SVal SizePtrSval = Call.getArgSVal(1);
+  State = EnsurePtrNotNull(SizePtrSval, Call.getArgExpr(1), C, State, "Size");
+  if (!State)
+    return;
+
+  // The parameter `lineptr` must not be NULL.
+  SVal LinePtrPtrSVal = Call.getArgSVal(0);
+  State =
+      EnsurePtrNotNull(LinePtrPtrSVal, Call.getArgExpr(0), C, State, "Line");
+  if (!State)
+    return;
+
+  State = EnsureGetdelimBufferAndSizeCorrect(LinePtrPtrSVal, SizePtrSval,
+                                             Call.getArgExpr(0),
+                                             Call.getArgExpr(1), C, State);
+  if (!State)
+    return;
+
+  C.addTransition(State);
 }
 
 //===----------------------------------------------------------------------===//
