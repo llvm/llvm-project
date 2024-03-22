@@ -45,7 +45,10 @@ enum OpenMPOffloadingRequiresDirFlags : int64_t {
   /// issue a GPU TLB prefaulting action. This allows applications
   /// using unified memory to run with unified memory support disabled
   /// (if possible on the target device).
-  OMPX_REQ_EAGER_ZERO_COPY_MAPS = 0x040
+  OMPX_REQ_EAGER_ZERO_COPY_MAPS = 0x040,
+  /// Flag which signals whether Multi-Device kernels are enabled in
+  /// the runtime.
+  OMPX_REQ_MULTI_DEVICE_ENABLED = 0x080
 };
 
 class RequirementCollection {
@@ -95,6 +98,12 @@ public:
         SetFlags = NewFlags;
       else if (SetFlags == OMPX_REQ_EAGER_ZERO_COPY_MAPS)
         SetFlags |= OMPX_REQ_AUTO_ZERO_COPY;
+      return;
+    }
+
+    // Ensure that the Multi-device mode is activated.
+    if (NewFlags == OMPX_REQ_MULTI_DEVICE_ENABLED) {
+      SetFlags |= OMPX_REQ_MULTI_DEVICE_ENABLED;
       return;
     }
 

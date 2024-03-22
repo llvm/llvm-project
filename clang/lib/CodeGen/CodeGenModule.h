@@ -396,6 +396,32 @@ public:
   };
   using XteamRedKernelMap = llvm::DenseMap<const Stmt *, XteamRedKernelInfo>;
 
+  /// Metadata for multi-device kernel codegen
+  struct MultiDeviceBoundsInfo {
+    MultiDeviceBoundsInfo(VarDecl *LBArg, VarDecl *UBArg)
+        : LBArg{LBArg}, UBArg{UBArg} {}
+    VarDecl *LBArg;
+    VarDecl *UBArg;
+  };
+  using MultiDeviceFunctionBoundsMap =
+      llvm::DenseMap<const llvm::Function *, MultiDeviceBoundsInfo>;
+
+  struct MultiDeviceKernelInfo {
+    MultiDeviceKernelInfo(OptKernelNestDirectives Dirs,
+                          MultiDeviceFunctionBoundsMap FBM,
+                          bool CanBeMultiDevice)
+        : MultiDeviceNestDirs{Dirs}, FunctionBoundsMap{FBM},
+          CanBeMultiDevice{CanBeMultiDevice} {}
+
+    OptKernelNestDirectives MultiDeviceNestDirs;
+    MultiDeviceFunctionBoundsMap FunctionBoundsMap;
+    bool CanBeMultiDevice;
+    bool NewBoundsHaveBeenUsed = false;
+  };
+  /// Map construct statement to corresponding metadata for a NoLoop kernel.
+  using MultiDeviceKernelMap =
+      llvm::DenseMap<const Stmt *, MultiDeviceKernelInfo>;
+
 private:
   ASTContext &Context;
   const LangOptions &LangOpts;
@@ -448,6 +474,7 @@ private:
   NoLoopKernelMap NoLoopKernels;
   NoLoopKernelMap BigJumpLoopKernels;
   XteamRedKernelMap XteamRedKernels;
+  MultiDeviceKernelMap MultiDeviceKernels;
 
   // A set of references that have only been seen via a weakref so far. This is
   // used to remove the weak of the reference if we ever see a direct reference
@@ -1882,6 +1909,12 @@ public:
   /// reduction variables are created for subsequent codegen phases to work on.
   NoLoopXteamErr checkAndSetXteamRedKernel(const OMPExecutableDirective &D);
 
+  /// If we are able to generate a multi-device kernel for this directive,
+  /// return true, otherwise return false. If successful, metadata for the
+  /// argument variables is created for subsequent codegen phases to work on.
+  bool checkAndSetMultiDeviceKernel(const OMPExecutableDirective &D,
+                                    bool CanBeMultiDevice);
+
   /// Compute the block size to be used for a kernel.
   int getWorkGroupSizeSPMDHelper(const OMPExecutableDirective &D);
   /// Used in optimized kernel codegen, compute the block size from the nested
@@ -2004,6 +2037,57 @@ public:
   /// Return true if the provided expression accesses the provided variable,
   /// otherwise return false.
   bool isXteamRedVarExpr(const Expr *E, const VarDecl *VD) const;
+
+  /// Are we generating multi-device kernel for the statement
+  bool multiDeviceFStmtEntryExists(const Stmt *S) {
+    return MultiDeviceKernels.find(S) != MultiDeviceKernels.end();
+  }
+  bool isMultiDeviceKernel(const Stmt *S) {
+    if (MultiDeviceKernels.find(S) == MultiDeviceKernels.end())
+      return false;
+    MultiDeviceKernelInfo MDInfo = MultiDeviceKernels.find(S)->second;
+    return MDInfo.CanBeMultiDevice;
+  }
+  bool isMultiDeviceKernel(const OMPExecutableDirective &D);
+
+  /// Given a ForStmt for which Multi Device codegen will be done, save the
+  /// metadata for the LB and UB args.
+  void saveMultiDeviceArgs(const OMPExecutableDirective &D,
+                           const llvm::Function *F, VarDecl *LBDecl,
+                           VarDecl *UBDecl) {
+    assert(isMultiDeviceKernel(getSingleForStmt(getOptKernelKey(D))) &&
+           "Must be a multi-device kernel");
+    const ForStmt *FStmt = getSingleForStmt(getOptKernelKey(D));
+    assert((MultiDeviceKernels.find(FStmt) != MultiDeviceKernels.end()) &&
+           "FStmt not found");
+    MultiDeviceKernelInfo &MDInfo = MultiDeviceKernels.find(FStmt)->second;
+    MDInfo.FunctionBoundsMap.insert(
+        std::make_pair(F, MultiDeviceBoundsInfo(LBDecl, UBDecl)));
+  }
+
+  /// Retrieve the metadata for the LB arg.
+  MultiDeviceBoundsInfo getMultiDeviceBounds(const OMPExecutableDirective &D,
+                                             const llvm::Function *F) {
+    const ForStmt *FStmt = getSingleForStmt(getOptKernelKey(D));
+    assert((MultiDeviceKernels.find(FStmt) != MultiDeviceKernels.end()) &&
+           "FStmt not found");
+    MultiDeviceKernelInfo MDInfo = MultiDeviceKernels.find(FStmt)->second;
+    assert(MDInfo.FunctionBoundsMap.find(F) != MDInfo.FunctionBoundsMap.end() &&
+           "Function must exist");
+    return MDInfo.FunctionBoundsMap.find(F)->second;
+  }
+
+  /// Retrieve the metadata for the LB arg.
+  VarDecl *getMultiDeviceLBArg(const OMPExecutableDirective &D,
+                               const llvm::Function *F) {
+    return getMultiDeviceBounds(D, F).LBArg;
+  }
+
+  /// Retrieve the metadata for the LB arg.
+  VarDecl *getMultiDeviceUBArg(const OMPExecutableDirective &D,
+                               const llvm::Function *F) {
+    return getMultiDeviceBounds(D, F).UBArg;
+  }
 
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
@@ -2287,6 +2371,15 @@ private:
   std::pair<NoLoopXteamErr, std::pair<CodeGenModule::XteamRedVarMap,
                                       CodeGenModule::XteamRedVarVecTy>>
   collectXteamRedVars(const OptKernelNestDirectives &NestDirs);
+
+  /// Top level checker for multi device of the loop
+  NoLoopXteamErr getMultiDeviceForStmtStatus(const OMPExecutableDirective &,
+                                             const Stmt *);
+
+  /// Are clauses on a combined OpenMP construct compatible with multi-device
+  /// codegen?
+  NoLoopXteamErr
+  getMultiDeviceStatusForClauses(const OptKernelNestDirectives &NestDirs);
 };
 
 }  // end namespace CodeGen

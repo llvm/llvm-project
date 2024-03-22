@@ -38,12 +38,15 @@ uint32_t inc(uint32_t *Addr, uint32_t V, OrderingTy Ordering,
 
 template <typename Ty> Ty add(Ty *Address, Ty Val, atomic::OrderingTy Ordering);
 
+template <typename Ty> Ty add_system(Ty *Address, Ty Val, atomic::OrderingTy Ordering);
+
 /// Atomically perform <op> on \p V and \p *Addr with \p Ordering semantics. The
 /// result is stored in \p *Addr;
 /// {
 
 #define ATOMIC_COMMON_OP(TY)                                                   \
   TY add(TY *Addr, TY V, OrderingTy Ordering);                                 \
+  TY add_system(TY *Addr, TY V, OrderingTy Ordering);                          \
   TY mul(TY *Addr, TY V, OrderingTy Ordering);                                 \
   TY load(TY *Addr, OrderingTy Ordering);                                      \
   void store(TY *Addr, TY V, OrderingTy Ordering);                             \

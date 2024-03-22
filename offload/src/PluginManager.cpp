@@ -272,12 +272,20 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
         (getRequirements() & OMPX_REQ_EAGER_ZERO_COPY_MAPS));
   }
 
+  // Add the flag for multi-device.
+  if (ExclusiveDevicesAccessor->size() > 0) {
+    auto &Device = *(*ExclusiveDevicesAccessor)[0];
+    if (Device.getNumMultiDevices() > 0)
+      addRequirements(OMPX_REQ_MULTI_DEVICE_ENABLED);
+  }
+
   DP("Done registering entries!\n");
 }
 
 // Temporary forward declaration, old style CTor/DTor handling is going away.
 int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-           KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
+           KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo,
+           bool InMultiDeviceMode, bool &IsMultiDeviceKernel);
 
 void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   DP("Unloading target library!\n");

@@ -199,6 +199,24 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
     *pstride = stride;
   }
 
+  /// static init function that takes into account multi-device execution
+  static void for_static_init_md(int32_t global_tid, int32_t schedtype,
+                                 int32_t *plastiter, T *plower_md, T *pupper_md,
+                                 T *plower, T *pupper, ST *pstride, ST chunk,
+                                 bool IsSPMDExecutionMode) {
+    T multi_device_lb;
+    multi_device_lb = *plower_md;
+    T multi_device_ub;
+    multi_device_ub = *pupper_md;
+
+    for_static_init(global_tid, schedtype, plastiter, &multi_device_lb,
+                    &multi_device_ub, pstride, chunk, IsSPMDExecutionMode);
+
+    // Perform post static init adjustment of LB and UB
+    *plower = multi_device_lb;
+    *pupper = multi_device_ub;
+  }
+
   ////////////////////////////////////////////////////////////////////////////////
   // Support for dispatch Init
 
@@ -599,6 +617,46 @@ void __kmpc_dispatch_fini_8u(IdentTy *loc, int32_t tid) {
 
 // deinit
 void __kmpc_dispatch_deinit(IdentTy *loc, int32_t tid) { popDST(); }
+
+////////////////////////////////////////////////////////////////////////////////
+// KMP interface implementation (static loops) for multi-device
+////////////////////////////////////////////////////////////////////////////////
+
+void __kmpc_distribute_static_init_multi_device_4(
+    IdentTy *loc, int32_t global_tid, int32_t schedtype, int32_t *plastiter,
+    int32_t *plower_md, int32_t *pupper_md, int32_t *plower, int32_t *pupper,
+    int32_t *pstride, int32_t incr, int32_t chunk) {
+  omptarget_nvptx_LoopSupport<int32_t, int32_t>::for_static_init_md(
+      global_tid, schedtype, plastiter, plower_md, pupper_md, plower, pupper,
+      pstride, chunk, mapping::isSPMDMode());
+}
+
+void __kmpc_distribute_static_init_multi_device_4u(
+    IdentTy *loc, int32_t global_tid, int32_t schedtype, int32_t *plastiter,
+    uint32_t *plower_md, uint32_t *pupper_md, uint32_t *plower,
+    uint32_t *pupper, int32_t *pstride, int32_t incr, int32_t chunk) {
+  omptarget_nvptx_LoopSupport<uint32_t, int32_t>::for_static_init_md(
+      global_tid, schedtype, plastiter, plower_md, pupper_md, plower, pupper,
+      pstride, chunk, mapping::isSPMDMode());
+}
+
+void __kmpc_distribute_static_init_multi_device_8(
+    IdentTy *loc, int32_t global_tid, int32_t schedtype, int32_t *plastiter,
+    int64_t *plower_md, int64_t *pupper_md, int64_t *plower, int64_t *pupper,
+    int64_t *pstride, int64_t incr, int64_t chunk) {
+  omptarget_nvptx_LoopSupport<int64_t, int64_t>::for_static_init_md(
+      global_tid, schedtype, plastiter, plower_md, pupper_md, plower, pupper,
+      pstride, chunk, mapping::isSPMDMode());
+}
+
+void __kmpc_distribute_static_init_multi_device_8u(
+    IdentTy *loc, int32_t global_tid, int32_t schedtype, int32_t *plastiter,
+    uint64_t *plower_md, uint64_t *pupper_md, uint64_t *plower,
+    uint64_t *pupper, int64_t *pstride, int64_t incr, int64_t chunk) {
+  omptarget_nvptx_LoopSupport<uint64_t, int64_t>::for_static_init_md(
+      global_tid, schedtype, plastiter, plower_md, pupper_md, plower, pupper,
+      pstride, chunk, mapping::isSPMDMode());
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // KMP interface implementation (static loops)

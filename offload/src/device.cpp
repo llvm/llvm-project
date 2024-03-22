@@ -343,3 +343,12 @@ void DeviceTy::zeroCopySanityChecksAndDiag(bool isUnifiedSharedMemory,
   RTL->zero_copy_sanity_checks_and_diag(RTLDeviceID, isUnifiedSharedMemory,
                                         isAutoZeroCopy, isEagerMaps);
 }
+
+uint32_t DeviceTy::getNumMultiDevices() const {
+  return RTL->get_num_multi_devices(RTLDeviceID);
+}
+
+// Check if kernel is a multi device kernel
+bool DeviceTy::isMultiDeviceKernel(void *TgtEntryPtr) {
+  return RTL->kernel_is_multi_device(RTLDeviceID, TgtEntryPtr);
+}

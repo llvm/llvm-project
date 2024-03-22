@@ -24,7 +24,8 @@
 #include <cstdint>
 
 extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-                  KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
+                  KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo,
+                  bool InMultiDeviceMode, bool &IsMultiDeviceKernel);
 
 extern int target_activate_rr(DeviceTy &Device, uint64_t MemorySize,
                               void *ReqAddr, bool isRecord, bool SaveOutput,

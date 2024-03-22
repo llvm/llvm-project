@@ -3664,6 +3664,14 @@ def fno_openmp_target_fast_reduction : Flag<["-"], "fno-openmp-target-fast-reduc
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Do not use the fast reduction code generation technique">,
   MarshallingInfoFlag<LangOpts<"OpenMPTargetFastReduction">>;
+def fopenmp_target_multi_device : Flag<["-"], "fopenmp-target-multi-device">, Group<f_Group>,
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable code generation to emit support for multi device target region execution">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetMultiDevice">>;
+def fno_openmp_target_multi_device : Flag<["-"], "fno-openmp-target-multi-device">, Group<f_Group>,
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Do not use code generation to emit support for multi target offloading">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetMultiDevice">>;
 
 //===----------------------------------------------------------------------===//
 // Shared cc1 + fc1 OpenMP Target Options

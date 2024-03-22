@@ -8486,6 +8486,17 @@ CodeGenModule::getNoLoopForStmtStatus(const OMPExecutableDirective &D,
   return std::make_pair(NxSuccess, HasNestedGenericCall);
 }
 
+CodeGenModule::NoLoopXteamErr
+CodeGenModule::getMultiDeviceForStmtStatus(const OMPExecutableDirective &D,
+                                           const Stmt *OMPStmt) {
+  const ForStmt *FStmt = getSingleForStmt(OMPStmt);
+  if (FStmt == nullptr)
+    return NxNoSingleForStmt;
+
+  assert(isa<OMPLoopDirective>(D) && "Expected a loop directive");
+  return NxSuccess;
+}
+
 int64_t CodeGenModule::getXteamRedNumTeamsFromClause(
     const OptKernelNestDirectives &NestDirs) {
   for (const auto &D : NestDirs) {
@@ -8719,6 +8730,26 @@ CodeGenModule::NoLoopXteamErr CodeGenModule::getXteamRedStatusForClauses(
   NoLoopXteamErr NxStatus = NxSuccess;
   if ((NxStatus = getXteamRedCompatibleThreadLimitStatus(LD)))
     return NxStatus;
+  if ((NxStatus = getNoLoopCompatibleOrderStatus(LD)))
+    return NxStatus;
+  return getNoLoopCompatibleSchedStatus(LD);
+}
+
+CodeGenModule::NoLoopXteamErr CodeGenModule::getMultiDeviceStatusForClauses(
+    const OptKernelNestDirectives &NestDirs) {
+  for (auto &D : NestDirs) {
+    if (D->hasClausesOfKind<OMPDependClause>() ||
+        D->hasClausesOfKind<OMPInReductionClause>() ||
+        D->hasClausesOfKind<OMPDistScheduleClause>() ||
+        D->hasClausesOfKind<OMPLastprivateClause>() ||
+        D->hasClausesOfKind<OMPCopyinClause>() ||
+        D->hasClausesOfKind<OMPOrderedClause>())
+      return NxUnsupportedTargetClause;
+  }
+  if (!isa<OMPLoopDirective>(NestDirs.back()))
+    return NxNotLoopDirective;
+  const OMPLoopDirective &LD = cast<OMPLoopDirective>(*NestDirs.back());
+  NoLoopXteamErr NxStatus = NxSuccess;
   if ((NxStatus = getNoLoopCompatibleOrderStatus(LD)))
     return NxStatus;
   return getNoLoopCompatibleSchedStatus(LD);
@@ -9080,6 +9111,47 @@ CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
   return NxOptionDisabledOrHasCall;
 }
 
+bool CodeGenModule::checkAndSetMultiDeviceKernel(
+    const OMPExecutableDirective &D, bool CanBeMultiDevice) {
+  NoLoopXteamErr NxStatus = NxSuccess;
+
+  bool IsMultiDeviceKernel = false;
+  OptKernelNestDirectives NestDirs;
+  if (checkNest(D, &NestDirs) == NxSuccess &&
+      getMultiDeviceStatusForClauses(NestDirs) == NxSuccess &&
+      D.hasAssociatedStmt()) {
+    const OMPExecutableDirective &InnermostDir = *NestDirs.back();
+    if (InnermostDir.hasAssociatedStmt() &&
+        getMultiDeviceForStmtStatus(
+            InnermostDir, InnermostDir.getAssociatedStmt()) == NxSuccess) {
+      // The metadata map for all optimized kernels will have the ForStmt
+      // as the key.
+      const ForStmt *FStmt = getSingleForStmt(InnermostDir.getAssociatedStmt());
+
+      // Check that we are on the device and that multi device has been enabled.
+      if (getLangOpts().OpenMPTargetMultiDevice &&
+          getLangOpts().OpenMPIsTargetDevice && FStmt) {
+        // Set the entry only if we have not set it before otherwise just return
+        // the outcome of the isMultiDeviceKernel check. If this is the first
+        // time the function is called the code below will add an entry to the
+        // struct to keep track of the multi kernel metadata.
+        if (!multiDeviceFStmtEntryExists(FStmt)) {
+          // Now that a multi-device kernel will be generated, set the nest map
+          addOptKernelNestMap(NestDirs);
+
+          MultiDeviceFunctionBoundsMap FunctionBoundsMap;
+          MultiDeviceKernels.insert(std::make_pair(
+              FStmt, MultiDeviceKernelInfo(NestDirs, FunctionBoundsMap,
+                                           CanBeMultiDevice)));
+        }
+        IsMultiDeviceKernel = isMultiDeviceKernel(FStmt);
+      }
+    }
+  }
+
+  return IsMultiDeviceKernel;
+}
+
 bool CodeGenModule::isXteamRedKernel(const OMPExecutableDirective &D) {
   if (!D.hasAssociatedStmt())
     return false;
@@ -9105,6 +9177,15 @@ bool CodeGenModule::isNoLoopKernel(const OMPExecutableDirective &D) {
   if (FStmt == nullptr)
     return false;
   return isNoLoopKernel(FStmt);
+}
+
+bool CodeGenModule::isMultiDeviceKernel(const OMPExecutableDirective &D) {
+  if (!D.hasAssociatedStmt())
+    return false;
+  const ForStmt *FStmt = getSingleForStmt(getOptKernelKey(D));
+  if (FStmt == nullptr)
+    return false;
+  return isMultiDeviceKernel(FStmt);
 }
 
 void CodeGenModule::addOptKernelNestMap(

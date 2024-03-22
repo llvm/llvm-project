@@ -908,11 +908,13 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Print more elaborate kernel launch info for AMDGPU
   Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                KernelArgsTy &KernelArgs, uint32_t NumThreads,
-                               uint64_t NumBlocks) const override;
+                               uint64_t NumBlocks, int64_t MultiDeviceLB,
+                               int64_t MultiDeviceUB) const override;
   /// Print the "old" AMD KernelTrace single-line format
   void printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
                                   KernelArgsTy &KernelArgs, uint32_t NumThreads,
-                                  uint64_t NumBlocks) const;
+                                  uint64_t NumBlocks, int64_t MultiDeviceLB,
+                                  int64_t MultiDeviceUB) const;
   /// Get group and private segment kernel size.
   uint32_t getGroupSize() const { return GroupSize; }
   uint32_t getPrivateSize() const { return PrivateSize; }
@@ -3006,6 +3008,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
     DP("The number of XGMI Engines: %i\n", NumXGmiEngines);
 
+    // Detect if we are in Multi-Device mode
+    if (OMPX_NumMultiDevices > 0)
+      IsMultiDeviceEnabled = true;
+
     // Detect if XNACK is enabled
     auto TargeTripleAndFeaturesOrError =
         utils::getTargetTripleAndFeatures(Agent);
@@ -3931,6 +3937,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Plugin::error("Internal runtime error: cannot be both "
                            "unified_shared_memory and auto zero-copy.");
 
+    // The following IsXnackEnable variables comes from compiler flags so it
+    // might be true even when we run with HSA_XNACK=0.
     if (IsXnackEnabled)
       INFO(OMP_INFOTYPE_USER_DIAGNOSTIC, getDeviceId(), "XNACK is enabled.\n");
     else
@@ -4394,6 +4402,9 @@ private:
   // If false, map checks are performed also in unified_shared_memory mode.
   // TODO: this feature is non functional.
   bool NoUSMMapChecks = true;
+
+  /// True if in multi-device mode.
+  bool IsMultiDeviceEnabled = false;
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
@@ -4937,7 +4948,9 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
                                                 KernelArgsTy &KernelArgs,
                                                 uint32_t NumThreads,
-                                                uint64_t NumBlocks) const {
+                                                uint64_t NumBlocks,
+                                                int64_t MultiDeviceLB,
+                                                int64_t MultiDeviceUB) const {
   auto GroupSegmentSize = (*KernelInfo).GroupSegmentList;
   auto SGPRCount = (*KernelInfo).SGPRCount;
   auto VGPRCount = (*KernelInfo).VGPRCount;
@@ -4954,24 +4967,26 @@ void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
           "DEVID: %2d SGN:%d ConstWGSize:%-4d args:%2d teamsXthrds:(%4luX%4d) "
           "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
           "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d "
-          "Occupancy: %u "
-          "n:%s\n",
+          "md:%d md_LB:%ld md_UB:%ld Occupancy: %u n:%s\n",
           GenericDevice.getDeviceId(), getExecutionModeFlags(), ConstWGSize,
           KernelArgs.NumArgs, NumBlocks, NumThreads, 0, 0, GroupSegmentSize,
           SGPRCount, VGPRCount, SGPRSpillCount, VGPRSpillCount,
-          KernelArgs.Tripcount, NeedsHostServices, Occupancy, getName());
+          KernelArgs.Tripcount, NeedsHostServices, isMultiDeviceKernel(),
+          MultiDeviceLB, MultiDeviceUB, Occupancy, getName());
 }
 
 Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                              KernelArgsTy &KernelArgs,
                                              uint32_t NumThreads,
-                                             uint64_t NumBlocks) const {
+                                             uint64_t NumBlocks,
+                                             int64_t MultiDeviceLB,
+                                             int64_t MultiDeviceUB) const {
   // When LIBOMPTARGET_KERNEL_TRACE is set, print the single-line kernel trace
   // info present in the old ASO plugin, and continue with the upstream 2-line
   // info, should LIBOMPTARGET_INFO be a meaningful value, otherwise return.
   if (getInfoLevel() & OMP_INFOTYPE_AMD_KERNEL_TRACE)
-    printAMDOneLineKernelTrace(GenericDevice, KernelArgs, NumThreads,
-                               NumBlocks);
+    printAMDOneLineKernelTrace(GenericDevice, KernelArgs, NumThreads, NumBlocks,
+                               MultiDeviceLB, MultiDeviceUB);
 
   // Only do all this when the output is requested
   if (!(getInfoLevel() & OMP_INFOTYPE_PLUGIN_KERNEL))

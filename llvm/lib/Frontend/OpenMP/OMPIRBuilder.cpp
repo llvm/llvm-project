@@ -1104,7 +1104,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitKernelLaunch(
     const LocationDescription &Loc, Function *OutlinedFn, Value *OutlinedFnID,
     EmitFallbackCallbackTy emitTargetCallFallbackCB, TargetKernelArgs &Args,
     Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP) {
-
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -6347,13 +6346,14 @@ void OpenMPIRBuilder::emitTargetRegionFunction(
     TargetRegionEntryInfo &EntryInfo,
     FunctionGenCallback &GenerateFunctionCallback, bool IsOffloadEntry,
     Function *&OutlinedFn, Constant *&OutlinedFnID) {
-
   SmallString<64> EntryFnName;
   OffloadInfoManager.getTargetRegionEntryFnName(EntryFnName, EntryInfo);
 
   OutlinedFn = Config.isTargetDevice() || !Config.openMPOffloadMandatory()
                    ? GenerateFunctionCallback(EntryFnName)
                    : nullptr;
+  // DORU: This is where the generated kernel can be printed.
+  // OutlinedFn->dump();
 
   // If this target outline function is not an offload entry, we don't need to
   // register it. This may be in the case of a false if clause, or if there are
@@ -6540,6 +6540,24 @@ OpenMPIRBuilder::createForStaticInitFunction(unsigned IVSize, bool IVSigned,
                                     : omp::OMPRTL___kmpc_for_static_init_4u)
                         : (IVSigned ? omp::OMPRTL___kmpc_for_static_init_8
                                     : omp::OMPRTL___kmpc_for_static_init_8u);
+
+  return getOrCreateRuntimeFunction(M, Name);
+}
+
+FunctionCallee
+OpenMPIRBuilder::createMDDistributeForStaticInitFunction(unsigned IVSize,
+                                                         bool IVSigned) {
+  assert((IVSize == 32 || IVSize == 64) &&
+         "IV size is not compatible with the omp runtime");
+  RuntimeFunction Name;
+  Name =
+      IVSize == 32
+          ? (IVSigned
+                 ? omp::OMPRTL___kmpc_distribute_static_init_multi_device_4
+                 : omp::OMPRTL___kmpc_distribute_static_init_multi_device_4u)
+          : (IVSigned
+                 ? omp::OMPRTL___kmpc_distribute_static_init_multi_device_8
+                 : omp::OMPRTL___kmpc_distribute_static_init_multi_device_8u);
 
   return getOrCreateRuntimeFunction(M, Name);
 }
@@ -6849,7 +6867,6 @@ static void emitTargetOutlinedFunction(
     Constant *&OutlinedFnID, SmallVectorImpl<Value *> &Inputs,
     OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
-
   OpenMPIRBuilder::FunctionGenCallback &&GenerateOutlinedFunction =
       [&OMPBuilder, &Builder, &Inputs, &CBFunc,
        &ArgAccessorFuncCB](StringRef EntryFnName) {

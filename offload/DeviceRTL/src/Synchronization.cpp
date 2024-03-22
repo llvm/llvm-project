@@ -40,6 +40,12 @@ template <typename Ty>
 Ty atomicAdd(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
   return __scoped_atomic_fetch_add(Address, Val, Ordering,
                                    __MEMORY_SCOPE_DEVICE);
+
+}
+
+template <typename Ty>
+Ty atomicSystemAdd(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
+  return __atomic_fetch_add(Address, Val, Ordering);
 }
 
 template <typename Ty>
@@ -583,6 +589,9 @@ void fence::system(atomic::OrderingTy Ordering) { impl::fenceSystem(Ordering); }
   TY atomic::add(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
     return impl::atomicAdd(Addr, V, Ordering);                                 \
   }                                                                            \
+  TY atomic::add_system(TY *Addr, TY V, atomic::OrderingTy Ordering) {         \
+    return impl::atomicSystemAdd(Addr, V, Ordering);                           \
+  }                                                                            \
   TY atomic::mul(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
     return impl::atomicMul(Addr, V, Ordering);                                 \
   }                                                                            \
@@ -663,6 +672,11 @@ uint32_t atomic::inc(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering,
 template <typename Ty>
 Ty atomic::add(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
   return impl::atomicAdd(Address, Val, Ordering);
+}
+
+template <typename Ty>
+Ty atomic::add_system(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
+  return impl::atomicSystemAdd(Address, Val, Ordering);
 }
 
 void unsetCriticalLock(omp_lock_t *Lock) { impl::unsetLock(Lock); }

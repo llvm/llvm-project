@@ -3561,10 +3561,12 @@ public:
                          SourceLocation Loc, const FunctionArgList *Args);
 
   void EmitNoLoopCode(const OMPExecutableDirective &D,
-                      const ForStmt *CapturedForStmt, SourceLocation Loc);
+                      const ForStmt *CapturedForStmt, SourceLocation Loc,
+                      const FunctionArgList *Args);
 
   void EmitBigJumpLoopCode(const OMPExecutableDirective &D,
-                           const ForStmt *CapturedForStmt, SourceLocation Loc);
+                           const ForStmt *CapturedForStmt, SourceLocation Loc,
+                           const FunctionArgList *Args);
 
   void EmitXteamRedCode(const OMPExecutableDirective &D,
                         const ForStmt *CapturedForStmt, SourceLocation Loc,
@@ -3572,7 +3574,8 @@ public:
 
   /// Used in No-Loop and Xteam codegen to emit the loop iteration and the
   /// associated variables. Returns the loop iteration variable and its address.
-  std::pair<const VarDecl *, Address> EmitNoLoopIV(const OMPLoopDirective &LD);
+  std::pair<const VarDecl *, Address> EmitNoLoopIV(const OMPLoopDirective &LD,
+                                                   const FunctionArgList *Args);
 
   /// Emit updates of the original loop indices. Used by both
   /// BigJumpLoop and Xteam reduction kernel codegen.
@@ -3608,6 +3611,8 @@ public:
   void EmitDoStmt(const DoStmt &S, ArrayRef<const Attr *> Attrs = std::nullopt);
   void EmitForStmt(const ForStmt &S,
                    ArrayRef<const Attr *> Attrs = std::nullopt);
+  void EmitForStmtWithArgs(const ForStmt &S, const FunctionArgList *Args,
+                           ArrayRef<const Attr *> Attrs = std::nullopt);
   void EmitReturnStmt(const ReturnStmt &S);
   void EmitDeclStmt(const DeclStmt &S);
   void EmitBreakStmt(const BreakStmt &S);
@@ -3705,13 +3710,16 @@ public:
   llvm::Function *EmitCapturedStmt(const CapturedStmt &S, CapturedRegionKind K);
   llvm::Function *GenerateCapturedStmtFunction(const CapturedStmt &S);
   Address GenerateCapturedStmtArgument(const CapturedStmt &S);
-  llvm::Function *
-  GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
-                                     const OMPExecutableDirective &D,
-                                     SourceLocation Loc);
+  llvm::Function *GenerateOpenMPCapturedStmtFunction(
+      const CapturedStmt &S, const OMPExecutableDirective &D,
+      SourceLocation Loc, bool TopLevel, bool IsTopKernel);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars,
                                   const Stmt *XteamRedNestKey);
+  void GenerateOpenMPCapturedVarsDevice(
+      const CapturedStmt &S, SmallVectorImpl<llvm::Value *> &CapturedVars,
+      SmallVectorImpl<llvm::Value *> &MultiTargetVars,
+      const Stmt *XteamRedNestKey);
   void
   InitializeXteamRedCapturedVars(SmallVectorImpl<llvm::Value *> &CapturedVars,
                                  QualType RedVarQualType);
@@ -4038,6 +4046,22 @@ public:
   void EmitOMPInnerLoop(
       const OMPExecutableDirective &S, bool RequiresCleanup,
       const Expr *LoopCond, const Expr *IncExpr,
+      const llvm::function_ref<void(CodeGenFunction &)> BodyGen,
+      const llvm::function_ref<void(CodeGenFunction &)> PostIncGen);
+
+  /// Emit inner loop of the worksharing/simd construct.
+  ///
+  /// \param S Directive, for which the inner loop must be emitted.
+  /// \param RequiresCleanup true, if directive has some associated private
+  /// variables.
+  /// \param LoopCond Bollean condition for loop continuation.
+  /// \param IncExpr Increment expression for loop control variable.
+  /// \param BodyGen Generator for the inner body of the inner loop.
+  /// \param PostIncGen Genrator for post-increment code (required for ordered
+  /// loop directvies).
+  void EmitOMPMultiDeviceInnerLoop(
+      const OMPExecutableDirective &S, bool RequiresCleanup,
+      const Expr *LoopCond, const Expr *IncExpr, const VarDecl *IVDecl,
       const llvm::function_ref<void(CodeGenFunction &)> BodyGen,
       const llvm::function_ref<void(CodeGenFunction &)> PostIncGen);
 
@@ -5427,7 +5451,8 @@ private:
   /// Emit the starting index of a BigJumpLoop which is used in
   /// BigJumpLoop and Xteam reduction kernels.
   std::pair<const VarDecl *, Address>
-  EmitBigJumpLoopStartingIndex(const ForStmt &FStmt);
+  EmitBigJumpLoopStartingIndex(const ForStmt &FStmt,
+                               const FunctionArgList *Args);
   /// Emit the increment of a BigJumpLoop which is used in BigJumpLoop
   /// and Xteam reduction kernels.
   void EmitBigJumpLoopInc(const ForStmt &FStmt, const VarDecl *LoopVar,

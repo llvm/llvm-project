@@ -6862,6 +6862,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       else
         CmdArgs.push_back("-fno-openmp-target-fast-reduction");
 
+      if (Args.hasFlag(options::OPT_fopenmp_target_multi_device,
+                       options::OPT_fno_openmp_target_multi_device, false))
+        CmdArgs.push_back("-fopenmp-target-multi-device");
+      else
+        CmdArgs.push_back("-fno-openmp-target-multi-device");
+
       // When in OpenMP offloading mode with NVPTX target, forward
       // cuda-mode flag
       if (Args.hasFlag(options::OPT_fopenmp_cuda_mode,

@@ -33,6 +33,8 @@
 #include <cstdio>
 #include <cstdlib>
 
+using llvm::SmallVector;
+
 #ifdef OMPT_SUPPORT
 using namespace llvm::omp::target::ompt;
 #endif
@@ -327,6 +329,19 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
 
+  // Target multiple devices if the user requests more than 1 device. The
+  // variable below tracks the number of EXTRA devices that are going to be
+  // used other than the first device.
+  int32_t NumMultiDevices = 0;
+  char *SplitFactor = getenv("LIBOMPTARGET_NUM_MULTI_DEVICES");
+  if (SplitFactor) {
+    NumMultiDevices = atoi(SplitFactor) - 1;
+
+    // In multi-device mode the default device is always 0.
+    if (DeviceId == -1)
+      DeviceId = 0;
+  }
+
   TIMESCOPE_WITH_IDENT(Loc);
 
   DP("Entering target region for device %" PRId64 " with entry point " DPxMOD
@@ -384,21 +399,98 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   int Rc = OFFLOAD_SUCCESS;
-  Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
+  bool IsMultiDeviceKernel = false;
+  Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo,
+              /*InMultiDeviceMode*/ NumMultiDevices > 0, IsMultiDeviceKernel);
 
-  if (Rc == OFFLOAD_SUCCESS)
-    Rc = AsyncInfo.synchronize();
+  // Check if this is a multi-device kernel.
+  SmallVector<TargetAsyncInfoTy *, 8> TargetAsyncInfos;
+  if (IsMultiDeviceKernel) {
+    // Check whether we have enough iterations for multiple devices, if we do
+    // not then we execute on one device. If the kernel does not have at least
+    // two arguments it means the loop bounds have not been passed in so we
+    // cannot execute on multiple devices.
+    if (NumMultiDevices > 0 && (KernelArgs->Tripcount < (NumMultiDevices + 1) ||
+                                KernelArgs->NumArgs < 2))
+      NumMultiDevices = 0;
+
+    // The first device used by the multi-device infrastructure:
+    int32_t FirstDeviceId = DeviceId + 1;
+
+    // Launch kernel on one or across multiple devices.
+    for (int64_t DeviceIndex = FirstDeviceId;
+         DeviceIndex < FirstDeviceId + NumMultiDevices; DeviceIndex++) {
+      DP("Entering target region for device %" PRId64
+         " with entry point " DPxMOD "\n",
+         DeviceIndex, DPxPTR(HostPtr));
+
+      if (checkDevice(DeviceIndex, Loc)) {
+        DP("Not offloading to device %" PRId64 "\n", DeviceIndex);
+        return OMP_TGT_FAIL;
+      }
+
+      if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
+        printKernelArguments(Loc, DeviceIndex, KernelArgs->NumArgs,
+                             KernelArgs->ArgSizes, KernelArgs->ArgTypes,
+                             KernelArgs->ArgNames, "Entering OpenMP kernel");
+#ifdef OMPTARGET_DEBUG
+      for (int I = 0; I < KernelArgs->NumArgs; ++I) {
+        DP("Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
+           ", Type=0x%" PRIx64 ", Name=%s\n",
+           I, DPxPTR(KernelArgs->ArgBasePtrs[I]),
+           DPxPTR(KernelArgs->ArgPtrs[I]), KernelArgs->ArgSizes[I],
+           KernelArgs->ArgTypes[I],
+           (KernelArgs->ArgNames)
+               ? getNameFromMapping(KernelArgs->ArgNames[I]).c_str()
+               : "unknown");
+      }
+#endif
+
+      auto DeviceOrErr = PM->getDevice(DeviceIndex);
+      if (!DeviceOrErr)
+        FATAL_MESSAGE(DeviceIndex, "%s",
+                      toString(DeviceOrErr.takeError()).c_str());
+
+      TargetAsyncInfoTy *LocalTAI = new TargetAsyncInfoTy(*DeviceOrErr);
+      AsyncInfoTy &AsyncInfoMD = *LocalTAI;
+      TargetAsyncInfos.emplace_back(LocalTAI);
+
+      // No need to check the global multi device value for this kernel.
+      if (target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfoMD, false,
+                 IsMultiDeviceKernel) != OFFLOAD_SUCCESS)
+        Rc = OFFLOAD_FAIL;
+    }
+  }
+
+  int PostSyncRc = Rc;
+  if (Rc == OFFLOAD_SUCCESS) {
+    PostSyncRc = AsyncInfo.synchronize();
+    for (TargetAsyncInfoTy *LocalTAI : TargetAsyncInfos) {
+      AsyncInfoTy &AsyncInfo = *LocalTAI;
+      if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
+        PostSyncRc = OFFLOAD_FAIL;
+    }
+  }
 
 #ifdef OMPT_SUPPORT
   if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo) {
     AI->OmptEventInfo->RIFunction = std::monostate();
     delete AI->OmptEventInfo;
   }
+
+  for (TargetAsyncInfoTy *LocalTAI : TargetAsyncInfos) {
+    AsyncInfoTy &AsyncInfo = *LocalTAI;
+    if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo) {
+      AI->OmptEventInfo->RIFunction = std::monostate();
+      delete AI->OmptEventInfo;
+    }
+  }
 #endif
 
-  handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
-  assert(Rc == OFFLOAD_SUCCESS && "offload failed");
-  assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_kernel unexpected failure!");
+  handleTargetOutcome(PostSyncRc == OFFLOAD_SUCCESS, Loc);
+  assert(PostSyncRc == OFFLOAD_SUCCESS && "offload failed");
+  assert(PostSyncRc == OFFLOAD_SUCCESS &&
+         "__tgt_target_kernel unexpected failure!");
 
   return OMP_TGT_SUCCESS;
 }

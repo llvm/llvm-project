@@ -186,6 +186,12 @@ struct DeviceTy {
   /// Indicate that there are pending images for this device or not.
   void setHasPendingImages(bool V) { HasPendingImages = V; }
 
+  /// Get number of devices used for multi-device kernels
+  uint32_t getNumMultiDevices() const;
+
+  /// Check if the kernel is multi device
+  bool isMultiDeviceKernel(void *TgtEntryPtr);
+
 private:
   /// Deinitialize the device (and plugin).
   void deinit();

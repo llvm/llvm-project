@@ -307,6 +307,9 @@ struct GenericKernelTy {
     llvm_unreachable("Unknown execution mode!");
   }
 
+  /// Check if kernel is a multi-device kernel.
+  bool isMultiDeviceKernel() const { return IsMultiDeviceKernel; }
+
 protected:
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
@@ -333,14 +336,16 @@ protected:
   /// Prints generic kernel launch information.
   Error printLaunchInfo(GenericDeviceTy &GenericDevice,
                         KernelArgsTy &KernelArgs, uint32_t NumThreads,
-                        uint64_t NumBlocks) const;
+                        uint64_t NumBlocks, int64_t MultiDeviceLB,
+                        int64_t MultiDeviceUB) const;
 
   /// Prints plugin-specific kernel launch information after generic kernel
   /// launch information
   virtual Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                        KernelArgsTy &KernelArgs,
-                                       uint32_t NumThreads,
-                                       uint64_t NumBlocks) const;
+                                       uint32_t NumThreads, uint64_t NumBlocks,
+                                       int64_t MultiDeviceLB,
+                                       int64_t MultiDeviceUB) const;
 
 private:
   /// Prepare the arguments before launching the kernel.
@@ -377,6 +382,9 @@ private:
 
   /// The execution flags of the kernel.
   OMPTgtExecModeFlags ExecutionMode;
+
+  /// The multi-device kernel flag.
+  bool IsMultiDeviceKernel;
 
   /// The image that contains this kernel.
   DeviceImageTy *ImagePtr = nullptr;
@@ -1044,6 +1052,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return Error::success();
   }
 
+  uint32_t getNumMultiDevices() const { return OMPX_NumMultiDevices; }
+
+  bool getMultiDeviceKernelValue(void *EntryPtr);
+
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;
 
@@ -1149,6 +1161,9 @@ protected:
   /// regarding the initial number of streams and events.
   UInt32Envar OMPX_InitialNumStreams;
   UInt32Envar OMPX_InitialNumEvents;
+
+  /// Specify the number of devices used by multi-device kernels.
+  UInt32Envar OMPX_NumMultiDevices;
 
   /// Array of images loaded into the device. Images are automatically
   /// deallocated by the allocator.
@@ -1516,6 +1531,12 @@ public:
                                            bool isUnifiedSharedMemory,
                                            bool isAutoZeroCopy,
                                            bool isEagerMaps);
+
+  /// Return number of devices used by multi-device kernels.
+  int32_t get_num_multi_devices(int32_t DeviceId);
+
+  /// Check if kernel is multi-device.
+  bool kernel_is_multi_device(int32_t DeviceId, void *TgtEntryPtr);
 
 private:
   /// Indicates if the platform runtime has been fully initialized.
