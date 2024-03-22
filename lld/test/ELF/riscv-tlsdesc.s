@@ -29,11 +29,13 @@
 # RUN: ld.lld -e 0 -z now a.32.o c.32.so -o a.32.ie
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d a.32.ie | FileCheck %s --check-prefix=IE32
 
-# RUN: llvm-mc -triple=riscv64 -filetype=obj d.s -o d.64.o
-# RUN: not ld.lld -shared -soname=d.64.so -o d.64.so d.64.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL
+## Prior to https://github.com/llvm/llvm-project/pull/85817 the local TLSDESC
+## labels would be marked STT_TLS, resulting in an error "has an STT_TLS symbol but doesn't have an SHF_TLS section"
 
+# RUN: llvm-mc -triple=riscv64 -filetype=obj d.s -o d.64.o
+# RUN: ld.lld -shared -soname=d.64.so -o d.64.so d.64.o --fatal-warnings
 # RUN: llvm-mc -triple=riscv32 -filetype=obj d.s -o d.32.o --defsym ELF32=1
-# RUN: not ld.lld -shared -soname=d.32.so -o d.32.so d.32.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL
+# RUN: ld.lld -shared -soname=d.32.so -o d.32.so d.32.o --fatal-warnings
 
 # GD64-RELA:      .rela.dyn {
 # GD64-RELA-NEXT:   0x2408 R_RISCV_TLSDESC - 0x7FF
@@ -74,14 +76,14 @@
 # GD64-NEXT:         add     a0, a0, tp
 
 ## &.got[b]-. = 0x23e0+40 - 0x12f4 = 0x1114
-# GD64-NEXT:   12f4: auipc   a2, 0x1
+# GD64:        12f4: auipc   a2, 0x1
 # GD64-NEXT:         ld      a3, 0x114(a2)
 # GD64-NEXT:         addi    a0, a2, 0x114
 # GD64-NEXT:         jalr    t0, 0x0(a3)
 # GD64-NEXT:         add     a0, a0, tp
 
 ## &.got[c]-. = 0x23e0+24 - 0x1308 = 0x10f0
-# GD64-NEXT:   1308: auipc   a4, 0x1
+# GD64:        1308: auipc   a4, 0x1
 # GD64-NEXT:         ld      a5, 0xf0(a4)
 # GD64-NEXT:         addi    a0, a4, 0xf0
 # GD64-NEXT:         jalr    t0, 0x0(a5)
@@ -89,7 +91,7 @@
 
 # NOREL: no relocations
 
-# LE64-LABEL: <.text>:
+# LE64-LABEL: <.Ltlsdesc_hi0>:
 ## st_value(a) = 8
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    zero, zero, 0x0
@@ -97,12 +99,14 @@
 # LE64-NEXT:         addi    a0, zero, 0x8
 # LE64-NEXT:         add     a0, a0, tp
 ## st_value(b) = 2047
+# LE64-LABEL: <.Ltlsdesc_hi1>:
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    a0, zero, 0x7ff
 # LE64-NEXT:         add     a0, a0, tp
 ## st_value(c) = 2048
+# LE64-LABEL: <.Ltlsdesc_hi2>:
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         lui     a0, 0x1
@@ -116,18 +120,20 @@
 # IE64:       .got     00000010 00000000000123a8
 
 ## a and b are optimized to use LE. c is optimized to IE.
-# IE64-LABEL: <.text>:
+# IE64-LABEL: <.Ltlsdesc_hi0>:
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    a0, zero, 0x8
 # IE64-NEXT:         add     a0, a0, tp
+# IE64-LABEL: <.Ltlsdesc_hi1>:
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    a0, zero, 0x7ff
 # IE64-NEXT:         add     a0, a0, tp
 ## &.got[c]-. = 0x123a8+8 - 0x112b8 = 0x10f8
+# IE64-LABEL: <.Ltlsdesc_hi2>:
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:  112b8: auipc   a0, 0x1
@@ -136,7 +142,7 @@
 
 # IE32:       .got     00000008 00012248
 
-# IE32-LABEL: <.text>:
+# IE32-LABEL: <.Ltlsdesc_hi0>:
 ## st_value(a) = 8
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    zero, zero, 0x0
@@ -144,20 +150,19 @@
 # IE32-NEXT:         addi    a0, zero, 0x8
 # IE32-NEXT:         add     a0, a0, tp
 ## st_value(b) = 2047
+# IE32-LABEL: <.Ltlsdesc_hi1>:
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    a0, zero, 0x7ff
 # IE32-NEXT:         add     a0, a0, tp
 ## &.got[c]-. = 0x12248+4 - 0x111cc = 0x1080
+# IE32-LABEL: <.Ltlsdesc_hi2>:
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:  111cc: auipc   a0, 0x1
 # IE32-NEXT:         lw      a0, 0x80(a0)
 # IE32-NEXT:         add     a0, a0, tp
-
-## FIXME This should not pass, but the code MC layer needs a fix to prevent this.
-# BADTLSLABEL: error: d.{{.*}}.o has an STT_TLS symbol but doesn't have an SHF_TLS section
 
 #--- a.s
 .macro load dst, src
