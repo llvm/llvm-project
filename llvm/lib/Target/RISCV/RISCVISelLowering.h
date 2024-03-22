@@ -456,6 +456,7 @@ enum NodeType : unsigned {
   TH_LDD,
   TH_SWD,
   TH_SDD,
+  STRCMP
 };
 // clang-format on
 } // namespace RISCVISD

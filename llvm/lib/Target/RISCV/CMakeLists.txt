@@ -52,6 +52,7 @@ add_llvm_target(RISCVCodeGen
   RISCVPushPopOptimizer.cpp
   RISCVRegisterInfo.cpp
   RISCVSubtarget.cpp
+  RISCVSelectionDAGTargetInfo.cpp
   RISCVTargetMachine.cpp
   RISCVTargetObjectFile.cpp
   RISCVTargetTransformInfo.cpp

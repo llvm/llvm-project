@@ -16,6 +16,7 @@
 #include "GISel/RISCVRegisterBankInfo.h"
 #include "RISCV.h"
 #include "RISCVFrameLowering.h"
+#include "RISCVSelectionDAGTargetInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"

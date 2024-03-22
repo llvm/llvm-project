@@ -17655,6 +17655,167 @@ static MachineBasicBlock *emitFROUND(MachineInstr &MI, MachineBasicBlock *MBB,
   return DoneMBB;
 }
 
+static MachineBasicBlock *emitSTRCMPI(MachineInstr &MI, MachineBasicBlock *MBB,
+                                      const RISCVSubtarget &Subtarget) {
+
+  const RISCVInstrInfo &TII = *Subtarget.getInstrInfo();
+  MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+  MachineFunction &MF = *MI.getParent()->getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  const GlobalVariable *GV = cast<GlobalVariable>(MI.getOperand(2).getGlobal());
+  StringRef Str = cast<ConstantDataArray>(GV->getInitializer())->getAsCString();
+  int NumOfBytes = Str.str().length();
+  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+  MachineFunction::iterator MBBI = ++MBB->getIterator();
+
+  MachineBasicBlock *ExitMBB = MF.CreateMachineBasicBlock(LLVM_BB);
+  MF.insert(MBBI, ExitMBB);
+  ExitMBB->splice(ExitMBB->end(), MBB, std::next(MI.getIterator()), MBB->end());
+  ExitMBB->transferSuccessorsAndUpdatePHIs(MBB);
+  MBBI = ExitMBB->getIterator();
+
+  // In the code below we assume that the constant string is second argument
+  // and negate the result if needed.
+  bool NeedToNegateResult = MI.getOperand(3).getImm() == 0;
+  Register PHIReg = NeedToNegateResult
+                        ? MRI.createVirtualRegister(&RISCV::GPRRegClass)
+                        : MI.getOperand(0).getReg();
+  MachineInstrBuilder PHI_MIB =
+      BuildMI(*ExitMBB, ExitMBB->begin(), DL, TII.get(RISCV::PHI), PHIReg);
+  if (NeedToNegateResult) {
+    BuildMI(*ExitMBB, ++ExitMBB->begin(), DL, TII.get(RISCV::SUB),
+            MI.getOperand(0).getReg())
+        .addReg(RISCV::X0)
+        .addReg(PHIReg);
+  }
+
+  MachineBasicBlock *ReturnEarlyNullByteMBB =
+      MF.CreateMachineBasicBlock(LLVM_BB);
+  MF.insert(MBBI, ReturnEarlyNullByteMBB);
+  Register NegReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  BuildMI(*ReturnEarlyNullByteMBB, ReturnEarlyNullByteMBB->end(), DL,
+          TII.get(RISCV::ADDI), NegReg)
+      .addReg(RISCV::X0)
+      .addImm(-1);
+  ReturnEarlyNullByteMBB->addSuccessor(ExitMBB);
+  PHI_MIB.addReg(NegReg).addMBB(ReturnEarlyNullByteMBB);
+  MBBI = ReturnEarlyNullByteMBB->getIterator();
+
+  Register BaseReg = MI.getOperand(1).getReg();
+  MachineMemOperand &MMO = *MI.memoperands()[0];
+
+  MachineBasicBlock *CheckNullByteMBB = MF.CreateMachineBasicBlock(LLVM_BB);
+  MF.insert(MBBI, CheckNullByteMBB);
+  Register LoadedLastByteReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  MachineInstr &LoadLastByteMI =
+      *BuildMI(*CheckNullByteMBB, CheckNullByteMBB->end(), DL,
+               TII.get(RISCV::LBU), LoadedLastByteReg)
+           .addReg(BaseReg)
+           .addImm(NumOfBytes)
+           .cloneMemRefs(MI)
+           .getInstr();
+  MachineMemOperand *NewMMO = MF.getMachineMemOperand(
+      MMO.getPointerInfo(), MachineMemOperand::MOLoad, LLT(MVT::i8), Align(1));
+  LoadLastByteMI.setMemRefs(MF, {NewMMO});
+  LoadLastByteMI.memoperands()[0]->setOffset(NumOfBytes);
+
+  Register NegLoadedLastByteReg =
+      MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  BuildMI(*CheckNullByteMBB, CheckNullByteMBB->end(), DL, TII.get(RISCV::SUB),
+          NegLoadedLastByteReg)
+      .addReg(RISCV::X0)
+      .addReg(LoadedLastByteReg);
+  BuildMI(*CheckNullByteMBB, CheckNullByteMBB->end(), DL,
+          TII.get(RISCV::PseudoBR))
+      .addMBB(ExitMBB);
+  CheckNullByteMBB->addSuccessor(ExitMBB);
+  PHI_MIB.addReg(NegLoadedLastByteReg).addMBB(CheckNullByteMBB);
+  MBBI = CheckNullByteMBB->getIterator();
+
+  // First byte will be processed in the original MBB.
+  // Create NewMBBs for all other (non-null) bytes.
+  MachineFunction::iterator NewMBBI = MBBI;
+  SmallVector<MachineBasicBlock *> NewMBBs(NumOfBytes);
+  for (int i = NumOfBytes - 2; i >= 0; --i) {
+    MachineBasicBlock *NewMBB = MF.CreateMachineBasicBlock(LLVM_BB);
+    NewMBBs[i] = NewMBB;
+    MF.insert(NewMBBI, NewMBB);
+    NewMBBI = NewMBB->getIterator();
+  }
+  // The CheckNullByteMBB will be a fall-through successor
+  // of the block checking last non-null byte.
+  NewMBBs[NumOfBytes - 1] = CheckNullByteMBB;
+
+  int64_t Offset = 0;
+  char Byte = Str[0];
+  MachineBasicBlock::iterator MII = std::next(MI.getIterator());
+  MachineBasicBlock *CurrMBB = MBB;
+  MachineBasicBlock *NextMBB = NewMBBs[0];
+
+  auto emitCodeToCheckOneByteEquality = [&] {
+    Register LoadedByteReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    MachineInstr &LoadByteMI =
+        *BuildMI(*CurrMBB, MII, DL, TII.get(RISCV::LBU), LoadedByteReg)
+             .addReg(BaseReg)
+             .addImm(Offset)
+             .cloneMemRefs(MI)
+             .getInstr();
+    MachineMemOperand *NewMMO =
+        MF.getMachineMemOperand(MMO.getPointerInfo(), MachineMemOperand::MOLoad,
+                                LLT(MVT::i8), Align(1));
+    LoadByteMI.setMemRefs(MF, {NewMMO});
+    LoadByteMI.memoperands()[0]->setOffset(Offset);
+
+    BuildMI(*CurrMBB, MII, DL, TII.get(RISCV::BEQ))
+        .addReg(LoadedByteReg)
+        .addReg(RISCV::X0)
+        .addMBB(ReturnEarlyNullByteMBB);
+
+    MBBI = NextMBB->getIterator();
+    MachineBasicBlock *CheckBytesEqualMBB = MF.CreateMachineBasicBlock(LLVM_BB);
+    MF.insert(MBBI, CheckBytesEqualMBB);
+    CurrMBB->addSuccessor(ReturnEarlyNullByteMBB);
+    CurrMBB->addSuccessor(CheckBytesEqualMBB);
+
+    MachineBasicBlock::iterator CheckBytesEqualMMBI =
+        CheckBytesEqualMBB->begin();
+    Register DiffReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(*CheckBytesEqualMBB, CheckBytesEqualMMBI, DL, TII.get(RISCV::ADDI),
+            DiffReg)
+        .addReg(LoadedByteReg)
+        .addImm(-Byte);
+
+    BuildMI(*CheckBytesEqualMBB, CheckBytesEqualMMBI, DL, TII.get(RISCV::BNE))
+        .addReg(DiffReg)
+        .addReg(RISCV::X0)
+        .addMBB(ExitMBB);
+
+    CheckBytesEqualMBB->addSuccessor(ExitMBB);
+    PHI_MIB.addReg(DiffReg).addMBB(CheckBytesEqualMBB);
+    CheckBytesEqualMBB->addSuccessor(NextMBB);
+  };
+
+  // Check the first byte.
+  emitCodeToCheckOneByteEquality();
+
+  for (int i = 0; i < NumOfBytes - 1; ++i) {
+    ++Offset;
+    Byte = Str[i + 1];
+    CurrMBB = NewMBBs[i];
+    MII = CurrMBB->begin();
+    NextMBB = NewMBBs[i + 1];
+    // Check all other non-null bytes.
+    // On the last iteration of this loop,
+    // NextMBB is CheckNullByteMBB, so it will become
+    // a fall-through successor of basic block checking last non-null byte.
+    emitCodeToCheckOneByteEquality();
+  }
+
+  MI.eraseFromParent();
+  return ExitMBB;
+}
+
 MachineBasicBlock *
 RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                  MachineBasicBlock *BB) const {
@@ -17737,6 +17898,8 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::PseudoFROUND_D_INX:
   case RISCV::PseudoFROUND_D_IN32X:
     return emitFROUND(MI, BB, Subtarget);
+  case RISCV::PseudoSTRCMPI:
+    return emitSTRCMPI(MI, BB, Subtarget);
   case TargetOpcode::STATEPOINT:
   case TargetOpcode::STACKMAP:
   case TargetOpcode::PATCHPOINT:
@@ -19512,6 +19675,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SWAP_CSR)
   NODE_NAME_CASE(CZERO_EQZ)
   NODE_NAME_CASE(CZERO_NEZ)
+  NODE_NAME_CASE(STRCMP)
   NODE_NAME_CASE(SF_VC_XV_SE)
   NODE_NAME_CASE(SF_VC_IV_SE)
   NODE_NAME_CASE(SF_VC_VV_SE)
