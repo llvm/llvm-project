@@ -1679,6 +1679,8 @@ Error LinuxKernelRewriter::updateStaticKeysJumpTablePostEmit() {
              << "\n\tTargetAddress: 0x" << Twine::utohexstr(TargetAddress)
              << "\n\tKeyAddress:    0x" << Twine::utohexstr(KeyAddress) << '\n';
     });
+    (void)TargetAddress;
+    (void)KeyAddress;
 
     BinaryFunction *BF =
         BC.getBinaryFunctionContainingAddress(JumpAddress,
