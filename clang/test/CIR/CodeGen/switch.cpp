@@ -274,3 +274,29 @@ void sw12(int a) {
 // CHECK-NEXT:     ^bb1:  // no predecessors
 // CHECK-NEXT:       cir.break
 // CHECK-NEXT:     }
+
+void fallthrough(int x) {
+  switch (x) {
+    case 1:
+      __attribute__((fallthrough));
+    case 2:
+      break;
+    default:
+      break;
+  }
+}
+
+//      CHECK:  cir.func @_Z11fallthroughi
+//      CHECK:    cir.scope {
+//      CHECK:      cir.switch (%1 : !s32i) [
+// CHECK-NEXT:      case (equal, 1) {
+// CHECK-NEXT:        cir.yield
+// CHECK-NEXT:      },
+// CHECK-NEXT:      case (equal, 2) {
+// CHECK-NEXT:        cir.break
+// CHECK-NEXT:      },
+// CHECK-NEXT:      case (default) {
+// CHECK-NEXT:        cir.break
+// CHECK-NEXT:      }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:    }
