@@ -69,6 +69,11 @@ public:
       return rewriter.notifyMatchFailure(op, "expected integer type");
     }
 
+    if (type.isInteger(1)) {
+      // arith expects wrap-around arithmethic, which doesn't happen on `bool`.
+      return rewriter.notifyMatchFailure(op, "i1 type is not implemented");
+    }
+
     Value lhs = adaptor.getLhs();
     Value rhs = adaptor.getRhs();
     Type arithmeticType = type;
