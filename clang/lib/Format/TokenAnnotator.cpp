@@ -4390,8 +4390,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   }
   if (Left.is(tok::colon))
     return Left.isNot(TT_ObjCMethodExpr);
-  if (Left.is(tok::coloncolon))
-    return false;
+  if (Left.is(tok::coloncolon)) {
+    return Right.is(tok::star) && Right.is(TT_PointerOrReference) &&
+           Style.PointerAlignment != FormatStyle::PAS_Left;
+  }
   if (Left.is(tok::less) || Right.isOneOf(tok::greater, tok::less)) {
     if (Style.Language == FormatStyle::LK_TextProto ||
         (Style.Language == FormatStyle::LK_Proto &&
