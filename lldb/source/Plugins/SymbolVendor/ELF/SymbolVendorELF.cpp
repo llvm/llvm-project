@@ -53,7 +53,7 @@ static bool IsDwpSymbolFile(const lldb::ModuleSP &module_sp,
   ObjectFileSP dwp_obj_file = ObjectFile::FindPlugin(
       module_sp, &file_spec, 0, FileSystem::Instance().GetByteSize(file_spec),
       dwp_file_data_sp, dwp_file_data_offset);
-  if (!dwp_obj_file || !ObjectFileELF::classof(dwp_obj_file.get()))
+  if (!ObjectFileELF::classof(dwp_obj_file.get()))
     return false;
   // The presence of a debug_cu_index section is the key identifying feature of
   // a DWP file. Make sure we don't fill in the section list on dwp_obj_file
