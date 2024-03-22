@@ -313,10 +313,7 @@ multiclass MTBUF_Pseudo_Stores<string opName, RegisterClass vdataClass,
 class MUBUFGetBaseOpcode<string Op> {
   string ret = !subst("DWORDX2", "DWORD",
     !subst("DWORDX3", "DWORD",
-    !subst("DWORDX4", "DWORD",
-    !subst("FORMAT_XY", "FORMAT_X",
-    !subst("FORMAT_XYZ", "FORMAT_X",
-    !subst("FORMAT_XYZW", "FORMAT_X", Op))))));
+    !subst("DWORDX4", "DWORD", Op)));
 }
 
 class MUBUF_Pseudo <string opName, dag outs, dag ins,
