@@ -862,7 +862,8 @@ public:
                                          addr);
         } else if (sym->test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
           // get the corresponding Cray pointer
-          auto ptrSym = Fortran::lower::getCrayPointer(sym);
+          Fortran::semantics::SymbolRef ptrSym{
+              Fortran::semantics::GetCrayPointer(sym)};
           ExtValue ptr = gen(ptrSym);
           mlir::Value ptrVal = fir::getBase(ptr);
           mlir::Type ptrTy = converter.genType(*ptrSym);
@@ -1537,8 +1538,8 @@ public:
     auto baseSym = getFirstSym(aref);
     if (baseSym.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
       // get the corresponding Cray pointer
-      auto ptrSym = Fortran::lower::getCrayPointer(baseSym);
-
+      Fortran::semantics::SymbolRef ptrSym{
+          Fortran::semantics::GetCrayPointer(baseSym)};
       fir::ExtendedValue ptr = gen(ptrSym);
       mlir::Value ptrVal = fir::getBase(ptr);
       mlir::Type ptrTy = ptrVal.getType();
@@ -6946,7 +6947,8 @@ private:
                             ComponentPath &components) {
     mlir::Value ptrVal = nullptr;
     if (x.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
-      auto ptrSym = Fortran::lower::getCrayPointer(x);
+      Fortran::semantics::SymbolRef ptrSym{
+          Fortran::semantics::GetCrayPointer(x)};
       ExtValue ptr = converter.getSymbolExtendedValue(ptrSym);
       ptrVal = fir::getBase(ptr);
     }
