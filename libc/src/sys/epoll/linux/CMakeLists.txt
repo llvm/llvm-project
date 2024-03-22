@@ -29,7 +29,8 @@ add_entrypoint_object(
   HDRS
     ../epoll_ctl.h
   DEPENDS
-    libc.include.sys_epoll
+    libc.hdr.types.struct_epoll_event
+    libc.hdr.sys_epoll_macros
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -60,7 +61,8 @@ add_entrypoint_object(
     libc.hdr.types.sigset_t
     libc.hdr.types.struct_epoll_event
     libc.hdr.types.struct_timespec
-    libc.include.signal
+    libc.hdr.sys_epoll_macros
+    libc.hdr.signal_macros
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -76,9 +78,9 @@ add_entrypoint_object(
     libc.hdr.types.sigset_t
     libc.hdr.types.struct_epoll_event
     libc.hdr.types.struct_timespec
-    libc.include.signal
+    libc.hdr.sys_epoll_macros
+    libc.hdr.signal_macros
     libc.include.sys_syscall
-    libc.include.time
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )

@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "include/llvm-libc-macros/linux/sys-epoll-macros.h"
+#include "hdr/sys_epoll_macros.h"
 #include "src/errno/libc_errno.h"
 #include "src/sys/epoll/epoll_create1.h"
 #include "src/unistd/close.h"
