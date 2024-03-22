@@ -33,7 +33,7 @@
 
 ;--- err1.ll
 
-; RUN: not --crash llc -mtriple=aarch64-linux err1.ll 2>&1 -o - | \
+; RUN: not llc -mtriple=aarch64-linux err1.ll 2>&1 -o - | \
 ; RUN:   FileCheck %s --check-prefix=ERR
 
 !llvm.module.flags = !{!0}
@@ -42,7 +42,7 @@
 
 ;--- err2.ll
 
-; RUN: not --crash llc -mtriple=aarch64-linux err2.ll 2>&1 -o - | \
+; RUN: not llc -mtriple=aarch64-linux err2.ll 2>&1 -o - | \
 ; RUN:   FileCheck %s --check-prefix=ERR
 
 !llvm.module.flags = !{!0}

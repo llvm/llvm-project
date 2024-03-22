@@ -1754,7 +1754,7 @@ void Verifier::visitModuleFlags() {
   }
 
   if ((PAuthABIPlatform == uint64_t(-1)) != (PAuthABIVersion == uint64_t(-1)))
-    report_fatal_error(
+    CheckFailed(
         "either both or no 'aarch64-elf-pauthabi-platform' and "
         "'aarch64-elf-pauthabi-version' module flags must be present");
 
