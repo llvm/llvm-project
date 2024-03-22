@@ -54126,7 +54126,8 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
   // Since UINT_TO_FP is legal (it's marked custom), dag combiner won't
   // optimize it to a SINT_TO_FP when the sign bit is known zero. Perform
   // the optimization here.
-  if (DAG.SignBitIsZero(Op0)) {
+  SDNodeFlags Flags = N->getFlags();
+  if (Flags.hasNonNeg() || DAG.SignBitIsZero(Op0)) {
     if (IsStrict)
       return DAG.getNode(ISD::STRICT_SINT_TO_FP, SDLoc(N), {VT, MVT::Other},
                          {N->getOperand(0), Op0});
