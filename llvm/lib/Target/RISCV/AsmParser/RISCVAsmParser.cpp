@@ -3081,34 +3081,11 @@ void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
 
 void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
                                  MCStreamer &Out) {
-  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Value, getSTI());
+  SmallVector<MCInst, 8> Seq;
+  RISCVMatInt::generateMCInstSeq(Value, getSTI(), DestReg, Seq);
 
-  MCRegister SrcReg = RISCV::X0;
-  for (const RISCVMatInt::Inst &Inst : Seq) {
-    switch (Inst.getOpndKind()) {
-    case RISCVMatInt::Imm:
-      emitToStreamer(Out,
-                     MCInstBuilder(Inst.getOpcode()).addReg(DestReg).addImm(Inst.getImm()));
-      break;
-    case RISCVMatInt::RegX0:
-      emitToStreamer(
-          Out, MCInstBuilder(Inst.getOpcode()).addReg(DestReg).addReg(SrcReg).addReg(
-                   RISCV::X0));
-      break;
-    case RISCVMatInt::RegReg:
-      emitToStreamer(
-          Out, MCInstBuilder(Inst.getOpcode()).addReg(DestReg).addReg(SrcReg).addReg(
-                   SrcReg));
-      break;
-    case RISCVMatInt::RegImm:
-      emitToStreamer(
-          Out, MCInstBuilder(Inst.getOpcode()).addReg(DestReg).addReg(SrcReg).addImm(
-                   Inst.getImm()));
-      break;
-    }
-
-    // Only the first instruction has X0 as its source.
-    SrcReg = DestReg;
+  for (MCInst &Inst : Seq) {
+    emitToStreamer(Out, Inst);
   }
 }
 
