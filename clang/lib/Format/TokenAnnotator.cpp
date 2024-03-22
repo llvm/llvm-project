@@ -4351,9 +4351,11 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Left.is(tok::kw_auto) && Right.isOneOf(tok::l_paren, tok::l_brace))
     return false;
 
+  const auto *BeforeLeft = Left.Previous;
+
   // operator co_await(x)
-  if (Right.is(tok::l_paren) && Left.is(tok::kw_co_await) && Left.Previous &&
-      Left.Previous->is(tok::kw_operator)) {
+  if (Right.is(tok::l_paren) && Left.is(tok::kw_co_await) && BeforeLeft &&
+      BeforeLeft->is(tok::kw_operator)) {
     return false;
   }
   // co_await (x), co_yield (x), co_return (x)
@@ -4404,8 +4406,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       return false;
   }
   if (Right.is(tok::ellipsis)) {
-    return Left.Tok.isLiteral() || (Left.is(tok::identifier) && Left.Previous &&
-                                    Left.Previous->is(tok::kw_case));
+    return Left.Tok.isLiteral() || (Left.is(tok::identifier) && BeforeLeft &&
+                                    BeforeLeft->is(tok::kw_case));
   }
   if (Left.is(tok::l_square) && Right.is(tok::amp))
     return Style.SpacesInSquareBrackets;
@@ -4473,8 +4475,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Right.is(tok::l_brace) && Right.is(BK_Block))
       return true;
     // for (auto a = 0, b = 0; const auto& c : {1, 2, 3})
-    if (Left.Previous && Left.Previous->isTypeOrIdentifier(IsCpp) &&
-        Right.Next && Right.Next->is(TT_RangeBasedForLoopColon)) {
+    if (BeforeLeft && BeforeLeft->isTypeOrIdentifier(IsCpp) && Right.Next &&
+        Right.Next->is(TT_RangeBasedForLoopColon)) {
       return getTokenPointerOrReferenceAlignment(Left) !=
              FormatStyle::PAS_Right;
     }
@@ -4496,12 +4498,17 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
           startsWithInitStatement(Line)))) {
       return false;
     }
-    return Left.Previous && !Left.Previous->isOneOf(
-                                tok::l_paren, tok::coloncolon, tok::l_square);
+    if (!BeforeLeft)
+      return false;
+    if (BeforeLeft->is(tok::coloncolon)) {
+      return Left.is(tok::star) &&
+             Style.PointerAlignment != FormatStyle::PAS_Right;
+    }
+    return !BeforeLeft->isOneOf(tok::l_paren, tok::l_square);
   }
   // Ensure right pointer alignment with ellipsis e.g. int *...P
-  if (Left.is(tok::ellipsis) && Left.Previous &&
-      Left.Previous->isPointerOrReference()) {
+  if (Left.is(tok::ellipsis) && BeforeLeft &&
+      BeforeLeft->isPointerOrReference()) {
     return Style.PointerAlignment != FormatStyle::PAS_Right;
   }
 
@@ -4663,13 +4670,13 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       return Style.SpaceBeforeParensOptions.AfterFunctionDefinitionName ||
              spaceRequiredBeforeParens(Right);
     }
-    if (!Left.Previous || !Left.Previous->isOneOf(tok::period, tok::arrow)) {
+    if (!BeforeLeft || !BeforeLeft->isOneOf(tok::period, tok::arrow)) {
       if (Left.isOneOf(tok::kw_try, Keywords.kw___except, tok::kw_catch)) {
         return Style.SpaceBeforeParensOptions.AfterControlStatements ||
                spaceRequiredBeforeParens(Right);
       }
       if (Left.isOneOf(tok::kw_new, tok::kw_delete)) {
-        return ((!Line.MightBeFunctionDecl || !Left.Previous) &&
+        return ((!Line.MightBeFunctionDecl || !BeforeLeft) &&
                 Style.SpaceBeforeParens != FormatStyle::SBPO_Never) ||
                spaceRequiredBeforeParens(Right);
       }

@@ -11054,7 +11054,12 @@ TEST_F(FormatTest, UnderstandsPointersToMembers) {
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaaa));");
   FormatStyle Style = getLLVMStyle();
   Style.PointerAlignment = FormatStyle::PAS_Left;
-  verifyFormat("typedef bool* (Class::*Member)() const;", Style);
+  verifyFormat("typedef bool* (Class::* Member)() const;", Style);
+  verifyFormat("void function(int A::* parameter, int* parameter2) {\n"
+               "  int A::* variable = &A::B;\n"
+               "  int* A::B;\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, UnderstandsUnaryOperators) {
