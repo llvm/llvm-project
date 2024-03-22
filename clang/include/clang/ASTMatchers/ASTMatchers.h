@@ -3547,6 +3547,21 @@ extern const internal::ArgumentAdaptingMatcherFunc<
     internal::ForEachDescendantMatcher>
     forEachDescendant;
 
+/// Matches AST nodes that have no child AST nodes that match the
+/// provided matcher.
+///
+/// Usable as: Any Matcher
+extern const internal::ArgumentAdaptingMatcherFunc<internal::ForNoneMatcher>
+    forNone;
+
+/// Matches AST nodes that have no descendant AST nodes that match the
+/// provided matcher.
+///
+/// Usable as: Any Matcher
+extern const internal::ArgumentAdaptingMatcherFunc<
+    internal::ForNoDescendantMatcher>
+    forNoDescendant;
+
 /// Matches if the node or any descendant matches.
 ///
 /// Generates results for each match.
