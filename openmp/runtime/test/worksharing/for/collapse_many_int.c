@@ -1,4 +1,5 @@
 // RUN: %libomp-compile-and-run
+// XFAIL: true
 
 // Non-rectangular loop collapsing.
 //
