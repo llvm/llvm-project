@@ -27,3 +27,21 @@ S b = {
 
 // LLVM: @.compoundLiteral.1 = internal global [1 x i32] [i32 1]
 // LLVM: @b = global %struct.S { ptr @.compoundLiteral.1 }
+
+int foo() {
+  return (struct {
+           int i;
+         }){1}
+      .i;
+}
+
+// CIR:  cir.func no_proto @foo() -> !s32i
+// CIR:    [[RET_MEM:%.*]] = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+// CIR:    [[COMPLITERAL_MEM:%.*]] = cir.alloca !ty_22anon2E122, cir.ptr <!ty_22anon2E122>, [".compoundliteral"] {alignment = 4 : i64}
+// CIR:    [[FIELD:%.*]] = cir.get_member [[COMPLITERAL_MEM]][0] {name = "i"} : !cir.ptr<!ty_22anon2E122> -> !cir.ptr<!s32i>
+// CIR:    [[ONE:%.*]] = cir.const(#cir.int<1> : !s32i) : !s32i
+// CIR:    cir.store [[ONE]], [[FIELD]] : !s32i, cir.ptr <!s32i>
+// CIR:    [[ONE:%.*]] = cir.const(#cir.int<1> : !s32i) : !s32i
+// CIR:    cir.store [[ONE]], [[RET_MEM]] : !s32i, cir.ptr <!s32i>
+// CIR:    [[RET:%.*]] = cir.load [[RET_MEM]] : cir.ptr <!s32i>, !s32i
+// CIR:    cir.return [[RET]] : !s32i

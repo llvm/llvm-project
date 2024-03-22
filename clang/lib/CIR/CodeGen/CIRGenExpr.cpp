@@ -411,6 +411,33 @@ LValue CIRGenFunction::buildLValueForFieldInitialization(
   return makeAddrLValue(V, FieldType, FieldBaseInfo);
 }
 
+LValue
+CIRGenFunction::buildCompoundLiteralLValue(const CompoundLiteralExpr *E) {
+  if (E->isFileScope()) {
+    llvm_unreachable("NYI");
+  }
+
+  if (E->getType()->isVariablyModifiedType()) {
+    llvm_unreachable("NYI");
+  }
+
+  Address DeclPtr = CreateMemTemp(E->getType(), getLoc(E->getSourceRange()),
+                                  ".compoundliteral");
+  const Expr *InitExpr = E->getInitializer();
+  LValue Result = makeAddrLValue(DeclPtr, E->getType(), AlignmentSource::Decl);
+
+  buildAnyExprToMem(InitExpr, DeclPtr, E->getType().getQualifiers(),
+                    /*Init*/ true);
+
+  // Block-scope compound literals are destroyed at the end of the enclosing
+  // scope in C.
+  if (!getLangOpts().CPlusPlus)
+    if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
+      llvm_unreachable("NYI");
+
+  return Result;
+}
+
 // Detect the unusual situation where an inline version is shadowed by a
 // non-inline version. In that case we should pick the external one
 // everywhere. That's GCC behavior too.
@@ -2242,6 +2269,8 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     return buildStringLiteralLValue(cast<StringLiteral>(E));
   case Expr::MemberExprClass:
     return buildMemberExpr(cast<MemberExpr>(E));
+  case Expr::CompoundLiteralExprClass:
+    return buildCompoundLiteralLValue(cast<CompoundLiteralExpr>(E));
   case Expr::PredefinedExprClass:
     return buildPredefinedLValue(cast<PredefinedExpr>(E));
   case Expr::CXXFunctionalCastExprClass:
