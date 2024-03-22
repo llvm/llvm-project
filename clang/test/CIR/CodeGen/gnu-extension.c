@@ -9,3 +9,11 @@ int foo(void) { return __extension__ 0b101010; }
 //CHECK-NEXT:    cir.store [[VAL]], [[ADDR]] : !s32i, cir.ptr <!s32i>
 //CHECK-NEXT:    [[LOAD_VAL:%.*]] = cir.load [[ADDR]] : cir.ptr <!s32i>, !s32i
 //CHECK-NEXT:    cir.return [[LOAD_VAL]] : !s32i
+
+void bar(void) {
+  __extension__ bar;
+}
+
+//CHECK:  cir.func @bar()
+//CHECK:    {{.*}} = cir.get_global @bar : cir.ptr <!cir.func<!void ()>>
+//CHECK:    cir.return
