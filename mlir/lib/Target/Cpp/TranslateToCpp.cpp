@@ -1105,7 +1105,7 @@ CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop)
 std::string CppEmitter::getSubscriptName(emitc::SubscriptOp op) {
   std::string out;
   llvm::raw_string_ostream ss(out);
-  ss << getOrCreateName(op.getArray());
+  ss << getOrCreateName(op.getRef());
   for (auto index : op.getIndices()) {
     ss << "[" << getOrCreateName(index) << "]";
   }

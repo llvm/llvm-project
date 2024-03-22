@@ -63,7 +63,8 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
     }
 
     auto subscript = rewriter.create<emitc::SubscriptOp>(
-        op.getLoc(), operands.getMemref(), operands.getIndices());
+        op.getLoc(), cast<TypedValue<emitc::ArrayType>>(operands.getMemref()),
+        operands.getIndices());
 
     auto noInit = emitc::OpaqueAttr::get(getContext(), "");
     auto var =
@@ -83,7 +84,8 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
                   ConversionPatternRewriter &rewriter) const override {
 
     auto subscript = rewriter.create<emitc::SubscriptOp>(
-        op.getLoc(), operands.getMemref(), operands.getIndices());
+        op.getLoc(), cast<TypedValue<emitc::ArrayType>>(operands.getMemref()),
+        operands.getIndices());
     rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, subscript,
                                                  operands.getValue());
     return success();

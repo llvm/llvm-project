@@ -70,6 +70,11 @@ bool mlir::emitc::isSupportedIntegerType(Type type) {
   return false;
 }
 
+bool mlir::emitc::isIntegerLikeType(Type type) {
+  return isSupportedIntegerType(type) ||
+         llvm::isa<IndexType, emitc::OpaqueType>(type);
+}
+
 bool mlir::emitc::isSupportedFloatType(Type type) {
   if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
     switch (floatType.getWidth()) {
@@ -781,11 +786,52 @@ LogicalResult emitc::YieldOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult emitc::SubscriptOp::verify() {
-  if (getIndices().size() != (size_t)getArray().getType().getRank()) {
-    return emitOpError() << "requires number of indices ("
-                         << getIndices().size()
-                         << ") to match the rank of the array type ("
-                         << getArray().getType().getRank() << ")";
+  if (auto arrayType = llvm::dyn_cast<emitc::ArrayType>(getRef().getType())) {
+    // Check arity of indices.
+    if (getIndices().size() != (size_t)arrayType.getRank()) {
+      return emitOpError() << "requires number of indices ("
+                           << getIndices().size()
+                           << ") to match the rank of the array type ("
+                           << arrayType.getRank() << ")";
+    }
+    // Check types of index operands.
+    for (unsigned i = 0, e = getIndices().size(); i != e; ++i) {
+      Type type = getIndices()[i].getType();
+      if (!isIntegerLikeType(type)) {
+        return emitOpError() << "requires index operand " << i
+                             << " to be integer-like, but got " << type;
+      }
+    }
+    // Check element type.
+    Type elementType = arrayType.getElementType();
+    if (elementType != getType()) {
+      return emitOpError() << "requires element type (" << elementType
+                           << ") and result type (" << getType()
+                           << ") to match";
+    }
+  } else if (auto pointerType =
+                 llvm::dyn_cast<emitc::PointerType>(getRef().getType())) {
+    // Check arity of indices.
+    if (getIndices().size() != 1) {
+      return emitOpError() << "requires one index operand, but got "
+                           << getIndices().size();
+    }
+    // Check types of index operand.
+    Type type = getIndices()[0].getType();
+    if (!isIntegerLikeType(type)) {
+      return emitOpError()
+             << "requires index operand to be integer-like, but got " << type;
+    }
+    // Check pointee type.
+    Type pointeeType = pointerType.getPointee();
+    if (pointeeType != getType()) {
+      return emitOpError() << "requires pointee type (" << pointeeType
+                           << ") and result type (" << getType()
+                           << ") to match";
+    }
+  } else {
+    // The reference has opaque type, so we can't assume anything about arity or
+    // types of index operands.
   }
   return success();
 }
