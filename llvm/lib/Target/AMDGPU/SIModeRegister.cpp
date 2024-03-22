@@ -170,6 +170,8 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
     case AMDGPU::V_INTERP_P1LL_F16:
     case AMDGPU::V_INTERP_P1LV_F16:
     case AMDGPU::V_INTERP_P2_F16:
+    case AMDGPU::V_INTERP_P10_F16_F32_inreg:
+    case AMDGPU::V_INTERP_P2_F16_F32_inreg:
       // f16 interpolation instructions need double precision round to zero
       return Status(FP_ROUND_MODE_DP(3),
                     FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_ZERO));

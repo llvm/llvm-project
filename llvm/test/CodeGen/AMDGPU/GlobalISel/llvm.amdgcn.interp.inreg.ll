@@ -129,12 +129,14 @@ define amdgpu_ps half @v_interp_f16(float inreg %i, float inreg %j, i32 inreg %m
 ; GCN-NEXT:    s_mov_b32 exec_lo, s3
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v2, s1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GCN-NEXT:    v_interp_p10_f16_f32 v3, v1, v0, v1 wait_exp:0
 ; GCN-NEXT:    v_interp_p10_f16_f32 v0, v1, v0, v1 op_sel:[1,0,1,0] wait_exp:7
 ; GCN-NEXT:    v_interp_p2_f16_f32 v3, v1, v2, v3 wait_exp:7
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GCN-NEXT:    v_interp_p2_f16_f32 v0, v1, v2, v0 op_sel:[1,0,0,0] wait_exp:7
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; GCN-NEXT:    v_add_f16_e32 v0, v3, v0
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -152,9 +154,11 @@ define amdgpu_ps half @v_interp_f16_imm_params(float inreg %i, float inreg %j) #
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GCN-NEXT:    v_mov_b32_e32 v2, s1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GCN-NEXT:    v_interp_p10_f16_f32 v1, v0, v1, v0 wait_exp:7
 ; GCN-NEXT:    v_interp_p2_f16_f32 v0, v0, v2, v0 wait_exp:7
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GCN-NEXT:    v_add_f16_e32 v0, v1, v0

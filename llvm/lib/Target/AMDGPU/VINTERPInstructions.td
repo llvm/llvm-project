@@ -110,10 +110,12 @@ let SubtargetPredicate = HasVINTERPEncoding in {
 let Uses = [M0, EXEC, MODE] in {
 def V_INTERP_P10_F32_inreg : VINTERP_Pseudo <"v_interp_p10_f32", VOP3_VINTERP_F32>;
 def V_INTERP_P2_F32_inreg : VINTERP_Pseudo <"v_interp_p2_f32", VOP3_VINTERP_F32>;
+let FPDPRounding = 1 in {
 def V_INTERP_P10_F16_F32_inreg :
   VINTERP_Pseudo <"v_interp_p10_f16_f32", VOP3_VINTERP_F16<[f32, f32, f32, f32]>>;
 def V_INTERP_P2_F16_F32_inreg :
   VINTERP_Pseudo <"v_interp_p2_f16_f32", VOP3_VINTERP_F16<[f16, f32, f32, f32]>>;
+} // End FPDPRounding = 1
 } // Uses = [M0, EXEC, MODE]
 
 let Uses = [M0, EXEC] in {
