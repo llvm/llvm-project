@@ -52,10 +52,7 @@ define float @test_with_nneg(i32 %x) nounwind {
 ; X86-LABEL: test_with_nneg:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    orpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    cvtsd2ss %xmm0, %xmm0
+; X86-NEXT:    cvtsi2ssl {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -63,8 +60,7 @@ define float @test_with_nneg(i32 %x) nounwind {
 ;
 ; X64-LABEL: test_with_nneg:
 ; X64:       ## %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    cvtsi2ss %rax, %xmm0
+; X64-NEXT:    cvtsi2ss %edi, %xmm0
 ; X64-NEXT:    retq
   %r = uitofp nneg i32 %x to float
   ret float %r
@@ -73,24 +69,12 @@ define float @test_with_nneg(i32 %x) nounwind {
 define <4 x float> @test_with_nneg_vec(<4 x i32> %x) nounwind {
 ; X86-LABEL: test_with_nneg_vec:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,65535]
-; X86-NEXT:    pand %xmm0, %xmm1
-; X86-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-NEXT:    psrld $16, %xmm0
-; X86-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    addps %xmm1, %xmm0
+; X86-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_with_nneg_vec:
 ; X64:       ## %bb.0:
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,65535]
-; X64-NEXT:    pand %xmm0, %xmm1
-; X64-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; X64-NEXT:    psrld $16, %xmm0
-; X64-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    addps %xmm1, %xmm0
+; X64-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %r = uitofp nneg <4 x i32> %x to <4 x float>
   ret <4 x float> %r
