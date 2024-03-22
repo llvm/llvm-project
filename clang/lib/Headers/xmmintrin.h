@@ -484,7 +484,7 @@ _mm_xor_ps(__m128 __a, __m128 __b)
 /// Compares two 32-bit float values in the low-order bits of both
 ///    operands for equality.
 ///
-///    The comparison yields 0x0 for false, 0xFFFFFFFF for true, in the
+///    The comparison returns 0x0 for false, 0xFFFFFFFF for true, in the
 ///    low-order bits of a vector [4 x float].
 ///    If either value in a comparison is NaN, returns false.
 ///
@@ -509,7 +509,7 @@ _mm_cmpeq_ss(__m128 __a, __m128 __b)
 /// Compares each of the corresponding 32-bit float values of the
 ///    128-bit vectors of [4 x float] for equality.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
 ///    If either value in a comparison is NaN, returns false.
 ///
 /// \headerfile <x86intrin.h>
@@ -531,7 +531,7 @@ _mm_cmpeq_ps(__m128 __a, __m128 __b)
 ///    operands to determine if the value in the first operand is less than the
 ///    corresponding value in the second operand.
 ///
-///    The comparison yields 0x0 for false, 0xFFFFFFFF for true, in the
+///    The comparison returns 0x0 for false, 0xFFFFFFFF for true, in the
 ///    low-order bits of a vector of [4 x float].
 ///    If either value in a comparison is NaN, returns false.
 ///
@@ -557,7 +557,7 @@ _mm_cmplt_ss(__m128 __a, __m128 __b)
 ///    128-bit vectors of [4 x float] to determine if the values in the first
 ///    operand are less than those in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
 ///    If either value in a comparison is NaN, returns false.
 ///
 /// \headerfile <x86intrin.h>
@@ -579,7 +579,7 @@ _mm_cmplt_ps(__m128 __a, __m128 __b)
 ///    operands to determine if the value in the first operand is less than or
 ///    equal to the corresponding value in the second operand.
 ///
-///    The comparison yields 0x0 for false, 0xFFFFFFFFFFFFFFFF for true, in
+///    The comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true, in
 ///    the low-order bits of a vector of [4 x float].
 ///    If either value in a comparison is NaN, returns false.
 ///
@@ -605,7 +605,7 @@ _mm_cmple_ss(__m128 __a, __m128 __b)
 ///    128-bit vectors of [4 x float] to determine if the values in the first
 ///    operand are less than or equal to those in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
 ///    If either value in a comparison is NaN, returns false.
 ///
 /// \headerfile <x86intrin.h>
@@ -627,7 +627,7 @@ _mm_cmple_ps(__m128 __a, __m128 __b)
 ///    operands to determine if the value in the first operand is greater than
 ///    the corresponding value in the second operand.
 ///
-///    The comparison yields 0x0 for false, 0xFFFFFFFF for true, in the
+///    The comparison returns 0x0 for false, 0xFFFFFFFF for true, in the
 ///    low-order bits of a vector of [4 x float].
 ///    If either value in a comparison is NaN, returns false.
 ///
@@ -655,7 +655,7 @@ _mm_cmpgt_ss(__m128 __a, __m128 __b)
 ///    128-bit vectors of [4 x float] to determine if the values in the first
 ///    operand are greater than those in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
 ///    If either value in a comparison is NaN, returns false.
 ///
 /// \headerfile <x86intrin.h>
@@ -677,7 +677,7 @@ _mm_cmpgt_ps(__m128 __a, __m128 __b)
 ///    operands to determine if the value in the first operand is greater than
 ///    or equal to the corresponding value in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true, in the
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true, in the
 ///    low-order bits of a vector of [4 x float].
 ///    If either value in a comparison is NaN, returns false.
 ///
@@ -705,7 +705,7 @@ _mm_cmpge_ss(__m128 __a, __m128 __b)
 ///    128-bit vectors of [4 x float] to determine if the values in the first
 ///    operand are greater than or equal to those in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
 ///    If either value in a comparison is NaN, returns false.
 ///
 /// \headerfile <x86intrin.h>
@@ -726,7 +726,7 @@ _mm_cmpge_ps(__m128 __a, __m128 __b)
 /// Compares two 32-bit float values in the low-order bits of both operands
 ///    for inequality.
 ///
-///    The comparison yields 0x0 for false, 0xFFFFFFFF for true, in the
+///    The comparison returns 0x0 for false, 0xFFFFFFFF for true, in the
 ///    low-order bits of a vector of [4 x float].
 ///    If either value in a comparison is NaN, returns true.
 ///
@@ -752,7 +752,7 @@ _mm_cmpneq_ss(__m128 __a, __m128 __b)
 /// Compares each of the corresponding 32-bit float values of the
 ///    128-bit vectors of [4 x float] for inequality.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
 ///    If either value in a comparison is NaN, returns true.
 ///
 /// \headerfile <x86intrin.h>
@@ -775,7 +775,7 @@ _mm_cmpneq_ps(__m128 __a, __m128 __b)
 ///    operands to determine if the value in the first operand is not less than
 ///    the corresponding value in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true, in the
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true, in the
 ///    low-order bits of a vector of [4 x float].
 ///    If either value in a comparison is NaN, returns true.
 ///
@@ -802,7 +802,7 @@ _mm_cmpnlt_ss(__m128 __a, __m128 __b)
 ///    128-bit vectors of [4 x float] to determine if the values in the first
 ///    operand are not less than those in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
 ///    If either value in a comparison is NaN, returns true.
 ///
 /// \headerfile <x86intrin.h>
@@ -825,7 +825,7 @@ _mm_cmpnlt_ps(__m128 __a, __m128 __b)
 ///    operands to determine if the value in the first operand is not less than
 ///    or equal to the corresponding value in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true, in the
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true, in the
 ///    low-order bits of a vector of [4 x float].
 ///    If either value in a comparison is NaN, returns true.
 ///
@@ -852,7 +852,7 @@ _mm_cmpnle_ss(__m128 __a, __m128 __b)
 ///    128-bit vectors of [4 x float] to determine if the values in the first
 ///    operand are not less than or equal to those in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
 ///    If either value in a comparison is NaN, returns true.
 ///
 /// \headerfile <x86intrin.h>
@@ -875,7 +875,7 @@ _mm_cmpnle_ps(__m128 __a, __m128 __b)
 ///    operands to determine if the value in the first operand is not greater
 ///    than the corresponding value in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true, in the
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true, in the
 ///    low-order bits of a vector of [4 x float].
 ///    If either value in a comparison is NaN, returns true.
 ///
@@ -904,7 +904,7 @@ _mm_cmpngt_ss(__m128 __a, __m128 __b)
 ///    128-bit vectors of [4 x float] to determine if the values in the first
 ///    operand are not greater than those in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
 ///    If either value in a comparison is NaN, returns true.
 ///
 /// \headerfile <x86intrin.h>
@@ -927,7 +927,7 @@ _mm_cmpngt_ps(__m128 __a, __m128 __b)
 ///    operands to determine if the value in the first operand is not greater
 ///    than or equal to the corresponding value in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true, in the
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true, in the
 ///    low-order bits of a vector of [4 x float].
 ///    If either value in a comparison is NaN, returns true.
 ///
@@ -956,7 +956,7 @@ _mm_cmpnge_ss(__m128 __a, __m128 __b)
 ///    128-bit vectors of [4 x float] to determine if the values in the first
 ///    operand are not greater than or equal to those in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
 ///    If either value in a comparison is NaN, returns true.
 ///
 /// \headerfile <x86intrin.h>
@@ -3061,7 +3061,7 @@ _mm_movemask_ps(__m128 __a)
 ///    [4 x float], using the operation specified by the immediate integer
 ///    operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
 ///    If either value in a comparison is NaN, comparisons that are ordered
 ///    return false, and comparisons that are unordered return true.
 ///
@@ -3096,7 +3096,7 @@ _mm_movemask_ps(__m128 __a)
 ///    vectors of [4 x float], using the operation specified by the immediate
 ///    integer operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
 ///    If either value in a comparison is NaN, comparisons that are ordered
 ///    return false, and comparisons that are unordered return true.
 ///
