@@ -9,6 +9,10 @@
 // RUN:   -split-input-file="// ""=====" -output-split-marker "// #####" \
 // RUN: | FileCheck -check-prefix=CHECK-CUSTOM %s
 
+// Check that (5) the input is not split if `-split-input-file` is not given.
+// RUN: mlir-pdll %s \
+// RUN: | FileCheck -check-prefix=CHECK-NOSPLIT %s
+
 // CHECK-DEFAULT:      Module
 // CHECK-DEFAULT-NEXT: PatternDecl
 // CHECK-DEFAULT-NOT:  PatternDecl
@@ -24,6 +28,14 @@
 // CHECK-CUSTOM-NEXT: Module
 // CHECK-CUSTOM-NEXT: PatternDecl
 // CHECK-CUSTOM-NOT:  PatternDecl
+
+// CHECK-NOSPLIT:      Module
+// CHECK-NOSPLIT-NEXT: PatternDecl
+// CHECK-NOSPLIT-NOT:  Module
+// CHECK-NOSPLIT:      PatternDecl
+// CHECK-NOSPLIT-NOT:  Module
+// CHECK-NOSPLIT:      PatternDecl
+// CHECK-NOSPLIT-NOT:  Module
 
 Pattern => erase op<test.op>;
 
