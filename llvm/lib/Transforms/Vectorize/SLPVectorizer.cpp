@@ -15959,7 +15959,7 @@ public:
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                           << " for reduction\n");
         if (!Cost.isValid())
-          return nullptr;
+          break;
         if (Cost >= -SLPCostThreshold) {
           V.getORE()->emit([&]() {
             return OptimizationRemarkMissed(
