@@ -1673,6 +1673,11 @@ LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicBefore(
       unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
       unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
       unwrap<Instruction>(Instr));
+  // This assert will fail if the module is in the new debug info format.
+  // This function should only be used called if the module is in the old
+  // debug info format.
+  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
+  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
   assert(isa<Instruction *>(DbgInst) &&
          "Function unexpectedly in new debug info format");
   return wrap(cast<Instruction *>(DbgInst));
@@ -1684,6 +1689,11 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordBefore(
       unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
       unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
       unwrap<Instruction>(Instr));
+  // This assert will fail if the module is in the old debug info format.
+  // This function should only be used called if the module is in the new
+  // debug info format.
+  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
+  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
   assert(isa<DbgRecord *>(DbgInst) &&
          "Function unexpectedly in old debug info format");
   return wrap(cast<DbgRecord *>(DbgInst));
@@ -1702,6 +1712,11 @@ LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
   DbgInstPtr DbgInst = unwrap(Builder)->insertDeclare(
       unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
       unwrap<DIExpression>(Expr), unwrap<DILocation>(DL), unwrap(Block));
+  // This assert will fail if the module is in the new debug info format.
+  // This function should only be used called if the module is in the old
+  // debug info format.
+  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
+  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
   assert(isa<Instruction *>(DbgInst) &&
          "Function unexpectedly in new debug info format");
   return wrap(cast<Instruction *>(DbgInst));
@@ -1712,6 +1727,11 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordAtEnd(
   DbgInstPtr DbgInst = unwrap(Builder)->insertDeclare(
       unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
       unwrap<DIExpression>(Expr), unwrap<DILocation>(DL), unwrap(Block));
+  // This assert will fail if the module is in the old debug info format.
+  // This function should only be used called if the module is in the new
+  // debug info format.
+  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
+  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
   assert(isa<DbgRecord *>(DbgInst) &&
          "Function unexpectedly in old debug info format");
   return wrap(cast<DbgRecord *>(DbgInst));
@@ -1729,6 +1749,11 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicBefore(
   DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
       unwrap<DILocation>(DebugLoc), unwrap<Instruction>(Instr));
+  // This assert will fail if the module is in the new debug info format.
+  // This function should only be used called if the module is in the old
+  // debug info format.
+  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
+  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
   assert(isa<Instruction *>(DbgInst) &&
          "Function unexpectedly in new debug info format");
   return wrap(cast<Instruction *>(DbgInst));
@@ -1739,6 +1764,11 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
   DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
       unwrap<DILocation>(DebugLoc), unwrap<Instruction>(Instr));
+  // This assert will fail if the module is in the old debug info format.
+  // This function should only be used called if the module is in the new
+  // debug info format.
+  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
+  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
   assert(isa<DbgRecord *>(DbgInst) &&
          "Function unexpectedly in old debug info format");
   return wrap(cast<DbgRecord *>(DbgInst));
@@ -1756,6 +1786,11 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicAtEnd(
   DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
       unwrap<DILocation>(DebugLoc), unwrap(Block));
+  // This assert will fail if the module is in the new debug info format.
+  // This function should only be used called if the module is in the old
+  // debug info format.
+  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
+  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
   assert(isa<Instruction *>(DbgInst) &&
          "Function unexpectedly in new debug info format");
   return wrap(cast<Instruction *>(DbgInst));
@@ -1766,6 +1801,11 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordAtEnd(
   DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
       unwrap<DILocation>(DebugLoc), unwrap(Block));
+  // This assert will fail if the module is in the old debug info format.
+  // This function should only be used called if the module is in the new
+  // debug info format.
+  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
+  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
   assert(isa<DbgRecord *>(DbgInst) &&
          "Function unexpectedly in old debug info format");
   return wrap(cast<DbgRecord *>(DbgInst));
