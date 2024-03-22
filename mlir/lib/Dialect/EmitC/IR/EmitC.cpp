@@ -71,8 +71,8 @@ bool mlir::emitc::isSupportedIntegerType(Type type) {
 }
 
 bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
-  return isSupportedIntegerType(type) ||
-         llvm::isa<IndexType, emitc::OpaqueType>(type);
+  return llvm::isa<IndexType, emitc::OpaqueType>(type) ||
+         isSupportedIntegerType(type);
 }
 
 bool mlir::emitc::isSupportedFloatType(Type type) {
@@ -786,6 +786,7 @@ LogicalResult emitc::YieldOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult emitc::SubscriptOp::verify() {
+  // Checks for array operand.
   if (auto arrayType = llvm::dyn_cast<emitc::ArrayType>(getValue().getType())) {
     // Check number of indices.
     if (getIndices().size() != (size_t)arrayType.getRank()) {
@@ -809,8 +810,12 @@ LogicalResult emitc::SubscriptOp::verify() {
                            << ") and result type (" << getType()
                            << ") to match";
     }
-  } else if (auto pointerType =
-                 llvm::dyn_cast<emitc::PointerType>(getValue().getType())) {
+    return success();
+  }
+
+  // Checks for pointer operand.
+  if (auto pointerType =
+          llvm::dyn_cast<emitc::PointerType>(getValue().getType())) {
     // Check number of indices.
     if (getIndices().size() != 1) {
       return emitOpError() << "requires one index operand, but got "
@@ -829,10 +834,11 @@ LogicalResult emitc::SubscriptOp::verify() {
                            << ") and result type (" << getType()
                            << ") to match";
     }
-  } else {
-    // The reference has opaque type, so we can't assume anything about arity or
-    // types of index operands.
+    return success();
   }
+
+  // The operand has opaque type, so we can't assume anything about arity or
+  // types of index operands.
   return success();
 }
 
