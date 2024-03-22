@@ -13,7 +13,7 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float128, fminimum_mag_numf128, (float128 x, float128 y)) {
-  return fputil::fminimum_num(x, y);
+  return fputil::fminimum_mag_num(x, y);
 }
 
 } // namespace LIBC_NAMESPACE

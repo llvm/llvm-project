@@ -69,10 +69,10 @@ public:
       if ((x == 0) && (y == 0))
         continue;
 
-      if (LIBC_NAMESPACE::fputil::abs(x) < LIBC_NAMESPACE::fputil::abs(y)) {
-        EXPECT_FP_EQ(x, func(x, y));
-      } else {
+      if (LIBC_NAMESPACE::fputil::abs(x) > LIBC_NAMESPACE::fputil::abs(y)) {
         EXPECT_FP_EQ(y, func(x, y));
+      } else {
+        EXPECT_FP_EQ(x, func(x, y));
       }
     }
   }
