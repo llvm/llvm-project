@@ -21,6 +21,27 @@
 #include <map>
 #include <type_traits>
 
+/// \macro RT_PRETTY_FUNCTION
+/// Gets a user-friendly looking function signature for the current scope
+/// using the best available method on each platform.  The exact format of the
+/// resulting string is implementation specific and non-portable, so this should
+/// only be used, for example, for logging or diagnostics.
+/// Copy of LLVM_PRETTY_FUNCTION
+#if defined(_MSC_VER)
+#define RT_PRETTY_FUNCTION __FUNCSIG__
+#elif defined(__GNUC__) || defined(__clang__)
+#define RT_PRETTY_FUNCTION __PRETTY_FUNCTION__
+#else
+#define RT_PRETTY_FUNCTION __func__
+#endif
+
+#if defined(RT_DEVICE_COMPILATION)
+// Use the pseudo lock and pseudo file unit implementations
+// for the device.
+#define RT_USE_PSEUDO_LOCK 1
+#define RT_USE_PSEUDO_FILE_UNIT 1
+#endif
+
 namespace Fortran::runtime {
 
 class Terminator;
@@ -430,7 +451,7 @@ template <>
 inline RT_API_ATTRS const char *FindCharacter(
     const char *data, char ch, std::size_t chars) {
   return reinterpret_cast<const char *>(
-      std::memchr(data, static_cast<int>(ch), chars));
+      runtime::memchr(data, static_cast<int>(ch), chars));
 }
 
 // Copy payload data from one allocated descriptor to another.

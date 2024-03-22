@@ -559,11 +559,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtDOrZdinx()) {
     setOperationAction(FPLegalNodeTypes, MVT::f64, Legal);
 
+    if (!Subtarget.is64Bit())
+      setOperationAction(ISD::BITCAST, MVT::i64, Custom);
+
     if (Subtarget.hasStdExtZfa()) {
       setOperationAction(FPRndMode, MVT::f64, Legal);
       setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
-      setOperationAction(ISD::BITCAST, MVT::i64, Custom);
-      setOperationAction(ISD::BITCAST, MVT::f64, Custom);
     } else {
       if (Subtarget.is64Bit())
         setOperationAction(FPRndMode, MVT::f64, Custom);
@@ -6071,8 +6072,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
           DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
       return FPConv;
     }
-    if (VT == MVT::f64 && Op0VT == MVT::i64 && XLenVT == MVT::i32 &&
-        Subtarget.hasStdExtZfa()) {
+    if (VT == MVT::f64 && Op0VT == MVT::i64 && XLenVT == MVT::i32) {
       SDValue Lo, Hi;
       std::tie(Lo, Hi) = DAG.SplitScalar(Op0, DL, MVT::i32, MVT::i32);
       SDValue RetReg =
@@ -6611,6 +6611,30 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // better than going through the stack, as the default expansion does.
     SDLoc DL(Op);
     MVT VT = Op.getSimpleValueType();
+    MVT ContainerVT = VT;
+    if (VT.isFixedLengthVector())
+      ContainerVT = ::getContainerForFixedLengthVector(DAG, VT, Subtarget);
+
+    // Recursively split concat_vectors with more than 2 operands:
+    //
+    // concat_vector op1, op2, op3, op4
+    // ->
+    // concat_vector (concat_vector op1, op2), (concat_vector op3, op4)
+    //
+    // This reduces the length of the chain of vslideups and allows us to
+    // perform the vslideups at a smaller LMUL, limited to MF2.
+    if (Op.getNumOperands() > 2 &&
+        ContainerVT.bitsGE(getLMUL1VT(ContainerVT))) {
+      MVT HalfVT = VT.getHalfNumVectorElementsVT();
+      assert(isPowerOf2_32(Op.getNumOperands()));
+      size_t HalfNumOps = Op.getNumOperands() / 2;
+      SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                               Op->ops().take_front(HalfNumOps));
+      SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                               Op->ops().drop_front(HalfNumOps));
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
+
     unsigned NumOpElts =
         Op.getOperand(0).getSimpleValueType().getVectorMinNumElements();
     SDValue Vec = DAG.getUNDEF(VT);
@@ -12157,8 +12181,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, FPConv));
-    } else if (VT == MVT::i64 && Op0VT == MVT::f64 && XLenVT == MVT::i32 &&
-               Subtarget.hasStdExtZfa()) {
+    } else if (VT == MVT::i64 && Op0VT == MVT::f64 && XLenVT == MVT::i32) {
       SDValue NewReg = DAG.getNode(RISCVISD::SplitF64, DL,
                                    DAG.getVTList(MVT::i32, MVT::i32), Op0);
       SDValue RetReg = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
@@ -13692,12 +13715,8 @@ struct NodeExtensionHelper {
 
       SDValue NarrowElt = OrigOperand.getOperand(0);
       MVT NarrowVT = NarrowElt.getSimpleValueType();
-
-      unsigned ScalarBits = VT.getScalarSizeInBits();
-      unsigned NarrowScalarBits = NarrowVT.getScalarSizeInBits();
-
-      // Ensure the extension's semantic is equivalent to rvv vzext or vsext.
-      if (ScalarBits != NarrowScalarBits * 2)
+      // i1 types are legal but we can't select V{S,Z}EXT_VLs with them.
+      if (NarrowVT.getVectorElementType() == MVT::i1)
         break;
 
       SupportsZExt = Opc == ISD::ZERO_EXTEND;
@@ -15323,62 +15342,13 @@ static SDValue performINSERT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);
 }
 
-// Recursively split up concat_vectors with more than 2 operands:
-//
-// concat_vector op1, op2, op3, op4
-// ->
-// concat_vector (concat_vector op1, op2), (concat_vector op3, op4)
-//
-// This reduces the length of the chain of vslideups and allows us to perform
-// the vslideups at a smaller LMUL, limited to MF2.
-//
-// We do this as a DAG combine rather than during lowering so that any undef
-// operands can get combined away.
-static SDValue
-performCONCAT_VECTORSSplitCombine(SDNode *N, SelectionDAG &DAG,
-                                  const RISCVTargetLowering &TLI) {
-  SDLoc DL(N);
-
-  if (N->getNumOperands() <= 2)
-    return SDValue();
-
-  if (!TLI.isTypeLegal(N->getValueType(0)))
-    return SDValue();
-  MVT VT = N->getSimpleValueType(0);
-
-  // Don't split any further than MF2.
-  MVT ContainerVT = VT;
-  if (VT.isFixedLengthVector())
-    ContainerVT = getContainerForFixedLengthVector(DAG, VT, TLI.getSubtarget());
-  if (ContainerVT.bitsLT(getLMUL1VT(ContainerVT)))
-    return SDValue();
-
-  MVT HalfVT = VT.getHalfNumVectorElementsVT();
-  assert(isPowerOf2_32(N->getNumOperands()));
-  size_t HalfNumOps = N->getNumOperands() / 2;
-  SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
-                           N->ops().take_front(HalfNumOps));
-  SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
-                           N->ops().drop_front(HalfNumOps));
-
-  // Lower to an insert_subvector directly so the concat_vectors don't get
-  // recombined.
-  SDValue Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), Lo,
-                            DAG.getVectorIdxConstant(0, DL));
-  Vec = DAG.getNode(
-      ISD::INSERT_SUBVECTOR, DL, VT, Vec, Hi,
-      DAG.getVectorIdxConstant(HalfVT.getVectorMinNumElements(), DL));
-  return Vec;
-}
-
 // If we're concatenating a series of vector loads like
 // concat_vectors (load v4i8, p+0), (load v4i8, p+n), (load v4i8, p+n*2) ...
 // Then we can turn this into a strided load by widening the vector elements
 // vlse32 p, stride=n
-static SDValue
-performCONCAT_VECTORSStridedLoadCombine(SDNode *N, SelectionDAG &DAG,
-                                        const RISCVSubtarget &Subtarget,
-                                        const RISCVTargetLowering &TLI) {
+static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
+                                            const RISCVSubtarget &Subtarget,
+                                            const RISCVTargetLowering &TLI) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
@@ -16483,10 +16453,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     break;
   case ISD::CONCAT_VECTORS:
-    if (SDValue V =
-            performCONCAT_VECTORSStridedLoadCombine(N, DAG, Subtarget, *this))
-      return V;
-    if (SDValue V = performCONCAT_VECTORSSplitCombine(N, DAG, *this))
+    if (SDValue V = performCONCAT_VECTORSCombine(N, DAG, Subtarget, *this))
       return V;
     break;
   case ISD::INSERT_VECTOR_ELT:
@@ -17194,9 +17161,7 @@ static MachineBasicBlock *emitReadCounterWidePseudo(MachineInstr &MI,
 static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
                                              MachineBasicBlock *BB,
                                              const RISCVSubtarget &Subtarget) {
-  assert((MI.getOpcode() == RISCV::SplitF64Pseudo ||
-          MI.getOpcode() == RISCV::SplitF64Pseudo_INX) &&
-         "Unexpected instruction");
+  assert(MI.getOpcode() == RISCV::SplitF64Pseudo && "Unexpected instruction");
 
   MachineFunction &MF = *BB->getParent();
   DebugLoc DL = MI.getDebugLoc();
@@ -17206,9 +17171,7 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
   Register HiReg = MI.getOperand(1).getReg();
   Register SrcReg = MI.getOperand(2).getReg();
 
-  const TargetRegisterClass *SrcRC = MI.getOpcode() == RISCV::SplitF64Pseudo_INX
-                                         ? &RISCV::GPRPairRegClass
-                                         : &RISCV::FPR64RegClass;
+  const TargetRegisterClass *SrcRC = &RISCV::FPR64RegClass;
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
 
   TII.storeRegToStackSlot(*BB, MI, SrcReg, MI.getOperand(2).isKill(), FI, SrcRC,
@@ -17233,8 +17196,7 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
 static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
                                                  MachineBasicBlock *BB,
                                                  const RISCVSubtarget &Subtarget) {
-  assert((MI.getOpcode() == RISCV::BuildPairF64Pseudo ||
-          MI.getOpcode() == RISCV::BuildPairF64Pseudo_INX) &&
+  assert(MI.getOpcode() == RISCV::BuildPairF64Pseudo &&
          "Unexpected instruction");
 
   MachineFunction &MF = *BB->getParent();
@@ -17245,9 +17207,7 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
   Register LoReg = MI.getOperand(1).getReg();
   Register HiReg = MI.getOperand(2).getReg();
 
-  const TargetRegisterClass *DstRC =
-      MI.getOpcode() == RISCV::BuildPairF64Pseudo_INX ? &RISCV::GPRPairRegClass
-                                                      : &RISCV::FPR64RegClass;
+  const TargetRegisterClass *DstRC = &RISCV::FPR64RegClass;
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
 
   MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
@@ -17768,10 +17728,8 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::Select_FPR64IN32X_Using_CC_GPR:
     return emitSelectPseudo(MI, BB, Subtarget);
   case RISCV::BuildPairF64Pseudo:
-  case RISCV::BuildPairF64Pseudo_INX:
     return emitBuildPairF64Pseudo(MI, BB, Subtarget);
   case RISCV::SplitF64Pseudo:
-  case RISCV::SplitF64Pseudo_INX:
     return emitSplitF64Pseudo(MI, BB, Subtarget);
   case RISCV::PseudoQuietFLE_H:
     return emitQuietFCMP(MI, BB, RISCV::FLE_H, RISCV::FEQ_H, Subtarget);
@@ -20961,7 +20919,7 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   if (Op == Instruction::Add || Op == Instruction::Sub ||
       Op == Instruction::And || Op == Instruction::Or ||
       Op == Instruction::Xor || Op == Instruction::InsertElement ||
-      Op == Instruction::Xor || Op == Instruction::ShuffleVector)
+      Op == Instruction::ShuffleVector || Op == Instruction::Load)
     return false;
 
   if (Inst.getType()->isScalableTy())

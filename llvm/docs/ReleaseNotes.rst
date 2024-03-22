@@ -67,6 +67,8 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
+* Added support for Cortex-A78AE, Cortex-A520AE and Cortex-A720AE CPUs.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -106,6 +108,7 @@ Changes to the RISC-V Backend
 * The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
 * The experimental Ssqosid extension is supported.
 * Zacas is no longer experimental.
+* Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -130,6 +133,18 @@ Changes to the C API
 
 * Added ``LLVMConstStringInContext2`` function, which better matches the C++
   API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``. 
+
+* Added the following functions for accessing a function's prefix data:
+
+  * ``LLVMHasPrefixData``
+  * ``LLVMGetPrefixData``
+  * ``LLVMSetPrefixData``
+
+* Added the following functions for accessing a function's prologue data:
+
+  * ``LLVMHasPrologueData``
+  * ``LLVMGetPrologueData``
+  * ``LLVMSetPrologueData``
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -159,6 +174,10 @@ Changes to the LLVM tools
 * llvm-objcopy now supports ``--set-symbol-visibility`` and
   ``--set-symbols-visibility`` options for ELF input to change the
   visibility of symbols.
+
+* llvm-objcopy now supports ``--skip-symbol`` and ``--skip-symbols`` options
+  for ELF input to skip the specified symbols when executing other options
+  that can change a symbol's name, binding or visibility.
 
 Changes to LLDB
 ---------------------------------

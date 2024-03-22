@@ -1829,6 +1829,11 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
 
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
 
+  if (auto PtrAuthData = N->getPtrAuthData())
+    Record.push_back(PtrAuthData->RawData);
+  else
+    Record.push_back(0);
+
   Stream.EmitRecord(bitc::METADATA_DERIVED_TYPE, Record, Abbrev);
   Record.clear();
 }
@@ -2746,9 +2751,10 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         Code = bitc::CST_CODE_CE_GEP;
         const auto *GO = cast<GEPOperator>(C);
         Record.push_back(VE.getTypeID(GO->getSourceElementType()));
-        if (std::optional<unsigned> Idx = GO->getInRangeIndex()) {
-          Code = bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX;
-          Record.push_back((*Idx << 1) | GO->isInBounds());
+        if (std::optional<ConstantRange> Range = GO->getInRange()) {
+          Code = bitc::CST_CODE_CE_GEP_WITH_INRANGE;
+          Record.push_back(GO->isInBounds());
+          emitConstantRange(Record, *Range);
         } else if (GO->isInBounds())
           Code = bitc::CST_CODE_CE_INBOUNDS_GEP;
         for (unsigned i = 0, e = CE->getNumOperands(); i != e; ++i) {
@@ -3542,7 +3548,8 @@ void ModuleBitcodeWriter::writeFunction(
         /// without the ValueAsMetadata wrapper.
         auto PushValueOrMetadata = [&Vals, InstID,
                                     this](Metadata *RawLocation) {
-          assert(RawLocation && "RawLocation unexpectedly null in DPValue");
+          assert(RawLocation &&
+                 "RawLocation unexpectedly null in DbgVariableRecord");
           if (ValueAsMetadata *VAM = dyn_cast<ValueAsMetadata>(RawLocation)) {
             SmallVector<unsigned, 2> ValAndType;
             // If the value is a fwd-ref the type is also pushed. We don't
@@ -3562,10 +3569,10 @@ void ModuleBitcodeWriter::writeFunction(
         // Write out non-instruction debug information attached to this
         // instruction. Write it after the instruction so that it's easy to
         // re-attach to the instruction reading the records in.
-        for (DbgRecord &DR : I.DbgMarker->getDbgRecordRange()) {
-          if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-            Vals.push_back(VE.getMetadataID(&*DPL->getDebugLoc()));
-            Vals.push_back(VE.getMetadataID(DPL->getLabel()));
+        for (DbgRecord &DR : I.DebugMarker->getDbgRecordRange()) {
+          if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+            Vals.push_back(VE.getMetadataID(&*DLR->getDebugLoc()));
+            Vals.push_back(VE.getMetadataID(DLR->getLabel()));
             Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_LABEL, Vals);
             Vals.clear();
             continue;
@@ -3581,25 +3588,25 @@ void ModuleBitcodeWriter::writeFunction(
           //   ..., LocationMetadata
           // dbg_assign (FUNC_CODE_DEBUG_RECORD_ASSIGN)
           //   ..., LocationMetadata, DIAssignID, DIExpression, LocationMetadata
-          DPValue &DPV = cast<DPValue>(DR);
-          Vals.push_back(VE.getMetadataID(&*DPV.getDebugLoc()));
-          Vals.push_back(VE.getMetadataID(DPV.getVariable()));
-          Vals.push_back(VE.getMetadataID(DPV.getExpression()));
-          if (DPV.isDbgValue()) {
-            if (PushValueOrMetadata(DPV.getRawLocation()))
+          DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
+          Vals.push_back(VE.getMetadataID(&*DVR.getDebugLoc()));
+          Vals.push_back(VE.getMetadataID(DVR.getVariable()));
+          Vals.push_back(VE.getMetadataID(DVR.getExpression()));
+          if (DVR.isDbgValue()) {
+            if (PushValueOrMetadata(DVR.getRawLocation()))
               Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE, Vals,
                                 FUNCTION_DEBUG_RECORD_VALUE_ABBREV);
             else
               Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_VALUE, Vals);
-          } else if (DPV.isDbgDeclare()) {
-            Vals.push_back(VE.getMetadataID(DPV.getRawLocation()));
+          } else if (DVR.isDbgDeclare()) {
+            Vals.push_back(VE.getMetadataID(DVR.getRawLocation()));
             Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_DECLARE, Vals);
           } else {
-            assert(DPV.isDbgAssign() && "Unexpected DbgRecord kind");
-            Vals.push_back(VE.getMetadataID(DPV.getRawLocation()));
-            Vals.push_back(VE.getMetadataID(DPV.getAssignID()));
-            Vals.push_back(VE.getMetadataID(DPV.getAddressExpression()));
-            Vals.push_back(VE.getMetadataID(DPV.getRawAddress()));
+            assert(DVR.isDbgAssign() && "Unexpected DbgRecord kind");
+            Vals.push_back(VE.getMetadataID(DVR.getRawLocation()));
+            Vals.push_back(VE.getMetadataID(DVR.getAssignID()));
+            Vals.push_back(VE.getMetadataID(DVR.getAddressExpression()));
+            Vals.push_back(VE.getMetadataID(DVR.getRawAddress()));
             Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN, Vals);
           }
           Vals.clear();

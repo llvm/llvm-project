@@ -1749,7 +1749,7 @@ static bool isInterestingPHIIncomingValue(const Value *V) {
     // Non constant index/out of bounds index -> folding is unlikely.
     // The latter is more of a sanity check because canonical IR should just
     // have replaced those with poison.
-    if (!Idx || Idx->getSExtValue() >= FVT->getNumElements())
+    if (!Idx || Idx->getZExtValue() >= FVT->getNumElements())
       return false;
 
     const auto *VecSrc = IE->getOperand(0);
@@ -1761,7 +1761,7 @@ static bool isInterestingPHIIncomingValue(const Value *V) {
       return false;
 
     CurVal = VecSrc;
-    EltsCovered.set(Idx->getSExtValue());
+    EltsCovered.set(Idx->getZExtValue());
 
     // All elements covered.
     if (EltsCovered.all())
@@ -1987,7 +1987,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   for (VectorSlice &S : Slices) {
     // We need to reset the build on each iteration, because getSlicedVal may
     // have inserted something into I's BB.
-    B.SetInsertPoint(I.getParent()->getFirstNonPHI());
+    B.SetInsertPoint(I.getParent()->getFirstNonPHIIt());
     S.NewPHI = B.CreatePHI(S.Ty, I.getNumIncomingValues());
 
     for (const auto &[Idx, BB] : enumerate(I.blocks())) {

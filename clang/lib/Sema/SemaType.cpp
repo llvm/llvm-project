@@ -1018,6 +1018,11 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
       return type;
     }
 
+    // Types that have __attribute__((NSObject)) are permitted.
+    if (typeArg->isObjCNSObjectType()) {
+      continue;
+    }
+
     // Dependent types will be checked at instantiation time.
     if (typeArg->isDependentType()) {
       continue;
@@ -6503,6 +6508,9 @@ namespace {
     void VisitAttributedTypeLoc(AttributedTypeLoc TL) {
       fillAttributedTypeLoc(TL, State);
     }
+    void VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
+      // nothing
+    }
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
       // nothing
     }
@@ -9752,6 +9760,26 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
       DiagnoseUseOfDecl(TT->getDecl(), E->getExprLoc());
   }
   return Context.getTypeOfExprType(E, Kind);
+}
+
+static void
+BuildTypeCoupledDecls(Expr *E,
+                      llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
+  // Currently, 'counted_by' only allows direct DeclRefExpr to FieldDecl.
+  auto *CountDecl = cast<DeclRefExpr>(E)->getDecl();
+  Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref*/ false));
+}
+
+QualType Sema::BuildCountAttributedArrayType(QualType WrappedTy,
+                                             Expr *CountExpr) {
+  assert(WrappedTy->isIncompleteArrayType());
+
+  llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
+  BuildTypeCoupledDecls(CountExpr, Decls);
+  /// When the resulting expression is invalid, we still create the AST using
+  /// the original count expression for the sake of AST dump.
+  return Context.getCountAttributedType(
+      WrappedTy, CountExpr, /*CountInBytes*/ false, /*OrNull*/ false, Decls);
 }
 
 /// getDecltypeForExpr - Given an expr, will return the decltype for

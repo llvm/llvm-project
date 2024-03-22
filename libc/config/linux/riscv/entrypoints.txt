@@ -196,6 +196,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdio.h entrypoints
     libc.src.stdio.remove
+    libc.src.stdio.rename
     libc.src.stdio.sprintf
     libc.src.stdio.snprintf
     libc.src.stdio.fprintf
@@ -221,6 +222,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.munlockall
     libc.src.sys.mman.msync
+    libc.src.sys.mman.shm_open
+    libc.src.sys.mman.shm_unlink
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -423,9 +426,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nextafter
     libc.src.math.nextafterf
     libc.src.math.nextafterl
+    libc.src.math.nextdown
+    libc.src.math.nextdownf
+    libc.src.math.nextdownl
     libc.src.math.nexttoward
     libc.src.math.nexttowardf
     libc.src.math.nexttowardl
+    libc.src.math.nextup
+    libc.src.math.nextupf
+    libc.src.math.nextupl
     libc.src.math.powf
     libc.src.math.remainderf
     libc.src.math.remainder
@@ -478,6 +487,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.modff128
     libc.src.math.nanf128
     libc.src.math.nextafterf128
+    libc.src.math.nextdownf128
+    libc.src.math.nextupf128
     libc.src.math.rintf128
     libc.src.math.roundf128
     libc.src.math.sqrtf128
@@ -563,6 +574,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fgetc_unlocked
     libc.src.stdio.fgets
     libc.src.stdio.fflush
+    libc.src.stdio.fileno
     libc.src.stdio.fopen
     libc.src.stdio.fputc
     libc.src.stdio.fputs

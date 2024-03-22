@@ -707,6 +707,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<ConstCharPtr>]
           >,
           FunctionSpec<
+              "rename",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
+          >,
+          FunctionSpec<
               "setbuf",
               RetValSpec<VoidType>,
               [ArgSpec<FILERestrictedPtr>, ArgSpec<CharRestrictedPtr>]
@@ -955,6 +960,8 @@ def StdC : StandardSpec<"stdc"> {
 
           FunctionSpec<"rand", RetValSpec<IntType>, [ArgSpec<VoidType>]>,
           FunctionSpec<"srand", RetValSpec<VoidType>, [ArgSpec<UnsignedIntType>]>,
+
+          FunctionSpec<"strfromf", RetValSpec<IntType>, [ArgSpec<CharRestrictedPtr>, ArgSpec<SizeTType>, ArgSpec<ConstCharRestrictedPtr>, ArgSpec<FloatType>]>,
 
           FunctionSpec<"strtof", RetValSpec<FloatType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>]>,
           FunctionSpec<"strtod", RetValSpec<DoubleType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>]>,
