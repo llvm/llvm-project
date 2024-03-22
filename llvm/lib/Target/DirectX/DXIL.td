@@ -255,6 +255,8 @@ class DXILOpMapping<int opCode, DXILOpClass opClass,
 }
 
 // Concrete definition of DXIL Operation mapping to corresponding LLVM intrinsic
+def Abs : DXILOpMapping<6, unary, int_fabs,
+                         "Returns the absolute value of the input.">;
 def IsInf : DXILOpMapping<9, isSpecialFloat, int_dx_isinf,
                          "Determines if the specified value is infinite.",
                          [llvm_i1_ty, llvm_halforfloat_ty]>;
