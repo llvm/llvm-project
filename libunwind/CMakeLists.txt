@@ -3,6 +3,7 @@
 #===============================================================================
 
 cmake_minimum_required(VERSION 3.20.0)
+project(Unwind LANGUAGES C CXX ASM)
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
