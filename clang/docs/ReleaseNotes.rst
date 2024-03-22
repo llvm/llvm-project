@@ -437,6 +437,8 @@ Bug Fixes to C++ Support
 - Clang's __builtin_bit_cast will now produce a constant value for records with empty bases. See:
   (#GH82383)
 - Fix a crash when instantiating a lambda that captures ``this`` outside of its context. Fixes (#GH85343).
+- Fix an issue where a namespace alias could be defined using a qualified name (all name components
+  following the first `::` were ignored).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
