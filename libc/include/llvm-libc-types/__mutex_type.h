@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES___MUTEX_TYPE_H
 #define LLVM_LIBC_TYPES___MUTEX_TYPE_H
 
-#include <llvm-libc-types/__futex_word.h>
+#include "llvm-libc-types/__futex_word.h"
 
 typedef struct {
   unsigned char __timed;
