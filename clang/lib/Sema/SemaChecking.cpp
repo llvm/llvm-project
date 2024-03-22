@@ -12450,12 +12450,11 @@ static analyze_format_string::ArgType::MatchKind
 handleFormatSignedness(analyze_format_string::ArgType::MatchKind Match,
                        DiagnosticsEngine &Diags, SourceLocation Loc) {
   if (Match == analyze_format_string::ArgType::NoMatchSignedness) {
-    if (!Diags.isIgnored(
-            diag::warn_format_conversion_argument_type_mismatch_signedness,
-            Loc))
-      Match = analyze_format_string::ArgType::NoMatch;
-    else
-      Match = analyze_format_string::ArgType::Match;
+    Match =
+        Diags.isIgnored(
+            diag::warn_format_conversion_argument_type_mismatch_signedness, Loc)
+            ? analyze_format_string::ArgType::Match
+            : analyze_format_string::ArgType::NoMatch;
   }
   return Match;
 }
