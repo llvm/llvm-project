@@ -1319,6 +1319,26 @@ m_AddLike(const LHS &L, const RHS &R) {
   return m_CombineOr(m_Add(L, R), m_DisjointOr(L, R));
 }
 
+/// Match either "add nsw" or "or disjoint"
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                              OverflowingBinaryOperator::NoSignedWrap>,
+    DisjointOr_match<LHS, RHS>>
+m_NSWAddLike(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_NSWAdd(L, R), m_DisjointOr(L, R));
+}
+
+/// Match either "add nuw" or "or disjoint"
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                              OverflowingBinaryOperator::NoUnsignedWrap>,
+    DisjointOr_match<LHS, RHS>>
+m_NUWAddLike(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_NUWAdd(L, R), m_DisjointOr(L, R));
+}
+
 //===----------------------------------------------------------------------===//
 // Class that matches a group of binary opcodes.
 //

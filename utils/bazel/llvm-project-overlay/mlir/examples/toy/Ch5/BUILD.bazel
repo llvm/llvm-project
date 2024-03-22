@@ -102,6 +102,7 @@ cc_binary(
         "//mlir:Analysis",
         "//mlir:ArithDialect",
         "//mlir:BytecodeReader",
+        "//mlir:CallOpInterfaces",
         "//mlir:CastInterfaces",
         "//mlir:FuncDialect",
         "//mlir:FuncExtensions",
