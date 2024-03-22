@@ -1432,11 +1432,12 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_cluster_load_b32:
   case Intrinsic::amdgcn_cluster_load_b64:
   case Intrinsic::amdgcn_cluster_load_b128:
-  case Intrinsic::amdgcn_ds_load_tr6:
-  case Intrinsic::amdgcn_ds_load_tr4:
-  case Intrinsic::amdgcn_ds_load_tr:
-  case Intrinsic::amdgcn_global_load_tr6:
-  case Intrinsic::amdgcn_global_load_tr4:
+  case Intrinsic::amdgcn_ds_load_tr6_b96:
+  case Intrinsic::amdgcn_ds_load_tr4_b64:
+  case Intrinsic::amdgcn_ds_load_tr8_b64:
+  case Intrinsic::amdgcn_ds_load_tr16_b128:
+  case Intrinsic::amdgcn_global_load_tr6_b96:
+  case Intrinsic::amdgcn_global_load_tr4_b64:
   case Intrinsic::amdgcn_global_load_tr_b64:
   case Intrinsic::amdgcn_global_load_tr_b128: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -1587,9 +1588,10 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_ds_fadd:
   case Intrinsic::amdgcn_ds_fmax:
   case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_load_tr:
-  case Intrinsic::amdgcn_ds_load_tr4:
-  case Intrinsic::amdgcn_ds_load_tr6:
+  case Intrinsic::amdgcn_ds_load_tr8_b64:
+  case Intrinsic::amdgcn_ds_load_tr16_b128:
+  case Intrinsic::amdgcn_ds_load_tr4_b64:
+  case Intrinsic::amdgcn_ds_load_tr6_b96:
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
   case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
@@ -1616,8 +1618,8 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_global_load_monitor_b64:
   case Intrinsic::amdgcn_global_load_tr_b64:
   case Intrinsic::amdgcn_global_load_tr_b128:
-  case Intrinsic::amdgcn_global_load_tr4:
-  case Intrinsic::amdgcn_global_load_tr6:
+  case Intrinsic::amdgcn_global_load_tr4_b64:
+  case Intrinsic::amdgcn_global_load_tr6_b96:
   case Intrinsic::amdgcn_global_store_async_from_lds_b8:
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:

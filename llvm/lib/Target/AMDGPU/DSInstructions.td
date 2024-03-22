@@ -1245,13 +1245,10 @@ class DSLoadTrPat <DS_Pseudo inst, ValueType vt, SDPatternOperator node> : GCNPa
 >;
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus in {
-def : DSLoadTrPat <DS_LOAD_TR8_B64,  v2i32, int_amdgcn_ds_load_tr>;
-def : DSLoadTrPat <DS_LOAD_TR4_B64,  v2i32, int_amdgcn_ds_load_tr4>;
-def : DSLoadTrPat <DS_LOAD_TR6_B96,  v3i32, int_amdgcn_ds_load_tr6>;
-
-foreach vt16 = [v8i16, v8f16, v8bf16] in {
-def : DSLoadTrPat <DS_LOAD_TR16_B128,  vt16, int_amdgcn_ds_load_tr>;
-}
+def : DSLoadTrPat <DS_LOAD_TR8_B64,   v2i32, int_amdgcn_ds_load_tr8_b64>;
+def : DSLoadTrPat <DS_LOAD_TR4_B64,   v2i32, int_amdgcn_ds_load_tr4_b64>;
+def : DSLoadTrPat <DS_LOAD_TR6_B96,   v3i32, int_amdgcn_ds_load_tr6_b96>;
+def : DSLoadTrPat <DS_LOAD_TR16_B128, v8i16, int_amdgcn_ds_load_tr16_b128>;
 } //let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus
 
 //===----------------------------------------------------------------------===//
