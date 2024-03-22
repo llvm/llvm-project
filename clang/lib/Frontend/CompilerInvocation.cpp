@@ -4297,6 +4297,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
               << VulkanEnv << T.getOSName() << T.str();
         }
+        if (Args.getLastArg(OPT_fnative_half_type)) {
+          if (!(Opts.LangStd >= LangStandard::lang_hlsl2021))
+            Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
+                << VulkanEnv << T.getOSName() << T.str();
+        }
       } else {
         llvm_unreachable("expected DXIL or SPIR-V target");
       }
