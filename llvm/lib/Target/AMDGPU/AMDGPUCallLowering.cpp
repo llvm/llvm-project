@@ -63,7 +63,8 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA) override {
-    if (VA.getLocVT() == MVT::i1 && MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64()) {
+    if (VA.getLocVT() == MVT::i1 &&
+        MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64()) {
       MIRBuilder.buildCopy(PhysReg, ValVReg);
       return;
     }
@@ -131,7 +132,11 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
       // a 32-bit copy, and truncate to avoid the verifier complaining about it.
       //
       // However, when function return type is i1, it may be in a 64b register.
-      unsigned CopyToBits = (VA.getLocVT() == MVT::i1 && MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64()) ? 64 : 32;
+      unsigned CopyToBits =
+          (VA.getLocVT() == MVT::i1 &&
+           MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64())
+              ? 64
+              : 32;
 
       auto Copy = MIRBuilder.buildCopy(LLT::scalar(CopyToBits), PhysReg);
 
@@ -276,7 +281,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
     assignValueToAddress(ValVReg, Addr, MemTy, MPO, VA);
   }
 };
-}
+} // namespace
 
 AMDGPUCallLowering::AMDGPUCallLowering(const AMDGPUTargetLowering &TLI)
   : CallLowering(&TLI) {
