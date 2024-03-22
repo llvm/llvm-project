@@ -545,6 +545,10 @@ void DIEBuilder::cloneDieReferenceAttribute(
   NewRefDie = DieInfo.Die;
 
   if (AttrSpec.Form == dwarf::DW_FORM_ref_addr) {
+    // Adding referenced DIE to DebugNames to be used when entries are created
+    // that contain cross cu references.
+    if (DebugNamesTable.canGenerateEntryWithCrossCUReference(U, Die, AttrSpec))
+      DebugNamesTable.addCrossCUDie(DieInfo.Die);
     // no matter forward reference or backward reference, we are supposed
     // to calculate them in `finish` due to the possible modification of
     // the DIE.
@@ -554,7 +558,7 @@ void DIEBuilder::cloneDieReferenceAttribute(
         std::make_pair(CurDieInfo, AddrReferenceInfo(&DieInfo, AttrSpec)));
 
     Die.addValue(getState().DIEAlloc, AttrSpec.Attr, dwarf::DW_FORM_ref_addr,
-                 DIEInteger(0xDEADBEEF));
+                 DIEInteger(DieInfo.Die->getOffset()));
     return;
   }
 
