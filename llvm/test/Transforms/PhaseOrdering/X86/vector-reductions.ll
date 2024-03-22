@@ -63,7 +63,7 @@ define i32 @TestVectorsEqual(ptr noalias %Vec0, ptr noalias %Vec1, i32 %Toleranc
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[VEC0:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[VEC1:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sub <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <4 x i32> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP2]], i1 true)
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3]])
 ; CHECK-NEXT:    [[CMP5_NOT:%.*]] = icmp sle i32 [[TMP4]], [[TOLERANCE:%.*]]

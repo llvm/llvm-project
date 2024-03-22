@@ -317,19 +317,16 @@ static bool isCommutative(Instruction *I) {
                          (Pred == ICmpInst::ICMP_EQ ||
                           Pred == ICmpInst::ICMP_NE))
                        return true;
-                     // Commutative, if abs(sub, flag).
-                     if (U.getOperandNo() != 0)
-                       return false;
-                     const auto *IC = dyn_cast<IntrinsicInst>(U.getUser());
-                     return IC && IC->getIntrinsicID() == Intrinsic::abs;
+                     // Commutative, if abs(sub, true).
+                     return match(U.getUser(),
+                                  m_Intrinsic<Intrinsic::abs>(
+                                      m_Specific(U.get()), m_One()));
                    })) ||
            (BO->getOpcode() == Instruction::FSub &&
             !BO->hasNUsesOrMore(UsesLimit) &&
             all_of(BO->uses(), [](const Use &U) {
-              if (U.getOperandNo() != 0)
-                return false;
-              const auto *IC = dyn_cast<IntrinsicInst>(U.getUser());
-              return IC && IC->getIntrinsicID() == Intrinsic::fabs;
+              return match(U.getUser(),
+                           m_Intrinsic<Intrinsic::fabs>(m_Specific(U.get())));
             }));
   // TODO: This should check for generic Instruction::isCommutative(), but
   //       we need to confirm that the caller code correctly handles Intrinsics
@@ -9303,6 +9300,8 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   bool IsAllowedSingleBVNode =
       VectorizableTree.size() > 1 ||
       (VectorizableTree.size() == 1 && VectorizableTree.front()->getOpcode() &&
+       VectorizableTree.front()->getOpcode() != Instruction::PHI &&
+       VectorizableTree.front()->getOpcode() != Instruction::GetElementPtr &&
        allSameBlock(VectorizableTree.front()->Scalars));
   if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->State == TreeEntry::NeedToGather &&
@@ -12343,14 +12342,16 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Value *V = Builder.CreateBinOp(
           static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS,
           RHS);
-      propagateIRFlags(V, E->Scalars, VL0,
-                       !MinBWs.contains(E) &&
-                           (ShuffleOrOp != Instruction::Sub ||
-                            none_of(E->Scalars, [](Value *V) {
-                              return isCommutative(cast<Instruction>(V));
-                            })));
-      if (auto *I = dyn_cast<Instruction>(V))
+      propagateIRFlags(V, E->Scalars, VL0, !MinBWs.contains(E));
+      if (auto *I = dyn_cast<Instruction>(V)) {
         V = propagateMetadata(I, E->Scalars);
+        // Drop nuw flags for abs(sub(commutative), true).
+        if (!MinBWs.contains(E) && ShuffleOrOp == Instruction::Sub &&
+            any_of(E->Scalars, [](Value *V) {
+              return isCommutative(cast<Instruction>(V));
+            }))
+          I->setHasNoUnsignedWrap(/*b=*/false);
+      }
 
       V = FinalShuffle(V, E, VecTy);
 
@@ -12503,12 +12504,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (UseIntrinsic && isVectorIntrinsicWithOverloadTypeAtArg(ID, -1))
         TysForDecl.push_back(
             FixedVectorType::get(CI->getType(), E->Scalars.size()));
+      auto *CEI = cast<CallInst>(VL0);
       for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
         ValueList OpVL;
         // Some intrinsics have scalar arguments. This argument should not be
         // vectorized.
         if (UseIntrinsic && isVectorIntrinsicWithScalarOpAtArg(ID, I)) {
-          CallInst *CEI = cast<CallInst>(VL0);
           ScalarArg = CEI->getArgOperand(I);
           OpVecs.push_back(CEI->getArgOperand(I));
           if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I))
@@ -12520,6 +12521,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         if (E->VectorizedValue) {
           LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
           return E->VectorizedValue;
+        }
+        ScalarArg = CEI->getArgOperand(I);
+        if (cast<VectorType>(OpVec->getType())->getElementType() !=
+            ScalarArg->getType()) {
+          auto *CastTy = FixedVectorType::get(ScalarArg->getType(),
+                                              VecTy->getNumElements());
+          OpVec = Builder.CreateIntCast(OpVec, CastTy, GetOperandSignedness(I));
         }
         LLVM_DEBUG(dbgs() << "SLP: OpVec[" << I << "]: " << *OpVec << "\n");
         OpVecs.push_back(OpVec);
@@ -12642,24 +12650,25 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           },
           Mask, &OpScalars, &AltScalars);
 
-      propagateIRFlags(V0, OpScalars, VL0,
-                       !isa<BinaryOperator>(VL0) ||
-                           (!MinBWs.contains(E) &&
-                            (E->getOpcode() != Instruction::Sub ||
-                             none_of(E->Scalars, [](Value *V) {
-                               auto *I = cast<Instruction>(V);
-                               return I->getOpcode() == Instruction::Sub &&
-                                      isCommutative(cast<Instruction>(V));
-                             }))));
-      propagateIRFlags(V1, AltScalars, E->getAltOp(),
-                       !isa<BinaryOperator>(VL0) ||
-                           (!MinBWs.contains(E) &&
-                            (E->getAltOpcode() != Instruction::Sub ||
-                             none_of(E->Scalars, [](Value *V) {
-                               auto *I = cast<Instruction>(V);
-                               return I->getOpcode() == Instruction::Sub &&
-                                      isCommutative(cast<Instruction>(V));
-                             }))));
+      propagateIRFlags(V0, OpScalars, E->getMainOp(), !MinBWs.contains(E));
+      propagateIRFlags(V1, AltScalars, E->getAltOp(), !MinBWs.contains(E));
+      // Drop nuw flags for abs(sub(commutative), true).
+      if (auto *I0 = dyn_cast<Instruction>(V0);
+          I0 && !MinBWs.contains(E) && E->getOpcode() == Instruction::Sub &&
+          any_of(E->Scalars, [](Value *V) {
+            auto *I = cast<Instruction>(V);
+            return I->getOpcode() == Instruction::Sub &&
+                   isCommutative(cast<Instruction>(V));
+          }))
+        I0->setHasNoUnsignedWrap(/*b=*/false);
+      if (auto *I1 = dyn_cast<Instruction>(V1);
+          I1 && !MinBWs.contains(E) && E->getAltOpcode() == Instruction::Sub &&
+          any_of(E->Scalars, [](Value *V) {
+            auto *I = cast<Instruction>(V);
+            return I->getOpcode() == Instruction::Sub &&
+                   isCommutative(cast<Instruction>(V));
+          }))
+        I1->setHasNoUnsignedWrap(/*b=*/false);
 
       Value *V = Builder.CreateShuffleVector(V0, V1, Mask);
       if (auto *I = dyn_cast<Instruction>(V)) {

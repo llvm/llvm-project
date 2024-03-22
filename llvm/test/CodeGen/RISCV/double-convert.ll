@@ -1116,13 +1116,7 @@ define i64 @fmv_x_d(double %a, double %b) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fmv_x_d:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fmv_x_d:
@@ -1257,13 +1251,13 @@ define double @fmv_d_x(i64 %a, i64 %b) nounwind {
 ; RV32IFD-LABEL: fmv_d_x:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw a3, 4(sp)
-; RV32IFD-NEXT:    sw a2, 0(sp)
-; RV32IFD-NEXT:    sw a1, 12(sp)
 ; RV32IFD-NEXT:    sw a0, 8(sp)
-; RV32IFD-NEXT:    fld fa5, 0(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld fa5, 8(sp)
+; RV32IFD-NEXT:    sw a2, 8(sp)
+; RV32IFD-NEXT:    sw a3, 12(sp)
 ; RV32IFD-NEXT:    fld fa4, 8(sp)
-; RV32IFD-NEXT:    fadd.d fa0, fa4, fa5
+; RV32IFD-NEXT:    fadd.d fa0, fa5, fa4
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
@@ -1276,17 +1270,7 @@ define double @fmv_d_x(i64 %a, i64 %b) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fmv_d_x:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a3, 4(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 0(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 0(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 4(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    fadd.d a0, a2, a0
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, a2
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fmv_d_x:
