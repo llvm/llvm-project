@@ -305,3 +305,16 @@ llvm.func @vector_store_type_mismatch(%arg: vector<4xi32>) {
   llvm.store %arg, %1 : vector<4xi32>, !llvm.ptr
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: llvm.func @store_to_memory
+// CHECK-SAME: %[[ARG:.*]]: !llvm.ptr
+llvm.func @store_to_memory(%arg: !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (vector<4xf32>)> : (i32) -> !llvm.ptr
+  // CHECK-NEXT: llvm.store %[[ALLOCA]], %[[ARG]]
+  llvm.store %1, %arg : !llvm.ptr, !llvm.ptr
+  llvm.return
+}
