@@ -2425,8 +2425,14 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
     // dropped, so we leverage function attribute(profile-checksum-mismatch) to
     // transfer the info: add the attribute during pre-link phase and check it
     // during post-link phase(see "profileIsValid").
-    if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink)
+    if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
       F.addFnAttr("profile-checksum-mismatch");
+      [[maybe_unused]] const auto *Desc = ProbeManager->getDesc(F);
+      assert((Desc &&
+              ProbeManager->profileIsHashMismatched(*Desc, *FSFlattened)) &&
+             "The profile-checksum-mismatch attribute is set but there is no "
+             "pseudo-probe descriptor or the checksum is matched");
+    }
 
     // The matching result will be saved to IRToProfileLocationMap, create a
     // new map for each function.

@@ -125,16 +125,11 @@ public:
   }
 
   bool profileIsValid(const Function &F, const FunctionSamples &Samples) const {
+    const auto *Desc = getDesc(F);
     // The desc for import function is unavailable. Check the function attribute
     // for mismatch.
-    if (F.hasFnAttribute("profile-checksum-mismatch"))
-      return false;
-
-    const auto *Desc = getDesc(F);
-    if (Desc && profileIsHashMismatched(*Desc, Samples))
-      return false;
-
-    return true;
+    return (!Desc && !F.hasFnAttribute("profile-checksum-mismatch")) ||
+           (Desc && !profileIsHashMismatched(*Desc, Samples));
   }
 };
 
