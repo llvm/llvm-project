@@ -37,6 +37,9 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- Setting the deprecated CMake variable ``GCC_INSTALL_PREFIX`` (which sets the
+  default ``--gcc-toolchain=``) now leads to a fatal error.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -177,6 +180,8 @@ Non-comprehensive list of changes in this release
   the previous builtins, this new builtin is constexpr and may be used in
   constant expressions.
 
+- Lambda expressions are now accepted in C++03 mode as an extension.
+
 New Compiler Flags
 ------------------
 
@@ -193,7 +198,25 @@ Modified Compiler Flags
   ``-Wreturn-type``, and moved some of the diagnostics previously controlled by
   ``-Wreturn-type`` under this new flag. Fixes #GH72116.
 
-- Added ``-Wcast-function-type`` as a warning enabled by ``-Wextra``. #GH76872
+- Added ``-Wcast-function-type-mismatch`` under the ``-Wcast-function-type``
+  warning group. Moved the diagnostic previously controlled by
+  ``-Wcast-function-type`` to the new warning group and added
+  ``-Wcast-function-type-mismatch`` to ``-Wextra``. #GH76872
+
+  .. code-block:: c
+
+     int x(long);
+     typedef int (f2)(void*);
+     typedef int (f3)();
+
+     void func(void) {
+       // Diagnoses under -Wcast-function-type, -Wcast-function-type-mismatch,
+       // -Wcast-function-type-strict, -Wextra
+       f2 *b = (f2 *)x;
+       // Diagnoses under -Wcast-function-type, -Wcast-function-type-strict
+       f3 *c = (f3 *)x;
+     }
+
 
 Removed Compiler Flags
 -------------------------
@@ -497,6 +520,7 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
+- Profile names in ``-march`` option are now supported.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -553,6 +577,7 @@ Static Analyzer
 - Fixed crashing on loops if the loop variable was declared in switch blocks
   but not under any case blocks if ``unroll-loops=true`` analyzer config is
   set. (#GH68819)
+- Support C++23 static operator calls. (#GH84972)
 
 New features
 ^^^^^^^^^^^^
