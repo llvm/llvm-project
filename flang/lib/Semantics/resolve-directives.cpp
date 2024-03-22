@@ -1651,10 +1651,13 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
   }
   // If this symbol already has a data-sharing attribute then there is nothing
   // to do here.
-  if (const Symbol *symbol = iv.symbol)
-    for (auto symMap : targetIt->objectWithDSA)
-      if (symMap.first->name() == symbol->name())
+  if (const Symbol *symbol{iv.symbol}) {
+    for (auto symMap : targetIt->objectWithDSA) {
+      if (symMap.first->name() == symbol->name()) {
         return;
+      }
+    }
+  }
   // If this symbol is already Private or Firstprivate in the enclosing
   // OpenMP parallel or task then there is nothing to do here.
   if (auto *symbol{targetIt->scope.FindSymbol(iv.source)}) {
