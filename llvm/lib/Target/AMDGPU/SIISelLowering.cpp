@@ -4332,7 +4332,8 @@ SDValue SITargetLowering::lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   EVT DstVT = Op.getValueType();
 
   if (SrcVT.getScalarType() != MVT::bf16 ||
-      (Subtarget->hasBF16ConversionInsts() && DstVT == MVT::f32))
+      // TODO: Is v_cvt_f32_bf16 useful in any way?
+      (false && Subtarget->hasBF16ConversionInsts() && DstVT == MVT::f32))
     return Op;
 
   SDLoc SL(Op);
