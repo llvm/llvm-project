@@ -26,7 +26,6 @@ struct Align;
 class Argument;
 class Function;
 class GlobalValue;
-class MCContext;
 class MCInstrInfo;
 class MCRegisterClass;
 class MCRegisterInfo;
@@ -35,9 +34,12 @@ class StringRef;
 class Triple;
 class raw_ostream;
 
+namespace amdhsa {
+struct kernel_descriptor_t;
+}
+
 namespace AMDGPU {
 
-struct MCKernelDescriptor;
 struct IsaVersion;
 
 /// Generic target versions emitted by this version of LLVM.
@@ -850,8 +852,8 @@ unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc);
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
                                const MCSubtargetInfo *STI);
 
-MCKernelDescriptor getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI,
-                                                    MCContext &Ctx);
+amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
+    const MCSubtargetInfo *STI);
 
 bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);

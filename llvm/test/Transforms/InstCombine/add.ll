@@ -3986,5 +3986,81 @@ define i32 @add_reduce_sqr_sum_varC_invalid2(i32 %a, i32 %b) {
   ret i32 %ab2
 }
 
+define i32 @fold_sext_addition_or_disjoint(i8 %x) {
+; CHECK-LABEL: @fold_sext_addition_or_disjoint(
+; CHECK-NEXT:    [[SE:%.*]] = sext i8 [[XX:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[SE]], 1246
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = or disjoint i8 %x, 12
+  %se = sext i8 %xx to i32
+  %r = add i32 %se, 1234
+  ret i32 %r
+}
+
+define i32 @fold_sext_addition_fail(i8 %x) {
+; CHECK-LABEL: @fold_sext_addition_fail(
+; CHECK-NEXT:    [[XX:%.*]] = or i8 [[X:%.*]], 12
+; CHECK-NEXT:    [[SE:%.*]] = sext i8 [[XX]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[SE]], 1234
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = or i8 %x, 12
+  %se = sext i8 %xx to i32
+  %r = add i32 %se, 1234
+  ret i32 %r
+}
+
+define i32 @fold_zext_addition_or_disjoint(i8 %x) {
+; CHECK-LABEL: @fold_zext_addition_or_disjoint(
+; CHECK-NEXT:    [[SE:%.*]] = zext i8 [[XX:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SE]], 1246
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = or disjoint i8 %x, 12
+  %se = zext i8 %xx to i32
+  %r = add i32 %se, 1234
+  ret i32 %r
+}
+
+define i32 @fold_zext_addition_or_disjoint2(i8 %x) {
+; CHECK-LABEL: @fold_zext_addition_or_disjoint2(
+; CHECK-NEXT:    [[XX:%.*]] = add nuw i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[SE:%.*]] = zext i8 [[XX]] to i32
+; CHECK-NEXT:    ret i32 [[SE]]
+;
+  %xx = or disjoint i8 %x, 18
+  %se = zext i8 %xx to i32
+  %r = add i32 %se, -14
+  ret i32 %r
+}
+
+define i32 @fold_zext_addition_fail(i8 %x) {
+; CHECK-LABEL: @fold_zext_addition_fail(
+; CHECK-NEXT:    [[XX:%.*]] = or i8 [[X:%.*]], 12
+; CHECK-NEXT:    [[SE:%.*]] = zext i8 [[XX]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SE]], 1234
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = or i8 %x, 12
+  %se = zext i8 %xx to i32
+  %r = add i32 %se, 1234
+  ret i32 %r
+}
+
+define i32 @fold_zext_addition_fail2(i8 %x) {
+; CHECK-LABEL: @fold_zext_addition_fail2(
+; CHECK-NEXT:    [[XX:%.*]] = or i8 [[X:%.*]], 18
+; CHECK-NEXT:    [[SE:%.*]] = zext i8 [[XX]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[SE]], -14
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = or i8 %x, 18
+  %se = zext i8 %xx to i32
+  %r = add i32 %se, -14
+  ret i32 %r
+}
+
+
 declare void @llvm.assume(i1)
 declare void @fake_func(i32)
