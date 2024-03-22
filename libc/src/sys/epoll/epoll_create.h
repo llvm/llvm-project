@@ -1,4 +1,4 @@
-//===-- Implementation header for epoll_wait function -----------*- C++ -*-===//
+//===-- Implementation header for epoll_create function ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_WAIT_H
-#define LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_WAIT_H
-
-#include "include/llvm-libc-types/struct_epoll_event.h"
+#ifndef LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_CREATE_H
+#define LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_CREATE_H
 
 namespace LIBC_NAMESPACE {
 
-int epoll_wait(int epfd, epoll_event *events, int maxevents, int timeout);
+int epoll_create(int size);
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_WAIT_H
+#endif // LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_CREATE_H

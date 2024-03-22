@@ -11,10 +11,43 @@ package(default_visibility = ["//visibility:public"])
 licenses(["notice"])
 
 libc_test(
+    name = "epoll_create_test",
+    srcs = ["linux/epoll_create_test.cpp"],
+    libc_function_deps = [
+        "//libc:epoll_create",
+        "//libc:close",
+    ],
+)
+
+libc_test(
+    name = "epoll_create1_test",
+    srcs = ["linux/epoll_create1_test.cpp"],
+    libc_function_deps = [
+        "//libc:epoll_create1",
+        "//libc:close",
+    ],
+)
+
+libc_test(
+    name = "epoll_ctl_test",
+    srcs = ["linux/epoll_ctl_test.cpp"],
+    libc_function_deps = [
+        "//libc:epoll_create1",
+        "//libc:epoll_ctl",
+        "//libc:pipe",
+        "//libc:close",
+    ],
+)
+
+libc_test(
     name = "epoll_wait_test",
     srcs = ["linux/epoll_wait_test.cpp"],
     libc_function_deps = [
         "//libc:epoll_wait",
+        "//libc:epoll_create1",
+        "//libc:epoll_ctl",
+        "//libc:pipe",
+        "//libc:close",
     ],
 )
 
@@ -23,6 +56,10 @@ libc_test(
     srcs = ["linux/epoll_pwait_test.cpp"],
     libc_function_deps = [
         "//libc:epoll_pwait",
+        "//libc:epoll_create1",
+        "//libc:epoll_ctl",
+        "//libc:pipe",
+        "//libc:close",
     ],
 )
 
@@ -33,5 +70,9 @@ libc_test(
 #     srcs = ["linux/epoll_pwait2_test.cpp"],
 #     libc_function_deps = [
 #         "//libc:epoll_pwait2",
+#         "//libc:epoll_create1",
+#         "//libc:epoll_ctl",
+#         "//libc:pipe",
+#         "//libc:close",
 #     ],
 # )

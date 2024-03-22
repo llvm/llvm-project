@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_TIMESPEC_H
 #define LLVM_LIBC_TYPES_STRUCT_TIMESPEC_H
 
-#include <llvm-libc-types/time_t.h>
+#include "include/llvm-libc-types/time_t.h"
 
 struct timespec {
   time_t tv_sec; /* Seconds.  */

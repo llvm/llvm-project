@@ -11,6 +11,12 @@ add_header(
 )
 
 add_header(
+  sys_epoll_macros
+  HDR
+    sys-epoll-macros.h
+)
+
+add_header(
   sys_ioctl_macros
   HDR
     sys-ioctl-macros.h

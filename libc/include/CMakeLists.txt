@@ -377,6 +377,7 @@ add_gen_header(
     .llvm-libc-types.struct_epoll_event
     .llvm-libc-types.struct_epoll_data
     .llvm-libc-types.sigset_t
+    .llvm-libc-macros.sys_epoll_macros
 )
 
 add_gen_header(

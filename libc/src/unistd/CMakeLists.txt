@@ -150,6 +150,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pipe
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pipe
+)
+
+add_entrypoint_object(
   pread
   ALIAS
   DEPENDS

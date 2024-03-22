@@ -1,4 +1,4 @@
-//===-- Linux header epoll.h ----------------------------------------------===//
+//===-- Implementation header for pipe --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SYS_EPOLL_H
-#define LLVM_LIBC_SYS_EPOLL_H
+#ifndef LLVM_LIBC_SRC_UNISTD_PIPE_H
+#define LLVM_LIBC_SRC_UNISTD_PIPE_H
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/sys-epoll-macros.h>
+namespace LIBC_NAMESPACE {
 
-%%public_api()
+int pipe(int pipefd[2]);
 
-#endif // LLVM_LIBC_SYS_EPOLL_H
+} // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC_UNISTD_PIPE_H

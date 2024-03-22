@@ -561,6 +561,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<IntType>, ArgSpec<OffTType>, ArgSpec<IntType>]
         >,
         FunctionSpec<
+          "pipe",
+          RetValSpec<IntType>,
+          [ArgSpec<IntPtr>] //TODO: make this int[2]
+        >,
+        FunctionSpec<
           "pread",
           RetValSpec<SSizeTType>,
           [ArgSpec<IntType>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>, ArgSpec<OffTType>]

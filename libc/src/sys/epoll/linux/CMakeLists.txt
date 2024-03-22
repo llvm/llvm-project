@@ -1,4 +1,41 @@
 add_entrypoint_object(
+  epoll_create
+  SRCS
+    epoll_create.cpp
+  HDRS
+    ../epoll_create.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  epoll_create1
+  SRCS
+    epoll_create1.cpp
+  HDRS
+    ../epoll_create1.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  epoll_ctl
+  SRCS
+    epoll_ctl.cpp
+  HDRS
+    ../epoll_ctl.h
+  DEPENDS
+    libc.include.sys_epoll
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   epoll_wait
   SRCS
     epoll_wait.cpp

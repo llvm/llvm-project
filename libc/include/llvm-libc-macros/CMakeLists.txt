@@ -144,6 +144,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_epoll_macros
+  HDR
+    sys-epoll-macros.h
+)
+
+add_macro_header(
   sys_ioctl_macros
   HDR
     sys-ioctl-macros.h

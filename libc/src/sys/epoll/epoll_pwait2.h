@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_PWAIT2_H
 #define LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_PWAIT2_H
 
-// TODO: Use this include once the include headers are also using quotes.
+// TODO: use our internal sigset_t type (issue #86034)
 // #include "include/llvm-libc-types/sigset_t.h"
-// #include "include/llvm-libc-types/struct_epoll_event.h"
-// #include "include/llvm-libc-types/struct_timespec.h"
+#include <signal.h>
 
-#include <sys/epoll.h>
+#include "include/llvm-libc-types/struct_epoll_event.h"
+#include "include/llvm-libc-types/struct_timespec.h"
 
 namespace LIBC_NAMESPACE {
 
