@@ -1,7 +1,6 @@
 ; RUN: opt -S -passes=tailcallelim < %s | FileCheck %s
 
-; Function Attrs: noinline nounwind uwtable
-define dso_local i32 @func(i32 noundef %a) #0 !dbg !10 {
+define dso_local i32 @func(i32 noundef %a) !dbg !10 {
 ; CHECK: entry
 ; CHECK: br label %tailrecurse{{$}}
 entry:
@@ -23,11 +22,9 @@ return:                                           ; preds = %if.end, %if.then
   ret i32 %retval.0, !dbg !26
 }
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3, !4, !5, !6, !7, !8}
