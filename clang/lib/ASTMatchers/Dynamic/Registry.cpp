@@ -377,6 +377,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasTypeLoc);
   REGISTER_MATCHER(hasUnaryOperand);
   REGISTER_MATCHER(hasUnarySelector);
+  REGISTER_MATCHER(isPODType);
   REGISTER_MATCHER(hasUnderlyingDecl);
   REGISTER_MATCHER(hasUnderlyingType);
   REGISTER_MATCHER(hasUnqualifiedDesugaredType);
