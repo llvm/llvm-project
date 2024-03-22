@@ -26,6 +26,11 @@ using LinuxStatFs = statfs;
 #endif
 
 LIBC_INLINE cpp::optional<LinuxStatFs> linux_statfs(const char *path) {
+#ifdef __clang__
+  // Disable pattern filling for result buffer: this struct is to be populated
+  // by the syscall.
+  [[clang::uninitialized]]
+#endif
   LinuxStatFs result;
   // On 32-bit platforms, original statfs cannot handle large file systems.
   // In such cases, SYS_statfs64 is defined and should be used.
