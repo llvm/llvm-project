@@ -1220,8 +1220,11 @@ Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
 }
 
 Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB) {
+  // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
+  // in Bionic's libc/platform/bionic/tls_defines.h.
+  constexpr int SanitizerSlot = 6;
   if (TargetTriple.isAArch64() && TargetTriple.isAndroid())
-    return memtag::getAndroidSanitizerSlotPtr(IRB);
+    return memtag::getAndroidSlotPtr(IRB, SanitizerSlot);
   return ThreadPtrGlobal;
 }
 
@@ -1235,15 +1238,7 @@ Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
   // Prepare ring buffer data.
   Value *PC = memtag::getPC(TargetTriple, IRB);
   Value *FP = getCachedFP(IRB);
-
-  // Mix FP and PC.
-  // Assumptions:
-  // PC is 0x0000PPPPPPPPPPPP  (48 bits are meaningful, others are zero)
-  // FP is 0xfffffffffffFFFF0  (4 lower bits are zero)
-  // We only really need ~20 lower non-zero bits (FFFF), so we mix like this:
-  //       0xFFFFPPPPPPPPPPPP
-  FP = IRB.CreateShl(FP, 44);
-  return IRB.CreateOr(PC, FP);
+  return memtag::getFrameRecordInfo(IRB, PC, FP);
 }
 
 void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {

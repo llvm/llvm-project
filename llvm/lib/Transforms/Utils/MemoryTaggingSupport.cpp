@@ -273,14 +273,25 @@ Value *getFP(IRBuilder<> &IRB) {
       IRB.getIntPtrTy(M->getDataLayout()));
 }
 
-Value *getAndroidSanitizerSlotPtr(IRBuilder<> &IRB) {
+Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot) {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
   // in Bionic's libc/private/bionic_tls.h.
   Function *ThreadPointerFunc =
       Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
   return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
-                                IRB.CreateCall(ThreadPointerFunc), 0x30);
+                                IRB.CreateCall(ThreadPointerFunc), 8 * Slot);
+}
+
+Value *getFrameRecordInfo(IRBuilder<> &IRB, Value *PC, Value *FP) {
+  // Mix FP and PC.
+  // Assumptions:
+  // PC is 0x0000PPPPPPPPPPPP  (48 bits are meaningful, others are zero)
+  // FP is 0xfffffffffffFFFF0  (4 lower bits are zero)
+  // We only really need ~20 lower non-zero bits (FFFF), so we mix like this:
+  //       0xFFFFPPPPPPPPPPPP
+  FP = IRB.CreateShl(FP, 44);
+  return IRB.CreateOr(PC, FP);
 }
 
 } // namespace memtag
