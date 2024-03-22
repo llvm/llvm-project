@@ -278,6 +278,110 @@ private:
     return FD;
   }
 
+  Error
+  runParentProcess(pid_t ChildPID, int WriteFD, StringRef CounterName,
+                   SmallVectorImpl<int64_t> &CounterValues,
+                   ArrayRef<const char *> ValidationCounters,
+                   SmallVectorImpl<int64_t> &ValidationCounterValues) const {
+    const ExegesisTarget &ET = State.getExegesisTarget();
+    auto CounterOrError =
+        ET.createCounter(CounterName, State, ValidationCounters, ChildPID);
+
+    if (!CounterOrError)
+      return CounterOrError.takeError();
+
+    pfm::CounterGroup *Counter = CounterOrError.get().get();
+
+    // Make sure to attach to the process (and wait for the sigstop to be
+    // delivered and for the process to continue) before we write to the counter
+    // file descriptor. Attaching to the process before writing to the socket
+    // ensures that the subprocess at most has blocked on the read call. If we
+    // attach afterwards, the subprocess might exit before we get to the attach
+    // call due to effects like scheduler contention, introducing transient
+    // failures.
+    if (ptrace(PTRACE_ATTACH, ChildPID, NULL, NULL) != 0)
+      return make_error<Failure>("Failed to attach to the child process: " +
+                                 Twine(strerror(errno)));
+
+    if (waitpid(ChildPID, NULL, 0) == -1) {
+      return make_error<Failure>(
+          "Failed to wait for child process to stop after attaching: " +
+          Twine(strerror(errno)));
+    }
+
+    if (ptrace(PTRACE_CONT, ChildPID, NULL, NULL) != 0)
+      return make_error<Failure>(
+          "Failed to continue execution of the child process: " +
+          Twine(strerror(errno)));
+
+    int CounterFileDescriptor = Counter->getFileDescriptor();
+    Error SendError =
+        sendFileDescriptorThroughSocket(WriteFD, CounterFileDescriptor);
+
+    if (SendError)
+      return SendError;
+
+    int ChildStatus;
+    if (waitpid(ChildPID, &ChildStatus, 0) == -1) {
+      return make_error<Failure>(
+          "Waiting for the child process to complete failed: " +
+          Twine(strerror(errno)));
+    }
+
+    if (WIFEXITED(ChildStatus)) {
+      int ChildExitCode = WEXITSTATUS(ChildStatus);
+      if (ChildExitCode == 0) {
+        // The child exited succesfully, read counter values and return
+        // success.
+        auto CounterValueOrErr = Counter->readOrError();
+        if (!CounterValueOrErr)
+          return CounterValueOrErr.takeError();
+        CounterValues = std::move(*CounterValueOrErr);
+
+        auto ValidationValuesOrErr = Counter->readValidationCountersOrError();
+        if (!ValidationValuesOrErr)
+          return ValidationValuesOrErr.takeError();
+
+        ArrayRef RealValidationValues = *ValidationValuesOrErr;
+        for (size_t I = 0; I < RealValidationValues.size(); ++I)
+          ValidationCounterValues[I] = RealValidationValues[I];
+
+        return Error::success();
+      }
+      // The child exited, but not successfully.
+      return make_error<Failure>(
+          "Child benchmarking process exited with non-zero exit code: " +
+          childProcessExitCodeToString(ChildExitCode));
+    }
+
+    // An error was encountered running the snippet, process it
+    siginfo_t ChildSignalInfo;
+    if (ptrace(PTRACE_GETSIGINFO, ChildPID, NULL, &ChildSignalInfo) == -1) {
+      return make_error<Failure>("Getting signal info from the child failed: " +
+                                 Twine(strerror(errno)));
+    }
+
+    // Send SIGKILL rather than SIGTERM as the child process has no SIGTERM
+    // handlers to run, and calling SIGTERM would mean that ptrace will force
+    // it to block in the signal-delivery-stop for the SIGSEGV/other signals,
+    // and upon exit.
+    if (kill(ChildPID, SIGKILL) == -1)
+      return make_error<Failure>("Failed to kill child benchmarking proces: " +
+                                 Twine(strerror(errno)));
+
+    // Wait for the process to exit so that there are no zombie processes left
+    // around.
+    if (waitpid(ChildPID, NULL, 0) == -1)
+      return make_error<Failure>("Failed to wait for process to die: " +
+                                 Twine(strerror(errno)));
+
+    if (ChildSignalInfo.si_signo == SIGSEGV)
+      return make_error<SnippetSegmentationFault>(
+          reinterpret_cast<intptr_t>(ChildSignalInfo.si_addr));
+
+    return make_error<SnippetSignal>(ChildSignalInfo.si_signo);
+  }
+
   Error createSubProcessAndRunBenchmark(
       StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues,
       ArrayRef<const char *> ValidationCounters,
@@ -314,112 +418,18 @@ private:
       // Unregister handlers, signal handling is now handled through ptrace in
       // the host process.
       sys::unregisterHandlers();
-      prepareAndRunBenchmark(PipeFiles[0], Key);
+      runChildSubprocess(PipeFiles[0], Key);
       // The child process terminates in the above function, so we should never
       // get to this point.
       llvm_unreachable("Child process didn't exit when expected.");
     }
 
-    const ExegesisTarget &ET = State.getExegesisTarget();
-    auto CounterOrError = ET.createCounter(
-        CounterName, State, ValidationCounters, ParentOrChildPID);
-
-    if (!CounterOrError)
-      return CounterOrError.takeError();
-
-    pfm::CounterGroup *Counter = CounterOrError.get().get();
-
+    // Close the read end of the pipe as we only need to write to the subprocess
+    // from the parent process.
     close(PipeFiles[0]);
-
-    // Make sure to attach to the process (and wait for the sigstop to be
-    // delivered and for the process to continue) before we write to the counter
-    // file descriptor. Attaching to the process before writing to the socket
-    // ensures that the subprocess at most has blocked on the read call. If we
-    // attach afterwards, the subprocess might exit before we get to the attach
-    // call due to effects like scheduler contention, introducing transient
-    // failures.
-    if (ptrace(PTRACE_ATTACH, ParentOrChildPID, NULL, NULL) != 0)
-      return make_error<Failure>("Failed to attach to the child process: " +
-                                 Twine(strerror(errno)));
-
-    if (waitpid(ParentOrChildPID, NULL, 0) == -1) {
-      return make_error<Failure>(
-          "Failed to wait for child process to stop after attaching: " +
-          Twine(strerror(errno)));
-    }
-
-    if (ptrace(PTRACE_CONT, ParentOrChildPID, NULL, NULL) != 0)
-      return make_error<Failure>(
-          "Failed to continue execution of the child process: " +
-          Twine(strerror(errno)));
-
-    int CounterFileDescriptor = Counter->getFileDescriptor();
-    Error SendError =
-        sendFileDescriptorThroughSocket(PipeFiles[1], CounterFileDescriptor);
-
-    if (SendError)
-      return SendError;
-
-    int ChildStatus;
-    if (waitpid(ParentOrChildPID, &ChildStatus, 0) == -1) {
-      return make_error<Failure>(
-          "Waiting for the child process to complete failed: " +
-          Twine(strerror(errno)));
-    }
-
-    if (WIFEXITED(ChildStatus)) {
-      int ChildExitCode = WEXITSTATUS(ChildStatus);
-      if (ChildExitCode == 0) {
-        // The child exited succesfully, read counter values and return
-        // success.
-        auto CounterValueOrErr = Counter->readOrError();
-        if (!CounterValueOrErr)
-          return CounterValueOrErr.takeError();
-        CounterValues = std::move(*CounterValueOrErr);
-
-        auto ValidationValuesOrErr = Counter->readValidationCountersOrError();
-        if (!ValidationValuesOrErr)
-          return ValidationValuesOrErr.takeError();
-
-        ArrayRef RealValidationValues = *ValidationValuesOrErr;
-        for (size_t I = 0; I < RealValidationValues.size(); ++I)
-          ValidationCounterValues[I] = RealValidationValues[I];
-
-        return Error::success();
-      }
-      // The child exited, but not successfully.
-      return make_error<Failure>(
-          "Child benchmarking process exited with non-zero exit code: " +
-          childProcessExitCodeToString(ChildExitCode));
-    }
-
-    // An error was encountered running the snippet, process it
-    siginfo_t ChildSignalInfo;
-    if (ptrace(PTRACE_GETSIGINFO, ParentOrChildPID, NULL, &ChildSignalInfo) ==
-        -1) {
-      return make_error<Failure>("Getting signal info from the child failed: " +
-                                 Twine(strerror(errno)));
-    }
-
-    // Send SIGKILL rather than SIGTERM as the child process has no SIGTERM
-    // handlers to run, and calling SIGTERM would mean that ptrace will force
-    // it to block in the signal-delivery-stop for the SIGSEGV/other signals,
-    // and upon exit.
-    if (kill(ParentOrChildPID, SIGKILL) == -1)
-      return make_error<Failure>("Failed to kill child benchmarking proces: " +
-                                 Twine(strerror(errno)));
-
-    // Wait for the process to exit so that there are no zombie processes left
-    // around.
-    if (waitpid(ParentOrChildPID, NULL, 0) == -1)
-      return make_error<Failure>("Failed to wait for process to die: " +
-                                 Twine(strerror(errno)));
-
-    if (ChildSignalInfo.si_signo == SIGSEGV)
-      return make_error<SnippetSegmentationFault>(
-          reinterpret_cast<intptr_t>(ChildSignalInfo.si_addr));
-
-    return make_error<SnippetSignal>(ChildSignalInfo.si_signo);
+    return runParentProcess(ParentOrChildPID, PipeFiles[1], CounterName,
+                            CounterValues, ValidationCounters,
+                            ValidationCounterValues);
   }
 
   void disableCoreDumps() const {
@@ -429,8 +439,8 @@ private:
     setrlimit(RLIMIT_CORE, &rlim);
   }
 
-  [[noreturn]] void prepareAndRunBenchmark(int Pipe,
-                                           const BenchmarkKey &Key) const {
+  [[noreturn]] void runChildSubprocess(int Pipe,
+                                       const BenchmarkKey &Key) const {
     // Disable core dumps in the child process as otherwise everytime we
     // encounter an execution failure like a segmentation fault, we will create
     // a core dump. We report the information directly rather than require the
