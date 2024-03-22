@@ -30,10 +30,15 @@ class StackTracePrinter {
 
   virtual void RenderFrame(InternalScopedString *buffer, const char *format,
                            int frame_no, uptr address, const AddressInfo *info,
-                           bool vs_style,
-                           const char *strip_path_prefix = "") = 0;
+                           bool vs_style, const char *strip_path_prefix = "") {
+    // Should be pure virtual, but we can't depend on __cxa_pure_virtual.
+    UNIMPLEMENTED();
+  }
 
-  virtual bool RenderNeedsSymbolization(const char *format) = 0;
+  virtual bool RenderNeedsSymbolization(const char *format) {
+    // Should be pure virtual, but we can't depend on __cxa_pure_virtual.
+    UNIMPLEMENTED();
+  }
 
   void RenderSourceLocation(InternalScopedString *buffer, const char *file,
                             int line, int column, bool vs_style,
@@ -44,7 +49,10 @@ class StackTracePrinter {
                             const char *strip_path_prefix);
   virtual void RenderData(InternalScopedString *buffer, const char *format,
                           const DataInfo *DI,
-                          const char *strip_path_prefix = "") = 0;
+                          const char *strip_path_prefix = "") {
+    // Should be pure virtual, but we can't depend on __cxa_pure_virtual.
+    UNIMPLEMENTED();
+  }
 
  private:
   // To be called from StackTracePrinter::GetOrInit
