@@ -6,95 +6,59 @@
 ; RUN:      -mtriple powerpc64-ibm-aix-xcoff --code-model=large \
 ; RUN:      < %s | FileCheck %s --check-prefix=CHECK-LARGECM64
 
-@mySmallLocalExecTLS6 = external thread_local(localexec) global [60 x i64], align 8
-@mySmallLocalExecTLS2 = external thread_local(localexec) global [3000 x i64], align 8 #0
-@MyTLSGDVar = thread_local global [800 x i64] zeroinitializer, align 8
-@mySmallLocalExecTLS3 = internal thread_local(localexec) global [3000 x i64] zeroinitializer, align 8
-@mySmallLocalExecTLS4 = internal thread_local(localexec) global [3000 x i64] zeroinitializer, align 8 #0
-@mySmallLocalExecTLS5 = thread_local(localexec) global [3000 x i64] zeroinitializer, align 8 #0
+@mySmallTLS = thread_local(localexec) global [7800 x i64] zeroinitializer, align 8 #0
+@mySmallTLS2 = thread_local(localexec) global [3000 x i64] zeroinitializer, align 8 #0
+@mySmallTLS3 = thread_local(localexec) global [3000 x i64] zeroinitializer, align 8
 declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull)
 
-; All accesses use a "faster" local-exec sequence directly off the thread pointer.
+; All accesses use a "faster" local-exec sequence directly off the thread pointer,
+; except for mySmallTLS, as this variable is over the 32KB size limit.
 define i64 @StoreLargeAccess1() #1 {
 ; CHECK-SMALLCM64-LABEL: StoreLargeAccess1:
 ; CHECK-SMALLCM64:       # %bb.0: # %entry
-; CHECK-SMALLCM64-NEXT:    mflr r0
-; CHECK-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; CHECK-SMALLCM64-NEXT:    li r3, 212
-; CHECK-SMALLCM64-NEXT:    li r4, 203
-; CHECK-SMALLCM64-NEXT:    std r0, 64(r1)
-; CHECK-SMALLCM64-NEXT:    std r3, mySmallLocalExecTLS6[UL]@le+424(r13)
-; CHECK-SMALLCM64-NEXT:    std r4, mySmallLocalExecTLS2[UL]@le+1200(r13)
-; CHECK-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsgdm) @MyTLSGDVar
-; CHECK-SMALLCM64-NEXT:    ld r4, L..C1(r2) # target-flags(ppc-tlsgd) @MyTLSGDVar
-; CHECK-SMALLCM64-NEXT:    bla .__tls_get_addr[PR]
-; CHECK-SMALLCM64-NEXT:    li r4, 44
-; CHECK-SMALLCM64-NEXT:    std r4, 440(r3)
-; CHECK-SMALLCM64-NEXT:    li r3, 6
-; CHECK-SMALLCM64-NEXT:    li r4, 100
-; CHECK-SMALLCM64-NEXT:    std r3, mySmallLocalExecTLS3[UL]@le+2000(r13)
-; CHECK-SMALLCM64-NEXT:    li r3, 882
-; CHECK-SMALLCM64-NEXT:    std r4, (mySmallLocalExecTLS4[UL]@le+6800)-65536(r13)
-; CHECK-SMALLCM64-NEXT:    std r3, (mySmallLocalExecTLS5[TL]@le+8400)-65536(r13)
-; CHECK-SMALLCM64-NEXT:    li r3, 1191
-; CHECK-SMALLCM64-NEXT:    addi r1, r1, 48
-; CHECK-SMALLCM64-NEXT:    ld r0, 16(r1)
-; CHECK-SMALLCM64-NEXT:    mtlr r0
+; CHECK-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tprel) @mySmallTLS
+; CHECK-SMALLCM64-NEXT:    li r4, 0
+; CHECK-SMALLCM64-NEXT:    li r5, 23
+; CHECK-SMALLCM64-NEXT:    ori r4, r4, 53328
+; CHECK-SMALLCM64-NEXT:    add r3, r13, r3
+; CHECK-SMALLCM64-NEXT:    stdx r5, r3, r4
+; CHECK-SMALLCM64-NEXT:    li r3, 55
+; CHECK-SMALLCM64-NEXT:    li r4, 64
+; CHECK-SMALLCM64-NEXT:    std r3, (mySmallTLS2[TL]@le+696)-65536(r13)
+; CHECK-SMALLCM64-NEXT:    li r3, 142
+; CHECK-SMALLCM64-NEXT:    std r4, (mySmallTLS3[TL]@le+20000)-131072(r13)
 ; CHECK-SMALLCM64-NEXT:    blr
 ;
 ; CHECK-LARGECM64-LABEL: StoreLargeAccess1:
 ; CHECK-LARGECM64:       # %bb.0: # %entry
-; CHECK-LARGECM64-NEXT:    mflr r0
-; CHECK-LARGECM64-NEXT:    stdu r1, -48(r1)
-; CHECK-LARGECM64-NEXT:    li r3, 212
-; CHECK-LARGECM64-NEXT:    std r0, 64(r1)
-; CHECK-LARGECM64-NEXT:    addis r4, L..C0@u(r2)
-; CHECK-LARGECM64-NEXT:    ld r4, L..C0@l(r4)
-; CHECK-LARGECM64-NEXT:    std r3, mySmallLocalExecTLS6[UL]@le+424(r13)
-; CHECK-LARGECM64-NEXT:    li r3, 203
-; CHECK-LARGECM64-NEXT:    std r3, mySmallLocalExecTLS2[UL]@le+1200(r13)
-; CHECK-LARGECM64-NEXT:    addis r3, L..C1@u(r2)
-; CHECK-LARGECM64-NEXT:    ld r3, L..C1@l(r3)
-; CHECK-LARGECM64-NEXT:    bla .__tls_get_addr[PR]
-; CHECK-LARGECM64-NEXT:    li r4, 44
-; CHECK-LARGECM64-NEXT:    std r4, 440(r3)
-; CHECK-LARGECM64-NEXT:    li r3, 6
-; CHECK-LARGECM64-NEXT:    li r4, 100
-; CHECK-LARGECM64-NEXT:    std r3, mySmallLocalExecTLS3[UL]@le+2000(r13)
-; CHECK-LARGECM64-NEXT:    li r3, 882
-; CHECK-LARGECM64-NEXT:    std r4, (mySmallLocalExecTLS4[UL]@le+6800)-65536(r13)
-; CHECK-LARGECM64-NEXT:    std r3, (mySmallLocalExecTLS5[TL]@le+8400)-65536(r13)
-; CHECK-LARGECM64-NEXT:    li r3, 1191
-; CHECK-LARGECM64-NEXT:    addi r1, r1, 48
-; CHECK-LARGECM64-NEXT:    ld r0, 16(r1)
-; CHECK-LARGECM64-NEXT:    mtlr r0
+; CHECK-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
+; CHECK-LARGECM64-NEXT:    li r4, 0
+; CHECK-LARGECM64-NEXT:    li r5, 23
+; CHECK-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
+; CHECK-LARGECM64-NEXT:    ori r4, r4, 53328
+; CHECK-LARGECM64-NEXT:    add r3, r13, r3
+; CHECK-LARGECM64-NEXT:    stdx r5, r3, r4
+; CHECK-LARGECM64-NEXT:    li r3, 55
+; CHECK-LARGECM64-NEXT:    li r4, 64
+; CHECK-LARGECM64-NEXT:    std r3, (mySmallTLS2[TL]@le+696)-65536(r13)
+; CHECK-LARGECM64-NEXT:    li r3, 142
+; CHECK-LARGECM64-NEXT:    std r4, (mySmallTLS3[TL]@le+20000)-131072(r13)
 ; CHECK-LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallLocalExecTLS6)
-  %arrayidx = getelementptr inbounds [60 x i64], ptr %0, i64 0, i64 53
-  store i64 212, ptr %arrayidx, align 8
-  %1 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallLocalExecTLS2)
-  %arrayidx1 = getelementptr inbounds [3000 x i64], ptr %1, i64 0, i64 150
-  store i64 203, ptr %arrayidx1, align 8
-  %2 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @MyTLSGDVar)
-  %arrayidx2 = getelementptr inbounds [800 x i64], ptr %2, i64 0, i64 55
-  store i64 44, ptr %arrayidx2, align 8
-  %3 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallLocalExecTLS3)
-  %arrayidx3 = getelementptr inbounds [3000 x i64], ptr %3, i64 0, i64 250
-  store i64 6, ptr %arrayidx3, align 8
-  %4 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallLocalExecTLS4)
-  %arrayidx4 = getelementptr inbounds [3000 x i64], ptr %4, i64 0, i64 850
-  store i64 100, ptr %arrayidx4, align 8
-  %5 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallLocalExecTLS5)
-  %arrayidx5 = getelementptr inbounds [3000 x i64], ptr %5, i64 0, i64 1050
-  store i64 882, ptr %arrayidx5, align 8
-  %6 = load i64, ptr %arrayidx1, align 8
-  %7 = load i64, ptr %arrayidx3, align 8
-  %8 = load i64, ptr %arrayidx4, align 8
-  %add = add i64 %6, 882
-  %add9 = add i64 %add, %7
-  %add11 = add i64 %add9, %8
-  ret i64 %add11
+  %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS)
+  %arrayidx = getelementptr inbounds i8, ptr %0, i32 53328
+  store i64 23, ptr %arrayidx, align 8
+  %1 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS2)
+  %arrayidx1 = getelementptr inbounds i8, ptr %1, i32 696
+  store i64 55, ptr %arrayidx1, align 8
+  %2 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS3)
+  %arrayidx2 = getelementptr inbounds i8, ptr %2, i32 20000
+  store i64 64, ptr %arrayidx2, align 8
+  %3 = load i64, ptr %arrayidx, align 8
+  %4 = load i64, ptr %arrayidx1, align 8
+  %add = add i64 %3, 64
+  %add6 = add i64 %add, %4
+  ret i64 %add6
 }
 
 ; Since this function does not have the 'aix-small-local-exec-tls` attribute,
@@ -103,93 +67,54 @@ entry:
 define i64 @StoreLargeAccess2() {
 ; CHECK-SMALLCM64-LABEL: StoreLargeAccess2:
 ; CHECK-SMALLCM64:       # %bb.0: # %entry
-; CHECK-SMALLCM64-NEXT:    mflr r0
-; CHECK-SMALLCM64-NEXT:    stdu r1, -48(r1)
-; CHECK-SMALLCM64-NEXT:    ld r3, L..C2(r2) # target-flags(ppc-tprel) @mySmallLocalExecTLS6
-; CHECK-SMALLCM64-NEXT:    li r4, 212
-; CHECK-SMALLCM64-NEXT:    std r0, 64(r1)
-; CHECK-SMALLCM64-NEXT:    add r3, r13, r3
-; CHECK-SMALLCM64-NEXT:    std r4, 424(r3)
-; CHECK-SMALLCM64-NEXT:    ld r4, L..C1(r2) # target-flags(ppc-tlsgd) @MyTLSGDVar
-; CHECK-SMALLCM64-NEXT:    li r3, 203
-; CHECK-SMALLCM64-NEXT:    std r3, mySmallLocalExecTLS2[UL]@le+1200(r13)
-; CHECK-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsgdm) @MyTLSGDVar
-; CHECK-SMALLCM64-NEXT:    bla .__tls_get_addr[PR]
-; CHECK-SMALLCM64-NEXT:    li r4, 44
-; CHECK-SMALLCM64-NEXT:    std r4, 440(r3)
-; CHECK-SMALLCM64-NEXT:    ld r3, L..C3(r2) # target-flags(ppc-tprel) @mySmallLocalExecTLS3
-; CHECK-SMALLCM64-NEXT:    li r4, 6
-; CHECK-SMALLCM64-NEXT:    add r3, r13, r3
-; CHECK-SMALLCM64-NEXT:    std r4, 2000(r3)
-; CHECK-SMALLCM64-NEXT:    li r3, 100
-; CHECK-SMALLCM64-NEXT:    li r4, 882
-; CHECK-SMALLCM64-NEXT:    std r3, mySmallLocalExecTLS4[UL]@le+6800(r13)
-; CHECK-SMALLCM64-NEXT:    std r4, mySmallLocalExecTLS5[TL]@le+8400(r13)
-; CHECK-SMALLCM64-NEXT:    li r3, 1191
-; CHECK-SMALLCM64-NEXT:    addi r1, r1, 48
-; CHECK-SMALLCM64-NEXT:    ld r0, 16(r1)
-; CHECK-SMALLCM64-NEXT:    mtlr r0
+; CHECK-SMALLCM64-NEXT:    ld r5, L..C0(r2) # target-flags(ppc-tprel) @mySmallTLS
+; CHECK-SMALLCM64-NEXT:    li r3, 0
+; CHECK-SMALLCM64-NEXT:    li r4, 23
+; CHECK-SMALLCM64-NEXT:    ori r3, r3, 53328
+; CHECK-SMALLCM64-NEXT:    add r5, r13, r5
+; CHECK-SMALLCM64-NEXT:    stdx r4, r5, r3
+; CHECK-SMALLCM64-NEXT:    ld r5, L..C1(r2) # target-flags(ppc-tprel) @mySmallTLS3
+; CHECK-SMALLCM64-NEXT:    li r3, 55
+; CHECK-SMALLCM64-NEXT:    li r4, 64
+; CHECK-SMALLCM64-NEXT:    std r3, mySmallTLS2[TL]@le+696(r13)
+; CHECK-SMALLCM64-NEXT:    li r3, 142
+; CHECK-SMALLCM64-NEXT:    add r5, r13, r5
+; CHECK-SMALLCM64-NEXT:    std r4, 20000(r5)
 ; CHECK-SMALLCM64-NEXT:    blr
 ;
 ; CHECK-LARGECM64-LABEL: StoreLargeAccess2:
 ; CHECK-LARGECM64:       # %bb.0: # %entry
-; CHECK-LARGECM64-NEXT:    mflr r0
-; CHECK-LARGECM64-NEXT:    stdu r1, -48(r1)
-; CHECK-LARGECM64-NEXT:    addis r3, L..C2@u(r2)
-; CHECK-LARGECM64-NEXT:    li r4, 212
-; CHECK-LARGECM64-NEXT:    std r0, 64(r1)
-; CHECK-LARGECM64-NEXT:    ld r3, L..C2@l(r3)
+; CHECK-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
+; CHECK-LARGECM64-NEXT:    li r4, 0
+; CHECK-LARGECM64-NEXT:    li r5, 23
+; CHECK-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
+; CHECK-LARGECM64-NEXT:    ori r4, r4, 53328
 ; CHECK-LARGECM64-NEXT:    add r3, r13, r3
-; CHECK-LARGECM64-NEXT:    std r4, 424(r3)
-; CHECK-LARGECM64-NEXT:    li r3, 203
-; CHECK-LARGECM64-NEXT:    addis r4, L..C0@u(r2)
-; CHECK-LARGECM64-NEXT:    ld r4, L..C0@l(r4)
-; CHECK-LARGECM64-NEXT:    std r3, mySmallLocalExecTLS2[UL]@le+1200(r13)
+; CHECK-LARGECM64-NEXT:    stdx r5, r3, r4
 ; CHECK-LARGECM64-NEXT:    addis r3, L..C1@u(r2)
+; CHECK-LARGECM64-NEXT:    li r4, 55
+; CHECK-LARGECM64-NEXT:    li r5, 64
 ; CHECK-LARGECM64-NEXT:    ld r3, L..C1@l(r3)
-; CHECK-LARGECM64-NEXT:    bla .__tls_get_addr[PR]
-; CHECK-LARGECM64-NEXT:    li r4, 44
-; CHECK-LARGECM64-NEXT:    std r4, 440(r3)
-; CHECK-LARGECM64-NEXT:    addis r3, L..C3@u(r2)
-; CHECK-LARGECM64-NEXT:    li r4, 6
-; CHECK-LARGECM64-NEXT:    ld r3, L..C3@l(r3)
+; CHECK-LARGECM64-NEXT:    std r4, mySmallTLS2[TL]@le+696(r13)
 ; CHECK-LARGECM64-NEXT:    add r3, r13, r3
-; CHECK-LARGECM64-NEXT:    std r4, 2000(r3)
-; CHECK-LARGECM64-NEXT:    li r3, 100
-; CHECK-LARGECM64-NEXT:    li r4, 882
-; CHECK-LARGECM64-NEXT:    std r3, mySmallLocalExecTLS4[UL]@le+6800(r13)
-; CHECK-LARGECM64-NEXT:    std r4, mySmallLocalExecTLS5[TL]@le+8400(r13)
-; CHECK-LARGECM64-NEXT:    li r3, 1191
-; CHECK-LARGECM64-NEXT:    addi r1, r1, 48
-; CHECK-LARGECM64-NEXT:    ld r0, 16(r1)
-; CHECK-LARGECM64-NEXT:    mtlr r0
+; CHECK-LARGECM64-NEXT:    std r5, 20000(r3)
+; CHECK-LARGECM64-NEXT:    li r3, 142
 ; CHECK-LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallLocalExecTLS6)
-  %arrayidx = getelementptr inbounds [60 x i64], ptr %0, i64 0, i64 53
-  store i64 212, ptr %arrayidx, align 8
-  %1 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallLocalExecTLS2)
-  %arrayidx1 = getelementptr inbounds [3000 x i64], ptr %1, i64 0, i64 150
-  store i64 203, ptr %arrayidx1, align 8
-  %2 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @MyTLSGDVar)
-  %arrayidx2 = getelementptr inbounds [800 x i64], ptr %2, i64 0, i64 55
-  store i64 44, ptr %arrayidx2, align 8
-  %3 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallLocalExecTLS3)
-  %arrayidx3 = getelementptr inbounds [3000 x i64], ptr %3, i64 0, i64 250
-  store i64 6, ptr %arrayidx3, align 8
-  %4 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallLocalExecTLS4)
-  %arrayidx4 = getelementptr inbounds [3000 x i64], ptr %4, i64 0, i64 850
-  store i64 100, ptr %arrayidx4, align 8
-  %5 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallLocalExecTLS5)
-  %arrayidx5 = getelementptr inbounds [3000 x i64], ptr %5, i64 0, i64 1050
-  store i64 882, ptr %arrayidx5, align 8
-  %6 = load i64, ptr %arrayidx1, align 8
-  %7 = load i64, ptr %arrayidx3, align 8
-  %8 = load i64, ptr %arrayidx4, align 8
-  %add = add i64 %6, 882
-  %add9 = add i64 %add, %7
-  %add11 = add i64 %add9, %8
-  ret i64 %add11
+  %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS)
+  %arrayidx = getelementptr inbounds i8, ptr %0, i32 53328
+  store i64 23, ptr %arrayidx, align 8
+  %1 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS2)
+  %arrayidx1 = getelementptr inbounds i8, ptr %1, i32 696
+  store i64 55, ptr %arrayidx1, align 8
+  %2 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS3)
+  %arrayidx2 = getelementptr inbounds i8, ptr %2, i32 20000
+  store i64 64, ptr %arrayidx2, align 8
+  %3 = load i64, ptr %arrayidx, align 8
+  %4 = load i64, ptr %arrayidx1, align 8
+  %add = add i64 %3, 64
+  %add6 = add i64 %add, %4
+  ret i64 %add6
 }
 
 attributes #0 = { "aix-small-tls" }
