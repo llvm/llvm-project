@@ -66,7 +66,10 @@ enum_targets_gen(
 llvm_target_asm_parsers = [
     t
     for t in llvm_targets
-    if glob(["lib/Target/{}/AsmParser/CMakeLists.txt".format(t)])
+    if glob(
+        ["lib/Target/{}/AsmParser/CMakeLists.txt".format(t)],
+        allow_empty = True,
+    )
 ]
 
 enum_targets_gen(
@@ -81,7 +84,10 @@ enum_targets_gen(
 llvm_target_disassemblers = [
     t
     for t in llvm_targets
-    if glob(["lib/Target/{}/Disassembler/CMakeLists.txt".format(t)])
+    if glob(
+        ["lib/Target/{}/Disassembler/CMakeLists.txt".format(t)],
+        allow_empty = True,
+    )
 ]
 
 enum_targets_gen(
@@ -96,7 +102,10 @@ enum_targets_gen(
 llvm_target_mcas = [
     t
     for t in llvm_targets
-    if glob(["lib/Target/{}/MCA/CMakeLists.txt".format(t)])
+    if glob(
+        ["lib/Target/{}/MCA/CMakeLists.txt".format(t)],
+        allow_empty = True,
+    )
 ]
 
 enum_targets_gen(
@@ -111,7 +120,10 @@ enum_targets_gen(
 llvm_target_exegesis = [
     t
     for t in llvm_targets
-    if glob(["tools/llvm-exegesis/lib/{}/CMakeLists.txt".format(t)])
+    if glob(
+        ["tools/llvm-exegesis/lib/{}/CMakeLists.txt".format(t)],
+        allow_empty = True,
+    )
 ]
 
 enum_targets_gen(
@@ -168,7 +180,6 @@ cc_library(
     name = "Demangle",
     srcs = glob([
         "lib/Demangle/*.cpp",
-        "lib/Demangle/*.h",
     ]),
     hdrs = glob([
         "include/llvm/Demangle/*.h",
@@ -203,7 +214,6 @@ cc_library(
         "include/llvm/Option/*.h",
     ]) + select({
         "@platforms//os:windows": glob([
-            "lib/Support/Windows/*.h",
             "lib/Support/Windows/*.inc",
         ]),
         "//conditions:default": glob([
@@ -315,7 +325,6 @@ cc_library(
     name = "LineEditor",
     srcs = glob([
         "lib/LineEditor/*.cpp",
-        "lib/LineEditor/*.h",
     ]),
     hdrs = glob(["include/llvm/LineEditor/*.h"]),
     copts = llvm_copts,
@@ -329,7 +338,6 @@ cc_library(
     name = "Option",
     srcs = glob([
         "lib/Option/*.cpp",
-        "lib/Option/*.h",
     ]),
     hdrs = glob(["include/llvm/Option/*.h"]),
     copts = llvm_copts,
@@ -376,8 +384,6 @@ cc_library(
     name = "BinaryFormat",
     srcs = glob([
         "lib/BinaryFormat/*.cpp",
-        "lib/BinaryFormat/*.def",
-        "lib/BinaryFormat/*.h",
     ]),
     hdrs = glob([
         "include/llvm/BinaryFormat/*.h",
@@ -409,7 +415,6 @@ cc_library(
     name = "DebugInfoMSF",
     srcs = glob([
         "lib/DebugInfo/MSF/*.cpp",
-        "lib/DebugInfo/MSF/*.h",
     ]),
     hdrs = glob(["include/llvm/DebugInfo/MSF/*.h"]),
     copts = llvm_copts,
@@ -420,7 +425,6 @@ cc_library(
     name = "DebugInfoBTF",
     srcs = glob([
         "lib/DebugInfo/BTF/*.cpp",
-        "lib/DebugInfo/BTF/*.h",
     ]),
     hdrs = glob(["include/llvm/DebugInfo/BTF/*.h"]) + [
         "include/llvm/DebugInfo/BTF/BTF.def",
@@ -437,7 +441,6 @@ cc_library(
     name = "DebugInfoCodeView",
     srcs = glob([
         "lib/DebugInfo/CodeView/*.cpp",
-        "lib/DebugInfo/CodeView/*.h",
     ]),
     hdrs = glob([
         "include/llvm/DebugInfo/CodeView/*.h",
@@ -480,9 +483,7 @@ cc_library(
     name = "DebugInfoPDB",
     srcs = glob([
         "lib/DebugInfo/PDB/*.cpp",
-        "lib/DebugInfo/PDB/*.h",
         "lib/DebugInfo/PDB/Native/*.cpp",
-        "lib/DebugInfo/PDB/Native/*.h",
     ]),
     hdrs = glob([
         "include/llvm/DebugInfo/PDB/*.h",
@@ -523,12 +524,9 @@ cc_library(
     name = "MC",
     srcs = glob([
         "lib/MC/*.cpp",
-        "lib/MC/*.h",
     ]),
     hdrs = glob([
         "include/llvm/MC/*.h",
-        "include/llvm/MC/*.def",
-        "include/llvm/MC/*.inc",
     ]),
     copts = llvm_copts,
     deps = [
@@ -545,7 +543,6 @@ cc_library(
     name = "DebugInfoDWARF",
     srcs = glob([
         "lib/DebugInfo/DWARF/*.cpp",
-        "lib/DebugInfo/DWARF/*.h",
     ]),
     hdrs = glob(["include/llvm/DebugInfo/DWARF/*.h"]),
     copts = llvm_copts,
@@ -563,7 +560,6 @@ cc_library(
     name = "DebugInfoGSYM",
     srcs = glob([
         "lib/DebugInfo/GSYM/*.cpp",
-        "lib/DebugInfo/GSYM/*.h",
     ]),
     hdrs = glob(["include/llvm/DebugInfo/GSYM/*.h"]),
     copts = llvm_copts,
@@ -580,7 +576,6 @@ cc_library(
     name = "Symbolize",
     srcs = glob([
         "lib/DebugInfo/Symbolize/*.cpp",
-        "lib/DebugInfo/Symbolize/*.h",
     ]),
     hdrs = glob([
         "include/llvm/DebugInfo/Symbolize/*.h",
@@ -658,7 +653,6 @@ cc_binary(
     srcs = glob(
         [
             "utils/TableGen/*.cpp",
-            "utils/TableGen/*.inc",
             "utils/TableGen/*.h",
             "utils/TableGen/GlobalISel/*.cpp",
             "utils/TableGen/GlobalISel/*.h",
@@ -821,7 +815,6 @@ cc_library(
     name = "BitstreamReader",
     srcs = glob([
         "lib/Bitstream/Reader/*.cpp",
-        "lib/Bitstream/Reader/*.h",
     ]),
     hdrs = [
         "include/llvm/Bitstream/BitCodeEnums.h",
@@ -836,9 +829,6 @@ cc_library(
 
 cc_library(
     name = "BitstreamWriter",
-    srcs = glob([
-        "lib/Bitstream/Writer/*.h",
-    ]),
     hdrs = [
         "include/llvm/Bitstream/BitCodeEnums.h",
         "include/llvm/Bitstream/BitCodes.h",
@@ -956,7 +946,6 @@ cc_library(
     name = "MCParser",
     srcs = glob([
         "lib/MC/MCParser/*.cpp",
-        "lib/MC/MCParser/*.h",
     ]),
     hdrs = glob(["include/llvm/MC/MCParser/*.h"]),
     copts = llvm_copts,
@@ -1002,9 +991,7 @@ cc_library(
     srcs = glob([
         "lib/TextAPI/BinaryReader/**/*.cpp",
     ]),
-    hdrs = ["include/llvm/TextAPI/DylibReader.h"] + glob(
-        ["lib/TextAPI/BinaryReader/**/*.h"],
-    ),
+    hdrs = ["include/llvm/TextAPI/DylibReader.h"],
     copts = llvm_copts,
     deps = [
         ":Object",
@@ -1067,7 +1054,6 @@ cc_library(
     name = "ObjectYAML",
     srcs = glob([
         "lib/ObjectYAML/*.cpp",
-        "lib/ObjectYAML/*.h",
     ]),
     hdrs = glob(["include/llvm/ObjectYAML/*.h"]),
     copts = llvm_copts,
@@ -1085,7 +1071,6 @@ cc_library(
     name = "ProfileData",
     srcs = glob([
         "lib/ProfileData/*.cpp",
-        "lib/ProfileData/*.h",
     ]),
     hdrs = glob([
         "include/llvm/ProfileData/*.h",
@@ -1109,7 +1094,6 @@ cc_library(
     name = "Coverage",
     srcs = glob([
         "lib/ProfileData/Coverage/*.cpp",
-        "lib/ProfileData/Coverage/*.h",
     ]),
     hdrs = glob(["include/llvm/ProfileData/Coverage/*.h"]),
     copts = llvm_copts,
@@ -1126,8 +1110,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Analysis/*.cpp",
-            "lib/Analysis/*.h",
-            "lib/Analysis/*.def",
         ],
     ),
     hdrs = glob(
@@ -1185,7 +1167,6 @@ cc_library(
     name = "Target",
     srcs = glob([
         "lib/Target/*.cpp",
-        "lib/Target/*.h",
     ]),
     hdrs = glob([
         "include/llvm/Target/*.h",
@@ -1221,14 +1202,11 @@ cc_library(
     name = "TargetParser",
     srcs = glob([
         "lib/TargetParser/*.cpp",
-        "lib/TargetParser/*.h",
     ]) + select({
         "@platforms//os:windows": glob([
-            "lib/TargetParser/Windows/*.h",
             "lib/TargetParser/Windows/*.inc",
         ]),
         "//conditions:default": glob([
-            "lib/TargetParser/Unix/*.h",
             "lib/TargetParser/Unix/*.inc",
         ]),
     }),
@@ -1252,7 +1230,6 @@ cc_library(
     name = "DWP",
     srcs = glob([
         "lib/DWP/*.cpp",
-        "lib/DWP/*.h",
     ]),
     hdrs = glob(["include/llvm/DWP/*.h"]),
     copts = llvm_copts,
@@ -1269,7 +1246,6 @@ cc_library(
     name = "TransformUtils",
     srcs = glob([
         "lib/Transforms/Utils/*.cpp",
-        "lib/Transforms/Utils/*.h",
     ]),
     hdrs = glob(["include/llvm/Transforms/Utils/*.h"]) + [
         "include/llvm/Transforms/Utils.h",
@@ -1390,7 +1366,6 @@ cc_library(
     name = "Scalar",
     srcs = glob([
         "lib/Transforms/Scalar/*.cpp",
-        "lib/Transforms/Scalar/*.h",
     ]),
     hdrs = glob(["include/llvm/Transforms/Scalar/*.h"]) + [
         "include/llvm/Transforms/Scalar.h",
@@ -1432,9 +1407,6 @@ cc_library(
 
 cc_library(
     name = "FrontendDebug",
-    srcs = glob([
-        "lib/Frontend/Debug/*.cpp",
-    ]),
     hdrs = glob([
         "include/llvm/Frontend/Debug/*.h",
     ]),
@@ -1530,8 +1502,6 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/Frontend/OpenMP/*.h",
-        "include/llvm/Frontend/OpenMP/OMP/*.h",
-        "include/llvm/Frontend/*.h",
     ]) + [
         "include/llvm/Frontend/OpenMP/OMP.h.inc",
         "include/llvm/Frontend/OpenMP/OMP.inc",
@@ -1591,9 +1561,7 @@ cc_library(
     ]) + [
         "include/llvm/Frontend/OpenACC/ACC.inc",
     ],
-    hdrs = glob([
-        "include/llvm/Frontend/OpenACC/*.h",
-    ]) + ["include/llvm/Frontend/OpenACC/ACC.h.inc"],
+    hdrs = ["include/llvm/Frontend/OpenACC/ACC.h.inc"],
     copts = llvm_copts,
     deps = [
         ":Analysis",
@@ -1607,7 +1575,6 @@ cc_library(
     name = "AsmParser",
     srcs = glob([
         "lib/AsmParser/*.cpp",
-        "lib/AsmParser/*.h",
     ]),
     hdrs = glob(["include/llvm/AsmParser/*.h"]),
     copts = llvm_copts,
@@ -1623,7 +1590,6 @@ cc_library(
     name = "IRPrinter",
     srcs = glob([
         "lib/IRPrinter/*.cpp",
-        "lib/IRPrinter/*.h",
     ]),
     hdrs = glob([
         "include/llvm/IRPrinter/*.h",
@@ -1640,7 +1606,6 @@ cc_library(
     name = "IRReader",
     srcs = glob([
         "lib/IRReader/*.cpp",
-        "lib/IRReader/*.h",
     ]),
     hdrs = glob([
         "include/llvm/IRReader/*.h",
@@ -1683,7 +1648,6 @@ cc_library(
     name = "IPO",
     srcs = glob([
         "lib/Transforms/IPO/*.cpp",
-        "lib/Transforms/IPO/*.h",
     ]),
     hdrs = glob([
         "include/llvm/Transforms/IPO/*.h",
@@ -1721,7 +1685,6 @@ cc_library(
     name = "CFGuard",
     srcs = glob([
         "lib/Transforms/CFGuard/*.cpp",
-        "lib/Transforms/CFGuard/*.h",
     ]),
     hdrs = ["include/llvm/Transforms/CFGuard.h"],
     copts = llvm_copts,
@@ -1736,7 +1699,6 @@ cc_library(
     name = "HipStdPar",
     srcs = glob([
         "lib/Transforms/HipStdPar/*.cpp",
-        "lib/Transforms/HipStdPar/*.h",
     ]),
     hdrs = ["include/llvm/Transforms/HipStdPar/HipStdPar.h"],
     copts = llvm_copts,
@@ -1826,7 +1788,6 @@ cc_library(
     copts = llvm_copts,
     textual_hdrs = glob([
         "include/llvm/CodeGen/**/*.def",
-        "include/llvm/CodeGen/**/*.inc",
     ]),
     deps = [
         ":AggressiveInstCombine",
@@ -2305,10 +2266,13 @@ gentbl(
         td_file = "lib/Target/" + target["name"] + "/" + target["short_name"] + ".td",
         td_srcs = [
             ":common_target_td_sources",
-        ] + glob([
-            "lib/Target/" + target["name"] + "/*.td",
-            "lib/Target/" + target["name"] + "/GISel/*.td",
-        ]),
+        ] + glob(
+            [
+                "lib/Target/" + target["name"] + "/*.td",
+                "lib/Target/" + target["name"] + "/GISel/*.td",
+            ],
+            allow_empty = True,
+        ),
         deps = target.get("tbl_deps", []),
     )],
     [cc_library(
@@ -2332,43 +2296,49 @@ gentbl(
     # a number of targets due to crisscrossing inclusion of headers.
     [cc_library(
         name = target["name"] + "UtilsAndDesc",
-        srcs = glob([
-            "lib/Target/" + target["name"] + "/MCTargetDesc/*.cpp",
-            "lib/Target/" + target["name"] + "/Utils/*.cpp",
+        srcs = glob(
+            [
+                "lib/Target/" + target["name"] + "/MCTargetDesc/*.cpp",
+                "lib/Target/" + target["name"] + "/Utils/*.cpp",
 
-            # We have to include these headers here as well as in the `hdrs`
-            # below to allow the `.cpp` files to use file-relative-inclusion to
-            # find them, even though consumers of this library use inclusion
-            # relative to the target with the `strip_includes_prefix` of this
-            # library. This mixture is likely incompatible with header modules.
-            "lib/Target/" + target["name"] + "/MCTargetDesc/*.h",
-            "lib/Target/" + target["name"] + "/Utils/*.h",
-        ]),
-        hdrs = glob([
-            "lib/Target/" + target["name"] + "/MCTargetDesc/*.h",
-            "lib/Target/" + target["name"] + "/Utils/*.h",
+                # We have to include these headers here as well as in the `hdrs`
+                # below to allow the `.cpp` files to use file-relative-inclusion to
+                # find them, even though consumers of this library use inclusion
+                # relative to the target with the `strip_includes_prefix` of this
+                # library. This mixture is likely incompatible with header modules.
+                "lib/Target/" + target["name"] + "/MCTargetDesc/*.h",
+                "lib/Target/" + target["name"] + "/Utils/*.h",
+            ],
+            allow_empty = True,
+        ),
+        hdrs = glob(
+            [
+                "lib/Target/" + target["name"] + "/MCTargetDesc/*.h",
+                "lib/Target/" + target["name"] + "/Utils/*.h",
 
-            # This a bit of a hack to allow us to expose common, internal
-            # target header files to other libraries within the target via
-            # target-relative includes. This usage of headers is inherently
-            # non-modular as there is a mixture of target-relative inclusion
-            # using this rule and file-relative inclusion using the repeated
-            # listing of these headers in the `srcs` of subsequent rules.
-            "lib/Target/" + target["name"] + "/*.h",
+                # This a bit of a hack to allow us to expose common, internal
+                # target header files to other libraries within the target via
+                # target-relative includes. This usage of headers is inherently
+                # non-modular as there is a mixture of target-relative inclusion
+                # using this rule and file-relative inclusion using the repeated
+                # listing of these headers in the `srcs` of subsequent rules.
+                "lib/Target/" + target["name"] + "/*.h",
 
-            # FIXME: The entries below should be `textual_hdrs` instead of
-            # `hdrs`, but unfortunately that doesn't work with
-            # `strip_include_prefix`:
-            # https://github.com/bazelbuild/bazel/issues/12424
-            #
-            # Once that issue is fixed and released, we can switch this to
-            # `textual_hdrs` and remove the feature disabling the various Bazel
-            # features (both current and under-development) that motivated the
-            # distinction between these two.
-            "lib/Target/" + target["name"] + "/*.def",
-            "lib/Target/" + target["name"] + "/*.inc",
-            "lib/Target/" + target["name"] + "/MCTargetDesc/*.def",
-        ]),
+                # FIXME: The entries below should be `textual_hdrs` instead of
+                # `hdrs`, but unfortunately that doesn't work with
+                # `strip_include_prefix`:
+                # https://github.com/bazelbuild/bazel/issues/12424
+                #
+                # Once that issue is fixed and released, we can switch this to
+                # `textual_hdrs` and remove the feature disabling the various Bazel
+                # features (both current and under-development) that motivated the
+                # distinction between these two.
+                "lib/Target/" + target["name"] + "/*.def",
+                "lib/Target/" + target["name"] + "/*.inc",
+                "lib/Target/" + target["name"] + "/MCTargetDesc/*.def",
+            ],
+            allow_empty = True,
+        ),
         copts = llvm_copts,
         features = [
             "-parse_headers",
@@ -2392,20 +2362,26 @@ gentbl(
     )],
     [cc_library(
         name = target["name"] + "CodeGen",
-        srcs = glob([
-            "lib/Target/" + target["name"] + "/GISel/*.cpp",
-            "lib/Target/" + target["name"] + "/GISel/*.h",
-            "lib/Target/" + target["name"] + "/*.cpp",
-            "lib/Target/" + target["name"] + "/*.h",
-        ]),
+        srcs = glob(
+            [
+                "lib/Target/" + target["name"] + "/GISel/*.cpp",
+                "lib/Target/" + target["name"] + "/GISel/*.h",
+                "lib/Target/" + target["name"] + "/*.cpp",
+                "lib/Target/" + target["name"] + "/*.h",
+            ],
+            allow_empty = True,
+        ),
         hdrs = ["lib/Target/" + target["name"] + "/" + target["short_name"] + ".h"],
         copts = llvm_copts,
         features = ["-layering_check"],
         strip_include_prefix = "lib/Target/" + target["name"],
-        textual_hdrs = glob([
-            "lib/Target/" + target["name"] + "/*.def",
-            "lib/Target/" + target["name"] + "/*.inc",
-        ]),
+        textual_hdrs = glob(
+            [
+                "lib/Target/" + target["name"] + "/*.def",
+                "lib/Target/" + target["name"] + "/*.inc",
+            ],
+            allow_empty = True,
+        ),
         deps = [
             ":Analysis",
             ":BinaryFormat",
@@ -2430,10 +2406,13 @@ gentbl(
     )],
     [cc_library(
         name = target["name"] + "AsmParser",
-        srcs = glob([
-            "lib/Target/" + target["name"] + "/AsmParser/*.cpp",
-            "lib/Target/" + target["name"] + "/AsmParser/*.h",
-        ]),
+        srcs = glob(
+            [
+                "lib/Target/" + target["name"] + "/AsmParser/*.cpp",
+                "lib/Target/" + target["name"] + "/AsmParser/*.h",
+            ],
+            allow_empty = True,
+        ),
         copts = llvm_copts,
         deps = [
             ":BinaryFormat",
@@ -2464,9 +2443,12 @@ gentbl(
         # `textual_hdrs` and remove the feature disabling the various Bazel
         # features (both current and under-development) that motivated the
         # distinction between these two.
-        hdrs = glob([
-            "lib/Target/" + target["name"] + "/Disassembler/*.h",
-        ]),
+        hdrs = glob(
+            [
+                "lib/Target/" + target["name"] + "/Disassembler/*.h",
+            ],
+            allow_empty = True,
+        ),
         features = [
             "-parse_headers",
             "-header_modules",
@@ -2475,11 +2457,14 @@ gentbl(
     )],
     [cc_library(
         name = target["name"] + "Disassembler",
-        srcs = glob([
-            "lib/Target/" + target["name"] + "/Disassembler/*.cpp",
-            "lib/Target/" + target["name"] + "/Disassembler/*.c",
-            "lib/Target/" + target["name"] + "/Disassembler/*.h",
-        ]),
+        srcs = glob(
+            [
+                "lib/Target/" + target["name"] + "/Disassembler/*.cpp",
+                "lib/Target/" + target["name"] + "/Disassembler/*.c",
+                "lib/Target/" + target["name"] + "/Disassembler/*.h",
+            ],
+            allow_empty = True,
+        ),
         copts = llvm_copts,
         features = ["-layering_check"],
         deps = [
@@ -2497,11 +2482,14 @@ gentbl(
     )],
     [cc_library(
         name = target["name"] + "TargetMCA",
-        srcs = glob([
-            "lib/Target/" + target["name"] + "/MCA/*.cpp",
-            "lib/Target/" + target["name"] + "/MCA/*.c",
-            "lib/Target/" + target["name"] + "/MCA/*.h",
-        ]),
+        srcs = glob(
+            [
+                "lib/Target/" + target["name"] + "/MCA/*.cpp",
+                "lib/Target/" + target["name"] + "/MCA/*.c",
+                "lib/Target/" + target["name"] + "/MCA/*.h",
+            ],
+            allow_empty = True,
+        ),
         copts = llvm_copts,
         features = ["-layering_check"],
         deps = [
@@ -2560,27 +2548,9 @@ cc_library(
 )
 
 cc_library(
-    name = "MLPolicies",
-    srcs = glob([
-        "lib/Analysis/ML/*.cpp",
-        "lib/Analysis/ML/*.h",
-    ]),
-    hdrs = glob([
-        "include/llvm/Analysis/ML/*.h",
-    ]),
-    copts = llvm_copts,
-    deps = [
-        ":Analysis",
-        ":Core",
-        ":Support",
-    ],
-)
-
-cc_library(
     name = "Passes",
     srcs = glob([
         "lib/Passes/*.cpp",
-        "lib/Passes/*.h",
     ]),
     hdrs = glob([
         "include/llvm/Passes/*.h",
@@ -2601,7 +2571,6 @@ cc_library(
         ":InstCombine",
         ":Instrumentation",
         ":MC",
-        ":MLPolicies",
         ":ObjCARC",
         ":Scalar",
         ":Support",
@@ -2618,7 +2587,6 @@ cc_library(
     name = "LTO",
     srcs = glob([
         "lib/LTO/*.cpp",
-        "lib/LTO/*.h",
     ]),
     hdrs = glob([
         "include/llvm/LTO/*.h",
@@ -2658,7 +2626,6 @@ cc_library(
     name = "ExecutionEngine",
     srcs = glob([
         "lib/ExecutionEngine/*.cpp",
-        "lib/ExecutionEngine/*.h",
         "lib/ExecutionEngine/RuntimeDyld/*.cpp",
         "lib/ExecutionEngine/RuntimeDyld/*.h",
         "lib/ExecutionEngine/RuntimeDyld/Targets/*.cpp",
@@ -2772,11 +2739,9 @@ cc_library(
     name = "OrcJIT",
     srcs = glob([
         "lib/ExecutionEngine/Orc/*.cpp",
-        "lib/ExecutionEngine/Orc/*.h",
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/*.h",
-        "include/llvm/ExecutionEngine/Orc/RPC/*.h",
     ]) + [
         "include/llvm-c/LLJIT.h",
         "include/llvm-c/Orc.h",
@@ -2900,7 +2865,6 @@ cc_library(
     name = "DWARFLinker",
     srcs = glob([
         "lib/DWARFLinker/Classic/*.cpp",
-        "lib/DWARFLinker/Classic/*.h",
     ]),
     hdrs = glob(["include/llvm/DWARFLinker/Classic/*.h"]),
     copts = llvm_copts,
@@ -2921,7 +2885,6 @@ cc_library(
     name = "DWARFLinkerBase",
     srcs = glob([
         "lib/DWARFLinker/*.cpp",
-        "lib/DWARFLinker/*.h",
     ]),
     hdrs = glob(["include/llvm/DWARFLinker/*.h"]),
     copts = llvm_copts,
@@ -3012,7 +2975,6 @@ cc_library(
     name = "InterfaceStub",
     srcs = glob([
         "lib/InterfaceStub/*.cpp",
-        "lib/InterfaceStub/*.h",
     ]),
     hdrs = glob([
         "include/llvm/InterfaceStub/*.h",
@@ -3063,7 +3025,6 @@ cc_library(
     name = "MCA",
     srcs = glob([
         "lib/MCA/**/*.cpp",
-        "lib/MCA/**/*.h",
     ]),
     hdrs = glob([
         "include/llvm/MCA/**/*.h",
@@ -3090,7 +3051,6 @@ cc_library(
     name = "XRay",
     srcs = glob([
         "lib/XRay/*.cpp",
-        "lib/XRay/*.h",
     ]),
     hdrs = glob(["include/llvm/XRay/*.h"]),
     copts = llvm_copts,
@@ -3147,21 +3107,24 @@ cc_library(
 
 cc_library(
     name = "Exegesis",
-    srcs = glob([
-        "tools/llvm-exegesis/lib/*.cpp",
-        # We have to include these headers here as well as in the `hdrs` below
-        # to allow the `.cpp` files to use file-relative-inclusion to find
-        # them, even though consumers of this library use inclusion relative to
-        # `tools/llvm-exegesis/lib` with the `strip_includes_prefix` of this
-        # library. This mixture appears to be incompatible with header modules.
-        "tools/llvm-exegesis/lib/*.h",
-    ] + [
-        "tools/llvm-exegesis/lib/{}/*.cpp".format(t)
-        for t in llvm_target_exegesis
-    ] + [
-        "tools/llvm-exegesis/lib/{}/*.h".format(t)
-        for t in llvm_target_exegesis
-    ]),
+    srcs = glob(
+        [
+            "tools/llvm-exegesis/lib/*.cpp",
+            # We have to include these headers here as well as in the `hdrs` below
+            # to allow the `.cpp` files to use file-relative-inclusion to find
+            # them, even though consumers of this library use inclusion relative to
+            # `tools/llvm-exegesis/lib` with the `strip_includes_prefix` of this
+            # library. This mixture appears to be incompatible with header modules.
+            "tools/llvm-exegesis/lib/*.h",
+        ] + [
+            "tools/llvm-exegesis/lib/{}/*.cpp".format(t)
+            for t in llvm_target_exegesis
+        ] + [
+            "tools/llvm-exegesis/lib/{}/*.h".format(t)
+            for t in llvm_target_exegesis
+        ],
+        allow_empty = True,
+    ),
     hdrs = glob(["tools/llvm-exegesis/lib/*.h"]),
     copts = llvm_copts,
     features = [
@@ -3335,7 +3298,6 @@ cc_binary(
     name = "llvm-ar",
     srcs = glob([
         "tools/llvm-ar/*.cpp",
-        "tools/llvm-ar/*.h",
     ]) + ["llvm-ar-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
@@ -3373,7 +3335,6 @@ cc_binary(
     name = "llvm-as",
     srcs = glob([
         "tools/llvm-as/*.cpp",
-        "tools/llvm-as/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -3390,7 +3351,6 @@ cc_binary(
     name = "llvm-bcanalyzer",
     srcs = glob([
         "tools/llvm-bcanalyzer/*.cpp",
-        "tools/llvm-bcanalyzer/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -3477,7 +3437,6 @@ cc_binary(
     name = "llvm-cvtres",
     srcs = glob([
         "tools/llvm-cvtres/*.cpp",
-        "tools/llvm-cvtres/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -3511,7 +3470,6 @@ cc_binary(
     name = "llvm-cxxmap",
     srcs = glob([
         "tools/llvm-cxxmap/*.cpp",
-        "tools/llvm-cxxmap/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -3546,7 +3504,6 @@ cc_binary(
     name = "llvm-cxxfilt",
     srcs = glob([
         "tools/llvm-cxxfilt/*.cpp",
-        "tools/llvm-cxxfilt/*.h",
     ]) + ["llvm-cxxfilt-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
@@ -3579,7 +3536,6 @@ cc_binary(
     name = "llvm-debuginfod-find",
     srcs = glob([
         "tools/llvm-debuginfod-find/*.cpp",
-        "tools/llvm-debuginfod-find/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -3596,7 +3552,6 @@ cc_binary(
     name = "llvm-dis",
     srcs = glob([
         "tools/llvm-dis/*.cpp",
-        "tools/llvm-dis/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -3691,7 +3646,6 @@ cc_binary(
     name = "llvm-dwp",
     srcs = glob([
         "tools/llvm-dwp/*.cpp",
-        "tools/llvm-dwp/*.h",
     ]) + ["llvm-dwp-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
@@ -3731,7 +3685,6 @@ cc_binary(
     name = "llvm-extract",
     srcs = glob([
         "tools/llvm-extract/*.cpp",
-        "tools/llvm-extract/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -3773,7 +3726,6 @@ cc_binary(
     name = "llvm-gsymutil",
     srcs = glob([
         "tools/llvm-gsymutil/*.cpp",
-        "tools/llvm-gsymutil/*.h",
     ]) + ["llvm-gsymutil-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
@@ -3925,7 +3877,6 @@ cc_binary(
     name = "llvm-link",
     srcs = glob([
         "tools/llvm-link/*.cpp",
-        "tools/llvm-link/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -3990,7 +3941,6 @@ cc_binary(
     name = "llvm-lto",
     srcs = glob([
         "tools/llvm-lto/*.cpp",
-        "tools/llvm-lto/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -4013,7 +3963,6 @@ cc_binary(
     name = "llvm-lto2",
     srcs = glob([
         "tools/llvm-lto2/*.cpp",
-        "tools/llvm-lto2/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -4159,7 +4108,6 @@ cc_binary(
     name = "llvm-mt",
     srcs = glob([
         "tools/llvm-mt/*.cpp",
-        "tools/llvm-mt/*.h",
     ]) + ["llvm-mt-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
@@ -4196,7 +4144,6 @@ cc_binary(
     name = "llvm-nm",
     srcs = glob([
         "tools/llvm-nm/*.cpp",
-        "tools/llvm-nm/*.h",
     ]) + ["llvm-nm-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
@@ -4280,7 +4227,6 @@ cc_binary(
     name = "llvm-stress",
     srcs = glob([
         "tools/llvm-stress/*.cpp",
-        "tools/llvm-stress/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -4457,7 +4403,6 @@ cc_binary(
     name = "llvm-profdata",
     srcs = glob([
         "tools/llvm-profdata/*.cpp",
-        "tools/llvm-profdata/*.h",
     ]) + ["llvm-profdata-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
@@ -4641,7 +4586,6 @@ cc_binary(
     name = "llvm-rtdyld",
     srcs = glob([
         "tools/llvm-rtdyld/*.cpp",
-        "tools/llvm-rtdyld/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -4683,7 +4627,6 @@ cc_binary(
     name = "llvm-size",
     srcs = glob([
         "tools/llvm-size/*.cpp",
-        "tools/llvm-size/*.h",
     ]) + ["llvm-size-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
@@ -4699,7 +4642,6 @@ cc_binary(
     name = "llvm-split",
     srcs = glob([
         "tools/llvm-split/*.cpp",
-        "tools/llvm-split/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -4729,7 +4671,6 @@ cc_binary(
     name = "llvm-strings",
     srcs = glob([
         "tools/llvm-strings/*.cpp",
-        "tools/llvm-strings/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -4766,7 +4707,6 @@ cc_binary(
     name = "llvm-symbolizer",
     srcs = glob([
         "tools/llvm-symbolizer/*.cpp",
-        "tools/llvm-symbolizer/*.h",
     ]) + ["llvm-symbolizer-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
@@ -4792,7 +4732,6 @@ cc_binary(
     name = "llvm-undname",
     srcs = glob([
         "tools/llvm-undname/*.cpp",
-        "tools/llvm-undname/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -4806,7 +4745,6 @@ cc_binary(
     name = "llvm-xray",
     srcs = glob([
         "tools/llvm-xray/*.cpp",
-        "tools/llvm-xray/*.cc",
         "tools/llvm-xray/*.h",
     ]),
     copts = llvm_copts,
@@ -4889,7 +4827,6 @@ cc_binary(
     name = "sancov",
     srcs = glob([
         "tools/sancov/*.cpp",
-        "tools/sancov/*.h",
     ]) + ["sancov-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
@@ -4912,7 +4849,6 @@ cc_binary(
     name = "sanstats",
     srcs = glob([
         "tools/sanstats/*.cpp",
-        "tools/sanstats/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -4927,7 +4863,6 @@ cc_binary(
     name = "split-file",
     srcs = glob([
         "utils/split-file/*.cpp",
-        "utils/split-file/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -5023,7 +4958,6 @@ cc_library(
     testonly = True,
     srcs = glob([
         "lib/Testing/Support/*.cpp",
-        "lib/Testing/Support/*.h",
     ]),
     hdrs = glob(["include/llvm/Testing/Support/*.h"]),
     copts = llvm_copts,
@@ -5052,7 +4986,6 @@ cc_binary(
     testonly = True,
     srcs = glob([
         "utils/FileCheck/*.cpp",
-        "utils/FileCheck/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -5098,7 +5031,6 @@ cc_binary(
     testonly = True,
     srcs = glob([
         "utils/count/*.c",
-        "utils/count/*.h",
     ]),
     stamp = 0,
     deps = [":Support"],
@@ -5109,7 +5041,6 @@ cc_binary(
     testonly = True,
     srcs = glob([
         "tools/lli/ChildTarget/*.cpp",
-        "tools/lli/ChildTarget/*.h",
     ]),
     copts = llvm_copts,
     # The tests load code into this binary that expect to see symbols
@@ -5176,7 +5107,6 @@ cc_binary(
     testonly = True,
     srcs = glob([
         "tools/llvm-diff/*.cpp",
-        "tools/llvm-diff/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -5194,7 +5124,6 @@ cc_binary(
     testonly = True,
     srcs = glob([
         "tools/llvm-isel-fuzzer/*.cpp",
-        "tools/llvm-isel-fuzzer/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -5240,7 +5169,6 @@ cc_binary(
     testonly = True,
     srcs = glob([
         "utils/not/*.cpp",
-        "utils/not/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -5320,7 +5248,6 @@ cc_binary(
     testonly = True,
     srcs = glob([
         "tools/llvm-tli-checker/*.cpp",
-        "tools/llvm-tli-checker/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -5367,7 +5294,6 @@ cc_binary(
     name = "verify-uselistorder",
     srcs = glob([
         "tools/verify-uselistorder/*.cpp",
-        "tools/verify-uselistorder/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -5387,7 +5313,6 @@ cc_binary(
     testonly = True,
     srcs = glob([
         "tools/yaml2obj/*.cpp",
-        "tools/yaml2obj/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,

@@ -955,16 +955,6 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   SubRegIdxSeqs.emit(OS, printSubRegIndex);
   OS << "};\n\n";
 
-  // Emit the table of sub-register index sizes.
-  OS << "extern const MCRegisterInfo::SubRegCoveredBits " << TargetName
-     << "SubRegIdxRanges[] = {\n";
-  OS << "  { " << (uint16_t)-1 << ", " << (uint16_t)-1 << " },\n";
-  for (const auto &Idx : SubRegIndices) {
-    OS << "  { " << Idx.Offset << ", " << Idx.Size << " },\t// "
-       << Idx.getName() << "\n";
-  }
-  OS << "};\n\n";
-
   // Emit the string table.
   RegStrings.layout();
   RegStrings.emitStringLiteralDef(OS, Twine("extern const char ") + TargetName +
@@ -1101,8 +1091,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
      << TargetName << "LaneMaskLists, " << TargetName << "RegStrings, "
      << TargetName << "RegClassStrings, " << TargetName << "SubRegIdxLists, "
      << (std::distance(SubRegIndices.begin(), SubRegIndices.end()) + 1) << ",\n"
-     << TargetName << "SubRegIdxRanges, " << TargetName
-     << "RegEncodingTable);\n\n";
+     << TargetName << "RegEncodingTable);\n\n";
 
   EmitRegMapping(OS, Regs, false);
 
@@ -1252,6 +1241,16 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
     OS << "\", \"";
   }
   OS << "\" };\n\n";
+
+  // Emit the table of sub-register index sizes.
+  OS << "static const TargetRegisterInfo::SubRegCoveredBits "
+        "SubRegIdxRangeTable[] = {\n";
+  OS << "  { " << (uint16_t)-1 << ", " << (uint16_t)-1 << " },\n";
+  for (const auto &Idx : SubRegIndices) {
+    OS << "  { " << Idx.Offset << ", " << Idx.Size << " },\t// "
+       << Idx.getName() << "\n";
+  }
+  OS << "};\n\n";
 
   // Emit SubRegIndex lane masks, including 0.
   OS << "\nstatic const LaneBitmask SubRegIndexLaneMaskTable[] = {\n  "
@@ -1634,8 +1633,6 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   OS << "extern const char " << TargetName << "RegClassStrings[];\n";
   OS << "extern const MCPhysReg " << TargetName << "RegUnitRoots[][2];\n";
   OS << "extern const uint16_t " << TargetName << "SubRegIdxLists[];\n";
-  OS << "extern const MCRegisterInfo::SubRegCoveredBits " << TargetName
-     << "SubRegIdxRanges[];\n";
   OS << "extern const uint16_t " << TargetName << "RegEncodingTable[];\n";
 
   EmitRegMappingTables(OS, Regs, true);
@@ -1646,7 +1643,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
         "      unsigned PC, unsigned HwMode)\n"
      << "  : TargetRegisterInfo(&" << TargetName << "RegInfoDesc"
      << ", RegisterClasses, RegisterClasses+" << RegisterClasses.size() << ",\n"
-     << "             SubRegIndexNameTable, SubRegIndexLaneMaskTable,\n"
+     << "             SubRegIndexNameTable, SubRegIdxRangeTable, "
+        "SubRegIndexLaneMaskTable,\n"
      << "             ";
   printMask(OS, RegBank.CoveringLanes);
   OS << ", RegClassInfos, VTLists, HwMode) {\n"
@@ -1661,7 +1659,6 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
      << "                     " << TargetName << "RegClassStrings,\n"
      << "                     " << TargetName << "SubRegIdxLists,\n"
      << "                     " << SubRegIndicesSize + 1 << ",\n"
-     << "                     " << TargetName << "SubRegIdxRanges,\n"
      << "                     " << TargetName << "RegEncodingTable);\n\n";
 
   EmitRegMapping(OS, Regs, true);

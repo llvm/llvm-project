@@ -325,9 +325,7 @@ cc_library(
         "lib/IR/*.cpp",
         "lib/IR/*.h",
         "lib/IR/PDL/*.cpp",
-        "lib/Bytecode/Reader/*.h",
         "lib/Bytecode/Writer/*.h",
-        "lib/Bytecode/*.h",
     ]) + [
         "include/mlir/IR/PDLPatternMatch.h.inc",
         "include/mlir/Interfaces/CallInterfaces.h",
@@ -1630,7 +1628,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/AMDGPU/Transforms/*.cpp",
-            "lib/Dialect/AMDGPU/Transforms/*.h",
         ],
     ),
     hdrs = glob(["include/mlir/Dialect/AMDGPU/Transforms/*.h"]),
@@ -1769,7 +1766,6 @@ cc_library(
     name = "TargetCpp",
     srcs = glob([
         "lib/Target/Cpp/*.cpp",
-        "lib/Target/Cpp/*.h",
     ]),
     hdrs = glob(["include/mlir/Target/Cpp/*.h"]),
     deps = [
@@ -1968,7 +1964,6 @@ cc_library(
     name = "ArmNeon2dToIntr",
     srcs = glob([
         "lib/Conversion/ArmNeon2dToIntr/*.cpp",
-        "lib/Conversion/ArmNeon2dToIntr/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/ArmNeon2dToIntr/*.h",
@@ -2840,7 +2835,6 @@ cc_library(
     name = "SCFTransforms",
     srcs = glob([
         "lib/Dialect/SCF/Transforms/*.cpp",
-        "lib/Dialect/SCF/Transforms/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Dialect/SCF/Transforms/*.h",
@@ -3189,7 +3183,6 @@ cc_library(
     name = "SparseTensorTransforms",
     srcs = glob([
         "lib/Dialect/SparseTensor/Transforms/*.cpp",
-        "lib/Dialect/SparseTensor/Transforms/*.h",
         "lib/Dialect/SparseTensor/Transforms/Utils/*.cpp",
         "lib/Dialect/SparseTensor/Transforms/Utils/*.h",
     ]),
@@ -3829,7 +3822,6 @@ cc_library(
     name = "Dialect",
     srcs = glob([
         "lib/Dialect/*.cpp",
-        "lib/Dialect/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Dialect/*.h",
@@ -3871,7 +3863,6 @@ cc_library(
     name = "DialectUtils",
     srcs = glob([
         "lib/Dialect/Utils/*.cpp",
-        "lib/Dialect/Utils/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Dialect/Utils/*.h",
@@ -3890,7 +3881,6 @@ cc_library(
     name = "AffineDialect",
     srcs = glob([
         "lib/Dialect/Affine/IR/*.cpp",
-        "lib/Dialect/Affine/IR/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Dialect/Affine/IR/*.h",
@@ -4012,7 +4002,6 @@ cc_library(
     name = "AffineAnalysis",
     srcs = glob([
         "lib/Dialect/Affine/Analysis/*.cpp",
-        "lib/Dialect/Affine/Analysis/*.h",
     ]),
     hdrs = glob(["include/mlir/Dialect/Affine/Analysis/*.h"]),
     includes = ["include"],
@@ -4036,7 +4025,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/Affine/Utils/*.cpp",
-            "lib/Dialect/Affine/Utils/*.h",
         ],
     ),
     hdrs = [
@@ -4083,7 +4071,6 @@ cc_library(
     name = "AffineTransforms",
     srcs = glob([
         "lib/Dialect/Affine/Transforms/*.cpp",
-        "lib/Dialect/Affine/Transforms/*.h",
     ]),
     hdrs = [
         "include/mlir/Dialect/Affine/Passes.h",
@@ -4191,7 +4178,6 @@ cc_library(
         ":MemRefToSPIRV",
         ":NVGPUToNVVM",
         ":NVVMToLLVM",
-        ":OpenACCToLLVM",
         ":OpenACCToSCF",
         ":OpenMPToLLVM",
         ":PDLToPDLInterp",
@@ -4224,7 +4210,6 @@ cc_library(
     name = "AsyncToLLVM",
     srcs = glob([
         "lib/Conversion/AsyncToLLVM/*.cpp",
-        "lib/Conversion/AsyncToLLVM/*.h",
     ]),
     hdrs = glob(["include/mlir/Conversion/AsyncToLLVM/*.h"]),
     includes = ["include"],
@@ -4250,7 +4235,6 @@ cc_library(
     name = "AffineToStandard",
     srcs = glob([
         "lib/Conversion/AffineToStandard/*.cpp",
-        "lib/Conversion/AffineToStandard/*.h",
     ]),
     hdrs = glob(["include/mlir/Conversion/AffineToStandard/*.h"]),
     includes = ["include"],
@@ -4271,32 +4255,11 @@ cc_library(
     ],
 )
 
-# SDBM dialect only contains attribute components that can be constructed given
-# a dialect object, so whenever it is used it must also be registered. Therefore
-# we don't split out the registration library for it.
-cc_library(
-    name = "SDBM",
-    srcs = glob([
-        "lib/Dialect/SDBM/*.cpp",
-        "lib/Dialect/SDBM/*.h",
-    ]),
-    hdrs = glob([
-        "include/mlir/Dialect/SDBM/*.h",
-    ]),
-    includes = ["include"],
-    deps = [
-        ":IR",
-        ":Support",
-        "//llvm:Support",
-    ],
-)
-
 cc_library(
     name = "SCFDialect",
     srcs = glob(
         [
             "lib/Dialect/SCF/IR/*.cpp",
-            "lib/Dialect/SCF/IR/*.h",
         ],
     ),
     hdrs = glob(
@@ -4605,7 +4568,6 @@ cc_library(
     name = "ShapeToStandard",
     srcs = glob([
         "lib/Conversion/ShapeToStandard/*.cpp",
-        "lib/Conversion/ShapeToStandard/*.h",
     ]),
     hdrs = ["include/mlir/Conversion/ShapeToStandard/ShapeToStandard.h"],
     includes = ["include"],
@@ -4645,7 +4607,6 @@ cc_library(
     name = "ShapeTransforms",
     srcs = glob([
         "lib/Dialect/Shape/Transforms/*.cpp",
-        "lib/Dialect/Shape/Transforms/*.h",
     ]),
     hdrs = [
         "include/mlir/Dialect/Shape/Analysis/ShapeMappingAnalysis.h",
@@ -4728,7 +4689,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/ControlFlow/IR/*.cpp",
-            "lib/Dialect/ControlFlow/IR/*.h",
         ],
     ),
     hdrs = glob([
@@ -4774,13 +4734,10 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/Func/IR/*.cpp",
-            "lib/Dialect/Func/IR/*.h",
-            "lib/Dialect/Func/Utils/*.cpp",
         ],
     ),
     hdrs = glob([
         "include/mlir/Dialect/Func/IR/*.h",
-        "include/mlir/Dialect/Func/Utils/*.h",
     ]),
     includes = ["include"],
     deps = [
@@ -4931,7 +4888,6 @@ cc_library(
     name = "FuncTransforms",
     srcs = glob([
         "lib/Dialect/Func/Transforms/*.cpp",
-        "lib/Dialect/Func/Transforms/*.h",
     ]),
     hdrs = glob(["include/mlir/Dialect/Func/Transforms/*.h"]),
     includes = ["include"],
@@ -5068,7 +5024,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/Vector/Transforms/*.cpp",
-            "lib/Dialect/Vector/Transforms/*.h",
         ],
     ),
     hdrs = glob([
@@ -5135,7 +5090,6 @@ cc_library(
     name = "Support",
     srcs = glob([
         "lib/Support/*.cpp",
-        "lib/Support/*.h",
     ]),
     hdrs = glob(["include/mlir/Support/*.h"]),
     includes = ["include"],
@@ -5149,11 +5103,8 @@ cc_library(
     name = "Debug",
     srcs = glob([
         "lib/Debug/*.cpp",
-        "lib/Debug/*.h",
         "lib/Debug/BreakpointManagers/*.cpp",
-        "lib/Debug/BreakpointManagers/*.h",
         "lib/Debug/Observers/*.cpp",
-        "lib/Debug/Observers/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Debug/*.h",
@@ -5195,8 +5146,6 @@ cc_library(
         [
             "lib/Tools/mlir-lsp-server/*.cpp",
             "lib/Tools/mlir-lsp-server/*.h",
-            "lib/Tools/mlir-lsp-server/lsp/*.cpp",
-            "lib/Tools/mlir-lsp-server/lsp/*.h",
         ],
     ),
     hdrs = glob(
@@ -5270,8 +5219,6 @@ cc_library(
     name = "BytecodeReader",
     srcs = glob([
         "lib/Bytecode/Reader/*.cpp",
-        "lib/Bytecode/Reader/*.h",
-        "lib/Bytecode/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Bytecode/*.h",
@@ -5291,7 +5238,6 @@ cc_library(
     srcs = glob([
         "lib/Bytecode/Writer/*.cpp",
         "lib/Bytecode/Writer/*.h",
-        "lib/Bytecode/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Bytecode/*.h",
@@ -5309,7 +5255,6 @@ cc_library(
     name = "Parser",
     srcs = glob([
         "lib/Parser/*.cpp",
-        "lib/Parser/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Parser/*.h",
@@ -5440,7 +5385,6 @@ cc_library(
     name = "LLVMIRTransforms",
     srcs = glob([
         "lib/Dialect/LLVMIR/Transforms/*.cpp",
-        "lib/Dialect/LLVMIR/Transforms/*.h",
     ]),
     hdrs = glob(["include/mlir/Dialect/LLVMIR/Transforms/*.h"]),
     includes = ["include"],
@@ -5593,7 +5537,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/GPU/IR/*.cpp",
-            "lib/Dialect/GPU/IR/*.h",
         ],
     ),
     hdrs = glob(["include/mlir/Dialect/GPU/IR/*.h"]),
@@ -5687,7 +5630,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/GPU/Transforms/*.cpp",
-            "lib/Dialect/GPU/Transforms/*.h",
         ],
     ),
     hdrs = glob(["include/mlir/Dialect/GPU/Transforms/*.h"]),
@@ -5877,7 +5819,6 @@ cc_library(
     name = "GPUToNVVMTransforms",
     srcs = glob([
         "lib/Conversion/GPUToNVVM/*.cpp",
-        "lib/Conversion/GPUToNVVM/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/GPUToNVVM/*.h",
@@ -5913,7 +5854,6 @@ cc_library(
     name = "AMDGPUToROCDL",
     srcs = glob([
         "lib/Conversion/AMDGPUToROCDL/*.cpp",
-        "lib/Conversion/AMDGPUToROCDL/*.h",
     ]) + ["include/mlir/Conversion/GPUToROCDL/Runtimes.h"],
     hdrs = glob([
         "include/mlir/Conversion/AMDGPUToROCDL/*.h",
@@ -5938,7 +5878,6 @@ cc_library(
     name = "NVGPUToNVVM",
     srcs = glob([
         "lib/Conversion/NVGPUToNVVM/*.cpp",
-        "lib/Conversion/NVGPUToNVVM/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/NVGPUToNVVM/*.h",
@@ -5966,7 +5905,6 @@ cc_library(
     name = "VectorToSPIRV",
     srcs = glob([
         "lib/Conversion/VectorToSPIRV/*.cpp",
-        "lib/Conversion/VectorToSPIRV/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/VectorToSPIRV/*.h",
@@ -6095,7 +6033,6 @@ cc_library(
     name = "GPUToSPIRV",
     srcs = glob([
         "lib/Conversion/GPUToSPIRV/*.cpp",
-        "lib/Conversion/GPUToSPIRV/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/GPUToSPIRV/*.h",
@@ -6665,7 +6602,6 @@ cc_library(
     name = "PDLDialect",
     srcs = glob([
         "lib/Dialect/PDL/IR/*.cpp",
-        "lib/Dialect/PDL/IR/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Dialect/PDL/IR/*.h",
@@ -6740,7 +6676,6 @@ cc_library(
     name = "PDLInterpDialect",
     srcs = glob([
         "lib/Dialect/PDLInterp/IR/*.cpp",
-        "lib/Dialect/PDLInterp/IR/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Dialect/PDLInterp/IR/*.h",
@@ -7038,7 +6973,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/SPIRV/Transforms/*.cpp",
-            "lib/Dialect/SPIRV/Transforms/*.h",
         ],
         exclude = ["lib/Dialect/SPIRV/Transforms/SPIRVConversion.cpp"],
     ),
@@ -7077,7 +7011,6 @@ cc_library(
     name = "MathToSPIRV",
     srcs = glob([
         "lib/Conversion/MathToSPIRV/*.cpp",
-        "lib/Conversion/MathToSPIRV/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/MathToSPIRV/*.h",
@@ -7104,7 +7037,6 @@ cc_library(
     name = "FuncToEmitC",
     srcs = glob([
         "lib/Conversion/FuncToEmitC/*.cpp",
-        "lib/Conversion/FuncToEmitC/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/FuncToEmitC/*.h",
@@ -7130,7 +7062,6 @@ cc_library(
     name = "FuncToSPIRV",
     srcs = glob([
         "lib/Conversion/FuncToSPIRV/*.cpp",
-        "lib/Conversion/FuncToSPIRV/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/FuncToSPIRV/*.h",
@@ -7162,7 +7093,6 @@ cc_library(
     name = "TensorToLinalg",
     srcs = glob([
         "lib/Conversion/TensorToLinalg/*.cpp",
-        "lib/Conversion/TensorToLinalg/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/TensorToLinalg/*.h",
@@ -7191,7 +7121,6 @@ cc_library(
     name = "TensorToSPIRV",
     srcs = glob([
         "lib/Conversion/TensorToSPIRV/*.cpp",
-        "lib/Conversion/TensorToSPIRV/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/TensorToSPIRV/*.h",
@@ -7477,7 +7406,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/Tensor/Transforms/*.cpp",
-            "lib/Dialect/Tensor/Transforms/*.h",
         ],
     ),
     hdrs = glob(["include/mlir/Dialect/Tensor/Transforms/*.h"]),
@@ -7584,7 +7512,6 @@ cc_library(
     srcs = glob(
         include = [
             "lib/Transforms/Utils/*.cpp",
-            "lib/Transforms/Utils/*.h",
         ],
         exclude = ["lib/Transforms/Utils/InliningUtils.cpp"],
     ),
@@ -7923,7 +7850,6 @@ cc_library(
     name = "Transforms",
     srcs = glob([
         "lib/Transforms/*.cpp",
-        "lib/Transforms/*.h",
     ]),
     hdrs = glob(["include/mlir/Transforms/*.h"]),
     includes = ["include"],
@@ -8011,7 +7937,6 @@ cc_library(
     name = "SCFToSPIRV",
     srcs = glob([
         "lib/Conversion/SCFToSPIRV/*.cpp",
-        "lib/Conversion/SCFToSPIRV/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/SCFToSPIRV/*.h",
@@ -8261,7 +8186,6 @@ cc_library(
     name = "MemRefToEmitC",
     srcs = glob([
         "lib/Conversion/MemRefToEmitC/*.cpp",
-        "lib/Conversion/MemRefToEmitC/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/MemRefToEmitC/*.h",
@@ -8311,7 +8235,6 @@ cc_library(
     name = "MemRefToSPIRV",
     srcs = glob([
         "lib/Conversion/MemRefToSPIRV/*.cpp",
-        "lib/Conversion/MemRefToSPIRV/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/MemRefToSPIRV/*.h",
@@ -8371,7 +8294,6 @@ cc_library(
     name = "ArithToArmSME",
     srcs = glob([
         "lib/Conversion/ArithToArmSME/*.cpp",
-        "lib/Conversion/ArithToArmSME/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/ArithToArmSME/*.h",
@@ -8392,7 +8314,6 @@ cc_library(
     name = "ArithToEmitC",
     srcs = glob([
         "lib/Conversion/ArithToEmitC/*.cpp",
-        "lib/Conversion/ArithToEmitC/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/ArithToEmitC/*.h",
@@ -8683,9 +8604,7 @@ cc_library(
     srcs = glob(
         [
             "lib/Analysis/*.cpp",
-            "lib/Analysis/*.h",
             "lib/Analysis/*/*.cpp",
-            "lib/Analysis/*/*.h",
         ],
     ),
     hdrs = glob(
@@ -8991,7 +8910,6 @@ cc_library(
         ":IR",
         ":LLVMDialect",
         ":OpenACCDialect",
-        ":OpenACCToLLVM",
         ":OpenMPCommon",
         ":Support",
         ":ToLLVMIRTranslation",
@@ -9357,7 +9275,6 @@ cc_library(
         ":SCFToGPU",
         ":SCFTransformOps",
         ":SCFTransforms",
-        ":SDBM",
         ":SPIRVDialect",
         ":SPIRVPassIncGen",
         ":SPIRVTarget",
@@ -9468,7 +9385,6 @@ cc_binary(
         "//mlir/test:TestTosaDialect",
         "//mlir/test:TestTransformDialect",
         "//mlir/test:TestTransforms",
-        "//mlir/test:TestTypeDialect",
         "//mlir/test:TestVector",
         "//mlir/test:TestVectorToSPIRV",
     ],
@@ -10086,7 +10002,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/OpenACC/IR/*.cpp",
-            "lib/Dialect/OpenACC/IR/*.h",
         ],
     ),
     hdrs = glob(
@@ -10140,7 +10055,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/OpenACC/Transforms/*.cpp",
-            "lib/Dialect/OpenACC/Transforms/*.h",
         ],
     ),
     hdrs = glob(["include/mlir/Dialect/OpenACC/Transforms/*.h"]),
@@ -10304,7 +10218,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/OpenMP/IR/*.cpp",
-            "lib/Dialect/OpenMP/IR/*.h",
         ],
     ),
     hdrs = glob(
@@ -10340,7 +10253,6 @@ cc_library(
     name = "OpenACCToSCF",
     srcs = glob([
         "lib/Conversion/OpenACCToSCF/*.cpp",
-        "lib/Conversion/OpenACCToSCF/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/OpenACCToSCF/*.h",
@@ -10361,34 +10273,9 @@ cc_library(
 )
 
 cc_library(
-    name = "OpenACCToLLVM",
-    srcs = glob([
-        "lib/Conversion/OpenACCToLLVM/*.cpp",
-        "lib/Conversion/OpenACCToLLVM/*.h",
-    ]),
-    hdrs = glob([
-        "include/mlir/Conversion/OpenACCToLLVM/*.h",
-    ]),
-    includes = ["include"],
-    deps = [
-        ":ConversionPassIncGen",
-        ":FuncDialect",
-        ":IR",
-        ":LLVMCommonConversion",
-        ":LLVMDialect",
-        ":OpenACCDialect",
-        ":Pass",
-        ":Transforms",
-        "//llvm:Core",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
     name = "OpenMPToLLVM",
     srcs = glob([
         "lib/Conversion/OpenMPToLLVM/*.cpp",
-        "lib/Conversion/OpenMPToLLVM/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/OpenMPToLLVM/*.h",
@@ -10598,7 +10485,6 @@ cc_library(
     name = "IndexToLLVM",
     srcs = glob([
         "lib/Conversion/IndexToLLVM/*.cpp",
-        "lib/Conversion/IndexToLLVM/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/IndexToLLVM/*.h",
@@ -10624,7 +10510,6 @@ cc_library(
     name = "IndexToSPIRV",
     srcs = glob([
         "lib/Conversion/IndexToSPIRV/*.cpp",
-        "lib/Conversion/IndexToSPIRV/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/IndexToSPIRV/*.h",
@@ -11015,7 +10900,6 @@ cc_library(
     name = "LinalgToStandard",
     srcs = glob([
         "lib/Conversion/LinalgToStandard/*.cpp",
-        "lib/Conversion/LinalgToStandard/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/LinalgToStandard/*.h",
@@ -11161,7 +11045,6 @@ cc_library(
     name = "LinalgUtils",
     srcs = glob([
         "lib/Dialect/Linalg/Utils/*.cpp",
-        "lib/Dialect/Linalg/Utils/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Dialect/Linalg/Utils/*.h",
@@ -11190,7 +11073,6 @@ cc_library(
     name = "LinalgTransforms",
     srcs = glob([
         "lib/Dialect/Linalg/Transforms/*.cpp",
-        "lib/Dialect/Linalg/Transforms/*.h",
     ]),
     hdrs = [
         "include/mlir/Dialect/Linalg/Passes.h",
@@ -11542,7 +11424,6 @@ cc_library(
     name = "VectorToLLVM",
     srcs = glob([
         "lib/Conversion/VectorToLLVM/*.cpp",
-        "lib/Conversion/VectorToLLVM/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/VectorToLLVM/*.h",
@@ -11584,7 +11465,6 @@ cc_library(
     name = "VectorToArmSME",
     srcs = glob([
         "lib/Conversion/VectorToArmSME/*.cpp",
-        "lib/Conversion/VectorToArmSME/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/VectorToArmSME/*.h",
@@ -11605,7 +11485,6 @@ cc_library(
     name = "VectorToGPU",
     srcs = glob([
         "lib/Conversion/VectorToGPU/*.cpp",
-        "lib/Conversion/VectorToGPU/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/VectorToGPU/*.h",
@@ -11642,7 +11521,6 @@ cc_library(
     name = "VectorToSCF",
     srcs = glob([
         "lib/Conversion/VectorToSCF/*.cpp",
-        "lib/Conversion/VectorToSCF/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/VectorToSCF/*.h",
@@ -11792,7 +11670,6 @@ cc_library(
     name = "TosaDialect",
     srcs = glob([
         "lib/Dialect/Tosa/IR/*.cpp",
-        "lib/Dialect/Tosa/IR/*.h",
         "lib/Dialect/Tosa/Utils/*.cpp",
         "lib/Dialect/Tosa/Transforms/*.cpp",
     ]),
@@ -11832,7 +11709,6 @@ cc_library(
     name = "TosaToArith",
     srcs = glob([
         "lib/Conversion/TosaToArith/*.cpp",
-        "lib/Conversion/TosaToArith/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/TosaToArith/*.h",
@@ -11856,7 +11732,6 @@ cc_library(
     name = "TosaToLinalg",
     srcs = glob([
         "lib/Conversion/TosaToLinalg/*.cpp",
-        "lib/Conversion/TosaToLinalg/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/TosaToLinalg/*.h",
@@ -11889,7 +11764,6 @@ cc_library(
     name = "TosaToMLProgram",
     srcs = glob([
         "lib/Conversion/TosaToMLProgram/*.cpp",
-        "lib/Conversion/TosaToMLProgram/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/TosaToMLProgram/*.h",
@@ -11913,7 +11787,6 @@ cc_library(
     name = "TosaToSCF",
     srcs = glob([
         "lib/Conversion/TosaToSCF/*.cpp",
-        "lib/Conversion/TosaToSCF/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/TosaToSCF/*.h",
@@ -11938,7 +11811,6 @@ cc_library(
     name = "TosaToTensor",
     srcs = glob([
         "lib/Conversion/TosaToTensor/*.cpp",
-        "lib/Conversion/TosaToTensor/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/TosaToTensor/*.h",
@@ -12443,7 +12315,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/Complex/IR/*.cpp",
-            "lib/Dialect/Complex/IR/*.h",
         ],
     ),
     hdrs = ["include/mlir/Dialect/Complex/IR/Complex.h"],
@@ -12466,7 +12337,6 @@ cc_library(
     name = "ComplexToLLVM",
     srcs = glob([
         "lib/Conversion/ComplexToLLVM/*.cpp",
-        "lib/Conversion/ComplexToLLVM/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/ComplexToLLVM/*.h",
@@ -12494,7 +12364,6 @@ cc_library(
     name = "ComplexToLibm",
     srcs = glob([
         "lib/Conversion/ComplexToLibm/*.cpp",
-        "lib/Conversion/ComplexToLibm/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/ComplexToLibm/*.h",
@@ -12518,7 +12387,6 @@ cc_library(
     name = "ComplexToSPIRV",
     srcs = glob([
         "lib/Conversion/ComplexToSPIRV/*.cpp",
-        "lib/Conversion/ComplexToSPIRV/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/ComplexToSPIRV/*.h",
@@ -12543,7 +12411,6 @@ cc_library(
     name = "ComplexToStandard",
     srcs = glob([
         "lib/Conversion/ComplexToStandard/*.cpp",
-        "lib/Conversion/ComplexToStandard/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/ComplexToStandard/*.h",
@@ -12760,7 +12627,6 @@ cc_library(
     name = "ArithTransforms",
     srcs = glob([
         "lib/Dialect/Arith/Transforms/*.cpp",
-        "lib/Dialect/Arith/Transforms/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Dialect/Arith/Transforms/*.h",
@@ -12882,7 +12748,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/Math/IR/*.cpp",
-            "lib/Dialect/Math/IR/*.h",
         ],
     ),
     hdrs = [
@@ -12909,7 +12774,6 @@ cc_library(
     name = "MathTransforms",
     srcs = glob([
         "lib/Dialect/Math/Transforms/*.cpp",
-        "lib/Dialect/Math/Transforms/*.h",
     ]),
     hdrs = glob(["include/mlir/Dialect/Math/Transforms/*.h"]),
     includes = ["include"],
@@ -12933,7 +12797,6 @@ cc_library(
     name = "MathToLibm",
     srcs = glob([
         "lib/Conversion/MathToLibm/*.cpp",
-        "lib/Conversion/MathToLibm/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/MathToLibm/*.h",
@@ -13024,7 +12887,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/MemRef/IR/*.cpp",
-            "lib/Dialect/MemRef/IR/*.h",
         ],
     ),
     hdrs = [
@@ -13102,7 +12964,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/MemRef/Transforms/*.cpp",
-            "lib/Dialect/MemRef/Transforms/*.h",
         ],
     ),
     hdrs = glob(["include/mlir/Dialect/MemRef/Transforms/*.h"]),
@@ -13730,7 +13591,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/Bufferization/Transforms/*.cpp",
-            "lib/Dialect/Bufferization/Transforms/*.h",
         ],
     ),
     hdrs = glob(["include/mlir/Dialect/Bufferization/Transforms/*.h"]),
@@ -13922,7 +13782,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Tools/PDLL/ODS/*.cpp",
-            "lib/Tools/PDLL/ODS/*.h",
         ],
     ),
     hdrs = glob(["include/mlir/Tools/PDLL/ODS/*.h"]),
@@ -13956,7 +13815,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Tools/PDLL/CodeGen/*.cpp",
-            "lib/Tools/PDLL/CodeGen/*.h",
         ],
     ),
     hdrs = glob(["include/mlir/Tools/PDLL/CodeGen/*.h"]),
@@ -14117,7 +13975,6 @@ cc_library(
     name = "UBToLLVM",
     srcs = glob([
         "lib/Conversion/UBToLLVM/*.cpp",
-        "lib/Conversion/UBToLLVM/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/UBToLLVM/*.h",
@@ -14138,7 +13995,6 @@ cc_library(
     name = "UBToSPIRV",
     srcs = glob([
         "lib/Conversion/UBToSPIRV/*.cpp",
-        "lib/Conversion/UBToSPIRV/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/UBToSPIRV/*.h",
