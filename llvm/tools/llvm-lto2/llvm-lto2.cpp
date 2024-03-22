@@ -193,6 +193,7 @@ static cl::opt<bool> TryUseNewDbgInfoFormat(
     cl::init(false), cl::Hidden);
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
+extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 
 static void check(Error E, std::string Msg) {
   if (!E)
@@ -228,6 +229,9 @@ static int usage() {
 
 static int run(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "Resolution-based LTO test harness");
+  // Load bitcode into the new debug info format by default.
+  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
+    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
 
   // RemoveDIs debug-info transition: tests may request that we /try/ to use the
   // new debug-info format.
