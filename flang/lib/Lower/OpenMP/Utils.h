@@ -34,6 +34,7 @@ struct OmpObjectList;
 } // namespace parser
 
 namespace lower {
+
 class AbstractConverter;
 
 namespace omp {

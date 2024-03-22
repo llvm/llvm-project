@@ -16,7 +16,6 @@
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
-#include <flang/Lower/PFTBuilder.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
