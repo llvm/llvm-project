@@ -999,10 +999,7 @@ libc_support_library(
 libc_support_library(
     name = "__support_osutil_quick_exit",
     hdrs = ["src/__support/OSUtil/quick_exit.h"],
-    textual_hdrs = [
-        "src/__support/OSUtil/linux/quick_exit.h",
-        #TODO: add support for GPU quick_exit (isn't just in a header.)
-    ],
+    srcs = ["src/__support/OSUtil/linux/quick_exit.cpp"],
     deps = [
         ":__support_osutil_syscall",
     ],
