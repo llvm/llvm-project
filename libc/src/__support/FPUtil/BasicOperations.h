@@ -118,7 +118,7 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
     else
       cx = x;
   } else if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
-    cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
+    cx = FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa()).get_val();
     raise_except_if_required(FE_INVALID);
     return 1;
   } else
