@@ -36,7 +36,8 @@
 #
 # CHECK:      BOLT: 3 out of 7 functions were overwritten.
 # CHECK:      BOLT-INFO: Wrote 6 BAT maps
-# CHECK:      BOLT-INFO: BAT section size (bytes): 336
+# CHECK:      BOLT-INFO: Wrote 3 function and 58 basic block hashes
+# CHECK:      BOLT-INFO: BAT section size (bytes): 920
 #
 # usqrt mappings (hot part). We match against any key (left side containing
 # the bolted binary offsets) because BOLT may change where it puts instructions
@@ -44,13 +45,13 @@
 # binary offsets (right side) should be the same because these addresses are
 # hardcoded in the blarge.yaml file.
 #
-# CHECK-BAT-DUMP:      Function Address: 0x401170
+# CHECK-BAT-DUMP:      Function Address: 0x401170, hash: 0xace6cbc638b31983
 # CHECK-BAT-DUMP-NEXT: BB mappings:
-# CHECK-BAT-DUMP-NEXT: 0x0 -> 0x0
+# CHECK-BAT-DUMP-NEXT: 0x0 -> 0x0 hash: 0x36007ba1d80c0000
 # CHECK-BAT-DUMP-NEXT: 0x8 -> 0x8 (branch)
-# CHECK-BAT-DUMP-NEXT: 0x{{.*}} -> 0x39
+# CHECK-BAT-DUMP-NEXT: 0x{{.*}} -> 0x39 hash: 0x5c06705524800039
 # CHECK-BAT-DUMP-NEXT: 0x{{.*}} -> 0x3d (branch)
-# CHECK-BAT-DUMP-NEXT: 0x{{.*}} -> 0x10
+# CHECK-BAT-DUMP-NEXT: 0x{{.*}} -> 0x10 hash: 0xd70d7a64320e0010
 # CHECK-BAT-DUMP-NEXT: 0x{{.*}} -> 0x30 (branch)
 #
 # CHECK-BAT-DUMP: 3 cold mappings

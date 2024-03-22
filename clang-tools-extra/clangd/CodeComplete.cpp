@@ -619,7 +619,8 @@ private:
     }
     // 'CompletionItemKind::Interface' matches template type aliases.
     if (Completion.Kind == CompletionItemKind::Interface ||
-        Completion.Kind == CompletionItemKind::Class) {
+        Completion.Kind == CompletionItemKind::Class ||
+        Completion.Kind == CompletionItemKind::Variable) {
       if (Snippet->front() != '<')
         return *Snippet; // Not an arg snippet?
 
@@ -1628,7 +1629,7 @@ public:
       IsUsingDeclaration = Recorder->CCContext.isUsingDeclaration();
       auto Style = getFormatStyleForFile(SemaCCInput.FileName,
                                          SemaCCInput.ParseInput.Contents,
-                                         *SemaCCInput.ParseInput.TFS);
+                                         *SemaCCInput.ParseInput.TFS, false);
       const auto NextToken = findTokenAfterCompletionPoint(
           Recorder->CCSema->getPreprocessor().getCodeCompletionLoc(),
           Recorder->CCSema->getSourceManager(), Recorder->CCSema->LangOpts);
@@ -1719,7 +1720,7 @@ public:
     ProxSources[FileName].Cost = 0;
     FileProximity.emplace(ProxSources);
 
-    auto Style = getFormatStyleForFile(FileName, Content, TFS);
+    auto Style = getFormatStyleForFile(FileName, Content, TFS, false);
     // This will only insert verbatim headers.
     Inserter.emplace(FileName, Content, Style,
                      /*BuildDir=*/"", /*HeaderSearchInfo=*/nullptr);

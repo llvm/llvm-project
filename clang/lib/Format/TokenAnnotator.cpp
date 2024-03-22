@@ -562,7 +562,7 @@ private:
           (CurrentToken->is(tok::l_paren) && CurrentToken->Next &&
            CurrentToken->Next->isOneOf(tok::star, tok::amp, tok::caret));
       if ((CurrentToken->Previous->isOneOf(tok::kw_const, tok::kw_auto) ||
-           CurrentToken->Previous->isSimpleTypeSpecifier()) &&
+           CurrentToken->Previous->isTypeName(IsCpp)) &&
           !(CurrentToken->is(tok::l_brace) ||
             (CurrentToken->is(tok::l_paren) && !ProbablyFunctionTypeLParen))) {
         Contexts.back().IsExpression = false;
@@ -975,12 +975,15 @@ private:
 
   // DagArg       ::=  Value [":" TokVarName] | TokVarName
   // Appears as a part of SimpleValue6.
-  bool parseTableGenDAGArg() {
+  bool parseTableGenDAGArg(bool AlignColon = false) {
     if (tryToParseTableGenTokVar())
       return true;
     if (parseTableGenValue()) {
       if (CurrentToken && CurrentToken->is(tok::colon)) {
-        CurrentToken->setType(TT_TableGenDAGArgListColon);
+        if (AlignColon)
+          CurrentToken->setType(TT_TableGenDAGArgListColonToAlign);
+        else
+          CurrentToken->setType(TT_TableGenDAGArgListColon);
         skipToNextNonComment();
         return tryToParseTableGenTokVar();
       }
@@ -989,16 +992,59 @@ private:
     return false;
   }
 
+  // Judge if the token is a operator ID to insert line break in DAGArg.
+  // That is, TableGenBreakingDAGArgOperators is empty (by the definition of the
+  // option) or the token is in the list.
+  bool isTableGenDAGArgBreakingOperator(const FormatToken &Tok) {
+    auto &Opes = Style.TableGenBreakingDAGArgOperators;
+    // If the list is empty, all operators are breaking operators.
+    if (Opes.empty())
+      return true;
+    // Otherwise, the operator is limited to normal identifiers.
+    if (Tok.isNot(tok::identifier) ||
+        Tok.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator)) {
+      return false;
+    }
+    // The case next is colon, it is not a operator of identifier.
+    if (!Tok.Next || Tok.Next->is(tok::colon))
+      return false;
+    return std::find(Opes.begin(), Opes.end(), Tok.TokenText.str()) !=
+           Opes.end();
+  }
+
   // SimpleValue6 ::=  "(" DagArg [DagArgList] ")"
   // This parses SimpleValue 6's inside part of "(" ")"
   bool parseTableGenDAGArgAndList(FormatToken *Opener) {
+    FormatToken *FirstTok = CurrentToken;
     if (!parseTableGenDAGArg())
       return false;
+    bool BreakInside = false;
+    if (Style.TableGenBreakInsideDAGArg != FormatStyle::DAS_DontBreak) {
+      // Specialized detection for DAGArgOperator, that determines the way of
+      // line break for this DAGArg elements.
+      if (isTableGenDAGArgBreakingOperator(*FirstTok)) {
+        // Special case for identifier DAGArg operator.
+        BreakInside = true;
+        Opener->setType(TT_TableGenDAGArgOpenerToBreak);
+        if (FirstTok->isOneOf(TT_TableGenBangOperator,
+                              TT_TableGenCondOperator)) {
+          // Special case for bang/cond operators. Set the whole operator as
+          // the DAGArg operator. Always break after it.
+          CurrentToken->Previous->setType(TT_TableGenDAGArgOperatorToBreak);
+        } else if (FirstTok->is(tok::identifier)) {
+          if (Style.TableGenBreakInsideDAGArg == FormatStyle::DAS_BreakAll)
+            FirstTok->setType(TT_TableGenDAGArgOperatorToBreak);
+          else
+            FirstTok->setType(TT_TableGenDAGArgOperatorID);
+        }
+      }
+    }
     // Parse the [DagArgList] part
     bool FirstDAGArgListElm = true;
     while (CurrentToken) {
       if (!FirstDAGArgListElm && CurrentToken->is(tok::comma)) {
-        CurrentToken->setType(TT_TableGenDAGArgListComma);
+        CurrentToken->setType(BreakInside ? TT_TableGenDAGArgListCommaToBreak
+                                          : TT_TableGenDAGArgListComma);
         skipToNextNonComment();
       }
       if (CurrentToken && CurrentToken->is(tok::r_paren)) {
@@ -1008,8 +1054,11 @@ private:
         skipToNextNonComment();
         return true;
       }
-      if (!parseTableGenDAGArg())
+      if (!parseTableGenDAGArg(
+              BreakInside &&
+              Style.AlignConsecutiveTableGenBreakingDAGArgColons.Enabled)) {
         return false;
+      }
       FirstDAGArgListElm = false;
     }
     return false;
@@ -2573,7 +2622,7 @@ private:
       return true;
 
     // MyClass a;
-    if (PreviousNotConst->isSimpleTypeSpecifier())
+    if (PreviousNotConst->isTypeName(IsCpp))
       return true;
 
     // type[] a in Java
@@ -2704,9 +2753,10 @@ private:
     }
 
     // Heuristically try to determine whether the parentheses contain a type.
-    auto IsQualifiedPointerOrReference = [](FormatToken *T) {
+    auto IsQualifiedPointerOrReference = [this](FormatToken *T) {
       // This is used to handle cases such as x = (foo *const)&y;
-      assert(!T->isSimpleTypeSpecifier() && "Should have already been checked");
+      assert(!T->isTypeName(IsCpp) && "Should have already been checked");
+      (void)IsCpp; // Avoid -Wunused-lambda-capture when assertion is disabled.
       // Strip trailing qualifiers such as const or volatile when checking
       // whether the parens could be a cast to a pointer/reference type.
       while (T) {
@@ -2738,7 +2788,7 @@ private:
     bool ParensAreType =
         !Tok.Previous ||
         Tok.Previous->isOneOf(TT_TemplateCloser, TT_TypeDeclarationParen) ||
-        Tok.Previous->isSimpleTypeSpecifier() ||
+        Tok.Previous->isTypeName(IsCpp) ||
         IsQualifiedPointerOrReference(Tok.Previous);
     bool ParensCouldEndDecl =
         Tok.Next->isOneOf(tok::equal, tok::semi, tok::l_brace, tok::greater);
@@ -3595,7 +3645,15 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
   if (!Current.Tok.getIdentifierInfo())
     return false;
 
-  auto skipOperatorName = [](const FormatToken *Next) -> const FormatToken * {
+  const auto &Previous = *Current.Previous;
+
+  if (const auto *PrevPrev = Previous.Previous;
+      PrevPrev && PrevPrev->is(TT_ObjCDecl)) {
+    return false;
+  }
+
+  auto skipOperatorName =
+      [IsCpp](const FormatToken *Next) -> const FormatToken * {
     for (; Next; Next = Next->Next) {
       if (Next->is(TT_OverloadedOperatorLParen))
         return Next;
@@ -3614,7 +3672,7 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
         Next = Next->Next;
         continue;
       }
-      if ((Next->isSimpleTypeSpecifier() || Next->is(tok::identifier)) &&
+      if ((Next->isTypeName(IsCpp) || Next->is(tok::identifier)) &&
           Next->Next && Next->Next->isPointerOrReference()) {
         // For operator void*(), operator char*(), operator Foo*().
         Next = Next->Next;
@@ -3633,18 +3691,17 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
   // Find parentheses of parameter list.
   const FormatToken *Next = Current.Next;
   if (Current.is(tok::kw_operator)) {
-    const auto *Previous = Current.Previous;
-    if (Previous->Tok.getIdentifierInfo() &&
-        !Previous->isOneOf(tok::kw_return, tok::kw_co_return)) {
+    if (Previous.Tok.getIdentifierInfo() &&
+        !Previous.isOneOf(tok::kw_return, tok::kw_co_return)) {
       return true;
     }
-    if (Previous->is(tok::r_paren) && Previous->is(TT_TypeDeclarationParen)) {
-      assert(Previous->MatchingParen);
-      assert(Previous->MatchingParen->is(tok::l_paren));
-      assert(Previous->MatchingParen->is(TT_TypeDeclarationParen));
+    if (Previous.is(tok::r_paren) && Previous.is(TT_TypeDeclarationParen)) {
+      assert(Previous.MatchingParen);
+      assert(Previous.MatchingParen->is(tok::l_paren));
+      assert(Previous.MatchingParen->is(TT_TypeDeclarationParen));
       return true;
     }
-    if (!Previous->isPointerOrReference() && Previous->isNot(TT_TemplateCloser))
+    if (!Previous.isPointerOrReference() && Previous.isNot(TT_TemplateCloser))
       return false;
     Next = skipOperatorName(Next);
   } else {
@@ -3712,9 +3769,8 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
       Tok = Tok->MatchingParen;
       continue;
     }
-    if (Tok->is(tok::kw_const) || Tok->isSimpleTypeSpecifier() ||
-        Tok->isOneOf(TT_PointerOrReference, TT_StartOfName, tok::ellipsis,
-                     TT_TypeName)) {
+    if (Tok->is(tok::kw_const) || Tok->isTypeName(IsCpp) ||
+        Tok->isOneOf(TT_PointerOrReference, TT_StartOfName, tok::ellipsis)) {
       return true;
     }
     if (Tok->isOneOf(tok::l_brace, TT_ObjCMethodExpr) || Tok->Tok.isLiteral())
@@ -4267,6 +4323,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return Left.is(tok::hash);
   if (Left.isOneOf(tok::hashhash, tok::hash))
     return Right.is(tok::hash);
+  if (Left.is(BK_Block) && Right.is(tok::r_brace) &&
+      Right.MatchingParen == &Left && Line.Children.empty()) {
+    return Style.SpaceInEmptyBlock;
+  }
   if ((Left.is(tok::l_paren) && Right.is(tok::r_paren)) ||
       (Left.is(tok::l_brace) && Left.isNot(BK_Block) &&
        Right.is(tok::r_brace) && Right.isNot(BK_Block))) {
@@ -4376,7 +4436,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Left.Tok.isLiteral())
       return true;
     // for (auto a = 0, b = 0; const auto & c : {1, 2, 3})
-    if (Left.isTypeOrIdentifier() && Right.Next && Right.Next->Next &&
+    if (Left.isTypeOrIdentifier(IsCpp) && Right.Next && Right.Next->Next &&
         Right.Next->Next->is(TT_RangeBasedForLoopColon)) {
       return getTokenPointerOrReferenceAlignment(Right) !=
              FormatStyle::PAS_Left;
@@ -4419,8 +4479,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Right.is(tok::l_brace) && Right.is(BK_Block))
       return true;
     // for (auto a = 0, b = 0; const auto& c : {1, 2, 3})
-    if (Left.Previous && Left.Previous->isTypeOrIdentifier() && Right.Next &&
-        Right.Next->is(TT_RangeBasedForLoopColon)) {
+    if (Left.Previous && Left.Previous->isTypeOrIdentifier(IsCpp) &&
+        Right.Next && Right.Next->is(TT_RangeBasedForLoopColon)) {
       return getTokenPointerOrReferenceAlignment(Left) !=
              FormatStyle::PAS_Right;
     }
@@ -4458,7 +4518,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Right.isPointerOrReference()) {
     const FormatToken *Previous = &Left;
     while (Previous && Previous->isNot(tok::kw_operator)) {
-      if (Previous->is(tok::identifier) || Previous->isSimpleTypeSpecifier()) {
+      if (Previous->is(tok::identifier) || Previous->isTypeName(IsCpp)) {
         Previous = Previous->getPreviousNonComment();
         continue;
       }
@@ -4609,7 +4669,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       return Style.SpaceBeforeParensOptions.AfterFunctionDefinitionName ||
              spaceRequiredBeforeParens(Right);
     }
-    if (!Left.Previous || Left.Previous->isNot(tok::period)) {
+    if (!Left.Previous || !Left.Previous->isOneOf(tok::period, tok::arrow)) {
       if (Left.isOneOf(tok::kw_try, Keywords.kw___except, tok::kw_catch)) {
         return Style.SpaceBeforeParensOptions.AfterControlStatements ||
                spaceRequiredBeforeParens(Right);
@@ -4647,7 +4707,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (!Style.isVerilog() &&
       (Left.isOneOf(tok::identifier, tok::greater, tok::r_square,
                     tok::r_paren) ||
-       Left.isSimpleTypeSpecifier()) &&
+       Left.isTypeName(IsCpp)) &&
       Right.is(tok::l_brace) && Right.getNextNonComment() &&
       Right.isNot(BK_Block)) {
     return false;
@@ -5076,12 +5136,19 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(tok::r_brace) && Right.is(tok::r_square))
       return true;
     // Do not insert around colon in DAGArg and cond operator.
-    if (Right.is(TT_TableGenDAGArgListColon) ||
-        Left.is(TT_TableGenDAGArgListColon)) {
+    if (Right.isOneOf(TT_TableGenDAGArgListColon,
+                      TT_TableGenDAGArgListColonToAlign) ||
+        Left.isOneOf(TT_TableGenDAGArgListColon,
+                     TT_TableGenDAGArgListColonToAlign)) {
       return false;
     }
     if (Right.is(TT_TableGenCondOperatorColon))
       return false;
+    if (Left.isOneOf(TT_TableGenDAGArgOperatorID,
+                     TT_TableGenDAGArgOperatorToBreak) &&
+        Right.isNot(TT_TableGenDAGArgCloser)) {
+      return true;
+    }
     // Do not insert bang operators and consequent openers.
     if (Right.isOneOf(tok::l_paren, tok::less) &&
         Left.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator)) {
@@ -5458,6 +5525,18 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     //       case2:0);
     if (Left.is(TT_TableGenCondOperatorComma))
       return true;
+    if (Left.is(TT_TableGenDAGArgOperatorToBreak) &&
+        Right.isNot(TT_TableGenDAGArgCloser)) {
+      return true;
+    }
+    if (Left.is(TT_TableGenDAGArgListCommaToBreak))
+      return true;
+    if (Right.is(TT_TableGenDAGArgCloser) && Right.MatchingParen &&
+        Right.MatchingParen->is(TT_TableGenDAGArgOpenerToBreak) &&
+        &Left != Right.MatchingParen->Next) {
+      // Check to avoid empty DAGArg such as (ins).
+      return Style.TableGenBreakInsideDAGArg == FormatStyle::DAS_BreakAll;
+    }
   }
 
   if (Line.startsWith(tok::kw_asm) && Right.is(TT_InlineASMColon) &&
@@ -5871,6 +5950,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     // Avoid to break around paste operator.
     if (Left.is(tok::hash) || Right.is(tok::hash))
+      return false;
+    if (Left.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator))
       return false;
   }
 

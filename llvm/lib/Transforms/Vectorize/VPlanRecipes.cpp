@@ -198,24 +198,21 @@ void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
          "Insertion position not in any VPBasicBlock");
-  Parent = InsertPos->getParent();
-  Parent->getRecipeList().insert(InsertPos->getIterator(), this);
+  InsertPos->getParent()->insert(this, InsertPos->getIterator());
 }
 
 void VPRecipeBase::insertBefore(VPBasicBlock &BB,
                                 iplist<VPRecipeBase>::iterator I) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(I == BB.end() || I->getParent() == &BB);
-  Parent = &BB;
-  BB.getRecipeList().insert(I, this);
+  BB.insert(this, I);
 }
 
 void VPRecipeBase::insertAfter(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
          "Insertion position not in any VPBasicBlock");
-  Parent = InsertPos->getParent();
-  Parent->getRecipeList().insertAfter(InsertPos->getIterator(), this);
+  InsertPos->getParent()->insert(this, std::next(InsertPos->getIterator()));
 }
 
 void VPRecipeBase::removeFromParent() {

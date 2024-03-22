@@ -310,23 +310,24 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    add a5, sp, a5
 ; CHECK-NEXT:    addi a5, a5, 16
 ; CHECK-NEXT:    vs8r.v v16, (a5) # Unknown-size Folded Spill
+; CHECK-NEXT:    mv a6, a7
 ; CHECK-NEXT:    bltu a7, a3, .LBB16_4
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    li a7, 64
+; CHECK-NEXT:    li a6, 64
 ; CHECK-NEXT:  .LBB16_4:
 ; CHECK-NEXT:    addi a5, a1, 384
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a1)
-; CHECK-NEXT:    csrr a6, vlenb
-; CHECK-NEXT:    slli a6, a6, 3
-; CHECK-NEXT:    add a6, sp, a6
-; CHECK-NEXT:    addi a6, a6, 16
-; CHECK-NEXT:    vs8r.v v8, (a6) # Unknown-size Folded Spill
-; CHECK-NEXT:    addi a6, a7, -32
-; CHECK-NEXT:    sltu t0, a7, a6
-; CHECK-NEXT:    addi t0, t0, -1
-; CHECK-NEXT:    and a6, t0, a6
+; CHECK-NEXT:    csrr t0, vlenb
+; CHECK-NEXT:    slli t0, t0, 3
+; CHECK-NEXT:    add t0, sp, t0
+; CHECK-NEXT:    addi t0, t0, 16
+; CHECK-NEXT:    vs8r.v v8, (t0) # Unknown-size Folded Spill
+; CHECK-NEXT:    addi t0, a6, -32
+; CHECK-NEXT:    sltu a6, a6, t0
+; CHECK-NEXT:    addi a6, a6, -1
+; CHECK-NEXT:    and a6, a6, t0
 ; CHECK-NEXT:    addi t0, a6, -16
 ; CHECK-NEXT:    sltu t1, a6, t0
 ; CHECK-NEXT:    addi t1, t1, -1
@@ -364,14 +365,15 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    add a5, sp, a5
 ; CHECK-NEXT:    addi a5, a5, 16
 ; CHECK-NEXT:    vs8r.v v16, (a5) # Unknown-size Folded Spill
+; CHECK-NEXT:    mv a5, a4
 ; CHECK-NEXT:    bltu a4, a3, .LBB16_8
 ; CHECK-NEXT:  # %bb.7:
-; CHECK-NEXT:    li a4, 32
+; CHECK-NEXT:    li a5, 32
 ; CHECK-NEXT:  .LBB16_8:
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a1)
-; CHECK-NEXT:    addi a1, a4, -16
-; CHECK-NEXT:    sltu a5, a4, a1
+; CHECK-NEXT:    addi a1, a5, -16
+; CHECK-NEXT:    sltu a5, a5, a1
 ; CHECK-NEXT:    addi a5, a5, -1
 ; CHECK-NEXT:    and a1, a5, a1
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
@@ -387,62 +389,63 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    vmv1r.v v0, v5
 ; CHECK-NEXT:    vnsrl.wi v8, v24, 0, v0.t
 ; CHECK-NEXT:    vmv.v.v v0, v8
+; CHECK-NEXT:    mv a1, a7
 ; CHECK-NEXT:    bltu a7, a3, .LBB16_12
 ; CHECK-NEXT:  # %bb.11:
-; CHECK-NEXT:    li a7, 32
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:  .LBB16_12:
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    li a4, 24
-; CHECK-NEXT:    mul a1, a1, a4
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v8, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    li a5, 24
+; CHECK-NEXT:    mul a4, a4, a5
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vl8r.v v8, (a4) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vmv4r.v v24, v8
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    li a4, 56
-; CHECK-NEXT:    mul a1, a1, a4
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v8, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    li a5, 56
+; CHECK-NEXT:    mul a4, a4, a5
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vl8r.v v8, (a4) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vslideup.vi v8, v24, 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    li a4, 56
-; CHECK-NEXT:    mul a1, a1, a4
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v8, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    li a5, 56
+; CHECK-NEXT:    mul a4, a4, a5
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vs8r.v v8, (a4) # Unknown-size Folded Spill
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    slli a4, a4, 4
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vl8r.v v8, (a4) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vmv4r.v v24, v8
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    li a4, 48
-; CHECK-NEXT:    mul a1, a1, a4
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v8, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    li a5, 48
+; CHECK-NEXT:    mul a4, a4, a5
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vl8r.v v8, (a4) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vslideup.vi v8, v24, 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    li a4, 48
-; CHECK-NEXT:    mul a1, a1, a4
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    li a5, 48
+; CHECK-NEXT:    mul a4, a4, a5
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vs8r.v v8, (a4) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vmv4r.v v8, v0
 ; CHECK-NEXT:    vslideup.vi v8, v16, 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    li a4, 24
-; CHECK-NEXT:    mul a1, a1, a4
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
-; CHECK-NEXT:    addi a1, a7, -16
-; CHECK-NEXT:    sltu a4, a7, a1
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a1, a4, a1
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    li a5, 24
+; CHECK-NEXT:    mul a4, a4, a5
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vs8r.v v8, (a4) # Unknown-size Folded Spill
+; CHECK-NEXT:    addi a4, a1, -16
+; CHECK-NEXT:    sltu a1, a1, a4
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a1, a1, a4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    csrr a1, vlenb

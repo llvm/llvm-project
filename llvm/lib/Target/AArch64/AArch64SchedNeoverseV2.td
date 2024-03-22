@@ -2567,13 +2567,13 @@ def : InstRW<[V2Write_4cyc_2V02], (instregex "^FRINT[AIMNPXZ]_ZPmZ_S")>;
 def : InstRW<[V2Write_3cyc_1V02], (instregex "^FRINT[AIMNPXZ]_ZPmZ_D")>;
 
 // Floating point square root, F16
-def : InstRW<[V2Write_13cyc_1V0_12rc], (instregex "^FSQRT_ZPmZ_H", "^FSQRT_ZPmZ_H")>;
+def : InstRW<[V2Write_13cyc_1V0_12rc], (instregex "^FSQRT_ZPmZ_H")>;
 
 // Floating point square root, F32
-def : InstRW<[V2Write_10cyc_1V0_9rc], (instregex "^FSQRT_ZPmZ_S", "^FSQRT_ZPmZ_S")>;
+def : InstRW<[V2Write_10cyc_1V0_9rc], (instregex "^FSQRT_ZPmZ_S")>;
 
 // Floating point square root, F64
-def : InstRW<[V2Write_16cyc_1V0_14rc], (instregex "^FSQRT_ZPmZ_D", "^FSQRT_ZPmZ_D")>;
+def : InstRW<[V2Write_16cyc_1V0_14rc], (instregex "^FSQRT_ZPmZ_D")>;
 
 // Floating point trigonometric exponentiation
 def : InstRW<[V2Write_3cyc_1V1], (instregex "^FEXPA_ZZ_[HSD]")>;

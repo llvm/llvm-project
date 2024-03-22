@@ -276,7 +276,6 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
       target->createMCRegInfo(targetTriple));
   std::unique_ptr<llvm::MCAsmInfo> mai(
       target->createMCAsmInfo(*mri, targetTriple, mcOptions));
-  mai->setRelaxELFRelocations(true);
   std::unique_ptr<llvm::MCSubtargetInfo> sti(
       target->createMCSubtargetInfo(targetTriple, chip, features));
 

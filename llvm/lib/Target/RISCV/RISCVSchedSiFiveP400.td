@@ -86,6 +86,16 @@ def : WriteRes<WriteIDiv32, [SiFiveP400MulDiv, SiFiveP400Div]> {
   let ReleaseAtCycles = [1, 19];
 }
 
+// Integer remainder
+def : WriteRes<WriteIRem, [SiFiveP400MulDiv, SiFiveP400Div]> {
+  let Latency = 35;
+  let ReleaseAtCycles = [1, 34];
+}
+def : WriteRes<WriteIRem32, [SiFiveP400MulDiv, SiFiveP400Div]> {
+  let Latency = 20;
+  let ReleaseAtCycles = [1, 19];
+}
+
 let Latency = 1 in {
 // Bitmanip
 def : WriteRes<WriteRotateImm, [SiFiveP400IntArith]>;
@@ -99,6 +109,7 @@ def : WriteRes<WriteCTZ, [SiFiveP400IntArith]>;
 def : WriteRes<WriteCTZ32, [SiFiveP400IntArith]>;
 
 def : WriteRes<WriteORCB, [SiFiveP400IntArith]>;
+def : WriteRes<WriteIMinMax, [SiFiveP400IntArith]>;
 
 def : WriteRes<WriteREV8, [SiFiveP400IntArith]>;
 
@@ -258,6 +269,8 @@ def : ReadAdvance<ReadShiftReg, 0>;
 def : ReadAdvance<ReadShiftReg32, 0>;
 def : ReadAdvance<ReadIDiv, 0>;
 def : ReadAdvance<ReadIDiv32, 0>;
+def : ReadAdvance<ReadIRem, 0>;
+def : ReadAdvance<ReadIRem32, 0>;
 def : ReadAdvance<ReadIMul, 0>;
 def : ReadAdvance<ReadIMul32, 0>;
 def : ReadAdvance<ReadAtomicWA, 0>;
@@ -337,6 +350,7 @@ def : ReadAdvance<ReadCTZ32, 0>;
 def : ReadAdvance<ReadCPOP, 0>;
 def : ReadAdvance<ReadCPOP32, 0>;
 def : ReadAdvance<ReadORCB, 0>;
+def : ReadAdvance<ReadIMinMax, 0>;
 def : ReadAdvance<ReadREV8, 0>;
 def : ReadAdvance<ReadSHXADD, 0>;
 def : ReadAdvance<ReadSHXADD32, 0>;

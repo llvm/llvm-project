@@ -208,6 +208,9 @@ struct IntrinsicLibrary {
   void genCFProcPointer(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCFunLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  template <mlir::arith::CmpIPredicate pred>
+  fir::ExtendedValue genCPtrCompare(mlir::Type,
+                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCosd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -338,6 +341,7 @@ struct IntrinsicLibrary {
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSizeOf(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSpacing(mlir::Type resultType,
                          llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genSpread(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);

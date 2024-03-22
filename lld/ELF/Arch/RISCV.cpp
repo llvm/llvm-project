@@ -1074,12 +1074,12 @@ static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
     mergedXlen = info.getXLen();
   } else {
     for (const auto &ext : info.getExtensions()) {
-      if (auto it = mergedExts.find(ext.first); it != mergedExts.end()) {
-        if (std::tie(it->second.Major, it->second.Minor) >=
+      auto p = mergedExts.insert(ext);
+      if (!p.second) {
+        if (std::tie(p.first->second.Major, p.first->second.Minor) <
             std::tie(ext.second.Major, ext.second.Minor))
-          continue;
+          p.first->second = ext.second;
       }
-      mergedExts[ext.first] = ext.second;
     }
   }
 }
