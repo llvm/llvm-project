@@ -4,8 +4,7 @@
 declare void @use.i8(i8)
 define <2 x i1> @simplify_cmp_or_disjoint(<2 x i8> %x) {
 ; CHECK-LABEL: @simplify_cmp_or_disjoint(
-; CHECK-NEXT:    [[V:%.*]] = or disjoint <2 x i8> [[X:%.*]], <i8 12, i8 13>
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[V]], <i8 0, i8 45>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 -12, i8 32>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %v = or disjoint <2 x i8> %x, <i8 12, i8 13>
@@ -49,8 +48,7 @@ define i1 @simplify_cmp_add_fail_multiuse(i8 %x) {
 
 define <2 x i1> @simplify_cmp_sub(<2 x i8> %x) {
 ; CHECK-LABEL: @simplify_cmp_sub(
-; CHECK-NEXT:    [[V:%.*]] = sub <2 x i8> <i8 12, i8 13>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[V]], <i8 0, i8 55>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 12, i8 -42>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %v = sub <2 x i8> <i8 12, i8 13>, %x

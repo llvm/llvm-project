@@ -3572,16 +3572,6 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
       return new ICmpInst(Pred, II->getArgOperand(0), ConstantInt::get(Ty, C));
     break;
 
-  case Intrinsic::bswap:
-    // bswap(A) == C  ->  A == bswap(C)
-    return new ICmpInst(Pred, II->getArgOperand(0),
-                        ConstantInt::get(Ty, C.byteSwap()));
-
-  case Intrinsic::bitreverse:
-    // bitreverse(A) == C  ->  A == bitreverse(C)
-    return new ICmpInst(Pred, II->getArgOperand(0),
-                        ConstantInt::get(Ty, C.reverseBits()));
-
   case Intrinsic::ctlz:
   case Intrinsic::cttz: {
     // ctz(A) == bitwidth(A)  ->  A == 0 and likewise for !=
@@ -3617,20 +3607,6 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
 
     break;
   }
-
-  case Intrinsic::fshl:
-  case Intrinsic::fshr:
-    if (II->getArgOperand(0) == II->getArgOperand(1)) {
-      const APInt *RotAmtC;
-      // ror(X, RotAmtC) == C --> X == rol(C, RotAmtC)
-      // rol(X, RotAmtC) == C --> X == ror(C, RotAmtC)
-      if (match(II->getArgOperand(2), m_APInt(RotAmtC)))
-        return new ICmpInst(Pred, II->getArgOperand(0),
-                            II->getIntrinsicID() == Intrinsic::fshl
-                                ? ConstantInt::get(Ty, C.rotr(*RotAmtC))
-                                : ConstantInt::get(Ty, C.rotl(*RotAmtC)));
-    }
-    break;
 
   case Intrinsic::umax:
   case Intrinsic::uadd_sat: {
@@ -5456,6 +5432,14 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   const CmpInst::Predicate Pred = I.getPredicate();
+  {
+    Constant *C;
+    if (match(Op1, m_ImmConstant(C))) {
+      if (auto *R = simplifyOpWithConstantEqConsts(Op0, Builder, C))
+        return new ICmpInst(Pred, R, C);
+    }
+  }
+
   Value *A, *B, *C, *D;
   if (match(Op0, m_Xor(m_Value(A), m_Value(B)))) {
     if (A == Op1 || B == Op1) { // (A^B) == A  ->  B == 0

@@ -2371,8 +2371,7 @@ define <2 x i1> @icmp_eq_add_non_splat(<2 x i32> %a) {
 
 define <2 x i1> @icmp_eq_add_undef2(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_eq_add_undef2(
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[A:%.*]], <i32 5, i32 5>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[ADD]], <i32 10, i32 undef>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 5, i32 undef>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = add <2 x i32> %a, <i32 5, i32 5>
@@ -2382,8 +2381,7 @@ define <2 x i1> @icmp_eq_add_undef2(<2 x i32> %a) {
 
 define <2 x i1> @icmp_eq_add_non_splat2(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_eq_add_non_splat2(
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[A:%.*]], <i32 5, i32 5>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[ADD]], <i32 10, i32 11>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 5, i32 6>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = add <2 x i32> %a, <i32 5, i32 5>
