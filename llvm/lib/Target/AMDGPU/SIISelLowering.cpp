@@ -3684,7 +3684,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (!IsSibCall)
     Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
 
-  if (!IsSibCall || IsChainCallConv) {
+  if (!AMDGPU::isGraphics(CallConv) && (!IsSibCall || IsChainCallConv)) {
     if (!Subtarget->enableFlatScratch()) {
       SmallVector<SDValue, 4> CopyFromChains;
 
