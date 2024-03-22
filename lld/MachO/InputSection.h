@@ -302,6 +302,8 @@ bool isEhFrameSection(const InputSection *);
 bool isGccExceptTabSection(const InputSection *);
 
 extern std::vector<ConcatInputSection *> inputSections;
+// This is used as a counter for specyfing input order for input sections
+extern int inputSectionsOrder;
 
 namespace section_names {
 
@@ -369,6 +371,7 @@ constexpr const char addrSig[] = "__llvm_addrsig";
 
 } // namespace section_names
 
+void addInputSection(InputSection *inputSection);
 } // namespace macho
 
 std::string toString(const macho::InputSection *);
