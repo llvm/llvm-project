@@ -74,7 +74,7 @@ namespace {
 struct BCEAtom {
   BCEAtom() = default;
   BCEAtom(GetElementPtrInst *GEP, LoadInst *LoadI, int BaseId, APInt Offset)
-      : GEP(GEP), LoadI(LoadI), BaseId(BaseId), Offset(Offset) {}
+      : GEP(GEP), LoadI(LoadI), BaseId(BaseId), Offset(std::move(Offset)) {}
 
   BCEAtom(const BCEAtom &) = delete;
   BCEAtom &operator=(const BCEAtom &) = delete;
