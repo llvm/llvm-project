@@ -33,12 +33,14 @@
 # GD64-NEXT:         c.add   a0, tp
 # GD64-NEXT:         jal     {{.*}} <foo>
 ## &.got[c]-. = 0x20c0+8 - 0x1020 = 0x10a8
+# GD64-LABEL: <.Ltlsdesc_hi1>:
 # GD64-NEXT:   1020: auipc   a4, 0x1
 # GD64-NEXT:         ld      a5, 0xa8(a4)
 # GD64-NEXT:         addi    a0, a4, 0xa8
 # GD64-NEXT:         jalr    t0, 0x0(a5)
 # GD64-NEXT:         c.add   a0, tp
 ## &.got[c]-. = 0x20c0+8 - 0x1032 = 0x1096
+# GD64-LABEL: <.Ltlsdesc_hi2>:
 # GD64-NEXT:   1032: auipc   a6, 0x1
 # GD64-NEXT:         ld      a7, 0x96(a6)
 # GD64-NEXT:         addi    a0, a6, 0x96
@@ -64,6 +66,7 @@
 # LE64-NEXT:         jal     {{.*}} <foo>
 # LE64-NEXT:                 R_RISCV_JAL foo
 # LE64-NEXT:                 R_RISCV_RELAX *ABS*
+# LE64-LABEL: <.Ltlsdesc_hi1>:
 # LE64-NEXT:         addi    a0, zero, 0x7ff
 # LE64-NEXT:                 R_RISCV_TLSDESC_HI20 b
 # LE64-NEXT:                 R_RISCV_RELAX *ABS*
@@ -71,6 +74,7 @@
 # LE64-NEXT:                 R_RISCV_TLSDESC_ADD_LO12 .Ltlsdesc_hi1
 # LE64-NEXT:                 R_RISCV_TLSDESC_CALL .Ltlsdesc_hi1
 # LE64-NEXT:         c.add   a0, tp
+# LE64-LABEL: <.Ltlsdesc_hi2>:
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:                 R_RISCV_TLSDESC_HI20 b
 # LE64-NEXT:         addi    zero, zero, 0x0
@@ -93,9 +97,11 @@
 # LE64A-NEXT:         addi    a0, a0, -0x479
 # LE64A-NEXT:         c.add   a0, tp
 # LE64A-NEXT:         jal     {{.*}} <foo>
+# LE64A-LABEL: <.Ltlsdesc_hi1>:
 # LE64A-NEXT:         lui     a0, 0x2
 # LE64A-NEXT:         addi    a0, a0, -0x479
 # LE64A-NEXT:         c.add   a0, tp
+# LE64A-LABEL: <.Ltlsdesc_hi2>:
 # LE64A-NEXT:         addi    zero, zero, 0x0
 # LE64A-NEXT:         addi    zero, zero, 0x0
 # LE64A-NEXT:         lui     a0, 0x2
@@ -115,10 +121,12 @@
 # IE64-NEXT:         c.add   a0, tp
 # IE64-NEXT:         jal     {{.*}} <foo>
 ## &.got[c]-. = 0x120e0+8 - 0x11018 = 0x10d0
+# IE64-LABEL: <.Ltlsdesc_hi1>:
 # IE64-NEXT:  11018: auipc   a0, 0x1
 # IE64-NEXT:         ld      a0, 0xd0(a0)
 # IE64-NEXT:         c.add   a0, tp
 ## &.got[c]-. = 0x120e0+8 - 0x1102a = 0x10be
+# IE64-LABEL: <.Ltlsdesc_hi2>:
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:  1102a: auipc   a0, 0x1
