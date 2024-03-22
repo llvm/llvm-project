@@ -1171,14 +1171,14 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     // We need a multiple of the divisor for a signed add constant, but
     // unsigned is fine with any constant pair.
     if (IsSigned &&
-        match(Op0, m_NSWAdd(m_NSWMul(m_Value(X), m_SpecificInt(*C2)),
-                            m_APInt(C1))) &&
+        match(Op0, m_NSWAddLike(m_NSWMul(m_Value(X), m_SpecificInt(*C2)),
+                                m_APInt(C1))) &&
         isMultiple(*C1, *C2, Quotient, IsSigned)) {
       return BinaryOperator::CreateNSWAdd(X, ConstantInt::get(Ty, Quotient));
     }
     if (!IsSigned &&
-        match(Op0, m_NUWAdd(m_NUWMul(m_Value(X), m_SpecificInt(*C2)),
-                            m_APInt(C1)))) {
+        match(Op0, m_NUWAddLike(m_NUWMul(m_Value(X), m_SpecificInt(*C2)),
+                                m_APInt(C1)))) {
       return BinaryOperator::CreateNUWAdd(X,
                                           ConstantInt::get(Ty, C1->udiv(*C2)));
     }

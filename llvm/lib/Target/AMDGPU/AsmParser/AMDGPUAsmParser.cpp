@@ -8,7 +8,6 @@
 
 #include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
-#include "MCTargetDesc/AMDGPUMCKernelDescriptor.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIDefines.h"
@@ -5418,8 +5417,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   if (getParser().parseIdentifier(KernelName))
     return true;
 
-  AMDGPU::MCKernelDescriptor KD =
-      getDefaultAmdhsaKernelDescriptor(&getSTI(), getContext());
+  kernel_descriptor_t KD = getDefaultAmdhsaKernelDescriptor(&getSTI());
 
   StringSet<> Seen;
 
@@ -5459,111 +5457,89 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       return TokError(".amdhsa_ directives cannot be repeated");
 
     SMLoc ValStart = getLoc();
-    const MCExpr *ExprVal;
-    if (getParser().parseExpression(ExprVal))
+    int64_t IVal;
+    if (getParser().parseAbsoluteExpression(IVal))
       return true;
     SMLoc ValEnd = getLoc();
     SMRange ValRange = SMRange(ValStart, ValEnd);
 
-    int64_t IVal = 0;
+    if (IVal < 0)
+      return OutOfRangeError(ValRange);
+
     uint64_t Val = IVal;
-    bool EvaluatableExpr;
-    if ((EvaluatableExpr = ExprVal->evaluateAsAbsolute(IVal))) {
-      if (IVal < 0)
-        return OutOfRangeError(ValRange);
-      Val = IVal;
-    }
 
 #define PARSE_BITS_ENTRY(FIELD, ENTRY, VALUE, RANGE)                           \
-  if (!isUInt<ENTRY##_WIDTH>(Val))                                             \
+  if (!isUInt<ENTRY##_WIDTH>(VALUE))                                           \
     return OutOfRangeError(RANGE);                                             \
-  AMDGPU::MCKernelDescriptor::bits_set(FIELD, VALUE, ENTRY##_SHIFT, ENTRY,     \
-                                       getContext());
-
-// Some fields use the parsed value immediately which requires the expression to
-// be solvable.
-#define EXPR_RESOLVE_OR_ERROR(RESOLVED)                                        \
-  if (!(RESOLVED))                                                             \
-    return Error(IDRange.Start, "directive should have resolvable expression", \
-                 IDRange);
+  AMDHSA_BITS_SET(FIELD, ENTRY, VALUE);
 
     if (ID == ".amdhsa_group_segment_fixed_size") {
-      if (!isUInt<sizeof(kernel_descriptor_t::group_segment_fixed_size) *
-                  CHAR_BIT>(Val))
+      if (!isUInt<sizeof(KD.group_segment_fixed_size) * CHAR_BIT>(Val))
         return OutOfRangeError(ValRange);
-      KD.group_segment_fixed_size = ExprVal;
+      KD.group_segment_fixed_size = Val;
     } else if (ID == ".amdhsa_private_segment_fixed_size") {
-      if (!isUInt<sizeof(kernel_descriptor_t::private_segment_fixed_size) *
-                  CHAR_BIT>(Val))
+      if (!isUInt<sizeof(KD.private_segment_fixed_size) * CHAR_BIT>(Val))
         return OutOfRangeError(ValRange);
-      KD.private_segment_fixed_size = ExprVal;
+      KD.private_segment_fixed_size = Val;
     } else if (ID == ".amdhsa_kernarg_size") {
-      if (!isUInt<sizeof(kernel_descriptor_t::kernarg_size) * CHAR_BIT>(Val))
+      if (!isUInt<sizeof(KD.kernarg_size) * CHAR_BIT>(Val))
         return OutOfRangeError(ValRange);
-      KD.kernarg_size = ExprVal;
+      KD.kernarg_size = Val;
     } else if (ID == ".amdhsa_user_sgpr_count") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       ExplicitUserSGPRCount = Val;
     } else if (ID == ".amdhsa_user_sgpr_private_segment_buffer") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (hasArchitectedFlatScratch())
         return Error(IDRange.Start,
                      "directive is not supported with architected flat scratch",
                      IDRange);
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER,
-                       ExprVal, ValRange);
+                       Val, ValRange);
       if (Val)
         ImpliedUserSGPRCount += 4;
     } else if (ID == ".amdhsa_user_sgpr_kernarg_preload_length") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (!hasKernargPreload())
         return Error(IDRange.Start, "directive requires gfx90a+", IDRange);
 
       if (Val > getMaxNumUserSGPRs())
         return OutOfRangeError(ValRange);
-      PARSE_BITS_ENTRY(KD.kernarg_preload, KERNARG_PRELOAD_SPEC_LENGTH, ExprVal,
+      PARSE_BITS_ENTRY(KD.kernarg_preload, KERNARG_PRELOAD_SPEC_LENGTH, Val,
                        ValRange);
       if (Val) {
         ImpliedUserSGPRCount += Val;
         PreloadLength = Val;
       }
     } else if (ID == ".amdhsa_user_sgpr_kernarg_preload_offset") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (!hasKernargPreload())
         return Error(IDRange.Start, "directive requires gfx90a+", IDRange);
 
       if (Val >= 1024)
         return OutOfRangeError(ValRange);
-      PARSE_BITS_ENTRY(KD.kernarg_preload, KERNARG_PRELOAD_SPEC_OFFSET, ExprVal,
+      PARSE_BITS_ENTRY(KD.kernarg_preload, KERNARG_PRELOAD_SPEC_OFFSET, Val,
                        ValRange);
       if (Val)
         PreloadOffset = Val;
     } else if (ID == ".amdhsa_user_sgpr_dispatch_ptr") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
-                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR, ExprVal,
+                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR, Val,
                        ValRange);
       if (Val)
         ImpliedUserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_queue_ptr") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
-                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR, ExprVal,
+                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR, Val,
                        ValRange);
       if (Val)
         ImpliedUserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_kernarg_segment_ptr") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR,
-                       ExprVal, ValRange);
+                       Val, ValRange);
       if (Val)
         ImpliedUserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_dispatch_id") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
-                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID, ExprVal,
+                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID, Val,
                        ValRange);
       if (Val)
         ImpliedUserSGPRCount += 2;
@@ -5572,39 +5548,34 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
         return Error(IDRange.Start,
                      "directive is not supported with architected flat scratch",
                      IDRange);
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
-                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT,
-                       ExprVal, ValRange);
+                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT, Val,
+                       ValRange);
       if (Val)
         ImpliedUserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_private_segment_size") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE,
-                       ExprVal, ValRange);
+                       Val, ValRange);
       if (Val)
         ImpliedUserSGPRCount += 1;
     } else if (ID == ".amdhsa_wavefront_size32") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (IVersion.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
       EnableWavefrontSize32 = Val;
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
-                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32, ExprVal,
-                       ValRange);
+                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
+                       Val, ValRange);
     } else if (ID == ".amdhsa_uses_dynamic_stack") {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
-                       KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK, ExprVal,
-                       ValRange);
+                       KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK, Val, ValRange);
     } else if (ID == ".amdhsa_system_sgpr_private_segment_wavefront_offset") {
       if (hasArchitectedFlatScratch())
         return Error(IDRange.Start,
                      "directive is not supported with architected flat scratch",
                      IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc2,
-                       COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT, ExprVal,
-                       ValRange);
+                       COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT, Val, ValRange);
     } else if (ID == ".amdhsa_enable_private_segment") {
       if (!hasArchitectedFlatScratch())
         return Error(
@@ -5612,48 +5583,42 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
             "directive is not supported without architected flat scratch",
             IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc2,
-                       COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT, ExprVal,
-                       ValRange);
+                       COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT, Val, ValRange);
     } else if (ID == ".amdhsa_system_sgpr_workgroup_id_x") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc2,
-                       COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, ExprVal,
+                       COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, Val,
                        ValRange);
     } else if (ID == ".amdhsa_system_sgpr_workgroup_id_y") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc2,
-                       COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_Y, ExprVal,
+                       COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_Y, Val,
                        ValRange);
     } else if (ID == ".amdhsa_system_sgpr_workgroup_id_z") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc2,
-                       COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_Z, ExprVal,
+                       COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_Z, Val,
                        ValRange);
     } else if (ID == ".amdhsa_system_sgpr_workgroup_info") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc2,
-                       COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_INFO, ExprVal,
+                       COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_INFO, Val,
                        ValRange);
     } else if (ID == ".amdhsa_system_vgpr_workitem_id") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc2,
-                       COMPUTE_PGM_RSRC2_ENABLE_VGPR_WORKITEM_ID, ExprVal,
+                       COMPUTE_PGM_RSRC2_ENABLE_VGPR_WORKITEM_ID, Val,
                        ValRange);
     } else if (ID == ".amdhsa_next_free_vgpr") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       VGPRRange = ValRange;
       NextFreeVGPR = Val;
     } else if (ID == ".amdhsa_next_free_sgpr") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       SGPRRange = ValRange;
       NextFreeSGPR = Val;
     } else if (ID == ".amdhsa_accum_offset") {
       if (!isGFX90A())
         return Error(IDRange.Start, "directive requires gfx90a+", IDRange);
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       AccumOffset = Val;
     } else if (ID == ".amdhsa_reserve_vcc") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (!isUInt<1>(Val))
         return OutOfRangeError(ValRange);
       ReserveVCC = Val;
     } else if (ID == ".amdhsa_reserve_flat_scratch") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (IVersion.Major < 7)
         return Error(IDRange.Start, "directive requires gfx7+", IDRange);
       if (hasArchitectedFlatScratch())
@@ -5673,105 +5638,97 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                                  IDRange);
     } else if (ID == ".amdhsa_float_round_mode_32") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_FLOAT_ROUND_MODE_32, ExprVal,
-                       ValRange);
+                       COMPUTE_PGM_RSRC1_FLOAT_ROUND_MODE_32, Val, ValRange);
     } else if (ID == ".amdhsa_float_round_mode_16_64") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_FLOAT_ROUND_MODE_16_64, ExprVal,
-                       ValRange);
+                       COMPUTE_PGM_RSRC1_FLOAT_ROUND_MODE_16_64, Val, ValRange);
     } else if (ID == ".amdhsa_float_denorm_mode_32") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_32, ExprVal,
-                       ValRange);
+                       COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_32, Val, ValRange);
     } else if (ID == ".amdhsa_float_denorm_mode_16_64") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64, ExprVal,
+                       COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64, Val,
                        ValRange);
     } else if (ID == ".amdhsa_dx10_clamp") {
       if (IVersion.Major >= 12)
         return Error(IDRange.Start, "directive unsupported on gfx12+", IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP, ExprVal,
+                       COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP, Val,
                        ValRange);
     } else if (ID == ".amdhsa_ieee_mode") {
       if (IVersion.Major >= 12)
         return Error(IDRange.Start, "directive unsupported on gfx12+", IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, ExprVal,
+                       COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, Val,
                        ValRange);
     } else if (ID == ".amdhsa_fp16_overflow") {
       if (IVersion.Major < 9)
         return Error(IDRange.Start, "directive requires gfx9+", IDRange);
-      PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_GFX9_PLUS_FP16_OVFL, ExprVal,
+      PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1, COMPUTE_PGM_RSRC1_GFX9_PLUS_FP16_OVFL, Val,
                        ValRange);
     } else if (ID == ".amdhsa_tg_split") {
       if (!isGFX90A())
         return Error(IDRange.Start, "directive requires gfx90a+", IDRange);
-      PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3, COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
-                       ExprVal, ValRange);
+      PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3, COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT, Val,
+                       ValRange);
     } else if (ID == ".amdhsa_workgroup_processor_mode") {
       if (IVersion.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
-      PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE, ExprVal,
+      PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1, COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE, Val,
                        ValRange);
     } else if (ID == ".amdhsa_memory_ordered") {
       if (IVersion.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
-      PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, ExprVal,
+      PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1, COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, Val,
                        ValRange);
     } else if (ID == ".amdhsa_forward_progress") {
       if (IVersion.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
-      PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_GFX10_PLUS_FWD_PROGRESS, ExprVal,
+      PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1, COMPUTE_PGM_RSRC1_GFX10_PLUS_FWD_PROGRESS, Val,
                        ValRange);
     } else if (ID == ".amdhsa_shared_vgpr_count") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (IVersion.Major < 10 || IVersion.Major >= 12)
         return Error(IDRange.Start, "directive requires gfx10 or gfx11",
                      IDRange);
       SharedVGPRCount = Val;
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3,
-                       COMPUTE_PGM_RSRC3_GFX10_GFX11_SHARED_VGPR_COUNT, ExprVal,
+                       COMPUTE_PGM_RSRC3_GFX10_GFX11_SHARED_VGPR_COUNT, Val,
                        ValRange);
     } else if (ID == ".amdhsa_exception_fp_ieee_invalid_op") {
       PARSE_BITS_ENTRY(
           KD.compute_pgm_rsrc2,
-          COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION,
-          ExprVal, ValRange);
+          COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION, Val,
+          ValRange);
     } else if (ID == ".amdhsa_exception_fp_denorm_src") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc2,
                        COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_FP_DENORMAL_SOURCE,
-                       ExprVal, ValRange);
+                       Val, ValRange);
     } else if (ID == ".amdhsa_exception_fp_ieee_div_zero") {
       PARSE_BITS_ENTRY(
           KD.compute_pgm_rsrc2,
-          COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_DIVISION_BY_ZERO,
-          ExprVal, ValRange);
+          COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_DIVISION_BY_ZERO, Val,
+          ValRange);
     } else if (ID == ".amdhsa_exception_fp_ieee_overflow") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc2,
                        COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_OVERFLOW,
-                       ExprVal, ValRange);
+                       Val, ValRange);
     } else if (ID == ".amdhsa_exception_fp_ieee_underflow") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc2,
                        COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_UNDERFLOW,
-                       ExprVal, ValRange);
+                       Val, ValRange);
     } else if (ID == ".amdhsa_exception_fp_ieee_inexact") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc2,
                        COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_INEXACT,
-                       ExprVal, ValRange);
+                       Val, ValRange);
     } else if (ID == ".amdhsa_exception_int_div_zero") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc2,
                        COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO,
-                       ExprVal, ValRange);
+                       Val, ValRange);
     } else if (ID == ".amdhsa_round_robin_scheduling") {
       if (IVersion.Major < 12)
         return Error(IDRange.Start, "directive requires gfx12+", IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN, ExprVal,
+                       COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN, Val,
                        ValRange);
     } else {
       return Error(IDRange.Start, "unknown .amdhsa_kernel directive", IDRange);
@@ -5798,18 +5755,15 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   if (!isUInt<COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT_WIDTH>(
           VGPRBlocks))
     return OutOfRangeError(VGPRRange);
-  AMDGPU::MCKernelDescriptor::bits_set(
-      KD.compute_pgm_rsrc1, MCConstantExpr::create(VGPRBlocks, getContext()),
-      COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT_SHIFT,
-      COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT, getContext());
+  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                  COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT, VGPRBlocks);
 
   if (!isUInt<COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT_WIDTH>(
           SGPRBlocks))
     return OutOfRangeError(SGPRRange);
-  AMDGPU::MCKernelDescriptor::bits_set(
-      KD.compute_pgm_rsrc1, MCConstantExpr::create(SGPRBlocks, getContext()),
-      COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT_SHIFT,
-      COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT, getContext());
+  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                  COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT,
+                  SGPRBlocks);
 
   if (ExplicitUserSGPRCount && ImpliedUserSGPRCount > *ExplicitUserSGPRCount)
     return TokError("amdgpu_user_sgpr_count smaller than than implied by "
@@ -5820,17 +5774,11 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
 
   if (!isUInt<COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
     return TokError("too many user SGPRs enabled");
-  AMDGPU::MCKernelDescriptor::bits_set(
-      KD.compute_pgm_rsrc2, MCConstantExpr::create(UserSGPRCount, getContext()),
-      COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_SHIFT,
-      COMPUTE_PGM_RSRC2_USER_SGPR_COUNT, getContext());
+  AMDHSA_BITS_SET(KD.compute_pgm_rsrc2, COMPUTE_PGM_RSRC2_USER_SGPR_COUNT,
+                  UserSGPRCount);
 
-  int64_t IVal = 0;
-  if (!KD.kernarg_size->evaluateAsAbsolute(IVal))
-    return TokError("Kernarg size should be resolvable");
-  uint64_t kernarg_size = IVal;
-  if (PreloadLength && kernarg_size &&
-      (PreloadLength * 4 + PreloadOffset * 4 > kernarg_size))
+  if (PreloadLength && KD.kernarg_size &&
+      (PreloadLength * 4 + PreloadOffset * 4 > KD.kernarg_size))
     return TokError("Kernarg preload length + offset is larger than the "
                     "kernarg segment size");
 
@@ -5842,11 +5790,8 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                       "increments of 4");
     if (AccumOffset > alignTo(std::max((uint64_t)1, NextFreeVGPR), 4))
       return TokError("accum_offset exceeds total VGPR allocation");
-    MCKernelDescriptor::bits_set(
-        KD.compute_pgm_rsrc3,
-        MCConstantExpr::create(AccumOffset / 4 - 1, getContext()),
-        COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT,
-        COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET, getContext());
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc3, COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET,
+                    (AccumOffset / 4 - 1));
   }
 
   if (IVersion.Major >= 10 && IVersion.Major < 12) {
