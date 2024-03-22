@@ -3802,85 +3802,17 @@ InstCombiner::simplifyOpWithConstantEqConsts(Value *Op, BuilderTy &Builder,
 
 Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
   Value *Cond = SI.getCondition();
-  Value *Op0;
-  ConstantInt *AddRHS;
-  if (match(Cond, m_Add(m_Value(Op0), m_ConstantInt(AddRHS)))) {
-    // Change 'switch (X+4) case 1:' into 'switch (X) case -3'.
-    for (auto Case : SI.cases()) {
-      Constant *NewCase = ConstantExpr::getSub(Case.getCaseValue(), AddRHS);
-      assert(isa<ConstantInt>(NewCase) &&
-             "Result of expression should be constant");
-      Case.setValue(cast<ConstantInt>(NewCase));
-    }
-    return replaceOperand(SI, 0, Op0);
-  }
 
-  ConstantInt *SubLHS;
-  if (match(Cond, m_Sub(m_ConstantInt(SubLHS), m_Value(Op0)))) {
-    // Change 'switch (1-X) case 1:' into 'switch (X) case 0'.
-    for (auto Case : SI.cases()) {
-      Constant *NewCase = ConstantExpr::getSub(SubLHS, Case.getCaseValue());
-      assert(isa<ConstantInt>(NewCase) &&
-             "Result of expression should be constant");
-      Case.setValue(cast<ConstantInt>(NewCase));
-    }
-    return replaceOperand(SI, 0, Op0);
-  }
+  SmallVector<Constant *> CaseVals;
+  for (const auto &Case : SI.cases())
+    CaseVals.push_back(Case.getCaseValue());
 
-  uint64_t ShiftAmt;
-  if (match(Cond, m_Shl(m_Value(Op0), m_ConstantInt(ShiftAmt))) &&
-      ShiftAmt < Op0->getType()->getScalarSizeInBits() &&
-      all_of(SI.cases(), [&](const auto &Case) {
-        return Case.getCaseValue()->getValue().countr_zero() >= ShiftAmt;
-      })) {
-    // Change 'switch (X << 2) case 4:' into 'switch (X) case 1:'.
-    OverflowingBinaryOperator *Shl = cast<OverflowingBinaryOperator>(Cond);
-    if (Shl->hasNoUnsignedWrap() || Shl->hasNoSignedWrap() ||
-        Shl->hasOneUse()) {
-      Value *NewCond = Op0;
-      if (!Shl->hasNoUnsignedWrap() && !Shl->hasNoSignedWrap()) {
-        // If the shift may wrap, we need to mask off the shifted bits.
-        unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
-        NewCond = Builder.CreateAnd(
-            Op0, APInt::getLowBitsSet(BitWidth, BitWidth - ShiftAmt));
-      }
-      for (auto Case : SI.cases()) {
-        const APInt &CaseVal = Case.getCaseValue()->getValue();
-        APInt ShiftedCase = Shl->hasNoSignedWrap() ? CaseVal.ashr(ShiftAmt)
-                                                   : CaseVal.lshr(ShiftAmt);
-        Case.setValue(ConstantInt::get(SI.getContext(), ShiftedCase));
-      }
-      return replaceOperand(SI, 0, NewCond);
-    }
-  }
-
-  // Fold switch(zext/sext(X)) into switch(X) if possible.
-  if (match(Cond, m_ZExtOrSExt(m_Value(Op0)))) {
-    bool IsZExt = isa<ZExtInst>(Cond);
-    Type *SrcTy = Op0->getType();
-    unsigned NewWidth = SrcTy->getScalarSizeInBits();
-
-    if (all_of(SI.cases(), [&](const auto &Case) {
-          const APInt &CaseVal = Case.getCaseValue()->getValue();
-          return IsZExt ? CaseVal.isIntN(NewWidth)
-                        : CaseVal.isSignedIntN(NewWidth);
-        })) {
-      for (auto &Case : SI.cases()) {
-        APInt TruncatedCase = Case.getCaseValue()->getValue().trunc(NewWidth);
-        Case.setValue(ConstantInt::get(SI.getContext(), TruncatedCase));
-      }
-      return replaceOperand(SI, 0, Op0);
-    }
-  }
-
-  // Fold 'switch(rol(x, C1)) case C2:' to 'switch(x) case rol(C2, -C1):'
-  if (match(Cond,
-            m_FShl(m_Value(Op0), m_Deferred(Op0), m_ConstantInt(ShiftAmt)))) {
-    for (auto &Case : SI.cases()) {
-      const APInt NewCase = Case.getCaseValue()->getValue().rotr(ShiftAmt);
-      Case.setValue(ConstantInt::get(SI.getContext(), NewCase));
-    }
-    return replaceOperand(SI, 0, Op0);
+  if (auto *R = simplifyOpWithConstantEqConsts(Cond, Builder, CaseVals,
+                                               /*ReqOneUseAdd=*/false)) {
+    unsigned i = 0;
+    for (auto &Case : SI.cases())
+      Case.setValue(cast<ConstantInt>(CaseVals[i++]));
+    return replaceOperand(SI, 0, R);
   }
 
   KnownBits Known = computeKnownBits(Cond, 0, &SI);

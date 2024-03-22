@@ -446,11 +446,10 @@ define i1 @simplify_cmp_fshl_fail_not_rotate(i8 %x, i8 %y) {
 
 define i8 @simplify_switch_or_disjoint(i8 %x) {
 ; CHECK-LABEL: @simplify_switch_or_disjoint(
-; CHECK-NEXT:    [[V:%.*]] = or disjoint i8 [[X:%.*]], 12
-; CHECK-NEXT:    switch i8 [[V]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i8 12, label [[L12:%.*]]
-; CHECK-NEXT:      i8 44, label [[L44:%.*]]
-; CHECK-NEXT:      i8 45, label [[L45:%.*]]
+; CHECK-NEXT:    switch i8 [[V:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 0, label [[L12:%.*]]
+; CHECK-NEXT:      i8 32, label [[L44:%.*]]
+; CHECK-NEXT:      i8 33, label [[L45:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       l12:
 ; CHECK-NEXT:    ret i8 12
@@ -554,10 +553,10 @@ define i8 @simplify_switch_xor(i8 %x) {
 ; CHECK-LABEL: @simplify_switch_xor(
 ; CHECK-NEXT:    [[V:%.*]] = xor i8 [[X:%.*]], 12
 ; CHECK-NEXT:    call void @use.i8(i8 [[V]])
-; CHECK-NEXT:    switch i8 [[V]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i8 12, label [[L12:%.*]]
-; CHECK-NEXT:      i8 44, label [[L44:%.*]]
-; CHECK-NEXT:      i8 45, label [[L45:%.*]]
+; CHECK-NEXT:    switch i8 [[X]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 0, label [[L12:%.*]]
+; CHECK-NEXT:      i8 32, label [[L44:%.*]]
+; CHECK-NEXT:      i8 33, label [[L45:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       l12:
 ; CHECK-NEXT:    ret i8 12
@@ -591,10 +590,10 @@ define i8 @simplify_switch_mul_udiv(i8 %x) {
 ; CHECK-LABEL: @simplify_switch_mul_udiv(
 ; CHECK-NEXT:    [[V:%.*]] = mul nuw i8 [[X:%.*]], 12
 ; CHECK-NEXT:    call void @use.i8(i8 [[V]])
-; CHECK-NEXT:    switch i8 [[V]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i8 12, label [[L12:%.*]]
-; CHECK-NEXT:      i8 48, label [[L48:%.*]]
-; CHECK-NEXT:      i8 60, label [[L60:%.*]]
+; CHECK-NEXT:    switch i8 [[X]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 1, label [[L12:%.*]]
+; CHECK-NEXT:      i8 4, label [[L48:%.*]]
+; CHECK-NEXT:      i8 5, label [[L60:%.*]]
 ; CHECK-NEXT:      i8 0, label [[L0:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       l12:
@@ -675,10 +674,10 @@ define i8 @simplify_switch_mul_sdiv(i8 %x) {
 ; CHECK-LABEL: @simplify_switch_mul_sdiv(
 ; CHECK-NEXT:    [[V:%.*]] = mul nuw i8 [[X:%.*]], 12
 ; CHECK-NEXT:    call void @use.i8(i8 [[V]])
-; CHECK-NEXT:    switch i8 [[V]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i8 -12, label [[L12:%.*]]
-; CHECK-NEXT:      i8 48, label [[L48:%.*]]
-; CHECK-NEXT:      i8 -60, label [[L60:%.*]]
+; CHECK-NEXT:    switch i8 [[X]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[L12:%.*]]
+; CHECK-NEXT:      i8 4, label [[L48:%.*]]
+; CHECK-NEXT:      i8 -5, label [[L60:%.*]]
 ; CHECK-NEXT:      i8 0, label [[L0:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       l12:
@@ -759,10 +758,10 @@ define i8 @simplify_switch_udiv(i8 %x) {
 ; CHECK-LABEL: @simplify_switch_udiv(
 ; CHECK-NEXT:    [[V:%.*]] = udiv exact i8 [[X:%.*]], 12
 ; CHECK-NEXT:    call void @use.i8(i8 [[V]])
-; CHECK-NEXT:    switch i8 [[V]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i8 12, label [[L12:%.*]]
-; CHECK-NEXT:      i8 3, label [[L48:%.*]]
-; CHECK-NEXT:      i8 9, label [[L60:%.*]]
+; CHECK-NEXT:    switch i8 [[X]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 -112, label [[L12:%.*]]
+; CHECK-NEXT:      i8 36, label [[L48:%.*]]
+; CHECK-NEXT:      i8 108, label [[L60:%.*]]
 ; CHECK-NEXT:      i8 0, label [[L0:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       l12:
@@ -843,10 +842,10 @@ define i8 @simplify_switch_sdiv(i8 %x) {
 ; CHECK-LABEL: @simplify_switch_sdiv(
 ; CHECK-NEXT:    [[V:%.*]] = sdiv exact i8 [[X:%.*]], 12
 ; CHECK-NEXT:    call void @use.i8(i8 [[V]])
-; CHECK-NEXT:    switch i8 [[V]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i8 4, label [[L12:%.*]]
-; CHECK-NEXT:      i8 -3, label [[L48:%.*]]
-; CHECK-NEXT:      i8 7, label [[L60:%.*]]
+; CHECK-NEXT:    switch i8 [[X]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 48, label [[L12:%.*]]
+; CHECK-NEXT:      i8 -36, label [[L48:%.*]]
+; CHECK-NEXT:      i8 84, label [[L60:%.*]]
 ; CHECK-NEXT:      i8 0, label [[L0:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       l12:
@@ -1290,10 +1289,10 @@ define i8 @simplify_switch_lshr(i8 %x) {
 ; CHECK-LABEL: @simplify_switch_lshr(
 ; CHECK-NEXT:    [[V:%.*]] = lshr exact i8 [[X:%.*]], 2
 ; CHECK-NEXT:    call void @use.i8(i8 [[V]])
-; CHECK-NEXT:    switch i8 [[V]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i8 12, label [[L12:%.*]]
-; CHECK-NEXT:      i8 16, label [[L48:%.*]]
-; CHECK-NEXT:      i8 30, label [[L60:%.*]]
+; CHECK-NEXT:    switch i8 [[X]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 48, label [[L12:%.*]]
+; CHECK-NEXT:      i8 64, label [[L48:%.*]]
+; CHECK-NEXT:      i8 120, label [[L60:%.*]]
 ; CHECK-NEXT:      i8 0, label [[L0:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       l12:
@@ -1372,10 +1371,10 @@ define i8 @simplify_switch_ashr(i8 %x) {
 ; CHECK-LABEL: @simplify_switch_ashr(
 ; CHECK-NEXT:    [[V:%.*]] = ashr exact i8 [[X:%.*]], 2
 ; CHECK-NEXT:    call void @use.i8(i8 [[V]])
-; CHECK-NEXT:    switch i8 [[V]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i8 -12, label [[L12:%.*]]
-; CHECK-NEXT:      i8 16, label [[L48:%.*]]
-; CHECK-NEXT:      i8 3, label [[L60:%.*]]
+; CHECK-NEXT:    switch i8 [[X]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 -48, label [[L12:%.*]]
+; CHECK-NEXT:      i8 64, label [[L48:%.*]]
+; CHECK-NEXT:      i8 12, label [[L60:%.*]]
 ; CHECK-NEXT:      i8 0, label [[L0:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       l12:
@@ -1452,12 +1451,11 @@ default:
 
 define i8 @simplify_switch_bitreverse(i8 %x) {
 ; CHECK-LABEL: @simplify_switch_bitreverse(
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[X:%.*]])
-; CHECK-NEXT:    switch i8 [[V]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i8 -12, label [[L12:%.*]]
-; CHECK-NEXT:      i8 16, label [[L48:%.*]]
-; CHECK-NEXT:      i8 30, label [[L60:%.*]]
-; CHECK-NEXT:      i8 -128, label [[L0:%.*]]
+; CHECK-NEXT:    switch i8 [[V:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 47, label [[L12:%.*]]
+; CHECK-NEXT:      i8 8, label [[L48:%.*]]
+; CHECK-NEXT:      i8 120, label [[L60:%.*]]
+; CHECK-NEXT:      i8 1, label [[L0:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       l12:
 ; CHECK-NEXT:    ret i8 12
@@ -1492,12 +1490,11 @@ default:
 
 define i16 @simplify_switch_bswap(i16 %x) {
 ; CHECK-LABEL: @simplify_switch_bswap(
-; CHECK-NEXT:    [[V:%.*]] = call i16 @llvm.bswap.i16(i16 [[X:%.*]])
-; CHECK-NEXT:    switch i16 [[V]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i16 -12, label [[L12:%.*]]
-; CHECK-NEXT:      i16 16, label [[L48:%.*]]
-; CHECK-NEXT:      i16 30, label [[L60:%.*]]
-; CHECK-NEXT:      i16 128, label [[L0:%.*]]
+; CHECK-NEXT:    switch i16 [[V:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i16 -2817, label [[L12:%.*]]
+; CHECK-NEXT:      i16 4096, label [[L48:%.*]]
+; CHECK-NEXT:      i16 7680, label [[L60:%.*]]
+; CHECK-NEXT:      i16 -32768, label [[L0:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       l12:
 ; CHECK-NEXT:    ret i16 12
