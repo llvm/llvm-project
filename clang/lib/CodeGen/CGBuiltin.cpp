@@ -799,7 +799,7 @@ Value *CodeGenFunction::EmitVAStartEnd(Value *ArgValue, bool IsStart) {
 /// Checks if using the result of __builtin_object_size(p, @p From) in place of
 /// __builtin_object_size(p, @p To) is correct
 static bool areBOSTypesCompatible(int From, int To) {
-  // Note: Our __builtin_object_size implementation currently treats Type=0 andV
+  // Note: Our __builtin_object_size implementation currently treats Type=0 and
   // Type=2 identically. Encoding this implementation detail here may make
   // improving __builtin_object_size difficult in the future, so it's omitted.
   return From == To || (From == 0 && To == 1) || (From == 3 && To == 2);
