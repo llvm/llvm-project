@@ -477,6 +477,7 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
     // Based on the base language, pick one.
     switch (IK.getLanguage()) {
     case clang::Language::Unknown:
+    case clang::Language::CIR:
     case clang::Language::LLVM_IR:
     case clang::Language::RenderScript:
       llvm_unreachable("Invalid input kind!");
