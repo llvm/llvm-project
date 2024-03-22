@@ -342,7 +342,7 @@ private:
       return make_error<Failure>("Failed to attach to the child process: " +
                                  Twine(strerror(errno)));
 
-    if (wait(NULL) == -1) {
+    if (waitpid(ParentOrChildPID, NULL, 0) == -1) {
       return make_error<Failure>(
           "Failed to wait for child process to stop after attaching: " +
           Twine(strerror(errno)));
@@ -361,7 +361,7 @@ private:
       return SendError;
 
     int ChildStatus;
-    if (wait(&ChildStatus) == -1) {
+    if (waitpid(ParentOrChildPID, &ChildStatus, 0) == -1) {
       return make_error<Failure>(
           "Waiting for the child process to complete failed: " +
           Twine(strerror(errno)));
@@ -400,6 +400,20 @@ private:
       return make_error<Failure>("Getting signal info from the child failed: " +
                                  Twine(strerror(errno)));
     }
+
+    // Send SIGKILL rather than SIGTERM as the child process has no SIGTERM
+    // handlers to run, and calling SIGTERM would mean that ptrace will force
+    // it to block in the signal-delivery-stop for the SIGSEGV/other signals,
+    // and upon exit.
+    if (kill(ParentOrChildPID, SIGKILL) == -1)
+      return make_error<Failure>("Failed to kill child benchmarking proces: " +
+                                 Twine(strerror(errno)));
+
+    // Wait for the process to exit so that there are no zombie processes left
+    // around.
+    if (waitpid(ParentOrChildPID, NULL, 0) == -1)
+      return make_error<Failure>("Failed to wait for process to die: " +
+                                 Twine(strerror(errno)));
 
     if (ChildSignalInfo.si_signo == SIGSEGV)
       return make_error<SnippetSegmentationFault>(
