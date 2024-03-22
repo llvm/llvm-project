@@ -30,7 +30,7 @@ private:
 /// When a thread stops, it checks the current frame contains a swift runtime
 /// failure diagnostic. If so, it returns a \a
 /// SwiftRuntimeFailureRecognizedStackFrame holding the diagnostic a stop reason
-/// description with  and the parent frame as the most relavant frame.
+/// description with  and the parent frame as the most relevant frame.
 class SwiftRuntimeFailureFrameRecognizer : public StackFrameRecognizer {
 public:
   std::string GetName() override {
@@ -40,6 +40,17 @@ public:
   RecognizeFrame(lldb::StackFrameSP frame) override;
 };
 
+/// Detect when a thread stops in _swift_runtime_on_report.
+class SwiftRuntimeInstrumentedFrameRecognizer : public StackFrameRecognizer {
+public:
+  std::string GetName() override {
+    return "Swift Runtime Instrumentation StackFrame Recognizer";
+  }
+  lldb::RecognizedStackFrameSP
+  RecognizeFrame(lldb::StackFrameSP frame) override;
+};
+
+  
 } // namespace lldb_private
 
 #endif // liblldb_SwiftRuntimeFailureRegognizer_h_
