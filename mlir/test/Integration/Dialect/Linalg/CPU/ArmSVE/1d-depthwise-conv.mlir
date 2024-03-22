@@ -31,8 +31,6 @@ func.func @conv() {
 
   // Run the convolution
   %res = linalg.depthwise_conv_1d_nwc_wc
-    {dilations = dense<1> : vector<1xi64>,
-    strides = dense<1> : vector<1xi64>}
     ins(%input_dyn, %filter_dyn : tensor<1x8x?xi32>, tensor<2x?xi32>)
     outs(%output_dyn : tensor<1x7x?xi32>) -> tensor<1x7x?xi32>
 
