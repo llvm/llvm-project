@@ -160,6 +160,10 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
   }
   Free(thr->tctx->sync);
 
+#if !SANITIZER_GO
+  thr->is_inited = true;
+#endif
+
   uptr stk_addr = 0;
   uptr stk_size = 0;
   uptr tls_addr = 0;
@@ -205,9 +209,6 @@ void ThreadContext::OnStarted(void *arg) {
   if (common_flags()->detect_deadlocks)
     thr->dd_lt = ctx->dd->CreateLogicalThread(tid);
   thr->tctx = this;
-#if !SANITIZER_GO
-  thr->is_inited = true;
-#endif
 }
 
 void ThreadFinish(ThreadState *thr) {
