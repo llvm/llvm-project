@@ -473,11 +473,109 @@ TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
   return pointee ? GetPointerTo(dem, nominal) : nominal;
 }
 
-/// Return a pair of modulename, type name for the outermost nominal type.
-static std::optional<std::pair<StringRef, StringRef>>
-GetNominal(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node) {
+bool 
+TypeSystemSwiftTypeRef::IsBuiltinType(CompilerType type) {
+  assert(type.GetTypeSystem().isa_and_nonnull<TypeSystemSwift>() &&
+         "Unexpected type system!");
+  Demangler dem;
+  auto *node = GetDemangledType(dem, type.GetMangledTypeName());
   if (!node)
+    return false;
+  return node->getKind() == Node::Kind::BuiltinTypeName;
+}
+
+std::optional<std::pair<NodePointer, NodePointer>>
+ExtractTypeNode(NodePointer node) {
+  // A type node is expected to have two children.
+  if (node->getNumChildren() != 2)
     return {};
+
+  auto *first = node->getChild(0);
+  auto *second = node->getChild(1);
+
+  // The second child of a type node is expected to be its identifier.
+  if (second->getKind() != Node::Kind::Identifier)
+    return {};
+  return {{first, second}};
+}
+
+static std::optional<llvm::StringRef>
+ExtractIdentifierFromLocalDeclName(NodePointer node) {
+  assert(node->getKind() == Node::Kind::LocalDeclName &&
+         "Expected LocalDeclName node!");
+
+  if (node->getNumChildren() != 2) {
+    assert(false && "Local decl name node should have 2 children!");
+    return {};
+  }
+
+  auto *first = node->getChild(0);
+  auto *second = node->getChild(1);
+
+  assert(first->getKind() == Node::Kind::Number && "Expected number node!");
+
+  if (second->getKind() == Node::Kind::Identifier) {
+    if (!second->hasText()) {
+      assert(false && "Identifier should have text!");
+      return {};
+    }
+    return second->getText();
+  }
+  assert(false && "Expected second child of local decl name to be its "
+                  "identifier!"); 
+  return {};
+}
+
+static std::optional<std::pair<StringRef, StringRef>>
+ExtractIdentifiersFromPrivateDeclName(NodePointer node) {
+  assert(node->getKind() == Node::Kind::PrivateDeclName && "Expected PrivateDeclName node!");
+
+  if (node->getNumChildren() != 2) {
+    assert(false && "Private decl name node should have 2 children!");
+    return {};
+  }
+
+  auto *private_discriminator = node->getChild(0);
+  auto *type_name = node->getChild(1);
+
+  if (private_discriminator->getKind() != Node::Kind::Identifier) {
+    assert(
+        false &&
+        "Expected first child of private decl name node to be an identifier!");
+    return {};
+  }
+  if (type_name->getKind() != Node::Kind::Identifier) {
+    assert(
+        false &&
+        "Expected second child of private decl name node to be an identifier!");
+    return {};
+  }
+
+  if (!private_discriminator->hasText() || !type_name->hasText()) {
+    assert(false && "Identifier nodes should have text!");
+    return {};
+  }
+
+  return {{private_discriminator->getText(), type_name->getText()}};
+}
+/// Builds the decl context of a given node. The decl context is the context in
+/// where this type is defined. For example, give a module A with the following 
+/// code:
+///
+/// struct B {
+///   class C {
+///     ...
+///   }
+/// }
+///
+/// The decl context of C would be:
+/// <Module A>
+///   <AnyType B>
+///     <AnyType C>
+static bool BuildDeclContext(swift::Demangle::NodePointer node,
+                             std::vector<CompilerContext> &context) {
+  if (!node)
+    return false;
   using namespace swift::Demangle;
   switch (node->getKind()) {
   case Node::Kind::Structure:
@@ -489,14 +587,34 @@ GetNominal(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node) {
   case Node::Kind::ProtocolListWithAnyObject:
   case Node::Kind::TypeAlias: {
     if (node->getNumChildren() != 2)
-      return {};
-    auto *m = node->getChild(0);
-    if (!m || m->getKind() != Node::Kind::Module || !m->hasText())
-      return {};
-    auto *n = node->getChild(1);
-    if (!n || n->getKind() != Node::Kind::Identifier || !n->hasText())
-      return {};
-    return {{m->getText(), n->getText()}};
+      return false;
+    auto *first = node->getChild(0);
+    if (!first)
+      return false;
+    if (first->getKind() == Node::Kind::Module) {
+      assert(first->hasText() && "Module node should have text!");
+      context.push_back(
+          {CompilerContextKind::Module, ConstString(first->getText())});
+    } else {
+      // If the node's kind is not a module, this is probably a nested type, so
+      // build the decl context for the parent type first.
+      if (!BuildDeclContext(first, context))
+        return false;
+    }
+
+    auto *second = node->getChild(1);
+    if (!second)
+      return false;
+
+    if (second->getKind() == Node::Kind::Identifier) {
+      assert(second->hasText() && "Identifier node should have text!");
+      context.push_back(
+          {CompilerContextKind::AnyType, ConstString(second->getText())});
+      return true;
+    }
+    // If the second child is not an identifier, it could be a private decl
+    // name or a local decl name.
+    return BuildDeclContext(second, context);
   }
   case Node::Kind::BoundGenericClass:
   case Node::Kind::BoundGenericEnum:
@@ -509,36 +627,91 @@ GetNominal(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node) {
     auto *type = node->getChild(0);
     if (!type || type->getKind() != Node::Kind::Type || !type->hasChildren())
       return {};
-    return GetNominal(dem, type->getFirstChild());
+    return BuildDeclContext(type->getFirstChild(), context);
+  }
+  case Node::Kind::Function: {
+    if (node->getNumChildren() != 3)
+      return false;
+
+    auto *first = node->getChild(0);
+    auto *second = node->getChild(1);
+
+    if (first->getKind() == Node::Kind::Module) {
+      if (!first->hasText()) {
+        assert(false && "Module should have text!");
+        return false;
+      }
+      context.push_back(
+          {CompilerContextKind::Module, ConstString(first->getText())});
+    } else if (!BuildDeclContext(first, context))
+      return false;
+
+    if (second->getKind() == Node::Kind::Identifier) {
+      if (!second->hasText()) {
+        assert(false && "Identifier should have text!");
+        return false;
+      }
+      context.push_back(
+          {CompilerContextKind::Function, ConstString(second->getText())});
+    } else if (!BuildDeclContext(second, context))
+      return false;
+
+    return true;
+  }
+  case Node::Kind::LocalDeclName: {
+    std::optional<llvm::StringRef> identifier =
+        ExtractIdentifierFromLocalDeclName(node);
+    if (!identifier)
+      return false;
+
+    context.push_back(
+        {CompilerContextKind::AnyDeclContext, ConstString(*identifier)});
+    return true;
+  }
+
+  case Node::Kind::PrivateDeclName: {
+    auto discriminator_and_type_name =
+        ExtractIdentifiersFromPrivateDeclName(node);
+
+    if (!discriminator_and_type_name)
+      return false;
+    auto &[private_discriminator, type_name] = *discriminator_and_type_name;
+
+    context.push_back(
+        {CompilerContextKind::Namespace, ConstString(private_discriminator)});
+    context.push_back(
+        {CompilerContextKind::AnyDeclContext, ConstString(type_name)});
+    return true;
   }
   default:
     break;
   }
+  return false;
+}
+
+/// Builds the decl context of a given swift type. See the documentation in the
+/// other implementation of BuildDeclContext for more details.
+static std::optional<std::vector<CompilerContext>>
+BuildDeclContext(llvm::StringRef mangled_name,
+                 swift::Demangle::Demangler &dem) {
+  std::vector<CompilerContext> context;
+  auto *node = GetDemangledType(dem, mangled_name);
+  
+  /// Builtin names belong to the builtin module, and are stored only with their
+  /// mangled name.
+  if (node->getKind() == Node::Kind::BuiltinTypeName) {
+    context.push_back({CompilerContextKind::Module, ConstString("Builtin")});
+    context.push_back(
+        {CompilerContextKind::AnyType, ConstString(mangled_name)});
+    return std::move(context);
+  }
+
+  auto success = BuildDeclContext(node, context);
+  if (success)
+    return std::move(context);
   return {};
 }
 
-bool 
-TypeSystemSwiftTypeRef::IsBuiltinType(CompilerType type) {
-  assert(type.GetTypeSystem().isa_and_nonnull<TypeSystemSwift>() &&
-         "Unexpected type system!");
-  Demangler dem;
-  auto *node = GetDemangledType(dem, type.GetMangledTypeName());
-  if (!node)
-    return false;
-  return node->getKind() == Node::Kind::BuiltinTypeName;
-}
-
-/// Return a pair of module name and type name, given a mangled name.
-static std::optional<std::pair<StringRef, StringRef>>
-GetNominal(llvm::StringRef mangled_name, swift::Demangle::Demangler &dem) {
-  auto *node = GetDemangledType(dem, mangled_name);
-  /// Builtin names belong to the builtin module, and are stored only with their
-  /// mangled name.
-  if (node->getKind() == Node::Kind::BuiltinTypeName) 
-    return {{"Builtin", mangled_name}};
-
-  return GetNominal(dem, node);
-}
 /// Detect the AnyObject type alias.
 static bool IsAnyObjectTypeAlias(swift::Demangle::NodePointer node) {
   using namespace swift::Demangle;
@@ -630,10 +803,6 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
   ConstString mangled(mangling.result());
 
   auto resolve_clang_type = [&]() -> CompilerType {
-    auto maybe_module_and_type_names = GetNominal(dem, node);
-    if (!maybe_module_and_type_names)
-      return {};
-
     // This is an imported Objective-C type; look it up in the debug info.
     llvm::SmallVector<CompilerContext, 2> decl_context;
     if (!IsClangImportedType(node, decl_context))
@@ -1887,20 +2056,14 @@ TypeSystemSwiftTypeRef::FindTypeInModule(opaque_compiler_type_t opaque_type) {
     return {};
 
   swift::Demangle::Demangler dem;
-  auto module_type = GetNominal(AsMangledName(opaque_type), dem);
-  if (!module_type)
+  auto context = BuildDeclContext(AsMangledName(opaque_type), dem);
+  if (!context)
     return {};
   // DW_AT_linkage_name is not part of the accelerator table, so
-  // we need to search by module+name.
-  ConstString module(module_type->first);
-  ConstString type(module_type->second);
-  llvm::SmallVector<CompilerContext, 2> decl_context;
-  if (!module.IsEmpty())
-    decl_context.push_back({CompilerContextKind::Module, module});
-  decl_context.push_back({CompilerContextKind::AnyType, type});
+  // we need to search by decl context.
 
-  TypeQuery query(decl_context, TypeQueryOptions::e_find_one |
-                                    TypeQueryOptions::e_module_search);
+  TypeQuery query(*context, TypeQueryOptions::e_find_one |
+                                TypeQueryOptions::e_module_search);
   query.SetLanguages(TypeSystemSwift::GetSupportedLanguagesForTypes());
 
   TypeResults results;

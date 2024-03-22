@@ -180,4 +180,34 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
         lldbutil.check_variable(self, second, False, value="315")
         u = right.GetChildMemberWithName("u")
         two = u.GetChildMemberWithName("two")
-        lldbutil.check_variable(self, two, False, value="one")
+        lldbutil.check_variable(self, two, False, value='one')
+
+        inner = frame.FindVariable("inner")
+        value = inner.GetChildMemberWithName("value")
+        lldbutil.check_variable(self, value, False, value='99')
+
+        innerer = frame.FindVariable("innerer")
+        innererValue = innerer.GetChildMemberWithName("innererValue")
+        lldbutil.check_variable(self, innererValue, False, value='101')
+
+        privateType = frame.FindVariable("privateType")
+        privateField = privateType.GetChildMemberWithName("privateField")
+        lldbutil.check_variable(self, privateField, False, value='100')
+
+        specializedInner = frame.FindVariable("specializedInner")
+        t = specializedInner.GetChildMemberWithName("t")
+        lldbutil.check_variable(self, t, False, value='837')
+
+        genericInner = frame.FindVariable("genericInner")
+        t = genericInner.GetChildMemberWithName("t")
+        lldbutil.check_variable(self, t, False, value='647')
+        u = genericInner.GetChildMemberWithName("u")
+        lldbutil.check_variable(self, u, False, value='674.5')
+
+        functionType = frame.FindVariable("functionType")
+        funcField = functionType.GetChildMemberWithName("funcField")
+        lldbutil.check_variable(self, funcField, False, value='67')
+
+        innerFunctionType = frame.FindVariable("innerFunctionType")
+        innerFuncField = innerFunctionType.GetChildMemberWithName("innerFuncField")
+        lldbutil.check_variable(self, innerFuncField, False, value='8479')
