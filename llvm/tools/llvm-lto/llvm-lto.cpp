@@ -270,7 +270,7 @@ static cl::opt<bool> TryUseNewDbgInfoFormat(
     cl::init(false), cl::Hidden);
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInforFormat;
+extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 
 namespace {
 
@@ -945,8 +945,8 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&LTOCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm LTO linker\n");
   // Load bitcode into the new debug info format by default.
-  if (LoadBitcodeIntoNewDbgInforFormat == cl::boolOrDefault::BOU_UNSET)
-    LoadBitcodeIntoNewDbgInforFormat = cl::boolOrDefault::BOU_TRUE;
+  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
+    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
 
   // RemoveDIs debug-info transition: tests may request that we /try/ to use the
   // new debug-info format.
