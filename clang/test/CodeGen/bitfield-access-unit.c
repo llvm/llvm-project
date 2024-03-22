@@ -62,12 +62,12 @@ struct A {
   char b : 7;
 } a;
 // CHECK-LABEL: LLVMType:%struct.A =
-// LAYOUT-FLEX-SAME: type { i8, i8 }
+// LAYOUT-FLEX-SAME: type { i16 }
 // LAYOUT-STRICT-SAME: type { i8, i8 }
 // LAYOUT-DWN32-SAME: type { i16 }
 // CHECK: BitFields:[
-// LAYOUT-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:0
-// LAYOUT-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:1
+// LAYOUT-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:16 StorageOffset:0
+// LAYOUT-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:16 StorageOffset:0
 
 // LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:0
 // LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:1
@@ -82,11 +82,11 @@ struct __attribute__((aligned(2))) B {
   char b : 7;
 } b;
 // CHECK-LABEL: LLVMType:%struct.B =
-// LAYOUT-SAME: type { i8, i8 }
+// LAYOUT-SAME: type { i16 }
 // LAYOUT-DWN32-SAME: type { i16 }
 // CHECK: BitFields:[
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:0
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:1
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:16 StorageOffset:0
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:16 StorageOffset:0
 
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:16 StorageOffset:0
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:16 StorageOffset:0
@@ -100,12 +100,12 @@ struct C {
   char b : 7;
 } c;
 // CHECK-LABEL: LLVMType:%struct.C =
-// LAYOUT-FLEX-SAME: type { i32, i8, i8, i8 }
+// LAYOUT-FLEX-SAME: type <{ i32, i8, i16, i8 }>
 // LAYOUT-STRICT-SAME: type { i32, i8, i8, i8 }
 // LAYOUT-DWN32-SAME: type <{ i32, i8, i16, i8 }>
 // CHECK: BitFields:[
-// LAYOUT-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:5
-// LAYOUT-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:6
+// LAYOUT-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:16 StorageOffset:5
+// LAYOUT-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:16 StorageOffset:5
 
 // LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:5
 // LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:6
@@ -123,21 +123,20 @@ struct __attribute__((packed)) D {
 } d;
 // CHECK-LABEL: LLVMType:%struct.D =
 // LAYOUT-FLEX-SAME: type <{ i32, i16, i8 }>
-// LAYOUT-STRICT-SAME: type <{ i32, i16, i8 }>
+// LAYOUT-STRICT-SAME: type <{ i32, i8, i8, i8 }>
 // LAYOUT-DWN32-FLEX-SAME: type <{ i32, i16, i8 }>
-// LAYOUT-DWN32-STRICT-SAME: type <{ i32, i16, i8 }>
+// LAYOUT-DWN32-STRICT-SAME: type <{ i32, i8, i8, i8 }>
 // CHECK: BitFields:[
 // LAYOUT-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:16 StorageOffset:4
 // LAYOUT-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:16 StorageOffset:4
 
-// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:16 StorageOffset:4
-// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:16 StorageOffset:4
+// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:4
+// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:5
 
 // LAYOUT-DWN32-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:16 StorageOffset:4
 // LAYOUT-DWN32-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:16 StorageOffset:4
-
-// LAYOUT-DWN32-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:16 StorageOffset:4
-// LAYOUT-DWN32-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:16 StorageOffset:4
+// LAYOUT-DWN32-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:4
+// LAYOUT-DWN32-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:5
 // CHECK-NEXT: ]>
 
 struct E {
@@ -146,22 +145,21 @@ struct E {
   unsigned c : 12;
 } e;
 // CHECK-LABEL: LLVMType:%struct.E =
-// LAYOUT-FLEX64-SAME: type { i8, i16, i16, [2 x i8] }
-// LAYOUT-FLEX32-SAME: type { i8, i16, i16, [2 x i8] }
-// LAYOUT-STRICT-SAME: type { i8, i16, i16, [2 x i8] }
+// LAYOUT-FLEX64-SAME: type { i64 }
+// LAYOUT-FLEX32-SAME: type { i32, i16 }
+// LAYOUT-STRICT-SAME: type { i32, i16 }
 // LAYOUT-DWN32-SAME: type { i32 }
 // CHECK: BitFields:[
+// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:64 StorageOffset:0
+// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:64 StorageOffset:0
+// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:64 StorageOffset:0
 
-// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:0
-// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:16 StorageOffset:2
-// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:16 StorageOffset:4
-
-// LAYOUT-FLEX32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:0
-// LAYOUT-FLEX32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:16 StorageOffset:2
+// LAYOUT-FLEX32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:32 StorageOffset:0
+// LAYOUT-FLEX32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:32 StorageOffset:0
 // LAYOUT-FLEX32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:16 StorageOffset:4
 
-// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:0
-// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:16 StorageOffset:2
+// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:32 StorageOffset:0
+// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:32 StorageOffset:0
 // LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:16 StorageOffset:4
 
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:32 StorageOffset:0
@@ -176,30 +174,30 @@ struct F {
   signed char d : 7;
 } f;
 // CHECK-LABEL: LLVMType:%struct.F =
-// LAYOUT-FLEX64-SAME: type { i8, i16, i16, i8 }
-// LAYOUT-FLEX32-SAME: type { i8, i16, i16, i8 }
-// LAYOUT-STRICT-SAME: type { i8, i16, i16, i8 }
-// LAYOUT-DWN32-SAME: type { [5 x i8] }
+// LAYOUT-FLEX64-SAME: type { i64 }
+// LAYOUT-FLEX32-SAME: type { i32, i32 }
+// LAYOUT-STRICT-SAME: type { i32, i32 }
+// LAYOUT-DWN32-SAME: type <{ i32, i8 }>
 // CHECK: BitFields:[
-// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:0
-// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:16 StorageOffset:2
-// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:16 StorageOffset:4
-// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:6
+// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:64 StorageOffset:0
+// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:64 StorageOffset:0
+// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:64 StorageOffset:0
+// LAYOUT-FLEX64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:64 StorageOffset:0
 
-// LAYOUT-FLEX32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:0
-// LAYOUT-FLEX32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:16 StorageOffset:2
-// LAYOUT-FLEX32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:16 StorageOffset:4
-// LAYOUT-FLEX32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:6
+// LAYOUT-FLEX32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:32 StorageOffset:0
+// LAYOUT-FLEX32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:32 StorageOffset:0
+// LAYOUT-FLEX32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:32 StorageOffset:4
+// LAYOUT-FLEX32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:32 StorageOffset:4
 
-// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:0
-// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:16 StorageOffset:2
-// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:16 StorageOffset:4
-// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:6
+// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:32 StorageOffset:0
+// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:32 StorageOffset:0
+// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:32 StorageOffset:4
+// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:32 StorageOffset:4
 
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:40 StorageOffset:0
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:40 StorageOffset:0
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:40 StorageOffset:0
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:40 StorageOffset:0
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:32 StorageOffset:0
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:32 StorageOffset:0
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:32 StorageOffset:0
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:4
 // CHECK-NEXT: ]>
 
 struct G {
@@ -210,18 +208,18 @@ struct G {
   signed char e;
 } g;
 // CHECK-LABEL: LLVMType:%struct.G =
-// LAYOUT-SAME: type { i8, i16, i16, i8, i8 }
-// LAYOUT-DWN32-SAME: type { [5 x i8], i8 }
+// LAYOUT-SAME: type { i32, i16, i8, i8 }
+// LAYOUT-DWN32-SAME: type <{ i32, i8, i8 }>
 // CHECK: BitFields:[
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:0
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:16 StorageOffset:2
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:32 StorageOffset:0
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:32 StorageOffset:0
 // LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:16 StorageOffset:4
 // LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:6
 
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:40 StorageOffset:0
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:40 StorageOffset:0
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:40 StorageOffset:0
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:40 StorageOffset:0
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:32 StorageOffset:0
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:13 IsSigned:1 StorageSize:32 StorageOffset:0
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:12 IsSigned:0 StorageSize:32 StorageOffset:0
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:4
 // CHECK-NEXT: ]>
 
 #if _LP64
@@ -257,24 +255,24 @@ struct B64 {
   signed char e; // not a bitfield
 } b64;
 // CHECK-64-LABEL: LLVMType:%struct.B64 =
-// LAYOUT-64-FLEX-SAME: type { [7 x i8], i8 }
-// LAYOUT-64-STRICT-SAME: type { [7 x i8], i8 }
-// LAYOUT-64-DWN-SAME: type { [7 x i8], i8 }
+// LAYOUT-64-FLEX-SAME: type <{ i16, i8, i32, i8 }>
+// LAYOUT-64-STRICT-SAME: type <{ i16, i8, i16, i16, i8 }>
+// LAYOUT-64-DWN-SAME: type <{ i16, i8, i32, i8 }>
 // CHECK-64: BitFields:[
-// LAYOUT-64-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:56 StorageOffset:0
-// LAYOUT-64-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:56 StorageOffset:0
-// LAYOUT-64-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:56 StorageOffset:0
-// LAYOUT-64-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:56 StorageOffset:0
+// LAYOUT-64-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:16 StorageOffset:0
+// LAYOUT-64-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2
+// LAYOUT-64-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:32 StorageOffset:3
+// LAYOUT-64-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:32 StorageOffset:3
 
-// LAYOUT-64-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:56 StorageOffset:0
-// LAYOUT-64-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:56 StorageOffset:0
-// LAYOUT-64-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:56 StorageOffset:0
-// LAYOUT-64-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:56 StorageOffset:0
+// LAYOUT-64-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:16 StorageOffset:0
+// LAYOUT-64-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2
+// LAYOUT-64-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:16 StorageOffset:3
+// LAYOUT-64-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:16 StorageOffset:5
 
-// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:56 StorageOffset:0
-// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:56 StorageOffset:0
-// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:56 StorageOffset:0
-// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:56 StorageOffset:0
+// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:16 StorageOffset:0
+// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2
+// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:32 StorageOffset:3
+// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:32 StorageOffset:3
 // CHECK-64-NEXT: ]>
 
 struct C64 {
@@ -285,20 +283,20 @@ struct C64 {
   signed char e : 7;
 } c64;
 // CHECK-64-LABEL: LLVMType:%struct.C64 =
-// LAYOUT-64-SAME: type { i16, [5 x i8], i8 }
-// LAYOUT-64-DWN-SAME: type { i16, [5 x i8], i8 }
+// LAYOUT-64-SAME: type {  i64 }
+// LAYOUT-64-DWN-SAME: type {  i64 }
 // CHECK-64: BitFields:[
-// LAYOUT-64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:15 IsSigned:1 StorageSize:16 StorageOffset:0
-// LAYOUT-64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:40 StorageOffset:2
-// LAYOUT-64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:40 StorageOffset:2
-// LAYOUT-64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:15 IsSigned:1 StorageSize:40 StorageOffset:2
-// LAYOUT-64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:7
+// LAYOUT-64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:15 IsSigned:1 StorageSize:64 StorageOffset:0
+// LAYOUT-64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:64 StorageOffset:0
+// LAYOUT-64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:64 StorageOffset:0
+// LAYOUT-64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:15 IsSigned:1 StorageSize:64 StorageOffset:0
+// LAYOUT-64-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:64 StorageOffset:0
 
-// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:15 IsSigned:1 StorageSize:16 StorageOffset:0
-// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:40 StorageOffset:2
-// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:40 StorageOffset:2
-// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:15 IsSigned:1 StorageSize:40 StorageOffset:2
-// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:7
+// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:15 IsSigned:1 StorageSize:64 StorageOffset:0
+// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:64 StorageOffset:0
+// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:64 StorageOffset:0
+// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:15 IsSigned:1 StorageSize:64 StorageOffset:0
+// LAYOUT-64-DWN-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:64 StorageOffset:0
 // CHECK-64-NEXT: ]>
 
 #endif
