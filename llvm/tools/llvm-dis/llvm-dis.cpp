@@ -81,8 +81,6 @@ static cl::opt<bool> PrintThinLTOIndexOnly(
     cl::init(false), cl::Hidden, cl::cat(DisCategory));
 
 extern cl::opt<bool> WriteNewDbgInfoFormat;
-
-extern cl::opt<bool> WriteNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 
 namespace {
