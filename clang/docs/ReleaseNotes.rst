@@ -505,6 +505,7 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
+- Profile names in ``-march`` option are now supported.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -566,6 +567,7 @@ Static Analyzer
 - Fixed crashing on loops if the loop variable was declared in switch blocks
   but not under any case blocks if ``unroll-loops=true`` analyzer config is
   set. (#GH68819)
+- Support C++23 static operator calls. (#GH84972)
 
 New features
 ^^^^^^^^^^^^
