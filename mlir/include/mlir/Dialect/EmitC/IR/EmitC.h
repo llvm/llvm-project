@@ -36,7 +36,7 @@ bool isSupportedIntegerType(mlir::Type type);
 
 /// Determines whether \p type is integer like, i.e. it's a supported integer,
 /// an index or opaque type.
-bool isIntegerLikeType(Type type);
+bool isIntegerIndexOrOpaqueType(Type type);
 
 /// Determines whether \p type is a valid floating-point type in EmitC.
 bool isSupportedFloatType(mlir::Type type);

@@ -1174,7 +1174,7 @@ def EmitC_SubscriptOp : EmitC_Op<"subscript", []> {
       EmitC_ArrayType,
       EmitC_OpaqueType,
       EmitC_PointerType]>,
-    "the reference to load from">:$ref,
+    "the value to subscript">:$value,
     Variadic<AnyType>:$indices);
   let results = (outs AnyType:$result);
 
@@ -1189,7 +1189,7 @@ def EmitC_SubscriptOp : EmitC_Op<"subscript", []> {
   ];
 
   let hasVerifier = 1;
-  let assemblyFormat = "$ref `[` $indices `]` attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat = "$value `[` $indices `]` attr-dict `:` functional-type(operands, results)";
 }
 
 
