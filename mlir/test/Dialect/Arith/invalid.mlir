@@ -64,6 +64,15 @@ func.func @constant_out_of_range() {
 
 // -----
 
+func.func @constant_invalid_scalable_vec_initialization() {
+^bb0:
+  // expected-error@+1 {{'arith.constant' op intializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
+  %c = arith.constant dense<[0, 1]> : vector<[2] x i32>
+  return
+}
+
+// -----
+
 func.func @constant_wrong_type() {
 ^bb:
   %x = "arith.constant"(){value = 10.} : () -> f32 // expected-error {{'arith.constant' op failed to verify that all of {value, result} have same type}}
@@ -211,14 +220,6 @@ func.func @func_with_ops() {
   %c = arith.constant dense<0> : tensor<42 x i32, "foo">
   // expected-error@+1 {{op failed to verify that result type has i1 element type and same shape as operands}}
   %r = "arith.cmpi"(%c, %c) {predicate = 0} : (tensor<42 x i32, "foo">, tensor<42 x i32, "foo">) -> tensor<42 x i1, "bar">
-}
-
-// -----
-
-func.func @func_with_ops() {
-^bb0:
-  // expected-error@+1 {{op failed to verify that result type has i1 element type and same shape as operands}}
-  %c = arith.constant dense<[0, 1]> : vector<[2] x i32>
 }
 
 // -----

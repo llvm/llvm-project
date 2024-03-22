@@ -191,13 +191,11 @@ LogicalResult arith::ConstantOp::verify() {
         "value must be an integer, float, or elements attribute");
   }
 
-  // Intializing scalable vectors with elements attribute is not supported
-  // unless it's a vector splot.
   auto vecType = dyn_cast<VectorType>(type);
-  auto val = dyn_cast<DenseElementsAttr>(getValue());
-  if ((vecType && val) && vecType.isScalable() && !val.isSplat())
+  if (vecType && vecType.isScalable() && !isa<SplatElementsAttr>(getValue()))
     return emitOpError(
-        "using elements attribute to initialize a scalable vector");
+        "intializing scalable vectors with elements attribute is not supported"
+        " unless it's a vector splat");
   return success();
 }
 
