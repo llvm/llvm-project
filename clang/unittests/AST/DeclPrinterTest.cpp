@@ -1386,6 +1386,27 @@ TEST(DeclPrinter, TestTemplateArgumentList16) {
   ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "NT2", "int NT2 = 5"));
 }
 
+TEST(DeclPrinter, TestCXXRecordDecl17) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches("template<typename T> struct Z {};"
+                                      "struct X {};"
+                                      "Z<X> A;",
+                                      "A",
+                                      "Z<X> A"));
+  [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
+}
+
+TEST(DeclPrinter, TestCXXRecordDecl18) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches("template<typename T> struct Z {};"
+                                      "struct X {};"
+                                      "Z<X> A;" 
+                                      "template <typename T1, int>"
+                                      "struct Y{};"
+                                      "Y<Z<X>, 2> B;",
+                                      "B", 
+                                      "Y<Z<X>, 2> B"));
+  [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
+}
+
 TEST(DeclPrinter, TestFunctionParamUglified) {
   llvm::StringLiteral Code = R"cpp(
     class __c;
