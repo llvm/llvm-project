@@ -790,7 +790,7 @@ LogicalResult emitc::SubscriptOp::verify() {
   if (auto arrayType = llvm::dyn_cast<emitc::ArrayType>(getValue().getType())) {
     // Check number of indices.
     if (getIndices().size() != (size_t)arrayType.getRank()) {
-      return emitOpError() << "requires number of indices ("
+      return emitOpError() << "on array operand requires number of indices ("
                            << getIndices().size()
                            << ") to match the rank of the array type ("
                            << arrayType.getRank() << ")";
@@ -799,15 +799,15 @@ LogicalResult emitc::SubscriptOp::verify() {
     for (unsigned i = 0, e = getIndices().size(); i != e; ++i) {
       Type type = getIndices()[i].getType();
       if (!isIntegerIndexOrOpaqueType(type)) {
-        return emitOpError() << "requires index operand " << i
+        return emitOpError() << "on array operand requires index operand " << i
                              << " to be integer-like, but got " << type;
       }
     }
     // Check element type.
     Type elementType = arrayType.getElementType();
     if (elementType != getType()) {
-      return emitOpError() << "requires element type (" << elementType
-                           << ") and result type (" << getType()
+      return emitOpError() << "on array operand requires element type ("
+                           << elementType << ") and result type (" << getType()
                            << ") to match";
     }
     return success();
@@ -818,20 +818,22 @@ LogicalResult emitc::SubscriptOp::verify() {
           llvm::dyn_cast<emitc::PointerType>(getValue().getType())) {
     // Check number of indices.
     if (getIndices().size() != 1) {
-      return emitOpError() << "requires one index operand, but got "
-                           << getIndices().size();
+      return emitOpError()
+             << "on pointer operand requires one index operand, but got "
+             << getIndices().size();
     }
     // Check types of index operand.
     Type type = getIndices()[0].getType();
     if (!isIntegerIndexOrOpaqueType(type)) {
-      return emitOpError()
-             << "requires index operand to be integer-like, but got " << type;
+      return emitOpError() << "on pointer operand requires index operand to be "
+                              "integer-like, but got "
+                           << type;
     }
     // Check pointee type.
     Type pointeeType = pointerType.getPointee();
     if (pointeeType != getType()) {
-      return emitOpError() << "requires pointee type (" << pointeeType
-                           << ") and result type (" << getType()
+      return emitOpError() << "on pointer operand requires pointee type ("
+                           << pointeeType << ") and result type (" << getType()
                            << ") to match";
     }
     return success();
