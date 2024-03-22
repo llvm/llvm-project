@@ -75,7 +75,7 @@ jobs:
         # the merge base.
         # Create an empty comments file so the pr-write job doesn't fail.
         run: |
-          touch comments &&
+          echo "[]" > comments &&
           python ./code-format-tools/llvm/utils/git/code-format-helper.py \
             --write-comment-to-file \
             --token ${{ secrets.GITHUB_TOKEN }} \
