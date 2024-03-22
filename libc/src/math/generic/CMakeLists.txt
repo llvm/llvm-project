@@ -2071,7 +2071,7 @@ add_entrypoint_object(
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer
   COMPILE_OPTIONS
-  -O3
+    -O3
 )
 
 add_entrypoint_object(

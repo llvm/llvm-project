@@ -84,7 +84,7 @@ behavior<printf_behavior>`.
 
 Unknown Math Rounding Direction
 -------------------------------
-The C standard states that if the value of the ``rnd`` argument of the
+The C23 standard states that if the value of the ``rnd`` argument of the
 ``fromfp``, ``ufromfp``, ``fromfpx`` and ``ufromfpx`` functions is not equal to
 the value of a math rounding direction macro, the direction of rounding is
 unspecified. LLVM's libc chooses to use the ``FP_INT_TONEAREST`` rounding
