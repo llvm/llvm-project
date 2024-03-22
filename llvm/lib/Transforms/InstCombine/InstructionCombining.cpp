@@ -3572,6 +3572,234 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
   return nullptr;
 }
 
+Value *
+InstCombiner::simplifyOpWithConstantEqConsts(Value *Op, BuilderTy &Builder,
+                                             SmallVector<Constant *> &Vals,
+                                             bool ReqOneUseAdd) {
+
+  Operator *I = dyn_cast<Operator>(Op);
+  if (!I)
+    return nullptr;
+
+  auto ReverseAll = [&](function_ref<Constant *(Constant *)> ReverseF) {
+    for (size_t i = 0, e = Vals.size(); i < e; ++i) {
+      Vals[i] = ReverseF(Vals[i]);
+    }
+  };
+
+  SmallVector<const APInt *, 4> ValsAsAPInt;
+  for (Constant *C : Vals) {
+    const APInt *CAPInt;
+    if (!match(C, m_APInt(CAPInt)))
+      break;
+    ValsAsAPInt.push_back(CAPInt);
+  }
+  bool UseAPInt = ValsAsAPInt.size() == Vals.size();
+
+  auto ReverseAllAPInt = [&](function_ref<APInt(const APInt *)> ReverseF) {
+    assert(UseAPInt && "Can't reverse non-apint constants!");
+    for (size_t i = 0, e = Vals.size(); i < e; ++i) {
+      Vals[i] = ConstantInt::get(Vals[i]->getType(), ReverseF(ValsAsAPInt[i]));
+    }
+  };
+
+  Constant *C;
+  switch (I->getOpcode()) {
+  default:
+    break;
+  case Instruction::Or:
+    if (!match(I, m_DisjointOr(m_Value(), m_Value())))
+      break;
+    // Can treat `or disjoint` as add
+    [[fallthrough]];
+  case Instruction::Add:
+    // We get some regressions if we drop the OneUse for add in some cases.
+    // See discussion in D58633.
+    if (ReqOneUseAdd && !I->hasOneUse())
+      break;
+    if (!match(I->getOperand(1), m_ImmConstant(C)))
+      break;
+    // X + C0 == C1 -> X == C1 - C0
+    ReverseAll([&](Constant *Val) { return ConstantExpr::getSub(Val, C); });
+    return I->getOperand(0);
+  case Instruction::Sub:
+    if (!match(I->getOperand(0), m_ImmConstant(C)))
+      break;
+    // C0 - X == C1 -> X == C0 - C1
+    ReverseAll([&](Constant *Val) { return ConstantExpr::getSub(C, Val); });
+    return I->getOperand(1);
+  case Instruction::Xor:
+    if (!match(I->getOperand(1), m_ImmConstant(C)))
+      break;
+    // X ^ C0 == C1 -> X == C1 ^ C0
+    ReverseAll([&](Constant *Val) { return ConstantExpr::getXor(Val, C); });
+    return I->getOperand(0);
+  case Instruction::Mul: {
+    const APInt *MC;
+    if (!UseAPInt || !match(I->getOperand(1), m_APInt(MC)) || MC->isZero())
+      break;
+    OverflowingBinaryOperator *Mul = cast<OverflowingBinaryOperator>(I);
+    if (!Mul->hasNoUnsignedWrap())
+      break;
+
+    // X nuw C0 == C1 -> X == C1 u/ C0 iff C1 u% C0 == 0
+    if (all_of(ValsAsAPInt,
+               [&](const APInt * AC) { return AC->urem(*MC).isZero(); })) {
+      ReverseAllAPInt([&](const APInt *Val) { return Val->udiv(*MC); });
+      return I->getOperand(0);
+    }
+
+    // X nuw C0 == C1 -> X == C1 s/ C0 iff C1 s% C0 == 0
+    if (all_of(ValsAsAPInt, [&](const APInt * AC) {
+          return (!AC->isMinSignedValue() || !MC->isAllOnes()) &&
+                 AC->srem(*MC).isZero();
+        })) {
+      ReverseAllAPInt([&](const APInt *Val) { return Val->sdiv(*MC); });
+      return I->getOperand(0);
+    }
+    break;
+  }
+  case Instruction::UDiv:
+  case Instruction::SDiv: {
+    const APInt *DC;
+    if (!UseAPInt)
+      break;
+    if (!UseAPInt || !match(I->getOperand(1), m_APInt(DC)))
+      break;
+    if (!cast<PossiblyExactOperator>(Op)->isExact())
+      break;
+    // X u/ C0 == C1 -> X == C0 * C1 iff C0 * C1 is nuw
+    // X s/ C0 == C1 -> X == C0 * C1 iff C0 * C1 is nsw
+    if (!all_of(ValsAsAPInt, [&](const APInt *AC) {
+          bool Ov;
+          (void)(I->getOpcode() == Instruction::UDiv ? DC->umul_ov(*AC, Ov)
+                                                     : DC->smul_ov(*AC, Ov));
+          return !Ov;
+        }))
+      break;
+
+    ReverseAllAPInt([&](const APInt *Val) { return (*Val) * (*DC); });
+    return I->getOperand(0);
+  }
+  case Instruction::ZExt:
+  case Instruction::SExt: {
+    if (!UseAPInt)
+      break;
+    bool IsZExt = isa<ZExtInst>(I);
+    Type *SrcTy = I->getOperand(0)->getType();
+    unsigned NewWidth = SrcTy->getScalarSizeInBits();
+    // zext(X) == C1 -> X == trunc C1 iff zext(trunc(C1)) == C1
+    // sext(X) == C1 -> X == trunc C1 iff sext(trunc(C1)) == C1
+    if (!all_of(ValsAsAPInt, [&](const APInt *AC) {
+          return IsZExt ? AC->isIntN(NewWidth) : AC->isSignedIntN(NewWidth);
+        }))
+      break;
+
+    for (size_t i = 0, e = Vals.size(); i < e; ++i) {
+      Vals[i] = ConstantInt::get(SrcTy, ValsAsAPInt[i]->trunc(NewWidth));
+    }
+    return I->getOperand(0);
+  }
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr: {
+    if (!UseAPInt)
+      break;
+    uint64_t ShAmtC;
+    if (!match(I->getOperand(1), m_ConstantInt(ShAmtC)))
+      break;
+    if (ShAmtC >= I->getType()->getScalarSizeInBits())
+      break;
+
+    // X << C0 == C1 -> X == C1 >> C0 iff C1 >> C0 is exact
+    // X u>> C0 == C1 -> X == C1 << C0 iff C1 << C0 is nuw
+    // X s>> C0 == C1 -> X == C1 << C0 iff C1 << C0 is nsw
+    if (!all_of(ValsAsAPInt, [&](const APInt *AC) {
+          switch (I->getOpcode()) {
+          case Instruction::Shl:
+            return AC->countr_zero() >= ShAmtC;
+          case Instruction::LShr:
+            return AC->countl_zero() >= ShAmtC;
+          case Instruction::AShr:
+            return AC->getNumSignBits() >= ShAmtC;
+            return false;
+          default:
+            llvm_unreachable("Already checked Opcode");
+          }
+        }))
+      break;
+
+    bool HasExact = false, HasNUW = false, HasNSW = false;
+    if (I->getOpcode() == Instruction::Shl) {
+      OverflowingBinaryOperator *Shl = cast<OverflowingBinaryOperator>(I);
+      HasNUW = Shl->hasNoUnsignedWrap();
+      HasNSW = Shl->hasNoSignedWrap();
+    } else {
+      HasExact = cast<PossiblyExactOperator>(Op)->isExact();
+    }
+
+    Value *R = I->getOperand(0);
+    if (!HasExact && !HasNUW && !HasNSW) {
+      if (!I->hasOneUse())
+        break;
+
+      // We may be shifting out 1s from X, so need to mask it.
+      unsigned BitWidth = R->getType()->getScalarSizeInBits();
+      R = Builder.CreateAnd(
+          R, I->getOpcode() == Instruction::Shl
+                 ? APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC)
+                 : APInt::getHighBitsSet(BitWidth, BitWidth - ShAmtC));
+    }
+
+    ReverseAllAPInt([&](const APInt *Val) {
+      if (I->getOpcode() == Instruction::Shl)
+        return HasNSW ? Val->ashr(ShAmtC) : Val->lshr(ShAmtC);
+      return Val->shl(ShAmtC);
+    });
+    return R;
+  }
+  case Instruction::Call:
+  case Instruction::Invoke: {
+    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      default:
+        break;
+      case Intrinsic::bitreverse:
+        if (!UseAPInt)
+          break;
+        // bitreverse(X) == C -> X == bitreverse(C)
+        ReverseAllAPInt([&](const APInt *Val) { return Val->reverseBits(); });
+        return II->getArgOperand(0);
+      case Intrinsic::bswap:
+        if (!UseAPInt)
+          break;
+        // bswap(X) == C -> X == bswap(C)
+        ReverseAllAPInt([&](const APInt *Val) { return Val->byteSwap(); });
+        return II->getArgOperand(0);
+      case Intrinsic::fshr:
+      case Intrinsic::fshl: {
+        if (!UseAPInt)
+          break;
+        if (II->getArgOperand(0) != II->getArgOperand(1))
+          break;
+        const APInt *RotAmtC;
+        if (!match(II->getArgOperand(2), m_APInt(RotAmtC)))
+          break;
+        // rol(X, C0) == C1 -> X == ror(C0, C1)
+        // ror(X, C0) == C1 -> X == rol(C0, C1)
+        ReverseAllAPInt([&](const APInt *Val) {
+          return II->getIntrinsicID() == Intrinsic::fshl ? Val->rotr(*RotAmtC)
+                                                         : Val->rotl(*RotAmtC);
+        });
+        return II->getArgOperand(0);
+      }
+      }
+    }
+  }
+  }
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
   Value *Cond = SI.getCondition();
   Value *Op0;
