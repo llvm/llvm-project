@@ -79,11 +79,7 @@ LIBC_INLINE T fdim(T x, T y) {
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE int canonicalize(T &cx, const T &x) {
   FPBits<T> sx(x);
-  if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
-    cx = FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa()).get_val();
-    raise_except_if_required(FE_INVALID);
-    return 1;
-  } else if constexpr (get_fp_type<T>() == FPType::X86_Binary80) {
+  if constexpr (get_fp_type<T>() == FPType::X86_Binary80) {
     // All the pseudo and unnormal numbers are not canonical.
     // More precisely :
     // Exponent   |       Significand      | Meaning
@@ -103,26 +99,31 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
     int exponent = sx.get_biased_exponent();
     if (exponent == 0x7FFF) {
       if (!bit63 && !bit62) {
-        if (!bit61) {
+        if (!bit61)
           cx = FPBits<T>::inf().get_val();
-        } else {
-          cx = FPBits<T>::signaling_nan().get_val();
+        else {
+          cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
+          raise_except_if_required(FE_INVALID);
+          return 1;
         }
       } else if (!bit63 && bit62) {
-        cx = FPBits<T>::signaling_nan().get_val();
-      }
-    } else if (exponent == 0 && bit63) {
-      cx = FPBits<T>::get_canonical_val(sx.sign(), mantissa).get_val();
-    } else if (!bit63) {
-      cx = FPBits<T>::get_canonical_val(sx.sign(), mantissa).get_val();
-    } else {
+        cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
+        raise_except_if_required(FE_INVALID);
+        return 1;
+      } else if (exponent == 0 && bit63)
+        cx = FPBits<T>::make_value(mantissa, 1).get_val();
+      else if (!bit63)
+        cx = FPBits<T>::make_value(mantissa, 1).get_val();
+      else
+        cx = x;
+    } else if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
+      cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
+      raise_except_if_required(FE_INVALID);
+      return 1;
+    } else
       cx = x;
-    }
-  } else {
-    cx = x;
+    return 0;
   }
-  return 0;
-}
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
