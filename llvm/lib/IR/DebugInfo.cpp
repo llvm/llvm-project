@@ -1674,7 +1674,7 @@ LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicBefore(
       unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
       unwrap<Instruction>(Instr));
   assert(isa<Instruction *>(DbgInst) &&
-         "Inserted a DbgRecord into function using old debug info mode");
+         "Function unexpectedly in new debug info format");
   return wrap(cast<Instruction *>(DbgInst));
 }
 LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordBefore(
@@ -1685,7 +1685,7 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordBefore(
       unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
       unwrap<Instruction>(Instr));
   assert(isa<DbgRecord *>(DbgInst) &&
-         "Inserted a debug intrinsic into function using new debug info mode");
+         "Function unexpectedly in old debug info format");
   return wrap(cast<DbgRecord *>(DbgInst));
 }
 
@@ -1703,7 +1703,7 @@ LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
       unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
       unwrap<DIExpression>(Expr), unwrap<DILocation>(DL), unwrap(Block));
   assert(isa<Instruction *>(DbgInst) &&
-         "Inserted a DbgRecord into function using old debug info mode");
+         "Function unexpectedly in new debug info format");
   return wrap(cast<Instruction *>(DbgInst));
 }
 LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordAtEnd(
@@ -1713,7 +1713,7 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordAtEnd(
       unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
       unwrap<DIExpression>(Expr), unwrap<DILocation>(DL), unwrap(Block));
   assert(isa<DbgRecord *>(DbgInst) &&
-         "Inserted a debug intrinsic into function using new debug info mode");
+         "Function unexpectedly in old debug info format");
   return wrap(cast<DbgRecord *>(DbgInst));
 }
 
@@ -1730,7 +1730,7 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicBefore(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
       unwrap<DILocation>(DebugLoc), unwrap<Instruction>(Instr));
   assert(isa<Instruction *>(DbgInst) &&
-         "Inserted a DbgRecord into function using old debug info mode");
+         "Function unexpectedly in new debug info format");
   return wrap(cast<Instruction *>(DbgInst));
 }
 LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
@@ -1740,7 +1740,7 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
       unwrap<DILocation>(DebugLoc), unwrap<Instruction>(Instr));
   assert(isa<DbgRecord *>(DbgInst) &&
-         "Inserted a debug intrinsic into function using new debug info mode");
+         "Function unexpectedly in old debug info format");
   return wrap(cast<DbgRecord *>(DbgInst));
 }
 
@@ -1757,7 +1757,7 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicAtEnd(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
       unwrap<DILocation>(DebugLoc), unwrap(Block));
   assert(isa<Instruction *>(DbgInst) &&
-         "Inserted a DbgRecord into function using old debug info mode");
+         "Function unexpectedly in new debug info format");
   return wrap(cast<Instruction *>(DbgInst));
 }
 LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordAtEnd(
@@ -1767,7 +1767,7 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordAtEnd(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
       unwrap<DILocation>(DebugLoc), unwrap(Block));
   assert(isa<DbgRecord *>(DbgInst) &&
-         "Inserted a DbgRecord into function using old debug info mode");
+         "Function unexpectedly in old debug info format");
   return wrap(cast<DbgRecord *>(DbgInst));
 }
 
