@@ -970,6 +970,11 @@ mlir::LogicalResult tosa::ReshapeOp::verify() {
                            << " elements into " << outputElementsNum;
     }
   }
+
+  int missingDims = std::count(getNewShape().begin(), getNewShape().end(), -1);
+  if (missingDims > 1)
+    return emitOpError() << "At most one target dim can be -1";
+
   return mlir::success();
 }
 
