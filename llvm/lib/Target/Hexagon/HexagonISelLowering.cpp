@@ -521,7 +521,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
   }
 
-  if (NeedsArgAlign && Subtarget.hasV60Ops()) {
+  if (NeedsArgAlign && Subtarget.hasFeature(llvm::Hexagon::ArchV60)) {
     LLVM_DEBUG(dbgs() << "Function needs byte stack align due to call args\n");
     Align VecAlign = HRI.getSpillAlign(Hexagon::HvxVRRegClass);
     LargestAlignSeen = std::max(LargestAlignSeen, VecAlign);
@@ -1812,17 +1812,17 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 
   // Subtarget-specific operation actions.
   //
-  if (Subtarget.hasV60Ops()) {
+  if (Subtarget.hasFeature(llvm::Hexagon::ArchV60)) {
     setOperationAction(ISD::ROTL, MVT::i32, Legal);
     setOperationAction(ISD::ROTL, MVT::i64, Legal);
     setOperationAction(ISD::ROTR, MVT::i32, Legal);
     setOperationAction(ISD::ROTR, MVT::i64, Legal);
   }
-  if (Subtarget.hasV66Ops()) {
+  if (Subtarget.hasFeature(llvm::Hexagon::ArchV66)) {
     setOperationAction(ISD::FADD, MVT::f64, Legal);
     setOperationAction(ISD::FSUB, MVT::f64, Legal);
   }
-  if (Subtarget.hasV67Ops()) {
+  if (Subtarget.hasFeature(llvm::Hexagon::ArchV67)) {
     setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMUL,    MVT::f64, Legal);
@@ -3631,7 +3631,8 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
       case 512:
         return {0u, &Hexagon::HvxVRRegClass};
       case 1024:
-        if (Subtarget.hasV60Ops() && Subtarget.useHVX128BOps())
+        if (Subtarget.hasFeature(llvm::Hexagon::ArchV60) &&
+            Subtarget.useHVX128BOps())
           return {0u, &Hexagon::HvxVRRegClass};
         return {0u, &Hexagon::HvxWRRegClass};
       case 2048:

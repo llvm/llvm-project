@@ -1105,7 +1105,8 @@ bool HexagonPacketizerList::isSoloInstruction(const MachineInstr &MI) {
 static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
       const HexagonInstrInfo &HII) {
   const MachineFunction *MF = MI.getParent()->getParent();
-  if (MF->getSubtarget<HexagonSubtarget>().hasV60OpsOnly() &&
+  if (MF->getSubtarget<HexagonSubtarget>().getHexagonArchVersion() ==
+          Hexagon::ArchEnum::V60 &&
       HII.isHVXMemWithAIndirect(MI, MJ))
     return true;
 
@@ -1540,9 +1541,10 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
         break;
       }
 
-      if (Slot1Store && MF.getSubtarget<HexagonSubtarget>().hasV65Ops() &&
-          ((LoadJ && StoreI && !NVStoreI) ||
-           (StoreJ && LoadI && !NVStoreJ)) &&
+      if (Slot1Store &&
+          MF.getSubtarget<HexagonSubtarget>().hasFeature(
+              llvm::Hexagon::ArchV65) &&
+          ((LoadJ && StoreI && !NVStoreI) || (StoreJ && LoadI && !NVStoreJ)) &&
           (J.getOpcode() != Hexagon::S2_allocframe &&
            I.getOpcode() != Hexagon::S2_allocframe) &&
           (J.getOpcode() != Hexagon::L2_deallocframe &&

@@ -82,7 +82,8 @@ HexagonTargetLowering::initializeHVXLowering() {
     addRegisterClass(MVT::v32i1, &Hexagon::HvxQRRegClass);
     addRegisterClass(MVT::v64i1, &Hexagon::HvxQRRegClass);
     addRegisterClass(MVT::v128i1, &Hexagon::HvxQRRegClass);
-    if (Subtarget.useHVXV68Ops() && Subtarget.useHVXFloatingPoint()) {
+    if (Subtarget.hasFeature(llvm::Hexagon::ExtensionHVXV68) &&
+        Subtarget.useHVXFloatingPoint()) {
       addRegisterClass(MVT::v32f32, &Hexagon::HvxVRRegClass);
       addRegisterClass(MVT::v64f16, &Hexagon::HvxVRRegClass);
       addRegisterClass(MVT::v64f32, &Hexagon::HvxWRRegClass);
@@ -117,7 +118,8 @@ HexagonTargetLowering::initializeHVXLowering() {
   setOperationAction(ISD::VECTOR_SHUFFLE,          ByteW, Legal);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
-  if (Subtarget.useHVX128BOps() && Subtarget.useHVXV68Ops() &&
+  if (Subtarget.useHVX128BOps() &&
+      Subtarget.hasFeature(llvm::Hexagon::ExtensionHVXV68) &&
       Subtarget.useHVXFloatingPoint()) {
 
     static const MVT FloatV[] = { MVT::v64f16, MVT::v32f32 };
@@ -615,7 +617,7 @@ void HexagonTargetLowering::AdjustHvxInstrPostInstrSelection(
 
   switch (Opc) {
   case Hexagon::PS_vsplatib:
-    if (Subtarget.useHVXV62Ops()) {
+    if (Subtarget.hasFeature(llvm::Hexagon::ExtensionHVXV62)) {
       // SplatV = A2_tfrsi #imm
       // OutV = V6_lvsplatb SplatV
       Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
@@ -639,7 +641,7 @@ void HexagonTargetLowering::AdjustHvxInstrPostInstrSelection(
     MB.erase(At);
     break;
   case Hexagon::PS_vsplatrb:
-    if (Subtarget.useHVXV62Ops()) {
+    if (Subtarget.hasFeature(llvm::Hexagon::ExtensionHVXV62)) {
       // OutV = V6_lvsplatb Inp
       Register OutV = MI.getOperand(0).getReg();
       BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatb), OutV)
@@ -656,7 +658,7 @@ void HexagonTargetLowering::AdjustHvxInstrPostInstrSelection(
     MB.erase(At);
     break;
   case Hexagon::PS_vsplatih:
-    if (Subtarget.useHVXV62Ops()) {
+    if (Subtarget.hasFeature(llvm::Hexagon::ExtensionHVXV62)) {
       // SplatV = A2_tfrsi #imm
       // OutV = V6_lvsplath SplatV
       Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
@@ -680,7 +682,7 @@ void HexagonTargetLowering::AdjustHvxInstrPostInstrSelection(
     MB.erase(At);
     break;
   case Hexagon::PS_vsplatrh:
-    if (Subtarget.useHVXV62Ops()) {
+    if (Subtarget.hasFeature(llvm::Hexagon::ExtensionHVXV62)) {
       // OutV = V6_lvsplath Inp
       Register OutV = MI.getOperand(0).getReg();
       BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplath), OutV)
@@ -1938,7 +1940,7 @@ HexagonTargetLowering::LowerHvxMulLoHi(SDValue Op, SelectionDAG &DAG) const {
 
   // Legal on HVX v62+, but lower it here because patterns can't handle multi-
   // valued nodes.
-  if (Subtarget.useHVXV62Ops())
+  if (Subtarget.hasFeature(llvm::Hexagon::ExtensionHVXV62))
     return emitHvxMulLoHiV62(Vu, SignedVu, Vv, SignedVv, dl, DAG);
 
   if (Opc == HexagonISD::SMUL_LOHI) {
@@ -2090,7 +2092,8 @@ HexagonTargetLowering::LowerHvxFunnelShift(SDValue Op,
   // The expansion into regular shifts produces worse code for i8 and for
   // right shift of i32 on v65+.
   bool UseShifts = ElemTy != MVT::i8;
-  if (Subtarget.useHVXV65Ops() && ElemTy == MVT::i32)
+  if (Subtarget.hasFeature(llvm::Hexagon::ExtensionHVXV65) &&
+      ElemTy == MVT::i32)
     UseShifts = false;
 
   if (SDValue SplatV = getSplatValue(S, DAG); SplatV && UseShifts) {

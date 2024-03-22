@@ -135,7 +135,7 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
       if (!HvxVer.drop_front(5).consumeInteger(10, Ver) && Ver >= 68)
         AddQFloat = true;
     } else if (HvxVer == "+hvx") {
-      if (hasV68Ops())
+      if (hasFeature(llvm::Hexagon::ArchV68))
         AddQFloat = true;
     }
 
@@ -146,7 +146,7 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   std::string FeatureString = Features.getString();
   ParseSubtargetFeatures(CPUString, /*TuneCPU*/ CPUString, FeatureString);
 
-  if (useHVXV68Ops())
+  if (hasFeature(llvm::Hexagon::ExtensionHVXV68))
     UseHVXFloatingPoint = UseHVXIEEEFPOps || UseHVXQFloatOps;
 
   if (UseHVXQFloatOps && UseHVXIEEEFPOps && UseHVXFloatingPoint)
@@ -156,7 +156,7 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   if (OverrideLongCalls.getPosition())
     UseLongCalls = OverrideLongCalls;
 
-  UseBSBScheduling = hasV60Ops() && EnableBSBSched;
+  UseBSBScheduling = hasFeature(llvm::Hexagon::ArchV60) && EnableBSBSched;
 
   if (isTinyCore()) {
     // Tiny core has a single thread, so back-to-back scheduling is enabled by
@@ -545,7 +545,7 @@ int HexagonSubtarget::updateLatency(MachineInstr &SrcInst,
                                     int Latency) const {
   if (IsArtificial)
     return 1;
-  if (!hasV60Ops())
+  if (!hasFeature(llvm::Hexagon::ArchV60))
     return Latency;
 
   auto &QII = static_cast<const HexagonInstrInfo &>(*getInstrInfo());
@@ -679,13 +679,13 @@ bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
   // Reassign the latency for the previous bests, which requires setting
   // the dependence edge in both directions.
   if (SrcBest != nullptr) {
-    if (!hasV60Ops())
+    if (!hasFeature(llvm::Hexagon::ArchV60))
       changeLatency(SrcBest, Dst, 1);
     else
       restoreLatency(SrcBest, Dst);
   }
   if (DstBest != nullptr) {
-    if (!hasV60Ops())
+    if (!hasFeature(llvm::Hexagon::ArchV60))
       changeLatency(Src, DstBest, 1);
     else
       restoreLatency(Src, DstBest);

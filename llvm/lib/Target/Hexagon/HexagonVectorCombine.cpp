@@ -713,7 +713,7 @@ auto AlignVectors::createLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
                               Value *Predicate, int Alignment, Value *Mask,
                               Value *PassThru,
                               ArrayRef<Value *> MDSources) const -> Value * {
-  bool HvxHasPredLoad = HVC.HST.useHVXV62Ops();
+  bool HvxHasPredLoad = HVC.HST.hasFeature(llvm::Hexagon::ExtensionHVXV62);
   // Predicate is nullptr if not creating predicated load
   if (Predicate) {
     assert(!Predicate->getType()->isVectorTy() &&
@@ -969,7 +969,7 @@ auto AlignVectors::createLoadGroups(const AddrList &Group) const -> MoveList {
   erase_if(LoadGroups, [](const MoveGroup &G) { return G.Main.size() <= 1; });
 
   // Erase HVX groups on targets < HvxV62 (due to lack of predicated loads).
-  if (!HVC.HST.useHVXV62Ops())
+  if (!HVC.HST.hasFeature(llvm::Hexagon::ExtensionHVXV62))
     erase_if(LoadGroups, [](const MoveGroup &G) { return G.IsHvx; });
 
   return LoadGroups;
@@ -1020,7 +1020,7 @@ auto AlignVectors::createStoreGroups(const AddrList &Group) const -> MoveList {
   erase_if(StoreGroups, [](const MoveGroup &G) { return G.Main.size() <= 1; });
 
   // Erase HVX groups on targets < HvxV62 (due to lack of predicated loads).
-  if (!HVC.HST.useHVXV62Ops())
+  if (!HVC.HST.hasFeature(llvm::Hexagon::ExtensionHVXV62))
     erase_if(StoreGroups, [](const MoveGroup &G) { return G.IsHvx; });
 
   // Erase groups where every store is a full HVX vector. The reason is that
@@ -1939,10 +1939,10 @@ auto HvxIdioms::createAddCarry(IRBuilderBase &Builder, Value *X, Value *Y,
     -> std::pair<Value *, Value *> {
   assert(X->getType() == Y->getType());
   auto VecTy = cast<VectorType>(X->getType());
-  if (VecTy == HvxI32Ty && HVC.HST.useHVXV62Ops()) {
+  if (VecTy == HvxI32Ty && HVC.HST.hasFeature(llvm::Hexagon::ExtensionHVXV62)) {
     SmallVector<Value *> Args = {X, Y};
     Intrinsic::ID AddCarry;
-    if (CarryIn == nullptr && HVC.HST.useHVXV66Ops()) {
+    if (CarryIn == nullptr && HVC.HST.hasFeature(llvm::Hexagon::ExtensionHVXV66)) {
       AddCarry = HVC.HST.getIntrinsicId(Hexagon::V6_vaddcarryo);
     } else {
       AddCarry = HVC.HST.getIntrinsicId(Hexagon::V6_vaddcarry);
@@ -2006,7 +2006,7 @@ auto HvxIdioms::createMulH16(IRBuilderBase &Builder, SValue X, SValue Y) const
     -> Value * {
   Type *HvxI16Ty = HVC.getHvxTy(HVC.getIntTy(16), /*Pair=*/false);
 
-  if (HVC.HST.useHVXV69Ops()) {
+  if (HVC.HST.hasFeature(Hexagon::ExtensionHVXV69)) {
     if (X.Sgn != Signed && Y.Sgn != Signed) {
       auto V6_vmpyuhvs = HVC.HST.getIntrinsicId(Hexagon::V6_vmpyuhvs);
       return HVC.createHvxIntrinsic(Builder, V6_vmpyuhvs, HvxI16Ty,

@@ -187,7 +187,7 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   // Leveraging these registers will require more work to recognize
   // the new semantics posed, Hi/LoVec patterns, etc.
   // Note well: if enabled, they should be restricted to only
-  // where `HST.useHVXOps() && HST.hasV67Ops()` is true.
+  // where `HST.useHVXOps() && HST.hasFeature(llvm::Hexagon::ArchV67)` is true.
   for (auto Reg : Hexagon_MC::GetVectRegRev())
     Reserved.set(Reg);
 

@@ -57,9 +57,10 @@ bool HexagonTTIImpl::isHVXVectorType(Type *Ty) const {
     return false;
   if (!ST.isTypeForHVX(VecTy))
     return false;
-  if (ST.useHVXV69Ops() || !VecTy->getElementType()->isFloatingPointTy())
+  if (ST.hasFeature(Hexagon::ExtensionHVXV69) ||
+      !VecTy->getElementType()->isFloatingPointTy())
     return true;
-  return ST.useHVXV68Ops() && EnableV68FloatAutoHVX;
+  return ST.hasFeature(llvm::Hexagon::ExtensionHVXV68) && EnableV68FloatAutoHVX;
 }
 
 unsigned HexagonTTIImpl::getTypeNumElements(Type *Ty) const {

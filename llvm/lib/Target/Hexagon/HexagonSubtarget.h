@@ -144,73 +144,6 @@ public:
 
   bool isXRaySupported() const override { return true; }
 
-  bool hasV5Ops() const {
-    return getHexagonArchVersion() >= Hexagon::ArchEnum::V5;
-  }
-  bool hasV5OpsOnly() const {
-    return getHexagonArchVersion() == Hexagon::ArchEnum::V5;
-  }
-  bool hasV55Ops() const {
-    return getHexagonArchVersion() >= Hexagon::ArchEnum::V55;
-  }
-  bool hasV55OpsOnly() const {
-    return getHexagonArchVersion() == Hexagon::ArchEnum::V55;
-  }
-  bool hasV60Ops() const {
-    return getHexagonArchVersion() >= Hexagon::ArchEnum::V60;
-  }
-  bool hasV60OpsOnly() const {
-    return getHexagonArchVersion() == Hexagon::ArchEnum::V60;
-  }
-  bool hasV62Ops() const {
-    return getHexagonArchVersion() >= Hexagon::ArchEnum::V62;
-  }
-  bool hasV62OpsOnly() const {
-    return getHexagonArchVersion() == Hexagon::ArchEnum::V62;
-  }
-  bool hasV65Ops() const {
-    return getHexagonArchVersion() >= Hexagon::ArchEnum::V65;
-  }
-  bool hasV65OpsOnly() const {
-    return getHexagonArchVersion() == Hexagon::ArchEnum::V65;
-  }
-  bool hasV66Ops() const {
-    return getHexagonArchVersion() >= Hexagon::ArchEnum::V66;
-  }
-  bool hasV66OpsOnly() const {
-    return getHexagonArchVersion() == Hexagon::ArchEnum::V66;
-  }
-  bool hasV67Ops() const {
-    return getHexagonArchVersion() >= Hexagon::ArchEnum::V67;
-  }
-  bool hasV67OpsOnly() const {
-    return getHexagonArchVersion() == Hexagon::ArchEnum::V67;
-  }
-  bool hasV68Ops() const {
-    return getHexagonArchVersion() >= Hexagon::ArchEnum::V68;
-  }
-  bool hasV68OpsOnly() const {
-    return getHexagonArchVersion() == Hexagon::ArchEnum::V68;
-  }
-  bool hasV69Ops() const {
-    return getHexagonArchVersion() >= Hexagon::ArchEnum::V69;
-  }
-  bool hasV69OpsOnly() const {
-    return getHexagonArchVersion() == Hexagon::ArchEnum::V69;
-  }
-  bool hasV71Ops() const {
-    return getHexagonArchVersion() >= Hexagon::ArchEnum::V71;
-  }
-  bool hasV71OpsOnly() const {
-    return getHexagonArchVersion() == Hexagon::ArchEnum::V71;
-  }
-  bool hasV73Ops() const {
-    return getHexagonArchVersion() >= Hexagon::ArchEnum::V73;
-  }
-  bool hasV73OpsOnly() const {
-    return getHexagonArchVersion() == Hexagon::ArchEnum::V73;
-  }
-
   bool useAudioOps() const { return UseAudioOps; }
   bool useCompound() const { return UseCompound; }
   bool useLongCalls() const { return UseLongCalls; }
@@ -232,34 +165,7 @@ public:
   }
   bool useHVXFloatingPoint() const { return UseHVXFloatingPoint; }
   bool useHVXOps() const {
-    return HexagonHVXVersion > Hexagon::ArchEnum::NoArch;
-  }
-  bool useHVXV60Ops() const {
-    return HexagonHVXVersion >= Hexagon::ArchEnum::V60;
-  }
-  bool useHVXV62Ops() const {
-    return HexagonHVXVersion >= Hexagon::ArchEnum::V62;
-  }
-  bool useHVXV65Ops() const {
-    return HexagonHVXVersion >= Hexagon::ArchEnum::V65;
-  }
-  bool useHVXV66Ops() const {
-    return HexagonHVXVersion >= Hexagon::ArchEnum::V66;
-  }
-  bool useHVXV67Ops() const {
-    return HexagonHVXVersion >= Hexagon::ArchEnum::V67;
-  }
-  bool useHVXV68Ops() const {
-    return HexagonHVXVersion >= Hexagon::ArchEnum::V68;
-  }
-  bool useHVXV69Ops() const {
-    return HexagonHVXVersion >= Hexagon::ArchEnum::V69;
-  }
-  bool useHVXV71Ops() const {
-    return HexagonHVXVersion >= Hexagon::ArchEnum::V71;
-  }
-  bool useHVXV73Ops() const {
-    return HexagonHVXVersion >= Hexagon::ArchEnum::V73;
+    return hasFeature(llvm::Hexagon::ExtensionHVX);
   }
   bool useHVX128BOps() const { return useHVXOps() && UseHVX128BOps; }
   bool useHVX64BOps() const { return useHVXOps() && UseHVX64BOps; }
@@ -323,7 +229,7 @@ public:
     static MVT Types[] = {MVT::i8, MVT::i16, MVT::i32};
     static MVT TypesV68[] = {MVT::i8, MVT::i16, MVT::i32, MVT::f16, MVT::f32};
 
-    if (useHVXV68Ops() && useHVXFloatingPoint())
+    if (hasFeature(llvm::Hexagon::ExtensionHVXV68) && useHVXFloatingPoint())
       return ArrayRef(TypesV68);
     return ArrayRef(Types);
   }

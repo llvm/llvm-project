@@ -400,12 +400,8 @@ static MCTargetStreamer *createHexagonNullTargetStreamer(MCStreamer &S) {
   return new HexagonTargetStreamer(S);
 }
 
-static void LLVM_ATTRIBUTE_UNUSED clearFeature(MCSubtargetInfo* STI, uint64_t F) {
-  if (STI->hasFeature(F))
-    STI->ToggleFeature(F);
-}
-
-static bool LLVM_ATTRIBUTE_UNUSED checkFeature(MCSubtargetInfo* STI, uint64_t F) {
+static bool LLVM_ATTRIBUTE_UNUSED checkFeature(MCSubtargetInfo *STI,
+                                               uint64_t F) {
   return STI->hasFeature(F);
 }
 
