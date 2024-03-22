@@ -18,7 +18,7 @@
 // * Start of the shadow memory region is aligned to 2**kShadowBaseAlignment.
 // * All stack ring buffers are located within (2**kShadowBaseAlignment)
 // sized region below and adjacent to the shadow region.
-// * Each ring buffer has a size of (2**N)*4096 where N is in [0, 8), and is
+// * Each ring buffer has a size of (2**N)*4096 where N is in [1, 7), and is
 // aligned to twice its size. The value of N can be different for each buffer.
 //
 // These constrains guarantee that, given an address A of any element of the
