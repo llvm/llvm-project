@@ -1754,9 +1754,8 @@ void Verifier::visitModuleFlags() {
   }
 
   if ((PAuthABIPlatform == uint64_t(-1)) != (PAuthABIVersion == uint64_t(-1)))
-    CheckFailed(
-        "either both or no 'aarch64-elf-pauthabi-platform' and "
-        "'aarch64-elf-pauthabi-version' module flags must be present");
+    CheckFailed("either both or no 'aarch64-elf-pauthabi-platform' and "
+                "'aarch64-elf-pauthabi-version' module flags must be present");
 
   // Validate that the requirements in the module are valid.
   for (const MDNode *Requirement : Requirements) {
