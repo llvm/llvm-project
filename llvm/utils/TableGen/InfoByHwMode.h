@@ -181,7 +181,7 @@ struct RegSizeInfo {
   unsigned SpillSize;
   unsigned SpillAlignment;
 
-  RegSizeInfo(Record *R, const CodeGenHwModes &CGH);
+  RegSizeInfo(Record *R);
   RegSizeInfo() = default;
   bool operator<(const RegSizeInfo &I) const;
   bool operator==(const RegSizeInfo &I) const {
