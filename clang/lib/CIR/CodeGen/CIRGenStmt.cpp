@@ -307,6 +307,8 @@ mlir::LogicalResult CIRGenFunction::buildSimpleStmt(const Stmt *S,
     return buildBreakStmt(cast<BreakStmt>(*S));
 
   case Stmt::AttributedStmtClass:
+    return buildAttributedStmt(cast<AttributedStmt>(*S));
+
   case Stmt::SEHLeaveStmtClass:
     llvm::errs() << "CIR codegen for '" << S->getStmtClassName()
                  << "' not implemented\n";
@@ -324,6 +326,23 @@ mlir::LogicalResult CIRGenFunction::buildLabelStmt(const clang::LabelStmt &S) {
   assert(!(getContext().getLangOpts().EHAsynch && S.isSideEntry()));
 
   return buildStmt(S.getSubStmt(), /* useCurrentScope */ true);
+}
+
+mlir::LogicalResult
+CIRGenFunction::buildAttributedStmt(const AttributedStmt &S) {
+  for (const auto *A : S.getAttrs()) {
+    switch (A->getKind()) {
+    case attr::NoMerge:
+    case attr::NoInline:
+    case attr::AlwaysInline:
+    case attr::MustTail:
+      llvm_unreachable("NIY attributes");
+    default:
+      break;
+    }
+  }
+
+  return buildStmt(S.getSubStmt(), true, S.getAttrs());
 }
 
 // Add terminating yield on body regions (loops, ...) in case there are

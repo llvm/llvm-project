@@ -986,6 +986,8 @@ public:
   mlir::LogicalResult buildLabel(const clang::LabelDecl *D);
   mlir::LogicalResult buildLabelStmt(const clang::LabelStmt &S);
 
+  mlir::LogicalResult buildAttributedStmt(const AttributedStmt &S);
+
   mlir::LogicalResult buildBreakStmt(const clang::BreakStmt &S);
   mlir::LogicalResult buildContinueStmt(const clang::ContinueStmt &S);
 
