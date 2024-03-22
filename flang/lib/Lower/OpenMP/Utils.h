@@ -36,13 +36,7 @@ struct OmpObjectList;
 namespace lower {
 class AbstractConverter;
 
-namespace pft {
-struct Evaluation;
-} // namespace pft
-
 namespace omp {
-
-uint32_t getOpenMPVersion(mlir::ModuleOp mod);
 
 using DeclareTargetCapturePair =
     std::pair<mlir::omp::DeclareTargetCaptureClause,
@@ -73,9 +67,6 @@ void genObjectList(const ObjectList &objects,
 void genObjectList2(const Fortran::parser::OmpObjectList &objectList,
                     Fortran::lower::AbstractConverter &converter,
                     llvm::SmallVectorImpl<mlir::Value> &operands);
-
-Fortran::semantics::Symbol *
-getIterationVariableSymbol(const Fortran::lower::pft::Evaluation &eval);
 
 } // namespace omp
 } // namespace lower
