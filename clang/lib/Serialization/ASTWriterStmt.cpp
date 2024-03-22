@@ -1268,6 +1268,10 @@ void ASTStmtWriter::VisitPPEmbedExpr(PPEmbedExpr *E) {
   Code = serialization::EXPR_BUILTIN_PP_EMBED;
 }
 
+void ASTStmtWriter::VisitEmbedSubscriptExpr(EmbedSubscriptExpr *E) {
+  VisitExpr(E);
+}
+
 void ASTStmtWriter::VisitAddrLabelExpr(AddrLabelExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getAmpAmpLoc());

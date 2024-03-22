@@ -113,6 +113,7 @@ public:
   bool VisitGenericSelectionExpr(const GenericSelectionExpr *E);
   bool VisitChooseExpr(const ChooseExpr *E);
   bool VisitPPEmbedExpr(const PPEmbedExpr *E);
+  bool VisitEmbedSubscriptExpr(const EmbedSubscriptExpr *E);
   bool VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E);
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
   bool VisitExpressionTraitExpr(const ExpressionTraitExpr *E);

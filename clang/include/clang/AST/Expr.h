@@ -4834,14 +4834,10 @@ public:
 
   size_t getDataElementCount(ASTContext &Context) const;
 
-private:
   template <bool Const>
   class ChildElementIter
       : public llvm::iterator_facade_base<
-            // FIXME: it seems reasonable to make this a random access iterator
-            // instead, but all current access patterns are a linear walk over
-            // the contents, so it's being left for follow-up work if needed.
-            ChildElementIter<Const>, std::input_iterator_tag,
+            ChildElementIter<Const>, std::random_access_iterator_tag,
             std::conditional_t<Const, const IntegerLiteral *,
                                IntegerLiteral *>> {
     friend class PPEmbedExpr;
@@ -4881,6 +4877,18 @@ private:
     bool operator==(ChildElementIter Other) const {
       return (PPExpr == Other.PPExpr && CurOffset == Other.CurOffset);
     }
+    ChildElementIter &operator+=(unsigned N) {
+      assert(PPExpr && "trying to increment an invalid iterator");
+      assert(CurOffset != ULLONG_MAX &&
+             "Already at the end of what we can iterate over");
+      if (CurOffset + N >= PPExpr->BinaryData->getByteLength()) {
+        CurOffset = ULLONG_MAX;
+        PPExpr = nullptr;
+      } else {
+        CurOffset += N;
+      }
+      return *this;
+    }
   }; // class ChildElementIter
 
 public:
@@ -4910,8 +4918,87 @@ public:
     return T->getStmtClass() == PPEmbedExprClass;
   }
 
+  ChildElementIter<false> begin() {
+    return ChildElementIter<false>(this);
+  }
+
 private:
   friend class ASTStmtReader;
+};
+
+/// Represents a subrange of data imported by #embed directive. Needed to
+/// handle nested initializer lists with #embed directives.
+/// Example:
+///  struct S {
+///    int x, y;
+///  };
+///
+///  struct T {
+///    int x[2];
+///    struct S s;
+///  };
+///
+///  struct T t[] = {
+///  #embed "data" // data contains 10 elements;
+///  };
+/// The resulting semantic form of initializer list will contain (ESE stands
+/// for EmbedSubscriptExpr):
+///  { {ESE(first two data elements), {ESE(3rd element), ESE(4th element) }},
+///  { {ESE(5th and 6th element), {ESE(7th element), ESE(8th element) }},
+///  { {ESE(9th and 10th element), { zeroinitializer }}}
+///
+/// EmbedSubscriptExpr referencing more than element only appear for arrays of
+/// scalars.
+class EmbedSubscriptExpr : public Expr {
+  PPEmbedExpr *ReferencedEmbed;
+  unsigned Begin;
+  unsigned NumOfElements;
+
+public:
+  explicit EmbedSubscriptExpr(QualType T, PPEmbedExpr *ReferencedEmbed,
+                              unsigned Begin, unsigned NumOfElements)
+      : Expr(EmbedSubscriptExprClass, T, VK_PRValue, OK_Ordinary),
+        ReferencedEmbed(ReferencedEmbed), Begin(Begin),
+        NumOfElements(NumOfElements) {}
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == EmbedSubscriptExprClass;
+  }
+
+  PPEmbedExpr *getEmbed() const {
+    return ReferencedEmbed;
+  }
+
+  unsigned getBegin() const {
+    return Begin;
+  }
+
+  unsigned getDataElementCount() const { return NumOfElements; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return SourceLocation(); }
+  SourceLocation getEndLoc() const LLVM_READONLY { return SourceLocation(); }
+
+  // Iterators
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  template <typename Foo, typename... Targs>
+  bool doForEachDataElement(Foo F, unsigned &StartingIndexInArray,
+                            Targs... Fargs) const {
+    PPEmbedExpr *PPEmbed = this->getEmbed();
+    auto It = PPEmbed->begin() + this->getBegin();
+    const unsigned NumOfEls = this->getDataElementCount();
+    for (unsigned EmbedIndex = 0; EmbedIndex < NumOfEls; ++EmbedIndex, ++It) {
+      if (!F(*It, StartingIndexInArray, Fargs...))
+        return false;
+      StartingIndexInArray++;
+    }
+    return true;
+  }
 };
 
 /// Describes an C or C++ initializer list.

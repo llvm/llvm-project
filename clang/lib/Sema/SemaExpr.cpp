@@ -7465,16 +7465,7 @@ Sema::BuildInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
   }
 
   InitListExpr *E = nullptr;
-  if (InitArgList.size() > 1 &&
-      CheckExprListForPPEmbedExpr(InitArgList, std::nullopt) !=
-          PPEmbedExpr::NotFound) {
-    SmallVector<Expr *, 4> OutputExprList;
-    ExpandPPEmbedExprInExprList(InitArgList, OutputExprList);
-    E = new (Context)
-        InitListExpr(Context, LBraceLoc, OutputExprList, RBraceLoc);
-  } else {
-    E = new (Context) InitListExpr(Context, LBraceLoc, InitArgList, RBraceLoc);
-  }
+  E = new (Context) InitListExpr(Context, LBraceLoc, InitArgList, RBraceLoc);
   E->setType(Context.VoidTy); // FIXME: just a place holder for now.
   return E;
 }

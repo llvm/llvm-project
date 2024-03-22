@@ -205,6 +205,7 @@ def TypoExpr : StmtNode<Expr>;
 def RecoveryExpr : StmtNode<Expr>;
 def BuiltinBitCastExpr : StmtNode<ExplicitCastExpr>;
 def PPEmbedExpr : StmtNode<Expr>;
+def EmbedSubscriptExpr : StmtNode<Expr>;
 
 // Microsoft Extensions.
 def MSPropertyRefExpr : StmtNode<Expr>;

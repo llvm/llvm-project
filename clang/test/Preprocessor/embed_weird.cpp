@@ -80,7 +80,7 @@ const unsigned char *null_ptr_1 =
 ;
 
 const unsigned char *null_ptr_2 =
-#embed <null_byte.bin>
+#embed <null_byte.bin> // c-warning {{expression which evaluates to zero treated as a null pointer constant of type 'const unsigned char *'}}
 ;
 
 const unsigned char *null_ptr_3 = {

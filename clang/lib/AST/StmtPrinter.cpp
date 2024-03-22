@@ -1170,6 +1170,10 @@ void StmtPrinter::VisitPPEmbedExpr(PPEmbedExpr *Node) {
   assert(false && "not yet implemented");
 }
 
+void StmtPrinter::VisitEmbedSubscriptExpr(EmbedSubscriptExpr *Node) {
+  assert(false && "not yet implemented");
+}
+
 void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {
   PrintExpr(Node->getSubExpr());
 }

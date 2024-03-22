@@ -2714,3 +2714,9 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
 void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {
   OS << " " << S->getDirectiveKind();
 }
+
+void TextNodeDumper::VisitEmbedSubscriptExpr(const EmbedSubscriptExpr *S) {
+  AddChild("begin", [=] { OS << S->getBegin(); });
+  AddChild("number of elements", [=] { OS << S->getDataElementCount(); });
+  AddChild("embed", [=] { Visit(S->getEmbed()); });
+}

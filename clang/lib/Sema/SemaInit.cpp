@@ -312,6 +312,8 @@ class InitListChecker {
   InitListExpr *FullyStructuredList = nullptr;
   NoInitExpr *DummyExpr = nullptr;
   SmallVectorImpl<QualType> *AggrDeductionCandidateParamTypes = nullptr;
+  PPEmbedExpr *CurEmbed = nullptr; // Save current embed we're processing.
+  unsigned CurEmbedIndex = 0;
 
   NoInitExpr *getDummyInit() {
     if (!DummyExpr)
@@ -499,6 +501,41 @@ class InitListChecker {
                               bool TopLevelObject);
   void CheckEmptyInitializable(const InitializedEntity &Entity,
                                SourceLocation Loc);
+
+  Expr *HandleEmbed(PPEmbedExpr *Embed, const InitializedEntity &Entity) {
+    Expr *Result = nullptr;
+    // Expand single-element embed as pure integer literal.
+    if (Embed->getDataElementCount(SemaRef.Context) == 1) {
+      Result = SemaRef.ExpandSinglePPEmbedExpr(Embed);
+    } else {
+      // Otherwise undrestand which part of embed we'd like to reference.
+      if (!CurEmbed) {
+        CurEmbed = Embed;
+        CurEmbedIndex = 0;
+      }
+      // Reference just one if we're initializing a single scalar.
+      uint64_t ElsCount = 1;
+      // Otherwise try to fill whole array with embed data.
+      if (Entity.getKind() == InitializedEntity::EK_ArrayElement) {
+        ValueDecl *ArrDecl = Entity.getParent()->getDecl();
+        auto *AType = SemaRef.Context.getAsArrayType(ArrDecl->getType());
+        assert(AType && "expected array type when initializing array");
+        ElsCount = Embed->getDataElementCount(SemaRef.Context);
+        if (const auto *CAType = dyn_cast<ConstantArrayType>(AType))
+          ElsCount = std::min(CAType->getSize().getZExtValue(),
+                              ElsCount - CurEmbedIndex);
+      }
+
+      Result = new (SemaRef.Context)
+          EmbedSubscriptExpr(Embed->getType(), Embed, CurEmbedIndex, ElsCount);
+      CurEmbedIndex += ElsCount;
+      if (CurEmbedIndex >= Embed->getDataElementCount(SemaRef.Context)) {
+        CurEmbed = nullptr;
+        CurEmbedIndex = 0;
+      }
+    }
+    return Result;
+  }
 
 public:
   InitListChecker(
@@ -1464,6 +1501,9 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
       // Brace elision is never performed if the element is not an
       // assignment-expression.
       if (Seq || isa<InitListExpr>(expr)) {
+        if (auto *Embed = dyn_cast<PPEmbedExpr>(expr)) {
+          expr = HandleEmbed(Embed, Entity);
+        }
         if (!VerifyOnly) {
           ExprResult Result = Seq.Perform(SemaRef, TmpEntity, Kind, expr);
           if (Result.isInvalid())
@@ -1477,7 +1517,8 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
           UpdateStructuredListElement(StructuredList, StructuredIndex,
                                       getDummyInit());
         }
-        ++Index;
+        if (!CurEmbed)
+          ++Index;
         if (AggrDeductionCandidateParamTypes)
           AggrDeductionCandidateParamTypes->push_back(ElemType);
         return;
@@ -1670,6 +1711,8 @@ void InitListChecker::CheckScalarType(const InitializedEntity &Entity,
     ++Index;
     ++StructuredIndex;
     return;
+  } else if (auto *Embed = dyn_cast<PPEmbedExpr>(expr)) {
+    expr = HandleEmbed(Embed, Entity);
   }
 
   ExprResult Result;
@@ -1688,17 +1731,12 @@ void InitListChecker::CheckScalarType(const InitializedEntity &Entity,
 
   if (Result.isInvalid())
     hadError = true; // types weren't compatible.
-  else {
+  else
     ResultExpr = Result.getAs<Expr>();
 
-    if (ResultExpr != expr && !VerifyOnly) {
-      // The type was promoted, update initializer list.
-      // FIXME: Why are we updating the syntactic init list?
-      IList->setInit(Index, ResultExpr);
-    }
-  }
   UpdateStructuredListElement(StructuredList, StructuredIndex, ResultExpr);
-  ++Index;
+  if (!CurEmbed)
+    ++Index;
   if (AggrDeductionCandidateParamTypes)
     AggrDeductionCandidateParamTypes->push_back(DeclType);
 }
@@ -1954,6 +1992,11 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     }
   }
 
+  if (SemaRef.CheckExprListForPPEmbedExpr(
+          IList->inits(), DeclType) == PPEmbedExpr::FoundOne) {
+    PPEmbedExpr *PPEmbed = cast<PPEmbedExpr>(IList->inits()[0]);
+    IList->setInit(0, PPEmbed->getDataStringLiteral());
+  }
   // Check for the special-case of initializing an array with a string.
   if (Index < IList->getNumInits()) {
     if (IsStringInit(IList->getInit(Index), arrayType, SemaRef.Context) ==
@@ -2059,10 +2102,23 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     InitializedEntity ElementEntity =
       InitializedEntity::InitializeElement(SemaRef.Context, StructuredIndex,
                                            Entity);
+
+    unsigned EmbedElementIndexBeforeInit = CurEmbedIndex;
     // Check this element.
     CheckSubElementType(ElementEntity, IList, elementType, Index,
                         StructuredList, StructuredIndex);
     ++elementIndex;
+    if ((CurEmbed || isa<PPEmbedExpr>(Init)) && elementType->isScalarType()) {
+      if (CurEmbed) {
+        elementIndex =
+            elementIndex + CurEmbedIndex - EmbedElementIndexBeforeInit - 1;
+      } else {
+        auto Embed = cast<PPEmbedExpr>(Init);
+        elementIndex = elementIndex +
+                       Embed->getDataElementCount(SemaRef.Context) -
+                       EmbedElementIndexBeforeInit - 1;
+      }
+    }
 
     // If the array is of incomplete type, keep track of the number of
     // elements in the initializer.
@@ -6217,8 +6273,17 @@ void InitializationSequence::InitializeFrom(Sema &S,
           S.CheckConversionToObjCLiteral(DestType, Initializer))
         Args[0] = Initializer;
     }
-    if (!isa<InitListExpr>(Initializer))
+    if (!isa<InitListExpr>(Initializer)) {
       SourceType = Initializer->getType();
+      if (auto *Embed = dyn_cast<PPEmbedExpr>(Initializer)) {
+        if (Embed->getDataElementCount(S.Context) == 1) {
+          // Expand single-element embed as pure integer literal.
+          // Otherwise there will be an error.
+          // TODO: why?
+          Initializer = S.ExpandSinglePPEmbedExpr(Embed);
+        }
+      }
+    }
   }
 
   //     - If the initializer is a (non-parenthesized) braced-init-list, the
@@ -9056,19 +9121,33 @@ ExprResult InitializationSequence::Perform(Sema &S,
           }
         }
       }
+      Expr *Init = CurInit.get();
+      if (auto *Embed = dyn_cast<PPEmbedExpr>(Init->IgnoreParenImpCasts())) {
+        if (Embed->getDataElementCount(S.Context) == 1) {
+          // Expand the list in-place immediately, let the natural work take
+          // hold
+          Init = S.ExpandSinglePPEmbedExpr(Embed);
+        } else {
+          // Whee, this is a comma expression! However, we don't need to retain
+          // it as such because the comma expression results are the right-most
+          // operand. So we'll get that value and expand it as a single value.
+          Init = new (S.Context) EmbedSubscriptExpr(
+              Embed->getType(), Embed,
+              Embed->getDataElementCount(S.Context) - 1, /*ElsCount*/ 1);
+        }
+      }
 
-      Sema::CheckedConversionKind CCK
-        = Kind.isCStyleCast()? Sema::CCK_CStyleCast
-        : Kind.isFunctionalCast()? Sema::CCK_FunctionalCast
-        : Kind.isExplicitCast()? Sema::CCK_OtherCast
-        : Sema::CCK_ImplicitConversion;
-      ExprResult CurInitExprRes =
-        S.PerformImplicitConversion(CurInit.get(), Step->Type, *Step->ICS,
-                                    getAssignmentAction(Entity), CCK);
+      Sema::CheckedConversionKind CCK =
+          Kind.isCStyleCast()       ? Sema::CCK_CStyleCast
+          : Kind.isFunctionalCast() ? Sema::CCK_FunctionalCast
+          : Kind.isExplicitCast()   ? Sema::CCK_OtherCast
+                                    : Sema::CCK_ImplicitConversion;
+      ExprResult CurInitExprRes = S.PerformImplicitConversion(
+          Init, Step->Type, *Step->ICS, getAssignmentAction(Entity), CCK);
       if (CurInitExprRes.isInvalid())
         return ExprError();
 
-      S.DiscardMisalignedMemberAddress(Step->Type.getTypePtr(), CurInit.get());
+      S.DiscardMisalignedMemberAddress(Step->Type.getTypePtr(), Init);
 
       CurInit = CurInitExprRes;
 

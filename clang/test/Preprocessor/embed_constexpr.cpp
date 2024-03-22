@@ -60,3 +60,26 @@ constexpr int paren_init(
 #embed <jk.txt> limit(1)
 );
 static_assert(paren_init == 'j');
+
+struct S {
+  const char buffer[2] = {
+#embed "jk.txt"
+  };
+};
+
+constexpr struct S s;
+static_assert(s.buffer[1] == 'k');
+
+struct S1 {
+  int x, y;
+};
+
+struct T {
+  int x, y;
+  struct S1 s;
+};
+
+constexpr struct T t[] = {
+#embed <numbers.txt>
+};
+static_assert(t[0].s.x == '2');

@@ -205,6 +205,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     return Cl::CL_PRValue;
 
   case Expr::PPEmbedExprClass:
+  case Expr::EmbedSubscriptExprClass:
     // Nominally, this just goes through as a PRValue until we actually expand
     // it and check it.
     return Cl::CL_PRValue;

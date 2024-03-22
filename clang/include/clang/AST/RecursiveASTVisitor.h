@@ -2846,6 +2846,7 @@ DEF_TRAVERSE_STMT(PPEmbedExpr, {
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(IL);
   }
 })
+DEF_TRAVERSE_STMT(EmbedSubscriptExpr, {})
 
 DEF_TRAVERSE_STMT(UnresolvedLookupExpr, {
   TRY_TO(TraverseNestedNameSpecifierLoc(S->getQualifierLoc()));

@@ -1060,6 +1060,24 @@ public:
     return Visit(E->getInitializer(), T);
   }
 
+  llvm::Constant *ProduceIntToIntCast(Expr *E, QualType DestType) {
+    QualType FromType = E->getType();
+    // See also HandleIntToIntCast in ExprConstant.cpp
+    if (FromType->isIntegerType())
+      if (llvm::Constant *C = Visit(E, FromType))
+        if (auto *CI = dyn_cast<llvm::ConstantInt>(C)) {
+          unsigned SrcWidth = CGM.getContext().getIntWidth(FromType);
+          unsigned DstWidth = CGM.getContext().getIntWidth(DestType);
+          if (DstWidth == SrcWidth)
+            return CI;
+          llvm::APInt A = FromType->isSignedIntegerType()
+                              ? CI->getValue().sextOrTrunc(DstWidth)
+                              : CI->getValue().zextOrTrunc(DstWidth);
+          return llvm::ConstantInt::get(CGM.getLLVMContext(), A);
+        }
+    return nullptr;
+  }
+
   llvm::Constant *VisitCastExpr(CastExpr *E, QualType destType) {
     if (const auto *ECE = dyn_cast<ExplicitCastExpr>(E))
       CGM.EmitExplicitCastExprType(ECE, Emitter.CGF);
@@ -1140,23 +1158,8 @@ public:
     case CK_IntToOCLSampler:
       llvm_unreachable("global sampler variables are not generated");
 
-    case CK_IntegralCast: {
-      QualType FromType = subExpr->getType();
-      // See also HandleIntToIntCast in ExprConstant.cpp
-      if (FromType->isIntegerType())
-        if (llvm::Constant *C = Visit(subExpr, FromType))
-          if (auto *CI = dyn_cast<llvm::ConstantInt>(C)) {
-            unsigned SrcWidth = CGM.getContext().getIntWidth(FromType);
-            unsigned DstWidth = CGM.getContext().getIntWidth(destType);
-            if (DstWidth == SrcWidth)
-              return CI;
-            llvm::APInt A = FromType->isSignedIntegerType()
-                                ? CI->getValue().sextOrTrunc(DstWidth)
-                                : CI->getValue().zextOrTrunc(DstWidth);
-            return llvm::ConstantInt::get(CGM.getLLVMContext(), A);
-          }
-      return nullptr;
-    }
+    case CK_IntegralCast:
+      return ProduceIntToIntCast(subExpr, destType);
 
     case CK_Dependent: llvm_unreachable("saw dependent cast!");
 
@@ -1251,6 +1254,16 @@ public:
     assert(CAT && "can't emit array init for non-constant-bound array");
     unsigned NumInitElements = ILE->getNumInits();
     unsigned NumElements = CAT->getZExtSize();
+    for (const auto *Init : ILE->inits()) {
+      if (const auto *Embed =
+              dyn_cast<EmbedSubscriptExpr>(Init->IgnoreParenImpCasts())) {
+        NumInitElements += Embed->getDataElementCount() - 1;
+        if (NumInitElements > NumElements) {
+          NumInitElements = NumElements;
+          break;
+        }
+      }
+    }
 
     // Initialising an array requires us to automatically
     // initialise any elements that have not been initialised explicitly
@@ -1268,22 +1281,43 @@ public:
 
     // Copy initializer elements.
     SmallVector<llvm::Constant*, 16> Elts;
-    if (fillC && fillC->isNullValue())
+    if (fillC && fillC->isNullValue()) {
       Elts.reserve(NumInitableElts + 1);
-    else
+    } else {
       Elts.reserve(NumElements);
+    }
+
 
     llvm::Type *CommonElementType = nullptr;
-    for (unsigned i = 0; i < NumInitableElts; ++i) {
-      Expr *Init = ILE->getInit(i);
-      llvm::Constant *C = Emitter.tryEmitPrivateForMemory(Init, EltType);
+    auto Emit = [&](Expr *Init, unsigned ArrayIndex, bool EmbedInit) {
+      llvm::Constant *C = nullptr;
+      if (EmbedInit &&
+          !CGM.getContext().hasSameType(Init->getType(), CAT->getElementType()))
+        C = ProduceIntToIntCast(Init, CAT->getElementType());
+      else
+        C = Emitter.tryEmitPrivateForMemory(Init, EltType);
       if (!C)
-        return nullptr;
-      if (i == 0)
+        return false;
+      if (ArrayIndex == 0)
         CommonElementType = C->getType();
       else if (C->getType() != CommonElementType)
         CommonElementType = nullptr;
       Elts.push_back(C);
+      return true;
+    };
+    unsigned ArrayIndex = 0;
+    for (unsigned i = 0; i < ILE->getNumInits(); ++i) {
+      Expr *Init = ILE->getInit(i);
+      if (auto *EmbedS =
+              dyn_cast<EmbedSubscriptExpr>(Init->IgnoreParenImpCasts())) {
+        if (!EmbedS->doForEachDataElement(Emit, ArrayIndex,
+                                          /*EmbedInit=*/true))
+          return nullptr;
+      } else {
+        if (!Emit(Init, ArrayIndex, /*EmbedInit=*/false))
+          return nullptr;
+        ArrayIndex++;
+      }
     }
 
     llvm::ArrayType *Desired =

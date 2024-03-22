@@ -13517,52 +13517,6 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     return;
   }
 
-  // Adjust the init expression for PPEmbedExpr as early as possible
-  // here.
-  bool AlreadyAdjustedPPEmbedExpr = false;
-  if (InitListExpr *ILExpr = dyn_cast_if_present<InitListExpr>(Init); ILExpr) {
-    QualType VDeclTy = VDecl->getType();
-    ArrayRef<Expr *> Inits = ILExpr->inits();
-    if (CheckExprListForPPEmbedExpr(Inits, VDeclTy) == PPEmbedExpr::FoundOne) {
-      PPEmbedExpr *PPEmbed = dyn_cast_if_present<PPEmbedExpr>(Inits[0]);
-      ILExpr->setInit(0, PPEmbed->getDataStringLiteral());
-      AlreadyAdjustedPPEmbedExpr = true;
-    }
-  }
-
-  if (!AlreadyAdjustedPPEmbedExpr && Init) {
-    // If there is a PPEmbedExpr as a single initializer without braces,
-    // make sure it only produces a single element (and then expand said
-    // element).
-    if (PPEmbedExpr *PPEmbed = dyn_cast<PPEmbedExpr>(Init->IgnoreParens())) {
-      if (PPEmbed->getDataElementCount(Context) == 1) {
-        // Expand the list in-place immediately, let the natural work take hold
-        Init = ExpandSinglePPEmbedExpr(PPEmbed);
-      } else {
-        // Whee, this is a comma expression! However, we don't need to retain
-        // it as such because the comma expression results are the right-most
-        // operand. So we'll get that value and expand it as a single value.
-        Init = ExpandSinglePPEmbedExpr(PPEmbed, /*FirstElement*/ false);
-      }
-    }
-
-    // Legitimately, in all other cases, COMPLETELY nuke the PPEmbedExpr
-    // and turn it into a list of integers where applicable.
-    if (InitListExpr *ILExpr = dyn_cast_if_present<InitListExpr>(Init);
-        ILExpr) {
-      ArrayRef<Expr *> Inits = ILExpr->inits();
-      SmallVector<Expr *, 4> OutputExprList{};
-      if (ExpandPPEmbedExprInExprList(Inits, OutputExprList, false) ==
-          PPEmbedExpr::Expanded) {
-        ILExpr->resizeInits(Context, OutputExprList.size());
-        for (size_t I = 0; I < OutputExprList.size(); ++I) {
-          auto &InitExpr = OutputExprList[I];
-          ILExpr->setInit(I, InitExpr);
-        }
-      }
-    }
-  }
-
   // WebAssembly tables can't be used to initialise a variable.
   if (Init && !Init->getType().isNull() &&
       Init->getType()->isWebAssemblyTableType()) {

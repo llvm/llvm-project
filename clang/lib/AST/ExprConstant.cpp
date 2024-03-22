@@ -7731,6 +7731,14 @@ public:
     return true;
   }
 
+  bool VisitEmbedSubscriptExpr(const EmbedSubscriptExpr *E) {
+    PPEmbedExpr *PPEmbed = E->getEmbed();
+    auto It = PPEmbed->begin() + E->getBegin();
+    if (!StmtVisitorTy::Visit(*It))
+      return false;
+    return true;
+  }
+
   bool VisitPredefinedExpr(const PredefinedExpr *E) {
     return StmtVisitorTy::Visit(E->getFunctionName());
   }
@@ -11138,8 +11146,19 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
 
   // If the initializer might depend on the array index, run it for each
   // array element.
-  if (NumEltsToInit != NumElts && MaybeElementDependentArrayFiller(ArrayFiller))
+  if (NumEltsToInit != NumElts &&
+          MaybeElementDependentArrayFiller(ArrayFiller)) {
     NumEltsToInit = NumElts;
+   } else {
+    for (auto *Init : Args) {
+      if (auto *EmbedS =
+              dyn_cast<EmbedSubscriptExpr>(Init->IgnoreParenImpCasts())) {
+        NumEltsToInit += EmbedS->getDataElementCount() - 1;
+      }
+    }
+    if (NumEltsToInit > NumElts)
+      NumEltsToInit = NumElts;
+  }
 
   LLVM_DEBUG(llvm::dbgs() << "The number of elements to initialize: "
                           << NumEltsToInit << ".\n");
@@ -11155,17 +11174,41 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
       Result.getArrayFiller() = Filler;
   }
 
+
   LValue Subobject = This;
   Subobject.addArray(Info, ExprToVisit, CAT);
-  for (unsigned Index = 0; Index != NumEltsToInit; ++Index) {
-    const Expr *Init = Index < Args.size() ? Args[Index] : ArrayFiller;
-    if (!EvaluateInPlace(Result.getArrayInitializedElt(Index),
-                         Info, Subobject, Init) ||
+  auto Eval = [&](const Expr *Init, unsigned ArrayIndex) {
+    LLVM_DEBUG(llvm::dbgs() << "Initializing element : "
+                            << ArrayIndex << ".\n");
+    if (!EvaluateInPlace(Result.getArrayInitializedElt(ArrayIndex), Info,
+                         Subobject, Init) ||
         !HandleLValueArrayAdjustment(Info, Init, Subobject,
                                      CAT->getElementType(), 1)) {
       if (!Info.noteFailure())
         return false;
       Success = false;
+    }
+    // Type mismatch may happen in case of #embed handling.
+    if (isa<IntegerLiteral>(Init) &&
+        !Info.Ctx.hasSameType(Init->getType(), CAT->getElementType()))
+      Result.getArrayInitializedElt(ArrayIndex).getInt() = HandleIntToIntCast(
+          Info, Init, CAT->getElementType(), Init->getType(),
+          Result.getArrayInitializedElt(ArrayIndex).getInt());
+    return true;
+  };
+  unsigned ArrayIndex = 0;
+  for (unsigned Index = 0; Index != NumEltsToInit; ++Index) {
+    const Expr *Init = Index < Args.size() ? Args[Index] : ArrayFiller;
+    if (ArrayIndex >= NumEltsToInit)
+      break;
+    if (auto *EmbedS =
+            dyn_cast<EmbedSubscriptExpr>(Init->IgnoreParenImpCasts())) {
+      if (!EmbedS->doForEachDataElement(Eval, ArrayIndex))
+        return false;
+    } else {
+      if (!Eval(Init, ArrayIndex))
+        return false;
+      ArrayIndex++;
     }
   }
 
@@ -16238,6 +16281,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::GNUNullExprClass:
   case Expr::SourceLocExprClass:
   case Expr::PPEmbedExprClass:
+  case Expr::EmbedSubscriptExprClass:
     return NoDiag();
 
   case Expr::PackIndexingExprClass:

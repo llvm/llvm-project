@@ -1324,6 +1324,10 @@ void ASTStmtReader::VisitPPEmbedExpr(PPEmbedExpr *E) {
   E->BinaryData = cast<StringLiteral>(Record.readSubStmt());
 }
 
+void ASTStmtReader::VisitEmbedSubscriptExpr(EmbedSubscriptExpr *E) {
+  VisitExpr(E);
+}
+
 void ASTStmtReader::VisitAddrLabelExpr(AddrLabelExpr *E) {
   VisitExpr(E);
   E->setAmpAmpLoc(readSourceLocation());

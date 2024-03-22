@@ -2423,6 +2423,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     }
 
     case Stmt::PPEmbedExprClass:
+    case Stmt::EmbedSubscriptExprClass:
       llvm_unreachable("Support for PPEmbedExpr is not implemented.");
       break;
   }
