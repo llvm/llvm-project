@@ -365,7 +365,8 @@ def : SourceOfDivergence<intr>;
 foreach intr = AMDGPUWMMAIntrinsicsGFX12 in
 def : SourceOfDivergence<intr>;
 
-def : SourceOfDivergence<int_amdgcn_global_load_tr>;
+def : SourceOfDivergence<int_amdgcn_global_load_tr_b64>;
+def : SourceOfDivergence<int_amdgcn_global_load_tr_b128>;
 
 // The dummy boolean output is divergent from the IR's perspective,
 // but the mask results are uniform. These produce a divergent and

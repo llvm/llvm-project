@@ -1355,7 +1355,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MOVolatile;
     return true;
   }
-  case Intrinsic::amdgcn_global_load_tr: {
+  case Intrinsic::amdgcn_global_load_tr_b64:
+  case Intrinsic::amdgcn_global_load_tr_b128: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
@@ -1462,7 +1463,8 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
-  case Intrinsic::amdgcn_global_load_tr:
+  case Intrinsic::amdgcn_global_load_tr_b64:
+  case Intrinsic::amdgcn_global_load_tr_b128:
     Ptr = II->getArgOperand(0);
     break;
   case Intrinsic::amdgcn_global_load_lds:

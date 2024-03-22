@@ -4889,7 +4889,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
     case Intrinsic::amdgcn_atomic_cond_sub_u32:
     case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
-    case Intrinsic::amdgcn_global_load_tr:
+    case Intrinsic::amdgcn_global_load_tr_b64:
+    case Intrinsic::amdgcn_global_load_tr_b128:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
     case Intrinsic::amdgcn_ds_ordered_swap:
