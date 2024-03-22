@@ -3577,7 +3577,8 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
 // is false/true.
 static Value *simplifySwitchOnSelectUsingRanges(SwitchInst &SI,
                                                 SelectInst *Select,
-                                                unsigned CstOpIdx) {
+                                                bool IsTrueArm) {
+  unsigned CstOpIdx = IsTrueArm ? 1 : 2;
   auto *C = dyn_cast<ConstantInt>(Select->getOperand(CstOpIdx));
   if (!C)
     return nullptr;
@@ -3591,7 +3592,7 @@ static Value *simplifySwitchOnSelectUsingRanges(SwitchInst &SI,
   if (!match(Select->getCondition(),
              m_ICmp(Pred, m_Specific(X), m_APInt(RHSC))))
     return nullptr;
-  if (CstOpIdx == 1)
+  if (IsTrueArm)
     Pred = ICmpInst::getInversePredicate(Pred);
 
   // See whether we can replace the select with X
@@ -3679,10 +3680,10 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
   // Fold switch(select cond, X, Y) into switch(X/Y) if possible
   if (auto *Select = dyn_cast<SelectInst>(Cond)) {
     if (Value *V =
-            simplifySwitchOnSelectUsingRanges(SI, Select, /*CstOpIdx=*/1))
+            simplifySwitchOnSelectUsingRanges(SI, Select, /*IsTrueArm=*/true))
       return replaceOperand(SI, 0, V);
     if (Value *V =
-            simplifySwitchOnSelectUsingRanges(SI, Select, /*CstOpIdx=*/2))
+            simplifySwitchOnSelectUsingRanges(SI, Select, /*IsTrueArm=*/false))
       return replaceOperand(SI, 0, V);
   }
 
