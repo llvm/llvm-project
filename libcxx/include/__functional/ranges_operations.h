@@ -13,6 +13,7 @@
 #include <__concepts/equality_comparable.h>
 #include <__concepts/totally_ordered.h>
 #include <__config>
+#include <__fwd/functional.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/operation_traits.h>
 #include <__utility/forward.h>
@@ -99,6 +100,10 @@ struct greater_equal {
 // operator are of the same type
 template <class _Tp, class _Up>
 struct __desugars_to<__equal_tag, ranges::equal_to, _Tp, _Up> : true_type {};
+template <class _Tp, class _Up>
+struct __desugars_to<__equal_tag, reference_wrapper<ranges::equal_to>, _Tp, _Up> : true_type {};
+template <class _Tp, class _Up>
+struct __desugars_to<__equal_tag, reference_wrapper<const ranges::equal_to>, _Tp, _Up> : true_type {};
 
 #endif // _LIBCPP_STD_VER >= 20
 
