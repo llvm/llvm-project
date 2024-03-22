@@ -1529,6 +1529,7 @@ public:
 
   LValue buildCheckedLValue(const Expr *E, TypeCheckKind TCK);
   LValue buildMemberExpr(const MemberExpr *E);
+  LValue buildCompoundLiteralLValue(const CompoundLiteralExpr *E);
 
   /// Specifies which type of sanitizer check to apply when handling a
   /// particular builtin.
