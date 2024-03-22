@@ -166,6 +166,29 @@ func.func @cast_away_contraction_leading_one_dims_nonleadingunitdim_rank4_acctra
 
 // -----
 
+// CHECK-DAG: #[[$MAP_0:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[$MAP_1:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #[[$MAP_2:.+]] = affine_map<(d0, d1, d2) -> (d1)>
+
+// CHECK-LABEL:   func.func @cast_away_contraction_does_not_transpose_leading_unit_dims(
+// CHECK-SAME:                                 %[[LHS:.*]]: vector<1x1x8xi32>,
+// CHECK-SAME:                                 %[[RHS:.*]]: vector<1x8x8xi32>,
+// CHECK-SAME:                                 %[[ACC:.*]]: vector<1x8xi32>) -> vector<1x8xi32> {
+// CHECK:           %[[EXT_LHS:.*]] = vector.extract %[[LHS]][0] : vector<1x8xi32> from vector<1x1x8xi32>
+// CHECK:           %[[EXT_ACC:.*]] = vector.extract %[[ACC]][0] : vector<8xi32> from vector<1x8xi32>
+// CHECK:           %[[RES:.*]] = vector.contract {indexing_maps = [#[[$MAP_0]], #[[$MAP_1]], #[[$MAP_2]]], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %[[EXT_LHS]], %[[RHS]], %[[EXT_ACC]] : vector<1x8xi32>, vector<1x8x8xi32> into vector<8xi32>
+// CHECK:           %[[BROADCAST_RES:.*]] = vector.broadcast %[[RES]] : vector<8xi32> to vector<1x8xi32>
+// CHECK:           return %[[BROADCAST_RES]] : vector<1x8xi32>
+// CHECK:         }
+// CHECK-NOT        vector.transpose
+func.func @cast_away_contraction_does_not_transpose_leading_unit_dims(%lhs: vector<1x1x8xi32>,
+                          %rhs: vector<1x8x8xi32>,
+                          %acc: vector<1x8xi32>) -> vector<1x8xi32> {
+  %result = vector.contract {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>, affine_map<(d0, d1, d2, d3) -> (d1, d2)>], iterator_types = ["parallel", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs, %rhs, %acc : vector<1x1x8xi32>, vector<1x8x8xi32> into vector<1x8xi32>
+  return %result : vector<1x8xi32>
+}
+
+// -----
 // CHECK-DAG: #[[MAP0:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
 // CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
 // CHECK-DAG: #[[MAP2:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
