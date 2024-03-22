@@ -201,7 +201,7 @@ Disassembler::GetFunctionDeclLineEntry(const SymbolContext &sc) {
   uint32_t func_decl_line;
   sc.function->GetStartLineSourceInfo(func_decl_file, func_decl_line);
 
-  if (func_decl_file != prologue_end_line.file_sp->GetSpecOnly() &&
+  if (func_decl_file != prologue_end_line.GetFile() &&
       func_decl_file != prologue_end_line.original_file_sp->GetSpecOnly())
     return {};
 

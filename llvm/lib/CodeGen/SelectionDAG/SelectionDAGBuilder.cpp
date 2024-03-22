@@ -1248,18 +1248,19 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
   // We must skip DbgVariableRecords if they've already been processed above as
   // we have just emitted the debug values resulting from assignment tracking
   // analysis, making any existing DbgVariableRecords redundant (and probably
-  // less correct). We still need to process DPLabels. This does sink DPLabels
-  // to the bottom of the group of debug records. That sholdn't be important
-  // as it does so deterministcally and ordering between DPLabels and
-  // DbgVariableRecords is immaterial (other than for MIR/IR printing).
+  // less correct). We still need to process DbgLabelRecords. This does sink
+  // DbgLabelRecords to the bottom of the group of debug records. That sholdn't
+  // be important as it does so deterministcally and ordering between
+  // DbgLabelRecords and DbgVariableRecords is immaterial (other than for MIR/IR
+  // printing).
   bool SkipDbgVariableRecords = DAG.getFunctionVarLocs();
   // Is there is any debug-info attached to this instruction, in the form of
   // DbgRecord non-instruction debug-info records.
   for (DbgRecord &DR : I.getDbgRecordRange()) {
-    if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-      assert(DPL->getLabel() && "Missing label");
+    if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+      assert(DLR->getLabel() && "Missing label");
       SDDbgLabel *SDV =
-          DAG.getDbgLabel(DPL->getLabel(), DPL->getDebugLoc(), SDNodeOrder);
+          DAG.getDbgLabel(DLR->getLabel(), DLR->getDebugLoc(), SDNodeOrder);
       DAG.AddDbgLabel(SDV);
       continue;
     }
@@ -10499,14 +10500,14 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   CLI.Ins.clear();
   Type *OrigRetTy = CLI.RetTy;
   SmallVector<EVT, 4> RetTys;
-  SmallVector<uint64_t, 4> Offsets;
+  SmallVector<TypeSize, 4> Offsets;
   auto &DL = CLI.DAG.getDataLayout();
-  ComputeValueVTs(*this, DL, CLI.RetTy, RetTys, &Offsets, 0);
+  ComputeValueVTs(*this, DL, CLI.RetTy, RetTys, &Offsets);
 
   if (CLI.IsPostTypeLegalization) {
     // If we are lowering a libcall after legalization, split the return type.
     SmallVector<EVT, 4> OldRetTys;
-    SmallVector<uint64_t, 4> OldOffsets;
+    SmallVector<TypeSize, 4> OldOffsets;
     RetTys.swap(OldRetTys);
     Offsets.swap(OldOffsets);
 
@@ -10518,7 +10519,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       unsigned RegisterVTByteSZ = RegisterVT.getSizeInBits() / 8;
       RetTys.append(NumRegs, RegisterVT);
       for (unsigned j = 0; j != NumRegs; ++j)
-        Offsets.push_back(Offset + j * RegisterVTByteSZ);
+        Offsets.push_back(TypeSize::getFixed(Offset + j * RegisterVTByteSZ));
     }
   }
 

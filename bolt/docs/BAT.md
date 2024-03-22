@@ -14,9 +14,8 @@ binary onto the original binary.
 # Usage
 `--enable-bat` flag controls the generation of BAT section. Sampled profile
 needs to be passed along with the optimized binary containing BAT section to
-`perf2bolt` which reads BAT section and produces fdata profile for the original
-binary. Note that YAML profile generation is not supported since BAT doesn't
-contain the metadata for input functions.
+`perf2bolt` which reads BAT section and produces profile for the original
+binary.
 
 # Internals
 ## Section contents
@@ -79,6 +78,8 @@ Hot indices are delta encoded, implicitly starting at zero.
 | ------ | ------| ----------- |
 | `Address` | Continuous, Delta, ULEB128 | Function address in the output binary |
 | `HotIndex` | Delta, ULEB128 | Cold functions only: index of corresponding hot function in hot functions table |
+| `FuncHash` | 8b | Hot functions only: function hash for input function |
+| `NumBlocks` | ULEB128 | Hot functions only: number of basic blocks in the original function |
 | `NumEntries` | ULEB128 | Number of address translation entries for a function |
 | `EqualElems` | ULEB128 | Hot functions only: number of equal offsets in the beginning of a function |
 | `BranchEntries` | Bitmask, `alignTo(EqualElems, 8)` bits | Hot functions only: if `EqualElems` is non-zero, bitmask denoting entries with `BRANCHENTRY` bit |
@@ -90,10 +91,12 @@ current function.
 ### Address translation table
 Delta encoding means that only the difference with the previous corresponding
 entry is encoded. Input offsets implicitly start at zero.
-| Entry  | Encoding | Description |
-| ------ | ------| ----------- |
-| `OutputOffset` | Continuous, Delta, ULEB128 | Function offset in output binary |
-| `InputOffset` | Optional, Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
+| Entry  | Encoding | Description | Branch/BB |
+| ------ | ------| ----------- | ------ |
+| `OutputOffset` | Continuous, Delta, ULEB128 | Function offset in output binary | Both |
+| `InputOffset` | Optional, Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit | Both |
+| `BBHash` | Optional, 8b | Basic block hash in input binary | BB |
+| `BBIdx`  | Optional, Delta, ULEB128 | Basic block index in input binary | BB |
 
 `BRANCHENTRY` bit denotes whether a given offset pair is a control flow source
 (branch or call instruction). If not set, it signifies a control flow target
