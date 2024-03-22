@@ -161,9 +161,9 @@ void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
                           fir::FortranVariableFlagsEnum::None,
                       bool force = false);
 
-/// For the given Cray pointee symbol return the corresponding
-/// Cray pointer symbol. Assert if the pointer symbol cannot be found.
-Fortran::semantics::SymbolRef getCrayPointer(Fortran::semantics::SymbolRef sym);
+/// Given the Fortran type of a Cray pointee, return the fir.box type used to
+/// track the cray pointee as Fortran pointer.
+mlir::Type getCrayPointeeBoxType(mlir::Type);
 
 } // namespace lower
 } // namespace Fortran
