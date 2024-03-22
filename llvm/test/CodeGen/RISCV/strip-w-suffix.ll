@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+no-strip-w-suffix -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=NO-STRIP %s
 
-define i32 @addiw(i32 signext %a) nounwind {
+define i32 @addiw(i32 %a) {
 ; STRIP-LABEL: addiw:
 ; STRIP:       # %bb.0:
 ; STRIP-NEXT:    lui a1, 1
@@ -22,7 +22,7 @@ define i32 @addiw(i32 signext %a) nounwind {
   ret i32 %ret
 }
 
-define signext i32 @addw(i32 signext %a, i32 signext %b) nounwind {
+define i32 @addw(i32 %a, i32 %b) {
 ; STRIP-LABEL: addw:
 ; STRIP:       # %bb.0:
 ; STRIP-NEXT:    add a0, a0, a1
@@ -39,7 +39,7 @@ define signext i32 @addw(i32 signext %a, i32 signext %b) nounwind {
   ret i32 %ret
 }
 
-define signext i32 @mulw(i32 signext %a, i32 signext %b) nounwind {
+define i32 @mulw(i32 %a, i32 %b) {
 ; STRIP-LABEL: mulw:
 ; STRIP:       # %bb.0:
 ; STRIP-NEXT:    mul a0, a0, a1
@@ -56,7 +56,7 @@ define signext i32 @mulw(i32 signext %a, i32 signext %b) nounwind {
   ret i32 %ret
 }
 
-define signext i32 @slliw(i32 signext %a) nounwind {
+define i32 @slliw(i32 %a) {
 ; STRIP-LABEL: slliw:
 ; STRIP:       # %bb.0:
 ; STRIP-NEXT:    slli a0, a0, 1
