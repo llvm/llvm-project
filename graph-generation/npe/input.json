@@ -7,9 +7,9 @@
             "locations": [
                 {
                     "type": "source",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
-                    "line": 9,
-                    "column": 12
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "line": 5,
+                    "column": 8
                 },
                 {
                     "type": "sink",
