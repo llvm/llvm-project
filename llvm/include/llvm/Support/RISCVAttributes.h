@@ -33,6 +33,7 @@ enum AttrType : unsigned {
   PRIV_SPEC_MINOR = 10,
   PRIV_SPEC_REVISION = 12,
   ATOMIC_ABI = 14,
+  X3_REG_USAGE = 16,
 };
 
 namespace RISCVAtomicAbiTag {
@@ -46,6 +47,18 @@ enum AtomicABI : unsigned {
   A7 = 3,
 };
 } // namespace RISCVAtomicAbiTag
+
+namespace RISCVX3RegUse {
+enum X3RegUsage : unsigned {
+  // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-elf.adoc#tag_riscv_x3_reg_usage-16-uleb128value
+  UNKNOWN = 0,
+  GP = 1,
+  SCS = 2,
+  TMP = 3,
+  // 4-1023 reserved for future standard defined platform register.
+  // 1024-2047 reserved for nonstandard defined platform register.
+};
+} // namespace RISCVX3RegUse
 
 enum { NOT_ALLOWED = 0, ALLOWED = 1 };
 
