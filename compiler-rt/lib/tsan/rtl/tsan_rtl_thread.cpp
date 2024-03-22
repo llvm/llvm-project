@@ -200,9 +200,8 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
 }
 
 void ThreadContext::OnStarted(void *arg) {
-  thr = static_cast<ThreadState *>(arg);
   DPrintf("#%d: ThreadStart\n", tid);
-  new (thr) ThreadState(tid);
+  thr = new (arg) ThreadState(tid);
   if (common_flags()->detect_deadlocks)
     thr->dd_lt = ctx->dd->CreateLogicalThread(tid);
   thr->tctx = this;
