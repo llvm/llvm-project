@@ -1139,8 +1139,8 @@ static void mergeX3RegUse(DenseMap<unsigned, unsigned>::iterator it,
                           const InputSectionBase *oldSection,
                           const InputSectionBase *newSection,
                           unsigned int oldTag, unsigned int newTag) {
-  // X3/GP register usage ar incompatible and cannot be merged, with the
-  // exception of the UNKNOWN or 0 value
+  // X3/GP register usage are incompatible and cannot be merged, with the
+  // exception of the UNKNOWN or 0 value.
   using RISCVAttrs::RISCVX3RegUse::X3RegUsage;
   if (newTag == X3RegUsage::UNKNOWN)
     return;
