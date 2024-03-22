@@ -280,6 +280,7 @@
   { include: [ "<__chrono/high_resolution_clock.h>", "private", "<chrono>", "public" ] },
   { include: [ "<__chrono/leap_second.h>", "private", "<chrono>", "public" ] },
   { include: [ "<__chrono/literals.h>", "private", "<chrono>", "public" ] },
+  { include: [ "<__chrono/local_info.h>", "private", "<chrono>", "public" ] },
   { include: [ "<__chrono/month.h>", "private", "<chrono>", "public" ] },
   { include: [ "<__chrono/month_weekday.h>", "private", "<chrono>", "public" ] },
   { include: [ "<__chrono/monthday.h>", "private", "<chrono>", "public" ] },

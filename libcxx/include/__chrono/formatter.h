@@ -18,6 +18,7 @@
 #include <__chrono/duration.h>
 #include <__chrono/file_clock.h>
 #include <__chrono/hh_mm_ss.h>
+#include <__chrono/local_info.h>
 #include <__chrono/month.h>
 #include <__chrono/month_weekday.h>
 #include <__chrono/monthday.h>
@@ -420,6 +421,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_ok(const _Tp& __value) {
 #  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
   else if constexpr (same_as<_Tp, chrono::sys_info>)
     return true;
+  else if constexpr (same_as<_Tp, chrono::local_info>)
+    return true;
 #  endif
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
@@ -463,6 +466,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_name_ok(const _Tp& __value) {
     return true;
 #  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
   else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+  else if constexpr (same_as<_Tp, chrono::local_info>)
     return true;
 #  endif
   else
@@ -508,6 +513,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __date_ok(const _Tp& __value) {
 #  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
   else if constexpr (same_as<_Tp, chrono::sys_info>)
     return true;
+  else if constexpr (same_as<_Tp, chrono::local_info>)
+    return true;
 #  endif
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
@@ -551,6 +558,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __month_name_ok(const _Tp& __value) {
     return true;
 #  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
   else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+  else if constexpr (same_as<_Tp, chrono::local_info>)
     return true;
 #  endif
   else
@@ -892,6 +901,17 @@ public:
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
     return _Base::__parse(__ctx, __format_spec::__fields_chrono, __format_spec::__flags::__time_zone);
+  }
+};
+
+template <__fmt_char_type _CharT>
+struct formatter<chrono::local_info, _CharT> : public __formatter_chrono<_CharT> {
+public:
+  using _Base = __formatter_chrono<_CharT>;
+
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    return _Base::__parse(__ctx, __format_spec::__fields_chrono, __format_spec::__flags{});
   }
 };
 #  endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
