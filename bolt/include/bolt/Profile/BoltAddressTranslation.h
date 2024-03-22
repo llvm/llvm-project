@@ -172,14 +172,19 @@ private:
 
 public:
   /// Map basic block input offset to a basic block index and hash pair.
-  class BBHashMapTy : std::unordered_map<uint32_t, BBHashMapEntryTy> {
+  class BBHashMapTy {
+    std::unordered_map<uint32_t, BBHashMapEntryTy> Map;
     const BBHashMapEntryTy &getEntry(uint32_t BBInputOffset) const {
-      auto It = find(BBInputOffset);
-      assert(It != end());
+      auto It = Map.find(BBInputOffset);
+      assert(It != Map.end());
       return It->second;
     }
 
   public:
+    bool isInputBlock(uint32_t InputOffset) const {
+      return Map.count(InputOffset);
+    }
+
     unsigned getBBIndex(uint32_t BBInputOffset) const {
       return getEntry(BBInputOffset).getBBIndex();
     }
@@ -189,10 +194,10 @@ public:
     }
 
     void addEntry(uint32_t BBInputOffset, unsigned BBIndex, size_t BBHash) {
-      emplace(BBInputOffset, BBHashMapEntryTy(BBIndex, BBHash));
+      Map.emplace(BBInputOffset, BBHashMapEntryTy(BBIndex, BBHash));
     }
 
-    size_t getNumBasicBlocks() const { return size(); }
+    size_t getNumBasicBlocks() const { return Map.size(); }
   };
 
 private:
