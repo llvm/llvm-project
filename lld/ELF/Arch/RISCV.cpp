@@ -469,14 +469,12 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   case INTERNAL_R_RISCV_X0REL_I:
   case INTERNAL_R_RISCV_X0REL_S: {
-    assert(isInt<12>(val));
-    uint64_t hi = (val + 0x800) >> 12;
-    uint64_t lo = val - (hi << 12);
+    checkInt(loc, val, 12, rel);
     uint32_t insn = (read32le(loc) & ~(31 << 15)) | (X_X0 << 15);
     if (rel.type == INTERNAL_R_RISCV_X0REL_I)
-      insn = setLO12_I(insn, lo);
+      insn = setLO12_I(insn, val);
     else
-      insn = setLO12_S(insn, lo);
+      insn = setLO12_S(insn, val);
     write32le(loc, insn);
     return;
   }
