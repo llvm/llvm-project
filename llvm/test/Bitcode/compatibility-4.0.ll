@@ -1322,7 +1322,7 @@ define void @instructions.va_arg(i8* %v, ...) {
 
   va_arg i8* %ap2, i32
   ; CHECK: va_arg ptr %ap2, i32
-s
+
   call void @llvm.va_copy(i8* %v, i8* %ap2)
   ; CHECK: call void @llvm.va_copy.p0(ptr %v, ptr %ap2)
 
