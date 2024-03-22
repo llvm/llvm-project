@@ -168,6 +168,14 @@ add_libc_test(
     .strtol_test_support
 )
 
+add_header_library(
+  strfrom_test_support
+  HDRS
+  StrfromTest.h
+  DEPENDS
+  libc.src.__support.CPP.type_traits
+)
+
 add_libc_test(
   strfromf_test
   SUITE
@@ -175,7 +183,30 @@ add_libc_test(
   SRCS
     strfromf_test.cpp
   DEPENDS
+    .strfrom_test_support
     libc.src.stdlib.strfromf
+)
+
+add_libc_test(
+  strfromd_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strfromd_test.cpp
+  DEPENDS
+    .strfrom_test_support
+    libc.src.stdlib.strfromd
+)
+
+add_libc_test(
+  strfroml_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strfroml_test.cpp
+  DEPENDS
+    .strfrom_test_support
+    libc.src.stdlib.strfroml
 )
 
 add_libc_test(
