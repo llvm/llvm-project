@@ -7,10 +7,9 @@ define i32 @switch_rol(i32 %a) #0 {
 ; CHECK-LABEL: define i32 @switch_rol(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ROL:%.*]] = call i32 @llvm.fshl.i32(i32 [[A]], i32 [[A]], i32 30)
-; CHECK-NEXT:    switch i32 [[ROL]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:    switch i32 [[A]], label [[DEFAULT:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[TRAP_EXIT:%.*]]
-; CHECK-NEXT:      i32 5, label [[TRAP_EXIT]]
+; CHECK-NEXT:      i32 20, label [[TRAP_EXIT]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
 ; CHECK-NEXT:    call void @dummy()
@@ -37,11 +36,9 @@ define i32 @switch_rol_2(i32 %a) #0 {
 ; CHECK-LABEL: define i32 @switch_rol_2(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A]], -7
-; CHECK-NEXT:    [[ROL:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP0]], i32 [[TMP0]], i32 30)
-; CHECK-NEXT:    switch i32 [[ROL]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i32 0, label [[TRAP_EXIT:%.*]]
-; CHECK-NEXT:      i32 5, label [[TRAP_EXIT]]
+; CHECK-NEXT:    switch i32 [[A]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 7, label [[TRAP_EXIT:%.*]]
+; CHECK-NEXT:      i32 27, label [[TRAP_EXIT]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
 ; CHECK-NEXT:    call void @dummy()

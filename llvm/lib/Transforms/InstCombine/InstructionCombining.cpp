@@ -3645,6 +3645,16 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
     }
   }
 
+  // Fold 'switch(rol(x, C1)) case C2:' to 'switch(x) case rol(C2, -C1):'
+  if (match(Cond,
+            m_FShl(m_Value(Op0), m_Deferred(Op0), m_ConstantInt(ShiftAmt)))) {
+    for (auto &Case : SI.cases()) {
+      const APInt NewCase = Case.getCaseValue()->getValue().rotr(ShiftAmt);
+      Case.setValue(ConstantInt::get(SI.getContext(), NewCase));
+    }
+    return replaceOperand(SI, 0, Op0);
+  }
+
   KnownBits Known = computeKnownBits(Cond, 0, &SI);
   unsigned LeadingKnownZeros = Known.countMinLeadingZeros();
   unsigned LeadingKnownOnes = Known.countMinLeadingOnes();
