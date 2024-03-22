@@ -47,7 +47,7 @@ function(add_target_library target_name lib_name)
   )
 
   llvm_update_compile_flags(${target_name})
-  target_link_libraries(${target_name} PUBLIC 
+  target_link_libraries(${target_name} PRIVATE
                         PluginCommon ${llvm_libs} ${OPENMP_PTHREAD_LIB})
 
   target_compile_definitions(${target_name} PRIVATE TARGET_NAME=${lib_name})
