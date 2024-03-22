@@ -215,7 +215,7 @@ what to add to your calendar invite.
      - `gcal <https://calendar.google.com/calendar/u/0?cid=cW1lZGg0ZXNpMnIyZDN2aTVydGVrdWF1YzRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
      - `Minutes/docs <https://docs.google.com/document/d/1x5-RbOC6-jnI_NcJ9Dp4pSmGhhNe7lUevuWUIB46TeM/edit?usp=sharing>`__
    * - LLVM SPIR-V Backend Working Group
-     - Every week on Thursday
+     - Every week on Monday
      -
      - `Meeting details/agenda <https://docs.google.com/document/d/1UjX-LAwPjJ75Nmb8a5jz-Qrm-pPtKtQw0k1S1Lop9jU/edit?usp=sharing>`__
    * - SYCL Upstream Working Group
@@ -305,11 +305,6 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - Monthly, 2nd Wednesday of the month at 11:00am PT, for 30 minutes.
     - `Zoom <https://fb.zoom.us/j/97065697120?pwd=NTFaUWJjZW9uVkJuaVlPTE9qclE3dz09>`__
     - English, Russian
-  * - Michal Paszkowski
-    - SPIR-V backend, IGC, OpenCL, and IR transformations
-    - Monthly, 3rd Thursday of the month at 21:00 Warsaw/Poland time, 1 hour slot.
-    - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_ODRmN2UwYTgtODdiOS00N2VkLTgxZjgtNDUxYjI3YmNkM2Ri%40thread.v2/0?context=%7b%22Tid%22%3a%2246c98d88-e344-4ed4-8496-4ed7712e255d%22%2c%22Oid%22%3a%220c2b140d-8412-4963-a118-0f7534426b65%22%7d>`__
-    - English, Polish
   * - Quentin Colombet (he/him)
     - LLVM/MLIR; Codegen (Instruction selection (GlobalISel/SDISel), Machine IR,
       Register allocation, etc.); Optimizations; MCA
@@ -327,6 +322,11 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - GlobalISel questions.
     - Monthly, 4th Wednesday of the month at 9:30am PT, for 30 minutes.
     - `Google meet <https://meet.google.com/pdd-dibg-cwv>`__
+    - English
+  * - Maksim Levental and Jeremy Kun
+    - MLIR newcomers and general discussion (`livestreamed <https://www.youtube.com/playlist?list=PLhxO86S3jsX2k7kOhZaV-qKWm8tNsUdAE>`__)
+    - Every two weeks, Fridays at 3:00pm US Pacific, for 90 minutes.
+    - Livestream chat or `Google meet <https://meet.google.com/wit-tvzc-dwc>`__
     - English
   * - Rotating hosts
     - Getting Started, beginner questions, new contributors.

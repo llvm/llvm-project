@@ -19,8 +19,6 @@
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
-#include <memory>
-#include <optional>
 #include <unordered_set>
 
 namespace clang {
@@ -154,8 +152,13 @@ namespace format {
   TYPE(TableGenCondOperatorComma)                                              \
   TYPE(TableGenDAGArgCloser)                                                   \
   TYPE(TableGenDAGArgListColon)                                                \
+  TYPE(TableGenDAGArgListColonToAlign)                                         \
   TYPE(TableGenDAGArgListComma)                                                \
+  TYPE(TableGenDAGArgListCommaToBreak)                                         \
   TYPE(TableGenDAGArgOpener)                                                   \
+  TYPE(TableGenDAGArgOpenerToBreak)                                            \
+  TYPE(TableGenDAGArgOperatorID)                                               \
+  TYPE(TableGenDAGArgOperatorToBreak)                                          \
   TYPE(TableGenListCloser)                                                     \
   TYPE(TableGenListOpener)                                                     \
   TYPE(TableGenMultiLineString)                                                \
@@ -676,7 +679,9 @@ public:
   /// Determine whether the token is a simple-type-specifier.
   [[nodiscard]] bool isSimpleTypeSpecifier() const;
 
-  [[nodiscard]] bool isTypeOrIdentifier() const;
+  [[nodiscard]] bool isTypeName(bool IsCpp) const;
+
+  [[nodiscard]] bool isTypeOrIdentifier(bool IsCpp) const;
 
   bool isObjCAccessSpecifier() const {
     return is(tok::at) && Next &&

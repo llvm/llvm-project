@@ -165,10 +165,9 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     }
   }
 
-  // Select the `ual` feature determined by -m[no-]unaligned-access
-  // or the alias -m[no-]strict-align.
-  AddTargetFeature(Args, Features, options::OPT_munaligned_access,
-                   options::OPT_mno_unaligned_access, "ual");
+  // Select the `ual` feature determined by -m[no-]strict-align.
+  AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
+                   options::OPT_mstrict_align, "ual");
 
   // Accept but warn about these TargetSpecific options.
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_mabi_EQ))

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-gnu -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-gnu -verify %s -fexperimental-new-constant-interpreter
 
 #if !__has_extension(datasizeof)
 #  error "Expected datasizeof extension"

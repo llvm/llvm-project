@@ -91,26 +91,42 @@ SECTIONS {
   .text : { *([.]abc .ab[v-y] ) }
 }
 
-## Test a few non-wildcard meta characters rejected by GNU ld.
+## Test a few non-wildcard characters rejected by GNU ld.
 
 #--- lbrace.lds
-# RUN: ld.lld -T lbrace.lds a.o -o out
+# RUN: not ld.lld -T lbrace.lds a.o 2>&1 | FileCheck %s --check-prefix=ERR-LBRACE --match-full-lines --strict-whitespace
+#      ERR-LBRACE:{{.*}}: section pattern is expected
+# ERR-LBRACE-NEXT:>>>   .text : { *(.a* { ) }
+# ERR-LBRACE-NEXT:>>>                   ^
 SECTIONS {
   .text : { *(.a* { ) }
 }
 
-#--- lparen.lds
-## ( is recognized as a section name pattern. Note, ( is rejected by GNU ld.
-# RUN: ld.lld -T lparen.lds a.o -o out
-# RUN: llvm-objdump --section-headers out | FileCheck --check-prefix=SEC-NO %s
+#--- lbrace2.lds
+# RUN: not ld.lld -T lbrace2.lds a.o 2>&1 | FileCheck %s --check-prefix=ERR-LBRACE2 --match-full-lines --strict-whitespace
+#      ERR-LBRACE2:{{.*}}: section pattern is expected
+# ERR-LBRACE2-NEXT:>>>   .text : { *(.a*{) }
+# ERR-LBRACE2-NEXT:>>>                  ^
 SECTIONS {
- .text : { *(.a* ( ) }
+  .text : { *(.a*{) }
+}
+
+#--- lparen.lds
+# RUN: not ld.lld -T lparen.lds a.o 2>&1 | FileCheck %s --check-prefix=ERR-LPAREN --match-full-lines --strict-whitespace
+#      ERR-LPAREN:{{.*}}: section pattern is expected
+# ERR-LPAREN-NEXT:>>>   .text : { *(.a* ( ) }
+# ERR-LPAREN-NEXT:>>>                   ^
+SECTIONS {
+  .text : { *(.a* ( ) }
 }
 
 #--- rbrace.lds
-# RUN: ld.lld -T rbrace.lds a.o -o out
+# RUN: not ld.lld -T rbrace.lds a.o 2>&1 | FileCheck %s --check-prefix=ERR-RBRACE --match-full-lines --strict-whitespace
+#      ERR-RBRACE:{{.*}}: section pattern is expected
+# ERR-RBRACE-NEXT:>>>   .text : { *(.a* x = 3; } ) }
+# ERR-RBRACE-NEXT:>>>                          ^
 SECTIONS {
-  .text : { *(.a* } ) }
+  .text : { *(.a* x = 3; } ) }
 }
 
 #--- rparen.lds

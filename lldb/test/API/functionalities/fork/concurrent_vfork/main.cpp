@@ -1,6 +1,8 @@
 #include <assert.h>
+#include <cstring>
 #include <iostream>
 #include <mutex>
+#include <string.h>
 #include <sys/wait.h>
 #include <thread>
 #include <unistd.h>

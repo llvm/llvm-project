@@ -213,6 +213,7 @@ template <class... Types>
 #include <__fwd/tuple.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
+#include <__tuple/find_index.h>
 #include <__tuple/make_tuple_types.h>
 #include <__tuple/sfinae_helpers.h>
 #include <__tuple/tuple_element.h>
@@ -231,20 +232,11 @@ template <class... Types>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_copy_assignable.h>
-#include <__type_traits/is_copy_constructible.h>
-#include <__type_traits/is_default_constructible.h>
 #include <__type_traits/is_empty.h>
 #include <__type_traits/is_final.h>
 #include <__type_traits/is_implicitly_default_constructible.h>
-#include <__type_traits/is_move_assignable.h>
-#include <__type_traits/is_move_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_nothrow_copy_assignable.h>
-#include <__type_traits/is_nothrow_copy_constructible.h>
-#include <__type_traits/is_nothrow_default_constructible.h>
-#include <__type_traits/is_nothrow_move_assignable.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
@@ -548,10 +540,6 @@ class _LIBCPP_TEMPLATE_VIS tuple {
 public:
   // [tuple.cnstr]
 
-  _LIBCPP_DIAGNOSTIC_PUSH
-  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")
-  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")
-
   // tuple() constructors (including allocator_arg_t variants)
   template <template <class...> class _IsImpDefault                = __is_implicitly_default_constructible,
             template <class...> class _IsDefault                   = is_default_constructible,
@@ -833,8 +821,6 @@ public:
       : __base_(allocator_arg_t(), __alloc, std::move(__p)) {}
 #  endif // _LIBCPP_STD_VER >= 23
 
-  _LIBCPP_DIAGNOSTIC_POP
-
   // [tuple.assign]
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(_If<_And<is_copy_assignable<_Tp>...>::value, tuple, __nat> const& __tuple)
@@ -1092,40 +1078,6 @@ get(const tuple<_Tp...>&& __t) _NOEXCEPT {
 }
 
 #  if _LIBCPP_STD_VER >= 14
-
-namespace __find_detail {
-
-static constexpr size_t __not_found = static_cast<size_t>(-1);
-static constexpr size_t __ambiguous = __not_found - 1;
-
-inline _LIBCPP_HIDE_FROM_ABI constexpr size_t __find_idx_return(size_t __curr_i, size_t __res, bool __matches) {
-  return !__matches ? __res : (__res == __not_found ? __curr_i : __ambiguous);
-}
-
-template <size_t _Nx>
-inline _LIBCPP_HIDE_FROM_ABI constexpr size_t __find_idx(size_t __i, const bool (&__matches)[_Nx]) {
-  return __i == _Nx
-           ? __not_found
-           : __find_detail::__find_idx_return(__i, __find_detail::__find_idx(__i + 1, __matches), __matches[__i]);
-}
-
-template <class _T1, class... _Args>
-struct __find_exactly_one_checked {
-  static constexpr bool __matches[sizeof...(_Args)] = {is_same<_T1, _Args>::value...};
-  static constexpr size_t value                     = __find_detail::__find_idx(0, __matches);
-  static_assert(value != __not_found, "type not found in type list");
-  static_assert(value != __ambiguous, "type occurs more than once in type list");
-};
-
-template <class _T1>
-struct __find_exactly_one_checked<_T1> {
-  static_assert(!is_same<_T1, _T1>::value, "type not in empty type list");
-};
-
-} // namespace __find_detail
-
-template <typename _T1, typename... _Args>
-struct __find_exactly_one_t : public __find_detail::__find_exactly_one_checked<_T1, _Args...> {};
 
 template <class _T1, class... _Args>
 inline _LIBCPP_HIDE_FROM_ABI constexpr _T1& get(tuple<_Args...>& __tup) noexcept {
@@ -1408,9 +1360,6 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_T1, _T2>::pair(
       second(std::forward<_Args2>(std::get<_I2>(__second_args))...) {}
 
 #  if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr size_t tuple_size_v = tuple_size<_Tp>::value;
-
 #    define _LIBCPP_NOEXCEPT_RETURN(...)                                                                               \
       noexcept(noexcept(__VA_ARGS__)) { return __VA_ARGS__; }
 
@@ -1428,15 +1377,41 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) apply(_Fn&& __f, _Tuple&& 
         std::forward<_Tuple>(__t),
         typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type{}))
 
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Tuple, size_t... _Idx>
 inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, __tuple_indices<_Idx...>)
+  noexcept(noexcept(_Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...)))
+  requires is_constructible_v<_Tp, decltype(std::get<_Idx>(std::forward<_Tuple>(__t)))...> {
+  return _Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...);
+}
+#else
+template <class _Tp, class _Tuple, size_t... _Idx>
+inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, __tuple_indices<_Idx...>, 
+    enable_if_t<is_constructible_v<_Tp, decltype(std::get<_Idx>(std::forward<_Tuple>(__t)))...>> * = nullptr)
     _LIBCPP_NOEXCEPT_RETURN(_Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...))
+#endif // _LIBCPP_STD_VER >= 20
 
+template <class _Tp, class _Tuple, 
+          class _Seq = typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type, class = void>
+inline constexpr bool __can_make_from_tuple = false;
+
+template <class _Tp, class _Tuple, size_t... _Idx>
+inline constexpr bool __can_make_from_tuple<_Tp, _Tuple, __tuple_indices<_Idx...>, 
+    enable_if_t<is_constructible_v<_Tp, decltype(std::get<_Idx>(std::declval<_Tuple>()))...>>> = true;
+
+// Based on LWG3528(https://wg21.link/LWG3528) and http://eel.is/c++draft/description#structure.requirements-9, 
+// the standard allows to impose requirements, we constraint std::make_from_tuple to make std::make_from_tuple 
+// SFINAE friendly and also avoid worse diagnostic messages. We still keep the constraints of std::__make_from_tuple_impl 
+// so that std::__make_from_tuple_impl will have the same advantages when used alone.
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Tuple>
+  requires __can_make_from_tuple<_Tp, _Tuple> // strengthen
+#else
+template <class _Tp, class _Tuple, class = enable_if_t<__can_make_from_tuple<_Tp, _Tuple>>> // strengthen
+#endif // _LIBCPP_STD_VER >= 20
 inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp make_from_tuple(_Tuple&& __t)
     _LIBCPP_NOEXCEPT_RETURN(std::__make_from_tuple_impl<_Tp>(
         std::forward<_Tuple>(__t), typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type{}))
-
 #    undef _LIBCPP_NOEXCEPT_RETURN
 
 #  endif // _LIBCPP_STD_VER >= 17

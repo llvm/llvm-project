@@ -322,95 +322,95 @@
 #--- atomic_abi_A7.s
 .attribute atomic_abi, 3
 
-# UNKNOWN_A6C: BuildAttributes {
-# UNKNOWN_A6C:   FormatVersion: 0x41
-# UNKNOWN_A6C:   Section 1 {
-# UNKNOWN_A6C:     SectionLength: 17
-# UNKNOWN_A6C:     Vendor: riscv
-# UNKNOWN_A6C:     Tag: Tag_File (0x1)
-# UNKNOWN_A6C:     Size: 7
-# UNKNOWN_A6C:     FileAttributes {
-# UNKNOWN_A6C:       Attribute {
-# UNKNOWN_A6C:         Tag: 14
-# UNKNOWN_A6C:         Value: 1
-# UNKNOWN_A6C:         TagName: atomic_abi
-# UNKNOWN_A6C:         Description: Atomic ABI is 1
-# UNKNOWN_A6C:       }
-# UNKNOWN_A6C:     }
-# UNKNOWN_A6C:   }
-# UNKNOWN_A6C: }
+#      UNKNOWN_A6C: BuildAttributes {
+# UNKNOWN_A6C-NEXT:   FormatVersion: 0x41
+# UNKNOWN_A6C-NEXT:   Section 1 {
+# UNKNOWN_A6C-NEXT:     SectionLength: 17
+# UNKNOWN_A6C-NEXT:     Vendor: riscv
+# UNKNOWN_A6C-NEXT:     Tag: Tag_File (0x1)
+# UNKNOWN_A6C-NEXT:     Size: 7
+# UNKNOWN_A6C-NEXT:     FileAttributes {
+# UNKNOWN_A6C-NEXT:       Attribute {
+# UNKNOWN_A6C-NEXT:         Tag: 14
+# UNKNOWN_A6C-NEXT:         Value: 1
+# UNKNOWN_A6C-NEXT:         TagName: atomic_abi
+# UNKNOWN_A6C-NEXT:         Description: Atomic ABI is 1
+# UNKNOWN_A6C-NEXT:       }
+# UNKNOWN_A6C-NEXT:     }
+# UNKNOWN_A6C-NEXT:   }
+# UNKNOWN_A6C-NEXT: }
 
-# UNKNOWN_A6S: BuildAttributes {
-# UNKNOWN_A6S:   FormatVersion: 0x41
-# UNKNOWN_A6S:   Section 1 {
-# UNKNOWN_A6S:     SectionLength: 17
-# UNKNOWN_A6S:     Vendor: riscv
-# UNKNOWN_A6S:     Tag: Tag_File (0x1)
-# UNKNOWN_A6S:     Size: 7
-# UNKNOWN_A6S:     FileAttributes {
-# UNKNOWN_A6S:       Attribute {
-# UNKNOWN_A6S:         Tag: 14
-# UNKNOWN_A6S:         Value: 2
-# UNKNOWN_A6S:         TagName: atomic_abi
-# UNKNOWN_A6S:         Description: Atomic ABI is 2
-# UNKNOWN_A6S:       }
-# UNKNOWN_A6S:     }
-# UNKNOWN_A6S:   }
-# UNKNOWN_A6S: }
+#      UNKNOWN_A6S: BuildAttributes {
+# UNKNOWN_A6S-NEXT:   FormatVersion: 0x41
+# UNKNOWN_A6S-NEXT:   Section 1 {
+# UNKNOWN_A6S-NEXT:     SectionLength: 17
+# UNKNOWN_A6S-NEXT:     Vendor: riscv
+# UNKNOWN_A6S-NEXT:     Tag: Tag_File (0x1)
+# UNKNOWN_A6S-NEXT:     Size: 7
+# UNKNOWN_A6S-NEXT:     FileAttributes {
+# UNKNOWN_A6S-NEXT:       Attribute {
+# UNKNOWN_A6S-NEXT:         Tag: 14
+# UNKNOWN_A6S-NEXT:         Value: 2
+# UNKNOWN_A6S-NEXT:         TagName: atomic_abi
+# UNKNOWN_A6S-NEXT:         Description: Atomic ABI is 2
+# UNKNOWN_A6S-NEXT:       }
+# UNKNOWN_A6S-NEXT:     }
+# UNKNOWN_A6S-NEXT:   }
+# UNKNOWN_A6S-NEXT: }
 
-# UNKNOWN_A7: BuildAttributes {
-# UNKNOWN_A7:   FormatVersion: 0x41
-# UNKNOWN_A7:   Section 1 {
-# UNKNOWN_A7:     SectionLength: 17
-# UNKNOWN_A7:     Vendor: riscv
-# UNKNOWN_A7:     Tag: Tag_File (0x1)
-# UNKNOWN_A7:     Size: 7
-# UNKNOWN_A7:     FileAttributes {
-# UNKNOWN_A7:       Attribute {
-# UNKNOWN_A7:         Tag: 14
-# UNKNOWN_A7:         Value: 3
-# UNKNOWN_A7:         TagName: atomic_abi
-# UNKNOWN_A7:         Description: Atomic ABI is 3
-# UNKNOWN_A7:       }
-# UNKNOWN_A7:     }
-# UNKNOWN_A7:   }
-# UNKNOWN_A7: }
+#      UNKNOWN_A7: BuildAttributes {
+# UNKNOWN_A7-NEXT:   FormatVersion: 0x41
+# UNKNOWN_A7-NEXT:   Section 1 {
+# UNKNOWN_A7-NEXT:     SectionLength: 17
+# UNKNOWN_A7-NEXT:     Vendor: riscv
+# UNKNOWN_A7-NEXT:     Tag: Tag_File (0x1)
+# UNKNOWN_A7-NEXT:     Size: 7
+# UNKNOWN_A7-NEXT:     FileAttributes {
+# UNKNOWN_A7-NEXT:       Attribute {
+# UNKNOWN_A7-NEXT:         Tag: 14
+# UNKNOWN_A7-NEXT:         Value: 3
+# UNKNOWN_A7-NEXT:         TagName: atomic_abi
+# UNKNOWN_A7-NEXT:         Description: Atomic ABI is 3
+# UNKNOWN_A7-NEXT:       }
+# UNKNOWN_A7-NEXT:     }
+# UNKNOWN_A7-NEXT:   }
+# UNKNOWN_A7-NEXT: }
 
-# A6C_A6S: BuildAttributes {
-# A6C_A6S:   FormatVersion: 0x41
-# A6C_A6S:   Section 1 {
-# A6C_A6S:     SectionLength: 17
-# A6C_A6S:     Vendor: riscv
-# A6C_A6S:     Tag: Tag_File (0x1)
-# A6C_A6S:     Size: 7
-# A6C_A6S:     FileAttributes {
-# A6C_A6S:       Attribute {
-# A6C_A6S:         Tag: 14
-# A6C_A6S:         Value: 1
-# A6C_A6S:         TagName: atomic_abi
-# A6C_A6S:         Description: Atomic ABI is 1
-# A6C_A6S:       }
-# A6C_A6S:     }
-# A6C_A6S:   }
-# A6C_A6S: }
+#      A6C_A6S: BuildAttributes {
+# A6C_A6S-NEXT:   FormatVersion: 0x41
+# A6C_A6S-NEXT:   Section 1 {
+# A6C_A6S-NEXT:     SectionLength: 17
+# A6C_A6S-NEXT:     Vendor: riscv
+# A6C_A6S-NEXT:     Tag: Tag_File (0x1)
+# A6C_A6S-NEXT:     Size: 7
+# A6C_A6S-NEXT:     FileAttributes {
+# A6C_A6S-NEXT:       Attribute {
+# A6C_A6S-NEXT:         Tag: 14
+# A6C_A6S-NEXT:         Value: 1
+# A6C_A6S-NEXT:         TagName: atomic_abi
+# A6C_A6S-NEXT:         Description: Atomic ABI is 1
+# A6C_A6S-NEXT:       }
+# A6C_A6S-NEXT:     }
+# A6C_A6S-NEXT:   }
+# A6C_A6S-NEXT: }
 
-# A6S_A7: BuildAttributes {
-# A6S_A7:   FormatVersion: 0x41
-# A6S_A7:   Section 1 {
-# A6S_A7:     SectionLength: 17
-# A6S_A7:     Vendor: riscv
-# A6S_A7:     Tag: Tag_File (0x1)
-# A6S_A7:     Size: 7
-# A6S_A7:     FileAttributes {
-# A6S_A7:       Attribute {
-# A6S_A7:         Tag: 14
-# A6S_A7:         Value: 3
-# A6S_A7:         TagName: atomic_abi
-# A6S_A7:         Description: Atomic ABI is 3
-# A6S_A7:       }
-# A6S_A7:     }
-# A6S_A7:   }
-# A6S_A7: }
+#      A6S_A7: BuildAttributes {
+# A6S_A7-NEXT:   FormatVersion: 0x41
+# A6S_A7-NEXT:   Section 1 {
+# A6S_A7-NEXT:     SectionLength: 17
+# A6S_A7-NEXT:     Vendor: riscv
+# A6S_A7-NEXT:     Tag: Tag_File (0x1)
+# A6S_A7-NEXT:     Size: 7
+# A6S_A7-NEXT:     FileAttributes {
+# A6S_A7-NEXT:       Attribute {
+# A6S_A7-NEXT:         Tag: 14
+# A6S_A7-NEXT:         Value: 3
+# A6S_A7-NEXT:         TagName: atomic_abi
+# A6S_A7-NEXT:         Description: Atomic ABI is 3
+# A6S_A7-NEXT:       }
+# A6S_A7-NEXT:     }
+# A6S_A7-NEXT:   }
+# A6S_A7-NEXT: }
 
 #--- unknown13.s
 .attribute 13, "0"

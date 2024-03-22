@@ -35,8 +35,8 @@ void salvageDebugInfo(
     SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
     DbgVariableIntrinsic &DVI, bool OptimizeFrame, bool IsEntryPoint);
 void salvageDebugInfo(
-    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap, DPValue &DPV,
-    bool OptimizeFrame, bool UseEntryValue);
+    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
+    DbgVariableRecord &DVR, bool OptimizeFrame, bool UseEntryValue);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.
 struct LowererBase {
@@ -84,6 +84,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   SmallVector<CoroAlignInst *, 2> CoroAligns;
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
   SmallVector<CallInst*, 2> SwiftErrorOps;
+  SmallVector<CoroAwaitSuspendInst *, 4> CoroAwaitSuspends;
 
   // Field indexes for special fields in the switch lowering.
   struct SwitchFieldIndex {

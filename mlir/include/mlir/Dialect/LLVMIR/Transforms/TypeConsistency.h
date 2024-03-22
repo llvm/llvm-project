@@ -29,18 +29,6 @@ namespace LLVM {
 /// interpret pointee types as consistently as possible.
 std::unique_ptr<Pass> createTypeConsistencyPass();
 
-/// Transforms uses of pointers to a whole struct to uses of pointers to the
-/// first element of a struct. This is achieved by inserting a GEP to the first
-/// element when possible.
-template <class User>
-class AddFieldGetterToStructDirectUse : public OpRewritePattern<User> {
-public:
-  using OpRewritePattern<User>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(User user,
-                                PatternRewriter &rewriter) const override;
-};
-
 /// Canonicalizes GEPs of which the base type and the pointer's type hint do not
 /// match. This is done by replacing the original GEP into a GEP with the type
 /// hint as a base type when an element of the hinted type aligns with the

@@ -1141,6 +1141,25 @@ static int getInstructionIDWithAttrMask(uint16_t *instructionID,
   return 0;
 }
 
+static bool isCCMPOrCTEST(InternalInstruction *insn) {
+  if (insn->opcodeType != MAP4)
+    return false;
+  if (insn->opcode == 0x83 && regFromModRM(insn->modRM) == 7)
+    return true;
+  switch (insn->opcode & 0xfe) {
+  default:
+    return false;
+  case 0x38:
+  case 0x3a:
+  case 0x84:
+    return true;
+  case 0x80:
+    return regFromModRM(insn->modRM) == 7;
+  case 0xf6:
+    return regFromModRM(insn->modRM) == 0;
+  }
+}
+
 static bool isNF(InternalInstruction *insn) {
   if (!nfFromEVEX4of4(insn->vectorExtensionPrefix[3]))
     return false;
@@ -1197,9 +1216,12 @@ static int getInstructionID(struct InternalInstruction *insn,
         attrMask |= ATTR_EVEXKZ;
       if (bFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXB;
-      if (isNF(insn)) // NF bit is the MSB of aaa.
+      if (isNF(insn) && !readModRM(insn) &&
+          !isCCMPOrCTEST(insn)) // NF bit is the MSB of aaa.
         attrMask |= ATTR_EVEXNF;
-      else if (aaaFromEVEX4of4(insn->vectorExtensionPrefix[3]))
+      // aaa is not used a opmask in MAP4
+      else if (aaaFromEVEX4of4(insn->vectorExtensionPrefix[3]) &&
+               (insn->opcodeType != MAP4))
         attrMask |= ATTR_EVEXK;
       if (lFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_VEXL;
@@ -1732,8 +1754,15 @@ static int readOperands(struct InternalInstruction *insn) {
       if (readOpcodeRegister(insn, 0))
         return -1;
       break;
+    case ENCODING_CF:
+      insn->immediates[1] = oszcFromEVEX3of4(insn->vectorExtensionPrefix[2]);
+      needVVVV = false; // oszc shares the same bits with VVVV
+      break;
     case ENCODING_CC:
-      insn->immediates[1] = insn->opcode & 0xf;
+      if (isCCMPOrCTEST(insn))
+        insn->immediates[2] = scFromEVEX4of4(insn->vectorExtensionPrefix[3]);
+      else
+        insn->immediates[1] = insn->opcode & 0xf;
       break;
     case ENCODING_FP:
       break;
@@ -2371,8 +2400,14 @@ static bool translateOperand(MCInst &mcInst, const OperandSpecifier &operand,
   case ENCODING_Rv:
     translateRegister(mcInst, insn.opcodeRegister);
     return false;
-  case ENCODING_CC:
+  case ENCODING_CF:
     mcInst.addOperand(MCOperand::createImm(insn.immediates[1]));
+    return false;
+  case ENCODING_CC:
+    if (isCCMPOrCTEST(&insn))
+      mcInst.addOperand(MCOperand::createImm(insn.immediates[2]));
+    else
+      mcInst.addOperand(MCOperand::createImm(insn.immediates[1]));
     return false;
   case ENCODING_FP:
     translateFPRegister(mcInst, insn.modRM & 7);

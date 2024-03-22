@@ -115,13 +115,13 @@ template <typename T> struct Parser {
   }
 };
 
-// Specialization for cpp::UInt<N>.
+// Specialization for UInt<N>.
 // Because this code runs at compile time we try to make it efficient. For
 // binary and hexadecimal formats we read digits by chunks of 64 bits and
 // produce the BigInt internal representation direcly. For decimal numbers we
 // go the slow path and use slower BigInt arithmetic.
-template <size_t N> struct Parser<LIBC_NAMESPACE::cpp::UInt<N>> {
-  using UIntT = cpp::UInt<N>;
+template <size_t N> struct Parser<LIBC_NAMESPACE::UInt<N>> {
+  using UIntT = UInt<N>;
   template <int base> static constexpr UIntT parse(const char *str) {
     const DigitBuffer<UIntT, base> buffer(str);
     if constexpr (base == 10) {
@@ -166,7 +166,7 @@ LIBC_INLINE constexpr UInt128 operator""_u128(const char *x) {
 }
 
 LIBC_INLINE constexpr auto operator""_u256(const char *x) {
-  return internal::parse_with_prefix<cpp::UInt<256>>(x);
+  return internal::parse_with_prefix<UInt<256>>(x);
 }
 
 } // namespace LIBC_NAMESPACE

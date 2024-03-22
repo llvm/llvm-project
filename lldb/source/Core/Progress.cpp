@@ -97,7 +97,7 @@ void ProgressManager::Increment(const Progress::ProgressData &progress_data) {
   // initial progress report.
   if (!m_progress_category_map.contains(progress_data.title)) {
     m_progress_category_map[progress_data.title].second = progress_data;
-    ReportProgress(progress_data);
+    ReportProgress(progress_data, EventType::Begin);
   }
   m_progress_category_map[progress_data.title].first++;
 }
@@ -110,7 +110,7 @@ void ProgressManager::Decrement(const Progress::ProgressData &progress_data) {
     return;
 
   if (pos->second.first <= 1) {
-    ReportProgress(pos->second.second);
+    ReportProgress(pos->second.second, EventType::End);
     m_progress_category_map.erase(progress_data.title);
   } else {
     --pos->second.first;
@@ -118,12 +118,14 @@ void ProgressManager::Decrement(const Progress::ProgressData &progress_data) {
 }
 
 void ProgressManager::ReportProgress(
-    const Progress::ProgressData &progress_data) {
+    const Progress::ProgressData &progress_data, EventType type) {
   // The category bit only keeps track of when progress report categories have
   // started and ended, so clear the details and reset other fields when
   // broadcasting to it since that bit doesn't need that information.
-  Debugger::ReportProgress(
-      progress_data.progress_id, progress_data.title, "",
-      Progress::kNonDeterministicTotal, Progress::kNonDeterministicTotal,
-      progress_data.debugger_id, Debugger::eBroadcastBitProgressCategory);
+  const uint64_t completed =
+      (type == EventType::Begin) ? 0 : Progress::kNonDeterministicTotal;
+  Debugger::ReportProgress(progress_data.progress_id, progress_data.title, "",
+                           completed, Progress::kNonDeterministicTotal,
+                           progress_data.debugger_id,
+                           Debugger::eBroadcastBitProgressCategory);
 }

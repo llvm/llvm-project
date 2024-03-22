@@ -1,5 +1,5 @@
 ! Test actual TARGET argument association to dummy POINTER:
-! RUN: bbc -emit-hlfir --polymorphic-type -o - -I nowhere %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - -I nowhere %s 2>&1 | FileCheck %s
 
 module target_to_pointer_types
   type t1
