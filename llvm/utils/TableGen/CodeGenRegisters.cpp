@@ -1400,11 +1400,11 @@ CodeGenSubRegIndex *CodeGenRegBank::getConcatSubRegIndex(
   // None exists, synthesize one.
   std::string Name = Parts.front()->getName();
   // Determine whether all parts are contiguous.
-  bool isContinuous = true;
+  bool IsContinuous = true;
   unsigned Size = Parts.front()->Size;
   unsigned LastOffset = Parts.front()->Offset;
   unsigned LastSize = Parts.front()->Size;
-  unsigned UnknownSize = (uint16_t)-1;
+  const unsigned UnknownSize = (uint16_t)-1;
   for (unsigned i = 1, e = Parts.size(); i != e; ++i) {
     Name += '_';
     Name += Parts[i]->getName();
@@ -1413,13 +1413,13 @@ CodeGenSubRegIndex *CodeGenRegBank::getConcatSubRegIndex(
     else
       Size += Parts[i]->Size;
     if (LastSize == UnknownSize || Parts[i]->Offset != (LastOffset + LastSize))
-      isContinuous = false;
+      IsContinuous = false;
     LastOffset = Parts[i]->Offset;
     LastSize = Parts[i]->Size;
   }
   Idx = createSubRegIndex(Name, Parts.front()->getNamespace());
   Idx->Size = Size;
-  Idx->Offset = isContinuous ? Parts.front()->Offset : -1;
+  Idx->Offset = IsContinuous ? Parts.front()->Offset : -1;
   Idx->ConcatenationOf.assign(Parts.begin(), Parts.end());
   return Idx;
 }
