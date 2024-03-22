@@ -25,10 +25,8 @@ if.end:                                           ; preds = %if.else, %if.then
   ret void, !dbg !29
 }
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
