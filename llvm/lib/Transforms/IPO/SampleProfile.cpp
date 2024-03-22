@@ -2411,8 +2411,8 @@ void SampleProfileMatcher::runOnFunction(const Function &F) {
   if (ReportProfileStaleness || PersistProfileStaleness)
     recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors, nullptr);
 
-  // Run profile matching for checksum mismatched profile. For probe-based
-  // profiles, run matching only when the current profile is not valid.
+  // For probe-based profiles, run matching only when the current profile is not
+  // valid.
   if (SalvageStaleProfile && (!FunctionSamples::ProfileIsProbeBased ||
                               !ProbeManager->profileIsValid(F, *FSFlattened))) {
     // The matching result will be saved to IRToProfileLocationMap, create a new
