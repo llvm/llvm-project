@@ -79,6 +79,7 @@ Hot indices are delta encoded, implicitly starting at zero.
 | `Address` | Continuous, Delta, ULEB128 | Function address in the output binary |
 | `HotIndex` | Delta, ULEB128 | Cold functions only: index of corresponding hot function in hot functions table |
 | `FuncHash` | 8b | Hot functions only: function hash for input function |
+| `NumBlocks` | ULEB128 | Hot functions only: number of basic blocks in the original function |
 | `NumEntries` | ULEB128 | Number of address translation entries for a function |
 | `EqualElems` | ULEB128 | Hot functions only: number of equal offsets in the beginning of a function |
 | `BranchEntries` | Bitmask, `alignTo(EqualElems, 8)` bits | Hot functions only: if `EqualElems` is non-zero, bitmask denoting entries with `BRANCHENTRY` bit |
