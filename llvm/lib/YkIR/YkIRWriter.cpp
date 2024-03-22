@@ -449,12 +449,28 @@ private:
       OutStreamer.emitInt32(0);
 
       VLMap[I] = {BBIdx, InstIdx};
-      InstIdx++;
     } else {
+      // type_index:
+      OutStreamer.emitSizeT(typeIndex(I->getType()));
+      // opcode:
+      serialiseOpcode(OpCode::CondBr);
       // We DO need operands for conditional branches, so that we can build
       // guards.
-      serialiseInstGeneric(I, VLMap, BBIdx, InstIdx, OpCode::CondBr);
+      //
+      // Note that in LLVM IR, the operands are ordered (despite the order they
+      // appear in the language reference): cond, if-false, if-true. We
+      // re-order those during lowering to avoid confusion.
+      //
+      // num_operands:
+      OutStreamer.emitInt32(3);
+      // OPERAND 0: condition.
+      serialiseOperand(I, VLMap, I->getOperand(0));
+      // OPERAND 1: block to go to if true.
+      serialiseOperand(I, VLMap, I->getOperand(2));
+      // OPERAND 2: block to go to if false.
+      serialiseOperand(I, VLMap, I->getOperand(1));
     }
+    InstIdx++;
   }
 
   void serialiseGetElementPtr(GetElementPtrInst *I, ValueLoweringMap &VLMap,
