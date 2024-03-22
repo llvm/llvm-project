@@ -2535,23 +2535,20 @@ static SDValue combineFixedwidthToAVGCEIL(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
   SDLoc DL(N);
-  bool IsAVGCEILULegal = TLI.isOperationLegal(ISD::AVGCEILU, VT);
-  bool IsAVGCEILSLegal = TLI.isOperationLegal(ISD::AVGCEILS, VT);
-  if (IsAVGCEILULegal || IsAVGCEILSLegal) {
-    SDValue A, B;
-    if (IsAVGCEILULegal) {
-      if (sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
-                            m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
-                                  m_SpecificInt(1))))) {
-        return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
-      }
-      if (IsAVGCEILSLegal) {
-        if (sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
-                              m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
-                                    m_SpecificInt(1))))) {
-          return DAG.getNode(ISD::AVGCEILS, DL, VT, A, B);
-        }
-      }
+  SDValue A, B;
+
+  if (TLI.isOperationLegal(ISD::AVGCEILU, VT)) {
+    if (sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
+                          m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
+                                m_SpecificInt(1))))) {
+      return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
+    }
+  }
+  if (TLI.isOperationLegal(ISD::AVGCEILS, VT)) {
+    if (sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
+                          m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
+                                m_SpecificInt(1))))) {
+      return DAG.getNode(ISD::AVGCEILS, DL, VT, A, B);
     }
   }
   return SDValue();
@@ -2854,26 +2851,23 @@ static SDValue combineFixedwidthToAVGFLOOR(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
   SDLoc DL(N);
-  bool IsAVGFLOORULegal = TLI.isOperationLegal(ISD::AVGFLOORU, VT);
-  bool IsAVGFLOORSLegal = TLI.isOperationLegal(ISD::AVGFLOORS, VT);
-  if (IsAVGFLOORSLegal || IsAVGFLOORULegal) {
-    SDValue A, B;
-    if (IsAVGFLOORULegal) {
-      if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
-                            m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
-                                  m_SpecificInt(1))))) {
-        return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
-      }
-    }
-    if (IsAVGFLOORSLegal) {
-      SDValue A, B;
-      if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
-                            m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
-                                  m_SpecificInt(1))))) {
-        return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
-      }
+  SDValue A, B;
+
+  if (TLI.isOperationLegal(ISD::AVGFLOORU, VT)) {
+    if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
+                          m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
+                                m_SpecificInt(1))))) {
+      return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
     }
   }
+  if (TLI.isOperationLegal(ISD::AVGFLOORS, VT)) {
+    if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
+                          m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
+                                m_SpecificInt(1))))) {
+      return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
+    }
+  }
+
   return SDValue();
 }
 
