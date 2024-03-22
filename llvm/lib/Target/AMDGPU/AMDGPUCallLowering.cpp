@@ -63,6 +63,11 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA) override {
+    if (VA.getLocVT() == MVT::i1 && MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64()) {
+      MIRBuilder.buildCopy(PhysReg, ValVReg);
+      return;
+    }
+
     Register ExtReg = extendRegisterMin32(*this, ValVReg, VA);
 
     // If this is a scalar return, insert a readfirstlane just in case the value
@@ -88,9 +93,6 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
                                         {MRI.getType(ExtReg)})
                         .addReg(ExtReg);
       ExtReg = ToSGPR.getReg(0);
-      if (VA.getLocVT() == MVT::i1 &&
-          MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64())
-        ExtReg = MIRBuilder.buildAnyExt(LLT::scalar(64), ExtReg).getReg(0);
     }
 
     MIRBuilder.buildCopy(PhysReg, ExtReg);
@@ -127,12 +129,9 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
     if (VA.getLocVT().getSizeInBits() < 32) {
       // 16-bit types are reported as legal for 32-bit registers. We need to do
       // a 32-bit copy, and truncate to avoid the verifier complaining about it.
-      unsigned CopyToBits = 32;
-
-      // When function return type is i1, it may be in a 64b register.
-      if (VA.getLocVT() == MVT::i1 &&
-          MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64())
-        CopyToBits = 64;
+      //
+      // However, when function return type is i1, it may be in a 64b register.
+      unsigned CopyToBits = (VA.getLocVT() == MVT::i1 && MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64()) ? 64 : 32;
 
       auto Copy = MIRBuilder.buildCopy(LLT::scalar(CopyToBits), PhysReg);
 

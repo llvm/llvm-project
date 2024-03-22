@@ -7,11 +7,8 @@ define i1 @i1_func_void() {
 ; GFX9: bb.1 (%ir-block.0):
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
 ; GFX9-NEXT:    [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (load (s1) from `ptr addrspace(1) undef`, addrspace 1)
-; GFX9-NEXT:    [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s1)
-; GFX9-NEXT:    [[INTRIN:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[ANYEXT]](s32)
-; GFX9-NEXT:    [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[INTRIN]](s32)
-; GFX9-NEXT:    $sgpr0_sgpr1 = COPY [[ANYEXT2]](s64)
-; GFX9-NEXT:    SI_RETURN implicit $sgpr0_sgpr1
+; GFX9-NEXT:    $sgpr0_sgpr1 = COPY [[LOAD]](s1)
+; GFX9-NEXT:    SI_RETURN
 ;
 ; GFX11-LABEL: name: i1_func_void
 ; GFX11: bb.1 (%ir-block.0):
@@ -61,11 +58,8 @@ define zeroext i1 @zeroext_i1_func_void() {
 ; GFX9: bb.1 (%ir-block.0):
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
 ; GFX9-NEXT:    [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (load (s1) from `ptr addrspace(1) undef`, addrspace 1)
-; GFX9-NEXT:    [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s1)
-; GFX9-NEXT:    [[INTRIN:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[ANYEXT]](s32)
-; GFX9-NEXT:    [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[INTRIN]](s32)
-; GFX9-NEXT:    $sgpr0_sgpr1 = COPY [[ANYEXT2]](s64)
-; GFX9-NEXT:    SI_RETURN implicit $sgpr0_sgpr1
+; GFX9-NEXT:    $sgpr0_sgpr1 = COPY [[LOAD]](s1)
+; GFX9-NEXT:    SI_RETURN
 ;
 ; GFX11-LABEL: name: zeroext_i1_func_void
 ; GFX11: bb.1 (%ir-block.0):
@@ -115,11 +109,8 @@ define signext i1 @signext_i1_func_void() {
 ; GFX9: bb.1 (%ir-block.0):
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
 ; GFX9-NEXT:    [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (load (s1) from `ptr addrspace(1) undef`, addrspace 1)
-; GFX9-NEXT:    [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s1)
-; GFX9-NEXT:    [[INTRIN:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[ANYEXT]](s32)
-; GFX9-NEXT:    [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[INTRIN]](s32)
-; GFX9-NEXT:    $sgpr0_sgpr1 = COPY [[ANYEXT2]](s64)
-; GFX9-NEXT:    SI_RETURN implicit $sgpr0_sgpr1
+; GFX9-NEXT:    $sgpr0_sgpr1 = COPY [[LOAD]](s1)
+; GFX9-NEXT:    SI_RETURN
 ;
 ; GFX11-LABEL: name: signext_i1_func_void
 ; GFX11: bb.1 (%ir-block.0):
@@ -223,15 +214,9 @@ define [2 x i1] @a2i1_func_void() {
 ; GFX9-NEXT:    [[CONST:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
 ; GFX9-NEXT:    [[PTRADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[CONST]](s64)
 ; GFX9-NEXT:    [[LOAD2:%[0-9]+]]:_(s1) = G_LOAD [[PTRADD]](p1) :: (load (s1) from `ptr addrspace(1) undef` + 1, addrspace 1)
-; GFX9-NEXT:    [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s1)
-; GFX9-NEXT:    [[INTRIN:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[ANYEXT]](s32)
-; GFX9-NEXT:    [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[INTRIN]](s32)
-; GFX9-NEXT:    $sgpr0_sgpr1 = COPY [[ANYEXT2]](s64)
-; GFX9-NEXT:    [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD2]](s1)
-; GFX9-NEXT:    [[INTRIN2:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[ANYEXT3]](s32)
-; GFX9-NEXT:    [[ANYEXT4:%[0-9]+]]:_(s64) = G_ANYEXT [[INTRIN2]](s32)
-; GFX9-NEXT:    $sgpr2_sgpr3 = COPY [[ANYEXT4]](s64)
-; GFX9-NEXT:    SI_RETURN implicit $sgpr0_sgpr1, implicit $sgpr2_sgpr3
+; GFX9-NEXT:    $sgpr0_sgpr1 = COPY [[LOAD]](s1)
+; GFX9-NEXT:    $sgpr2_sgpr3 = COPY [[LOAD2]](s1)
+; GFX9-NEXT:    SI_RETURN
 ;
 ; GFX11-LABEL: name: a2i1_func_void
 ; GFX11: bb.1 (%ir-block.0):

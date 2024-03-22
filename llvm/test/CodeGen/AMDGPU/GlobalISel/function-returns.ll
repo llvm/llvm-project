@@ -8,11 +8,8 @@ define i1 @i1_func_void() #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (load (s1) from `ptr addrspace(1) undef`, addrspace 1)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s1)
-  ; CHECK-NEXT:   [[INTRIN:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[ANYEXT]](s32)
-  ; CHECK-NEXT:   [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[INTRIN]](s32)
-  ; CHECK-NEXT:   $sgpr0_sgpr1 = COPY [[ANYEXT2]](s64)
-  ; CHECK-NEXT:   SI_RETURN implicit $sgpr0_sgpr1
+  ; CHECK-NEXT:   $sgpr0_sgpr1 = COPY [[LOAD]](s1)
+  ; CHECK-NEXT:   SI_RETURN
   %val = load i1, ptr addrspace(1) undef
   ret i1 %val
 }
@@ -22,11 +19,8 @@ define zeroext i1 @i1_zeroext_func_void() #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (load (s1) from `ptr addrspace(1) undef`, addrspace 1)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s1)
-  ; CHECK-NEXT:   [[INTRIN:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[ANYEXT]](s32)
-  ; CHECK-NEXT:   [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[INTRIN]](s32)
-  ; CHECK-NEXT:   $sgpr0_sgpr1 = COPY [[ANYEXT2]](s64)
-  ; CHECK-NEXT:   SI_RETURN implicit $sgpr0_sgpr1
+  ; CHECK-NEXT:   $sgpr0_sgpr1 = COPY [[LOAD]](s1)
+  ; CHECK-NEXT:   SI_RETURN
   %val = load i1, ptr addrspace(1) undef
   ret i1 %val
 }
@@ -36,11 +30,8 @@ define signext i1 @i1_signext_func_void() #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (load (s1) from `ptr addrspace(1) undef`, addrspace 1)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s1)
-  ; CHECK-NEXT:   [[INTRIN:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[ANYEXT]](s32)
-  ; CHECK-NEXT:   [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[INTRIN]](s32)
-  ; CHECK-NEXT:   $sgpr0_sgpr1 = COPY [[ANYEXT2]](s64)
-  ; CHECK-NEXT:   SI_RETURN implicit $sgpr0_sgpr1
+  ; CHECK-NEXT:   $sgpr0_sgpr1 = COPY [[LOAD]](s1)
+  ; CHECK-NEXT:   SI_RETURN
   %val = load i1, ptr addrspace(1) undef
   ret i1 %val
 }
