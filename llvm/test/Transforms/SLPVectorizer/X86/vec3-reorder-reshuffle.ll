@@ -142,8 +142,8 @@ define void @gather_2(ptr %mat1, float %0, float %1) {
 ; CHECK-SAME: ptr [[MAT1:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> <float 0.000000e+00, float poison>, <2 x i32> <i32 2, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x float> zeroinitializer)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.fmuladd.f32(float [[TMP0]], float [[TMP1]], float 0.000000e+00)
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul float [[TMP6]], 0.000000e+00
