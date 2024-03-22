@@ -383,15 +383,7 @@ define i32 @shl_cttz_i32(i32 %x, i32 %y) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    neg a2, a1
 ; RV32I-NEXT:    and a1, a1, a2
-; RV32I-NEXT:    lui a2, 30667
-; RV32I-NEXT:    addi a2, a2, 1329
-; RV32I-NEXT:    mul a1, a1, a2
-; RV32I-NEXT:    srli a1, a1, 27
-; RV32I-NEXT:    lui a2, %hi(.LCPI4_0)
-; RV32I-NEXT:    addi a2, a2, %lo(.LCPI4_0)
-; RV32I-NEXT:    add a1, a2, a1
-; RV32I-NEXT:    lbu a1, 0(a1)
-; RV32I-NEXT:    sll a0, a0, a1
+; RV32I-NEXT:    mul a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: shl_cttz_i32:
@@ -492,16 +484,7 @@ define i32 @shl_cttz_constant_i32(i32 %y) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    neg a1, a0
 ; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    lui a1, 30667
-; RV32I-NEXT:    addi a1, a1, 1329
-; RV32I-NEXT:    mul a0, a0, a1
-; RV32I-NEXT:    srli a0, a0, 27
-; RV32I-NEXT:    lui a1, %hi(.LCPI6_0)
-; RV32I-NEXT:    addi a1, a1, %lo(.LCPI6_0)
-; RV32I-NEXT:    add a0, a1, a0
-; RV32I-NEXT:    lbu a0, 0(a0)
-; RV32I-NEXT:    li a1, 4
-; RV32I-NEXT:    sll a0, a1, a0
+; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: shl_cttz_constant_i32:
@@ -719,17 +702,9 @@ define i64 @shl_cttz_i64(i64 %x, i64 %y) {
 ;
 ; RV64I-LABEL: shl_cttz_i64:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    lui a2, %hi(.LCPI8_0)
-; RV64I-NEXT:    ld a2, %lo(.LCPI8_0)(a2)
-; RV64I-NEXT:    neg a3, a1
-; RV64I-NEXT:    and a1, a1, a3
-; RV64I-NEXT:    mul a1, a1, a2
-; RV64I-NEXT:    srli a1, a1, 58
-; RV64I-NEXT:    lui a2, %hi(.LCPI8_1)
-; RV64I-NEXT:    addi a2, a2, %lo(.LCPI8_1)
-; RV64I-NEXT:    add a1, a2, a1
-; RV64I-NEXT:    lbu a1, 0(a1)
-; RV64I-NEXT:    sll a0, a0, a1
+; RV64I-NEXT:    neg a2, a1
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    mul a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: shl_cttz_i64:
@@ -812,18 +787,9 @@ define i64 @shl_cttz_constant_i64(i64 %y) {
 ;
 ; RV64I-LABEL: shl_cttz_constant_i64:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    lui a1, %hi(.LCPI9_0)
-; RV64I-NEXT:    ld a1, %lo(.LCPI9_0)(a1)
-; RV64I-NEXT:    neg a2, a0
-; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    mul a0, a0, a1
-; RV64I-NEXT:    srli a0, a0, 58
-; RV64I-NEXT:    lui a1, %hi(.LCPI9_1)
-; RV64I-NEXT:    addi a1, a1, %lo(.LCPI9_1)
-; RV64I-NEXT:    add a0, a1, a0
-; RV64I-NEXT:    lbu a0, 0(a0)
-; RV64I-NEXT:    li a1, 4
-; RV64I-NEXT:    sll a0, a1, a0
+; RV64I-NEXT:    neg a1, a0
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: shl_cttz_constant_i64:
