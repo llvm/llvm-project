@@ -81,6 +81,7 @@ extern cl::list<std::string> HotTextMoveSections;
 extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
 extern cl::opt<JumpTableSupportLevel> JumpTables;
+extern cl::opt<bool> KeepNops;
 extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TimeBuild;
@@ -2031,6 +2032,9 @@ void RewriteInstance::adjustCommandLineOptions() {
 
   if (opts::Lite)
     BC->outs() << "BOLT-INFO: enabling lite mode\n";
+
+  if (BC->IsLinuxKernel && !opts::KeepNops.getNumOccurrences())
+    opts::KeepNops = true;
 }
 
 namespace {
