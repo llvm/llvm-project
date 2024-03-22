@@ -349,7 +349,7 @@ Reports destructions of arrays of polymorphic objects that are destructed as
 their base class. If the dynamic type of the array is different from its static
 type, calling `delete[]` is undefined.
 
-This checker corresponds to the CERT rule `EXP51-CPP: Do not delete an array through a pointer of the incorrect type <https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP51-CPP.+Do+not+delete+an+array+through+a+pointer+of+the+incorrect+type>`_.
+This checker corresponds to the SEI CERT rule `EXP51-CPP: Do not delete an array through a pointer of the incorrect type <https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP51-CPP.+Do+not+delete+an+array+through+a+pointer+of+the+incorrect+type>`_.
 
 .. code-block:: cpp
 
