@@ -83,9 +83,23 @@ class RegInfoByHwMode<list<HwMode> Ms = [], list<RegInfo> Ts = []>
   list<RegInfo> Objects = Ts;
 }
 
+class SubRegRange<int size, int offset = 0> {
+  int Size = size;      // Sub register size in bits.
+  int Offset = offset;  // Offset of the first bit of the sub-reg index.
+}
+
+class SubRegRangeByHwMode<list<HwMode> Ms = [], list<SubRegRange> Ts = []>
+    : HwModeSelect<Ms> {
+  // The length of this list must be the same as the length of Ms.
+  list<SubRegRange> Objects = Ts;
+}
+
 // SubRegIndex - Use instances of SubRegIndex to identify subregisters.
 class SubRegIndex<int size, int offset = 0> {
   string Namespace = "";
+
+  // The size/offset information, parameterized by a HW mode.
+  SubRegRangeByHwMode SubRegRanges;
 
   // Size - Size (in bits) of the sub-registers represented by this index.
   int Size = size;
