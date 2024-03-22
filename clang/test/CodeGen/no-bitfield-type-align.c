@@ -12,7 +12,6 @@ struct S {
 // LAYOUT-SAME: type { i32 }
 // LAYOUT: BitFields:[
 // LAYOUT-NEXT: <CGBitFieldInfo Offset:0 Size:15 IsSigned:0 StorageSize:32 StorageOffset:0
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:15 Size:0 IsSigned:0 StorageSize:32 StorageOffset:0
 // LAYOUT-NEXT: <CGBitFieldInfo Offset:15 Size:15 IsSigned:0 StorageSize:32 StorageOffset:0
 // LAYOUT-NEXT: ]>
 
