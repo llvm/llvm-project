@@ -2035,6 +2035,9 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
   MachineBasicBlock *HaltLoop = MF->CreateMachineBasicBlock();
   MF->push_back(HaltLoop);
 
+  constexpr unsigned DoorbellIDMask = 0x3ff;
+  constexpr unsigned ECQueueWaveAbort = 0x400;
+
   // Start with a `s_trap 2`, if we're in PRIV=1 and we need the workaround this
   // will be a nop.
   BuildMI(MBB, MI, DL, get(AMDGPU::S_TRAP))
@@ -2044,15 +2047,16 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
       .addImm(AMDGPU::SendMsg::ID_RTN_GET_DOORBELL);
   BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::TTMP2)
       .addUse(AMDGPU::M0);
-  Register And0x3ff = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_AND_B32), And0x3ff)
+  Register DoorbellRegMasked =
+      MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  BuildMI(MBB, MI, DL, get(AMDGPU::S_AND_B32), DoorbellRegMasked)
       .addUse(DoorbellReg)
-      .addImm(0x3ff);
+      .addImm(DoorbellIDMask);
   Register SetWaveAbortBit =
       MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
   BuildMI(MBB, MI, DL, get(AMDGPU::S_OR_B32), SetWaveAbortBit)
-      .addUse(And0x3ff)
-      .addImm(0x400);
+      .addUse(DoorbellRegMasked)
+      .addImm(ECQueueWaveAbort);
   BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
       .addUse(SetWaveAbortBit);
   BuildMI(MBB, MI, DL, get(AMDGPU::S_SENDMSG))
