@@ -18629,12 +18629,16 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     }
   }
 
-  if (N->getOperand(0).getValueType() == MVT::v4i8) {
+  if (N->getOperand(0).getValueType() == MVT::v4i8 ||
+      N->getOperand(0).getValueType() == MVT::v2i16 ||
+      N->getOperand(0).getValueType() == MVT::v2i8) {
+    EVT SrcVT = N->getOperand(0).getValueType();
     // If we have a concat of v4i8 loads, convert them to a buildvector of f32
     // loads to prevent having to go through the v4i8 load legalization that
     // needs to extend each element into a larger type.
-    if (N->getNumOperands() % 2 == 0 && all_of(N->op_values(), [](SDValue V) {
-          if (V.getValueType() != MVT::v4i8)
+    if (N->getNumOperands() % 2 == 0 &&
+        all_of(N->op_values(), [SrcVT](SDValue V) {
+          if (V.getValueType() != SrcVT)
             return false;
           if (V.isUndef())
             return true;
@@ -18642,19 +18646,18 @@ static SDValue performConcatVectorsCombine(SDNode *N,
           return LD && V.hasOneUse() && LD->isSimple() && !LD->isIndexed() &&
                  LD->getExtensionType() == ISD::NON_EXTLOAD;
         })) {
-      EVT NVT =
-          EVT::getVectorVT(*DAG.getContext(), MVT::f32, N->getNumOperands());
+      EVT FVT = SrcVT == MVT::v2i8 ? MVT::f16 : MVT::f32;
+      EVT NVT = EVT::getVectorVT(*DAG.getContext(), FVT, N->getNumOperands());
       SmallVector<SDValue> Ops;
 
       for (unsigned i = 0; i < N->getNumOperands(); i++) {
         SDValue V = N->getOperand(i);
         if (V.isUndef())
-          Ops.push_back(DAG.getUNDEF(MVT::f32));
+          Ops.push_back(DAG.getUNDEF(FVT));
         else {
           LoadSDNode *LD = cast<LoadSDNode>(V);
-          SDValue NewLoad =
-              DAG.getLoad(MVT::f32, dl, LD->getChain(), LD->getBasePtr(),
-                          LD->getMemOperand());
+          SDValue NewLoad = DAG.getLoad(FVT, dl, LD->getChain(),
+                                        LD->getBasePtr(), LD->getMemOperand());
           DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLoad.getValue(1));
           Ops.push_back(NewLoad);
         }
