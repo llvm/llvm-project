@@ -252,11 +252,17 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// Paravirtual instruction patch sites.
   Error readParaInstructions();
+  Error rewriteParaInstructions();
 
   Error readBugTable();
 
-  /// Read alternative instruction info from .altinstructions.
+  /// Do no process functions containing instruction annotated with
+  /// \p Annotation.
+  void skipFunctionsWithAnnotation(StringRef Annotation) const;
+
+  /// Handle alternative instruction info from .altinstructions.
   Error readAltInstructions();
+  Error rewriteAltInstructions();
 
   /// Read .pci_fixup
   Error readPCIFixupTable();
@@ -316,6 +322,12 @@ public:
     // Since rewriteExceptionTable() can mark functions as non-simple, run it
     // before other rewriters that depend on simple/emit status.
     if (Error E = rewriteExceptionTable())
+      return E;
+
+    if (Error E = rewriteAltInstructions())
+      return E;
+
+    if (Error E = rewriteParaInstructions())
       return E;
 
     if (Error E = rewriteORCTables())
@@ -1126,6 +1138,31 @@ Error LinuxKernelRewriter::readParaInstructions() {
   return Error::success();
 }
 
+void LinuxKernelRewriter::skipFunctionsWithAnnotation(
+    StringRef Annotation) const {
+  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
+    if (!BC.shouldEmit(BF))
+      continue;
+    for (const BinaryBasicBlock &BB : BF) {
+      const bool HasAnnotation = llvm::any_of(BB, [&](const MCInst &Inst) {
+        return BC.MIB->hasAnnotation(Inst, Annotation);
+      });
+      if (HasAnnotation) {
+        BF.setSimple(false);
+        break;
+      }
+    }
+  }
+}
+
+Error LinuxKernelRewriter::rewriteParaInstructions() {
+  // Disable output of functions with paravirtual instructions before the
+  // rewrite support is complete.
+  skipFunctionsWithAnnotation("ParaSite");
+
+  return Error::success();
+}
+
 /// Process __bug_table section.
 /// This section contains information useful for kernel debugging.
 /// Each entry in the section is a struct bug_entry that contains a pointer to
@@ -1301,6 +1338,14 @@ Error LinuxKernelRewriter::readAltInstructions() {
 
   BC.outs() << "BOLT-INFO: parsed " << EntryID
             << " alternative instruction entries\n";
+
+  return Error::success();
+}
+
+Error LinuxKernelRewriter::rewriteAltInstructions() {
+  // Disable output of functions with alt instructions before the rewrite
+  // support is complete.
+  skipFunctionsWithAnnotation("AltInst");
 
   return Error::success();
 }
