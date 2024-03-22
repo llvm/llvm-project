@@ -74,6 +74,8 @@ public:
         return visited->second;
       [[maybe_unused]] auto newIt = visitedTypes.try_emplace(ty, false);
       assert(newIt.second && "expected ty to not be in the map");
+      bool wasAlreadyVisitingRecordType = needConversionIsVisitingRecordType;
+      needConversionIsVisitingRecordType = true;
       bool result = false;
       for (auto t : recTy.getTypeList()) {
         if (needsConversion(t.second)) {
@@ -81,8 +83,18 @@ public:
           break;
         }
       }
-      // newIt may have been invalidated.
-      visitedTypes.find(ty)->second = result;
+      // Only keep the result cached if the fir.type visited was a "top-level
+      // type". Nested types with a recursive reference to the "top-level type"
+      // may incorrectly have been resolved as not needed conversions because it
+      // had not been determined yet if the "top-level type" needed conversion.
+      // This is not an issue to determine the "top-level type" need of
+      // conversion, but the result should not be kept and later used in other
+      // contexts.
+      needConversionIsVisitingRecordType = wasAlreadyVisitingRecordType;
+      if (needConversionIsVisitingRecordType)
+        visitedTypes.erase(ty);
+      else
+        visitedTypes.find(ty)->second = result;
       return result;
     }
     if (auto boxTy = ty.dyn_cast<BaseBoxType>())
@@ -177,6 +189,7 @@ private:
   // components and or parent types), so the lifetime of the cache
   // is the whole pass.
   llvm::DenseMap<mlir::Type, bool> visitedTypes;
+  bool needConversionIsVisitingRecordType = false;
   llvm::DenseMap<mlir::Type, mlir::Type> convertedTypes;
   mlir::Location loc;
 };
