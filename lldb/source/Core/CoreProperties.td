@@ -64,6 +64,10 @@ let Definition = "modulelist" in {
     DefaultEnumValue<"llvm::to_underlying(AutoBool::Auto)">,
     EnumValues<"OptionEnumValues(g_enable_full_dwarf_debugging)">,
     Desc<"Read full debug information from DWARF for Swift debugging. By default LLDB will use DWARF debug information if it cannot use reflection metadata.">;
+  def SwiftEnableASTContext: Property<"swift-enable-ast-context", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Enable instantiating Swift AST contexts.">;
 // END SWIFT
   def SymLinkPaths: Property<"debug-info-symlink-paths", "FileSpecList">,
     Global,

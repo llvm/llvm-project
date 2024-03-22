@@ -95,6 +95,7 @@ public:
 
   AutoBool GetSwiftEnableCxxInterop() const;
   AutoBool GetSwiftEnableFullDwarfDebugging() const;
+  bool GetSwiftEnableASTContext() const;
   // END SWIFT
 
   FileSpec GetClangModulesCachePath() const;

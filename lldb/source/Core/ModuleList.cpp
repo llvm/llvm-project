@@ -273,6 +273,12 @@ AutoBool ModuleListProperties::GetSwiftEnableFullDwarfDebugging() const {
       idx, static_cast<AutoBool>(
                g_modulelist_properties[idx].default_uint_value));
 }
+
+bool ModuleListProperties::GetSwiftEnableASTContext() const {
+  const uint32_t idx = ePropertySwiftEnableASTContext;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
 // END SWIFT
 
 FileSpec ModuleListProperties::GetLLDBIndexCachePath() const {
