@@ -12,7 +12,14 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
+
+#define TEST_SPECIAL(x, y, expected, expected_exception)                       \
+  EXPECT_FP_EQ(expected, f(&x, &y));                                           \
+  EXPECT_FP_EXCEPTION(expected_exception);                                     \
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
+
+#define TEST_REGULAR(x, y, expected) TEST_SPECIAL(x, y, expected, 0)
 
 template <typename T>
 class CanonicalizeTest : public LIBC_NAMESPACE::testing::Test {
@@ -20,25 +27,38 @@ class CanonicalizeTest : public LIBC_NAMESPACE::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
-  typedef T (*CanonicalizeFunc)(T);
+  typedef T (*CanonicalizeFunc)(T *, T *);
 
-  void testSpecialNumbers(CanonicalizeFunc func) {
-    EXPECT_FP_EQ(zero, func(zero));
-    EXPECT_FP_EQ(neg_zero, func(neg_zero));
-
-    EXPECT_FP_EQ(inf, func(inf));
-    EXPECT_FP_EQ(neg_inf, func(neg_inf));
-
-    EXPECT_FP_EQ(aNaN, func(aNaN));
+  void testSpecialNumbers(CanonicalizeFunc f) {
+    T cx;
+    TEST_SPECIAL(cx, zero, 0, 0);
+    EXPECT_EQ(cx, T(0.0));
+    TEST_SPECIAL(cx, neg_zero, 0, 0);
+    EXPECT_EQ(cx, T(-0.0));
+    TEST_SPECIAL(cx, inf, 0, 0);
+    EXPECT_EQ(cx, inf);
+    TEST_SPECIAL(cx, neg_inf, 0, 0);
+    EXPECT_EQ(cx, neg_inf);
+    TEST_SPECIAL(cx, sNaN, 1, FE_INVALID);
+    EXPECT_EQ(cx, aNaN);
+    TEST_SPECIAL(cx, -sNaN, 1, FE_INVALID);
+    EXPECT_EQ(cx, -aNaN);
   }
 
-  void testRoundedNumbers(CanonicalizeFunc func) {
-    EXPECT_FP_EQ(T(1.0), func(T(1.0)));
-    EXPECT_FP_EQ(T(-1.0), func(T(-1.0)));
-    EXPECT_FP_EQ(T(10.0), func(T(10.0)));
-    EXPECT_FP_EQ(T(-10.0), func(T(-10.0)));
-    EXPECT_FP_EQ(T(1234.0), func(T(1234.0)));
-    EXPECT_FP_EQ(T(-1234.0), func(T(-1234.0)));
+  void testRegularNumbers(CanonicalizeFunc func) {
+    T cx;
+    TEST_REGULAR(cx, T(1.0), 0);
+    EXPECT_EQ(cx, T(1.0));
+    TEST_REGULAR(cx, T(-1.0), 0);
+    EXPECT_EQ(cx, T(-1.0));
+    TEST_REGULAR(cx, T(10.0), 0);
+    EXPECT_EQ(cx, T(10.0));
+    TEST_REGULAR(cx, T(-10.0), 0);
+    EXPECT_EQ(cx, T(-10.0));
+    TEST_REGULAR(cx, T(1234.0), 0);
+    EXPECT_EQ(cx, T(1234.0));
+    TEST_REGULAR(cx, T(-1234.0), 0);
+    EXPECT_EQ(cx, T(-1234.0));
   }
 };
 
@@ -47,8 +67,8 @@ public:
   TEST_F(LlvmLibcCanonicalizeTest, SpecialNumbers) {                           \
     testSpecialNumbers(&func);                                                 \
   }                                                                            \
-  TEST_F(LlvmLibcCanonicalizeTest, RoundedNubmers) {                           \
-    testRoundedNumbers(&func);                                                 \
+  TEST_F(LlvmLibcCanonicalizeTest, RegularNubmers) {                           \
+    testRegularNumbers(&func);                                                 \
   }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_CANONICALIZETEST_H
