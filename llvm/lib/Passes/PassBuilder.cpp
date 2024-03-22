@@ -601,8 +601,9 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   return UnrollOpts;
 }
 
-Expected<bool> parseSinglePassOption(StringRef Params, StringRef OptionName,
-                                     StringRef PassName) {
+Expected<bool> PassBuilder::parseSinglePassOption(StringRef Params,
+                                                  StringRef OptionName,
+                                                  StringRef PassName) {
   bool Result = false;
   while (!Params.empty()) {
     StringRef ParamName;
@@ -621,24 +622,28 @@ Expected<bool> parseSinglePassOption(StringRef Params, StringRef OptionName,
 }
 
 Expected<bool> parseGlobalDCEPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "vfe-linkage-unit-visibility", "GlobalDCE");
+  return PassBuilder::parseSinglePassOption(
+      Params, "vfe-linkage-unit-visibility", "GlobalDCE");
 }
 
 Expected<bool> parseCGProfilePassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "in-lto-post-link", "CGProfile");
+  return PassBuilder::parseSinglePassOption(Params, "in-lto-post-link",
+                                            "CGProfile");
 }
 
 Expected<bool> parseInlinerPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "only-mandatory", "InlinerPass");
+  return PassBuilder::parseSinglePassOption(Params, "only-mandatory",
+                                            "InlinerPass");
 }
 
 Expected<bool> parseCoroSplitPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "reuse-storage", "CoroSplitPass");
+  return PassBuilder::parseSinglePassOption(Params, "reuse-storage",
+                                            "CoroSplitPass");
 }
 
 Expected<bool> parsePostOrderFunctionAttrsPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "skip-non-recursive-function-attrs",
-                               "PostOrderFunctionAttrs");
+  return PassBuilder::parseSinglePassOption(
+      Params, "skip-non-recursive-function-attrs", "PostOrderFunctionAttrs");
 }
 
 Expected<CFGuardPass::Mechanism> parseCFGuardPassOptions(StringRef Params) {
@@ -662,19 +667,21 @@ Expected<CFGuardPass::Mechanism> parseCFGuardPassOptions(StringRef Params) {
 }
 
 Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "memssa", "EarlyCSE");
+  return PassBuilder::parseSinglePassOption(Params, "memssa", "EarlyCSE");
 }
 
 Expected<bool> parseEntryExitInstrumenterPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "post-inline", "EntryExitInstrumenter");
+  return PassBuilder::parseSinglePassOption(Params, "post-inline",
+                                            "EntryExitInstrumenter");
 }
 
 Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "single", "LoopExtractor");
+  return PassBuilder::parseSinglePassOption(Params, "single", "LoopExtractor");
 }
 
 Expected<bool> parseLowerMatrixIntrinsicsPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "minimal", "LowerMatrixIntrinsics");
+  return PassBuilder::parseSinglePassOption(Params, "minimal",
+                                            "LowerMatrixIntrinsics");
 }
 
 Expected<AddressSanitizerOptions> parseASanPassOptions(StringRef Params) {
@@ -1014,13 +1021,13 @@ parseStackLifetimeOptions(StringRef Params) {
 }
 
 Expected<bool> parseDependenceAnalysisPrinterOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "normalized-results",
-                               "DependenceAnalysisPrinter");
+  return PassBuilder::parseSinglePassOption(Params, "normalized-results",
+                                            "DependenceAnalysisPrinter");
 }
 
 Expected<bool> parseSeparateConstOffsetFromGEPPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "lower-gep",
-                               "SeparateConstOffsetFromGEP");
+  return PassBuilder::parseSinglePassOption(Params, "lower-gep",
+                                            "SeparateConstOffsetFromGEP");
 }
 
 Expected<OptimizationLevel>
@@ -1036,13 +1043,13 @@ parseFunctionSimplificationPipelineOptions(StringRef Params) {
 }
 
 Expected<bool> parseMemorySSAPrinterPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "no-ensure-optimized-uses",
-                               "MemorySSAPrinterPass");
+  return PassBuilder::parseSinglePassOption(Params, "no-ensure-optimized-uses",
+                                            "MemorySSAPrinterPass");
 }
 
 Expected<bool> parseSpeculativeExecutionPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "only-if-divergent-target",
-                               "SpeculativeExecutionPass");
+  return PassBuilder::parseSinglePassOption(Params, "only-if-divergent-target",
+                                            "SpeculativeExecutionPass");
 }
 
 Expected<std::string> parseMemProfUsePassOptions(StringRef Params) {
@@ -1063,13 +1070,13 @@ Expected<std::string> parseMemProfUsePassOptions(StringRef Params) {
 }
 
 Expected<bool> parseStructuralHashPrinterPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "detailed",
-                               "StructuralHashPrinterPass");
+  return PassBuilder::parseSinglePassOption(Params, "detailed",
+                                            "StructuralHashPrinterPass");
 }
 
 Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "demote-catchswitch-only",
-                               "WinEHPreparePass");
+  return PassBuilder::parseSinglePassOption(Params, "demote-catchswitch-only",
+                                            "WinEHPreparePass");
 }
 
 Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
