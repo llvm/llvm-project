@@ -21,31 +21,13 @@ using namespace llvm::dxil;
 
 constexpr StringLiteral DXILOpNamePrefix = "dx.op.";
 
-namespace {
-
-enum OverloadKind : uint16_t {
-  VOID = 1,
-  HALF = 1 << 1,
-  FLOAT = 1 << 2,
-  DOUBLE = 1 << 3,
-  I1 = 1 << 4,
-  I8 = 1 << 5,
-  I16 = 1 << 6,
-  I32 = 1 << 7,
-  I64 = 1 << 8,
-  UserDefineType = 1 << 9,
-  ObjectType = 1 << 10,
-};
-
-} // namespace
-
 static const char *getOverloadTypeName(OverloadKind Kind) {
   switch (Kind) {
-  case OverloadKind::HALF:
+  case OverloadKind::Half:
     return "f16";
-  case OverloadKind::FLOAT:
+  case OverloadKind::Float:
     return "f32";
-  case OverloadKind::DOUBLE:
+  case OverloadKind::Double:
     return "f64";
   case OverloadKind::I1:
     return "i1";
@@ -57,12 +39,15 @@ static const char *getOverloadTypeName(OverloadKind Kind) {
     return "i32";
   case OverloadKind::I64:
     return "i64";
-  case OverloadKind::VOID:
+  case OverloadKind::Void:
   case OverloadKind::ObjectType:
   case OverloadKind::UserDefineType:
     break;
+  case OverloadKind::Invalid:
+    report_fatal_error("Invalid Overload Type for type name lookup",
+                       /* gen_crash_diag=*/false);
   }
-  llvm_unreachable("invalid overload type for name");
+  llvm_unreachable("Unhandled Overload Type specified for type name lookup");
   return "void";
 }
 
@@ -70,13 +55,13 @@ static OverloadKind getOverloadKind(Type *Ty) {
   Type::TypeID T = Ty->getTypeID();
   switch (T) {
   case Type::VoidTyID:
-    return OverloadKind::VOID;
+    return OverloadKind::Void;
   case Type::HalfTyID:
-    return OverloadKind::HALF;
+    return OverloadKind::Half;
   case Type::FloatTyID:
-    return OverloadKind::FLOAT;
+    return OverloadKind::Float;
   case Type::DoubleTyID:
-    return OverloadKind::DOUBLE;
+    return OverloadKind::Double;
   case Type::IntegerTyID: {
     IntegerType *ITy = cast<IntegerType>(Ty);
     unsigned Bits = ITy->getBitWidth();
@@ -93,7 +78,7 @@ static OverloadKind getOverloadKind(Type *Ty) {
       return OverloadKind::I64;
     default:
       llvm_unreachable("invalid overload type");
-      return OverloadKind::VOID;
+      return OverloadKind::Void;
     }
   }
   case Type::PointerTyID:
@@ -102,7 +87,7 @@ static OverloadKind getOverloadKind(Type *Ty) {
     return OverloadKind::ObjectType;
   default:
     llvm_unreachable("invalid overload type");
-    return OverloadKind::VOID;
+    return OverloadKind::Void;
   }
 }
 
@@ -147,7 +132,7 @@ struct OpCodeProperty {
 
 static std::string constructOverloadName(OverloadKind Kind, Type *Ty,
                                          const OpCodeProperty &Prop) {
-  if (Kind == OverloadKind::VOID) {
+  if (Kind == OverloadKind::Void) {
     return (Twine(DXILOpNamePrefix) + getOpCodeClassName(Prop)).str();
   }
   return (Twine(DXILOpNamePrefix) + getOpCodeClassName(Prop) + "." +
@@ -157,7 +142,7 @@ static std::string constructOverloadName(OverloadKind Kind, Type *Ty,
 
 static std::string constructOverloadTypeName(OverloadKind Kind,
                                              StringRef TypeName) {
-  if (Kind == OverloadKind::VOID)
+  if (Kind == OverloadKind::Void)
     return TypeName.str();
 
   assert(Kind < OverloadKind::UserDefineType && "invalid overload kind");
@@ -284,13 +269,13 @@ Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, FunctionType *FT) {
   if (Prop->OverloadParamIndex < 0) {
     auto &Ctx = FT->getContext();
     switch (Prop->OverloadTys) {
-    case OverloadKind::VOID:
+    case OverloadKind::Void:
       return Type::getVoidTy(Ctx);
-    case OverloadKind::HALF:
+    case OverloadKind::Half:
       return Type::getHalfTy(Ctx);
-    case OverloadKind::FLOAT:
+    case OverloadKind::Float:
       return Type::getFloatTy(Ctx);
-    case OverloadKind::DOUBLE:
+    case OverloadKind::Double:
       return Type::getDoubleTy(Ctx);
     case OverloadKind::I1:
       return Type::getInt1Ty(Ctx);
