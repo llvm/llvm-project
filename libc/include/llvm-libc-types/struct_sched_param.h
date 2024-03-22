@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_SCHED_PARAM_H
 #define LLVM_LIBC_TYPES_STRUCT_SCHED_PARAM_H
 
-#include <llvm-libc-types/pid_t.h>
-#include <llvm-libc-types/struct_timespec.h>
-#include <llvm-libc-types/time_t.h>
+#include "llvm-libc-types/pid_t.h"
+#include "llvm-libc-types/struct_timespec.h"
+#include "llvm-libc-types/time_t.h"
 
 struct sched_param {
   // Process or thread execution scheduling priority.
