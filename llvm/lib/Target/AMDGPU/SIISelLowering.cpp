@@ -15098,7 +15098,7 @@ void SITargetLowering::AddMemOpInit(MachineInstr &MI) const {
   const DebugLoc &DL = MI.getDebugLoc();
 
   // Create a register for the initialization value.
-  Register PrevDst = MRI.createVirtualRegister(TII->getOpRegClass(MI, DstIdx));
+  Register PrevDst = MRI.cloneVirtualRegister(MI.getOperand(DstIdx).getReg());
   unsigned NewDst = 0; // Final initialized value will be in here
 
   // If PRTStrictNull feature is enabled (the default) then initialize
