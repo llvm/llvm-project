@@ -199,7 +199,10 @@ void saveLocationInfo(ASTContext &Context, const SourceRange &range,
                       ordered_json &j) {
     SourceManager &SM = Context.getSourceManager();
 
-    const SourceLocation &b = range.getBegin();
+    SourceLocation b = range.getBegin();
+    if (b.isMacroID()) {
+        b = SM.getExpansionLoc(b);
+    }
     auto bLoc = Location::fromSourceLocation(Context, b);
     if (bLoc) {
         j["file"] = bLoc->file;
@@ -218,7 +221,11 @@ void saveLocationInfo(ASTContext &Context, const SourceRange &range,
      * https://discourse.llvm.org/t/problem-with-retrieving-the-binaryoperator-rhs-end-location/51897
      * https://clang.llvm.org/docs/InternalsManual.html#sourcerange-and-charsourcerange
      */
-    const SourceLocation &_e = range.getEnd();
+    SourceLocation _e = range.getEnd();
+    if (_e.isMacroID()) {
+        // _e = SM.getExpansionLoc(_e);
+        _e = getEndOfMacroExpansion(_e, Context);
+    }
     SourceLocation e =
         Lexer::getLocForEndOfToken(_e, 0, SM, Context.getLangOpts());
     if (e.isInvalid())

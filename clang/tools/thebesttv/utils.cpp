@@ -110,3 +110,20 @@ Location::fromSourceLocation(const ASTContext &Context, SourceLocation loc) {
 
     return std::make_unique<Location>(file, line, column);
 }
+
+SourceLocation getEndOfMacroExpansion(SourceLocation loc, ASTContext &Context) {
+    auto &SM = Context.getSourceManager();
+    auto &LangOpts = Context.getLangOpts();
+    requireTrue(loc.isValid() && loc.isMacroID());
+
+    FileID FID = SM.getFileID(loc);
+    const SrcMgr::SLocEntry *Entry = &SM.getSLocEntry(FID);
+    while (Entry->getExpansion().getExpansionLocStart().isMacroID()) {
+        loc = Entry->getExpansion().getExpansionLocStart();
+        FID = SM.getFileID(loc);
+        Entry = &SM.getSLocEntry(FID);
+    }
+    SourceLocation end = Entry->getExpansion().getExpansionLocEnd();
+    requireTrue(end.isValid() && !end.isMacroID());
+    return end;
+}

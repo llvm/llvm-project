@@ -128,4 +128,6 @@ struct GlobalStat {
     ICFG icfg;
 };
 
+SourceLocation getEndOfMacroExpansion(SourceLocation loc, ASTContext &Context);
+
 #endif
