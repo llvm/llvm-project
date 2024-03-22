@@ -20,7 +20,7 @@
 #endif
 
 #include "leading-zero-bit-count.h"
-#include "flang/Runtime/api-attrs.h"
+#include "flang/Common/api-attrs.h"
 #include <cstdint>
 #include <type_traits>
 

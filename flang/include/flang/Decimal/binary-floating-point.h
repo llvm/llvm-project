@@ -12,9 +12,9 @@
 // Access and manipulate the fields of an IEEE-754 binary
 // floating-point value via a generalized template.
 
+#include "flang/Common/api-attrs.h"
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
-#include "flang/Runtime/api-attrs.h"
 #include <cinttypes>
 #include <climits>
 #include <cstring>

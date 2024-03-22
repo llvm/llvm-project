@@ -12,7 +12,7 @@
 #define FORTRAN_RUNTIME_NAMELIST_H_
 
 #include "non-tbp-dio.h"
-#include "flang/Runtime/api-attrs.h"
+#include "flang/Common/api-attrs.h"
 
 #include <cstddef>
 

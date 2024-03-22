@@ -12,7 +12,7 @@
 #ifndef FORTRAN_DECIMAL_DECIMAL_H_
 #define FORTRAN_DECIMAL_DECIMAL_H_
 
-#include "flang/Runtime/api-attrs.h"
+#include "flang/Common/api-attrs.h"
 #include <stddef.h>
 
 #ifdef __cplusplus

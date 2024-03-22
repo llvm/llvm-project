@@ -11,7 +11,7 @@
 
 #ifndef FORTRAN_RUNTIME_IOSTAT_H_
 #define FORTRAN_RUNTIME_IOSTAT_H_
-#include "flang/Runtime/api-attrs.h"
+#include "flang/Common/api-attrs.h"
 #include "flang/Runtime/magic-numbers.h"
 namespace Fortran::runtime::io {
 

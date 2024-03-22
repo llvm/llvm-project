@@ -9,7 +9,7 @@
 #ifndef FORTRAN_RUNTIME_FREESTANDING_TOOLS_H_
 #define FORTRAN_RUNTIME_FREESTANDING_TOOLS_H_
 
-#include "flang/Runtime/api-attrs.h"
+#include "flang/Common/api-attrs.h"
 #include "flang/Runtime/c-or-cpp.h"
 #include <algorithm>
 #include <cstring>
