@@ -224,7 +224,7 @@ namespace N2 {
     void *p;
   };
 // LAYOUT-LABEL: LLVMType:%"struct.N2::S" =
-// LAYOUT-SAME: type { i24, ptr }
+// LAYOUT-SAME: type { i32, ptr }
 // LAYOUT: BitFields:[
 // LAYOUT-X86-64-NEXT: <CGBitFieldInfo Offset:0 Size:24 IsSigned:0 StorageSize:32 StorageOffset:0
 // LAYOUT-PPC64-NEXT: <CGBitFieldInfo Offset:8 Size:24 IsSigned:0 StorageSize:32 StorageOffset:0
@@ -268,7 +268,7 @@ namespace N3 {
     unsigned b : 24;
   };
 // LAYOUT-LABEL: LLVMType:%"struct.N3::S" =
-// LAYOUT-SAME: type { i24 }
+// LAYOUT-SAME: type { i32 }
 // LAYOUT: BitFields:[
 // LAYOUT-X86-64-NEXT: <CGBitFieldInfo Offset:0 Size:24 IsSigned:0 StorageSize:32 StorageOffset:0
 // LAYOUT-PPC64-NEXT: <CGBitFieldInfo Offset:8 Size:24 IsSigned:0 StorageSize:32 StorageOffset:0
@@ -378,7 +378,7 @@ namespace N5 {
 // LAYOUT-NEXT: ]>
 
 // LAYOUT-LABEL: LLVMType:%"struct.N5::U::Y" =
-// LAYOUT-SAME: type { i24 }
+// LAYOUT-SAME: type { i32 }
 // LAYOUT-NEXT: NonVirtualBaseLLVMType:%"struct.N5::U::Y" =
 // LAYOUT: BitFields:[
 // LAYOUT-X86-64-NEXT: <CGBitFieldInfo Offset:0 Size:24 IsSigned:0 StorageSize:32 StorageOffset:0
