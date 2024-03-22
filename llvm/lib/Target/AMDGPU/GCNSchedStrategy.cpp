@@ -973,8 +973,11 @@ void GCNSchedStage::checkScheduling() {
     LLVM_DEBUG(dbgs() << "Occupancy lowered for the function to "
                       << DAG.MinOccupancy << ".\n");
   }
-
+  // The maximum number of arch VGPR on non-unified register file, or the
+  // maximum VGPR + AGPR in the unified register file case.
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
+  // The maximum number of arch VGPR for both unified and non-unified register
+  // file.
   unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
