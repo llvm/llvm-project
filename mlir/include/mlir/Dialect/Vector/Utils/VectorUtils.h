@@ -127,8 +127,8 @@ SmallVector<OpFoldResult> getMixedSizesXfer(bool hasTensorSemantics,
 /// responsible for providing an updated ("rewritten") version of:
 ///   a. the source Op when mask _is not_ present,
 ///   b. the source Op and the masking Op when mask _is_ present.
-/// Note that the return value from `matchAndRewriteMaskableOp` depends on the
-/// case above.
+/// To use this pattern, implement `matchAndRewriteMaskableOp`. Note that
+/// the return value will depend on the case above.
 template <class SourceOp>
 struct MaskableOpRewritePattern : OpRewritePattern<SourceOp> {
   using OpRewritePattern<SourceOp>::OpRewritePattern;
@@ -162,9 +162,9 @@ private:
   }
 
 public:
-  // Matches SourceOp that can potentially be masked with `maskingOp`. If the
-  // latter is present, returns an updated masking op (with a replacement for
-  // `sourceOp` nested inside). Otherwise, returns an updated `sourceOp`.
+  // Matches `sourceOp` that can potentially be masked with `maskingOp`. If the
+  // latter is present, returns a replacement for `maskingOp`. Otherwise,
+  // returns a replacement for `sourceOp`.
   virtual FailureOr<Value>
   matchAndRewriteMaskableOp(SourceOp sourceOp, MaskingOpInterface maskingOp,
                             PatternRewriter &rewriter) const = 0;
