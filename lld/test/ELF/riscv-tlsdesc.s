@@ -29,11 +29,13 @@
 # RUN: ld.lld -e 0 -z now a.32.o c.32.so -o a.32.ie
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d a.32.ie | FileCheck %s --check-prefix=IE32
 
-# RUN: llvm-mc -triple=riscv64 -filetype=obj d.s -o d.64.o
-# RUN: ld.lld -shared -soname=d.64.so -o d.64.so d.64.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL --allow-empty
+## Prior to https://github.com/llvm/llvm-project/pull/85817 the local TLSDESC
+## labels would be marked STT_TLS, resulting in an error "has an STT_TLS symbol but doesn't have an SHF_TLS section"
 
+# RUN: llvm-mc -triple=riscv64 -filetype=obj d.s -o d.64.o
+# RUN: ld.lld -shared -soname=d.64.so -o d.64.so d.64.o --fatal-warnings
 # RUN: llvm-mc -triple=riscv32 -filetype=obj d.s -o d.32.o --defsym ELF32=1
-# RUN: ld.lld -shared -soname=d.32.so -o d.32.so d.32.o 2>&1 | FileCheck %s --check-prefix=BADTLSLABEL --allow-empty
+# RUN: ld.lld -shared -soname=d.32.so -o d.32.so d.32.o --fatal-warnings
 
 # GD64-RELA:      .rela.dyn {
 # GD64-RELA-NEXT:   0x2408 R_RISCV_TLSDESC - 0x7FF
@@ -161,9 +163,6 @@
 # IE32-NEXT:  111cc: auipc   a0, 0x1
 # IE32-NEXT:         lw      a0, 0x80(a0)
 # IE32-NEXT:         add     a0, a0, tp
-
-# At one point the local TLSDESC labels would be marked STT_TLS, so make sure we don't regress
-# BADTLSLABEL-NOT: error: d.{{.*}}.o has an STT_TLS symbol but doesn't have an SHF_TLS section
 
 #--- a.s
 .macro load dst, src

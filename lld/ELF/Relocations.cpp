@@ -1480,13 +1480,10 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
 
   // Process TLS relocations, including TLS optimizations. Note that
   // R_TPREL and R_TPREL_NEG relocations are resolved in processAux.
-  if (sym.isTls() ||
-      // These RISCV TLSDESC relocations reference a local symbol that won't be
-      // a TLS symbol, but we need to process them in handleTlsRelocation the
-      // same as other TLS relocations.
-      (config->emachine == EM_RISCV &&
-       (type == R_RISCV_TLSDESC_CALL || type == R_RISCV_TLSDESC_LOAD_LO12 ||
-        type == R_RISCV_TLSDESC_ADD_LO12))) {
+  //
+  // Some RISCV TLSDESC relocations reference a local NOTYPE symbol,
+  // but we need to process them in handleTlsRelocation.
+  if (sym.isTls() || oneof<R_TLSDESC_PC, R_TLSDESC_CALL>(expr)) {
     if (unsigned processed =
             handleTlsRelocation(type, sym, *sec, offset, addend, expr)) {
       i += processed - 1;
