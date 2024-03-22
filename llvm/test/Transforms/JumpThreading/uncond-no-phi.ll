@@ -8,11 +8,11 @@ define i1 @if_else(i1 %c, i1 %c1) {
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[RETURN:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    br i1 [[C1]], label [[RETURN]], label [[RETURN1:%.*]]
+; CHECK-NEXT:    br i1 [[C1]], label [[ELSE:%.*]], label [[RETURN]]
 ; CHECK:       else:
-; CHECK-NEXT:    br label [[RETURN1]]
+; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ true, [[RETURN]] ], [ false, [[THEN]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ false, [[THEN]] ], [ true, [[ENTRY:%.*]] ], [ true, [[ELSE]] ]
 ; CHECK-NEXT:    ret i1 [[RETVAL_0]]
 ;
 entry:
@@ -44,14 +44,14 @@ define i8 @switch_uncond(i8 %arg) {
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb:
 ; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    br label [[BB2]]
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    br label [[BB2]]
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ 0, [[BB2]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ 1, [[ENTRY:%.*]] ], [ 0, [[BB3]] ], [ 0, [[BB1]] ], [ 0, [[BB2]] ]
 ; CHECK-NEXT:    ret i8 [[PHI]]
 ;
 entry:
