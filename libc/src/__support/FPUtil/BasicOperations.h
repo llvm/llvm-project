@@ -124,7 +124,6 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
   } else
     cx = x;
   return 0;
-  }
 }
 
 } // namespace fputil
