@@ -357,7 +357,8 @@ DWARFASTParserSwift::getBuiltinTypeDescriptor(
   if (byte_size == LLDB_INVALID_ADDRESS)
     return {};
 
-  auto alignment = die.GetAttributeValueAsUnsigned(DW_AT_alignment, 8);
+  auto alignment = die.GetAttributeValueAsUnsigned(DW_AT_alignment,
+                                                   byte_size ? byte_size : 8);
 
   // TODO: this seems simple to calculate but maybe we should encode the stride
   // in DWARF? That's what reflection metadata does.
