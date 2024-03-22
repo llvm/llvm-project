@@ -414,24 +414,24 @@ func.func @test_subscript_array_type_mismatch(%arg0: !emitc.array<4x8xf32>, %arg
 
 // -----
 
-func.func @test_subscript_ptr_indices_mismatch(%arg0: !emitc.ptr<f32>, %arg2: index) {
+func.func @test_subscript_ptr_indices_mismatch(%arg0: !emitc.ptr<f32>, %arg1: index) {
   // expected-error @+1 {{'emitc.subscript' op on pointer operand requires one index operand, but got 2}}
-  %0 = emitc.subscript %arg0[%arg2, %arg2] : (!emitc.ptr<f32>, index, index) -> f32
+  %0 = emitc.subscript %arg0[%arg1, %arg1] : (!emitc.ptr<f32>, index, index) -> f32
   return
 }
 
 // -----
 
-func.func @test_subscript_ptr_index_type_mismatch(%arg0: !emitc.ptr<f32>, %arg2: f64) {
+func.func @test_subscript_ptr_index_type_mismatch(%arg0: !emitc.ptr<f32>, %arg1: f64) {
   // expected-error @+1 {{'emitc.subscript' op on pointer operand requires index operand to be integer-like, but got 'f64'}}
-  %0 = emitc.subscript %arg0[%arg2] : (!emitc.ptr<f32>, f64) -> f32
+  %0 = emitc.subscript %arg0[%arg1] : (!emitc.ptr<f32>, f64) -> f32
   return
 }
 
 // -----
 
-func.func @test_subscript_ptr_type_mismatch(%arg0: !emitc.ptr<f32>, %arg2: index) {
+func.func @test_subscript_ptr_type_mismatch(%arg0: !emitc.ptr<f32>, %arg1: index) {
   // expected-error @+1 {{'emitc.subscript' op on pointer operand requires pointee type ('f32') and result type ('f64') to match}}
-  %0 = emitc.subscript %arg0[%arg2] : (!emitc.ptr<f32>, index) -> f64
+  %0 = emitc.subscript %arg0[%arg1] : (!emitc.ptr<f32>, index) -> f64
   return
 }
