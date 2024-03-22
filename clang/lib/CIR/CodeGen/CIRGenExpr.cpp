@@ -1012,7 +1012,8 @@ mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *E) {
 
 LValue CIRGenFunction::buildUnaryOpLValue(const UnaryOperator *E) {
   // __extension__ doesn't affect lvalue-ness.
-  assert(E->getOpcode() != UO_Extension && "not implemented");
+  if (E->getOpcode() == UO_Extension)
+    return buildLValue(E->getSubExpr());
 
   switch (E->getOpcode()) {
   default:
