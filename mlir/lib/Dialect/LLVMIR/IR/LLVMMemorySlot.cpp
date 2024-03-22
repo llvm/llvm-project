@@ -251,6 +251,10 @@ bool LLVM::StoreOp::canRewire(const DestructurableMemorySlot &slot,
   if (getVolatile_())
     return false;
 
+  // Storing the pointer to memory cannot be dealt with.
+  if (getValue() == slot.ptr)
+    return false;
+
   // A store always accesses the first element of the destructured slot.
   auto index = IntegerAttr::get(IntegerType::get(getContext(), 32), 0);
   Type subslotType = getTypeAtIndex(slot, index);
