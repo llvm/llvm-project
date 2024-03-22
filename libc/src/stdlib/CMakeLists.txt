@@ -62,6 +62,26 @@ add_entrypoint_object(
     .str_from_util
 )
 
+add_entrypoint_object(
+  strfromd
+  SRCS
+    strfromd.cpp
+  HDRS
+    strfromd.h
+  DEPENDS
+    .str_from_util
+)
+
+add_entrypoint_object(
+  strfroml
+  SRCS
+    strfroml.cpp
+  HDRS
+    strfroml.h
+  DEPENDS
+    .str_from_util
+)
+
 add_header_library(
   str_from_util
   HDRS
