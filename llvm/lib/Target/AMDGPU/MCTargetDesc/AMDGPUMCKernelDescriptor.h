@@ -21,6 +21,7 @@
 namespace llvm {
 class MCExpr;
 class MCContext;
+class MCSubtargetInfo;
 namespace AMDGPU {
 
 struct MCKernelDescriptor {
@@ -33,6 +34,8 @@ struct MCKernelDescriptor {
   const MCExpr *kernel_code_properties = nullptr;
   const MCExpr *kernarg_preload = nullptr;
 
+  static MCKernelDescriptor
+  getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI, MCContext &Ctx);
   // MCExpr for:
   // Dst = Dst & ~Mask
   // Dst = Dst | (Value << Shift)

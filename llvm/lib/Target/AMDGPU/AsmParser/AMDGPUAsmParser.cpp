@@ -5419,7 +5419,8 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     return true;
 
   AMDGPU::MCKernelDescriptor KD =
-      getDefaultAmdhsaKernelDescriptor(&getSTI(), getContext());
+      AMDGPU::MCKernelDescriptor::getDefaultAmdhsaKernelDescriptor(
+          &getSTI(), getContext());
 
   StringSet<> Seen;
 
