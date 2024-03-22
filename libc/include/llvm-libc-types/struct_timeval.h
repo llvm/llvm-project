@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_TIMEVAL_H
 #define LLVM_LIBC_TYPES_STRUCT_TIMEVAL_H
 
-#include <llvm-libc-types/suseconds_t.h>
-#include <llvm-libc-types/time_t.h>
+#include "llvm-libc-types/suseconds_t.h"
+#include "llvm-libc-types/time_t.h"
 
 struct timeval {
   time_t tv_sec;       // Seconds
