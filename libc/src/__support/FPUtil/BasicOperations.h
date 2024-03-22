@@ -124,7 +124,7 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
       cx = x;
     return 0;
   }
-
+}
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 
