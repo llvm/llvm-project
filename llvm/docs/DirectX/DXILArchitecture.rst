@@ -66,11 +66,11 @@ The DirectX Intrinsic Expansion Pass
 There are intrinsics that don't map directly to DXIL Ops. In some cases
 an intrinsic needs to be expanded to a set of LLVM IR instructions. In
 other cases an intrinsic needs modifications to the arguments or return
-values of a DXIL Op. This pass (`DXILIntrinsicExpansion.cpp`) handles all 
-the cases where our intrinsics don't have a one to one mapping. You should 
-also consider using this pass when the expansion is specific to DXIL so 
-as to keep implementation details out of CodeGen. Finally, there is an 
-expectation that we maintain vectors through this pass. Therefore, best 
+values of a DXIL Op. The `DXILIntrinsicExpansion` pass handles all 
+the cases where our intrinsics don't have a one to one mapping. This 
+pass may also be used when the expansion is specific to DXIL to keep 
+implementation details out of CodeGen. Finally, there is an expectation 
+that we maintain vector types through this pass. Therefore, best 
 practice would be to avoid scalarization in this pass.
 
 
