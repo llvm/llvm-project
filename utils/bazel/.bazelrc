@@ -6,6 +6,11 @@
 # Common flags that apply to all configurations.
 # Use sparingly for things common to all compilers and platforms.
 ###############################################################################
+
+# Flip off to disable MODULE.bazel until we're ready.
+# https://github.com/llvm/llvm-project/issues/55924
+common --enable_bzlmod=false
+
 # Prevent invalid caching if input files are modified during a build.
 build --experimental_guard_against_concurrent_changes
 
