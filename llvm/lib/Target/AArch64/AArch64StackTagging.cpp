@@ -11,6 +11,7 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -81,6 +82,26 @@ static cl::opt<size_t> ClMaxLifetimes(
     cl::ReallyHidden,
     cl::desc("How many lifetime ends to handle for a single alloca."),
     cl::Optional);
+
+// Mode for selecting how to insert frame record info into the stack ring
+// buffer.
+enum RecordStackHistoryMode {
+  // Do not record frame record info.
+  none,
+
+  // Insert instructions into the prologue for storing into the stack ring
+  // buffer directly.
+  instr,
+};
+
+static cl::opt<RecordStackHistoryMode> ClRecordStackHistory(
+    "stack-tagging-record-stack-history",
+    cl::desc("Record stack frames with tagged allocations in a thread-local "
+             "ring buffer"),
+    cl::values(clEnumVal(none, "Do not record stack ring history"),
+               clEnumVal(instr, "Insert instructions into the prologue for "
+                                "storing into the stack ring buffer")),
+    cl::Hidden, cl::init(instr));
 
 static const Align kTagGranuleSize = Align(16);
 
@@ -309,6 +330,7 @@ public:
                                    uint64_t Size, InitializerBuilder &IB);
 
   Instruction *insertBaseTaggedPointer(
+      const Module &M,
       const MapVector<AllocaInst *, memtag::AllocaInfo> &Allocas,
       const DominatorTree *DT);
   bool runOnFunction(Function &F) override;
@@ -437,6 +459,7 @@ void AArch64StackTagging::untagAlloca(AllocaInst *AI, Instruction *InsertBefore,
 }
 
 Instruction *AArch64StackTagging::insertBaseTaggedPointer(
+    const Module &M,
     const MapVector<AllocaInst *, memtag::AllocaInfo> &AllocasToInstrument,
     const DominatorTree *DT) {
   BasicBlock *PrologueBB = nullptr;
@@ -458,6 +481,38 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   Instruction *Base =
       IRB.CreateCall(IRG_SP, {Constant::getNullValue(IRB.getInt64Ty())});
   Base->setName("basetag");
+  auto TargetTriple = Triple(M.getTargetTriple());
+  if (ClRecordStackHistory == instr && TargetTriple.isAndroid() &&
+      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(35)) {
+    constexpr int StackMteSlot = -3;
+    constexpr uint64_t TagMask = 0xFULL << 56;
+
+    auto *IntptrTy = IRB.getIntPtrTy(M.getDataLayout());
+    Value *SlotPtr = memtag::getAndroidSlotPtr(IRB, StackMteSlot);
+    SlotPtr->setName("TLS_SLOT_STACK_MTE");
+    auto *ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
+    Value *TaggedFP = IRB.CreateOr(
+        memtag::getFP(IRB),
+        IRB.CreateAnd(IRB.CreatePtrToInt(Base, IntptrTy), TagMask));
+    Value *PC = memtag::getPC(TargetTriple, IRB);
+
+    Value *RecordPtr = IRB.CreateIntToPtr(ThreadLong, IRB.getPtrTy(0));
+    IRB.CreateStore(PC, RecordPtr);
+    IRB.CreateStore(TaggedFP, IRB.CreateConstGEP1_64(IntptrTy, RecordPtr, 1));
+    // Update the ring buffer. Top byte of ThreadLong defines the size of the
+    // buffer in pages, it must be a power of two, and the start of the buffer
+    // must be aligned by twice that much. Therefore wrap around of the ring
+    // buffer is simply Addr &= ~((ThreadLong >> 56) << 12).
+    // The use of AShr instead of LShr is due to
+    //   https://bugs.llvm.org/show_bug.cgi?id=39030
+    // Runtime library makes sure not to use the highest bit.
+    Value *WrapMask = IRB.CreateXor(
+        IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
+        ConstantInt::get(IntptrTy, (uint64_t)-1));
+    Value *ThreadLongNew = IRB.CreateAnd(
+        IRB.CreateAdd(ThreadLong, ConstantInt::get(IntptrTy, 16)), WrapMask);
+    IRB.CreateStore(ThreadLongNew, SlotPtr);
+  }
   return Base;
 }
 
@@ -513,7 +568,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   SetTagFunc =
       Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_settag);
 
-  Instruction *Base = insertBaseTaggedPointer(SInfo.AllocasToInstrument, DT);
+  Instruction *Base =
+      insertBaseTaggedPointer(*Fn.getParent(), SInfo.AllocasToInstrument, DT);
 
   int NextTag = 0;
   for (auto &I : SInfo.AllocasToInstrument) {
