@@ -23,7 +23,7 @@ void func(void) {
     // CHECK-NEXT: FloatingLiteral
 
     // Ensure that a cast removes the extra precision.
-    _Static_assert((float)(123.0F * 2.0F) == 246.0F, "");
+    _Static_assert(123.0F * 2.0F == 246.0F, "");
     // CHECK: StaticAssertDecl
     // CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <IntegralToBoolean>
     // CHECK-NEXT: BinaryOperator {{.*}} 'int' '=='
