@@ -48,7 +48,7 @@ void testva (int n, ...) {
 // AIX32-NEXT:  call void @llvm.memcpy.p0.p0.i32(ptr align 8 %t, ptr align 4 %argp.cur, i32 16, i1 false)
 // AIX64-NEXT:  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %t, ptr align 8 %argp.cur, i64 16, i1 false)
 
-// CHECK-NEXT:  call void @llvm.va_copy.p0.p0(ptr %ap2, ptr %ap)
+// CHECK-NEXT:  call void @llvm.va_copy.p0(ptr %ap2, ptr %ap)
 
 // AIX32-NEXT:  %argp.cur1 = load ptr, ptr %ap2, align 4
 // AIX32-NEXT:  %argp.next2 = getelementptr inbounds i8, ptr %argp.cur1, i32 4
@@ -71,5 +71,5 @@ void testva (int n, ...) {
 // AIX32: declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
 // AIX64: declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
-// CHECK: declare void @llvm.va_copy.p0.p0(ptr, ptr)
+// CHECK: declare void @llvm.va_copy.p0(ptr, ptr)
 // CHECK: declare void @llvm.va_end.p0(ptr)
