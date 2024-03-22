@@ -23,12 +23,9 @@ struct Int {
 // CHECK-LABEL: define dso_local void @_Z1AP4Tail
 // CHECK-SAME: (ptr nocapture noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[BF_LOAD:%.*]] = load i24, ptr [[P]], align 4
-// CHECK-NEXT:    [[NARROW:%.*]] = add i24 [[BF_LOAD]], 1
-// CHECK-NEXT:    [[BF_VALUE:%.*]] = and i24 [[NARROW]], 65535
-// CHECK-NEXT:    [[BF_CLEAR:%.*]] = and i24 [[BF_LOAD]], -65536
-// CHECK-NEXT:    [[BF_SET:%.*]] = or disjoint i24 [[BF_VALUE]], [[BF_CLEAR]]
-// CHECK-NEXT:    store i24 [[BF_SET]], ptr [[P]], align 4
+// CHECK-NEXT:    [[BF_LOAD:%.*]] = load i16, ptr [[P]], align 4
+// CHECK-NEXT:    [[INC:%.*]] = add i16 [[BF_LOAD]], 1
+// CHECK-NEXT:    store i16 [[INC]], ptr [[P]], align 4
 // CHECK-NEXT:    ret void
 //
 void A (Tail *p) {
@@ -38,12 +35,10 @@ void A (Tail *p) {
 // CHECK-LABEL: define dso_local void @_Z1BP4Tail
 // CHECK-SAME: (ptr nocapture noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[BF_LOAD:%.*]] = load i24, ptr [[P]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = and i24 [[BF_LOAD]], -65536
-// CHECK-NEXT:    [[BF_SHL:%.*]] = add i24 [[TMP0]], 65536
-// CHECK-NEXT:    [[BF_CLEAR:%.*]] = and i24 [[BF_LOAD]], 65535
-// CHECK-NEXT:    [[BF_SET:%.*]] = or disjoint i24 [[BF_SHL]], [[BF_CLEAR]]
-// CHECK-NEXT:    store i24 [[BF_SET]], ptr [[P]], align 4
+// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
+// CHECK-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[B]], align 2
+// CHECK-NEXT:    [[INC:%.*]] = add i8 [[BF_LOAD]], 1
+// CHECK-NEXT:    store i8 [[INC]], ptr [[B]], align 2
 // CHECK-NEXT:    ret void
 //
 void B (Tail *p) {
@@ -53,12 +48,9 @@ void B (Tail *p) {
 // CHECK-LABEL: define dso_local void @_Z1AP4Char
 // CHECK-SAME: (ptr nocapture noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[BF_LOAD:%.*]] = load i24, ptr [[P]], align 4
-// CHECK-NEXT:    [[NARROW:%.*]] = add i24 [[BF_LOAD]], 1
-// CHECK-NEXT:    [[BF_VALUE:%.*]] = and i24 [[NARROW]], 65535
-// CHECK-NEXT:    [[BF_CLEAR:%.*]] = and i24 [[BF_LOAD]], -65536
-// CHECK-NEXT:    [[BF_SET:%.*]] = or disjoint i24 [[BF_VALUE]], [[BF_CLEAR]]
-// CHECK-NEXT:    store i24 [[BF_SET]], ptr [[P]], align 4
+// CHECK-NEXT:    [[BF_LOAD:%.*]] = load i16, ptr [[P]], align 4
+// CHECK-NEXT:    [[INC:%.*]] = add i16 [[BF_LOAD]], 1
+// CHECK-NEXT:    store i16 [[INC]], ptr [[P]], align 4
 // CHECK-NEXT:    ret void
 //
 void A (Char *p) {
@@ -68,12 +60,10 @@ void A (Char *p) {
 // CHECK-LABEL: define dso_local void @_Z1BP4Char
 // CHECK-SAME: (ptr nocapture noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[BF_LOAD:%.*]] = load i24, ptr [[P]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = and i24 [[BF_LOAD]], -65536
-// CHECK-NEXT:    [[BF_SHL:%.*]] = add i24 [[TMP0]], 65536
-// CHECK-NEXT:    [[BF_CLEAR:%.*]] = and i24 [[BF_LOAD]], 65535
-// CHECK-NEXT:    [[BF_SET:%.*]] = or disjoint i24 [[BF_SHL]], [[BF_CLEAR]]
-// CHECK-NEXT:    store i24 [[BF_SET]], ptr [[P]], align 4
+// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
+// CHECK-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[B]], align 2
+// CHECK-NEXT:    [[INC:%.*]] = add i8 [[BF_LOAD]], 1
+// CHECK-NEXT:    store i8 [[INC]], ptr [[B]], align 2
 // CHECK-NEXT:    ret void
 //
 void B (Char *p) {
