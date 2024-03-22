@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_RLIMIT_H
 #define LLVM_LIBC_TYPES_STRUCT_RLIMIT_H
 
-#include <llvm-libc-types/rlim_t.h>
+#include "llvm-libc-types/rlim_t.h"
 
 struct rlimit {
   rlim_t rlim_cur;

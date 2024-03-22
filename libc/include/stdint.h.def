@@ -9,6 +9,6 @@
 #ifndef LLVM_LIBC_STDINT_H
 #define LLVM_LIBC_STDINT_H
 
-#include <llvm-libc-macros/stdint-macros.h>
+#include "llvm-libc-macros/stdint-macros.h"
 
 #endif // LLVM_LIBC_STDINT_H
