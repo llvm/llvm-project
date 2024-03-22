@@ -26,14 +26,15 @@ namespace Fortran::runtime::io {
 class IoErrorHandler : public Terminator {
 public:
   using Terminator::Terminator;
-  explicit IoErrorHandler(const Terminator &that) : Terminator{that} {}
-  void HasIoStat() { flags_ |= hasIoStat; }
-  void HasErrLabel() { flags_ |= hasErr; }
-  void HasEndLabel() { flags_ |= hasEnd; }
-  void HasEorLabel() { flags_ |= hasEor; }
-  void HasIoMsg() { flags_ |= hasIoMsg; }
+  explicit RT_API_ATTRS IoErrorHandler(const Terminator &that)
+      : Terminator{that} {}
+  RT_API_ATTRS void HasIoStat() { flags_ |= hasIoStat; }
+  RT_API_ATTRS void HasErrLabel() { flags_ |= hasErr; }
+  RT_API_ATTRS void HasEndLabel() { flags_ |= hasEnd; }
+  RT_API_ATTRS void HasEorLabel() { flags_ |= hasEor; }
+  RT_API_ATTRS void HasIoMsg() { flags_ |= hasIoMsg; }
 
-  bool InError() const {
+  RT_API_ATTRS bool InError() const {
     return ioStat_ != IostatOk || pendingError_ != IostatOk;
   }
 
@@ -41,22 +42,25 @@ public:
   // Begin...() API routines before it is known whether they
   // have error handling control list items.  Such statements
   // have an ErroneousIoStatementState with a pending error.
-  void SetPendingError(int iostat) { pendingError_ = iostat; }
+  RT_API_ATTRS void SetPendingError(int iostat) { pendingError_ = iostat; }
 
-  void SignalError(int iostatOrErrno, const char *msg, ...);
-  void SignalError(int iostatOrErrno);
-  template <typename... X> void SignalError(const char *msg, X &&...xs) {
+  RT_API_ATTRS void SignalError(int iostatOrErrno, const char *msg, ...);
+  RT_API_ATTRS void SignalError(int iostatOrErrno);
+  template <typename... X>
+  RT_API_ATTRS void SignalError(const char *msg, X &&...xs) {
     SignalError(IostatGenericError, msg, std::forward<X>(xs)...);
   }
 
-  void Forward(int iostatOrErrno, const char *, std::size_t);
+  RT_API_ATTRS void Forward(int iostatOrErrno, const char *, std::size_t);
 
   void SignalErrno(); // SignalError(errno)
-  void SignalEnd(); // input only; EOF on internal write is an error
-  void SignalEor(); // non-advancing input only; EOR on write is an error
-  void SignalPendingError();
+  RT_API_ATTRS void
+  SignalEnd(); // input only; EOF on internal write is an error
+  RT_API_ATTRS void
+  SignalEor(); // non-advancing input only; EOR on write is an error
+  RT_API_ATTRS void SignalPendingError();
 
-  int GetIoStat() const { return ioStat_; }
+  RT_API_ATTRS int GetIoStat() const { return ioStat_; }
   bool GetIoMsg(char *, std::size_t);
 
 private:

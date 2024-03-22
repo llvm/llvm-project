@@ -106,11 +106,11 @@ private:
   OwningPtr<Pending> pending_;
 };
 
-bool IsATerminal(int fd);
-bool IsExtant(const char *path);
-bool MayRead(const char *path);
-bool MayWrite(const char *path);
-bool MayReadAndWrite(const char *path);
-std::int64_t SizeInBytes(const char *path);
+RT_API_ATTRS bool IsATerminal(int fd);
+RT_API_ATTRS bool IsExtant(const char *path);
+RT_API_ATTRS bool MayRead(const char *path);
+RT_API_ATTRS bool MayWrite(const char *path);
+RT_API_ATTRS bool MayReadAndWrite(const char *path);
+RT_API_ATTRS std::int64_t SizeInBytes(const char *path);
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_FILE_H_
