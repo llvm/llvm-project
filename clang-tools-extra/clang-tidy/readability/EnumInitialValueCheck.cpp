@@ -61,8 +61,8 @@ void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (Loc.isInvalid() || Loc.isMacroID())
     return;
   DiagnosticBuilder Diag =
-      diag(Loc, "inital value in enum %0 has readability issue, "
-                "explicit initialization of all of enumerators")
+      diag(Loc, "inital values in enum %0 are not consistent, consider "
+                "explicit initialization first, all or none of enumerators")
       << Enum->getName();
   for (EnumConstantDecl const *ECD : Enum->enumerators())
     if (ECD->getInitExpr() == nullptr) {
