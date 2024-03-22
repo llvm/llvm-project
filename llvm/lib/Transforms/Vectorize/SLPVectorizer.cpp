@@ -308,20 +308,19 @@ static bool isCommutative(Instruction *I) {
     return BO->isCommutative() ||
            (BO->getOpcode() == Instruction::Sub &&
             !BO->hasNUsesOrMore(UsesLimit) &&
-            all_of(BO->uses(),
-                   [](const Use &U) {
-                     // Commutative, if icmp eq/ne sub, 0
-                     ICmpInst::Predicate Pred;
-                     if (match(U.getUser(),
-                               m_ICmp(Pred, m_Specific(U.get()), m_Zero())) &&
-                         (Pred == ICmpInst::ICMP_EQ ||
-                          Pred == ICmpInst::ICMP_NE))
-                       return true;
-                     // Commutative, if abs(sub, true).
-                     return match(U.getUser(),
-                                  m_Intrinsic<Intrinsic::abs>(
-                                      m_Specific(U.get()), m_One()));
-                   })) ||
+            all_of(
+                BO->uses(),
+                [](const Use &U) {
+                  // Commutative, if icmp eq/ne sub, 0
+                  ICmpInst::Predicate Pred;
+                  if (match(U.getUser(),
+                            m_ICmp(Pred, m_Specific(U.get()), m_Zero())) &&
+                      (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE))
+                    return true;
+                  // Commutative, if abs(sub, true).
+                  return match(U.getUser(), m_Intrinsic<Intrinsic::abs>(
+                                                m_Specific(U.get()), m_One()));
+                })) ||
            (BO->getOpcode() == Instruction::FSub &&
             !BO->hasNUsesOrMore(UsesLimit) &&
             all_of(BO->uses(), [](const Use &U) {
