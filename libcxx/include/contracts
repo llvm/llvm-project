@@ -38,7 +38,7 @@ public:
       enum detection_mode __mode,
       assertion_kind __kind,
       evaluation_semantic __semantic,
-      source_location __location = source_location::current())
+      source_location const& __location)
       : __comment_(__comment),
         __detection_mode_(__mode),
         __assertion_kind_(__kind),
@@ -77,6 +77,23 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_OVERRIDABLE_FUNC_VIS void handle_contract_violation(const std::contracts::contract_violation&) noexcept
     /* strenghtened */;
 
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace contracts {
+
+template <std::contracts::detection_mode _Mode,
+          std::contracts::assertion_kind _Kind,
+          std::contracts::evaluation_semantic _Semantic>
+_LIBCPP_HIDE_FROM_ABI __attribute__((__cold__)) inline void
+__handle_cv(char const* __message, std::source_location const& __location) {
+  std::contracts::contract_violation __cv(
+      ::std::contracts::__private_constructor_tag{}, __message, _Mode, _Kind, _Semantic, __location);
+
+  ::handle_contract_violation(__cv);
+}
+
+} // namespace contracts
+_LIBCPP_END_NAMESPACE_STD
+
 #define _LIBCPP_TRAP(expr, message)                                                                                    \
   _LIBCPP_ASSERTION_HANDLER(                                                                                           \
       __FILE__ ":" _LIBCPP_TOSTRING(__LINE__) ": assertion " _LIBCPP_TOSTRING(expr) " failed: " message "\n")
@@ -89,23 +106,17 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS void handle_contract_violation(const std::contracts
     try {                                                                                                              \
       __violation = !__builtin_expect(static_cast<bool>(expr), 1);                                                     \
     } catch (...) {                                                                                                    \
-      static constinit ::std::contracts::contract_violation __cv(                                                      \
-          ::std::contracts::__private_constructor_tag{},                                                               \
-          message,                                                                                                     \
-          ::std::contracts::detection_mode::evaluation_exception,                                                      \
-          kind,                                                                                                        \
-          ::std::contracts::evaluation_semantic::observe);                                                             \
-      ::handle_contract_violation(__cv);                                                                               \
+      ::std::contracts::__handle_cv<::std::contracts::detection_mode::evaluation_exception,                            \
+                                    kind,                                                                              \
+                                    ::std::contracts::evaluation_semantic::observe>(                                   \
+          message, ::std::source_location::current());                                                                 \
       _LIBCPP_TRAP(expr, message);                                                                                     \
     }                                                                                                                  \
     if (__violation) {                                                                                                 \
-      static constinit ::std::contracts::contract_violation __cv(                                                      \
-          ::std::contracts::__private_constructor_tag{},                                                               \
-          message,                                                                                                     \
-          ::std::contracts::detection_mode::predicate_false,                                                           \
-          kind,                                                                                                        \
-          ::std::contracts::evaluation_semantic::observe);                                                             \
-      ::handle_contract_violation(__cv);                                                                               \
+      ::std::contracts::__handle_cv<::std::contracts::detection_mode::predicate_false,                                 \
+                                    kind,                                                                              \
+                                    ::std::contracts::evaluation_semantic::observe>(                                   \
+          message, ::std::source_location::current());                                                                 \
     }                                                                                                                  \
   } while (false)
 
@@ -115,23 +126,17 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS void handle_contract_violation(const std::contracts
     try {                                                                                                              \
       __violation = !__builtin_expect(static_cast<bool>(expr), 1);                                                     \
     } catch (...) {                                                                                                    \
-      static constinit ::std::contracts::contract_violation __cv(                                                      \
-          ::std::contracts::__private_constructor_tag{},                                                               \
-          message,                                                                                                     \
-          ::std::contracts::detection_mode::evaluation_exception,                                                      \
-          kind,                                                                                                        \
-          ::std::contracts::evaluation_semantic::enforce);                                                             \
-      ::handle_contract_violation(__cv);                                                                               \
+      ::std::contracts::__handle_cv<::std::contracts::detection_mode::evaluation_exception,                            \
+                                    kind,                                                                              \
+                                    ::std::contracts::evaluation_semantic::enforce>(                                   \
+          message, ::std::source_location::current());                                                                 \
       _LIBCPP_TRAP(expr, message);                                                                                     \
     }                                                                                                                  \
     if (__violation) {                                                                                                 \
-      static constinit ::std::contracts::contract_violation __cv(                                                      \
-          ::std::contracts::__private_constructor_tag{},                                                               \
-          message,                                                                                                     \
-          ::std::contracts::detection_mode::predicate_false,                                                           \
-          kind,                                                                                                        \
-          ::std::contracts::evaluation_semantic::enforce);                                                             \
-      ::handle_contract_violation(__cv);                                                                               \
+      ::std::contracts::__handle_cv<::std::contracts::detection_mode::predicate_false,                                 \
+                                    kind,                                                                              \
+                                    ::std::contracts::evaluation_semantic::enforce>(                                   \
+          message, ::std::source_location::current());                                                                 \
       _LIBCPP_TRAP(expr, message);                                                                                     \
     }                                                                                                                  \
   } while (false)
