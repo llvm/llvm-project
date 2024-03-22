@@ -1517,7 +1517,7 @@ void kmp_handle_upper_triangle_matrix(
   kmp_uint64 iter_with_current = iter_before_current + iter_current;
   // calculate the outer loop lower bound (lbo) which is the max outer iv value
   // that gives the number of iterations that is equal or just below the total
-  // number of iterations executed by the previous threads,
+  // number of iterations executed by the previous threads:
   // lbo*(lbo+1)/2<=iter_before_current =>
   // lbo^2+lbo-2*iter_before_current<=0
   kmp_uint64 lower_bound_outer =

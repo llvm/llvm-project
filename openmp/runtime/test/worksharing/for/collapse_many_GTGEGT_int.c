@@ -14,16 +14,28 @@
 #define DLOOP_GE1
 #define DLOOP_GT2
 
-#define LOOP                                                                    \
-        for (i = iLB; i COMPARE0 iUB; i += iStep)                               \
-            for (j = jA0; j COMPARE1 jB0; j += jStep)                           \
-                for (k = kA0; k COMPARE2 kB0; k += kStep)
+#define LOOP                                                                   \
+  for (i = iLB; i COMPARE0 iUB; i += iStep)                                    \
+    for (j = jA0; j COMPARE1 jB0; j += jStep)                                  \
+      for (k = kA0; k COMPARE2 kB0; k += kStep)
 #include "collapse_test.inc"
 
 int main() {
   int fail;
 
-  iLB = 3; iUB = -2; jA0 = -3; jA1 = 0; jB0 = -6; jB1 = 0; kA0 = -2; kA1 = 0; kB0 = -4; kB1 = 0; iStep = -1; jStep = -1; kStep = -4;
+  iLB = 3;
+  iUB = -2;
+  jA0 = -3;
+  jA1 = 0;
+  jB0 = -6;
+  jB1 = 0;
+  kA0 = -2;
+  kA1 = 0;
+  kB0 = -4;
+  kB1 = 0;
+  iStep = -1;
+  jStep = -1;
+  kStep = -4;
   PRINTF("\nOne off iLB=%d; iUB=%d; jA0=%d; jA1=%d; jB0=%d; jB1=%d; kA0=%d; "
          "kA1=%d; kB0=%d; kB1=%d; iStep=%d; jStep=%d; kStep=%d;\n",
          iLB, iUB, jA0, jA1, jB0, jB1, kA0, kA1, kB0, kB1, iStep, jStep, kStep);
@@ -55,6 +67,5 @@ int main() {
     }
   }
 
-return fail;
+  return fail;
 }
-
