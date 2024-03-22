@@ -86,7 +86,7 @@ class BUF_Pseudo <string opName, dag outs, dag ins,
   bits<1> has_soffset = 1;
   bits<1> has_offset  = 1;
   bits<1> has_slc     = 1;
-  bits<1> tfe         = ?;
+  bits<1> tfe         = 0;
   bits<4> elements    = 0;
   bits<1> has_sccb    = 1;
   bits<1> sccb_value  = 0;
@@ -119,7 +119,6 @@ class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
-  let hasPostISelHook = 1;
 
   let VM_CNT = 1;
   let EXP_CNT = 1;
@@ -392,7 +391,6 @@ class MUBUF_Invalidate <string opName, SDPatternOperator node = null_frag> :
   let has_slc     = 0;
   let has_sccb    = 0;
   let sccb_value  = 0;
-  let tfe         = 0;
 }
 
 class getLdStVDataRegisterOperand<RegisterClass RC, bit isTFE> {
@@ -678,7 +676,6 @@ class MUBUF_Pseudo_Store_Lds<string opName>
   let has_vaddr = 0;
   let lds = 1;
   let VALU = 1;
-  let tfe = 0;
 
   let Uses = [EXEC, M0];
   let AsmMatchConverter = "cvtMubuf";
@@ -737,7 +734,6 @@ class MUBUF_Atomic_Pseudo<string opName,
   let has_glc = 0;
   let has_dlc = 0;
   let has_sccb = 1;
-  let tfe = 0;
   let AsmMatchConverter = "cvtMubufAtomic";
 }
 
