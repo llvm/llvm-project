@@ -2855,11 +2855,11 @@ static SDValue combineFixedwidthToAVGFLOOR(SDNode *N, SelectionDAG &DAG) {
                           m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
                                 m_SpecificInt(1))))) {
       return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
+    } else if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
+                                 m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
+                                       m_SpecificInt(1))))) {
+      return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
     }
-  } else if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
-                               m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
-                                     m_SpecificInt(1))))) {
-    return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
   }
   return SDValue();
 }
