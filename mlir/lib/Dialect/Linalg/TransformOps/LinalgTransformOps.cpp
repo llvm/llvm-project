@@ -3279,14 +3279,14 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
     return DiagnosedSilenceableFailure::success();
   }
 
-  // Attempt to flatten all dims to one
+  // Attempt to flatten all dims to one.
   ReassociationIndices reassociation(target.getNumLoops());
   std::iota(reassociation.begin(), reassociation.end(), 0);
   auto maybeFlattened =
       collapseOpIterationDims(target, reassociation, rewriter);
   if (failed(maybeFlattened))
     return mlir::emitSilenceableFailure(target->getLoc())
-           << "Attempted to flatten, but failed";
+           << "attempted to flatten, but failed";
   results.push_back(maybeFlattened->collapsedOp);
   rewriter.replaceOp(target, maybeFlattened->results);
   return DiagnosedSilenceableFailure::success();

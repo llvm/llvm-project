@@ -18,7 +18,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 func.func @unsupported_memref(%arg0: memref<32x7xf32, strided<[7, 2]>>, %arg1: memref<32x7xf32, strided<[7, 2]>>, %arg2: memref<32x7xf32, strided<[7, 2]>>) {
-  // expected-error @below {{Attempted to flatten, but failed}}
+  // expected-error @below {{attempted to flatten, but failed}}
     linalg.map {arith.addf} ins(%arg0, %arg1: memref<32x7xf32, strided<[7, 2]>>, memref<32x7xf32, strided<[7, 2]>>) outs(%arg2: memref<32x7xf32, strided<[7, 2]>>)
     return
 }
