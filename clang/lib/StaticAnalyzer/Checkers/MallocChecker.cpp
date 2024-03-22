@@ -1441,7 +1441,7 @@ void MallocChecker::preGetdelim(const CallEvent &Call,
     return;
 
   ProgramStateRef State = C.getState();
-  const auto LinePtr = getPointeeDefVal(Call.getArgSVal(0), State);
+  const auto LinePtr = getPointeeVal(Call.getArgSVal(0), State);
   if (!LinePtr)
     return;
 
@@ -1470,8 +1470,10 @@ void MallocChecker::checkGetdelim(const CallEvent &Call,
 
   SValBuilder &SVB = C.getSValBuilder();
 
-  const auto LinePtr = getPointeeDefVal(Call.getArgSVal(0), State);
-  const auto Size = getPointeeDefVal(Call.getArgSVal(1), State);
+  const auto LinePtr =
+      getPointeeVal(Call.getArgSVal(0), State)->getAs<DefinedSVal>();
+  const auto Size =
+      getPointeeVal(Call.getArgSVal(1), State)->getAs<DefinedSVal>();
   if (!LinePtr || !Size || !LinePtr->getAsRegion())
     return;
 
