@@ -80,6 +80,7 @@ def libc_function(
     """
     # We use the explicit equals pattern here because append and += mutate the
     # original list, where this creates a new list and stores it in deps.
+    copts = copts or []
     copts = copts + [
         "-O3",
         "-fno-builtin",
