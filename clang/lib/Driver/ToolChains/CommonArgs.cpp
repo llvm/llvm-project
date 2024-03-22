@@ -1142,7 +1142,11 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                     options::OPT_fno_rtlib_add_rpath, false))
     return;
 
-  for (const auto &CandidateRPath : TC.getArchSpecificLibPaths()) {
+  SmallVector<std::string> CandidateRPaths(TC.getArchSpecificLibPaths());
+  if (const auto CandidateRPath = TC.getStdlibPath())
+    CandidateRPaths.emplace_back(*CandidateRPath);
+
+  for (const auto &CandidateRPath : CandidateRPaths) {
     if (TC.getVFS().exists(CandidateRPath)) {
       CmdArgs.push_back("-rpath");
       CmdArgs.push_back(Args.MakeArgString(CandidateRPath));
