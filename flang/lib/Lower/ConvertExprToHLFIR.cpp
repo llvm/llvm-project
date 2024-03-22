@@ -284,7 +284,7 @@ private:
         // value of the Cray pointer variable.
         fir::FirOpBuilder &builder = getBuilder();
         fir::FortranVariableOpInterface ptrVar =
-            gen(Fortran::lower::getCrayPointer(symbolRef));
+            gen(Fortran::semantics::GetCrayPointer(symbolRef));
         mlir::Value ptrAddr = ptrVar.getBase();
 
         // Reinterpret the reference to a Cray pointer so that
@@ -306,7 +306,14 @@ private:
       }
       return *varDef;
     }
+    llvm::errs() << *symbolRef << "\n";
     TODO(getLoc(), "lowering symbol to HLFIR");
+  }
+
+  fir::FortranVariableOpInterface
+  gen(const Fortran::semantics::Symbol &symbol) {
+    Fortran::evaluate::SymbolRef symref{symbol};
+    return gen(symref);
   }
 
   fir::FortranVariableOpInterface
