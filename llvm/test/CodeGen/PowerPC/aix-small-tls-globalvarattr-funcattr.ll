@@ -45,20 +45,20 @@ define i64 @StoreLargeAccess1() #1 {
 ; CHECK-LARGECM64-NEXT:    std r4, (mySmallTLS3[TL]@le+20000)-131072(r13)
 ; CHECK-LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS)
-  %arrayidx = getelementptr inbounds i8, ptr %0, i32 53328
+  %tls0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS)
+  %arrayidx = getelementptr inbounds i8, ptr %tls0, i32 53328
   store i64 23, ptr %arrayidx, align 8
-  %1 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS2)
-  %arrayidx1 = getelementptr inbounds i8, ptr %1, i32 696
+  %tls1 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS2)
+  %arrayidx1 = getelementptr inbounds i8, ptr %tls1, i32 696
   store i64 55, ptr %arrayidx1, align 8
-  %2 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS3)
-  %arrayidx2 = getelementptr inbounds i8, ptr %2, i32 20000
+  %tls2 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS3)
+  %arrayidx2 = getelementptr inbounds i8, ptr %tls2, i32 20000
   store i64 64, ptr %arrayidx2, align 8
-  %3 = load i64, ptr %arrayidx, align 8
-  %4 = load i64, ptr %arrayidx1, align 8
-  %add = add i64 %3, 64
-  %add6 = add i64 %add, %4
-  ret i64 %add6
+  %load1 = load i64, ptr %arrayidx, align 8
+  %load2 = load i64, ptr %arrayidx1, align 8
+  %add1 = add i64 %load1, 64
+  %add2 = add i64 %add1, %load2
+  ret i64 %add2
 }
 
 ; Since this function does not have the 'aix-small-local-exec-tls` attribute,
@@ -101,20 +101,20 @@ define i64 @StoreLargeAccess2() {
 ; CHECK-LARGECM64-NEXT:    li r3, 142
 ; CHECK-LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS)
-  %arrayidx = getelementptr inbounds i8, ptr %0, i32 53328
+  %tls0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS)
+  %arrayidx = getelementptr inbounds i8, ptr %tls0, i32 53328
   store i64 23, ptr %arrayidx, align 8
-  %1 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS2)
-  %arrayidx1 = getelementptr inbounds i8, ptr %1, i32 696
+  %tls1 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS2)
+  %arrayidx1 = getelementptr inbounds i8, ptr %tls1, i32 696
   store i64 55, ptr %arrayidx1, align 8
-  %2 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS3)
-  %arrayidx2 = getelementptr inbounds i8, ptr %2, i32 20000
+  %tls2 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS3)
+  %arrayidx2 = getelementptr inbounds i8, ptr %tls2, i32 20000
   store i64 64, ptr %arrayidx2, align 8
-  %3 = load i64, ptr %arrayidx, align 8
-  %4 = load i64, ptr %arrayidx1, align 8
-  %add = add i64 %3, 64
-  %add6 = add i64 %add, %4
-  ret i64 %add6
+  %load1 = load i64, ptr %arrayidx, align 8
+  %load2 = load i64, ptr %arrayidx1, align 8
+  %add1 = add i64 %load1, 64
+  %add2 = add i64 %add1, %load2
+  ret i64 %add2
 }
 
 attributes #0 = { "aix-small-tls" }

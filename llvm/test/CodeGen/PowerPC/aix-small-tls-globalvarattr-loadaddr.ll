@@ -37,8 +37,8 @@ define nonnull ptr @AddrTest1() local_unnamed_addr {
 ; LARGECM64-NEXT:    addi r3, r13, a[TL]@le+1
 ; LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @a)
-  %arrayidx = getelementptr inbounds [87 x i8], ptr %0, i64 0, i64 1
+  %tls0 = tail call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @a)
+  %arrayidx = getelementptr inbounds [87 x i8], ptr %tls0, i64 0, i64 1
   ret ptr %arrayidx
 }
 
@@ -58,8 +58,8 @@ define nonnull ptr @AddrTest1_NoAttr() local_unnamed_addr {
 ; LARGECM64-NEXT:    addi r3, r3, 1
 ; LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @a_noattr)
-  %arrayidx = getelementptr inbounds [87 x i8], ptr %0, i64 0, i64 1
+  %tls0 = tail call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @a_noattr)
+  %arrayidx = getelementptr inbounds [87 x i8], ptr %tls0, i64 0, i64 1
   ret ptr %arrayidx
 }
 
@@ -74,8 +74,8 @@ define nonnull ptr @AddrTest2() local_unnamed_addr {
 ; LARGECM64-NEXT:    addi r3, r13, b[TL]@le+4
 ; LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 2 ptr @llvm.threadlocal.address.p0(ptr align 2 @b)
-  %arrayidx = getelementptr inbounds [87 x i16], ptr %0, i64 0, i64 2
+  %tls0 = tail call align 2 ptr @llvm.threadlocal.address.p0(ptr align 2 @b)
+  %arrayidx = getelementptr inbounds [87 x i16], ptr %tls0, i64 0, i64 2
   ret ptr %arrayidx
 }
 
@@ -95,8 +95,8 @@ define nonnull ptr @AddrTest2_NoAttr() local_unnamed_addr {
 ; LARGECM64-NEXT:    addi r3, r3, 4
 ; LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 2 ptr @llvm.threadlocal.address.p0(ptr align 2 @b_noattr)
-  %arrayidx = getelementptr inbounds [87 x i16], ptr %0, i64 0, i64 2
+  %tls0 = tail call align 2 ptr @llvm.threadlocal.address.p0(ptr align 2 @b_noattr)
+  %arrayidx = getelementptr inbounds [87 x i16], ptr %tls0, i64 0, i64 2
   ret ptr %arrayidx
 }
 
@@ -111,8 +111,8 @@ define nonnull ptr @AddrTest3() local_unnamed_addr {
 ; LARGECM64-NEXT:    addi r3, r13, c[TL]@le+12
 ; LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @c)
-  %arrayidx = getelementptr inbounds [87 x i32], ptr %0, i64 0, i64 3
+  %tls0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @c)
+  %arrayidx = getelementptr inbounds [87 x i32], ptr %tls0, i64 0, i64 3
   ret ptr %arrayidx
 }
 
@@ -132,8 +132,8 @@ define nonnull ptr @AddrTest3_NoAttr() local_unnamed_addr {
 ; LARGECM64-NEXT:    addi r3, r3, 12
 ; LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @c_noattr)
-  %arrayidx = getelementptr inbounds [87 x i32], ptr %0, i64 0, i64 3
+  %tls0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @c_noattr)
+  %arrayidx = getelementptr inbounds [87 x i32], ptr %tls0, i64 0, i64 3
   ret ptr %arrayidx
 }
 
@@ -148,8 +148,8 @@ define nonnull ptr @AddrTest4() local_unnamed_addr {
 ; LARGECM64-NEXT:    addi r3, r13, c[TL]@le+56
 ; LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @c)
-  %arrayidx = getelementptr inbounds [87 x i64], ptr %0, i64 0, i64 7
+  %tls0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @c)
+  %arrayidx = getelementptr inbounds [87 x i64], ptr %tls0, i64 0, i64 7
   ret ptr %arrayidx
 }
 
@@ -169,8 +169,8 @@ define nonnull ptr @AddrTest4_NoAttr() local_unnamed_addr {
 ; LARGECM64-NEXT:    addi r3, r3, 56
 ; LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @c_noattr)
-  %arrayidx = getelementptr inbounds [87 x i64], ptr %0, i64 0, i64 7
+  %tls0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @c_noattr)
+  %arrayidx = getelementptr inbounds [87 x i64], ptr %tls0, i64 0, i64 7
   ret ptr %arrayidx
 }
 
@@ -185,8 +185,8 @@ define nonnull ptr @AddrTest5() local_unnamed_addr {
 ; LARGECM64-NEXT:    addi r3, r13, e[TL]@le+48
 ; LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @e)
-  %arrayidx = getelementptr inbounds [87 x double], ptr %0, i64 0, i64 6
+  %tls0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @e)
+  %arrayidx = getelementptr inbounds [87 x double], ptr %tls0, i64 0, i64 6
   ret ptr %arrayidx
 }
 
@@ -206,8 +206,8 @@ define nonnull ptr @AddrTest5_NoAttr() local_unnamed_addr {
 ; LARGECM64-NEXT:    addi r3, r3, 48
 ; LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @e_noattr)
-  %arrayidx = getelementptr inbounds [87 x double], ptr %0, i64 0, i64 6
+  %tls0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @e_noattr)
+  %arrayidx = getelementptr inbounds [87 x double], ptr %tls0, i64 0, i64 6
   ret ptr %arrayidx
 }
 
@@ -222,8 +222,8 @@ define nonnull ptr @AddrTest6() local_unnamed_addr {
 ; LARGECM64-NEXT:    addi r3, r13, f[TL]@le+16
 ; LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @f)
-  %arrayidx = getelementptr inbounds [87 x float], ptr %0, i64 0, i64 4
+  %tls0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @f)
+  %arrayidx = getelementptr inbounds [87 x float], ptr %tls0, i64 0, i64 4
   ret ptr %arrayidx
 }
 
@@ -243,8 +243,8 @@ define nonnull ptr @AddrTest6_NoAttr() local_unnamed_addr {
 ; LARGECM64-NEXT:    addi r3, r3, 16
 ; LARGECM64-NEXT:    blr
 entry:
-  %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @f_noattr)
-  %arrayidx = getelementptr inbounds [87 x float], ptr %0, i64 0, i64 4
+  %tls0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @f_noattr)
+  %arrayidx = getelementptr inbounds [87 x float], ptr %tls0, i64 0, i64 4
   ret ptr %arrayidx
 }
 
