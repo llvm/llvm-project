@@ -4740,6 +4740,11 @@ static Instruction *foldICmpAndXX(ICmpInst &I, const SimplifyQuery &Q,
         return new ICmpInst(Pred, IC.Builder.CreateOr(A, NotOp1),
                             Constant::getAllOnesValue(Op1->getType()));
     // icmp (X & Y) eq/ne Y --> (~X & Y) eq/ne 0 if X  is freely invertible.
+    // Since we may be consuming a `not` here, first check if we match
+    // `foldICmpWithLowBitMaskedVal` as it is a "better" user of `not`
+    // instructions.
+    if (Value *R = foldICmpWithLowBitMaskedVal(Pred, Op0, Op1, Q, IC))
+      return IC.replaceInstUsesWith(I, R);
     if (auto *NotA = IC.getFreelyInverted(A, A->hasOneUse(), &IC.Builder))
       return new ICmpInst(Pred, IC.Builder.CreateAnd(Op1, NotA),
                           Constant::getNullValue(Op1->getType()));
