@@ -209,8 +209,9 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
     break;
   }
 
-  // Only 32-bit floating point atomic ops are supported.
-  if (AtomicRMWInst::isFPOperation(Op) && !I.getType()->isFloatTy()) {
+  // Only 32 and 64 bit floating point atomic ops are supported.
+  if (AtomicRMWInst::isFPOperation(Op) &&
+      !(I.getType()->isFloatTy() || I.getType()->isDoubleTy())) {
     return;
   }
 
@@ -920,8 +921,10 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     Value *BroadcastI = nullptr;
 
     if (TyBitWidth == 64) {
-      Value *const ExtractLo = B.CreateTrunc(PHI, Int32Ty);
-      Value *const ExtractHi = B.CreateTrunc(B.CreateLShr(PHI, 32), Int32Ty);
+      Value *CastedPhi = B.CreateBitCast(PHI, IntNTy);
+      Value *const ExtractLo = B.CreateTrunc(CastedPhi, Int32Ty);
+      Value *const ExtractHi =
+          B.CreateTrunc(B.CreateLShr(CastedPhi, 32), Int32Ty);
       CallInst *const ReadFirstLaneLo =
           B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractLo);
       CallInst *const ReadFirstLaneHi =
