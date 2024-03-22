@@ -414,6 +414,21 @@ struct FormatStyle {
   /// \version 17
   ShortCaseStatementsAlignmentStyle AlignConsecutiveShortCaseStatements;
 
+  /// Style of aligning consecutive TableGen DAGArg operator colons.
+  /// If enabled, align the colon inside DAGArg which have line break inside.
+  /// This works only when TableGenBreakInsideDAGArg is BreakElements or
+  /// BreakAll and the DAGArg is not excepted by
+  /// TableGenBreakingDAGArgOperators's effect.
+  /// \code
+  ///   let dagarg = (ins
+  ///       a  :$src1,
+  ///       aa :$src2,
+  ///       aaa:$src3
+  ///   )
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenBreakingDAGArgColons;
+
   /// Style of aligning consecutive TableGen cond operator colons.
   /// Align the colons of cases inside !cond operators.
   /// \code
@@ -4879,6 +4894,8 @@ struct FormatStyle {
            AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
            AlignConsecutiveShortCaseStatements ==
                R.AlignConsecutiveShortCaseStatements &&
+           AlignConsecutiveTableGenBreakingDAGArgColons ==
+               R.AlignConsecutiveTableGenBreakingDAGArgColons &&
            AlignConsecutiveTableGenCondOperatorColons ==
                R.AlignConsecutiveTableGenCondOperatorColons &&
            AlignConsecutiveTableGenDefinitionColons ==

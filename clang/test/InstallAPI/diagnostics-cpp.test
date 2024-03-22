@@ -12,8 +12,8 @@
 // RUN: --verify-mode=Pedantic -o %t/output.tbd --demangle 2> %t/errors.log
 // RUN: FileCheck -input-file %t/errors.log %s 
 
-CHECK: warning: violations found for arm64-apple-macos13
-CHECK: CPP.h:5:7: error: declaration has external linkage, but symbol has internal linkage in dynamic library 'vtable for Bar'
+CHECK:      warning: violations found for arm64-apple-macos13
+CHECK:      CPP.h:5:7: error: declaration has external linkage, but symbol has internal linkage in dynamic library 'vtable for Bar'
 CHECK-NEXT: class Bar : Foo {
 CHECK-NEXT:       ^
 CHECK-NEXT: CPP.h:5:7: error: declaration has external linkage, but symbol has internal linkage in dynamic library 'typeinfo for Bar'
@@ -21,6 +21,8 @@ CHECK-NEXT: CPP.h:5:7: error: declaration has external linkage, but symbol has i
 CHECK-NEXT: CPP.h:6:7: error: dynamic library symbol '(weak-def) Bar::init()' is weak defined, but its declaration is not
 CHECK-NEXT:   int init();
 CHECK-NEXT:       ^
+CHECK-NEXT: warning: violations found for arm64
+CHECK-NEXT: error: no declaration found for exported symbol 'int foo<unsigned int>(unsigned int)' in dynamic library
 
 //--- inputs.json.in
 {

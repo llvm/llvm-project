@@ -115,7 +115,7 @@ ValueTypeByHwMode llvm::getValueTypeByHwMode(Record *Rec,
   return ValueTypeByHwMode(Rec, llvm::getValueType(Rec));
 }
 
-RegSizeInfo::RegSizeInfo(Record *R, const CodeGenHwModes &CGH) {
+RegSizeInfo::RegSizeInfo(Record *R) {
   RegSize = R->getValueAsInt("RegSize");
   SpillSize = R->getValueAsInt("SpillSize");
   SpillAlignment = R->getValueAsInt("SpillAlignment");
@@ -139,7 +139,7 @@ void RegSizeInfo::writeToStream(raw_ostream &OS) const {
 RegSizeInfoByHwMode::RegSizeInfoByHwMode(Record *R, const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.insert({P.first, RegSizeInfo(P.second, CGH)});
+    auto I = Map.insert({P.first, RegSizeInfo(P.second)});
     assert(I.second && "Duplicate entry?");
     (void)I;
   }

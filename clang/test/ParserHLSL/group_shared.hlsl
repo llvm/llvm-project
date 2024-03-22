@@ -3,8 +3,8 @@ extern groupshared float f;
 extern float groupshared f; // Ok, redeclaration?
 
 
-// NOTE:lambda is not enabled except for hlsl202x.
-// expected-error@+2 {{expected expression}}
+// expected-warning@+3 {{lambdas are a C++11 extension}}
+// expected-error@+2   {{expected body of lambda expression}}
 // expected-warning@+1 {{'auto' type specifier is a C++11 extension}}
 auto l = []() groupshared  {};
 

@@ -104,7 +104,7 @@ static cl::opt<bool> ExpandConstantExprs(
 /// of debug intrinsics). UNSET is treated as FALSE, so the default action
 /// is to do nothing. Individual tools can override this to incrementally add
 /// support for the RemoveDIs format.
-cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInforFormat(
+cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat(
     "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden,
     cl::desc("Load bitcode directly into the new debug info format (regardless "
              "of input format)"));
@@ -4300,11 +4300,11 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
                                  ParserCallbacks Callbacks) {
-  // Load directly into RemoveDIs format if LoadBitcodeIntoNewDbgInforFormat
+  // Load directly into RemoveDIs format if LoadBitcodeIntoNewDbgInfoFormat
   // has been set to true (default action: load into the old debug format).
   TheModule->IsNewDbgInfoFormat =
       UseNewDbgInfoFormat &&
-      LoadBitcodeIntoNewDbgInforFormat == cl::boolOrDefault::BOU_TRUE;
+      LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_TRUE;
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
   if (ResumeBit) {
@@ -6426,14 +6426,15 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
     case bitc::FUNC_CODE_DEBUG_RECORD_LABEL: {
-      // DPLabels are placed after the Instructions that they are attached to.
+      // DbgLabelRecords are placed after the Instructions that they are
+      // attached to.
       Instruction *Inst = getLastInstruction();
       if (!Inst)
         return error("Invalid dbg record: missing instruction");
       DILocation *DIL = cast<DILocation>(getFnMetadataByID(Record[0]));
       DILabel *Label = cast<DILabel>(getFnMetadataByID(Record[1]));
       Inst->getParent()->insertDbgRecordBefore(
-          new DPLabel(Label, DebugLoc(DIL)), Inst->getIterator());
+          new DbgLabelRecord(Label, DebugLoc(DIL)), Inst->getIterator());
       continue; // This isn't an instruction.
     }
     case bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE:
