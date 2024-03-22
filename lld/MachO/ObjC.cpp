@@ -790,7 +790,7 @@ void ObjcCategoryMerger::emitAndLinkProtocolList(
       infoCategoryWriter.catPtrListInfo.align);
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
   listSec->live = true;
-  addInputSection(listSec);
+  allInputSections.push_back(listSec);
 
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
@@ -848,7 +848,7 @@ void ObjcCategoryMerger::emitAndLinkPointerList(
       infoCategoryWriter.catPtrListInfo.align);
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
   listSec->live = true;
-  addInputSection(listSec);
+  allInputSections.push_back(listSec);
 
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
@@ -889,7 +889,7 @@ ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCateogryName,
                                bodyData, infoCategoryWriter.catListInfo.align);
   newCatList->parent = infoCategoryWriter.catListInfo.outputSection;
   newCatList->live = true;
-  addInputSection(newCatList);
+  allInputSections.push_back(newCatList);
 
   newCatList->parent = infoCategoryWriter.catListInfo.outputSection;
 
@@ -927,7 +927,7 @@ Defined *ObjcCategoryMerger::emitCategoryBody(const std::string &name,
                                bodyData, infoCategoryWriter.catBodyInfo.align);
   newBodySec->parent = infoCategoryWriter.catBodyInfo.outputSection;
   newBodySec->live = true;
-  addInputSection(newBodySec);
+  allInputSections.push_back(newBodySec);
 
   std::string symName =
       objc::symbol_names::category + baseClassName + "_$_(" + name + ")";
@@ -1132,7 +1132,7 @@ void ObjcCategoryMerger::generateCatListForNonErasedCategories(
           infoCategoryWriter.catListInfo.align);
       listSec->parent = infoCategoryWriter.catListInfo.outputSection;
       listSec->live = true;
-      addInputSection(listSec);
+      allInputSections.push_back(listSec);
 
       std::string slotSymName = "<__objc_catlist slot for category ";
       slotSymName += nonErasedCatBody->getName();
@@ -1221,11 +1221,9 @@ void ObjcCategoryMerger::doCleanup() { generatedSectionData.clear(); }
 
 StringRef ObjcCategoryMerger::newStringData(const char *str) {
   uint32_t len = strlen(str);
-  uint32_t bufSize = len + 1;
-  auto &data = newSectionData(bufSize);
+  auto &data = newSectionData(len + 1);
   char *strData = reinterpret_cast<char *>(data.data());
-  // Copy the string chars and null-terminator
-  memcpy(strData, str, bufSize);
+  strncpy(strData, str, len);
   return StringRef(strData, len);
 }
 
