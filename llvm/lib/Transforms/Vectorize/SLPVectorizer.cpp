@@ -12526,7 +12526,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         }
         ScalarArg = CEI->getArgOperand(I);
         if (cast<VectorType>(OpVec->getType())->getElementType() !=
-            ScalarArg->getType() && It == MinBWs.end()) {
+                ScalarArg->getType() &&
+            It == MinBWs.end()) {
           auto *CastTy = FixedVectorType::get(ScalarArg->getType(),
                                               VecTy->getNumElements());
           OpVec = Builder.CreateIntCast(OpVec, CastTy, GetOperandSignedness(I));
