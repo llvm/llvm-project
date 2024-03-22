@@ -21,14 +21,16 @@ def run(f):
     assert Context._get_live_count() == 0
 
 
-# Verify capsule interop.
-# CHECK-LABEL: TEST: testCapsule
-def testCapsule():
+# Verify capsule interop for passing an Operation.
+# CHECK-LABEL: TEST: testAcceptsOperation
+def testAcceptsOperation():
     with Context():
-        module = Module.parse(
+        module = Operation.parse(
             r"""
+builtin.module {
 llvm.func @none() {
-  llvm.return
+llvm.return
+}
 }
     """
         )
@@ -42,7 +44,34 @@ llvm.func @none() {
         log(repr(execution_engine1))
 
 
-run(testCapsule)
+run(testAcceptsOperation)
+
+
+# Verify capsule interop for passing a Module.
+# CHECK-LABEL: TEST: testAcceptsModule
+def testAcceptsModule():
+    with Context():
+        module = Module.parse(
+            r"""
+builtin.module {
+llvm.func @none() {
+llvm.return
+}
+}
+    """
+        )
+        print("MODULE:", type(module))
+        execution_engine = ExecutionEngine(module)
+        execution_engine_capsule = execution_engine._CAPIPtr
+        # CHECK: mlir.execution_engine.ExecutionEngine._CAPIPtr
+        log(repr(execution_engine_capsule))
+        execution_engine._testing_release()
+        execution_engine1 = ExecutionEngine._CAPICreate(execution_engine_capsule)
+        # CHECK: _mlirExecutionEngine.ExecutionEngine
+        log(repr(execution_engine1))
+
+
+run(testAcceptsModule)
 
 
 # Test invalid ExecutionEngine creation
@@ -50,9 +79,11 @@ run(testCapsule)
 def testInvalidModule():
     with Context():
         # Builtin function
-        module = Module.parse(
+        module = Operation.parse(
             r"""
+    builtin.module {
     func.func @foo() { return }
+    }
     """
         )
         # CHECK: Got RuntimeError:  Failure while creating the ExecutionEngine.
@@ -69,7 +100,7 @@ def lowerToLLVM(module):
     pm = PassManager.parse(
         "builtin.module(convert-complex-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)"
     )
-    pm.run(module.operation)
+    pm.run(module)
     return module
 
 
@@ -77,10 +108,12 @@ def lowerToLLVM(module):
 # CHECK-LABEL: TEST: testInvokeVoid
 def testInvokeVoid():
     with Context():
-        module = Module.parse(
+        module = Operation.parse(
             r"""
+builtin.module {
 func.func @void() attributes { llvm.emit_c_interface } {
   return
+}
 }
     """
         )
@@ -96,11 +129,13 @@ run(testInvokeVoid)
 # CHECK-LABEL: TEST: testInvokeFloatAdd
 def testInvokeFloatAdd():
     with Context():
-        module = Module.parse(
+        module = Operation.parse(
             r"""
+builtin.module {
 func.func @add(%arg0: f32, %arg1: f32) -> f32 attributes { llvm.emit_c_interface } {
   %add = arith.addf %arg0, %arg1 : f32
   return %add : f32
+}
 }
     """
         )
@@ -129,13 +164,15 @@ def testBasicCallback():
 
     with Context():
         # The module just forwards to a runtime function known as "some_callback_into_python".
-        module = Module.parse(
+        module = Operation.parse(
             r"""
+builtin.module {
 func.func @add(%arg0: f32, %arg1: i32) -> f32 attributes { llvm.emit_c_interface } {
   %resf = call @some_callback_into_python(%arg0, %arg1) : (f32, i32) -> (f32)
   return %resf : f32
 }
 func.func private @some_callback_into_python(f32, i32) -> f32 attributes { llvm.emit_c_interface }
+}
     """
         )
         execution_engine = ExecutionEngine(lowerToLLVM(module))
@@ -168,13 +205,15 @@ def testUnrankedMemRefCallback():
 
     with Context():
         # The module just forwards to a runtime function known as "some_callback_into_python".
-        module = Module.parse(
+        module = Operation.parse(
             r"""
+builtin.module {
 func.func @callback_memref(%arg0: memref<*xf32>) attributes { llvm.emit_c_interface } {
   call @some_callback_into_python(%arg0) : (memref<*xf32>) -> ()
   return
 }
 func.func private @some_callback_into_python(memref<*xf32>) -> () attributes { llvm.emit_c_interface }
+}
 """
         )
         execution_engine = ExecutionEngine(lowerToLLVM(module))
@@ -221,13 +260,15 @@ def testRankedMemRefCallback():
 
     with Context():
         # The module just forwards to a runtime function known as "some_callback_into_python".
-        module = Module.parse(
+        module = Operation.parse(
             r"""
+builtin.module {
 func.func @callback_memref(%arg0: memref<2x2xf32>) attributes { llvm.emit_c_interface } {
   call @some_callback_into_python(%arg0) : (memref<2x2xf32>) -> ()
   return
 }
 func.func private @some_callback_into_python(memref<2x2xf32>) -> () attributes { llvm.emit_c_interface }
+}
 """
         )
         execution_engine = ExecutionEngine(lowerToLLVM(module))
@@ -262,8 +303,9 @@ def testRankedMemRefWithOffsetCallback():
 
     with Context():
         # The module takes a subview of the argument memref and calls the callback with it
-        module = Module.parse(
+        module = Operation.parse(
             r"""
+builtin.module {
 func.func @callback_memref(%arg0: memref<5xf32>) attributes {llvm.emit_c_interface} {
   %base_buffer, %offset, %sizes, %strides = memref.extract_strided_metadata %arg0 : memref<5xf32> -> memref<f32>, index, index, index
   %reinterpret_cast = memref.reinterpret_cast %base_buffer to offset: [3], sizes: [2], strides: [1] : memref<f32> to memref<2xf32, strided<[1], offset: 3>>
@@ -272,6 +314,7 @@ func.func @callback_memref(%arg0: memref<5xf32>) attributes {llvm.emit_c_interfa
   return
 }
 func.func private @some_callback_into_python(memref<?xf32, strided<[?], offset: ?>>) attributes {llvm.emit_c_interface}
+}
 """
         )
         execution_engine = ExecutionEngine(lowerToLLVM(module))
@@ -301,8 +344,9 @@ def testUnrankedMemRefWithOffsetCallback():
     with Context():
         # The module takes a subview of the argument memref, casts it to an unranked memref and 
         # calls the callback with it.
-        module = Module.parse(
+        module = Operation.parse(
             r"""
+builtin.module {
 func.func @callback_memref(%arg0: memref<5xf32>) attributes {llvm.emit_c_interface} {
     %base_buffer, %offset, %sizes, %strides = memref.extract_strided_metadata %arg0 : memref<5xf32> -> memref<f32>, index, index, index
     %reinterpret_cast = memref.reinterpret_cast %base_buffer to offset: [3], sizes: [2], strides: [1] : memref<f32> to memref<2xf32, strided<[1], offset: 3>>
@@ -311,6 +355,7 @@ func.func @callback_memref(%arg0: memref<5xf32>) attributes {llvm.emit_c_interfa
     return
 }
 func.func private @some_callback_into_python(memref<*xf32>) attributes {llvm.emit_c_interface}
+}
 """
         )
         execution_engine = ExecutionEngine(lowerToLLVM(module))
@@ -330,9 +375,9 @@ run(testUnrankedMemRefWithOffsetCallback)
 # CHECK-LABEL: TEST: testMemrefAdd
 def testMemrefAdd():
     with Context():
-        module = Module.parse(
+        module = Operation.parse(
             """
-    module  {
+    builtin.module  {
       func.func @main(%arg0: memref<1xf32>, %arg1: memref<f32>, %arg2: memref<1xf32>) attributes { llvm.emit_c_interface } {
         %0 = arith.constant 0 : index
         %1 = memref.load %arg0[%0] : memref<1xf32>
@@ -372,9 +417,9 @@ run(testMemrefAdd)
 # CHECK-LABEL: TEST: testF16MemrefAdd
 def testF16MemrefAdd():
     with Context():
-        module = Module.parse(
+        module = Operation.parse(
             """
-    module  {
+    builtin.module  {
       func.func @main(%arg0: memref<1xf16>,
                       %arg1: memref<1xf16>,
                       %arg2: memref<1xf16>) attributes { llvm.emit_c_interface } {
@@ -422,9 +467,9 @@ run(testF16MemrefAdd)
 # CHECK-LABEL: TEST: testComplexMemrefAdd
 def testComplexMemrefAdd():
     with Context():
-        module = Module.parse(
+        module = Operation.parse(
             """
-    module  {
+    builtin.module  {
       func.func @main(%arg0: memref<1xcomplex<f64>>,
                       %arg1: memref<1xcomplex<f64>>,
                       %arg2: memref<1xcomplex<f64>>) attributes { llvm.emit_c_interface } {
@@ -472,9 +517,9 @@ run(testComplexMemrefAdd)
 # CHECK-LABEL: TEST: testComplexUnrankedMemrefAdd
 def testComplexUnrankedMemrefAdd():
     with Context():
-        module = Module.parse(
+        module = Operation.parse(
             """
-    module  {
+    builtin.module  {
       func.func @main(%arg0: memref<*xcomplex<f32>>,
                       %arg1: memref<*xcomplex<f32>>,
                       %arg2: memref<*xcomplex<f32>>) attributes { llvm.emit_c_interface } {
@@ -525,9 +570,9 @@ run(testComplexUnrankedMemrefAdd)
 # CHECK-LABEL: TEST: testDynamicMemrefAdd2D
 def testDynamicMemrefAdd2D():
     with Context():
-        module = Module.parse(
+        module = Operation.parse(
             """
-      module  {
+      builtin.module  {
         func.func @memref_add_2d(%arg0: memref<2x2xf32>, %arg1: memref<?x?xf32>, %arg2: memref<2x2xf32>) attributes {llvm.emit_c_interface} {
           %c0 = arith.constant 0 : index
           %c2 = arith.constant 2 : index
@@ -589,9 +634,9 @@ run(testDynamicMemrefAdd2D)
 # CHECK-LABEL: TEST: testSharedLibLoad
 def testSharedLibLoad():
     with Context():
-        module = Module.parse(
+        module = Operation.parse(
             """
-      module  {
+      builtin.module  {
       func.func @main(%arg0: memref<1xf32>) attributes { llvm.emit_c_interface } {
         %c0 = arith.constant 0 : index
         %cst42 = arith.constant 42.0 : f32
@@ -640,9 +685,9 @@ run(testSharedLibLoad)
 # CHECK-LABEL: TEST: testNanoTime
 def testNanoTime():
     with Context():
-        module = Module.parse(
+        module = Operation.parse(
             """
-      module {
+      builtin.module {
       func.func @main() attributes { llvm.emit_c_interface } {
         %now = call @nanoTime() : () -> i64
         %memref = memref.alloca() : memref<1xi64>
@@ -686,9 +731,9 @@ def testDumpToObjectFile():
 
     try:
         with Context():
-            module = Module.parse(
+            module = Operation.parse(
                 """
-        module {
+        builtin.module {
         func.func @main() attributes { llvm.emit_c_interface } {
           return
         }
