@@ -11,16 +11,17 @@
 // allocator:
 // T* allocate(size_t n, const void* hint);
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
+// Removed in C++20, deprecated in C++17.
+
+// REQUIRES: c++03 || c++11 || c++14 || c++17
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <memory>
 #include <cassert>
-#include <cstddef>       // for std::max_align_t
+#include <cstddef> // for std::max_align_t
 
 #include "test_macros.h"
 #include "count_new.h"
-
 
 #ifdef TEST_HAS_NO_ALIGNED_ALLOCATION
 static const bool UsingAlignedNew = false;
@@ -36,7 +37,6 @@ static const std::size_t MaxAligned = std::alignment_of<std::max_align_t>::value
 
 static const std::size_t OverAligned = MaxAligned * 2;
 
-
 template <std::size_t Align>
 struct TEST_ALIGNAS(Align) AlignedType {
   char data;
@@ -48,7 +48,6 @@ struct TEST_ALIGNAS(Align) AlignedType {
 template <std::size_t Align>
 int AlignedType<Align>::constructed = 0;
 
-
 template <std::size_t Align>
 void test_aligned() {
   typedef AlignedType<Align> T;
@@ -56,11 +55,11 @@ void test_aligned() {
   globalMemCounter.reset();
   std::allocator<T> a;
   const bool IsOverAlignedType = Align > MaxAligned;
-  const bool ExpectAligned = IsOverAlignedType && UsingAlignedNew;
+  const bool ExpectAligned     = IsOverAlignedType && UsingAlignedNew;
   {
-    globalMemCounter.last_new_size = 0;
+    globalMemCounter.last_new_size  = 0;
     globalMemCounter.last_new_align = 0;
-    T* ap2 = a.allocate(11, (const void*)5);
+    T* ap2                          = a.allocate(11, (const void*)5);
     DoNotOptimize(ap2);
     assert(globalMemCounter.checkOutstandingNewEq(1));
     assert(globalMemCounter.checkNewCalledEq(1));
@@ -80,14 +79,14 @@ void test_aligned() {
 }
 
 int main(int, char**) {
-    test_aligned<1>();
-    test_aligned<2>();
-    test_aligned<4>();
-    test_aligned<8>();
-    test_aligned<16>();
-    test_aligned<MaxAligned>();
-    test_aligned<OverAligned>();
-    test_aligned<OverAligned * 2>();
+  test_aligned<1>();
+  test_aligned<2>();
+  test_aligned<4>();
+  test_aligned<8>();
+  test_aligned<16>();
+  test_aligned<MaxAligned>();
+  test_aligned<OverAligned>();
+  test_aligned<OverAligned * 2>();
 
   return 0;
 }
