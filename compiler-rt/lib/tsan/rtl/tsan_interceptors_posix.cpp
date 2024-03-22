@@ -2169,8 +2169,7 @@ static bool is_sync_signal(ThreadSignalContext *sctx, int sig,
     return false;
 #endif
   return sig == SIGSEGV || sig == SIGBUS || sig == SIGILL || sig == SIGTRAP ||
-         sig == SIGABRT || sig == SIGFPE || sig == SIGPIPE || sig == SIGSYS ||
-         sig == SIGPROF;
+         sig == SIGABRT || sig == SIGFPE || sig == SIGPIPE || sig == SIGSYS;
 }
 
 void sighandler(int sig, __sanitizer_siginfo *info, void *ctx) {
@@ -2181,7 +2180,8 @@ void sighandler(int sig, __sanitizer_siginfo *info, void *ctx) {
     return;
   }
   // Don't mess with synchronous signals.
-  const bool sync = is_sync_signal(sctx, sig, info);
+  const bool sync = is_sync_signal(sctx, sig, info) ||
+                    (sig == SIGPROF && thr->is_inited && !thr->is_dead);
   if (sync ||
       // If we are in blocking function, we can safely process it now
       // (but check if we are in a recursive interceptor,
