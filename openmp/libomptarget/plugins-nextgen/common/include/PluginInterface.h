@@ -49,7 +49,7 @@ namespace llvm {
 namespace omp {
 namespace target {
 
-namespace plugin {
+namespace PLUGIN {
 
 struct GenericPluginTy;
 struct GenericKernelTy;
@@ -1395,7 +1395,7 @@ protected:
 /// A static check on whether or not we support RPC in libomptarget.
 bool libomptargetSupportsRPC();
 
-} // namespace plugin
+} // namespace PLUGIN
 } // namespace target
 } // namespace omp
 } // namespace llvm

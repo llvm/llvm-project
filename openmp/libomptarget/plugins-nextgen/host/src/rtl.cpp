@@ -46,7 +46,7 @@
 namespace llvm {
 namespace omp {
 namespace target {
-namespace plugin {
+namespace PLUGIN {
 
 /// Forward declarations for all specialized data structures.
 struct GenELF64KernelTy;
@@ -434,7 +434,7 @@ Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
       inconvertibleErrorCode(), ErrMsg, Args..., std::to_string(Code).data());
 }
 
-} // namespace plugin
+} // namespace PLUGIN
 } // namespace target
 } // namespace omp
 } // namespace llvm

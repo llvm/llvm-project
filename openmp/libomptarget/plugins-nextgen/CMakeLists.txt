@@ -12,7 +12,7 @@
 
 # Common interface to handle creating a plugin library.
 set(common_dir ${CMAKE_CURRENT_SOURCE_DIR}/common)
-function(add_target_library target_name lib_name)
+function(add_target_library target_name lib_name plugin_target)
   llvm_map_components_to_libnames(llvm_libs
     ${LLVM_TARGETS_TO_BUILD}
     AggressiveInstCombine
@@ -77,6 +77,7 @@ function(add_target_library target_name lib_name)
     target_compile_definitions(${target_name} PRIVATE "LIBOMPTARGET_JIT_${Target}")
   endforeach()
 
+  target_compile_definitions(${target_name} PRIVATE PLUGIN=${plugin_target})
   target_compile_definitions(${target_name} PRIVATE TARGET_NAME=${lib_name})
   target_compile_definitions(${target_name} PRIVATE 
                              DEBUG_PREFIX="TARGET ${lib_name} RTL")

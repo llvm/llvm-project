@@ -26,7 +26,7 @@
 namespace llvm {
 namespace omp {
 namespace target {
-namespace plugin {
+namespace PLUGIN {
 
 class DeviceImageTy;
 struct GenericDeviceTy;
@@ -166,7 +166,7 @@ public:
   }
 };
 
-} // namespace plugin
+} // namespace PLUGIN
 } // namespace target
 } // namespace omp
 } // namespace llvm

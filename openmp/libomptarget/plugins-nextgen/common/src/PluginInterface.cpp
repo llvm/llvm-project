@@ -37,7 +37,7 @@
 using namespace llvm;
 using namespace omp;
 using namespace target;
-using namespace plugin;
+using namespace PLUGIN;
 
 GenericPluginTy *Plugin::SpecificPlugin = nullptr;
 
@@ -1565,7 +1565,7 @@ Expected<bool> GenericPluginTy::checkELFImage(StringRef Image) const {
   return isELFCompatible(Image);
 }
 
-bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
+bool llvm::omp::target::PLUGIN::libomptargetSupportsRPC() {
 #ifdef LIBOMPTARGET_RPC_SUPPORT
   return true;
 #else

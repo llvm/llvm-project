@@ -34,9 +34,9 @@ class MemoryBuffer;
 
 namespace omp {
 namespace target {
-namespace plugin {
+namespace PLUGIN {
 struct GenericDeviceTy;
-} // namespace plugin
+} // namespace PLUGIN
 
 /// The JIT infrastructure and caching mechanism.
 struct JITEngine {
@@ -53,7 +53,7 @@ struct JITEngine {
   /// generated device image that could be loaded to the device directly.
   Expected<const __tgt_device_image *>
   process(const __tgt_device_image &Image,
-          target::plugin::GenericDeviceTy &Device);
+          target::PLUGIN::GenericDeviceTy &Device);
 
   /// Return true if \p Image is a bitcode image that can be JITed for the given
   /// architecture.

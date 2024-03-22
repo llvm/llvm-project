@@ -23,7 +23,7 @@
 using namespace llvm;
 using namespace omp;
 using namespace target;
-using namespace plugin;
+using namespace PLUGIN;
 
 Expected<std::unique_ptr<ObjectFile>>
 GenericGlobalHandlerTy::getELFObjectFile(DeviceImageTy &Image) {

@@ -32,7 +32,7 @@ using namespace llvm::ELF;
 namespace llvm {
 namespace omp {
 namespace target {
-namespace plugin {
+namespace PLUGIN {
 namespace utils {
 
 // The implicit arguments of COV5 AMDGPU kernels.
@@ -311,7 +311,7 @@ readAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
 }
 
 } // namespace utils
-} // namespace plugin
+} // namespace PLUGIN
 } // namespace target
 } // namespace omp
 } // namespace llvm

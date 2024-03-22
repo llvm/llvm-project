@@ -14,7 +14,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64le$")
 endif()
 
 # Create the library and add the default arguments.
-add_target_library(omptarget.rtl.${machine} ${machine})
+add_target_library(omptarget.rtl.${machine} ${machine}  host)
 
 target_sources(omptarget.rtl.${machine} PRIVATE src/rtl.cpp)
 

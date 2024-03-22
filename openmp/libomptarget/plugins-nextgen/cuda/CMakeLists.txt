@@ -24,7 +24,7 @@ endif()
 libomptarget_say("Building CUDA NextGen offloading plugin.")
 
 # Create the library and add the default arguments.
-add_target_library(omptarget.rtl.cuda CUDA)
+add_target_library(omptarget.rtl.cuda CUDA cuda)
 
 target_sources(omptarget.rtl.cuda PRIVATE src/rtl.cpp)
 

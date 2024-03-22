@@ -316,7 +316,7 @@ JITEngine::compile(const __tgt_device_image &Image,
 
 Expected<const __tgt_device_image *>
 JITEngine::process(const __tgt_device_image &Image,
-                   target::plugin::GenericDeviceTy &Device) {
+                   target::PLUGIN::GenericDeviceTy &Device) {
   const std::string &ComputeUnitKind = Device.getComputeUnitKind();
 
   PostProcessingFn PostProcessing = [&Device](std::unique_ptr<MemoryBuffer> MB)

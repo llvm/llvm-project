@@ -21,11 +21,11 @@
 #include <cstdint>
 
 namespace llvm::omp::target {
-namespace plugin {
+namespace PLUGIN {
 struct GenericDeviceTy;
 class GenericGlobalHandlerTy;
 class DeviceImageTy;
-} // namespace plugin
+} // namespace PLUGIN
 
 /// A generic class implementing the interface between the RPC server provided
 /// by the 'libc' project and 'libomptarget'. If the RPC server is not availible
@@ -37,24 +37,24 @@ public:
   /// Check if this device image is using an RPC server. This checks for the
   /// precense of an externally visible symbol in the device image that will
   /// be present whenever RPC code is called.
-  llvm::Expected<bool> isDeviceUsingRPC(plugin::GenericDeviceTy &Device,
-                                        plugin::GenericGlobalHandlerTy &Handler,
-                                        plugin::DeviceImageTy &Image);
+  llvm::Expected<bool> isDeviceUsingRPC(PLUGIN::GenericDeviceTy &Device,
+                                        PLUGIN::GenericGlobalHandlerTy &Handler,
+                                        PLUGIN::DeviceImageTy &Image);
 
   /// Initialize the RPC server for the given device. This will allocate host
   /// memory for the internal server and copy the data to the client on the
   /// device. The device must be loaded before this is valid.
-  llvm::Error initDevice(plugin::GenericDeviceTy &Device,
-                         plugin::GenericGlobalHandlerTy &Handler,
-                         plugin::DeviceImageTy &Image);
+  llvm::Error initDevice(PLUGIN::GenericDeviceTy &Device,
+                         PLUGIN::GenericGlobalHandlerTy &Handler,
+                         PLUGIN::DeviceImageTy &Image);
 
   /// Runs the RPC server associated with the \p Device until the pending work
   /// is cleared.
-  llvm::Error runServer(plugin::GenericDeviceTy &Device);
+  llvm::Error runServer(PLUGIN::GenericDeviceTy &Device);
 
   /// Deinitialize the RPC server for the given device. This will free the
   /// memory associated with the k
-  llvm::Error deinitDevice(plugin::GenericDeviceTy &Device);
+  llvm::Error deinitDevice(PLUGIN::GenericDeviceTy &Device);
 
   ~RPCServerTy();
 };

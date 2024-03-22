@@ -35,7 +35,7 @@
 namespace llvm {
 namespace omp {
 namespace target {
-namespace plugin {
+namespace PLUGIN {
 
 /// Forward declarations for all specialized data structures.
 struct CUDAKernelTy;
@@ -1509,7 +1509,7 @@ Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
                                                     ErrFmt, Args..., Desc);
 }
 
-} // namespace plugin
+} // namespace PLUGIN
 } // namespace target
 } // namespace omp
 } // namespace llvm

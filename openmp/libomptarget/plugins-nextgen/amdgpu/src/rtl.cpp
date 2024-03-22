@@ -72,7 +72,7 @@
 namespace llvm {
 namespace omp {
 namespace target {
-namespace plugin {
+namespace PLUGIN {
 
 /// Forward declarations for all specialized data structures.
 struct AMDGPUKernelTy;
@@ -3441,7 +3441,7 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
   return Alloc;
 }
 
-} // namespace plugin
+} // namespace PLUGIN
 } // namespace target
 } // namespace omp
 } // namespace llvm
