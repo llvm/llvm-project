@@ -311,6 +311,47 @@ def LLVM_InvariantEndOp : LLVM_ZeroResultIntrOp<"invariant.end", [2],
       "qualified(type($ptr))";
 }
 
+// Constrained Floating-Point Intrinsics
+
+class LLVM_ConstrainedIntr<string mnem, int numArgs, bit hasRoundingMode>
+    : LLVM_OneResultIntrOp<"experimental.constrained." # mnem,
+                           /*overloadedResults=*/[0],
+                           /*overloadedOperands=*/[0],
+                           /*traits=*/[Pure, DeclareOpInterfaceMethods<ExceptionBehaviorOpInterface>]
+                           # !cond(
+                               !gt(hasRoundingMode, 0) : [DeclareOpInterfaceMethods<RoundingModeOpInterface>],
+                               true : []),
+                           /*requiresFastmath=*/0,
+                           /*immArgPositions=*/[],
+                           /*immArgAttrNames=*/[]> {
+  dag regularArgs = !dag(ins, !listsplat(LLVM_Type, numArgs), !foreach(i, !range(numArgs), "arg_" #i));
+  dag attrArgs = !con(!cond(!gt(hasRoundingMode, 0) : (ins ValidRoundingModeAttr:$roundingmode),
+                            true : (ins)),
+                      (ins ExceptionBehaviorAttr:$exceptionbehavior));
+  let arguments = !con(regularArgs, attrArgs);
+  let llvmBuilder = [{
+    $res = LLVM::detail::createConstrainedIntrinsicCall(
+      builder, moduleTranslation, &opInst, llvm::Intrinsic::experimental_constrained_}]
+       # mnem
+       # [{);
+  }];
+  let mlirBuilder = [{
+    auto op = moduleImport.translateConstrainedIntrinsic(
+      $_location, $_resultType, llvmOperands,
+      $_qualCppClassName::getOperationName());
+    if (!op)
+      return failure();
+    $res = op;
+  }];
+}
+
+def LLVM_ConstrainedFPTruncIntr
+    : LLVM_ConstrainedIntr<"fptrunc", /*numArgs=*/1, /*hasRoundingMode=*/1> {
+  let assemblyFormat = [{
+    $arg_0 $roundingmode $exceptionbehavior attr-dict `:` type($arg_0) `to` type(results)
+  }];
+}
+
 // Intrinsics with multiple returns.
 
 class LLVM_ArithWithOverflowOp<string mnem>

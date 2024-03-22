@@ -232,6 +232,11 @@ public:
                             SmallVectorImpl<Value> &valuesOut,
                             SmallVectorImpl<NamedAttribute> &attrsOut);
 
+  /// Import constrained intrinsic.
+  Value translateConstrainedIntrinsic(Location loc, Type type,
+                                      ArrayRef<llvm::Value *> llvmOperands,
+                                      StringRef opName);
+
 private:
   /// Clears the accumulated state before processing a new region.
   void clearRegionState() {
