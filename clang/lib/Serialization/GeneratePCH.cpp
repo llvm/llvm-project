@@ -12,9 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaConsumer.h"
+#include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 
@@ -25,17 +27,33 @@ PCHGenerator::PCHGenerator(
     StringRef OutputFile, StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     bool AllowASTWithErrors, bool IncludeTimestamps,
-    bool BuildingImplicitModule, bool ShouldCacheASTInMemory)
+    bool BuildingImplicitModule, bool ShouldCacheASTInMemory,
+    bool GeneratingReducedBMI)
     : PP(PP), OutputFile(OutputFile), isysroot(isysroot.str()),
       SemaPtr(nullptr), Buffer(std::move(Buffer)), Stream(this->Buffer->Data),
       Writer(Stream, this->Buffer->Data, ModuleCache, Extensions,
-             IncludeTimestamps, BuildingImplicitModule),
+             IncludeTimestamps, BuildingImplicitModule, GeneratingReducedBMI),
       AllowASTWithErrors(AllowASTWithErrors),
       ShouldCacheASTInMemory(ShouldCacheASTInMemory) {
   this->Buffer->IsComplete = false;
 }
 
 PCHGenerator::~PCHGenerator() {
+}
+
+Module *PCHGenerator::getEmittingModule(ASTContext &) {
+  Module *M = nullptr;
+
+  if (PP.getLangOpts().isCompilingModule()) {
+    M = PP.getHeaderSearchInfo().lookupModule(PP.getLangOpts().CurrentModule,
+                                              SourceLocation(),
+                                              /*AllowSearch*/ false);
+    if (!M)
+      assert(PP.getDiagnostics().hasErrorOccurred() &&
+             "emitting module but current module doesn't exist");
+  }
+
+  return M;
 }
 
 void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
@@ -47,16 +65,7 @@ void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   if (hasErrors && !AllowASTWithErrors)
     return;
 
-  Module *Module = nullptr;
-  if (PP.getLangOpts().isCompilingModule()) {
-    Module = PP.getHeaderSearchInfo().lookupModule(
-        PP.getLangOpts().CurrentModule, SourceLocation(),
-        /*AllowSearch*/ false);
-    if (!Module) {
-      assert(hasErrors && "emitting module but current module doesn't exist");
-      return;
-    }
-  }
+  Module *Module = getEmittingModule(Ctx);
 
   // Errors that do not prevent the PCH from being written should not cause the
   // overall compilation to fail either.
@@ -77,4 +86,40 @@ ASTMutationListener *PCHGenerator::GetASTMutationListener() {
 
 ASTDeserializationListener *PCHGenerator::GetASTDeserializationListener() {
   return &Writer;
+}
+
+ReducedBMIGenerator::ReducedBMIGenerator(const Preprocessor &PP,
+                                         InMemoryModuleCache &ModuleCache,
+                                         StringRef OutputFile)
+    : PCHGenerator(
+          PP, ModuleCache, OutputFile, llvm::StringRef(),
+          std::make_shared<PCHBuffer>(),
+          /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
+          /*AllowASTWithErrors*/ false, /*IncludeTimestamps=*/false,
+          /*BuildingImplicitModule=*/false, /*ShouldCacheASTInMemory=*/false,
+          /*GeneratingReducedBMI=*/true) {}
+
+Module *ReducedBMIGenerator::getEmittingModule(ASTContext &Ctx) {
+  Module *M = Ctx.getCurrentNamedModule();
+  assert(M->isNamedModuleUnit() &&
+         "ReducedBMIGenerator should only be used with C++20 Named modules.");
+  return M;
+}
+
+void ReducedBMIGenerator::HandleTranslationUnit(ASTContext &Ctx) {
+  PCHGenerator::HandleTranslationUnit(Ctx);
+
+  if (!isComplete())
+    return;
+
+  std::error_code EC;
+  auto OS = std::make_unique<llvm::raw_fd_ostream>(getOutputFile(), EC);
+  if (EC) {
+    getDiagnostics().Report(diag::err_fe_unable_to_open_output)
+        << getOutputFile() << EC.message() << "\n";
+    return;
+  }
+
+  *OS << getBufferPtr()->Data;
+  OS->flush();
 }

@@ -289,7 +289,7 @@ struct GenericKernelTy {
 
   /// Return a device pointer to a new kernel launch environment.
   Expected<KernelLaunchEnvironmentTy *>
-  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice,
+  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice, uint32_t Version,
                              AsyncInfoWrapperTy &AsyncInfo) const;
 
   /// Indicate whether an execution mode is valid.
@@ -1393,7 +1393,7 @@ protected:
 };
 
 /// A static check on whether or not we support RPC in libomptarget.
-const bool libomptargetSupportsRPC();
+bool libomptargetSupportsRPC();
 
 } // namespace plugin
 } // namespace target

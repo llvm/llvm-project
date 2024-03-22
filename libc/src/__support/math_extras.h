@@ -10,7 +10,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H
 
-#include "src/__support/CPP/limits.h"        // CHAR_BIT
+#include "src/__support/CPP/bit.h"           // countl_one, countr_zero
+#include "src/__support/CPP/limits.h"        // CHAR_BIT, numeric_limits
 #include "src/__support/CPP/type_traits.h"   // is_unsigned_v
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
@@ -20,21 +21,18 @@ namespace LIBC_NAMESPACE {
 // Create a bitmask with the count right-most bits set to 1, and all other bits
 // set to 0.  Only unsigned types are allowed.
 template <typename T, size_t count>
-LIBC_INLINE constexpr T mask_trailing_ones() {
-  static_assert(cpp::is_unsigned_v<T>);
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
+mask_trailing_ones() {
   constexpr unsigned T_BITS = CHAR_BIT * sizeof(T);
   static_assert(count <= T_BITS && "Invalid bit index");
-  // It's important not to initialize T with -1, since T may be BigInt which
-  // will take -1 as a uint64_t and only initialize the low 64 bits.
-  constexpr T ALL_ZEROES(0);
-  constexpr T ALL_ONES(~ALL_ZEROES); // bitwise NOT performs integer promotion.
-  return count == 0 ? 0 : (ALL_ONES >> (T_BITS - count));
+  return count == 0 ? 0 : (T(-1) >> (T_BITS - count));
 }
 
 // Create a bitmask with the count left-most bits set to 1, and all other bits
 // set to 0.  Only unsigned types are allowed.
 template <typename T, size_t count>
-LIBC_INLINE constexpr T mask_leading_ones() {
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
+mask_leading_ones() {
   constexpr T MASK(mask_trailing_ones<T, CHAR_BIT * sizeof(T) - count>());
   return T(~MASK); // bitwise NOT performs integer promotion.
 }
@@ -228,6 +226,40 @@ sub_with_borrow<unsigned long long>(unsigned long long a, unsigned long long b,
 }
 
 #endif // LIBC_HAS_BUILTIN(__builtin_subc)
+
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+first_leading_zero(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0
+                                                : cpp::countl_one(value) + 1;
+}
+
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+first_leading_one(T value) {
+  return first_leading_zero(static_cast<T>(~value));
+}
+
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+first_trailing_zero(T value) {
+  return value == cpp::numeric_limits<T>::max()
+             ? 0
+             : cpp::countr_zero(static_cast<T>(~value)) + 1;
+}
+
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+first_trailing_one(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0
+                                                : cpp::countr_zero(value) + 1;
+}
+
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+count_zeros(T value) {
+  return cpp::popcount<T>(static_cast<T>(~value));
+}
 
 } // namespace LIBC_NAMESPACE
 

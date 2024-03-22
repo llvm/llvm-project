@@ -860,6 +860,9 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   m_collection_sp->AppendProperty(
       "symbols", "Symbol lookup and cache settings.", true,
       ModuleList::GetGlobalModuleListProperties().GetValueProperties());
+  m_collection_sp->AppendProperty(
+      LanguageProperties::GetSettingName(), "Language settings.", true,
+      Language::GetGlobalLanguageProperties().GetValueProperties());
   if (m_command_interpreter_up) {
     m_collection_sp->AppendProperty(
         "interpreter",

@@ -2215,6 +2215,15 @@ let TargetGuard = "sve2p1" in {
   def SVTBXQ : SInst<"svtbxq[_{d}]", "dddu", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_tbxq">;
   // EXTQ
   def EXTQ : SInst<"svextq[_{d}]", "dddk", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_extq", [], [ImmCheck<2, ImmCheck0_15>]>;
+  // DUPQ
+  def SVDUP_LANEQ_B  : SInst<"svdup_laneq[_{d}]", "ddi",  "cUc", MergeNone, "aarch64_sve_dup_laneq", [IsStreamingCompatible], [ImmCheck<1, ImmCheck0_15>]>;
+  def SVDUP_LANEQ_H  : SInst<"svdup_laneq[_{d}]", "ddi",  "sUsh", MergeNone, "aarch64_sve_dup_laneq", [IsStreamingCompatible], [ImmCheck<1, ImmCheck0_7>]>;
+  def SVDUP_LANEQ_S  : SInst<"svdup_laneq[_{d}]", "ddi",  "iUif", MergeNone, "aarch64_sve_dup_laneq", [IsStreamingCompatible], [ImmCheck<1, ImmCheck0_3>]>;
+  def SVDUP_LANEQ_D  : SInst<"svdup_laneq[_{d}]", "ddi",  "lUld", MergeNone, "aarch64_sve_dup_laneq", [IsStreamingCompatible], [ImmCheck<1, ImmCheck0_1>]>;
+
+  let TargetGuard = "bf16" in {
+    def SVDUP_LANEQ_BF16  : SInst<"svdup_laneq[_{d}]", "ddi",  "b", MergeNone, "aarch64_sve_dup_laneq", [IsStreamingCompatible], [ImmCheck<1, ImmCheck0_7>]>;
+  }
   // PMOV
   // Move to Pred
   multiclass PMOV_TO_PRED<string name, string types, string intrinsic, list<FlagType> flags=[], ImmCheckType immCh > {

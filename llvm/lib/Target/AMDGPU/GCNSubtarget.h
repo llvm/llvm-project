@@ -648,11 +648,11 @@ public:
   // BUFFER/FLAT/GLOBAL_ATOMIC_ADD/MIN/MAX_F64
   bool hasBufferFlatGlobalAtomicsF64() const { return hasGFX90AInsts(); }
 
-  bool hasExpOrExportInsts() const {
+  bool hasExportInsts() const {
     return !hasGFX940Insts();
   }
 
-  bool hasInterpInsts() const {
+  bool hasVINTERPEncoding() const {
     return GFX11Insts;
   }
 

@@ -10,7 +10,6 @@
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCEXPR_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCExpr.h"
 
 namespace llvm {
@@ -31,14 +30,13 @@ public:
 
 private:
   VariadicKind Kind;
-  SmallVector<const MCExpr *, 2> Args;
+  MCContext &Ctx;
+  const MCExpr **RawArgs;
+  ArrayRef<const MCExpr *> Args;
 
-  AMDGPUVariadicMCExpr(VariadicKind Kind, ArrayRef<const MCExpr *> Args)
-      : Kind(Kind), Args(Args) {
-    assert(Args.size() >= 1 && "Needs a minimum of one expression.");
-    assert(Kind != AGVK_None &&
-           "Cannot construct AMDGPUVariadicMCExpr of kind none.");
-  }
+  AMDGPUVariadicMCExpr(VariadicKind Kind, ArrayRef<const MCExpr *> Args,
+                       MCContext &Ctx);
+  ~AMDGPUVariadicMCExpr();
 
 public:
   static const AMDGPUVariadicMCExpr *

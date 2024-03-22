@@ -264,11 +264,14 @@ namespace {
 }
 
 QualType Expr::getEnumCoercedType(const ASTContext &Ctx) const {
-  if (isa<EnumType>(this->getType()))
-    return this->getType();
-  else if (const auto *ECD = this->getEnumConstantDecl())
-    return Ctx.getTypeDeclType(cast<EnumDecl>(ECD->getDeclContext()));
-  return this->getType();
+  if (isa<EnumType>(getType()))
+    return getType();
+  if (const auto *ECD = getEnumConstantDecl()) {
+    const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
+    if (ED->isCompleteDefinition())
+      return Ctx.getTypeDeclType(ED);
+  }
+  return getType();
 }
 
 SourceLocation Expr::getExprLoc() const {
@@ -673,7 +676,8 @@ StringRef PredefinedExpr::getIdentKindName(PredefinedIdentKind IK) {
 // FIXME: Maybe this should use DeclPrinter with a special "print predefined
 // expr" policy instead.
 std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
-                                        const Decl *CurrentDecl) {
+                                        const Decl *CurrentDecl,
+                                        bool ForceElaboratedPrinting) {
   ASTContext &Context = CurrentDecl->getASTContext();
 
   if (IK == PredefinedIdentKind::FuncDName) {
@@ -721,10 +725,21 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     return std::string(Out.str());
   }
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CurrentDecl)) {
-    if (IK != PredefinedIdentKind::PrettyFunction &&
+    const auto &LO = Context.getLangOpts();
+    bool IsFuncOrFunctionInNonMSVCCompatEnv =
+        ((IK == PredefinedIdentKind::Func ||
+          IK == PredefinedIdentKind ::Function) &&
+         !LO.MSVCCompat);
+    bool IsLFunctionInMSVCCommpatEnv =
+        IK == PredefinedIdentKind::LFunction && LO.MSVCCompat;
+    bool IsFuncOrFunctionOrLFunctionOrFuncDName =
+        IK != PredefinedIdentKind::PrettyFunction &&
         IK != PredefinedIdentKind::PrettyFunctionNoVirtual &&
         IK != PredefinedIdentKind::FuncSig &&
-        IK != PredefinedIdentKind::LFuncSig)
+        IK != PredefinedIdentKind::LFuncSig;
+    if ((ForceElaboratedPrinting &&
+         (IsFuncOrFunctionInNonMSVCCompatEnv || IsLFunctionInMSVCCommpatEnv)) ||
+        (!ForceElaboratedPrinting && IsFuncOrFunctionOrLFunctionOrFuncDName))
       return FD->getNameAsString();
 
     SmallString<256> Name;
@@ -752,6 +767,8 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     PrintingPolicy Policy(Context.getLangOpts());
     PrettyCallbacks PrettyCB(Context.getLangOpts());
     Policy.Callbacks = &PrettyCB;
+    if (IK == PredefinedIdentKind::Function && ForceElaboratedPrinting)
+      Policy.SuppressTagKeyword = !LO.MSVCCompat;
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
 
@@ -778,6 +795,12 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     }
 
     FD->printQualifiedName(POut, Policy);
+
+    if (IK == PredefinedIdentKind::Function) {
+      POut.flush();
+      Out << Proto;
+      return std::string(Name);
+    }
 
     POut << "(";
     if (FT) {
@@ -4601,8 +4624,17 @@ SourceRange DesignatedInitExpr::getDesignatorsSourceRange() const {
 SourceLocation DesignatedInitExpr::getBeginLoc() const {
   auto *DIE = const_cast<DesignatedInitExpr *>(this);
   Designator &First = *DIE->getDesignator(0);
-  if (First.isFieldDesignator())
-    return GNUSyntax ? First.getFieldLoc() : First.getDotLoc();
+  if (First.isFieldDesignator()) {
+    // Skip past implicit designators for anonymous structs/unions, since
+    // these do not have valid source locations.
+    for (unsigned int i = 0; i < DIE->size(); i++) {
+      Designator &Des = *DIE->getDesignator(i);
+      SourceLocation retval = GNUSyntax ? Des.getFieldLoc() : Des.getDotLoc();
+      if (!retval.isValid())
+        continue;
+      return retval;
+    }
+  }
   return First.getLBracketLoc();
 }
 

@@ -198,7 +198,7 @@ TEST_F(FrontendActionTest, EmitLLVM) {
   EXPECT_TRUE(success);
   EXPECT_TRUE(!outputFileBuffer.empty());
 
-  EXPECT_TRUE(llvm::StringRef(outputFileBuffer.data())
+  EXPECT_TRUE(llvm::StringRef(outputFileBuffer.begin(), outputFileBuffer.size())
                   .contains("define void @_QQmain()"));
 }
 
@@ -227,6 +227,7 @@ TEST_F(FrontendActionTest, EmitAsm) {
   EXPECT_TRUE(success);
   EXPECT_TRUE(!outputFileBuffer.empty());
 
-  EXPECT_TRUE(llvm::StringRef(outputFileBuffer.data()).contains("_QQmain"));
+  EXPECT_TRUE(llvm::StringRef(outputFileBuffer.begin(), outputFileBuffer.size())
+                  .contains("_QQmain"));
 }
 } // namespace
