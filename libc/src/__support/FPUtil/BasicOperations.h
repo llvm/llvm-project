@@ -110,21 +110,23 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
         cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
         raise_except_if_required(FE_INVALID);
         return 1;
-      } else if (exponent == 0 && bit63)
-        cx = FPBits<T>::make_value(mantissa, 1).get_val();
-      else if (!bit63)
-        cx = FPBits<T>::make_value(mantissa, 1).get_val();
-      else
-        cx = x;
-    } else if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
-      cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
-      raise_except_if_required(FE_INVALID);
-      return 1;
-    } else
+      }
+    } else if (exponent == 0 && bit63)
+      cx = FPBits<T>::make_value(mantissa, 1).get_val();
+    else if (!bit63)
+      cx = FPBits<T>::make_value(mantissa, 1).get_val();
+    else
       cx = x;
-    return 0;
+  } else if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
+    cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
+    raise_except_if_required(FE_INVALID);
+    return 1;
+  } else
+    cx = x;
+  return 0;
   }
 }
+
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 
