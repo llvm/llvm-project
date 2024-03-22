@@ -147,6 +147,8 @@ bool mlir::tensor::isCastLikeInsertSliceOp(InsertSliceOp op) {
   // same size.
   for (int64_t resultDim = 0; resultDim < resultType.getRank(); ++resultDim) {
     if (droppedDims.test(resultDim)) {
+      // InsertSlice may expand unit dimensions that result from inserting a
+      // size-1 slice into a non-size-1 result dimension.
       if (resultType.getDimSize(resultDim) != 1)
         return false;
       continue;
