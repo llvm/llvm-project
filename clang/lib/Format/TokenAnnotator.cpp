@@ -975,12 +975,15 @@ private:
 
   // DagArg       ::=  Value [":" TokVarName] | TokVarName
   // Appears as a part of SimpleValue6.
-  bool parseTableGenDAGArg() {
+  bool parseTableGenDAGArg(bool AlignColon = false) {
     if (tryToParseTableGenTokVar())
       return true;
     if (parseTableGenValue()) {
       if (CurrentToken && CurrentToken->is(tok::colon)) {
-        CurrentToken->setType(TT_TableGenDAGArgListColon);
+        if (AlignColon)
+          CurrentToken->setType(TT_TableGenDAGArgListColonToAlign);
+        else
+          CurrentToken->setType(TT_TableGenDAGArgListColon);
         skipToNextNonComment();
         return tryToParseTableGenTokVar();
       }
@@ -1051,8 +1054,11 @@ private:
         skipToNextNonComment();
         return true;
       }
-      if (!parseTableGenDAGArg())
+      if (!parseTableGenDAGArg(
+              BreakInside &&
+              Style.AlignConsecutiveTableGenBreakingDAGArgColons.Enabled)) {
         return false;
+      }
       FirstDAGArgListElm = false;
     }
     return false;
@@ -5130,8 +5136,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(tok::r_brace) && Right.is(tok::r_square))
       return true;
     // Do not insert around colon in DAGArg and cond operator.
-    if (Right.is(TT_TableGenDAGArgListColon) ||
-        Left.is(TT_TableGenDAGArgListColon)) {
+    if (Right.isOneOf(TT_TableGenDAGArgListColon,
+                      TT_TableGenDAGArgListColonToAlign) ||
+        Left.isOneOf(TT_TableGenDAGArgListColon,
+                     TT_TableGenDAGArgListColonToAlign)) {
       return false;
     }
     if (Right.is(TT_TableGenCondOperatorColon))
