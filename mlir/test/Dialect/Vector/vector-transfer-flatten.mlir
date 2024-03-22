@@ -494,13 +494,3 @@ func.func @unsupported_non_contiguous_dim_write(%value : vector<2x2xf32>,
 // CHECK-128B-LABEL: func @unsupported_non_contiguous_dim_write(
 //   CHECK-128B-NOT:   memref.collapse_shape
 
-// -----
-
-// This test exists to make sure it doesn't hit an assert and compiles through.
-func.func @simple_mul(%arg0: tensor<4xf32>, %arg1: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
-    %0 = arith.mulf %arg0, %arg1 : tensor<4xf32>
-    return %0, %arg0 : tensor<4xf32>, tensor<4xf32>
-}
-
-// CHECK-LABEL: func.func @simple_mul
-// CHECK-128B-LABEL: func.func @simple_mul

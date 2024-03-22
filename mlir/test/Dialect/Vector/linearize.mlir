@@ -90,3 +90,16 @@ func.func @test_index_no_linearize(%arg0: vector<2x2xindex>, %arg1: vector<2x2xi
     %0 = arith.addi %arg0, %arg1 : vector<2x2xindex>
     return %0 : vector<2x2xindex>
 }
+
+// -----
+
+// This test exists to make sure it doesn't hit an assert and compiles through.
+func.func @simple_mul(%arg0: tensor<4xf32>, %arg1: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+    %0 = arith.mulf %arg0, %arg1 : tensor<4xf32>
+    return %0, %arg0 : tensor<4xf32>, tensor<4xf32>
+}
+
+// CHECK-LABEL: func.func @simple_mul
+// CHECK128-LABEL: func.func @simple_mul
+// CHECK0-LABEL: func.func @simple_mul
+
