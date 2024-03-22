@@ -12473,12 +12473,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (UseIntrinsic && isVectorIntrinsicWithOverloadTypeAtArg(ID, -1))
         TysForDecl.push_back(
             FixedVectorType::get(CI->getType(), E->Scalars.size()));
+      auto *CEI = cast<CallInst>(VL0);
       for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
         ValueList OpVL;
         // Some intrinsics have scalar arguments. This argument should not be
         // vectorized.
         if (UseIntrinsic && isVectorIntrinsicWithScalarOpAtArg(ID, I)) {
-          CallInst *CEI = cast<CallInst>(VL0);
           ScalarArg = CEI->getArgOperand(I);
           OpVecs.push_back(CEI->getArgOperand(I));
           if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I))
@@ -12490,6 +12490,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         if (E->VectorizedValue) {
           LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
           return E->VectorizedValue;
+        }
+        ScalarArg = CEI->getArgOperand(I);
+        if (cast<VectorType>(OpVec->getType())->getElementType() !=
+            ScalarArg->getType()) {
+          auto *CastTy = FixedVectorType::get(ScalarArg->getType(),
+                                              VecTy->getNumElements());
+          OpVec = Builder.CreateIntCast(OpVec, CastTy, GetOperandSignedness(I));
         }
         LLVM_DEBUG(dbgs() << "SLP: OpVec[" << I << "]: " << *OpVec << "\n");
         OpVecs.push_back(OpVec);
