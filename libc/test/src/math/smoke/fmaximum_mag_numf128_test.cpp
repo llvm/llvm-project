@@ -1,5 +1,4 @@
-//===-- Unittests for fmaximum_mag_numf128
-//--------------------------------------------===//
+//===-- Unittests for fmaximum_mag_numf128---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FMaximumMag_NumTest.h"
+#include "FMaximumMagNumTest.h"
 
 #include "src/math/fmaximum_mag_numf128.h"
 

@@ -1,4 +1,4 @@
-fset(TARGET_LIBC_ENTRYPOINTS
+set(TARGET_LIBC_ENTRYPOINTS
     # ctype.h entrypoints
     libc.src.ctype.isalnum
     libc.src.ctype.isalpha

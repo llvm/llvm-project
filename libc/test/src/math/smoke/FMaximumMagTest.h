@@ -1,5 +1,4 @@
-//===-- Utility class to test fmaximum_mag[f|l] -------------------------*- C++
-//-*-===//
+//===-- Utility class to test fmaximum_mag[f|l] -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -70,7 +69,7 @@ public:
       if ((x == 0) && (y == 0))
         continue;
 
-      if (abs(x) > abs(y)) {
+      if (LIBC_NAMESPACE::fputil::abs(x) > LIBC_NAMESPACE::fputil::abs(y)) {
         EXPECT_FP_EQ(x, func(x, y));
       } else {
         EXPECT_FP_EQ(y, func(x, y));

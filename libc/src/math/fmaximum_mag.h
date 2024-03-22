@@ -1,4 +1,4 @@
-//===-- Implementation header for fmaximum_mag--------------------------*- C++
+//===-- Implementation header for fmaximum_mag------------------------*- C++
 //-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
