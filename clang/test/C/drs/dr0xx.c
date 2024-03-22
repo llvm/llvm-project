@@ -73,6 +73,10 @@
  * WG14 DR085: yes
  * Returning from main
  *
+ * WG14 DR087: yes
+ * Order of evaluation
+ * Note: this DR is covered by C/C11/n1282.c
+ *
  * WG14 DR086: yes
  * Object-like macros in system headers
  *
