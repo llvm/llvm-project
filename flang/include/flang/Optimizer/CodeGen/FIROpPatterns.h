@@ -17,7 +17,6 @@ namespace fir {
 
 struct FIRToLLVMPassOptions;
 
-// TODO: This should really be recovered from the specified target.
 static constexpr unsigned defaultAddressSpace = 0u;
 
 class ConvertFIRToLLVMPattern : public mlir::ConvertToLLVMPattern {
