@@ -1249,12 +1249,7 @@ LLVMMetadataRef LLVMDIBuilderCreateTempGlobalVariableFwdDecl(
     LLVMMetadataRef Decl, uint32_t AlignInBits);
 
 /*
- * Insert a new Declare DbgRecord before the given instruction.
- *
- * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
- * Use LLVMSetIsNewDbgInfoFormat(LLVMBool) to convert between formats.
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
- *
+ * Insert a new llvm.dbg.declare intrinsic call before the given instruction.
  * \param Builder     The DIBuilder.
  * \param Storage     The storage of the variable to declare.
  * \param VarInfo     The variable's debug info descriptor.
@@ -1262,13 +1257,13 @@ LLVMMetadataRef LLVMDIBuilderCreateTempGlobalVariableFwdDecl(
  * \param DebugLoc    Debug info location.
  * \param Instr       Instruction acting as a location for the new intrinsic.
  */
-LLVMDbgRecordRef
+LLVMValueRef
 LLVMDIBuilderInsertDeclareBefore(LLVMDIBuilderRef Builder, LLVMValueRef Storage,
                                  LLVMMetadataRef VarInfo, LLVMMetadataRef Expr,
                                  LLVMMetadataRef DebugLoc, LLVMValueRef Instr);
 /**
  * Soon to be deprecated.
- * Only use in "old debug mode" (LLVMIsNewDbgInfoFormat() is false).
+ * Only use in "old debug mode" (LLVMIsNewDbgFormat() is false).
  * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a new llvm.dbg.declare intrinsic call before the given instruction.
@@ -1284,7 +1279,7 @@ LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicBefore(
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr);
 /**
  * Soon to be deprecated.
- * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
+ * Only use in "new debug mode" (LLVMIsNewDbgFormat() is true).
  * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a Declare DbgRecord before the given instruction.
@@ -1300,14 +1295,9 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordBefore(
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr);
 
 /**
- * Insert a new Declare DbgRecord at the end of the given basic block. If the
- * basic block has a terminator instruction, the intrinsic is inserted before
- * that terminator instruction.
- *
- * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
- * Use LLVMSetIsNewDbgInfoFormat(LLVMBool) to convert between formats.
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
- *
+ * Insert a new llvm.dbg.declare intrinsic call at the end of the given basic
+ * block. If the basic block has a terminator instruction, the intrinsic is
+ * inserted before that terminator instruction.
  * \param Builder     The DIBuilder.
  * \param Storage     The storage of the variable to declare.
  * \param VarInfo     The variable's debug info descriptor.
@@ -1315,12 +1305,12 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordBefore(
  * \param DebugLoc    Debug info location.
  * \param Block       Basic block acting as a location for the new intrinsic.
  */
-LLVMDbgRecordRef LLVMDIBuilderInsertDeclareAtEnd(
+LLVMValueRef LLVMDIBuilderInsertDeclareAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block);
 /**
  * Soon to be deprecated.
- * Only use in "old debug mode" (LLVMIsNewDbgInfoFormat() is false).
+ * Only use in "old debug mode" (LLVMIsNewDbgFormat() is false).
  * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a new llvm.dbg.declare intrinsic call at the end of the given basic
@@ -1338,7 +1328,7 @@ LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block);
 /**
  * Soon to be deprecated.
- * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
+ * Only use in "new debug mode" (LLVMIsNewDbgFormat() is true).
  * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a Declare DbgRecord at the end of the given basic block. If the basic
@@ -1356,12 +1346,7 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordAtEnd(
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block);
 
 /**
- * Insert a new Value DbgRecord before the given instruction.
- *
- * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
- * Use LLVMSetIsNewDbgInfoFormat(LLVMBool) to convert between formats.
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
- *
+ * Insert a new llvm.dbg.value intrinsic call before the given instruction.
  * \param Builder     The DIBuilder.
  * \param Val         The value of the variable.
  * \param VarInfo     The variable's debug info descriptor.
@@ -1369,13 +1354,13 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordAtEnd(
  * \param DebugLoc    Debug info location.
  * \param Instr       Instruction acting as a location for the new intrinsic.
  */
-LLVMDbgRecordRef
+LLVMValueRef
 LLVMDIBuilderInsertDbgValueBefore(LLVMDIBuilderRef Builder, LLVMValueRef Val,
                                   LLVMMetadataRef VarInfo, LLVMMetadataRef Expr,
                                   LLVMMetadataRef DebugLoc, LLVMValueRef Instr);
 /**
  * Soon to be deprecated.
- * Only use in "old debug mode" (LLVMIsNewDbgInfoFormat() is false).
+ * Only use in "old debug mode" (Module::IsNewDbgInfoFormat is false).
  * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a new llvm.dbg.value intrinsic call before the given instruction.
@@ -1391,7 +1376,7 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicBefore(
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr);
 /**
  * Soon to be deprecated.
- * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
+ * Only use in "new debug mode" (Module::IsNewDbgInfoFormat is true).
  * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a new llvm.dbg.value intrinsic call before the given instruction.
@@ -1407,14 +1392,9 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr);
 
 /**
- * Insert a new Value DbgRecord at the end of the given basic block. If the
- * basic block has a terminator instruction, the intrinsic is inserted before
- * that terminator instruction.
- *
- * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
- * Use LLVMSetIsNewDbgInfoFormat(LLVMBool) to convert between formats.
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
- *
+ * Insert a new llvm.dbg.value intrinsic call at the end of the given basic
+ * block. If the basic block has a terminator instruction, the intrinsic is
+ * inserted before that terminator instruction.
  * \param Builder     The DIBuilder.
  * \param Val         The value of the variable.
  * \param VarInfo     The variable's debug info descriptor.
@@ -1422,12 +1402,12 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
  * \param DebugLoc    Debug info location.
  * \param Block       Basic block acting as a location for the new intrinsic.
  */
-LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueAtEnd(
+LLVMValueRef LLVMDIBuilderInsertDbgValueAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block);
 /**
  * Soon to be deprecated.
- * Only use in "old debug mode" (LLVMIsNewDbgInfoFormat() is false).
+ * Only use in "old debug mode" (Module::IsNewDbgInfoFormat is false).
  * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a new llvm.dbg.value intrinsic call at the end of the given basic
@@ -1445,7 +1425,7 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicAtEnd(
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block);
 /**
  * Soon to be deprecated.
- * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
+ * Only use in "new debug mode" (Module::IsNewDbgInfoFormat is true).
  * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a new llvm.dbg.value intrinsic call at the end of the given basic

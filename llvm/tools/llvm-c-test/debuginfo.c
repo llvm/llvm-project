@@ -136,13 +136,12 @@ int llvm_test_dibuilder(bool NewDebugInfoFormat) {
   LLVMMetadataRef FooParamVar1 =
     LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "a", 1, 1, File,
                                          42, Int64Ty, true, 0);
-
   if (LLVMIsNewDbgInfoFormat(M))
-    LLVMDIBuilderInsertDeclareAtEnd(
+    LLVMDIBuilderInsertDeclareRecordAtEnd(
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar1,
         FooParamExpression, FooParamLocation, FooEntryBlock);
   else
-    LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
+    LLVMDIBuilderInsertDeclareAtEnd(
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar1,
         FooParamExpression, FooParamLocation, FooEntryBlock);
   LLVMMetadataRef FooParamVar2 =
@@ -150,11 +149,11 @@ int llvm_test_dibuilder(bool NewDebugInfoFormat) {
                                          42, Int64Ty, true, 0);
 
   if (LLVMIsNewDbgInfoFormat(M))
-    LLVMDIBuilderInsertDeclareAtEnd(
+    LLVMDIBuilderInsertDeclareRecordAtEnd(
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar2,
         FooParamExpression, FooParamLocation, FooEntryBlock);
   else
-    LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
+    LLVMDIBuilderInsertDeclareAtEnd(
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar2,
         FooParamExpression, FooParamLocation, FooEntryBlock);
 
@@ -162,11 +161,11 @@ int llvm_test_dibuilder(bool NewDebugInfoFormat) {
     LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "c", 1, 3, File,
                                          42, VectorTy, true, 0);
   if (LLVMIsNewDbgInfoFormat(M))
-    LLVMDIBuilderInsertDeclareAtEnd(
+    LLVMDIBuilderInsertDeclareRecordAtEnd(
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar3,
         FooParamExpression, FooParamLocation, FooEntryBlock);
   else
-    LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
+    LLVMDIBuilderInsertDeclareAtEnd(
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar3,
         FooParamExpression, FooParamLocation, FooEntryBlock);
 
