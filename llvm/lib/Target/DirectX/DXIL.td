@@ -260,6 +260,9 @@ def Abs : DXILOpMapping<6, unary, int_fabs,
 def IsInf : DXILOpMapping<9, isSpecialFloat, int_dx_isinf,
                          "Determines if the specified value is infinite.",
                          [llvm_i1_ty, llvm_halforfloat_ty]>;
+def Cos  : DXILOpMapping<12, unary, int_cos,
+                         "Returns cosine(theta) for theta in radians.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def Sin  : DXILOpMapping<13, unary, int_sin,
                          "Returns sine(theta) for theta in radians.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
@@ -278,6 +281,9 @@ def RSqrt : DXILOpMapping<25, unary, int_dx_rsqrt,
 def Round : DXILOpMapping<26, unary, int_round,
                          "Returns the input rounded to the nearest integer"
                          "within a floating-point type.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Floor : DXILOpMapping<27, unary, int_floor,
+                         "Returns the largest integer that is less than or equal to the input.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def FMax : DXILOpMapping<35, binary, int_maxnum,
                          "Float maximum. FMax(a,b) = a > b ? a : b">;
