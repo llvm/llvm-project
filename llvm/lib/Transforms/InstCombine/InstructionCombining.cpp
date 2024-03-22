@@ -2889,8 +2889,11 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     // Try to replace ADD + GEP with GEP + GEP.
     Value *Idx1, *Idx2;
     if (match(GEP.getOperand(1),
-              m_OneUse(m_Add(m_Value(Idx1), m_Value(Idx2))))) {
+              m_OneUse(m_AddLike(m_Value(Idx1), m_Value(Idx2))))) {
       //   %idx = add i64 %idx1, %idx2
+      //   %gep = getelementptr i32, ptr %ptr, i64 %idx
+      // or
+      //   %idx = or disjoint i64 %idx1, %idx2
       //   %gep = getelementptr i32, ptr %ptr, i64 %idx
       // as:
       //   %newptr = getelementptr i32, ptr %ptr, i64 %idx1
@@ -2901,14 +2904,18 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                        Idx2);
     }
     ConstantInt *C;
-    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAdd(
+    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAddLike(
                                      m_Value(Idx1), m_ConstantInt(C))))))) {
-      // %add = add nsw i32 %idx1, idx2
-      // %sidx = sext i32 %add to i64
-      // %gep = getelementptr i32, ptr %ptr, i64 %sidx
+      //   %add = add nsw i32 %idx1, %idx2
+      //   %sidx = sext i32 %add to i64
+      //   %gep = getelementptr i32, ptr %ptr, i64 %sidx
+      // or
+      //   %disjointOr = or disjoint i32 %idx1, %idx2
+      //   %sidx = sext i32 %disjointOr to i64
+      //   %gep = getelementptr i32, ptr %ptr, i64 %sidx
       // as:
-      // %newptr = getelementptr i32, ptr %ptr, i32 %idx1
-      // %newgep = getelementptr i32, ptr %newptr, i32 idx2
+      //   %newptr = getelementptr i32, ptr %ptr, i32 %idx1
+      //   %newgep = getelementptr i32, ptr %newptr, i32 idx2
       auto *NewPtr = Builder.CreateGEP(
           GEP.getResultElementType(), GEP.getPointerOperand(),
           Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()));
