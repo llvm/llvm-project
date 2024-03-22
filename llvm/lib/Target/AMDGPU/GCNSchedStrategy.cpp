@@ -975,10 +975,12 @@ void GCNSchedStage::checkScheduling() {
   }
 
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
+  unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
-  if (PressureAfter.getVGPRNum(false) > MaxVGPRs ||
-      PressureAfter.getAGPRNum() > MaxVGPRs ||
+  if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
+      PressureAfter.getVGPRNum(false) > MaxArchVGPRs ||
+      PressureAfter.getAGPRNum() > MaxArchVGPRs ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
     DAG.RescheduleRegions[RegionIdx] = true;
     DAG.RegionsWithHighRP[RegionIdx] = true;
