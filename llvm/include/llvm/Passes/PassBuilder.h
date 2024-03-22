@@ -672,6 +672,13 @@ public:
     return Result;
   }
 
+  /// Handle passes only accept one bool-valued parameter.
+  ///
+  /// \return false when Params is empty.
+  static Expected<bool> parseSinglePassOption(StringRef Params,
+                                              StringRef OptionName,
+                                              StringRef PassName);
+
 private:
   // O1 pass pipeline
   FunctionPassManager
