@@ -27,75 +27,22 @@ if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE
   return()
 endif()
 
-################################################################################
-# Define the suffix for the runtime messaging dumps.
-add_definitions(-DTARGET_NAME=AMDGPU)
+# Create the library and add the default arguments.
+add_target_library(omptarget.rtl.amdgpu AMDGPU)
 
-# Define debug prefix. TODO: This should be automatized in the Debug.h but it
-# requires changing the original plugins.
-add_definitions(-DDEBUG_PREFIX="TARGET AMDGPU RTL")
+target_sources(omptarget.rtl.amdgpu PRIVATE src/rtl.cpp)
+target_include_directories(omptarget.rtl.amdgpu PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}/utils)
 
-set(LIBOMPTARGET_DLOPEN_LIBHSA OFF)
-option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" ${LIBOMPTARGET_DLOPEN_LIBHSA})
-
-if (${hsa-runtime64_FOUND} AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
-  libomptarget_say("Building AMDGPU NextGen plugin linked against libhsa")
-  set(LIBOMPTARGET_EXTRA_SOURCE)
-  set(LIBOMPTARGET_DEP_LIBRARIES hsa-runtime64::hsa-runtime64)
+option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" OFF)
+if(hsa-runtime64_FOUND AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
+  libomptarget_say("Building AMDGPU plugin linked against libhsa")
+  target_link_libraries(omptarget.rtl.amdgpu PRIVATE hsa-runtime64::hsa-runtime64)
 else()
-  libomptarget_say("Building AMDGPU NextGen plugin for dlopened libhsa")
-  include_directories(dynamic_hsa)
-  set(LIBOMPTARGET_EXTRA_SOURCE dynamic_hsa/hsa.cpp)
-  set(LIBOMPTARGET_DEP_LIBRARIES)
+  libomptarget_say("Building AMDGPU plugin for dlopened libhsa")
+  target_include_directories(omptarget.rtl.amdgpu PRIVATE dynamic_hsa)
+  target_sources(omptarget.rtl.amdgpu PRIVATE dynamic_hsa/hsa.cpp)
 endif()
-
-if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
-  # On FreeBSD, the 'environ' symbol is undefined at link time, but resolved by
-  # the dynamic linker at runtime. Therefore, allow the symbol to be undefined
-  # when creating a shared library.
-  set(LDFLAGS_UNDEFINED "-Wl,--allow-shlib-undefined")
-else()
-  set(LDFLAGS_UNDEFINED "-Wl,-z,defs")
-endif()
-
-add_llvm_library(omptarget.rtl.amdgpu SHARED
-  src/rtl.cpp
-  ${LIBOMPTARGET_EXTRA_SOURCE}
-
-  ADDITIONAL_HEADER_DIRS
-  ${LIBOMPTARGET_INCLUDE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/utils
-
-  LINK_COMPONENTS
-  Support
-  Object
-
-  LINK_LIBS
-  PRIVATE
-  PluginCommon
-  ${LIBOMPTARGET_DEP_LIBRARIES}
-  ${OPENMP_PTHREAD_LIB}
-  ${LDFLAGS_UNDEFINED}
-
-  NO_INSTALL_RPATH
-  BUILDTREE_ONLY
-)
-
-if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
-  target_link_libraries(omptarget.rtl.amdgpu PRIVATE OMPT)
-endif()
-
-if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  target_link_libraries(omptarget.rtl.amdgpu PRIVATE
-    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports")
-endif()
-
-target_include_directories(
-  omptarget.rtl.amdgpu
-  PRIVATE
-  ${LIBOMPTARGET_INCLUDE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/utils
-)
 
 # Configure testing for the AMDGPU plugin. We will build tests if we could a
 # functional AMD GPU on the system, or if manually specifies by the user.
@@ -114,5 +61,4 @@ endif()
 # Install plugin under the lib destination folder.
 install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 set_target_properties(omptarget.rtl.amdgpu PROPERTIES
-  INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
-  CXX_VISIBILITY_PRESET protected)
+  INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
