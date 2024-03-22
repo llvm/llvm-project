@@ -6,7 +6,7 @@
 
 ; GCN-LABEL: {{^}}split_smrd_add_worklist:
 ; GCN: image_sample v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0x1
-define amdgpu_ps void @split_smrd_add_worklist(ptr addrspace(4) inreg %arg) #0 {
+define amdgpu_ps void @split_smrd_add_worklist(ptr addrspace(4) inreg %arg) nounwind {
 bb:
   %tmp = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 96, i32 0)
   %tmp1 = bitcast float %tmp to i32
@@ -24,18 +24,14 @@ bb3:                                              ; preds = %bb
   %tmp9 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float bitcast (i32 1061158912 to float), float bitcast (i32 1048576000 to float), <8 x i32> %tmp8, <4 x i32> undef, i1 0, i32 0, i32 0)
   %tmp10 = extractelement <4 x float> %tmp9, i32 0
   %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp10, float undef)
-  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp12, <2 x half> undef, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp12, <2 x half> undef, i1 true, i1 true) nounwind
   ret void
 }
 
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
-declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind readonly }
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) nounwind readnone
+declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) nounwind
+declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) nounwind readnone
 
 !0 = !{!1, !1, i64 0, i32 1}
 !1 = !{!"const", !2}

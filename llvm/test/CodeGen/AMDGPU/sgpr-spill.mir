@@ -7,15 +7,13 @@
 
 --- |
 
-  define amdgpu_kernel void @check_spill() #0 {
+  define amdgpu_kernel void @check_spill() "frame-pointer"="all" {
     ret void
   }
 
-  define amdgpu_kernel void @check_reload() #0 {
+  define amdgpu_kernel void @check_reload() "frame-pointer"="all" {
     ret void
   }
-
-  attributes #0 = {  "frame-pointer"="all" }
 ...
 ---
 name:            check_spill

@@ -114,7 +114,7 @@
 ; GFX7: @ConstantExpr = internal global i64 0
 @ConstantExpr = internal global i64 ptrtoint (ptr @needs_dpp to i64)
 
-define void @needs_dpp(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #0 {
+define void @needs_dpp(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+dpp" {
 ; GFX7-NOT:   define void @needs_dpp(
 ; GFX8:       define void @needs_dpp(
 ; GFX9:       define void @needs_dpp(
@@ -138,7 +138,7 @@ endif:
   ret void
 }
 
-define void @needs_16bit_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #1 {
+define void @needs_16bit_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+16-bit-insts" {
 ; GFX7-NOT:   define void @needs_16bit_insts(
 ; GFX8:       define void @needs_16bit_insts(
 ; GFX9:       define void @needs_16bit_insts(
@@ -162,7 +162,7 @@ endif:
   ret void
 }
 
-define void @needs_gfx8_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #2 {
+define void @needs_gfx8_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+gfx8-insts" {
 ; GFX7-NOT:   define void @needs_gfx8_insts(
 ; GFX8:       define void @needs_gfx8_insts(
 ; GFX9:       define void @needs_gfx8_insts(
@@ -186,7 +186,7 @@ endif:
   ret void
 }
 
-define void @needs_gfx9_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #3 {
+define void @needs_gfx9_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+gfx9-insts" {
 ; GFX7-NOT:   define void @needs_gfx9_insts(
 ; GFX8-NOT:   define void @needs_gfx9_insts(
 ; GFX9:       define void @needs_gfx9_insts(
@@ -210,7 +210,7 @@ endif:
   ret void
 }
 
-define void @needs_gfx10_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #4 {
+define void @needs_gfx10_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+gfx10-insts" {
 ; GFX7-NOT:   define void @needs_gfx10_insts(
 ; GFX8-NOT:   define void @needs_gfx10_insts(
 ; GFX9-NOT:   define void @needs_gfx10_insts(
@@ -234,7 +234,7 @@ endif:
   ret void
 }
 
-define void @needs_gfx11_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #5 {
+define void @needs_gfx11_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+gfx11-insts" {
 ; GFX7-NOT:   define void @needs_gfx11_insts(
 ; GFX8-NOT:   define void @needs_gfx11_insts(
 ; GFX9-NOT:   define void @needs_gfx11_insts(
@@ -258,7 +258,7 @@ endif:
   ret void
 }
 
-define void @needs_dot1_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #6 {
+define void @needs_dot1_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+dot1-insts" {
 ; GFX7-NOT:     define void @needs_dot1_insts(
 ; GFX8-NOT:     define void @needs_dot1_insts(
 ; GFX9:         define void @needs_dot1_insts(
@@ -269,7 +269,7 @@ define void @needs_dot1_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #6 {
   ret void
 }
 
-define void @needs_dot2_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #7 {
+define void @needs_dot2_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+dot2-insts" {
 ; GFX7-NOT:     define void @needs_dot2_insts(
 ; GFX8-NOT:     define void @needs_dot2_insts(
 ; GFX9:         define void @needs_dot2_insts(
@@ -280,7 +280,7 @@ define void @needs_dot2_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #7 {
   ret void
 }
 
-define void @needs_dot3_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #8 {
+define void @needs_dot3_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+dot3-insts" {
 ; GFX7-NOT:   define void @needs_dot3_insts(
 ; GFX8-NOT:   define void @needs_dot3_insts(
 ; GFX906-NOT: define void @needs_dot3_insts(
@@ -293,7 +293,7 @@ define void @needs_dot3_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #8 {
 }
 
 
-define void @needs_dot4_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #9 {
+define void @needs_dot4_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+dot4-insts" {
 ; GFX7-NOT:   define void @needs_dot4_insts(
 ; GFX8-NOT:   define void @needs_dot4_insts(
 ; GFX906-NOT: define void @needs_dot4_insts(
@@ -305,7 +305,7 @@ define void @needs_dot4_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #9 {
   ret void
 }
 
-define void @needs_dot5_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #10 {
+define void @needs_dot5_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+dot5-insts" {
 ; GFX7-NOT:   define void @needs_dot5_insts(
 ; GFX8-NOT:   define void @needs_dot5_insts(
 ; GFX906-NOT: define void @needs_dot5_insts(
@@ -317,7 +317,7 @@ define void @needs_dot5_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #10 {
   ret void
 }
 
-define void @needs_dot6_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #11 {
+define void @needs_dot6_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+dot6-insts" {
 ; GFX7-NOT:   define void @needs_dot6_insts(
 ; GFX8-NOT:   define void @needs_dot6_insts(
 ; GFX906-NOT: define void @needs_dot6_insts(
@@ -329,7 +329,7 @@ define void @needs_dot6_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #11 {
   ret void
 }
 
-define void @needs_dot7_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #12 {
+define void @needs_dot7_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+dot7-insts" {
 ; GFX7-NOT:   define void @needs_dot7_insts(
 ; GFX8-NOT:   define void @needs_dot7_insts(
 ; GFX9:       define void @needs_dot7_insts(
@@ -340,7 +340,7 @@ define void @needs_dot7_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #12 {
   ret void
 }
 
-define void @needs_dot8_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #13 {
+define void @needs_dot8_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) "target-features"="+dot8-insts" {
 ; GFX7-NOT:   define void @needs_dot8_insts(
 ; GFX8-NOT:   define void @needs_dot8_insts(
 ; GFX9-NOT:   define void @needs_dot8_insts(
@@ -444,18 +444,3 @@ define void @caller(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) {
   ; IR: ret void
   ret void
 }
-
-attributes #0 = { "target-features"="+dpp" }
-attributes #1 = { "target-features"="+16-bit-insts" }
-attributes #2 = { "target-features"="+gfx8-insts" }
-attributes #3 = { "target-features"="+gfx9-insts" }
-attributes #4 = { "target-features"="+gfx10-insts" }
-attributes #5 = { "target-features"="+gfx11-insts" }
-attributes #6 = { "target-features"="+dot1-insts" }
-attributes #7 = { "target-features"="+dot2-insts" }
-attributes #8 = { "target-features"="+dot3-insts" }
-attributes #9 = { "target-features"="+dot4-insts" }
-attributes #10 = { "target-features"="+dot5-insts" }
-attributes #11 = { "target-features"="+dot6-insts" }
-attributes #12 = { "target-features"="+dot7-insts" }
-attributes #13 = { "target-features"="+dot8-insts" }

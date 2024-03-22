@@ -2,19 +2,19 @@
 ; RUN: opt -S -mtriple=amdgcn-unknown-unknown -amdgpu-annotate-kernel-features < %s | FileCheck -check-prefixes=CHECK,AKF_CHECK %s
 ; RUN: opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-attributor < %s | FileCheck -check-prefixes=CHECK,ATTRIBUTOR_CHECK %s
 
-declare i32 @llvm.r600.read.tgid.x() #0
-declare i32 @llvm.r600.read.tgid.y() #0
-declare i32 @llvm.r600.read.tgid.z() #0
+declare i32 @llvm.r600.read.tgid.x() nounwind readnone
+declare i32 @llvm.r600.read.tgid.y() nounwind readnone
+declare i32 @llvm.r600.read.tgid.z() nounwind readnone
 
-declare i32 @llvm.r600.read.tidig.x() #0
-declare i32 @llvm.r600.read.tidig.y() #0
-declare i32 @llvm.r600.read.tidig.z() #0
+declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.r600.read.tidig.y() nounwind readnone
+declare i32 @llvm.r600.read.tidig.z() nounwind readnone
 
-declare i32 @llvm.r600.read.local.size.x() #0
-declare i32 @llvm.r600.read.local.size.y() #0
-declare i32 @llvm.r600.read.local.size.z() #0
+declare i32 @llvm.r600.read.local.size.x() nounwind readnone
+declare i32 @llvm.r600.read.local.size.y() nounwind readnone
+declare i32 @llvm.r600.read.local.size.z() nounwind readnone
 
-define amdgpu_kernel void @use_tgid_x(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_x(ptr addrspace(1) %ptr) nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@use_tgid_x
 ; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.x()
@@ -26,7 +26,7 @@ define amdgpu_kernel void @use_tgid_x(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tgid_y(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_y(ptr addrspace(1) %ptr) nounwind {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_y
 ; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.y()
@@ -44,7 +44,7 @@ define amdgpu_kernel void @use_tgid_y(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @multi_use_tgid_y(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @multi_use_tgid_y(ptr addrspace(1) %ptr) nounwind {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@multi_use_tgid_y
 ; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.y()
@@ -68,7 +68,7 @@ define amdgpu_kernel void @multi_use_tgid_y(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tgid_x_y(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_x_y(ptr addrspace(1) %ptr) nounwind {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_y
 ; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
@@ -92,7 +92,7 @@ define amdgpu_kernel void @use_tgid_x_y(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tgid_z(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_z(ptr addrspace(1) %ptr) nounwind {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_z
 ; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.z()
@@ -110,7 +110,7 @@ define amdgpu_kernel void @use_tgid_z(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tgid_x_z(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_x_z(ptr addrspace(1) %ptr) nounwind {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_z
 ; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
@@ -134,7 +134,7 @@ define amdgpu_kernel void @use_tgid_x_z(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tgid_y_z(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_y_z(ptr addrspace(1) %ptr) nounwind {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_y_z
 ; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.y()
@@ -158,7 +158,7 @@ define amdgpu_kernel void @use_tgid_y_z(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tgid_x_y_z(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tgid_x_y_z(ptr addrspace(1) %ptr) nounwind {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_y_z
 ; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
@@ -188,7 +188,7 @@ define amdgpu_kernel void @use_tgid_x_y_z(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tidig_x(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tidig_x(ptr addrspace(1) %ptr) nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@use_tidig_x
 ; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.x()
@@ -200,7 +200,7 @@ define amdgpu_kernel void @use_tidig_x(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tidig_y(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tidig_y(ptr addrspace(1) %ptr) nounwind {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tidig_y
 ; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.y()
@@ -218,7 +218,7 @@ define amdgpu_kernel void @use_tidig_y(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tidig_z(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tidig_z(ptr addrspace(1) %ptr) nounwind {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tidig_z
 ; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.z()
@@ -236,7 +236,7 @@ define amdgpu_kernel void @use_tidig_z(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tidig_x_tgid_x(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tidig_x_tgid_x(ptr addrspace(1) %ptr) nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@use_tidig_x_tgid_x
 ; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
@@ -252,7 +252,7 @@ define amdgpu_kernel void @use_tidig_x_tgid_x(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tidig_y_tgid_y(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tidig_y_tgid_y(ptr addrspace(1) %ptr) nounwind {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tidig_y_tgid_y
 ; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.y()
@@ -276,7 +276,7 @@ define amdgpu_kernel void @use_tidig_y_tgid_y(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_tidig_x_y_z(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_tidig_x_y_z(ptr addrspace(1) %ptr) nounwind {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_tidig_x_y_z
 ; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
@@ -306,7 +306,7 @@ define amdgpu_kernel void @use_tidig_x_y_z(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_all_workitems(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_all_workitems(ptr addrspace(1) %ptr) nounwind {
 ; AKF_CHECK-LABEL: define {{[^@]+}}@use_all_workitems
 ; AKF_CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
@@ -354,7 +354,7 @@ define amdgpu_kernel void @use_all_workitems(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_get_local_size_x(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_get_local_size_x(ptr addrspace(1) %ptr) nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@use_get_local_size_x
 ; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.local.size.x()
@@ -366,7 +366,7 @@ define amdgpu_kernel void @use_get_local_size_x(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_get_local_size_y(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_get_local_size_y(ptr addrspace(1) %ptr) nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@use_get_local_size_y
 ; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.local.size.y()
@@ -378,7 +378,7 @@ define amdgpu_kernel void @use_get_local_size_y(ptr addrspace(1) %ptr) #1 {
   ret void
 }
 
-define amdgpu_kernel void @use_get_local_size_z(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @use_get_local_size_z(ptr addrspace(1) %ptr) nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@use_get_local_size_z
 ; CHECK-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.local.size.z()
@@ -389,9 +389,6 @@ define amdgpu_kernel void @use_get_local_size_z(ptr addrspace(1) %ptr) #1 {
   store i32 %val, ptr addrspace(1) %ptr
   ret void
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
 
 ;.
 ; AKF_CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

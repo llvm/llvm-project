@@ -35,11 +35,8 @@ define void @caller_builtin(i32 %n) {
 ; GCN-NEXT:    ret void
 ;
 entry:
-  %call = call i32 (ptr, ...) @printf(ptr @str, i32 %n) #0
+  %call = call i32 (ptr, ...) @printf(ptr @str, i32 %n) builtin
   ret void
 }
 
-declare i32 @printf(ptr, ...) #1
-
-attributes #0 = { builtin }
-attributes #1 = { nobuiltin }
+declare i32 @printf(ptr, ...) nobuiltin

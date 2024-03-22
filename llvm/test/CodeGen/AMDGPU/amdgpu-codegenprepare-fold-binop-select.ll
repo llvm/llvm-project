@@ -508,6 +508,4 @@ define <2 x half> @multi_use_cast_regression(i1 %cond) {
   ret <2 x half> %call
 }
 
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #0
-
-attributes #0 = { nounwind readnone speculatable }
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) nounwind readnone speculatable

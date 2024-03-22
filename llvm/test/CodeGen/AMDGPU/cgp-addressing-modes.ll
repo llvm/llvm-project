@@ -20,7 +20,7 @@ define amdgpu_kernel void @test_sink_global_small_offset_i32(ptr addrspace(1) %o
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i64 999999
   %in.gep = getelementptr i32, ptr addrspace(1) %in, i64 7
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -53,7 +53,7 @@ define amdgpu_kernel void @test_sink_global_small_max_i32_ds_offset(ptr addrspac
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i64 99999
   %in.gep = getelementptr i8, ptr addrspace(1) %in, i64 65535
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -82,7 +82,7 @@ define amdgpu_kernel void @test_sink_global_small_max_mubuf_offset(ptr addrspace
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 1024
   %in.gep = getelementptr i8, ptr addrspace(1) %in, i64 4095
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -111,7 +111,7 @@ define amdgpu_kernel void @test_sink_global_small_max_plus_1_mubuf_offset(ptr ad
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i64 99999
   %in.gep = getelementptr i8, ptr addrspace(1) %in, i64 4096
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -146,7 +146,7 @@ entry:
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i64 999999
   %add.arg = add i32 %arg, 8
   %alloca.gep = getelementptr [512 x i32], ptr addrspace(5) %alloca, i32 0, i32 1022
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -186,7 +186,7 @@ entry:
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i64 999999
   %add.arg = add i32 %arg, 8
   %alloca.gep = getelementptr [512 x i32], ptr addrspace(5) %alloca, i32 0, i32 1023
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -223,7 +223,7 @@ entry:
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i64 999999
   %add.arg = add i32 %arg, 8
   %alloca.gep = getelementptr [512 x i32], ptr addrspace(5) %alloca, i32 0, i32 1024
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -253,7 +253,7 @@ entry:
   %offset.ext = zext i32 %offset to i64
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i64 999999
   %in.gep = getelementptr i32, ptr addrspace(1) %in, i64 %offset.ext
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -282,7 +282,7 @@ define amdgpu_kernel void @test_sink_constant_small_offset_i32(ptr addrspace(1) 
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i64 999999
   %in.gep = getelementptr i32, ptr addrspace(4) %in, i64 7
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -311,7 +311,7 @@ define amdgpu_kernel void @test_sink_constant_max_8_bit_offset_i32(ptr addrspace
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i64 999999
   %in.gep = getelementptr i32, ptr addrspace(4) %in, i64 255
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -344,7 +344,7 @@ define amdgpu_kernel void @test_sink_constant_max_8_bit_offset_p1_i32(ptr addrsp
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i64 999999
   %in.gep = getelementptr i32, ptr addrspace(4) %in, i64 256
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -383,7 +383,7 @@ define amdgpu_kernel void @test_sink_constant_max_32_bit_offset_i32(ptr addrspac
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i64 999999
   %in.gep = getelementptr i32, ptr addrspace(4) %in, i64 4294967295
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -414,7 +414,7 @@ define amdgpu_kernel void @test_sink_constant_max_32_bit_offset_p1_i32(ptr addrs
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i64 999999
   %in.gep = getelementptr i32, ptr addrspace(4) %in, i64 17179869181
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -444,7 +444,7 @@ define amdgpu_kernel void @test_sink_constant_max_20_bit_byte_offset_i32(ptr add
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i64 999999
   %in.gep = getelementptr i32, ptr addrspace(4) %in, i64 262143
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -482,7 +482,7 @@ define amdgpu_kernel void @test_sink_constant_max_20_bit_byte_offset_p1_i32(ptr 
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i64 999999
   %in.gep = getelementptr i32, ptr addrspace(4) %in, i64 262144
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -538,7 +538,7 @@ define amdgpu_kernel void @test_sink_constant_small_max_mubuf_offset_load_i32_al
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 1024
   %in.gep = getelementptr i8, ptr addrspace(4) %in, i64 4095
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -562,7 +562,7 @@ define amdgpu_kernel void @test_sink_local_small_offset_atomicrmw_i32(ptr addrsp
 entry:
   %out.gep = getelementptr i32, ptr addrspace(3) %out, i32 999999
   %in.gep = getelementptr i32, ptr addrspace(3) %in, i32 7
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -586,7 +586,7 @@ define amdgpu_kernel void @test_sink_local_small_offset_cmpxchg_i32(ptr addrspac
 entry:
   %out.gep = getelementptr i32, ptr addrspace(3) %out, i32 999999
   %in.gep = getelementptr i32, ptr addrspace(3) %in, i32 7
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -612,7 +612,7 @@ define amdgpu_kernel void @test_wrong_operand_local_small_offset_cmpxchg_i32(ptr
 entry:
   %out.gep = getelementptr ptr addrspace(3), ptr addrspace(3) %out, i32 999999
   %in.gep = getelementptr i32, ptr addrspace(3) %in, i32 7
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -646,7 +646,7 @@ define amdgpu_kernel void @test_sink_global_small_min_scratch_global_offset(ptr 
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 1024
   %in.gep = getelementptr i8, ptr addrspace(1) %in, i64 -4096
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -674,7 +674,7 @@ define amdgpu_kernel void @test_sink_global_small_min_scratch_global_neg1_offset
 entry:
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i64 99999
   %in.gep = getelementptr i8, ptr addrspace(1) %in, i64 -4097
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -699,7 +699,7 @@ define amdgpu_kernel void @test_sink_small_offset_ds_append(ptr addrspace(3) %ou
 entry:
   %out.gep = getelementptr i32, ptr addrspace(3) %out, i32 999999
   %in.gep = getelementptr i32, ptr addrspace(3) %in, i32 7
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -723,7 +723,7 @@ define amdgpu_kernel void @test_sink_small_offset_ds_consume(ptr addrspace(3) %o
 entry:
   %out.gep = getelementptr i32, ptr addrspace(3) %out, i32 999999
   %in.gep = getelementptr i32, ptr addrspace(3) %in, i32 7
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
@@ -740,11 +740,6 @@ done:
   ret void
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
-declare i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) nocapture, i1 immarg) #3
-declare i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) nocapture, i1 immarg) #3
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind argmemonly }
-attributes #3 = { argmemonly convergent nounwind willreturn }
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone
+declare i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) nocapture, i1 immarg) argmemonly convergent nounwind willreturn
+declare i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) nocapture, i1 immarg) argmemonly convergent nounwind willreturn

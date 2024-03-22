@@ -12,7 +12,7 @@
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare float @llvm.fabs.f32(float) nounwind readnone
 
-define amdgpu_kernel void @madak_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in.a, ptr addrspace(1) noalias %in.b) #0 {
+define amdgpu_kernel void @madak_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in.a, ptr addrspace(1) noalias %in.b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: madak_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -162,7 +162,7 @@ define amdgpu_kernel void @madak_f32(ptr addrspace(1) noalias %out, ptr addrspac
 ; Make sure this is only folded with one use. This is a code size
 ; optimization and if we fold the immediate multiple times, we'll undo
 ; it.
-define amdgpu_kernel void @madak_2_use_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
+define amdgpu_kernel void @madak_2_use_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: madak_2_use_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -362,7 +362,7 @@ define amdgpu_kernel void @madak_2_use_f32(ptr addrspace(1) noalias %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @madak_m_inline_imm_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in.a) #0 {
+define amdgpu_kernel void @madak_m_inline_imm_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in.a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: madak_m_inline_imm_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -481,7 +481,7 @@ define amdgpu_kernel void @madak_m_inline_imm_f32(ptr addrspace(1) noalias %out,
 
 ; Make sure nothing weird happens with a value that is also allowed as
 ; an inline immediate.
-define amdgpu_kernel void @madak_inline_imm_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in.a, ptr addrspace(1) noalias %in.b) #0 {
+define amdgpu_kernel void @madak_inline_imm_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in.a, ptr addrspace(1) noalias %in.b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: madak_inline_imm_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -629,7 +629,7 @@ define amdgpu_kernel void @madak_inline_imm_f32(ptr addrspace(1) noalias %out, p
 }
 
 ; We can't use an SGPR when forming madak
-define amdgpu_kernel void @s_v_madak_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in.a, float %b) #0 {
+define amdgpu_kernel void @s_v_madak_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in.a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: s_v_madak_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -760,7 +760,7 @@ define amdgpu_kernel void @s_v_madak_f32(ptr addrspace(1) noalias %out, ptr addr
   ret void
 }
 
-define amdgpu_kernel void @v_s_madak_f32(ptr addrspace(1) noalias %out, float %a, ptr addrspace(1) noalias %in.b) #0 {
+define amdgpu_kernel void @v_s_madak_f32(ptr addrspace(1) noalias %out, float %a, ptr addrspace(1) noalias %in.b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: v_s_madak_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xd
@@ -902,7 +902,7 @@ define amdgpu_kernel void @v_s_madak_f32(ptr addrspace(1) noalias %out, float %a
   ret void
 }
 
-define amdgpu_kernel void @s_s_madak_f32(ptr addrspace(1) %out, float %a, float %b) #0 {
+define amdgpu_kernel void @s_s_madak_f32(ptr addrspace(1) %out, float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: s_s_madak_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1000,7 +1000,7 @@ define amdgpu_kernel void @s_s_madak_f32(ptr addrspace(1) %out, float %a, float 
   ret void
 }
 
-define amdgpu_kernel void @no_madak_src0_modifier_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in.a, ptr addrspace(1) noalias %in.b) #0 {
+define amdgpu_kernel void @no_madak_src0_modifier_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in.a, ptr addrspace(1) noalias %in.b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: no_madak_src0_modifier_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1153,7 +1153,7 @@ define amdgpu_kernel void @no_madak_src0_modifier_f32(ptr addrspace(1) noalias %
   ret void
 }
 
-define amdgpu_kernel void @no_madak_src1_modifier_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in.a, ptr addrspace(1) noalias %in.b) #0 {
+define amdgpu_kernel void @no_madak_src1_modifier_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in.a, ptr addrspace(1) noalias %in.b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: no_madak_src1_modifier_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1309,7 +1309,7 @@ define amdgpu_kernel void @no_madak_src1_modifier_f32(ptr addrspace(1) noalias %
 ; SIFoldOperands should not fold the SGPR copy into the instruction before GFX10
 ; because the implicit immediate already uses the constant bus.
 ; On GFX10+ we can use two scalar operands.
-define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], float %sgpr0, float %sgpr1) #0 {
+define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], float %sgpr0, float %sgpr1) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: madak_constant_bus_violation:
 ; GFX6:       ; %bb.0: ; %bb
 ; GFX6-NEXT:    s_load_dword s2, s[0:1], 0x9
@@ -1512,5 +1512,3 @@ bb4:
   store volatile float %tmp2, ptr addrspace(1) undef, align 4
   ret void
 }
-
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

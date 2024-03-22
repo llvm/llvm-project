@@ -15,7 +15,7 @@
 ; GFX90A:      .vgpr_count:    44
 ; GFX908:      .vgpr_count:    32
 ; GFX801:      .vgpr_count:    9
-define amdgpu_kernel void @kernel_32_agprs() #0 {
+define amdgpu_kernel void @kernel_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v8}" ()
   call void asm sideeffect "", "~{a31}" ()
@@ -29,7 +29,7 @@ bb:
 ; GFX90A:      .vgpr_count:    1
 ; GFX908:      .vgpr_count:    1
 ; GFX801:      .vgpr_count:    1
-define amdgpu_kernel void @kernel_0_agprs() #0 {
+define amdgpu_kernel void @kernel_0_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v0}" ()
   ret void
@@ -42,7 +42,7 @@ bb:
 ; GFX90A:      .vgpr_count:    56
 ; GFX908:      .vgpr_count:    40
 ; GFX801:      .vgpr_count:    40
-define amdgpu_kernel void @kernel_40_vgprs() #0 {
+define amdgpu_kernel void @kernel_40_vgprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v39}" ()
   call void asm sideeffect "", "~{a15}" ()
@@ -56,14 +56,14 @@ bb:
 ; GFX90A:      .vgpr_count:    512
 ; GFX908:      .vgpr_count:    256
 ; GFX801:      .vgpr_count:    256
-define amdgpu_kernel void @kernel_max_gprs() #0 {
+define amdgpu_kernel void @kernel_max_gprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v255}" ()
   call void asm sideeffect "", "~{a255}" ()
   ret void
 }
 
-define void @func_32_agprs() #0 {
+define void @func_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v8}" ()
   call void asm sideeffect "", "~{a31}" ()
@@ -77,9 +77,9 @@ bb:
 ; GFX90A:      .vgpr_count:    44
 ; GFX908:      .vgpr_count:    32
 ; GFX801:      .vgpr_count:    9
-define amdgpu_kernel void @kernel_call_func_32_agprs() #0 {
+define amdgpu_kernel void @kernel_call_func_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
-  call void @func_32_agprs() #0
+  call void @func_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512"
   ret void
 }
 
@@ -92,10 +92,8 @@ declare void @undef_func()
 ; GFX90A:      .vgpr_count:    64
 ; GFX908:      .vgpr_count:    32
 ; GFX801:      .vgpr_count:    32
-define amdgpu_kernel void @kernel_call_undef_func() #0 {
+define amdgpu_kernel void @kernel_call_undef_func() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void @undef_func()
   ret void
 }
-
-attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" }

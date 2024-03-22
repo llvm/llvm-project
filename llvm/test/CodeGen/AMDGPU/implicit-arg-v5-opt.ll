@@ -2,7 +2,7 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -passes=amdgpu-lower-kernel-attributes,instcombine,infer-alignment %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_local_size_x(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @get_local_size_x(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" {
 ; GCN-LABEL: @get_local_size_x(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; GCN-NEXT:    [[GEP_LOCAL_SIZE:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 12
@@ -22,7 +22,7 @@ define amdgpu_kernel void @get_local_size_x(ptr addrspace(1) %out) #0 {
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_local_size_y(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @get_local_size_y(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" {
 ; GCN-LABEL: @get_local_size_y(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; GCN-NEXT:    [[GEP_LOCAL_SIZE:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 14
@@ -43,7 +43,7 @@ define amdgpu_kernel void @get_local_size_y(ptr addrspace(1) %out) #0 {
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_local_size_z(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @get_local_size_z(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" {
 ; GCN-LABEL: @get_local_size_z(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; GCN-NEXT:    [[GEP_LOCAL_SIZE:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 16
@@ -64,7 +64,7 @@ define amdgpu_kernel void @get_local_size_z(ptr addrspace(1) %out) #0 {
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_remainder_x(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @get_remainder_x(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" {
 ; GCN-LABEL: @get_remainder_x(
 ; GCN-NEXT:    store i16 0, ptr addrspace(1) [[OUT:%.*]], align 2
 ; GCN-NEXT:    ret void
@@ -77,7 +77,7 @@ define amdgpu_kernel void @get_remainder_x(ptr addrspace(1) %out) #0 {
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_remainder_y(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @get_remainder_y(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" {
 ; GCN-LABEL: @get_remainder_y(
 ; GCN-NEXT:    store i16 0, ptr addrspace(1) [[OUT:%.*]], align 2
 ; GCN-NEXT:    ret void
@@ -90,7 +90,7 @@ define amdgpu_kernel void @get_remainder_y(ptr addrspace(1) %out) #0 {
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_remainder_z(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @get_remainder_z(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" {
 ; GCN-LABEL: @get_remainder_z(
 ; GCN-NEXT:    store i16 0, ptr addrspace(1) [[OUT:%.*]], align 2
 ; GCN-NEXT:    ret void
@@ -103,7 +103,7 @@ define amdgpu_kernel void @get_remainder_z(ptr addrspace(1) %out) #0 {
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_work_group_size_x(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @get_work_group_size_x(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" {
 ; GCN-LABEL: @get_work_group_size_x(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; GCN-NEXT:    [[GEP_X:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 12
@@ -119,7 +119,7 @@ define amdgpu_kernel void @get_work_group_size_x(ptr addrspace(1) %out) #0 {
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_work_group_size_y(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @get_work_group_size_y(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" {
 ; GCN-LABEL: @get_work_group_size_y(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; GCN-NEXT:    [[GEP_Y:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 14
@@ -135,7 +135,7 @@ define amdgpu_kernel void @get_work_group_size_y(ptr addrspace(1) %out) #0 {
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_work_group_size_z(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @get_work_group_size_z(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" {
 ; GCN-LABEL: @get_work_group_size_z(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; GCN-NEXT:    [[GEP_Z:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 16
@@ -151,7 +151,7 @@ define amdgpu_kernel void @get_work_group_size_z(ptr addrspace(1) %out) #0 {
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_work_group_size_x_reqd(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @get_work_group_size_x_reqd(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
 ; GCN-LABEL: @get_work_group_size_x_reqd(
 ; GCN-NEXT:    store i16 8, ptr addrspace(1) [[OUT:%.*]], align 2
 ; GCN-NEXT:    ret void
@@ -164,7 +164,7 @@ define amdgpu_kernel void @get_work_group_size_x_reqd(ptr addrspace(1) %out) #0 
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_work_group_size_y_reqd(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @get_work_group_size_y_reqd(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
 ; GCN-LABEL: @get_work_group_size_y_reqd(
 ; GCN-NEXT:    store i16 16, ptr addrspace(1) [[OUT:%.*]], align 2
 ; GCN-NEXT:    ret void
@@ -177,7 +177,7 @@ define amdgpu_kernel void @get_work_group_size_y_reqd(ptr addrspace(1) %out) #0 
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_work_group_size_z_reqd(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @get_work_group_size_z_reqd(ptr addrspace(1) %out) nounwind "uniform-work-group-size"="true" !reqd_work_group_size !0 {
 ; GCN-LABEL: @get_work_group_size_z_reqd(
 ; GCN-NEXT:    store i16 2, ptr addrspace(1) [[OUT:%.*]], align 2
 ; GCN-NEXT:    ret void
@@ -190,14 +190,11 @@ define amdgpu_kernel void @get_work_group_size_z_reqd(ptr addrspace(1) %out) #0 
 }
 
 
-declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #1
-declare i32 @llvm.amdgcn.workgroup.id.x() #1
-declare i32 @llvm.amdgcn.workgroup.id.y() #1
-declare i32 @llvm.amdgcn.workgroup.id.z() #1
+declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workgroup.id.y() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workgroup.id.z() nounwind readnone speculatable
 
 !llvm.module.flags = !{!1}
-
-attributes #0 = { nounwind "uniform-work-group-size"="true" }
-attributes #1 = { nounwind readnone speculatable }
 !0 = !{i32 8, i32 16, i32 2}
 !1 = !{i32 1, !"amdhsa_code_object_version", i32 500}

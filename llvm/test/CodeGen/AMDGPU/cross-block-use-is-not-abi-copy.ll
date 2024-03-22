@@ -23,7 +23,7 @@
 ; since that didn't look like an ABI copy.
 
 
-define float @call_split_type_used_outside_block_v2f32() #0 {
+define float @call_split_type_used_outside_block_v2f32() nounwind {
 ; GCN-LABEL: call_split_type_used_outside_block_v2f32:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -59,7 +59,7 @@ bb1:
   ret float %extract
 }
 
-define float @call_split_type_used_outside_block_v3f32() #0 {
+define float @call_split_type_used_outside_block_v3f32() nounwind {
 ; GCN-LABEL: call_split_type_used_outside_block_v3f32:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -95,7 +95,7 @@ bb1:
   ret float %extract
 }
 
-define half @call_split_type_used_outside_block_v4f16() #0 {
+define half @call_split_type_used_outside_block_v4f16() nounwind {
 ; GCN-LABEL: call_split_type_used_outside_block_v4f16:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -131,7 +131,7 @@ bb1:
   ret half %extract
 }
 
-define { i32, half } @call_split_type_used_outside_block_struct() #0 {
+define { i32, half } @call_split_type_used_outside_block_struct() nounwind {
 ; GCN-LABEL: call_split_type_used_outside_block_struct:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -173,7 +173,7 @@ bb1:
   ret { i32, half } %ins1
 }
 
-define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
+define amdgpu_kernel void @v3i16_registers(i1 %cond) nounwind {
 ; GCN-LABEL: v3i16_registers:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
@@ -213,7 +213,7 @@ if.then:                                          ; preds = %entry
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %call6 = tail call <3 x i16> @func_v3i16() #0
+  %call6 = tail call <3 x i16> @func_v3i16() nounwind
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -222,7 +222,7 @@ if.end:                                           ; preds = %if.else, %if.then
   ret void
 }
 
-define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
+define amdgpu_kernel void @v3f16_registers(i1 %cond) nounwind {
 ; GCN-LABEL: v3f16_registers:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
@@ -262,7 +262,7 @@ if.then:                                          ; preds = %entry
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %call6 = tail call <3 x half> @func_v3f16() #0
+  %call6 = tail call <3 x half> @func_v3f16() nounwind
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -271,16 +271,14 @@ if.end:                                           ; preds = %if.else, %if.then
   ret void
 }
 
-declare hidden <2 x float> @func_v2f32() #0
-declare hidden <3 x float> @func_v3f32() #0
-declare hidden <4 x float> @func_v4f32() #0
-declare hidden <4 x half> @func_v4f16() #0
+declare hidden <2 x float> @func_v2f32() nounwind
+declare hidden <3 x float> @func_v3f32() nounwind
+declare hidden <4 x float> @func_v4f32() nounwind
+declare hidden <4 x half> @func_v4f16() nounwind
 declare hidden <3 x i16> @func_v3i16()
 declare hidden <3 x half> @func_v3f16()
 
-declare hidden { <4 x i32>, <4 x half> } @func_struct() #0
-
-attributes #0 = { nounwind}
+declare hidden { <4 x i32>, <4 x half> } @func_struct() nounwind
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

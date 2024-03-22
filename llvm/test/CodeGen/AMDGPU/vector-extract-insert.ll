@@ -4,10 +4,10 @@
 ; Test that when extracting the same unknown vector index from an
 ; insertelement the dynamic indexing is folded away.
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; No dynamic indexing required
-define amdgpu_kernel void @extract_insert_same_dynelt_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val, i32 %idx) #1 {
+define amdgpu_kernel void @extract_insert_same_dynelt_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val, i32 %idx) nounwind {
 ; GCN-LABEL: extract_insert_same_dynelt_v4i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -31,7 +31,7 @@ define amdgpu_kernel void @extract_insert_same_dynelt_v4i32(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @extract_insert_different_dynelt_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val, i32 %idx0, i32 %idx1) #1 {
+define amdgpu_kernel void @extract_insert_different_dynelt_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val, i32 %idx0, i32 %idx1) nounwind {
 ; GCN-LABEL: extract_insert_different_dynelt_v4i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
@@ -84,7 +84,7 @@ define amdgpu_kernel void @extract_insert_different_dynelt_v4i32(ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @extract_insert_same_elt2_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val, i32 %idx) #1 {
+define amdgpu_kernel void @extract_insert_same_elt2_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val, i32 %idx) nounwind {
 ; GCN-LABEL: extract_insert_same_elt2_v4i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -108,7 +108,7 @@ define amdgpu_kernel void @extract_insert_same_elt2_v4i32(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @extract_insert_same_dynelt_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in, float %val, i32 %idx) #1 {
+define amdgpu_kernel void @extract_insert_same_dynelt_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in, float %val, i32 %idx) nounwind {
 ; GCN-LABEL: extract_insert_same_dynelt_v4f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -136,6 +136,3 @@ define amdgpu_kernel void @extract_insert_same_dynelt_v4f32(ptr addrspace(1) %ou
   store float %extract, ptr addrspace(1) %gep.out
   ret void
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }

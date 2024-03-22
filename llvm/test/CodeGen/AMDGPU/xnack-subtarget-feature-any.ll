@@ -10,8 +10,6 @@
 
 ; NOT-SUPPORTED: xnack setting for subtarget: Unsupported
 ; ANY: xnack setting for subtarget: Any
-define void @xnack-subtarget-feature-any() #0 {
+define void @xnack-subtarget-feature-any() nounwind {
   ret void
 }
-
-attributes #0 = { nounwind }

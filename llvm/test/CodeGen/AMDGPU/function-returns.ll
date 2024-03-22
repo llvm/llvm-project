@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX789,GFX89,GFX9 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
-define i1 @i1_func_void() #0 {
+define i1 @i1_func_void() nounwind {
 ; GFX789-LABEL: i1_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -27,7 +27,7 @@ define i1 @i1_func_void() #0 {
 }
 
 ; FIXME: Missing and?
-define zeroext i1 @i1_zeroext_func_void() #0 {
+define zeroext i1 @i1_zeroext_func_void() nounwind {
 ; GFX789-LABEL: i1_zeroext_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -49,7 +49,7 @@ define zeroext i1 @i1_zeroext_func_void() #0 {
   ret i1 %val
 }
 
-define signext i1 @i1_signext_func_void() #0 {
+define signext i1 @i1_signext_func_void() nounwind {
 ; GFX789-LABEL: i1_signext_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -73,7 +73,7 @@ define signext i1 @i1_signext_func_void() #0 {
   ret i1 %val
 }
 
-define i8 @i8_func_void() #0 {
+define i8 @i8_func_void() nounwind {
 ; GFX789-LABEL: i8_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -95,7 +95,7 @@ define i8 @i8_func_void() #0 {
   ret i8 %val
 }
 
-define zeroext i8 @i8_zeroext_func_void() #0 {
+define zeroext i8 @i8_zeroext_func_void() nounwind {
 ; GFX789-LABEL: i8_zeroext_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -117,7 +117,7 @@ define zeroext i8 @i8_zeroext_func_void() #0 {
   ret i8 %val
 }
 
-define signext i8 @i8_signext_func_void() #0 {
+define signext i8 @i8_signext_func_void() nounwind {
 ; GFX789-LABEL: i8_signext_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -139,7 +139,7 @@ define signext i8 @i8_signext_func_void() #0 {
   ret i8 %val
 }
 
-define i16 @i16_func_void() #0 {
+define i16 @i16_func_void() nounwind {
 ; GFX789-LABEL: i16_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -161,7 +161,7 @@ define i16 @i16_func_void() #0 {
   ret i16 %val
 }
 
-define zeroext i16 @i16_zeroext_func_void() #0 {
+define zeroext i16 @i16_zeroext_func_void() nounwind {
 ; GFX789-LABEL: i16_zeroext_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -183,7 +183,7 @@ define zeroext i16 @i16_zeroext_func_void() #0 {
   ret i16 %val
 }
 
-define signext i16 @i16_signext_func_void() #0 {
+define signext i16 @i16_signext_func_void() nounwind {
 ; GFX789-LABEL: i16_signext_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -205,7 +205,7 @@ define signext i16 @i16_signext_func_void() #0 {
   ret i16 %val
 }
 
-define i32 @i32_func_void() #0 {
+define i32 @i32_func_void() nounwind {
 ; GFX789-LABEL: i32_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -227,7 +227,7 @@ define i32 @i32_func_void() #0 {
   ret i32 %val
 }
 
-define i48 @i48_func_void() #0 {
+define i48 @i48_func_void() nounwind {
 ; GFX789-LABEL: i48_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -252,7 +252,7 @@ define i48 @i48_func_void() #0 {
   ret i48 %val
 }
 
-define zeroext i48 @i48_zeroext_func_void() #0 {
+define zeroext i48 @i48_zeroext_func_void() nounwind {
 ; GFX789-LABEL: i48_zeroext_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -277,7 +277,7 @@ define zeroext i48 @i48_zeroext_func_void() #0 {
   ret i48 %val
 }
 
-define signext i48 @i48_signext_func_void() #0 {
+define signext i48 @i48_signext_func_void() nounwind {
 ; GFX789-LABEL: i48_signext_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -302,7 +302,7 @@ define signext i48 @i48_signext_func_void() #0 {
   ret i48 %val
 }
 
-define i63 @i63_func_void(i63 %val) #0 {
+define i63 @i63_func_void(i63 %val) nounwind {
 ; GFX789-LABEL: i63_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -315,7 +315,7 @@ define i63 @i63_func_void(i63 %val) #0 {
   ret i63 %val
 }
 
-define zeroext i63 @i63_zeroext_func_void(i63 %val) #0 {
+define zeroext i63 @i63_zeroext_func_void(i63 %val) nounwind {
 ; GFX789-LABEL: i63_zeroext_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -330,7 +330,7 @@ define zeroext i63 @i63_zeroext_func_void(i63 %val) #0 {
   ret i63 %val
 }
 
-define signext i63 @i63_signext_func_void(i63 %val) #0 {
+define signext i63 @i63_signext_func_void(i63 %val) nounwind {
 ; CI-LABEL: i63_signext_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -355,7 +355,7 @@ define signext i63 @i63_signext_func_void(i63 %val) #0 {
   ret i63 %val
 }
 
-define i64 @i64_func_void() #0 {
+define i64 @i64_func_void() nounwind {
 ; GFX789-LABEL: i64_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -377,7 +377,7 @@ define i64 @i64_func_void() #0 {
   ret i64 %val
 }
 
-define i65 @i65_func_void() #0 {
+define i65 @i65_func_void() nounwind {
 ; GFX789-LABEL: i65_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -402,7 +402,7 @@ define i65 @i65_func_void() #0 {
   ret i65 %val
 }
 
-define float @f32_func_void() #0 {
+define float @f32_func_void() nounwind {
 ; GFX789-LABEL: f32_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -424,7 +424,7 @@ define float @f32_func_void() #0 {
   ret float %val
 }
 
-define double @f64_func_void() #0 {
+define double @f64_func_void() nounwind {
 ; GFX789-LABEL: f64_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -446,7 +446,7 @@ define double @f64_func_void() #0 {
   ret double %val
 }
 
-define <2 x double> @v2f64_func_void() #0 {
+define <2 x double> @v2f64_func_void() nounwind {
 ; GFX789-LABEL: v2f64_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -468,7 +468,7 @@ define <2 x double> @v2f64_func_void() #0 {
   ret <2 x double> %val
 }
 
-define <2 x i32> @v2i32_func_void() #0 {
+define <2 x i32> @v2i32_func_void() nounwind {
 ; GFX789-LABEL: v2i32_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -490,7 +490,7 @@ define <2 x i32> @v2i32_func_void() #0 {
   ret <2 x i32> %val
 }
 
-define <3 x i32> @v3i32_func_void() #0 {
+define <3 x i32> @v3i32_func_void() nounwind {
 ; GFX789-LABEL: v3i32_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -512,7 +512,7 @@ define <3 x i32> @v3i32_func_void() #0 {
   ret <3 x i32> %val
 }
 
-define <4 x i32> @v4i32_func_void() #0 {
+define <4 x i32> @v4i32_func_void() nounwind {
 ; GFX789-LABEL: v4i32_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -534,7 +534,7 @@ define <4 x i32> @v4i32_func_void() #0 {
   ret <4 x i32> %val
 }
 
-define <5 x i32> @v5i32_func_void() #0 {
+define <5 x i32> @v5i32_func_void() nounwind {
 ; GFX789-LABEL: v5i32_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -560,7 +560,7 @@ define <5 x i32> @v5i32_func_void() #0 {
   ret <5 x i32> %val
 }
 
-define <8 x i32> @v8i32_func_void() #0 {
+define <8 x i32> @v8i32_func_void() nounwind {
 ; GFX789-LABEL: v8i32_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -590,7 +590,7 @@ define <8 x i32> @v8i32_func_void() #0 {
   ret <8 x i32> %val
 }
 
-define <16 x i32> @v16i32_func_void() #0 {
+define <16 x i32> @v16i32_func_void() nounwind {
 ; GFX789-LABEL: v16i32_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -624,7 +624,7 @@ define <16 x i32> @v16i32_func_void() #0 {
   ret <16 x i32> %val
 }
 
-define <32 x i32> @v32i32_func_void() #0 {
+define <32 x i32> @v32i32_func_void() nounwind {
 ; GFX789-LABEL: v32i32_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -666,7 +666,7 @@ define <32 x i32> @v32i32_func_void() #0 {
   ret <32 x i32> %val
 }
 
-define <2 x i64> @v2i64_func_void() #0 {
+define <2 x i64> @v2i64_func_void() nounwind {
 ; GFX789-LABEL: v2i64_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -688,7 +688,7 @@ define <2 x i64> @v2i64_func_void() #0 {
   ret <2 x i64> %val
 }
 
-define <3 x i64> @v3i64_func_void() #0 {
+define <3 x i64> @v3i64_func_void() nounwind {
 ; GFX789-LABEL: v3i64_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -718,7 +718,7 @@ define <3 x i64> @v3i64_func_void() #0 {
   ret <3 x i64> %val
 }
 
-define <4 x i64> @v4i64_func_void() #0 {
+define <4 x i64> @v4i64_func_void() nounwind {
 ; GFX789-LABEL: v4i64_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -748,7 +748,7 @@ define <4 x i64> @v4i64_func_void() #0 {
   ret <4 x i64> %val
 }
 
-define <5 x i64> @v5i64_func_void() #0 {
+define <5 x i64> @v5i64_func_void() nounwind {
 ; GFX789-LABEL: v5i64_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -780,7 +780,7 @@ define <5 x i64> @v5i64_func_void() #0 {
   ret <5 x i64> %val
 }
 
-define <8 x i64> @v8i64_func_void() #0 {
+define <8 x i64> @v8i64_func_void() nounwind {
 ; GFX789-LABEL: v8i64_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -814,7 +814,7 @@ define <8 x i64> @v8i64_func_void() #0 {
   ret <8 x i64> %val
 }
 
-define <16 x i64> @v16i64_func_void() #0 {
+define <16 x i64> @v16i64_func_void() nounwind {
 ; GFX789-LABEL: v16i64_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -856,7 +856,7 @@ define <16 x i64> @v16i64_func_void() #0 {
   ret <16 x i64> %val
 }
 
-define <2 x i16> @v2i16_func_void() #0 {
+define <2 x i16> @v2i16_func_void() nounwind {
 ; CI-LABEL: v2i16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -888,7 +888,7 @@ define <2 x i16> @v2i16_func_void() #0 {
   ret <2 x i16> %val
 }
 
-define <3 x i16> @v3i16_func_void() #0 {
+define <3 x i16> @v3i16_func_void() nounwind {
 ; CI-LABEL: v3i16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -922,7 +922,7 @@ define <3 x i16> @v3i16_func_void() #0 {
   ret <3 x i16> %val
 }
 
-define <4 x i16> @v4i16_func_void() #0 {
+define <4 x i16> @v4i16_func_void() nounwind {
 ; CI-LABEL: v4i16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -957,7 +957,7 @@ define <4 x i16> @v4i16_func_void() #0 {
   ret <4 x i16> %val
 }
 
-define <4 x half> @v4f16_func_void() #0 {
+define <4 x half> @v4f16_func_void() nounwind {
 ; CI-LABEL: v4f16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -996,7 +996,7 @@ define <4 x half> @v4f16_func_void() #0 {
 
 ; FIXME: Mixing buffer and global
 ; FIXME: Should not scalarize
-define <5 x i16> @v5i16_func_void() #0 {
+define <5 x i16> @v5i16_func_void() nounwind {
 ; CI-LABEL: v5i16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1040,7 +1040,7 @@ define <5 x i16> @v5i16_func_void() #0 {
   ret <5 x i16> %val
 }
 
-define <8 x i16> @v8i16_func_void() #0 {
+define <8 x i16> @v8i16_func_void() nounwind {
 ; CI-LABEL: v8i16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1086,7 +1086,7 @@ define <8 x i16> @v8i16_func_void() #0 {
   ret <8 x i16> %val
 }
 
-define <16 x i16> @v16i16_func_void() #0 {
+define <16 x i16> @v16i16_func_void() nounwind {
 ; CI-LABEL: v16i16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1146,7 +1146,7 @@ define <16 x i16> @v16i16_func_void() #0 {
 }
 
 ; FIXME: Should pack
-define <16 x i8> @v16i8_func_void() #0 {
+define <16 x i8> @v16i8_func_void() nounwind {
 ; GFX789-LABEL: v16i8_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1208,7 +1208,7 @@ define <16 x i8> @v16i8_func_void() #0 {
 }
 
 ; FIXME: Should pack
-define <4  x i8> @v4i8_func_void() #0 {
+define <4  x i8> @v4i8_func_void() nounwind {
 ; GFX789-LABEL: v4i8_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1241,7 +1241,7 @@ define <4  x i8> @v4i8_func_void() #0 {
   ret <4  x i8> %val
 }
 
-define {i8, i32} @struct_i8_i32_func_void() #0 {
+define {i8, i32} @struct_i8_i32_func_void() nounwind {
 ; GFX789-LABEL: struct_i8_i32_func_void:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1266,7 +1266,7 @@ define {i8, i32} @struct_i8_i32_func_void() #0 {
   ret { i8, i32 } %val
 }
 
-define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %arg0) #0 {
+define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %arg0) nounwind {
 ; GFX789-LABEL: void_func_sret_struct_i8_i32:
 ; GFX789:       ; %bb.0:
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1306,7 +1306,7 @@ define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %ar
 ; FIXME: Should be able to fold offsets in all of these pre-gfx9. Call
 ; lowering introduces an extra CopyToReg/CopyFromReg obscuring the
 ; AssertZext inserted. Not using it introduces the spills.
-define <33 x i32> @v33i32_func_void() #0 {
+define <33 x i32> @v33i32_func_void() nounwind {
 ; CI-LABEL: v33i32_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1595,7 +1595,7 @@ define <33 x i32> @v33i32_func_void() #0 {
   ret <33 x i32> %val
 }
 
-define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
+define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() nounwind {
 ; CI-LABEL: struct_v32i32_i32_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1884,7 +1884,7 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
   ret { <32 x i32>, i32 }%val
 }
 
-define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
+define { i32, <32 x i32> } @struct_i32_v32i32_func_void() nounwind {
 ; CI-LABEL: struct_i32_v32i32_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2177,7 +2177,7 @@ define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
 }
 
 ; Make sure the last struct component is returned in v3, not v4.
-define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() #0 {
+define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() nounwind {
 ; CI-LABEL: v3i32_struct_func_void_wasted_reg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2236,7 +2236,7 @@ define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() #0 {
   ret { <3 x i32>, i32 } %insert.4
 }
 
-define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
+define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() nounwind {
 ; CI-LABEL: v3f32_struct_func_void_wasted_reg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2295,7 +2295,7 @@ define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
   ret { <3 x float>, i32 } %insert.4
 }
 
-define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0) #0 {
+define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0) nounwind {
 ; CI-LABEL: void_func_sret_max_known_zero_bits:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2354,7 +2354,7 @@ define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0)
   ret void
 }
 
-define bfloat @bf16_func_void() #0 {
+define bfloat @bf16_func_void() nounwind {
 ; CI-LABEL: bf16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2386,7 +2386,7 @@ define bfloat @bf16_func_void() #0 {
   ret bfloat %val
 }
 
-define <2 x bfloat> @v2bf16_func_void() #0 {
+define <2 x bfloat> @v2bf16_func_void() nounwind {
 ; CI-LABEL: v2bf16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2419,7 +2419,7 @@ define <2 x bfloat> @v2bf16_func_void() #0 {
   ret <2 x bfloat> %val
 }
 
-define <3 x bfloat> @v3bf16_func_void() #0 {
+define <3 x bfloat> @v3bf16_func_void() nounwind {
 ; CI-LABEL: v3bf16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2453,7 +2453,7 @@ define <3 x bfloat> @v3bf16_func_void() #0 {
   ret <3 x bfloat> %val
 }
 
-define <4 x bfloat> @v4bf16_func_void() #0 {
+define <4 x bfloat> @v4bf16_func_void() nounwind {
 ; CI-LABEL: v4bf16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2488,7 +2488,7 @@ define <4 x bfloat> @v4bf16_func_void() #0 {
   ret <4 x bfloat> %val
 }
 
-define <6 x bfloat> @v6bf16_func_void() #0 {
+define <6 x bfloat> @v6bf16_func_void() nounwind {
 ; CI-LABEL: v6bf16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2525,7 +2525,7 @@ define <6 x bfloat> @v6bf16_func_void() #0 {
   ret <6 x bfloat> %val
 }
 
-define <8 x bfloat> @v8bf16_func_void() #0 {
+define <8 x bfloat> @v8bf16_func_void() nounwind {
 ; CI-LABEL: v8bf16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2564,7 +2564,7 @@ define <8 x bfloat> @v8bf16_func_void() #0 {
   ret <8 x bfloat> %val
 }
 
-define <16 x bfloat> @v16bf16_func_void() #0 {
+define <16 x bfloat> @v16bf16_func_void() nounwind {
 ; CI-LABEL: v16bf16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2617,7 +2617,7 @@ define <16 x bfloat> @v16bf16_func_void() #0 {
   ret <16 x bfloat> %val
 }
 
-define <32 x bfloat> @v32bf16_func_void() #0 {
+define <32 x bfloat> @v32bf16_func_void() nounwind {
 ; CI-LABEL: v32bf16_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2697,5 +2697,3 @@ define <32 x bfloat> @v32bf16_func_void() #0 {
   %val = load <32 x bfloat>, ptr addrspace(1) undef
   ret <32 x bfloat> %val
 }
-
-attributes #0 = { nounwind }

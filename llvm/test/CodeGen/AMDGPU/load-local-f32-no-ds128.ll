@@ -16,5 +16,3 @@ define amdgpu_kernel void @local_v4f32_to_2b64(ptr addrspace(3) %out, ptr addrsp
   store <4 x float> %ld, ptr addrspace(3) %out, align 16
   ret void
 }
-
-attributes #0 = { nounwind }

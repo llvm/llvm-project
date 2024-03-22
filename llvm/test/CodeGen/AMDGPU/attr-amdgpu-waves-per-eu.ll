@@ -6,11 +6,10 @@
 ; CHECK: VGPRBlocks: 32
 ; CHECK: NumSGPRsForWavesPerEU: 102
 ; CHECK: NumVGPRsForWavesPerEU: 129
-define amdgpu_kernel void @empty_exactly_1() #0 {
+define amdgpu_kernel void @empty_exactly_1() "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,64" {
 entry:
   ret void
 }
-attributes #0 = {"amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,64" }
 
 ; Exactly 5 waves per execution unit.
 ; CHECK-LABEL: {{^}}empty_exactly_5:
@@ -18,11 +17,10 @@ attributes #0 = {"amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,64
 ; CHECK: VGPRBlocks: 10
 ; CHECK: NumSGPRsForWavesPerEU: 102
 ; CHECK: NumVGPRsForWavesPerEU: 41
-define amdgpu_kernel void @empty_exactly_5() #1 {
+define amdgpu_kernel void @empty_exactly_5() "amdgpu-waves-per-eu"="5,5" {
 entry:
   ret void
 }
-attributes #1 = {"amdgpu-waves-per-eu"="5,5"}
 
 ; Exactly 10 waves per execution unit.
 ; CHECK-LABEL: {{^}}empty_exactly_10:
@@ -30,11 +28,10 @@ attributes #1 = {"amdgpu-waves-per-eu"="5,5"}
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-define amdgpu_kernel void @empty_exactly_10() #2 {
+define amdgpu_kernel void @empty_exactly_10() "amdgpu-waves-per-eu"="10,10" {
 entry:
   ret void
 }
-attributes #2 = {"amdgpu-waves-per-eu"="10,10"}
 
 ; At least 1 wave per execution unit.
 ; CHECK-LABEL: {{^}}empty_at_least_1:
@@ -42,11 +39,10 @@ attributes #2 = {"amdgpu-waves-per-eu"="10,10"}
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-define amdgpu_kernel void @empty_at_least_1() #3 {
+define amdgpu_kernel void @empty_at_least_1() "amdgpu-waves-per-eu"="1" {
 entry:
   ret void
 }
-attributes #3 = {"amdgpu-waves-per-eu"="1"}
 
 ; At least 5 waves per execution unit.
 ; CHECK-LABEL: {{^}}empty_at_least_5:
@@ -54,11 +50,10 @@ attributes #3 = {"amdgpu-waves-per-eu"="1"}
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-define amdgpu_kernel void @empty_at_least_5() #4 {
+define amdgpu_kernel void @empty_at_least_5() "amdgpu-waves-per-eu"="5" {
 entry:
   ret void
 }
-attributes #4 = {"amdgpu-waves-per-eu"="5"}
 
 ; At least 10 waves per execution unit.
 ; CHECK-LABEL: {{^}}empty_at_least_10:
@@ -66,11 +61,10 @@ attributes #4 = {"amdgpu-waves-per-eu"="5"}
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-define amdgpu_kernel void @empty_at_least_10() #5 {
+define amdgpu_kernel void @empty_at_least_10() "amdgpu-waves-per-eu"="10" {
 entry:
   ret void
 }
-attributes #5 = {"amdgpu-waves-per-eu"="10"}
 
 ; At most 1 wave per execution unit (same as @empty_exactly_1).
 
@@ -80,11 +74,10 @@ attributes #5 = {"amdgpu-waves-per-eu"="10"}
 ; CHECK: VGPRBlocks: 10
 ; CHECK: NumSGPRsForWavesPerEU: 102
 ; CHECK: NumVGPRsForWavesPerEU: 41
-define amdgpu_kernel void @empty_at_most_5() #6 {
+define amdgpu_kernel void @empty_at_most_5() "amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="1,64" {
 entry:
   ret void
 }
-attributes #6 = {"amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="1,64"}
 
 ; At most 10 waves per execution unit.
 ; CHECK-LABEL: {{^}}empty_at_most_10:
@@ -92,11 +85,10 @@ attributes #6 = {"amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="1,64
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-define amdgpu_kernel void @empty_at_most_10() #7 {
+define amdgpu_kernel void @empty_at_most_10() "amdgpu-waves-per-eu"="1,10" {
 entry:
   ret void
 }
-attributes #7 = {"amdgpu-waves-per-eu"="1,10"}
 
 ; Between 1 and 5 waves per execution unit (same as @empty_at_most_5).
 
@@ -106,11 +98,10 @@ attributes #7 = {"amdgpu-waves-per-eu"="1,10"}
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-define amdgpu_kernel void @empty_between_5_and_10() #8 {
+define amdgpu_kernel void @empty_between_5_and_10() "amdgpu-waves-per-eu"="5,10" {
 entry:
   ret void
 }
-attributes #8 = {"amdgpu-waves-per-eu"="5,10"}
 
 @var = addrspace(1) global float 0.0
 
@@ -120,7 +111,7 @@ attributes #8 = {"amdgpu-waves-per-eu"="5,10"}
 ; CHECK: VGPRBlocks: 5
 ; CHECK: NumSGPRsForWavesPerEU: 12
 ; CHECK: NumVGPRsForWavesPerEU: 24
-define amdgpu_kernel void @exactly_10() #9 {
+define amdgpu_kernel void @exactly_10() "amdgpu-waves-per-eu"="10,10" {
   %val0 = load volatile float, ptr addrspace(1) @var
   %val1 = load volatile float, ptr addrspace(1) @var
   %val2 = load volatile float, ptr addrspace(1) @var
@@ -187,7 +178,6 @@ define amdgpu_kernel void @exactly_10() #9 {
 
   ret void
 }
-attributes #9 = {"amdgpu-waves-per-eu"="10,10"}
 
 ; Exactly 256 workitems and exactly 2 waves.
 ; CHECK-LABEL: {{^}}empty_workitems_exactly_256_waves_exactly_2:
@@ -195,8 +185,7 @@ attributes #9 = {"amdgpu-waves-per-eu"="10,10"}
 ; CHECK: VGPRBlocks: 21
 ; CHECK: NumSGPRsForWavesPerEU: 102
 ; CHECK: NumVGPRsForWavesPerEU: 85
-define amdgpu_kernel void @empty_workitems_exactly_256_waves_exactly_2() #10 {
+define amdgpu_kernel void @empty_workitems_exactly_256_waves_exactly_2() "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="2,2" {
 entry:
   ret void
 }
-attributes #10 = {"amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="2,2"}

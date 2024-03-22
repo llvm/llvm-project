@@ -63,7 +63,7 @@
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RELOAD_VAL]]
 
 ; VGPR: .amdhsa_private_segment_fixed_size 16
-define amdgpu_kernel void @divergent_if_endif(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @divergent_if_endif(ptr addrspace(1) %out) nounwind {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %load0 = load volatile i32, ptr addrspace(3) undef
@@ -134,7 +134,7 @@ endif:
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v[[VAL_END]]
 
 ; VGPR: .amdhsa_private_segment_fixed_size 20
-define amdgpu_kernel void @divergent_loop(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @divergent_loop(ptr addrspace(1) %out) nounwind {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %load0 = load volatile i32, ptr addrspace(3) null
@@ -248,7 +248,7 @@ end:
 ; GCN: buffer_load_dword v[[RESULT:[0-9]+]], off, s[0:3], 0 offset:[[RESULT_OFFSET]] ; 4-byte Folded Reload
 
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v[[RESULT]]
-define amdgpu_kernel void @divergent_if_else_endif(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @divergent_if_else_endif(ptr addrspace(1) %out) nounwind {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %load0 = load volatile i32, ptr addrspace(3) null
@@ -271,10 +271,7 @@ endif:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

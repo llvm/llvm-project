@@ -42,7 +42,7 @@ define amdgpu_ps double @flat_atomic_fadd_f64_rtn_intrinsic(ptr %ptr, double %da
   ret double %ret
 }
 
-define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_atomicrmw(ptr %ptr, double %data) #0 {
+define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_atomicrmw(ptr %ptr, double %data) "amdgpu-unsafe-fp-atomics"="true" {
   ; GFX90A_GFX940-LABEL: name: flat_atomic_fadd_f64_no_rtn_atomicrmw
   ; GFX90A_GFX940: bb.1 (%ir-block.0):
   ; GFX90A_GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -59,7 +59,7 @@ define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_atomicrmw(ptr %ptr, double %d
   ret void
 }
 
-define amdgpu_ps double @flat_atomic_fadd_f64_rtn_atomicrmw(ptr %ptr, double %data) #0 {
+define amdgpu_ps double @flat_atomic_fadd_f64_rtn_atomicrmw(ptr %ptr, double %data) "amdgpu-unsafe-fp-atomics"="true" {
   ; GFX90A_GFX940-LABEL: name: flat_atomic_fadd_f64_rtn_atomicrmw
   ; GFX90A_GFX940: bb.1 (%ir-block.0):
   ; GFX90A_GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -83,5 +83,3 @@ define amdgpu_ps double @flat_atomic_fadd_f64_rtn_atomicrmw(ptr %ptr, double %da
 }
 
 declare double @llvm.amdgcn.flat.atomic.fadd.f64.p1.f64(ptr, double)
-
-attributes #0 = {"amdgpu-unsafe-fp-atomics"="true" }

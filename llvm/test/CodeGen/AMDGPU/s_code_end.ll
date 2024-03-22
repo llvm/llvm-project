@@ -17,7 +17,7 @@
 
 ; GCN-OBJ-NEXT:           s_nop 0
 
-define amdgpu_kernel void @a_kernel1() #0 {
+define amdgpu_kernel void @a_kernel1() "amdgpu-flat-work-group-size"="1,512" {
   ret void
 }
 
@@ -28,7 +28,7 @@ define amdgpu_kernel void @a_kernel1() #0 {
 
 ; GCN-OBJ:   {{^$}}
 
-define amdgpu_kernel void @a_kernel2() #0 {
+define amdgpu_kernel void @a_kernel2() "amdgpu-flat-work-group-size"="1,512" {
   ret void
 }
 
@@ -62,8 +62,6 @@ define amdgpu_kernel void @a_kernel2() #0 {
 ; GFX90AEND-OBJ:           s_nop 0 // 000000000140:
 ; GFX90AEND-OBJ-COUNT-255: s_nop 0
 
-define void @a_function() #0 {
+define void @a_function() "amdgpu-flat-work-group-size"="1,512" {
   ret void
 }
-
-attributes #0 = { "amdgpu-flat-work-group-size"="1,512" }

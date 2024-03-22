@@ -4,15 +4,15 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 
-declare half @llvm.nearbyint.f16(half) #0
-declare float @llvm.nearbyint.f32(float) #0
-declare <2 x float> @llvm.nearbyint.v2f32(<2 x float>) #0
-declare <4 x float> @llvm.nearbyint.v4f32(<4 x float>) #0
-declare double @llvm.nearbyint.f64(double) #0
-declare <2 x double> @llvm.nearbyint.v2f64(<2 x double>) #0
-declare <4 x double> @llvm.nearbyint.v4f64(<4 x double>) #0
+declare half @llvm.nearbyint.f16(half) nounwind readonly
+declare float @llvm.nearbyint.f32(float) nounwind readonly
+declare <2 x float> @llvm.nearbyint.v2f32(<2 x float>) nounwind readonly
+declare <4 x float> @llvm.nearbyint.v4f32(<4 x float>) nounwind readonly
+declare double @llvm.nearbyint.f64(double) nounwind readonly
+declare <2 x double> @llvm.nearbyint.v2f64(<2 x double>) nounwind readonly
+declare <4 x double> @llvm.nearbyint.v4f64(<4 x double>) nounwind readonly
 
-define amdgpu_kernel void @fnearbyint_f16(ptr addrspace(1) %out, half %in) #1 {
+define amdgpu_kernel void @fnearbyint_f16(ptr addrspace(1) %out, half %in) nounwind {
 ; SI-LABEL: fnearbyint_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -67,7 +67,7 @@ define amdgpu_kernel void @fnearbyint_f16(ptr addrspace(1) %out, half %in) #1 {
   ret void
 }
 
-define amdgpu_kernel void @fnearbyint_f32(ptr addrspace(1) %out, float %in) #1 {
+define amdgpu_kernel void @fnearbyint_f32(ptr addrspace(1) %out, float %in) nounwind {
 ; SICI-LABEL: fnearbyint_f32:
 ; SICI:       ; %bb.0: ; %entry
 ; SICI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -108,7 +108,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @fnearbyint_v2f32(ptr addrspace(1) %out, <2 x float> %in) #1 {
+define amdgpu_kernel void @fnearbyint_v2f32(ptr addrspace(1) %out, <2 x float> %in) nounwind {
 ; SICI-LABEL: fnearbyint_v2f32:
 ; SICI:       ; %bb.0: ; %entry
 ; SICI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -150,7 +150,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @fnearbyint_v4f32(ptr addrspace(1) %out, <4 x float> %in) #1 {
+define amdgpu_kernel void @fnearbyint_v4f32(ptr addrspace(1) %out, <4 x float> %in) nounwind {
 ; SICI-LABEL: fnearbyint_v4f32:
 ; SICI:       ; %bb.0: ; %entry
 ; SICI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
@@ -444,6 +444,3 @@ entry:
   store <4 x double> %0, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind readonly }
-attributes #1 = { nounwind }

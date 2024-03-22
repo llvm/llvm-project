@@ -1007,7 +1007,7 @@ bb.end:                                           ; preds = %bb.then, %bb
   ret void
 }
 
-define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
+define void @scc_liveness(i32 %arg) local_unnamed_addr nounwind readnone speculatable {
 ; GCN-LABEL: scc_liveness:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1431,12 +1431,8 @@ bb12:                                             ; preds = %bb10
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare void @llvm.amdgcn.s.barrier() #1
-
-attributes #0 = { nounwind readnone speculatable }
-attributes #1 = { nounwind convergent }
-attributes #2 = { nounwind }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
+declare void @llvm.amdgcn.s.barrier() nounwind convergent
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

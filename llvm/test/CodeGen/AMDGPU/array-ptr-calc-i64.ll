@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
-declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #0
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone
+declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) nounwind readnone
 
 ; SI-LABEL: {{^}}test_array_ptr_calc:
 ; SI-DAG: v_mul_u32_u24
@@ -18,5 +18,3 @@ define amdgpu_kernel void @test_array_ptr_calc(ptr addrspace(1) noalias %out, pt
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind readnone }

@@ -330,7 +330,7 @@ define amdgpu_kernel void @v_sext_i1_to_i16_with_and(ptr addrspace(1) %out, i32 
 ; VI-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[4:5]
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %cmp0 = icmp eq i32 %a, %tid
   %cmp1 = icmp eq i32 %b, %c
   %cmp = and i1 %cmp0, %cmp1
@@ -619,6 +619,4 @@ define amdgpu_kernel void @v_sext_v4i16_to_v4i32(ptr addrspace(1) %out, ptr addr
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

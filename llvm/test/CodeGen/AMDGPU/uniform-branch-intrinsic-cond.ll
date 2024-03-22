@@ -14,7 +14,7 @@ main_body:
 
 if:
   %u = fadd float %v, %v
-  call void asm sideeffect "", ""() #0 ; Prevent ifconversion
+  call void asm sideeffect "", ""() nounwind memory(argmem: read) ; Prevent ifconversion
   br label %else
 
 else:
@@ -22,6 +22,4 @@ else:
   ret float %r
 }
 
-declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32 immarg) #0
-
-attributes #0 = { nounwind memory(argmem: read) }
+declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32 immarg) nounwind memory(argmem: read)

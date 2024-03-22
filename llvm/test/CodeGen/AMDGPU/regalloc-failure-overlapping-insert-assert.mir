@@ -12,11 +12,9 @@
 # subregister over the same range.
 
 --- |
-  define void @foo() #0 {
+  define void @foo() "amdgpu-waves-per-eu"="8,8" {
     ret void
   }
-
-  attributes #0 = { "amdgpu-waves-per-eu"="8,8" }
 
 ...
 ---

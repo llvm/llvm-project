@@ -270,7 +270,7 @@ define amdgpu_ps float @test_maxmin_commuted_f32_ieee_false(float %a, float %b, 
   ret float %maxmin
 }
 
-define void @test_med3_f32(ptr addrspace(1) %arg, float %x, float %y, float %z) #0 {
+define void @test_med3_f32(ptr addrspace(1) %arg, float %x, float %y, float %z) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; GFX11-LABEL: test_med3_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -379,7 +379,7 @@ define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
   ret half %maxmin
 }
 
-define void @test_med3_f16(ptr addrspace(1) %arg, half %x, half %y, half %z) #0 {
+define void @test_med3_f16(ptr addrspace(1) %arg, half %x, half %y, half %z) nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" {
 ; GFX11-LABEL: test_med3_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -402,5 +402,4 @@ declare half @llvm.minnum.f16(half, half)
 declare half @llvm.maxnum.f16(half, half)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
-attributes #0 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" }
 

@@ -36,7 +36,7 @@ define amdgpu_kernel void @caller(i32 %x) {
 
 
 ; inlinehint
-define i32 @callee_hint(i32 %x) #0 {
+define i32 @callee_hint(i32 %x) inlinehint {
 entry:
   %cc = icmp eq i32 %x, 1
   br i1 %cc, label %ret_res, label %mulx
@@ -66,5 +66,3 @@ define amdgpu_kernel void @caller_hint(i32 %x) {
   store volatile i32 %res, ptr addrspace(1) undef
   ret void
 }
-
-attributes #0 = { inlinehint }

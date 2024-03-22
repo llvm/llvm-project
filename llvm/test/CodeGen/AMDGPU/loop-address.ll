@@ -5,7 +5,7 @@
 ;CHECK: LOOP_BREAK @10
 ;CHECK: POP @10
 
-define amdgpu_kernel void @loop_ge(ptr addrspace(1) nocapture %out, i32 %iterations) #0 {
+define amdgpu_kernel void @loop_ge(ptr addrspace(1) nocapture %out, i32 %iterations) nounwind "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" {
 entry:
   %cmp5 = icmp sgt i32 %iterations, 0
   br i1 %cmp5, label %for.body, label %for.end
@@ -23,8 +23,6 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body, %entry
   ret void
 }
-
-attributes #0 = { nounwind "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
 
 !opencl.kernels = !{!0, !1, !2, !3}
 

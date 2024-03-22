@@ -13,7 +13,7 @@
 ; CHECK: ; def v[4:19] v[20:27] v[0:4] v[0:3] a[0:15]
 ; CHECK: ; clobber
 ; CHECK: ; use v[4:19] v[20:27] v[0:4] v[0:3] a[1:16]
-define void @illegal_eviction_assert(ptr addrspace(1) %arg) #0 {
+define void @illegal_eviction_assert(ptr addrspace(1) %arg) "amdgpu-waves-per-eu"="8,8" {
   ;%agpr0 = call i32 asm sideeffect "; def $0","=${a0}"()
   %asm = call %asm.output asm sideeffect "; def $0 $1 $2 $3 $4","=v,=v,=v,=v,={a[0:15]}"()
   %vgpr0 = extractvalue %asm.output %asm, 0
@@ -25,5 +25,3 @@ define void @illegal_eviction_assert(ptr addrspace(1) %arg) #0 {
   call void asm sideeffect "; use $0 $1 $2 $3 $4","v,v,v,v,{a[1:16]}"(<16 x i32> %vgpr0, <8 x i32> %vgpr1, <5 x i32> %vgpr2, <4 x i32> %vgpr3, <16 x i32> %agpr0)
   ret void
 }
-
-attributes #0 = { "amdgpu-waves-per-eu"="8,8" }

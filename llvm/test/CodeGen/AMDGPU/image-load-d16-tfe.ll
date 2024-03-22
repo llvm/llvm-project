@@ -661,9 +661,7 @@ define amdgpu_ps void @load_1d_v4f16_tfe_dmask15(<8 x i32> inreg %rsrc, i32 %s) 
   ret void
 }
 
-declare { half, i32 } @llvm.amdgcn.image.load.1d.sl_f16i32s.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare { <2 x half>, i32 } @llvm.amdgcn.image.load.1d.sl_v2f16i32s.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare { <3 x half>, i32 } @llvm.amdgcn.image.load.1d.sl_v3f16i32s.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-declare { <4 x half>, i32 } @llvm.amdgcn.image.load.1d.sl_v4f16i32s.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) #0
-
-attributes #0 = { nounwind readonly }
+declare { half, i32 } @llvm.amdgcn.image.load.1d.sl_f16i32s.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly
+declare { <2 x half>, i32 } @llvm.amdgcn.image.load.1d.sl_v2f16i32s.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly
+declare { <3 x half>, i32 } @llvm.amdgcn.image.load.1d.sl_v3f16i32s.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly
+declare { <4 x half>, i32 } @llvm.amdgcn.image.load.1d.sl_v4f16i32s.i32(i32 immarg, i32, <8 x i32>, i32 immarg, i32 immarg) nounwind readonly

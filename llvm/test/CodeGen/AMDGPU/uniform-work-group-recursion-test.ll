@@ -4,7 +4,7 @@
 ; Test to ensure recursive functions exhibit proper behaviour
 ; Test to generate fibonacci numbers
 
-define i32 @fib(i32 %n) #0 {
+define i32 @fib(i32 %n) nounwind readnone {
 ; CHECK-LABEL: define {{[^@]+}}@fib
 ; CHECK-SAME: (i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[N]], 0
@@ -42,7 +42,7 @@ exit:
   ret i32 1
 }
 
-define internal i32 @fib_internal(i32 %n) #0 {
+define internal i32 @fib_internal(i32 %n) nounwind readnone {
 ; CHECK-LABEL: define {{[^@]+}}@fib_internal
 ; CHECK-SAME: (i32 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[N]], 0
@@ -80,7 +80,7 @@ exit:
   ret i32 1
 }
 
-define amdgpu_kernel void @kernel(ptr addrspace(1) %m) #1 {
+define amdgpu_kernel void @kernel(ptr addrspace(1) %m) "uniform-work-group-size"="true" {
 ; CHECK-LABEL: define {{[^@]+}}@kernel
 ; CHECK-SAME: (ptr addrspace(1) [[M:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @fib(i32 5)
@@ -98,8 +98,6 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %m) #1 {
 }
 
 ; nounwind and readnone are added to match attributor results.
-attributes #0 = { nounwind readnone }
-attributes #1 = { "uniform-work-group-size"="true" }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nounwind memory(none) "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR1]] = { nounwind memory(none) "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="true" }

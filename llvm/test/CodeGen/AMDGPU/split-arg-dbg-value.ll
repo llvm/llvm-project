@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN %s
 ; Make sure dbg_value reports something for argument registers when they are split into multiple registers
 
-define hidden <4 x float> @split_v4f32_arg(<4 x float> returned %arg) local_unnamed_addr #0 !dbg !7 {
+define hidden <4 x float> @split_v4f32_arg(<4 x float> returned %arg) local_unnamed_addr norecurse nounwind readnone !dbg !7 {
 ; GCN-LABEL: split_v4f32_arg:
 ; GCN:       .Lfunc_begin0:
 ; GCN-NEXT:    .file 0
@@ -23,7 +23,7 @@ define hidden <4 x float> @split_v4f32_arg(<4 x float> returned %arg) local_unna
   ret <4 x float> %arg, !dbg !20
 }
 
-define hidden <4 x float> @split_v4f32_multi_arg(<4 x float> %arg0, <2 x float> %arg1) local_unnamed_addr #0 !dbg !21 {
+define hidden <4 x float> @split_v4f32_multi_arg(<4 x float> %arg0, <2 x float> %arg1) local_unnamed_addr norecurse nounwind readnone !dbg !21 {
 ; GCN-LABEL: split_v4f32_multi_arg:
 ; GCN:       .Lfunc_begin1:
 ; GCN-NEXT:    .loc 0 7 0 ; /tmp/dbg.cl:7:0
@@ -57,7 +57,7 @@ define hidden <4 x float> @split_v4f32_multi_arg(<4 x float> %arg0, <2 x float> 
   ret <4 x float> %add, !dbg !34
 }
 
-define hidden <4 x half> @split_v4f16_arg(<4 x half> returned %arg) local_unnamed_addr #0 !dbg !35 {
+define hidden <4 x half> @split_v4f16_arg(<4 x half> returned %arg) local_unnamed_addr norecurse nounwind readnone !dbg !35 {
 ; GCN-LABEL: split_v4f16_arg:
 ; GCN:       .Lfunc_begin2:
 ; GCN-NEXT:    .loc 0 11 0 is_stmt 1 ; /tmp/dbg.cl:11:0
@@ -75,7 +75,7 @@ define hidden <4 x half> @split_v4f16_arg(<4 x half> returned %arg) local_unname
   ret <4 x half> %arg, !dbg !44
 }
 
-define hidden double @split_f64_arg(double returned %arg) local_unnamed_addr #0 !dbg !45 {
+define hidden double @split_f64_arg(double returned %arg) local_unnamed_addr norecurse nounwind readnone !dbg !45 {
 ; GCN-LABEL: split_f64_arg:
 ; GCN:       .Lfunc_begin3:
 ; GCN-NEXT:    .loc 0 15 0 ; /tmp/dbg.cl:15:0
@@ -93,7 +93,7 @@ define hidden double @split_f64_arg(double returned %arg) local_unnamed_addr #0 
   ret double %arg, !dbg !52
 }
 
-define hidden <2 x double> @split_v2f64_arg(<2 x double> returned %arg) local_unnamed_addr #0 !dbg !53 {
+define hidden <2 x double> @split_v2f64_arg(<2 x double> returned %arg) local_unnamed_addr norecurse nounwind readnone !dbg !53 {
 ; GCN-LABEL: split_v2f64_arg:
 ; GCN:       .Lfunc_begin4:
 ; GCN-NEXT:    .loc 0 19 0 ; /tmp/dbg.cl:19:0
@@ -113,7 +113,7 @@ define hidden <2 x double> @split_v2f64_arg(<2 x double> returned %arg) local_un
   ret <2 x double> %arg, !dbg !61
 }
 
-define hidden i64 @split_i64_arg(i64 returned %arg) local_unnamed_addr #0 !dbg !62 {
+define hidden i64 @split_i64_arg(i64 returned %arg) local_unnamed_addr norecurse nounwind readnone !dbg !62 {
 ; GCN-LABEL: split_i64_arg:
 ; GCN:       .Lfunc_begin5:
 ; GCN-NEXT:    .loc 0 23 0 ; /tmp/dbg.cl:23:0
@@ -131,7 +131,7 @@ define hidden i64 @split_i64_arg(i64 returned %arg) local_unnamed_addr #0 !dbg !
   ret i64 %arg, !dbg !69
 }
 
-define hidden ptr addrspace(1) @split_ptr_arg(ptr addrspace(1) readnone returned %arg) local_unnamed_addr #0 !dbg !70 {
+define hidden ptr addrspace(1) @split_ptr_arg(ptr addrspace(1) readnone returned %arg) local_unnamed_addr norecurse nounwind readnone !dbg !70 {
 ; GCN-LABEL: split_ptr_arg:
 ; GCN:       .Lfunc_begin6:
 ; GCN-NEXT:    .loc 0 27 0 ; /tmp/dbg.cl:27:0
@@ -149,10 +149,7 @@ define hidden ptr addrspace(1) @split_ptr_arg(ptr addrspace(1) readnone returned
   ret ptr addrspace(1) %arg, !dbg !78
 }
 
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { norecurse nounwind readnone }
-attributes #1 = { nounwind readnone speculatable }
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone speculatable
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

@@ -740,10 +740,8 @@ bb:
   ret void
 }
 
-declare i1 @llvm.amdgcn.class.f32(float, i32) #0
+declare i1 @llvm.amdgcn.class.f32(float, i32) nounwind readnone speculatable
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
 
-declare i32 @llvm.amdgcn.workitem.id.y() #0
-
-attributes #0 = { nounwind readnone speculatable }
+declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone speculatable

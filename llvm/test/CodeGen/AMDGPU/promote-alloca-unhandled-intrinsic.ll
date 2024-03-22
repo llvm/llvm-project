@@ -3,12 +3,12 @@
 ; This is just an arbitrary intrinisic that shouldn't be
 ; handled to ensure it doesn't crash.
 
-declare void @llvm.stackrestore.p5(ptr addrspace(5)) #2
+declare void @llvm.stackrestore.p5(ptr addrspace(5)) nounwind
 
 ; CHECK-LABEL: @try_promote_unhandled_intrinsic(
 ; CHECK: alloca
 ; CHECK: call void @llvm.stackrestore.p5(ptr addrspace(5) %tmp)
-define amdgpu_kernel void @try_promote_unhandled_intrinsic(ptr addrspace(1) %arg) #2 {
+define amdgpu_kernel void @try_promote_unhandled_intrinsic(ptr addrspace(1) %arg) nounwind {
 bb:
   %tmp = alloca i32, addrspace(5)
   %tmp2 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 1
@@ -17,7 +17,3 @@ bb:
   call void @llvm.stackrestore.p5(ptr addrspace(5) %tmp)
   ret void
 }
-
-attributes #0 = { argmemonly nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind }

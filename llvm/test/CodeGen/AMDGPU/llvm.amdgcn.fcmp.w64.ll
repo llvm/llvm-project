@@ -6,12 +6,12 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=VI-SDAG %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=VI-GISEL %s
 
-declare i64 @llvm.amdgcn.fcmp.f32(float, float, i32) #0
-declare i64 @llvm.amdgcn.fcmp.f64(double, double, i32) #0
-declare float @llvm.fabs.f32(float) #0
+declare i64 @llvm.amdgcn.fcmp.f32(float, float, i32) nounwind readnone convergent
+declare i64 @llvm.amdgcn.fcmp.f64(double, double, i32) nounwind readnone convergent
+declare float @llvm.fabs.f32(float) nounwind readnone convergent
 
-declare i64 @llvm.amdgcn.fcmp.f16(half, half, i32) #0
-declare half @llvm.fabs.f16(half) #0
+declare i64 @llvm.amdgcn.fcmp.f16(half, half, i32) nounwind readnone convergent
+declare half @llvm.fabs.f16(half) nounwind readnone convergent
 
 define amdgpu_kernel void @v_fcmp_f32_oeq_with_fabs(ptr addrspace(1) %out, float %src, float %a) {
 ; GFX11-LABEL: v_fcmp_f32_oeq_with_fabs:
@@ -2943,5 +2943,3 @@ define amdgpu_kernel void @v_fcmp_f16_ule(ptr addrspace(1) %out, half %src) {
   store i64 %result, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind readnone convergent }

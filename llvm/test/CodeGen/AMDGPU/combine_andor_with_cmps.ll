@@ -796,7 +796,7 @@ define i1 @test53(i32 %arg1, i32 %arg2, i32 %arg3) {
   ret i1 %and
 }
 
-define i1 @test54(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test54(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test54:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -810,7 +810,7 @@ define i1 @test54(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test55(double %arg1, double %arg2, double %arg3) #0 {
+define i1 @test55(double %arg1, double %arg2, double %arg3) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test55:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -824,7 +824,7 @@ define i1 @test55(double %arg1, double %arg2, double %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test56(double %arg1, double %arg2, double %arg3) #0 {
+define i1 @test56(double %arg1, double %arg2, double %arg3) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test56:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -838,7 +838,7 @@ define i1 @test56(double %arg1, double %arg2, double %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test57(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test57(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test57:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -852,7 +852,7 @@ define i1 @test57(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test58(double %arg1, double %arg2, double %arg3) #0 {
+define i1 @test58(double %arg1, double %arg2, double %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test58:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -874,7 +874,7 @@ define i1 @test58(double %arg1, double %arg2, double %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test59(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test59(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test59:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -896,7 +896,7 @@ define i1 @test59(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test60(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test60(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test60:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -918,7 +918,7 @@ define i1 @test60(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test61(double %arg1, double %arg2, double %arg3) #0 {
+define i1 @test61(double %arg1, double %arg2, double %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test61:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -957,7 +957,7 @@ define i1 @test62(float %arg1, float %arg2, float %arg3) {
   ret i1 %or1
 }
 
-define i1 @test63(double %arg1, double %arg2, double %arg3) #0 {
+define i1 @test63(double %arg1, double %arg2, double %arg3) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test63:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -975,7 +975,7 @@ define i1 @test63(double %arg1, double %arg2, double %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test64(double %arg1, double %arg2, double %arg3) #0 {
+define i1 @test64(double %arg1, double %arg2, double %arg3) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1028,7 +1028,7 @@ define i1 @test66(double %arg1, double %arg2, double %arg3) {
   ret i1 %and1
 }
 
-define i1 @test67(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test67(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test67:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1045,7 +1045,7 @@ define i1 @test67(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test68(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test68(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test68:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1272,7 +1272,7 @@ define i1 @test77(double %arg1, double %arg2, double %arg3) {
   ret i1 %and1
 }
 
-define i1 @test78(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test78(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test78:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1286,7 +1286,7 @@ define i1 @test78(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test79(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test79(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test79:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2068,7 +2068,7 @@ define i1 @test109(float %arg1, float %arg2, float %arg3, float %arg4, float %C)
   ret i1 %or3
 }
 
-define i1 @test110(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) #0 {
+define i1 @test110(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test110:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2395,7 +2395,7 @@ define i1 @test117(float %arg1, float %arg2, float %arg3, float %arg4, float %ar
 }
 
 
-define i1 @test118(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) #0 {
+define i1 @test118(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test118:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2420,7 +2420,7 @@ define i1 @test118(float %arg1, float %arg2, float %arg3, float %arg4, float %C1
   ret i1 %and2
 }
 
-define i1 @test119(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) #0 {
+define i1 @test119(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test119:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2445,7 +2445,7 @@ define i1 @test119(float %arg1, float %arg2, float %arg3, float %arg4, float %C1
   ret i1 %and2
 }
 
-define i1 @test120(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) #0 {
+define i1 @test120(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test120:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2470,7 +2470,7 @@ define i1 @test120(float %arg1, float %arg2, float %arg3, float %arg4, float %C1
   ret i1 %and2
 }
 
-define i1 @test121(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) #0 {
+define i1 @test121(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) nounwind "amdgpu-ieee"="false" {
 ; GCN-LABEL: test121:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2495,7 +2495,7 @@ define i1 @test121(float %arg1, float %arg2, float %arg3, float %arg4, float %C1
   ret i1 %and2
 }
 
-define i1 @test122(double %arg1, double %arg2, double %arg3) #1 {
+define i1 @test122(double %arg1, double %arg2, double %arg3) nounwind "unsafe-fp-math"="true" "no-nans-fp-math"="true" {
 ; GCN-LABEL: test122:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2509,7 +2509,7 @@ define i1 @test122(double %arg1, double %arg2, double %arg3) #1 {
   ret i1 %or1
 }
 
-define i1 @test123(double %arg1, double %arg2, double %arg3) #1 {
+define i1 @test123(double %arg1, double %arg2, double %arg3) nounwind "unsafe-fp-math"="true" "no-nans-fp-math"="true" {
 ; GCN-LABEL: test123:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2685,7 +2685,7 @@ define i1 @test133(i32 %arg1, i32 %arg2) {
   ret i1 %or
 }
 
-define i1 @test134(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test134(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test134:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2708,7 +2708,7 @@ define i1 @test134(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test135(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test135(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test135:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2786,7 +2786,7 @@ define i1 @test137(float %arg1, float %arg2, float %arg3) {
   ret i1 %or1
 }
 
-define i1 @test138(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test138(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test138:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2809,7 +2809,7 @@ define i1 @test138(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test139(double %arg1, double %arg2, double %arg3) #0 {
+define i1 @test139(double %arg1, double %arg2, double %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test139:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2832,7 +2832,7 @@ define i1 @test139(double %arg1, double %arg2, double %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test140(double %arg1, double %arg2, double %arg3) #0 {
+define i1 @test140(double %arg1, double %arg2, double %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test140:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2855,7 +2855,7 @@ define i1 @test140(double %arg1, double %arg2, double %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test141(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test141(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test141:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2878,7 +2878,7 @@ define i1 @test141(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test142(double %arg1, double %arg2, double %arg3) #0 {
+define i1 @test142(double %arg1, double %arg2, double %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test142:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2901,7 +2901,7 @@ define i1 @test142(double %arg1, double %arg2, double %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test143(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test143(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test143:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2924,7 +2924,7 @@ define i1 @test143(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test144(float %arg1, float %arg2, float %arg3) #0 {
+define i1 @test144(float %arg1, float %arg2, float %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test144:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2947,7 +2947,7 @@ define i1 @test144(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test145(double %arg1, double %arg2, double %arg3) #0 {
+define i1 @test145(double %arg1, double %arg2, double %arg3) nounwind "amdgpu-ieee"="false" {
 ; GFX11-LABEL: test145:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3194,6 +3194,3 @@ declare double @llvm.canonicalize.f64(double)
 declare float @llvm.canonicalize.f32(float)
 declare half @llvm.canonicalize.f16(half)
 declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>)
-
-attributes #0 = { nounwind "amdgpu-ieee"="false" }
-attributes #1 = { nounwind "unsafe-fp-math"="true" "no-nans-fp-math"="true" }

@@ -13,7 +13,7 @@
 ; CHECK: endif:
 ; CHECK: %phi.ptr = phi ptr addrspace(3) [ %arrayidx0, %if ], [ %arrayidx1, %else ]
 ; CHECK: store i32 0, ptr addrspace(3) %phi.ptr, align 4
-define amdgpu_kernel void @branch_ptr_var_same_alloca(i32 %a, i32 %b, i1 %c0) #0 {
+define amdgpu_kernel void @branch_ptr_var_same_alloca(i32 %a, i32 %b, i1 %c0) nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [64 x i32], align 4, addrspace(5)
   br i1 %c0, label %if, label %else
@@ -34,7 +34,7 @@ endif:
 
 ; CHECK-LABEL: @branch_ptr_phi_alloca_null_0(
 ; CHECK: %phi.ptr = phi ptr addrspace(3) [ %arrayidx0, %if ], [ null, %entry ]
-define amdgpu_kernel void @branch_ptr_phi_alloca_null_0(i32 %a, i32 %b, i1 %c0) #0 {
+define amdgpu_kernel void @branch_ptr_phi_alloca_null_0(i32 %a, i32 %b, i1 %c0) nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [64 x i32], align 4, addrspace(5)
   br i1 %c0, label %if, label %endif
@@ -51,7 +51,7 @@ endif:
 
 ; CHECK-LABEL: @branch_ptr_phi_alloca_null_1(
 ; CHECK: %phi.ptr = phi ptr addrspace(3)  [ null, %entry ], [ %arrayidx0, %if ]
-define amdgpu_kernel void @branch_ptr_phi_alloca_null_1(i32 %a, i32 %b, i1 %c0) #0 {
+define amdgpu_kernel void @branch_ptr_phi_alloca_null_1(i32 %a, i32 %b, i1 %c0) nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [64 x i32], align 4, addrspace(5)
   br i1 %c0, label %if, label %endif
@@ -73,7 +73,7 @@ endif:
 ; CHECK: br label %exit
 ; CHECK: %phi.ptr = phi ptr addrspace(3) [ %arrayidx0, %entry ]
 ; CHECK: store i32 0, ptr addrspace(3) %phi.ptr, align 4
-define amdgpu_kernel void @one_phi_value(i32 %a) #0 {
+define amdgpu_kernel void @one_phi_value(i32 %a) nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [64 x i32], align 4, addrspace(5)
   %arrayidx0 = getelementptr inbounds [64 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
@@ -97,7 +97,7 @@ exit:
 ; CHECK: endif:
 ; CHECK: %phi.ptr = phi ptr addrspace(5) [ %arrayidx0, %if ], [ %arrayidx1, %else ]
 ; CHECK: store i32 0, ptr addrspace(5) %phi.ptr, align 4
-define amdgpu_kernel void @branch_ptr_alloca_unknown_obj(i32 %a, i32 %b, i1 %c0) #0 {
+define amdgpu_kernel void @branch_ptr_alloca_unknown_obj(i32 %a, i32 %b, i1 %c0) nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [64 x i32], align 4, addrspace(5)
   br i1 %c0, label %if, label %else
@@ -134,7 +134,7 @@ endif:
 ; CHECK-LABEL: @ptr_induction_var_same_alloca(
 ; CHECK: %alloca = alloca [64 x i32], align 4
 ; CHECK: phi ptr addrspace(5) [ %arrayidx, %entry ], [ %incdec.ptr, %for.body ]
-define amdgpu_kernel void @ptr_induction_var_same_alloca() #0 {
+define amdgpu_kernel void @ptr_induction_var_same_alloca() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [64 x i32], align 4, addrspace(5)
   %arrayidx = getelementptr inbounds [64 x i32], ptr addrspace(5) %alloca, i32 0, i32 2
@@ -172,7 +172,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK: %alloca = alloca [64 x i32], align 4
 ; CHECK: %p.08 = phi ptr addrspace(5) [ %incdec.ptr, %for.body ], [ %arrayidx, %for.body.preheader ]
 ; CHECK: %cmp = icmp eq ptr addrspace(5) %incdec.ptr, %call
-define amdgpu_kernel void @ptr_induction_var_alloca_unknown() #0 {
+define amdgpu_kernel void @ptr_induction_var_alloca_unknown() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [64 x i32], align 4, addrspace(5)
   %arrayidx = getelementptr inbounds [64 x i32], ptr addrspace(5) %alloca, i32 0, i32 2
@@ -199,6 +199,4 @@ for.body:                                         ; preds = %for.body, %for.body
   br i1 %cmp, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-declare ptr addrspace(5) @get_unknown_pointer() #0
-
-attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" }
+declare ptr addrspace(5) @get_unknown_pointer() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256"

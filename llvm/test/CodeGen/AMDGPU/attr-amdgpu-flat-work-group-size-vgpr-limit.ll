@@ -540,11 +540,10 @@ define internal void @use256vgprs() {
 ; GFX11WGP-WAVE64: NumVgprs: 256
 ; GFX11CU-WAVE32: NumVgprs: 256
 ; GFX11CU-WAVE64: NumVgprs: 256
-define amdgpu_kernel void @f256() #256 {
+define amdgpu_kernel void @f256() nounwind "amdgpu-flat-work-group-size"="256,256" {
   call void @use256vgprs()
   ret void
 }
-attributes #256 = { nounwind "amdgpu-flat-work-group-size"="256,256" }
 
 ; GCN-LABEL: {{^}}f512:
 ; GFX9: NumVgprs: 128
@@ -559,12 +558,11 @@ attributes #256 = { nounwind "amdgpu-flat-work-group-size"="256,256" }
 ; GFX11WGP-WAVE64: NumVgprs: 256
 ; GFX11CU-WAVE32: NumVgprs: 192
 ; GFX11CU-WAVE64: NumVgprs: 192
-define amdgpu_kernel void @f512() #512 {
+define amdgpu_kernel void @f512() nounwind "amdgpu-flat-work-group-size"="512,512" {
   call void @foo()
   call void @use256vgprs()
   ret void
 }
-attributes #512 = { nounwind "amdgpu-flat-work-group-size"="512,512" }
 
 ; GCN-LABEL: {{^}}f1024:
 ; GFX9: NumVgprs: 64
@@ -578,12 +576,10 @@ attributes #512 = { nounwind "amdgpu-flat-work-group-size"="512,512" }
 ; GFX11WGP-WAVE64: NumVgprs: 192
 ; GFX11CU-WAVE32: NumVgprs: 96
 ; GFX11CU-WAVE64: NumVgprs: 96
-define amdgpu_kernel void @f1024() #1024 {
+define amdgpu_kernel void @f1024() nounwind "amdgpu-flat-work-group-size"="1024,1024" {
   call void @foo()
   call void @use256vgprs()
   ret void
 }
-
-attributes #1024 = { nounwind "amdgpu-flat-work-group-size"="1024,1024" }
 
 declare void @foo()

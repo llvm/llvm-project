@@ -17,11 +17,9 @@
 # can only be corrected by adjusting to a non-overlapping register.
 
 --- |
-  define void @recolor_impossible_hint() #0 {
+  define void @recolor_impossible_hint() "amdgpu-waves-per-eu"="10,10" {
     ret void
   }
-
-  attributes #0 = { "amdgpu-waves-per-eu"="10,10" }
 ---
 
 ---

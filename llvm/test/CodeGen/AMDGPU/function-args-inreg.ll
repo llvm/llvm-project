@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -enable-var-scope -check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -enable-var-scope -check-prefix=GFX11 %s
 
-define void @void_func_i1_inreg(i1 inreg %arg0) #0 {
+define void @void_func_i1_inreg(i1 inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_i1_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -24,7 +24,7 @@ define void @void_func_i1_inreg(i1 inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_i8_inreg(i8 inreg %arg0) #0 {
+define void @void_func_i8_inreg(i8 inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_i8_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -43,7 +43,7 @@ define void @void_func_i8_inreg(i8 inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_i16_inreg(i16 inreg %arg0) #0 {
+define void @void_func_i16_inreg(i16 inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_i16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -62,7 +62,7 @@ define void @void_func_i16_inreg(i16 inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_i32_inreg(i32 inreg %arg0) #0 {
+define void @void_func_i32_inreg(i32 inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -81,7 +81,7 @@ define void @void_func_i32_inreg(i32 inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_i64_inreg(i64 inreg %arg0) #0 {
+define void @void_func_i64_inreg(i64 inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -101,7 +101,7 @@ define void @void_func_i64_inreg(i64 inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_f16_inreg(half inreg %arg0) #0 {
+define void @void_func_f16_inreg(half inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_f16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -120,7 +120,7 @@ define void @void_func_f16_inreg(half inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_f32_inreg(float inreg %arg0) #0 {
+define void @void_func_f32_inreg(float inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_f32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -139,7 +139,7 @@ define void @void_func_f32_inreg(float inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_f64_inreg(double inreg %arg0) #0 {
+define void @void_func_f64_inreg(double inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_f64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -159,7 +159,7 @@ define void @void_func_f64_inreg(double inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i16_inreg(<2 x i16> inreg %arg0) #0 {
+define void @void_func_v2i16_inreg(<2 x i16> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v2i16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -178,7 +178,7 @@ define void @void_func_v2i16_inreg(<2 x i16> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3i16_inreg(<3 x i16> inreg %arg0) #0 {
+define void @void_func_v3i16_inreg(<3 x i16> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v3i16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -201,7 +201,7 @@ define void @void_func_v3i16_inreg(<3 x i16> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4i16_inreg(<4 x i16> inreg %arg0) #0 {
+define void @void_func_v4i16_inreg(<4 x i16> inreg %arg0) nounwind {
 ; GFX89-LABEL: void_func_v4i16_inreg:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -230,7 +230,7 @@ define void @void_func_v4i16_inreg(<4 x i16> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v5i16_inreg(<5 x i16> inreg %arg0) #0 {
+define void @void_func_v5i16_inreg(<5 x i16> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v5i16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -255,7 +255,7 @@ define void @void_func_v5i16_inreg(<5 x i16> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8i16_inreg(<8 x i16> inreg %arg0) #0 {
+define void @void_func_v8i16_inreg(<8 x i16> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v8i16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -278,7 +278,7 @@ define void @void_func_v8i16_inreg(<8 x i16> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i32_inreg(<2 x i32> inreg %arg0) #0 {
+define void @void_func_v2i32_inreg(<2 x i32> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v2i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -298,7 +298,7 @@ define void @void_func_v2i32_inreg(<2 x i32> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3i32_inreg(<3 x i32> inreg %arg0) #0 {
+define void @void_func_v3i32_inreg(<3 x i32> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v3i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -320,7 +320,7 @@ define void @void_func_v3i32_inreg(<3 x i32> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4i32_inreg(<4 x i32> inreg %arg0) #0 {
+define void @void_func_v4i32_inreg(<4 x i32> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v4i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -343,7 +343,7 @@ define void @void_func_v4i32_inreg(<4 x i32> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v5i32_inreg(<5 x i32> inreg %arg0) #0 {
+define void @void_func_v5i32_inreg(<5 x i32> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v5i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -371,7 +371,7 @@ define void @void_func_v5i32_inreg(<5 x i32> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8i32_inreg(<8 x i32> inreg %arg0) #0 {
+define void @void_func_v8i32_inreg(<8 x i32> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v8i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -404,7 +404,7 @@ define void @void_func_v8i32_inreg(<8 x i32> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16i32_inreg(<16 x i32> inreg %arg0) #0 {
+define void @void_func_v16i32_inreg(<16 x i32> inreg %arg0) nounwind {
 ; CIGFX89-LABEL: void_func_v16i32_inreg:
 ; CIGFX89:       ; %bb.0:
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -484,7 +484,7 @@ define void @void_func_v16i32_inreg(<16 x i32> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v32i32_inreg(<32 x i32> inreg %arg0) #0 {
+define void @void_func_v32i32_inreg(<32 x i32> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v32i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -567,7 +567,7 @@ define void @void_func_v32i32_inreg(<32 x i32> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i64_inreg(<2 x i64> inreg %arg0) #0 {
+define void @void_func_v2i64_inreg(<2 x i64> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v2i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -590,7 +590,7 @@ define void @void_func_v2i64_inreg(<2 x i64> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3i64_inreg(<3 x i64> inreg %arg0) #0 {
+define void @void_func_v3i64_inreg(<3 x i64> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v3i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -619,7 +619,7 @@ define void @void_func_v3i64_inreg(<3 x i64> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4i64_inreg(<4 x i64> inreg %arg0) #0 {
+define void @void_func_v4i64_inreg(<4 x i64> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v4i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -652,7 +652,7 @@ define void @void_func_v4i64_inreg(<4 x i64> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v5i64_inreg(<5 x i64> inreg %arg0) #0 {
+define void @void_func_v5i64_inreg(<5 x i64> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v5i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -691,7 +691,7 @@ define void @void_func_v5i64_inreg(<5 x i64> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8i64_inreg(<8 x i64> inreg %arg0) #0 {
+define void @void_func_v8i64_inreg(<8 x i64> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v8i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -742,7 +742,7 @@ define void @void_func_v8i64_inreg(<8 x i64> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16i64_inreg(<16 x i64> inreg %arg0) #0 {
+define void @void_func_v16i64_inreg(<16 x i64> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v16i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -825,7 +825,7 @@ define void @void_func_v16i64_inreg(<16 x i64> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2f16_inreg(<2 x half> inreg %arg0) #0 {
+define void @void_func_v2f16_inreg(<2 x half> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v2f16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -844,7 +844,7 @@ define void @void_func_v2f16_inreg(<2 x half> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3f16_inreg(<3 x half> inreg %arg0) #0 {
+define void @void_func_v3f16_inreg(<3 x half> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v3f16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -867,7 +867,7 @@ define void @void_func_v3f16_inreg(<3 x half> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4f16_inreg(<4 x half> inreg %arg0) #0 {
+define void @void_func_v4f16_inreg(<4 x half> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v4f16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -887,7 +887,7 @@ define void @void_func_v4f16_inreg(<4 x half> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8f16_inreg(<8 x half> inreg %arg0) #0 {
+define void @void_func_v8f16_inreg(<8 x half> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v8f16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -910,7 +910,7 @@ define void @void_func_v8f16_inreg(<8 x half> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16f16_inreg(<16 x half> inreg %arg0) #0 {
+define void @void_func_v16f16_inreg(<16 x half> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v16f16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -943,7 +943,7 @@ define void @void_func_v16f16_inreg(<16 x half> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2f32_inreg(<2 x float> inreg %arg0) #0 {
+define void @void_func_v2f32_inreg(<2 x float> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v2f32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -963,7 +963,7 @@ define void @void_func_v2f32_inreg(<2 x float> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3f32_inreg(<3 x float> inreg %arg0) #0 {
+define void @void_func_v3f32_inreg(<3 x float> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v3f32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -985,7 +985,7 @@ define void @void_func_v3f32_inreg(<3 x float> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4f32_inreg(<4 x float> inreg %arg0) #0 {
+define void @void_func_v4f32_inreg(<4 x float> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v4f32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1008,7 +1008,7 @@ define void @void_func_v4f32_inreg(<4 x float> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8f32_inreg(<8 x float> inreg %arg0) #0 {
+define void @void_func_v8f32_inreg(<8 x float> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v8f32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1041,7 +1041,7 @@ define void @void_func_v8f32_inreg(<8 x float> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16f32_inreg(<16 x float> inreg %arg0) #0 {
+define void @void_func_v16f32_inreg(<16 x float> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v16f32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1092,7 +1092,7 @@ define void @void_func_v16f32_inreg(<16 x float> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2f64_inreg(<2 x double> inreg %arg0) #0 {
+define void @void_func_v2f64_inreg(<2 x double> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v2f64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1115,7 +1115,7 @@ define void @void_func_v2f64_inreg(<2 x double> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3f64_inreg(<3 x double> inreg %arg0) #0 {
+define void @void_func_v3f64_inreg(<3 x double> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v3f64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1144,7 +1144,7 @@ define void @void_func_v3f64_inreg(<3 x double> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4f64_inreg(<4 x double> inreg %arg0) #0 {
+define void @void_func_v4f64_inreg(<4 x double> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v4f64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1177,7 +1177,7 @@ define void @void_func_v4f64_inreg(<4 x double> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8f64_inreg(<8 x double> inreg %arg0) #0 {
+define void @void_func_v8f64_inreg(<8 x double> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v8f64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1228,7 +1228,7 @@ define void @void_func_v8f64_inreg(<8 x double> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16f64_inreg(<16 x double> inreg %arg0) #0 {
+define void @void_func_v16f64_inreg(<16 x double> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v16f64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1311,7 +1311,7 @@ define void @void_func_v16f64_inreg(<16 x double> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v32i32_i1_i8_i16_f32_inreg(<32 x i32> inreg %arg0, i1 inreg %arg1, i8 inreg %arg2, i16 inreg %arg3, half inreg %arg4) #0 {
+define void @void_func_v32i32_i1_i8_i16_f32_inreg(<32 x i32> inreg %arg0, i1 inreg %arg1, i8 inreg %arg2, i16 inreg %arg3, half inreg %arg4) nounwind {
 ; GFX9-LABEL: void_func_v32i32_i1_i8_i16_f32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1423,7 +1423,7 @@ define void @void_func_v32i32_i1_i8_i16_f32_inreg(<32 x i32> inreg %arg0, i1 inr
   ret void
 }
 
-define void @void_func_v32i32_v2i32_v2f32_inreg(<32 x i32> inreg %arg0, <2 x i32> inreg %arg1, <2 x float> inreg %arg2) #0 {
+define void @void_func_v32i32_v2i32_v2f32_inreg(<32 x i32> inreg %arg0, <2 x i32> inreg %arg1, <2 x float> inreg %arg2) nounwind {
 ; GFX9-LABEL: void_func_v32i32_v2i32_v2f32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1751,7 +1751,7 @@ define void @too_many_args_use_workitem_id_x_inreg(
   ret void
 }
 
-define void @void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inreg %arg1) #0 {
+define void @void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inreg %arg1) nounwind {
 ; GFX9-LABEL: void_func_i32_v2float_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1777,7 +1777,7 @@ define void @void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inreg %arg
   ret void
 }
 
-define void @caller_void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inreg %arg1) #0 {
+define void @caller_void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inreg %arg1) nounwind {
 ; GFX9-LABEL: caller_void_func_i32_v2float_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1870,7 +1870,7 @@ define void @caller_void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inr
   ret void
 }
 
-define void @void_func_bf16_inreg(bfloat inreg %arg0) #0 {
+define void @void_func_bf16_inreg(bfloat inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1889,7 +1889,7 @@ define void @void_func_bf16_inreg(bfloat inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2bf16_inreg(<2 x bfloat> inreg %arg0) #0 {
+define void @void_func_v2bf16_inreg(<2 x bfloat> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v2bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1908,7 +1908,7 @@ define void @void_func_v2bf16_inreg(<2 x bfloat> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3bf16_inreg(<3 x bfloat> inreg %arg0) #0 {
+define void @void_func_v3bf16_inreg(<3 x bfloat> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v3bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1931,7 +1931,7 @@ define void @void_func_v3bf16_inreg(<3 x bfloat> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4bf16_inreg(<4 x bfloat> inreg %arg0) #0 {
+define void @void_func_v4bf16_inreg(<4 x bfloat> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v4bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1951,7 +1951,7 @@ define void @void_func_v4bf16_inreg(<4 x bfloat> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8bf16_inreg(<8 x bfloat> inreg %arg0) #0 {
+define void @void_func_v8bf16_inreg(<8 x bfloat> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v8bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1974,7 +1974,7 @@ define void @void_func_v8bf16_inreg(<8 x bfloat> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16bf16_inreg(<16 x bfloat> inreg %arg0) #0 {
+define void @void_func_v16bf16_inreg(<16 x bfloat> inreg %arg0) nounwind {
 ; GFX9-LABEL: void_func_v16bf16_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2339,9 +2339,6 @@ define void @void_func_a16i32_inreg__noimplicit([16 x i32] inreg %arg0, ptr addr
   store [16 x i32] %arg0, ptr addrspace(1) %ptr
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind noinline }
 
 
 

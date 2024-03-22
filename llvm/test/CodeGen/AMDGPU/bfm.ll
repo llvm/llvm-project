@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=VI %s
 
-define amdgpu_kernel void @s_bfm_pattern(ptr addrspace(1) %out, i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @s_bfm_pattern(ptr addrspace(1) %out, i32 %x, i32 %y) nounwind {
 ; SI-LABEL: s_bfm_pattern:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -33,7 +33,7 @@ define amdgpu_kernel void @s_bfm_pattern(ptr addrspace(1) %out, i32 %x, i32 %y) 
   ret void
 }
 
-define amdgpu_kernel void @s_bfm_pattern_simple(ptr addrspace(1) %out, i32 %x) #0 {
+define amdgpu_kernel void @s_bfm_pattern_simple(ptr addrspace(1) %out, i32 %x) nounwind {
 ; SI-LABEL: s_bfm_pattern_simple:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -63,7 +63,7 @@ define amdgpu_kernel void @s_bfm_pattern_simple(ptr addrspace(1) %out, i32 %x) #
   ret void
 }
 
-define void @v_bfm_pattern(ptr addrspace(1) %out, i32 %x, i32 %y) #0 {
+define void @v_bfm_pattern(ptr addrspace(1) %out, i32 %x, i32 %y) nounwind {
 ; SI-LABEL: v_bfm_pattern:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -90,7 +90,7 @@ define void @v_bfm_pattern(ptr addrspace(1) %out, i32 %x, i32 %y) #0 {
   ret void
 }
 
-define void @v_bfm_pattern_simple(ptr addrspace(1) %out, i32 %x) #0 {
+define void @v_bfm_pattern_simple(ptr addrspace(1) %out, i32 %x) nounwind {
 ; SI-LABEL: v_bfm_pattern_simple:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -115,5 +115,3 @@ define void @v_bfm_pattern_simple(ptr addrspace(1) %out, i32 %x) #0 {
   store i32 %b, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }

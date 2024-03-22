@@ -17,7 +17,7 @@
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_load_i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_load_i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %ld = load i64, ptr addrspace(3) %in
   store i64 %ld, ptr addrspace(3) %out
   ret void
@@ -33,7 +33,7 @@ define amdgpu_kernel void @local_load_i64(ptr addrspace(3) %out, ptr addrspace(3
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_load_v2i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_load_v2i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
 entry:
   %ld = load <2 x i64>, ptr addrspace(3) %in
   store <2 x i64> %ld, ptr addrspace(3) %out
@@ -66,7 +66,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_load_v3i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_load_v3i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
 entry:
   %ld = load <3 x i64>, ptr addrspace(3) %in
   store <3 x i64> %ld, ptr addrspace(3) %out
@@ -89,7 +89,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_load_v4i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_load_v4i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
 entry:
   %ld = load <4 x i64>, ptr addrspace(3) %in
   store <4 x i64> %ld, ptr addrspace(3) %out
@@ -121,7 +121,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_load_v8i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_load_v8i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
 entry:
   %ld = load <8 x i64>, ptr addrspace(3) %in
   store <8 x i64> %ld, ptr addrspace(3) %out
@@ -180,11 +180,9 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_load_v16i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_load_v16i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
 entry:
   %ld = load <16 x i64>, ptr addrspace(3) %in
   store <16 x i64> %ld, ptr addrspace(3) %out
   ret void
 }
-
-attributes #0 = { nounwind }

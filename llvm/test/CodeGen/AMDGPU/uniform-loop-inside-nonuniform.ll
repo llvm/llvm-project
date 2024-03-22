@@ -35,7 +35,7 @@ out:
 ; CHECK-NEXT: s_cbranch_execz
 define amdgpu_kernel void @test2(ptr addrspace(1) %out, i32 %a, i32 %b) {
 main_body:
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readonly
   %cc = icmp eq i32 %tid, 0
   br i1 %cc, label %done1, label %if
 
@@ -61,6 +61,4 @@ done1:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #1 = { nounwind readonly }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readonly

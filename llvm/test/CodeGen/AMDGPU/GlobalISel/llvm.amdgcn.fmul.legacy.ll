@@ -299,7 +299,7 @@ define float @v_add_mul_legacy_f32(float %a, float %b, float %c) {
   ret float %add
 }
 
-define float @v_mad_legacy_f32(float %a, float %b, float %c) #2 {
+define float @v_mad_legacy_f32(float %a, float %b, float %c) "denormal-fp-math-f32"="preserve-sign" {
 ; GFX6-LABEL: v_mad_legacy_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -343,7 +343,7 @@ define float @v_mad_legacy_f32(float %a, float %b, float %c) #2 {
   ret float %add
 }
 
-define float @v_mad_legacy_fneg_f32(float %a, float %b, float %c) #2 {
+define float @v_mad_legacy_fneg_f32(float %a, float %b, float %c) "denormal-fp-math-f32"="preserve-sign" {
 ; GFX6-LABEL: v_mad_legacy_fneg_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -586,9 +586,5 @@ define float @v_mul_legacy_f32_2.0_swap(float %b) {
   ret float %result
 }
 
-declare float @llvm.fabs.f32(float) #0
-declare float @llvm.amdgcn.fmul.legacy(float, float) #1
-
-attributes #0 = { nounwind readnone speculatable willreturn }
-attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { "denormal-fp-math-f32"="preserve-sign" }
+declare float @llvm.fabs.f32(float) nounwind readnone speculatable willreturn
+declare float @llvm.amdgcn.fmul.legacy(float, float) nounwind readnone speculatable

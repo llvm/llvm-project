@@ -5,7 +5,7 @@
 ; SI hits an assertion at -O0, evergreen hits a not implemented unreachable.
 
 ; COMMON-LABEL: {{^}}branch_true:
-define amdgpu_kernel void @branch_true(ptr addrspace(1) nocapture %main, i32 %main_stride) #0 {
+define amdgpu_kernel void @branch_true(ptr addrspace(1) nocapture %main, i32 %main_stride) nounwind {
 entry:
   br i1 true, label %for.end, label %for.body.lr.ph
 
@@ -36,7 +36,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; COMMON-LABEL: {{^}}branch_false:
 ; SI: s_cbranch_scc1
 ; SI: s_endpgm
-define amdgpu_kernel void @branch_false(ptr addrspace(1) nocapture %main, i32 %main_stride) #0 {
+define amdgpu_kernel void @branch_false(ptr addrspace(1) nocapture %main, i32 %main_stride) nounwind {
 entry:
   br i1 false, label %for.end, label %for.body.lr.ph
 
@@ -68,7 +68,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; SI: s_cbranch_scc1
 ; SI: s_cbranch_scc1
 ; SI: s_endpgm
-define amdgpu_kernel void @branch_undef(ptr addrspace(1) nocapture %main, i32 %main_stride) #0 {
+define amdgpu_kernel void @branch_undef(ptr addrspace(1) nocapture %main, i32 %main_stride) nounwind {
 entry:
   br i1 undef, label %for.end, label %for.body.lr.ph
 
@@ -95,5 +95,3 @@ for.body:                                         ; preds = %for.body, %for.body
 for.end:                                          ; preds = %for.body, %entry
   ret void
 }
-
-attributes #0 = { nounwind }

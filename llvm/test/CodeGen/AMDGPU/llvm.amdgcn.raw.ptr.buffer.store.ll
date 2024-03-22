@@ -61,7 +61,7 @@ main_body:
 ;CHECK-LABEL: {{^}}buffer_store_x2:
 ;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 offen
-define amdgpu_ps void @buffer_store_x2(ptr addrspace(8) inreg %rsrc, <2 x float> %data, i32 %offset) #0 {
+define amdgpu_ps void @buffer_store_x2(ptr addrspace(8) inreg %rsrc, <2 x float> %data, i32 %offset) nounwind {
 main_body:
   call void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float> %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
   ret void
@@ -240,7 +240,7 @@ main_body:
 ;CHECK-LABEL: {{^}}buffer_store_v4f16:
 ;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 offen
-define amdgpu_ps void @buffer_store_v4f16(ptr addrspace(8) inreg %rsrc, <4 x half> %data, i32 %offset) #0 {
+define amdgpu_ps void @buffer_store_v4f16(ptr addrspace(8) inreg %rsrc, <4 x half> %data, i32 %offset) nounwind {
 main_body:
   call void @llvm.amdgcn.raw.ptr.buffer.store.v4f16(<4 x half> %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
   ret void
@@ -270,7 +270,7 @@ main_body:
 ;CHECK-LABEL: {{^}}buffer_store_v4i16:
 ;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 offen
-define amdgpu_ps void @buffer_store_v4i16(ptr addrspace(8) inreg %rsrc, <4 x i16> %data, i32 %offset) #0 {
+define amdgpu_ps void @buffer_store_v4i16(ptr addrspace(8) inreg %rsrc, <4 x i16> %data, i32 %offset) nounwind {
 main_body:
   call void @llvm.amdgcn.raw.ptr.buffer.store.v4i16(<4 x i16> %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
   ret void
@@ -307,20 +307,17 @@ define amdgpu_ps void @raw_ptr_buffer_store_x1_offset_swizzled_not_merged(ptr ad
   ret void
 }
 
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8), i32, i32, i32) #1
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.f16(half, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f16(<2 x half>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f16(<4 x half>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i16(<2 x i16>, ptr addrspace(8), i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.buffer.store.v4i16(<4 x i16>, ptr addrspace(8), i32, i32, i32) #0
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readonly }
+declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32) nounwind
+declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8), i32, i32, i32) nounwind readonly
+declare void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8, ptr addrspace(8), i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.buffer.store.f16(half, ptr addrspace(8), i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f16(<2 x half>, ptr addrspace(8), i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f16(<4 x half>, ptr addrspace(8), i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16, ptr addrspace(8), i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i16(<2 x i16>, ptr addrspace(8), i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.buffer.store.v4i16(<4 x i16>, ptr addrspace(8), i32, i32, i32) nounwind

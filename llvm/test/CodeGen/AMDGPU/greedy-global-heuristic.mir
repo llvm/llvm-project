@@ -15,12 +15,10 @@
 
 --- |
 
-  define void @use_global_assign() #0 {
+  define void @use_global_assign() "amdgpu-waves-per-eu"="10,10" {
   entry:
     unreachable
   }
-
-  attributes #0 = { "amdgpu-waves-per-eu"="10,10" }
 
 ...
 ---

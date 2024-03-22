@@ -4,7 +4,7 @@
 
 ; Make sure we don't try to form FMAX_LEGACY nodes with f64
 
-define amdgpu_kernel void @test_fmax_legacy_uge_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_uge_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_fmax_legacy_uge_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -43,7 +43,7 @@ define amdgpu_kernel void @test_fmax_legacy_uge_f64(ptr addrspace(1) %out, ptr a
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; VI-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
 ; VI-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
 
@@ -56,7 +56,7 @@ define amdgpu_kernel void @test_fmax_legacy_uge_f64(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-define amdgpu_kernel void @test_fmax_legacy_oge_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_oge_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_fmax_legacy_oge_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -95,7 +95,7 @@ define amdgpu_kernel void @test_fmax_legacy_oge_f64(ptr addrspace(1) %out, ptr a
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; VI-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
 ; VI-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
 
@@ -108,7 +108,7 @@ define amdgpu_kernel void @test_fmax_legacy_oge_f64(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-define amdgpu_kernel void @test_fmax_legacy_ugt_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_ugt_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_fmax_legacy_ugt_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -147,7 +147,7 @@ define amdgpu_kernel void @test_fmax_legacy_ugt_f64(ptr addrspace(1) %out, ptr a
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; VI-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
 ; VI-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
 
@@ -160,7 +160,7 @@ define amdgpu_kernel void @test_fmax_legacy_ugt_f64(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-define amdgpu_kernel void @test_fmax_legacy_ogt_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_ogt_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_fmax_legacy_ogt_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -199,7 +199,7 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_f64(ptr addrspace(1) %out, ptr a
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; VI-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
 ; VI-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
 
@@ -212,7 +212,4 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_f64(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

@@ -1,10 +1,8 @@
 # RUN: llc --mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs -run-pass si-fold-operands,si-shrink-instructions %s -o - | FileCheck %s
 --- |
-  define amdgpu_kernel void @test() #0 {
+  define amdgpu_kernel void @test() nounwind {
     ret void
   }
-
-  attributes #0 = { nounwind }
 
 ...
 ---

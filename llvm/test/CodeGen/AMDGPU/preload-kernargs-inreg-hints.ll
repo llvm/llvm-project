@@ -5,7 +5,7 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -amdgpu-kernarg-preload-count=16 -passes=amdgpu-attributor -S < %s | FileCheck -check-prefix=PRELOAD-16 %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -amdgpu-kernarg-preload-count=20 -passes=amdgpu-attributor -S < %s | FileCheck -check-prefix=PRELOAD-20 %s
 
-define amdgpu_kernel void @test_preload_hint_kernel_1(ptr %0) #0 {
+define amdgpu_kernel void @test_preload_hint_kernel_1(ptr %0) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_hint_kernel_1
 ; NO-PRELOAD-SAME: (ptr [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-PRELOAD-NEXT:    ret void
@@ -29,7 +29,7 @@ define amdgpu_kernel void @test_preload_hint_kernel_1(ptr %0) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_preload_hint_kernel_2(i32 %0, i64 %1) #0 {
+define amdgpu_kernel void @test_preload_hint_kernel_2(i32 %0, i64 %1) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_hint_kernel_2
 ; NO-PRELOAD-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    ret void
@@ -53,7 +53,7 @@ define amdgpu_kernel void @test_preload_hint_kernel_2(i32 %0, i64 %1) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_preload_hint_kernel_4(i32 %0, i64 %1, <2 x float> %2, ptr %3) #0 {
+define amdgpu_kernel void @test_preload_hint_kernel_4(i32 %0, i64 %1, <2 x float> %2, ptr %3) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_hint_kernel_4
 ; NO-PRELOAD-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]], <2 x float> [[TMP2:%.*]], ptr [[TMP3:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    ret void
@@ -77,7 +77,7 @@ define amdgpu_kernel void @test_preload_hint_kernel_4(i32 %0, i64 %1, <2 x float
   ret void
 }
 
-define amdgpu_kernel void @test_preload_hint_kernel_18(i32 %0, i64 %1, <2 x float> %2, ptr %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10, i32 %11, i32 %12, i32 %13, i32 %14, i32 %15, i32 %16, i32 %17) #0 {
+define amdgpu_kernel void @test_preload_hint_kernel_18(i32 %0, i64 %1, <2 x float> %2, ptr %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10, i32 %11, i32 %12, i32 %13, i32 %14, i32 %15, i32 %16, i32 %17) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_hint_kernel_18
 ; NO-PRELOAD-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]], <2 x float> [[TMP2:%.*]], ptr [[TMP3:%.*]], i32 [[TMP4:%.*]], i32 [[TMP5:%.*]], i32 [[TMP6:%.*]], i32 [[TMP7:%.*]], i32 [[TMP8:%.*]], i32 [[TMP9:%.*]], i32 [[TMP10:%.*]], i32 [[TMP11:%.*]], i32 [[TMP12:%.*]], i32 [[TMP13:%.*]], i32 [[TMP14:%.*]], i32 [[TMP15:%.*]], i32 [[TMP16:%.*]], i32 [[TMP17:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    ret void
@@ -101,7 +101,7 @@ define amdgpu_kernel void @test_preload_hint_kernel_18(i32 %0, i64 %1, <2 x floa
   ret void
 }
 
-define void @test_preload_hint_non_kernel_2(i32 %0, i64 %1) #0 {
+define void @test_preload_hint_non_kernel_2(i32 %0, i64 %1) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_hint_non_kernel_2
 ; NO-PRELOAD-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; NO-PRELOAD-NEXT:    ret void
@@ -125,7 +125,7 @@ define void @test_preload_hint_non_kernel_2(i32 %0, i64 %1) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_preload_hint_kernel_1_call_func(ptr %0) #0 {
+define amdgpu_kernel void @test_preload_hint_kernel_1_call_func(ptr %0) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_hint_kernel_1_call_func
 ; NO-PRELOAD-SAME: (ptr [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] {
 ; NO-PRELOAD-NEXT:    call void @func(ptr [[TMP0]])
@@ -155,7 +155,7 @@ define amdgpu_kernel void @test_preload_hint_kernel_1_call_func(ptr %0) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_preload_hint_kernel_1_call_intrinsic(i16 %0) #0 {
+define amdgpu_kernel void @test_preload_hint_kernel_1_call_intrinsic(i16 %0) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_hint_kernel_1_call_intrinsic
 ; NO-PRELOAD-SAME: (i16 [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
 ; NO-PRELOAD-NEXT:    call void @llvm.amdgcn.set.prio(i16 [[TMP0]])
@@ -185,7 +185,7 @@ define amdgpu_kernel void @test_preload_hint_kernel_1_call_intrinsic(i16 %0) #0 
   ret void
 }
 
-define spir_kernel void @test_preload_hint_kernel_1_spir_cc(ptr %0) #0 {
+define spir_kernel void @test_preload_hint_kernel_1_spir_cc(ptr %0) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_hint_kernel_1_spir_cc
 ; NO-PRELOAD-SAME: (ptr [[TMP0:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    ret void
@@ -209,7 +209,7 @@ define spir_kernel void @test_preload_hint_kernel_1_spir_cc(ptr %0) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_preload_hint_kernel_2_preexisting(i32 inreg %0, i64 %1) #0 {
+define amdgpu_kernel void @test_preload_hint_kernel_2_preexisting(i32 inreg %0, i64 %1) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_hint_kernel_2_preexisting
 ; NO-PRELOAD-SAME: (i32 inreg [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    ret void
@@ -257,7 +257,5 @@ define amdgpu_kernel void @test_preload_hint_kernel_incompatible_attributes(ptr 
   ret void
 }
 
-declare void @func(ptr) #0
+declare void @func(ptr) nounwind
 declare void @llvm.amdgcn.set.prio(i16)
-
-attributes #0 = { nounwind }

@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-mesa3d -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX12 %s
 
-define float @test_min_max_ValK0_K1_f32(float %a) #0 {
+define float @test_min_max_ValK0_K1_f32(float %a) "amdgpu-ieee"="true" {
 ; GFX10-LABEL: test_min_max_ValK0_K1_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -30,7 +30,7 @@ define float @test_min_max_ValK0_K1_f32(float %a) #0 {
   ret float %fmed
 }
 
-define float @test_min_max_K0Val_K1_f32(float %a) #1 {
+define float @test_min_max_K0Val_K1_f32(float %a) "amdgpu-ieee"="false" {
 ; GFX10-LABEL: test_min_max_K0Val_K1_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -59,7 +59,7 @@ define float @test_min_max_K0Val_K1_f32(float %a) #1 {
 
 ; min-max patterns for ieee=true do not have to check for NaNs
 ; 'v_max_f16_e32 v0, v0, v0' is from fcanonicalize of the input to fmin/fmax with ieee=true
-define half @test_min_K1max_ValK0_f16(half %a) #0 {
+define half @test_min_K1max_ValK0_f16(half %a) "amdgpu-ieee"="true" {
 ; GFX10-LABEL: test_min_K1max_ValK0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -91,7 +91,7 @@ define half @test_min_K1max_ValK0_f16(half %a) #0 {
   ret half %fmed
 }
 
-define half @test_min_K1max_K0Val_f16(half %a) #1 {
+define half @test_min_K1max_K0Val_f16(half %a) "amdgpu-ieee"="false" {
 ; GFX10-LABEL: test_min_K1max_K0Val_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -120,7 +120,7 @@ define half @test_min_K1max_K0Val_f16(half %a) #1 {
 }
 
 ; max-mix patterns work only for non-NaN inputs
-define float @test_max_min_ValK1_K0_f32(float %a) #0 {
+define float @test_max_min_ValK1_K0_f32(float %a) "amdgpu-ieee"="true" {
 ; GFX10-LABEL: test_max_min_ValK1_K0_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -147,7 +147,7 @@ define float @test_max_min_ValK1_K0_f32(float %a) #0 {
   ret float %fmed
 }
 
-define float @test_max_min_K1Val_K0_f32(float %a) #1 {
+define float @test_max_min_K1Val_K0_f32(float %a) "amdgpu-ieee"="false" {
 ; GFX10-LABEL: test_max_min_K1Val_K0_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -174,7 +174,7 @@ define float @test_max_min_K1Val_K0_f32(float %a) #1 {
   ret float %fmed
 }
 
-define half @test_max_K0min_ValK1_f16(half %a) #0 {
+define half @test_max_K0min_ValK1_f16(half %a) "amdgpu-ieee"="true" {
 ; GFX10-LABEL: test_max_K0min_ValK1_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -202,7 +202,7 @@ define half @test_max_K0min_ValK1_f16(half %a) #0 {
   ret half %fmed
 }
 
-define half @test_max_K0min_K1Val_f16(half %a) #1 {
+define half @test_max_K0min_K1Val_f16(half %a) "amdgpu-ieee"="false" {
 ; GFX10-LABEL: test_max_K0min_K1Val_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -232,7 +232,7 @@ define half @test_max_K0min_K1Val_f16(half %a) #1 {
 
 ; global nnan function attribute always forces fmed3 combine
 
-define float @test_min_max_global_nnan(float %a) #2 {
+define float @test_min_max_global_nnan(float %a) "no-nans-fp-math"="true" {
 ; GFX10-LABEL: test_min_max_global_nnan:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -259,7 +259,7 @@ define float @test_min_max_global_nnan(float %a) #2 {
   ret float %fmed
 }
 
-define float @test_max_min_global_nnan(float %a) #2 {
+define float @test_max_min_global_nnan(float %a) "no-nans-fp-math"="true" {
 ; GFX10-LABEL: test_max_min_global_nnan:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -291,7 +291,7 @@ define float @test_max_min_global_nnan(float %a) #2 {
 ; ------------------------------------------------------------------------------
 
 ; min(max(Val, K0), K1) K0 > K1, should be K0<=K1
-define float @test_min_max_K0_gt_K1(float %a) #0 {
+define float @test_min_max_K0_gt_K1(float %a) "amdgpu-ieee"="true" {
 ; GFX10-LABEL: test_min_max_K0_gt_K1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -321,7 +321,7 @@ define float @test_min_max_K0_gt_K1(float %a) #0 {
 }
 
 ; max(min(Val, K1), K0) K0 > K1, should be K0<=K1
-define float @test_max_min_K0_gt_K1(float %a) #0 {
+define float @test_max_min_K0_gt_K1(float %a) "amdgpu-ieee"="true" {
 ; GFX10-LABEL: test_max_min_K0_gt_K1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -351,7 +351,7 @@ define float @test_max_min_K0_gt_K1(float %a) #0 {
 }
 
 ; non-inline constant
-define float @test_min_max_non_inline_const(float %a) #0 {
+define float @test_min_max_non_inline_const(float %a) "amdgpu-ieee"="true" {
 ; GFX10-LABEL: test_min_max_non_inline_const:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -382,7 +382,7 @@ define float @test_min_max_non_inline_const(float %a) #0 {
 
 ; there is no fmed3 for f64 or v2f16 types
 
-define double @test_min_max_f64(double %a) #0 {
+define double @test_min_max_f64(double %a) "amdgpu-ieee"="true" {
 ; GFX10-LABEL: test_min_max_f64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -413,7 +413,7 @@ define double @test_min_max_f64(double %a) #0 {
   ret double %fmed
 }
 
-define <2 x half> @test_min_max_v2f16(<2 x half> %a) #0 {
+define <2 x half> @test_min_max_v2f16(<2 x half> %a) "amdgpu-ieee"="true" {
 ; GFX10-LABEL: test_min_max_v2f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -452,7 +452,7 @@ define <2 x half> @test_min_max_v2f16(<2 x half> %a) #0 {
 ; input that can be NaN
 
 ; min-max patterns for ieee=false require known non-NaN input
-define float @test_min_max_maybe_NaN_input_ieee_false(float %a) #1 {
+define float @test_min_max_maybe_NaN_input_ieee_false(float %a) "amdgpu-ieee"="false" {
 ; GFX10-LABEL: test_min_max_maybe_NaN_input_ieee_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -485,7 +485,7 @@ define float @test_min_max_maybe_NaN_input_ieee_false(float %a) #1 {
 
 ; max-min patterns always require known non-NaN input
 
-define float @test_max_min_maybe_NaN_input_ieee_false(float %a) #1 {
+define float @test_max_min_maybe_NaN_input_ieee_false(float %a) "amdgpu-ieee"="false" {
 ; GFX10-LABEL: test_max_min_maybe_NaN_input_ieee_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -517,7 +517,7 @@ define float @test_max_min_maybe_NaN_input_ieee_false(float %a) #1 {
 }
 
 ; 'v_max_f32_e32 v0, v0, v0' is from fcanonicalize of the input to fmin/fmax with ieee=true
-define float @test_max_min_maybe_NaN_input_ieee_true(float %a) #0 {
+define float @test_max_min_maybe_NaN_input_ieee_true(float %a) "amdgpu-ieee"="true" {
 ; GFX10-LABEL: test_max_min_maybe_NaN_input_ieee_true:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -558,6 +558,3 @@ declare double @llvm.minnum.f64(double, double)
 declare double @llvm.maxnum.f64(double, double)
 declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>)
 declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>)
-attributes #0 = {"amdgpu-ieee"="true"}
-attributes #1 = {"amdgpu-ieee"="false"}
-attributes #2 = {"no-nans-fp-math"="true"}

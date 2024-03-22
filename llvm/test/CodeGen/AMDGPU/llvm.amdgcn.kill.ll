@@ -29,7 +29,7 @@ define amdgpu_ps void @vcc_implicit_def(float %arg13, float %arg14) {
   %c1 = fcmp oge float %arg14, 0.0
   call void @llvm.amdgcn.kill(i1 %c1)
   %tmp1 = select i1 %tmp0, float 1.000000e+00, float 0.000000e+00
-  call void @llvm.amdgcn.exp.f32(i32 1, i32 15, float %tmp1, float %tmp1, float %tmp1, float %tmp1, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.f32(i32 1, i32 15, float %tmp1, float %tmp1, float %tmp1, float %tmp1, i1 true, i1 true) nounwind
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
   ret void
 }
@@ -225,7 +225,7 @@ define amdgpu_gs void @neg_olt(float %a) {
 ; GFX10: v_cmp_lt_f32_e32 vcc, 0x3e800000, v0
 ; GCN: v_cndmask_b32
 ; GCN: v_cmp_nle_f32
-define amdgpu_ps void @fcmp_x2(float %a) #0 {
+define amdgpu_ps void @fcmp_x2(float %a) nounwind {
   %ogt = fcmp nsz ogt float %a, 2.500000e-01
   %k = select i1 %ogt, float -1.000000e+00, float 0.000000e+00
   %c = fcmp nsz oge float %k, 0.000000e+00
@@ -251,7 +251,7 @@ define amdgpu_ps float @wqm(float %a) {
 ; This checks that we use the 64-bit encoding when the operand is a SGPR.
 ; GCN-LABEL: {{^}}test_sgpr:
 ; GCN: v_cmp_nle_f32_e64
-define amdgpu_ps void @test_sgpr(float inreg %a) #0 {
+define amdgpu_ps void @test_sgpr(float inreg %a) nounwind {
   %c = fcmp ole float %a, 1.000000e+00
   call void @llvm.amdgcn.kill(i1 %c) #1
   ret void
@@ -259,7 +259,7 @@ define amdgpu_ps void @test_sgpr(float inreg %a) #0 {
 
 ; GCN-LABEL: {{^}}test_non_inline_imm_sgpr:
 ; GCN-NOT: v_cmp_le_f32_e64
-define amdgpu_ps void @test_non_inline_imm_sgpr(float inreg %a) #0 {
+define amdgpu_ps void @test_non_inline_imm_sgpr(float inreg %a) nounwind {
   %c = fcmp ole float %a, 1.500000e+00
   call void @llvm.amdgcn.kill(i1 %c) #1
   ret void
@@ -270,7 +270,7 @@ define amdgpu_ps void @test_non_inline_imm_sgpr(float inreg %a) #0 {
 ; GCN: s_and_b64 exec
 ; GCN: s_cmp
 ; GCN: s_cbranch_scc
-define amdgpu_ps void @test_scc_liveness() #0 {
+define amdgpu_ps void @test_scc_liveness() nounwind {
 main_body:
   br label %loop3
 
@@ -318,9 +318,7 @@ bb35:                                             ; preds = %bb33, %.entry
   ret void
 }
 
-declare void @llvm.amdgcn.kill(i1) #0
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare void @llvm.amdgcn.s.sendmsg(i32, i32) #0
+declare void @llvm.amdgcn.kill(i1) nounwind
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind
+declare void @llvm.amdgcn.s.sendmsg(i32, i32) nounwind
 declare i1 @llvm.amdgcn.wqm.vote(i1)
-
-attributes #0 = { nounwind }

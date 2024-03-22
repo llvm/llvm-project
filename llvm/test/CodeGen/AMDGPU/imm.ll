@@ -1842,10 +1842,8 @@ define amdgpu_vs void @literal_folding(float %arg) {
 main_body:
   %tmp = fmul float %arg, 0x3FE86A7F00000000
   %tmp1 = fmul float %arg, 0xBFE86A7F00000000
-  call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float %tmp, float %tmp, float %tmp1, float %tmp1, i1 true, i1 false) #0
+  call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float %tmp, float %tmp, float %tmp1, float %tmp1, i1 true, i1 false) nounwind
   ret void
 }
 
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-
-attributes #0 = { nounwind }
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind

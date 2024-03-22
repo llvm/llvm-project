@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
 
-define amdgpu_kernel void @s_add_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @s_add_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX6-LABEL: s_add_i32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -768,7 +768,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @v_add_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_add_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX6-LABEL: v_add_i32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -879,7 +879,7 @@ define amdgpu_kernel void @v_add_i32(ptr addrspace(1) %out, ptr addrspace(1) %in
   ret void
 }
 
-define amdgpu_kernel void @v_add_imm_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_add_imm_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX6-LABEL: v_add_imm_i32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1424,7 +1424,4 @@ define amdgpu_ps void @add_select_vop3(i32 inreg %s, i32 %v) {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable

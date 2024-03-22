@@ -254,10 +254,7 @@ define amdgpu_ps float @div_scale_s_s_false(float inreg %src0, float inreg %src1
   ret float %result
 }
 
-declare float @llvm.fma.f32(float, float, float) #0
-declare float @llvm.amdgcn.div.fmas.f32(float, float, float, i1) #1
-declare { float, i1 } @llvm.amdgcn.div.scale.f32(float, float, i1 immarg) #1
-declare i1 @llvm.amdgcn.class.f32(float, i32) #1
-
-attributes #0 = { nounwind readnone speculatable willreturn }
-attributes #1 = { nounwind readnone speculatable }
+declare float @llvm.fma.f32(float, float, float) nounwind readnone speculatable willreturn
+declare float @llvm.amdgcn.div.fmas.f32(float, float, float, i1) nounwind readnone speculatable
+declare { float, i1 } @llvm.amdgcn.div.scale.f32(float, float, i1 immarg) nounwind readnone speculatable
+declare i1 @llvm.amdgcn.class.f32(float, i32) nounwind readnone speculatable

@@ -55,6 +55,4 @@ define amdgpu_ps void @global_csub_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
   ret void
 }
 
-declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) #0
-
-attributes #0 = { argmemonly nounwind willreturn }
+declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) argmemonly nounwind willreturn

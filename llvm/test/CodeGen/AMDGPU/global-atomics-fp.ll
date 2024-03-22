@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
-define amdgpu_kernel void @global_atomic_fadd_ret_f32(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_ret_f32(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX900-LABEL: global_atomic_fadd_ret_f32:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_mov_b64 s[4:5], exec
@@ -219,7 +219,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32(ptr addrspace(1) %ptr) #0 
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_ret_f32_ieee(ptr addrspace(1) %ptr) #2 {
+define amdgpu_kernel void @global_atomic_fadd_ret_f32_ieee(ptr addrspace(1) %ptr) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX900-LABEL: global_atomic_fadd_ret_f32_ieee:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_mov_b64 s[4:5], exec
@@ -407,7 +407,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_ieee(ptr addrspace(1) %ptr
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_noret_f32(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_noret_f32(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX900-LABEL: global_atomic_fadd_noret_f32:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_mov_b64 s[2:3], exec
@@ -539,7 +539,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32(ptr addrspace(1) %ptr) #
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_noret_f32_ieee(ptr addrspace(1) %ptr) #2 {
+define amdgpu_kernel void @global_atomic_fadd_noret_f32_ieee(ptr addrspace(1) %ptr) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX900-LABEL: global_atomic_fadd_noret_f32_ieee:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_mov_b64 s[2:3], exec
@@ -671,7 +671,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_ieee(ptr addrspace(1) %p
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_ret_f32_agent(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_ret_f32_agent(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX900-LABEL: global_atomic_fadd_ret_f32_agent:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_mov_b64 s[4:5], exec
@@ -855,7 +855,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_agent(ptr addrspace(1) %pt
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_ret_f32_system(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_ret_f32_system(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX900-LABEL: global_atomic_fadd_ret_f32_system:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_mov_b64 s[4:5], exec
@@ -1069,7 +1069,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_system(ptr addrspace(1) %p
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "target-cpu"="gfx803" "target-features"="+atomic-fadd-no-rtn-insts" "amdgpu-unsafe-fp-atomics"="true" {
 ; GCN-LABEL: global_atomic_fadd_ret_f32_wrong_subtarget:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
@@ -1156,7 +1156,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(ptr addrspace(1) %ptr) #1 {
+define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "target-cpu"="gfx803" "target-features"="+atomic-fadd-no-rtn-insts" "amdgpu-unsafe-fp-atomics"="true" {
 ; GCN-LABEL: global_atomic_fadd_noret_f32_wrong_subtarget:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b64 s[2:3], exec
@@ -1370,7 +1370,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_safe(ptr addrspace(1) %p
   ret void
 }
 
-define amdgpu_kernel void @infer_as_before_atomic(ptr addrspace(4) %arg) #0 {
+define amdgpu_kernel void @infer_as_before_atomic(ptr addrspace(4) %arg) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX900-LABEL: infer_as_before_atomic:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_mov_b64 s[2:3], exec
@@ -1501,7 +1501,7 @@ define amdgpu_kernel void @infer_as_before_atomic(ptr addrspace(4) %arg) #0 {
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_ret_bf16_agent(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_ret_bf16_agent(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX900-LABEL: global_atomic_fadd_ret_bf16_agent:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x24
@@ -1716,7 +1716,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_bf16_agent(ptr addrspace(1) %p
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_ret_bf16_system(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_ret_bf16_system(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX900-LABEL: global_atomic_fadd_ret_bf16_system:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x24
@@ -1932,7 +1932,3 @@ define amdgpu_kernel void @global_atomic_fadd_ret_bf16_system(ptr addrspace(1) %
   store bfloat %result, ptr addrspace(1) undef
   ret void
 }
-
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
-attributes #1 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "target-cpu"="gfx803" "target-features"="+atomic-fadd-no-rtn-insts" "amdgpu-unsafe-fp-atomics"="true" }
-attributes #2 = { "amdgpu-unsafe-fp-atomics"="true" }

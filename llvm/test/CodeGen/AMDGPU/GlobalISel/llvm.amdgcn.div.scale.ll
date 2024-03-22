@@ -1493,7 +1493,7 @@ define amdgpu_kernel void @test_div_scale_f32_fabs_den(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_val_undef_val(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_div_scale_f32_val_undef_val(ptr addrspace(1) %out) nounwind {
 ; GFX7-LABEL: test_div_scale_f32_val_undef_val:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1541,7 +1541,7 @@ define amdgpu_kernel void @test_div_scale_f32_val_undef_val(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_undef_val_val(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_div_scale_f32_undef_val_val(ptr addrspace(1) %out) nounwind {
 ; GFX7-LABEL: test_div_scale_f32_undef_val_val:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1589,7 +1589,7 @@ define amdgpu_kernel void @test_div_scale_f32_undef_val_val(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_undef_undef_val(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_div_scale_f32_undef_undef_val(ptr addrspace(1) %out) nounwind {
 ; GFX7-LABEL: test_div_scale_f32_undef_undef_val:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1635,7 +1635,7 @@ define amdgpu_kernel void @test_div_scale_f32_undef_undef_val(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f64_val_undef_val(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_div_scale_f64_val_undef_val(ptr addrspace(1) %out) nounwind {
 ; GFX7-LABEL: test_div_scale_f64_val_undef_val:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1685,10 +1685,7 @@ define amdgpu_kernel void @test_div_scale_f64_val_undef_val(ptr addrspace(1) %ou
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare { float, i1 } @llvm.amdgcn.div.scale.f32(float, float, i1) #1
-declare { double, i1 } @llvm.amdgcn.div.scale.f64(double, double, i1) #1
-declare float @llvm.fabs.f32(float) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
+declare { float, i1 } @llvm.amdgcn.div.scale.f32(float, float, i1) nounwind readnone speculatable
+declare { double, i1 } @llvm.amdgcn.div.scale.f64(double, double, i1) nounwind readnone speculatable
+declare float @llvm.fabs.f32(float) nounwind readnone speculatable

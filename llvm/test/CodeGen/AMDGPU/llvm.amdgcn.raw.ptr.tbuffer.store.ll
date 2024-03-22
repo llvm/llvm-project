@@ -279,9 +279,7 @@ main_body:
   ret void
 }
 
-declare void @llvm.amdgcn.raw.ptr.tbuffer.store.i32(i32, ptr addrspace(8), i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.tbuffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.tbuffer.store.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.raw.ptr.tbuffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32) #0
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readonly }
+declare void @llvm.amdgcn.raw.ptr.tbuffer.store.i32(i32, ptr addrspace(8), i32, i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.tbuffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.tbuffer.store.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32, i32) nounwind
+declare void @llvm.amdgcn.raw.ptr.tbuffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32) nounwind

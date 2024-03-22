@@ -25,11 +25,9 @@
 ; LOOP-NEXT: s_getreg_b32 [[GETREG:s[0-9]+]], hwreg(HW_REG_TRAPSTS, 8, 1)
 ; LOOP-NEXT: s_cmp_lg_u32 [[GETREG]], 0
 ; LOOP-NEXT: s_cbranch_scc1 [[LOOP]]
-define amdgpu_kernel void @gws_sema_br_offset0(i32 %val) #0 {
+define amdgpu_kernel void @gws_sema_br_offset0(i32 %val) convergent inaccessiblememonly nounwind {
   call void @llvm.amdgcn.ds.gws.sema.br(i32 %val, i32 0)
   ret void
 }
 
-declare void @llvm.amdgcn.ds.gws.sema.br(i32, i32) #0
-
-attributes #0 = { convergent inaccessiblememonly nounwind }
+declare void @llvm.amdgcn.ds.gws.sema.br(i32, i32) convergent inaccessiblememonly nounwind

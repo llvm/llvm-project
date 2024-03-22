@@ -4,9 +4,9 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -show-mc-encoding -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx90a -show-mc-encoding -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 %s
 
-declare void @llvm.amdgcn.s.setprio(i16) #0
+declare void @llvm.amdgcn.s.setprio(i16) nounwind
 
-define void @test_llvm_amdgcn_s_setprio() #0 {
+define void @test_llvm_amdgcn_s_setprio() nounwind {
 ; GFX9-LABEL: test_llvm_amdgcn_s_setprio:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
@@ -45,5 +45,3 @@ define void @test_llvm_amdgcn_s_setprio() #0 {
   call void @llvm.amdgcn.s.setprio(i16 -1)
   ret void
 }
-
-attributes #0 = { nounwind }

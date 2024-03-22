@@ -4,7 +4,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 < %s | FileCheck -check-prefixes=GFX908 %s
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX90A %s
 
-define amdgpu_kernel void @scalar_to_vector_v8i16(<2 x i32> %in, ptr %out) #0 {
+define amdgpu_kernel void @scalar_to_vector_v8i16(<2 x i32> %in, ptr %out) nounwind {
 ; GFX900-LABEL: scalar_to_vector_v8i16:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -74,7 +74,7 @@ entry:
 
   %val.6.vec8.i16 = shufflevector <8 x i16> %val.5.vec8.i16, <8 x i16> %val.3.vec8.i16, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
 
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %out.gep = getelementptr inbounds <8 x i16>, ptr %out, i64 %tid.ext
   store <8 x i16> %val.6.vec8.i16, ptr %out.gep, align 16
@@ -82,7 +82,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @scalar_to_vector_v8f16(<2 x float> %in, ptr %out) #0 {
+define amdgpu_kernel void @scalar_to_vector_v8f16(<2 x float> %in, ptr %out) nounwind {
 ; GFX900-LABEL: scalar_to_vector_v8f16:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -152,7 +152,7 @@ entry:
 
   %val.6.vec8.half = shufflevector <8 x half> %val.5.vec8.half, <8 x half> %val.3.vec8.half, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
 
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %out.gep = getelementptr inbounds <8 x half>, ptr %out, i64 %tid.ext
   store <8 x half> %val.6.vec8.half, ptr %out.gep, align 16
@@ -160,7 +160,4 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

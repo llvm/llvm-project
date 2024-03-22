@@ -2,7 +2,7 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; Extract the high bit of the 1st quarter
-define amdgpu_kernel void @v_uextract_bit_31_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
+define amdgpu_kernel void @v_uextract_bit_31_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GCN-LABEL: v_uextract_bit_31_i128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -34,7 +34,7 @@ define amdgpu_kernel void @v_uextract_bit_31_i128(ptr addrspace(1) %out, ptr add
 }
 
 ; Extract the high bit of the 2nd quarter
-define amdgpu_kernel void @v_uextract_bit_63_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
+define amdgpu_kernel void @v_uextract_bit_63_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GCN-LABEL: v_uextract_bit_63_i128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -65,7 +65,7 @@ define amdgpu_kernel void @v_uextract_bit_63_i128(ptr addrspace(1) %out, ptr add
 }
 
 ; Extract the high bit of the 3rd quarter
-define amdgpu_kernel void @v_uextract_bit_95_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
+define amdgpu_kernel void @v_uextract_bit_95_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GCN-LABEL: v_uextract_bit_95_i128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -98,7 +98,7 @@ define amdgpu_kernel void @v_uextract_bit_95_i128(ptr addrspace(1) %out, ptr add
 }
 
 ; Extract the high bit of the 4th quarter
-define amdgpu_kernel void @v_uextract_bit_127_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
+define amdgpu_kernel void @v_uextract_bit_127_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GCN-LABEL: v_uextract_bit_127_i128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -129,7 +129,7 @@ define amdgpu_kernel void @v_uextract_bit_127_i128(ptr addrspace(1) %out, ptr ad
 }
 
 ; Spans more than 2 dword boundaries
-define amdgpu_kernel void @v_uextract_bit_34_100_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
+define amdgpu_kernel void @v_uextract_bit_34_100_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GCN-LABEL: v_uextract_bit_34_100_i128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -159,9 +159,6 @@ define amdgpu_kernel void @v_uextract_bit_34_100_i128(ptr addrspace(1) %out, ptr
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
+declare i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone

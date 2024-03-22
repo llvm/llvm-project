@@ -4,7 +4,7 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -amdgpu-attributor -amdgpu-lower-kernel-arguments -amdgpu-kernarg-preload-count=3 -S < %s | FileCheck -check-prefix=PRELOAD-3 %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -amdgpu-attributor -amdgpu-lower-kernel-arguments -amdgpu-kernarg-preload-count=8 -S < %s | FileCheck -check-prefix=PRELOAD-8 %s
 
-define amdgpu_kernel void @test_preload_IR_lowering_kernel_2(ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_preload_IR_lowering_kernel_2(ptr addrspace(1) %in, ptr addrspace(1) %out) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_2
 ; NO-PRELOAD-SAME: (ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_2_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -44,7 +44,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_2(ptr addrspace(1) %i
   ret void
 }
 
-define amdgpu_kernel void @test_preload_IR_lowering_kernel_4(ptr addrspace(1) %in, ptr addrspace(1) %in1, ptr addrspace(1) %out, ptr addrspace(1) %out1) #0 {
+define amdgpu_kernel void @test_preload_IR_lowering_kernel_4(ptr addrspace(1) %in, ptr addrspace(1) %in1, ptr addrspace(1) %out, ptr addrspace(1) %out1) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4
 ; NO-PRELOAD-SAME: (ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -104,7 +104,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4(ptr addrspace(1) %i
   ret void
 }
 
-define amdgpu_kernel void @test_preload_IR_lowering_kernel_8(ptr addrspace(1) %in, ptr addrspace(1) %in1, ptr addrspace(1) %in2, ptr addrspace(1) %in3, ptr addrspace(1) %out, ptr addrspace(1) %out1, ptr addrspace(1) %out2, ptr addrspace(1) %out3) #0 {
+define amdgpu_kernel void @test_preload_IR_lowering_kernel_8(ptr addrspace(1) %in, ptr addrspace(1) %in1, ptr addrspace(1) %in2, ptr addrspace(1) %in3, ptr addrspace(1) %out, ptr addrspace(1) %out1, ptr addrspace(1) %out2, ptr addrspace(1) %out3) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_8
 ; NO-PRELOAD-SAME: (ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]], ptr addrspace(1) [[IN3:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]], ptr addrspace(1) [[OUT2:%.*]], ptr addrspace(1) [[OUT3:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -212,7 +212,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_8(ptr addrspace(1) %i
 
 ; Preload args with inreg in the NO-PRELOAD case.
 
-define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset(ptr addrspace(1) %in, ptr addrspace(1) %in1, ptr addrspace(1) inreg %out, ptr addrspace(1) inreg %out1) #0 {
+define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset(ptr addrspace(1) %in, ptr addrspace(1) %in1, ptr addrspace(1) inreg %out, ptr addrspace(1) inreg %out1) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_inreg_offset
 ; NO-PRELOAD-SAME: (ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -272,7 +272,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset(ptr ad
 
 ; Only preload the first sequence of arguments with the inreg attribute. In the NO-PRELOAD case this is just the first argument.
 
-define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset_two_sequence(ptr addrspace(1) inreg %in, ptr addrspace(1) %in1, ptr addrspace(1) inreg %out, ptr addrspace(1) inreg %out1) #0 {
+define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset_two_sequence(ptr addrspace(1) inreg %in, ptr addrspace(1) %in1, ptr addrspace(1) inreg %out, ptr addrspace(1) inreg %out1) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_inreg_offset_two_sequence
 ; NO-PRELOAD-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -328,7 +328,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset_two_se
   ret void
 }
 
-define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_misaligned(i16 %arg0, ptr addrspace(1) %in, ptr addrspace(1) %in1, ptr addrspace(1) %out, ptr addrspace(1) %out1) #0 {
+define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_misaligned(i16 %arg0, ptr addrspace(1) %in, ptr addrspace(1) %in1, ptr addrspace(1) %out, ptr addrspace(1) %out1) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_misaligned
 ; NO-PRELOAD-SAME: (i16 [[ARG0:%.*]], ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(40) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -407,7 +407,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_misaligned(i16 %arg
 
 ; In this case both i16 args with be preloaded into the first SGPR.
 
-define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_i16_i16(i16 %arg0, i16 %arg1, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_i16_i16(i16 %arg0, i16 %arg1, ptr addrspace(1) %out) nounwind {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_i16_i16
 ; NO-PRELOAD-SAME: (i16 [[ARG0:%.*]], i16 [[ARG1:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -465,5 +465,3 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_i16_i16(i16 %arg0, 
   store i32 %add, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }

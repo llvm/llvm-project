@@ -103,9 +103,9 @@
 
 ; GCN: ; %UnifiedReturnBlock
 ; GCN-NEXT: s_endpgm
-define amdgpu_kernel void @multi_divergent_region_exit_ret_ret(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2) #0 {
+define amdgpu_kernel void @multi_divergent_region_exit_ret_ret(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2) nounwind {
 entry:
-  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tmp1 = add i32 0, %tmp
   %tmp2 = zext i32 %tmp1 to i64
   %tmp3 = add i64 0, %tmp2
@@ -158,9 +158,9 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; GCN-LABEL: {{^}}multi_divergent_region_exit_unreachable_unreachable:
 ; GCN: ; %UnifiedUnreachableBlock
 ; GCN-NEXT: .Lfunc_end
-define amdgpu_kernel void @multi_divergent_region_exit_unreachable_unreachable(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2) #0 {
+define amdgpu_kernel void @multi_divergent_region_exit_unreachable_unreachable(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2) nounwind {
 entry:
-  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tmp1 = add i32 0, %tmp
   %tmp2 = zext i32 %tmp1 to i64
   %tmp3 = add i64 0, %tmp2
@@ -239,9 +239,9 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR: UnifiedReturnBlock:
 ; IR: call void @llvm.amdgcn.end.cf.i64(i64 %11)
 ; IR: ret void
-define amdgpu_kernel void @multi_exit_region_divergent_ret_uniform_ret(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2, i32 %arg3) #0 {
+define amdgpu_kernel void @multi_exit_region_divergent_ret_uniform_ret(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2, i32 %arg3) nounwind {
 entry:
-  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tmp1 = add i32 0, %tmp
   %tmp2 = zext i32 %tmp1 to i64
   %tmp3 = add i64 0, %tmp2
@@ -288,9 +288,9 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR: call void @llvm.amdgcn.end.cf.i64(i64 %16)
 ; IR: %9 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %8)
 
-define amdgpu_kernel void @multi_exit_region_uniform_ret_divergent_ret(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2, i32 %arg3) #0 {
+define amdgpu_kernel void @multi_exit_region_uniform_ret_divergent_ret(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2, i32 %arg3) nounwind {
 entry:
-  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tmp1 = add i32 0, %tmp
   %tmp2 = zext i32 %tmp1 to i64
   %tmp3 = add i64 0, %tmp2
@@ -334,7 +334,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR: %UnifiedRetVal = phi float [ %8, %Flow2 ], [ 1.000000e+00, %exit0 ]
 ; IR: call void @llvm.amdgcn.end.cf.i64(i64 %12)
 ; IR: ret float %UnifiedRetVal
-define amdgpu_ps float @multi_divergent_region_exit_ret_ret_return_value(i32 %vgpr) #0 {
+define amdgpu_ps float @multi_divergent_region_exit_ret_ret_return_value(i32 %vgpr) nounwind {
 entry:
   %Pivot = icmp slt i32 %vgpr, 2
   br i1 %Pivot, label %LeafBlock, label %LeafBlock1
@@ -376,7 +376,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; GCN-NEXT: s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT: ; return
 
-define amdgpu_ps float @uniform_branch_to_multi_divergent_region_exit_ret_ret_return_value(i32 inreg %sgpr, i32 %vgpr) #0 {
+define amdgpu_ps float @uniform_branch_to_multi_divergent_region_exit_ret_ret_return_value(i32 inreg %sgpr, i32 %vgpr) nounwind {
 entry:
   %uniform.cond = icmp slt i32 %sgpr, 2
   br i1 %uniform.cond, label %LeafBlock, label %LeafBlock1
@@ -433,9 +433,9 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR: UnifiedReturnBlock:
 ; IR-NEXT: call void @llvm.amdgcn.end.cf.i64(i64 %11)
 ; IR-NEXT: ret void
-define amdgpu_kernel void @multi_divergent_region_exit_ret_unreachable(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2) #0 {
+define amdgpu_kernel void @multi_divergent_region_exit_ret_unreachable(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2) nounwind {
 entry:
-  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tmp1 = add i32 0, %tmp
   %tmp2 = zext i32 %tmp1 to i64
   %tmp3 = add i64 0, %tmp2
@@ -489,9 +489,9 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR: UnifiedReturnBlock:                               ; preds = %exit0, %Flow2
 ; IR-NEXT: call void @llvm.amdgcn.end.cf.i64(i64 %11)
 ; IR-NEXT: ret void
-define amdgpu_kernel void @indirect_multi_divergent_region_exit_ret_unreachable(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2) #0 {
+define amdgpu_kernel void @indirect_multi_divergent_region_exit_ret_unreachable(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2) nounwind {
 entry:
-  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tmp1 = add i32 0, %tmp
   %tmp2 = zext i32 %tmp1 to i64
   %tmp3 = add i64 0, %tmp2
@@ -531,9 +531,9 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 }
 
 ; IR-LABEL: @multi_divergent_region_exit_ret_switch(
-define amdgpu_kernel void @multi_divergent_region_exit_ret_switch(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2) #0 {
+define amdgpu_kernel void @multi_divergent_region_exit_ret_switch(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2) nounwind {
 entry:
-  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tmp1 = add i32 0, %tmp
   %tmp2 = zext i32 %tmp1 to i64
   %tmp3 = add i64 0, %tmp2
@@ -570,7 +570,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 }
 
 ; IR-LABEL: @divergent_multi_ret_nest_in_uniform_triangle(
-define amdgpu_kernel void @divergent_multi_ret_nest_in_uniform_triangle(i32 %arg0) #0 {
+define amdgpu_kernel void @divergent_multi_ret_nest_in_uniform_triangle(i32 %arg0) nounwind {
 entry:
   %uniform.cond0 = icmp eq i32 %arg0, 4
   br i1 %uniform.cond0, label %divergent.multi.exit.region, label %uniform.ret
@@ -594,7 +594,7 @@ uniform.ret:
 }
 
 ; IR-LABEL: @divergent_complex_multi_ret_nest_in_uniform_triangle(
-define amdgpu_kernel void @divergent_complex_multi_ret_nest_in_uniform_triangle(i32 %arg0) #0 {
+define amdgpu_kernel void @divergent_complex_multi_ret_nest_in_uniform_triangle(i32 %arg0) nounwind {
 entry:
   %uniform.cond0 = icmp eq i32 %arg0, 4
   br i1 %uniform.cond0, label %divergent.multi.exit.region, label %uniform.ret
@@ -644,7 +644,7 @@ uniform.ret:
 ; IR: UnifiedReturnBlock:                               ; preds = %Flow3, %Flow2
 ; IR-NEXT: call void @llvm.amdgcn.end.cf.i64(i64 %5)
 ; IR-NEXT: ret void
-define amdgpu_kernel void @uniform_complex_multi_ret_nest_in_divergent_triangle(i32 %arg0) #0 {
+define amdgpu_kernel void @uniform_complex_multi_ret_nest_in_divergent_triangle(i32 %arg0) nounwind {
 entry:
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %divergent.cond0 = icmp eq i32 %id.x, 0
@@ -690,7 +690,7 @@ divergent.ret:
 ; IR: UnifiedReturnBlock:
 ; IR-NEXT: call void @llvm.amdgcn.end.cf.i64(i64
 ; IR-NEXT: ret void
-define amdgpu_kernel void @multi_divergent_unreachable_exit() #0 {
+define amdgpu_kernel void @multi_divergent_unreachable_exit() nounwind {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   switch i32 %tmp, label %bb3 [
@@ -747,8 +747,5 @@ bb27:                                             ; preds = %.entry
   ret void
 }
 
-declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg) #0
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg) nounwind
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

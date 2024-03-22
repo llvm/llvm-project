@@ -429,27 +429,27 @@ main_body:
   ret <2 x float> %v
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f32.f16(i32, float, float, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f16(i32, float, float, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32.f16(i32, float, float, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f32.f16(i32, float, float, float, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f32.f16(i32, float, float, float, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f32.f16(i32, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f32.f16(i32, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f32.f16(i32, float, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f32.f16(i32, float, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f32.f16(i32, float, float, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f16(i32, float, float, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32.f16(i32, float, float, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f32.f16(i32, float, float, float, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f32.f16(i32, float, float, float, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f32.f16(i32, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f32.f16(i32, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f32.f16(i32, float, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f32.f16(i32, float, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
 
-declare <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f32.f16(i32, float, float, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f32.f16(i32, float, float, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f32.f16(i32, float, float, float, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f32.f16(i32, float, float, float, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f32.f16(i32, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f32.f16(i32, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f32.f16(i32, float, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f32.f16(i32, float, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f32.f16(i32, float, float, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f32.f16(i32, float, float, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f32.f16(i32, float, float, float, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f32.f16(i32, float, float, float, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f32.f16(i32, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f32.f16(i32, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f32.f16(i32, float, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f32.f16(i32, float, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
 
-declare float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f32.f16(i32, i32, float, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f16(i32, i32, float, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f32.f16(i32, i32, float, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f16(i32, i32, float, float, float, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
 
 define amdgpu_ps <4 x float> @sample_g16_noa16_d_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, float %s) {
 ; GFX10-LABEL: sample_g16_noa16_d_1d:
@@ -868,27 +868,27 @@ main_body:
   ret <2 x float> %v
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f16.f32(i32, half, half, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f16.f32(i32, half, half, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f16.f32(i32, half, half, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f16.f32(i32, float, half, half, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f16.f32(i32, float, half, half, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f16.f32(i32, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f16.f32(i32, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f16.f32(i32, float, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f16.f32(i32, float, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f16.f32(i32, half, half, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f16.f32(i32, half, half, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f16.f32(i32, half, half, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f16.f32(i32, float, half, half, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f16.f32(i32, float, half, half, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f16.f32(i32, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f16.f32(i32, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f16.f32(i32, float, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f16.f32(i32, float, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
 
-declare <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f16.f32(i32, half, half, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f16.f32(i32, half, half, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f16.f32(i32, float, half, half, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f16.f32(i32, float, half, half, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f16.f32(i32, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f16.f32(i32, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f16.f32(i32, float, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f16.f32(i32, float, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f16.f32(i32, half, half, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f16.f32(i32, half, half, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f16.f32(i32, float, half, half, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f16.f32(i32, float, half, half, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f16.f32(i32, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f16.f32(i32, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f16.f32(i32, float, half, half, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f16.f32(i32, float, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
 
-declare float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f16.f32(i32, i32, float, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f16.f32(i32, i32, float, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f16.f32(i32, i32, float, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f16.f32(i32, i32, float, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
 
 define amdgpu_ps <4 x float> @sample_d_1d_g16_a16(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, half %s) {
 ; GFX10-LABEL: sample_d_1d_g16_a16:
@@ -969,7 +969,3 @@ main_body:
 declare <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f16.f16(i32, half,  half,  half, <8 x i32>, <4 x i32>, i1, i32, i32)
 declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f16.f16(i32, half,  half,  half,  half,  half,  half, <8 x i32>, <4 x i32>, i1, i32, i32)
 declare <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f16.f16(i32, half,  half,  half,  half,  half,  half,  half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32)
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readonly }
-attributes #2 = { nounwind readnone }

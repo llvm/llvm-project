@@ -8,7 +8,7 @@ target triple = "amdgcn-amd-amdhsa"
 
 @global_barrier_state = hidden addrspace(3) global i32 undef, align 4
 
-define i32 @rw() #0 {
+define i32 @rw() noinline {
 entry:
   %0 = atomicrmw add ptr addrspace(3) @global_barrier_state, i32 1 acq_rel, align 4
   ret i32 %0
@@ -19,5 +19,3 @@ entry:
   %0 = call i32 @rw()
   ret void
 }
-
-attributes #0 = { noinline  }

@@ -6,7 +6,7 @@
 ; leading to an effectively dead INSERT_SUBREG.
 
 
-define dllexport amdgpu_ps void @_amdgpu_ps_main(i32 %descTable2) #0 {
+define dllexport amdgpu_ps void @_amdgpu_ps_main(i32 %descTable2) "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %i2 = zext i32 %descTable2 to i64
   %i4 = inttoptr i64 %i2 to ptr addrspace(4)
@@ -86,5 +86,3 @@ declare float @llvm.amdgcn.fmed3.f32(float, float, float)
 declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i32, i32 immarg)
 declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg)
 declare <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32>, i32, i32 immarg)
-
-attributes #0 = { "target-features"=",+wavefrontsize64,+cumode" }

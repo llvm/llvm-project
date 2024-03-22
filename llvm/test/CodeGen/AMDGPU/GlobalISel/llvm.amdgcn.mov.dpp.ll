@@ -43,7 +43,7 @@ define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in) {
 ; GFX11-NEXT:    s_nop 0 ; encoding: [0x00,0x00,0x80,0xbf]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
-  %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %in, i32 1, i32 1, i32 1, i1 true) #0
+  %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %in, i32 1, i32 1, i32 1, i1 true) convergent nounwind readnone
   store i32 %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -85,12 +85,10 @@ define amdgpu_kernel void @mov_dpp64_test(ptr addrspace(1) %out, i64 %in1) {
 ; GFX11-NEXT:    s_nop 0 ; encoding: [0x00,0x00,0x80,0xbf]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
-  %tmp0 = call i64 @llvm.amdgcn.mov.dpp.i64(i64 %in1, i32 1, i32 1, i32 1, i1 false) #0
+  %tmp0 = call i64 @llvm.amdgcn.mov.dpp.i64(i64 %in1, i32 1, i32 1, i32 1, i1 false) convergent nounwind readnone
   store i64 %tmp0, ptr addrspace(1) %out
   ret void
 }
 
-declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg) #0
-declare i64 @llvm.amdgcn.mov.dpp.i64(i64, i32 immarg, i32 immarg, i32 immarg, i1 immarg) #0
-
-attributes #0 = { convergent nounwind readnone }
+declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg) convergent nounwind readnone
+declare i64 @llvm.amdgcn.mov.dpp.i64(i64, i32 immarg, i32 immarg, i32 immarg, i1 immarg) convergent nounwind readnone

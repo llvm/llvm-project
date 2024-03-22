@@ -49,10 +49,8 @@ bb1:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i1 @llvm.amdgcn.is.private(ptr nocapture) #0
-
-attributes #0 = { nounwind readnone speculatable }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
+declare i1 @llvm.amdgcn.is.private(ptr nocapture) nounwind readnone speculatable
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

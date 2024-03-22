@@ -11,14 +11,14 @@
 ; beneficial even without fp32 denormals, but they do require no-infs-fp-math
 ; for correctness.
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare double @llvm.fabs.f64(double) #0
-declare double @llvm.fma.f64(double, double, double) #0
-declare float @llvm.fma.f32(float, float, float) #0
-declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>) #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare double @llvm.fabs.f64(double) nounwind readnone
+declare double @llvm.fma.f64(double, double, double) nounwind readnone
+declare float @llvm.fma.f32(float, float, float) nounwind readnone
+declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
 
 ; (fadd (fmul x, y), z) -> (fma x, y, z)
-define amdgpu_kernel void @combine_to_fma_f64_0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_f64_0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: combine_to_fma_f64_0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -55,7 +55,7 @@ define amdgpu_kernel void @combine_to_fma_f64_0(ptr addrspace(1) noalias %out, p
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
   %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
@@ -72,7 +72,7 @@ define amdgpu_kernel void @combine_to_fma_f64_0(ptr addrspace(1) noalias %out, p
 }
 
 ; (fadd (fmul x, y), z) -> (fma x, y, z)
-define amdgpu_kernel void @combine_to_fma_f64_0_2use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_f64_0_2use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: combine_to_fma_f64_0_2use:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -121,7 +121,7 @@ define amdgpu_kernel void @combine_to_fma_f64_0_2use(ptr addrspace(1) noalias %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
   %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
@@ -143,7 +143,7 @@ define amdgpu_kernel void @combine_to_fma_f64_0_2use(ptr addrspace(1) noalias %o
 }
 
 ; (fadd x, (fmul y, z)) -> (fma y, z, x)
-define amdgpu_kernel void @combine_to_fma_f64_1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_f64_1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: combine_to_fma_f64_1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -180,7 +180,7 @@ define amdgpu_kernel void @combine_to_fma_f64_1(ptr addrspace(1) noalias %out, p
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
   %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
@@ -197,7 +197,7 @@ define amdgpu_kernel void @combine_to_fma_f64_1(ptr addrspace(1) noalias %out, p
 }
 
 ; (fsub (fmul x, y), z) -> (fma x, y, (fneg z))
-define amdgpu_kernel void @combine_to_fma_fsub_0_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_0_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: combine_to_fma_fsub_0_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -234,7 +234,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_0_f64(ptr addrspace(1) noalias %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
   %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
@@ -251,7 +251,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_0_f64(ptr addrspace(1) noalias %o
 }
 
 ; (fsub (fmul x, y), z) -> (fma x, y, (fneg z))
-define amdgpu_kernel void @combine_to_fma_fsub_f64_0_2use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_f64_0_2use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: combine_to_fma_fsub_f64_0_2use:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -300,7 +300,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_f64_0_2use(ptr addrspace(1) noali
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
   %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
@@ -322,7 +322,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_f64_0_2use(ptr addrspace(1) noali
 }
 
 ; (fsub x, (fmul y, z)) -> (fma (fneg y), z, x)
-define amdgpu_kernel void @combine_to_fma_fsub_1_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_1_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: combine_to_fma_fsub_1_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -359,7 +359,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_1_f64(ptr addrspace(1) noalias %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
   %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
@@ -376,7 +376,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_1_f64(ptr addrspace(1) noalias %o
 }
 
 ; (fsub x, (fmul y, z)) -> (fma (fneg y), z, x)
-define amdgpu_kernel void @combine_to_fma_fsub_1_f64_2use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_1_f64_2use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: combine_to_fma_fsub_1_f64_2use:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -425,7 +425,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_1_f64_2use(ptr addrspace(1) noali
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
   %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
@@ -447,7 +447,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_1_f64_2use(ptr addrspace(1) noali
 }
 
 ; (fsub (fneg (fmul x, y)), z) -> (fma (fneg x), y, (fneg z))
-define amdgpu_kernel void @combine_to_fma_fsub_2_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_2_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: combine_to_fma_fsub_2_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -484,7 +484,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64(ptr addrspace(1) noalias %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
   %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
@@ -503,7 +503,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64(ptr addrspace(1) noalias %o
 }
 
 ; (fsub (fneg (fmul x, y)), z) -> (fma (fneg x), y, (fneg z))
-define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_neg(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_neg(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: combine_to_fma_fsub_2_f64_2uses_neg:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -552,7 +552,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_neg(ptr addrspace(1) 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
   %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
@@ -576,7 +576,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_neg(ptr addrspace(1) 
 }
 
 ; (fsub (fneg (fmul x, y)), z) -> (fma (fneg x), y, (fneg z))
-define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_mul(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_mul(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: combine_to_fma_fsub_2_f64_2uses_mul:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -625,7 +625,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_mul(ptr addrspace(1) 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
   %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
@@ -649,7 +649,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_mul(ptr addrspace(1) 
 }
 
 ; fold (fsub (fma x, y, (fmul u, v)), z) -> (fma x, y (fma u, v, (fneg z)))
-define amdgpu_kernel void @aggressive_combine_to_fma_fsub_0_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
+define amdgpu_kernel void @aggressive_combine_to_fma_fsub_0_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-NOFMA-LABEL: aggressive_combine_to_fma_fsub_0_f64:
 ; SI-NOFMA:       ; %bb.0:
 ; SI-NOFMA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -747,7 +747,7 @@ define amdgpu_kernel void @aggressive_combine_to_fma_fsub_0_f64(ptr addrspace(1)
 ; GFX11-FMA-NEXT:    s_nop 0
 ; GFX11-FMA-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FMA-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
   %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
@@ -762,7 +762,7 @@ define amdgpu_kernel void @aggressive_combine_to_fma_fsub_0_f64(ptr addrspace(1)
   %v = load volatile double, ptr addrspace(1) %gep.4
 
   %tmp0 = fmul double %u, %v
-  %tmp1 = call double @llvm.fma.f64(double %x, double %y, double %tmp0) #0
+  %tmp1 = call double @llvm.fma.f64(double %x, double %y, double %tmp0) nounwind readnone
   %tmp2 = fsub double %tmp1, %z
 
   store double %tmp2, ptr addrspace(1) %gep.out
@@ -771,7 +771,7 @@ define amdgpu_kernel void @aggressive_combine_to_fma_fsub_0_f64(ptr addrspace(1)
 
 ; fold (fsub x, (fma y, z, (fmul u, v)))
 ;   -> (fma (fneg y), z, (fma (fneg u), v, x))
-define amdgpu_kernel void @aggressive_combine_to_fma_fsub_1_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
+define amdgpu_kernel void @aggressive_combine_to_fma_fsub_1_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-NOFMA-LABEL: aggressive_combine_to_fma_fsub_1_f64:
 ; SI-NOFMA:       ; %bb.0:
 ; SI-NOFMA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -869,7 +869,7 @@ define amdgpu_kernel void @aggressive_combine_to_fma_fsub_1_f64(ptr addrspace(1)
 ; GFX11-FMA-NEXT:    s_nop 0
 ; GFX11-FMA-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FMA-NEXT:    s_endpgm
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
   %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
@@ -885,7 +885,7 @@ define amdgpu_kernel void @aggressive_combine_to_fma_fsub_1_f64(ptr addrspace(1)
 
   ; nsz flag is needed since this combine may change sign of zero
   %tmp0 = fmul nsz double %u, %v
-  %tmp1 = call nsz double @llvm.fma.f64(double %y, double %z, double %tmp0) #0
+  %tmp1 = call nsz double @llvm.fma.f64(double %y, double %z, double %tmp0) nounwind readnone
   %tmp2 = fsub nsz double %x, %tmp1
 
   store double %tmp2, ptr addrspace(1) %gep.out
@@ -2217,7 +2217,7 @@ define amdgpu_kernel void @test_f64_interp(ptr addrspace(1) %out,
 }
 
 ; Make sure negative constant cancels out fneg
-define amdgpu_kernel void @fma_neg_2.0_neg_a_b_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @fma_neg_2.0_neg_a_b_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind readnone {
 ; SI-LABEL: fma_neg_2.0_neg_a_b_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -2263,7 +2263,7 @@ define amdgpu_kernel void @fma_neg_2.0_neg_a_b_f32(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @fma_2.0_neg_a_b_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @fma_2.0_neg_a_b_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind readnone {
 ; SI-LABEL: fma_2.0_neg_a_b_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -2309,7 +2309,7 @@ define amdgpu_kernel void @fma_2.0_neg_a_b_f32(ptr addrspace(1) %out, ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @fma_neg_b_c_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #2 {
+define amdgpu_kernel void @fma_neg_b_c_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind "no-signed-zeros-fp-math"="true" {
 ; SI-LABEL: fma_neg_b_c_v4f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2366,7 +2366,3 @@ define amdgpu_kernel void @fma_neg_b_c_v4f32(ptr addrspace(1) %out, ptr addrspac
   store <4 x float> %fma0, ptr addrspace(1) %gep.out
   ret void
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind "no-signed-zeros-fp-math"="true" }

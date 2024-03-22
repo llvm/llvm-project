@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O0 -verify-machineinstrs < %s | FileCheck %s
 
 ; FP is in CSR range, modified.
-define hidden fastcc void @callee_has_fp() #1 {
+define hidden fastcc void @callee_has_fp() "frame-pointer"="all" noinline {
 ; CHECK-LABEL: callee_has_fp:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -23,7 +23,7 @@ define hidden fastcc void @callee_has_fp() #1 {
 ; Has no stack objects, but introduces them due to the CSR spill. We
 ; see the FP modified in the callee with IPRA. We should not have
 ; redundant spills of s33 or assert.
-define internal fastcc void @csr_vgpr_spill_fp_callee() #0 {
+define internal fastcc void @csr_vgpr_spill_fp_callee() "frame-pointer"="none" noinline {
 ; CHECK-LABEL: csr_vgpr_spill_fp_callee:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -97,7 +97,7 @@ bb:
 }
 
 ; Same, except with a tail call.
-define internal fastcc void @csr_vgpr_spill_fp_tailcall_callee() #0 {
+define internal fastcc void @csr_vgpr_spill_fp_tailcall_callee() "frame-pointer"="none" noinline {
 ; CHECK-LABEL: csr_vgpr_spill_fp_tailcall_callee:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -156,7 +156,7 @@ bb:
   ret void
 }
 
-define hidden i32 @tail_call() #1 {
+define hidden i32 @tail_call() "frame-pointer"="all" noinline {
 ; CHECK-LABEL: tail_call:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -169,7 +169,7 @@ entry:
   ret i32 0
 }
 
-define hidden i32 @caller_save_vgpr_spill_fp_tail_call() #0 {
+define hidden i32 @caller_save_vgpr_spill_fp_tail_call() "frame-pointer"="none" noinline {
 ; CHECK-LABEL: caller_save_vgpr_spill_fp_tail_call:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -204,7 +204,7 @@ entry:
   ret i32 %call
 }
 
-define hidden i32 @caller_save_vgpr_spill_fp() #0 {
+define hidden i32 @caller_save_vgpr_spill_fp() "frame-pointer"="none" noinline {
 ; CHECK-LABEL: caller_save_vgpr_spill_fp:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -270,9 +270,6 @@ entry:
   %call = call i32 @caller_save_vgpr_spill_fp()
   ret void
 }
-
-attributes #0 = { "frame-pointer"="none" noinline }
-attributes #1 = { "frame-pointer"="all" noinline }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

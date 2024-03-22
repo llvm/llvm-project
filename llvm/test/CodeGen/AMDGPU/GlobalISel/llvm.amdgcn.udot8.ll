@@ -84,6 +84,4 @@ define i32 @v_udot8_fnegv2f16_a(<2 x half> %a, i32 %b, i32 %c) {
   ret i32 %r
 }
 
-declare i32 @llvm.amdgcn.udot8(i32, i32, i32, i1 immarg) #0
-
-attributes #0 = { nounwind readnone speculatable }
+declare i32 @llvm.amdgcn.udot8(i32, i32, i32, i1 immarg) nounwind readnone speculatable

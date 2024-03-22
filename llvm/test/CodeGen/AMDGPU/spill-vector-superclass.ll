@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -stop-after=greedy,1 -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 ; Convert AV spills into VGPR spills by introducing appropriate copies in between.
 
-define amdgpu_kernel void @test_spill_av_class(<4 x i32> %arg) #0 {
+define amdgpu_kernel void @test_spill_av_class(<4 x i32> %arg) nounwind "amdgpu-num-vgpr"="5" {
   ; GCN-LABEL: name: test_spill_av_class
   ; GCN: bb.0 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr4_sgpr5
@@ -28,5 +28,3 @@ define amdgpu_kernel void @test_spill_av_class(<4 x i32> %arg) #0 {
 }
 
 declare <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32, i32, <4 x i32>, i32, i32, i32)
-
-attributes #0 = { nounwind "amdgpu-num-vgpr"="5" }

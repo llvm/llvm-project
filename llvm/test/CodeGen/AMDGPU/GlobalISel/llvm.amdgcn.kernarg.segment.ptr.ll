@@ -10,7 +10,7 @@
 
 ; HSA: .amdhsa_kernarg_size 8
 ; HSA: .amdhsa_user_sgpr_kernarg_segment_ptr 1
-define amdgpu_kernel void @test(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test(ptr addrspace(1) %out) nounwind "amdgpu-implicitarg-num-bytes"="0" {
   %kernarg.segment.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
   %gep = getelementptr i32, ptr addrspace(4) %kernarg.segment.ptr, i64 10
   %value = load i32, ptr addrspace(4) %gep
@@ -27,7 +27,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out) #1 {
 ; OS-UNKNOWN: s_load_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, 0x15
 
 ; HSA:        .amdhsa_kernarg_size 8
-define amdgpu_kernel void @test_implicit(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_implicit(ptr addrspace(1) %out) nounwind "amdgpu-implicitarg-num-bytes"="0" {
   %implicitarg.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr i32, ptr addrspace(4) %implicitarg.ptr, i64 10
   %value = load i32, ptr addrspace(4) %gep
@@ -46,7 +46,7 @@ define amdgpu_kernel void @test_implicit(ptr addrspace(1) %out) #1 {
 ; ALL: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[V_VAL]]
 
 ; HSA:        .amdhsa_kernarg_size 12
-define amdgpu_kernel void @test_implicit_alignment(ptr addrspace(1) %out, <2 x i8> %in) #1 {
+define amdgpu_kernel void @test_implicit_alignment(ptr addrspace(1) %out, <2 x i8> %in) nounwind "amdgpu-implicitarg-num-bytes"="0" {
   %implicitarg.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %val = load i32, ptr addrspace(4) %implicitarg.ptr
   store i32 %val, ptr addrspace(1) %out
@@ -64,7 +64,7 @@ define amdgpu_kernel void @test_implicit_alignment(ptr addrspace(1) %out, <2 x i
 ; ALL: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[V_VAL]]
 
 ; HSA:        .amdhsa_kernarg_size 64
-define amdgpu_kernel void @opencl_test_implicit_alignment(ptr addrspace(1) %out, <2 x i8> %in) #2 {
+define amdgpu_kernel void @opencl_test_implicit_alignment(ptr addrspace(1) %out, <2 x i8> %in) nounwind "amdgpu-implicitarg-num-bytes"="48" {
   %implicitarg.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %val = load i32, ptr addrspace(4) %implicitarg.ptr
   store i32 %val, ptr addrspace(1) %out
@@ -81,7 +81,7 @@ define amdgpu_kernel void @opencl_test_implicit_alignment(ptr addrspace(1) %out,
 
 ; HSA: .amdhsa_kernarg_size 0
 ; HSA: .amdhsa_user_sgpr_kernarg_segment_ptr 0
-define amdgpu_kernel void @test_no_kernargs() #1 {
+define amdgpu_kernel void @test_no_kernargs() nounwind "amdgpu-implicitarg-num-bytes"="0" {
   %kernarg.segment.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
   %gep = getelementptr i32, ptr addrspace(4) %kernarg.segment.ptr, i64 10
   %value = load i32, ptr addrspace(4) %gep
@@ -93,7 +93,7 @@ define amdgpu_kernel void @test_no_kernargs() #1 {
 ; OS-MESA3D: kernarg_segment_byte_size = 16
 ; OS-MESA3D: kernarg_segment_alignment = 4
 ; HSA:        .amdhsa_kernarg_size 48
-define amdgpu_kernel void @opencl_test_implicit_alignment_no_explicit_kernargs() #2 {
+define amdgpu_kernel void @opencl_test_implicit_alignment_no_explicit_kernargs() nounwind "amdgpu-implicitarg-num-bytes"="48" {
   %implicitarg.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %val = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   store volatile i32 %val, ptr addrspace(1) null
@@ -104,7 +104,7 @@ define amdgpu_kernel void @opencl_test_implicit_alignment_no_explicit_kernargs()
 ; OS-MESA3D: kernarg_segment_byte_size = 16
 ; OS-MESA3D: kernarg_segment_alignment = 4
 ; HSA:        .amdhsa_kernarg_size 40
-define amdgpu_kernel void @opencl_test_implicit_alignment_no_explicit_kernargs_round_up() #3 {
+define amdgpu_kernel void @opencl_test_implicit_alignment_no_explicit_kernargs_round_up() nounwind "amdgpu-implicitarg-num-bytes"="38" {
   %implicitarg.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %val = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   store volatile i32 %val, ptr addrspace(1) null
@@ -119,13 +119,8 @@ define ptr addrspace(4) @func_kernarg_segment_ptr() {
   ret ptr addrspace(4) %ptr
 }
 
-declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "amdgpu-implicitarg-num-bytes"="0" }
-attributes #2 = { nounwind "amdgpu-implicitarg-num-bytes"="48" }
-attributes #3 = { nounwind "amdgpu-implicitarg-num-bytes"="38" }
+declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() nounwind readnone
+declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() nounwind readnone
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

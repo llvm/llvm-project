@@ -34,7 +34,7 @@
 
 ; REALTIME:         define i64 @needs_s_memrealtime
 ; NOREALTIME-NOT:   define i64 @needs_s_memrealtime
-define i64 @needs_s_memrealtime() #0 {
+define i64 @needs_s_memrealtime() "target-features"="+s-memrealtime" {
   %t = tail call i64 @llvm.amdgcn.s.memrealtime()
   ret i64 %t
 }
@@ -50,7 +50,7 @@ define i64 @s_memrealtime_caller() {
 
 ; MEMTIME:         define i64 @needs_s_memtime
 ; NOMEMTIME-NOT:   define i64 @needs_s_memtime
-define i64 @needs_s_memtime() #1 {
+define i64 @needs_s_memtime() "target-features"="+s-memtime-inst" {
   %t = tail call i64 @llvm.amdgcn.s.memtime()
   ret i64 %t
 }
@@ -67,6 +67,3 @@ define i64 @s_memtime_caller() {
 
 declare i64 @llvm.amdgcn.s.memrealtime()
 declare i64 @llvm.amdgcn.s.memtime()
-
-attributes #0 = { "target-features"="+s-memrealtime"}
-attributes #1 = { "target-features"="+s-memtime-inst"}

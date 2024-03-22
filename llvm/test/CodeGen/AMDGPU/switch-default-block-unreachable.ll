@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -verify-machineinstrs -stop-after=amdgpu-isel -o - %s | FileCheck -check-prefix=GCN %s
-define void @test(i1 %c0) #1 {
+define void @test(i1 %c0) nounwind {
   ; Clean up the unreachable blocks introduced with LowerSwitch pass.
   ; This test ensures that, in the pass flow, UnreachableBlockElim pass
   ; follows the LowerSwitch. Otherwise, this testcase will crash
@@ -21,7 +21,7 @@ define void @test(i1 %c0) #1 {
   ; GCN: bb.{{[0-9]+}}.Flow:
   ; GCN: bb.{{[0-9]+}}.UnifiedReturnBlock:
   entry:
-    %idx = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+    %idx = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
     br i1 %c0, label %entry.true.blk, label %entry.false.blk
 
   entry.true.blk:                                   ; preds = %entry
@@ -43,7 +43,7 @@ define void @test(i1 %c0) #1 {
     br i1 %pre.exit, label %unreach.blk, label %pre.false.blk
 
   pre.false.blk:                                    ; preds = %preheader.blk
-    %call.pre.false = tail call i32 @func(i32 %idx) #0
+    %call.pre.false = tail call i32 @func(i32 %idx) nounwind readnone
     br label %unreach.blk
 
   unreach.blk:                                      ; preds = %preheader.blk, %pre.false.blk
@@ -55,8 +55,5 @@ define void @test(i1 %c0) #1 {
     ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @func(i32)#0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare i32 @func(i32)nounwind readnone

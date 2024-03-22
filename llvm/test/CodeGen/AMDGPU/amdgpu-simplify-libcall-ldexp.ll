@@ -212,7 +212,7 @@ define <16 x half> @test_ldexp_v16f16(<16 x half> %x, <16 x i32> %y) {
   ret <16 x half> %ldexp
 }
 
-define float @test_ldexp_f32_minsize(float %x, i32 %y) #3 {
+define float @test_ldexp_f32_minsize(float %x, i32 %y) minsize {
 ; CHECK-LABEL: define float @test_ldexp_f32_minsize
 ; CHECK-SAME: (float [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[LDEXP:%.*]] = tail call float @llvm.ldexp.f32.i32(float [[X]], i32 [[Y]])
@@ -228,22 +228,16 @@ define float @test_ldexp_f32_nobuiltin(float %x, i32 %y) {
 ; CHECK-NEXT:    [[LDEXP:%.*]] = tail call float @_Z5ldexpfi(float [[X]], i32 [[Y]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret float [[LDEXP]]
 ;
-  %ldexp = tail call float @_Z5ldexpfi(float %x, i32 %y) #0
+  %ldexp = tail call float @_Z5ldexpfi(float %x, i32 %y) nobuiltin
   ret float %ldexp
 }
 
-define float @test_ldexp_f32_strictfp(float %x, i32 %y) #4 {
+define float @test_ldexp_f32_strictfp(float %x, i32 %y) strictfp {
 ; CHECK-LABEL: define float @test_ldexp_f32_strictfp
 ; CHECK-SAME: (float [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[LDEXP:%.*]] = tail call nnan float @_Z5ldexpfi(float [[X]], i32 [[Y]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret float [[LDEXP]]
 ;
-  %ldexp = tail call nnan float @_Z5ldexpfi(float %x, i32 %y) #4
+  %ldexp = tail call nnan float @_Z5ldexpfi(float %x, i32 %y) strictfp
   ret float %ldexp
 }
-
-attributes #0 = { nobuiltin }
-attributes #1 = { "no-builtins" }
-attributes #2 = { nounwind memory(none) }
-attributes #3 = { minsize }
-attributes #4 = { strictfp }

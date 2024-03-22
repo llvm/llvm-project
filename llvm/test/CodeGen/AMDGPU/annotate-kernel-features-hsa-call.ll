@@ -4,21 +4,21 @@
 
 ; TODO: The test contains UB which is refined by the Attributor and should be removed.
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-declare i32 @llvm.amdgcn.workgroup.id.y() #0
-declare i32 @llvm.amdgcn.workgroup.id.z() #0
+declare i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workgroup.id.y() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workgroup.id.z() nounwind readnone speculatable
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.workitem.id.y() #0
-declare i32 @llvm.amdgcn.workitem.id.z() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workitem.id.z() nounwind readnone speculatable
 
-declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #0
-declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #0
-declare i64 @llvm.amdgcn.dispatch.id() #0
+declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() nounwind readnone speculatable
+declare ptr addrspace(4) @llvm.amdgcn.queue.ptr() nounwind readnone speculatable
+declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() nounwind readnone speculatable
+declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() nounwind readnone speculatable
+declare i64 @llvm.amdgcn.dispatch.id() nounwind readnone speculatable
 
-define void @use_workitem_id_x() #1 {
+define void @use_workitem_id_x() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_workitem_id_x
 ; AKF_HSA-SAME: () #[[ATTR1:[0-9]+]] {
 ; AKF_HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -36,7 +36,7 @@ define void @use_workitem_id_x() #1 {
   ret void
 }
 
-define void @use_workitem_id_y() #1 {
+define void @use_workitem_id_y() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_workitem_id_y
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
@@ -54,7 +54,7 @@ define void @use_workitem_id_y() #1 {
   ret void
 }
 
-define void @use_workitem_id_z() #1 {
+define void @use_workitem_id_z() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_workitem_id_z
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
@@ -72,7 +72,7 @@ define void @use_workitem_id_z() #1 {
   ret void
 }
 
-define void @use_workgroup_id_x() #1 {
+define void @use_workgroup_id_x() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_workgroup_id_x
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -90,7 +90,7 @@ define void @use_workgroup_id_x() #1 {
   ret void
 }
 
-define void @use_workgroup_id_y() #1 {
+define void @use_workgroup_id_y() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_workgroup_id_y
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -108,7 +108,7 @@ define void @use_workgroup_id_y() #1 {
   ret void
 }
 
-define void @use_workgroup_id_z() #1 {
+define void @use_workgroup_id_z() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_workgroup_id_z
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workgroup.id.z()
@@ -126,7 +126,7 @@ define void @use_workgroup_id_z() #1 {
   ret void
 }
 
-define void @use_dispatch_ptr() #1 {
+define void @use_dispatch_ptr() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_dispatch_ptr
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[DISPATCH_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
@@ -144,7 +144,7 @@ define void @use_dispatch_ptr() #1 {
   ret void
 }
 
-define void @use_queue_ptr() #1 {
+define void @use_queue_ptr() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_queue_ptr
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[QUEUE_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
@@ -162,7 +162,7 @@ define void @use_queue_ptr() #1 {
   ret void
 }
 
-define void @use_dispatch_id() #1 {
+define void @use_dispatch_id() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_dispatch_id
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL:%.*]] = call i64 @llvm.amdgcn.dispatch.id()
@@ -180,7 +180,7 @@ define void @use_dispatch_id() #1 {
   ret void
 }
 
-define void @use_workgroup_id_y_workgroup_id_z() #1 {
+define void @use_workgroup_id_y_workgroup_id_z() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_workgroup_id_y_workgroup_id_z
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -204,7 +204,7 @@ define void @use_workgroup_id_y_workgroup_id_z() #1 {
   ret void
 }
 
-define void @func_indirect_use_workitem_id_x() #1 {
+define void @func_indirect_use_workitem_id_x() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_workitem_id_x
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_workitem_id_x()
@@ -219,7 +219,7 @@ define void @func_indirect_use_workitem_id_x() #1 {
   ret void
 }
 
-define void @kernel_indirect_use_workitem_id_x() #1 {
+define void @kernel_indirect_use_workitem_id_x() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@kernel_indirect_use_workitem_id_x
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_workitem_id_x()
@@ -234,7 +234,7 @@ define void @kernel_indirect_use_workitem_id_x() #1 {
   ret void
 }
 
-define void @func_indirect_use_workitem_id_y() #1 {
+define void @func_indirect_use_workitem_id_y() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_workitem_id_y
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_workitem_id_y()
@@ -249,7 +249,7 @@ define void @func_indirect_use_workitem_id_y() #1 {
   ret void
 }
 
-define void @func_indirect_use_workitem_id_z() #1 {
+define void @func_indirect_use_workitem_id_z() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_workitem_id_z
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_workitem_id_z()
@@ -264,7 +264,7 @@ define void @func_indirect_use_workitem_id_z() #1 {
   ret void
 }
 
-define void @func_indirect_use_workgroup_id_x() #1 {
+define void @func_indirect_use_workgroup_id_x() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_workgroup_id_x
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_workgroup_id_x()
@@ -279,7 +279,7 @@ define void @func_indirect_use_workgroup_id_x() #1 {
   ret void
 }
 
-define void @kernel_indirect_use_workgroup_id_x() #1 {
+define void @kernel_indirect_use_workgroup_id_x() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@kernel_indirect_use_workgroup_id_x
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_workgroup_id_x()
@@ -294,7 +294,7 @@ define void @kernel_indirect_use_workgroup_id_x() #1 {
   ret void
 }
 
-define void @func_indirect_use_workgroup_id_y() #1 {
+define void @func_indirect_use_workgroup_id_y() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_workgroup_id_y
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_workgroup_id_y()
@@ -309,7 +309,7 @@ define void @func_indirect_use_workgroup_id_y() #1 {
   ret void
 }
 
-define void @func_indirect_use_workgroup_id_z() #1 {
+define void @func_indirect_use_workgroup_id_z() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_workgroup_id_z
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_workgroup_id_z()
@@ -324,7 +324,7 @@ define void @func_indirect_use_workgroup_id_z() #1 {
   ret void
 }
 
-define void @func_indirect_indirect_use_workgroup_id_y() #1 {
+define void @func_indirect_indirect_use_workgroup_id_y() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_indirect_use_workgroup_id_y
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @func_indirect_use_workgroup_id_y()
@@ -339,7 +339,7 @@ define void @func_indirect_indirect_use_workgroup_id_y() #1 {
   ret void
 }
 
-define void @indirect_x2_use_workgroup_id_y() #1 {
+define void @indirect_x2_use_workgroup_id_y() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@indirect_x2_use_workgroup_id_y
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @func_indirect_indirect_use_workgroup_id_y()
@@ -354,7 +354,7 @@ define void @indirect_x2_use_workgroup_id_y() #1 {
   ret void
 }
 
-define void @func_indirect_use_dispatch_ptr() #1 {
+define void @func_indirect_use_dispatch_ptr() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_dispatch_ptr
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_dispatch_ptr()
@@ -369,7 +369,7 @@ define void @func_indirect_use_dispatch_ptr() #1 {
   ret void
 }
 
-define void @func_indirect_use_queue_ptr() #1 {
+define void @func_indirect_use_queue_ptr() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_queue_ptr
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_queue_ptr()
@@ -384,7 +384,7 @@ define void @func_indirect_use_queue_ptr() #1 {
   ret void
 }
 
-define void @func_indirect_use_dispatch_id() #1 {
+define void @func_indirect_use_dispatch_id() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_dispatch_id
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_dispatch_id()
@@ -399,7 +399,7 @@ define void @func_indirect_use_dispatch_id() #1 {
   ret void
 }
 
-define void @func_indirect_use_workgroup_id_y_workgroup_id_z() #1 {
+define void @func_indirect_use_workgroup_id_y_workgroup_id_z() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_workgroup_id_y_workgroup_id_z
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @func_indirect_use_workgroup_id_y_workgroup_id_z()
@@ -414,7 +414,7 @@ define void @func_indirect_use_workgroup_id_y_workgroup_id_z() #1 {
   ret void
 }
 
-define void @recursive_use_workitem_id_y() #1 {
+define void @recursive_use_workitem_id_y() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@recursive_use_workitem_id_y
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
@@ -435,7 +435,7 @@ define void @recursive_use_workitem_id_y() #1 {
   ret void
 }
 
-define void @call_recursive_use_workitem_id_y() #1 {
+define void @call_recursive_use_workitem_id_y() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@call_recursive_use_workitem_id_y
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @recursive_use_workitem_id_y()
@@ -450,7 +450,7 @@ define void @call_recursive_use_workitem_id_y() #1 {
   ret void
 }
 
-define void @use_group_to_flat_addrspacecast(ptr addrspace(3) %ptr) #1 {
+define void @use_group_to_flat_addrspacecast(ptr addrspace(3) %ptr) nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_group_to_flat_addrspacecast
 ; AKF_HSA-SAME: (ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(3) [[PTR]] to ptr addrspace(4)
@@ -469,7 +469,7 @@ define void @use_group_to_flat_addrspacecast(ptr addrspace(3) %ptr) #1 {
 }
 
 
-define void @use_group_to_flat_addrspacecast_gfx9(ptr addrspace(3) %ptr) #2 {
+define void @use_group_to_flat_addrspacecast_gfx9(ptr addrspace(3) %ptr) nounwind "target-cpu"="gfx900" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_group_to_flat_addrspacecast_gfx9
 ; AKF_HSA-SAME: (ptr addrspace(3) [[PTR:%.*]]) #[[ATTR2:[0-9]+]] {
 ; AKF_HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(3) [[PTR]] to ptr addrspace(4)
@@ -487,7 +487,7 @@ define void @use_group_to_flat_addrspacecast_gfx9(ptr addrspace(3) %ptr) #2 {
   ret void
 }
 
-define void @use_group_to_flat_addrspacecast_queue_ptr_gfx9(ptr addrspace(3) %ptr) #2 {
+define void @use_group_to_flat_addrspacecast_queue_ptr_gfx9(ptr addrspace(3) %ptr) nounwind "target-cpu"="gfx900" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_group_to_flat_addrspacecast_queue_ptr_gfx9
 ; AKF_HSA-SAME: (ptr addrspace(3) [[PTR:%.*]]) #[[ATTR2]] {
 ; AKF_HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(3) [[PTR]] to ptr addrspace(4)
@@ -508,7 +508,7 @@ define void @use_group_to_flat_addrspacecast_queue_ptr_gfx9(ptr addrspace(3) %pt
   ret void
 }
 
-define void @indirect_use_group_to_flat_addrspacecast() #1 {
+define void @indirect_use_group_to_flat_addrspacecast() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@indirect_use_group_to_flat_addrspacecast
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_group_to_flat_addrspacecast(ptr addrspace(3) null)
@@ -523,7 +523,7 @@ define void @indirect_use_group_to_flat_addrspacecast() #1 {
   ret void
 }
 
-define void @indirect_use_group_to_flat_addrspacecast_gfx9() #1 {
+define void @indirect_use_group_to_flat_addrspacecast_gfx9() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@indirect_use_group_to_flat_addrspacecast_gfx9
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_group_to_flat_addrspacecast_gfx9(ptr addrspace(3) null)
@@ -538,7 +538,7 @@ define void @indirect_use_group_to_flat_addrspacecast_gfx9() #1 {
   ret void
 }
 
-define void @indirect_use_group_to_flat_addrspacecast_queue_ptr_gfx9() #1 {
+define void @indirect_use_group_to_flat_addrspacecast_queue_ptr_gfx9() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@indirect_use_group_to_flat_addrspacecast_queue_ptr_gfx9
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_group_to_flat_addrspacecast_queue_ptr_gfx9(ptr addrspace(3) null)
@@ -553,7 +553,7 @@ define void @indirect_use_group_to_flat_addrspacecast_queue_ptr_gfx9() #1 {
   ret void
 }
 
-define void @use_kernarg_segment_ptr() #1 {
+define void @use_kernarg_segment_ptr() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_kernarg_segment_ptr
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[KERNARG_SEGMENT_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -570,7 +570,7 @@ define void @use_kernarg_segment_ptr() #1 {
   store volatile ptr addrspace(4) %kernarg.segment.ptr, ptr addrspace(1) undef
   ret void
 }
-define void @func_indirect_use_kernarg_segment_ptr() #1 {
+define void @func_indirect_use_kernarg_segment_ptr() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_kernarg_segment_ptr
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_kernarg_segment_ptr()
@@ -585,7 +585,7 @@ define void @func_indirect_use_kernarg_segment_ptr() #1 {
   ret void
 }
 
-define amdgpu_kernel void @kern_use_implicitarg_ptr() #1 {
+define amdgpu_kernel void @kern_use_implicitarg_ptr() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@kern_use_implicitarg_ptr
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -603,7 +603,7 @@ define amdgpu_kernel void @kern_use_implicitarg_ptr() #1 {
   ret void
 }
 
-define void @use_implicitarg_ptr() #1 {
+define void @use_implicitarg_ptr() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_implicitarg_ptr
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -621,7 +621,7 @@ define void @use_implicitarg_ptr() #1 {
   ret void
 }
 
-define void @func_indirect_use_implicitarg_ptr() #1 {
+define void @func_indirect_use_implicitarg_ptr() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_implicitarg_ptr
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    call void @use_implicitarg_ptr()
@@ -636,10 +636,10 @@ define void @func_indirect_use_implicitarg_ptr() #1 {
   ret void
 }
 
-declare void @external.func() #3
+declare void @external.func() nounwind
 
 ; This function gets deleted.
-define internal void @defined.func() #3 {
+define internal void @defined.func() nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@defined.func
 ; AKF_HSA-SAME: () #[[ATTR3:[0-9]+]] {
 ; AKF_HSA-NEXT:    ret void
@@ -651,7 +651,7 @@ define internal void @defined.func() #3 {
   ret void
 }
 
-define void @func_call_external() #3 {
+define void @func_call_external() nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_call_external
 ; AKF_HSA-SAME: () #[[ATTR3]] {
 ; AKF_HSA-NEXT:    call void @external.func()
@@ -666,7 +666,7 @@ define void @func_call_external() #3 {
   ret void
 }
 
-define void @func_call_defined() #3 {
+define void @func_call_defined() nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_call_defined
 ; AKF_HSA-SAME: () #[[ATTR3]] {
 ; AKF_HSA-NEXT:    call void @defined.func()
@@ -680,7 +680,7 @@ define void @func_call_defined() #3 {
   call void @defined.func()
   ret void
 }
-define void @func_call_asm() #3 {
+define void @func_call_asm() nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_call_asm
 ; AKF_HSA-SAME: () #[[ATTR3]] {
 ; AKF_HSA-NEXT:    call void asm sideeffect "", ""() #[[ATTR3]]
@@ -691,11 +691,11 @@ define void @func_call_asm() #3 {
 ; ATTRIBUTOR_HSA-NEXT:    call void asm sideeffect "", ""() #[[ATTR28:[0-9]+]]
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
-  call void asm sideeffect "", ""() #3
+  call void asm sideeffect "", ""() nounwind
   ret void
 }
 
-define amdgpu_kernel void @kern_call_external() #3 {
+define amdgpu_kernel void @kern_call_external() nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@kern_call_external
 ; AKF_HSA-SAME: () #[[ATTR4:[0-9]+]] {
 ; AKF_HSA-NEXT:    call void @external.func()
@@ -710,7 +710,7 @@ define amdgpu_kernel void @kern_call_external() #3 {
   ret void
 }
 
-define amdgpu_kernel void @func_kern_defined() #3 {
+define amdgpu_kernel void @func_kern_defined() nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_kern_defined
 ; AKF_HSA-SAME: () #[[ATTR4]] {
 ; AKF_HSA-NEXT:    call void @defined.func()
@@ -725,7 +725,7 @@ define amdgpu_kernel void @func_kern_defined() #3 {
   ret void
 }
 
-define i32 @use_dispatch_ptr_ret_type() #1 {
+define i32 @use_dispatch_ptr_ret_type() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_dispatch_ptr_ret_type
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[DISPATCH_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
@@ -743,7 +743,7 @@ define i32 @use_dispatch_ptr_ret_type() #1 {
   ret i32 0
 }
 
-define float @func_indirect_use_dispatch_ptr_constexpr_cast_func() #1 {
+define float @func_indirect_use_dispatch_ptr_constexpr_cast_func() nounwind "target-cpu"="fiji" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_dispatch_ptr_constexpr_cast_func
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[F:%.*]] = call float @use_dispatch_ptr_ret_type()
@@ -761,7 +761,7 @@ define float @func_indirect_use_dispatch_ptr_constexpr_cast_func() #1 {
   ret float %fadd
 }
 
-define float @func_indirect_call(ptr %fptr) #3 {
+define float @func_indirect_call(ptr %fptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_call
 ; AKF_HSA-SAME: (ptr [[FPTR:%.*]]) #[[ATTR3]] {
 ; AKF_HSA-NEXT:    [[F:%.*]] = call float [[FPTR]]()
@@ -779,8 +779,8 @@ define float @func_indirect_call(ptr %fptr) #3 {
   ret float %fadd
 }
 
-declare float @extern() #3
-define float @func_extern_call() #3 {
+declare float @extern() nounwind
+define float @func_extern_call() nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_extern_call
 ; AKF_HSA-SAME: () #[[ATTR3]] {
 ; AKF_HSA-NEXT:    [[F:%.*]] = call float @extern()
@@ -798,7 +798,7 @@ define float @func_extern_call() #3 {
   ret float %fadd
 }
 
-define float @func_null_call(ptr %fptr) #3 {
+define float @func_null_call(ptr %fptr) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_null_call
 ; AKF_HSA-SAME: (ptr [[FPTR:%.*]]) #[[ATTR3]] {
 ; AKF_HSA-NEXT:    [[F:%.*]] = call float null()
@@ -816,10 +816,10 @@ define float @func_null_call(ptr %fptr) #3 {
   ret float %fadd
 }
 
-declare float @llvm.amdgcn.rcp.f32(float) #0
+declare float @llvm.amdgcn.rcp.f32(float) nounwind readnone speculatable
 
 ; Calls some other recognized intrinsic
-define float @func_other_intrinsic_call(float %arg) #3 {
+define float @func_other_intrinsic_call(float %arg) nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_other_intrinsic_call
 ; AKF_HSA-SAME: (float [[ARG:%.*]]) #[[ATTR3]] {
 ; AKF_HSA-NEXT:    [[F:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[ARG]])
@@ -838,7 +838,7 @@ define float @func_other_intrinsic_call(float %arg) #3 {
 }
 
 ; Hostcall needs to be enabled for sanitizers
-define amdgpu_kernel void @kern_sanitize_address() #4 {
+define amdgpu_kernel void @kern_sanitize_address() nounwind sanitize_address {
 ; AKF_HSA-LABEL: define {{[^@]+}}@kern_sanitize_address
 ; AKF_HSA-SAME: () #[[ATTR5:[0-9]+]] {
 ; AKF_HSA-NEXT:    store volatile i32 0, ptr addrspace(1) null, align 4
@@ -854,7 +854,7 @@ define amdgpu_kernel void @kern_sanitize_address() #4 {
 }
 
 ; Hostcall needs to be enabled for sanitizers
-define void @func_sanitize_address() #4 {
+define void @func_sanitize_address() nounwind sanitize_address {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_sanitize_address
 ; AKF_HSA-SAME: () #[[ATTR5]] {
 ; AKF_HSA-NEXT:    store volatile i32 0, ptr addrspace(1) null, align 4
@@ -870,7 +870,7 @@ define void @func_sanitize_address() #4 {
 }
 
 ; Hostcall needs to be enabled for sanitizers
-define void @func_indirect_sanitize_address() #3 {
+define void @func_indirect_sanitize_address() nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_sanitize_address
 ; AKF_HSA-SAME: () #[[ATTR3]] {
 ; AKF_HSA-NEXT:    call void @func_sanitize_address()
@@ -886,7 +886,7 @@ define void @func_indirect_sanitize_address() #3 {
 }
 
 ; Hostcall needs to be enabled for sanitizers
-define amdgpu_kernel void @kern_indirect_sanitize_address() #3 {
+define amdgpu_kernel void @kern_indirect_sanitize_address() nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@kern_indirect_sanitize_address
 ; AKF_HSA-SAME: () #[[ATTR4]] {
 ; AKF_HSA-NEXT:    call void @func_sanitize_address()
@@ -903,9 +903,9 @@ define amdgpu_kernel void @kern_indirect_sanitize_address() #3 {
 
 ; Marked with amdgpu-no-implicitarg-ptr, and
 ; sanitize_address. sanitize_address wins and requires the pointer.
-declare void @extern_func_sanitize_address() #5
+declare void @extern_func_sanitize_address() nounwind sanitize_address "amdgpu-no-implicitarg-ptr"
 
-define amdgpu_kernel void @kern_decl_sanitize_address() #3 {
+define amdgpu_kernel void @kern_decl_sanitize_address() nounwind {
 ; AKF_HSA-LABEL: define {{[^@]+}}@kern_decl_sanitize_address
 ; AKF_HSA-SAME: () #[[ATTR4]] {
 ; AKF_HSA-NEXT:    call void @extern_func_sanitize_address()
@@ -920,9 +920,9 @@ define amdgpu_kernel void @kern_decl_sanitize_address() #3 {
   ret void
 }
 
-declare void @enqueue_block_decl() #6
+declare void @enqueue_block_decl() "enqueued-block"
 
-define internal void @enqueue_block_def() #6 {
+define internal void @enqueue_block_def() "enqueued-block" {
 ; AKF_HSA-LABEL: define {{[^@]+}}@enqueue_block_def
 ; AKF_HSA-SAME: () #[[ATTR7:[0-9]+]] {
 ; AKF_HSA-NEXT:    ret void
@@ -998,17 +998,9 @@ define amdgpu_kernel void @kern_callsite_enqueue_block() {
 ; ATTRIBUTOR_HSA-NEXT:    call void @known_func() #[[ATTR29:[0-9]+]]
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
-  call void @known_func() #6
+  call void @known_func() "enqueued-block"
   ret void
 }
-
-attributes #0 = { nounwind readnone speculatable }
-attributes #1 = { nounwind "target-cpu"="fiji" }
-attributes #2 = { nounwind "target-cpu"="gfx900" }
-attributes #3 = { nounwind }
-attributes #4 = { nounwind sanitize_address }
-attributes #5 = { nounwind sanitize_address "amdgpu-no-implicitarg-ptr" }
-attributes #6 = { "enqueued-block" }
 
 
 !llvm.module.flags = !{!0}

@@ -14,6 +14,4 @@ define amdgpu_cs void @atomic_fadd(<4 x i32> inreg %arg0) {
   ret void
 }
 
-declare float @llvm.amdgcn.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i1 immarg) #0
-
-attributes #0 = { nounwind }
+declare float @llvm.amdgcn.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i1 immarg) nounwind

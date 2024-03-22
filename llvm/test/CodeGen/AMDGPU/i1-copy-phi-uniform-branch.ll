@@ -13,7 +13,7 @@
 ; GCN: [[PREEXIT]]:
 ; GCN: [[EXIT]]:
 
-define amdgpu_vs float @test_dont_clobber_scc(i32 inreg %uni, i32 inreg %uni2) #0 {
+define amdgpu_vs float @test_dont_clobber_scc(i32 inreg %uni, i32 inreg %uni2) nounwind {
 entry:
   %cc.uni = icmp eq i32 %uni, 0
   br i1 %cc.uni, label %exit, label %blocka
@@ -33,5 +33,3 @@ exit:
   %r = select i1 %cc.phi, float 1.0, float 2.0
   ret float %r
 }
-
-attributes #0 = { nounwind }

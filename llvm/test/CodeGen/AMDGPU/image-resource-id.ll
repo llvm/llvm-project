@@ -11,7 +11,7 @@ define amdgpu_kernel void @test_2d_rd_1_0(ptr addrspace(1) %in, ; read_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      ptr addrspace(1) %in) #0
+      ptr addrspace(1) %in) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -25,7 +25,7 @@ define amdgpu_kernel void @test_3d_rd_1_0(ptr addrspace(1) %in, ; read_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      ptr addrspace(1) %in) #0
+      ptr addrspace(1) %in) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -41,7 +41,7 @@ define amdgpu_kernel void @test_2d_wr_1_0(ptr addrspace(1) %in, ; write_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      ptr addrspace(1) %in) #0
+      ptr addrspace(1) %in) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -55,7 +55,7 @@ define amdgpu_kernel void @test_3d_wr_1_0(ptr addrspace(1) %in, ; write_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      ptr addrspace(1) %in) #0
+      ptr addrspace(1) %in) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -72,7 +72,7 @@ define amdgpu_kernel void @test_2d_rd_2_0(ptr addrspace(1) %in1, ; read_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      ptr addrspace(1) %in1) #0
+      ptr addrspace(1) %in1) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -87,7 +87,7 @@ define amdgpu_kernel void @test_2d_rd_2_1(ptr addrspace(1) %in1, ; read_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      ptr addrspace(1) %in2) #0
+      ptr addrspace(1) %in2) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -102,7 +102,7 @@ define amdgpu_kernel void @test_3d_rd_2_0(ptr addrspace(1) %in1, ; read_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      ptr addrspace(1) %in1) #0
+      ptr addrspace(1) %in1) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -117,7 +117,7 @@ define amdgpu_kernel void @test_3d_rd_2_1(ptr addrspace(1) %in1, ; read_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      ptr addrspace(1) %in2) #0
+      ptr addrspace(1) %in2) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -134,7 +134,7 @@ define amdgpu_kernel void @test_2d_wr_2_0(ptr addrspace(1) %in1, ; write_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      ptr addrspace(1) %in1) #0
+      ptr addrspace(1) %in1) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -149,7 +149,7 @@ define amdgpu_kernel void @test_2d_wr_2_1(ptr addrspace(1) %in1, ; write_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      ptr addrspace(1) %in2) #0
+      ptr addrspace(1) %in2) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -164,7 +164,7 @@ define amdgpu_kernel void @test_3d_wr_2_0(ptr addrspace(1) %in1, ; write_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      ptr addrspace(1) %in1) #0
+      ptr addrspace(1) %in1) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -179,7 +179,7 @@ define amdgpu_kernel void @test_3d_wr_2_1(ptr addrspace(1) %in1, ; write_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      ptr addrspace(1) %in2) #0
+      ptr addrspace(1) %in2) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -197,7 +197,7 @@ define amdgpu_kernel void @test_2d_rd_3_0(ptr addrspace(1) %in1, ; read_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      ptr addrspace(1) %in3) #0
+      ptr addrspace(1) %in3) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -214,7 +214,7 @@ define amdgpu_kernel void @test_3d_rd_3_0(ptr addrspace(1) %in1, ; read_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      ptr addrspace(1) %in3) #0
+      ptr addrspace(1) %in3) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -232,7 +232,7 @@ define amdgpu_kernel void @test_2d_wr_3_0(ptr addrspace(1) %in1, ; write_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      ptr addrspace(1) %in3) #0
+      ptr addrspace(1) %in3) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -249,7 +249,7 @@ define amdgpu_kernel void @test_3d_wr_3_0(ptr addrspace(1) %in1, ; write_only
                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      ptr addrspace(1) %in3) #0
+      ptr addrspace(1) %in3) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -267,7 +267,7 @@ define amdgpu_kernel void @test_2d_mix_3_0(ptr addrspace(1) %in1, ; write_only
                              ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      ptr addrspace(1) %in3) #0
+      ptr addrspace(1) %in3) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -283,7 +283,7 @@ define amdgpu_kernel void @test_3d_mix_3_0(ptr addrspace(1) %in1, ; write_only
                              ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      ptr addrspace(1) %in3) #0
+      ptr addrspace(1) %in3) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -299,7 +299,7 @@ define amdgpu_kernel void @test_2d_mix_3_1(ptr addrspace(1) %in1, ; write_only
                              ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      ptr addrspace(1) %in3) #0
+      ptr addrspace(1) %in3) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -315,7 +315,7 @@ define amdgpu_kernel void @test_3d_mix_3_1(ptr addrspace(1) %in1, ; write_only
                              ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      ptr addrspace(1) %in3) #0
+      ptr addrspace(1) %in3) readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -324,10 +324,8 @@ entry:
 %opencl.image2d_t = type opaque
 %opencl.image3d_t = type opaque
 
-declare i32 @llvm.OpenCL.image.get.resource.id.2d(ptr addrspace(1)) #0
-declare i32 @llvm.OpenCL.image.get.resource.id.3d(ptr addrspace(1)) #0
-
-attributes #0 = { readnone }
+declare i32 @llvm.OpenCL.image.get.resource.id.2d(ptr addrspace(1)) readnone
+declare i32 @llvm.OpenCL.image.get.resource.id.3d(ptr addrspace(1)) readnone
 
 !opencl.kernels = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13,
                     !14, !15, !16, !17, !18, !19}

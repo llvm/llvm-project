@@ -218,11 +218,11 @@ define float @test_fma_f32_noinline(float %x, float %y, float %z) {
 ; CHECK-NEXT:    [[FMA:%.*]] = tail call fast float @_Z3fmafff(float [[X]], float [[Y]], float [[Z]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
-  %fma = tail call fast float @_Z3fmafff(float %x, float %y, float %z) #1
+  %fma = tail call fast float @_Z3fmafff(float %x, float %y, float %z) noinline
   ret float %fma
 }
 
-define float @test_fma_f32_fast_minsize(float %x, float %y, float %z) #0 {
+define float @test_fma_f32_fast_minsize(float %x, float %y, float %z) minsize {
 ; CHECK-LABEL: define float @test_fma_f32_fast_minsize
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[FMA:%.*]] = tail call fast float @llvm.fma.f32(float [[X]], float [[Y]], float [[Z]])
@@ -232,13 +232,13 @@ define float @test_fma_f32_fast_minsize(float %x, float %y, float %z) #0 {
   ret float %fma
 }
 
-define float @test_fma_f32_fast_strictfp(float %x, float %y, float %z) #2 {
+define float @test_fma_f32_fast_strictfp(float %x, float %y, float %z) strictfp {
 ; CHECK-LABEL: define float @test_fma_f32_fast_strictfp
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[FMA:%.*]] = tail call nnan nsz float @_Z3fmafff(float [[X]], float [[Y]], float [[Z]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
-  %fma = tail call nsz nnan float @_Z3fmafff(float %x, float %y, float %z) #2
+  %fma = tail call nsz nnan float @_Z3fmafff(float %x, float %y, float %z) strictfp
   ret float %fma
 }
 
@@ -248,11 +248,6 @@ define float @test_fma_f32_fast_nobuiltin(float %x, float %y, float %z) {
 ; CHECK-NEXT:    [[FMA:%.*]] = tail call fast float @_Z3fmafff(float [[X]], float [[Y]], float [[Z]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
-  %fma = tail call fast float @_Z3fmafff(float %x, float %y, float %z) #3
+  %fma = tail call fast float @_Z3fmafff(float %x, float %y, float %z) nobuiltin
   ret float %fma
 }
-
-attributes #0 = { minsize }
-attributes #1 = { noinline }
-attributes #2 = { strictfp }
-attributes #3 = { nobuiltin }

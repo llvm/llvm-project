@@ -4,7 +4,7 @@
 ; Check lowering of some large insertelement that use the stack
 ; instead of register indexing.
 
-define amdgpu_kernel void @v_insert_v64i32_varidx(ptr addrspace(1) %out.ptr, ptr addrspace(1) %ptr, i32 %val, i32 %idx) #0 {
+define amdgpu_kernel void @v_insert_v64i32_varidx(ptr addrspace(1) %out.ptr, ptr addrspace(1) %ptr, i32 %val, i32 %idx) "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="1,10" {
 ; GCN-LABEL: v_insert_v64i32_varidx:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[20:23], s[4:5], 0x0
@@ -256,5 +256,3 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(ptr addrspace(1) %out.ptr, ptr
   store <64 x i32> %insert, ptr addrspace(1) %out.ptr
   ret void
 }
-
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="1,10" }

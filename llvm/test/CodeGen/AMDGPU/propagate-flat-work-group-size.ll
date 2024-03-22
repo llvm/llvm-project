@@ -13,7 +13,7 @@ define internal void @default_to_1_256() {
   ret void
 }
 
-define amdgpu_kernel void @kernel_1_256() #0 {
+define amdgpu_kernel void @kernel_1_256() "amdgpu-flat-work-group-size"="1,256" {
 ; CHECK-LABEL: define {{[^@]+}}@kernel_1_256
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    call void @default_to_1_256()
@@ -32,7 +32,7 @@ define internal void @default_to_64_128() {
   ret void
 }
 
-define amdgpu_kernel void @kernel_64_128() #1 {
+define amdgpu_kernel void @kernel_64_128() "amdgpu-flat-work-group-size"="64,128" {
 ; CHECK-LABEL: define {{[^@]+}}@kernel_64_128
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    call void @default_to_64_128()
@@ -59,7 +59,7 @@ define internal void @default_to_128_512() {
 
 ; This already has a strict bounds, but called from kernels with wider
 ; bounds, and should not be changed.
-define internal void @flat_group_64_64() #2 {
+define internal void @flat_group_64_64() "amdgpu-flat-work-group-size"="64,64" {
 ; CHECK-LABEL: define {{[^@]+}}@flat_group_64_64
 ; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -68,7 +68,7 @@ define internal void @flat_group_64_64() #2 {
 }
 
 ; 128,256 -> 128,128
-define internal void @flat_group_128_256() #3 {
+define internal void @flat_group_128_256() "amdgpu-flat-work-group-size"="128,256" {
 ; CHECK-LABEL: define {{[^@]+}}@flat_group_128_256
 ; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -76,7 +76,7 @@ define internal void @flat_group_128_256() #3 {
   ret void
 }
 
-define internal void @flat_group_512_1024() #4 {
+define internal void @flat_group_512_1024() "amdgpu-flat-work-group-size"="512,1024" {
 ; CHECK-LABEL: define {{[^@]+}}@flat_group_512_1024
 ; CHECK-SAME: () #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -84,7 +84,7 @@ define internal void @flat_group_512_1024() #4 {
   ret void
 }
 
-define amdgpu_kernel void @kernel_128_512() #5 {
+define amdgpu_kernel void @kernel_128_512() "amdgpu-flat-work-group-size"="128,512" {
 ; CHECK-LABEL: define {{[^@]+}}@kernel_128_512
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:    call void @default_to_128_512()
@@ -96,7 +96,7 @@ define amdgpu_kernel void @kernel_128_512() #5 {
   ret void
 }
 
-define amdgpu_kernel void @kernel_512_512() #6 {
+define amdgpu_kernel void @kernel_512_512() "amdgpu-flat-work-group-size"="512,512" {
 ; CHECK-LABEL: define {{[^@]+}}@kernel_512_512
 ; CHECK-SAME: () #[[ATTR5]] {
 ; CHECK-NEXT:    call void @default_to_128_512()
@@ -119,7 +119,7 @@ define internal void @default_to_64_256() {
 
 ; The kernel's lower bound is higher than the callee's lower bound, so
 ; this should probably be illegal.
-define amdgpu_kernel void @kernel_128_256() #3 {
+define amdgpu_kernel void @kernel_128_256() "amdgpu-flat-work-group-size"="128,256" {
 ; CHECK-LABEL: define {{[^@]+}}@kernel_128_256
 ; CHECK-SAME: () #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    call void @default_to_64_256()
@@ -130,7 +130,7 @@ define amdgpu_kernel void @kernel_128_256() #3 {
 }
 
 ; 64,128 -> 64,128
-define internal void @merge_cycle_0() #1 {
+define internal void @merge_cycle_0() "amdgpu-flat-work-group-size"="64,128" {
 ; CHECK-LABEL: define {{[^@]+}}@merge_cycle_0
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    call void @merge_cycle_1()
@@ -141,7 +141,7 @@ define internal void @merge_cycle_0() #1 {
 }
 
 ; 128,256 -> 128,128
-define internal void @merge_cycle_1() #3 {
+define internal void @merge_cycle_1() "amdgpu-flat-work-group-size"="128,256" {
 ; CHECK-LABEL: define {{[^@]+}}@merge_cycle_1
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    call void @merge_cycle_0()
@@ -151,7 +151,7 @@ define internal void @merge_cycle_1() #3 {
   ret void
 }
 
-define amdgpu_kernel void @kernel_64_256() #7 {
+define amdgpu_kernel void @kernel_64_256() "amdgpu-flat-work-group-size"="64,256" {
 ; CHECK-LABEL: define {{[^@]+}}@kernel_64_256
 ; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:    call void @merge_cycle_0()
@@ -193,15 +193,6 @@ define internal i32 @bitcasted_function() {
 ;
   ret i32 0
 }
-
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
-attributes #1 = { "amdgpu-flat-work-group-size"="64,128" }
-attributes #2 = { "amdgpu-flat-work-group-size"="64,64" }
-attributes #3 = { "amdgpu-flat-work-group-size"="128,256" }
-attributes #4 = { "amdgpu-flat-work-group-size"="512,1024" }
-attributes #5 = { "amdgpu-flat-work-group-size"="128,512" }
-attributes #6 = { "amdgpu-flat-work-group-size"="512,512" }
-attributes #7 = { "amdgpu-flat-work-group-size"="64,256" }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR1]] = { "amdgpu-flat-work-group-size"="64,128" "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }

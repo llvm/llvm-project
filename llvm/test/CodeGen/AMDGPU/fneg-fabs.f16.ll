@@ -464,7 +464,7 @@ define amdgpu_kernel void @fneg_fabs_v4f16(ptr addrspace(1) %out, <4 x half> %in
   ret void
 }
 
-define amdgpu_kernel void @fold_user_fneg_fabs_v2f16(ptr addrspace(1) %out, <2 x half> %in) #0 {
+define amdgpu_kernel void @fold_user_fneg_fabs_v2f16(ptr addrspace(1) %out, <2 x half> %in) nounwind {
 ; CI-LABEL: fold_user_fneg_fabs_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x2
@@ -689,9 +689,6 @@ define amdgpu_kernel void @s_fneg_multi_use_fabs_foldable_neg_v2f16(ptr addrspac
   ret void
 }
 
-declare half @llvm.fabs.f16(half) #1
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #1
-declare <4 x half> @llvm.fabs.v4f16(<4 x half>) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare half @llvm.fabs.f16(half) nounwind readnone
+declare <2 x half> @llvm.fabs.v2f16(<2 x half>) nounwind readnone
+declare <4 x half> @llvm.fabs.v4f16(<4 x half>) nounwind readnone

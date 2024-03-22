@@ -27,7 +27,7 @@
 ; GCN: NumVgprs: 256
 ; GCN: ScratchSize: 640
 
-define amdgpu_vs void @main(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, ptr addrspace(4) inreg %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10) #0 {
+define amdgpu_vs void @main(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, ptr addrspace(4) inreg %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10) nounwind {
 bb:
   %tmp11 = load <4 x i32>, ptr addrspace(4) %arg1, align 16, !tbaa !0
   %tmp12 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp11, i32 0, i32 0)
@@ -175,44 +175,44 @@ bb24:                                             ; preds = %bb157, %bb
   %tmp152 = phi float [ 0.000000e+00, %bb ], [ %tmp417, %bb157 ]
   %tmp153 = phi float [ 0.000000e+00, %bb ], [ %tmp418, %bb157 ]
   %tmp154 = bitcast float %tmp107 to i32
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #1
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp155 = icmp sgt i32 %tmp154, %tid
   br i1 %tmp155, label %bb156, label %bb157
 
 bb156:                                            ; preds = %bb24
-  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %tmp12, float %tmp103, float %tmp102, float %tmp101, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 33, i32 15, float %tmp99, float %tmp98, float %tmp97, float %tmp95, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 34, i32 15, float %tmp94, float %tmp93, float %tmp91, float %tmp90, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 35, i32 15, float %tmp89, float %tmp87, float %tmp86, float %tmp85, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 36, i32 15, float %tmp83, float %tmp82, float %tmp81, float %tmp79, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 37, i32 15, float %tmp78, float %tmp77, float %tmp75, float %tmp74, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 38, i32 15, float %tmp73, float %tmp71, float %tmp70, float %tmp69, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 39, i32 15, float %tmp67, float %tmp66, float %tmp65, float %tmp63, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 40, i32 15, float %tmp62, float %tmp61, float %tmp59, float %tmp58, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 41, i32 15, float %tmp57, float %tmp55, float %tmp54, float %tmp53, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 42, i32 15, float %tmp51, float %tmp50, float %tmp49, float %tmp47, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 43, i32 15, float %tmp46, float %tmp45, float %tmp43, float %tmp42, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 44, i32 15, float %tmp41, float %tmp39, float %tmp38, float %tmp37, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 45, i32 15, float %tmp35, float %tmp34, float %tmp33, float %tmp31, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 46, i32 15, float %tmp30, float %tmp29, float %tmp27, float %tmp26, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 47, i32 15, float %tmp25, float %tmp28, float %tmp32, float %tmp36, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 48, i32 15, float %tmp40, float %tmp44, float %tmp48, float %tmp52, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 49, i32 15, float %tmp56, float %tmp60, float %tmp64, float %tmp68, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 50, i32 15, float %tmp72, float %tmp76, float %tmp80, float %tmp84, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 51, i32 15, float %tmp88, float %tmp92, float %tmp96, float %tmp100, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 52, i32 15, float %tmp104, float %tmp105, float %tmp106, float %tmp108, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 53, i32 15, float %tmp109, float %tmp110, float %tmp111, float %tmp112, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 54, i32 15, float %tmp113, float %tmp114, float %tmp115, float %tmp116, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 55, i32 15, float %tmp117, float %tmp118, float %tmp119, float %tmp120, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 56, i32 15, float %tmp121, float %tmp122, float %tmp123, float %tmp124, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 57, i32 15, float %tmp125, float %tmp126, float %tmp127, float %tmp128, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 58, i32 15, float %tmp129, float %tmp130, float %tmp131, float %tmp132, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 59, i32 15, float %tmp133, float %tmp134, float %tmp135, float %tmp136, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 60, i32 15, float %tmp137, float %tmp138, float %tmp139, float %tmp140, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 61, i32 15, float %tmp141, float %tmp142, float %tmp143, float %tmp144, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 62, i32 15, float %tmp145, float %tmp146, float %tmp147, float %tmp148, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 63, i32 15, float %tmp149, float %tmp150, float %tmp151, float %tmp13, i1 false, i1 false) #0
-  call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float %tmp19, float %tmp20, float %tmp21, float %tmp22, i1 true, i1 false) #0
+  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %tmp12, float %tmp103, float %tmp102, float %tmp101, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 33, i32 15, float %tmp99, float %tmp98, float %tmp97, float %tmp95, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 34, i32 15, float %tmp94, float %tmp93, float %tmp91, float %tmp90, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 35, i32 15, float %tmp89, float %tmp87, float %tmp86, float %tmp85, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 36, i32 15, float %tmp83, float %tmp82, float %tmp81, float %tmp79, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 37, i32 15, float %tmp78, float %tmp77, float %tmp75, float %tmp74, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 38, i32 15, float %tmp73, float %tmp71, float %tmp70, float %tmp69, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 39, i32 15, float %tmp67, float %tmp66, float %tmp65, float %tmp63, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 40, i32 15, float %tmp62, float %tmp61, float %tmp59, float %tmp58, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 41, i32 15, float %tmp57, float %tmp55, float %tmp54, float %tmp53, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 42, i32 15, float %tmp51, float %tmp50, float %tmp49, float %tmp47, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 43, i32 15, float %tmp46, float %tmp45, float %tmp43, float %tmp42, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 44, i32 15, float %tmp41, float %tmp39, float %tmp38, float %tmp37, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 45, i32 15, float %tmp35, float %tmp34, float %tmp33, float %tmp31, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 46, i32 15, float %tmp30, float %tmp29, float %tmp27, float %tmp26, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 47, i32 15, float %tmp25, float %tmp28, float %tmp32, float %tmp36, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 48, i32 15, float %tmp40, float %tmp44, float %tmp48, float %tmp52, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 49, i32 15, float %tmp56, float %tmp60, float %tmp64, float %tmp68, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 50, i32 15, float %tmp72, float %tmp76, float %tmp80, float %tmp84, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 51, i32 15, float %tmp88, float %tmp92, float %tmp96, float %tmp100, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 52, i32 15, float %tmp104, float %tmp105, float %tmp106, float %tmp108, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 53, i32 15, float %tmp109, float %tmp110, float %tmp111, float %tmp112, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 54, i32 15, float %tmp113, float %tmp114, float %tmp115, float %tmp116, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 55, i32 15, float %tmp117, float %tmp118, float %tmp119, float %tmp120, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 56, i32 15, float %tmp121, float %tmp122, float %tmp123, float %tmp124, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 57, i32 15, float %tmp125, float %tmp126, float %tmp127, float %tmp128, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 58, i32 15, float %tmp129, float %tmp130, float %tmp131, float %tmp132, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 59, i32 15, float %tmp133, float %tmp134, float %tmp135, float %tmp136, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 60, i32 15, float %tmp137, float %tmp138, float %tmp139, float %tmp140, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 61, i32 15, float %tmp141, float %tmp142, float %tmp143, float %tmp144, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 62, i32 15, float %tmp145, float %tmp146, float %tmp147, float %tmp148, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 63, i32 15, float %tmp149, float %tmp150, float %tmp151, float %tmp13, i1 false, i1 false) nounwind
+  call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float %tmp19, float %tmp20, float %tmp21, float %tmp22, i1 true, i1 false) nounwind
   ret void
 
 bb157:                                            ; preds = %bb24
@@ -483,15 +483,11 @@ bb157:                                            ; preds = %bb24
   br label %bb24
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind
 
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32, i32 immarg) #2
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind readonly }
+declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) nounwind readnone
+declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32, i32 immarg) nounwind readonly
 
 !0 = !{!1, !1, i64 0, i32 1}
 !1 = !{!"const", !2}

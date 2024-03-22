@@ -4,45 +4,40 @@
 
 --- |
 
-  define void @test_spill_v2_partial_agpr() #1 {
+  define void @test_spill_v2_partial_agpr() nounwind "amdgpu-num-vgpr"="1" {
   entry:
     unreachable
   }
 
-  define void @test_spill_v3_partial_agpr() #1 {
+  define void @test_spill_v3_partial_agpr() nounwind "amdgpu-num-vgpr"="1" {
   entry:
     unreachable
   }
 
-  define void @test_spill_v4_partial_agpr() #2 {
+  define void @test_spill_v4_partial_agpr() nounwind "amdgpu-num-vgpr"="3" {
   entry:
     unreachable
   }
 
-  define void @test_spill_v5_partial_agpr() #2 {
+  define void @test_spill_v5_partial_agpr() nounwind "amdgpu-num-vgpr"="3" {
   entry:
     unreachable
   }
 
-  define void @test_spill_v6_partial_agpr() #4 {
+  define void @test_spill_v6_partial_agpr() nounwind "amdgpu-num-vgpr"="5" {
   entry:
     unreachable
   }
 
-  define void @test_spill_v8_partial_agpr() #3 {
+  define void @test_spill_v8_partial_agpr() nounwind "amdgpu-num-vgpr"="4" {
   entry:
     unreachable
   }
 
-  define void @test_spill_v16_partial_agpr() #4 {
+  define void @test_spill_v16_partial_agpr() nounwind "amdgpu-num-vgpr"="5" {
   entry:
     unreachable
   }
-
-  attributes #1 = { nounwind "amdgpu-num-vgpr"="1" }
-  attributes #2 = { nounwind "amdgpu-num-vgpr"="3" }
-  attributes #3 = { nounwind "amdgpu-num-vgpr"="4" }
-  attributes #4 = { nounwind "amdgpu-num-vgpr"="5" }
 ...
 
 ---

@@ -223,7 +223,7 @@ exit:
 
 ; There is a divergent, according to machine uniformity info, g_brcond branch
 ; here, not lowered to si_if because of "amdgpu-flat-work-group-size"="1,1".
-define amdgpu_cs void @single_lane_execution_attribute(i32 inreg %.userdata0, <3 x i32> inreg %.WorkgroupId, <3 x i32> %.LocalInvocationId) #0 {
+define amdgpu_cs void @single_lane_execution_attribute(i32 inreg %.userdata0, <3 x i32> inreg %.WorkgroupId, <3 x i32> %.LocalInvocationId) nounwind memory(readwrite) "amdgpu-flat-work-group-size"="1,1" {
 ; GFX10-LABEL: single_lane_execution_attribute:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_getpc_b64 s[4:5]
@@ -338,5 +338,3 @@ declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32 immarg)
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(write)
 declare void @llvm.amdgcn.raw.buffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg)
-
-attributes #0 = { nounwind memory(readwrite) "amdgpu-flat-work-group-size"="1,1" }

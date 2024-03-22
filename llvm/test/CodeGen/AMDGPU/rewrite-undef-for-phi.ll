@@ -2,7 +2,7 @@
 ; RUN: opt -mtriple=amdgcn-- -S -amdgpu-rewrite-undef-for-phi %s | FileCheck -check-prefix=OPT %s
 ; RUN: opt -mtriple=amdgcn-- -S -passes=amdgpu-rewrite-undef-for-phi %s | FileCheck -check-prefix=OPT %s
 
-define amdgpu_ps float @basic(float inreg %c, i32 %x) #0 {
+define amdgpu_ps float @basic(float inreg %c, i32 %x) nounwind noinline {
 ; OPT-LABEL: @basic(
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[CC:%.*]] = icmp slt i32 [[X:%.*]], 0
@@ -24,7 +24,7 @@ end:
   ret float %c2
 }
 
-define amdgpu_ps float @with_uniform_region_inside(float inreg %c, i32 inreg %d, i32 %x) #0 {
+define amdgpu_ps float @with_uniform_region_inside(float inreg %c, i32 inreg %d, i32 %x) nounwind noinline {
 ; OPT-LABEL: @with_uniform_region_inside(
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[CC:%.*]] = icmp slt i32 [[X:%.*]], 0
@@ -65,7 +65,7 @@ end:
   ret float %c2
 }
 
-define amdgpu_ps float @exclude_backedge(float inreg %c, i32 %x) #0 {
+define amdgpu_ps float @exclude_backedge(float inreg %c, i32 %x) nounwind noinline {
 ; OPT-LABEL: @exclude_backedge(
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[CC:%.*]] = icmp slt i32 [[X:%.*]], 0
@@ -100,5 +100,3 @@ end:
   %r = phi float [ %c2, %loop_end ], [ %c, %entry ]
   ret float %r
 }
-
-attributes #0 = { nounwind noinline }

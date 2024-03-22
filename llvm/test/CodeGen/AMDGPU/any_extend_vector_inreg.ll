@@ -24,7 +24,7 @@
 ; GCN: {{buffer|flat}}_store_byte
 ; GCN: {{buffer|flat}}_store_byte
 ; GCN: {{buffer|flat}}_store_byte
-define amdgpu_kernel void @any_extend_vector_inreg_v16i8_to_v4i32(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) %arg1) local_unnamed_addr #0 {
+define amdgpu_kernel void @any_extend_vector_inreg_v16i8_to_v4i32(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) %arg1) local_unnamed_addr nounwind {
 bb:
   %tmp2 = load <16 x i8>, ptr addrspace(1) %arg, align 16
   %tmp3 = extractelement <16 x i8> %tmp2, i64 4
@@ -50,5 +50,3 @@ bb:
   store <16 x i8> %tmp19, ptr addrspace(1) %arg1, align 1
   ret void
 }
-
-attributes #0 = { nounwind }

@@ -6765,7 +6765,7 @@ define <2 x half> @v_contract_mul_add_v2f16_select_4_128(<2 x i32> %arg, <2 x ha
 ; strictfp support
 ;---------------------------------------------------------------------
 
-define float @v_constrained_fmul_32_f32(float %x, float %y) #0 {
+define float @v_constrained_fmul_32_f32(float %x, float %y) strictfp {
 ; GCN-LABEL: v_constrained_fmul_32_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6775,7 +6775,7 @@ define float @v_constrained_fmul_32_f32(float %x, float %y) #0 {
   ret float %val
 }
 
-define double @v_constrained_fmul_32_f64(double %x, double %y) #0 {
+define double @v_constrained_fmul_32_f64(double %x, double %y) strictfp {
 ; GFX9-SDAG-LABEL: v_constrained_fmul_32_f64:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6817,7 +6817,7 @@ define double @v_constrained_fmul_32_f64(double %x, double %y) #0 {
   ret double %val
 }
 
-define double @v_constrained_fmul_0x1p64_f64(double %x, double %y) #0 {
+define double @v_constrained_fmul_0x1p64_f64(double %x, double %y) strictfp {
 ; GFX9-SDAG-LABEL: v_constrained_fmul_0x1p64_f64:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6859,7 +6859,7 @@ define double @v_constrained_fmul_0x1p64_f64(double %x, double %y) #0 {
   ret double %val
 }
 
-define half @v_constrained_fmul_32_f16(half %x, half %y) #0 {
+define half @v_constrained_fmul_32_f16(half %x, half %y) strictfp {
 ; GCN-LABEL: v_constrained_fmul_32_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7249,5 +7249,3 @@ define double @v_mul_fabs_8_f64(double %x) {
 declare half @llvm.experimental.constrained.fmul.f16(half, half, metadata, metadata)
 declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
 declare double @llvm.experimental.constrained.fmul.f64(double, double, metadata, metadata)
-
-attributes #0 = { strictfp }

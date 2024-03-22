@@ -5,7 +5,7 @@
 @lds_512_4 = internal unnamed_addr addrspace(3) global [128 x i32] undef, align 4
 @lds_4_8 = addrspace(3) global i32 undef, align 8
 
-define amdgpu_kernel void @use_lds_globals(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @use_lds_globals(ptr addrspace(1) %out, ptr addrspace(3) %in) nounwind {
 ; CHECK-LABEL: use_lds_globals:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -30,5 +30,3 @@ entry:
   store i32 9, ptr addrspace(3) @lds_4_8
   ret void
 }
-
-attributes #0 = { nounwind }

@@ -7,18 +7,15 @@
 ; GCN: foo1@gotpcrel32@lo+4
 ; GCN: foo1@gotpcrel32@hi+12
 
-define void @foo1(i32 %x) #1 {
+define void @foo1(i32 %x) noinline nounwind "target-features"="+wavefrontsize64" {
 entry:
   %cc = icmp eq i32 %x, 0
   store volatile i1 %cc, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @kernel1(float %x) #0 {
+define amdgpu_kernel void @kernel1(float %x) nounwind "target-features"="+wavefrontsize32" {
 entry:
   call void @foo1(float %x)
   ret void
 }
-
-attributes #0 = { nounwind "target-features"="+wavefrontsize32" }
-attributes #1 = { noinline nounwind "target-features"="+wavefrontsize64" }

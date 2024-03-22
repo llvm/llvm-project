@@ -93,14 +93,11 @@ define amdgpu_kernel void @update_dpp64_test(ptr addrspace(1) %arg, i64 %in1, i6
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, ptr addrspace(1) %arg, i32 %id
   %load = load i64, ptr addrspace(1) %gep
-  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 %load, i32 1, i32 1, i32 1, i1 false) #1
+  %tmp0 = call i64 @llvm.amdgcn.update.dpp.i64(i64 %in1, i64 %load, i32 1, i32 1, i32 1, i1 false) convergent nounwind readnone
   store i64 %tmp0, ptr addrspace(1) %gep
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg) #1
-declare i64 @llvm.amdgcn.update.dpp.i64(i64, i64, i32 immarg, i32 immarg, i32 immarg, i1 immarg) #1
-
-attributes #0 = { nounwind readnone speculatable }
-attributes #1 = { convergent nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg) convergent nounwind readnone
+declare i64 @llvm.amdgcn.update.dpp.i64(i64, i64, i32 immarg, i32 immarg, i32 immarg, i1 immarg) convergent nounwind readnone

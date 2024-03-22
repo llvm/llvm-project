@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs -o - %s | FileCheck %s
 ; FIXME: pre-VI should have same ABI without legal i16 operations.
 
-define void @void_func_empty_arg({} %arg0, i32 %arg1) #0 {
+define void @void_func_empty_arg({} %arg0, i32 %arg1) nounwind {
   ; CHECK-LABEL: name: void_func_empty_arg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -18,7 +18,7 @@ define void @void_func_empty_arg({} %arg0, i32 %arg1) #0 {
   ret void
 }
 
-define void @void_func_empty_array([0 x i8] %arg0, i32 %arg1) #0 {
+define void @void_func_empty_array([0 x i8] %arg0, i32 %arg1) nounwind {
   ; CHECK-LABEL: name: void_func_empty_array
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -31,7 +31,7 @@ define void @void_func_empty_array([0 x i8] %arg0, i32 %arg1) #0 {
   ret void
 }
 
-define void @void_func_i1(i1 %arg0) #0 {
+define void @void_func_i1(i1 %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i1
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -45,7 +45,7 @@ define void @void_func_i1(i1 %arg0) #0 {
   ret void
 }
 
-define void @void_func_i1_zeroext(i1 zeroext %arg0) #0 {
+define void @void_func_i1_zeroext(i1 zeroext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i1_zeroext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -65,7 +65,7 @@ define void @void_func_i1_zeroext(i1 zeroext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i1_signext(i1 signext %arg0) #0 {
+define void @void_func_i1_signext(i1 signext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i1_signext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -85,7 +85,7 @@ define void @void_func_i1_signext(i1 signext %arg0) #0 {
   ret void
 }
 
-define void @i1_arg_i1_use(i1 %arg) #0 {
+define void @i1_arg_i1_use(i1 %arg) nounwind {
   ; CHECK-LABEL: name: i1_arg_i1_use
   ; CHECK: bb.1.bb:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
@@ -121,7 +121,7 @@ bb2:
   ret void
 }
 
-define void @void_func_i8(i8 %arg0) #0 {
+define void @void_func_i8(i8 %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -136,7 +136,7 @@ define void @void_func_i8(i8 %arg0) #0 {
   ret void
 }
 
-define void @void_func_i8_zeroext(i8 zeroext %arg0) #0 {
+define void @void_func_i8_zeroext(i8 zeroext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i8_zeroext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -156,7 +156,7 @@ define void @void_func_i8_zeroext(i8 zeroext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i8_signext(i8 signext %arg0) #0 {
+define void @void_func_i8_signext(i8 signext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i8_signext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -176,7 +176,7 @@ define void @void_func_i8_signext(i8 signext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i16(i16 %arg0) #0 {
+define void @void_func_i16(i16 %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -190,7 +190,7 @@ define void @void_func_i16(i16 %arg0) #0 {
   ret void
 }
 
-define void @void_func_i16_zeroext(i16 zeroext %arg0) #0 {
+define void @void_func_i16_zeroext(i16 zeroext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i16_zeroext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -210,7 +210,7 @@ define void @void_func_i16_zeroext(i16 zeroext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i16_signext(i16 signext %arg0) #0 {
+define void @void_func_i16_signext(i16 signext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i16_signext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -230,7 +230,7 @@ define void @void_func_i16_signext(i16 signext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i24(i24 %arg0) #0 {
+define void @void_func_i24(i24 %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i24
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -244,7 +244,7 @@ define void @void_func_i24(i24 %arg0) #0 {
   ret void
 }
 
-define void @void_func_i24_zeroext(i24 zeroext %arg0) #0 {
+define void @void_func_i24_zeroext(i24 zeroext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i24_zeroext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -259,7 +259,7 @@ define void @void_func_i24_zeroext(i24 zeroext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i24_signext(i24 signext %arg0) #0 {
+define void @void_func_i24_signext(i24 signext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i24_signext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -274,7 +274,7 @@ define void @void_func_i24_signext(i24 signext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i32(i32 %arg0) #0 {
+define void @void_func_i32(i32 %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -288,7 +288,7 @@ define void @void_func_i32(i32 %arg0) #0 {
 }
 
 ; The signext is an no-op
-define void @void_func_i32_signext(i32 signext %arg0) #0 {
+define void @void_func_i32_signext(i32 signext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i32_signext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -302,7 +302,7 @@ define void @void_func_i32_signext(i32 signext %arg0) #0 {
 }
 
 ; The zeroext is an no-op
-define void @void_func_i32_zeroext(i32 zeroext %arg0) #0 {
+define void @void_func_i32_zeroext(i32 zeroext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i32_zeroext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -315,7 +315,7 @@ define void @void_func_i32_zeroext(i32 zeroext %arg0) #0 {
   ret void
 }
 
-define void @void_func_p3i8(ptr addrspace(3) %arg0) #0 {
+define void @void_func_p3i8(ptr addrspace(3) %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_p3i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -328,7 +328,7 @@ define void @void_func_p3i8(ptr addrspace(3) %arg0) #0 {
   ret void
 }
 
-define void @void_func_i48(i48 %arg0) #0 {
+define void @void_func_i48(i48 %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i48
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -344,7 +344,7 @@ define void @void_func_i48(i48 %arg0) #0 {
   ret void
 }
 
-define void @void_func_i48_zeroext(i48 zeroext %arg0) #0 {
+define void @void_func_i48_zeroext(i48 zeroext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i48_zeroext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -365,7 +365,7 @@ define void @void_func_i48_zeroext(i48 zeroext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i48_signext(i48 signext %arg0) #0 {
+define void @void_func_i48_signext(i48 signext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i48_signext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -386,7 +386,7 @@ define void @void_func_i48_signext(i48 signext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i64(i64 %arg0) #0 {
+define void @void_func_i64(i64 %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -401,7 +401,7 @@ define void @void_func_i64(i64 %arg0) #0 {
   ret void
 }
 
-define void @void_func_i95(i95 %arg0) #0 {
+define void @void_func_i95(i95 %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i95
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -418,7 +418,7 @@ define void @void_func_i95(i95 %arg0) #0 {
   ret void
 }
 
-define void @void_func_i95_zeroext(i95 zeroext %arg0) #0 {
+define void @void_func_i95_zeroext(i95 zeroext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i95_zeroext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -440,7 +440,7 @@ define void @void_func_i95_zeroext(i95 zeroext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i95_signext(i95 signext %arg0) #0 {
+define void @void_func_i95_signext(i95 signext %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i95_signext
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -462,7 +462,7 @@ define void @void_func_i95_signext(i95 signext %arg0) #0 {
   ret void
 }
 
-define void @void_func_i96(i96 %arg0) #0 {
+define void @void_func_i96(i96 %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i96
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -478,7 +478,7 @@ define void @void_func_i96(i96 %arg0) #0 {
   ret void
 }
 
-define void @void_func_p0i8(ptr %arg0) #0 {
+define void @void_func_p0i8(ptr %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_p0i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -493,7 +493,7 @@ define void @void_func_p0i8(ptr %arg0) #0 {
   ret void
 }
 
-define void @void_func_p1i8(ptr addrspace(1) %arg0) #0 {
+define void @void_func_p1i8(ptr addrspace(1) %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_p1i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -508,7 +508,7 @@ define void @void_func_p1i8(ptr addrspace(1) %arg0) #0 {
   ret void
 }
 
-define void @void_func_f16(half %arg0) #0 {
+define void @void_func_f16(half %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_f16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -522,7 +522,7 @@ define void @void_func_f16(half %arg0) #0 {
   ret void
 }
 
-define void @void_func_f32(float %arg0) #0 {
+define void @void_func_f32(float %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_f32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -535,7 +535,7 @@ define void @void_func_f32(float %arg0) #0 {
   ret void
 }
 
-define void @void_func_f64(double %arg0) #0 {
+define void @void_func_f64(double %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_f64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -550,7 +550,7 @@ define void @void_func_f64(double %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i32(<2 x i32> %arg0) #0 {
+define void @void_func_v2i32(<2 x i32> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -565,7 +565,7 @@ define void @void_func_v2i32(<2 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i24(<2 x i24> %arg0) #0 {
+define void @void_func_v2i24(<2 x i24> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2i24
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -581,7 +581,7 @@ define void @void_func_v2i24(<2 x i24> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3i24(<3 x i24> %arg0) #0 {
+define void @void_func_v3i24(<3 x i24> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v3i24
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -598,7 +598,7 @@ define void @void_func_v3i24(<3 x i24> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i8(<2 x i8> %arg0) #0 {
+define void @void_func_v2i8(<2 x i8> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -616,7 +616,7 @@ define void @void_func_v2i8(<2 x i8> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3i8(<3 x i8> %arg0) #0 {
+define void @void_func_v3i8(<3 x i8> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v3i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -636,7 +636,7 @@ define void @void_func_v3i8(<3 x i8> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4i8(<4 x i8> %arg0) #0 {
+define void @void_func_v4i8(<4 x i8> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v4i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -658,7 +658,7 @@ define void @void_func_v4i8(<4 x i8> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2p3i8(<2 x ptr addrspace(3)> %arg0) #0 {
+define void @void_func_v2p3i8(<2 x ptr addrspace(3)> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2p3i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -673,7 +673,7 @@ define void @void_func_v2p3i8(<2 x ptr addrspace(3)> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3i32(<3 x i32> %arg0) #0 {
+define void @void_func_v3i32(<3 x i32> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v3i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -689,7 +689,7 @@ define void @void_func_v3i32(<3 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4i32(<4 x i32> %arg0) #0 {
+define void @void_func_v4i32(<4 x i32> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v4i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -706,7 +706,7 @@ define void @void_func_v4i32(<4 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v5i32(<5 x i32> %arg0) #0 {
+define void @void_func_v5i32(<5 x i32> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v5i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -724,7 +724,7 @@ define void @void_func_v5i32(<5 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8i32(<8 x i32> %arg0) #0 {
+define void @void_func_v8i32(<8 x i32> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v8i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
@@ -745,7 +745,7 @@ define void @void_func_v8i32(<8 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16i32(<16 x i32> %arg0) #0 {
+define void @void_func_v16i32(<16 x i32> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v16i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15
@@ -774,7 +774,7 @@ define void @void_func_v16i32(<16 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v32i32(<32 x i32> %arg0) #0 {
+define void @void_func_v32i32(<32 x i32> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v32i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -821,7 +821,7 @@ define void @void_func_v32i32(<32 x i32> %arg0) #0 {
 }
 
 ; 1 over register limit
-define void @void_func_v33i32(<33 x i32> %arg0) #0 {
+define void @void_func_v33i32(<33 x i32> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v33i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -869,7 +869,7 @@ define void @void_func_v33i32(<33 x i32> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i64(<2 x i64> %arg0) #0 {
+define void @void_func_v2i64(<2 x i64> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -888,7 +888,7 @@ define void @void_func_v2i64(<2 x i64> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2p0i8(<2 x ptr> %arg0) #0 {
+define void @void_func_v2p0i8(<2 x ptr> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2p0i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -907,7 +907,7 @@ define void @void_func_v2p0i8(<2 x ptr> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2p1i8(<2 x ptr addrspace(1)> %arg0) #0 {
+define void @void_func_v2p1i8(<2 x ptr addrspace(1)> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2p1i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -926,7 +926,7 @@ define void @void_func_v2p1i8(<2 x ptr addrspace(1)> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3i64(<3 x i64> %arg0) #0 {
+define void @void_func_v3i64(<3 x i64> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v3i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -948,7 +948,7 @@ define void @void_func_v3i64(<3 x i64> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4i64(<4 x i64> %arg0) #0 {
+define void @void_func_v4i64(<4 x i64> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v4i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
@@ -973,7 +973,7 @@ define void @void_func_v4i64(<4 x i64> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v5i64(<5 x i64> %arg0) #0 {
+define void @void_func_v5i64(<5 x i64> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v5i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9
@@ -1001,7 +1001,7 @@ define void @void_func_v5i64(<5 x i64> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8i64(<8 x i64> %arg0) #0 {
+define void @void_func_v8i64(<8 x i64> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v8i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15
@@ -1038,7 +1038,7 @@ define void @void_func_v8i64(<8 x i64> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16i64(<16 x i64> %arg0) #0 {
+define void @void_func_v16i64(<16 x i64> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v16i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -1100,7 +1100,7 @@ define void @void_func_v16i64(<16 x i64> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i16(<2 x i16> %arg0) #0 {
+define void @void_func_v2i16(<2 x i16> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2i16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -1113,7 +1113,7 @@ define void @void_func_v2i16(<2 x i16> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3i16(<3 x i16> %arg0) #0 {
+define void @void_func_v3i16(<3 x i16> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v3i16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -1130,7 +1130,7 @@ define void @void_func_v3i16(<3 x i16> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4i16(<4 x i16> %arg0) #0 {
+define void @void_func_v4i16(<4 x i16> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v4i16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -1145,7 +1145,7 @@ define void @void_func_v4i16(<4 x i16> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v5i16(<5 x i16> %arg0) #0 {
+define void @void_func_v5i16(<5 x i16> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v5i16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1163,7 +1163,7 @@ define void @void_func_v5i16(<5 x i16> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8i16(<8 x i16> %arg0) #0 {
+define void @void_func_v8i16(<8 x i16> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v8i16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -1180,7 +1180,7 @@ define void @void_func_v8i16(<8 x i16> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16i16(<16 x i16> %arg0) #0 {
+define void @void_func_v16i16(<16 x i16> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v16i16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
@@ -1203,7 +1203,7 @@ define void @void_func_v16i16(<16 x i16> %arg0) #0 {
 
 ; <2 x i16> pieces that start spilling to the stack.
 ; FIXME: load of 2 would be sufficient for last piece
-define void @void_func_v65i16(<65 x i16> %arg0) #0 {
+define void @void_func_v65i16(<65 x i16> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v65i16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -1253,7 +1253,7 @@ define void @void_func_v65i16(<65 x i16> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2f32(<2 x float> %arg0) #0 {
+define void @void_func_v2f32(<2 x float> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2f32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -1268,7 +1268,7 @@ define void @void_func_v2f32(<2 x float> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3f32(<3 x float> %arg0) #0 {
+define void @void_func_v3f32(<3 x float> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v3f32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1284,7 +1284,7 @@ define void @void_func_v3f32(<3 x float> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4f32(<4 x float> %arg0) #0 {
+define void @void_func_v4f32(<4 x float> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v4f32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -1301,7 +1301,7 @@ define void @void_func_v4f32(<4 x float> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8f32(<8 x float> %arg0) #0 {
+define void @void_func_v8f32(<8 x float> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v8f32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
@@ -1322,7 +1322,7 @@ define void @void_func_v8f32(<8 x float> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16f32(<16 x float> %arg0) #0 {
+define void @void_func_v16f32(<16 x float> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v16f32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15
@@ -1351,7 +1351,7 @@ define void @void_func_v16f32(<16 x float> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2f64(<2 x double> %arg0) #0 {
+define void @void_func_v2f64(<2 x double> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2f64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -1370,7 +1370,7 @@ define void @void_func_v2f64(<2 x double> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3f64(<3 x double> %arg0) #0 {
+define void @void_func_v3f64(<3 x double> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v3f64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -1392,7 +1392,7 @@ define void @void_func_v3f64(<3 x double> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4f64(<4 x double> %arg0) #0 {
+define void @void_func_v4f64(<4 x double> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v4f64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
@@ -1417,7 +1417,7 @@ define void @void_func_v4f64(<4 x double> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8f64(<8 x double> %arg0) #0 {
+define void @void_func_v8f64(<8 x double> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v8f64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15
@@ -1454,7 +1454,7 @@ define void @void_func_v8f64(<8 x double> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16f64(<16 x double> %arg0) #0 {
+define void @void_func_v16f64(<16 x double> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v16f64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -1516,7 +1516,7 @@ define void @void_func_v16f64(<16 x double> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2f16(<2 x half> %arg0) #0 {
+define void @void_func_v2f16(<2 x half> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2f16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -1529,7 +1529,7 @@ define void @void_func_v2f16(<2 x half> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v3f16(<3 x half> %arg0) #0 {
+define void @void_func_v3f16(<3 x half> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v3f16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -1546,7 +1546,7 @@ define void @void_func_v3f16(<3 x half> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v4f16(<4 x half> %arg0) #0 {
+define void @void_func_v4f16(<4 x half> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v4f16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -1561,7 +1561,7 @@ define void @void_func_v4f16(<4 x half> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v8f16(<8 x half> %arg0) #0 {
+define void @void_func_v8f16(<8 x half> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v8f16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -1578,7 +1578,7 @@ define void @void_func_v8f16(<8 x half> %arg0) #0 {
   ret void
 }
 
-define void @void_func_v16f16(<16 x half> %arg0) #0 {
+define void @void_func_v16f16(<16 x half> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v16f16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
@@ -1600,7 +1600,7 @@ define void @void_func_v16f16(<16 x half> %arg0) #0 {
 }
 
 ; Make sure there is no alignment requirement for passed vgprs.
-define void @void_func_i32_i64_i32(i32 %arg0, i64 %arg1, i32 %arg2) #0 {
+define void @void_func_i32_i64_i32(i32 %arg0, i64 %arg1, i32 %arg2) nounwind {
   ; CHECK-LABEL: name: void_func_i32_i64_i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -1621,7 +1621,7 @@ define void @void_func_i32_i64_i32(i32 %arg0, i64 %arg1, i32 %arg2) #0 {
   ret void
 }
 
-define void @void_func_struct_i32({ i32 } %arg0) #0 {
+define void @void_func_struct_i32({ i32 } %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_struct_i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -1634,7 +1634,7 @@ define void @void_func_struct_i32({ i32 } %arg0) #0 {
   ret void
 }
 
-define void @void_func_struct_i8_i32({ i8, i32 } %arg0) #0 {
+define void @void_func_struct_i8_i32({ i8, i32 } %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_struct_i8_i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -1653,7 +1653,7 @@ define void @void_func_struct_i8_i32({ i8, i32 } %arg0) #0 {
   ret void
 }
 
-define void @void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 }) %arg0) #0 {
+define void @void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 }) %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_byval_struct_i8_i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
@@ -1673,7 +1673,7 @@ define void @void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 }) %
   ret void
 }
 
-define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }) %arg0, ptr addrspace(5) byval({ i8, i32 }) %arg1, i32 %arg2) #0 {
+define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }) %arg0, ptr addrspace(5) byval({ i8, i32 }) %arg1, i32 %arg2) nounwind {
   ; CHECK-LABEL: name: void_func_byval_struct_i8_i32_x2
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -1709,7 +1709,7 @@ define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }
   ret void
 }
 
-define void @void_func_byval_i32_byval_i64(ptr addrspace(5) byval(i32) %arg0, ptr addrspace(5) byval(i64) %arg1) #0 {
+define void @void_func_byval_i32_byval_i64(ptr addrspace(5) byval(i32) %arg0, ptr addrspace(5) byval(i64) %arg1) nounwind {
   ; CHECK-LABEL: name: void_func_byval_i32_byval_i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
@@ -1729,7 +1729,7 @@ define void @void_func_byval_i32_byval_i64(ptr addrspace(5) byval(i32) %arg0, pt
   ret void
 }
 
-define void @void_func_byval_i8_align32_i16_align64(ptr addrspace(5) byval(i8) %arg0, ptr addrspace(5) byval(i16) align 64 %arg1) #0 {
+define void @void_func_byval_i8_align32_i16_align64(ptr addrspace(5) byval(i8) %arg0, ptr addrspace(5) byval(i16) align 64 %arg1) nounwind {
   ; CHECK-LABEL: name: void_func_byval_i8_align32_i16_align64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
@@ -1750,7 +1750,7 @@ define void @void_func_byval_i8_align32_i16_align64(ptr addrspace(5) byval(i8) %
 }
 
 ; Make sure the alignment is taken from the correct parameter.
-define void @byval_a3i32_align128_byval_i16_align64(ptr addrspace(5) byval([3 x i32]) align 128 %arg0, ptr addrspace(5) byval(i16) align 64 %arg1) #0 {
+define void @byval_a3i32_align128_byval_i16_align64(ptr addrspace(5) byval([3 x i32]) align 128 %arg0, ptr addrspace(5) byval(i16) align 64 %arg1) nounwind {
   ; CHECK-LABEL: name: byval_a3i32_align128_byval_i16_align64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
@@ -1783,7 +1783,7 @@ define void @byval_a3i32_align128_byval_i16_align64(ptr addrspace(5) byval([3 x 
 }
 
 ; byval argument after non-byval stack passed argument
-define void @void_func_v32i32_i32_byval_i8(<32 x i32> %arg0, i32 %arg1, ptr addrspace(5) byval(i8) align 8 %arg2) #0 {
+define void @void_func_v32i32_i32_byval_i8(<32 x i32> %arg0, i32 %arg1, ptr addrspace(5) byval(i8) align 8 %arg2) nounwind {
   ; CHECK-LABEL: name: void_func_v32i32_i32_byval_i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -1838,7 +1838,7 @@ define void @void_func_v32i32_i32_byval_i8(<32 x i32> %arg0, i32 %arg1, ptr addr
 }
 
 ; byval argument before non-byval stack passed argument
-define void @void_func_v32i32_byval_i8_i32(<32 x i32> %arg0, ptr addrspace(5) byval(i8) %arg1, i32 %arg2) #0 {
+define void @void_func_v32i32_byval_i8_i32(<32 x i32> %arg0, ptr addrspace(5) byval(i8) %arg1, i32 %arg2) nounwind {
   ; CHECK-LABEL: name: void_func_v32i32_byval_i8_i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -1892,7 +1892,7 @@ define void @void_func_v32i32_byval_i8_i32(<32 x i32> %arg0, ptr addrspace(5) by
   ret void
 }
 
-define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) #0 {
+define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) nounwind {
   ; CHECK-LABEL: name: void_func_v32i32_i32_i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -1950,7 +1950,7 @@ define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) #0
 }
 
 ; FIXME: Different ext load types on CI vs. VI
-define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i16 %arg3, half %arg4) #0 {
+define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i16 %arg3, half %arg4) nounwind {
   ; CHECK-LABEL: name: void_func_v32i32_i1_i8_i16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -2014,7 +2014,7 @@ define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i1
   ret void
 }
 
-define void @void_func_v32i32_p3_p5_i16(<32 x i32> %arg0, ptr addrspace(3) %arg1, ptr addrspace(5) %arg2) #0 {
+define void @void_func_v32i32_p3_p5_i16(<32 x i32> %arg0, ptr addrspace(3) %arg1, ptr addrspace(5) %arg2) nounwind {
   ; CHECK-LABEL: name: void_func_v32i32_p3_p5_i16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -2068,7 +2068,7 @@ define void @void_func_v32i32_p3_p5_i16(<32 x i32> %arg0, ptr addrspace(3) %arg1
   ret void
 }
 
-define void @void_func_v32i32_v2i32_v2f32(<32 x i32> %arg0, <2 x i32> %arg1, <2 x float> %arg2) #0 {
+define void @void_func_v32i32_v2i32_v2f32(<32 x i32> %arg0, <2 x i32> %arg1, <2 x float> %arg2) nounwind {
   ; CHECK-LABEL: name: void_func_v32i32_v2i32_v2f32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -2128,7 +2128,7 @@ define void @void_func_v32i32_v2i32_v2f32(<32 x i32> %arg0, <2 x i32> %arg1, <2 
   ret void
 }
 
-define void @void_func_v32i32_v2i16_v2f16(<32 x i32> %arg0, <2 x i16> %arg1, <2 x half> %arg2) #0 {
+define void @void_func_v32i32_v2i16_v2f16(<32 x i32> %arg0, <2 x i16> %arg1, <2 x half> %arg2) nounwind {
   ; CHECK-LABEL: name: void_func_v32i32_v2i16_v2f16
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -2182,7 +2182,7 @@ define void @void_func_v32i32_v2i16_v2f16(<32 x i32> %arg0, <2 x i16> %arg1, <2 
   ret void
 }
 
-define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 x double> %arg2) #0 {
+define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 x double> %arg2) nounwind {
   ; CHECK-LABEL: name: void_func_v32i32_v2i64_v2f64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -2254,7 +2254,7 @@ define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 
   ret void
 }
 
-define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 x float> %arg2) #0 {
+define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 x float> %arg2) nounwind {
   ; CHECK-LABEL: name: void_func_v32i32_v4i32_v4f32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -2322,7 +2322,7 @@ define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 
   ret void
 }
 
-define void @void_func_v32i32_v8i32_v8f32(<32 x i32> %arg0, <8 x i32> %arg1, <8 x float> %arg2) #0 {
+define void @void_func_v32i32_v8i32_v8f32(<32 x i32> %arg0, <8 x i32> %arg1, <8 x float> %arg2) nounwind {
   ; CHECK-LABEL: name: void_func_v32i32_v8i32_v8f32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -2406,7 +2406,7 @@ define void @void_func_v32i32_v8i32_v8f32(<32 x i32> %arg0, <8 x i32> %arg1, <8 
   ret void
 }
 
-define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, <16 x float> %arg2) #0 {
+define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, <16 x float> %arg2) nounwind {
   ; CHECK-LABEL: name: void_func_v32i32_v16i32_v16f32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -2523,7 +2523,7 @@ define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, 
 }
 
 ; Make sure v3 isn't a wasted register because of v3 types being promoted to v4
-define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) #0 {
+define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) nounwind {
   ; CHECK-LABEL: name: void_func_v3f32_wasted_reg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -2555,7 +2555,7 @@ define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) #0 {
   ret void
 }
 
-define void @void_func_v3i32_wasted_reg(<3 x i32> %arg0, i32 %arg1) #0 {
+define void @void_func_v3i32_wasted_reg(<3 x i32> %arg0, i32 %arg1) nounwind {
   ; CHECK-LABEL: name: void_func_v3i32_wasted_reg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -2588,7 +2588,7 @@ define void @void_func_v3i32_wasted_reg(<3 x i32> %arg0, i32 %arg1) #0 {
 }
 
 ; Check there is no crash.
-define void @void_func_v16i8(<16 x i8> %arg0) #0 {
+define void @void_func_v16i8(<16 x i8> %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v16i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15
@@ -2635,7 +2635,7 @@ define void @void_func_v16i8(<16 x i8> %arg0) #0 {
 }
 
 ; Check there is no crash.
-define void @void_func_v32i32_v16i8(<32 x i32> %arg0, <16 x i8> %arg1) #0 {
+define void @void_func_v32i32_v16i8(<32 x i32> %arg0, <16 x i8> %arg1) nounwind {
   ; CHECK-LABEL: name: void_func_v32i32_v16i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
@@ -2777,7 +2777,7 @@ define void @vector_ptr_in_struct_arg({ <2 x ptr addrspace(1)>, <2 x ptr addrspa
   ret void
 }
 
-define void @void_func_i1_inreg(i1 inreg %arg0) #0 {
+define void @void_func_i1_inreg(i1 inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i1_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
@@ -2791,7 +2791,7 @@ define void @void_func_i1_inreg(i1 inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_i8_inreg(i8 inreg %arg0) #0 {
+define void @void_func_i8_inreg(i8 inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i8_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
@@ -2806,7 +2806,7 @@ define void @void_func_i8_inreg(i8 inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_i16_inreg(i16 inreg %arg0) #0 {
+define void @void_func_i16_inreg(i16 inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i16_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
@@ -2820,7 +2820,7 @@ define void @void_func_i16_inreg(i16 inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_i32_inreg(i32 inreg %arg0) #0 {
+define void @void_func_i32_inreg(i32 inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i32_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
@@ -2833,7 +2833,7 @@ define void @void_func_i32_inreg(i32 inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_i48_inreg(i48 inreg %arg0) #0 {
+define void @void_func_i48_inreg(i48 inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i48_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
@@ -2849,7 +2849,7 @@ define void @void_func_i48_inreg(i48 inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_i64_inreg(i64 inreg %arg0) #0 {
+define void @void_func_i64_inreg(i64 inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i64_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
@@ -2864,7 +2864,7 @@ define void @void_func_i64_inreg(i64 inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_i96_inreg(i96 inreg %arg0) #0 {
+define void @void_func_i96_inreg(i96 inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i96_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18
@@ -2880,7 +2880,7 @@ define void @void_func_i96_inreg(i96 inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_i128_inreg(i128 inreg %arg0) #0 {
+define void @void_func_i128_inreg(i128 inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_i128_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19
@@ -2897,7 +2897,7 @@ define void @void_func_i128_inreg(i128 inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_f16_inreg(half inreg %arg0) #0 {
+define void @void_func_f16_inreg(half inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_f16_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
@@ -2911,7 +2911,7 @@ define void @void_func_f16_inreg(half inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_bf16_inreg(bfloat inreg %arg0) #0 {
+define void @void_func_bf16_inreg(bfloat inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_bf16_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
@@ -2925,7 +2925,7 @@ define void @void_func_bf16_inreg(bfloat inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_f32_inreg(float inreg %arg0) #0 {
+define void @void_func_f32_inreg(float inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_f32_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
@@ -2938,7 +2938,7 @@ define void @void_func_f32_inreg(float inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_f64_inreg(double inreg %arg0) #0 {
+define void @void_func_f64_inreg(double inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_f64_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
@@ -2953,7 +2953,7 @@ define void @void_func_f64_inreg(double inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i1_inreg(<2 x i1> inreg %arg0) #0 {
+define void @void_func_v2i1_inreg(<2 x i1> inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2i1_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
@@ -2972,7 +2972,7 @@ define void @void_func_v2i1_inreg(<2 x i1> inreg %arg0) #0 {
 }
 
 
-define void @void_func_v2i8_inreg(<2 x i8> inreg %arg0) #0 {
+define void @void_func_v2i8_inreg(<2 x i8> inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2i8_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
@@ -2990,7 +2990,7 @@ define void @void_func_v2i8_inreg(<2 x i8> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i16_inreg(<2 x i16> inreg %arg0) #0 {
+define void @void_func_v2i16_inreg(<2 x i16> inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2i16_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
@@ -3003,7 +3003,7 @@ define void @void_func_v2i16_inreg(<2 x i16> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2f16_inreg(<2 x half> inreg %arg0) #0 {
+define void @void_func_v2f16_inreg(<2 x half> inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2f16_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
@@ -3016,7 +3016,7 @@ define void @void_func_v2f16_inreg(<2 x half> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2bf16_inreg(<2 x bfloat> inreg %arg0) #0 {
+define void @void_func_v2bf16_inreg(<2 x bfloat> inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2bf16_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
@@ -3030,7 +3030,7 @@ define void @void_func_v2bf16_inreg(<2 x bfloat> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i32_inreg(<2 x i32> inreg %arg0) #0 {
+define void @void_func_v2i32_inreg(<2 x i32> inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2i32_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
@@ -3045,7 +3045,7 @@ define void @void_func_v2i32_inreg(<2 x i32> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2f32_inreg(<2 x float> inreg %arg0) #0 {
+define void @void_func_v2f32_inreg(<2 x float> inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2f32_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
@@ -3060,7 +3060,7 @@ define void @void_func_v2f32_inreg(<2 x float> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2i64_inreg(<2 x i64> inreg %arg0) #0 {
+define void @void_func_v2i64_inreg(<2 x i64> inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2i64_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19
@@ -3079,7 +3079,7 @@ define void @void_func_v2i64_inreg(<2 x i64> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2f64_inreg(<2 x double> inreg %arg0) #0 {
+define void @void_func_v2f64_inreg(<2 x double> inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2f64_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19
@@ -3099,17 +3099,17 @@ define void @void_func_v2f64_inreg(<2 x double> inreg %arg0) #0 {
 }
 
 ; FIXME: Broken, see issue #78121
-; define void @void_func_v2i128_inreg(<2 x i128> inreg %arg0) #0 {
+; define void @void_func_v2i128_inreg(<2 x i128> inreg %arg0) nounwind {
 ;   store <2 x i128> %arg0, ptr addrspace(1) undef
 ;   ret void
 ; }
 
-; define void @void_func_v2f128_inreg(<2 x fp128> inreg %arg0) #0 {
+; define void @void_func_v2f128_inreg(<2 x fp128> inreg %arg0) nounwind {
 ;   store <2 x fp128> %arg0, ptr addrspace(1) undef
 ;   ret void
 ; }
 
-define void @void_func_p0_inreg(ptr inreg %arg0) #0 {
+define void @void_func_p0_inreg(ptr inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_p0_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
@@ -3124,7 +3124,7 @@ define void @void_func_p0_inreg(ptr inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_p1_inreg(ptr addrspace(1) inreg %arg0) #0 {
+define void @void_func_p1_inreg(ptr addrspace(1) inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_p1_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
@@ -3139,7 +3139,7 @@ define void @void_func_p1_inreg(ptr addrspace(1) inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_p3_inreg(ptr addrspace(3) inreg %arg0) #0 {
+define void @void_func_p3_inreg(ptr addrspace(3) inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_p3_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
@@ -3152,7 +3152,7 @@ define void @void_func_p3_inreg(ptr addrspace(3) inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_p5_inreg(ptr addrspace(5) inreg %arg0) #0 {
+define void @void_func_p5_inreg(ptr addrspace(5) inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_p5_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
@@ -3165,7 +3165,7 @@ define void @void_func_p5_inreg(ptr addrspace(5) inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_p999_inreg(ptr addrspace(999) inreg %arg0) #0 {
+define void @void_func_p999_inreg(ptr addrspace(999) inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_p999_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
@@ -3180,7 +3180,7 @@ define void @void_func_p999_inreg(ptr addrspace(999) inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2p0_inreg(<2 x ptr> inreg %arg0) #0 {
+define void @void_func_v2p0_inreg(<2 x ptr> inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2p0_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19
@@ -3199,7 +3199,7 @@ define void @void_func_v2p0_inreg(<2 x ptr> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2p1_inreg(<2 x ptr addrspace(1)> inreg %arg0) #0 {
+define void @void_func_v2p1_inreg(<2 x ptr addrspace(1)> inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2p1_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19
@@ -3218,7 +3218,7 @@ define void @void_func_v2p1_inreg(<2 x ptr addrspace(1)> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_v2p3_inreg(<2 x ptr addrspace(3)> inreg %arg0) #0 {
+define void @void_func_v2p3_inreg(<2 x ptr addrspace(3)> inreg %arg0) nounwind {
   ; CHECK-LABEL: name: void_func_v2p3_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
@@ -3232,8 +3232,6 @@ define void @void_func_v2p3_inreg(<2 x ptr addrspace(3)> inreg %arg0) #0 {
   store <2 x ptr addrspace(3)> %arg0, ptr addrspace(1) undef
   ret void
 }
-
-attributes #0 = { nounwind }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

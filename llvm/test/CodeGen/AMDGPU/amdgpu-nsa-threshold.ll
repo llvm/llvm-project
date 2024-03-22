@@ -6,7 +6,7 @@
 
 ; Note: command line argument should override function attribute.
 
-define amdgpu_ps <4 x float> @sample_2d_nsa2(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %t, float %s) #2 {
+define amdgpu_ps <4 x float> @sample_2d_nsa2(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %t, float %s) nounwind readonly "amdgpu-nsa-threshold"="2" {
 ; ATTRIB-LABEL: sample_2d_nsa2:
 ; ATTRIB:       ; %bb.0: ; %main_body
 ; ATTRIB-NEXT:    s_mov_b32 s12, exec_lo
@@ -51,7 +51,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_3d_nsa2(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %r, float %s, float %t) #2 {
+define amdgpu_ps <4 x float> @sample_3d_nsa2(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %r, float %s, float %t) nounwind readonly "amdgpu-nsa-threshold"="2" {
 ; ATTRIB-LABEL: sample_3d_nsa2:
 ; ATTRIB:       ; %bb.0: ; %main_body
 ; ATTRIB-NEXT:    s_mov_b32 s12, exec_lo
@@ -96,7 +96,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_2d_nsa3(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %t, float %s) #3 {
+define amdgpu_ps <4 x float> @sample_2d_nsa3(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %t, float %s) nounwind readonly "amdgpu-nsa-threshold"="3" {
 ; ATTRIB-LABEL: sample_2d_nsa3:
 ; ATTRIB:       ; %bb.0: ; %main_body
 ; ATTRIB-NEXT:    s_mov_b32 s12, exec_lo
@@ -141,7 +141,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_3d_nsa3(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %r, float %s, float %t) #3 {
+define amdgpu_ps <4 x float> @sample_3d_nsa3(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %r, float %s, float %t) nounwind readonly "amdgpu-nsa-threshold"="3" {
 ; ATTRIB-LABEL: sample_3d_nsa3:
 ; ATTRIB:       ; %bb.0: ; %main_body
 ; ATTRIB-NEXT:    s_mov_b32 s12, exec_lo
@@ -186,7 +186,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_2d_nsa4(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %t, float %s) #4 {
+define amdgpu_ps <4 x float> @sample_2d_nsa4(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %t, float %s) nounwind readonly "amdgpu-nsa-threshold"="4" {
 ; ATTRIB-LABEL: sample_2d_nsa4:
 ; ATTRIB:       ; %bb.0: ; %main_body
 ; ATTRIB-NEXT:    s_mov_b32 s12, exec_lo
@@ -231,7 +231,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_3d_nsa4(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %r, float %s, float %t) #4 {
+define amdgpu_ps <4 x float> @sample_3d_nsa4(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %r, float %s, float %t) nounwind readonly "amdgpu-nsa-threshold"="4" {
 ; ATTRIB-LABEL: sample_3d_nsa4:
 ; ATTRIB:       ; %bb.0: ; %main_body
 ; ATTRIB-NEXT:    s_mov_b32 s12, exec_lo
@@ -276,10 +276,5 @@ main_body:
   ret <4 x float> %v
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-
-attributes #1 = { nounwind readonly }
-attributes #2 = { nounwind readonly "amdgpu-nsa-threshold"="2" }
-attributes #3 = { nounwind readonly "amdgpu-nsa-threshold"="3" }
-attributes #4 = { nounwind readonly "amdgpu-nsa-threshold"="4" }
+declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly

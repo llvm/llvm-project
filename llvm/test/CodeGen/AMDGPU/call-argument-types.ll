@@ -5,62 +5,62 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=HSA %s
 
-declare hidden void @external_void_func_i1(i1) #0
-declare hidden void @external_void_func_i1_signext(i1 signext) #0
-declare hidden void @external_void_func_i1_zeroext(i1 zeroext) #0
+declare hidden void @external_void_func_i1(i1) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_i1_signext(i1 signext) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_i1_zeroext(i1 zeroext) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
-declare hidden void @external_void_func_i8(i8) #0
-declare hidden void @external_void_func_i8_signext(i8 signext) #0
-declare hidden void @external_void_func_i8_zeroext(i8 zeroext) #0
+declare hidden void @external_void_func_i8(i8) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_i8_signext(i8 signext) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_i8_zeroext(i8 zeroext) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
-declare hidden void @external_void_func_i16(i16) #0
-declare hidden void @external_void_func_i16_signext(i16 signext) #0
-declare hidden void @external_void_func_i16_zeroext(i16 zeroext) #0
+declare hidden void @external_void_func_i16(i16) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_i16_signext(i16 signext) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_i16_zeroext(i16 zeroext) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
-declare hidden void @external_void_func_i32(i32) #0
-declare hidden void @external_void_func_i64(i64) #0
-declare hidden void @external_void_func_v2i64(<2 x i64>) #0
-declare hidden void @external_void_func_v3i64(<3 x i64>) #0
-declare hidden void @external_void_func_v4i64(<4 x i64>) #0
+declare hidden void @external_void_func_i32(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_i64(i64) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v2i64(<2 x i64>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v3i64(<3 x i64>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v4i64(<4 x i64>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
-declare hidden void @external_void_func_f16(half) #0
-declare hidden void @external_void_func_f32(float) #0
-declare hidden void @external_void_func_f64(double) #0
-declare hidden void @external_void_func_v2f32(<2 x float>) #0
-declare hidden void @external_void_func_v2f64(<2 x double>) #0
-declare hidden void @external_void_func_v3f32(<3 x float>) #0
-declare hidden void @external_void_func_v3f64(<3 x double>) #0
-declare hidden void @external_void_func_v5f32(<5 x float>) #0
+declare hidden void @external_void_func_f16(half) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_f32(float) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_f64(double) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v2f32(<2 x float>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v2f64(<2 x double>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v3f32(<3 x float>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v3f64(<3 x double>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v5f32(<5 x float>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
-declare hidden void @external_void_func_v2i16(<2 x i16>) #0
-declare hidden void @external_void_func_v2f16(<2 x half>) #0
-declare hidden void @external_void_func_v3i16(<3 x i16>) #0
-declare hidden void @external_void_func_v3f16(<3 x half>) #0
-declare hidden void @external_void_func_v4i16(<4 x i16>) #0
-declare hidden void @external_void_func_v4f16(<4 x half>) #0
+declare hidden void @external_void_func_v2i16(<2 x i16>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v2f16(<2 x half>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v3i16(<3 x i16>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v3f16(<3 x half>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v4i16(<4 x i16>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v4f16(<4 x half>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
-declare hidden void @external_void_func_v2i32(<2 x i32>) #0
-declare hidden void @external_void_func_v3i32(<3 x i32>) #0
-declare hidden void @external_void_func_v3i32_i32(<3 x i32>, i32) #0
-declare hidden void @external_void_func_v4i32(<4 x i32>) #0
-declare hidden void @external_void_func_v5i32(<5 x i32>) #0
-declare hidden void @external_void_func_v8i32(<8 x i32>) #0
-declare hidden void @external_void_func_v16i32(<16 x i32>) #0
-declare hidden void @external_void_func_v32i32(<32 x i32>) #0
-declare hidden void @external_void_func_v32i32_i32(<32 x i32>, i32) #0
+declare hidden void @external_void_func_v2i32(<2 x i32>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v3i32(<3 x i32>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v3i32_i32(<3 x i32>, i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v4i32(<4 x i32>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v5i32(<5 x i32>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v8i32(<8 x i32>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v16i32(<16 x i32>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v32i32(<32 x i32>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_v32i32_i32(<32 x i32>, i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
 ; return value and argument
-declare hidden i32 @external_i32_func_i32(i32) #0
+declare hidden i32 @external_i32_func_i32(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
 ; Structs
-declare hidden void @external_void_func_struct_i8_i32({ i8, i32 }) #0
-declare hidden void @external_void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 })) #0
-declare hidden void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }), ptr addrspace(5) byval({ i8, i32 })) #0
+declare hidden void @external_void_func_struct_i8_i32({ i8, i32 }) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 })) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }), ptr addrspace(5) byval({ i8, i32 })) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
-declare hidden void @external_void_func_v16i8(<16 x i8>) #0
+declare hidden void @external_void_func_v16i8(<16 x i8>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
 ; FIXME: Should be passing -1
-define amdgpu_kernel void @test_call_external_void_func_i1_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_i1_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_i1_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -144,7 +144,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
+define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_i1_signext:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -249,7 +249,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
 }
 
 ; FIXME: load should be scheduled before getpc
-define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
+define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_i1_zeroext:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -353,7 +353,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
+define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_i8_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -438,7 +438,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
 }
 
 ; FIXME: don't wait before call
-define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
+define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_i8_signext:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -538,7 +538,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) #0 {
+define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_i8_zeroext:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -638,7 +638,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_i16_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_i16_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_i16_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -722,7 +722,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
+define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_i16_signext:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -822,7 +822,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
+define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_i16_zeroext:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -922,7 +922,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_i32_imm(i32) #0 {
+define amdgpu_kernel void @test_call_external_void_func_i32_imm(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_i32_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -1006,7 +1006,7 @@ define amdgpu_kernel void @test_call_external_void_func_i32_imm(i32) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_i64_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_i64_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_i64_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -1094,7 +1094,7 @@ define amdgpu_kernel void @test_call_external_void_func_i64_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v2i64() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v2i64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -1199,7 +1199,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v2i64_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v2i64_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v2i64_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -1296,7 +1296,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v3i64() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v3i64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -1412,7 +1412,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v4i64() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v4i64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -1536,7 +1536,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_f16_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_f16_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_f16_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -1620,7 +1620,7 @@ define amdgpu_kernel void @test_call_external_void_func_f16_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_f32_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_f32_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_f32_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -1704,7 +1704,7 @@ define amdgpu_kernel void @test_call_external_void_func_f32_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v2f32_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v2f32_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v2f32_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -1792,7 +1792,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2f32_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v3f32_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v3f32_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v3f32_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -1885,7 +1885,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3f32_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v5f32_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v5f32_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v5f32_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -1987,7 +1987,7 @@ define amdgpu_kernel void @test_call_external_void_func_v5f32_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_f64_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_f64_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_f64_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -2075,7 +2075,7 @@ define amdgpu_kernel void @test_call_external_void_func_f64_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v2f64_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v2f64_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v2f64_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -2172,7 +2172,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2f64_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v3f64_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v3f64_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v3f64_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -2278,7 +2278,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3f64_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v2i16() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v2i16() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v2i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
@@ -2375,7 +2375,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i16() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v3i16() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v3i16() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v3i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
@@ -2474,7 +2474,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v3f16() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v3f16() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v3f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
@@ -2574,7 +2574,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3f16() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v3i16_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v3i16_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v3i16_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -2663,7 +2663,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v3f16_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v3f16_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v3f16_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -2753,7 +2753,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3f16_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v4i16() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v4i16() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v4i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
@@ -2853,7 +2853,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v4i16_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v4i16_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v4i16_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -2944,7 +2944,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v2f16() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v2f16() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
@@ -3043,7 +3043,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2f16() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v2i32() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v2i32() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v2i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
@@ -3138,7 +3138,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v2i32_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v2i32_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v2i32_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -3226,7 +3226,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v3i32_imm(i32) #0 {
+define amdgpu_kernel void @test_call_external_void_func_v3i32_imm(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v3i32_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -3319,7 +3319,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i32_imm(i32) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v3i32_i32(i32) #0 {
+define amdgpu_kernel void @test_call_external_void_func_v3i32_i32(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v3i32_i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -3416,7 +3416,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i32_i32(i32) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v4i32() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v4i32() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v4i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
@@ -3511,7 +3511,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v4i32_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v4i32_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v4i32_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -3608,7 +3608,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v5i32_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v5i32_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v5i32_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -3710,7 +3710,7 @@ define amdgpu_kernel void @test_call_external_void_func_v5i32_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v8i32() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v8i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -3822,7 +3822,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v8i32_imm() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v8i32_imm() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v8i32_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -3937,7 +3937,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32_imm() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v16i32() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v16i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -4059,7 +4059,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v32i32() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v32i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -4210,7 +4210,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
+define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v32i32_i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -4378,7 +4378,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_i32_func_i32_imm(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_call_external_i32_func_i32_imm(ptr addrspace(1) %out) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_i32_func_i32_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s40, SCRATCH_RSRC_DWORD0
@@ -4488,7 +4488,7 @@ define amdgpu_kernel void @test_call_external_i32_func_i32_imm(ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
+define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_struct_i8_i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -4600,7 +4600,7 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0 {
+define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_byval_struct_i8_i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -4731,7 +4731,7 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32(i32) #0 {
+define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32(i32) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -4924,7 +4924,7 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   ret void
 }
 
-define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
+define amdgpu_kernel void @test_call_external_void_func_v16i8() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: test_call_external_void_func_v16i8:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
@@ -5122,7 +5122,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
   ret void
 }
 
-define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, double %tmp) #0 {
+define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, double %tmp) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: stack_passed_arg_alignment_v32i32_f64:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_mov_b32 s52, SCRATCH_RSRC_DWORD0
@@ -5395,7 +5395,7 @@ entry:
   ret void
 }
 
-define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
+define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: tail_call_byval_align16:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5483,7 +5483,7 @@ entry:
   ret void
 }
 
-define void @tail_call_stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, double %tmp) #0 {
+define void @tail_call_stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, double %tmp) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: tail_call_stack_passed_arg_alignment_v32i32_f64:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5571,7 +5571,7 @@ entry:
   ret void
 }
 
-define void @stack_12xv3i32() #0 {
+define void @stack_12xv3i32() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: stack_12xv3i32:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5910,7 +5910,7 @@ entry:
   ret void
 }
 
-define void @stack_12xv3f32() #0 {
+define void @stack_12xv3f32() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: stack_12xv3f32:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6253,7 +6253,7 @@ entry:
   ret void
 }
 
-define void @stack_8xv5i32() #0 {
+define void @stack_8xv5i32() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: stack_8xv5i32:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6625,7 +6625,7 @@ entry:
   ret void
 }
 
-define void @stack_8xv5f32() #0 {
+define void @stack_8xv5f32() nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
 ; VI-LABEL: stack_8xv5f32:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7000,20 +7000,16 @@ entry:
   ret void
 }
 
-declare hidden void @byval_align16_f64_arg(<32 x i32>, ptr addrspace(5) byval(double) align 16) #0
-declare hidden void @stack_passed_f64_arg(<32 x i32>, double) #0
+declare hidden void @byval_align16_f64_arg(<32 x i32>, ptr addrspace(5) byval(double) align 16) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @stack_passed_f64_arg(<32 x i32>, double) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 declare hidden void @external_void_func_12xv3i32(<3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>,
-    <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>) #0
+    <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 declare hidden void @external_void_func_8xv5i32(<5 x i32>, <5 x i32>, <5 x i32>, <5 x i32>,
-    <5 x i32>, <5 x i32>, <5 x i32>, <5 x i32>) #0
+    <5 x i32>, <5 x i32>, <5 x i32>, <5 x i32>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 declare hidden void @external_void_func_12xv3f32(<3 x float>, <3 x float>, <3 x float>, <3 x float>,
-    <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>) #0
+    <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 declare hidden void @external_void_func_8xv5f32(<5 x float>, <5 x float>, <5 x float>, <5 x float>,
-    <5 x float>, <5 x float>, <5 x float>, <5 x float>) #0
-
-attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind noinline }
+    <5 x float>, <5 x float>, <5 x float>, <5 x float>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

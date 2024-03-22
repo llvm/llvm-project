@@ -4,7 +4,7 @@
 
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT: s_setpc_b64
-define void @void_func_void() #1 {
+define void @void_func_void() nounwind noinline {
   ret void
 }
 
@@ -14,6 +14,3 @@ define amdgpu_kernel void @test_call_void_func_void() {
   call void @void_func_void()
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind noinline }

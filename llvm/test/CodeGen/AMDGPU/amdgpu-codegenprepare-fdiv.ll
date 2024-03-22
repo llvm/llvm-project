@@ -9,7 +9,7 @@
 ; RUN: opt -amdgpu-codegenprepare -disable-output %s
 
 
-define amdgpu_kernel void @noop_fdiv_fpmath(ptr addrspace(1) %out, float %a, float %b) #0 {
+define amdgpu_kernel void @noop_fdiv_fpmath(ptr addrspace(1) %out, float %a, float %b) optnone noinline {
 ; CHECK-LABEL: define amdgpu_kernel void @noop_fdiv_fpmath(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[MD_25ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !0
@@ -4480,8 +4480,6 @@ declare float @llvm.fabs.f32(float)
 declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)
 declare <4 x float> @llvm.sqrt.v4f32(<4 x float>)
 declare void @llvm.assume(i1 noundef)
-
-attributes #0 = { optnone noinline }
 
 !0 = !{float 2.500000e+00}
 !1 = !{float 5.000000e-01}

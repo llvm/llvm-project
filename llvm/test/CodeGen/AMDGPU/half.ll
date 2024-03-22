@@ -5,7 +5,7 @@
 
 ; half args should be promoted to float for CI and lower.
 
-define amdgpu_kernel void @load_f16_arg(ptr addrspace(1) %out, half %arg) #0 {
+define amdgpu_kernel void @load_f16_arg(ptr addrspace(1) %out, half %arg) nounwind {
 ; CI-LABEL: load_f16_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -43,7 +43,7 @@ define amdgpu_kernel void @load_f16_arg(ptr addrspace(1) %out, half %arg) #0 {
   ret void
 }
 
-define amdgpu_kernel void @load_v2f16_arg(ptr addrspace(1) %out, <2 x half> %arg) #0 {
+define amdgpu_kernel void @load_v2f16_arg(ptr addrspace(1) %out, <2 x half> %arg) nounwind {
 ; CI-LABEL: load_v2f16_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -81,7 +81,7 @@ define amdgpu_kernel void @load_v2f16_arg(ptr addrspace(1) %out, <2 x half> %arg
   ret void
 }
 
-define amdgpu_kernel void @load_v3f16_arg(ptr addrspace(1) %out, <3 x half> %arg) #0 {
+define amdgpu_kernel void @load_v3f16_arg(ptr addrspace(1) %out, <3 x half> %arg) nounwind {
 ; CIVI-LABEL: load_v3f16_arg:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -116,7 +116,7 @@ define amdgpu_kernel void @load_v3f16_arg(ptr addrspace(1) %out, <3 x half> %arg
 
 
 ; FIXME: Why not one load?
-define amdgpu_kernel void @load_v4f16_arg(ptr addrspace(1) %out, <4 x half> %arg) #0 {
+define amdgpu_kernel void @load_v4f16_arg(ptr addrspace(1) %out, <4 x half> %arg) nounwind {
 ; CIVI-LABEL: load_v4f16_arg:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -142,7 +142,7 @@ define amdgpu_kernel void @load_v4f16_arg(ptr addrspace(1) %out, <4 x half> %arg
   ret void
 }
 
-define amdgpu_kernel void @load_v8f16_arg(ptr addrspace(1) %out, <8 x half> %arg) #0 {
+define amdgpu_kernel void @load_v8f16_arg(ptr addrspace(1) %out, <8 x half> %arg) nounwind {
 ; CI-LABEL: load_v8f16_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
@@ -188,7 +188,7 @@ define amdgpu_kernel void @load_v8f16_arg(ptr addrspace(1) %out, <8 x half> %arg
   ret void
 }
 
-define amdgpu_kernel void @extload_v2f16_arg(ptr addrspace(1) %out, <2 x half> %in) #0 {
+define amdgpu_kernel void @extload_v2f16_arg(ptr addrspace(1) %out, <2 x half> %in) nounwind {
 ; CI-LABEL: extload_v2f16_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -234,7 +234,7 @@ define amdgpu_kernel void @extload_v2f16_arg(ptr addrspace(1) %out, <2 x half> %
   ret void
 }
 
-define amdgpu_kernel void @extload_f16_to_f32_arg(ptr addrspace(1) %out, half %arg) #0 {
+define amdgpu_kernel void @extload_f16_to_f32_arg(ptr addrspace(1) %out, half %arg) nounwind {
 ; CI-LABEL: extload_f16_to_f32_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -274,7 +274,7 @@ define amdgpu_kernel void @extload_f16_to_f32_arg(ptr addrspace(1) %out, half %a
   ret void
 }
 
-define amdgpu_kernel void @extload_v2f16_to_v2f32_arg(ptr addrspace(1) %out, <2 x half> %arg) #0 {
+define amdgpu_kernel void @extload_v2f16_to_v2f32_arg(ptr addrspace(1) %out, <2 x half> %arg) nounwind {
 ; CI-LABEL: extload_v2f16_to_v2f32_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -320,7 +320,7 @@ define amdgpu_kernel void @extload_v2f16_to_v2f32_arg(ptr addrspace(1) %out, <2 
   ret void
 }
 
-define amdgpu_kernel void @extload_v3f16_to_v3f32_arg(ptr addrspace(1) %out, <3 x half> %arg) #0 {
+define amdgpu_kernel void @extload_v3f16_to_v3f32_arg(ptr addrspace(1) %out, <3 x half> %arg) nounwind {
 ; CI-LABEL: extload_v3f16_to_v3f32_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -365,7 +365,7 @@ define amdgpu_kernel void @extload_v3f16_to_v3f32_arg(ptr addrspace(1) %out, <3 
   ret void
 }
 
-define amdgpu_kernel void @extload_v4f16_to_v4f32_arg(ptr addrspace(1) %out, <4 x half> %arg) #0 {
+define amdgpu_kernel void @extload_v4f16_to_v4f32_arg(ptr addrspace(1) %out, <4 x half> %arg) nounwind {
 ; CI-LABEL: extload_v4f16_to_v4f32_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -416,7 +416,7 @@ define amdgpu_kernel void @extload_v4f16_to_v4f32_arg(ptr addrspace(1) %out, <4 
   ret void
 }
 
-define amdgpu_kernel void @extload_v8f16_to_v8f32_arg(ptr addrspace(1) %out, <8 x half> %arg) #0 {
+define amdgpu_kernel void @extload_v8f16_to_v8f32_arg(ptr addrspace(1) %out, <8 x half> %arg) nounwind {
 ; CI-LABEL: extload_v8f16_to_v8f32_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
@@ -503,7 +503,7 @@ define amdgpu_kernel void @extload_v8f16_to_v8f32_arg(ptr addrspace(1) %out, <8 
   ret void
 }
 
-define amdgpu_kernel void @extload_f16_to_f64_arg(ptr addrspace(1) %out, half %arg) #0 {
+define amdgpu_kernel void @extload_f16_to_f64_arg(ptr addrspace(1) %out, half %arg) nounwind {
 ; CI-LABEL: extload_f16_to_f64_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x2
@@ -549,7 +549,7 @@ define amdgpu_kernel void @extload_f16_to_f64_arg(ptr addrspace(1) %out, half %a
   ret void
 }
 
-define amdgpu_kernel void @extload_v2f16_to_v2f64_arg(ptr addrspace(1) %out, <2 x half> %arg) #0 {
+define amdgpu_kernel void @extload_v2f16_to_v2f64_arg(ptr addrspace(1) %out, <2 x half> %arg) nounwind {
 ; CI-LABEL: extload_v2f16_to_v2f64_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x2
@@ -604,7 +604,7 @@ define amdgpu_kernel void @extload_v2f16_to_v2f64_arg(ptr addrspace(1) %out, <2 
   ret void
 }
 
-define amdgpu_kernel void @extload_v3f16_to_v3f64_arg(ptr addrspace(1) %out, <3 x half> %arg) #0 {
+define amdgpu_kernel void @extload_v3f16_to_v3f64_arg(ptr addrspace(1) %out, <3 x half> %arg) nounwind {
 ; CI-LABEL: extload_v3f16_to_v3f64_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -672,7 +672,7 @@ define amdgpu_kernel void @extload_v3f16_to_v3f64_arg(ptr addrspace(1) %out, <3 
   ret void
 }
 
-define amdgpu_kernel void @extload_v4f16_to_v4f64_arg(ptr addrspace(1) %out, <4 x half> %arg) #0 {
+define amdgpu_kernel void @extload_v4f16_to_v4f64_arg(ptr addrspace(1) %out, <4 x half> %arg) nounwind {
 ; CI-LABEL: extload_v4f16_to_v4f64_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -751,7 +751,7 @@ define amdgpu_kernel void @extload_v4f16_to_v4f64_arg(ptr addrspace(1) %out, <4 
   ret void
 }
 
-define amdgpu_kernel void @extload_v8f16_to_v8f64_arg(ptr addrspace(1) %out, <8 x half> %arg) #0 {
+define amdgpu_kernel void @extload_v8f16_to_v8f64_arg(ptr addrspace(1) %out, <8 x half> %arg) nounwind {
 ; CI-LABEL: extload_v8f16_to_v8f64_arg:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
@@ -886,7 +886,7 @@ define amdgpu_kernel void @extload_v8f16_to_v8f64_arg(ptr addrspace(1) %out, <8 
   ret void
 }
 
-define amdgpu_kernel void @global_load_store_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_store_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CIVI-LABEL: global_load_store_f16:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -916,7 +916,7 @@ define amdgpu_kernel void @global_load_store_f16(ptr addrspace(1) %out, ptr addr
   ret void
 }
 
-define amdgpu_kernel void @global_load_store_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_store_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CIVI-LABEL: global_load_store_v2f16:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -946,7 +946,7 @@ define amdgpu_kernel void @global_load_store_v2f16(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @global_load_store_v4f16(ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @global_load_store_v4f16(ptr addrspace(1) %in, ptr addrspace(1) %out) nounwind {
 ; CIVI-LABEL: global_load_store_v4f16:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -976,7 +976,7 @@ define amdgpu_kernel void @global_load_store_v4f16(ptr addrspace(1) %in, ptr add
   ret void
 }
 
-define amdgpu_kernel void @global_load_store_v8f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_store_v8f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CIVI-LABEL: global_load_store_v8f16:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1006,7 +1006,7 @@ define amdgpu_kernel void @global_load_store_v8f16(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @global_extload_f16_to_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_extload_f16_to_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CIVI-LABEL: global_extload_f16_to_f32:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1039,7 +1039,7 @@ define amdgpu_kernel void @global_extload_f16_to_f32(ptr addrspace(1) %out, ptr 
   ret void
 }
 
-define amdgpu_kernel void @global_extload_v2f16_to_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_extload_v2f16_to_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_extload_v2f16_to_v2f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1092,7 +1092,7 @@ define amdgpu_kernel void @global_extload_v2f16_to_v2f32(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @global_extload_v3f16_to_v3f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_extload_v3f16_to_v3f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_extload_v3f16_to_v3f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1148,7 +1148,7 @@ define amdgpu_kernel void @global_extload_v3f16_to_v3f32(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @global_extload_v4f16_to_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_extload_v4f16_to_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_extload_v4f16_to_v4f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1209,7 +1209,7 @@ define amdgpu_kernel void @global_extload_v4f16_to_v4f32(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @global_extload_v8f16_to_v8f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_extload_v8f16_to_v8f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_extload_v8f16_to_v8f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1297,7 +1297,7 @@ define amdgpu_kernel void @global_extload_v8f16_to_v8f32(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @global_extload_v16f16_to_v16f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_extload_v16f16_to_v16f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_extload_v16f16_to_v16f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1454,7 +1454,7 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f32(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @global_extload_f16_to_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_extload_f16_to_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CIVI-LABEL: global_extload_f16_to_f64:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1490,7 +1490,7 @@ define amdgpu_kernel void @global_extload_f16_to_f64(ptr addrspace(1) %out, ptr 
   ret void
 }
 
-define amdgpu_kernel void @global_extload_v2f16_to_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_extload_v2f16_to_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_extload_v2f16_to_v2f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1550,7 +1550,7 @@ define amdgpu_kernel void @global_extload_v2f16_to_v2f64(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @global_extload_v3f16_to_v3f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_extload_v3f16_to_v3f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_extload_v3f16_to_v3f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1628,7 +1628,7 @@ define amdgpu_kernel void @global_extload_v3f16_to_v3f64(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @global_extload_v4f16_to_v4f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_extload_v4f16_to_v4f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_extload_v4f16_to_v4f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1715,7 +1715,7 @@ define amdgpu_kernel void @global_extload_v4f16_to_v4f64(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @global_extload_v8f16_to_v8f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_extload_v8f16_to_v8f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_extload_v8f16_to_v8f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1849,7 +1849,7 @@ define amdgpu_kernel void @global_extload_v8f16_to_v8f64(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_extload_v16f16_to_v16f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2099,7 +2099,7 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @global_truncstore_f32_to_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_truncstore_f32_to_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CIVI-LABEL: global_truncstore_f32_to_f16:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2132,7 +2132,7 @@ define amdgpu_kernel void @global_truncstore_f32_to_f16(ptr addrspace(1) %out, p
   ret void
 }
 
-define amdgpu_kernel void @global_truncstore_v2f32_to_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_truncstore_v2f32_to_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_truncstore_v2f32_to_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2187,7 +2187,7 @@ define amdgpu_kernel void @global_truncstore_v2f32_to_v2f16(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @global_truncstore_v3f32_to_v3f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_truncstore_v3f32_to_v3f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_truncstore_v3f32_to_v3f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2257,7 +2257,7 @@ define amdgpu_kernel void @global_truncstore_v3f32_to_v3f16(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @global_truncstore_v4f32_to_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_truncstore_v4f32_to_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_truncstore_v4f32_to_v4f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2322,7 +2322,7 @@ define amdgpu_kernel void @global_truncstore_v4f32_to_v4f16(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @global_truncstore_v8f32_to_v8f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_truncstore_v8f32_to_v8f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_truncstore_v8f32_to_v8f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2422,7 +2422,7 @@ define amdgpu_kernel void @global_truncstore_v8f32_to_v8f16(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @global_truncstore_v16f32_to_v16f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_truncstore_v16f32_to_v16f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: global_truncstore_v16f32_to_v16f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2603,7 +2603,7 @@ define amdgpu_kernel void @global_truncstore_v16f32_to_v16f16(ptr addrspace(1) %
 }
 
 ; FIXME: Unsafe math should fold conversions away
-define amdgpu_kernel void @fadd_f16(ptr addrspace(1) %out, half %a, half %b) #0 {
+define amdgpu_kernel void @fadd_f16(ptr addrspace(1) %out, half %a, half %b) nounwind {
 ; CI-LABEL: fadd_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x2
@@ -2652,7 +2652,7 @@ define amdgpu_kernel void @fadd_f16(ptr addrspace(1) %out, half %a, half %b) #0 
    ret void
 }
 
-define amdgpu_kernel void @fadd_v2f16(ptr addrspace(1) %out, <2 x half> %a, <2 x half> %b) #0 {
+define amdgpu_kernel void @fadd_v2f16(ptr addrspace(1) %out, <2 x half> %a, <2 x half> %b) nounwind {
 ; CI-LABEL: fadd_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2706,7 +2706,7 @@ define amdgpu_kernel void @fadd_v2f16(ptr addrspace(1) %out, <2 x half> %a, <2 x
   ret void
 }
 
-define amdgpu_kernel void @fadd_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @fadd_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: fadd_v4f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2784,7 +2784,7 @@ define amdgpu_kernel void @fadd_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
   ret void
 }
 
-define amdgpu_kernel void @fadd_v8f16(ptr addrspace(1) %out, <8 x half> %a, <8 x half> %b) #0 {
+define amdgpu_kernel void @fadd_v8f16(ptr addrspace(1) %out, <8 x half> %a, <8 x half> %b) nounwind {
 ; CI-LABEL: fadd_v8f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x4
@@ -2905,7 +2905,7 @@ define amdgpu_kernel void @fadd_v8f16(ptr addrspace(1) %out, <8 x half> %a, <8 x
   ret void
 }
 
-define amdgpu_kernel void @test_bitcast_from_half(ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_bitcast_from_half(ptr addrspace(1) %in, ptr addrspace(1) %out) nounwind {
 ; CIVI-LABEL: test_bitcast_from_half:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2936,7 +2936,7 @@ define amdgpu_kernel void @test_bitcast_from_half(ptr addrspace(1) %in, ptr addr
   ret void
 }
 
-define amdgpu_kernel void @test_bitcast_to_half(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @test_bitcast_to_half(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; CIVI-LABEL: test_bitcast_to_half:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2966,5 +2966,3 @@ define amdgpu_kernel void @test_bitcast_to_half(ptr addrspace(1) %out, ptr addrs
   store half %val_fp, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }

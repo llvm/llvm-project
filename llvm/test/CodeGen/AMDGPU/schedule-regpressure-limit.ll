@@ -586,6 +586,4 @@ bb:
 }
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.fmuladd.f32(float, float, float) #0
-
-attributes #0 = { nounwind readnone }
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone

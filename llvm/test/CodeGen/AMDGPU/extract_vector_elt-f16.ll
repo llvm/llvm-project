@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 
-define amdgpu_kernel void @extract_vector_elt_v2f16(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr) #0 {
+define amdgpu_kernel void @extract_vector_elt_v2f16(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr) nounwind {
 ; SI-LABEL: extract_vector_elt_v2f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -59,7 +59,7 @@ define amdgpu_kernel void @extract_vector_elt_v2f16(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-define amdgpu_kernel void @extract_vector_elt_v2f16_dynamic_sgpr(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, i32 %idx) #0 {
+define amdgpu_kernel void @extract_vector_elt_v2f16_dynamic_sgpr(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, i32 %idx) nounwind {
 ; SI-LABEL: extract_vector_elt_v2f16_dynamic_sgpr:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -116,7 +116,7 @@ define amdgpu_kernel void @extract_vector_elt_v2f16_dynamic_sgpr(ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @extract_vector_elt_v2f16_dynamic_vgpr(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, ptr addrspace(1) %idx.ptr) #0 {
+define amdgpu_kernel void @extract_vector_elt_v2f16_dynamic_vgpr(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, ptr addrspace(1) %idx.ptr) nounwind {
 ; SI-LABEL: extract_vector_elt_v2f16_dynamic_vgpr:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -190,7 +190,7 @@ define amdgpu_kernel void @extract_vector_elt_v2f16_dynamic_vgpr(ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @extract_vector_elt_v3f16(ptr addrspace(1) %out, <3 x half> %foo) #0 {
+define amdgpu_kernel void @extract_vector_elt_v3f16(ptr addrspace(1) %out, <3 x half> %foo) nounwind {
 ; SI-LABEL: extract_vector_elt_v3f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -244,7 +244,7 @@ define amdgpu_kernel void @extract_vector_elt_v3f16(ptr addrspace(1) %out, <3 x 
 }
 
 ; FIXME: Why sometimes vector shift?
-define amdgpu_kernel void @dynamic_extract_vector_elt_v3f16(ptr addrspace(1) %out, <3 x half> %foo, i32 %idx) #0 {
+define amdgpu_kernel void @dynamic_extract_vector_elt_v3f16(ptr addrspace(1) %out, <3 x half> %foo, i32 %idx) nounwind {
 ; SI-LABEL: dynamic_extract_vector_elt_v3f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xd
@@ -297,7 +297,7 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v3f16(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @v_extractelement_v4f16_2(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_extractelement_v4f16_2(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: v_extractelement_v4f16_2:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -346,7 +346,7 @@ define amdgpu_kernel void @v_extractelement_v4f16_2(ptr addrspace(1) %out, ptr a
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds half, ptr addrspace(1) %out, i64 %tid.ext
@@ -356,7 +356,7 @@ define amdgpu_kernel void @v_extractelement_v4f16_2(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v4f16_dynamic_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_insertelement_v4f16_dynamic_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: v_insertelement_v4f16_dynamic_vgpr:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -420,7 +420,7 @@ define amdgpu_kernel void @v_insertelement_v4f16_dynamic_vgpr(ptr addrspace(1) %
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds half, ptr addrspace(1) %out, i64 %tid.ext
@@ -431,7 +431,7 @@ define amdgpu_kernel void @v_insertelement_v4f16_dynamic_vgpr(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @reduce_load_vector_v8f16_extract_01(ptr addrspace(4) %ptr) #0 {
+define amdgpu_kernel void @reduce_load_vector_v8f16_extract_01(ptr addrspace(4) %ptr) nounwind {
 ; SI-LABEL: reduce_load_vector_v8f16_extract_01:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -492,7 +492,7 @@ define amdgpu_kernel void @reduce_load_vector_v8f16_extract_01(ptr addrspace(4) 
   ret void
 }
 
-define amdgpu_kernel void @reduce_load_vector_v8f16_extract_23(ptr addrspace(4) %ptr) #0 {
+define amdgpu_kernel void @reduce_load_vector_v8f16_extract_23(ptr addrspace(4) %ptr) nounwind {
 ; SI-LABEL: reduce_load_vector_v8f16_extract_23:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -553,7 +553,7 @@ define amdgpu_kernel void @reduce_load_vector_v8f16_extract_23(ptr addrspace(4) 
   ret void
 }
 
-define amdgpu_kernel void @v_extractelement_v8f16_dynamic_sgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %n) #0 {
+define amdgpu_kernel void @v_extractelement_v8f16_dynamic_sgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %n) nounwind {
 ; SI-LABEL: v_extractelement_v8f16_dynamic_sgpr:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -691,7 +691,7 @@ define amdgpu_kernel void @v_extractelement_v8f16_dynamic_sgpr(ptr addrspace(1) 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <8 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds half, ptr addrspace(1) %out, i64 %tid.ext
@@ -701,7 +701,7 @@ define amdgpu_kernel void @v_extractelement_v8f16_dynamic_sgpr(ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %n) #0 {
+define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %n) nounwind {
 ; SI-LABEL: v_extractelement_v16f16_dynamic_sgpr:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -944,7 +944,7 @@ define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1)
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <16 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds half, ptr addrspace(1) %out, i64 %tid.ext
@@ -954,7 +954,4 @@ define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1)
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

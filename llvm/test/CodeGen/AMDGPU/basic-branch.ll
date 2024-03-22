@@ -17,7 +17,7 @@
 
 ; GCN: {{^}}[[END]]:
 ; GCN: s_endpgm
-define amdgpu_kernel void @test_branch(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, i32 %val) #0 {
+define amdgpu_kernel void @test_branch(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, i32 %val) nounwind {
   %cmp = icmp ne i32 %val, 0
   br i1 %cmp, label %store, label %end
 
@@ -41,7 +41,7 @@ end:
 
 ; GCN: {{^}}[[END]]:
 ; GCN: s_endpgm
-define amdgpu_kernel void @test_brcc_i1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, i1 %val) #0 {
+define amdgpu_kernel void @test_brcc_i1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, i1 %val) nounwind {
   %cmp0 = icmp ne i1 %val, 0
   br i1 %cmp0, label %store, label %end
 
@@ -52,5 +52,3 @@ store:
 end:
   ret void
 }
-
-attributes #0 = { nounwind }

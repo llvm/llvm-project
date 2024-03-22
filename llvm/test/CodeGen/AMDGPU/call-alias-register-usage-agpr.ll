@@ -14,21 +14,17 @@
 ; GFX90A: .amdhsa_next_free_vgpr 59
 ; GFX90A-NEXT: .amdhsa_next_free_sgpr 33
 ; GFX90A-NEXT: .amdhsa_accum_offset 32
-define amdgpu_kernel void @kernel() #0 {
+define amdgpu_kernel void @kernel() noinline norecurse nounwind optnone {
 bb:
-  call void @alias() #2
+  call void @alias() nounwind readnone willreturn
   ret void
 }
 
-define internal void @aliasee_default() #1 {
+define internal void @aliasee_default() noinline norecurse nounwind readnone willreturn {
 bb:
   call void asm sideeffect "; clobber a26 ", "~{a26}"()
   ret void
 }
-
-attributes #0 = { noinline norecurse nounwind optnone }
-attributes #1 = { noinline norecurse nounwind readnone willreturn }
-attributes #2 = { nounwind readnone willreturn }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

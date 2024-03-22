@@ -6,7 +6,7 @@
 ; Stores to the same address appear multiple places in the same
 ; block. When sorted by offset, the merges would fail. We should form
 ; two groupings of ds_write2_b64 on either side of the fence.
-define amdgpu_kernel void @same_address_fence_merge_write2() #0 {
+define amdgpu_kernel void @same_address_fence_merge_write2() nounwind readnone speculatable {
 ; GCN-LABEL: same_address_fence_merge_write2:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_mov_b32 s0, 0
@@ -61,10 +61,7 @@ bb:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare void @llvm.amdgcn.s.barrier() #1
-
-attributes #0 = { nounwind readnone speculatable }
-attributes #1 = { convergent nounwind }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
+declare void @llvm.amdgcn.s.barrier() convergent nounwind
 
 !0 = !{i32 0, i32 1024}

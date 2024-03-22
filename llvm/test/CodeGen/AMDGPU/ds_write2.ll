@@ -6,7 +6,7 @@
 @lds = addrspace(3) global [512 x float] undef, align 4
 @lds.f64 = addrspace(3) global [512 x double] undef, align 8
 
-define amdgpu_kernel void @simple_write2_one_val_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @simple_write2_one_val_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: simple_write2_one_val_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
@@ -30,7 +30,7 @@ define amdgpu_kernel void @simple_write2_one_val_f32(ptr addrspace(1) %C, ptr ad
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write2_b32 v0, v1, v1 offset1:8
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in.gep = getelementptr float, ptr addrspace(1) %in, i32 %x.i
   %val = load float, ptr addrspace(1) %in.gep, align 4
   %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %x.i
@@ -41,7 +41,7 @@ define amdgpu_kernel void @simple_write2_one_val_f32(ptr addrspace(1) %C, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @simple_write2_two_val_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @simple_write2_two_val_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: simple_write2_two_val_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
@@ -69,7 +69,7 @@ define amdgpu_kernel void @simple_write2_two_val_f32(ptr addrspace(1) %C, ptr ad
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write2_b32 v0, v1, v2 offset1:8
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in.gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %x.i
   %in.gep.1 = getelementptr float, ptr addrspace(1) %in.gep.0, i32 1
   %val0 = load volatile float, ptr addrspace(1) %in.gep.0, align 4
@@ -82,7 +82,7 @@ define amdgpu_kernel void @simple_write2_two_val_f32(ptr addrspace(1) %C, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @simple_write2_two_val_f32_volatile_0(ptr addrspace(1) %C, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @simple_write2_two_val_f32_volatile_0(ptr addrspace(1) %C, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; CI-LABEL: simple_write2_two_val_f32_volatile_0:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x2
@@ -115,7 +115,7 @@ define amdgpu_kernel void @simple_write2_two_val_f32_volatile_0(ptr addrspace(1)
 ; GFX9-NEXT:    ds_write_b32 v0, v1
 ; GFX9-NEXT:    ds_write_b32 v0, v2 offset:32
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in0.gep = getelementptr float, ptr addrspace(1) %in0, i32 %x.i
   %in1.gep = getelementptr float, ptr addrspace(1) %in1, i32 %x.i
   %val0 = load volatile float, ptr addrspace(1) %in0.gep, align 4
@@ -128,7 +128,7 @@ define amdgpu_kernel void @simple_write2_two_val_f32_volatile_0(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @simple_write2_two_val_f32_volatile_1(ptr addrspace(1) %C, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @simple_write2_two_val_f32_volatile_1(ptr addrspace(1) %C, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; CI-LABEL: simple_write2_two_val_f32_volatile_1:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x2
@@ -161,7 +161,7 @@ define amdgpu_kernel void @simple_write2_two_val_f32_volatile_1(ptr addrspace(1)
 ; GFX9-NEXT:    ds_write_b32 v0, v1
 ; GFX9-NEXT:    ds_write_b32 v0, v2 offset:32
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in0.gep = getelementptr float, ptr addrspace(1) %in0, i32 %x.i
   %in1.gep = getelementptr float, ptr addrspace(1) %in1, i32 %x.i
   %val0 = load volatile float, ptr addrspace(1) %in0.gep, align 4
@@ -179,7 +179,7 @@ define amdgpu_kernel void @simple_write2_two_val_f32_volatile_1(ptr addrspace(1)
 ;       This should be an s_mov_b32. The v_mov_b32 gets introduced by an
 ;       early legalization of the constant bus constraint on the v_lshl_add_u32,
 ;       and then SIFoldOperands folds in an unlucky order.
-define amdgpu_kernel void @simple_write2_two_val_subreg2_mixed_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @simple_write2_two_val_subreg2_mixed_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: simple_write2_two_val_subreg2_mixed_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
@@ -211,7 +211,7 @@ define amdgpu_kernel void @simple_write2_two_val_subreg2_mixed_f32(ptr addrspace
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write2_b32 v0, v1, v3 offset1:8
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in.gep.0 = getelementptr <2 x float>, ptr addrspace(1) %in, i32 %x.i
   %in.gep.1 = getelementptr <2 x float>, ptr addrspace(1) %in.gep.0, i32 1
   %val0 = load volatile <2 x float>, ptr addrspace(1) %in.gep.0, align 8
@@ -226,7 +226,7 @@ define amdgpu_kernel void @simple_write2_two_val_subreg2_mixed_f32(ptr addrspace
   ret void
 }
 
-define amdgpu_kernel void @simple_write2_two_val_subreg2_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @simple_write2_two_val_subreg2_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: simple_write2_two_val_subreg2_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
@@ -252,7 +252,7 @@ define amdgpu_kernel void @simple_write2_two_val_subreg2_f32(ptr addrspace(1) %C
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write2_b32 v0, v1, v2 offset1:8
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in.gep = getelementptr <2 x float>, ptr addrspace(1) %in, i32 %x.i
   %val = load <2 x float>, ptr addrspace(1) %in.gep, align 8
   %val0 = extractelement <2 x float> %val, i32 0
@@ -265,7 +265,7 @@ define amdgpu_kernel void @simple_write2_two_val_subreg2_f32(ptr addrspace(1) %C
   ret void
 }
 
-define amdgpu_kernel void @simple_write2_two_val_subreg4_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @simple_write2_two_val_subreg4_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: simple_write2_two_val_subreg4_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
@@ -291,7 +291,7 @@ define amdgpu_kernel void @simple_write2_two_val_subreg4_f32(ptr addrspace(1) %C
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write2_b32 v0, v1, v4 offset1:8
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in.gep = getelementptr <4 x float>, ptr addrspace(1) %in, i32 %x.i
   %val = load <4 x float>, ptr addrspace(1) %in.gep, align 16
   %val0 = extractelement <4 x float> %val, i32 0
@@ -304,7 +304,7 @@ define amdgpu_kernel void @simple_write2_two_val_subreg4_f32(ptr addrspace(1) %C
   ret void
 }
 
-define amdgpu_kernel void @simple_write2_two_val_max_offset_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @simple_write2_two_val_max_offset_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: simple_write2_two_val_max_offset_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
@@ -332,7 +332,7 @@ define amdgpu_kernel void @simple_write2_two_val_max_offset_f32(ptr addrspace(1)
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write2_b32 v0, v1, v2 offset1:255
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in.gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %x.i
   %in.gep.1 = getelementptr float, ptr addrspace(1) %in.gep.0, i32 1
   %val0 = load volatile float, ptr addrspace(1) %in.gep.0, align 4
@@ -345,7 +345,7 @@ define amdgpu_kernel void @simple_write2_two_val_max_offset_f32(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @simple_write2_two_val_too_far_f32(ptr addrspace(1) %C, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @simple_write2_two_val_too_far_f32(ptr addrspace(1) %C, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; CI-LABEL: simple_write2_two_val_too_far_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x2
@@ -378,7 +378,7 @@ define amdgpu_kernel void @simple_write2_two_val_too_far_f32(ptr addrspace(1) %C
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write_b32 v0, v2 offset:1028
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in0.gep = getelementptr float, ptr addrspace(1) %in0, i32 %x.i
   %in1.gep = getelementptr float, ptr addrspace(1) %in1, i32 %x.i
   %val0 = load float, ptr addrspace(1) %in0.gep, align 4
@@ -391,7 +391,7 @@ define amdgpu_kernel void @simple_write2_two_val_too_far_f32(ptr addrspace(1) %C
   ret void
 }
 
-define amdgpu_kernel void @simple_write2_two_val_f32_x2(ptr addrspace(1) %C, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @simple_write2_two_val_f32_x2(ptr addrspace(1) %C, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; CI-LABEL: simple_write2_two_val_f32_x2:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x2
@@ -422,7 +422,7 @@ define amdgpu_kernel void @simple_write2_two_val_f32_x2(ptr addrspace(1) %C, ptr
 ; GFX9-NEXT:    ds_write2_b32 v0, v1, v2 offset1:8
 ; GFX9-NEXT:    ds_write2_b32 v0, v1, v2 offset0:11 offset1:27
 ; GFX9-NEXT:    s_endpgm
-  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in0.gep = getelementptr float, ptr addrspace(1) %in0, i32 %tid.x
   %in1.gep = getelementptr float, ptr addrspace(1) %in1, i32 %tid.x
   %val0 = load float, ptr addrspace(1) %in0.gep, align 4
@@ -447,7 +447,7 @@ define amdgpu_kernel void @simple_write2_two_val_f32_x2(ptr addrspace(1) %C, ptr
   ret void
 }
 
-define amdgpu_kernel void @simple_write2_two_val_f32_x2_nonzero_base(ptr addrspace(1) %C, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @simple_write2_two_val_f32_x2_nonzero_base(ptr addrspace(1) %C, ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; CI-LABEL: simple_write2_two_val_f32_x2_nonzero_base:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x2
@@ -478,7 +478,7 @@ define amdgpu_kernel void @simple_write2_two_val_f32_x2_nonzero_base(ptr addrspa
 ; GFX9-NEXT:    ds_write2_b32 v0, v1, v2 offset0:3 offset1:8
 ; GFX9-NEXT:    ds_write2_b32 v0, v1, v2 offset0:11 offset1:27
 ; GFX9-NEXT:    s_endpgm
-  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in0.gep = getelementptr float, ptr addrspace(1) %in0, i32 %tid.x
   %in1.gep = getelementptr float, ptr addrspace(1) %in1, i32 %tid.x
   %val0 = load float, ptr addrspace(1) %in0.gep, align 4
@@ -503,7 +503,7 @@ define amdgpu_kernel void @simple_write2_two_val_f32_x2_nonzero_base(ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @write2_ptr_subreg_arg_two_val_f32(ptr addrspace(1) %C, ptr addrspace(1) %in0, ptr addrspace(1) %in1, <2 x ptr addrspace(3)> %lds.ptr) #0 {
+define amdgpu_kernel void @write2_ptr_subreg_arg_two_val_f32(ptr addrspace(1) %C, ptr addrspace(1) %in0, ptr addrspace(1) %in1, <2 x ptr addrspace(3)> %lds.ptr) nounwind {
 ; CI-LABEL: write2_ptr_subreg_arg_two_val_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x2
@@ -542,7 +542,7 @@ define amdgpu_kernel void @write2_ptr_subreg_arg_two_val_f32(ptr addrspace(1) %C
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write_b32 v3, v2 offset:32
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in0.gep = getelementptr float, ptr addrspace(1) %in0, i32 %x.i
   %in1.gep = getelementptr float, ptr addrspace(1) %in1, i32 %x.i
   %val0 = load float, ptr addrspace(1) %in0.gep, align 4
@@ -563,7 +563,7 @@ define amdgpu_kernel void @write2_ptr_subreg_arg_two_val_f32(ptr addrspace(1) %C
   ret void
 }
 
-define amdgpu_kernel void @simple_write2_one_val_f64(ptr addrspace(1) %C, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @simple_write2_one_val_f64(ptr addrspace(1) %C, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: simple_write2_one_val_f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
@@ -587,7 +587,7 @@ define amdgpu_kernel void @simple_write2_one_val_f64(ptr addrspace(1) %C, ptr ad
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write2_b64 v2, v[0:1], v[0:1] offset1:8
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in.gep = getelementptr double, ptr addrspace(1) %in, i32 %x.i
   %val = load double, ptr addrspace(1) %in.gep, align 8
   %arrayidx0 = getelementptr inbounds [512 x double], ptr addrspace(3) @lds.f64, i32 0, i32 %x.i
@@ -598,7 +598,7 @@ define amdgpu_kernel void @simple_write2_one_val_f64(ptr addrspace(1) %C, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @misaligned_simple_write2_one_val_f64(ptr addrspace(1) %C, ptr addrspace(1) %in, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @misaligned_simple_write2_one_val_f64(ptr addrspace(1) %C, ptr addrspace(1) %in, ptr addrspace(3) %lds) nounwind {
 ; CI-LABEL: misaligned_simple_write2_one_val_f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
@@ -628,7 +628,7 @@ define amdgpu_kernel void @misaligned_simple_write2_one_val_f64(ptr addrspace(1)
 ; GFX9-NEXT:    ds_write2_b32 v2, v0, v1 offset1:1
 ; GFX9-NEXT:    ds_write2_b32 v2, v0, v1 offset0:14 offset1:15
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in.gep = getelementptr double, ptr addrspace(1) %in, i32 %x.i
   %val = load double, ptr addrspace(1) %in.gep, align 8
   %arrayidx0 = getelementptr inbounds double, ptr addrspace(3) %lds, i32 %x.i
@@ -639,7 +639,7 @@ define amdgpu_kernel void @misaligned_simple_write2_one_val_f64(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @unaligned_offset_simple_write2_one_val_f64(ptr addrspace(1) %C, ptr addrspace(1) %in, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @unaligned_offset_simple_write2_one_val_f64(ptr addrspace(1) %C, ptr addrspace(1) %in, ptr addrspace(3) %lds) nounwind {
 ; CI-LABEL: unaligned_offset_simple_write2_one_val_f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
@@ -712,7 +712,7 @@ define amdgpu_kernel void @unaligned_offset_simple_write2_one_val_f64(ptr addrsp
 ; GFX9-UNALIGNED-NEXT:    ds_write_b64 v2, v[0:1] offset:5
 ; GFX9-UNALIGNED-NEXT:    ds_write_b64 v2, v[0:1] offset:9
 ; GFX9-UNALIGNED-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in.gep = getelementptr double, ptr addrspace(1) %in, i32 %x.i
   %val = load double, ptr addrspace(1) %in.gep, align 8
   %base = getelementptr inbounds double, ptr addrspace(3) %lds, i32 %x.i
@@ -723,7 +723,7 @@ define amdgpu_kernel void @unaligned_offset_simple_write2_one_val_f64(ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @simple_write2_two_val_f64(ptr addrspace(1) %C, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @simple_write2_two_val_f64(ptr addrspace(1) %C, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: simple_write2_two_val_f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
@@ -751,7 +751,7 @@ define amdgpu_kernel void @simple_write2_two_val_f64(ptr addrspace(1) %C, ptr ad
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:8
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in.gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %x.i
   %in.gep.1 = getelementptr double, ptr addrspace(1) %in.gep.0, i32 1
   %val0 = load volatile double, ptr addrspace(1) %in.gep.0, align 8
@@ -865,7 +865,7 @@ define amdgpu_kernel void @store_misaligned64_constant_large_offsets() {
 @sgemm.lA = internal unnamed_addr addrspace(3) global [264 x float] undef, align 4
 @sgemm.lB = internal unnamed_addr addrspace(3) global [776 x float] undef, align 4
 
-define amdgpu_kernel void @write2_sgemm_sequence(ptr addrspace(1) %C, i32 %lda, i32 %ldb, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @write2_sgemm_sequence(ptr addrspace(1) %C, i32 %lda, i32 %ldb, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: write2_sgemm_sequence:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x4
@@ -908,8 +908,8 @@ define amdgpu_kernel void @write2_sgemm_sequence(ptr addrspace(1) %C, i32 %lda, 
 ; GFX9-NEXT:    ds_write2_b32 v0, v3, v4 offset0:32 offset1:33
 ; GFX9-NEXT:    ds_write2_b32 v0, v3, v4 offset0:64 offset1:65
 ; GFX9-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workgroup.id.x() #1
-  %y.i = tail call i32 @llvm.amdgcn.workitem.id.y() #1
+  %x.i = tail call i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone speculatable
+  %y.i = tail call i32 @llvm.amdgcn.workitem.id.y() nounwind readnone speculatable
   %val = load float, ptr addrspace(1) %in
   %arrayidx44 = getelementptr inbounds [264 x float], ptr addrspace(3) @sgemm.lA, i32 0, i32 %x.i
   store float %val, ptr addrspace(3) %arrayidx44, align 4
@@ -942,7 +942,7 @@ define amdgpu_kernel void @write2_sgemm_sequence(ptr addrspace(1) %C, i32 %lda, 
   ret void
 }
 
-define amdgpu_kernel void @simple_write2_v4f32_superreg_align4(ptr addrspace(3) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @simple_write2_v4f32_superreg_align4(ptr addrspace(3) %out, ptr addrspace(1) %in) nounwind {
 ; CI-LABEL: simple_write2_v4f32_superreg_align4:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2
@@ -992,7 +992,7 @@ define amdgpu_kernel void @simple_write2_v4f32_superreg_align4(ptr addrspace(3) 
 ; GFX9-UNALIGNED-NEXT:    ds_write2_b32 v0, v1, v2 offset0:2 offset1:3
 ; GFX9-UNALIGNED-NEXT:    ds_write2_b32 v0, v3, v4 offset1:1
 ; GFX9-UNALIGNED-NEXT:    s_endpgm
-  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %in.gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %in
   %val0 = load <4 x float>, ptr addrspace(1) %in.gep, align 4
   %out.gep = getelementptr inbounds <4 x float>, ptr addrspace(3) %out, i32 %x.i
@@ -1048,11 +1048,7 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #1
-declare i32 @llvm.amdgcn.workgroup.id.y() #1
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare i32 @llvm.amdgcn.workitem.id.y() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { convergent nounwind }
+declare i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workgroup.id.y() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone speculatable

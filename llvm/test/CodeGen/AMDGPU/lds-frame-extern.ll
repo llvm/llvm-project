@@ -13,7 +13,7 @@
 @module_variable = addrspace(3) global i16 undef
 
 ; Variables are allocated into module scope block when used by a non-kernel function
-define void @use_module() #0 {
+define void @use_module() noinline {
 ; CHECK-LABEL: use_module:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -35,7 +35,7 @@ define void @use_module() #0 {
 
 
 ; External LDS does not influence the frame when called indirectly either
-define void @use_extern_normal() #0 {
+define void @use_extern_normal() noinline {
 ; CHECK-LABEL: use_extern_normal:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -59,7 +59,7 @@ define void @use_extern_normal() #0 {
   ret void
 }
 
-define void @use_extern_overalign() #0 {
+define void @use_extern_overalign() noinline {
 ; CHECK-LABEL: use_extern_overalign:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -608,9 +608,6 @@ define amdgpu_kernel void @module_1_kernel_overalign_indirect_extern_overalign(i
   call void @use_extern_overalign()
   ret void
 }
-
-
-attributes #0 = { noinline }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

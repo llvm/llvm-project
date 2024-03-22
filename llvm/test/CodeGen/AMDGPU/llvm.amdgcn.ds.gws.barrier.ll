@@ -39,7 +39,7 @@
 ; MIR-NEXT: DS_GWS_BARRIER renamable $vgpr0, 0, implicit $m0, implicit $exec :: (load (s32) from custom "GWSResource")
 ; MIR-NEXT: S_WAITCNT 0
 ; MIR-NEXT: }
-define amdgpu_kernel void @gws_barrier_offset0(i32 %val) #0 {
+define amdgpu_kernel void @gws_barrier_offset0(i32 %val) nounwind {
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 0)
   ret void
 }
@@ -52,7 +52,7 @@ define amdgpu_kernel void @gws_barrier_offset0(i32 %val) #0 {
 ; NOLOOP-DAG: s_mov_b32 m0, 0{{$}}
 ; NOLOOP-DAG: v_mov_b32_e32 v0, [[BAR_NUM]]
 ; NOLOOP: ds_gws_barrier v0 offset:63 gds{{$}}
-define amdgpu_kernel void @gws_barrier_offset63(i32 %val) #0 {
+define amdgpu_kernel void @gws_barrier_offset63(i32 %val) nounwind {
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 63)
   ret void
 }
@@ -69,7 +69,7 @@ define amdgpu_kernel void @gws_barrier_offset63(i32 %val) #0 {
 
 ; NOLOOP-DAG: v_mov_b32_e32 [[GWS_VAL:v[0-9]+]], s[[BAR_NUM]]
 ; NOLOOP: ds_gws_barrier [[GWS_VAL]] gds{{$}}
-define amdgpu_kernel void @gws_barrier_sgpr_offset(i32 %val, i32 %offset) #0 {
+define amdgpu_kernel void @gws_barrier_sgpr_offset(i32 %val, i32 %offset) nounwind {
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 %offset)
   ret void
 }
@@ -85,7 +85,7 @@ define amdgpu_kernel void @gws_barrier_sgpr_offset(i32 %val, i32 %offset) #0 {
 
 ; NOLOOP-DAG: v_mov_b32_e32 [[GWS_VAL:v[0-9]+]], s[[BAR_NUM]]
 ; NOLOOP: ds_gws_barrier [[GWS_VAL]] offset:1 gds{{$}}
-define amdgpu_kernel void @gws_barrier_sgpr_offset_add1(i32 %val, i32 %offset.base) #0 {
+define amdgpu_kernel void @gws_barrier_sgpr_offset_add1(i32 %val, i32 %offset.base) nounwind {
   %offset = add i32 %offset.base, 1
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 %offset)
   ret void
@@ -102,7 +102,7 @@ define amdgpu_kernel void @gws_barrier_sgpr_offset_add1(i32 %val, i32 %offset.ba
 
 ; NOLOOP-DAG: v_mov_b32_e32 [[GWS_VAL:v[0-9]+]], [[BAR_NUM]]
 ; NOLOOP: ds_gws_barrier [[GWS_VAL]] gds{{$}}
-define amdgpu_kernel void @gws_barrier_vgpr_offset(i32 %val) #0 {
+define amdgpu_kernel void @gws_barrier_vgpr_offset(i32 %val) nounwind {
   %vgpr.offset = call i32 @llvm.amdgcn.workitem.id.x()
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 %vgpr.offset)
   ret void
@@ -120,7 +120,7 @@ define amdgpu_kernel void @gws_barrier_vgpr_offset(i32 %val) #0 {
 
 ; NOLOOP-DAG: v_mov_b32_e32 [[GWS_VAL:v[0-9]+]], [[BAR_NUM]]
 ; NOLOOP: ds_gws_barrier [[GWS_VAL]] offset:3 gds{{$}}
-define amdgpu_kernel void @gws_barrier_vgpr_offset_add(i32 %val) #0 {
+define amdgpu_kernel void @gws_barrier_vgpr_offset_add(i32 %val) nounwind {
   %vgpr.offset.base = call i32 @llvm.amdgcn.workitem.id.x()
   %vgpr.offset = add i32 %vgpr.offset.base, 3
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 %vgpr.offset)
@@ -143,7 +143,7 @@ define amdgpu_kernel void @gws_barrier_vgpr_offset_add(i32 %val) #0 {
 
 ; LOOP: s_mov_b32 m0, -1
 ; LOOP: ds_write_b32
-define amdgpu_kernel void @gws_barrier_save_m0_barrier_constant_offset(i32 %val) #0 {
+define amdgpu_kernel void @gws_barrier_save_m0_barrier_constant_offset(i32 %val) nounwind {
   store i32 1, ptr addrspace(3) @lds
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 10)
   store i32 2, ptr addrspace(3) @lds
@@ -165,7 +165,7 @@ define void @gws_barrier_lgkmcnt(i32 %val) {
 ; GCN-LABEL: {{^}}gws_barrier_wait_before:
 ; NOLOOP: s_waitcnt
 ; NOLOOP-NOT: s_waitcnt{{$}}
-define amdgpu_kernel void @gws_barrier_wait_before(i32 %val, ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @gws_barrier_wait_before(i32 %val, ptr addrspace(1) %ptr) nounwind {
   store i32 0, ptr addrspace(1) %ptr
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 7)
   ret void
@@ -176,7 +176,7 @@ define amdgpu_kernel void @gws_barrier_wait_before(i32 %val, ptr addrspace(1) %p
 ; NOLOOP: ds_gws_barrier v{{[0-9]+}} offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; NOLOOP: load_{{dword|b32}}
-define amdgpu_kernel void @gws_barrier_wait_after(i32 %val, ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @gws_barrier_wait_after(i32 %val, ptr addrspace(1) %ptr) nounwind {
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 7)
   %load = load volatile i32, ptr addrspace(1) %ptr
   ret void
@@ -190,7 +190,7 @@ define amdgpu_kernel void @gws_barrier_wait_after(i32 %val, ptr addrspace(1) %pt
 ; GFX10: s_waitcnt_vscnt null, 0x0
 ; NOLOOP: ds_gws_barrier v{{[0-9]+}} offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-define amdgpu_kernel void @gws_barrier_fence_before(i32 %val, ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @gws_barrier_fence_before(i32 %val, ptr addrspace(1) %ptr) nounwind {
   store i32 0, ptr addrspace(1) %ptr
   fence release
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 7)
@@ -204,7 +204,7 @@ define amdgpu_kernel void @gws_barrier_fence_before(i32 %val, ptr addrspace(1) %
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; NOLOOP-NEXT: load_{{dword|b32}}
 
-define amdgpu_kernel void @gws_barrier_fence_after(i32 %val, ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @gws_barrier_fence_after(i32 %val, ptr addrspace(1) %ptr) nounwind {
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 7)
   fence release
   %load = load volatile i32, ptr addrspace(1) %ptr
@@ -218,7 +218,7 @@ define amdgpu_kernel void @gws_barrier_fence_after(i32 %val, ptr addrspace(1) %p
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; NOLOOP-NEXT: ds_gws_barrier v0 offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-define amdgpu_kernel void @gws_init_barrier(i32 %val) #0 {
+define amdgpu_kernel void @gws_init_barrier(i32 %val) nounwind {
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 7)
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 7)
   ret void
@@ -231,18 +231,13 @@ define amdgpu_kernel void @gws_init_barrier(i32 %val) #0 {
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; NOLOOP-NEXT: ds_gws_barrier v0 offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-define amdgpu_kernel void @gws_init_fence_barrier(i32 %val) #0 {
+define amdgpu_kernel void @gws_init_fence_barrier(i32 %val) nounwind {
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 7)
   fence release
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 7)
   ret void
 }
 
-declare void @llvm.amdgcn.ds.gws.barrier(i32, i32) #1
-declare void @llvm.amdgcn.ds.gws.init(i32, i32) #2
-declare i32 @llvm.amdgcn.workitem.id.x() #3
-
-attributes #0 = { nounwind }
-attributes #1 = { convergent inaccessiblememonly nounwind }
-attributes #2 = { convergent inaccessiblememonly nounwind writeonly }
-attributes #3 = { nounwind readnone speculatable }
+declare void @llvm.amdgcn.ds.gws.barrier(i32, i32) convergent inaccessiblememonly nounwind
+declare void @llvm.amdgcn.ds.gws.init(i32, i32) convergent inaccessiblememonly nounwind writeonly
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable

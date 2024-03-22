@@ -1,7 +1,7 @@
 # RUN: llc -run-pass block-placement -mtriple=amdgcn -verify-machineinstrs -o - %s | FileCheck %s
 --- |
 
-  define amdgpu_kernel void @invert_br_undef_vcc(float %cond, ptr addrspace(1) %out) #0 {
+  define amdgpu_kernel void @invert_br_undef_vcc(float %cond, ptr addrspace(1) %out) nounwind {
   entry:
     br i1 undef, label %if, label %else, !structurizecfg.uniform !0, !amdgpu.uniform !0
 
@@ -18,8 +18,6 @@
     store i32 %value, ptr addrspace(1) %out
     ret void
   }
-
-  attributes #0 = { nounwind }
 
   !0 = !{}
 

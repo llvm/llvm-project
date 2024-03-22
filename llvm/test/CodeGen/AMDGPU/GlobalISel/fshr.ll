@@ -8120,35 +8120,33 @@ define <2 x i128> @v_fshr_v2i128(<2 x i128> %lhs, <2 x i128> %rhs, <2 x i128> %a
   ret <2 x i128> %result
 }
 
-declare i7 @llvm.fshr.i7(i7, i7, i7) #0
-declare i8 @llvm.fshr.i8(i8, i8, i8) #0
-declare <2 x i8> @llvm.fshr.v2i8(<2 x i8>, <2 x i8>, <2 x i8>) #0
-declare <4 x i8> @llvm.fshr.v4i8(<4 x i8>, <4 x i8>, <4 x i8>) #0
+declare i7 @llvm.fshr.i7(i7, i7, i7) nounwind readnone speculatable willreturn
+declare i8 @llvm.fshr.i8(i8, i8, i8) nounwind readnone speculatable willreturn
+declare <2 x i8> @llvm.fshr.v2i8(<2 x i8>, <2 x i8>, <2 x i8>) nounwind readnone speculatable willreturn
+declare <4 x i8> @llvm.fshr.v4i8(<4 x i8>, <4 x i8>, <4 x i8>) nounwind readnone speculatable willreturn
 
-declare i16 @llvm.fshr.i16(i16, i16, i16) #0
-declare <2 x i16> @llvm.fshr.v2i16(<2 x i16>, <2 x i16>, <2 x i16>) #0
-declare <3 x i16> @llvm.fshr.v3i16(<3 x i16>, <3 x i16>, <3 x i16>) #0
-declare <4 x i16> @llvm.fshr.v4i16(<4 x i16>, <4 x i16>, <4 x i16>) #0
-declare <5 x i16> @llvm.fshr.v5i16(<5 x i16>, <5 x i16>, <5 x i16>) #0
-declare <6 x i16> @llvm.fshr.v6i16(<6 x i16>, <6 x i16>, <6 x i16>) #0
-declare <8 x i16> @llvm.fshr.v8i16(<8 x i16>, <8 x i16>, <8 x i16>) #0
+declare i16 @llvm.fshr.i16(i16, i16, i16) nounwind readnone speculatable willreturn
+declare <2 x i16> @llvm.fshr.v2i16(<2 x i16>, <2 x i16>, <2 x i16>) nounwind readnone speculatable willreturn
+declare <3 x i16> @llvm.fshr.v3i16(<3 x i16>, <3 x i16>, <3 x i16>) nounwind readnone speculatable willreturn
+declare <4 x i16> @llvm.fshr.v4i16(<4 x i16>, <4 x i16>, <4 x i16>) nounwind readnone speculatable willreturn
+declare <5 x i16> @llvm.fshr.v5i16(<5 x i16>, <5 x i16>, <5 x i16>) nounwind readnone speculatable willreturn
+declare <6 x i16> @llvm.fshr.v6i16(<6 x i16>, <6 x i16>, <6 x i16>) nounwind readnone speculatable willreturn
+declare <8 x i16> @llvm.fshr.v8i16(<8 x i16>, <8 x i16>, <8 x i16>) nounwind readnone speculatable willreturn
 
-declare i24 @llvm.fshr.i24(i24, i24, i24) #0
-declare <2 x i24> @llvm.fshr.v2i24(<2 x i24>, <2 x i24>, <2 x i24>) #0
+declare i24 @llvm.fshr.i24(i24, i24, i24) nounwind readnone speculatable willreturn
+declare <2 x i24> @llvm.fshr.v2i24(<2 x i24>, <2 x i24>, <2 x i24>) nounwind readnone speculatable willreturn
 
-declare i32 @llvm.fshr.i32(i32, i32, i32) #0
-declare <2 x i32> @llvm.fshr.v2i32(<2 x i32>, <2 x i32>, <2 x i32>) #0
-declare <3 x i32> @llvm.fshr.v3i32(<3 x i32>, <3 x i32>, <3 x i32>) #0
-declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>) #0
-declare <5 x i32> @llvm.fshr.v5i32(<5 x i32>, <5 x i32>, <5 x i32>) #0
-declare <16 x i32> @llvm.fshr.v16i32(<16 x i32>, <16 x i32>, <16 x i32>) #0
+declare i32 @llvm.fshr.i32(i32, i32, i32) nounwind readnone speculatable willreturn
+declare <2 x i32> @llvm.fshr.v2i32(<2 x i32>, <2 x i32>, <2 x i32>) nounwind readnone speculatable willreturn
+declare <3 x i32> @llvm.fshr.v3i32(<3 x i32>, <3 x i32>, <3 x i32>) nounwind readnone speculatable willreturn
+declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>) nounwind readnone speculatable willreturn
+declare <5 x i32> @llvm.fshr.v5i32(<5 x i32>, <5 x i32>, <5 x i32>) nounwind readnone speculatable willreturn
+declare <16 x i32> @llvm.fshr.v16i32(<16 x i32>, <16 x i32>, <16 x i32>) nounwind readnone speculatable willreturn
 
-declare i48 @llvm.fshr.i48(i48, i48, i48) #0
+declare i48 @llvm.fshr.i48(i48, i48, i48) nounwind readnone speculatable willreturn
 
-declare i64 @llvm.fshr.i64(i64, i64, i64) #0
-declare <2 x i64> @llvm.fshr.v2i64(<2 x i64>, <2 x i64>, <2 x i64>) #0
+declare i64 @llvm.fshr.i64(i64, i64, i64) nounwind readnone speculatable willreturn
+declare <2 x i64> @llvm.fshr.v2i64(<2 x i64>, <2 x i64>, <2 x i64>) nounwind readnone speculatable willreturn
 
-declare i128 @llvm.fshr.i128(i128, i128, i128) #0
-declare <2 x i128> @llvm.fshr.v2i128(<2 x i128>, <2 x i128>, <2 x i128>) #0
-
-attributes #0 = { nounwind readnone speculatable willreturn }
+declare i128 @llvm.fshr.i128(i128, i128, i128) nounwind readnone speculatable willreturn
+declare <2 x i128> @llvm.fshr.v2i128(<2 x i128>, <2 x i128>, <2 x i128>) nounwind readnone speculatable willreturn

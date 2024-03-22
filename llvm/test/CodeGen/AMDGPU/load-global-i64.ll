@@ -13,7 +13,7 @@
 ; GCN-HSA: flat_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, [[VAL]]
 
 ; EG: VTX_READ_64
-define amdgpu_kernel void @global_load_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %ld = load i64, ptr addrspace(1) %in
   store i64 %ld, ptr addrspace(1) %out
   ret void
@@ -24,7 +24,7 @@ define amdgpu_kernel void @global_load_i64(ptr addrspace(1) %out, ptr addrspace(
 ; GCN-HSA: flat_load_dwordx4
 
 ; EG: VTX_READ_128
-define amdgpu_kernel void @global_load_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %ld = load <2 x i64>, ptr addrspace(1) %in
   store <2 x i64> %ld, ptr addrspace(1) %out
@@ -40,7 +40,7 @@ entry:
 
 ; EG: VTX_READ_128
 ; EG: VTX_READ_128
-define amdgpu_kernel void @global_load_v3i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v3i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %ld = load <3 x i64>, ptr addrspace(1) %in
   store <3 x i64> %ld, ptr addrspace(1) %out
@@ -56,7 +56,7 @@ entry:
 
 ; EG: VTX_READ_128
 ; EG: VTX_READ_128
-define amdgpu_kernel void @global_load_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %ld = load <4 x i64>, ptr addrspace(1) %in
   store <4 x i64> %ld, ptr addrspace(1) %out
@@ -78,7 +78,7 @@ entry:
 ; EG: VTX_READ_128
 ; EG: VTX_READ_128
 ; EG: VTX_READ_128
-define amdgpu_kernel void @global_load_v8i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v8i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %ld = load <8 x i64>, ptr addrspace(1) %in
   store <8 x i64> %ld, ptr addrspace(1) %out
@@ -112,11 +112,9 @@ entry:
 ; EG: VTX_READ_128
 ; EG: VTX_READ_128
 ; EG: VTX_READ_128
-define amdgpu_kernel void @global_load_v16i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v16i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %ld = load <16 x i64>, ptr addrspace(1) %in
   store <16 x i64> %ld, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }

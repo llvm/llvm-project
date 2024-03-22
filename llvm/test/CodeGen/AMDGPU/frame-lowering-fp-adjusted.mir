@@ -5,11 +5,9 @@
 # CHECK: BUFFER_STORE_DWORD_OFFSET
 --- |
 
-  define amdgpu_kernel void @foo() #0 {
+  define amdgpu_kernel void @foo() "frame-pointer"="all" {
     ret void
   }
-
-  attributes #0 = {  "frame-pointer"="all" }
 ...
 ---
 name:            foo

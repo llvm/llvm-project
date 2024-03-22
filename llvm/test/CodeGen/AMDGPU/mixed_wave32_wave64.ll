@@ -30,7 +30,7 @@
 ;
 ; GCN: .amd_amdgpu_pal_metadata{{.*}},0x2e00,0x8000,{{.*}}0xa1b6,0x1,{{.*}},0xa2d5,0xe00000,
 
-define dllexport amdgpu_ps void @_amdgpu_ps_main(float %arg10) #0 {
+define dllexport amdgpu_ps void @_amdgpu_ps_main(float %arg10) nounwind "InitialPSInputAddr"="2" "target-features"="+wavefrontsize64" {
 .entry:
   %tmp100 = fcmp ogt float %arg10, 0.25
   br i1 %tmp100, label %if, label %endif
@@ -43,7 +43,7 @@ endif:
   ret void
 }
 
-define dllexport amdgpu_vs void @_amdgpu_vs_main(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, float %arg10) local_unnamed_addr #2 {
+define dllexport amdgpu_vs void @_amdgpu_vs_main(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, float %arg10) local_unnamed_addr nounwind "target-features"="+wavefrontsize32" {
 .entry:
   %tmp100 = fcmp ogt float %arg10, 0.25
   br i1 %tmp100, label %if, label %endif
@@ -56,7 +56,7 @@ endif:
   ret void
 }
 
-define dllexport amdgpu_gs void @_amdgpu_gs_main(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, float %arg10) local_unnamed_addr #2 {
+define dllexport amdgpu_gs void @_amdgpu_gs_main(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, float %arg10) local_unnamed_addr nounwind "target-features"="+wavefrontsize32" {
 .entry:
   %tmp100 = fcmp ogt float %arg10, 0.25
   br i1 %tmp100, label %if, label %endif
@@ -69,7 +69,7 @@ endif:
   ret void
 }
 
-define dllexport amdgpu_hs void @_amdgpu_hs_main(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, float %arg10) local_unnamed_addr #2 {
+define dllexport amdgpu_hs void @_amdgpu_hs_main(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, float %arg10) local_unnamed_addr nounwind "target-features"="+wavefrontsize32" {
 .entry:
   %tmp100 = fcmp ogt float %arg10, 0.25
   br i1 %tmp100, label %if, label %endif
@@ -82,7 +82,7 @@ endif:
   ret void
 }
 
-define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, float %arg10) local_unnamed_addr #2 {
+define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, float %arg10) local_unnamed_addr nounwind "target-features"="+wavefrontsize32" {
 .entry:
   %tmp100 = fcmp ogt float %arg10, 0.25
   br i1 %tmp100, label %if, label %endif
@@ -95,12 +95,7 @@ endif:
   ret void
 }
 
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #2
-
-attributes #0 = { nounwind "InitialPSInputAddr"="2" "target-features"="+wavefrontsize64" }
-attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { nounwind "target-features"="+wavefrontsize32" }
-attributes #3 = { nounwind readonly }
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind "target-features"="+wavefrontsize32"
 
 !amdgpu.pal.metadata = !{!8}
 

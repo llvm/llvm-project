@@ -7,11 +7,9 @@
 ; GCN: global_load_dword
 ; GCN: ds_min_u32
 ; GCN: ds_max_u32
-define amdgpu_kernel void @are_loads_from_same_base_ptr_ds_atomic(ptr addrspace(1) %arg0, ptr addrspace(3) noalias %ptr0) #0 {
+define amdgpu_kernel void @are_loads_from_same_base_ptr_ds_atomic(ptr addrspace(1) %arg0, ptr addrspace(3) noalias %ptr0) nounwind {
   %tmp1 = load volatile i32, ptr addrspace(1) %arg0
   %tmp2 = atomicrmw umin ptr addrspace(3) %ptr0, i32 %tmp1 seq_cst
   %tmp3 = atomicrmw umax ptr addrspace(3) %ptr0, i32 %tmp1 seq_cst
   ret void
 }
-
-attributes #0 = { nounwind }

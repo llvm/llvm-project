@@ -8,9 +8,9 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9-DENORM-CONTRACT,GFX9-DENORM %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9-DENORM-CONTRACT,GFX9-DENORM %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare <2 x half> @llvm.fmuladd.v2f16(<2 x half>, <2 x half>, <2 x half>) #1
-declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare <2 x half> @llvm.fmuladd.v2f16(<2 x half>, <2 x half>, <2 x half>) nounwind readnone
+declare <2 x half> @llvm.fabs.v2f16(<2 x half>) nounwind readnone
 
 ; GCN-LABEL: {{^}}fmuladd_v2f16:
 ; GFX9-FLUSH: v_pk_mul_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
@@ -18,7 +18,7 @@ declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #1
 
 ; GFX9-DENORM: v_pk_fma_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 define amdgpu_kernel void @fmuladd_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) #0 {
+                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) nounwind {
   %r0 = load <2 x half>, ptr addrspace(1) %in1
   %r1 = load <2 x half>, ptr addrspace(1) %in2
   %r2 = load <2 x half>, ptr addrspace(1) %in3
@@ -33,7 +33,7 @@ define amdgpu_kernel void @fmuladd_v2f16(ptr addrspace(1) %out, ptr addrspace(1)
 
 ; GFX9-DENORM-CONTRACT: v_pk_fma_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 define amdgpu_kernel void @fmul_fadd_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) #0 {
+                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) nounwind {
   %r0 = load <2 x half>, ptr addrspace(1) %in1
   %r1 = load <2 x half>, ptr addrspace(1) %in2
   %r2 = load <2 x half>, ptr addrspace(1) %in3
@@ -49,7 +49,7 @@ define amdgpu_kernel void @fmul_fadd_v2f16(ptr addrspace(1) %out, ptr addrspace(
 
 ; GFX9-DENORM: v_pk_fma_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 define amdgpu_kernel void @fmul_fadd_contract_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) #0 {
+                         ptr addrspace(1) %in2, ptr addrspace(1) %in3) nounwind {
   %r0 = load <2 x half>, ptr addrspace(1) %in1
   %r1 = load <2 x half>, ptr addrspace(1) %in2
   %r2 = load <2 x half>, ptr addrspace(1) %in3
@@ -70,7 +70,7 @@ define amdgpu_kernel void @fmul_fadd_contract_v2f16(ptr addrspace(1) %out, ptr a
 
 ; GFX9-DENORM: v_pk_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
 ; GFX9-DENORM: global_store_dword v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fmuladd_2.0_a_b_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @fmuladd_2.0_a_b_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %gep.1 = getelementptr <2 x half>, ptr addrspace(1) %gep.0, i32 1
@@ -94,7 +94,7 @@ define amdgpu_kernel void @fmuladd_2.0_a_b_v2f16(ptr addrspace(1) %out, ptr addr
 
 ; GFX9-DENORM: v_pk_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
 ; GFX9-DENORM: global_store_dword v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fmuladd_a_2.0_b_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @fmuladd_a_2.0_b_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %gep.1 = getelementptr <2 x half>, ptr addrspace(1) %gep.0, i32 1
@@ -122,7 +122,7 @@ define amdgpu_kernel void @fmuladd_a_2.0_b_v2f16(ptr addrspace(1) %out, ptr addr
 ; GCN: {{flat|global}}_store_dword v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @fadd_a_a_b_v2f16(ptr addrspace(1) %out,
                             ptr addrspace(1) %in1,
-                            ptr addrspace(1) %in2) #0 {
+                            ptr addrspace(1) %in2) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %gep.1 = getelementptr <2 x half>, ptr addrspace(1) %gep.0, i32 1
@@ -136,6 +136,3 @@ define amdgpu_kernel void @fadd_a_a_b_v2f16(ptr addrspace(1) %out,
   store <2 x half> %add.1, ptr addrspace(1) %gep.out
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

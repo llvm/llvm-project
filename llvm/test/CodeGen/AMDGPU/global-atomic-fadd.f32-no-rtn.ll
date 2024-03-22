@@ -117,7 +117,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_flat_intrinsic(ptr ad
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fadd_f32_no_rtn_atomicrmw(ptr addrspace(1) %ptr, float %data) #0 {
+define amdgpu_ps void @global_atomic_fadd_f32_no_rtn_atomicrmw(ptr addrspace(1) %ptr, float %data) "amdgpu-unsafe-fp-atomics"="true" {
   ; GFX908_GFX11_GFX12-LABEL: name: global_atomic_fadd_f32_no_rtn_atomicrmw
   ; GFX908_GFX11_GFX12: bb.0 (%ir-block.0):
   ; GFX908_GFX11_GFX12-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -145,7 +145,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_no_rtn_atomicrmw(ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspace(1) inreg %ptr, float %data) #0 {
+define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspace(1) inreg %ptr, float %data) "amdgpu-unsafe-fp-atomics"="true" {
   ; GFX908-LABEL: name: global_atomic_fadd_f32_saddr_no_rtn_atomicrmw
   ; GFX908: bb.0 (%ir-block.0):
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.4(0x40000000)
@@ -326,8 +326,6 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %data syncscope("wavefront") monotonic
   ret void
 }
-
-attributes #0 = {"amdgpu-unsafe-fp-atomics"="true" }
 
 declare float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1), float)
 declare float @llvm.amdgcn.flat.atomic.fadd.f32.p1.f32(ptr addrspace(1), float)

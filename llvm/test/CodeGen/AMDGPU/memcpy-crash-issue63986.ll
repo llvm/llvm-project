@@ -313,8 +313,5 @@ loop-memcpy-residual.preheader:                   ; preds = %loop-memcpy-residua
   br label %loop-memcpy-residual
 }
 
-declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #0
-declare i64 @llvm.umin.i64(i64, i64) #1
-
-attributes #0 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) nocallback nofree nounwind willreturn memory(argmem: readwrite)
+declare i64 @llvm.umin.i64(i64, i64) nocallback nofree nosync nounwind speculatable willreturn memory(none)

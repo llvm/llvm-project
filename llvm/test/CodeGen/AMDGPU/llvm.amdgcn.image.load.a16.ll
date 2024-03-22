@@ -150,6 +150,3 @@ main_body:
 declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i16(i32, i16, <8 x i32>, i32, i32) #2
 declare <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i16(i32, i16, i16, <8 x i32>, i32, i32) #2
 declare <4 x float> @llvm.amdgcn.image.load.3d.v4f32.i16(i32, i16, i16, i16, <8 x i32>, i32, i32) #2
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readonly }

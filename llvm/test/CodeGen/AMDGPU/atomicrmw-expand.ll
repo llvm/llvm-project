@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX1100 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX1200 %s
 
-define float @syncscope_system(ptr %addr, float %val) #0 {
+define float @syncscope_system(ptr %addr, float %val) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX908-LABEL: syncscope_system:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -119,7 +119,7 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
   ret float %res
 }
 
-define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
+define float @syncscope_workgroup_rtn(ptr %addr, float %val) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX908-LABEL: syncscope_workgroup_rtn:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -222,7 +222,7 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
   ret float %res
 }
 
-define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
+define void @syncscope_workgroup_nortn(ptr %addr, float %val) "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX908-LABEL: syncscope_workgroup_nortn:
 ; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -462,5 +462,3 @@ define float @no_unsafe(ptr %addr, float %val) {
   %res = atomicrmw fadd ptr %addr, float %val syncscope("workgroup") seq_cst
   ret float %res
 }
-
-attributes #0 = { "amdgpu-unsafe-fp-atomics"="true" }

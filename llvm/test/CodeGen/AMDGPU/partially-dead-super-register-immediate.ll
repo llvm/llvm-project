@@ -8,10 +8,10 @@
 ; During live interval construction, the first sub register def is
 ; incorrectly marked as dead.
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-define amdgpu_kernel void @dead_def_subregister(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+define amdgpu_kernel void @dead_def_subregister(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %in.gep = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %val = load i64, ptr addrspace(1) %in.gep
 
@@ -23,6 +23,3 @@ define amdgpu_kernel void @dead_def_subregister(ptr addrspace(1) noalias %out, p
   store i32 %elt1, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

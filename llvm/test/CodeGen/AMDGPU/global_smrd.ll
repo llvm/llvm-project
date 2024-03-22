@@ -47,7 +47,7 @@ bb:
 
 define amdgpu_kernel void @non-uniform_load(ptr addrspace(1) %arg, [8 x i32], ptr addrspace(1) %arg1) #0 {
 bb:
-  %tmp = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tmp = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tmp2 = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %tmp
   %tmp3 = load float, ptr addrspace(1) %tmp2, align 4, !tbaa !8
   %tmp4 = fadd float %tmp3, 0.000000e+00
@@ -134,9 +134,7 @@ entry:
 }
 
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 !8 = !{!9, !9, i64 0}
 !9 = !{!"float", !10, i64 0}

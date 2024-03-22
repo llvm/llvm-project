@@ -7,18 +7,15 @@ entry:
   ret void
 }
 
-define void @func1() #0 {
+define void @func1() "target-features"="-xnack" {
 entry:
   ret void
 }
 
-define void @func2() #1 {
+define void @func2() "target-features"="+xnack" {
 entry:
   ret void
 }
-
-attributes #0 = { "target-features"="-xnack" }
-attributes #1 = { "target-features"="+xnack" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

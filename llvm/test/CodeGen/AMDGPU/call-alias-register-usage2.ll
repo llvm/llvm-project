@@ -9,21 +9,17 @@
 ; CHECK-LABEL: {{^}}kernel2:
 ; CHECK: .amdhsa_next_free_vgpr 53
 ; CHECK-NEXT: .amdhsa_next_free_sgpr 33
-define amdgpu_kernel void @kernel2() #0 {
+define amdgpu_kernel void @kernel2() noinline norecurse nounwind optnone {
 bb:
-  call void @alias2() #2
+  call void @alias2() nounwind readnone willreturn
   ret void
 }
 
-define internal void @aliasee_vgpr64_sgpr102() #1 {
+define internal void @aliasee_vgpr64_sgpr102() noinline norecurse nounwind readnone willreturn "amdgpu-waves-per-eu"="4,10" {
 bb:
   call void asm sideeffect "; clobber v52 ", "~{v52}"()
   ret void
 }
-
-attributes #0 = { noinline norecurse nounwind optnone }
-attributes #1 = { noinline norecurse nounwind readnone willreturn "amdgpu-waves-per-eu"="4,10" }
-attributes #2 = { nounwind readnone willreturn }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

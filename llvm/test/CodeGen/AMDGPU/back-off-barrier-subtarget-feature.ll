@@ -9,7 +9,7 @@
 ; Subtargets must wait for outstanding memory instructions before a barrier if
 ; they cannot back off of the barrier.
 
-define void @back_off_barrier_no_fence(ptr %in, ptr %out) #0 {
+define void @back_off_barrier_no_fence(ptr %in, ptr %out) nounwind {
 ; GFX9-NO-BACKOFF-LABEL: back_off_barrier_no_fence:
 ; GFX9-NO-BACKOFF:       ; %bb.0:
 ; GFX9-NO-BACKOFF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -66,7 +66,7 @@ define void @back_off_barrier_no_fence(ptr %in, ptr %out) #0 {
   ret void
 }
 
-define void @back_off_barrier_with_fence(ptr %in, ptr %out) #0 {
+define void @back_off_barrier_with_fence(ptr %in, ptr %out) nounwind {
 ; GFX9-NO-BACKOFF-LABEL: back_off_barrier_with_fence:
 ; GFX9-NO-BACKOFF:       ; %bb.0:
 ; GFX9-NO-BACKOFF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -131,5 +131,3 @@ define void @back_off_barrier_with_fence(ptr %in, ptr %out) #0 {
 }
 
 declare void @llvm.amdgcn.s.barrier()
-
-attributes #0 = { nounwind }

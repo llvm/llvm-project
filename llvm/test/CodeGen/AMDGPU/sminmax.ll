@@ -268,7 +268,4 @@ define amdgpu_kernel void @v_min_max_i32_user(ptr addrspace(1) %out0, ptr addrsp
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

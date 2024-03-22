@@ -37,7 +37,7 @@ entry:
 define amdgpu_kernel void @test_max_flat_workgroup_size(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #2 {
+    ptr addrspace(1) %b) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -64,7 +64,7 @@ define amdgpu_kernel void @num_spilled_sgprs(
     i32 %in0, i32 %in1, i32 %in2, i32 %in3, [8 x i32],
     i32 %in4, i32 %in5, i32 %in6, i32 %in7, [8 x i32],
     i32 %in8, i32 %in9, i32 %ina, i32 %inb, [8 x i32],
-    i32 %inc, i32 %ind, i32 %ine, i32 %inf) #0 {
+    i32 %inc, i32 %ind, i32 %ine, i32 %inf) "amdgpu-num-sgpr"="14" {
 entry:
   store i32 %in0, ptr addrspace(1) %out0
   store i32 %in1, ptr addrspace(1) %out1
@@ -88,7 +88,7 @@ entry:
 ; CHECK:   .name:       num_spilled_vgprs
 ; CHECK:   .symbol:     num_spilled_vgprs.kd
 ; CHECK:   .vgpr_spill_count: {{13|14}}
-define amdgpu_kernel void @num_spilled_vgprs() #1 {
+define amdgpu_kernel void @num_spilled_vgprs() "amdgpu-num-vgpr"="20" {
   %val0 = load volatile float, ptr addrspace(1) @var
   %val1 = load volatile float, ptr addrspace(1) @var
   %val2 = load volatile float, ptr addrspace(1) @var
@@ -159,10 +159,6 @@ define amdgpu_kernel void @num_spilled_vgprs() #1 {
 ; CHECK:  amdhsa.version:
 ; CHECK-NEXT: - 1
 ; CHECK-NEXT: - 1
-
-attributes #0 = { "amdgpu-num-sgpr"="14" }
-attributes #1 = { "amdgpu-num-vgpr"="20" }
-attributes #2 = { "amdgpu-flat-work-group-size"="1,256" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

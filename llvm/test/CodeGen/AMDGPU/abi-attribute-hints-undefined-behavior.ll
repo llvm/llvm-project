@@ -13,7 +13,7 @@ declare hidden void @requires_all_inputs()
 ; This function incorrectly is marked with the hints that the callee
 ; does not require the implicit arguments to the function. Make sure
 ; we do not crash.
-define void @parent_func_missing_inputs() #0 {
+define void @parent_func_missing_inputs() "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-LABEL: parent_func_missing_inputs:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -44,7 +44,7 @@ define void @parent_func_missing_inputs() #0 {
   ret void
 }
 
-define amdgpu_kernel void @parent_kernel_missing_inputs() #0 {
+define amdgpu_kernel void @parent_kernel_missing_inputs() "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-SDAG-LABEL: parent_kernel_missing_inputs:
 ; FIXEDABI-SDAG:       ; %bb.0:
 ; FIXEDABI-SDAG-NEXT:    s_add_i32 s4, s4, s9
@@ -93,7 +93,7 @@ define amdgpu_kernel void @parent_kernel_missing_inputs() #0 {
 }
 
 ; Function is marked with amdgpu-no-workitem-id-* but uses them anyway
-define void @marked_func_use_workitem_id(ptr addrspace(1) %ptr) #0 {
+define void @marked_func_use_workitem_id(ptr addrspace(1) %ptr) "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-SDAG-LABEL: marked_func_use_workitem_id:
 ; FIXEDABI-SDAG:       ; %bb.0:
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -131,7 +131,7 @@ define void @marked_func_use_workitem_id(ptr addrspace(1) %ptr) #0 {
 }
 
 ; Function is marked with amdgpu-no-workitem-id-* but uses them anyway
-define amdgpu_kernel void @marked_kernel_use_workitem_id(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @marked_kernel_use_workitem_id(ptr addrspace(1) %ptr) "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-LABEL: marked_kernel_use_workitem_id:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -154,7 +154,7 @@ define amdgpu_kernel void @marked_kernel_use_workitem_id(ptr addrspace(1) %ptr) 
   ret void
 }
 
-define void @marked_func_use_workgroup_id(ptr addrspace(1) %ptr) #0 {
+define void @marked_func_use_workgroup_id(ptr addrspace(1) %ptr) "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-LABEL: marked_func_use_workgroup_id:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -177,7 +177,7 @@ define void @marked_func_use_workgroup_id(ptr addrspace(1) %ptr) #0 {
   ret void
 }
 
-define amdgpu_kernel void @marked_kernel_use_workgroup_id(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @marked_kernel_use_workgroup_id(ptr addrspace(1) %ptr) "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-LABEL: marked_kernel_use_workgroup_id:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -203,7 +203,7 @@ define amdgpu_kernel void @marked_kernel_use_workgroup_id(ptr addrspace(1) %ptr)
   ret void
 }
 
-define void @marked_func_use_other_sgpr(ptr addrspace(1) %ptr) #0 {
+define void @marked_func_use_other_sgpr(ptr addrspace(1) %ptr) "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-LABEL: marked_func_use_other_sgpr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -235,7 +235,7 @@ define void @marked_func_use_other_sgpr(ptr addrspace(1) %ptr) #0 {
   ret void
 }
 
-define amdgpu_kernel void @marked_kernel_use_other_sgpr(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @marked_kernel_use_other_sgpr(ptr addrspace(1) %ptr) "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-LABEL: marked_kernel_use_other_sgpr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_add_u32 s0, s4, 8
@@ -259,7 +259,7 @@ define amdgpu_kernel void @marked_kernel_use_other_sgpr(ptr addrspace(1) %ptr) #
   ret void
 }
 
-define amdgpu_kernel void @marked_kernel_nokernargs_implicitarg_ptr() #0 {
+define amdgpu_kernel void @marked_kernel_nokernargs_implicitarg_ptr() "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-LABEL: marked_kernel_nokernargs_implicitarg_ptr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v0, 0
@@ -272,7 +272,7 @@ define amdgpu_kernel void @marked_kernel_nokernargs_implicitarg_ptr() #0 {
 }
 
 ; On gfx8, the queue ptr is required for this addrspacecast.
-define void @addrspacecast_requires_queue_ptr(ptr addrspace(5) %ptr.private, ptr addrspace(3) %ptr.local) #0 {
+define void @addrspacecast_requires_queue_ptr(ptr addrspace(5) %ptr.private, ptr addrspace(3) %ptr.local) "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-SDAG-LABEL: addrspacecast_requires_queue_ptr:
 ; FIXEDABI-SDAG:       ; %bb.0:
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -327,7 +327,7 @@ define void @addrspacecast_requires_queue_ptr(ptr addrspace(5) %ptr.private, ptr
   ret void
 }
 
-define void @is_shared_requires_queue_ptr(ptr %ptr) #0 {
+define void @is_shared_requires_queue_ptr(ptr %ptr) "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-LABEL: is_shared_requires_queue_ptr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -345,7 +345,7 @@ define void @is_shared_requires_queue_ptr(ptr %ptr) #0 {
   ret void
 }
 
-define void @is_private_requires_queue_ptr(ptr %ptr) #0 {
+define void @is_private_requires_queue_ptr(ptr %ptr) "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-LABEL: is_private_requires_queue_ptr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -363,7 +363,7 @@ define void @is_private_requires_queue_ptr(ptr %ptr) #0 {
   ret void
 }
 
-define void @trap_requires_queue() #0 {
+define void @trap_requires_queue() "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-LABEL: trap_requires_queue:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -375,7 +375,7 @@ define void @trap_requires_queue() #0 {
   unreachable
 }
 
-define void @debugtrap_requires_queue() #0 {
+define void @debugtrap_requires_queue() "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" {
 ; FIXEDABI-LABEL: debugtrap_requires_queue:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -398,8 +398,6 @@ declare i1 @llvm.amdgcn.is.shared(ptr)
 declare i1 @llvm.amdgcn.is.private(ptr)
 declare void @llvm.trap()
 declare void @llvm.debugtrap()
-
-attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

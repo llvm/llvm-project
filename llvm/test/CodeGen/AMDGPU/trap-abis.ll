@@ -4,8 +4,8 @@
 ; RUN: llc %s -o - -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs | FileCheck --check-prefix=HSA-TRAP-GFX900 %s
 ; RUN: llc %s -o - -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-trap-handler -verify-machineinstrs | FileCheck --check-prefix=HSA-NOTRAP-GFX900 %s
 
-declare void @llvm.trap() #0
-declare void @llvm.debugtrap() #1
+declare void @llvm.trap() nounwind noreturn
+declare void @llvm.debugtrap() nounwind
 
 define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; NOHSA-TRAP-GFX900-LABEL: trap:
@@ -202,9 +202,6 @@ define amdgpu_kernel void @debugtrap(ptr addrspace(1) nocapture readonly %arg0) 
   store volatile i32 2, ptr addrspace(1) %arg0
   ret void
 }
-
-attributes #0 = { nounwind noreturn }
-attributes #1 = { nounwind }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

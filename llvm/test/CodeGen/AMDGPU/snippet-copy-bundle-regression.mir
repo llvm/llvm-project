@@ -9,12 +9,10 @@
 
 --- |
 
-  define amdgpu_kernel void @kernel() #0 {
+  define amdgpu_kernel void @kernel() "amdgpu-calls" "amdgpu-waves-per-eu"="10,10" "target-cpu"="gfx900" {
   bb:
     ret void
   }
-
-  attributes #0 = { "amdgpu-calls" "amdgpu-waves-per-eu"="10,10" "target-cpu"="gfx900" }
 
 ...
 ---

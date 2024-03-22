@@ -3,7 +3,7 @@
 
 ; GCN-LABEL: {{^}}zext_grp_size_128:
 ; GCN-NOT: and_b32
-define amdgpu_kernel void @zext_grp_size_128(ptr addrspace(1) nocapture %arg) #0 {
+define amdgpu_kernel void @zext_grp_size_128(ptr addrspace(1) nocapture %arg) nounwind "amdgpu-flat-work-group-size"="64,128" {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = and i32 %tmp, 127
@@ -21,7 +21,7 @@ bb:
 
 ; GCN-LABEL: {{^}}zext_grp_size_32x4x1:
 ; GCN-NOT: and_b32
-define amdgpu_kernel void @zext_grp_size_32x4x1(ptr addrspace(1) nocapture %arg) #0 !reqd_work_group_size !0 {
+define amdgpu_kernel void @zext_grp_size_32x4x1(ptr addrspace(1) nocapture %arg) nounwind "amdgpu-flat-work-group-size"="64,128" !reqd_work_group_size !0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = and i32 %tmp, 31
@@ -42,7 +42,7 @@ bb:
 
 ; When EarlyCSE is not run this call produces a range max with 0 active bits,
 ; which is a special case as an AssertZext from width 0 is invalid.
-define amdgpu_kernel void @zext_grp_size_1x1x1(ptr addrspace(1) nocapture %arg) #0 !reqd_work_group_size !1 {
+define amdgpu_kernel void @zext_grp_size_1x1x1(ptr addrspace(1) nocapture %arg) nounwind "amdgpu-flat-work-group-size"="64,128" !reqd_work_group_size !1 {
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = and i32 %tmp, 1
   store i32 %tmp1, ptr addrspace(1) %arg, align 4
@@ -51,7 +51,7 @@ define amdgpu_kernel void @zext_grp_size_1x1x1(ptr addrspace(1) nocapture %arg) 
 
 ; GCN-LABEL: {{^}}zext_grp_size_512:
 ; GCN-NOT: and_b32
-define amdgpu_kernel void @zext_grp_size_512(ptr addrspace(1) nocapture %arg) #1 {
+define amdgpu_kernel void @zext_grp_size_512(ptr addrspace(1) nocapture %arg) nounwind "amdgpu-flat-work-group-size"="512,512" {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = and i32 %tmp, 65535
@@ -71,7 +71,7 @@ bb:
 ; O2-NOT: and_b32
 ; O2: v_and_b32_e32 v{{[0-9]+}}, 0x3ff,
 ; O2-NOT: and_b32
-define void @func_test_workitem_id_x_known_max_range(ptr addrspace(1) nocapture %out) #0 {
+define void @func_test_workitem_id_x_known_max_range(ptr addrspace(1) nocapture %out) nounwind "amdgpu-flat-work-group-size"="64,128" {
 entry:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %and = and i32 %id, 1023
@@ -83,7 +83,7 @@ entry:
 ; O2-NOT: and_b32
 ; O2: v_and_b32_e32 v{{[0-9]+}}, 0x3ff,
 ; O2-NOT: and_b32
-define void @func_test_workitem_id_x_default_range(ptr addrspace(1) nocapture %out) #4 {
+define void @func_test_workitem_id_x_default_range(ptr addrspace(1) nocapture %out) nounwind {
 entry:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %and = and i32 %id, 1023
@@ -91,17 +91,11 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #2
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
 
-declare i32 @llvm.amdgcn.workitem.id.y() #2
+declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone speculatable
 
-declare i32 @llvm.amdgcn.workitem.id.z() #2
-
-attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,128" }
-attributes #1 = { nounwind "amdgpu-flat-work-group-size"="512,512" }
-attributes #2 = { nounwind readnone speculatable }
-attributes #3 = { nounwind readnone }
-attributes #4 = { nounwind }
+declare i32 @llvm.amdgcn.workitem.id.z() nounwind readnone speculatable
 
 !0 = !{i32 32, i32 4, i32 1}
 !1 = !{i32 1, i32 1, i32 1}

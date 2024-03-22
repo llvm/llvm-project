@@ -354,6 +354,4 @@ define i32 @v_sdot2_shuffle10_b(<2 x i16> %a, <2 x i16> %b, i32 %c) {
   ret i32 %r
 }
 
-declare i32 @llvm.amdgcn.sdot2(<2 x i16>, <2 x i16>, i32, i1 immarg) #0
-
-attributes #0 = { nounwind readnone speculatable }
+declare i32 @llvm.amdgcn.sdot2(<2 x i16>, <2 x i16>, i32, i1 immarg) nounwind readnone speculatable

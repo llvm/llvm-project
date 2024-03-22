@@ -6,9 +6,7 @@
   define void @divergent_i1_phi_uniform_branch_simple() {ret void}
   define void @divergent_i1_phi_used_inside_loop() {ret void}
   define void @divergent_i1_phi_used_inside_loop_bigger_loop_body() {ret void}
-  define void @_amdgpu_cs_main() #0 {ret void}
-
-  attributes #0 = {"amdgpu-flat-work-group-size"="1,1"}
+  define void @_amdgpu_cs_main() "amdgpu-flat-work-group-size"="1,1" {ret void}
 ...
 
 ---

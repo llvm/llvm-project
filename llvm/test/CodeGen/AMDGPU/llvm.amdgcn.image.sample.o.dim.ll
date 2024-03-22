@@ -321,51 +321,47 @@ main_body:
   ret <4 x float> %v
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.o.1d.v4f32.f32(i32, i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.o.2d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cl.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cl.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cl.o.1d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cl.o.2d.v4f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.o.1d.v4f32.f32(i32, i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.o.2d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.cl.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.cl.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cl.o.1d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cl.o.2d.v4f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
 
-declare <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.o.2d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.b.o.2d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.b.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.b.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
 
-declare <4 x float> @llvm.amdgcn.image.sample.d.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.d.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.d.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.d.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
 
-declare <4 x float> @llvm.amdgcn.image.sample.cd.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.cd.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
 
-declare <4 x float> @llvm.amdgcn.image.sample.l.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.l.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.l.o.1d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.l.o.2d.v4f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.lz.o.1d.v4f32.f32(i32, i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.lz.o.2d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.lz.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.lz.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readonly }
-attributes #2 = { nounwind readnone }
+declare <4 x float> @llvm.amdgcn.image.sample.l.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.l.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.l.o.1d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.l.o.2d.v4f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.lz.o.1d.v4f32.f32(i32, i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.lz.o.2d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.lz.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.c.lz.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly

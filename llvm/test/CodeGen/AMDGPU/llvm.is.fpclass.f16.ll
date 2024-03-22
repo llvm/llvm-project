@@ -2386,7 +2386,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @iszero_or_nan_f_daz(half %x) #0 {
+define i1 @iszero_or_nan_f_daz(half %x) "denormal-fp-math"="ieee,preserve-sign" {
 ; GFX7SELDAG-LABEL: iszero_or_nan_f_daz:
 ; GFX7SELDAG:       ; %bb.0: ; %entry
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2444,7 +2444,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @iszero_or_nan_f_maybe_daz(half %x) #1 {
+define i1 @iszero_or_nan_f_maybe_daz(half %x) "denormal-fp-math"="ieee,dynamic" {
 ; GFX7SELDAG-LABEL: iszero_or_nan_f_maybe_daz:
 ; GFX7SELDAG:       ; %bb.0: ; %entry
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2569,7 +2569,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @not_iszero_or_nan_f_daz(half %x) #0 {
+define i1 @not_iszero_or_nan_f_daz(half %x) "denormal-fp-math"="ieee,preserve-sign" {
 ; GFX7SELDAG-LABEL: not_iszero_or_nan_f_daz:
 ; GFX7SELDAG:       ; %bb.0: ; %entry
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2636,7 +2636,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @not_iszero_or_nan_f_maybe_daz(half %x) #1 {
+define i1 @not_iszero_or_nan_f_maybe_daz(half %x) "denormal-fp-math"="ieee,dynamic" {
 ; GFX7SELDAG-LABEL: not_iszero_or_nan_f_maybe_daz:
 ; GFX7SELDAG:       ; %bb.0: ; %entry
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3213,7 +3213,5 @@ declare <3 x i1> @llvm.is.fpclass.v3f16(<3 x half>, i32)
 declare <4 x i1> @llvm.is.fpclass.v4f16(<4 x half>, i32)
 
 ; Assume DAZ
-attributes #0 = { "denormal-fp-math"="ieee,preserve-sign" }
 
 ; Maybe daz
-attributes #1 = { "denormal-fp-math"="ieee,dynamic" }

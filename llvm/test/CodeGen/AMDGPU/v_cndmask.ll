@@ -4,13 +4,13 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare half @llvm.fabs.f16(half)
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 
 ; All nan values are converted to 0xffffffff
-define amdgpu_kernel void @v_cnd_nan_nosgpr(ptr addrspace(1) %out, i32 %c, ptr addrspace(1) %fptr) #0 {
+define amdgpu_kernel void @v_cnd_nan_nosgpr(ptr addrspace(1) %out, i32 %c, ptr addrspace(1) %fptr) nounwind {
 ; SI-LABEL: v_cnd_nan_nosgpr:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -90,7 +90,7 @@ define amdgpu_kernel void @v_cnd_nan_nosgpr(ptr addrspace(1) %out, i32 %c, ptr a
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %idx = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %f.gep = getelementptr float, ptr addrspace(1) %fptr, i32 %idx
   %f = load float, ptr addrspace(1) %f.gep
   %setcc = icmp ne i32 %c, 0
@@ -104,7 +104,7 @@ define amdgpu_kernel void @v_cnd_nan_nosgpr(ptr addrspace(1) %out, i32 %c, ptr a
 ; never be moved.
 ; However on GFX10 constant bus is limited to 2 scalar operands, not one.
 ; All nan values are converted to 0xffffffff
-define amdgpu_kernel void @v_cnd_nan(ptr addrspace(1) %out, i32 %c, float %f) #0 {
+define amdgpu_kernel void @v_cnd_nan(ptr addrspace(1) %out, i32 %c, float %f) nounwind {
 ; SI-LABEL: v_cnd_nan:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -166,7 +166,7 @@ define amdgpu_kernel void @v_cnd_nan(ptr addrspace(1) %out, i32 %c, float %f) #0
 ; Test different compare and select operand types for optimal code
 ; shrinking.
 ; (select (cmp (sgprX, constant)), constant, sgprZ)
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprZ_f32(ptr addrspace(1) %out, [8 x i32], float %x, float %z) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprZ_f32(ptr addrspace(1) %out, [8 x i32], float %x, float %z) nounwind {
 ; SI-LABEL: fcmp_sgprX_k0_select_k1_sgprZ_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -223,7 +223,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprZ_f32(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
   %setcc = fcmp one float %x, 0.0
@@ -232,7 +232,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprZ_f32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprX_f32(ptr addrspace(1) %out, float %x) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprX_f32(ptr addrspace(1) %out, float %x) nounwind {
 ; SI-LABEL: fcmp_sgprX_k0_select_k1_sgprX_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -289,7 +289,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprX_f32(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
   %setcc = fcmp one float %x, 0.0
@@ -298,7 +298,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprX_f32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprZ_f32(ptr addrspace(1) %out, [8 x i32], float %x, float %z) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprZ_f32(ptr addrspace(1) %out, [8 x i32], float %x, float %z) nounwind {
 ; SI-LABEL: fcmp_sgprX_k0_select_k0_sgprZ_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -355,7 +355,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprZ_f32(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
   %setcc = fcmp one float %x, 0.0
@@ -364,7 +364,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprZ_f32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprX_f32(ptr addrspace(1) %out, float %x) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprX_f32(ptr addrspace(1) %out, float %x) nounwind {
 ; SI-LABEL: fcmp_sgprX_k0_select_k0_sgprX_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -421,7 +421,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprX_f32(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
   %setcc = fcmp one float %x, 0.0
@@ -430,7 +430,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprX_f32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_vgprZ_f32(ptr addrspace(1) %out, float %x, ptr addrspace(1) %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_vgprZ_f32(ptr addrspace(1) %out, float %x, ptr addrspace(1) %z.ptr) nounwind {
 ; SI-LABEL: fcmp_sgprX_k0_select_k0_vgprZ_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -504,7 +504,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_vgprZ_f32(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %z.gep = getelementptr inbounds float, ptr addrspace(1) %z.ptr, i64 %tid.ext
   %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
@@ -515,7 +515,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_vgprZ_f32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_vgprZ_f32(ptr addrspace(1) %out, float %x, ptr addrspace(1) %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_vgprZ_f32(ptr addrspace(1) %out, float %x, ptr addrspace(1) %z.ptr) nounwind {
 ; SI-LABEL: fcmp_sgprX_k0_select_k1_vgprZ_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -589,7 +589,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_vgprZ_f32(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %z.gep = getelementptr inbounds float, ptr addrspace(1) %z.ptr, i64 %tid.ext
   %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
@@ -600,7 +600,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_vgprZ_f32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_sgprZ_f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, float %z) #0 {
+define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_sgprZ_f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, float %z) nounwind {
 ; SI-LABEL: fcmp_vgprX_k0_select_k1_sgprZ_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -667,7 +667,7 @@ define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_sgprZ_f32(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
   %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
@@ -678,7 +678,7 @@ define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_sgprZ_f32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) nounwind {
 ; SI-LABEL: fcmp_vgprX_k0_select_k1_vgprZ_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -757,7 +757,7 @@ define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_f32(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
   %z.gep = getelementptr inbounds float, ptr addrspace(1) %z.ptr, i64 %tid.ext
@@ -770,7 +770,7 @@ define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_f32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
+define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) nounwind {
 ; SI-LABEL: icmp_vgprX_k0_select_k1_vgprZ_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -849,7 +849,7 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i32(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %x.gep = getelementptr inbounds i32, ptr addrspace(1) %x.ptr, i64 %tid.ext
   %z.gep = getelementptr inbounds i32, ptr addrspace(1) %z.ptr, i64 %tid.ext
@@ -862,7 +862,7 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
+define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) nounwind {
 ; SI-LABEL: icmp_vgprX_k0_select_k1_vgprZ_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -945,7 +945,7 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %x.gep = getelementptr inbounds i64, ptr addrspace(1) %x.ptr, i64 %tid.ext
   %z.gep = getelementptr inbounds i64, ptr addrspace(1) %z.ptr, i64 %tid.ext
@@ -958,7 +958,7 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @fcmp_vgprX_k0_select_vgprZ_k1_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_vgprX_k0_select_vgprZ_k1_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) nounwind {
 ; SI-LABEL: fcmp_vgprX_k0_select_vgprZ_k1_v4f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1054,7 +1054,7 @@ define amdgpu_kernel void @fcmp_vgprX_k0_select_vgprZ_k1_v4f32(ptr addrspace(1) 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
   %z.gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %z.ptr, i64 %tid.ext
@@ -1067,7 +1067,7 @@ define amdgpu_kernel void @fcmp_vgprX_k0_select_vgprZ_k1_v4f32(ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) nounwind {
 ; SI-LABEL: fcmp_vgprX_k0_select_k1_vgprZ_v4f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1163,7 +1163,7 @@ define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_v4f32(ptr addrspace(1) 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
   %z.gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %z.ptr, i64 %tid.ext
@@ -1178,7 +1178,7 @@ define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_v4f32(ptr addrspace(1) 
 
 ; This must be swapped as a vector type before the condition has
 ; multiple uses.
-define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) nounwind {
 ; SI-LABEL: fcmp_k0_vgprX_select_k1_vgprZ_v4f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1274,7 +1274,7 @@ define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_v4f32(ptr addrspace(1) 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
   %z.gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %z.ptr, i64 %tid.ext
@@ -1287,7 +1287,7 @@ define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_v4f32(ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i1(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
+define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i1(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) nounwind {
 ; SI-LABEL: icmp_vgprX_k0_select_k1_vgprZ_i1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1381,7 +1381,7 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i1(ptr addrspace(1) %ou
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %x.gep = getelementptr inbounds i32, ptr addrspace(1) %x.ptr, i64 %tid.ext
   %z.gep = getelementptr inbounds i1, ptr addrspace(1) %z.ptr, i64 %tid.ext
@@ -1395,7 +1395,7 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i1(ptr addrspace(1) %ou
 }
 
 ; Different types compared vs. selected
-define amdgpu_kernel void @fcmp_vgprX_k0_selectf64_k1_vgprZ_f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_vgprX_k0_selectf64_k1_vgprZ_f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) nounwind {
 ; SI-LABEL: fcmp_vgprX_k0_selectf64_k1_vgprZ_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1485,7 +1485,7 @@ define amdgpu_kernel void @fcmp_vgprX_k0_selectf64_k1_vgprZ_f32(ptr addrspace(1)
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
   %z.gep = getelementptr inbounds double, ptr addrspace(1) %z.ptr, i64 %tid.ext
@@ -1499,7 +1499,7 @@ define amdgpu_kernel void @fcmp_vgprX_k0_selectf64_k1_vgprZ_f32(ptr addrspace(1)
 }
 
 ; Different types compared vs. selected
-define amdgpu_kernel void @fcmp_vgprX_k0_selecti64_k1_vgprZ_f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_vgprX_k0_selecti64_k1_vgprZ_f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) nounwind {
 ; SI-LABEL: fcmp_vgprX_k0_selecti64_k1_vgprZ_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1587,7 +1587,7 @@ define amdgpu_kernel void @fcmp_vgprX_k0_selecti64_k1_vgprZ_f32(ptr addrspace(1)
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
   %z.gep = getelementptr inbounds i64, ptr addrspace(1) %z.ptr, i64 %tid.ext
@@ -1601,7 +1601,7 @@ define amdgpu_kernel void @fcmp_vgprX_k0_selecti64_k1_vgprZ_f32(ptr addrspace(1)
 }
 
 ; Different types compared vs. selected
-define amdgpu_kernel void @icmp_vgprX_k0_selectf32_k1_vgprZ_i32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
+define amdgpu_kernel void @icmp_vgprX_k0_selectf32_k1_vgprZ_i32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) nounwind {
 ; SI-LABEL: icmp_vgprX_k0_selectf32_k1_vgprZ_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1680,7 +1680,7 @@ define amdgpu_kernel void @icmp_vgprX_k0_selectf32_k1_vgprZ_i32(ptr addrspace(1)
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %x.gep = getelementptr inbounds i32, ptr addrspace(1) %x.ptr, i64 %tid.ext
   %z.gep = getelementptr inbounds float, ptr addrspace(1) %z.ptr, i64 %tid.ext
@@ -1694,7 +1694,7 @@ define amdgpu_kernel void @icmp_vgprX_k0_selectf32_k1_vgprZ_i32(ptr addrspace(1)
 }
 
 ; FIXME: Should be able to handle multiple uses
-define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) nounwind {
 ; SI-LABEL: fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1789,7 +1789,7 @@ define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2(ptr add
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
   %z.gep = getelementptr inbounds float, ptr addrspace(1) %z.ptr, i64 %tid.ext
@@ -1805,7 +1805,7 @@ define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2(ptr add
 }
 
 ; Source modifiers abs/neg only work for f32
-define amdgpu_kernel void @v_cndmask_abs_neg_f16(ptr addrspace(1) %out, i32 %c, ptr addrspace(1) %fptr) #0 {
+define amdgpu_kernel void @v_cndmask_abs_neg_f16(ptr addrspace(1) %out, i32 %c, ptr addrspace(1) %fptr) nounwind {
 ; SI-LABEL: v_cndmask_abs_neg_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s8, s[0:1], 0xb
@@ -1896,7 +1896,7 @@ define amdgpu_kernel void @v_cndmask_abs_neg_f16(ptr addrspace(1) %out, i32 %c, 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %idx = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %f.gep = getelementptr half, ptr addrspace(1) %fptr, i32 %idx
   %f = load half, ptr addrspace(1) %f.gep
   %f.abs = call half @llvm.fabs.f16(half %f)
@@ -1907,7 +1907,7 @@ define amdgpu_kernel void @v_cndmask_abs_neg_f16(ptr addrspace(1) %out, i32 %c, 
   ret void
 }
 
-define amdgpu_kernel void @v_cndmask_abs_neg_f32(ptr addrspace(1) %out, i32 %c, ptr addrspace(1) %fptr) #0 {
+define amdgpu_kernel void @v_cndmask_abs_neg_f32(ptr addrspace(1) %out, i32 %c, ptr addrspace(1) %fptr) nounwind {
 ; SI-LABEL: v_cndmask_abs_neg_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -1987,7 +1987,7 @@ define amdgpu_kernel void @v_cndmask_abs_neg_f32(ptr addrspace(1) %out, i32 %c, 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %idx = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %f.gep = getelementptr float, ptr addrspace(1) %fptr, i32 %idx
   %f = load float, ptr addrspace(1) %f.gep
   %f.abs = call float @llvm.fabs.f32(float %f)
@@ -1998,7 +1998,7 @@ define amdgpu_kernel void @v_cndmask_abs_neg_f32(ptr addrspace(1) %out, i32 %c, 
   ret void
 }
 
-define amdgpu_kernel void @v_cndmask_abs_neg_f64(ptr addrspace(1) %out, i32 %c, ptr addrspace(1) %fptr) #0 {
+define amdgpu_kernel void @v_cndmask_abs_neg_f64(ptr addrspace(1) %out, i32 %c, ptr addrspace(1) %fptr) nounwind {
 ; SI-LABEL: v_cndmask_abs_neg_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s8, s[0:1], 0xb
@@ -2092,7 +2092,7 @@ define amdgpu_kernel void @v_cndmask_abs_neg_f64(ptr addrspace(1) %out, i32 %c, 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %idx = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %f.gep = getelementptr double, ptr addrspace(1) %fptr, i32 %idx
   %f = load double, ptr addrspace(1) %f.gep
   %f.abs = call double @llvm.fabs.f64(double %f)
@@ -2102,6 +2102,3 @@ define amdgpu_kernel void @v_cndmask_abs_neg_f64(ptr addrspace(1) %out, i32 %c, 
   store double %select, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

@@ -12,7 +12,7 @@
 
 ; CHECK: error: ran out of registers during register allocation
 ; CHECK: Bad machine code: Using an undefined physical register
-define amdgpu_kernel void @alloc_failure_with_split_vregs(float %v0, float %v1) #0 {
+define amdgpu_kernel void @alloc_failure_with_split_vregs(float %v0, float %v1) "amdgpu-waves-per-eu"="10,10" {
   %agpr0 = call float asm sideeffect "; def $0", "=${a0}"()
   %agpr.vec = insertelement <16 x float> undef, float %agpr0, i32 0
   %mfma0 = call <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float %v0, float %v1, <16 x float> %agpr.vec, i32 0, i32 0, i32 0)
@@ -24,9 +24,5 @@ define amdgpu_kernel void @alloc_failure_with_split_vregs(float %v0, float %v1) 
   ret void
 }
 
-declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>, i32 immarg, i32 immarg, i32 immarg) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
-attributes #0 = { "amdgpu-waves-per-eu"="10,10" }
-attributes #1 = { convergent nounwind readnone willreturn }
-attributes #2 = { nounwind readnone speculatable willreturn }
+declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>, i32 immarg, i32 immarg, i32 immarg) convergent nounwind readnone willreturn
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable willreturn

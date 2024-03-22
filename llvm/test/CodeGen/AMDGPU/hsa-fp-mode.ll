@@ -4,7 +4,7 @@
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 1
 ; GCN: FloatMode: 240
-define amdgpu_kernel void @test_default_ci(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #0 {
+define amdgpu_kernel void @test_default_ci(ptr addrspace(1) %out0, ptr addrspace(1) %out1) nounwind "target-cpu"="kaveri" {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
   ret void
@@ -14,7 +14,7 @@ define amdgpu_kernel void @test_default_ci(ptr addrspace(1) %out0, ptr addrspace
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 1
 ; GCN: FloatMode: 240
-define amdgpu_kernel void @test_default_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #1 {
+define amdgpu_kernel void @test_default_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) nounwind "target-cpu"="fiji" {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
   ret void
@@ -24,7 +24,7 @@ define amdgpu_kernel void @test_default_vi(ptr addrspace(1) %out0, ptr addrspace
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 1
 ; GCN: FloatMode: 192
-define amdgpu_kernel void @test_f64_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #2 {
+define amdgpu_kernel void @test_f64_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
   ret void
@@ -34,7 +34,7 @@ define amdgpu_kernel void @test_f64_denormals(ptr addrspace(1) %out0, ptr addrsp
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 1
 ; GCN: FloatMode: 48
-define amdgpu_kernel void @test_f32_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #3 {
+define amdgpu_kernel void @test_f32_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
   ret void
@@ -44,7 +44,7 @@ define amdgpu_kernel void @test_f32_denormals(ptr addrspace(1) %out0, ptr addrsp
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 1
 ; GCN: FloatMode: 240
-define amdgpu_kernel void @test_f32_f64_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #4 {
+define amdgpu_kernel void @test_f32_f64_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) nounwind "denormal-fp-math"="ieee,ieee" {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
   ret void
@@ -54,7 +54,7 @@ define amdgpu_kernel void @test_f32_f64_denormals(ptr addrspace(1) %out0, ptr ad
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 1
 ; GCN: FloatMode: 0
-define amdgpu_kernel void @test_no_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #5 {
+define amdgpu_kernel void @test_no_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
   ret void
@@ -64,7 +64,7 @@ define amdgpu_kernel void @test_no_denormals(ptr addrspace(1) %out0, ptr addrspa
 ; GCN: .amdhsa_dx10_clamp 0
 ; GCN: .amdhsa_ieee_mode 1
 ; GCN: FloatMode: 240
-define amdgpu_kernel void @test_no_dx10_clamp_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #6 {
+define amdgpu_kernel void @test_no_dx10_clamp_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) nounwind "amdgpu-dx10-clamp"="false" "target-cpu"="fiji" {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
   ret void
@@ -74,7 +74,7 @@ define amdgpu_kernel void @test_no_dx10_clamp_vi(ptr addrspace(1) %out0, ptr add
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 0
 ; GCN: FloatMode: 240
-define amdgpu_kernel void @test_no_ieee_mode_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #7 {
+define amdgpu_kernel void @test_no_ieee_mode_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) nounwind "amdgpu-ieee"="false" "target-cpu"="fiji" {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
   ret void
@@ -84,21 +84,11 @@ define amdgpu_kernel void @test_no_ieee_mode_vi(ptr addrspace(1) %out0, ptr addr
 ; GCN: .amdhsa_dx10_clamp 0
 ; GCN: .amdhsa_ieee_mode 0
 ; GCN: FloatMode: 240
-define amdgpu_kernel void @test_no_ieee_mode_no_dx10_clamp_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #8 {
+define amdgpu_kernel void @test_no_ieee_mode_no_dx10_clamp_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) nounwind "amdgpu-dx10-clamp"="false" "amdgpu-ieee"="false" "target-cpu"="fiji" {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
   ret void
 }
-
-attributes #0 = { nounwind "target-cpu"="kaveri" }
-attributes #1 = { nounwind "target-cpu"="fiji" }
-attributes #2 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #3 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #4 = { nounwind "denormal-fp-math"="ieee,ieee" }
-attributes #5 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #6 = { nounwind "amdgpu-dx10-clamp"="false" "target-cpu"="fiji" }
-attributes #7 = { nounwind "amdgpu-ieee"="false" "target-cpu"="fiji" }
-attributes #8 = { nounwind "amdgpu-dx10-clamp"="false" "amdgpu-ieee"="false" "target-cpu"="fiji" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

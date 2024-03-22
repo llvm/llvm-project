@@ -7,7 +7,7 @@
 ; GCN: v_add_co_ci_u32_e32 v[[EXTRA_HI:[0-9]+]], vcc_lo, 0, v5, vcc_lo
 ; GCN: global_atomic_csub v{{[0-9]+}}, v[[[LO]]:[[HI]]], [[K]], off offset:512 glc
 ; GCN: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[[[EXTRA_LO]]:[[EXTRA_HI]]]
-define i32 @shl_base_atomicrmw_global_atomic_csub_ptr(ptr addrspace(1) %out, ptr addrspace(1) %extra.use, ptr addrspace(1) %ptr) #0 {
+define i32 @shl_base_atomicrmw_global_atomic_csub_ptr(ptr addrspace(1) %out, ptr addrspace(1) %extra.use, ptr addrspace(1) %ptr) argmemonly nounwind {
   %arrayidx0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 32
   %cast = ptrtoint ptr addrspace(1) %arrayidx0 to i64
   %shl = shl i64 %cast, 2
@@ -17,6 +17,4 @@ define i32 @shl_base_atomicrmw_global_atomic_csub_ptr(ptr addrspace(1) %out, ptr
   ret i32 %val
 }
 
-declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) #0
-
-attributes #0 = { argmemonly nounwind }
+declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) argmemonly nounwind

@@ -210,7 +210,7 @@ define float @test_fabs_f32_nobuiltin_callsite(float %arg) {
 ; CHECK-NEXT:    [[FABS:%.*]] = tail call float @_Z4fabsf(float [[ARG]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
-  %fabs = tail call float @_Z4fabsf(float %arg) #0
+  %fabs = tail call float @_Z4fabsf(float %arg) nobuiltin
   ret float %fabs
 }
 
@@ -220,28 +220,28 @@ define <2 x float> @test_fabs_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 ; CHECK-NEXT:    [[FABS:%.*]] = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
-  %fabs = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> %arg) #0
+  %fabs = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> %arg) nobuiltin
   ret <2 x float> %fabs
 }
 
 ; "no-builtins" should be ignored
-define float @test_fabs_f32_nobuiltins(float %arg) #1 {
+define float @test_fabs_f32_nobuiltins(float %arg) "no-builtins" {
 ; CHECK-LABEL: define float @test_fabs_f32_nobuiltins
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = tail call float @_Z4fabsf(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
-  %fabs = tail call float @_Z4fabsf(float %arg) #0
+  %fabs = tail call float @_Z4fabsf(float %arg) nobuiltin
   ret float %fabs
 }
 
-define <2 x float> @test_fabs_v2f32_nobuiltins(<2 x float> %arg) #1 {
+define <2 x float> @test_fabs_v2f32_nobuiltins(<2 x float> %arg) "no-builtins" {
 ; CHECK-LABEL: define <2 x float> @test_fabs_v2f32_nobuiltins
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
-  %fabs = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> %arg) #0
+  %fabs = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> %arg) nobuiltin
   ret <2 x float> %fabs
 }
 
@@ -286,8 +286,8 @@ define <2 x float> @test_fabs_v2f32_preserve_flags_md(<2 x float> %arg) {
 }
 
 ; Test the libm name, not a recognized opencl builtin.
-declare float @fabsf(float) #2
-declare double @fabs(double) #2
+declare float @fabsf(float) nounwind memory(none)
+declare double @fabs(double) nounwind memory(none)
 
 define float @test_libm_fabs_f32(float %arg) {
 ; CHECK-LABEL: define float @test_libm_fabs_f32
@@ -309,19 +309,14 @@ define double @test_libm_fabs_f64(double %arg) {
   ret double %fabs
 }
 
-define float @test_fabs_f32_strictfp(float %arg) #3 {
+define float @test_fabs_f32_strictfp(float %arg) strictfp {
 ; CHECK-LABEL: define float @test_fabs_f32_strictfp
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
-  %fabs = tail call nnan float @_Z4fabsf(float %arg) #3
+  %fabs = tail call nnan float @_Z4fabsf(float %arg) strictfp
   ret float %fabs
 }
-
-attributes #0 = { nobuiltin }
-attributes #1 = { "no-builtins" }
-attributes #2 = { nounwind memory(none) }
-attributes #3 = { strictfp }
 
 !0 = !{i32 1234}

@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GFX11 %s
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck --check-prefixes=R600 %s
 
-define amdgpu_kernel void @round_f32(ptr addrspace(1) %out, float %x) #0 {
+define amdgpu_kernel void @round_f32(ptr addrspace(1) %out, float %x) nounwind {
 ; GFX6-LABEL: round_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dword s6, s[0:1], 0xb
@@ -97,7 +97,7 @@ define amdgpu_kernel void @round_f32(ptr addrspace(1) %out, float %x) #0 {
 ; R600-NEXT:     ADD T0.X, T0.W, PV.W,
 ; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %result = call float @llvm.round.f32(float %x) #1
+  %result = call float @llvm.round.f32(float %x) nounwind readnone
   store float %result, ptr addrspace(1) %out
   ret void
 }
@@ -106,7 +106,7 @@ define amdgpu_kernel void @round_f32(ptr addrspace(1) %out, float %x) #0 {
 ; predict how the scheduler will order the instructions.  We already have
 ; a test for the scalar case, so the vector tests just check that the
 ; compiler doesn't crash.
-define amdgpu_kernel void @round_v2f32(ptr addrspace(1) %out, <2 x float> %in) #0 {
+define amdgpu_kernel void @round_v2f32(ptr addrspace(1) %out, <2 x float> %in) nounwind {
 ; GFX6-LABEL: round_v2f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -208,12 +208,12 @@ define amdgpu_kernel void @round_v2f32(ptr addrspace(1) %out, <2 x float> %in) #
 ; R600-NEXT:     ADD T0.X, T2.W, PV.W,
 ; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %result = call <2 x float> @llvm.round.v2f32(<2 x float> %in) #1
+  %result = call <2 x float> @llvm.round.v2f32(<2 x float> %in) nounwind readnone
   store <2 x float> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @round_v4f32(ptr addrspace(1) %out, <4 x float> %in) #0 {
+define amdgpu_kernel void @round_v4f32(ptr addrspace(1) %out, <4 x float> %in) nounwind {
 ; GFX6-LABEL: round_v4f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
@@ -404,12 +404,12 @@ define amdgpu_kernel void @round_v4f32(ptr addrspace(1) %out, <4 x float> %in) #
 ; R600-NEXT:     ADD T4.X, T3.W, PV.W,
 ; R600-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
 ; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %result = call <4 x float> @llvm.round.v4f32(<4 x float> %in) #1
+  %result = call <4 x float> @llvm.round.v4f32(<4 x float> %in) nounwind readnone
   store <4 x float> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @round_v8f32(ptr addrspace(1) %out, <8 x float> %in) #0 {
+define amdgpu_kernel void @round_v8f32(ptr addrspace(1) %out, <8 x float> %in) nounwind {
 ; GFX6-LABEL: round_v8f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x11
@@ -677,12 +677,12 @@ define amdgpu_kernel void @round_v8f32(ptr addrspace(1) %out, <8 x float> %in) #
 ; R600-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; R600-NEXT:     LSHR * T2.X, PV.W, literal.x,
 ; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %result = call <8 x float> @llvm.round.v8f32(<8 x float> %in) #1
+  %result = call <8 x float> @llvm.round.v8f32(<8 x float> %in) nounwind readnone
   store <8 x float> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @round_f16(ptr addrspace(1) %out, i32 %x.arg) #0 {
+define amdgpu_kernel void @round_f16(ptr addrspace(1) %out, i32 %x.arg) nounwind {
 ; GFX6-LABEL: round_f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -789,13 +789,13 @@ define amdgpu_kernel void @round_f16(ptr addrspace(1) %out, i32 %x.arg) #0 {
 ; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %x.arg.trunc = trunc i32 %x.arg to i16
   %x = bitcast i16 %x.arg.trunc to half
-  %result = call half @llvm.round.f16(half %x) #1
+  %result = call half @llvm.round.f16(half %x) nounwind readnone
   store half %result, ptr addrspace(1) %out
   ret void
 }
 
 ; Should be scalarized
-define amdgpu_kernel void @round_v2f16(ptr addrspace(1) %out, i32 %in.arg) #0 {
+define amdgpu_kernel void @round_v2f16(ptr addrspace(1) %out, i32 %in.arg) nounwind {
 ; GFX6-LABEL: round_v2f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -951,15 +951,12 @@ define amdgpu_kernel void @round_v2f16(ptr addrspace(1) %out, i32 %in.arg) #0 {
   ret void
 }
 
-declare float @llvm.round.f32(float) #1
-declare <2 x float> @llvm.round.v2f32(<2 x float>) #1
-declare <4 x float> @llvm.round.v4f32(<4 x float>) #1
-declare <8 x float> @llvm.round.v8f32(<8 x float>) #1
+declare float @llvm.round.f32(float) nounwind readnone
+declare <2 x float> @llvm.round.v2f32(<2 x float>) nounwind readnone
+declare <4 x float> @llvm.round.v4f32(<4 x float>) nounwind readnone
+declare <8 x float> @llvm.round.v8f32(<8 x float>) nounwind readnone
 
-declare half @llvm.round.f16(half) #1
-declare <2 x half> @llvm.round.v2f16(<2 x half>) #1
-declare <4 x half> @llvm.round.v4f16(<4 x half>) #1
-declare <8 x half> @llvm.round.v8f16(<8 x half>) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare half @llvm.round.f16(half) nounwind readnone
+declare <2 x half> @llvm.round.v2f16(<2 x half>) nounwind readnone
+declare <4 x half> @llvm.round.v4f16(<4 x half>) nounwind readnone
+declare <8 x half> @llvm.round.v8f16(<8 x half>) nounwind readnone

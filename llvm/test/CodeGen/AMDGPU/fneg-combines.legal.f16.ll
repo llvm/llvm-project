@@ -6,7 +6,7 @@
 ; rcp tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_rcp_f16(half %a) #0 {
+define half @v_fneg_rcp_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_rcp_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17,7 +17,7 @@ define half @v_fneg_rcp_f16(half %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_rcp_fneg_f16(half %a) #0 {
+define half @v_fneg_rcp_fneg_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_rcp_fneg_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -29,7 +29,7 @@ define half @v_fneg_rcp_fneg_f16(half %a) #0 {
   ret half %fneg
 }
 
-define { half, half } @v_fneg_rcp_store_use_fneg_f16(half %a) #0 {
+define { half, half } @v_fneg_rcp_store_use_fneg_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_rcp_store_use_fneg_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -45,7 +45,7 @@ define { half, half } @v_fneg_rcp_store_use_fneg_f16(half %a) #0 {
   ret { half, half } %insert.1
 }
 
-define { half, half } @v_fneg_rcp_multi_use_fneg_f16(half %a, half %c) #0 {
+define { half, half } @v_fneg_rcp_multi_use_fneg_f16(half %a, half %c) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_rcp_multi_use_fneg_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -66,7 +66,7 @@ define { half, half } @v_fneg_rcp_multi_use_fneg_f16(half %a, half %c) #0 {
 ; sin tests
 ; --------------------------------------------------------------------------------
 
-define half @v_fneg_amdgcn_sin_f16(half %a) #0 {
+define half @v_fneg_amdgcn_sin_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_amdgcn_sin_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -81,7 +81,7 @@ define half @v_fneg_amdgcn_sin_f16(half %a) #0 {
 ; vintrp tests
 ; --------------------------------------------------------------------------------
 
-define { float, float } @v_fneg_interp_p1_f16(float %a, float %b) #0 {
+define { float, float } @v_fneg_interp_p1_f16(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_interp_p1_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -100,7 +100,7 @@ define { float, float } @v_fneg_interp_p1_f16(float %a, float %b) #0 {
   ret { float, float } %insert.1
 }
 
-define { half, half } @v_fneg_interp_p2_f16(float %a, float %b) #0 {
+define { half, half } @v_fneg_interp_p2_f16(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_interp_p2_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -125,7 +125,7 @@ define { half, half } @v_fneg_interp_p2_f16(float %a, float %b) #0 {
 ; --------------------------------------------------------------------------------
 
 ; FIXME: Legalization/promote is broken
-define half @v_fneg_arithmetic_fence_f16(half %a) #0 {
+define half @v_fneg_arithmetic_fence_f16(half %a) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_arithmetic_fence_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    ;ARITH_FENCE
@@ -137,7 +137,7 @@ define half @v_fneg_arithmetic_fence_f16(half %a) #0 {
   ret half %fneg
 }
 
-define half @v_fneg_arithmetic_fence_fmul_f16(half %a, half %b) #0 {
+define half @v_fneg_arithmetic_fence_fmul_f16(half %a, half %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GCN-LABEL: v_fneg_arithmetic_fence_fmul_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -151,17 +151,11 @@ define half @v_fneg_arithmetic_fence_fmul_f16(half %a, half %b) #0 {
   ret half %fneg
 }
 
-declare half @llvm.amdgcn.rcp.f16(half) #1
-declare half @llvm.amdgcn.sin.f16(half) #1
-declare half @llvm.arithmetic.fence.f16(half) #1
-declare float @llvm.amdgcn.interp.p1.f16(float, i32, i32, i1, i32) #0
-declare half @llvm.amdgcn.interp.p2.f16(float, float, i32, i32, i1, i32) #0
-
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "unsafe-fp-math"="true" }
-attributes #3 = { nounwind "no-signed-zeros-fp-math"="true" }
-attributes #4 = { nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+declare half @llvm.amdgcn.rcp.f16(half) nounwind readnone
+declare half @llvm.amdgcn.sin.f16(half) nounwind readnone
+declare half @llvm.arithmetic.fence.f16(half) nounwind readnone
+declare float @llvm.amdgcn.interp.p1.f16(float, i32, i32, i1, i32) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+declare half @llvm.amdgcn.interp.p2.f16(float, float, i32, i32, i1, i32) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign"
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN-NSZ: {{.*}}
 ; GCN-SAFE: {{.*}}

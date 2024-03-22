@@ -4,7 +4,7 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9 %s
 
 
-define amdgpu_kernel void @s_usubo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %b) #0 {
+define amdgpu_kernel void @s_usubo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %b) nounwind {
 ; SI-LABEL: s_usubo_i64_zext:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -62,7 +62,7 @@ define amdgpu_kernel void @s_usubo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
-  %usub = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %a, i64 %b) #0
+  %usub = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %a, i64 %b) nounwind
   %val = extractvalue { i64, i1 } %usub, 0
   %carry = extractvalue { i64, i1 } %usub, 1
   %ext = zext i1 %carry to i64
@@ -72,7 +72,7 @@ define amdgpu_kernel void @s_usubo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %
 }
 
 ; FIXME: Could do scalar
-define amdgpu_kernel void @s_usubo_i32(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @s_usubo_i32(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i32 %a, i32 %b) nounwind {
 ; SI-LABEL: s_usubo_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -129,7 +129,7 @@ define amdgpu_kernel void @s_usubo_i32(ptr addrspace(1) %out, ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_usubo_i32(ptr addrspace(1) %out, ptr addrspace(1) %carryout, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
+define amdgpu_kernel void @v_usubo_i32(ptr addrspace(1) %out, ptr addrspace(1) %carryout, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) nounwind {
 ; SI-LABEL: v_usubo_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -207,7 +207,7 @@ define amdgpu_kernel void @v_usubo_i32(ptr addrspace(1) %out, ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_usubo_i32_novcc(ptr addrspace(1) %out, ptr addrspace(1) %carryout, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
+define amdgpu_kernel void @v_usubo_i32_novcc(ptr addrspace(1) %out, ptr addrspace(1) %carryout, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) nounwind {
 ; SI-LABEL: v_usubo_i32_novcc:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -293,12 +293,12 @@ define amdgpu_kernel void @v_usubo_i32_novcc(ptr addrspace(1) %out, ptr addrspac
   %val = extractvalue { i32, i1 } %uadd, 0
   %carry = extractvalue { i32, i1 } %uadd, 1
   store volatile i32 %val, ptr addrspace(1) %out, align 4
-  call void asm sideeffect "", "~{vcc}"() #0
+  call void asm sideeffect "", "~{vcc}"() nounwind
   store volatile i1 %carry, ptr addrspace(1) %carryout
   ret void
 }
 
-define amdgpu_kernel void @s_usubo_i64(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i64 %a, i64 %b) #0 {
+define amdgpu_kernel void @s_usubo_i64(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i64 %a, i64 %b) nounwind {
 ; SI-LABEL: s_usubo_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -367,7 +367,7 @@ define amdgpu_kernel void @s_usubo_i64(ptr addrspace(1) %out, ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_usubo_i64(ptr addrspace(1) %out, ptr addrspace(1) %carryout, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
+define amdgpu_kernel void @v_usubo_i64(ptr addrspace(1) %out, ptr addrspace(1) %carryout, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) nounwind {
 ; SI-LABEL: v_usubo_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -451,7 +451,7 @@ define amdgpu_kernel void @v_usubo_i64(ptr addrspace(1) %out, ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_usubo_i16(ptr addrspace(1) %out, ptr addrspace(1) %carryout, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
+define amdgpu_kernel void @v_usubo_i16(ptr addrspace(1) %out, ptr addrspace(1) %carryout, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) nounwind {
 ; SI-LABEL: v_usubo_i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -615,7 +615,7 @@ define amdgpu_kernel void @v_usubo_v2i32(ptr addrspace(1) %out, ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @s_usubo_clamp_bit(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @s_usubo_clamp_bit(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i32 %a, i32 %b) nounwind {
 ; SI-LABEL: s_usubo_clamp_bit:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xd
@@ -704,7 +704,7 @@ exit:
 }
 
 
-define amdgpu_kernel void @v_usubo_clamp_bit(ptr addrspace(1) %out, ptr addrspace(1) %carryout, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
+define amdgpu_kernel void @v_usubo_clamp_bit(ptr addrspace(1) %out, ptr addrspace(1) %carryout, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) nounwind {
 ; SI-LABEL: v_usubo_clamp_bit:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x9
@@ -809,11 +809,8 @@ exit:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare { i16, i1 } @llvm.usub.with.overflow.i16(i16, i16) #1
-declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32) #1
-declare { i64, i1 } @llvm.usub.with.overflow.i64(i64, i64) #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare { i16, i1 } @llvm.usub.with.overflow.i16(i16, i16) nounwind readnone
+declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32) nounwind readnone
+declare { i64, i1 } @llvm.usub.with.overflow.i64(i64, i64) nounwind readnone
 declare { <2 x i32>, <2 x i1> } @llvm.usub.with.overflow.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

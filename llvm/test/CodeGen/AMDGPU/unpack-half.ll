@@ -8,7 +8,7 @@
 ; CHECK-LABEL: {{^}}main:
 ; CHECK: v_cvt_f32_f16
 
-define amdgpu_gs void @main(i32 inreg %arg) local_unnamed_addr #0 {
+define amdgpu_gs void @main(i32 inreg %arg) local_unnamed_addr nounwind {
 .entry:
   %tmp = load volatile float, ptr addrspace(1) undef
   %tmp1 = bitcast float %tmp to i32
@@ -22,5 +22,3 @@ define amdgpu_gs void @main(i32 inreg %arg) local_unnamed_addr #0 {
   store volatile i32 %tmp6, ptr addrspace(1) undef
   ret void
 }
-
-attributes #0 = { nounwind }

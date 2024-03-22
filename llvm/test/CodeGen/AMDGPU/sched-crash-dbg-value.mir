@@ -11,7 +11,7 @@
 
   @sched_dbg_value_crash.tmp6 = internal unnamed_addr addrspace(3) global [256 x [16 x i8]] undef, align 16
 
-  define amdgpu_kernel void @sched_dbg_value_crash(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture readonly %arg1, ptr addrspace(1) nocapture readonly %arg2, ptr addrspace(1) nocapture readonly %arg3, ptr addrspace(1) nocapture %arg4) local_unnamed_addr #2 {
+  define amdgpu_kernel void @sched_dbg_value_crash(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture readonly %arg1, ptr addrspace(1) nocapture readonly %arg2, ptr addrspace(1) nocapture readonly %arg3, ptr addrspace(1) nocapture %arg4) local_unnamed_addr convergent nounwind "amdgpu-dispatch-ptr" "amdgpu-flat-scratch" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "target-cpu"="gfx900" {
   bb:
     %0 = getelementptr i32, ptr addrspace(1) %arg1, i64 0, !amdgpu.uniform !3, !amdgpu.noclobber !3
     %tmp5 = alloca %struct.wombat, align 16, addrspace(5)
@@ -33,7 +33,7 @@
     %16 = add i32 %15, %11
     %17 = getelementptr inbounds [256 x [16 x i8]], ptr addrspace(3) @sched_dbg_value_crash.tmp6, i32 0, i32 %16
     %tmp7 = load i64, ptr addrspace(4) null, align 536870912
-    %tmp8 = tail call i32 @llvm.amdgcn.workitem.id.x() #3, !range !4
+    %tmp8 = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind, !range !4
     %tmp9 = zext i32 %tmp8 to i64
     %tmp10 = add i64 %tmp7, %tmp9
     %tmp11 = shl i64 %tmp10, 32
@@ -49,7 +49,7 @@
     %tmp21 = getelementptr inbounds i8, ptr addrspace(1) %arg, i64 %tmp20
     %tmp22 = bitcast ptr addrspace(1) %tmp21 to ptr addrspace(1)
     %tmp23 = bitcast ptr addrspace(5) %tmp5 to ptr addrspace(5)
-    call void @llvm.lifetime.start.p5(i64 144, ptr addrspace(5) nonnull %tmp23) #3
+    call void @llvm.lifetime.start.p5(i64 144, ptr addrspace(5) nonnull %tmp23) nounwind
     %tmp24 = getelementptr inbounds %struct.wombat, ptr addrspace(5) %tmp5, i32 0, i32 6
     %tmp25 = getelementptr i32, ptr addrspace(1) %arg1, i64 3, !amdgpu.uniform !3, !amdgpu.noclobber !3
     %tmp26 = load i32, ptr addrspace(1) %tmp25, align 4
@@ -115,7 +115,7 @@
     %tmp85 = fadd fast float %tmp84, undef
     %tmp86 = fmul float %tmp82, %tmp82
     %tmp87 = fdiv float 1.000000e+00, %tmp86
-    tail call void @llvm.dbg.value(metadata float %tmp87, metadata !5, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #3, !dbg !8
+    tail call void @llvm.dbg.value(metadata float %tmp87, metadata !5, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) nounwind, !dbg !8
     %tmp88 = fmul float %tmp82, 0.000000e+00
     %tmp89 = fsub fast float %tmp85, %tmp88
     %tmp90 = fdiv float %tmp89, %tmp86
@@ -129,31 +129,26 @@
     %extractelement = extractelement <2 x float> %fadd, i64 1
     %tmp96 = fsub float %extractelement, %tmp95
     %tmp97 = getelementptr inbounds %struct.wombat, ptr addrspace(5) %tmp5, i32 0, i32 8, i32 1
-    call void @func(float %tmp96, i64 0, ptr addrspace(5) nonnull %tmp97) #3
+    call void @func(float %tmp96, i64 0, ptr addrspace(5) nonnull %tmp97) nounwind
     %tmp984 = bitcast ptr addrspace(3) %17 to ptr addrspace(3)
     %tmp99 = getelementptr inbounds %struct.snork, ptr addrspace(1) %arg4, i64 %tmp12, i32 8, i32 1, i64 0
     call void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) %tmp99, ptr addrspace(3) %tmp984, i64 16, i32 16, i1 false)
-    call void @llvm.lifetime.end.p5(i64 144, ptr addrspace(5) nonnull %tmp23) #3
+    call void @llvm.lifetime.end.p5(i64 144, ptr addrspace(5) nonnull %tmp23) nounwind
     ret void
   }
 
   declare void @func(float, i64, ptr addrspace(5))
-  declare void @llvm.lifetime.start.p5(i64, ptr addrspace(5) nocapture) #0
-  declare float @llvm.fmuladd.f32(float, float, float) #1
-  declare void @llvm.lifetime.end.p5(i64, ptr addrspace(5) nocapture) #0
-  declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>) #1
-  declare i32 @llvm.amdgcn.workitem.id.x() #1
-  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-  declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #1
-  declare i32 @llvm.amdgcn.workitem.id.y() #1
-  declare i32 @llvm.amdgcn.workitem.id.z() #1
-  declare void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i32, i1) #0
-  declare void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(3) nocapture readonly, i64, i32, i1) #0
-
-  attributes #0 = { argmemonly nounwind }
-  attributes #1 = { nounwind readnone speculatable }
-  attributes #2 = { convergent nounwind "amdgpu-dispatch-ptr" "amdgpu-flat-scratch" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "target-cpu"="gfx900" }
-  attributes #3 = { nounwind }
+  declare void @llvm.lifetime.start.p5(i64, ptr addrspace(5) nocapture) argmemonly nounwind
+  declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone speculatable
+  declare void @llvm.lifetime.end.p5(i64, ptr addrspace(5) nocapture) argmemonly nounwind
+  declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>) nounwind readnone speculatable
+  declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone speculatable
+  declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() nounwind readnone speculatable
+  declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone speculatable
+  declare i32 @llvm.amdgcn.workitem.id.z() nounwind readnone speculatable
+  declare void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i32, i1) argmemonly nounwind
+  declare void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(3) nocapture readonly, i64, i32, i1) argmemonly nounwind
 
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2}

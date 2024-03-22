@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX1011,GFX10 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GCN,GFX1011,GFX11 %s
 
-define float @v_constrained_fpext_f16_to_f32_fpexcept_strict(half %arg) #0 {
+define float @v_constrained_fpext_f16_to_f32_fpexcept_strict(half %arg) strictfp {
 ; SI-LABEL: v_constrained_fpext_f16_to_f32_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -29,7 +29,7 @@ define float @v_constrained_fpext_f16_to_f32_fpexcept_strict(half %arg) #0 {
   ret float %result
 }
 
-define <2 x float> @v_constrained_fpext_v2f16_to_v2f32_fpexcept_strict(<2 x half> %arg) #0 {
+define <2 x float> @v_constrained_fpext_v2f16_to_v2f32_fpexcept_strict(<2 x half> %arg) strictfp {
 ; SI-LABEL: v_constrained_fpext_v2f16_to_v2f32_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -68,7 +68,7 @@ define <2 x float> @v_constrained_fpext_v2f16_to_v2f32_fpexcept_strict(<2 x half
   ret <2 x float>   %result
 }
 
-define <3 x float> @v_constrained_fpext_v3f16_to_v3f32_fpexcept_strict(<3 x half> %arg) #0 {
+define <3 x float> @v_constrained_fpext_v3f16_to_v3f32_fpexcept_strict(<3 x half> %arg) strictfp {
 ; SI-LABEL: v_constrained_fpext_v3f16_to_v3f32_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -116,7 +116,7 @@ define <3 x float> @v_constrained_fpext_v3f16_to_v3f32_fpexcept_strict(<3 x half
   ret <3 x float>   %result
 }
 
-define double @v_constrained_fpext_f32_to_f64_fpexcept_strict(float %arg) #0 {
+define double @v_constrained_fpext_f32_to_f64_fpexcept_strict(float %arg) strictfp {
 ; GCN-LABEL: v_constrained_fpext_f32_to_f64_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -126,7 +126,7 @@ define double @v_constrained_fpext_f32_to_f64_fpexcept_strict(float %arg) #0 {
   ret double %result
 }
 
-define <2 x double> @v_constrained_fpext_v2f32_to_v2f64_fpexcept_strict(<2 x float> %arg) #0 {
+define <2 x double> @v_constrained_fpext_v2f32_to_v2f64_fpexcept_strict(<2 x float> %arg) strictfp {
 ; GCN-LABEL: v_constrained_fpext_v2f32_to_v2f64_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -138,7 +138,7 @@ define <2 x double> @v_constrained_fpext_v2f32_to_v2f64_fpexcept_strict(<2 x flo
   ret <2 x double>   %result
 }
 
-define <3 x double> @v_constrained_fpext_v3f32_to_v3f64_fpexcept_strict(<3 x float> %arg) #0 {
+define <3 x double> @v_constrained_fpext_v3f32_to_v3f64_fpexcept_strict(<3 x float> %arg) strictfp {
 ; SI-LABEL: v_constrained_fpext_v3f32_to_v3f64_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -172,7 +172,7 @@ define <3 x double> @v_constrained_fpext_v3f32_to_v3f64_fpexcept_strict(<3 x flo
   ret <3 x double>   %result
 }
 
-define double @v_constrained_fpext_f16_to_f64_fpexcept_strict(half %arg) #0 {
+define double @v_constrained_fpext_f16_to_f64_fpexcept_strict(half %arg) strictfp {
 ; SI-LABEL: v_constrained_fpext_f16_to_f64_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -199,7 +199,7 @@ define double @v_constrained_fpext_f16_to_f64_fpexcept_strict(half %arg) #0 {
   ret double %result
 }
 
-define <2 x double> @v_constrained_fpext_v2f16_to_v2f64_fpexcept_strict(<2 x half> %arg) #0 {
+define <2 x double> @v_constrained_fpext_v2f16_to_v2f64_fpexcept_strict(<2 x half> %arg) strictfp {
 ; SI-LABEL: v_constrained_fpext_v2f16_to_v2f64_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -244,7 +244,7 @@ define <2 x double> @v_constrained_fpext_v2f16_to_v2f64_fpexcept_strict(<2 x hal
   ret <2 x double>   %result
 }
 
-define <3 x double> @v_constrained_fpext_v3f16_to_v2f64_fpexcept_strict(<3 x half> %arg) #0 {
+define <3 x double> @v_constrained_fpext_v3f16_to_v2f64_fpexcept_strict(<3 x half> %arg) strictfp {
 ; SI-LABEL: v_constrained_fpext_v3f16_to_v2f64_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -299,7 +299,7 @@ define <3 x double> @v_constrained_fpext_v3f16_to_v2f64_fpexcept_strict(<3 x hal
   ret <3 x double>   %result
 }
 
-define float @v_constrained_fneg_fpext_f16_to_f32_fpexcept_strict(half %arg) #0 {
+define float @v_constrained_fneg_fpext_f16_to_f32_fpexcept_strict(half %arg) strictfp {
 ; SI-LABEL: v_constrained_fneg_fpext_f16_to_f32_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -327,7 +327,7 @@ define float @v_constrained_fneg_fpext_f16_to_f32_fpexcept_strict(half %arg) #0 
   ret float %neg.result
 }
 
-define float @v_constrained_fpext_fneg_f16_to_f32_fpexcept_strict(half %arg) #0 {
+define float @v_constrained_fpext_fneg_f16_to_f32_fpexcept_strict(half %arg) strictfp {
 ; SI-LABEL: v_constrained_fpext_fneg_f16_to_f32_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -353,7 +353,7 @@ define float @v_constrained_fpext_fneg_f16_to_f32_fpexcept_strict(half %arg) #0 
   ret float %result
 }
 
-define double @v_constrained_fpext_fneg_f32_to_f64_fpexcept_strict(float %arg) #0 {
+define double @v_constrained_fpext_fneg_f32_to_f64_fpexcept_strict(float %arg) strictfp {
 ; GCN-LABEL: v_constrained_fpext_fneg_f32_to_f64_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -364,7 +364,7 @@ define double @v_constrained_fpext_fneg_f32_to_f64_fpexcept_strict(float %arg) #
   ret double %result
 }
 
-define double @v_constrained_fneg_fpext_f32_to_f64_fpexcept_strict(float %arg) #0 {
+define double @v_constrained_fneg_fpext_f32_to_f64_fpexcept_strict(float %arg) strictfp {
 ; GCN-LABEL: v_constrained_fneg_fpext_f32_to_f64_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -376,7 +376,7 @@ define double @v_constrained_fneg_fpext_f32_to_f64_fpexcept_strict(float %arg) #
   ret double %neg.result
 }
 
-define float @v_constrained_fpext_f16_to_f32_noabi(ptr addrspace(1) %ptr) #0 {
+define float @v_constrained_fpext_f16_to_f32_noabi(ptr addrspace(1) %ptr) strictfp {
 ; SI-LABEL: v_constrained_fpext_f16_to_f32_noabi:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -425,7 +425,7 @@ define float @v_constrained_fpext_f16_to_f32_noabi(ptr addrspace(1) %ptr) #0 {
   ret float %result
 }
 
-define <2 x float> @v_constrained_fpext_v2f16_to_v2f32_noabi(ptr addrspace(1) %ptr) #0 {
+define <2 x float> @v_constrained_fpext_v2f16_to_v2f32_noabi(ptr addrspace(1) %ptr) strictfp {
 ; SI-LABEL: v_constrained_fpext_v2f16_to_v2f32_noabi:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -481,17 +481,14 @@ define <2 x float> @v_constrained_fpext_v2f16_to_v2f32_noabi(ptr addrspace(1) %p
   ret <2 x float> %result
 }
 
-declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata) #1
-declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(<2 x float>, metadata) #1
-declare <3 x double> @llvm.experimental.constrained.fpext.v3f64.v3f32(<3 x float>, metadata) #1
+declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata) nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
+declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(<2 x float>, metadata) nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
+declare <3 x double> @llvm.experimental.constrained.fpext.v3f64.v3f32(<3 x float>, metadata) nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
 
-declare double @llvm.experimental.constrained.fpext.f64.f16(half, metadata) #1
-declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f16(<2 x half>, metadata) #1
-declare <3 x double> @llvm.experimental.constrained.fpext.v3f64.v3f16(<3 x half>, metadata) #1
+declare double @llvm.experimental.constrained.fpext.f64.f16(half, metadata) nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
+declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f16(<2 x half>, metadata) nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
+declare <3 x double> @llvm.experimental.constrained.fpext.v3f64.v3f16(<3 x half>, metadata) nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
 
-declare float @llvm.experimental.constrained.fpext.f32.f16(half, metadata) #1
-declare <2 x float> @llvm.experimental.constrained.fpext.v2f32.v2f16(<2 x half>, metadata) #1
-declare <3 x float> @llvm.experimental.constrained.fpext.v3f32.v3f16(<3 x half>, metadata) #1
-
-attributes #0 = { strictfp }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+declare float @llvm.experimental.constrained.fpext.f32.f16(half, metadata) nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
+declare <2 x float> @llvm.experimental.constrained.fpext.v2f32.v2f16(<2 x half>, metadata) nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
+declare <3 x float> @llvm.experimental.constrained.fpext.v3f32.v3f16(<3 x half>, metadata) nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)

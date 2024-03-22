@@ -79,7 +79,7 @@ define amdgpu_kernel void @gds_global_align(ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_kernel void @gds_global_align_plus_attr(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @gds_global_align_plus_attr(ptr addrspace(1) %out) "amdgpu-gds-size"="1024" {
 ; GCN-LABEL: gds_global_align_plus_attr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, 5
@@ -103,7 +103,7 @@ define amdgpu_kernel void @gds_global_align_plus_attr(ptr addrspace(1) %out) #0 
 @small.gds = internal addrspace(2) global i8 undef, align 1
 @gds.external = external unnamed_addr addrspace(3) global [0 x i32], align 4
 
-define amdgpu_kernel void @gds_extern_align(ptr addrspace(1) %out, ptr addrspace(2) %gds.arg) #0 {
+define amdgpu_kernel void @gds_extern_align(ptr addrspace(1) %out, ptr addrspace(2) %gds.arg) "amdgpu-gds-size"="1024" {
 ; GCN-LABEL: gds_extern_align:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x8
@@ -124,5 +124,3 @@ define amdgpu_kernel void @gds_extern_align(ptr addrspace(1) %out, ptr addrspace
   %val0 = atomicrmw add ptr addrspace(2) %gep.gds0, i32 5 acq_rel
   ret void
 }
-
-attributes #0 = { "amdgpu-gds-size"="1024" }

@@ -12,7 +12,7 @@
 
 ; GCN: flat_store_dword
 ; GCN: s_endpgm
-define amdgpu_kernel void @test_debug_value(ptr addrspace(1) nocapture %globalptr_arg) #0 !dbg !4 {
+define amdgpu_kernel void @test_debug_value(ptr addrspace(1) nocapture %globalptr_arg) nounwind !dbg !4 {
 entry:
   tail call void @llvm.dbg.value(metadata ptr addrspace(1) %globalptr_arg, metadata !10, metadata !13), !dbg !14
   store i32 123, ptr addrspace(1) %globalptr_arg, align 4, !dbg !14
@@ -27,16 +27,13 @@ entry:
 ; NOOPT-NEXT: s_endpgm
 
 ; OPT: s_endpgm
-define amdgpu_kernel void @only_undef_dbg_value() #1 {
+define amdgpu_kernel void @only_undef_dbg_value() nounwind readnone {
 bb:
   call void @llvm.dbg.value(metadata <4 x float> undef, metadata !10, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !14
   ret void, !dbg !14
 }
 
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind  }
-attributes #1 = { nounwind readnone }
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!11, !12, !15}

@@ -137,7 +137,7 @@ entry:
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @extract_neg_offset_vgpr(ptr addrspace(1) %out) {
 entry:
-  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %id = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %index = add i32 %id, -512
   %value = extractelement <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>, i32 %index
   store i32 %value, ptr addrspace(1) %out
@@ -293,7 +293,7 @@ entry:
 ; GCN-COUNT-4:  buffer_store_dwordx4
 define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 entry:
-  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %id = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %index = add i32 %id, -512
   %value = insertelement <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>, i32 33, i32 %index
   store <16 x i32> %value, ptr addrspace(1) %out
@@ -307,7 +307,7 @@ entry:
 ; GCN-COUNT-4:  buffer_store_dwordx4
 define amdgpu_kernel void @insert_neg_inline_offset_vgpr(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 entry:
-  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %id = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %index = add i32 %id, -16
   %value = insertelement <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>, i32 500, i32 %index
   store <16 x i32> %value, ptr addrspace(1) %out
@@ -326,9 +326,9 @@ entry:
 
 ; GCN: buffer_store_dword [[RESULT0]]
 ; GCN: buffer_store_dword [[RESULT1]]
-define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %in) nounwind {
 entry:
-  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %id = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %id.ext = zext i32 %id to i64
   %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %id.ext
   %idx0 = load volatile i32, ptr addrspace(1) %gep
@@ -355,7 +355,7 @@ bb2:
 
 
 ; GCN-LABEL: {{^}}insert_adjacent_blocks:
-define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) #0 {
+define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) nounwind {
 bb:
   %tmp = icmp eq i32 %arg, 0
   br i1 %tmp, label %bb1, label %bb4
@@ -363,13 +363,13 @@ bb:
 bb1:                                              ; preds = %bb
   %tmp2 = load volatile <4 x float>, ptr addrspace(1) undef
   %tmp3 = insertelement <4 x float> %tmp2, float %val0, i32 undef
-  call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp3) #0 ; Prevent block optimize out
+  call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp3) nounwind ; Prevent block optimize out
   br label %bb7
 
 bb4:                                              ; preds = %bb
   %tmp5 = load volatile <4 x float>, ptr addrspace(1) undef
   %tmp6 = insertelement <4 x float> %tmp5, float %val0, i32 undef
-  call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp6) #0 ; Prevent block optimize out
+  call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp6) nounwind ; Prevent block optimize out
   br label %bb7
 
 bb7:                                              ; preds = %bb4, %bb1
@@ -404,7 +404,7 @@ bb7:                                              ; preds = %bb4, %bb1
 ; GCN: ds_write_b32
 ; GCN: ds_write_b32
 ; GCN: s_endpgm
-define amdgpu_kernel void @multi_same_block(i32 %arg) #0 {
+define amdgpu_kernel void @multi_same_block(i32 %arg) nounwind {
 bb:
   %tmp1 = add i32 %arg, -16
   %tmp2 = insertelement <9 x float> <float 1.700000e+01, float 1.800000e+01, float 1.900000e+01, float 2.000000e+01, float 2.100000e+01, float 2.200000e+01, float 2.300000e+01, float 2.400000e+01, float 2.500000e+01>, float 4.000000e+00, i32 %tmp1
@@ -523,7 +523,7 @@ define amdgpu_kernel void @insertelement_v16f32_or_index(ptr addrspace(1) %out, 
 ; GCN: s_mov_b64 exec,
 ; GCN: s_cbranch_execnz [[BB2]]
 
-define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) #0 {
+define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) nounwind {
 bb:
   br label %bb2
 
@@ -543,9 +543,5 @@ bb8:                                              ; preds = %bb2
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare void @llvm.amdgcn.s.barrier() #2
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind convergent }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare void @llvm.amdgcn.s.barrier() nounwind convergent

@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX803 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-promote-alloca -mattr=+enable-flat-scratch -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX900-FLATSCR %s
 
-define <2 x i16> @load_local_lo_hi_v2i16_multi_use_lo(ptr addrspace(3) noalias %in) #0 {
+define <2 x i16> @load_local_lo_hi_v2i16_multi_use_lo(ptr addrspace(3) noalias %in) nounwind {
 ; GFX900-LABEL: load_local_lo_hi_v2i16_multi_use_lo:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -71,7 +71,7 @@ entry:
   ret <2 x i16> %build1
 }
 
-define <2 x i16> @load_local_lo_hi_v2i16_multi_use_hi(ptr addrspace(3) noalias %in) #0 {
+define <2 x i16> @load_local_lo_hi_v2i16_multi_use_hi(ptr addrspace(3) noalias %in) nounwind {
 ; GFX900-LABEL: load_local_lo_hi_v2i16_multi_use_hi:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -138,7 +138,7 @@ entry:
   ret <2 x i16> %build1
 }
 
-define <2 x i16> @load_local_lo_hi_v2i16_multi_use_lohi(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out0, ptr addrspace(3) noalias %out1) #0 {
+define <2 x i16> @load_local_lo_hi_v2i16_multi_use_lohi(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out0, ptr addrspace(3) noalias %out1) nounwind {
 ; GFX900-LABEL: load_local_lo_hi_v2i16_multi_use_lohi:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -206,7 +206,7 @@ entry:
   ret <2 x i16> %build1
 }
 
-define <2 x i16> @load_local_hi_v2i16_undeflo(ptr addrspace(3) %in) #0 {
+define <2 x i16> @load_local_hi_v2i16_undeflo(ptr addrspace(3) %in) nounwind {
 ; GFX900-LABEL: load_local_hi_v2i16_undeflo:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -243,7 +243,7 @@ entry:
   ret <2 x i16> %build
 }
 
-define <2 x i16> @load_local_hi_v2i16_reglo(ptr addrspace(3) %in, i16 %reg) #0 {
+define <2 x i16> @load_local_hi_v2i16_reglo(ptr addrspace(3) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_local_hi_v2i16_reglo:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -285,7 +285,7 @@ entry:
   ret <2 x i16> %build1
 }
 
-define void @load_local_hi_v2i16_reglo_vreg(ptr addrspace(3) %in, i16 %reg) #0 {
+define void @load_local_hi_v2i16_reglo_vreg(ptr addrspace(3) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_local_hi_v2i16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -334,7 +334,7 @@ entry:
   ret void
 }
 
-define <2 x i16> @load_local_hi_v2i16_zerolo(ptr addrspace(3) %in) #0 {
+define <2 x i16> @load_local_hi_v2i16_zerolo(ptr addrspace(3) %in) nounwind {
 ; GFX900-LABEL: load_local_hi_v2i16_zerolo:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -376,7 +376,7 @@ entry:
 }
 
 ; FIXME: Remove m0 initialization
-define i32 @load_local_hi_v2i16_zerolo_shift(ptr addrspace(3) %in) #0 {
+define i32 @load_local_hi_v2i16_zerolo_shift(ptr addrspace(3) %in) nounwind {
 ; GFX900-LABEL: load_local_hi_v2i16_zerolo_shift:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -416,7 +416,7 @@ entry:
   ret i32 %shift
 }
 
-define void @load_local_hi_v2f16_reglo_vreg(ptr addrspace(3) %in, half %reg) #0 {
+define void @load_local_hi_v2f16_reglo_vreg(ptr addrspace(3) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_local_hi_v2f16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -465,7 +465,7 @@ entry:
   ret void
 }
 
-define void @load_local_hi_v2i16_reglo_vreg_zexti8(ptr addrspace(3) %in, i16 %reg) #0 {
+define void @load_local_hi_v2i16_reglo_vreg_zexti8(ptr addrspace(3) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_local_hi_v2i16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -515,7 +515,7 @@ entry:
   ret void
 }
 
-define void @load_local_hi_v2i16_reglo_vreg_sexti8(ptr addrspace(3) %in, i16 %reg) #0 {
+define void @load_local_hi_v2i16_reglo_vreg_sexti8(ptr addrspace(3) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_local_hi_v2i16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -565,7 +565,7 @@ entry:
   ret void
 }
 
-define void @load_local_hi_v2f16_reglo_vreg_zexti8(ptr addrspace(3) %in, half %reg) #0 {
+define void @load_local_hi_v2f16_reglo_vreg_zexti8(ptr addrspace(3) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_local_hi_v2f16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -617,7 +617,7 @@ entry:
   ret void
 }
 
-define void @load_local_hi_v2f16_reglo_vreg_sexti8(ptr addrspace(3) %in, half %reg) #0 {
+define void @load_local_hi_v2f16_reglo_vreg_sexti8(ptr addrspace(3) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_local_hi_v2f16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -669,7 +669,7 @@ entry:
   ret void
 }
 
-define void @load_global_hi_v2i16_reglo_vreg(ptr addrspace(1) %in, i16 %reg) #0 {
+define void @load_global_hi_v2i16_reglo_vreg(ptr addrspace(1) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_global_hi_v2i16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -720,7 +720,7 @@ entry:
   ret void
 }
 
-define void @load_global_hi_v2f16_reglo_vreg(ptr addrspace(1) %in, half %reg) #0 {
+define void @load_global_hi_v2f16_reglo_vreg(ptr addrspace(1) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_global_hi_v2f16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -771,7 +771,7 @@ entry:
   ret void
 }
 
-define void @load_global_hi_v2i16_reglo_vreg_zexti8(ptr addrspace(1) %in, i16 %reg) #0 {
+define void @load_global_hi_v2i16_reglo_vreg_zexti8(ptr addrspace(1) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_global_hi_v2i16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -823,7 +823,7 @@ entry:
   ret void
 }
 
-define void @load_global_hi_v2i16_reglo_vreg_sexti8(ptr addrspace(1) %in, i16 %reg) #0 {
+define void @load_global_hi_v2i16_reglo_vreg_sexti8(ptr addrspace(1) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_global_hi_v2i16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -875,7 +875,7 @@ entry:
   ret void
 }
 
-define void @load_global_hi_v2f16_reglo_vreg_sexti8(ptr addrspace(1) %in, half %reg) #0 {
+define void @load_global_hi_v2f16_reglo_vreg_sexti8(ptr addrspace(1) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_global_hi_v2f16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -928,7 +928,7 @@ entry:
   ret void
 }
 
-define void @load_global_hi_v2f16_reglo_vreg_zexti8(ptr addrspace(1) %in, half %reg) #0 {
+define void @load_global_hi_v2f16_reglo_vreg_zexti8(ptr addrspace(1) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_global_hi_v2f16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -981,7 +981,7 @@ entry:
   ret void
 }
 
-define void @load_flat_hi_v2i16_reglo_vreg(ptr %in, i16 %reg) #0 {
+define void @load_flat_hi_v2i16_reglo_vreg(ptr %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_flat_hi_v2i16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1029,7 +1029,7 @@ entry:
   ret void
 }
 
-define void @load_flat_hi_v2f16_reglo_vreg(ptr %in, half %reg) #0 {
+define void @load_flat_hi_v2f16_reglo_vreg(ptr %in, half %reg) nounwind {
 ; GFX900-LABEL: load_flat_hi_v2f16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1077,7 +1077,7 @@ entry:
   ret void
 }
 
-define void @load_flat_hi_v2i16_reglo_vreg_zexti8(ptr %in, i16 %reg) #0 {
+define void @load_flat_hi_v2i16_reglo_vreg_zexti8(ptr %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_flat_hi_v2i16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1126,7 +1126,7 @@ entry:
   ret void
 }
 
-define void @load_flat_hi_v2i16_reglo_vreg_sexti8(ptr %in, i16 %reg) #0 {
+define void @load_flat_hi_v2i16_reglo_vreg_sexti8(ptr %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_flat_hi_v2i16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1175,7 +1175,7 @@ entry:
   ret void
 }
 
-define void @load_flat_hi_v2f16_reglo_vreg_zexti8(ptr %in, half %reg) #0 {
+define void @load_flat_hi_v2f16_reglo_vreg_zexti8(ptr %in, half %reg) nounwind {
 ; GFX900-LABEL: load_flat_hi_v2f16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1225,7 +1225,7 @@ entry:
   ret void
 }
 
-define void @load_flat_hi_v2f16_reglo_vreg_sexti8(ptr %in, half %reg) #0 {
+define void @load_flat_hi_v2f16_reglo_vreg_sexti8(ptr %in, half %reg) nounwind {
 ; GFX900-LABEL: load_flat_hi_v2f16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1275,7 +1275,7 @@ entry:
   ret void
 }
 
-define void @load_private_hi_v2i16_reglo_vreg(ptr addrspace(5) byval(i16) %in, i16 %reg) #0 {
+define void @load_private_hi_v2i16_reglo_vreg(ptr addrspace(5) byval(i16) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_private_hi_v2i16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1324,7 +1324,7 @@ entry:
   ret void
 }
 
-define void @load_private_hi_v2f16_reglo_vreg(ptr addrspace(5) byval(half) %in, half %reg) #0 {
+define void @load_private_hi_v2f16_reglo_vreg(ptr addrspace(5) byval(half) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_private_hi_v2f16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1373,7 +1373,7 @@ entry:
   ret void
 }
 
-define void @load_private_hi_v2i16_reglo_vreg_nooff(ptr addrspace(5) byval(i16) %in, i16 %reg) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_nooff(ptr addrspace(5) byval(i16) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_private_hi_v2i16_reglo_vreg_nooff:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1422,7 +1422,7 @@ entry:
   ret void
 }
 
-define void @load_private_hi_v2f16_reglo_vreg_nooff(ptr addrspace(5) %in, half %reg) #0 {
+define void @load_private_hi_v2f16_reglo_vreg_nooff(ptr addrspace(5) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_private_hi_v2f16_reglo_vreg_nooff:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1471,7 +1471,7 @@ entry:
   ret void
 }
 
-define void @load_private_hi_v2i16_reglo_vreg_zexti8(ptr addrspace(5) byval(i8) %in, i16 %reg) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_zexti8(ptr addrspace(5) byval(i8) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_private_hi_v2i16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1521,7 +1521,7 @@ entry:
   ret void
 }
 
-define void @load_private_hi_v2f16_reglo_vreg_zexti8(ptr addrspace(5) byval(i8) %in, half %reg) #0 {
+define void @load_private_hi_v2f16_reglo_vreg_zexti8(ptr addrspace(5) byval(i8) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_private_hi_v2f16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1572,7 +1572,7 @@ entry:
   ret void
 }
 
-define void @load_private_hi_v2f16_reglo_vreg_sexti8(ptr addrspace(5) byval(i8) %in, half %reg) #0 {
+define void @load_private_hi_v2f16_reglo_vreg_sexti8(ptr addrspace(5) byval(i8) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_private_hi_v2f16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1623,7 +1623,7 @@ entry:
   ret void
 }
 
-define void @load_private_hi_v2i16_reglo_vreg_sexti8(ptr addrspace(5) byval(i8) %in, i16 %reg) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_sexti8(ptr addrspace(5) byval(i8) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_private_hi_v2i16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1673,7 +1673,7 @@ entry:
   ret void
 }
 
-define void @load_private_hi_v2i16_reglo_vreg_nooff_zexti8(ptr addrspace(5) %in, i16 %reg) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_nooff_zexti8(ptr addrspace(5) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_private_hi_v2i16_reglo_vreg_nooff_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1723,7 +1723,7 @@ entry:
   ret void
 }
 
-define void @load_private_hi_v2i16_reglo_vreg_nooff_sexti8(ptr addrspace(5) %in, i16 %reg) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_nooff_sexti8(ptr addrspace(5) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_private_hi_v2i16_reglo_vreg_nooff_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1773,7 +1773,7 @@ entry:
   ret void
 }
 
-define void @load_private_hi_v2f16_reglo_vreg_nooff_zexti8(ptr addrspace(5) %in, half %reg) #0 {
+define void @load_private_hi_v2f16_reglo_vreg_nooff_zexti8(ptr addrspace(5) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_private_hi_v2f16_reglo_vreg_nooff_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1824,7 +1824,7 @@ entry:
   ret void
 }
 
-define void @load_constant_hi_v2i16_reglo_vreg(ptr addrspace(4) %in, i16 %reg) #0 {
+define void @load_constant_hi_v2i16_reglo_vreg(ptr addrspace(4) %in, i16 %reg) nounwind {
 ; GFX900-LABEL: load_constant_hi_v2i16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1875,7 +1875,7 @@ entry:
   ret void
 }
 
-define void @load_constant_hi_v2f16_reglo_vreg(ptr addrspace(4) %in, half %reg) #0 {
+define void @load_constant_hi_v2f16_reglo_vreg(ptr addrspace(4) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_constant_hi_v2f16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1926,7 +1926,7 @@ entry:
   ret void
 }
 
-define void @load_constant_hi_v2f16_reglo_vreg_sexti8(ptr addrspace(4) %in, half %reg) #0 {
+define void @load_constant_hi_v2f16_reglo_vreg_sexti8(ptr addrspace(4) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_constant_hi_v2f16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1979,7 +1979,7 @@ entry:
   ret void
 }
 
-define void @load_constant_hi_v2f16_reglo_vreg_zexti8(ptr addrspace(4) %in, half %reg) #0 {
+define void @load_constant_hi_v2f16_reglo_vreg_zexti8(ptr addrspace(4) %in, half %reg) nounwind {
 ; GFX900-LABEL: load_constant_hi_v2f16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2035,7 +2035,7 @@ entry:
 ; Local object gives known offset, so requires converting from offen
 ; to offset variant.
 
-define void @load_private_hi_v2i16_reglo_vreg_to_offset(i16 %reg, ptr addrspace(5) %obj0) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_to_offset(i16 %reg, ptr addrspace(5) %obj0) nounwind {
 ; GFX900-LABEL: load_private_hi_v2i16_reglo_vreg_to_offset:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2098,7 +2098,7 @@ entry:
   ret void
 }
 
-define void @load_private_hi_v2i16_reglo_vreg_sexti8_to_offset(i16 %reg, ptr addrspace(5) %obj0) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_sexti8_to_offset(i16 %reg, ptr addrspace(5) %obj0) nounwind {
 ; GFX900-LABEL: load_private_hi_v2i16_reglo_vreg_sexti8_to_offset:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2162,7 +2162,7 @@ entry:
   ret void
 }
 
-define void @load_private_hi_v2i16_reglo_vreg_zexti8_to_offset(i16 %reg, ptr addrspace(5) %obj0) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_zexti8_to_offset(i16 %reg, ptr addrspace(5) %obj0) nounwind {
 ; GFX900-LABEL: load_private_hi_v2i16_reglo_vreg_zexti8_to_offset:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2228,7 +2228,7 @@ entry:
 
 ; FIXME: Remove m0 init and waitcnt between reads
 ; FIXME: Is there a cost to using the extload over not?
-define <2 x i16> @load_local_v2i16_split_multi_chain(ptr addrspace(3) %in) #0 {
+define <2 x i16> @load_local_v2i16_split_multi_chain(ptr addrspace(3) %in) nounwind {
 ; GFX900-LABEL: load_local_v2i16_split_multi_chain:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2278,7 +2278,7 @@ entry:
   ret <2 x i16> %build1
 }
 
-define <2 x i16> @load_local_lo_hi_v2i16_samechain(ptr addrspace(3) %in) #0 {
+define <2 x i16> @load_local_lo_hi_v2i16_samechain(ptr addrspace(3) %in) nounwind {
 ; GFX900-LABEL: load_local_lo_hi_v2i16_samechain:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2330,7 +2330,7 @@ entry:
 }
 
 ; FIXME: Remove and
-define <2 x i16> @load_local_v2i16_broadcast(ptr addrspace(3) %in) #0 {
+define <2 x i16> @load_local_v2i16_broadcast(ptr addrspace(3) %in) nounwind {
 ; GFX900-LABEL: load_local_v2i16_broadcast:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2375,7 +2375,7 @@ entry:
   ret <2 x i16> %build1
 }
 
-define <2 x i16> @load_local_lo_hi_v2i16_side_effect(ptr addrspace(3) %in, ptr addrspace(3) %may.alias) #0 {
+define <2 x i16> @load_local_lo_hi_v2i16_side_effect(ptr addrspace(3) %in, ptr addrspace(3) %may.alias) nounwind {
 ; GFX900-LABEL: load_local_lo_hi_v2i16_side_effect:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2435,7 +2435,7 @@ entry:
 }
 
 ; FIXME: Remove waitcnt between reads
-define <2 x i16> @load_global_v2i16_split(ptr addrspace(1) %in) #0 {
+define <2 x i16> @load_global_v2i16_split(ptr addrspace(1) %in) nounwind {
 ; GFX900-LABEL: load_global_v2i16_split:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2489,7 +2489,7 @@ entry:
 }
 
 ; FIXME: Remove waitcnt between reads
-define <2 x i16> @load_flat_v2i16_split(ptr %in) #0 {
+define <2 x i16> @load_flat_v2i16_split(ptr %in) nounwind {
 ; GFX900-LABEL: load_flat_v2i16_split:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2544,7 +2544,7 @@ entry:
 }
 
 ; FIXME: Remove waitcnt between reads
-define <2 x i16> @load_constant_v2i16_split(ptr addrspace(4) %in) #0 {
+define <2 x i16> @load_constant_v2i16_split(ptr addrspace(4) %in) nounwind {
 ; GFX900-LABEL: load_constant_v2i16_split:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2597,7 +2597,7 @@ entry:
 
 ; FIXME: Remove m0 init and waitcnt between reads
 ; FIXME: Is there a cost to using the extload over not?
-define <2 x i16> @load_private_v2i16_split(ptr addrspace(5) byval(i16) %in) #0 {
+define <2 x i16> @load_private_v2i16_split(ptr addrspace(5) byval(i16) %in) nounwind {
 ; GFX900-LABEL: load_private_v2i16_split:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2649,7 +2649,7 @@ entry:
 ; FIXME: This test should work without copying of v0.
 ;        ds_read_u16_d16_hi preserves low 16 bits of the destination
 ;        and ds_write_b16 only reads low 16 bits.
-define <2 x i16> @load_local_hi_v2i16_store_local_lo(i16 %reg, ptr addrspace(3) %in) #0 {
+define <2 x i16> @load_local_hi_v2i16_store_local_lo(i16 %reg, ptr addrspace(3) %in) nounwind {
 ; GFX900-LABEL: load_local_hi_v2i16_store_local_lo:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2703,5 +2703,3 @@ entry:
   store volatile i16 %reg, ptr addrspace(3) %in
   ret <2 x i16> %build1
 }
-
-attributes #0 = { nounwind }

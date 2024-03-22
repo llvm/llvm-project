@@ -11,31 +11,31 @@ target triple = "amdgcn-amd-amdhsa"
 @kernel_round1.collisionsNum = external hidden addrspace(3) global i32, align 4
 
 ; Function Attrs: convergent mustprogress nofree nounwind willreturn memory(none)
-declare hidden i64 @_Z13get_global_idj(i32 noundef) local_unnamed_addr #0
+declare hidden i64 @_Z13get_global_idj(i32 noundef) local_unnamed_addr convergent mustprogress nofree nounwind willreturn memory(none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1030" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32"
 
 ; Function Attrs: convergent nounwind
-declare hidden i32 @_Z10atomic_addPU3AS1Vjj(ptr addrspace(1) noundef, i32 noundef) local_unnamed_addr #1
+declare hidden i32 @_Z10atomic_addPU3AS1Vjj(ptr addrspace(1) noundef, i32 noundef) local_unnamed_addr convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1030" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32"
 
 ; Function Attrs: convergent nounwind
-declare hidden i32 @_Z10atomic_subPU3AS1Vjj(ptr addrspace(1) noundef, i32 noundef) local_unnamed_addr #1
+declare hidden i32 @_Z10atomic_subPU3AS1Vjj(ptr addrspace(1) noundef, i32 noundef) local_unnamed_addr convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1030" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32"
 
 ; Function Attrs: convergent mustprogress nofree nounwind willreturn memory(none)
-declare hidden i64 @_Z12get_local_idj(i32 noundef) local_unnamed_addr #0
+declare hidden i64 @_Z12get_local_idj(i32 noundef) local_unnamed_addr convergent mustprogress nofree nounwind willreturn memory(none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1030" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32"
 
 ; Function Attrs: convergent nounwind
-declare hidden void @_Z7barrierj(i32 noundef) local_unnamed_addr #1
+declare hidden void @_Z7barrierj(i32 noundef) local_unnamed_addr convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1030" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32"
 
 ; Function Attrs: convergent mustprogress nofree nounwind willreturn memory(none)
-declare hidden i32 @_Z3minjj(i32 noundef, i32 noundef) local_unnamed_addr #0
+declare hidden i32 @_Z3minjj(i32 noundef, i32 noundef) local_unnamed_addr convergent mustprogress nofree nounwind willreturn memory(none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1030" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32"
 
 ; Function Attrs: convergent nounwind
-declare hidden i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef) local_unnamed_addr #1
+declare hidden i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef) local_unnamed_addr convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1030" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32"
 
 ; Function Attrs: convergent mustprogress nofree nounwind willreturn memory(none)
-declare hidden i64 @_Z14get_local_sizej(i32 noundef) local_unnamed_addr #0
+declare hidden i64 @_Z14get_local_sizej(i32 noundef) local_unnamed_addr convergent mustprogress nofree nounwind willreturn memory(none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1030" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32"
 
 ; Function Attrs: convergent norecurse nounwind
-define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture noundef readonly align 1 %0, ptr addrspace(1) nocapture noundef writeonly align 1 %1, ptr addrspace(1) nocapture noundef readonly align 4 %2, ptr addrspace(1) noundef align 4 %3, ptr addrspace(1) nocapture noundef readnone align 4 %4) local_unnamed_addr #2 !kernel_arg_addr_space !5 !kernel_arg_access_qual !6 !kernel_arg_type !7 !kernel_arg_base_type !7 !kernel_arg_type_qual !8 !kernel_arg_name !9 !reqd_work_group_size !10 {
+define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture noundef readonly align 1 %0, ptr addrspace(1) nocapture noundef writeonly align 1 %1, ptr addrspace(1) nocapture noundef readonly align 4 %2, ptr addrspace(1) noundef align 4 %3, ptr addrspace(1) nocapture noundef readnone align 4 %4) local_unnamed_addr convergent norecurse nounwind "amdgpu-flat-work-group-size"="64,64" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1030" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32" "uniform-work-group-size"="true" !kernel_arg_addr_space !5 !kernel_arg_access_qual !6 !kernel_arg_type !7 !kernel_arg_base_type !7 !kernel_arg_type_qual !8 !kernel_arg_name !9 !reqd_work_group_size !10 {
 ; CHECK-LABEL: kernel_round1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 s10, s10, s15
@@ -499,14 +499,14 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_branch .LBB0_27
 ; CHECK-NEXT:  .LBB0_33:
 ; CHECK-NEXT:    s_endpgm
-  %6 = tail call i64 @_Z13get_global_idj(i32 noundef 0) #4
+  %6 = tail call i64 @_Z13get_global_idj(i32 noundef 0) convergent nounwind willreturn memory(none)
   %7 = trunc i64 %6 to i32
-  %8 = tail call i64 @_Z12get_local_idj(i32 noundef 0) #4
+  %8 = tail call i64 @_Z12get_local_idj(i32 noundef 0) convergent nounwind willreturn memory(none)
   %9 = trunc i64 %8 to i32
   %10 = mul i32 %9, 14
   %11 = getelementptr inbounds i8, ptr addrspace(3) @kernel_round1.first_words_data, i32 %10
   store i32 0, ptr addrspace(3) @kernel_round1.collisionsNum, align 4, !tbaa !11
-  tail call void @_Z7barrierj(i32 noundef 1) #5
+  tail call void @_Z7barrierj(i32 noundef 1) convergent nounwind
   %12 = lshr i64 %6, 3
   %13 = shl i32 %7, 2
   %14 = and i32 %13, 28
@@ -515,7 +515,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
   %17 = load i32, ptr addrspace(1) %16, align 4, !tbaa !11
   %18 = lshr i32 %17, %14
   %19 = and i32 %18, 15
-  %20 = tail call i32 @_Z3minjj(i32 noundef %19, i32 noundef 12) #4
+  %20 = tail call i32 @_Z3minjj(i32 noundef %19, i32 noundef 12) convergent nounwind willreturn memory(none)
   %21 = icmp eq i32 %20, 0
   br i1 %21, label %119, label %27
 
@@ -575,7 +575,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 
 61:                                               ; preds = %53
   %62 = add i32 %56, 1
-  %63 = tail call i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef @kernel_round1.collisionsNum) #5
+  %63 = tail call i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef @kernel_round1.collisionsNum) convergent nounwind
   %64 = getelementptr inbounds i32, ptr addrspace(3) @kernel_round1.collisionsData, i32 %63
   store i32 %57, ptr addrspace(3) %64, align 4, !tbaa !11
   br label %65
@@ -591,7 +591,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 71:                                               ; preds = %65
   %72 = add i32 %57, 1
   %73 = add i32 %66, 1
-  %74 = tail call i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef @kernel_round1.collisionsNum) #5
+  %74 = tail call i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef @kernel_round1.collisionsNum) convergent nounwind
   %75 = getelementptr inbounds i32, ptr addrspace(3) @kernel_round1.collisionsData, i32 %74
   store i32 %72, ptr addrspace(3) %75, align 4, !tbaa !11
   br label %76
@@ -607,7 +607,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 82:                                               ; preds = %76
   %83 = add i32 %57, 2
   %84 = add i32 %77, 1
-  %85 = tail call i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef @kernel_round1.collisionsNum) #5
+  %85 = tail call i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef @kernel_round1.collisionsNum) convergent nounwind
   %86 = getelementptr inbounds i32, ptr addrspace(3) @kernel_round1.collisionsData, i32 %85
   store i32 %83, ptr addrspace(3) %86, align 4, !tbaa !11
   br label %87
@@ -623,7 +623,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 93:                                               ; preds = %87
   %94 = add i32 %57, 3
   %95 = add i32 %88, 1
-  %96 = tail call i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef @kernel_round1.collisionsNum) #5
+  %96 = tail call i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef @kernel_round1.collisionsNum) convergent nounwind
   %97 = getelementptr inbounds i32, ptr addrspace(3) @kernel_round1.collisionsData, i32 %96
   store i32 %94, ptr addrspace(3) %97, align 4, !tbaa !11
   br label %98
@@ -646,7 +646,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 
 110:                                              ; preds = %103
   %111 = add i32 %105, 1
-  %112 = tail call i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef @kernel_round1.collisionsNum) #5
+  %112 = tail call i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef @kernel_round1.collisionsNum) convergent nounwind
   %113 = getelementptr inbounds i32, ptr addrspace(3) @kernel_round1.collisionsData, i32 %112
   store i32 %106, ptr addrspace(3) %113, align 4, !tbaa !11
   br label %114
@@ -659,7 +659,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
   br i1 %118, label %103, label %32
 
 119:                                              ; preds = %32, %22, %5
-  tail call void @_Z7barrierj(i32 noundef 1) #5
+  tail call void @_Z7barrierj(i32 noundef 1) convergent nounwind
   %120 = load i32, ptr addrspace(3) @kernel_round1.collisionsNum, align 4, !tbaa !11
   %121 = icmp ugt i32 %120, %9
   br i1 %121, label %122, label %206
@@ -722,14 +722,14 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
   %173 = and i32 %172, 28
   %174 = getelementptr inbounds i32, ptr addrspace(1) %3, i64 %171
   %175 = shl nuw nsw i32 1, %173
-  %176 = tail call i32 @_Z10atomic_addPU3AS1Vjj(ptr addrspace(1) noundef %174, i32 noundef %175) #5
+  %176 = tail call i32 @_Z10atomic_addPU3AS1Vjj(ptr addrspace(1) noundef %174, i32 noundef %175) convergent nounwind
   %177 = lshr i32 %176, %173
   %178 = and i32 %177, 15
   %179 = icmp ugt i32 %178, 11
   br i1 %179, label %180, label %182
 
 180:                                              ; preds = %154
-  %181 = tail call i32 @_Z10atomic_subPU3AS1Vjj(ptr addrspace(1) noundef %174, i32 noundef %175) #5
+  %181 = tail call i32 @_Z10atomic_subPU3AS1Vjj(ptr addrspace(1) noundef %174, i32 noundef %175) convergent nounwind
   br label %201
 
 182:                                              ; preds = %154
@@ -758,7 +758,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
   br label %201
 
 201:                                              ; preds = %182, %180, %124
-  %202 = tail call i64 @_Z14get_local_sizej(i32 noundef 0) #4
+  %202 = tail call i64 @_Z14get_local_sizej(i32 noundef 0) convergent nounwind willreturn memory(none)
   %203 = add i64 %202, %127
   %204 = trunc i64 %203 to i32
   %205 = icmp ugt i32 %120, %204
@@ -770,7 +770,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 
 ; Removed most of the if-else blocks
 
-define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapture noundef readonly align 1 %.0, ptr addrspace(1) nocapture noundef writeonly align 1 %.1, ptr addrspace(1) nocapture noundef readonly align 4 %.2, ptr addrspace(1) noundef align 4 %.3, ptr addrspace(1) nocapture noundef readnone align 4 %.4) local_unnamed_addr #2 !kernel_arg_addr_space !5 !kernel_arg_access_qual !6 !kernel_arg_type !7 !kernel_arg_base_type !7 !kernel_arg_type_qual !8 !kernel_arg_name !9 !reqd_work_group_size !10 {
+define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapture noundef readonly align 1 %.0, ptr addrspace(1) nocapture noundef writeonly align 1 %.1, ptr addrspace(1) nocapture noundef readonly align 4 %.2, ptr addrspace(1) noundef align 4 %.3, ptr addrspace(1) nocapture noundef readnone align 4 %.4) local_unnamed_addr convergent norecurse nounwind "amdgpu-flat-work-group-size"="64,64" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1030" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32" "uniform-work-group-size"="true" !kernel_arg_addr_space !5 !kernel_arg_access_qual !6 !kernel_arg_type !7 !kernel_arg_base_type !7 !kernel_arg_type_qual !8 !kernel_arg_name !9 !reqd_work_group_size !10 {
 ; CHECK-LABEL: kernel_round1_short:
 ; CHECK:       ; %bb.0: ; %.5
 ; CHECK-NEXT:    s_add_u32 s10, s10, s15
@@ -972,14 +972,14 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; CHECK-NEXT:    s_endpgm
 .5:
-  %.6 = tail call i64 @_Z13get_global_idj(i32 noundef 0) #4
+  %.6 = tail call i64 @_Z13get_global_idj(i32 noundef 0) convergent nounwind willreturn memory(none)
   %.7 = trunc i64 %.6 to i32
-  %.8 = tail call i64 @_Z12get_local_idj(i32 noundef 0) #4
+  %.8 = tail call i64 @_Z12get_local_idj(i32 noundef 0) convergent nounwind willreturn memory(none)
   %.9 = trunc i64 %.8 to i32
   %.10 = mul i32 %.9, 14
   %.11 = getelementptr inbounds i8, ptr addrspace(3) @kernel_round1.first_words_data, i32 %.10
   store i32 0, ptr addrspace(3) @kernel_round1.collisionsNum, align 4, !tbaa !11
-  tail call void @_Z7barrierj(i32 noundef 1) #5
+  tail call void @_Z7barrierj(i32 noundef 1) convergent nounwind
   %.12 = lshr i64 %.6, 3
   %.13 = shl i32 %.7, 2
   %.14 = and i32 %.13, 28
@@ -988,7 +988,7 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
   %.17 = load i32, ptr addrspace(1) %.16, align 4, !tbaa !11
   %.18 = lshr i32 %.17, %.14
   %.19 = and i32 %.18, 15
-  %.20 = tail call i32 @_Z3minjj(i32 noundef %.19, i32 noundef 12) #4
+  %.20 = tail call i32 @_Z3minjj(i32 noundef %.19, i32 noundef 12) convergent nounwind willreturn memory(none)
   %.21 = icmp eq i32 %.20, 0
   %.23 = add i32 %.20, -1
   %.24 = icmp eq i32 %.23, 0
@@ -1051,7 +1051,7 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 
 .110:                                              ; preds = %.103
   %.111 = add i32 %.105, 1
-  %.112 = tail call i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef @kernel_round1.collisionsNum) #5
+  %.112 = tail call i32 @_Z10atomic_incPU3AS3Vj(ptr addrspace(3) noundef @kernel_round1.collisionsNum) convergent nounwind
   %.113 = getelementptr inbounds i32, ptr addrspace(3) @kernel_round1.collisionsData, i32 %.112
   store i32 %.106, ptr addrspace(3) %.113, align 4, !tbaa !11
   br label %.114
@@ -1064,7 +1064,7 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
   br i1 %.118, label %.103, label %.32
 
 .119:                                              ; preds = %.32, %.22, %.5
-  tail call void @_Z7barrierj(i32 noundef 1) #5
+  tail call void @_Z7barrierj(i32 noundef 1) convergent nounwind
   %.120 = load i32, ptr addrspace(3) @kernel_round1.collisionsNum, align 4, !tbaa !11
   %.121 = icmp ugt i32 %.120, %.9
   br label %.206
@@ -1074,14 +1074,7 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare i64 @llvm.fshl.i64(i64, i64, i64) #3
-
-attributes #0 = { convergent mustprogress nofree nounwind willreturn memory(none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1030" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32" }
-attributes #1 = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1030" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32" }
-attributes #2 = { convergent norecurse nounwind "amdgpu-flat-work-group-size"="64,64" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1030" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32" "uniform-work-group-size"="true" }
-attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #4 = { convergent nounwind willreturn memory(none) }
-attributes #5 = { convergent nounwind }
+declare i64 @llvm.fshl.i64(i64, i64, i64) nocallback nofree nosync nounwind speculatable willreturn memory(none)
 
 !llvm.module.flags = !{!0, !1, !2}
 !opencl.ocl.version = !{!3}

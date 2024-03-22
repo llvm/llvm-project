@@ -4879,8 +4879,6 @@ define void @shuffle_v32bf16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %ar
   ret void
 }
 
-declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>) #0
-declare <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat>, <2 x bfloat>, <2 x bfloat>) #0
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone speculatable }
+declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>) nounwind readnone speculatable
+declare <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat>, <2 x bfloat>, <2 x bfloat>) nounwind readnone speculatable
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable

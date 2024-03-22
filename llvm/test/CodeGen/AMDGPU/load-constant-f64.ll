@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX12 %s
 
 ; FUNC-LABEL: {{^}}constant_load_f64:
-define amdgpu_kernel void @constant_load_f64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+define amdgpu_kernel void @constant_load_f64(ptr addrspace(1) %out, ptr addrspace(4) %in) nounwind {
 ; GFX6-NOHSA-LABEL: constant_load_f64:
 ; GFX6-NOHSA:       ; %bb.0:
 ; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -61,8 +61,6 @@ define amdgpu_kernel void @constant_load_f64(ptr addrspace(1) %out, ptr addrspac
   store double %ld, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }
 
 ; Tests whether a load-chain of 8 constants of 64bit each gets vectorized into a wider load.
 define amdgpu_kernel void @constant_load_2v4f64(ptr addrspace(4) noalias nocapture readonly %weights, ptr addrspace(1) noalias nocapture %out_ptr) {

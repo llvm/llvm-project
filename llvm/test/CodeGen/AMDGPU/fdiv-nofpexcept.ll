@@ -4,7 +4,7 @@
 ; Make sure nofpexcept flags are emitted when lowering a
 ; non-constrained fdiv.
 
-define float @fdiv_f32(float %a, float %b) #0 {
+define float @fdiv_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
   ; GCN-LABEL: name: fdiv_f32
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1
@@ -35,7 +35,7 @@ entry:
   ret float %fdiv
 }
 
-define float @fdiv_nnan_f32(float %a, float %b) #0 {
+define float @fdiv_nnan_f32(float %a, float %b) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
   ; GCN-LABEL: name: fdiv_nnan_f32
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1
@@ -65,5 +65,3 @@ entry:
   %fdiv = fdiv nnan float %a, %b
   ret float %fdiv
 }
-
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

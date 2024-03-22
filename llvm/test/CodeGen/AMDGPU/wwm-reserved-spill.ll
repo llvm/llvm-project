@@ -919,7 +919,7 @@ define amdgpu_gfx void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %in
 }
 
 ; FIXME: This spills v40 and v41 twice, once in whole-wave-mode and once for the active lanes
-define amdgpu_gfx <32 x i32> @strict_wwm_callee_saves(<32 x i32> inreg %keep, ptr addrspace(5) %ptr, i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) #0 {
+define amdgpu_gfx <32 x i32> @strict_wwm_callee_saves(<32 x i32> inreg %keep, ptr addrspace(5) %ptr, i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) "amdgpu-waves-per-eu"="5,5" {
 ; GFX9-O0-LABEL: strict_wwm_callee_saves:
 ; GFX9-O0:       ; %bb.0:
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1404,5 +1404,3 @@ declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float>, ptr addrspace(
 declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32)
 declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32)
 declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i32)
-
-attributes #0 = { "amdgpu-waves-per-eu"="5,5" }

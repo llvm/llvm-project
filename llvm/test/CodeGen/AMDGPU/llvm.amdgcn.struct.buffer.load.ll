@@ -272,21 +272,19 @@ main_body:
   ret void
 }
 
-declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32) #0
-declare <2 x float> @llvm.amdgcn.struct.buffer.load.v2f32(<4 x i32>, i32, i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32>, i32, i32, i32, i32) #0
-declare i32 @llvm.amdgcn.struct.buffer.load.i32(<4 x i32>, i32, i32, i32, i32) #0
-declare <2 x i32> @llvm.amdgcn.struct.buffer.load.v2i32(<4 x i32>, i32, i32, i32, i32) #0
-declare <4 x i32> @llvm.amdgcn.struct.buffer.load.v4i32(<4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare i8 @llvm.amdgcn.struct.buffer.load.i8(<4 x i32>, i32, i32, i32, i32) #0
+declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32) nounwind readonly
+declare <2 x float> @llvm.amdgcn.struct.buffer.load.v2f32(<4 x i32>, i32, i32, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32>, i32, i32, i32, i32) nounwind readonly
+declare i32 @llvm.amdgcn.struct.buffer.load.i32(<4 x i32>, i32, i32, i32, i32) nounwind readonly
+declare <2 x i32> @llvm.amdgcn.struct.buffer.load.v2i32(<4 x i32>, i32, i32, i32, i32) nounwind readonly
+declare <4 x i32> @llvm.amdgcn.struct.buffer.load.v4i32(<4 x i32>, i32, i32, i32, i32) nounwind readonly
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind readonly
+declare i8 @llvm.amdgcn.struct.buffer.load.i8(<4 x i32>, i32, i32, i32, i32) nounwind readonly
 
-declare half @llvm.amdgcn.struct.buffer.load.f16(<4 x i32>, i32, i32, i32, i32) #0
-declare <2 x half> @llvm.amdgcn.struct.buffer.load.v2f16(<4 x i32>, i32, i32, i32, i32) #0
-declare <4 x half> @llvm.amdgcn.struct.buffer.load.v4f16(<4 x i32>, i32, i32, i32, i32) #0
+declare half @llvm.amdgcn.struct.buffer.load.f16(<4 x i32>, i32, i32, i32, i32) nounwind readonly
+declare <2 x half> @llvm.amdgcn.struct.buffer.load.v2f16(<4 x i32>, i32, i32, i32, i32) nounwind readonly
+declare <4 x half> @llvm.amdgcn.struct.buffer.load.v4f16(<4 x i32>, i32, i32, i32, i32) nounwind readonly
 
-declare i16 @llvm.amdgcn.struct.buffer.load.i16(<4 x i32>, i32, i32, i32, i32) #0
-declare <2 x i16> @llvm.amdgcn.struct.buffer.load.v2i16(<4 x i32>, i32, i32, i32, i32) #0
-declare <4 x i16> @llvm.amdgcn.struct.buffer.load.v4i16(<4 x i32>, i32, i32, i32, i32) #0
-
-attributes #0 = { nounwind readonly }
+declare i16 @llvm.amdgcn.struct.buffer.load.i16(<4 x i32>, i32, i32, i32, i32) nounwind readonly
+declare <2 x i16> @llvm.amdgcn.struct.buffer.load.v2i16(<4 x i32>, i32, i32, i32, i32) nounwind readonly
+declare <4 x i16> @llvm.amdgcn.struct.buffer.load.v4i16(<4 x i32>, i32, i32, i32, i32) nounwind readonly

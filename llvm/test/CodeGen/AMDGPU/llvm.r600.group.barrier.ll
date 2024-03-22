@@ -2,7 +2,7 @@
 
 ; EG-LABEL: {{^}}test_group_barrier:
 ; EG: GROUP_BARRIER
-define amdgpu_kernel void @test_group_barrier(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_group_barrier(ptr addrspace(1) %out) nounwind {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x()
   %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
@@ -18,14 +18,10 @@ entry:
 }
 
 ; Function Attrs: convergent nounwind
-declare void @llvm.r600.group.barrier() #1
+declare void @llvm.r600.group.barrier() convergent nounwind
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tidig.x() #2
+declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.local.size.x() #2
-
-attributes #0 = { nounwind }
-attributes #1 = { convergent nounwind }
-attributes #2 = { nounwind readnone }
+declare i32 @llvm.r600.read.local.size.x() nounwind readnone

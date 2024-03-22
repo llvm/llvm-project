@@ -2,7 +2,7 @@
 
 ; GCN-LABEL: {{^}}max_sgprs_gfx10:
 ; GCN: NumSgprs: 108
-define amdgpu_kernel void @max_sgprs_gfx10() #0 {
+define amdgpu_kernel void @max_sgprs_gfx10() nounwind "target-cpu"="gfx1010" {
   call void asm sideeffect "", "~{s[0:7]}" ()
   call void asm sideeffect "", "~{s[8:15]}" ()
   call void asm sideeffect "", "~{s[16:23]}" ()
@@ -21,5 +21,3 @@ define amdgpu_kernel void @max_sgprs_gfx10() #0 {
   call void asm sideeffect "", "~{vcc}" ()
   ret void
 }
-
-attributes #0 = { nounwind "target-cpu"="gfx1010" }

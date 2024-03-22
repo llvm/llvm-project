@@ -16,7 +16,7 @@
 ; CHECK-LABEL: @no_flat_workgroup_size(
 ; CHECK: alloca [5 x i32]
 ; CHECK: store i32 4, ptr addrspace(5) %arrayidx1, align 4
-define amdgpu_kernel void @no_flat_workgroup_size(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #0 {
+define amdgpu_kernel void @no_flat_workgroup_size(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) "amdgpu-waves-per-eu"="1,1" {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
   %0 = load i32, ptr addrspace(1) %in, align 4
@@ -38,7 +38,7 @@ entry:
 ; CHECK-LABEL: @explicit_default_workgroup_size(
 ; CHECK: alloca [5 x i32]
 ; CHECK: store i32 4, ptr addrspace(5) %arrayidx1, align 4
-define amdgpu_kernel void @explicit_default_workgroup_size(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #1 {
+define amdgpu_kernel void @explicit_default_workgroup_size(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1024" {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
   %0 = load i32, ptr addrspace(1) %in, align 4
@@ -56,6 +56,3 @@ entry:
   store i32 %3, ptr addrspace(1) %arrayidx13
   ret void
 }
-
-attributes #0 = { "amdgpu-waves-per-eu"="1,1" }
-attributes #1 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1024" }

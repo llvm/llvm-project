@@ -539,18 +539,16 @@ define internal void @use512vgprs() {
   ret void
 }
 
-define void @foo() #0 {
+define void @foo() noinline {
   call void asm sideeffect "; use $0", "a"(i32 0)
   ret void
 }
-
-attributes #0 = { noinline }
 
 ; GCN-LABEL: {{^}}k256_w8:
 ; GFX90A: NumVgprs: 32
 ; GFX90A: NumAgprs: 32
 ; GFX90A: TotalNumVgprs: 64
-define amdgpu_kernel void @k256_w8() #2568 {
+define amdgpu_kernel void @k256_w8() nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="8" {
   call void @foo()
   call void @use256vgprs()
   ret void
@@ -560,18 +558,16 @@ define amdgpu_kernel void @k256_w8() #2568 {
 ; GFX90A: NumVgprs: 64
 ; GFX90A: NumAgprs: 0
 ; GFX90A: TotalNumVgprs: 64
-define amdgpu_kernel void @k256_w8_no_agprs() #2568 {
+define amdgpu_kernel void @k256_w8_no_agprs() nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="8" {
   call void @use256vgprs()
   ret void
 }
-
-attributes #2568 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="8" }
 
 ; GCN-LABEL: {{^}}k256_w4:
 ; GFX90A: NumVgprs: 64
 ; GFX90A: NumAgprs: 64
 ; GFX90A: TotalNumVgprs: 128
-define amdgpu_kernel void @k256_w4() #2564 {
+define amdgpu_kernel void @k256_w4() nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="4" {
   call void @foo()
   call void @use256vgprs()
   ret void
@@ -581,18 +577,16 @@ define amdgpu_kernel void @k256_w4() #2564 {
 ; GFX90A: NumVgprs: 128
 ; GFX90A: NumAgprs: 0
 ; GFX90A: TotalNumVgprs: 128
-define amdgpu_kernel void @k256_w4_no_agprs() #2564 {
+define amdgpu_kernel void @k256_w4_no_agprs() nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="4" {
   call void @use256vgprs()
   ret void
 }
-
-attributes #2564 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="4" }
 
 ; GCN-LABEL: {{^}}k256_w2:
 ; GFX90A: NumVgprs: 128
 ; GFX90A: NumAgprs: 128
 ; GFX90A: TotalNumVgprs: 256
-define amdgpu_kernel void @k256_w2() #2562 {
+define amdgpu_kernel void @k256_w2() nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="2" {
   call void @foo()
   call void @use256vgprs()
   ret void
@@ -602,18 +596,16 @@ define amdgpu_kernel void @k256_w2() #2562 {
 ; GFX90A: NumVgprs: 256
 ; GFX90A: NumAgprs: 0
 ; GFX90A: TotalNumVgprs: 256
-define amdgpu_kernel void @k256_w2_no_agprs() #2562 {
+define amdgpu_kernel void @k256_w2_no_agprs() nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="2" {
   call void @use256vgprs()
   ret void
 }
-
-attributes #2562 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="2" }
 
 ; GCN-LABEL: {{^}}k256_w1:
 ; GFX90A: NumVgprs: 256
 ; GFX90A: NumAgprs: 256
 ; GFX90A: TotalNumVgprs: 512
-define amdgpu_kernel void @k256_w1() #2561 {
+define amdgpu_kernel void @k256_w1() nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="1" {
   call void @foo()
   call void @use512vgprs()
   ret void
@@ -623,18 +615,16 @@ define amdgpu_kernel void @k256_w1() #2561 {
 ; GFX90A: NumVgprs: 256
 ; GFX90A: NumAgprs: 256
 ; GFX90A: TotalNumVgprs: 512
-define amdgpu_kernel void @k256_w1_no_agprs() #2561 {
+define amdgpu_kernel void @k256_w1_no_agprs() nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="1" {
   call void @use512vgprs()
   ret void
 }
-
-attributes #2561 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="1" }
 
 ; GCN-LABEL: {{^}}k512_no_agprs:
 ; GFX90A: NumVgprs: 256
 ; GFX90A: NumAgprs: 0
 ; GFX90A: TotalNumVgprs: 256
-define amdgpu_kernel void @k512_no_agprs() #512 {
+define amdgpu_kernel void @k512_no_agprs() nounwind "amdgpu-flat-work-group-size"="512,512" {
   call void @use256vgprs()
   ret void
 }
@@ -643,7 +633,7 @@ define amdgpu_kernel void @k512_no_agprs() #512 {
 ; GFX90A: NumVgprs: 128
 ; GFX90A: NumAgprs: 128
 ; GFX90A: TotalNumVgprs: 256
-define amdgpu_kernel void @k512_call() #512 {
+define amdgpu_kernel void @k512_call() nounwind "amdgpu-flat-work-group-size"="512,512" {
   call void @foo()
   call void @use256vgprs()
   ret void
@@ -653,7 +643,7 @@ define amdgpu_kernel void @k512_call() #512 {
 ; GFX90A: NumVgprs: 128
 ; GFX90A: NumAgprs: 128
 ; GFX90A: TotalNumVgprs: 256
-define amdgpu_kernel void @k512_virtual_agpr() #512 {
+define amdgpu_kernel void @k512_virtual_agpr() nounwind "amdgpu-flat-work-group-size"="512,512" {
   %a0 = call i32 asm sideeffect "; def $0", "=a"()
   call void @use256vgprs()
   ret void
@@ -663,7 +653,7 @@ define amdgpu_kernel void @k512_virtual_agpr() #512 {
 ; GFX90A: NumVgprs: 128
 ; GFX90A: NumAgprs: 128
 ; GFX90A: TotalNumVgprs: 256
-define amdgpu_kernel void @k512_physical_agpr() #512 {
+define amdgpu_kernel void @k512_physical_agpr() nounwind "amdgpu-flat-work-group-size"="512,512" {
   call void asm sideeffect "", "~{a8}" ()
   call void @use256vgprs()
   ret void
@@ -672,18 +662,16 @@ define amdgpu_kernel void @k512_physical_agpr() #512 {
 ; GCN-LABEL: {{^}}f512:
 ; GFX90A: NumVgprs: 12{{[0-9]}}
 ; GFX90A: NumAgprs: {{[1-9]}}
-define void @f512() #512 {
+define void @f512() nounwind "amdgpu-flat-work-group-size"="512,512" {
   call void @use256vgprs()
   ret void
 }
-
-attributes #512 = { nounwind "amdgpu-flat-work-group-size"="512,512" }
 
 ; GCN-LABEL: {{^}}k1024:
 ; GFX90A: NumVgprs: 128
 ; GFX90A: NumAgprs: 0
 ; GFX90A: TotalNumVgprs: 128
-define amdgpu_kernel void @k1024() #1024 {
+define amdgpu_kernel void @k1024() nounwind "amdgpu-flat-work-group-size"="1024,1024" {
   call void @use256vgprs()
   ret void
 }
@@ -692,10 +680,8 @@ define amdgpu_kernel void @k1024() #1024 {
 ; GFX90A: NumVgprs: 64
 ; GFX90A: NumAgprs: 64
 ; GFX90A: TotalNumVgprs: 128
-define amdgpu_kernel void @k1024_call() #1024 {
+define amdgpu_kernel void @k1024_call() nounwind "amdgpu-flat-work-group-size"="1024,1024" {
   call void @foo()
   call void @use256vgprs()
   ret void
 }
-
-attributes #1024 = { nounwind "amdgpu-flat-work-group-size"="1024,1024" }

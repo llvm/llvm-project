@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=hawaii < %s | FileCheck -check-prefix=CI %s
 
-define amdgpu_kernel void @round_f64(ptr addrspace(1) %out, double %x) #0 {
+define amdgpu_kernel void @round_f64(ptr addrspace(1) %out, double %x) nounwind {
 ; SI-LABEL: round_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -60,12 +60,12 @@ define amdgpu_kernel void @round_f64(ptr addrspace(1) %out, double %x) #0 {
 ; CI-NEXT:    s_mov_b32 s5, s1
 ; CI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; CI-NEXT:    s_endpgm
-  %result = call double @llvm.round.f64(double %x) #1
+  %result = call double @llvm.round.f64(double %x) nounwind readnone
   store double %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_round_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_round_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: v_round_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -129,16 +129,16 @@ define amdgpu_kernel void @v_round_f64(ptr addrspace(1) %out, ptr addrspace(1) %
 ; CI-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; CI-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64
 ; CI-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr double, ptr addrspace(1) %in, i32 %tid
   %out.gep = getelementptr double, ptr addrspace(1) %out, i32 %tid
   %x = load double, ptr addrspace(1) %gep
-  %result = call double @llvm.round.f64(double %x) #1
+  %result = call double @llvm.round.f64(double %x) nounwind readnone
   store double %result, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @round_v2f64(ptr addrspace(1) %out, <2 x double> %in) #0 {
+define amdgpu_kernel void @round_v2f64(ptr addrspace(1) %out, <2 x double> %in) nounwind {
 ; SI-LABEL: round_v2f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
@@ -224,12 +224,12 @@ define amdgpu_kernel void @round_v2f64(ptr addrspace(1) %out, <2 x double> %in) 
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
-  %result = call <2 x double> @llvm.round.v2f64(<2 x double> %in) #1
+  %result = call <2 x double> @llvm.round.v2f64(<2 x double> %in) nounwind readnone
   store <2 x double> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @round_v4f64(ptr addrspace(1) %out, <4 x double> %in) #0 {
+define amdgpu_kernel void @round_v4f64(ptr addrspace(1) %out, <4 x double> %in) nounwind {
 ; SI-LABEL: round_v4f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x11
@@ -378,12 +378,12 @@ define amdgpu_kernel void @round_v4f64(ptr addrspace(1) %out, <4 x double> %in) 
 ; CI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
 ; CI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
-  %result = call <4 x double> @llvm.round.v4f64(<4 x double> %in) #1
+  %result = call <4 x double> @llvm.round.v4f64(<4 x double> %in) nounwind readnone
   store <4 x double> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @round_v8f64(ptr addrspace(1) %out, <8 x double> %in) #0 {
+define amdgpu_kernel void @round_v8f64(ptr addrspace(1) %out, <8 x double> %in) nounwind {
 ; SI-LABEL: round_v8f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx16 s[4:19], s[0:1], 0x19
@@ -656,17 +656,14 @@ define amdgpu_kernel void @round_v8f64(ptr addrspace(1) %out, <8 x double> %in) 
 ; CI-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0 offset:16
 ; CI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
-  %result = call <8 x double> @llvm.round.v8f64(<8 x double> %in) #1
+  %result = call <8 x double> @llvm.round.v8f64(<8 x double> %in) nounwind readnone
   store <8 x double> %result, ptr addrspace(1) %out
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-declare double @llvm.round.f64(double) #1
-declare <2 x double> @llvm.round.v2f64(<2 x double>) #1
-declare <4 x double> @llvm.round.v4f64(<4 x double>) #1
-declare <8 x double> @llvm.round.v8f64(<8 x double>) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare double @llvm.round.f64(double) nounwind readnone
+declare <2 x double> @llvm.round.v2f64(<2 x double>) nounwind readnone
+declare <4 x double> @llvm.round.v4f64(<4 x double>) nounwind readnone
+declare <8 x double> @llvm.round.v8f64(<8 x double>) nounwind readnone

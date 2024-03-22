@@ -33,7 +33,7 @@ do.end:                                           ; preds = %do.body
   ret void
 }
 
-define void @unroll_full() #0 {
+define void @unroll_full() "amdgpu-unroll-threshold"="1000" {
 entry:
   br label %do.body
 
@@ -48,5 +48,3 @@ do.body:                                          ; preds = %entry
 do.end:                                           ; preds = %do.body
   ret void
 }
-
-attributes #0 = { "amdgpu-unroll-threshold"="1000" }

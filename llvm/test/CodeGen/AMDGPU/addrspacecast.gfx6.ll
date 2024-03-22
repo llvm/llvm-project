@@ -106,7 +106,7 @@ define ptr @constant32bit_to_flat_addrspacecast_0(ptr addrspace(6) %ptr) {
   ret ptr %stof
 }
 
-define ptr @constant32bit_to_flat_addrspacecast_1(ptr addrspace(6) %ptr) #0 {
+define ptr @constant32bit_to_flat_addrspacecast_1(ptr addrspace(6) %ptr) "amdgpu-32bit-address-high-bits"="0xffff8000" {
 ; CHECK-LABEL: constant32bit_to_flat_addrspacecast_1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -127,7 +127,7 @@ define ptr @constant32bit_to_flat_addrspacecast_null() {
   ret ptr %stof
 }
 
-define ptr @constant32bit_to_flat_addrspacecast_undef() #0 {
+define ptr @constant32bit_to_flat_addrspacecast_undef() "amdgpu-32bit-address-high-bits"="0xffff8000" {
 ; SDAG-LABEL: constant32bit_to_flat_addrspacecast_undef:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -142,7 +142,7 @@ define ptr @constant32bit_to_flat_addrspacecast_undef() #0 {
   ret ptr %stof
 }
 
-define ptr @constant32bit_to_flat_addrspacecast_poison() #0 {
+define ptr @constant32bit_to_flat_addrspacecast_poison() "amdgpu-32bit-address-high-bits"="0xffff8000" {
 ; SDAG-LABEL: constant32bit_to_flat_addrspacecast_poison:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -157,7 +157,7 @@ define ptr @constant32bit_to_flat_addrspacecast_poison() #0 {
   ret ptr %stof
 }
 
-define ptr @constant32bit_to_flat_addrspacecast_constant() #0 {
+define ptr @constant32bit_to_flat_addrspacecast_constant() "amdgpu-32bit-address-high-bits"="0xffff8000" {
 ; CHECK-LABEL: constant32bit_to_flat_addrspacecast_constant:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -204,8 +204,6 @@ define ptr addrspace(6) @addrspacecast_flat_null_to_constant32bit() {
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   ret ptr addrspace(6) addrspacecast (ptr null to ptr addrspace(6))
 }
-
-attributes #0 = { "amdgpu-32bit-address-high-bits"="0xffff8000" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

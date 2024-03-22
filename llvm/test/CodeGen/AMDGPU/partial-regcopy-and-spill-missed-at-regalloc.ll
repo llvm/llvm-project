@@ -5,7 +5,7 @@
 ;RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a --stop-after=prologepilog -verify-machineinstrs < %s | FileCheck -check-prefix=PEI-GFX90A %s
 
 ; Partial reg copy and spill missed during regalloc handled later at frame lowering.
-define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
+define amdgpu_kernel void @partial_copy(<4 x i32> %arg) nounwind "amdgpu-num-vgpr"="5" {
   ; REGALLOC-GFX908-LABEL: name: partial_copy
   ; REGALLOC-GFX908: bb.0 (%ir-block.0):
   ; REGALLOC-GFX908-NEXT:   liveins: $sgpr4_sgpr5
@@ -110,5 +110,3 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
 }
 
 declare <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32, i32, <4 x i32>, i32, i32, i32)
-
-attributes #0 = { nounwind "amdgpu-num-vgpr"="5" }

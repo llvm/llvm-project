@@ -10,13 +10,13 @@
 @0 = external unnamed_addr addrspace(3) global [462 x float], align 4
 
 ; Function Attrs: nounwind readnone speculatable
-declare i32 @llvm.amdgcn.workitem.id.y() #0
+declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone speculatable
 
 ; Function Attrs: nounwind readnone speculatable
-declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
 
 ; Function Attrs: nounwind readnone speculatable
-declare float @llvm.fmuladd.f32(float, float, float) #0
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone speculatable
 
 ; CHECK: s_endpgm
 define amdgpu_kernel void @foo(ptr addrspace(1) noalias nocapture readonly %arg, ptr addrspace(1) noalias nocapture readonly %arg1, ptr addrspace(1) noalias nocapture %arg2, float %arg3, i1 %c0, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5) local_unnamed_addr !reqd_work_group_size !0 {
@@ -88,7 +88,5 @@ bb37:                                             ; preds = %bb11
 bb38:                                             ; preds = %bb37, %bb11
   ret void
 }
-
-attributes #0 = { nounwind readnone speculatable }
 
 !0 = !{i32 8, i32 16, i32 1}

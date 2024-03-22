@@ -9,9 +9,9 @@
 ; GCN: buffer_load_dword
 ; GCN: ds_write2_b32
 ; GCN: s_endpgm
-define amdgpu_kernel void @reschedule_global_load_lds_store(ptr addrspace(1) noalias %gptr0, ptr addrspace(1) noalias %gptr1, ptr addrspace(3) noalias %lptr, i32 %c) #0 {
+define amdgpu_kernel void @reschedule_global_load_lds_store(ptr addrspace(1) noalias %gptr0, ptr addrspace(1) noalias %gptr1, ptr addrspace(3) noalias %lptr, i32 %c) nounwind {
 entry:
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %idx = shl i32 %tid, 2
   %gep0 = getelementptr i32, ptr addrspace(1) %gptr0, i32 %idx
   %gep1 = getelementptr i32, ptr addrspace(1) %gptr1, i32 %idx
@@ -41,8 +41,4 @@ exit:                                             ; preds = %for.body, %entry
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { convergent nounwind }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

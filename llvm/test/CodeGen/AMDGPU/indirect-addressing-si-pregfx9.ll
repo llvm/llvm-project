@@ -23,9 +23,9 @@
 ; GCN-COUNT-32: v_cndmask_b32
 
 ; GCN-COUNT-4: buffer_store_dwordx4
-define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %in, <16 x i32> %vec0) #0 {
+define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %in, <16 x i32> %vec0) nounwind {
 entry:
-  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %id = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %id.ext = zext i32 %id to i64
   %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %id.ext
   %idx0 = load volatile i32, ptr addrspace(1) %gep
@@ -45,9 +45,5 @@ bb2:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare void @llvm.amdgcn.s.barrier() #2
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind convergent }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare void @llvm.amdgcn.s.barrier() nounwind convergent

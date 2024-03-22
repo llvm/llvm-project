@@ -5,7 +5,7 @@
 ; SI: s_and_b64
 define amdgpu_kernel void @v_and_i64_br(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) {
 entry:
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) nounwind readnone
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %if, label %endif
 
@@ -21,6 +21,4 @@ endif:
   ret void
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
-
-attributes #0 = { nounwind readnone }
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone

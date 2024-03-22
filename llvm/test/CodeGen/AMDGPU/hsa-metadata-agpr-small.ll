@@ -33,7 +33,7 @@
 ; GFX90A:      .vgpr_count:    44
 
 ; GFX801:      .vgpr_count:    9
-define amdgpu_kernel void @kernel_32_agprs() #0 {
+define amdgpu_kernel void @kernel_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v8}" ()
   call void asm sideeffect "", "~{a31}" ()
@@ -47,11 +47,9 @@ bb:
 ; GFX90A:      .vgpr_count:    56
 
 ; GFX801:      .vgpr_count:    40
-define amdgpu_kernel void @kernel_40_vgprs() #0 {
+define amdgpu_kernel void @kernel_40_vgprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v39}" ()
   call void asm sideeffect "", "~{a15}" ()
   ret void
 }
-
-attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" }

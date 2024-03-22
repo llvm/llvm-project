@@ -325,6 +325,4 @@ entry:
   ret void
 }
 
-declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, i1 immarg) #0
-
-attributes #0 = { argmemonly nounwind willreturn writeonly }
+declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, i1 immarg) argmemonly nounwind willreturn writeonly

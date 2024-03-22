@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
-define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
 ; SI-LABEL: test_fmax3_olt_0_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -136,7 +136,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 }
 
 ; Commute operand of second fmax
-define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
 ; SI-LABEL: test_fmax3_olt_1_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -267,7 +267,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
   ret void
 }
 
-define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
 ; SI-LABEL: test_fmax3_olt_0_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -407,7 +407,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 }
 
 ; Commute operand of second fmax
-define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) nounwind {
 ; SI-LABEL: test_fmax3_olt_1_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -548,7 +548,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 
 ; Checks whether the test passes; performMinMaxCombine() should not optimize vector patterns of max3
 ; since there are no pack instructions for fmax3.
-define <2 x half> @no_fmax3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d) #2 {
+define <2 x half> @no_fmax3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d) nounwind "no-nans-fp-math"="true" {
 ; SI-LABEL: no_fmax3_v2f16:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -609,11 +609,7 @@ entry:
   ret <2 x half> %res
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare half @llvm.maxnum.f16(half, half) #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
+declare float @llvm.maxnum.f32(float, float) nounwind readnone speculatable
+declare half @llvm.maxnum.f16(half, half) nounwind readnone speculatable
 declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>)
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { nounwind "no-nans-fp-math"="true" }

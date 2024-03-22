@@ -128,7 +128,7 @@ entry:
 ; EG-DAG: MOV {{[* ]*}}[[DATA:T[0-9]+\.[XYZW]]], OQAP
 ; EG-DAG: MOV {{[* ]*}}[[TO:T[0-9]+\.[XYZW]]], KC0[2].Y
 ; EG: LDS_WRITE {{\*?}} [[TO]], [[DATA]]
-define amdgpu_kernel void @local_zextload_i16_to_i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_i16_to_i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %a = load i16, ptr addrspace(3) %in
   %ext = zext i16 %a to i32
   store i32 %ext, ptr addrspace(3) %out
@@ -150,7 +150,7 @@ define amdgpu_kernel void @local_zextload_i16_to_i32(ptr addrspace(3) %out, ptr 
 ; EG-DAG: BFE_INT {{[* ]*}}[[DATA:T[0-9]+\.[XYZW]]], {{.*}}, 0.0, literal
 ; EG: 16
 ; EG: LDS_WRITE {{\*?}} [[TO]], [[DATA]]
-define amdgpu_kernel void @local_sextload_i16_to_i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_i16_to_i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %a = load i16, ptr addrspace(3) %in
   %ext = sext i16 %a to i32
   store i32 %ext, ptr addrspace(3) %out
@@ -168,7 +168,7 @@ define amdgpu_kernel void @local_sextload_i16_to_i32(ptr addrspace(3) %out, ptr 
 ; EG-DAG: MOV {{[* ]*}}[[DATA:T[0-9]+\.[XYZW]]], OQAP
 ; EG-DAG: MOV {{[* ]*}}[[TO:T[0-9]+\.[XYZW]]], KC0[2].Y
 ; EG: LDS_WRITE {{\*?}} [[TO]], [[DATA]]
-define amdgpu_kernel void @local_zextload_v1i16_to_v1i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_v1i16_to_v1i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <1 x i16>, ptr addrspace(3) %in
   %ext = zext <1 x i16> %load to <1 x i32>
   store <1 x i32> %ext, ptr addrspace(3) %out
@@ -188,7 +188,7 @@ define amdgpu_kernel void @local_zextload_v1i16_to_v1i32(ptr addrspace(3) %out, 
 ; EG-DAG: BFE_INT {{[* ]*}}[[DATA:T[0-9]+\.[XYZW]]], {{.*}}, 0.0, literal
 ; EG: 16
 ; EG: LDS_WRITE {{\*?}} [[TO]], [[DATA]]
-define amdgpu_kernel void @local_sextload_v1i16_to_v1i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_v1i16_to_v1i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <1 x i16>, ptr addrspace(3) %in
   %ext = sext <1 x i16> %load to <1 x i32>
   store <1 x i32> %ext, ptr addrspace(3) %out
@@ -203,7 +203,7 @@ define amdgpu_kernel void @local_sextload_v1i16_to_v1i32(ptr addrspace(3) %out, 
 ; GCN: ds_read_b32
 
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_zextload_v2i16_to_v2i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_v2i16_to_v2i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <2 x i16>, ptr addrspace(3) %in
   %ext = zext <2 x i16> %load to <2 x i32>
   store <2 x i32> %ext, ptr addrspace(3) %out
@@ -220,7 +220,7 @@ define amdgpu_kernel void @local_zextload_v2i16_to_v2i32(ptr addrspace(3) %out, 
 ; EG: LDS_READ_RET
 ; EG: BFE_INT
 ; EG: BFE_INT
-define amdgpu_kernel void @local_sextload_v2i16_to_v2i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_v2i16_to_v2i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <2 x i16>, ptr addrspace(3) %in
   %ext = sext <2 x i16> %load to <2 x i32>
   store <2 x i32> %ext, ptr addrspace(3) %out
@@ -281,7 +281,7 @@ entry:
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_local_zextload_v4i16_to_v4i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_local_zextload_v4i16_to_v4i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <4 x i16>, ptr addrspace(3) %in
   %ext = zext <4 x i16> %load to <4 x i32>
   store <4 x i32> %ext, ptr addrspace(3) %out
@@ -301,7 +301,7 @@ define amdgpu_kernel void @local_local_zextload_v4i16_to_v4i32(ptr addrspace(3) 
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
-define amdgpu_kernel void @local_sextload_v4i16_to_v4i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_v4i16_to_v4i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <4 x i16>, ptr addrspace(3) %in
   %ext = sext <4 x i16> %load to <4 x i32>
   store <4 x i32> %ext, ptr addrspace(3) %out
@@ -318,7 +318,7 @@ define amdgpu_kernel void @local_sextload_v4i16_to_v4i32(ptr addrspace(3) %out, 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_zextload_v8i16_to_v8i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_v8i16_to_v8i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <8 x i16>, ptr addrspace(3) %in
   %ext = zext <8 x i16> %load to <8 x i32>
   store <8 x i32> %ext, ptr addrspace(3) %out
@@ -343,7 +343,7 @@ define amdgpu_kernel void @local_zextload_v8i16_to_v8i32(ptr addrspace(3) %out, 
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
-define amdgpu_kernel void @local_sextload_v8i16_to_v8i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_v8i16_to_v8i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <8 x i16>, ptr addrspace(3) %in
   %ext = sext <8 x i16> %load to <8 x i32>
   store <8 x i32> %ext, ptr addrspace(3) %out
@@ -370,7 +370,7 @@ define amdgpu_kernel void @local_sextload_v8i16_to_v8i32(ptr addrspace(3) %out, 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_zextload_v16i16_to_v16i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_v16i16_to_v16i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <16 x i16>, ptr addrspace(3) %in
   %ext = zext <16 x i16> %load to <16 x i32>
   store <16 x i32> %ext, ptr addrspace(3) %out
@@ -409,7 +409,7 @@ define amdgpu_kernel void @local_zextload_v16i16_to_v16i32(ptr addrspace(3) %out
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
-define amdgpu_kernel void @local_sextload_v16i16_to_v16i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_v16i16_to_v16i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <16 x i16>, ptr addrspace(3) %in
   %ext = sext <16 x i16> %load to <16 x i32>
   store <16 x i32> %ext, ptr addrspace(3) %out
@@ -441,7 +441,7 @@ define amdgpu_kernel void @local_sextload_v16i16_to_v16i32(ptr addrspace(3) %out
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_zextload_v32i16_to_v32i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_v32i16_to_v32i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <32 x i16>, ptr addrspace(3) %in
   %ext = zext <32 x i16> %load to <32 x i32>
   store <32 x i32> %ext, ptr addrspace(3) %out
@@ -481,7 +481,7 @@ define amdgpu_kernel void @local_zextload_v32i16_to_v32i32(ptr addrspace(3) %out
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_sextload_v32i16_to_v32i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_v32i16_to_v32i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <32 x i16>, ptr addrspace(3) %in
   %ext = sext <32 x i16> %load to <32 x i32>
   store <32 x i32> %ext, ptr addrspace(3) %out
@@ -549,7 +549,7 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i32(ptr addrspace(3) %out
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_zextload_v64i16_to_v64i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_v64i16_to_v64i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <64 x i16>, ptr addrspace(3) %in
   %ext = zext <64 x i16> %load to <64 x i32>
   store <64 x i32> %ext, ptr addrspace(3) %out
@@ -592,7 +592,7 @@ define amdgpu_kernel void @local_zextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_sextload_v64i16_to_v64i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_v64i16_to_v64i32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <64 x i16>, ptr addrspace(3) %in
   %ext = sext <64 x i16> %load to <64 x i32>
   store <64 x i32> %ext, ptr addrspace(3) %out
@@ -613,7 +613,7 @@ define amdgpu_kernel void @local_sextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; EG-DAG: MOV {{[* ]*}}[[DATA:T[0-9]+\.[XYZW]]], OQAP
 ; EG-DAG: MOV {{[* ]*}}[[TO:T[0-9]+\.[XYZW]]], KC0[2].Y
 ; EG-DAG: LDS_WRITE
-define amdgpu_kernel void @local_zextload_i16_to_i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_i16_to_i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %a = load i16, ptr addrspace(3) %in
   %ext = zext i16 %a to i64
   store i64 %ext, ptr addrspace(3) %out
@@ -643,7 +643,7 @@ define amdgpu_kernel void @local_zextload_i16_to_i64(ptr addrspace(3) %out, ptr 
 ; EG-DAG: LDS_WRITE
 ; EG-DAG: 16
 ; EG: LDS_WRITE {{\*?}} [[TO]], [[DATA]]
-define amdgpu_kernel void @local_sextload_i16_to_i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_i16_to_i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %a = load i16, ptr addrspace(3) %in
   %ext = sext i16 %a to i64
   store i64 %ext, ptr addrspace(3) %out
@@ -660,7 +660,7 @@ define amdgpu_kernel void @local_sextload_i16_to_i64(ptr addrspace(3) %out, ptr 
 ; EG-DAG: MOV {{[* ]*}}[[DATA:T[0-9]+\.[XYZW]]], OQAP
 ; EG-DAG: MOV {{[* ]*}}[[TO:T[0-9]+\.[XYZW]]], KC0[2].Y
 ; EG-DAG: LDS_WRITE
-define amdgpu_kernel void @local_zextload_v1i16_to_v1i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_v1i16_to_v1i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <1 x i16>, ptr addrspace(3) %in
   %ext = zext <1 x i16> %load to <1 x i64>
   store <1 x i64> %ext, ptr addrspace(3) %out
@@ -680,7 +680,7 @@ define amdgpu_kernel void @local_zextload_v1i16_to_v1i64(ptr addrspace(3) %out, 
 ; EG-DAG: LDS_WRITE
 ; EG-DAG: 16
 ; EG: LDS_WRITE {{\*?}} [[TO]], [[DATA]]
-define amdgpu_kernel void @local_sextload_v1i16_to_v1i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_v1i16_to_v1i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <1 x i16>, ptr addrspace(3) %in
   %ext = sext <1 x i16> %load to <1 x i64>
   store <1 x i64> %ext, ptr addrspace(3) %out
@@ -693,7 +693,7 @@ define amdgpu_kernel void @local_sextload_v1i16_to_v1i64(ptr addrspace(3) %out, 
 
 
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_zextload_v2i16_to_v2i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_v2i16_to_v2i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <2 x i16>, ptr addrspace(3) %in
   %ext = zext <2 x i16> %load to <2 x i64>
   store <2 x i64> %ext, ptr addrspace(3) %out
@@ -708,7 +708,7 @@ define amdgpu_kernel void @local_zextload_v2i16_to_v2i64(ptr addrspace(3) %out, 
 ; EG: LDS_READ_RET
 ; EG-DAG: BFE_INT
 ; EG-DAG: ASHR
-define amdgpu_kernel void @local_sextload_v2i16_to_v2i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_v2i16_to_v2i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <2 x i16>, ptr addrspace(3) %in
   %ext = sext <2 x i16> %load to <2 x i64>
   store <2 x i64> %ext, ptr addrspace(3) %out
@@ -722,7 +722,7 @@ define amdgpu_kernel void @local_sextload_v2i16_to_v2i64(ptr addrspace(3) %out, 
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_zextload_v4i16_to_v4i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_v4i16_to_v4i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <4 x i16>, ptr addrspace(3) %in
   %ext = zext <4 x i16> %load to <4 x i64>
   store <4 x i64> %ext, ptr addrspace(3) %out
@@ -740,7 +740,7 @@ define amdgpu_kernel void @local_zextload_v4i16_to_v4i64(ptr addrspace(3) %out, 
 ; EG-DAG: BFE_INT
 ; EG-DAG: ASHR
 ; EG-DAG: ASHR
-define amdgpu_kernel void @local_sextload_v4i16_to_v4i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_v4i16_to_v4i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <4 x i16>, ptr addrspace(3) %in
   %ext = sext <4 x i16> %load to <4 x i64>
   store <4 x i64> %ext, ptr addrspace(3) %out
@@ -756,7 +756,7 @@ define amdgpu_kernel void @local_sextload_v4i16_to_v4i64(ptr addrspace(3) %out, 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_zextload_v8i16_to_v8i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_v8i16_to_v8i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <8 x i16>, ptr addrspace(3) %in
   %ext = zext <8 x i16> %load to <8 x i64>
   store <8 x i64> %ext, ptr addrspace(3) %out
@@ -780,7 +780,7 @@ define amdgpu_kernel void @local_zextload_v8i16_to_v8i64(ptr addrspace(3) %out, 
 ; EG-DAG: BFE_INT
 ; EG-DAG: ASHR
 ; EG-DAG: ASHR
-define amdgpu_kernel void @local_sextload_v8i16_to_v8i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_v8i16_to_v8i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <8 x i16>, ptr addrspace(3) %in
   %ext = sext <8 x i16> %load to <8 x i64>
   store <8 x i64> %ext, ptr addrspace(3) %out
@@ -800,7 +800,7 @@ define amdgpu_kernel void @local_sextload_v8i16_to_v8i64(ptr addrspace(3) %out, 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_zextload_v16i16_to_v16i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_v16i16_to_v16i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <16 x i16>, ptr addrspace(3) %in
   %ext = zext <16 x i16> %load to <16 x i64>
   store <16 x i64> %ext, ptr addrspace(3) %out
@@ -836,7 +836,7 @@ define amdgpu_kernel void @local_zextload_v16i16_to_v16i64(ptr addrspace(3) %out
 ; EG-DAG: BFE_INT
 ; EG-DAG: ASHR
 ; EG-DAG: ASHR
-define amdgpu_kernel void @local_sextload_v16i16_to_v16i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_v16i16_to_v16i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <16 x i16>, ptr addrspace(3) %in
   %ext = sext <16 x i16> %load to <16 x i64>
   store <16 x i64> %ext, ptr addrspace(3) %out
@@ -864,7 +864,7 @@ define amdgpu_kernel void @local_sextload_v16i16_to_v16i64(ptr addrspace(3) %out
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_zextload_v32i16_to_v32i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_zextload_v32i16_to_v32i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <32 x i16>, ptr addrspace(3) %in
   %ext = zext <32 x i16> %load to <32 x i64>
   store <32 x i64> %ext, ptr addrspace(3) %out
@@ -924,7 +924,7 @@ define amdgpu_kernel void @local_zextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; EG-DAG: BFE_INT
 ; EG-DAG: ASHR
 ; EG-DAG: ASHR
-define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
   %load = load <32 x i16>, ptr addrspace(3) %in
   %ext = sext <32 x i16> %load to <32 x i64>
   store <32 x i64> %ext, ptr addrspace(3) %out
@@ -932,7 +932,7 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out
 }
 
 ; ; XFUNC-LABEL: {{^}}local_zextload_v64i16_to_v64i64:
-; define amdgpu_kernel void @local_zextload_v64i16_to_v64i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+; define amdgpu_kernel void @local_zextload_v64i16_to_v64i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
 ;   %load = load <64 x i16>, ptr addrspace(3) %in
 ;   %ext = zext <64 x i16> %load to <64 x i64>
 ;   store <64 x i64> %ext, ptr addrspace(3) %out
@@ -940,7 +940,7 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; }
 
 ; ; XFUNC-LABEL: {{^}}local_sextload_v64i16_to_v64i64:
-; define amdgpu_kernel void @local_sextload_v64i16_to_v64i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+; define amdgpu_kernel void @local_sextload_v64i16_to_v64i64(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
 ;   %load = load <64 x i16>, ptr addrspace(3) %in
 ;   %ext = sext <64 x i16> %load to <64 x i64>
 ;   store <64 x i64> %ext, ptr addrspace(3) %out
@@ -965,5 +965,3 @@ define amdgpu_kernel void @local_v8i16_to_128(ptr addrspace(3) %out, ptr addrspa
   store <8 x i16> %ld, ptr addrspace(3) %out, align 16
   ret void
 }
-
-attributes #0 = { nounwind }

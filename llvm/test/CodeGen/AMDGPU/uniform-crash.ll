@@ -40,7 +40,7 @@ bb3:                                              ; preds = %bb3, %bb2
   br i1 %tmp4, label %bb5, label %bb3
 
 bb5:                                              ; preds = %bb3, %bb
-  %tmp6 = tail call i32 @llvm.amdgcn.workitem.id.y() #1
+  %tmp6 = tail call i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
   %tmp10 = icmp ult i32 %tmp6, %arg
   br i1 %tmp10, label %bb11, label %bb12
 
@@ -52,6 +52,4 @@ bb12:                                             ; preds = %bb11, %bb5
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.amdgcn.workitem.id.y() #1
-
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone

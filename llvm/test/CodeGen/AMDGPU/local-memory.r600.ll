@@ -15,9 +15,9 @@
 ; EG-NEXT: ALU clause
 
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_memory(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @local_memory(ptr addrspace(1) %out) nounwind {
 entry:
-  %y.i = call i32 @llvm.r600.read.tidig.x() #1
+  %y.i = call i32 @llvm.r600.read.tidig.x() nounwind readnone
   %arrayidx = getelementptr inbounds [128 x i32], ptr addrspace(3) @local_memory.local_mem, i32 0, i32 %y.i
   store i32 %y.i, ptr addrspace(3) %arrayidx, align 4
   %add = add nsw i32 %y.i, 1
@@ -57,9 +57,9 @@ entry:
 ; EG: LDS_READ_RET {{[*]*}} OQAP, {{PV|T}}[[ADDRR:[0-9]*\.[XYZW]]]
 ; EG-NOT: LDS_READ_RET {{[*]*}} OQAP, T[[ADDRR]]
 
-define amdgpu_kernel void @local_memory_two_objects(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @local_memory_two_objects(ptr addrspace(1) %out) nounwind {
 entry:
-  %x.i = call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = call i32 @llvm.r600.read.tidig.x() nounwind readnone
   %arrayidx = getelementptr inbounds [4 x i32], ptr addrspace(3) @local_memory_two_objects.local_mem0, i32 0, i32 %x.i
   store i32 %x.i, ptr addrspace(3) %arrayidx, align 4
   %mul = shl nsw i32 %x.i, 1
@@ -79,9 +79,5 @@ entry:
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #1
-declare void @llvm.r600.group.barrier() #2
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { convergent nounwind }
+declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare void @llvm.r600.group.barrier() convergent nounwind

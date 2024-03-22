@@ -2,7 +2,7 @@
 
 ; ERR: warning: inline asm clobber list contains reserved registers: v42
 ; ERR: note: Reserved registers on the clobber list may not be preserved across the asm statement, and clobbering them may lead to undefined behaviour.
-define amdgpu_kernel void @clobber_occupancy_limited_vgpr() #0 {
+define amdgpu_kernel void @clobber_occupancy_limited_vgpr() "amdgpu-waves-per-eu"="10,10" {
 entry:
   call void asm sideeffect "; clobber $0", "~{v42}"()
   ret void
@@ -10,7 +10,7 @@ entry:
 
 ; ERR: warning: inline asm clobber list contains reserved registers: v[42:43]
 ; ERR: note: Reserved registers on the clobber list may not be preserved across the asm statement, and clobbering them may lead to undefined behaviour.
-define amdgpu_kernel void @clobber_occupancy_limited_vgpr64() #0 {
+define amdgpu_kernel void @clobber_occupancy_limited_vgpr64() "amdgpu-waves-per-eu"="10,10" {
 entry:
   call void asm sideeffect "; clobber $0", "~{v[42:43]}"()
   ret void
@@ -48,5 +48,3 @@ entry:
   store i64 %exec, ptr addrspace(1) %ptr
   ret void
 }
-
-attributes #0 = { "amdgpu-waves-per-eu"="10,10" }

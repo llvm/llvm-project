@@ -151,15 +151,12 @@ define amdgpu_ps float @sample_def_undef_undef_undef(<8 x i32> inreg %rsrc, <4 x
   ret float %r
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32(i32, float, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32(i32, float, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
 
-declare float @llvm.amdgcn.image.sample.3d.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare float @llvm.amdgcn.image.sample.3d.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
 
-declare float @llvm.rint.f32(float) #2
-declare float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #1
-
-attributes #1 = { nounwind readonly }
-attributes #2 = { nounwind readnone speculatable willreturn }
+declare float @llvm.rint.f32(float) nounwind readnone speculatable willreturn
+declare float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly

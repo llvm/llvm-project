@@ -5,14 +5,12 @@
 # that the return address is not clobbered in the callee by the outstanding load.
 
 --- |
-  define amdgpu_kernel void @call_waw_waitcnt() #0 {
+  define amdgpu_kernel void @call_waw_waitcnt() nounwind {
     %1 = call i32 @func()
     ret void
   }
 
-  declare hidden i32 @func() #0
-
-  attributes #0 = { nounwind }
+  declare hidden i32 @func() nounwind
 ...
 
 ---

@@ -9,7 +9,7 @@
 ; GCN: s_cbranch_scc1
 ; GCN-NOT: s_endpgm
 ; GCN: .Lfunc_end0
-define amdgpu_kernel void @annotate_unreachable_noloop(ptr addrspace(1) noalias nocapture readonly %arg) #0 {
+define amdgpu_kernel void @annotate_unreachable_noloop(ptr addrspace(1) noalias nocapture readonly %arg) nounwind {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1
@@ -42,7 +42,7 @@ bb5:                                              ; preds = %bb3, %bb1
 ; GCN: s_and_saveexec_b64
 ; GCN-NEXT: s_endpgm
 ; GCN: .Lfunc_end
-define amdgpu_kernel void @annotate_ret_noloop(ptr addrspace(1) noalias nocapture readonly %arg) #0 {
+define amdgpu_kernel void @annotate_ret_noloop(ptr addrspace(1) noalias nocapture readonly %arg) nounwind {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1
@@ -75,7 +75,7 @@ bb5:                                              ; preds = %bb3, %bb1
 ; GCN: s_cbranch_scc1
 ; GCN: s_endpgm
 ; GCN: .Lfunc_end
-define amdgpu_kernel void @uniform_annotate_ret_noloop(ptr addrspace(1) noalias nocapture readonly %arg, i32 %tmp) #0 {
+define amdgpu_kernel void @uniform_annotate_ret_noloop(ptr addrspace(1) noalias nocapture readonly %arg, i32 %tmp) nounwind {
 bb:
   br label %bb1
 
@@ -98,7 +98,4 @@ bb5:                                              ; preds = %bb3, %bb1
 }
 
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

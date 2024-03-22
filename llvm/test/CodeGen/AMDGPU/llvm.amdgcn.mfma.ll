@@ -68,7 +68,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; GFX908-COUNT-2: global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}]
 ; GFX90A-NOT:     v_accvgpr_read_b32
 ; GFX90A-COUNT-8: global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
-define amdgpu_kernel void @test_mfma_f32_32x32x1f32(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x1f32(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <32 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %in.1, i32 1, i32 2, i32 3)
@@ -88,7 +88,7 @@ bb:
 ; GFX908-COUNT-4:    global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}]
 ; GFX90A-NOT:        v_accvgpr_read_b32
 ; GFX90A-COUNT-4:    global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
-define amdgpu_kernel void @test_mfma_f32_16x16x1f32(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x1f32(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <16 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float 1.0, float 2.0, <16 x float> %in.1, i32 1, i32 2, i32 3)
@@ -108,7 +108,7 @@ bb:
 ; GFX908:           global_store_dwordx4
 ; GFX90A-NOT:       v_accvgpr_read_b32
 ; GFX90A:           global_store_dwordx4 {{v[0-9]+}}, [[RES]]
-define amdgpu_kernel void @test_mfma_f32_4x4x1f32(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_4x4x1f32(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 2.0, <4 x float> %in.1, i32 1, i32 2, i32 3)
@@ -128,7 +128,7 @@ bb:
 ; GFX908-COUNT-4:    global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}]
 ; GFX90A-NOT:        v_accvgpr_read_b32
 ; GFX90A-COUNT-4:    global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
-define amdgpu_kernel void @test_mfma_f32_32x32x2f32(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x2f32(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <16 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x2f32(float 1.0, float 2.0, <16 x float> %in.1, i32 1, i32 2, i32 3)
@@ -148,7 +148,7 @@ bb:
 ; GFX908:           global_store_dwordx4
 ; GFX90A-NOT:       v_accvgpr_read_b32
 ; GFX90A:           global_store_dwordx4 {{v[0-9]+}}, [[RES]],
-define amdgpu_kernel void @test_mfma_f32_16x16x4f32(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x4f32(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x4f32(float 1.0, float 2.0, <4 x float> %in.1, i32 1, i32 2, i32 3)
@@ -167,7 +167,7 @@ bb:
 ; GFX908:            global_store_dwordx4
 ; GFX90A-NOT:        v_accvgpr_read_b32
 ; GFX90A-COUNT-8:    global_store_dwordx4 {{v[0-9]+}}, a[{{[0-9:]+}}],
-define amdgpu_kernel void @test_mfma_f32_32x32x4f16(ptr addrspace(1) %arg, ptr addrspace(1) %c) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x4f16(ptr addrspace(1) %arg, ptr addrspace(1) %c) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <32 x float>, ptr addrspace(1) %arg
   %c.1 = load <4 x half>, ptr addrspace(1) %c
@@ -188,7 +188,7 @@ bb:
 ; GFX908:            global_store_dwordx4
 ; GFX90A-NOT:        v_accvgpr_read_b32
 ; GFX90A-COUNT-4:    global_store_dwordx4 {{v[0-9]+}}, a[{{[0-9:]+}}],
-define amdgpu_kernel void @test_mfma_f32_16x16x4f16(ptr addrspace(1) %arg, ptr addrspace(1) %c) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x4f16(ptr addrspace(1) %arg, ptr addrspace(1) %c) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <16 x float>, ptr addrspace(1) %arg
   %c.1 = load <4 x half>, ptr addrspace(1) %c
@@ -210,7 +210,7 @@ bb:
 ; GFX908:           global_store_dwordx4
 ; GFX90A-NOT:       v_accvgpr_read_b32
 ; GFX90A:           global_store_dwordx4 {{v[0-9]+}}, [[RES]],
-define amdgpu_kernel void @test_mfma_f32_4x4x4f16(ptr addrspace(1) %arg, ptr addrspace(1) %c) #0 {
+define amdgpu_kernel void @test_mfma_f32_4x4x4f16(ptr addrspace(1) %arg, ptr addrspace(1) %c) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
   %c.1 = load <4 x half>, ptr addrspace(1) %c
@@ -233,7 +233,7 @@ bb:
 ; GFX908:            global_store_dwordx4
 ; GFX90A-NOT:        v_accvgpr_read_b32
 ; GFX90A-COUNT-4:    global_store_dwordx4 {{v[0-9]+}}, a[{{[0-9:]+}}],
-define amdgpu_kernel void @test_mfma_f32_32x32x8f16(ptr addrspace(1) %arg, ptr addrspace(1) %c) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x8f16(ptr addrspace(1) %arg, ptr addrspace(1) %c) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <16 x float>, ptr addrspace(1) %arg
   %c.1 = load <4 x half>, ptr addrspace(1) %c
@@ -255,7 +255,7 @@ bb:
 ; GFX908:           global_store_dwordx4
 ; GFX90A-NOT:       v_accvgpr_read_b32
 ; GFX90A:           global_store_dwordx4 {{v[0-9]+}}, [[RES]],
-define amdgpu_kernel void @test_mfma_f32_16x16x16f16(ptr addrspace(1) %arg, ptr addrspace(1) %c) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x16f16(ptr addrspace(1) %arg, ptr addrspace(1) %c) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
   %c.1 = load <4 x half>, ptr addrspace(1) %c
@@ -310,7 +310,7 @@ bb:
 ; GFX908:          global_store_dwordx4
 ; GFX90A-NOT:      v_accvgpr_read_b32
 ; GFX90A-COUNT-8:  global_store_dwordx4 {{v[0-9]+}}, a[{{[0-9:]+}}],
-define amdgpu_kernel void @test_mfma_i32_32x32x4i8(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_i32_32x32x4i8(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <32 x i32>, ptr addrspace(1) %arg
   %mai.1 = tail call <32 x i32> @llvm.amdgcn.mfma.i32.32x32x4i8(i32 1, i32 2, <32 x i32> %in.1, i32 1, i32 2, i32 3)
@@ -330,7 +330,7 @@ bb:
 ; GFX908:            global_store_dwordx4
 ; GFX90A-NOT:        v_accvgpr_read_b32
 ; GFX90A-COUNT-4:    global_store_dwordx4 {{v[0-9]+}}, a[{{[0-9:]+}}],
-define amdgpu_kernel void @test_mfma_i32_16x16x4i8(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_i32_16x16x4i8(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <16 x i32>, ptr addrspace(1) %arg
   %mai.1 = tail call <16 x i32> @llvm.amdgcn.mfma.i32.16x16x4i8(i32 1, i32 2, <16 x i32> %in.1, i32 1, i32 2, i32 3)
@@ -350,7 +350,7 @@ bb:
 ; GFX908:           global_store_dwordx4
 ; GFX90A-NOT:       v_accvgpr_read_b32
 ; GFX90A:           global_store_dwordx4 {{v[0-9]+}}, [[RES]],
-define amdgpu_kernel void @test_mfma_i32_4x4x4i8(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_i32_4x4x4i8(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <4 x i32>, ptr addrspace(1) %arg
   %mai.1 = tail call <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32 1, i32 2, <4 x i32> %in.1, i32 1, i32 2, i32 3)
@@ -363,7 +363,7 @@ bb:
 ; GFX908_A-NEXT: v_mfma_f32_32x32x1f32 a[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, v{{[0-9]+}}, [[MAI1]]
 ; GFX940:        v_mfma_f32_32x32x1_2b_f32 [[MAI1:a\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, v{{[0-9]+}}, a[{{[0-9]+:[0-9]+}}]
 ; GFX940-NEXT:   v_mfma_f32_32x32x1_2b_f32 a[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, v{{[0-9]+}}, [[MAI1]]
-define amdgpu_kernel void @test_mfma_f32_32x32x1f32_forward_acc(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x1f32_forward_acc(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <32 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %in.1, i32 0, i32 0, i32 0)
@@ -377,7 +377,7 @@ bb:
 ; GFX908_A-NEXT: v_mfma_f32_16x16x1f32 a[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, v{{[0-9]+}}, [[MAI1]]
 ; GFX940:        v_mfma_f32_16x16x1_4b_f32 [[MAI1:a\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, v{{[0-9]+}}, a[{{[0-9]+:[0-9]+}}]
 ; GFX940-NEXT:   v_mfma_f32_16x16x1_4b_f32 a[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, v{{[0-9]+}}, [[MAI1]]
-define amdgpu_kernel void @test_mfma_f32_16x16x1f32_forward_acc(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x1f32_forward_acc(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <16 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float 1.0, float 2.0, <16 x float> %in.1, i32 0, i32 0, i32 0)
@@ -392,7 +392,7 @@ bb:
 ; GFX940:        v_mfma_f32_4x4x1_16b_f32 [[MAI1:a\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, v{{[0-9]+}}, a[{{[0-9]+:[0-9]+}}]
 ; GFX940-NEXT:   s_nop 1
 ; GFX940-NEXT:   v_mfma_f32_4x4x1_16b_f32 a[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, v{{[0-9]+}}, [[MAI1]]
-define amdgpu_kernel void @test_mfma_f32_4x4x1f32_forward_acc(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_4x4x1f32_forward_acc(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 2.0, <4 x float> %in.1, i32 0, i32 0, i32 0)
@@ -416,7 +416,7 @@ bb:
 ; GFX908:         global_store_dwordx4
 ; GFX90A-NOT:     v_accvgpr_read_b32
 ; GFX90A:         global_store_dwordx4 {{v[0-9]+}}, [[RES]],
-define amdgpu_kernel void @test_mfma_f32_4x4x1f32_imm_splat(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_4x4x1f32_imm_splat(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 2.0, <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, i32 0, i32 0, i32 0)
   store <4 x float> %mai.1, ptr addrspace(1) %arg
@@ -435,7 +435,7 @@ bb:
 ; GFX908:          global_store_dwordx4
 ; GFX90A-NOT:      v_accvgpr_read_b32
 ; GFX90A-COUNT-4:  global_store_dwordx4 {{v[0-9]+}}, a[{{[0-9:]+}}],
-define amdgpu_kernel void @test_mfma_f32_16x16x1f32_imm_splat(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x1f32_imm_splat(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float 1.0, float 2.0, <16 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, i32 0, i32 0, i32 0)
   store <16 x float> %mai.1, ptr addrspace(1) %arg
@@ -454,7 +454,7 @@ bb:
 ; GFX908:          global_store_dwordx4
 ; GFX90A-NOT:      v_accvgpr_read_b32
 ; GFX90A-COUNT-4:  global_store_dwordx4 {{v[0-9]+}}, a[{{[0-9:]+}}],
-define amdgpu_kernel void @test_mfma_f32_32x32x8f16_imm_splat(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x8f16_imm_splat(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x8f16(<4 x half> <half 1.0, half 1.0, half 1.0, half 1.0>, <4 x half> <half 2.0, half 2.0, half 2.0, half 2.0>, <16 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, i32 0, i32 0, i32 0)
   store <16 x float> %mai.1, ptr addrspace(1) %arg
@@ -473,7 +473,7 @@ bb:
 ; GFX908:          global_store_dwordx4
 ; GFX90A-NOT:      v_accvgpr_read_b32
 ; GFX90A-COUNT-8:  global_store_dwordx4 {{v[0-9]+}}, a[{{[0-9:]+}}],
-define amdgpu_kernel void @test_mfma_f32_32x32x1f32_imm_splat(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x1f32_imm_splat(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> <float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0>, i32 0, i32 0, i32 0)
   store <32 x float> %mai.1, ptr addrspace(1) %arg
@@ -493,7 +493,7 @@ bb:
 ; GFX908:         global_store_dwordx4
 ; GFX90A-NOT:     v_accvgpr_read_b32
 ; GFX90A:         global_store_dwordx4 {{v[0-9]+}}, [[RES]],
-define amdgpu_kernel void @test_mfma_f32_4x4x1f32_imm(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_4x4x1f32_imm(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 2.0, <4 x float> <float 1.0, float 2.0, float 1.0, float 1.0>, i32 0, i32 0, i32 0)
   store <4 x float> %mai.1, ptr addrspace(1) %arg
@@ -511,7 +511,7 @@ bb:
 ; GFX908:          global_store_dwordx4
 ; GFX90A-NOT:      v_accvgpr_read_b32
 ; GFX90A-COUNT-4:  global_store_dwordx4 {{v[0-9]+}}, a[{{[0-9:]+}}],
-define amdgpu_kernel void @test_mfma_f32_16x16x1f32_imm(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x1f32_imm(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float 1.0, float 2.0, <16 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 2.0>, i32 0, i32 0, i32 0)
   store <16 x float> %mai.1, ptr addrspace(1) %arg
@@ -587,7 +587,7 @@ bb:
 ; GFX908:          global_store_dwordx4
 ; GFX90A-NOT:      v_accvgpr_read_b32
 ; GFX90A-COUNT-8:  global_store_dwordx4 {{v[0-9]+}}, a[{{[0-9:]+}}],
-define amdgpu_kernel void @test_mfma_f32_32x32x1f32_imm(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x1f32_imm(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> <float 1.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0>, i32 0, i32 0, i32 0)
   store <32 x float> %mai.1, ptr addrspace(1) %arg
@@ -609,7 +609,7 @@ bb:
 ; GFX908:         global_store_dwordx4
 ; GFX90A-NOT:     v_accvgpr_read_b32
 ; GFX90A:         global_store_dwordx4 {{v[0-9]+}}, [[RES]]
-define amdgpu_kernel void @test_mfma_f32_4x4x1f32_lit_splat(ptr addrspace(1) %arg, i64 %idx) #0 {
+define amdgpu_kernel void @test_mfma_f32_4x4x1f32_lit_splat(ptr addrspace(1) %arg, i64 %idx) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %arg, i32 %tid
@@ -632,7 +632,7 @@ bb:
 ; GFX908-COUNT-4: v_accvgpr_read_b32
 ; GFX908:    global_store_dwordx4 v{{[0-9]+}}, v[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GFX90A_40: global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}], s[{{[0-9:]+}}]
-define amdgpu_kernel void @test_mfma_f32_4x4x1f32_lit_splat_bad_code(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_4x4x1f32_lit_splat_bad_code(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %arg, i32 %tid
@@ -657,7 +657,7 @@ bb:
 ; GFX908-COUNT-8:    global_store_dwordx4
 ; GFX90A_40-NOT:     v_accvgpr_read_b32
 ; GFX90A_40-COUNT-5: global_store_dwordx4 v{{[0-9:]+}}, a[{{[0-9:]+}}], s[{{[0-9:]+}}]
-define amdgpu_kernel void @test_mfma_f32_32x32x1f32_vecarg(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x1f32_vecarg(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <32 x float>, ptr addrspace(1) %arg, i32 %tid
@@ -666,5 +666,3 @@ bb:
   store <32 x float> %mai.1, ptr addrspace(1) %gep
   ret void
 }
-
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }

@@ -13,7 +13,7 @@
 
 target triple = "amdgcn--"
 
-define amdgpu_gs void @main(i32 inreg %arg) #0 {
+define amdgpu_gs void @main(i32 inreg %arg) nounwind "target-cpu"="tonga" {
 main_body:
   %tmp = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 20, i32 0)
   %tmp1 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 24, i32 0)
@@ -45,11 +45,6 @@ main_body:
   ret void
 }
 
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32 immarg) #1
-declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32 immarg) #2
-declare void @llvm.amdgcn.raw.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg, i32 immarg) #3
-
-attributes #0 = { nounwind "target-cpu"="tonga" }
-attributes #1 = { nounwind readnone willreturn }
-attributes #2 = { nounwind readonly willreturn }
-attributes #3 = { nounwind willreturn writeonly }
+declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32 immarg) nounwind readnone willreturn
+declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32 immarg) nounwind readonly willreturn
+declare void @llvm.amdgcn.raw.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg, i32 immarg) nounwind willreturn writeonly

@@ -9,7 +9,7 @@ target datalayout = "A5"
 ; CIVI-NEXT: v_add_{{i|u}}32_e32 v0, vcc, v0, v1
 ; GFX9-NEXT: v_add_u32_e32 v0, v0, v1
 ; GCN-NEXT: s_setpc_b64
-define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
+define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) nounwind noinline {
   %add0 = add i32 %arg0, %arg1
   ret i32 %add0
 }
@@ -23,7 +23,7 @@ define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN: s_setpc_b64
 ; GCN: ; ScratchSize: 68
-define fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %arg0, i32 %arg1) #1 {
+define fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %arg0, i32 %arg1) nounwind noinline {
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 5
   store volatile i32 9, ptr addrspace(5) %gep
@@ -32,7 +32,7 @@ define fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %arg0, i32 %arg1) #1 {
 }
 
 ; GCN-LABEL: {{^}}sibling_call_i32_fastcc_i32_i32:
-define hidden fastcc i32 @sibling_call_i32_fastcc_i32_i32(i32 %a, i32 %b, i32 %c) #1 {
+define hidden fastcc i32 @sibling_call_i32_fastcc_i32_i32(i32 %a, i32 %b, i32 %c) nounwind noinline {
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_i32(i32 %a, i32 %b)
   ret i32 %ret
@@ -43,7 +43,7 @@ entry:
 ; GCN: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:20
 ; GCN: s_setpc_b64
 ; GCN: ; ScratchSize: 68
-define fastcc i32 @sibling_call_i32_fastcc_i32_i32_stack_object(i32 %a, i32 %b, i32 %c) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_i32_stack_object(i32 %a, i32 %b, i32 %c) nounwind noinline {
 entry:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 5
@@ -57,7 +57,7 @@ entry:
 ; GCN: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:20
 ; GCN: s_setpc_b64
 ; GCN: ; ScratchSize: 136
-define fastcc i32 @sibling_call_i32_fastcc_i32_i32_callee_stack_object(i32 %a, i32 %b, i32 %c) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_i32_callee_stack_object(i32 %a, i32 %b, i32 %c) nounwind noinline {
 entry:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 5
@@ -67,7 +67,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}sibling_call_i32_fastcc_i32_i32_unused_result:
-define fastcc void @sibling_call_i32_fastcc_i32_i32_unused_result(i32 %a, i32 %b, i32 %c) #1 {
+define fastcc void @sibling_call_i32_fastcc_i32_i32_unused_result(i32 %a, i32 %b, i32 %c) nounwind noinline {
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_i32(i32 %a, i32 %b)
   ret void
@@ -75,8 +75,8 @@ entry:
 
 ; It doesn't make sense to do a tail from a kernel
 ; GCN-LABEL: {{^}}kernel_call_i32_fastcc_i32_i32_unused_result:
-;define amdgpu_kernel void @kernel_call_i32_fastcc_i32_i32_unused_result(i32 %a, i32 %b, i32 %c) #1 {
-define amdgpu_kernel void @kernel_call_i32_fastcc_i32_i32_unused_result(i32 %a, i32 %b, i32 %c) #1 {
+;define amdgpu_kernel void @kernel_call_i32_fastcc_i32_i32_unused_result(i32 %a, i32 %b, i32 %c) nounwind noinline {
+define amdgpu_kernel void @kernel_call_i32_fastcc_i32_i32_unused_result(i32 %a, i32 %b, i32 %c) nounwind noinline {
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_i32(i32 %a, i32 %b)
   ret void
@@ -91,7 +91,7 @@ entry:
 ; GFX9-NEXT: v_add_u32_e32 v0, v0, v1
 
 ; GCN-NEXT: s_setpc_b64 s[30:31]
-define hidden fastcc i32 @i32_fastcc_i32_byval_i32(i32 %arg0, ptr addrspace(5) byval(i32) align 4 %arg1) #1 {
+define hidden fastcc i32 @i32_fastcc_i32_byval_i32(i32 %arg0, ptr addrspace(5) byval(i32) align 4 %arg1) nounwind noinline {
   %arg1.load = load i32, ptr addrspace(5) %arg1, align 4
   %add0 = add i32 %arg0, %arg1.load
   ret i32 %add0
@@ -104,7 +104,7 @@ define hidden fastcc i32 @i32_fastcc_i32_byval_i32(i32 %arg0, ptr addrspace(5) b
 ; GCN: s_swappc_b64
 ; GCN-NOT: v_readlane_b32 s32
 ; GCN: s_setpc_b64
-define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32_byval_parent(i32 %a, ptr addrspace(5) byval(i32) %b.byval, i32 %c) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32_byval_parent(i32 %a, ptr addrspace(5) byval(i32) %b.byval, i32 %c) nounwind noinline {
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_byval_i32(i32 %a, ptr addrspace(5) byval(i32) %b.byval)
   ret i32 %ret
@@ -120,7 +120,7 @@ entry:
 ; GCN: buffer_load_dword v1, off, s[0:3], 0 offset:16
 ; GCN: buffer_store_dword v1, off, s[0:3], s32{{$}}
 ; GCN-NEXT: s_setpc_b64
-define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32(i32 %a, [32 x i32] %large) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32(i32 %a, [32 x i32] %large) nounwind noinline {
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_byval_i32(i32 %a, ptr addrspace(5) byval(i32) inttoptr (i32 16 to ptr addrspace(5)))
   ret i32 %ret
@@ -140,7 +140,7 @@ entry:
 ; GFX9: v_add3_u32 v0, v0, v3, v2
 
 ; GCN-NEXT: s_setpc_b64
-define fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %arg0, i32 %arg1, [32 x i32] %large) #1 {
+define fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %arg0, i32 %arg1, [32 x i32] %large) nounwind noinline {
   %val_firststack = extractvalue [32 x i32] %large, 30
   %val_laststack = extractvalue [32 x i32] %large, 31
   %add0 = add i32 %arg0, %arg1
@@ -164,7 +164,7 @@ define fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %arg0, i32 %arg1, [32 x i32] %l
 
 ; GCN-NOT: s32
 ; GCN: s_setpc_b64
-define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x i32] %c) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x i32] %c) nounwind noinline {
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x i32] %c)
   ret i32 %ret
@@ -174,7 +174,7 @@ entry:
 ; GCN-DAG: v_mov_b32_e32 [[NINE:v[0-9]+]], 9
 ; GCN: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:32
 ; GCN: s_setpc_b64
-define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32_stack_object(i32 %a, i32 %b, [32 x i32] %c) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32_stack_object(i32 %a, i32 %b, [32 x i32] %c) nounwind noinline {
 entry:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 5
@@ -190,7 +190,7 @@ entry:
 ; GCN-LABEL: {{^}}no_sibling_call_callee_more_stack_space:
 ; GCN: s_swappc_b64
 ; GCN: s_setpc_b64
-define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) #1 {
+define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) nounwind noinline {
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x i32] zeroinitializer)
   ret i32 %ret
@@ -233,7 +233,7 @@ entry:
 ; GCN-NEXT: s_addk_i32 s32, 0xfc00
 ; GCN-NEXT: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN-NEXT: s_setpc_b64 s[4:5]
-define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i32 %c) #1 {
+define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i32 %c) nounwind noinline {
 entry:
   %other.call = tail call fastcc i32 @i32_fastcc_i32_i32(i32 %a, i32 %b)
   %ret = tail call fastcc i32 @sibling_call_i32_fastcc_i32_i32(i32 %a, i32 %b, i32 %other.call)
@@ -251,7 +251,7 @@ entry:
 
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s32 offset:
 ; GCN: s_setpc_b64 s[4:5]
-define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x i32] %c) #1 {
+define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x i32] %c) nounwind noinline {
 entry:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 5
@@ -266,7 +266,7 @@ entry:
 
 ; GCN-NOT: s33
 ; GCN: s_setpc_b64 s[4:5]
-define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32_larger_arg_area(i32 %a, i32 %b, [36 x i32] %c) #1 {
+define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32_larger_arg_area(i32 %a, i32 %b, [36 x i32] %c) nounwind noinline {
 entry:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 5
@@ -282,7 +282,7 @@ entry:
 ; GCN: s_load_dwordx2 [[GV_ADDR:s\[[0-9]+:[0-9]+\]]]
 ; GCN: s_load_dwordx2 [[FUNC_PTR:s\[[0-9]+:[0-9]+\]]], [[GV_ADDR]]
 ; GCN: s_setpc_b64 [[FUNC_PTR]]
-define hidden fastcc i32 @indirect_uniform_sibling_call_i32_fastcc_i32_i32(i32 %a, i32 %b, i32 %c) #1 {
+define hidden fastcc i32 @indirect_uniform_sibling_call_i32_fastcc_i32_i32(i32 %a, i32 %b, i32 %c) nounwind noinline {
 entry:
   %func.ptr.load = load ptr, ptr addrspace(4) @func_ptr_gv
   %ret = tail call fastcc i32 %func.ptr.load(i32 %a, i32 %b)
@@ -298,7 +298,7 @@ entry:
 ; GCN: s_swappc_b64
 ; GCN: s_cbranch_execnz
 ; GCN: s_setpc_b64
-define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr %func.ptr, i32 %a, i32 %b, i32 %c) #1 {
+define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr %func.ptr, i32 %a, i32 %b, i32 %c) nounwind noinline {
 entry:
   %add = add i32 %b, %c
   %ret = tail call fastcc i32 %func.ptr(i32 %a, i32 %add)
@@ -330,7 +330,7 @@ declare hidden void @void_fastcc_multi_byval(i32 %a, ptr addrspace(5) byval([3 x
 ; GCN-DAG: buffer_store_dword [[ZERO]], off, s[0:3], s32 offset:28{{$}}
 
 ; GCN: s_setpc_b64 [[TARGET_ADDR]]
-define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
+define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) nounwind noinline {
 entry:
   %alloca0 = alloca [3 x i32], align 16, addrspace(5)
   %alloca1 = alloca [2 x i64], align 8, addrspace(5)
@@ -362,7 +362,7 @@ declare hidden void @void_fastcc_byval_and_stack_passed(ptr addrspace(5) byval([
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
 ; GCN-NEXT: s_setpc_b64 [[TARGET_ADDR]]
-define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 x i32]) #1 {
+define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 x i32]) nounwind noinline {
 entry:
   %alloca = alloca [3 x i32], align 16, addrspace(5)
   store [3 x i32] [i32 9, i32 9, i32 9], ptr addrspace(5) %alloca
@@ -378,7 +378,7 @@ declare hidden fastcc i64 @i64_fastcc_i64(i64 %arg0)
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
 ; GCN-NEXT: s_setpc_b64
-define hidden fastcc i64 @sibling_call_i64_fastcc_i64(i64 %a) #1 {
+define hidden fastcc i64 @sibling_call_i64_fastcc_i64(i64 %a) nounwind noinline {
 entry:
   %ret = tail call fastcc i64 @i64_fastcc_i64(i64 %a)
   ret i64 %ret
@@ -392,7 +392,7 @@ declare hidden fastcc ptr addrspace(1) @p1i8_fastcc_p1i8(ptr addrspace(1) %arg0)
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
 ; GCN-NEXT: s_setpc_b64
-define hidden fastcc ptr addrspace(1) @sibling_call_p1i8_fastcc_p1i8(ptr addrspace(1) %a) #1 {
+define hidden fastcc ptr addrspace(1) @sibling_call_p1i8_fastcc_p1i8(ptr addrspace(1) %a) nounwind noinline {
 entry:
   %ret = tail call fastcc ptr addrspace(1) @p1i8_fastcc_p1i8(ptr addrspace(1) %a)
   ret ptr addrspace(1) %ret
@@ -406,7 +406,7 @@ declare hidden fastcc i16 @i16_fastcc_i16(i16 %arg0)
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
 ; GCN-NEXT: s_setpc_b64
-define hidden fastcc i16 @sibling_call_i16_fastcc_i16(i16 %a) #1 {
+define hidden fastcc i16 @sibling_call_i16_fastcc_i16(i16 %a) nounwind noinline {
 entry:
   %ret = tail call fastcc i16 @i16_fastcc_i16(i16 %a)
   ret i16 %ret
@@ -420,7 +420,7 @@ declare hidden fastcc half @f16_fastcc_f16(half %arg0)
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
 ; GCN-NEXT: s_setpc_b64
-define hidden fastcc half @sibling_call_f16_fastcc_f16(half %a) #1 {
+define hidden fastcc half @sibling_call_f16_fastcc_f16(half %a) nounwind noinline {
 entry:
   %ret = tail call fastcc half @f16_fastcc_f16(half %a)
   ret half %ret
@@ -434,7 +434,7 @@ declare hidden fastcc <3 x i16> @v3i16_fastcc_v3i16(<3 x i16> %arg0)
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
 ; GCN-NEXT: s_setpc_b64
-define hidden fastcc <3 x i16> @sibling_call_v3i16_fastcc_v3i16(<3 x i16> %a) #1 {
+define hidden fastcc <3 x i16> @sibling_call_v3i16_fastcc_v3i16(<3 x i16> %a) nounwind noinline {
 entry:
   %ret = tail call fastcc <3 x i16> @v3i16_fastcc_v3i16(<3 x i16> %a)
   ret <3 x i16> %ret
@@ -448,7 +448,7 @@ declare hidden fastcc <4 x i16> @v4i16_fastcc_v4i16(<4 x i16> %arg0)
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
 ; GCN-NEXT: s_setpc_b64
-define hidden fastcc <4 x i16> @sibling_call_v4i16_fastcc_v4i16(<4 x i16> %a) #1 {
+define hidden fastcc <4 x i16> @sibling_call_v4i16_fastcc_v4i16(<4 x i16> %a) nounwind noinline {
 entry:
   %ret = tail call fastcc <4 x i16> @v4i16_fastcc_v4i16(<4 x i16> %a)
   ret <4 x i16> %ret
@@ -462,11 +462,8 @@ declare hidden fastcc <2 x i64> @v2i64_fastcc_v2i64(<2 x i64> %arg0)
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
 ; GCN-NEXT: s_setpc_b64
-define hidden fastcc <2 x i64> @sibling_call_v2i64_fastcc_v2i64(<2 x i64> %a) #1 {
+define hidden fastcc <2 x i64> @sibling_call_v2i64_fastcc_v2i64(<2 x i64> %a) nounwind noinline {
 entry:
   %ret = tail call fastcc <2 x i64> @v2i64_fastcc_v2i64(<2 x i64> %a)
   ret <2 x i64> %ret
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind noinline }

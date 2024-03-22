@@ -6,7 +6,7 @@
 ; and also before the beginning of the epilogue instructions in a trivial function.
 
 ; Function Attrs: convergent noinline nounwind optnone mustprogress
-define hidden void @_Z9base_casev() #0 !dbg !6 {
+define hidden void @_Z9base_casev() nounwind !dbg !6 {
 ; CHECK-LABEL: _Z9base_casev:
 ; CHECK:       .Lfunc_begin0:
 ; CHECK-NEXT:    .file 0 "dir" "file.cpp"
@@ -30,8 +30,6 @@ define hidden void @_Z9base_casev() #0 !dbg !6 {
 entry:
   ret void, !dbg !7
 }
-
-attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!4, !5}

@@ -12,7 +12,7 @@
 ; CHECK: buffer_store_byte
 ; ModuleID = 'radeon'
 
-define amdgpu_kernel void @test_8_min_char(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture readonly %in0, ptr addrspace(1) nocapture readonly %in1) #0 {
+define amdgpu_kernel void @test_8_min_char(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture readonly %in0, ptr addrspace(1) nocapture readonly %in1) nounwind {
 entry:
   %0 = load i8, ptr addrspace(1) %in0, align 1
   %1 = insertelement <8 x i8> undef, i8 %0, i32 0
@@ -89,8 +89,6 @@ entry:
   store i8 %39, ptr addrspace(1) %arrayidx2.i6.i8.i, align 1
   ret void
 }
-
-attributes #0 = { nounwind }
 
 !opencl.kernels = !{!0, !1, !2, !3, !4, !5, !6, !7, !8}
 

@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1031 -verify-machineinstrs < %s | FileCheck %s
 
 ; Testcase which happened to trigger a liveness verifier error
-define amdgpu_kernel void @test_long_add4(<4 x i64> %arg) #0 {
+define amdgpu_kernel void @test_long_add4(<4 x i64> %arg) noinline optnone {
 ; CHECK-LABEL: test_long_add4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
@@ -99,5 +99,3 @@ entry:
   store <4 x i64> %add, ptr addrspace(1) null, align 32
   ret void
 }
-
-attributes #0 = { noinline optnone }

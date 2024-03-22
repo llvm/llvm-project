@@ -11,7 +11,7 @@
 ; CHECK: BB0_3:
 ; CHECK: v_mov_b32_e32 v{{[0-9]+}}, [[SREG]]
 
-define amdgpu_ps void @mov_opt(i32 %arg, i32 inreg %arg1, i32 inreg %arg2) local_unnamed_addr #0 {
+define amdgpu_ps void @mov_opt(i32 %arg, i32 inreg %arg1, i32 inreg %arg2) local_unnamed_addr nounwind {
 bb:
   %tmp = icmp eq i32 %arg1, 0
   br i1 %tmp, label %bb3, label %bb10
@@ -31,12 +31,9 @@ bb9:                                              ; preds = %bb5
 
 bb10:                                             ; preds = %bb9, %bb5, %bb3, %bb
   %tmp11 = phi float [ 1.000000e+00, %bb3 ], [ 0.000000e+00, %bb9 ], [ 1.000000e+00, %bb ], [ undef, %bb5 ]
-  call void @llvm.amdgcn.exp.f32(i32 immarg 40, i32 immarg 15, float %tmp11, float undef, float undef, float undef, i1 immarg false, i1 immarg false) #0
+  call void @llvm.amdgcn.exp.f32(i32 immarg 40, i32 immarg 15, float %tmp11, float undef, float undef, float undef, i1 immarg false, i1 immarg false) nounwind
   ret void
 }
 
 ; Function Attrs: inaccessiblememonly nounwind
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { inaccessiblememonly nounwind }
+declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) inaccessiblememonly nounwind

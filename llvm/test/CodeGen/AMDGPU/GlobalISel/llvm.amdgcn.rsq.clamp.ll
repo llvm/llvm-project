@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=VI %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX12 %s
 
-define float @v_rsq_clamp_f32(float %src) #0 {
+define float @v_rsq_clamp_f32(float %src) nounwind {
 ; SI-LABEL: v_rsq_clamp_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -34,7 +34,7 @@ define float @v_rsq_clamp_f32(float %src) #0 {
   ret float %rsq_clamp
 }
 
-define float @v_rsq_clamp_fabs_f32(float %src) #0 {
+define float @v_rsq_clamp_fabs_f32(float %src) nounwind {
 ; SI-LABEL: v_rsq_clamp_fabs_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -66,7 +66,7 @@ define float @v_rsq_clamp_fabs_f32(float %src) #0 {
   ret float %rsq_clamp
 }
 
-define double @v_rsq_clamp_f64(double %src) #0 {
+define double @v_rsq_clamp_f64(double %src) nounwind {
 ; SI-LABEL: v_rsq_clamp_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -104,7 +104,7 @@ define double @v_rsq_clamp_f64(double %src) #0 {
   ret double %rsq_clamp
 }
 
-define double @v_rsq_clamp_fabs_f64(double %src) #0 {
+define double @v_rsq_clamp_fabs_f64(double %src) nounwind {
 ; SI-LABEL: v_rsq_clamp_fabs_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -143,7 +143,7 @@ define double @v_rsq_clamp_fabs_f64(double %src) #0 {
   ret double %rsq_clamp
 }
 
-define float @v_rsq_clamp_undef_f32() #0 {
+define float @v_rsq_clamp_undef_f32() nounwind {
 ; SI-LABEL: v_rsq_clamp_undef_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -174,7 +174,7 @@ define float @v_rsq_clamp_undef_f32() #0 {
   ret float %rsq_clamp
 }
 
-define double @v_rsq_clamp_undef_f64() #0 {
+define double @v_rsq_clamp_undef_f64() nounwind {
 ; SI-LABEL: v_rsq_clamp_undef_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -212,7 +212,7 @@ define double @v_rsq_clamp_undef_f64() #0 {
   ret double %rsq_clamp
 }
 
-define float @v_rsq_clamp_f32_non_ieee(float %src) #2 {
+define float @v_rsq_clamp_f32_non_ieee(float %src) nounwind "amdgpu-ieee"="false" {
 ; SI-LABEL: v_rsq_clamp_f32_non_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -243,7 +243,7 @@ define float @v_rsq_clamp_f32_non_ieee(float %src) #2 {
   ret float %rsq_clamp
 }
 
-define double @v_rsq_clamp_f64_non_ieee(double %src) #2 {
+define double @v_rsq_clamp_f64_non_ieee(double %src) nounwind "amdgpu-ieee"="false" {
 ; SI-LABEL: v_rsq_clamp_f64_non_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -281,11 +281,7 @@ define double @v_rsq_clamp_f64_non_ieee(double %src) #2 {
   ret double %rsq_clamp
 }
 
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.amdgcn.rsq.clamp.f32(float) #1
-declare double @llvm.fabs.f64(double) #1
-declare double @llvm.amdgcn.rsq.clamp.f64(double) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "amdgpu-ieee"="false" }
+declare float @llvm.fabs.f32(float) nounwind readnone
+declare float @llvm.amdgcn.rsq.clamp.f32(float) nounwind readnone
+declare double @llvm.fabs.f64(double) nounwind readnone
+declare double @llvm.amdgcn.rsq.clamp.f64(double) nounwind readnone

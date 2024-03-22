@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -misched-cluster=0 < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -misched-cluster=0 -amdgpu-igrouplp-exact-solver-max-branches=250000 < %s | FileCheck -check-prefix=EXACTCUTOFF %s
 
-define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_cluster(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
+define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_cluster(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) nounwind "amdgpu-flat-work-group-size"="1,32" {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_WMMA_cluster:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -172,7 +172,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
+define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) nounwind "amdgpu-flat-work-group-size"="1,32" {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_WMMA_interleave:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -394,10 +394,6 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-declare void @llvm.amdgcn.sched.group.barrier(i32, i32, i32) #1
-declare <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half>, <16 x half> , <16 x half>, i1 immarg) #1
-
-attributes #0 = { nounwind "amdgpu-flat-work-group-size"="1,32" }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind readnone speculatable }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
+declare void @llvm.amdgcn.sched.group.barrier(i32, i32, i32) nounwind
+declare <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half>, <16 x half> , <16 x half>, i1 immarg) nounwind

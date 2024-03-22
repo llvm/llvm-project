@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=r600 -mcpu=cayman < %s | FileCheck -check-prefix=CM %s
 
 ; Signed 24-bit multiply is not supported on pre-Cayman GPUs.
-define amdgpu_kernel void @test_smul24_i32(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @test_smul24_i32(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {
 ; SI-LABEL: test_smul24_i32:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -97,7 +97,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_smulhi24_i64(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @test_smulhi24_i64(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {
 ; SI-LABEL: test_smulhi24_i64:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -271,7 +271,7 @@ define <2 x i64> @test_smul48_v2i64(<2 x i64> %lhs, <2 x i64> %rhs) {
 ; unnecessary extension instructions because after legalization they
 ; will not be removed by SimplifyDemandedBits because there are
 ; multiple uses by the separate mul and mulhi.
-define amdgpu_kernel void @test_smul24_i64(ptr addrspace(1) %out, [8 x i32], i32 %a, [8 x i32], i32 %b) #0 {
+define amdgpu_kernel void @test_smul24_i64(ptr addrspace(1) %out, [8 x i32], i32 %a, [8 x i32], i32 %b) nounwind {
 ; SI-LABEL: test_smul24_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -373,7 +373,7 @@ define amdgpu_kernel void @test_smul24_i64(ptr addrspace(1) %out, [8 x i32], i32
   ret void
 }
 
-define amdgpu_kernel void @test_smul24_i64_square(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @test_smul24_i64_square(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {
 ; SI-LABEL: test_smul24_i64_square:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -460,7 +460,7 @@ define amdgpu_kernel void @test_smul24_i64_square(ptr addrspace(1) %out, i32 %a,
   ret void
 }
 
-define amdgpu_kernel void @test_smul24_i33(ptr addrspace(1) %out, i33 %a, i33 %b) #0 {
+define amdgpu_kernel void @test_smul24_i33(ptr addrspace(1) %out, i33 %a, i33 %b) nounwind {
 ; SI-LABEL: test_smul24_i33:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -813,4 +813,3 @@ bb7:
   ret void
 
 }
-attributes #0 = { nounwind }

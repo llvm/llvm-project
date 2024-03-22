@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 ; CHECK-LABEL: @lds_promoted_alloca_select_invalid_pointer_operand(
 ; CHECK: %alloca = alloca i32
 ; CHECK: select i1 undef, ptr addrspace(5) undef, ptr addrspace(5) %alloca
-define amdgpu_kernel void @lds_promoted_alloca_select_invalid_pointer_operand() #0 {
+define amdgpu_kernel void @lds_promoted_alloca_select_invalid_pointer_operand() norecurse nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
   %alloca = alloca i32, align 4, addrspace(5)
   %select = select i1 undef, ptr addrspace(5) undef, ptr addrspace(5) %alloca
   store i32 0, ptr addrspace(5) %select, align 4
@@ -18,7 +18,7 @@ define amdgpu_kernel void @lds_promoted_alloca_select_invalid_pointer_operand() 
 ; CHECK: %ptr1 = getelementptr inbounds [16 x i32], ptr addrspace(3) [[ARRAYGEP]], i32 0, i32 %b
 ; CHECK: %select = select i1 undef, ptr addrspace(3) %ptr0, ptr addrspace(3) %ptr1
 ; CHECK: store i32 0, ptr addrspace(3) %select, align 4
-define amdgpu_kernel void @lds_promote_alloca_select_two_derived_pointers(i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @lds_promote_alloca_select_two_derived_pointers(i32 %a, i32 %b) norecurse nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %ptr0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
   %ptr1 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %b
@@ -35,7 +35,7 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_derived_pointers(i32 %a
 ; CHECK: %ptr0 = getelementptr inbounds i32, ptr addrspace(5) %alloca0, i32 %a
 ; CHECK: %ptr1 = getelementptr inbounds i32, ptr addrspace(5) %alloca1, i32 %b
 ; CHECK: %select = select i1 undef, ptr addrspace(5) %ptr0, ptr addrspace(5) %ptr1
-define amdgpu_kernel void @lds_promote_alloca_select_two_allocas(i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @lds_promote_alloca_select_two_allocas(i32 %a, i32 %b) norecurse nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
   %alloca0 = alloca i32, i32 16, align 4, addrspace(5)
   %alloca1 = alloca i32, i32 16, align 4, addrspace(5)
   %ptr0 = getelementptr inbounds i32, ptr addrspace(5) %alloca0, i32 %a
@@ -52,7 +52,7 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_allocas(i32 %a, i32 %b)
 ; CHECK: %ptr1 = getelementptr inbounds [16 x i32], ptr addrspace(3) [[ARRAYGEP]], i32 0, i32 3
 ; CHECK: %select = select i1 undef, ptr addrspace(3) %ptr0, ptr addrspace(3) %ptr1
 ; CHECK: store i32 0, ptr addrspace(3) %select, align 4
-define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointers() #0 {
+define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointers() norecurse nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %ptr0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
   %ptr1 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 3
@@ -66,7 +66,7 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointe
 
 ; CHECK-LABEL: @lds_promoted_alloca_select_input_select(
 ; CHECK: alloca
-define amdgpu_kernel void @lds_promoted_alloca_select_input_select(i32 %a, i32 %b, i32 %c, i1 %c1, i1 %c2) #0 {
+define amdgpu_kernel void @lds_promoted_alloca_select_input_select(i32 %a, i32 %b, i32 %c, i1 %c1, i1 %c2) norecurse nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %ptr0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
   %ptr1 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %b
@@ -77,7 +77,7 @@ define amdgpu_kernel void @lds_promoted_alloca_select_input_select(i32 %a, i32 %
   ret void
 }
 
-define amdgpu_kernel void @lds_promoted_alloca_select_input_phi(i32 %a, i32 %b, i32 %c, i1 %c0) #0 {
+define amdgpu_kernel void @lds_promoted_alloca_select_input_phi(i32 %a, i32 %b, i32 %c, i1 %c0) norecurse nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %ptr0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
@@ -101,7 +101,7 @@ bb2:
 ; CHECK-LABEL: @select_null_rhs(
 ; CHECK-NOT: alloca
 ; CHECK: select i1 %tmp2, ptr addrspace(3) %{{[0-9]+}}, ptr addrspace(3) null
-define amdgpu_kernel void @select_null_rhs(ptr addrspace(1) nocapture %arg, i32 %arg1) #1 {
+define amdgpu_kernel void @select_null_rhs(ptr addrspace(1) nocapture %arg, i32 %arg1) norecurse nounwind {
 bb:
   %tmp = alloca double, align 8, addrspace(5)
   store double 0.000000e+00, ptr addrspace(5) %tmp, align 8
@@ -116,7 +116,7 @@ bb:
 ; CHECK-LABEL: @select_null_lhs(
 ; CHECK-NOT: alloca
 ; CHECK: select i1 %tmp2, ptr addrspace(3) null, ptr addrspace(3) %{{[0-9]+}}
-define amdgpu_kernel void @select_null_lhs(ptr addrspace(1) nocapture %arg, i32 %arg1) #1 {
+define amdgpu_kernel void @select_null_lhs(ptr addrspace(1) nocapture %arg, i32 %arg1) norecurse nounwind {
 bb:
   %tmp = alloca double, align 8, addrspace(5)
   store double 0.000000e+00, ptr addrspace(5) %tmp, align 8
@@ -127,6 +127,3 @@ bb:
   store double %tmp4, ptr addrspace(1) %arg
   ret void
 }
-
-attributes #0 = { norecurse nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" }
-attributes #1 = { norecurse nounwind }

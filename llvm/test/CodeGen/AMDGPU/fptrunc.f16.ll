@@ -1003,7 +1003,7 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
     ptr addrspace(1) %r,
-    ptr addrspace(1) %a) #0 {
+    ptr addrspace(1) %a) nounwind {
 entry:
   %a.val = load float, ptr addrspace(1) %a
   %a.fabs = call float @llvm.fabs.f32(float %a.val)
@@ -1142,7 +1142,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
     ptr addrspace(1) %r,
-    ptr addrspace(1) %a) #0 {
+    ptr addrspace(1) %a) nounwind {
 entry:
   %a.val = load float, ptr addrspace(1) %a
   %r.val = fptrunc float %a.val to half
@@ -1281,7 +1281,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
     ptr addrspace(1) %r,
-    ptr addrspace(1) %a) #0 {
+    ptr addrspace(1) %a) nounwind {
 entry:
   %a.val = load float, ptr addrspace(1) %a
   %a.fabs = call float @llvm.fabs.f32(float %a.val)
@@ -1427,7 +1427,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
     ptr addrspace(1) %r,
-    ptr addrspace(1) %a) #0 {
+    ptr addrspace(1) %a) nounwind {
 entry:
   %a.val = load float, ptr addrspace(1) %a
   %r.val = fptrunc float %a.val to half
@@ -1437,7 +1437,4 @@ entry:
   ret void
 }
 
-declare float @llvm.fabs.f32(float) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare float @llvm.fabs.f32(float) nounwind readnone

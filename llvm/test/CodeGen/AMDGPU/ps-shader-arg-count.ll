@@ -3,7 +3,7 @@
 
 ; ;CHECK-LABEL: {{^}}_amdgpu_ps_1_arg:
 ; ;CHECK: NumVgprs: 4
-define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_1_arg(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr #0 {
+define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_1_arg(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr nounwind "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %i1 = extractelement <2 x float> %arg3, i32 1
   %ret1 = insertelement <4 x float> undef, float %i1, i32 0
@@ -13,7 +13,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_1_arg(i32 inreg %arg, i32
 
 ; CHECK-LABEL: {{^}}_amdgpu_ps_3_arg:
 ; CHECK: NumVgprs: 6
-define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_3_arg(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr #0 {
+define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_3_arg(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr nounwind "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %i1 = extractelement <2 x float> %arg3, i32 1
   %i2 = extractelement <2 x float> %arg4, i32 0
@@ -27,7 +27,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_3_arg(i32 inreg %arg, i32
 
 ; CHECK-LABEL: {{^}}_amdgpu_ps_2_arg_gap:
 ; CHECK: NumVgprs: 4
-define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_2_arg_gap(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr #0 {
+define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_2_arg_gap(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr nounwind "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %i1 = extractelement <2 x float> %arg3, i32 1
   %i3 = extractelement <2 x float> %arg5, i32 1
@@ -41,7 +41,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_2_arg_gap(i32 inreg %arg,
 ; adjacent to arg1 (the only 2 used arguments)
 ; CHECK-LABEL: {{^}}_amdgpu_ps_2_arg_no_pack:
 ; CHECK: NumVgprs: 6
-define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_2_arg_no_pack(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr #1 {
+define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_2_arg_no_pack(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr nounwind "InitialPSInputAddr"="2" "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %i1 = extractelement <2 x float> %arg3, i32 1
   %i3 = extractelement <2 x float> %arg5, i32 1
@@ -53,7 +53,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_2_arg_no_pack(i32 inreg %
 
 ; CHECK-LABEL: {{^}}_amdgpu_ps_all_arg:
 ; CHECK: NumVgprs: 24
-define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @_amdgpu_ps_all_arg(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr #0 {
+define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @_amdgpu_ps_all_arg(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr nounwind "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %i1 = extractelement <2 x float> %arg3, i32 1
   %i2 = extractelement <2 x float> %arg4, i32 0
@@ -99,7 +99,7 @@ define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> 
 ; Extra arguments have to be allocated even if they're unused
 ; CHECK-LABEL: {{^}}_amdgpu_ps_all_arg_extra_unused:
 ; CHECK: NumVgprs: 26
-define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @_amdgpu_ps_all_arg_extra_unused(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr #0 {
+define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @_amdgpu_ps_all_arg_extra_unused(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr nounwind "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %i1 = extractelement <2 x float> %arg3, i32 1
   %i2 = extractelement <2 x float> %arg4, i32 0
@@ -145,7 +145,7 @@ define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> 
 ; CHECK-LABEL: {{^}}_amdgpu_ps_all_arg_extra:
 ; CHECK: NumVgprs: 26
 ; CHECK: NumVGPRsForWavesPerEU: 26
-define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @_amdgpu_ps_all_arg_extra(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr #0 {
+define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @_amdgpu_ps_all_arg_extra(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr nounwind "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %i1 = extractelement <2 x float> %arg3, i32 1
   %i2 = extractelement <2 x float> %arg4, i32 0
@@ -194,7 +194,7 @@ define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> 
 ; Check that when no input args are used we get the minimum allocation - note that we always enable the first input
 ; CHECK-LABEL: {{^}}_amdgpu_ps_all_unused:
 ; CHECK: NumVgprs: 4
-define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr #0 {
+define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr nounwind "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   ret { <4 x float> } undef
 }
@@ -203,14 +203,14 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused(i32 inreg %arg
 ; Additionally set the PSInputAddr to 0 via the metadata
 ; CHECK-LABEL: {{^}}_amdgpu_ps_all_unused_ia0:
 ; CHECK: NumVgprs: 4
-define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_ia0(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr #3 {
+define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_ia0(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr nounwind "InitialPSInputAddr"="0" "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   ret { <4 x float> } undef
 }
 
 ; CHECK-LABEL: {{^}}_amdgpu_ps_all_unused_extra_used:
 ; CHECK: NumVgprs: 4
-define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_used(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr #0 {
+define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_used(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr nounwind "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %ret4.1 = insertelement <4 x float> undef, float %extra_arg1, i32 0
   %ret4.2 = insertelement <4 x float> %ret4.1, float %extra_arg2, i32 1
@@ -222,7 +222,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_used(i32
 
 ; CHECK-LABEL: {{^}}_amdgpu_ps_part_unused_extra_used:
 ; CHECK: NumVgprs: 5
-define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_part_unused_extra_used(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr #0 {
+define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_part_unused_extra_used(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr nounwind "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %ret4.1 = insertelement <4 x float> undef, float %arg14, i32 0
   %ret4.2 = insertelement <4 x float> %ret4.1, float %extra_arg1, i32 1
@@ -235,7 +235,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_part_unused_extra_used(i3
 
 ; CHECK-LABEL: {{^}}_amdgpu_ps_part_unused_extra_unused:
 ; CHECK: NumVgprs: 7
-define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_part_unused_extra_unused(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr #0 {
+define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_part_unused_extra_unused(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr nounwind "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %ret4.1 = insertelement <4 x float> undef, float %arg12, i32 0
   %ret4.2 = insertelement <4 x float> %ret4.1, float %arg13, i32 1
@@ -249,7 +249,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_part_unused_extra_unused(
 ; Extra unused inputs are always added to the allocation
 ; CHECK-LABEL: {{^}}_amdgpu_ps_all_unused_extra_unused:
 ; CHECK: NumVgprs: 4
-define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_unused(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr #0 {
+define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_unused(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr nounwind "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
 
   ret { <4 x float> } undef
@@ -257,7 +257,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_unused(i
 
 ; CHECK-LABEL: {{^}}_amdgpu_ps_all_unused_extra_used_no_packing:
 ; CHECK: NumVgprs: 26
-define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_used_no_packing(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr #2 {
+define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_used_no_packing(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr nounwind "InitialPSInputAddr"="0xffff" "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %ret4.1 = insertelement <4 x float> undef, float %extra_arg1, i32 0
   %ret4.2 = insertelement <4 x float> %ret4.1, float %extra_arg2, i32 1
@@ -269,7 +269,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_used_no_
 
 ; CHECK-LABEL: {{^}}_amdgpu_ps_all_unused_extra_unused_no_packing:
 ; CHECK: NumVgprs: 26
-define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_unused_no_packing(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr #2 {
+define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_unused_no_packing(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr nounwind "InitialPSInputAddr"="0xffff" "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   ret { <4 x float> } undef
 }
@@ -277,7 +277,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_unused_n
 ; CHECK-LABEL: {{^}}_amdgpu_ps_some_unused_arg_extra:
 ; CHECK: NumVgprs: 24
 ; CHECK: NumVGPRsForWavesPerEU: 24
-define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @_amdgpu_ps_some_unused_arg_extra(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr #0 {
+define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @_amdgpu_ps_some_unused_arg_extra(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr nounwind "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %i1 = extractelement <2 x float> %arg3, i32 1
   %i2 = extractelement <2 x float> %arg4, i32 0
@@ -321,7 +321,7 @@ define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> 
 ;CHECK-LABEL: {{^}}_amdgpu_ps_some_unused_no_packing_arg_extra:
 ;CHECK: NumVgprs: 26
 ;CHECK: NumVGPRsForWavesPerEU: 26
-define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @_amdgpu_ps_some_unused_no_packing_arg_extra(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr #2 {
+define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @_amdgpu_ps_some_unused_no_packing_arg_extra(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18, float %extra_arg1, float %extra_arg2) local_unnamed_addr nounwind "InitialPSInputAddr"="0xffff" "target-features"=",+wavefrontsize64,+cumode" {
 .entry:
   %i1 = extractelement <2 x float> %arg3, i32 1
   %i2 = extractelement <2 x float> %arg4, i32 0
@@ -356,8 +356,3 @@ define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> 
 
   ret { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res
 }
-
-attributes #0 = { nounwind "target-features"=",+wavefrontsize64,+cumode"  }
-attributes #1 = { nounwind "InitialPSInputAddr"="2" "target-features"=",+wavefrontsize64,+cumode" }
-attributes #2 = { nounwind "InitialPSInputAddr"="0xffff" "target-features"=",+wavefrontsize64,+cumode" }
-attributes #3 = { nounwind "InitialPSInputAddr"="0" "target-features"=",+wavefrontsize64,+cumode" }

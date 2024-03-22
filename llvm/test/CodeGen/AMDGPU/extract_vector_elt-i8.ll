@@ -5,7 +5,7 @@
 ; GCN: s_load_dword [[LOAD:s[0-9]+]]
 ; GCN: v_mov_b32_e32 [[V_LOAD:v[0-9]+]], [[LOAD]]
 ; GCN: buffer_store_byte [[V_LOAD]]
-define amdgpu_kernel void @extract_vector_elt_v1i8(ptr addrspace(1) %out, <1 x i8> %foo) #0 {
+define amdgpu_kernel void @extract_vector_elt_v1i8(ptr addrspace(1) %out, <1 x i8> %foo) nounwind {
   %p0 = extractelement <1 x i8> %foo, i32 0
   store i8 %p0, ptr addrspace(1) %out
   ret void
@@ -19,7 +19,7 @@ define amdgpu_kernel void @extract_vector_elt_v1i8(ptr addrspace(1) %out, <1 x i
 ; GCN-NOT: {{flat|buffer|global}}
 ; GCN: buffer_store_byte
 ; GCN: buffer_store_byte
-define amdgpu_kernel void @extract_vector_elt_v2i8(ptr addrspace(1) %out, <2 x i8> %foo) #0 {
+define amdgpu_kernel void @extract_vector_elt_v2i8(ptr addrspace(1) %out, <2 x i8> %foo) nounwind {
   %p0 = extractelement <2 x i8> %foo, i32 0
   %p1 = extractelement <2 x i8> %foo, i32 1
   %out1 = getelementptr i8, ptr addrspace(1) %out, i32 1
@@ -35,7 +35,7 @@ define amdgpu_kernel void @extract_vector_elt_v2i8(ptr addrspace(1) %out, <2 x i
 ; GCN-NOT: {{flat|buffer|global}}
 ; GCN: buffer_store_byte
 ; GCN: buffer_store_byte
-define amdgpu_kernel void @extract_vector_elt_v3i8(ptr addrspace(1) %out, <3 x i8> %foo) #0 {
+define amdgpu_kernel void @extract_vector_elt_v3i8(ptr addrspace(1) %out, <3 x i8> %foo) nounwind {
   %p0 = extractelement <3 x i8> %foo, i32 0
   %p1 = extractelement <3 x i8> %foo, i32 2
   %out1 = getelementptr i8, ptr addrspace(1) %out, i32 1
@@ -51,7 +51,7 @@ define amdgpu_kernel void @extract_vector_elt_v3i8(ptr addrspace(1) %out, <3 x i
 ; GCN-NOT: {{flat|buffer|global}}
 ; GCN: buffer_store_byte
 ; GCN: buffer_store_byte
-define amdgpu_kernel void @extract_vector_elt_v4i8(ptr addrspace(1) %out, <4 x i8> %foo) #0 {
+define amdgpu_kernel void @extract_vector_elt_v4i8(ptr addrspace(1) %out, <4 x i8> %foo) nounwind {
   %p0 = extractelement <4 x i8> %foo, i32 0
   %p1 = extractelement <4 x i8> %foo, i32 2
   %out1 = getelementptr i8, ptr addrspace(1) %out, i32 1
@@ -68,7 +68,7 @@ define amdgpu_kernel void @extract_vector_elt_v4i8(ptr addrspace(1) %out, <4 x i
 ; GCN-NOT: {{s|flat|buffer|global}}_load
 ; GCN: buffer_store_byte
 ; GCN: buffer_store_byte
-define amdgpu_kernel void @extract_vector_elt_v8i8(<8 x i8> %foo) #0 {
+define amdgpu_kernel void @extract_vector_elt_v8i8(<8 x i8> %foo) nounwind {
   %p0 = extractelement <8 x i8> %foo, i32 0
   %p1 = extractelement <8 x i8> %foo, i32 2
   store volatile i8 %p1, ptr addrspace(1) null
@@ -84,7 +84,7 @@ define amdgpu_kernel void @extract_vector_elt_v8i8(<8 x i8> %foo) #0 {
 ; GCN-DAG: v_mov_b32_e32 [[V_ELT2:v[0-9]+]], [[ELT2]]
 ; GCN: buffer_store_byte [[V_ELT2]]
 ; GCN: buffer_store_byte [[V_LOAD0]]
-define amdgpu_kernel void @extract_vector_elt_v16i8(ptr addrspace(1) %out, <16 x i8> %foo) #0 {
+define amdgpu_kernel void @extract_vector_elt_v16i8(ptr addrspace(1) %out, <16 x i8> %foo) nounwind {
   %p0 = extractelement <16 x i8> %foo, i32 0
   %p1 = extractelement <16 x i8> %foo, i32 2
   %out1 = getelementptr i8, ptr addrspace(1) %out, i32 1
@@ -102,7 +102,7 @@ define amdgpu_kernel void @extract_vector_elt_v16i8(ptr addrspace(1) %out, <16 x
 ; GCN-DAG: v_mov_b32_e32 [[V_ELT2:v[0-9]+]], [[ELT2]]
 ; GCN: buffer_store_byte [[V_ELT2]]
 ; GCN: buffer_store_byte [[V_LOAD0]]
-define amdgpu_kernel void @extract_vector_elt_v32i8(<32 x i8> %foo) #0 {
+define amdgpu_kernel void @extract_vector_elt_v32i8(<32 x i8> %foo) nounwind {
   %p0 = extractelement <32 x i8> %foo, i32 0
   %p1 = extractelement <32 x i8> %foo, i32 2
   store volatile i8 %p1, ptr addrspace(1) null
@@ -118,7 +118,7 @@ define amdgpu_kernel void @extract_vector_elt_v32i8(<32 x i8> %foo) #0 {
 ; GCN-DAG: v_mov_b32_e32 [[V_ELT2:v[0-9]+]], [[ELT2]]
 ; GCN: buffer_store_byte [[V_ELT2]]
 ; GCN: buffer_store_byte [[V_LOAD0]]
-define amdgpu_kernel void @extract_vector_elt_v64i8(ptr addrspace(1) %out, <64 x i8> %foo) #0 {
+define amdgpu_kernel void @extract_vector_elt_v64i8(ptr addrspace(1) %out, <64 x i8> %foo) nounwind {
   %p0 = extractelement <64 x i8> %foo, i32 0
   %p1 = extractelement <64 x i8> %foo, i32 2
   %out1 = getelementptr i8, ptr addrspace(1) %out, i32 1
@@ -140,7 +140,7 @@ define amdgpu_kernel void @extract_vector_elt_v64i8(ptr addrspace(1) %out, <64 x
 ; VI-DAG: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 3
 ; VI: v_lshrrev_b16_e32 [[ELT:v[0-9]+]], [[SCALED_IDX]], [[V_LOAD]]
 ; VI: buffer_store_byte [[ELT]]
-define amdgpu_kernel void @dynamic_extract_vector_elt_v2i8(ptr addrspace(1) %out, [8 x i32], <2 x i8> %foo, [8 x i32], i32 %idx) #0 {
+define amdgpu_kernel void @dynamic_extract_vector_elt_v2i8(ptr addrspace(1) %out, [8 x i32], <2 x i8> %foo, [8 x i32], i32 %idx) nounwind {
   %elt = extractelement <2 x i8> %foo, i32 %idx
   store volatile i8 %elt, ptr addrspace(1) %out
   ret void
@@ -154,7 +154,7 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v2i8(ptr addrspace(1) %out
 ; VI: s_lshr_b32 [[ELT:s[0-9]+]], [[LOAD]], [[SCALED_IDX]]
 ; VI: v_mov_b32_e32 [[V_ELT:v[0-9]+]], [[ELT]]
 ; VI: buffer_store_byte [[V_ELT]]
-define amdgpu_kernel void @dynamic_extract_vector_elt_v3i8(ptr addrspace(1) %out, [8 x i32], <3 x i8> %foo, [8 x i32], i32 %idx) #0 {
+define amdgpu_kernel void @dynamic_extract_vector_elt_v3i8(ptr addrspace(1) %out, [8 x i32], <3 x i8> %foo, [8 x i32], i32 %idx) nounwind {
   %p0 = extractelement <3 x i8> %foo, i32 %idx
   %out1 = getelementptr i8, ptr addrspace(1) %out, i32 1
   store volatile i8 %p0, ptr addrspace(1) %out
@@ -170,7 +170,7 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v3i8(ptr addrspace(1) %out
 
 ; VI: v_mov_b32_e32 [[V_EXTRACT:v[0-9]+]], [[EXTRACT]]
 ; VI: buffer_store_byte [[V_EXTRACT]]
-define amdgpu_kernel void @dynamic_extract_vector_elt_v4i8(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, [8 x i32], i32 %idx) #0 {
+define amdgpu_kernel void @dynamic_extract_vector_elt_v4i8(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, [8 x i32], i32 %idx) nounwind {
   %vec = load <4 x i8>, ptr addrspace(4) %vec.ptr
   %p0 = extractelement <4 x i8> %vec, i32 %idx
   %out1 = getelementptr i8, ptr addrspace(1) %out, i32 1
@@ -186,7 +186,7 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v4i8(ptr addrspace(1) %out
 ; VI: s_lshr_b64 s[[[EXTRACT_LO:[0-9]+]]:{{[0-9]+\]}}, [[VEC8]], [[SCALED_IDX]]
 ; VI: v_mov_b32_e32 [[V_EXTRACT:v[0-9]+]], s[[EXTRACT_LO]]
 ; VI: buffer_store_byte [[V_EXTRACT]]
-define amdgpu_kernel void @dynamic_extract_vector_elt_v8i8(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, i32 %idx) #0 {
+define amdgpu_kernel void @dynamic_extract_vector_elt_v8i8(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, i32 %idx) nounwind {
   %vec = load <8 x i8>, ptr addrspace(4) %vec.ptr
   %p0 = extractelement <8 x i8> %vec, i32 %idx
   %out1 = getelementptr i8, ptr addrspace(1) %out, i32 1
@@ -201,7 +201,7 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v8i8(ptr addrspace(1) %out
 ; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8
 ; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
 ; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 24
-define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0123() #0 {
+define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0123() nounwind {
   %load = load <8 x i8>, ptr addrspace(4) null
   %elt0 = extractelement <8 x i8> %load, i32 0
   %elt1 = extractelement <8 x i8> %load, i32 1
@@ -220,7 +220,7 @@ define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0123() #0 {
 ; GCN-NOT: {{s|buffer|flat|global}}_load_
 ; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8
 ; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8
-define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0145() #0 {
+define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0145() nounwind {
   %load = load <8 x i8>, ptr addrspace(4) null
   %elt0 = extractelement <8 x i8> %load, i32 0
   %elt1 = extractelement <8 x i8> %load, i32 1
@@ -239,7 +239,7 @@ define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0145() #0 {
 ; GCN: s_load_dword s{{[0-9]+}}, [[PTR]], 0x0{{$}}
 ; GCN-NOT: {{s|buffer|flat|global}}_load_
 ; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8
-define amdgpu_kernel void @reduce_load_vector_v8i8_extract_45() #0 {
+define amdgpu_kernel void @reduce_load_vector_v8i8_extract_45() nounwind {
   %load = load <8 x i8>, ptr addrspace(4) null
   %elt4 = extractelement <8 x i8> %load, i32 4
   %elt5 = extractelement <8 x i8> %load, i32 5
@@ -255,7 +255,7 @@ define amdgpu_kernel void @reduce_load_vector_v8i8_extract_45() #0 {
 ; GCN-NOT: {{s|buffer|flat|global}}_load_
 ; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8
 ; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8
-define amdgpu_kernel void @reduce_load_vector_v16i8_extract_0145() #0 {
+define amdgpu_kernel void @reduce_load_vector_v16i8_extract_0145() nounwind {
   %load = load <16 x i8>, ptr addrspace(4) null
   %elt0 = extractelement <16 x i8> %load, i32 0
   %elt1 = extractelement <16 x i8> %load, i32 1
@@ -267,5 +267,3 @@ define amdgpu_kernel void @reduce_load_vector_v16i8_extract_0145() #0 {
   store volatile i8 %elt5, ptr addrspace(1) undef, align 1
   ret void
 }
-
-attributes #0 = { nounwind }

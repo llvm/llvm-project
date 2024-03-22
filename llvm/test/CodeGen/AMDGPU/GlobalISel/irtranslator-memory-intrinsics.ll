@@ -253,21 +253,18 @@ define void @test_memset_p3_i16(ptr addrspace(3) %dst, i8 %val) {
   ret void
 }
 
-declare void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(3) noalias nocapture readonly, i64, i1 immarg) #0
-declare void @llvm.memcpy.p1.p3.i32(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(3) noalias nocapture readonly, i32, i1 immarg) #0
-declare void @llvm.memcpy.p1.p3.i16(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(3) noalias nocapture readonly, i16, i1 immarg) #0
-declare void @llvm.memcpy.p3.p1.i64(ptr addrspace(3) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64, i1 immarg) #0
-declare void @llvm.memcpy.p3.p1.i32(ptr addrspace(3) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i32, i1 immarg) #0
-declare void @llvm.memcpy.p3.p1.i16(ptr addrspace(3) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i16, i1 immarg) #0
-declare void @llvm.memmove.p1.p3.i64(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i64, i1 immarg) #0
-declare void @llvm.memmove.p1.p3.i32(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i32, i1 immarg) #0
-declare void @llvm.memmove.p1.p3.i16(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i16, i1 immarg) #0
-declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture writeonly, i8, i64, i1 immarg) #1
-declare void @llvm.memset.p1.i32(ptr addrspace(1) nocapture writeonly, i8, i32, i1 immarg) #1
-declare void @llvm.memset.p1.i16(ptr addrspace(1) nocapture writeonly, i8, i16, i1 immarg) #1
-declare void @llvm.memset.p3.i64(ptr addrspace(3) nocapture writeonly, i8, i64, i1 immarg) #1
-declare void @llvm.memset.p3.i32(ptr addrspace(3) nocapture writeonly, i8, i32, i1 immarg) #1
-declare void @llvm.memset.p3.i16(ptr addrspace(3) nocapture writeonly, i8, i16, i1 immarg) #1
-
-attributes #0 = { argmemonly nounwind willreturn }
-attributes #1 = { argmemonly nounwind willreturn writeonly }
+declare void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(3) noalias nocapture readonly, i64, i1 immarg) argmemonly nounwind willreturn
+declare void @llvm.memcpy.p1.p3.i32(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(3) noalias nocapture readonly, i32, i1 immarg) argmemonly nounwind willreturn
+declare void @llvm.memcpy.p1.p3.i16(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(3) noalias nocapture readonly, i16, i1 immarg) argmemonly nounwind willreturn
+declare void @llvm.memcpy.p3.p1.i64(ptr addrspace(3) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64, i1 immarg) argmemonly nounwind willreturn
+declare void @llvm.memcpy.p3.p1.i32(ptr addrspace(3) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i32, i1 immarg) argmemonly nounwind willreturn
+declare void @llvm.memcpy.p3.p1.i16(ptr addrspace(3) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i16, i1 immarg) argmemonly nounwind willreturn
+declare void @llvm.memmove.p1.p3.i64(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i64, i1 immarg) argmemonly nounwind willreturn
+declare void @llvm.memmove.p1.p3.i32(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i32, i1 immarg) argmemonly nounwind willreturn
+declare void @llvm.memmove.p1.p3.i16(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i16, i1 immarg) argmemonly nounwind willreturn
+declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture writeonly, i8, i64, i1 immarg) argmemonly nounwind willreturn writeonly
+declare void @llvm.memset.p1.i32(ptr addrspace(1) nocapture writeonly, i8, i32, i1 immarg) argmemonly nounwind willreturn writeonly
+declare void @llvm.memset.p1.i16(ptr addrspace(1) nocapture writeonly, i8, i16, i1 immarg) argmemonly nounwind willreturn writeonly
+declare void @llvm.memset.p3.i64(ptr addrspace(3) nocapture writeonly, i8, i64, i1 immarg) argmemonly nounwind willreturn writeonly
+declare void @llvm.memset.p3.i32(ptr addrspace(3) nocapture writeonly, i8, i32, i1 immarg) argmemonly nounwind willreturn writeonly
+declare void @llvm.memset.p3.i16(ptr addrspace(3) nocapture writeonly, i8, i16, i1 immarg) argmemonly nounwind willreturn writeonly

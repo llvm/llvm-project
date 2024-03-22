@@ -4,7 +4,7 @@
 ; The forced spill to preserve the scratch VGPR require the voffset to hold the large offset
 ; value in the MUBUF instruction being emitted before s_cbranch_scc1 as it clobbers the SCC.
 
-define amdgpu_kernel void @test_kernel(i32 %val) #0 {
+define amdgpu_kernel void @test_kernel(i32 %val) nounwind "frame-pointer"="all" {
 ; CHECK-LABEL: test_kernel:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_mov_b32 s32, 0x180000
@@ -112,8 +112,6 @@ end:
 }
 
 declare void @device_func(ptr addrspace(5))
-
-attributes #0 = { nounwind "frame-pointer"="all" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

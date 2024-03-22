@@ -119,10 +119,7 @@ loop0_merge:                                      ; preds = %branch2_merge, %bb
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
-declare float @llvm.fma.f32(float, float, float) #0
+declare float @llvm.fma.f32(float, float, float) nocallback nofree nosync nounwind readnone speculatable willreturn
 
 ; Function Attrs: nounwind readonly willreturn
-declare float @llvm.amdgcn.image.sample.lz.3d.f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #1
-
-attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
-attributes #1 = { nounwind readonly willreturn }
+declare float @llvm.amdgcn.image.sample.lz.3d.f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) nounwind readonly willreturn

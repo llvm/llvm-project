@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare { float, i1 } @llvm.amdgcn.div.scale.f32(float, float, i1) #1
-declare { double, i1 } @llvm.amdgcn.div.scale.f64(double, double, i1) #1
-declare float @llvm.fabs.f32(float) #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
+declare { float, i1 } @llvm.amdgcn.div.scale.f32(float, float, i1) nounwind readnone speculatable
+declare { double, i1 } @llvm.amdgcn.div.scale.f64(double, double, i1) nounwind readnone speculatable
+declare float @llvm.fabs.f32(float) nounwind readnone speculatable
 
 ; SI-LABEL: {{^}}test_div_scale_f32_1:
 ; SI-DAG: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64
@@ -412,7 +412,7 @@ define amdgpu_kernel void @test_div_scale_f32_fabs_den(ptr addrspace(1) %out, pt
 ; SI-LABEL: {{^}}test_div_scale_f32_val_undef_val:
 ; SI: s_mov_b32 [[K:s[0-9]+]], 0x41000000
 ; SI: v_div_scale_f32 v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, [[K]], v{{[0-9]+}}, [[K]]
-define amdgpu_kernel void @test_div_scale_f32_val_undef_val(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_div_scale_f32_val_undef_val(ptr addrspace(1) %out) nounwind {
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float 8.0, float undef, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
   store float %result0, ptr addrspace(1) %out, align 4
@@ -422,7 +422,7 @@ define amdgpu_kernel void @test_div_scale_f32_val_undef_val(ptr addrspace(1) %ou
 ; SI-LABEL: {{^}}test_div_scale_f32_undef_val_val:
 ; SI: s_mov_b32 [[K:s[0-9]+]], 0x41000000
 ; SI: v_div_scale_f32 v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, [[K]], [[K]], v{{[0-9]+}}
-define amdgpu_kernel void @test_div_scale_f32_undef_val_val(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_div_scale_f32_undef_val_val(ptr addrspace(1) %out) nounwind {
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float undef, float 8.0, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
   store float %result0, ptr addrspace(1) %out, align 4
@@ -432,7 +432,7 @@ define amdgpu_kernel void @test_div_scale_f32_undef_val_val(ptr addrspace(1) %ou
 ; SI-LABEL: {{^}}test_div_scale_f32_undef_undef_val:
 ; SI-NOT: v0
 ; SI: v_div_scale_f32 v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s0, s0, v0
-define amdgpu_kernel void @test_div_scale_f32_undef_undef_val(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_div_scale_f32_undef_undef_val(ptr addrspace(1) %out) nounwind {
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float undef, float undef, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
   store float %result0, ptr addrspace(1) %out, align 4
@@ -443,12 +443,9 @@ define amdgpu_kernel void @test_div_scale_f32_undef_undef_val(ptr addrspace(1) %
 ; SI-DAG: s_mov_b32 s[[K_LO:[0-9]+]], 0{{$}}
 ; SI-DAG: s_mov_b32 s[[K_HI:[0-9]+]], 0x40200000
 ; SI: v_div_scale_f64 v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s[[[K_LO]]:[[K_HI]]], v[0:1], s[[[K_LO]]:[[K_HI]]]
-define amdgpu_kernel void @test_div_scale_f64_val_undef_val(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_div_scale_f64_val_undef_val(ptr addrspace(1) %out) nounwind {
   %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double 8.0, double undef, i1 false)
   %result0 = extractvalue { double, i1 } %result, 0
   store double %result0, ptr addrspace(1) %out, align 8
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable }

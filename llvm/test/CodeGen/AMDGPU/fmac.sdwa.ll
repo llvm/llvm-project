@@ -4,7 +4,7 @@
 ; GCN-LABEL: {{^}}addMul2D:
 ; GFX1010: v_fmac_f16
 ; GFX1010: v_fmac_f16
-define hidden <4 x half> @addMul2D(ptr nocapture readonly %arg, ptr addrspace(4) nocapture readonly %arg1, <2 x i32> %arg2, i32 %arg3) local_unnamed_addr #0 {
+define hidden <4 x half> @addMul2D(ptr nocapture readonly %arg, ptr addrspace(4) nocapture readonly %arg1, <2 x i32> %arg2, i32 %arg3) local_unnamed_addr convergent nounwind readonly {
 bb:
   %tmp = extractelement <2 x i32> %arg2, i64 1
   %tmp4 = icmp sgt i32 %tmp, 0
@@ -76,7 +76,7 @@ bb36:                                             ; preds = %bb32, %bb
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define linkonce_odr hidden <4 x half> @_Z13convert_half4Dv4_h(<4 x i8> %arg) local_unnamed_addr #1 {
+define linkonce_odr hidden <4 x half> @_Z13convert_half4Dv4_h(<4 x i8> %arg) local_unnamed_addr norecurse nounwind readnone {
 bb:
   %tmp = extractelement <4 x i8> %arg, i64 0
   %tmp1 = uitofp i8 %tmp to half
@@ -94,6 +94,3 @@ bb:
 }
 
 declare half @llvm.fmuladd.f16(half, half, half)
-
-attributes #0 = { convergent nounwind readonly}
-attributes #1 = { norecurse nounwind readnone }

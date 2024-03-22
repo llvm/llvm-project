@@ -17,8 +17,6 @@ define i32 @reloc_constant() {
   ret i32 %res
 }
 
-declare i32 @llvm.amdgcn.reloc.constant(metadata) #0
-
-attributes #0 = { nounwind readnone speculatable willreturn }
+declare i32 @llvm.amdgcn.reloc.constant(metadata) nounwind readnone speculatable willreturn
 
 !0 = !{!"arst"}

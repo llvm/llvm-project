@@ -3198,5 +3198,3 @@ define amdgpu_ps void @global_dec_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
   %unused = atomicrmw udec_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic
   ret void
 }
-
-attributes #0 = { argmemonly nounwind willreturn }

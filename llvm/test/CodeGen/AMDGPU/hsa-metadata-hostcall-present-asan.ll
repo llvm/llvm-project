@@ -27,7 +27,7 @@
 ; CHECK:          .name:           test_kernel
 ; CHECK:          .symbol:         test_kernel.kd
 
-define amdgpu_kernel void @test_kernel(i8 %a) #0
+define amdgpu_kernel void @test_kernel(i8 %a) sanitize_address "amdgpu-implicitarg-num-bytes"="48"
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 {
   ret void
@@ -36,8 +36,6 @@ define amdgpu_kernel void @test_kernel(i8 %a) #0
 ; CHECK:  amdhsa.version:
 ; CHECK-NEXT: - 1
 ; CHECK-NEXT: - 1
-
-attributes #0 = { sanitize_address "amdgpu-implicitarg-num-bytes"="48" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

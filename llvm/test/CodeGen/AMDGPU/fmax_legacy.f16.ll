@@ -11,7 +11,7 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11-SAFE %s
 ; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -mtriple=amdgcn-- -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11-NNAN %s
 
-define half @test_fmax_legacy_ugt_f16(half %a, half %b) #0 {
+define half @test_fmax_legacy_ugt_f16(half %a, half %b) nounwind {
 ; GFX9-SAFE-LABEL: test_fmax_legacy_ugt_f16:
 ; GFX9-SAFE:       ; %bb.0:
 ; GFX9-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -75,7 +75,7 @@ define half @test_fmax_legacy_ugt_f16(half %a, half %b) #0 {
   ret half %val
 }
 
-define <2 x half> @test_fmax_legacy_ugt_v2f16(<2 x half> %a, <2 x half> %b) #0 {
+define <2 x half> @test_fmax_legacy_ugt_v2f16(<2 x half> %a, <2 x half> %b) nounwind {
 ; GFX9-SAFE-LABEL: test_fmax_legacy_ugt_v2f16:
 ; GFX9-SAFE:       ; %bb.0:
 ; GFX9-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -169,7 +169,7 @@ define <2 x half> @test_fmax_legacy_ugt_v2f16(<2 x half> %a, <2 x half> %b) #0 {
   ret <2 x half> %val
 }
 
-define <3 x half> @test_fmax_legacy_ugt_v3f16(<3 x half> %a, <3 x half> %b) #0 {
+define <3 x half> @test_fmax_legacy_ugt_v3f16(<3 x half> %a, <3 x half> %b) nounwind {
 ; GFX9-SAFE-LABEL: test_fmax_legacy_ugt_v3f16:
 ; GFX9-SAFE:       ; %bb.0:
 ; GFX9-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -282,7 +282,7 @@ define <3 x half> @test_fmax_legacy_ugt_v3f16(<3 x half> %a, <3 x half> %b) #0 {
   ret <3 x half> %val
 }
 
-define <4 x half> @test_fmax_legacy_ugt_v4f16(<4 x half> %a, <4 x half> %b) #0 {
+define <4 x half> @test_fmax_legacy_ugt_v4f16(<4 x half> %a, <4 x half> %b) nounwind {
 ; GFX9-SAFE-LABEL: test_fmax_legacy_ugt_v4f16:
 ; GFX9-SAFE:       ; %bb.0:
 ; GFX9-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -424,7 +424,7 @@ define <4 x half> @test_fmax_legacy_ugt_v4f16(<4 x half> %a, <4 x half> %b) #0 {
   ret <4 x half> %val
 }
 
-define <8 x half> @test_fmax_legacy_ugt_v8f16(<8 x half> %a, <8 x half> %b) #0 {
+define <8 x half> @test_fmax_legacy_ugt_v8f16(<8 x half> %a, <8 x half> %b) nounwind {
 ; GFX9-SAFE-LABEL: test_fmax_legacy_ugt_v8f16:
 ; GFX9-SAFE:       ; %bb.0:
 ; GFX9-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -659,5 +659,3 @@ define <8 x half> @test_fmax_legacy_ugt_v8f16(<8 x half> %a, <8 x half> %b) #0 {
   %val = select <8 x i1> %cmp, <8 x half> %a, <8 x half> %b
   ret <8 x half> %val
 }
-
-attributes #0 = { nounwind }

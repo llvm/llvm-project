@@ -16,7 +16,7 @@
 ; GFX90A: AccumOffset: 12
 ; GCN:    Occupancy: 8
 ; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 2
-define amdgpu_kernel void @kernel_32_agprs() #0 {
+define amdgpu_kernel void @kernel_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v8}" ()
   call void asm sideeffect "", "~{a31}" ()
@@ -35,7 +35,7 @@ bb:
 ; GFX908: Occupancy: 10
 ; GFX90A: Occupancy: 8
 ; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 0
-define amdgpu_kernel void @kernel_0_agprs() #0 {
+define amdgpu_kernel void @kernel_0_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v0}" ()
   ret void
@@ -57,7 +57,7 @@ bb:
 ; GFX908: Occupancy: 6
 ; GFX90A: Occupancy: 8
 ; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 9
-define amdgpu_kernel void @kernel_40_vgprs() #0 {
+define amdgpu_kernel void @kernel_40_vgprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v39}" ()
   call void asm sideeffect "", "~{a15}" ()
@@ -69,7 +69,7 @@ bb:
 ; GCN:    NumAgprs: 32
 ; GFX908: TotalNumVgprs: 32
 ; GFX90A: TotalNumVgprs: 44
-define void @func_32_agprs() #0 {
+define void @func_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v8}" ()
   call void asm sideeffect "", "~{a31}" ()
@@ -81,7 +81,7 @@ bb:
 ; GCN:    NumAgprs: 9
 ; GFX908: TotalNumVgprs: 32
 ; GFX90A: TotalNumVgprs: 41
-define void @func_32_vgprs() #0 {
+define void @func_32_vgprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v31}" ()
   call void asm sideeffect "", "~{a8}" ()
@@ -92,7 +92,7 @@ bb:
 ; GCN:    NumVgprs: 1
 ; GCN:    NumAgprs: 0
 ; GCN:    TotalNumVgprs: 1
-define amdgpu_kernel void @func_0_agprs() #0 {
+define amdgpu_kernel void @func_0_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v0}" ()
   ret void
@@ -113,7 +113,7 @@ bb:
 ; GFX90A: AccumOffset: 256
 ; GCN:    Occupancy: 1
 ; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 63
-define amdgpu_kernel void @kernel_max_gprs() #0 {
+define amdgpu_kernel void @kernel_max_gprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void asm sideeffect "", "~{v255}" ()
   call void asm sideeffect "", "~{a255}" ()
@@ -134,9 +134,9 @@ bb:
 ; GFX90A: AccumOffset: 12
 ; GCN:    Occupancy: 8
 ; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 2
-define amdgpu_kernel void @kernel_call_func_32_agprs() #0 {
+define amdgpu_kernel void @kernel_call_func_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
-  call void @func_32_agprs() #0
+  call void @func_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512"
   ret void
 }
 
@@ -145,9 +145,9 @@ bb:
 ; GCN:    NumAgprs: 32
 ; GFX908: TotalNumVgprs: 32
 ; GFX90A: TotalNumVgprs: 44
-define void @func_call_func_32_agprs() #0 {
+define void @func_call_func_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
-  call void @func_32_agprs() #0
+  call void @func_32_agprs() nounwind noinline "amdgpu-flat-work-group-size"="1,512"
   ret void
 }
 
@@ -171,10 +171,8 @@ declare void @undef_func()
 ; GFX908: Occupancy: 8
 ; GFX90A: Occupancy: 8
 ; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 7
-define amdgpu_kernel void @kernel_call_undef_func() #0 {
+define amdgpu_kernel void @kernel_call_undef_func() nounwind noinline "amdgpu-flat-work-group-size"="1,512" {
 bb:
   call void @undef_func()
   ret void
 }
-
-attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" }

@@ -22,7 +22,7 @@
 ; GCN: .LBB0_{{[0-9]+}}: ; %UnifiedReturnBlock
 ; GCN-NEXT: s_endpgm
 ; GCN-NEXT: .Lfunc_end
-define amdgpu_ps void @ham(float %arg, float %arg1) #0 {
+define amdgpu_ps void @ham(float %arg, float %arg1) nounwind readonly "InitialPSInputAddr"="36983" {
 bb:
   %tmp = fcmp ogt float %arg, 0.000000e+00
   %tmp2 = fcmp ogt float %arg1, 0.000000e+00
@@ -36,6 +36,3 @@ bb4:                                              ; preds = %bb
 bb5:                                              ; preds = %bb
   ret void
 }
-
-attributes #0 = { nounwind readonly "InitialPSInputAddr"="36983" }
-attributes #1 = { nounwind readnone }

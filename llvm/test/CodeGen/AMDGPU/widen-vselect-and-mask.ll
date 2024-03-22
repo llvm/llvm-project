@@ -9,7 +9,7 @@
 ; GCN: v_cndmask_b32_e64 v[[VSEL:[0-9]+]], 0, -1, [[CMP]]
 ; GCN: v_mov_b32_e32 v[[VSEL_EXT:[0-9]+]], v[[VSEL]]
 ; GCN: v_cmp_lt_i64_e32 vcc, -1, v[[[VSEL]]:[[VSEL_EXT]]]
-define amdgpu_kernel void @widen_vselect_and_mask_v4f64(<4 x double> %arg) #0 {
+define amdgpu_kernel void @widen_vselect_and_mask_v4f64(<4 x double> %arg) nounwind {
 bb:
   %tmp = extractelement <4 x double> %arg, i64 0
   %tmp1 = fcmp uno double %tmp, 0.000000e+00
@@ -31,7 +31,7 @@ bb:
 ; GCN: v_cndmask_b32_e64 v[[VSEL:[0-9]+]], 0, -1, [[CMP]]
 ; GCN: v_mov_b32_e32 v[[VSEL_EXT:[0-9]+]], v[[VSEL]]
 ; GCN: v_cmp_lt_i64_e32 vcc, -1, v[[[VSEL]]:[[VSEL_EXT]]]
-define amdgpu_kernel void @widen_vselect_and_mask_v4i64(<4 x i64> %arg) #0 {
+define amdgpu_kernel void @widen_vselect_and_mask_v4i64(<4 x i64> %arg) nounwind {
 bb:
   %tmp = extractelement <4 x i64> %arg, i64 0
   %tmp1 = icmp eq i64 %tmp, 0
@@ -47,6 +47,3 @@ bb:
   store <4 x i64> %tmp10, ptr addrspace(1) null, align 32
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable }

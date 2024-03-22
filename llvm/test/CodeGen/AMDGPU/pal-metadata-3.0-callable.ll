@@ -161,17 +161,17 @@
 ; CHECK-NEXT:...
 ; CHECK-NEXT:        .end_amdgpu_pal_metadata
 
-declare amdgpu_gfx float @extern_func(float) #0
-declare amdgpu_gfx float @extern_func_many_args(<64 x float>) #0
+declare amdgpu_gfx float @extern_func(float) nounwind
+declare amdgpu_gfx float @extern_func_many_args(<64 x float>) nounwind
 
 @funcptr = external hidden unnamed_addr addrspace(4) constant ptr, align 4
 
-define amdgpu_gfx float @no_stack(float %arg0) #0 {
+define amdgpu_gfx float @no_stack(float %arg0) nounwind {
   %add = fadd float %arg0, 1.0
   ret float %add
 }
 
-define amdgpu_gfx float @simple_stack(float %arg0) #0 {
+define amdgpu_gfx float @simple_stack(float %arg0) nounwind {
   %stack = alloca float, i32 4, align 4, addrspace(5)
   store volatile float 2.0, ptr addrspace(5) %stack
   %val = load volatile float, ptr addrspace(5) %stack
@@ -179,7 +179,7 @@ define amdgpu_gfx float @simple_stack(float %arg0) #0 {
   ret float %add
 }
 
-define amdgpu_gfx float @multiple_stack(float %arg0) #0 {
+define amdgpu_gfx float @multiple_stack(float %arg0) nounwind {
   %stack = alloca float, i32 4, align 4, addrspace(5)
   store volatile float 2.0, ptr addrspace(5) %stack
   %val = load volatile float, ptr addrspace(5) %stack
@@ -191,7 +191,7 @@ define amdgpu_gfx float @multiple_stack(float %arg0) #0 {
   ret float %add2
 }
 
-define amdgpu_gfx float @dynamic_stack(float %arg0) #0 {
+define amdgpu_gfx float @dynamic_stack(float %arg0) nounwind {
 bb0:
   %cmp = fcmp ogt float %arg0, 0.0
   br i1 %cmp, label %bb1, label %bb2
@@ -208,7 +208,7 @@ bb2:
   ret float %res
 }
 
-define amdgpu_gfx float @dynamic_stack_loop(float %arg0) #0 {
+define amdgpu_gfx float @dynamic_stack_loop(float %arg0) nounwind {
 bb0:
   br label %bb1
 
@@ -226,12 +226,12 @@ bb2:
   ret float %add
 }
 
-define amdgpu_gfx float @no_stack_call(float %arg0) #0 {
+define amdgpu_gfx float @no_stack_call(float %arg0) nounwind {
   %res = call amdgpu_gfx float @simple_stack(float %arg0)
   ret float %res
 }
 
-define amdgpu_gfx float @simple_stack_call(float %arg0) #0 {
+define amdgpu_gfx float @simple_stack_call(float %arg0) nounwind {
   %stack = alloca float, i32 4, align 4, addrspace(5)
   store volatile float 2.0, ptr addrspace(5) %stack
   %val = load volatile float, ptr addrspace(5) %stack
@@ -240,12 +240,12 @@ define amdgpu_gfx float @simple_stack_call(float %arg0) #0 {
   ret float %add
 }
 
-define amdgpu_gfx float @no_stack_extern_call(float %arg0) #0 {
+define amdgpu_gfx float @no_stack_extern_call(float %arg0) nounwind {
   %res = call amdgpu_gfx float @extern_func(float %arg0)
   ret float %res
 }
 
-define amdgpu_gfx float @simple_stack_extern_call(float %arg0) #0 {
+define amdgpu_gfx float @simple_stack_extern_call(float %arg0) nounwind {
   %stack = alloca float, i32 4, align 4, addrspace(5)
   store volatile float 2.0, ptr addrspace(5) %stack
   %val = load volatile float, ptr addrspace(5) %stack
@@ -254,18 +254,18 @@ define amdgpu_gfx float @simple_stack_extern_call(float %arg0) #0 {
   ret float %add
 }
 
-define amdgpu_gfx float @no_stack_extern_call_many_args(<64 x float> %arg0) #0 {
+define amdgpu_gfx float @no_stack_extern_call_many_args(<64 x float> %arg0) nounwind {
   %res = call amdgpu_gfx float @extern_func_many_args(<64 x float> %arg0)
   ret float %res
 }
 
-define amdgpu_gfx float @no_stack_indirect_call(float %arg0) #0 {
+define amdgpu_gfx float @no_stack_indirect_call(float %arg0) nounwind {
   %fptr = load ptr, ptr addrspace(4) @funcptr
   call amdgpu_gfx void %fptr()
   ret float %arg0
 }
 
-define amdgpu_gfx float @simple_stack_indirect_call(float %arg0) #0 {
+define amdgpu_gfx float @simple_stack_indirect_call(float %arg0) nounwind {
   %stack = alloca float, i32 4, align 4, addrspace(5)
   store volatile float 2.0, ptr addrspace(5) %stack
   %val = load volatile float, ptr addrspace(5) %stack
@@ -275,7 +275,7 @@ define amdgpu_gfx float @simple_stack_indirect_call(float %arg0) #0 {
   ret float %add
 }
 
-define amdgpu_gfx float @simple_stack_recurse(float %arg0) #0 {
+define amdgpu_gfx float @simple_stack_recurse(float %arg0) nounwind {
   %stack = alloca float, i32 4, align 4, addrspace(5)
   store volatile float 2.0, ptr addrspace(5) %stack
   %val = load volatile float, ptr addrspace(5) %stack
@@ -286,18 +286,16 @@ define amdgpu_gfx float @simple_stack_recurse(float %arg0) #0 {
 
 @lds = internal addrspace(3) global [64 x float] undef
 
-define amdgpu_gfx float @simple_lds(float %arg0) #0 {
+define amdgpu_gfx float @simple_lds(float %arg0) nounwind {
   %val = load float, ptr addrspace(3) @lds
   ret float %val
 }
 
-define amdgpu_gfx float @simple_lds_recurse(float %arg0) #0 {
+define amdgpu_gfx float @simple_lds_recurse(float %arg0) nounwind {
   %val = load float, ptr addrspace(3) @lds
   %res = call amdgpu_gfx float @simple_lds_recurse(float %val)
   ret float %res
 }
-
-attributes #0 = { nounwind }
 
 !amdgpu.pal.metadata.msgpack = !{!0}
 

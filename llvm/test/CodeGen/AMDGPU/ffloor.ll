@@ -6,7 +6,7 @@
 ; SI: v_floor_f32_e32
 ; R600: FLOOR
 define amdgpu_kernel void @floor_f32(ptr addrspace(1) %out, float %in) {
-  %tmp = call float @llvm.floor.f32(float %in) #0
+  %tmp = call float @llvm.floor.f32(float %in) nounwind readnone
   store float %tmp, ptr addrspace(1) %out
   ret void
 }
@@ -16,7 +16,7 @@ define amdgpu_kernel void @floor_f32(ptr addrspace(1) %out, float %in) {
 ; SI: v_floor_f32_e32
 
 define amdgpu_kernel void @floor_v2f32(ptr addrspace(1) %out, <2 x float> %in) {
-  %tmp = call <2 x float> @llvm.floor.v2f32(<2 x float> %in) #0
+  %tmp = call <2 x float> @llvm.floor.v2f32(<2 x float> %in) nounwind readnone
   store <2 x float> %tmp, ptr addrspace(1) %out
   ret void
 }
@@ -32,18 +32,16 @@ define amdgpu_kernel void @floor_v2f32(ptr addrspace(1) %out, <2 x float> %in) {
 ; R600: FLOOR
 ; R600: FLOOR
 define amdgpu_kernel void @floor_v4f32(ptr addrspace(1) %out, <4 x float> %in) {
-  %tmp = call <4 x float> @llvm.floor.v4f32(<4 x float> %in) #0
+  %tmp = call <4 x float> @llvm.floor.v4f32(<4 x float> %in) nounwind readnone
   store <4 x float> %tmp, ptr addrspace(1) %out
   ret void
 }
 
 ; Function Attrs: nounwind readonly
-declare float @llvm.floor.f32(float) #0
+declare float @llvm.floor.f32(float) nounwind readnone
 
 ; Function Attrs: nounwind readonly
-declare <2 x float> @llvm.floor.v2f32(<2 x float>) #0
+declare <2 x float> @llvm.floor.v2f32(<2 x float>) nounwind readnone
 
 ; Function Attrs: nounwind readonly
-declare <4 x float> @llvm.floor.v4f32(<4 x float>) #0
-
-attributes #0 = { nounwind readnone }
+declare <4 x float> @llvm.floor.v4f32(<4 x float>) nounwind readnone

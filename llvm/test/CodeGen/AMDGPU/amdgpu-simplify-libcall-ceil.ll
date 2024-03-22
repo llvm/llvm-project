@@ -210,7 +210,7 @@ define float @test_ceil_f32_nobuiltin_callsite(float %arg) {
 ; CHECK-NEXT:    [[CEIL:%.*]] = tail call float @_Z4ceilf(float [[ARG]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[CEIL]]
 ;
-  %ceil = tail call float @_Z4ceilf(float %arg) #0
+  %ceil = tail call float @_Z4ceilf(float %arg) nobuiltin
   ret float %ceil
 }
 
@@ -220,28 +220,28 @@ define <2 x float> @test_ceil_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 ; CHECK-NEXT:    [[CEIL:%.*]] = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret <2 x float> [[CEIL]]
 ;
-  %ceil = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> %arg) #0
+  %ceil = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> %arg) nobuiltin
   ret <2 x float> %ceil
 }
 
 ; "no-builtins" should be ignored
-define float @test_ceil_f32_nobuiltins(float %arg) #1 {
+define float @test_ceil_f32_nobuiltins(float %arg) "no-builtins" {
 ; CHECK-LABEL: define float @test_ceil_f32_nobuiltins
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[CEIL:%.*]] = tail call float @_Z4ceilf(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CEIL]]
 ;
-  %ceil = tail call float @_Z4ceilf(float %arg) #0
+  %ceil = tail call float @_Z4ceilf(float %arg) nobuiltin
   ret float %ceil
 }
 
-define <2 x float> @test_ceil_v2f32_nobuiltins(<2 x float> %arg) #1 {
+define <2 x float> @test_ceil_v2f32_nobuiltins(<2 x float> %arg) "no-builtins" {
 ; CHECK-LABEL: define <2 x float> @test_ceil_v2f32_nobuiltins
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CEIL:%.*]] = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret <2 x float> [[CEIL]]
 ;
-  %ceil = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> %arg) #0
+  %ceil = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> %arg) nobuiltin
   ret <2 x float> %ceil
 }
 
@@ -286,8 +286,8 @@ define <2 x float> @test_ceil_v2f32_preserve_flags_md(<2 x float> %arg) {
 }
 
 ; Test the libm name, not a recognized opencl builtin.
-declare float @ceilf(float) #2
-declare double @ceil(double) #2
+declare float @ceilf(float) nounwind memory(none)
+declare double @ceil(double) nounwind memory(none)
 
 define float @test_libm_ceil_f32(float %arg) {
 ; CHECK-LABEL: define float @test_libm_ceil_f32
@@ -309,19 +309,14 @@ define double @test_libm_ceil_f64(double %arg) {
   ret double %ceil
 }
 
-define float @test_ceil_f32_strictfp(float %arg) #3 {
+define float @test_ceil_f32_strictfp(float %arg) strictfp {
 ; CHECK-LABEL: define float @test_ceil_f32_strictfp
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[CEIL:%.*]] = tail call nnan float @_Z4ceilf(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CEIL]]
 ;
-  %ceil = tail call nnan float @_Z4ceilf(float %arg) #3
+  %ceil = tail call nnan float @_Z4ceilf(float %arg) strictfp
   ret float %ceil
 }
-
-attributes #0 = { nobuiltin }
-attributes #1 = { "no-builtins" }
-attributes #2 = { nounwind memory(none) }
-attributes #3 = { strictfp }
 
 !0 = !{i32 1234}

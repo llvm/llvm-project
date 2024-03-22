@@ -136,7 +136,7 @@ define amdgpu_kernel void @sgpr_if_else_valu_br(ptr addrspace(1) %out, float %a,
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 entry:
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() readnone
   %tid_f = uitofp i32 %tid to float
   %tmp1 = fcmp ueq float %tid_f, 0.0
   br i1 %tmp1, label %if, label %else
@@ -199,7 +199,7 @@ define amdgpu_kernel void @sgpr_if_else_valu_cmp_phi_br(ptr addrspace(1) %out, p
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 entry:
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() readnone
   %tmp1 = icmp eq i32 %tid, 0
   br i1 %tmp1, label %if, label %else
 
@@ -222,6 +222,4 @@ endif:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() readnone

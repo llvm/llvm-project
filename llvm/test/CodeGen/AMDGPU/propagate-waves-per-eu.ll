@@ -12,7 +12,7 @@ define internal void @default_to_1_8_a() {
   ret void
 }
 
-define amdgpu_kernel void @kernel_1_8() #0 {
+define amdgpu_kernel void @kernel_1_8() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,8" {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_1_8
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    call void @default_to_1_8_a()
@@ -31,7 +31,7 @@ define internal void @default_to_1_2() {
   ret void
 }
 
-define amdgpu_kernel void @kernel_1_2() #1 {
+define amdgpu_kernel void @kernel_1_2() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,2" {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_1_2
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    call void @default_to_1_2()
@@ -56,7 +56,7 @@ define internal void @default_to_1_4() {
   ret void
 }
 
-define amdgpu_kernel void @kernel_1_4() #2 {
+define amdgpu_kernel void @kernel_1_4() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,4" {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_1_4
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:    call void @default_to_1_4()
@@ -77,7 +77,7 @@ define internal void @default_to_2_9() {
 
 ; This already has strict bounds, but called from kernels with wider
 ; bounds, and should not be changed.
-define internal void @flat_group_1_1() #3 {
+define internal void @flat_group_1_1() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,1" {
 ; CHECK-LABEL: define internal void @flat_group_1_1
 ; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -86,7 +86,7 @@ define internal void @flat_group_1_1() #3 {
 }
 
 ; 2,8 -> 2,2
-define internal void @flat_group_2_8() #4 {
+define internal void @flat_group_2_8() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="2,8" {
 ; CHECK-LABEL: define internal void @flat_group_2_8
 ; CHECK-SAME: () #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -95,7 +95,7 @@ define internal void @flat_group_2_8() #4 {
 }
 
 ; 9,10 -> 9,9
-define internal void @flat_group_9_10() #5 {
+define internal void @flat_group_9_10() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="9,10" {
 ; CHECK-LABEL: define internal void @flat_group_9_10
 ; CHECK-SAME: () #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -103,7 +103,7 @@ define internal void @flat_group_9_10() #5 {
   ret void
 }
 
-define amdgpu_kernel void @kernel_2_9() #6 {
+define amdgpu_kernel void @kernel_2_9() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="2,9" {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_2_9
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    call void @default_to_2_9()
@@ -115,7 +115,7 @@ define amdgpu_kernel void @kernel_2_9() #6 {
   ret void
 }
 
-define amdgpu_kernel void @kernel_9_9() #7 {
+define amdgpu_kernel void @kernel_9_9() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="9,9" {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_9_9
 ; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:    call void @default_to_2_9()
@@ -138,7 +138,7 @@ define internal void @default_to_1_8_b() {
 
 ; The kernel's lower bound is higher than the callee's lower bound, so
 ; this should probably be illegal.
-define amdgpu_kernel void @kernel_2_8() #4 {
+define amdgpu_kernel void @kernel_2_8() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="2,8" {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_2_8
 ; CHECK-SAME: () #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    call void @default_to_1_8_a()
@@ -151,7 +151,7 @@ define amdgpu_kernel void @kernel_2_8() #4 {
 }
 
 ; 1,2 -> 2,2
-define internal void @merge_cycle_0() #1 {
+define internal void @merge_cycle_0() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,2" {
 ; CHECK-LABEL: define internal void @merge_cycle_0
 ; CHECK-SAME: () #[[ATTR5]] {
 ; CHECK-NEXT:    call void @merge_cycle_1()
@@ -163,7 +163,7 @@ define internal void @merge_cycle_0() #1 {
 
 ; Called from 1,2 + 3,8
 ; 2,8 -> 2,8
-define internal void @merge_cycle_1() #4 {
+define internal void @merge_cycle_1() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="2,8" {
 ; CHECK-LABEL: define internal void @merge_cycle_1
 ; CHECK-SAME: () #[[ATTR7]] {
 ; CHECK-NEXT:    call void @merge_cycle_0()
@@ -173,7 +173,7 @@ define internal void @merge_cycle_1() #4 {
   ret void
 }
 
-define amdgpu_kernel void @kernel_3_8() #8 {
+define amdgpu_kernel void @kernel_3_8() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="3,8" {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_3_8
 ; CHECK-SAME: () #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:    call void @merge_cycle_0()
@@ -233,7 +233,7 @@ define internal void @called_from_invalid_bounds_1() {
 }
 
 ; Invalid range for amdgpu-waves-per-eu
-define amdgpu_kernel void @kernel_invalid_bounds_0_8() #9 {
+define amdgpu_kernel void @kernel_invalid_bounds_0_8() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="0,8" {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_invalid_bounds_0_8
 ; CHECK-SAME: () #[[ATTR11:[0-9]+]] {
 ; CHECK-NEXT:    call void @called_from_invalid_bounds_0()
@@ -244,7 +244,7 @@ define amdgpu_kernel void @kernel_invalid_bounds_0_8() #9 {
 }
 
 ; Invalid range for amdgpu-waves-per-eu
-define amdgpu_kernel void @kernel_invalid_bounds_1_123() #10 {
+define amdgpu_kernel void @kernel_invalid_bounds_1_123() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,123" {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_invalid_bounds_1_123
 ; CHECK-SAME: () #[[ATTR12:[0-9]+]] {
 ; CHECK-NEXT:    call void @called_from_invalid_bounds_1()
@@ -258,7 +258,7 @@ define amdgpu_kernel void @kernel_invalid_bounds_1_123() #10 {
 ; The 512 maximum workgroup size implies a minimum occupancy of 2. The
 ; implied minimum waves-per-eu should not be 3
 ; -> 2,10
-define void @larger_group_size_implies_lower_minimum() #11 {
+define void @larger_group_size_implies_lower_minimum() "amdgpu-flat-work-group-size"="1,512" {
 ; CHECK-LABEL: define void @larger_group_size_implies_lower_minimum
 ; CHECK-SAME: () #[[ATTR13:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -266,7 +266,7 @@ define void @larger_group_size_implies_lower_minimum() #11 {
   ret void
 }
 
-define amdgpu_kernel void @kernel_3_6() #12 {
+define amdgpu_kernel void @kernel_3_6() "amdgpu-flat-work-group-size"="1,512" "amdgpu-waves-per-eu"="3,6" {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_3_6
 ; CHECK-SAME: () #[[ATTR14:[0-9]+]] {
 ; CHECK-NEXT:    call void @larger_group_size_implies_lower_minimum()
@@ -277,7 +277,7 @@ define amdgpu_kernel void @kernel_3_6() #12 {
 }
 
 ; 3,6 -> 6,9
-define internal void @refine_upper_func_3_6() #13 {
+define internal void @refine_upper_func_3_6() "amdgpu-waves-per-eu"="3,6" {
 ; CHECK-LABEL: define internal void @refine_upper_func_3_6
 ; CHECK-SAME: () #[[ATTR15:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -286,7 +286,7 @@ define internal void @refine_upper_func_3_6() #13 {
 }
 
 ; 4,8 -> 6,8
-define internal void @refine_lower_func_4_8() #14 {
+define internal void @refine_lower_func_4_8() "amdgpu-waves-per-eu"="4,8" {
 ; CHECK-LABEL: define internal void @refine_lower_func_4_8
 ; CHECK-SAME: () #[[ATTR16:[0-9]+]] {
 ; CHECK-NEXT:    call void @refine_upper_func_3_6()
@@ -296,7 +296,7 @@ define internal void @refine_lower_func_4_8() #14 {
   ret void
 }
 
-define amdgpu_kernel void @kernel_foo_6_8() #15 {
+define amdgpu_kernel void @kernel_foo_6_8() "amdgpu-waves-per-eu"="6,8" {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_foo_6_8
 ; CHECK-SAME: () #[[ATTR16]] {
 ; CHECK-NEXT:    call void @refine_upper_func_3_6()
@@ -311,7 +311,7 @@ define amdgpu_kernel void @kernel_foo_6_8() #15 {
 }
 
 ; 5,5 -> 5,5
-define internal void @func_5_5() #16 {
+define internal void @func_5_5() "amdgpu-waves-per-eu"="5,5" {
 ; CHECK-LABEL: define internal void @func_5_5
 ; CHECK-SAME: () #[[ATTR17:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -320,7 +320,7 @@ define internal void @func_5_5() #16 {
 }
 
 ; 5,8 -> 8,8
-define internal void @func_5_8() #17 {
+define internal void @func_5_8() "amdgpu-waves-per-eu"="5,8" {
 ; CHECK-LABEL: define internal void @func_5_8
 ; CHECK-SAME: () #[[ATTR18:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -329,7 +329,7 @@ define internal void @func_5_8() #17 {
 }
 
 ; 9,10 -> 9,10
-define internal void @func_9_10_a() #18 {
+define internal void @func_9_10_a() "amdgpu-waves-per-eu"="9,10" {
 ; CHECK-LABEL: define internal void @func_9_10_a
 ; CHECK-SAME: () #[[ATTR19:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -338,7 +338,7 @@ define internal void @func_9_10_a() #18 {
 }
 
 ; 9,10 -> 9,9
-define internal void @func_9_10_b() #18 {
+define internal void @func_9_10_b() "amdgpu-waves-per-eu"="9,10" {
 ; CHECK-LABEL: define internal void @func_9_10_b
 ; CHECK-SAME: () #[[ATTR20:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -346,7 +346,7 @@ define internal void @func_9_10_b() #18 {
   ret void
 }
 
-define amdgpu_kernel void @kernel_bar_8_9() #19 {
+define amdgpu_kernel void @kernel_bar_8_9() "amdgpu-waves-per-eu"="8,9" {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_bar_8_9
 ; CHECK-SAME: () #[[ATTR21:[0-9]+]] {
 ; CHECK-NEXT:    call void @refine_upper_func_3_6()
@@ -377,27 +377,6 @@ define void @externally_visible() {
 
 ; Use a 1 wave workgroup so there is no interaction by the workgroup
 ; size on the implied waves per EU.
-
-attributes #0 = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,8" }
-attributes #1 = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,2" }
-attributes #2 = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,4" }
-attributes #3 = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,1" }
-attributes #4 = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="2,8" }
-attributes #5 = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="9,10" }
-attributes #6 = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="2,9" }
-attributes #7 = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="9,9" }
-attributes #8 = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="3,8" }
-attributes #9 = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="0,8" }
-attributes #10 = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,123" }
-attributes #11 = { "amdgpu-flat-work-group-size"="1,512" }
-attributes #12 = { "amdgpu-flat-work-group-size"="1,512" "amdgpu-waves-per-eu"="3,6" }
-attributes #13 = { "amdgpu-waves-per-eu"="3,6" }
-attributes #14 = { "amdgpu-waves-per-eu"="4,8" }
-attributes #15 = { "amdgpu-waves-per-eu"="6,8" }
-attributes #16 = { "amdgpu-waves-per-eu"="5,5" }
-attributes #17 = { "amdgpu-waves-per-eu"="5,8" }
-attributes #18 = { "amdgpu-waves-per-eu"="9,10" }
-attributes #19 = { "amdgpu-waves-per-eu"="8,9" }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="1,8" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR1]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="1,2" "uniform-work-group-size"="false" }

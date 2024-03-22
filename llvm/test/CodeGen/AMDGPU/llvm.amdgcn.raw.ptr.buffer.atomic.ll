@@ -149,20 +149,18 @@ main_body:
   ret void
 }
 
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.swap.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare float @llvm.amdgcn.raw.ptr.buffer.atomic.swap.f32(float, ptr addrspace(8), i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.sub.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.smin.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.umin.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.smax.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.umax.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.and.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.or.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.xor.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.inc.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.dec.i32(i32, ptr addrspace(8), i32, i32, i32) #0
-declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32, i32, ptr addrspace(8), i32, i32, i32) #0
-declare i64 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i64(i64, i64, ptr addrspace(8), i32, i32, i32) #0
-
-attributes #0 = { nounwind }
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.swap.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare float @llvm.amdgcn.raw.ptr.buffer.atomic.swap.f32(float, ptr addrspace(8), i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.sub.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.smin.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.umin.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.smax.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.umax.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.and.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.or.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.xor.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.inc.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.dec.i32(i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32, i32, ptr addrspace(8), i32, i32, i32) nounwind
+declare i64 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i64(i64, i64, ptr addrspace(8), i32, i32, i32) nounwind

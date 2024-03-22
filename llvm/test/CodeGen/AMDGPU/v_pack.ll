@@ -2,9 +2,9 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 ; RUN: llc -global-isel -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GISEL %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-define amdgpu_kernel void @v_pack_b32_v2f16(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @v_pack_b32_v2f16(ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; GCN-LABEL: v_pack_b32_v2f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -49,11 +49,11 @@ define amdgpu_kernel void @v_pack_b32_v2f16(ptr addrspace(1) %in0, ptr addrspace
   %vec.0 = insertelement <2 x half> undef, half %v0.add, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %v1.add, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
-  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) nounwind
   ret void
 }
 
-define amdgpu_kernel void @v_pack_b32_v2f16_sub(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @v_pack_b32_v2f16_sub(ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; GCN-LABEL: v_pack_b32_v2f16_sub:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -98,7 +98,7 @@ define amdgpu_kernel void @v_pack_b32_v2f16_sub(ptr addrspace(1) %in0, ptr addrs
   %vec.0 = insertelement <2 x half> undef, half %v0.add, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %v1.add, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
-  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) nounwind
   ret void
 }
 
@@ -144,7 +144,7 @@ define amdgpu_kernel void @fptrunc(
   ret void
 }
 
-define amdgpu_kernel void @v_pack_b32.fabs(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @v_pack_b32.fabs(ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; GCN-LABEL: v_pack_b32.fabs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -191,11 +191,11 @@ define amdgpu_kernel void @v_pack_b32.fabs(ptr addrspace(1) %in0, ptr addrspace(
   %vec.0 = insertelement <2 x half> undef, half %v0.fabs, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %v1.fabs, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
-  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) nounwind
   ret void
 }
 
-define amdgpu_kernel void @v_pack_b32.fneg(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @v_pack_b32.fneg(ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; GCN-LABEL: v_pack_b32.fneg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -242,12 +242,9 @@ define amdgpu_kernel void @v_pack_b32.fneg(ptr addrspace(1) %in0, ptr addrspace(
   %vec.0 = insertelement <2 x half> undef, half %v0.fneg, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %v1.fneg, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
-  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) nounwind
   ret void
 }
 
-declare half @llvm.fabs.f16(half) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare half @llvm.fabs.f16(half) nounwind readnone
 

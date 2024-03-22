@@ -6,8 +6,8 @@
 ; stack. This test is likely redundant when all DAG and GlobalISel
 ; tests are unified.
 
-declare hidden void @external_void_func_v16i32_v16i32_v4i32(<16 x i32>, <16 x i32>, <4 x i32>) #0
-declare hidden void @external_void_func_byval(ptr addrspace(5) byval([16 x i32])) #0
+declare hidden void @external_void_func_v16i32_v16i32_v4i32(<16 x i32>, <16 x i32>, <4 x i32>) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
+declare hidden void @external_void_func_byval(ptr addrspace(5) byval([16 x i32])) nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
 
 define amdgpu_kernel void @kernel_caller_stack() {
 ; MUBUF-LABEL: kernel_caller_stack:
@@ -449,7 +449,4 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) {
   ret void
 }
 
-declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, i1 immarg) #1
-
-attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
-attributes #1 = { argmemonly nofree nounwind willreturn writeonly }
+declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, i1 immarg) argmemonly nofree nounwind willreturn writeonly

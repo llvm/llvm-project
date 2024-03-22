@@ -4,7 +4,7 @@ target triple = "amdgcn-amd-amdhsa"
 
 @_RSENC_gDcd_______________________________ = external protected addrspace(1) externally_initialized global [4096 x i8], align 16
 
-define protected amdgpu_kernel void @_RSENC_PRInit__________________________________(i1 %c0) local_unnamed_addr #0 {
+define protected amdgpu_kernel void @_RSENC_PRInit__________________________________(i1 %c0) local_unnamed_addr "uniform-work-group-size"="true" {
 entry:
   %runtimeVersionCopy = alloca [128 x i8], align 16, addrspace(5)
   %licenseVersionCopy = alloca [128 x i8], align 16, addrspace(5)
@@ -150,5 +150,3 @@ if.end570:                                        ; preds = %for.body564, %if.el
 cleanup.cont:                                     ; preds = %if.end15, %if.end
   ret void
 }
-
-attributes #0 = { "uniform-work-group-size"="true" }

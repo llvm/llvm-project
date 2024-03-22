@@ -13,11 +13,9 @@
 
 ; GCN-NEXT: v_mov_b32_e32 v0, v1
 ; GCN-NEXT: ; return
-define amdgpu_ps float @main(i32 inreg %arg) #0 {
+define amdgpu_ps float @main(i32 inreg %arg) "InitialPSInputAddr"="36983" {
 main_body:
   %tmp24 = insertelement <16 x float> zeroinitializer, float 1.000000e+00, i32 %arg
   %tmp25 = extractelement <16 x float> %tmp24, i32 1
   ret float %tmp25
 }
-
-attributes #0 = { "InitialPSInputAddr"="36983" }

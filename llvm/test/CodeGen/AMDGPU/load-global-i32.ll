@@ -6,7 +6,7 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN-HSA -check-prefix=GCN-GFX900-HSA %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn--amdhsa -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN-HSA -check-prefix=GCN-GFX908-HSA %s
 
-define amdgpu_kernel void @global_load_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_load_i32:
 ; SI-NOHSA:       ; %bb.0: ; %entry
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -85,7 +85,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @global_load_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_load_v2i32:
 ; SI-NOHSA:       ; %bb.0: ; %entry
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -164,7 +164,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @global_load_v3i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v3i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_load_v3i32:
 ; SI-NOHSA:       ; %bb.0: ; %entry
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -249,7 +249,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @global_load_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_load_v4i32:
 ; SI-NOHSA:       ; %bb.0: ; %entry
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -328,7 +328,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @global_load_v8i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v8i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_load_v8i32:
 ; SI-NOHSA:       ; %bb.0: ; %entry
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -431,7 +431,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @global_load_v9i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v9i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_load_v9i32:
 ; SI-NOHSA:       ; %bb.0: ; %entry
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -562,7 +562,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @global_load_v10i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v10i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_load_v10i32:
 ; SI-NOHSA:       ; %bb.0: ; %entry
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -691,7 +691,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @global_load_v11i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v11i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_load_v11i32:
 ; SI-NOHSA:       ; %bb.0: ; %entry
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -827,7 +827,7 @@ entry:
 }
 
 
-define amdgpu_kernel void @global_load_v12i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v12i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_load_v12i32:
 ; SI-NOHSA:       ; %bb.0: ; %entry
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -957,7 +957,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @global_load_v16i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v16i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_load_v16i32:
 ; SI-NOHSA:       ; %bb.0: ; %entry
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1112,7 +1112,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @global_zextload_i32_to_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_zextload_i32_to_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_zextload_i32_to_i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1195,7 +1195,7 @@ define amdgpu_kernel void @global_zextload_i32_to_i64(ptr addrspace(1) %out, ptr
   ret void
 }
 
-define amdgpu_kernel void @global_sextload_i32_to_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_sextload_i32_to_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_sextload_i32_to_i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1279,7 +1279,7 @@ define amdgpu_kernel void @global_sextload_i32_to_i64(ptr addrspace(1) %out, ptr
   ret void
 }
 
-define amdgpu_kernel void @global_zextload_v1i32_to_v1i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_zextload_v1i32_to_v1i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_zextload_v1i32_to_v1i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1362,7 +1362,7 @@ define amdgpu_kernel void @global_zextload_v1i32_to_v1i64(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @global_sextload_v1i32_to_v1i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_sextload_v1i32_to_v1i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_sextload_v1i32_to_v1i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1446,7 +1446,7 @@ define amdgpu_kernel void @global_sextload_v1i32_to_v1i64(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @global_zextload_v2i32_to_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_zextload_v2i32_to_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_zextload_v2i32_to_v2i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1544,7 +1544,7 @@ define amdgpu_kernel void @global_zextload_v2i32_to_v2i64(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @global_sextload_v2i32_to_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_sextload_v2i32_to_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_sextload_v2i32_to_v2i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1641,7 +1641,7 @@ define amdgpu_kernel void @global_sextload_v2i32_to_v2i64(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @global_zextload_v4i32_to_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_zextload_v4i32_to_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_zextload_v4i32_to_v4i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1766,7 +1766,7 @@ define amdgpu_kernel void @global_zextload_v4i32_to_v4i64(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @global_sextload_v4i32_to_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_sextload_v4i32_to_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_sextload_v4i32_to_v4i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1899,7 +1899,7 @@ define amdgpu_kernel void @global_sextload_v4i32_to_v4i64(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @global_zextload_v8i32_to_v8i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_zextload_v8i32_to_v8i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_zextload_v8i32_to_v8i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2088,7 +2088,7 @@ define amdgpu_kernel void @global_zextload_v8i32_to_v8i64(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @global_sextload_v8i32_to_v8i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_sextload_v8i32_to_v8i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_sextload_v8i32_to_v8i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2300,7 +2300,7 @@ define amdgpu_kernel void @global_sextload_v8i32_to_v8i64(ptr addrspace(1) %out,
   ret void
 }
 
-define amdgpu_kernel void @global_sextload_v16i32_to_v16i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_sextload_v16i32_to_v16i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_sextload_v16i32_to_v16i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -2671,7 +2671,7 @@ define amdgpu_kernel void @global_sextload_v16i32_to_v16i64(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @global_zextload_v16i32_to_v16i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_zextload_v16i32_to_v16i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_zextload_v16i32_to_v16i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -2988,7 +2988,7 @@ define amdgpu_kernel void @global_zextload_v16i32_to_v16i64(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_sextload_v32i32_to_v32i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -3808,7 +3808,7 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @global_zextload_v32i32_to_v32i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_zextload_v32i32_to_v32i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_zextload_v32i32_to_v32i64:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -4386,7 +4386,7 @@ define amdgpu_kernel void @global_zextload_v32i32_to_v32i64(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @global_load_v32i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v32i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-NOHSA-LABEL: global_load_v32i32:
 ; SI-NOHSA:       ; %bb.0:
 ; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -4635,5 +4635,3 @@ define amdgpu_kernel void @global_load_v32i32(ptr addrspace(1) %out, ptr addrspa
   store <32 x i32> %ld, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }

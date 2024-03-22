@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck --check-prefix=GFX803 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-promote-alloca -verify-machineinstrs --mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=GFX900,GFX900-FLATSCR %s
 
-define <2 x i16> @load_local_lo_v2i16_undeflo(ptr addrspace(3) %in) #0 {
+define <2 x i16> @load_local_lo_v2i16_undeflo(ptr addrspace(3) %in) nounwind {
 ; GFX900-LABEL: load_local_lo_v2i16_undeflo:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -32,7 +32,7 @@ entry:
   ret <2 x i16> %build
 }
 
-define <2 x i16> @load_local_lo_v2i16_reglo(ptr addrspace(3) %in, i16 %reg) #0 {
+define <2 x i16> @load_local_lo_v2i16_reglo(ptr addrspace(3) %in, i16 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_local_lo_v2i16_reglo:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -77,7 +77,7 @@ entry:
 }
 
 ; Show that we get reasonable regalloc without physreg constraints.
-define void @load_local_lo_v2i16_reglo_vreg(ptr addrspace(3) %in, i16 %reg) #0 {
+define void @load_local_lo_v2i16_reglo_vreg(ptr addrspace(3) %in, i16 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_local_lo_v2i16_reglo_vreg:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -130,7 +130,7 @@ entry:
   ret void
 }
 
-define <2 x i16> @load_local_lo_v2i16_zerolo(ptr addrspace(3) %in) #0 {
+define <2 x i16> @load_local_lo_v2i16_zerolo(ptr addrspace(3) %in) nounwind {
 ; GFX900-LABEL: load_local_lo_v2i16_zerolo:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -161,7 +161,7 @@ entry:
   ret <2 x i16> %build
 }
 
-define <2 x half> @load_local_lo_v2f16_fpimm(ptr addrspace(3) %in) #0 {
+define <2 x half> @load_local_lo_v2f16_fpimm(ptr addrspace(3) %in) nounwind {
 ; GFX900-LABEL: load_local_lo_v2f16_fpimm:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -195,7 +195,7 @@ entry:
   ret <2 x half> %build
 }
 
-define void @load_local_lo_v2f16_reghi_vreg(ptr addrspace(3) %in, i32 %reg) #0 {
+define void @load_local_lo_v2f16_reghi_vreg(ptr addrspace(3) %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_local_lo_v2f16_reghi_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -235,7 +235,7 @@ entry:
   ret void
 }
 
-define void @load_local_lo_v2f16_reglo_vreg(ptr addrspace(3) %in, half %reg) #0 {
+define void @load_local_lo_v2f16_reglo_vreg(ptr addrspace(3) %in, half %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_local_lo_v2f16_reglo_vreg:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -288,7 +288,7 @@ entry:
   ret void
 }
 
-define void @load_local_lo_v2i16_reghi_vreg_zexti8(ptr addrspace(3) %in, i32 %reg) #0 {
+define void @load_local_lo_v2i16_reghi_vreg_zexti8(ptr addrspace(3) %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_local_lo_v2i16_reghi_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -329,7 +329,7 @@ entry:
   ret void
 }
 
-define void @load_local_lo_v2i16_reglo_vreg_zexti8(ptr addrspace(3) %in, i16 %reg) #0 {
+define void @load_local_lo_v2i16_reglo_vreg_zexti8(ptr addrspace(3) %in, i16 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_local_lo_v2i16_reglo_vreg_zexti8:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -383,7 +383,7 @@ entry:
   ret void
 }
 
-define void @load_local_lo_v2i16_reghi_vreg_sexti8(ptr addrspace(3) %in, i32 %reg) #0 {
+define void @load_local_lo_v2i16_reghi_vreg_sexti8(ptr addrspace(3) %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_local_lo_v2i16_reghi_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -424,7 +424,7 @@ entry:
   ret void
 }
 
-define void @load_local_lo_v2i16_reglo_vreg_sexti8(ptr addrspace(3) %in, i16 %reg) #0 {
+define void @load_local_lo_v2i16_reglo_vreg_sexti8(ptr addrspace(3) %in, i16 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_local_lo_v2i16_reglo_vreg_sexti8:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -478,7 +478,7 @@ entry:
   ret void
 }
 
-define void @load_local_lo_v2f16_reglo_vreg_zexti8(ptr addrspace(3) %in, half %reg) #0 {
+define void @load_local_lo_v2f16_reglo_vreg_zexti8(ptr addrspace(3) %in, half %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_local_lo_v2f16_reglo_vreg_zexti8:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -533,7 +533,7 @@ entry:
   ret void
 }
 
-define void @load_local_lo_v2f16_reglo_vreg_sexti8(ptr addrspace(3) %in, half %reg) #0 {
+define void @load_local_lo_v2f16_reglo_vreg_sexti8(ptr addrspace(3) %in, half %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_local_lo_v2f16_reglo_vreg_sexti8:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -588,7 +588,7 @@ entry:
   ret void
 }
 
-define void @load_local_lo_v2i16_reghi_vreg_multi_use_lo(ptr addrspace(3) %in, <2 x i16> %reg) #0 {
+define void @load_local_lo_v2i16_reghi_vreg_multi_use_lo(ptr addrspace(3) %in, <2 x i16> %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_local_lo_v2i16_reghi_vreg_multi_use_lo:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -650,7 +650,7 @@ entry:
   ret void
 }
 
-define void @load_local_lo_v2i16_reghi_vreg_multi_use_hi(ptr addrspace(3) %in, <2 x i16> %reg) #0 {
+define void @load_local_lo_v2i16_reghi_vreg_multi_use_hi(ptr addrspace(3) %in, <2 x i16> %reg) nounwind {
 ; GFX900-LABEL: load_local_lo_v2i16_reghi_vreg_multi_use_hi:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -700,7 +700,7 @@ entry:
   ret void
 }
 
-define void @load_local_lo_v2i16_reghi_vreg_multi_use_lohi(ptr addrspace(3) noalias %in, <2 x i16> %reg, ptr addrspace(3) noalias %out0, ptr addrspace(3) noalias %out1) #0 {
+define void @load_local_lo_v2i16_reghi_vreg_multi_use_lohi(ptr addrspace(3) noalias %in, <2 x i16> %reg, ptr addrspace(3) noalias %out0, ptr addrspace(3) noalias %out1) nounwind {
 ; GFX900-MUBUF-LABEL: load_local_lo_v2i16_reghi_vreg_multi_use_lohi:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -767,7 +767,7 @@ entry:
   ret void
 }
 
-define void @load_global_lo_v2i16_reglo_vreg(ptr addrspace(1) %in, i32 %reg) #0 {
+define void @load_global_lo_v2i16_reglo_vreg(ptr addrspace(1) %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_global_lo_v2i16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -809,7 +809,7 @@ entry:
   ret void
 }
 
-define void @load_global_lo_v2f16_reglo_vreg(ptr addrspace(1) %in, i32 %reg) #0 {
+define void @load_global_lo_v2f16_reglo_vreg(ptr addrspace(1) %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_global_lo_v2f16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -851,7 +851,7 @@ entry:
   ret void
 }
 
-define void @load_global_lo_v2i16_reglo_vreg_zexti8(ptr addrspace(1) %in, i32 %reg) #0 {
+define void @load_global_lo_v2i16_reglo_vreg_zexti8(ptr addrspace(1) %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_global_lo_v2i16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -894,7 +894,7 @@ entry:
   ret void
 }
 
-define void @load_global_lo_v2i16_reglo_vreg_sexti8(ptr addrspace(1) %in, i32 %reg) #0 {
+define void @load_global_lo_v2i16_reglo_vreg_sexti8(ptr addrspace(1) %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_global_lo_v2i16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -937,7 +937,7 @@ entry:
   ret void
 }
 
-define void @load_global_lo_v2f16_reglo_vreg_zexti8(ptr addrspace(1) %in, i32 %reg) #0 {
+define void @load_global_lo_v2f16_reglo_vreg_zexti8(ptr addrspace(1) %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_global_lo_v2f16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -981,7 +981,7 @@ entry:
   ret void
 }
 
-define void @load_global_lo_v2f16_reglo_vreg_sexti8(ptr addrspace(1) %in, i32 %reg) #0 {
+define void @load_global_lo_v2f16_reglo_vreg_sexti8(ptr addrspace(1) %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_global_lo_v2f16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1025,7 +1025,7 @@ entry:
   ret void
 }
 
-define void @load_flat_lo_v2i16_reghi_vreg(ptr %in, i32 %reg) #0 {
+define void @load_flat_lo_v2i16_reghi_vreg(ptr %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_flat_lo_v2i16_reghi_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1064,7 +1064,7 @@ entry:
   ret void
 }
 
-define void @load_flat_lo_v2f16_reghi_vreg(ptr %in, i32 %reg) #0 {
+define void @load_flat_lo_v2f16_reghi_vreg(ptr %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_flat_lo_v2f16_reghi_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1105,7 +1105,7 @@ entry:
   ret void
 }
 
-define void @load_flat_lo_v2i16_reglo_vreg_zexti8(ptr %in, i32 %reg) #0 {
+define void @load_flat_lo_v2i16_reglo_vreg_zexti8(ptr %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_flat_lo_v2i16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1145,7 +1145,7 @@ entry:
   ret void
 }
 
-define void @load_flat_lo_v2i16_reglo_vreg_sexti8(ptr %in, i32 %reg) #0 {
+define void @load_flat_lo_v2i16_reglo_vreg_sexti8(ptr %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_flat_lo_v2i16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1185,7 +1185,7 @@ entry:
   ret void
 }
 
-define void @load_flat_lo_v2f16_reglo_vreg_zexti8(ptr %in, i32 %reg) #0 {
+define void @load_flat_lo_v2f16_reglo_vreg_zexti8(ptr %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_flat_lo_v2f16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1226,7 +1226,7 @@ entry:
   ret void
 }
 
-define void @load_flat_lo_v2f16_reglo_vreg_sexti8(ptr %in, i32 %reg) #0 {
+define void @load_flat_lo_v2f16_reglo_vreg_sexti8(ptr %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_flat_lo_v2f16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1267,7 +1267,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2i16_reglo_vreg(ptr addrspace(5) byval(i16) %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg(ptr addrspace(5) byval(i16) %in, i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2i16_reglo_vreg:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1316,7 +1316,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2i16_reghi_vreg(ptr addrspace(5) byval(i16) %in, i16 %reg) #0 {
+define void @load_private_lo_v2i16_reghi_vreg(ptr addrspace(5) byval(i16) %in, i16 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2i16_reghi_vreg:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1369,7 +1369,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2f16_reglo_vreg(ptr addrspace(5) byval(half) %in, i32 %reg) #0 {
+define void @load_private_lo_v2f16_reglo_vreg(ptr addrspace(5) byval(half) %in, i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2f16_reglo_vreg:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1418,7 +1418,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2i16_reglo_vreg_nooff(ptr addrspace(5) %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg_nooff(ptr addrspace(5) %in, i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2i16_reglo_vreg_nooff:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1467,7 +1467,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2i16_reghi_vreg_nooff(ptr addrspace(5) %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reghi_vreg_nooff(ptr addrspace(5) %in, i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2i16_reghi_vreg_nooff:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1516,7 +1516,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2f16_reglo_vreg_nooff(ptr addrspace(5) %in, i32 %reg) #0 {
+define void @load_private_lo_v2f16_reglo_vreg_nooff(ptr addrspace(5) %in, i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2f16_reglo_vreg_nooff:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1565,7 +1565,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2i16_reglo_vreg_zexti8(ptr addrspace(5) byval(i8) %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg_zexti8(ptr addrspace(5) byval(i8) %in, i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2i16_reglo_vreg_zexti8:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1615,7 +1615,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2i16_reglo_vreg_sexti8(ptr addrspace(5) byval(i8) %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg_sexti8(ptr addrspace(5) byval(i8) %in, i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2i16_reglo_vreg_sexti8:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1665,7 +1665,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2i16_reglo_vreg_nooff_zexti8(ptr addrspace(5) %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg_nooff_zexti8(ptr addrspace(5) %in, i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2i16_reglo_vreg_nooff_zexti8:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1715,7 +1715,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2i16_reglo_vreg_nooff_sexti8(ptr addrspace(5) %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg_nooff_sexti8(ptr addrspace(5) %in, i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2i16_reglo_vreg_nooff_sexti8:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1765,7 +1765,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2f16_reglo_vreg_nooff_zexti8(ptr addrspace(5) %in, i32 %reg) #0 {
+define void @load_private_lo_v2f16_reglo_vreg_nooff_zexti8(ptr addrspace(5) %in, i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2f16_reglo_vreg_nooff_zexti8:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1816,7 +1816,7 @@ entry:
   ret void
 }
 
-define void @load_constant_lo_v2i16_reglo_vreg(ptr addrspace(4) %in, i32 %reg) #0 {
+define void @load_constant_lo_v2i16_reglo_vreg(ptr addrspace(4) %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_constant_lo_v2i16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1858,7 +1858,7 @@ entry:
   ret void
 }
 
-define void @load_constant_lo_v2f16_reglo_vreg(ptr addrspace(4) %in, i32 %reg) #0 {
+define void @load_constant_lo_v2f16_reglo_vreg(ptr addrspace(4) %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_constant_lo_v2f16_reglo_vreg:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1900,7 +1900,7 @@ entry:
   ret void
 }
 
-define void @load_constant_lo_v2f16_reglo_vreg_zexti8(ptr addrspace(4) %in, i32 %reg) #0 {
+define void @load_constant_lo_v2f16_reglo_vreg_zexti8(ptr addrspace(4) %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_constant_lo_v2f16_reglo_vreg_zexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1944,7 +1944,7 @@ entry:
   ret void
 }
 
-define void @load_constant_lo_v2f16_reglo_vreg_sexti8(ptr addrspace(4) %in, i32 %reg) #0 {
+define void @load_constant_lo_v2f16_reglo_vreg_sexti8(ptr addrspace(4) %in, i32 %reg) nounwind {
 ; GFX900-LABEL: load_constant_lo_v2f16_reglo_vreg_sexti8:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1988,7 +1988,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2i16_reglo_vreg_to_offset(i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg_to_offset(i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2i16_reglo_vreg_to_offset:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2056,7 +2056,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2i16_reglo_vreg_sexti8_to_offset(i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg_sexti8_to_offset(i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2i16_reglo_vreg_sexti8_to_offset:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2125,7 +2125,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2i16_reglo_vreg_zexti8_to_offset(i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg_zexti8_to_offset(i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2i16_reglo_vreg_zexti8_to_offset:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2194,7 +2194,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2f16_reglo_vreg_sexti8_to_offset(i32 %reg) #0 {
+define void @load_private_lo_v2f16_reglo_vreg_sexti8_to_offset(i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2f16_reglo_vreg_sexti8_to_offset:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2264,7 +2264,7 @@ entry:
   ret void
 }
 
-define void @load_private_lo_v2f16_reglo_vreg_zexti8_to_offset(i32 %reg) #0 {
+define void @load_private_lo_v2f16_reglo_vreg_zexti8_to_offset(i32 %reg) nounwind {
 ; GFX900-MUBUF-LABEL: load_private_lo_v2f16_reglo_vreg_zexti8_to_offset:
 ; GFX900-MUBUF:       ; %bb.0: ; %entry
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2333,5 +2333,3 @@ entry:
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
 }
-
-attributes #0 = { nounwind }

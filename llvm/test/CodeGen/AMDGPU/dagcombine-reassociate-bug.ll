@@ -11,7 +11,7 @@
 
 define amdgpu_kernel void @store_same_base_ptr(ptr addrspace(1) %out) {
 entry:
-  %id = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %id = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %offset = sext i32 %id to i64
   %offset0 = add i64 %offset, 1027
   %ptr0 = getelementptr i32, ptr addrspace(1) %out, i64 %offset0
@@ -28,6 +28,4 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

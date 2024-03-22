@@ -7,7 +7,7 @@
 ; the condition that appears to have no uses until the loop is
 ; completely processed.
 
-define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) nocapture %arg) #0 {
+define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) nocapture %arg) nounwind {
 ; GCN-LABEL: reduced_nested_loop_conditions:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x9
@@ -95,7 +95,7 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) nocap
 ; IR-NEXT:    ret void
 ;
 bb:
-  %my.tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %my.tmp = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %my.tmp1 = getelementptr inbounds i64, ptr addrspace(3) %arg, i32 %my.tmp
   %my.tmp2 = load volatile i64, ptr addrspace(3) %my.tmp1
   br label %bb5
@@ -144,7 +144,7 @@ bb23:                                             ; preds = %bb10
 
 ; Earlier version of above, before a run of the structurizer.
 
-define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) nocapture %arg) #0 {
+define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) nocapture %arg) nounwind {
 ; GCN-LABEL: nested_loop_conditions:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
@@ -284,7 +284,7 @@ bb:
   br i1 %my.tmp1235, label %bb14.lr.ph, label %bb13
 
 bb14.lr.ph:                                       ; preds = %bb
-  %my.tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %my.tmp = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %my.tmp1 = zext i32 %my.tmp to i64
   %my.tmp2 = getelementptr inbounds i64, ptr addrspace(1) %arg, i64 %my.tmp1
   %my.tmp3 = load i64, ptr addrspace(1) %my.tmp2, align 16
@@ -339,7 +339,4 @@ bb31:                                             ; preds = %bb31.loopexit, %bb1
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

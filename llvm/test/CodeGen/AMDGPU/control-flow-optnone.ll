@@ -19,7 +19,7 @@
 ; GCN: {{[s|v]}}_cmp_eq_u32
 ; GCN: s_cbranch_execz
 ; GCN-NEXT: s_branch
-define amdgpu_kernel void @copytoreg_divergent_brcond(i32 %arg, i32 %arg1, i32 %arg2) #0 {
+define amdgpu_kernel void @copytoreg_divergent_brcond(i32 %arg, i32 %arg1, i32 %arg2) nounwind optnone noinline {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp3 = zext i32 %tmp to i64
@@ -49,7 +49,4 @@ bb14:                                             ; preds = %bb13, %bb9
   br i1 %tmp15, label %bb8.loopexit, label %bb9
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind optnone noinline }
-attributes #1 = { nounwind readnone speculatable }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable

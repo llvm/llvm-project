@@ -18,7 +18,7 @@ declare <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float, float, <4 x float>, i3
 ; FAST:   v_mfma_f32_32x32x1{{.*}} a[64:95], v{{[0-9]+}}, v{{[0-9]+}}, a[64:95]
 ; FAST:   v_mfma_f32_32x32x1{{.*}} a[32:63], v{{[0-9]+}}, v{{[0-9]+}}, a[64:95]
 ; GCN:    v_mfma_f32_32x32x1{{.*}} a[0:31], v{{[0-9]+}}, v{{[0-9]+}}, a[0:31]
-define amdgpu_kernel void @test_mfma_f32_32x32x1f32(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x1f32(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <32 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %in.1, i32 0, i32 0, i32 0)
@@ -42,7 +42,7 @@ bb:
 ; FAST:   v_mfma_f32_16x16x1{{.*}} a[32:47], v{{[0-9]+}}, v{{[0-9]+}}, a[32:47]
 ; FAST:   v_mfma_f32_16x16x1{{.*}} a[16:31], v{{[0-9]+}}, v{{[0-9]+}}, a[32:47]
 ; GCN:    v_mfma_f32_16x16x1{{.*}} a[0:15], v{{[0-9]+}}, v{{[0-9]+}}, a[0:15]
-define amdgpu_kernel void @test_mfma_f32_16x16x1f32(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x1f32(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <16 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float 1.0, float 2.0, <16 x float> %in.1, i32 0, i32 0, i32 0)
@@ -61,7 +61,7 @@ bb:
 ; FAST:   v_mfma_f32_4x4x1{{.*}} a[8:11], v{{[0-9]+}}, v{{[0-9]+}}, a[0:3]
 ; FAST:   v_mfma_f32_4x4x1{{.*}} a[4:7], v{{[0-9]+}}, v{{[0-9]+}}, a[8:11]
 ; GCN:    v_mfma_f32_4x4x1{{.*}} a[0:3], v{{[0-9]+}}, v{{[0-9]+}}, a[0:3]
-define amdgpu_kernel void @test_mfma_f32_4x4x1f32(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_4x4x1f32(ptr addrspace(1) %arg) "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 2.0, <4 x float> %in.1, i32 0, i32 0, i32 0)
@@ -71,5 +71,3 @@ bb:
   store <4 x float> %mai.3, ptr addrspace(1) %arg
   ret void
 }
-
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }

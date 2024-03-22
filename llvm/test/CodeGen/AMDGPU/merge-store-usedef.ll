@@ -5,7 +5,7 @@
 ; CHECK: ds_write_b32
 ; CHECK: ds_read_b32
 ; CHECK: ds_write_b32
-define amdgpu_vs void @test1(i32 %v) #0 {
+define amdgpu_vs void @test1(i32 %v) nounwind {
   %p1 = getelementptr i32, ptr addrspace(3) null, i32 1
 
   store i32 %v, ptr addrspace(3) null
@@ -17,7 +17,4 @@ define amdgpu_vs void @test1(i32 %v) #0 {
   ret void
 }
 
-declare void @llvm.amdgcn.raw.ptr.tbuffer.store.i32(i32, ptr addrspace(8), i32, i32, i32 immarg, i32 immarg) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind willreturn writeonly }
+declare void @llvm.amdgcn.raw.ptr.tbuffer.store.i32(i32, ptr addrspace(8), i32, i32, i32 immarg, i32 immarg) nounwind willreturn writeonly

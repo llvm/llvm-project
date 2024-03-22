@@ -16,7 +16,7 @@
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_x(ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.local.size.x() #0
+  %0 = call i32 @llvm.r600.read.local.size.x() nounwind readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -31,7 +31,7 @@ entry:
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_y(ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.local.size.y() #0
+  %0 = call i32 @llvm.r600.read.local.size.y() nounwind readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -46,7 +46,7 @@ entry:
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_z(ptr addrspace(1) %out) {
 entry:
-  %0 = call i32 @llvm.r600.read.local.size.z() #0
+  %0 = call i32 @llvm.r600.read.local.size.z() nounwind readnone
   store i32 %0, ptr addrspace(1) %out
   ret void
 }
@@ -59,8 +59,8 @@ entry:
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_xy(ptr addrspace(1) %out) {
 entry:
-  %x = call i32 @llvm.r600.read.local.size.x() #0
-  %y = call i32 @llvm.r600.read.local.size.y() #0
+  %x = call i32 @llvm.r600.read.local.size.x() nounwind readnone
+  %y = call i32 @llvm.r600.read.local.size.y() nounwind readnone
   %val = mul i32 %x, %y
   store i32 %val, ptr addrspace(1) %out
   ret void
@@ -78,8 +78,8 @@ entry:
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_xz(ptr addrspace(1) %out) {
 entry:
-  %x = call i32 @llvm.r600.read.local.size.x() #0
-  %z = call i32 @llvm.r600.read.local.size.z() #0
+  %x = call i32 @llvm.r600.read.local.size.x() nounwind readnone
+  %z = call i32 @llvm.r600.read.local.size.z() nounwind readnone
   %val = mul i32 %x, %z
   store i32 %val, ptr addrspace(1) %out
   ret void
@@ -96,8 +96,8 @@ entry:
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_yz(ptr addrspace(1) %out) {
 entry:
-  %y = call i32 @llvm.r600.read.local.size.y() #0
-  %z = call i32 @llvm.r600.read.local.size.z() #0
+  %y = call i32 @llvm.r600.read.local.size.y() nounwind readnone
+  %z = call i32 @llvm.r600.read.local.size.z() nounwind readnone
   %val = mul i32 %y, %z
   store i32 %val, ptr addrspace(1) %out
   ret void
@@ -117,9 +117,9 @@ entry:
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_xyz(ptr addrspace(1) %out) {
 entry:
-  %x = call i32 @llvm.r600.read.local.size.x() #0
-  %y = call i32 @llvm.r600.read.local.size.y() #0
-  %z = call i32 @llvm.r600.read.local.size.z() #0
+  %x = call i32 @llvm.r600.read.local.size.x() nounwind readnone
+  %y = call i32 @llvm.r600.read.local.size.y() nounwind readnone
+  %z = call i32 @llvm.r600.read.local.size.z() nounwind readnone
   %xy = mul i32 %x, %y
   %xyz = add i32 %xy, %z
   store i32 %xyz, ptr addrspace(1) %out
@@ -134,7 +134,7 @@ entry:
 ; GCN-NEXT: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_x_known_bits(ptr addrspace(1) %out) {
 entry:
-  %size = call i32 @llvm.r600.read.local.size.x() #0
+  %size = call i32 @llvm.r600.read.local.size.x() nounwind readnone
   %shl = shl i32 %size, 16
   %shr = lshr i32 %shl, 16
   store i32 %shr, ptr addrspace(1) %out
@@ -149,7 +149,7 @@ entry:
 ; GCN-NEXT: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_y_known_bits(ptr addrspace(1) %out) {
 entry:
-  %size = call i32 @llvm.r600.read.local.size.y() #0
+  %size = call i32 @llvm.r600.read.local.size.y() nounwind readnone
   %shl = shl i32 %size, 16
   %shr = lshr i32 %shl, 16
   store i32 %shr, ptr addrspace(1) %out
@@ -164,15 +164,13 @@ entry:
 ; GCN-NEXT: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_z_known_bits(ptr addrspace(1) %out) {
 entry:
-  %size = call i32 @llvm.r600.read.local.size.z() #0
+  %size = call i32 @llvm.r600.read.local.size.z() nounwind readnone
   %shl = shl i32 %size, 16
   %shr = lshr i32 %shl, 16
   store i32 %shr, ptr addrspace(1) %out
   ret void
 }
 
-declare i32 @llvm.r600.read.local.size.x() #0
-declare i32 @llvm.r600.read.local.size.y() #0
-declare i32 @llvm.r600.read.local.size.z() #0
-
-attributes #0 = { nounwind readnone }
+declare i32 @llvm.r600.read.local.size.x() nounwind readnone
+declare i32 @llvm.r600.read.local.size.y() nounwind readnone
+declare i32 @llvm.r600.read.local.size.z() nounwind readnone

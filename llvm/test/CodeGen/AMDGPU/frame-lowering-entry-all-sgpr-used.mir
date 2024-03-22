@@ -3,10 +3,9 @@
 # CHECK-LABEL: all_sgpr_used
 # CHECK: V_CMP_LT_U32_e64
 --- |
-  define amdgpu_kernel void @all_sgpr_used() #0 {
+  define amdgpu_kernel void @all_sgpr_used() "amdgpu-num-sgpr"="8" "frame-pointer"="all" {
     ret void
   }
-  attributes #0 = { "amdgpu-num-sgpr"="8" "frame-pointer"="all"}
 ...
 ---
 name:            all_sgpr_used

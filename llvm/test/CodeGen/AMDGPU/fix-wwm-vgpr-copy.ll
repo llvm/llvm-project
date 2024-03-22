@@ -76,11 +76,7 @@ work:
   br i1 %tmp34, label %bb602, label %bb42
 }
 
-declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #0
-declare i32 @llvm.amdgcn.wwm.i32(i32) #1
-declare i32 @llvm.amdgcn.strict.wwm.i32(i32) #1
-declare void @llvm.amdgcn.raw.ptr.tbuffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg, i32 immarg) #2
-
-attributes #0 = { convergent nounwind readnone willreturn }
-attributes #1 = { convergent nounwind readnone speculatable willreturn }
-attributes #2 = { nounwind willreturn memory(argmem: write) }
+declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) convergent nounwind readnone willreturn
+declare i32 @llvm.amdgcn.wwm.i32(i32) convergent nounwind readnone speculatable willreturn
+declare i32 @llvm.amdgcn.strict.wwm.i32(i32) convergent nounwind readnone speculatable willreturn
+declare void @llvm.amdgcn.raw.ptr.tbuffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg, i32 immarg) nounwind willreturn memory(argmem: write)

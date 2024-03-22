@@ -6,7 +6,7 @@
 ; The 64-bit pointer argument %arg1 will be split into two registers
 ; and for its llvm.dbg.declare, DAG should emit two DBG_VALUE instructions
 ; with the fragment expressions.
-define hidden void @ptr_arg_split_subregs(ptr %arg1) #0 !dbg !9 {
+define hidden void @ptr_arg_split_subregs(ptr %arg1) nounwind !dbg !9 {
 ; CHECK-LABEL: ptr_arg_split_subregs:
 ; CHECK:       .Lfunc_begin0:
 ; CHECK-NEXT:    .file 1 "temp" "example.cpp"
@@ -37,7 +37,7 @@ define hidden void @ptr_arg_split_subregs(ptr %arg1) #0 !dbg !9 {
 ; are totally misleading. The former represent part of the incoming argument in register
 ; while the latter was emitted for the parameter copy to a virtual register inserted
 ; at the function entry by DAGBuilder.
-define hidden void @ptr_arg_split_reg_mem(<30 x i32>, ptr %arg2) #0 !dbg !25 {
+define hidden void @ptr_arg_split_reg_mem(<30 x i32>, ptr %arg2) nounwind !dbg !25 {
 ; CHECK-LABEL: ptr_arg_split_reg_mem:
 ; CHECK:       .Lfunc_begin1:
 ; CHECK-NEXT:    .loc 1 10 0 ; example.cpp:10:0
@@ -63,7 +63,7 @@ define hidden void @ptr_arg_split_reg_mem(<30 x i32>, ptr %arg2) #0 !dbg !25 {
 
 ; FIXME: The 64-bit pointer argument %arg3 will be entirely in the stack memory.
 ; No DBG_VALUE emitted for the incoming argument in this case and it should be fixed.
-define hidden void @ptr_arg_in_memory(<32 x i32>, ptr %arg3) #0 !dbg !31 {
+define hidden void @ptr_arg_in_memory(<32 x i32>, ptr %arg3) nounwind !dbg !31 {
 ; CHECK-LABEL: ptr_arg_in_memory:
 ; CHECK:       .Lfunc_begin2:
 ; CHECK-NEXT:    .loc 1 15 0 ; example.cpp:15:0
@@ -87,9 +87,7 @@ define hidden void @ptr_arg_in_memory(<32 x i32>, ptr %arg3) #0 !dbg !31 {
   ret void, !dbg !36
 }
 
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
-
-attributes #0 = { nounwind }
+declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6, !7}

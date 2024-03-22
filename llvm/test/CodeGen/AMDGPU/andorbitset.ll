@@ -54,15 +54,15 @@ define amdgpu_kernel void @s_set_midbit(ptr addrspace(1) %out, i32 %in) {
 ; SI-LABEL: {{^}}bitset_verifier_error:
 ; SI-NOT:   %bb.1:
 ; SI:       s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7fffffff
-define void @bitset_verifier_error() local_unnamed_addr #0 {
+define void @bitset_verifier_error() local_unnamed_addr nounwind readnone speculatable willreturn {
 bb:
-  %i = call float @llvm.fabs.f32(float undef) #0
+  %i = call float @llvm.fabs.f32(float undef) nounwind readnone speculatable willreturn
   %i1 = bitcast float %i to i32
   store i32 %i1, ptr addrspace(1) @gv
   br label %bb2
 
 bb2:
-  %i3 = call float @llvm.fabs.f32(float undef) #0
+  %i3 = call float @llvm.fabs.f32(float undef) nounwind readnone speculatable willreturn
   %i4 = fcmp fast ult float %i3, 0x3FEFF7CEE0000000
   br i1 %i4, label %bb5, label %bb6
 
@@ -73,6 +73,4 @@ bb6:
   unreachable
 }
 
-declare float @llvm.fabs.f32(float) #0
-
-attributes #0 = { nounwind readnone speculatable willreturn }
+declare float @llvm.fabs.f32(float) nounwind readnone speculatable willreturn

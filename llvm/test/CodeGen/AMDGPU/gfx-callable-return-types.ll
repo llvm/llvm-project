@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX10PLUS,GFX10 %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX10PLUS,GFX11 %s
 
-define amdgpu_gfx i1 @return_i1() #0 {
+define amdgpu_gfx i1 @return_i1() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" {
 ; GFX9-LABEL: return_i1:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -19,7 +19,7 @@ entry:
   ret i1 1
 }
 
-define amdgpu_gfx void @call_i1() #0 {
+define amdgpu_gfx void @call_i1() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" {
 ; GFX9-LABEL: call_i1:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -99,7 +99,7 @@ entry:
   ret void
 }
 
-define amdgpu_gfx i16 @return_i16() #0 {
+define amdgpu_gfx i16 @return_i16() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" {
 ; GFX9-LABEL: return_i16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -115,7 +115,7 @@ entry:
   ret i16 10
 }
 
-define amdgpu_gfx void @call_i16() #0 {
+define amdgpu_gfx void @call_i16() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" {
 ; GFX9-LABEL: call_i16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -195,7 +195,7 @@ entry:
   ret void
 }
 
-define amdgpu_gfx <2 x i16> @return_2xi16() #0 {
+define amdgpu_gfx <2 x i16> @return_2xi16() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" {
 ; GFX9-LABEL: return_2xi16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -211,7 +211,7 @@ entry:
   ret <2 x i16> <i16 1, i16 2>
 }
 
-define amdgpu_gfx void @call_2xi16() #0 {
+define amdgpu_gfx void @call_2xi16() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" {
 ; GFX9-LABEL: call_2xi16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -291,7 +291,7 @@ entry:
   ret void
 }
 
-define amdgpu_gfx <3 x i16> @return_3xi16() #0 {
+define amdgpu_gfx <3 x i16> @return_3xi16() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" {
 ; GFX9-LABEL: return_3xi16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -315,7 +315,7 @@ entry:
   ret <3 x i16> <i16 1, i16 2, i16 3>
 }
 
-define amdgpu_gfx void @call_3xi16() #0 {
+define amdgpu_gfx void @call_3xi16() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" {
 ; GFX9-LABEL: call_3xi16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -397,7 +397,7 @@ entry:
 
 ; Check that return values that overlap CSRs are correctly handled
 
-define amdgpu_gfx <100 x i32> @return_100xi32() #0 {
+define amdgpu_gfx <100 x i32> @return_100xi32() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" {
 ; GFX9-LABEL: return_100xi32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -665,7 +665,7 @@ define amdgpu_gfx <100 x i32> @return_100xi32() #0 {
   ret <100 x i32> zeroinitializer
 }
 
-define amdgpu_gfx void @call_100xi32() #0 {
+define amdgpu_gfx void @call_100xi32() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" {
 ; GFX9-LABEL: call_100xi32:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -941,7 +941,7 @@ entry:
 
 ; Check that return values that do not fit in registers do not crash
 
-define amdgpu_gfx <512 x i32> @return_512xi32() #0 {
+define amdgpu_gfx <512 x i32> @return_512xi32() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" {
 ; GFX9-LABEL: return_512xi32:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2244,7 +2244,7 @@ entry:
   ret <512 x i32> zeroinitializer
 }
 
-define amdgpu_gfx void @call_512xi32() #0 {
+define amdgpu_gfx void @call_512xi32() nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" {
 ; GFX9-LABEL: call_512xi32:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2333,7 +2333,7 @@ entry:
 
 ; Check that return values larger than VGPR limit are handled correctly
 
-define amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val) #1 {
+define amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val) nounwind "amdgpu-num-vgpr"="64" {
 ; GFX9-LABEL: return_72xi32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2757,7 +2757,7 @@ define amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val) #1 {
   ret <72 x i32> %val
 }
 
-define amdgpu_gfx void @call_72xi32() #1 {
+define amdgpu_gfx void @call_72xi32() nounwind "amdgpu-num-vgpr"="64" {
 ; GFX9-LABEL: call_72xi32:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3505,7 +3505,5 @@ entry:
 }
 
 ; Ensure all VGPRs are available
-attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" }
 
 ; Limit to 64 VGPRs
-attributes #1 = { nounwind "amdgpu-num-vgpr"="64" }

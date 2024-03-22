@@ -13,7 +13,7 @@
 ;
 ; MISCHED: NumVgprs: {{[7-9][0-9]$}}
 
-define amdgpu_kernel void @load_fma_store(ptr addrspace(3) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1) #1 {
+define amdgpu_kernel void @load_fma_store(ptr addrspace(3) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1) "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tmp = getelementptr inbounds float, ptr addrspace(3) %arg, i32 1
   %tmp2 = load float, ptr addrspace(3) %tmp, align 4
@@ -594,7 +594,4 @@ bb:
 }
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.fmuladd.f32(float, float, float) #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" }
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone

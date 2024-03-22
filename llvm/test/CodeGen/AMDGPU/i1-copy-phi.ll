@@ -34,9 +34,7 @@ bb6:                                              ; preds = %bb4, %bb3
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; Make sure this won't crash.
 ; SI-LABEL: {{^}}vcopy_i1_undef

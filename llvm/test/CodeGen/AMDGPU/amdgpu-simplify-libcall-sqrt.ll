@@ -270,7 +270,7 @@ define float @test_sqrt_f32_nobuiltin_callsite(float %arg) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = tail call float @_Z4sqrtf(float [[ARG]]) #[[ATTR3:[0-9]+]], !fpmath [[META0]]
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
-  %sqrt = tail call float @_Z4sqrtf(float %arg) #0, !fpmath !0
+  %sqrt = tail call float @_Z4sqrtf(float %arg) nobuiltin, !fpmath !0
   ret float %sqrt
 }
 
@@ -280,7 +280,7 @@ define <2 x float> @test_sqrt_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = tail call <2 x float> @_Z4sqrtDv2_f(<2 x float> [[ARG]]) #[[ATTR3]], !fpmath [[META0]]
 ; CHECK-NEXT:    ret <2 x float> [[SQRT]]
 ;
-  %sqrt = tail call <2 x float> @_Z4sqrtDv2_f(<2 x float> %arg) #0, !fpmath !0
+  %sqrt = tail call <2 x float> @_Z4sqrtDv2_f(<2 x float> %arg) nobuiltin, !fpmath !0
   ret <2 x float> %sqrt
 }
 
@@ -290,7 +290,7 @@ define float @test_sqrt_cr_f32_nobuiltin_callsite(float %arg) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = tail call float @_Z4sqrtf(float [[ARG]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
-  %sqrt = tail call float @_Z4sqrtf(float %arg) #0
+  %sqrt = tail call float @_Z4sqrtf(float %arg) nobuiltin
   ret float %sqrt
 }
 
@@ -300,48 +300,48 @@ define <2 x float> @test_sqrt_cr_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = tail call <2 x float> @_Z4sqrtDv2_f(<2 x float> [[ARG]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret <2 x float> [[SQRT]]
 ;
-  %sqrt = tail call <2 x float> @_Z4sqrtDv2_f(<2 x float> %arg) #0
+  %sqrt = tail call <2 x float> @_Z4sqrtDv2_f(<2 x float> %arg) nobuiltin
   ret <2 x float> %sqrt
 }
 
 ; "no-builtins" should be ignored
-define float @test_sqrt_f32_nobuiltins(float %arg) #1 {
+define float @test_sqrt_f32_nobuiltins(float %arg) "no-builtins" {
 ; CHECK-LABEL: define float @test_sqrt_f32_nobuiltins
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[SQRT:%.*]] = tail call float @_Z4sqrtf(float [[ARG]]) #[[ATTR3]], !fpmath [[META0]]
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
-  %sqrt = tail call float @_Z4sqrtf(float %arg) #0, !fpmath !0
+  %sqrt = tail call float @_Z4sqrtf(float %arg) nobuiltin, !fpmath !0
   ret float %sqrt
 }
 
-define <2 x float> @test_sqrt_v2f32_nobuiltins(<2 x float> %arg) #1 {
+define <2 x float> @test_sqrt_v2f32_nobuiltins(<2 x float> %arg) "no-builtins" {
 ; CHECK-LABEL: define <2 x float> @test_sqrt_v2f32_nobuiltins
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SQRT:%.*]] = tail call <2 x float> @_Z4sqrtDv2_f(<2 x float> [[ARG]]) #[[ATTR3]], !fpmath [[META0]]
 ; CHECK-NEXT:    ret <2 x float> [[SQRT]]
 ;
-  %sqrt = tail call <2 x float> @_Z4sqrtDv2_f(<2 x float> %arg) #0, !fpmath !0
+  %sqrt = tail call <2 x float> @_Z4sqrtDv2_f(<2 x float> %arg) nobuiltin, !fpmath !0
   ret <2 x float> %sqrt
 }
 
-define float @test_sqrt_cr_f32_nobuiltins(float %arg) #1 {
+define float @test_sqrt_cr_f32_nobuiltins(float %arg) "no-builtins" {
 ; CHECK-LABEL: define float @test_sqrt_cr_f32_nobuiltins
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SQRT:%.*]] = tail call float @_Z4sqrtf(float [[ARG]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
-  %sqrt = tail call float @_Z4sqrtf(float %arg) #0
+  %sqrt = tail call float @_Z4sqrtf(float %arg) nobuiltin
   ret float %sqrt
 }
 
-define <2 x float> @test_sqrt_cr_v2f32_nobuiltins(<2 x float> %arg) #1 {
+define <2 x float> @test_sqrt_cr_v2f32_nobuiltins(<2 x float> %arg) "no-builtins" {
 ; CHECK-LABEL: define <2 x float> @test_sqrt_cr_v2f32_nobuiltins
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SQRT:%.*]] = tail call <2 x float> @_Z4sqrtDv2_f(<2 x float> [[ARG]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret <2 x float> [[SQRT]]
 ;
-  %sqrt = tail call <2 x float> @_Z4sqrtDv2_f(<2 x float> %arg) #0
+  %sqrt = tail call <2 x float> @_Z4sqrtDv2_f(<2 x float> %arg) nobuiltin
   ret <2 x float> %sqrt
 }
 
@@ -406,8 +406,8 @@ define <2 x float> @test_sqrt_cr_v2f32_preserve_flags(<2 x float> %arg) {
 }
 
 ; Test the libm name, not a recognized opencl builtin.
-declare float @sqrtf(float) #2
-declare double @sqrt(double) #2
+declare float @sqrtf(float) nounwind memory(none)
+declare double @sqrt(double) nounwind memory(none)
 
 define float @test_libm_sqrt_f32(float %arg) {
 ; CHECK-LABEL: define float @test_libm_sqrt_f32
@@ -448,10 +448,6 @@ define double @test_libm_sqrt_f64_fpmath(double %arg) {
   %sqrt = tail call double @sqrt(double %arg), !fpmath !0
   ret double %sqrt
 }
-
-attributes #0 = { nobuiltin }
-attributes #1 = { "no-builtins" }
-attributes #2 = { nounwind memory(none) }
 
 !0 = !{float 3.000000e+00}
 !1 = !{i32 1234}

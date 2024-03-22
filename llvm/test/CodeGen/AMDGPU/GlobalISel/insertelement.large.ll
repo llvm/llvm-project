@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX11 %s
 
-define amdgpu_kernel void @v_insert_v64i32_37(ptr addrspace(1) %ptr.in, ptr addrspace(1) %ptr.out) #0 {
+define amdgpu_kernel void @v_insert_v64i32_37(ptr addrspace(1) %ptr.in, ptr addrspace(1) %ptr.out) "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="1,10" {
 ; GCN-LABEL: v_insert_v64i32_37:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -158,7 +158,4 @@ define amdgpu_kernel void @v_insert_v64i32_37(ptr addrspace(1) %ptr.in, ptr addr
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="1,10" }
-attributes #1 = { nounwind readnone speculatable willreturn }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable willreturn

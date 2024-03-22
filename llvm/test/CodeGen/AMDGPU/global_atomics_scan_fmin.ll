@@ -14,7 +14,7 @@
 
 declare float @div.float.value()
 
-define amdgpu_kernel void @global_atomic_fmin_uni_address_uni_value_agent_scope_unsafe(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fmin_uni_address_uni_value_agent_scope_unsafe(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX7LESS-LABEL: global_atomic_fmin_uni_address_uni_value_agent_scope_unsafe:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -349,7 +349,7 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_uni_value_agent_scope_
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_agent_scope_unsafe(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_agent_scope_unsafe(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX7LESS-LABEL: global_atomic_fmin_uni_address_div_value_agent_scope_unsafe:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s32, 0
@@ -1192,7 +1192,7 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_agent_scope_
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fmin_uni_address_uni_value_one_as_scope_unsafe(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fmin_uni_address_uni_value_one_as_scope_unsafe(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX7LESS-LABEL: global_atomic_fmin_uni_address_uni_value_one_as_scope_unsafe:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -1528,7 +1528,7 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_uni_value_one_as_scope
 }
 
 
-define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_one_as_scope_unsafe(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_one_as_scope_unsafe(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX7LESS-LABEL: global_atomic_fmin_uni_address_div_value_one_as_scope_unsafe:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s32, 0
@@ -2372,7 +2372,7 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_one_as_scope
 }
 
 
-define amdgpu_kernel void @global_atomic_fmin_uni_address_uni_value_defalut_scope_unsafe(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fmin_uni_address_uni_value_defalut_scope_unsafe(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX7LESS-LABEL: global_atomic_fmin_uni_address_uni_value_defalut_scope_unsafe:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -2707,7 +2707,7 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_uni_value_defalut_scop
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_defalut_scope_unsafe(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_defalut_scope_unsafe(ptr addrspace(1) %ptr) "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" {
 ; GFX7LESS-LABEL: global_atomic_fmin_uni_address_div_value_defalut_scope_unsafe:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s32, 0
@@ -3549,8 +3549,6 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_defalut_scop
   %result = atomicrmw fmin ptr addrspace(1) %ptr, float %divValue monotonic, align 4
   ret void
 }
-
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

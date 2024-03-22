@@ -101,7 +101,7 @@ entry:
 ; VI-XNACK: NumSgprs: 6
 ; GFX9-ARCH-FLAT: ; NumSgprs: 6
 ; GFX10-ARCH-FLAT: ; NumSgprs: 0
-define amdgpu_kernel void @use_flat_scr() #0 {
+define amdgpu_kernel void @use_flat_scr() nounwind {
 entry:
   call void asm sideeffect "; clobber ", "~{flat_scratch}"()
   ret void
@@ -118,7 +118,7 @@ entry:
 ; VI-XNACK: NumSgprs: 6
 ; GFX9-ARCH-FLAT: ; NumSgprs: 6
 ; GFX10-ARCH-FLAT: ; NumSgprs: 0
-define amdgpu_kernel void @use_flat_scr_lo() #0 {
+define amdgpu_kernel void @use_flat_scr_lo() nounwind {
 entry:
   call void asm sideeffect "; clobber ", "~{flat_scratch_lo}"()
   ret void
@@ -135,13 +135,11 @@ entry:
 ; VI-XNACK: NumSgprs: 6
 ; GFX9-ARCH-FLAT: ; NumSgprs: 6
 ; GFX10-ARCH-FLAT: ; NumSgprs: 0
-define amdgpu_kernel void @use_flat_scr_hi() #0 {
+define amdgpu_kernel void @use_flat_scr_hi() nounwind {
 entry:
   call void asm sideeffect "; clobber ", "~{flat_scratch_hi}"()
   ret void
 }
-
-attributes #0 = { nounwind }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

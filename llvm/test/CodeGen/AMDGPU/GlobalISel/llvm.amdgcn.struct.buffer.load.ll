@@ -834,15 +834,13 @@ define amdgpu_ps float @struct_buffer_load_f32__sgpr_rsrc__vgpr_vindex__vgpr_vof
   ret float %val
 }
 
-declare i8 @llvm.amdgcn.struct.buffer.load.i8(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare i16 @llvm.amdgcn.struct.buffer.load.i16(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare <2 x float> @llvm.amdgcn.struct.buffer.load.v2f32(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare <3 x float> @llvm.amdgcn.struct.buffer.load.v3f32(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare half @llvm.amdgcn.struct.buffer.load.f16(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare <2 x half> @llvm.amdgcn.struct.buffer.load.v2f16(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare <3 x half> @llvm.amdgcn.struct.buffer.load.v3f16(<4 x i32>, i32, i32, i32, i32 immarg) #0
-declare <4 x half> @llvm.amdgcn.struct.buffer.load.v4f16(<4 x i32>, i32, i32, i32, i32 immarg) #0
-
-attributes #0 = { nounwind readonly }
+declare i8 @llvm.amdgcn.struct.buffer.load.i8(<4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly
+declare i16 @llvm.amdgcn.struct.buffer.load.i16(<4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly
+declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly
+declare <2 x float> @llvm.amdgcn.struct.buffer.load.v2f32(<4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly
+declare <3 x float> @llvm.amdgcn.struct.buffer.load.v3f32(<4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly
+declare half @llvm.amdgcn.struct.buffer.load.f16(<4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly
+declare <2 x half> @llvm.amdgcn.struct.buffer.load.v2f16(<4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly
+declare <3 x half> @llvm.amdgcn.struct.buffer.load.v3f16(<4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly
+declare <4 x half> @llvm.amdgcn.struct.buffer.load.v4f16(<4 x i32>, i32, i32, i32, i32 immarg) nounwind readonly

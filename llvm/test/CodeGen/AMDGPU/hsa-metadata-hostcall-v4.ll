@@ -3,22 +3,22 @@
 
 declare void @function1()
 
-declare void @function2() #0
+declare void @function2() "amdgpu-no-hostcall-ptr"
 
 ; Function Attrs: noinline
-define void @function3(ptr addrspace(4) %argptr, ptr addrspace(1) %sink) #4 {
+define void @function3(ptr addrspace(4) %argptr, ptr addrspace(1) %sink) noinline {
   store ptr addrspace(4) %argptr, ptr addrspace(1) %sink, align 8
   ret void
 }
 
 ; Function Attrs: noinline
-define void @function4(i64 %arg, ptr %a) #4 {
+define void @function4(i64 %arg, ptr %a) noinline {
   store i64 %arg, ptr %a
   ret void
 }
 
 ; Function Attrs: noinline
-define void @function5(ptr addrspace(4) %ptr, ptr %sink) #4 {
+define void @function5(ptr addrspace(4) %ptr, ptr %sink) noinline {
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 8
   %x = load i64, ptr addrspace(4) %gep
   store i64 %x, ptr %sink
@@ -26,13 +26,13 @@ define void @function5(ptr addrspace(4) %ptr, ptr %sink) #4 {
 }
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #1
+declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() nounwind readnone speculatable willreturn
 
 ; CHECK: amdhsa.kernels:
 ; CHECK:  - .args:
 ; CHECK-NOT: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel10
-define amdgpu_kernel void @test_kernel10(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel10(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   store i8 3, ptr %a, align 1
   ret void
 }
@@ -42,7 +42,7 @@ define amdgpu_kernel void @test_kernel10(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel20
-define amdgpu_kernel void @test_kernel20(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel20(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   call void @function1()
   store i8 3, ptr %a, align 1
   ret void
@@ -53,7 +53,7 @@ define amdgpu_kernel void @test_kernel20(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK-NOT: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel21
-define amdgpu_kernel void @test_kernel21(ptr %a) #3 {
+define amdgpu_kernel void @test_kernel21(ptr %a) "amdgpu-implicitarg-num-bytes"="48" "amdgpu-no-hostcall-ptr" {
   call void @function1()
   store i8 3, ptr %a, align 1
   ret void
@@ -64,7 +64,7 @@ define amdgpu_kernel void @test_kernel21(ptr %a) #3 {
 ; CHECK:  - .args:
 ; CHECK-NOT: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel22
-define amdgpu_kernel void @test_kernel22(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel22(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   call void @function2()
   store i8 3, ptr %a, align 1
   ret void
@@ -75,7 +75,7 @@ define amdgpu_kernel void @test_kernel22(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel30
-define amdgpu_kernel void @test_kernel30(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel30(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 16
   %x = load i128, ptr addrspace(4) %gep
@@ -88,7 +88,7 @@ define amdgpu_kernel void @test_kernel30(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel40
-define amdgpu_kernel void @test_kernel40(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel40(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 24
   %x = load i64, ptr addrspace(4) %gep
@@ -101,7 +101,7 @@ define amdgpu_kernel void @test_kernel40(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK-NOT: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel41
-define amdgpu_kernel void @test_kernel41(ptr %a) #3 {
+define amdgpu_kernel void @test_kernel41(ptr %a) "amdgpu-implicitarg-num-bytes"="48" "amdgpu-no-hostcall-ptr" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 24
   %x = load i64, ptr addrspace(4) %gep
@@ -114,7 +114,7 @@ define amdgpu_kernel void @test_kernel41(ptr %a) #3 {
 ; CHECK:  - .args:
 ; CHECK-NOT: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel42
-define amdgpu_kernel void @test_kernel42(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel42(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 16
   %x = load i64, ptr addrspace(4) %gep
@@ -127,7 +127,7 @@ define amdgpu_kernel void @test_kernel42(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK-NOT: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel43
-define amdgpu_kernel void @test_kernel43(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel43(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 32
   %x = load i64, ptr addrspace(4) %gep
@@ -140,7 +140,7 @@ define amdgpu_kernel void @test_kernel43(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK-NOT: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel44
-define amdgpu_kernel void @test_kernel44(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel44(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 23
   %x = load i8, ptr addrspace(4) %gep, align 1
@@ -153,7 +153,7 @@ define amdgpu_kernel void @test_kernel44(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel45
-define amdgpu_kernel void @test_kernel45(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel45(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 24
   %x = load i8, ptr addrspace(4) %gep, align 1
@@ -166,7 +166,7 @@ define amdgpu_kernel void @test_kernel45(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel46
-define amdgpu_kernel void @test_kernel46(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel46(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 31
   %x = load i8, ptr addrspace(4) %gep, align 1
@@ -179,7 +179,7 @@ define amdgpu_kernel void @test_kernel46(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK-NOT: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel47
-define amdgpu_kernel void @test_kernel47(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel47(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 32
   %x = load i8, ptr addrspace(4) %gep, align 1
@@ -192,7 +192,7 @@ define amdgpu_kernel void @test_kernel47(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel50
-define amdgpu_kernel void @test_kernel50(ptr %a, i32 %b) #2 {
+define amdgpu_kernel void @test_kernel50(ptr %a, i32 %b) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i32 %b
   %x = load i8, ptr addrspace(4) %gep, align 1
@@ -205,7 +205,7 @@ define amdgpu_kernel void @test_kernel50(ptr %a, i32 %b) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel51
-define amdgpu_kernel void @test_kernel51(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel51(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep1 = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 16
   %gep2 = getelementptr inbounds i8, ptr addrspace(4) %gep1, i64 8
@@ -219,7 +219,7 @@ define amdgpu_kernel void @test_kernel51(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK-NOT: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel52
-define amdgpu_kernel void @test_kernel52(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel52(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep1 = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 16
   %gep2 = getelementptr inbounds i8, ptr addrspace(4) %gep1, i64 16
@@ -233,7 +233,7 @@ define amdgpu_kernel void @test_kernel52(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel60
-define amdgpu_kernel void @test_kernel60(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel60(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 24
   %x = load i64, ptr addrspace(4) %gep
@@ -246,7 +246,7 @@ define amdgpu_kernel void @test_kernel60(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel61
-define amdgpu_kernel void @test_kernel61(ptr %a) #2 {
+define amdgpu_kernel void @test_kernel61(ptr %a) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i64 16
   call void @function5(ptr addrspace(4) %gep, ptr %a)
@@ -258,7 +258,7 @@ define amdgpu_kernel void @test_kernel61(ptr %a) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel70
-define amdgpu_kernel void @test_kernel70(ptr addrspace(1) %sink) #2 {
+define amdgpu_kernel void @test_kernel70(ptr addrspace(1) %sink) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i32 42
   store ptr addrspace(4) %gep, ptr addrspace(1) %sink, align 8
@@ -270,7 +270,7 @@ define amdgpu_kernel void @test_kernel70(ptr addrspace(1) %sink) #2 {
 ; CHECK:  - .args:
 ; CHECK: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel71
-define amdgpu_kernel void @test_kernel71(ptr addrspace(1) %sink) #2 {
+define amdgpu_kernel void @test_kernel71(ptr addrspace(1) %sink) "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i32 42
   call void @function3(ptr addrspace(4) %gep, ptr addrspace(1) %sink)
@@ -282,18 +282,12 @@ define amdgpu_kernel void @test_kernel71(ptr addrspace(1) %sink) #2 {
 ; CHECK:  - .args:
 ; CHECK-NOT: hidden_hostcall_buffer
 ; CHECK-LABEL:    .name:           test_kernel72
-define amdgpu_kernel void @test_kernel72() #2 {
+define amdgpu_kernel void @test_kernel72() "amdgpu-implicitarg-num-bytes"="48" {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i32 42
   store ptr addrspace(4) %gep, ptr addrspace(1) undef, align 8
   ret void
 }
-
-attributes #0 = { "amdgpu-no-hostcall-ptr" }
-attributes #1 = { nounwind readnone speculatable willreturn }
-attributes #2 = { "amdgpu-implicitarg-num-bytes"="48" }
-attributes #3 = { "amdgpu-implicitarg-num-bytes"="48" "amdgpu-no-hostcall-ptr" }
-attributes #4 = { noinline }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

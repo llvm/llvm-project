@@ -2,16 +2,13 @@
 
 ; ERROR: error: foo.cl:1:42: in function rsq_legacy_f32 void (ptr addrspace(1), float): intrinsic not supported on subtarget
 
-declare float @llvm.amdgcn.rsq.legacy(float) #0
+declare float @llvm.amdgcn.rsq.legacy(float) nounwind readnone
 
-define amdgpu_kernel void @rsq_legacy_f32(ptr addrspace(1) %out, float %src) #1 {
+define amdgpu_kernel void @rsq_legacy_f32(ptr addrspace(1) %out, float %src) nounwind {
   %rsq = call float @llvm.amdgcn.rsq.legacy(float %src), !dbg !4
   store float %rsq, ptr addrspace(1) %out, align 4
   ret void
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

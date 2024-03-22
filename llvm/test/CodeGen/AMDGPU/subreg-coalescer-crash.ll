@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL:{{^}}row_filter_C1_D0:
-define amdgpu_kernel void @row_filter_C1_D0() #0 {
+define amdgpu_kernel void @row_filter_C1_D0() nounwind {
 entry:
   br i1 undef, label %for.inc.1, label %do.body.preheader
 
@@ -42,7 +42,7 @@ for.inc.1:                                        ; preds = %do.body.1562.prehea
 
 ; GCN-LABEL: {{^}}foo:
 ; GCN: s_endpgm
-define amdgpu_ps void @foo() #0 {
+define amdgpu_ps void @foo() nounwind {
 bb:
   br i1 undef, label %bb2, label %bb1
 
@@ -78,7 +78,7 @@ bb14:                                             ; preds = %bb27, %bb24, %bb9
   %tmp16 = phi float [ %tmp11, %bb9 ], [ undef, %bb27 ], [ %tmp25, %bb24 ]
   %tmp17 = fmul float 1.050000e+01, %tmp16
   %tmp18 = fmul float 1.150000e+01, %tmp15
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %tmp18, float %tmp17, float %tmp17, float %tmp17, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %tmp18, float %tmp17, float %tmp17, float %tmp17, i1 true, i1 true) nounwind
   ret void
 
 bb23:                                             ; preds = %bb13
@@ -96,8 +96,5 @@ bb27:                                             ; preds = %bb24
 }
 
 
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readonly }
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind
+declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly

@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX1011,GFX10 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GCN,GFX1011,GFX11 %s
 
-define half @v_constrained_fptrunc_f32_to_f16_fpexcept_strict(float %arg) #0 {
+define half @v_constrained_fptrunc_f32_to_f16_fpexcept_strict(float %arg) strictfp {
 ; SI-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -29,7 +29,7 @@ define half @v_constrained_fptrunc_f32_to_f16_fpexcept_strict(float %arg) #0 {
   ret half %val
 }
 
-define <2 x half> @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict(<2 x float> %arg) #0 {
+define <2 x half> @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict(<2 x float> %arg) strictfp {
 ; SI-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -69,7 +69,7 @@ define <2 x half> @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict(<2 x flo
   ret <2 x half> %val
 }
 
-define <3 x half> @v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict(<3 x float> %arg) #0 {
+define <3 x half> @v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict(<3 x float> %arg) strictfp {
 ; SI-LABEL: v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -115,7 +115,7 @@ define <3 x half> @v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict(<3 x flo
   ret <3 x half> %val
 }
 
-define float @v_constrained_fptrunc_f64_to_f32_fpexcept_strict(double %arg) #0 {
+define float @v_constrained_fptrunc_f64_to_f32_fpexcept_strict(double %arg) strictfp {
 ; GCN-LABEL: v_constrained_fptrunc_f64_to_f32_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -125,7 +125,7 @@ define float @v_constrained_fptrunc_f64_to_f32_fpexcept_strict(double %arg) #0 {
   ret float %val
 }
 
-define <2 x float> @v_constrained_fptrunc_v2f64_to_v2f32_fpexcept_strict(<2 x double> %arg) #0 {
+define <2 x float> @v_constrained_fptrunc_v2f64_to_v2f32_fpexcept_strict(<2 x double> %arg) strictfp {
 ; GCN-LABEL: v_constrained_fptrunc_v2f64_to_v2f32_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -136,7 +136,7 @@ define <2 x float> @v_constrained_fptrunc_v2f64_to_v2f32_fpexcept_strict(<2 x do
   ret <2 x float> %val
 }
 
-define <3 x float> @v_constrained_fptrunc_v3f64_to_v3f32_fpexcept_strict(<3 x double> %arg) #0 {
+define <3 x float> @v_constrained_fptrunc_v3f64_to_v3f32_fpexcept_strict(<3 x double> %arg) strictfp {
 ; GCN-LABEL: v_constrained_fptrunc_v3f64_to_v3f32_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -149,22 +149,22 @@ define <3 x float> @v_constrained_fptrunc_v3f64_to_v3f32_fpexcept_strict(<3 x do
 }
 
 ; FIXME:
-; define half @v_constrained_fptrunc_f64_to_f16_fpexcept_strict(double %arg) #0 {
+; define half @v_constrained_fptrunc_f64_to_f16_fpexcept_strict(double %arg) strictfp {
 ;   %val = call half @llvm.experimental.constrained.fptrunc.f16.f64(double %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
 ;   ret half %val
 ; }
 
-; define <2 x half> @v_constrained_fptrunc_v2f64_to_v2f16_fpexcept_strict(<2 x double> %arg) #0 {
+; define <2 x half> @v_constrained_fptrunc_v2f64_to_v2f16_fpexcept_strict(<2 x double> %arg) strictfp {
 ;   %val = call <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f64(<2 x double> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
 ;   ret <2 x half> %val
 ; }
 
-; define <3 x half> @v_constrained_fptrunc_v3f64_to_v3f16_fpexcept_strict(<3 x double> %arg) #0 {
+; define <3 x half> @v_constrained_fptrunc_v3f64_to_v3f16_fpexcept_strict(<3 x double> %arg) strictfp {
 ;   %val = call <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f64(<3 x double> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
 ;   ret <3 x half> %val
 ; }
 
-define half @v_constrained_fneg_fptrunc_f32_to_f16_fpexcept_strict(float %arg) #0 {
+define half @v_constrained_fneg_fptrunc_f32_to_f16_fpexcept_strict(float %arg) strictfp {
 ; SI-LABEL: v_constrained_fneg_fptrunc_f32_to_f16_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -192,7 +192,7 @@ define half @v_constrained_fneg_fptrunc_f32_to_f16_fpexcept_strict(float %arg) #
   ret half %neg.val
 }
 
-define half @v_constrained_fptrunc_fneg_f32_to_f16_fpexcept_strict(float %arg) #0 {
+define half @v_constrained_fptrunc_fneg_f32_to_f16_fpexcept_strict(float %arg) strictfp {
 ; SI-LABEL: v_constrained_fptrunc_fneg_f32_to_f16_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -217,7 +217,7 @@ define half @v_constrained_fptrunc_fneg_f32_to_f16_fpexcept_strict(float %arg) #
   ret half %val
 }
 
-define float @v_constrained_fneg_fptrunc_f64_to_f32_fpexcept_strict(double %arg) #0 {
+define float @v_constrained_fneg_fptrunc_f64_to_f32_fpexcept_strict(double %arg) strictfp {
 ; GCN-LABEL: v_constrained_fneg_fptrunc_f64_to_f32_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -229,7 +229,7 @@ define float @v_constrained_fneg_fptrunc_f64_to_f32_fpexcept_strict(double %arg)
   ret float %neg.val
 }
 
-define float @v_constrained_fptrunc_fneg_f64_to_f32_fpexcept_strict(double %arg) #0 {
+define float @v_constrained_fptrunc_fneg_f64_to_f32_fpexcept_strict(double %arg) strictfp {
 ; GCN-LABEL: v_constrained_fptrunc_fneg_f64_to_f32_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -240,7 +240,7 @@ define float @v_constrained_fptrunc_fneg_f64_to_f32_fpexcept_strict(double %arg)
   ret float %val
 }
 
-define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi(float %arg, ptr addrspace(1) %ptr) #0 {
+define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi(float %arg, ptr addrspace(1) %ptr) strictfp {
 ; SI-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -264,7 +264,7 @@ define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi(float %arg, 
   ret void
 }
 
-define void @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict_noabi(<2 x float> %arg, ptr addrspace(1) %ptr) #0 {
+define void @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict_noabi(<2 x float> %arg, ptr addrspace(1) %ptr) strictfp {
 ; SI-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict_noabi:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -329,7 +329,7 @@ define void @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict_noabi(<2 x flo
   ret void
 }
 
-define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fneg(float %arg, ptr addrspace(1) %ptr) #0 {
+define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fneg(float %arg, ptr addrspace(1) %ptr) strictfp {
 ; SI-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fneg:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -354,7 +354,7 @@ define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fneg(float %
   ret void
 }
 
-define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fabs(float %arg, ptr addrspace(1) %ptr) #0 {
+define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fabs(float %arg, ptr addrspace(1) %ptr) strictfp {
 ; SI-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fabs:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -374,7 +374,7 @@ define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fabs(float %
 ; GFX1011-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1011-NEXT:    v_cvt_f16_f32_e64 v0, |v0|
 ; GFX1011-NEXT:    s_setpc_b64 s[30:31]
-  %abs.arg = call float @llvm.fabs.f32(float %arg) #0
+  %abs.arg = call float @llvm.fabs.f32(float %arg) strictfp
   %result = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %abs.arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -392,5 +392,3 @@ declare <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f64(<2 x doubl
 declare <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f64(<3 x double>, metadata, metadata)
 
 declare float @llvm.fabs.f32(float)
-
-attributes #0 = { strictfp }

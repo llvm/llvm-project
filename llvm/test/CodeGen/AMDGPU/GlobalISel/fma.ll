@@ -1019,18 +1019,16 @@ define amdgpu_ps float @dont_crash_after_fma_mix_select_attempt(float inreg %x, 
   ret float %fma
 }
 
-declare half @llvm.fma.f16(half, half, half) #0
-declare float @llvm.fma.f32(float, float, float) #0
-declare double @llvm.fma.f64(double, double, double) #0
+declare half @llvm.fma.f16(half, half, half) nounwind readnone speculatable willreturn
+declare float @llvm.fma.f32(float, float, float) nounwind readnone speculatable willreturn
+declare double @llvm.fma.f64(double, double, double) nounwind readnone speculatable willreturn
 
-declare half @llvm.fabs.f16(half) #0
-declare float @llvm.fabs.f32(float) #0
+declare half @llvm.fabs.f16(half) nounwind readnone speculatable willreturn
+declare float @llvm.fabs.f32(float) nounwind readnone speculatable willreturn
 
-declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>) #0
-declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>) #0
-declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>) #0
+declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>) nounwind readnone speculatable willreturn
+declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>) nounwind readnone speculatable willreturn
+declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>) nounwind readnone speculatable willreturn
 
-declare <3 x half> @llvm.fma.v3f16(<3 x half>, <3 x half>, <3 x half>) #0
-declare <4 x half> @llvm.fma.v4f16(<4 x half>, <4 x half>, <4 x half>) #0
-
-attributes #0 = { nounwind readnone speculatable willreturn }
+declare <3 x half> @llvm.fma.v3f16(<3 x half>, <3 x half>, <3 x half>) nounwind readnone speculatable willreturn
+declare <4 x half> @llvm.fma.v4f16(<4 x half>, <4 x half>, <4 x half>) nounwind readnone speculatable willreturn

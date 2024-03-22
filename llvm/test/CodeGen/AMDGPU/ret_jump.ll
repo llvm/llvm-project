@@ -21,14 +21,14 @@
 ; GCN-NEXT: [[RET_BB]]:
 ; GCN-NEXT: ; return
 ; GCN-NEXT: .Lfunc_end0
-define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @uniform_br_trivial_ret_divergent_br_trivial_unreachable(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, i32 inreg %arg17, i32 %arg18, i32 %arg19, float %arg20, i32 %arg21) #0 {
+define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @uniform_br_trivial_ret_divergent_br_trivial_unreachable(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, i32 inreg %arg17, i32 %arg18, i32 %arg19, float %arg20, i32 %arg21) "InitialPSInputAddr"="36983" {
 entry:
   %i.i = extractelement <2 x i32> %arg7, i32 0
   %j.i = extractelement <2 x i32> %arg7, i32 1
   %i.f.i = bitcast i32 %i.i to float
   %j.f.i = bitcast i32 %j.i to float
-  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 1, i32 0, i32 %arg5) #2
-  %p2 = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 1, i32 0, i32 %arg5) #2
+  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 1, i32 0, i32 %arg5) nounwind
+  %p2 = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 1, i32 0, i32 %arg5) nounwind
   %p87 = fmul float %p2, %p2
   %p88 = fadd float %p87, %p87
   %p93 = fadd float %p88, %p88
@@ -73,14 +73,14 @@ ret.bb:                                          ; preds = %else, %main_body
 
 ; GCN: ; %ret.bb
 ; GCN: store_dword
-define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @uniform_br_nontrivial_ret_divergent_br_nontrivial_unreachable(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, i32 inreg %arg18, i32 %arg19, float %arg20, i32 %arg21) #0 {
+define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @uniform_br_nontrivial_ret_divergent_br_nontrivial_unreachable(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, i32 inreg %arg18, i32 %arg19, float %arg20, i32 %arg21) "InitialPSInputAddr"="36983" {
 main_body:
   %i.i = extractelement <2 x i32> %arg7, i32 0
   %j.i = extractelement <2 x i32> %arg7, i32 1
   %i.f.i = bitcast i32 %i.i to float
   %j.f.i = bitcast i32 %j.i to float
-  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 1, i32 0, i32 %arg5) #2
-  %p2 = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 1, i32 0, i32 %arg5) #2
+  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 1, i32 0, i32 %arg5) nounwind
+  %p2 = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 1, i32 0, i32 %arg5) nounwind
   %p87 = fmul float %p2, %p2
   %p88 = fadd float %p87, %p87
   %p93 = fadd float %p88, %p88
@@ -108,23 +108,19 @@ ret.bb:                                          ; preds = %else, %main_body
 }
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
+declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) nounwind readnone
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
+declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) nounwind readnone
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #1
+declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) nounwind readnone
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.fabs.f32(float) #1
+declare float @llvm.fabs.f32(float) nounwind readnone
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.sqrt.f32(float) #1
+declare float @llvm.sqrt.f32(float) nounwind readnone
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.floor.f32(float) #1
-
-attributes #0 = { "InitialPSInputAddr"="36983" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind }
+declare float @llvm.floor.f32(float) nounwind readnone

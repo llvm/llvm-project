@@ -518,7 +518,5 @@ define amdgpu_ps void @struct_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc
   ret void
 }
 
-declare float @llvm.amdgcn.struct.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i32, i32 immarg) #0
-declare <2 x half> @llvm.amdgcn.struct.buffer.atomic.fadd.v2f16(<2 x half>, <4 x i32>, i32, i32, i32, i32 immarg) #0
-
-attributes #0 = { nounwind }
+declare float @llvm.amdgcn.struct.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i32, i32 immarg) nounwind
+declare <2 x half> @llvm.amdgcn.struct.buffer.atomic.fadd.v2f16(<2 x half>, <4 x i32>, i32, i32, i32, i32 immarg) nounwind

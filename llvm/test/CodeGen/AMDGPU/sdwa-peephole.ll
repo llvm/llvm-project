@@ -4,7 +4,7 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -amdgpu-sdwa-peephole -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SDWA,GFX9_10,GFX9 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1010 -amdgpu-sdwa-peephole -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SDWA,GFX9_10,GFX10 %s
 
-define amdgpu_kernel void @add_shr_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @add_shr_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: add_shr_i32:
 ; NOSDWA:       ; %bb.0:
 ; NOSDWA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -62,7 +62,7 @@ define amdgpu_kernel void @add_shr_i32(ptr addrspace(1) %out, ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @sub_shr_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @sub_shr_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: sub_shr_i32:
 ; NOSDWA:       ; %bb.0:
 ; NOSDWA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -120,7 +120,7 @@ define amdgpu_kernel void @sub_shr_i32(ptr addrspace(1) %out, ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @mul_shr_i32(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #0 {
+define amdgpu_kernel void @mul_shr_i32(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mul_shr_i32:
 ; NOSDWA:       ; %bb.0:
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -207,7 +207,7 @@ define amdgpu_kernel void @mul_shr_i32(ptr addrspace(1) %out, ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @mul_i16(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mul_i16(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mul_i16:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -290,7 +290,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @mul_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mul_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mul_v2i16:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -380,7 +380,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @mul_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mul_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mul_v4i16:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -481,7 +481,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @mul_v8i16(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mul_v8i16(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mul_v8i16:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -604,7 +604,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @mul_half(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mul_half(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mul_half:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -676,7 +676,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @mul_v2half(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mul_v2half(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mul_v2half:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -756,7 +756,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @mul_v4half(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mul_v4half(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mul_v4half:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -847,7 +847,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @mul_v8half(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mul_v8half(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mul_v8half:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -960,7 +960,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @mul_i8(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mul_i8(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mul_i8:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -1039,7 +1039,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @mul_v2i8(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mul_v2i8(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mul_v2i8:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -1139,7 +1139,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @mul_v4i8(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mul_v4i8(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mul_v4i8:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -1268,7 +1268,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @mul_v8i8(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mul_v8i8(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mul_v8i8:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -1508,7 +1508,7 @@ define amdgpu_kernel void @sitofp_v2i16_to_v2f16(
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
     ptr addrspace(1) %r,
-    ptr addrspace(1) %a) #0 {
+    ptr addrspace(1) %a) "denormal-fp-math"="preserve-sign,preserve-sign" {
 entry:
   %a.val = load <2 x i16>, ptr addrspace(1) %a
   %r.val = sitofp <2 x i16> %a.val to <2 x half>
@@ -1516,7 +1516,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @mac_v2half(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mac_v2half(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mac_v2half:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -1602,7 +1602,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @immediate_mul_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @immediate_mul_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: immediate_mul_v2i16:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -1676,7 +1676,7 @@ entry:
 }
 
 ; Double use of same src - should not convert it
-define amdgpu_kernel void @mulmul_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @mulmul_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: mulmul_v2i16:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -1776,7 +1776,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @add_bb_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) #0 {
+define amdgpu_kernel void @add_bb_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %ina, ptr addrspace(1) %inb) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: add_bb_v2i16:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -1862,7 +1862,7 @@ store_label:
 }
 
 ; Check that "pulling out" SDWA operands works correctly.
-define amdgpu_kernel void @pulled_out_test(ptr addrspace(1) %sourceA, ptr addrspace(1) %destValues) #0 {
+define amdgpu_kernel void @pulled_out_test(ptr addrspace(1) %sourceA, ptr addrspace(1) %destValues) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: pulled_out_test:
 ; NOSDWA:       ; %bb.0: ; %entry
 ; NOSDWA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -2012,7 +2012,7 @@ entry:
 }
 
 ; TODO: Why is the constant not peepholed into the v_or_b32_e32?
-define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
+define amdgpu_kernel void @sdwa_crash_inlineasm_def() "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; NOSDWA-LABEL: sdwa_crash_inlineasm_def:
 ; NOSDWA:       ; %bb.0: ; %bb
 ; NOSDWA-NEXT:    s_mov_b32 s0, 0xffff
@@ -2206,8 +2206,6 @@ bb2:
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x()
-
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}
 ; GFX9_10: {{.*}}

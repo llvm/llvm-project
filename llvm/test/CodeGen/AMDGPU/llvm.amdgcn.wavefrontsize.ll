@@ -28,7 +28,7 @@
 
 define amdgpu_kernel void @fold_wavefrontsize(ptr addrspace(1) nocapture %arg) {
 bb:
-  %tmp = tail call i32 @llvm.amdgcn.wavefrontsize() #0
+  %tmp = tail call i32 @llvm.amdgcn.wavefrontsize() nounwind readnone speculatable
   store i32 %tmp, ptr addrspace(1) %arg, align 4
   ret void
 }
@@ -49,7 +49,7 @@ bb:
 
 define amdgpu_kernel void @fold_and_optimize_wavefrontsize(ptr addrspace(1) nocapture %arg) {
 bb:
-  %tmp = tail call i32 @llvm.amdgcn.wavefrontsize() #0
+  %tmp = tail call i32 @llvm.amdgcn.wavefrontsize() nounwind readnone speculatable
   %tmp1 = icmp ugt i32 %tmp, 32
   %tmp2 = select i1 %tmp1, i32 2, i32 1
   store i32 %tmp2, ptr addrspace(1) %arg
@@ -67,7 +67,7 @@ bb:
 
 define amdgpu_kernel void @fold_and_optimize_if_wavefrontsize(ptr addrspace(1) nocapture %arg) {
 bb:
-  %tmp = tail call i32 @llvm.amdgcn.wavefrontsize() #0
+  %tmp = tail call i32 @llvm.amdgcn.wavefrontsize() nounwind readnone speculatable
   %tmp1 = icmp ugt i32 %tmp, 32
   br i1 %tmp1, label %bb2, label %bb3
 
@@ -79,6 +79,4 @@ bb3:                                              ; preds = %bb2, %bb
   ret void
 }
 
-declare i32 @llvm.amdgcn.wavefrontsize() #0
-
-attributes #0 = { nounwind readnone speculatable }
+declare i32 @llvm.amdgcn.wavefrontsize() nounwind readnone speculatable

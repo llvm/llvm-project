@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=r600 -mcpu=cayman -stress-sched -verify-misched -verify-machineinstrs < %s
 ; REQUIRES: asserts
 
-define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) #0 {
+define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) nounwind {
 main_body:
   %tmp = extractelement <4 x float> %reg1, i32 0
   %tmp5 = extractelement <4 x float> %reg1, i32 1
@@ -76,9 +76,6 @@ ELSE17:                                           ; preds = %ELSE
   br label %ENDIF
 }
 
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32) #0
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare float @llvm.minnum.f32(float, float) nounwind readnone
+declare float @llvm.maxnum.f32(float, float) nounwind readnone
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32) nounwind

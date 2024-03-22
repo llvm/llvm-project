@@ -10,7 +10,7 @@
 ; GCN-HSA: flat_load_dword
 
 ; R600: VTX_READ_32 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 0
-define amdgpu_kernel void @global_load_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %tmp0 = load float, ptr addrspace(1) %in
   store float %tmp0, ptr addrspace(1) %out
@@ -22,7 +22,7 @@ entry:
 ; GCN-HSA: flat_load_dwordx2
 
 ; R600: VTX_READ_64
-define amdgpu_kernel void @global_load_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %tmp0 = load <2 x float>, ptr addrspace(1) %in
   store <2 x float> %tmp0, ptr addrspace(1) %out
@@ -35,7 +35,7 @@ entry:
 ; GCNX3-HSA: flat_load_dwordx3
 
 ; R600: VTX_READ_128
-define amdgpu_kernel void @global_load_v3f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v3f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %tmp0 = load <3 x float>, ptr addrspace(1) %in
   store <3 x float> %tmp0, ptr addrspace(1) %out
@@ -47,7 +47,7 @@ entry:
 ; GCN-HSA: flat_load_dwordx4
 
 ; R600: VTX_READ_128
-define amdgpu_kernel void @global_load_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %tmp0 = load <4 x float>, ptr addrspace(1) %in
   store <4 x float> %tmp0, ptr addrspace(1) %out
@@ -62,7 +62,7 @@ entry:
 
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
-define amdgpu_kernel void @global_load_v8f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v8f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %tmp0 = load <8 x float>, ptr addrspace(1) %in
   store <8 x float> %tmp0, ptr addrspace(1) %out
@@ -80,7 +80,7 @@ entry:
 ; R600: VTX_READ_128
 ; R600: VTX_READ_32
 ; R600: VTX_READ_128
-define amdgpu_kernel void @global_load_v9f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v9f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %tmp0 = load <9 x float>, ptr addrspace(1) %in
   store <9 x float> %tmp0, ptr addrspace(1) %out
@@ -99,7 +99,7 @@ entry:
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
-define amdgpu_kernel void @global_load_v10f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v10f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %tmp0 = load <10 x float>, ptr addrspace(1) %in
   store <10 x float> %tmp0, ptr addrspace(1) %out
@@ -120,7 +120,7 @@ entry:
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
-define amdgpu_kernel void @global_load_v11f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v11f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %tmp0 = load <11 x float>, ptr addrspace(1) %in
   store <11 x float> %tmp0, ptr addrspace(1) %out
@@ -138,7 +138,7 @@ entry:
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
-define amdgpu_kernel void @global_load_v12f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v12f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %tmp0 = load <12 x float>, ptr addrspace(1) %in
   store <12 x float> %tmp0, ptr addrspace(1) %out
@@ -160,11 +160,9 @@ entry:
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
-define amdgpu_kernel void @global_load_v16f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @global_load_v16f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 entry:
   %tmp0 = load <16 x float>, ptr addrspace(1) %in
   store <16 x float> %tmp0, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { nounwind }

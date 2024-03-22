@@ -173,12 +173,6 @@ define amdgpu_kernel void @store_vgpr_ptr(ptr addrspace(1) %out) {
 }
 
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare void @llvm.amdgcn.raw.ptr.tbuffer.store.i32(i32, ptr addrspace(8), i32, i32, i32 immarg, i32 immarg) #2
-declare i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8), i32, i32, i32 immarg) #3
-
-attributes #0 = { nounwind readonly }
-attributes #1 = { nounwind readnone speculatable willreturn }
-attributes #2 = { nounwind willreturn writeonly }
-attributes #3 = { nounwind readonly willreturn }
-attributes #4 = { readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable willreturn
+declare void @llvm.amdgcn.raw.ptr.tbuffer.store.i32(i32, ptr addrspace(8), i32, i32, i32 immarg, i32 immarg) nounwind willreturn writeonly
+declare i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8), i32, i32, i32 immarg) nounwind readonly willreturn

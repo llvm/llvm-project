@@ -12,7 +12,7 @@
 ; VI-OPT: v_mov_b32_dpp v0, v0 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x02,0x00,0x7e,0x00,0x01,0x08,0x11]
 ; VI-NOOPT: v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x02,0x00,0x7e,0x01,0x01,0x08,0x11]
 define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in) {
-  %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %in, i32 1, i32 1, i32 1, i1 1) #0
+  %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %in, i32 1, i32 1, i32 1, i1 1) nounwind readnone convergent
   store i32 %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -27,8 +27,8 @@ define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in) {
 ; VI-OPT: v_mov_b32_dpp v{{[0-9]+}}, [[VGPR0]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:1
 ; VI-NOOPT: v_mov_b32_dpp v{{[0-9]+}}, [[VGPR1]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:1
 define amdgpu_kernel void @dpp_wait_states(ptr addrspace(1) %out, i32 %in) {
-  %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %in, i32 1, i32 1, i32 1, i1 1) #0
-  %tmp1 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %tmp0, i32 1, i32 1, i32 1, i1 1) #0
+  %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %in, i32 1, i32 1, i32 1, i1 1) nounwind readnone convergent
+  %tmp1 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %tmp0, i32 1, i32 1, i32 1, i1 1) nounwind readnone convergent
   store i32 %tmp1, ptr addrspace(1) %out
   ret void
 }
@@ -60,9 +60,9 @@ else:
 endif:
   %val = phi float [%if_val, %if], [%else_val, %else]
   %val_i32 = bitcast float %val to i32
-  %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %val_i32, i32 1, i32 1, i32 1, i1 1) #0
-  %tmp1 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %tmp0, i32 1, i32 1, i32 1, i1 1) #0
-  %tmp2 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %tmp1, i32 1, i32 1, i32 1, i1 1) #0
+  %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %val_i32, i32 1, i32 1, i32 1, i1 1) nounwind readnone convergent
+  %tmp1 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %tmp0, i32 1, i32 1, i32 1, i1 1) nounwind readnone convergent
+  %tmp2 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %tmp1, i32 1, i32 1, i32 1, i1 1) nounwind readnone convergent
   %tmp_float = bitcast i32 %tmp2 to float
   store float %tmp_float, ptr addrspace(1) %out
   ret void
@@ -72,7 +72,7 @@ endif:
 ; VI: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; VI: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 define amdgpu_kernel void @mov_dpp64_test(ptr addrspace(1) %out, i64 %in1) {
-  %tmp0 = call i64 @llvm.amdgcn.mov.dpp.i64(i64 %in1, i32 1, i32 1, i32 1, i1 0) #0
+  %tmp0 = call i64 @llvm.amdgcn.mov.dpp.i64(i64 %in1, i32 1, i32 1, i32 1, i1 0) nounwind readnone convergent
   store i64 %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -86,13 +86,11 @@ define amdgpu_kernel void @mov_dpp64_test(ptr addrspace(1) %out, i64 %in1) {
 ; VI-OPT-DAG: v_mov_b32_dpp v[[OLD_HI]], v[[OLD_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; VI-NOOPT-COUNT-2: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 define amdgpu_kernel void @mov_dpp64_imm_test(ptr addrspace(1) %out) {
-  %tmp0 = call i64 @llvm.amdgcn.mov.dpp.i64(i64 123451234512345, i32 1, i32 1, i32 1, i1 0) #0
+  %tmp0 = call i64 @llvm.amdgcn.mov.dpp.i64(i64 123451234512345, i32 1, i32 1, i32 1, i1 0) nounwind readnone convergent
   store i64 %tmp0, ptr addrspace(1) %out
   ret void
 }
 
-declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.mov.dpp.i64(i64, i32, i32, i32, i1) #0
-
-attributes #0 = { nounwind readnone convergent }
+declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) nounwind readnone convergent
+declare i64 @llvm.amdgcn.mov.dpp.i64(i64, i32, i32, i32, i1) nounwind readnone convergent
 

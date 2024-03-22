@@ -70,9 +70,7 @@ define double @v_fneg_fabs_sqrt_f64(double %src)  {
   ret double %sqrt
 }
 
-declare float @llvm.amdgcn.sqrt.f32(float) #0
-declare double @llvm.amdgcn.sqrt.f64(double) #0
-declare float @llvm.fabs.f32(float) #0
-declare double @llvm.fabs.f64(double) #0
-
-attributes #0 = { nounwind readnone speculatable willreturn }
+declare float @llvm.amdgcn.sqrt.f32(float) nounwind readnone speculatable willreturn
+declare double @llvm.amdgcn.sqrt.f64(double) nounwind readnone speculatable willreturn
+declare float @llvm.fabs.f32(float) nounwind readnone speculatable willreturn
+declare double @llvm.fabs.f64(double) nounwind readnone speculatable willreturn

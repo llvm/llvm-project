@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GLOBAL-ISEL %s
 
-define amdgpu_kernel void @test1_s_barrier_signal(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test1_s_barrier_signal(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test1_s_barrier_signal:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -46,7 +46,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test2_s_barrier_signal(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test2_s_barrier_signal(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test2_s_barrier_signal:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -90,7 +90,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test3_s_barrier_signal(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test3_s_barrier_signal(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test3_s_barrier_signal:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -134,7 +134,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test1_s_barrier_signal_var(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test1_s_barrier_signal_var(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test1_s_barrier_signal_var:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -209,7 +209,7 @@ define void @test2_s_barrier_signal_var(i32 %arg) {
   ret void
 }
 
-define amdgpu_kernel void @test1_s_barrier_signal_isfirst(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test1_s_barrier_signal_isfirst(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test1_s_barrier_signal_isfirst:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
@@ -263,7 +263,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test2_s_barrier_signal_isfirst(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test2_s_barrier_signal_isfirst(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test2_s_barrier_signal_isfirst:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
@@ -317,7 +317,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test3_s_barrier_signal_isfirst(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test3_s_barrier_signal_isfirst(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test3_s_barrier_signal_isfirst:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
@@ -371,7 +371,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test1_s_barrier_signal_isfirst_var(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test1_s_barrier_signal_isfirst_var(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test1_s_barrier_signal_isfirst_var:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
@@ -495,7 +495,7 @@ define void @test2_s_barrier_signal_isfirst_var(ptr addrspace(1) %a, ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @test1_s_barrier_init(ptr addrspace(1) %out, i32 %mbrCnt) #0 {
+define amdgpu_kernel void @test1_s_barrier_init(ptr addrspace(1) %out, i32 %mbrCnt) nounwind {
 ; GCN-LABEL: test1_s_barrier_init:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
@@ -539,7 +539,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test2_s_barrier_init(ptr addrspace(1) %out, i32 %mbrCnt) #0 {
+define amdgpu_kernel void @test2_s_barrier_init(ptr addrspace(1) %out, i32 %mbrCnt) nounwind {
 ; GCN-LABEL: test2_s_barrier_init:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
@@ -583,7 +583,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test3_s_barrier_init(ptr addrspace(1) %out, i32 %mbrCnt) #0 {
+define amdgpu_kernel void @test3_s_barrier_init(ptr addrspace(1) %out, i32 %mbrCnt) nounwind {
 ; GCN-LABEL: test3_s_barrier_init:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
@@ -627,7 +627,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test4_s_barrier_init(ptr addrspace(1) %out, i32 %bar, i32 %mbrCnt) #0 {
+define amdgpu_kernel void @test4_s_barrier_init(ptr addrspace(1) %out, i32 %bar, i32 %mbrCnt) nounwind {
 ; GCN-LABEL: test4_s_barrier_init:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -709,7 +709,7 @@ define void @test5_s_barrier_init_m0(i32 %arg1 ,i32 %arg2) {
   ret void
 }
 
-define amdgpu_kernel void @test1_s_barrier_join(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test1_s_barrier_join(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test1_s_barrier_join:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -749,7 +749,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test2_s_barrier_join(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test2_s_barrier_join(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test2_s_barrier_join:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -789,7 +789,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test3_s_barrier_join(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test3_s_barrier_join(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test3_s_barrier_join:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -829,7 +829,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test4_s_barrier_join_m0(ptr addrspace(1) %out, i32 %bar) #0 {
+define amdgpu_kernel void @test4_s_barrier_join_m0(ptr addrspace(1) %out, i32 %bar) nounwind {
 ; GCN-LABEL: test4_s_barrier_join_m0:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
@@ -901,7 +901,7 @@ define void @test5_s_barrier_join_m0(i32 %arg) {
   ret void
 }
 
-define amdgpu_kernel void @test1_s_barrier_leave(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test1_s_barrier_leave(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test1_s_barrier_leave:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
@@ -955,7 +955,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test1_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test1_s_wakeup_barrier(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test1_s_wakeup_barrier:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -995,7 +995,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test2_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test2_s_wakeup_barrier(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test2_s_wakeup_barrier:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -1035,7 +1035,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test3_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test3_s_wakeup_barrier(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test3_s_wakeup_barrier:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -1075,7 +1075,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test4_s_wakeup_barrier_m0(ptr addrspace(1) %out, i32 %bar) #0 {
+define amdgpu_kernel void @test4_s_wakeup_barrier_m0(ptr addrspace(1) %out, i32 %bar) nounwind {
 ; GCN-LABEL: test4_s_wakeup_barrier_m0:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
@@ -1147,7 +1147,7 @@ define void @test5_s_wakeup_barrier_m0(i32 %arg) {
   ret void
 }
 
-define amdgpu_kernel void @test1_s_get_barrier_state(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test1_s_get_barrier_state(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test1_s_get_barrier_state:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_get_barrier_state s2, -1
@@ -1183,7 +1183,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test2_s_get_barrier_state(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test2_s_get_barrier_state(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test2_s_get_barrier_state:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_get_barrier_state s2, 1
@@ -1219,7 +1219,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test3_s_get_barrier_state(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test3_s_get_barrier_state(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test3_s_get_barrier_state:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_get_barrier_state s2, 0
@@ -1255,7 +1255,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test4_s_get_barrier_state_m0(ptr addrspace(1) %out, i32 %bar) #0 {
+define amdgpu_kernel void @test4_s_get_barrier_state_m0(ptr addrspace(1) %out, i32 %bar) nounwind {
 ; GCN-LABEL: test4_s_get_barrier_state_m0:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
@@ -1329,7 +1329,7 @@ define i32 @test5_s_get_barrier_state_m0(i32 %arg) {
   ret i32 %state
 }
 
-define amdgpu_kernel void @test_barrier_convert(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @test_barrier_convert(ptr addrspace(1) %out) nounwind {
 ; GCN-LABEL: test_barrier_convert:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -1371,20 +1371,16 @@ entry:
   store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
-declare void @llvm.amdgcn.s.barrier() #1
-declare void @llvm.amdgcn.s.barrier.wait(i16) #1
-declare void @llvm.amdgcn.s.barrier.signal(i32) #1
-declare void @llvm.amdgcn.s.barrier.signal.var(i32) #1
-declare i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32) #1
-declare i1 @llvm.amdgcn.s.barrier.signal.isfirst.var(i32) #1
-declare void @llvm.amdgcn.s.barrier.init(i32, i32) #1
-declare void @llvm.amdgcn.s.barrier.join(i32) #1
-declare i1 @llvm.amdgcn.s.barrier.leave() #1
-declare void @llvm.amdgcn.s.wakeup.barrier(i32) #1
-declare i32 @llvm.amdgcn.s.get.barrier.state(i32) #1
-declare i32 @llvm.amdgcn.s.get.barrier.state.var(i32) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
-attributes #0 = { nounwind }
-attributes #1 = { convergent nounwind }
-attributes #2 = { nounwind readnone }
+declare void @llvm.amdgcn.s.barrier() convergent nounwind
+declare void @llvm.amdgcn.s.barrier.wait(i16) convergent nounwind
+declare void @llvm.amdgcn.s.barrier.signal(i32) convergent nounwind
+declare void @llvm.amdgcn.s.barrier.signal.var(i32) convergent nounwind
+declare i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32) convergent nounwind
+declare i1 @llvm.amdgcn.s.barrier.signal.isfirst.var(i32) convergent nounwind
+declare void @llvm.amdgcn.s.barrier.init(i32, i32) convergent nounwind
+declare void @llvm.amdgcn.s.barrier.join(i32) convergent nounwind
+declare i1 @llvm.amdgcn.s.barrier.leave() convergent nounwind
+declare void @llvm.amdgcn.s.wakeup.barrier(i32) convergent nounwind
+declare i32 @llvm.amdgcn.s.get.barrier.state(i32) convergent nounwind
+declare i32 @llvm.amdgcn.s.get.barrier.state.var(i32) convergent nounwind
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

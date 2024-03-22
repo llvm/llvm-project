@@ -7,7 +7,7 @@
 ; GCN-DAG: v_mul_f32_e32 [[QUIET1:v[0-9]+]], 1.0, [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
 ; GCN-NOT: v_mul_f32
-define amdgpu_kernel void @kernel_ieee_mode_default() #0 {
+define amdgpu_kernel void @kernel_ieee_mode_default() nounwind {
   %val0 = load volatile float, ptr addrspace(1) undef
   %val1 = load volatile float, ptr addrspace(1) undef
   %min = call float @llvm.minnum.f32(float %val0, float %val1)
@@ -22,7 +22,7 @@ define amdgpu_kernel void @kernel_ieee_mode_default() #0 {
 ; GCN-DAG: v_mul_f32_e32 [[QUIET1:v[0-9]+]], 1.0, [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
 ; GCN-NOT: v_mul_f32
-define amdgpu_kernel void @kernel_ieee_mode_on() #1 {
+define amdgpu_kernel void @kernel_ieee_mode_on() nounwind "amdgpu-ieee"="true" {
   %val0 = load volatile float, ptr addrspace(1) undef
   %val1 = load volatile float, ptr addrspace(1) undef
   %min = call float @llvm.minnum.f32(float %val0, float %val1)
@@ -37,7 +37,7 @@ define amdgpu_kernel void @kernel_ieee_mode_on() #1 {
 ; GCN-NOT: [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[VAL0]], [[VAL1]]
 ; GCN-NOT: v_mul_f32
-define amdgpu_kernel void @kernel_ieee_mode_off() #2 {
+define amdgpu_kernel void @kernel_ieee_mode_off() nounwind "amdgpu-ieee"="false" {
   %val0 = load volatile float, ptr addrspace(1) undef
   %val1 = load volatile float, ptr addrspace(1) undef
   %min = call float @llvm.minnum.f32(float %val0, float %val1)
@@ -52,7 +52,7 @@ define amdgpu_kernel void @kernel_ieee_mode_off() #2 {
 ; GCN-DAG: v_mul_f32_e32 [[QUIET1:v[0-9]+]], 1.0, [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
 ; GCN-NOT: v_mul_f32
-define void @func_ieee_mode_default() #0 {
+define void @func_ieee_mode_default() nounwind {
   %val0 = load volatile float, ptr addrspace(1) undef
   %val1 = load volatile float, ptr addrspace(1) undef
   %min = call float @llvm.minnum.f32(float %val0, float %val1)
@@ -67,7 +67,7 @@ define void @func_ieee_mode_default() #0 {
 ; GCN-DAG: v_mul_f32_e32 [[QUIET1:v[0-9]+]], 1.0, [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
 ; GCN-NOT: v_mul_f32
-define void @func_ieee_mode_on() #1 {
+define void @func_ieee_mode_on() nounwind "amdgpu-ieee"="true" {
   %val0 = load volatile float, ptr addrspace(1) undef
   %val1 = load volatile float, ptr addrspace(1) undef
   %min = call float @llvm.minnum.f32(float %val0, float %val1)
@@ -82,7 +82,7 @@ define void @func_ieee_mode_on() #1 {
 ; GCN-NOT: [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[VAL0]], [[VAL1]]
 ; GCN-NOT: v_mul_f32
-define void @func_ieee_mode_off() #2 {
+define void @func_ieee_mode_off() nounwind "amdgpu-ieee"="false" {
   %val0 = load volatile float, ptr addrspace(1) undef
   %val1 = load volatile float, ptr addrspace(1) undef
   %min = call float @llvm.minnum.f32(float %val0, float %val1)
@@ -97,7 +97,7 @@ define void @func_ieee_mode_off() #2 {
 ; GCN-NOT: [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
 ; GCN-NOT: v_mul_f32
-define amdgpu_cs void @cs_ieee_mode_default() #0 {
+define amdgpu_cs void @cs_ieee_mode_default() nounwind {
   %val0 = load volatile float, ptr addrspace(1) undef
   %val1 = load volatile float, ptr addrspace(1) undef
   %min = call float @llvm.minnum.f32(float %val0, float %val1)
@@ -112,7 +112,7 @@ define amdgpu_cs void @cs_ieee_mode_default() #0 {
 ; GCN-DAG: v_mul_f32_e32 [[QUIET1:v[0-9]+]], 1.0, [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
 ; GCN-NOT: v_mul_f32
-define amdgpu_cs void @cs_ieee_mode_on() #1 {
+define amdgpu_cs void @cs_ieee_mode_on() nounwind "amdgpu-ieee"="true" {
   %val0 = load volatile float, ptr addrspace(1) undef
   %val1 = load volatile float, ptr addrspace(1) undef
   %min = call float @llvm.minnum.f32(float %val0, float %val1)
@@ -127,7 +127,7 @@ define amdgpu_cs void @cs_ieee_mode_on() #1 {
 ; GCN-NOT: [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[VAL0]], [[VAL1]]
 ; GCN-NOT: v_mul_f32
-define amdgpu_cs void @cs_ieee_mode_off() #2 {
+define amdgpu_cs void @cs_ieee_mode_off() nounwind "amdgpu-ieee"="false" {
   %val0 = load volatile float, ptr addrspace(1) undef
   %val1 = load volatile float, ptr addrspace(1) undef
   %min = call float @llvm.minnum.f32(float %val0, float %val1)
@@ -142,7 +142,7 @@ define amdgpu_cs void @cs_ieee_mode_off() #2 {
 ; GCN-NOT: [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[VAL0]], [[VAL1]]
 ; GCN-NOT: v_mul_f32
-define amdgpu_ps void @ps_ieee_mode_default() #0 {
+define amdgpu_ps void @ps_ieee_mode_default() nounwind {
   %val0 = load volatile float, ptr addrspace(1) undef
   %val1 = load volatile float, ptr addrspace(1) undef
   %min = call float @llvm.minnum.f32(float %val0, float %val1)
@@ -157,7 +157,7 @@ define amdgpu_ps void @ps_ieee_mode_default() #0 {
 ; GCN-DAG: v_mul_f32_e32 [[QUIET1:v[0-9]+]], 1.0, [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
 ; GCN-NOT: v_mul_f32
-define amdgpu_ps void @ps_ieee_mode_on() #1 {
+define amdgpu_ps void @ps_ieee_mode_on() nounwind "amdgpu-ieee"="true" {
   %val0 = load volatile float, ptr addrspace(1) undef
   %val1 = load volatile float, ptr addrspace(1) undef
   %min = call float @llvm.minnum.f32(float %val0, float %val1)
@@ -172,7 +172,7 @@ define amdgpu_ps void @ps_ieee_mode_on() #1 {
 ; GCN-NOT: [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[VAL0]], [[VAL1]]
 ; GCN-NOT: v_mul_f32
-define amdgpu_ps void @ps_ieee_mode_off() #2 {
+define amdgpu_ps void @ps_ieee_mode_off() nounwind "amdgpu-ieee"="false" {
   %val0 = load volatile float, ptr addrspace(1) undef
   %val1 = load volatile float, ptr addrspace(1) undef
   %min = call float @llvm.minnum.f32(float %val0, float %val1)
@@ -180,9 +180,4 @@ define amdgpu_ps void @ps_ieee_mode_off() #2 {
   ret void
 }
 
-declare float @llvm.minnum.f32(float, float) #3
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind "amdgpu-ieee"="true" }
-attributes #2 = { nounwind "amdgpu-ieee"="false" }
-attributes #3 = { nounwind readnone speculatable }
+declare float @llvm.minnum.f32(float, float) nounwind readnone speculatable

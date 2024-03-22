@@ -155,15 +155,13 @@ define amdgpu_ps <3 x float> @strict_wwm_v3f32(<3 x float> %val) {
   ret <3 x float> %ret
 }
 
-declare i1 @llvm.amdgcn.wwm.i1(i1) #0
-declare float @llvm.amdgcn.wwm.f32(float) #0
-declare <2 x half> @llvm.amdgcn.wwm.v2f16(<2 x half>) #0
-declare <3 x float> @llvm.amdgcn.wwm.v3f32(<3 x float>) #0
-declare double @llvm.amdgcn.wwm.f64(double) #0
-declare i1 @llvm.amdgcn.strict.wwm.i1(i1) #0
-declare float @llvm.amdgcn.strict.wwm.f32(float) #0
-declare <2 x half> @llvm.amdgcn.strict.wwm.v2f16(<2 x half>) #0
-declare <3 x float> @llvm.amdgcn.strict.wwm.v3f32(<3 x float>) #0
-declare double @llvm.amdgcn.strict.wwm.f64(double) #0
-
-attributes #0 = { nounwind readnone speculatable }
+declare i1 @llvm.amdgcn.wwm.i1(i1) nounwind readnone speculatable
+declare float @llvm.amdgcn.wwm.f32(float) nounwind readnone speculatable
+declare <2 x half> @llvm.amdgcn.wwm.v2f16(<2 x half>) nounwind readnone speculatable
+declare <3 x float> @llvm.amdgcn.wwm.v3f32(<3 x float>) nounwind readnone speculatable
+declare double @llvm.amdgcn.wwm.f64(double) nounwind readnone speculatable
+declare i1 @llvm.amdgcn.strict.wwm.i1(i1) nounwind readnone speculatable
+declare float @llvm.amdgcn.strict.wwm.f32(float) nounwind readnone speculatable
+declare <2 x half> @llvm.amdgcn.strict.wwm.v2f16(<2 x half>) nounwind readnone speculatable
+declare <3 x float> @llvm.amdgcn.strict.wwm.v3f32(<3 x float>) nounwind readnone speculatable
+declare double @llvm.amdgcn.strict.wwm.f64(double) nounwind readnone speculatable

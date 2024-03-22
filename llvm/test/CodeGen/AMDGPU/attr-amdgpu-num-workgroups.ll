@@ -9,41 +9,36 @@ entry:
 
 ; Ignore if number of work groups for x dimension is 0.
 ; CHECK-LABEL: {{^}}empty_max_num_workgroups_x0:
-define amdgpu_kernel void @empty_max_num_workgroups_x0() #0 {
+define amdgpu_kernel void @empty_max_num_workgroups_x0() "amdgpu-max-num-workgroups"="0,2,3" {
 entry:
   ret void
 }
-attributes #0 = {"amdgpu-max-num-workgroups"="0,2,3"}
 
 ; Ignore if number of work groups for y dimension is 0.
 ; CHECK-LABEL: {{^}}empty_max_num_workgroups_y0:
-define amdgpu_kernel void @empty_max_num_workgroups_y0() #1 {
+define amdgpu_kernel void @empty_max_num_workgroups_y0() "amdgpu-max-num-workgroups"="1,0,3" {
 entry:
   ret void
 }
-attributes #1 = {"amdgpu-max-num-workgroups"="1,0,3"}
 
 ; Ignore if number of work groups for z dimension is 0.
 ; CHECK-LABEL: {{^}}empty_max_num_workgroups_z0:
-define amdgpu_kernel void @empty_max_num_workgroups_z0() #2 {
+define amdgpu_kernel void @empty_max_num_workgroups_z0() "amdgpu-max-num-workgroups"="1,2,0" {
 entry:
   ret void
 }
-attributes #2 = {"amdgpu-max-num-workgroups"="1,2,0"}
 
 ; CHECK-LABEL: {{^}}empty_max_num_workgroups_1_2_3:
-define amdgpu_kernel void @empty_max_num_workgroups_1_2_3() #3 {
+define amdgpu_kernel void @empty_max_num_workgroups_1_2_3() "amdgpu-max-num-workgroups"="1,2,3" {
 entry:
   ret void
 }
-attributes #3 = {"amdgpu-max-num-workgroups"="1,2,3"}
 
 ; CHECK-LABEL: {{^}}empty_max_num_workgroups_1024_1024_1024:
-define amdgpu_kernel void @empty_max_num_workgroups_1024_1024_1024() #4 {
+define amdgpu_kernel void @empty_max_num_workgroups_1024_1024_1024() "amdgpu-max-num-workgroups"="1024,1024,1024" {
 entry:
   ret void
 }
-attributes #4 = {"amdgpu-max-num-workgroups"="1024,1024,1024"}
 
 
 ; CHECK: .amdgpu_metadata

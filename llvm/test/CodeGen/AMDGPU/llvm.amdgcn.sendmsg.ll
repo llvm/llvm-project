@@ -69,7 +69,7 @@ body:
 ; VIPLUS-NEXT: s_nop 0
 ; GCN-NEXT: sendmsg(MSG_GS_DONE, GS_OP_NOP)
 ; GCN-NEXT: s_endpgm
-define amdgpu_gs void @sendmsg(i32 inreg %a) #0 {
+define amdgpu_gs void @sendmsg(i32 inreg %a) nounwind {
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 %a)
   ret void
 }
@@ -79,7 +79,7 @@ define amdgpu_gs void @sendmsg(i32 inreg %a) #0 {
 ; VIPLUS-NEXT: s_nop 0
 ; GCN-NEXT: s_sendmsghalt sendmsg(MSG_INTERRUPT)
 ; GCN-NEXT: s_endpgm
-define amdgpu_kernel void @sendmsghalt(i32 inreg %a) #0 {
+define amdgpu_kernel void @sendmsghalt(i32 inreg %a) nounwind {
   call void @llvm.amdgcn.s.sendmsghalt(i32 1, i32 %a)
   ret void
 }
@@ -149,7 +149,7 @@ body:
 ; GCN-LABEL: {{^}}if_sendmsg:
 ; GCN: s_cbranch_execz
 ; GCN: s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP)
-define amdgpu_gs void @if_sendmsg(i32 %flag) #0 {
+define amdgpu_gs void @if_sendmsg(i32 %flag) nounwind {
   %cc = icmp eq i32 %flag, 0
   br i1 %cc, label %sendmsg, label %end
 
@@ -161,7 +161,5 @@ end:
   ret void
 }
 
-declare void @llvm.amdgcn.s.sendmsg(i32, i32) #0
-declare void @llvm.amdgcn.s.sendmsghalt(i32, i32) #0
-
-attributes #0 = { nounwind }
+declare void @llvm.amdgcn.s.sendmsg(i32, i32) nounwind
+declare void @llvm.amdgcn.s.sendmsghalt(i32, i32) nounwind

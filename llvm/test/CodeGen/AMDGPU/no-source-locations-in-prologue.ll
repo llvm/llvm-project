@@ -4,7 +4,7 @@
 ; Test that source locations (.loc directives) are not added to the code within the prologue.
 
 ; Function Attrs: convergent mustprogress nounwind
-define hidden void @_ZL3barv() #0 !dbg !1644 {
+define hidden void @_ZL3barv() nounwind "frame-pointer"="all" !dbg !1644 {
 ; CHECK-LABEL: _ZL3barv:
 ; CHECK:       .Lfunc_begin0:
 ; CHECK-NEXT:    .file 0 "/tmp" "lane-info.cpp" md5 0x4ab9b75a30baffdf0f6f536a80e3e382
@@ -55,9 +55,7 @@ entry:
 }
 
 ; Function Attrs: convergent nounwind
-declare void @_ZL13sleep_foreverv() #0
-
-attributes #0 = { nounwind "frame-pointer"="all" }
+declare void @_ZL13sleep_foreverv() nounwind "frame-pointer"="all"
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!1638, !1639, !1640, !1641}

@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=VI %s
 
-define amdgpu_ps float @main(float %arg0, float %arg1) #0 {
+define amdgpu_ps float @main(float %arg0, float %arg1) nounwind {
 ; SI-LABEL: main:
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    image_load v2, v0, s[0:7] dmask:0x1 unorm
@@ -43,9 +43,5 @@ bb:
   ret float %tmp9
 }
 
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
-declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32, i32, <8 x i32>, i32, i32) #2
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind readonly }
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) nounwind readnone
+declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32, i32, <8 x i32>, i32, i32) nounwind readonly

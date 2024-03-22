@@ -21,6 +21,5 @@ ENDIF:                                            ; preds = %IF, %main_body
   ret void
 }
 
-declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
+declare float @llvm.r600.dot4(<4 x float>, <4 x float>) readnone
 declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
-attributes #1 = { readnone }

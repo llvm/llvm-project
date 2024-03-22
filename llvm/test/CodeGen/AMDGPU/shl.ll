@@ -3,9 +3,9 @@
 ; RUN: llc < %s -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s -check-prefixes=VI
 ; RUN: llc < %s -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mtriple=r600-- -mcpu=redwood -verify-machineinstrs | FileCheck %s --check-prefixes=EG
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
+declare i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone
 
 define amdgpu_kernel void @shl_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: shl_v2i32:
@@ -457,7 +457,7 @@ define amdgpu_kernel void @shl_i16_computed_amount(ptr addrspace(1) %out, ptr ad
 ; EG-NEXT:     MOV * T0.Z, 0.0,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr inbounds i16, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr inbounds i16, ptr addrspace(1) %out, i32 %tid
   %b_ptr = getelementptr i16, ptr addrspace(1) %gep, i16 1
@@ -616,7 +616,7 @@ define amdgpu_kernel void @shl_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-NEXT:     OR_INT T0.X, PV.W, PS,
 ; EG-NEXT:     LSHR * T7.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i32 %tid
   %b_ptr = getelementptr <2 x i16>, ptr addrspace(1) %gep, i16 1
@@ -738,7 +738,7 @@ define amdgpu_kernel void @shl_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     MOV T7.X, PV.Y,
 ; EG-NEXT:     MOV * T10.X, T6.X,
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr inbounds <4 x i16>, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr inbounds <4 x i16>, ptr addrspace(1) %out, i32 %tid
   %b_ptr = getelementptr <4 x i16>, ptr addrspace(1) %gep, i16 1
@@ -1123,7 +1123,7 @@ define amdgpu_kernel void @v_shl_32_i64(ptr addrspace(1) %out, ptr addrspace(1) 
 ; EG-NEXT:     LSHR T2.X, PV.W, literal.x,
 ; EG-NEXT:     MOV * T1.Y, T0.X,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %tid = call i32 @llvm.amdgcn.workgroup.id.x() #0
+  %tid = call i32 @llvm.amdgcn.workgroup.id.x() nounwind readnone
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
   %gep.out = getelementptr i64, ptr addrspace(1) %out, i32 %tid
   %a = load i64, ptr addrspace(1) %gep.in
@@ -2204,5 +2204,3 @@ define void @shl_or_k_two_uses(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i
   store i32 %tmp0, ptr addrspace(1) %out1
   ret void
 }
-
-attributes #0 = { nounwind readnone }

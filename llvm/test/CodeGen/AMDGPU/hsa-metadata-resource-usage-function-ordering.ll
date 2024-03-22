@@ -38,7 +38,7 @@ define amdgpu_kernel void @test1(ptr %x) {
   ret void
 }
 
-define internal float @f(float %arg0) #0 {
+define internal float @f(float %arg0) norecurse {
   %stack = alloca float, i32 4, align 4, addrspace(5)
   store volatile float 3.0, ptr addrspace(5) %stack
   %val = load volatile float, ptr addrspace(5) %stack
@@ -104,7 +104,7 @@ define amdgpu_kernel void @test3() {
   ret void
 }
 
-declare void @g() #0
+declare void @g() norecurse
 
 ; test a kernel without an external call that occurs after its callee in the module
 ; CHECK-LABEL: test4
@@ -133,8 +133,6 @@ define amdgpu_kernel void @test4() {
   call void @g()
   ret void
 }
-
-attributes #0 = { norecurse }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

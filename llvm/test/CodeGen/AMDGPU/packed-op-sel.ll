@@ -11,7 +11,7 @@
 ; GCN-NOT: or
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[SCALAR0]] op_sel_hi:[1,1,0]{{$}}
-define amdgpu_kernel void @fma_vector_vector_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
+define amdgpu_kernel void @fma_vector_vector_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
 
@@ -39,7 +39,7 @@ bb:
 ; GCN-NOT: or
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[SCALAR0]] op_sel_hi:[1,1,0] neg_lo:[0,0,1] neg_hi:[0,0,1]{{$}}
-define amdgpu_kernel void @fma_vector_vector_neg_broadcast_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
+define amdgpu_kernel void @fma_vector_vector_neg_broadcast_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
 
@@ -68,7 +68,7 @@ bb:
 ; GCN-NOT: or
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[SCALAR0]] op_sel_hi:[1,1,0] neg_lo:[0,0,1] neg_hi:[0,0,1]{{$}}
-define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
+define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
 
@@ -97,7 +97,7 @@ bb:
 ; GCN-NOT: or
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[SCALAR0]] op_sel_hi:[1,1,0]{{$}}
-define amdgpu_kernel void @fma_vector_vector_neg_broadcast_neg_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
+define amdgpu_kernel void @fma_vector_vector_neg_broadcast_neg_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
 
@@ -127,7 +127,7 @@ bb:
 ; GCN-NOT: or
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[SCALAR0]] op_sel_hi:[1,1,0] neg_lo:[0,0,1]{{$}}
-define amdgpu_kernel void @fma_vector_vector_scalar_neg_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
+define amdgpu_kernel void @fma_vector_vector_scalar_neg_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
 
@@ -155,7 +155,7 @@ bb:
 ; GCN-NOT: or
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[SCALAR0]] op_sel_hi:[1,1,0] neg_hi:[0,0,1]{{$}}
-define amdgpu_kernel void @fma_vector_vector_scalar_neg_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
+define amdgpu_kernel void @fma_vector_vector_scalar_neg_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
 
@@ -182,7 +182,7 @@ bb:
 ; GCN-NOT: or
 
 ; GCN: v_pk_add_u16 v{{[0-9]+}}, [[VEC0]], [[SCALAR0]] op_sel_hi:[1,0] neg_lo:[0,1] neg_hi:[0,1]{{$}}
-define amdgpu_kernel void @add_vector_neg_bitcast_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
+define amdgpu_kernel void @add_vector_neg_bitcast_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) nounwind {
 bb:
   %vec0 = load volatile <2 x i16>, ptr addrspace(3) %lds, align 4
   %scalar0 = load volatile half, ptr addrspace(3) %arg2, align 2
@@ -209,7 +209,7 @@ bb:
 ; GCN: v_lshl_or_b32 [[PACKED:v[0-9]+]], [[SCALAR1]], 16, [[SCALAR0]]
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[PACKED]]{{$}}
-define amdgpu_kernel void @fma_vector_vector_scalar_lo_neg_scalar_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
+define amdgpu_kernel void @fma_vector_vector_scalar_lo_neg_scalar_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %arg2.gep = getelementptr inbounds half, ptr addrspace(3) %arg2, i32 2
@@ -237,7 +237,7 @@ bb:
 ; GCN: ds_read_u16_d16_hi [[PACKED]]
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[PACKED]] neg_lo:[0,0,1] neg_hi:[0,0,1]{{$}}
-define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo_scalar_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
+define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo_scalar_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %arg2.gep = getelementptr inbounds half, ptr addrspace(3) %arg2, i32 2
@@ -268,7 +268,7 @@ bb:
 ; GCN-NOT: or
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[VEC2]] op_sel:[0,0,1] neg_lo:[0,0,1] neg_hi:[0,0,1]{{$}}
-define amdgpu_kernel void @fma_vector_vector_neg_vector_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @fma_vector_vector_neg_vector_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %lds.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 2
@@ -296,7 +296,7 @@ bb:
 ; GCN-NOT: or
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[VEC2]] neg_hi:[0,0,1]{{$}}
-define amdgpu_kernel void @fma_vector_vector_vector_neg_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @fma_vector_vector_vector_neg_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %lds.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 2
@@ -324,7 +324,7 @@ bb:
 ; GCN-NOT: or
 
 ; GCN: v_pk_add_u16 v{{[0-9]+}}, [[VEC0]], [[VEC1]] op_sel:[0,1]{{$}}
-define amdgpu_kernel void @add_vector_scalar_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @add_vector_scalar_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x i16>, ptr addrspace(3) %lds, i32 1
 
@@ -349,7 +349,7 @@ bb:
 ; GCN-NOT: or
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[VEC2]] op_sel:[0,0,1]{{$}}
-define amdgpu_kernel void @fma_vector_vector_scalar_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @fma_vector_vector_scalar_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %lds.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 2
@@ -377,7 +377,7 @@ bb:
 ; GCN-NOT: or
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[VEC2]]{{$}}
-define amdgpu_kernel void @fma_vector_vector_neg_vector_lo_neg_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @fma_vector_vector_neg_vector_lo_neg_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %lds.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 2
@@ -407,7 +407,7 @@ bb:
 ; GCN-NOT: or
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[VEC2]] op_sel:[0,0,1] op_sel_hi:[1,1,0]{{$}}
-define amdgpu_kernel void @fma_vector_vector_swap_vector(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @fma_vector_vector_swap_vector(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %lds.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 2
@@ -435,7 +435,7 @@ bb:
 ; GCN-NOT: xor
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[VEC2]] op_sel:[0,0,1] op_sel_hi:[1,1,0] neg_lo:[0,0,1] neg_hi:[0,0,1]{{$}}
-define amdgpu_kernel void @fma_vector_vector_swap_neg_vector(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @fma_vector_vector_swap_neg_vector(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %lds.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 2
@@ -464,7 +464,7 @@ bb:
 ; GCN-NOT: xor
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[VEC2]] op_sel:[0,0,1] op_sel_hi:[1,1,0] neg_lo:[0,0,1]{{$}}
-define amdgpu_kernel void @fma_vector_vector_blend_vector_neg_vector_0(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @fma_vector_vector_blend_vector_neg_vector_0(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %lds.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 2
@@ -492,7 +492,7 @@ bb:
 ; GCN-NOT: xor
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[VEC2]] neg_lo:[0,0,1]{{$}}
-define amdgpu_kernel void @fma_vector_vector_blend_vector_neg_vector_1(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @fma_vector_vector_blend_vector_neg_vector_1(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %lds.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 2
@@ -520,7 +520,7 @@ bb:
 ; GCN-NOT: xor
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[VEC2]] neg_hi:[0,0,1]{{$}}
-define amdgpu_kernel void @fma_vector_vector_blend_vector_neg_vector_2(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @fma_vector_vector_blend_vector_neg_vector_2(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %lds.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 2
@@ -548,7 +548,7 @@ bb:
 ; GCN-NOT: xor
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[VEC2]] op_sel:[0,0,1] neg_lo:[0,0,1]{{$}}
-define amdgpu_kernel void @fma_vector_vector_blend_vector_neg_vector_3(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @fma_vector_vector_blend_vector_neg_vector_3(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %lds.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 2
@@ -566,7 +566,7 @@ bb:
 
 ; GCN-LABEL: {{^}}bitcast_fneg_f32:
 ; GCN: v_pk_add_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+$}}
-define amdgpu_kernel void @bitcast_fneg_f32(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @bitcast_fneg_f32(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %vec0 = load volatile <2 x half>, ptr addrspace(3) %lds, align 4
   %f32 = load volatile float, ptr addrspace(3) undef, align 4
@@ -580,7 +580,7 @@ bb:
 
 ; GCN-LABEL: {{^}}shuffle_bitcast_fneg_f32:
 ; GCN: v_pk_add_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} op_sel:[0,1] op_sel_hi:[1,0]{{$}}
-define amdgpu_kernel void @shuffle_bitcast_fneg_f32(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @shuffle_bitcast_fneg_f32(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %vec0 = load volatile <2 x half>, ptr addrspace(3) %lds, align 4
 
@@ -596,7 +596,7 @@ bb:
 ; GCN-LABEL: {{^}}extract_from_i64:
 ; GCN: v_lshl_or_b32
 ; GCN: v_pk_add_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+$}}
-define amdgpu_kernel void @extract_from_i64(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @extract_from_i64(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %vec0 = load volatile <2 x i16>, ptr addrspace(3) %lds, align 4
   %i64 = load volatile i64, ptr addrspace(1) undef
@@ -626,7 +626,7 @@ bb:
 
 ; GCN: v_pk_add_f16 [[FADD:v[0-9]+]]
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[FADD]] op_sel:[0,0,1] op_sel_hi:[1,1,0]{{$}}
-define amdgpu_kernel void @bitcast_lo_elt_op_sel(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @bitcast_lo_elt_op_sel(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %lds.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 2
@@ -661,7 +661,7 @@ bb:
 
 ; GCN: v_pk_add_f16 [[FADD:v[0-9]+]]
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[FADD]] op_sel:[0,0,1] op_sel_hi:[1,1,0]{{$}}
-define amdgpu_kernel void @mix_elt_types_op_sel(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @mix_elt_types_op_sel(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
   %lds.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 2
@@ -685,7 +685,4 @@ bb:
   ret void
 }
 
-declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>) nounwind readnone

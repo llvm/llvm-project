@@ -12,8 +12,6 @@ entry:
   ret void
 }
 
-attributes #3 = { nounwind }
-
 !opencl.kernels = !{!0}
 
 !0 = !{ptr @kernel, !1, !2, !3, !4, !5}

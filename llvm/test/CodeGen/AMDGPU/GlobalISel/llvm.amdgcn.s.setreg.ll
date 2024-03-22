@@ -1476,6 +1476,4 @@ define void @test_setreg_roundingmode_var_vgpr(i32 %var.mode) {
   ret void
 }
 
-declare void @llvm.amdgcn.s.setreg(i32 immarg, i32) #0
-
-attributes #0 = { nounwind }
+declare void @llvm.amdgcn.s.setreg(i32 immarg, i32) nounwind

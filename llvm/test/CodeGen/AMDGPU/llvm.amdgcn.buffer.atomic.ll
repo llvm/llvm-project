@@ -184,26 +184,24 @@ main_body:
   ret float %v.float
 }
 
-declare i32 @llvm.amdgcn.buffer.atomic.swap.i32(i32, <4 x i32>, i32, i32, i1) #0
-declare i32 @llvm.amdgcn.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i1) #0
-declare i32 @llvm.amdgcn.buffer.atomic.sub.i32(i32, <4 x i32>, i32, i32, i1) #0
-declare i32 @llvm.amdgcn.buffer.atomic.smin.i32(i32, <4 x i32>, i32, i32, i1) #0
-declare i32 @llvm.amdgcn.buffer.atomic.umin.i32(i32, <4 x i32>, i32, i32, i1) #0
-declare i32 @llvm.amdgcn.buffer.atomic.smax.i32(i32, <4 x i32>, i32, i32, i1) #0
-declare i32 @llvm.amdgcn.buffer.atomic.umax.i32(i32, <4 x i32>, i32, i32, i1) #0
-declare i32 @llvm.amdgcn.buffer.atomic.and.i32(i32, <4 x i32>, i32, i32, i1) #0
-declare i32 @llvm.amdgcn.buffer.atomic.or.i32(i32, <4 x i32>, i32, i32, i1) #0
-declare i32 @llvm.amdgcn.buffer.atomic.xor.i32(i32, <4 x i32>, i32, i32, i1) #0
-declare i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32, i32, <4 x i32>, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.buffer.atomic.swap.i64(i64, <4 x i32>, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.buffer.atomic.add.i64(i64, <4 x i32>, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.buffer.atomic.sub.i64(i64, <4 x i32>, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.buffer.atomic.smin.i64(i64, <4 x i32>, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.buffer.atomic.umin.i64(i64, <4 x i32>, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.buffer.atomic.smax.i64(i64, <4 x i32>, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.buffer.atomic.umax.i64(i64, <4 x i32>, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.buffer.atomic.and.i64(i64, <4 x i32>, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.buffer.atomic.or.i64(i64, <4 x i32>, i32, i32, i1) #0
-declare i64 @llvm.amdgcn.buffer.atomic.xor.i64(i64, <4 x i32>, i32, i32, i1) #0
-
-attributes #0 = { nounwind }
+declare i32 @llvm.amdgcn.buffer.atomic.swap.i32(i32, <4 x i32>, i32, i32, i1) nounwind
+declare i32 @llvm.amdgcn.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i1) nounwind
+declare i32 @llvm.amdgcn.buffer.atomic.sub.i32(i32, <4 x i32>, i32, i32, i1) nounwind
+declare i32 @llvm.amdgcn.buffer.atomic.smin.i32(i32, <4 x i32>, i32, i32, i1) nounwind
+declare i32 @llvm.amdgcn.buffer.atomic.umin.i32(i32, <4 x i32>, i32, i32, i1) nounwind
+declare i32 @llvm.amdgcn.buffer.atomic.smax.i32(i32, <4 x i32>, i32, i32, i1) nounwind
+declare i32 @llvm.amdgcn.buffer.atomic.umax.i32(i32, <4 x i32>, i32, i32, i1) nounwind
+declare i32 @llvm.amdgcn.buffer.atomic.and.i32(i32, <4 x i32>, i32, i32, i1) nounwind
+declare i32 @llvm.amdgcn.buffer.atomic.or.i32(i32, <4 x i32>, i32, i32, i1) nounwind
+declare i32 @llvm.amdgcn.buffer.atomic.xor.i32(i32, <4 x i32>, i32, i32, i1) nounwind
+declare i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32, i32, <4 x i32>, i32, i32, i1) nounwind
+declare i64 @llvm.amdgcn.buffer.atomic.swap.i64(i64, <4 x i32>, i32, i32, i1) nounwind
+declare i64 @llvm.amdgcn.buffer.atomic.add.i64(i64, <4 x i32>, i32, i32, i1) nounwind
+declare i64 @llvm.amdgcn.buffer.atomic.sub.i64(i64, <4 x i32>, i32, i32, i1) nounwind
+declare i64 @llvm.amdgcn.buffer.atomic.smin.i64(i64, <4 x i32>, i32, i32, i1) nounwind
+declare i64 @llvm.amdgcn.buffer.atomic.umin.i64(i64, <4 x i32>, i32, i32, i1) nounwind
+declare i64 @llvm.amdgcn.buffer.atomic.smax.i64(i64, <4 x i32>, i32, i32, i1) nounwind
+declare i64 @llvm.amdgcn.buffer.atomic.umax.i64(i64, <4 x i32>, i32, i32, i1) nounwind
+declare i64 @llvm.amdgcn.buffer.atomic.and.i64(i64, <4 x i32>, i32, i32, i1) nounwind
+declare i64 @llvm.amdgcn.buffer.atomic.or.i64(i64, <4 x i32>, i32, i32, i1) nounwind
+declare i64 @llvm.amdgcn.buffer.atomic.xor.i64(i64, <4 x i32>, i32, i32, i1) nounwind

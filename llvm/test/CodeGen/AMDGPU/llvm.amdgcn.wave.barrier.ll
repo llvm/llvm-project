@@ -4,9 +4,9 @@
 ; GCN-DAG: ; wave barrier
 ; GCN-NOT: s_barrier
 
-define amdgpu_kernel void @test_wave_barrier() #0 {
+define amdgpu_kernel void @test_wave_barrier() nounwind {
 entry:
-  call void @llvm.amdgcn.wave.barrier() #1
+  call void @llvm.amdgcn.wave.barrier() convergent nounwind
   ret void
 }
 
@@ -16,13 +16,10 @@ entry:
 ; GCN-LABEL: {{^}}test_wave_barrier_is_not_isBarrier:
 ; GCN-DAG: ; wave barrier
 ; GCN-NOT: s_barrier
-define amdgpu_kernel void @test_wave_barrier_is_not_isBarrier() #0 {
+define amdgpu_kernel void @test_wave_barrier_is_not_isBarrier() nounwind {
 entry:
-  call void @llvm.amdgcn.wave.barrier() #1
+  call void @llvm.amdgcn.wave.barrier() convergent nounwind
   unreachable
 }
 
-declare void @llvm.amdgcn.wave.barrier() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { convergent nounwind }
+declare void @llvm.amdgcn.wave.barrier() convergent nounwind

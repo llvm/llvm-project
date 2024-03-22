@@ -18,7 +18,7 @@
 
 ; GCN: .LBB0_3:
 ; GCN-NEXT: s_endpgm
-define amdgpu_kernel void @copy_local_to_global_loop_m0_init(ptr addrspace(1) noalias nocapture %out, ptr addrspace(3) noalias nocapture readonly %in, i32 %n) #0 {
+define amdgpu_kernel void @copy_local_to_global_loop_m0_init(ptr addrspace(1) noalias nocapture %out, ptr addrspace(3) noalias nocapture readonly %in, i32 %n) nounwind {
 bb:
   %tmp = icmp sgt i32 %n, 0
   br i1 %tmp, label %.lr.ph.preheader, label %._crit_edge
@@ -45,5 +45,3 @@ bb:
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %._crit_edge.loopexit, label %.lr.ph
 }
-
-attributes #0 = { nounwind }

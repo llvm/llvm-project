@@ -2,13 +2,13 @@
 
 %struct.wombat = type { [4 x i32], [4 x i32], [4 x i32] }
 
-define amdgpu_kernel void @wobble(ptr addrspace(1) nocapture readonly %arg) #0 !dbg !4 {
+define amdgpu_kernel void @wobble(ptr addrspace(1) nocapture readonly %arg) convergent nounwind "target-cpu"="gfx900" !dbg !4 {
 bb:
   %tmp = load i32, ptr addrspace(1) undef, align 4
   %tmp1 = load <4 x float>, ptr addrspace(1) undef, align 16
   %tmp2 = sext i32 %tmp to i64
   %tmp3 = shufflevector <4 x float> undef, <4 x float> %tmp1, <2 x i32> <i32 3, i32 7>
-  %tmp4 = call float @barney() #2
+  %tmp4 = call float @barney() nounwind
   %tmp9 = getelementptr inbounds %struct.wombat, ptr addrspace(1) %arg, i64 %tmp2, i32 2, i64 0
   %tmp10 = load i32, ptr addrspace(1) %tmp9, align 4
   %tmp11 = sext i32 %tmp10 to i64
@@ -68,26 +68,22 @@ bb28:                                             ; preds = %bb25, %bb21
   ; CHECK-NOT: ;DEBUG_VALUE:
   ; CHECK: ;DEBUG_VALUE: foo:var <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef]
   ; CHECK-NOT: ;DEBUG_VALUE:
-  call void @llvm.dbg.value(metadata <4 x float> %tmp29, metadata !3, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !5
+  call void @llvm.dbg.value(metadata <4 x float> %tmp29, metadata !3, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) nounwind, !dbg !5
   %tmp59 = bitcast i64 %tmp35 to <2 x float>
   %tmp60 = insertelement <2 x float> undef, float %tmp58, i32 0
   %tmp61 = shufflevector <2 x float> %tmp60, <2 x float> undef, <2 x i32> zeroinitializer
   %tmp62 = fmul <2 x float> %tmp61, undef
   %tmp63 = fsub <2 x float> %tmp62, %tmp59
   %tmp64 = extractelement <2 x float> %tmp63, i64 0
-  call void @eggs(float %tmp64) #2
+  call void @eggs(float %tmp64) nounwind
   store <2 x float> %tmp3, ptr addrspace(1) undef, align 8
   store float 0.000000e+00, ptr addrspace(1) undef, align 4
   ret void
 }
 
-declare float @barney() #2
-declare void @eggs(float) #2
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { convergent nounwind "target-cpu"="gfx900" }
-attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { nounwind }
+declare float @barney() nounwind
+declare void @eggs(float) nounwind
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone speculatable
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}

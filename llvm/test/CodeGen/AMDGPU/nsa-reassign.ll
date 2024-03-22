@@ -23,7 +23,7 @@ main_body:
 ; GCN-LABEL: {{^}}sample_contig_nsa_10vgprs:
 ; GCN-DAG: image_sample_c_l v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}],
 ; GCN-DAG: image_sample v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}],
-define amdgpu_ps <2 x float> @sample_contig_nsa_10vgprs(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s1, float %t1, float %r1, float %lod, float %r2, float %s2, float %t2) #0 {
+define amdgpu_ps <2 x float> @sample_contig_nsa_10vgprs(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s1, float %t1, float %r1, float %lod, float %r2, float %s2, float %t2) "amdgpu-num-vgpr"="10" {
 main_body:
   %zcompare.1 = fadd float %zcompare, 1.0
   %s1.1 = fadd float %s1, 1.0
@@ -98,5 +98,3 @@ main_body:
 
 declare float @llvm.amdgcn.image.sample.3d.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
 declare float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
-
-attributes #0 = {"amdgpu-num-vgpr"="10"}

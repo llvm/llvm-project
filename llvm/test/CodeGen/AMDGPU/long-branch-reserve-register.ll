@@ -6,12 +6,12 @@
 
 ; Used to emit an always 4 byte instruction. Inline asm always assumes
 ; each instruction is the maximum size.
-declare void @llvm.amdgcn.s.sleep(i32) #0
+declare void @llvm.amdgcn.s.sleep(i32) nounwind
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 
-define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addrspace(1) %arg, i32 %cnd) #0 {
+define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addrspace(1) %arg, i32 %cnd) nounwind {
 ; GCN-LABEL: uniform_conditional_max_short_forward_branch:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -43,7 +43,7 @@ bb2:
   call void asm sideeffect
   "v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   call void @llvm.amdgcn.s.sleep(i32 0)
   br label %bb3
 
@@ -52,7 +52,7 @@ bb3:
   ret void
 }
 
-define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrspace(1) %arg, i32 %cnd) #0 {
+define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrspace(1) %arg, i32 %cnd) nounwind {
 ; GCN-LABEL: uniform_conditional_min_long_forward_branch:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -91,7 +91,7 @@ bb2:
   "v_nop_e64
   v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   br label %bb3
 
 bb3:
@@ -99,7 +99,7 @@ bb3:
   ret void
 }
 
-define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr addrspace(1) %arg, float %cnd) #0 {
+define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr addrspace(1) %arg, float %cnd) nounwind {
 ; GCN-LABEL: uniform_conditional_min_long_forward_vcnd_branch:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -139,7 +139,7 @@ bb2:
   v_nop_e64
   v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   br label %bb3
 
 bb3:
@@ -147,7 +147,7 @@ bb3:
   ret void
 }
 
-define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) nounwind {
 ; GCN-LABEL: min_long_forward_vbranch:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -198,7 +198,7 @@ bb2:
   v_nop_e64
   v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   br label %bb3
 
 bb3:
@@ -206,7 +206,7 @@ bb3:
   ret void
 }
 
-define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) nounwind {
 ; GCN-LABEL: long_backward_sbranch:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_mov_b32 s0, 0
@@ -239,7 +239,7 @@ bb2:
   call void asm sideeffect
   "v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   %inc = add nsw i32 %loop.idx, 1 ; add cost 4
   %cmp = icmp slt i32 %inc, 10 ; condition cost = 8
   br i1 %cmp, label %bb2, label %bb3 ; -
@@ -319,13 +319,10 @@ bb3:
   "v_nop_e64
   v_nop_e64
   v_nop_e64
-  v_nop_e64", ""() #0
+  v_nop_e64", ""() nounwind
   br label %bb4
 
 bb4:
   store volatile i32 63, ptr addrspace(1) %arg
   ret void
 }
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }

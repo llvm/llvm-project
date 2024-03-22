@@ -13,7 +13,7 @@
 ; GCN: ds_read_b32
 
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @load_f32_local(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @load_f32_local(ptr addrspace(1) %out, ptr addrspace(3) %in) nounwind {
 entry:
   %tmp0 = load float, ptr addrspace(3) %in
   store float %tmp0, ptr addrspace(1) %out
@@ -28,7 +28,7 @@ entry:
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @load_v2f32_local(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @load_v2f32_local(ptr addrspace(1) %out, ptr addrspace(3) %in) nounwind {
 entry:
   %tmp0 = load <2 x float>, ptr addrspace(3) %in
   store <2 x float> %tmp0, ptr addrspace(1) %out
@@ -51,7 +51,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_load_v3f32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_load_v3f32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
 entry:
   %tmp0 = load <3 x float>, ptr addrspace(3) %in
   store <3 x float> %tmp0, ptr addrspace(3) %out
@@ -68,7 +68,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_load_v4f32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_load_v4f32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
 entry:
   %tmp0 = load <4 x float>, ptr addrspace(3) %in
   store <4 x float> %tmp0, ptr addrspace(3) %out
@@ -90,7 +90,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_load_v8f32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_load_v8f32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
 entry:
   %tmp0 = load <8 x float>, ptr addrspace(3) %in
   store <8 x float> %tmp0, ptr addrspace(3) %out
@@ -122,7 +122,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_load_v16f32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @local_load_v16f32(ptr addrspace(3) %out, ptr addrspace(3) %in) nounwind {
 entry:
   %tmp0 = load <16 x float>, ptr addrspace(3) %in
   store <16 x float> %tmp0, ptr addrspace(3) %out
@@ -147,5 +147,3 @@ define amdgpu_kernel void @local_v4f32_to_128(ptr addrspace(3) %out, ptr addrspa
   store <4 x float> %ld, ptr addrspace(3) %out, align 16
   ret void
 }
-
-attributes #0 = { nounwind }

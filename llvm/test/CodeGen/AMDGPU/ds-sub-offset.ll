@@ -4,11 +4,11 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 @lds.obj = addrspace(3) global [256 x i32] undef, align 4
 
-define amdgpu_kernel void @write_ds_sub0_offset0_global() #0 {
+define amdgpu_kernel void @write_ds_sub0_offset0_global() nounwind readnone {
 ; CI-LABEL: write_ds_sub0_offset0_global:
 ; CI:       ; %bb.0: ; %entry
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -42,7 +42,7 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global() #0 {
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:12
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() nounwind
   %sub1 = sub i32 0, %x.i
   %tmp0 = getelementptr [256 x i32], ptr addrspace(3) @lds.obj, i32 0, i32 %sub1
   %arrayidx = getelementptr inbounds i32, ptr addrspace(3) %tmp0, i32 3
@@ -50,7 +50,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.val) #0 {
+define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.val) nounwind readnone {
 ; CI-LABEL: write_ds_sub0_offset0_global_clamp_bit:
 ; CI:       ; %bb.0: ; %entry
 ; CI-NEXT:    s_load_dword s0, s[0:1], 0x0
@@ -122,7 +122,7 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() nounwind
   %sub1 = sub i32 0, %x.i
   %tmp0 = getelementptr [256 x i32], ptr addrspace(3) @lds.obj, i32 0, i32 %sub1
   %arrayidx = getelementptr inbounds i32, ptr addrspace(3) %tmp0, i32 3
@@ -132,7 +132,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy.val) #0 {
+define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy.val) nounwind readnone {
 ; CI-LABEL: write_ds_sub_max_offset_global_clamp_bit:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[0:1], 0x0
@@ -198,7 +198,7 @@ define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() nounwind
   %sub1 = sub i32 -1, %x.i
   %tmp0 = getelementptr [256 x i32], ptr addrspace(3) @lds.obj, i32 0, i32 %sub1
   %arrayidx = getelementptr inbounds i32, ptr addrspace(3) %tmp0, i32 16383
@@ -208,7 +208,7 @@ define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy
   ret void
 }
 
-define amdgpu_kernel void @add_x_shl_max_offset() #1 {
+define amdgpu_kernel void @add_x_shl_max_offset() nounwind {
 ; CI-LABEL: add_x_shl_max_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
@@ -247,7 +247,7 @@ define amdgpu_kernel void @add_x_shl_max_offset() #1 {
 
 ; this could have the offset transform, but sub became xor
 
-define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_alt() #1 {
+define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_alt() nounwind {
 ; CI-LABEL: add_x_shl_neg_to_sub_max_offset_alt:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -291,7 +291,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_alt() #1 {
 
 ; this could have the offset transform, but sub became xor
 
-define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_not_canonical() #1 {
+define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_not_canonical() nounwind {
 ; CI-LABEL: add_x_shl_neg_to_sub_max_offset_not_canonical:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -324,7 +324,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_not_canonical() #1 {
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
 ; GFX11-NEXT:    ds_store_b8 v0, v1
 ; GFX11-NEXT:    s_endpgm
-  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 65535, %shl
@@ -333,7 +333,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_not_canonical() #1 {
   ret void
 }
 
-define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_p1() #1 {
+define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_p1() nounwind {
 ; CI-LABEL: add_x_shl_neg_to_sub_max_offset_p1:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -366,7 +366,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_p1() #1 {
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0x10000, v0
 ; GFX11-NEXT:    ds_store_b8 v0, v1
 ; GFX11-NEXT:    s_endpgm
-  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 65536, %shl
@@ -375,7 +375,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_p1() #1 {
   ret void
 }
 
-define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use() #1 {
+define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use() nounwind {
 ; CI-LABEL: add_x_shl_neg_to_sub_multi_use:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -412,7 +412,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use() #1 {
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:123
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:456
 ; GFX11-NEXT:    s_endpgm
-  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add0 = add i32 123, %shl
@@ -424,7 +424,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use() #1 {
   ret void
 }
 
-define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use_same_offset() #1 {
+define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use_same_offset() nounwind {
 ; CI-LABEL: add_x_shl_neg_to_sub_multi_use_same_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -461,7 +461,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use_same_offset() #1 {
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:123
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:123
 ; GFX11-NEXT:    s_endpgm
-  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 123, %shl
@@ -471,7 +471,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use_same_offset() #1 {
   ret void
 }
 
-define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset() #1 {
+define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset() nounwind {
 ; CI-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -509,7 +509,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset() #1 {
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0x3fb, v0
 ; GFX11-NEXT:    ds_store_2addr_b32 v0, v1, v2 offset1:1
 ; GFX11-NEXT:    s_endpgm
-  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 1019, %shl
@@ -518,7 +518,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset() #1 {
   ret void
 }
 
-define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit(float %dummy.val) #1 {
+define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit(float %dummy.val) nounwind {
 ; CI-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[0:1], 0x0
@@ -594,7 +594,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 1019, %shl
@@ -605,7 +605,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
   ret void
 }
 
-define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_p1() #1 {
+define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_p1() nounwind {
 ; CI-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset_p1:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -643,7 +643,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_p1() #
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0x3fc, v0
 ; GFX11-NEXT:    ds_store_2addr_b32 v0, v1, v2 offset1:1
 ; GFX11-NEXT:    s_endpgm
-  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 1020, %shl
@@ -653,7 +653,3 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_p1() #
 }
 
 declare float @llvm.amdgcn.div.fmas.f32(float, float, float, i1)
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind convergent }

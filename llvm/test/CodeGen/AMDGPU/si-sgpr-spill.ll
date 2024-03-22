@@ -108,104 +108,104 @@ main_body:
   %j.i = extractelement <2 x i32> %arg6, i32 1
   %i.f.i = bitcast i32 %i.i to float
   %j.f.i = bitcast i32 %j.i to float
-  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 0, i32 0, i32 %arg4) #0
-  %p2.i = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 0, i32 0, i32 %arg4) #0
+  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 0, i32 0, i32 %arg4) nounwind
+  %p2.i = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 0, i32 0, i32 %arg4) nounwind
   %i.i91 = extractelement <2 x i32> %arg6, i32 0
   %j.i92 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i93 = bitcast i32 %i.i91 to float
   %j.f.i94 = bitcast i32 %j.i92 to float
-  %p1.i95 = call float @llvm.amdgcn.interp.p1(float %i.f.i93, i32 1, i32 0, i32 %arg4) #0
-  %p2.i96 = call float @llvm.amdgcn.interp.p2(float %p1.i95, float %j.f.i94, i32 1, i32 0, i32 %arg4) #0
+  %p1.i95 = call float @llvm.amdgcn.interp.p1(float %i.f.i93, i32 1, i32 0, i32 %arg4) nounwind
+  %p2.i96 = call float @llvm.amdgcn.interp.p2(float %p1.i95, float %j.f.i94, i32 1, i32 0, i32 %arg4) nounwind
   %i.i85 = extractelement <2 x i32> %arg6, i32 0
   %j.i86 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i87 = bitcast i32 %i.i85 to float
   %j.f.i88 = bitcast i32 %j.i86 to float
-  %p1.i89 = call float @llvm.amdgcn.interp.p1(float %i.f.i87, i32 0, i32 1, i32 %arg4) #0
-  %p2.i90 = call float @llvm.amdgcn.interp.p2(float %p1.i89, float %j.f.i88, i32 0, i32 1, i32 %arg4) #0
+  %p1.i89 = call float @llvm.amdgcn.interp.p1(float %i.f.i87, i32 0, i32 1, i32 %arg4) nounwind
+  %p2.i90 = call float @llvm.amdgcn.interp.p2(float %p1.i89, float %j.f.i88, i32 0, i32 1, i32 %arg4) nounwind
   %i.i79 = extractelement <2 x i32> %arg6, i32 0
   %j.i80 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i81 = bitcast i32 %i.i79 to float
   %j.f.i82 = bitcast i32 %j.i80 to float
-  %p1.i83 = call float @llvm.amdgcn.interp.p1(float %i.f.i81, i32 1, i32 1, i32 %arg4) #0
-  %p2.i84 = call float @llvm.amdgcn.interp.p2(float %p1.i83, float %j.f.i82, i32 1, i32 1, i32 %arg4) #0
+  %p1.i83 = call float @llvm.amdgcn.interp.p1(float %i.f.i81, i32 1, i32 1, i32 %arg4) nounwind
+  %p2.i84 = call float @llvm.amdgcn.interp.p2(float %p1.i83, float %j.f.i82, i32 1, i32 1, i32 %arg4) nounwind
   %i.i73 = extractelement <2 x i32> %arg6, i32 0
   %j.i74 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i75 = bitcast i32 %i.i73 to float
   %j.f.i76 = bitcast i32 %j.i74 to float
-  %p1.i77 = call float @llvm.amdgcn.interp.p1(float %i.f.i75, i32 2, i32 1, i32 %arg4) #0
-  %p2.i78 = call float @llvm.amdgcn.interp.p2(float %p1.i77, float %j.f.i76, i32 2, i32 1, i32 %arg4) #0
+  %p1.i77 = call float @llvm.amdgcn.interp.p1(float %i.f.i75, i32 2, i32 1, i32 %arg4) nounwind
+  %p2.i78 = call float @llvm.amdgcn.interp.p2(float %p1.i77, float %j.f.i76, i32 2, i32 1, i32 %arg4) nounwind
   %i.i67 = extractelement <2 x i32> %arg6, i32 0
   %j.i68 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i69 = bitcast i32 %i.i67 to float
   %j.f.i70 = bitcast i32 %j.i68 to float
-  %p1.i71 = call float @llvm.amdgcn.interp.p1(float %i.f.i69, i32 0, i32 2, i32 %arg4) #0
-  %p2.i72 = call float @llvm.amdgcn.interp.p2(float %p1.i71, float %j.f.i70, i32 0, i32 2, i32 %arg4) #0
+  %p1.i71 = call float @llvm.amdgcn.interp.p1(float %i.f.i69, i32 0, i32 2, i32 %arg4) nounwind
+  %p2.i72 = call float @llvm.amdgcn.interp.p2(float %p1.i71, float %j.f.i70, i32 0, i32 2, i32 %arg4) nounwind
   %i.i61 = extractelement <2 x i32> %arg6, i32 0
   %j.i62 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i63 = bitcast i32 %i.i61 to float
   %j.f.i64 = bitcast i32 %j.i62 to float
-  %p1.i65 = call float @llvm.amdgcn.interp.p1(float %i.f.i63, i32 1, i32 2, i32 %arg4) #0
-  %p2.i66 = call float @llvm.amdgcn.interp.p2(float %p1.i65, float %j.f.i64, i32 1, i32 2, i32 %arg4) #0
+  %p1.i65 = call float @llvm.amdgcn.interp.p1(float %i.f.i63, i32 1, i32 2, i32 %arg4) nounwind
+  %p2.i66 = call float @llvm.amdgcn.interp.p2(float %p1.i65, float %j.f.i64, i32 1, i32 2, i32 %arg4) nounwind
   %i.i55 = extractelement <2 x i32> %arg6, i32 0
   %j.i56 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i57 = bitcast i32 %i.i55 to float
   %j.f.i58 = bitcast i32 %j.i56 to float
-  %p1.i59 = call float @llvm.amdgcn.interp.p1(float %i.f.i57, i32 2, i32 2, i32 %arg4) #0
-  %p2.i60 = call float @llvm.amdgcn.interp.p2(float %p1.i59, float %j.f.i58, i32 2, i32 2, i32 %arg4) #0
+  %p1.i59 = call float @llvm.amdgcn.interp.p1(float %i.f.i57, i32 2, i32 2, i32 %arg4) nounwind
+  %p2.i60 = call float @llvm.amdgcn.interp.p2(float %p1.i59, float %j.f.i58, i32 2, i32 2, i32 %arg4) nounwind
   %i.i49 = extractelement <2 x i32> %arg6, i32 0
   %j.i50 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i51 = bitcast i32 %i.i49 to float
   %j.f.i52 = bitcast i32 %j.i50 to float
-  %p1.i53 = call float @llvm.amdgcn.interp.p1(float %i.f.i51, i32 0, i32 3, i32 %arg4) #0
-  %p2.i54 = call float @llvm.amdgcn.interp.p2(float %p1.i53, float %j.f.i52, i32 0, i32 3, i32 %arg4) #0
+  %p1.i53 = call float @llvm.amdgcn.interp.p1(float %i.f.i51, i32 0, i32 3, i32 %arg4) nounwind
+  %p2.i54 = call float @llvm.amdgcn.interp.p2(float %p1.i53, float %j.f.i52, i32 0, i32 3, i32 %arg4) nounwind
   %i.i43 = extractelement <2 x i32> %arg6, i32 0
   %j.i44 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i45 = bitcast i32 %i.i43 to float
   %j.f.i46 = bitcast i32 %j.i44 to float
-  %p1.i47 = call float @llvm.amdgcn.interp.p1(float %i.f.i45, i32 1, i32 3, i32 %arg4) #0
-  %p2.i48 = call float @llvm.amdgcn.interp.p2(float %p1.i47, float %j.f.i46, i32 1, i32 3, i32 %arg4) #0
+  %p1.i47 = call float @llvm.amdgcn.interp.p1(float %i.f.i45, i32 1, i32 3, i32 %arg4) nounwind
+  %p2.i48 = call float @llvm.amdgcn.interp.p2(float %p1.i47, float %j.f.i46, i32 1, i32 3, i32 %arg4) nounwind
   %i.i37 = extractelement <2 x i32> %arg6, i32 0
   %j.i38 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i39 = bitcast i32 %i.i37 to float
   %j.f.i40 = bitcast i32 %j.i38 to float
-  %p1.i41 = call float @llvm.amdgcn.interp.p1(float %i.f.i39, i32 2, i32 3, i32 %arg4) #0
-  %p2.i42 = call float @llvm.amdgcn.interp.p2(float %p1.i41, float %j.f.i40, i32 2, i32 3, i32 %arg4) #0
+  %p1.i41 = call float @llvm.amdgcn.interp.p1(float %i.f.i39, i32 2, i32 3, i32 %arg4) nounwind
+  %p2.i42 = call float @llvm.amdgcn.interp.p2(float %p1.i41, float %j.f.i40, i32 2, i32 3, i32 %arg4) nounwind
   %i.i31 = extractelement <2 x i32> %arg6, i32 0
   %j.i32 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i33 = bitcast i32 %i.i31 to float
   %j.f.i34 = bitcast i32 %j.i32 to float
-  %p1.i35 = call float @llvm.amdgcn.interp.p1(float %i.f.i33, i32 0, i32 4, i32 %arg4) #0
-  %p2.i36 = call float @llvm.amdgcn.interp.p2(float %p1.i35, float %j.f.i34, i32 0, i32 4, i32 %arg4) #0
+  %p1.i35 = call float @llvm.amdgcn.interp.p1(float %i.f.i33, i32 0, i32 4, i32 %arg4) nounwind
+  %p2.i36 = call float @llvm.amdgcn.interp.p2(float %p1.i35, float %j.f.i34, i32 0, i32 4, i32 %arg4) nounwind
   %i.i25 = extractelement <2 x i32> %arg6, i32 0
   %j.i26 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i27 = bitcast i32 %i.i25 to float
   %j.f.i28 = bitcast i32 %j.i26 to float
-  %p1.i29 = call float @llvm.amdgcn.interp.p1(float %i.f.i27, i32 1, i32 4, i32 %arg4) #0
-  %p2.i30 = call float @llvm.amdgcn.interp.p2(float %p1.i29, float %j.f.i28, i32 1, i32 4, i32 %arg4) #0
+  %p1.i29 = call float @llvm.amdgcn.interp.p1(float %i.f.i27, i32 1, i32 4, i32 %arg4) nounwind
+  %p2.i30 = call float @llvm.amdgcn.interp.p2(float %p1.i29, float %j.f.i28, i32 1, i32 4, i32 %arg4) nounwind
   %i.i19 = extractelement <2 x i32> %arg6, i32 0
   %j.i20 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i21 = bitcast i32 %i.i19 to float
   %j.f.i22 = bitcast i32 %j.i20 to float
-  %p1.i23 = call float @llvm.amdgcn.interp.p1(float %i.f.i21, i32 2, i32 4, i32 %arg4) #0
-  %p2.i24 = call float @llvm.amdgcn.interp.p2(float %p1.i23, float %j.f.i22, i32 2, i32 4, i32 %arg4) #0
+  %p1.i23 = call float @llvm.amdgcn.interp.p1(float %i.f.i21, i32 2, i32 4, i32 %arg4) nounwind
+  %p2.i24 = call float @llvm.amdgcn.interp.p2(float %p1.i23, float %j.f.i22, i32 2, i32 4, i32 %arg4) nounwind
   %i.i13 = extractelement <2 x i32> %arg6, i32 0
   %j.i14 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i15 = bitcast i32 %i.i13 to float
   %j.f.i16 = bitcast i32 %j.i14 to float
-  %p1.i17 = call float @llvm.amdgcn.interp.p1(float %i.f.i15, i32 0, i32 5, i32 %arg4) #0
-  %p2.i18 = call float @llvm.amdgcn.interp.p2(float %p1.i17, float %j.f.i16, i32 0, i32 5, i32 %arg4) #0
+  %p1.i17 = call float @llvm.amdgcn.interp.p1(float %i.f.i15, i32 0, i32 5, i32 %arg4) nounwind
+  %p2.i18 = call float @llvm.amdgcn.interp.p2(float %p1.i17, float %j.f.i16, i32 0, i32 5, i32 %arg4) nounwind
   %i.i7 = extractelement <2 x i32> %arg6, i32 0
   %j.i8 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i9 = bitcast i32 %i.i7 to float
   %j.f.i10 = bitcast i32 %j.i8 to float
-  %p1.i11 = call float @llvm.amdgcn.interp.p1(float %i.f.i9, i32 1, i32 5, i32 %arg4) #0
-  %p2.i12 = call float @llvm.amdgcn.interp.p2(float %p1.i11, float %j.f.i10, i32 1, i32 5, i32 %arg4) #0
+  %p1.i11 = call float @llvm.amdgcn.interp.p1(float %i.f.i9, i32 1, i32 5, i32 %arg4) nounwind
+  %p2.i12 = call float @llvm.amdgcn.interp.p2(float %p1.i11, float %j.f.i10, i32 1, i32 5, i32 %arg4) nounwind
   %i.i1 = extractelement <2 x i32> %arg6, i32 0
   %j.i2 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i3 = bitcast i32 %i.i1 to float
   %j.f.i4 = bitcast i32 %j.i2 to float
-  %p1.i5 = call float @llvm.amdgcn.interp.p1(float %i.f.i3, i32 2, i32 5, i32 %arg4) #0
-  %p2.i6 = call float @llvm.amdgcn.interp.p2(float %p1.i5, float %j.f.i4, i32 2, i32 5, i32 %arg4) #0
+  %p1.i5 = call float @llvm.amdgcn.interp.p1(float %i.f.i3, i32 2, i32 5, i32 %arg4) nounwind
+  %p2.i6 = call float @llvm.amdgcn.interp.p2(float %p1.i5, float %j.f.i4, i32 2, i32 5, i32 %arg4) nounwind
   %mbcnt.lo.0 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tmp109 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo.0)
   %tmp110 = getelementptr [64 x i32], ptr addrspace(3) %lds, i32 0, i32 %tmp109
@@ -518,7 +518,7 @@ IF67:                                             ; preds = %LOOP65
   %tmp461 = fmul float %tmp454, %tmp458
   %tmp462 = fadd float %tmp461, 1.500000e+00
   %tmp91.bc = bitcast <4 x i32> %tmp91 to <4 x i32>
-  %tmp470 = call <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32(i32 15, float %tmp462, float %tmp460, float %tmp456, <8 x i32> %tmp89, <4 x i32> %tmp91.bc, i1 0, i32 0, i32 0) #0
+  %tmp470 = call <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32(i32 15, float %tmp462, float %tmp460, float %tmp456, <8 x i32> %tmp89, <4 x i32> %tmp91.bc, i1 0, i32 0, i32 0) nounwind
   %tmp471 = extractelement <4 x float> %tmp470, i32 0
   %tmp472 = extractelement <4 x float> %tmp470, i32 1
   %tmp473 = extractelement <4 x float> %tmp470, i32 2
@@ -618,7 +618,7 @@ IF67:                                             ; preds = %LOOP65
   %tmp580 = fadd float %tmp579, %tmp556
   %tmp581 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp576, float %tmp578)
   %tmp583 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp580, float %tmp282)
-  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp581, <2 x half> %tmp583, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp581, <2 x half> %tmp583, i1 true, i1 true) nounwind
   ret void
 
 ENDIF66:                                          ; preds = %LOOP65
@@ -648,7 +648,7 @@ ENDIF66:                                          ; preds = %LOOP65
 ; GCN-LABEL: {{^}}main1:
 ; GCN: s_endpgm
 ; TOVGPR: ScratchSize: 0{{$}}
-define amdgpu_ps void @main1(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
+define amdgpu_ps void @main1(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) nounwind {
 main_body:
   %tmp21 = load <4 x i32>, ptr addrspace(4) %arg, !tbaa !0
   %tmp22 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 0, i32 0)
@@ -794,194 +794,194 @@ main_body:
   %j.i = extractelement <2 x i32> %arg6, i32 1
   %i.f.i = bitcast i32 %i.i to float
   %j.f.i = bitcast i32 %j.i to float
-  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 0, i32 0, i32 %arg4) #0
-  %p2.i = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 0, i32 0, i32 %arg4) #0
+  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 0, i32 0, i32 %arg4) nounwind
+  %p2.i = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 0, i32 0, i32 %arg4) nounwind
   %i.i181 = extractelement <2 x i32> %arg6, i32 0
   %j.i182 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i183 = bitcast i32 %i.i181 to float
   %j.f.i184 = bitcast i32 %j.i182 to float
-  %p1.i185 = call float @llvm.amdgcn.interp.p1(float %i.f.i183, i32 1, i32 0, i32 %arg4) #0
-  %p2.i186 = call float @llvm.amdgcn.interp.p2(float %p1.i185, float %j.f.i184, i32 1, i32 0, i32 %arg4) #0
+  %p1.i185 = call float @llvm.amdgcn.interp.p1(float %i.f.i183, i32 1, i32 0, i32 %arg4) nounwind
+  %p2.i186 = call float @llvm.amdgcn.interp.p2(float %p1.i185, float %j.f.i184, i32 1, i32 0, i32 %arg4) nounwind
   %i.i175 = extractelement <2 x i32> %arg6, i32 0
   %j.i176 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i177 = bitcast i32 %i.i175 to float
   %j.f.i178 = bitcast i32 %j.i176 to float
-  %p1.i179 = call float @llvm.amdgcn.interp.p1(float %i.f.i177, i32 2, i32 0, i32 %arg4) #0
-  %p2.i180 = call float @llvm.amdgcn.interp.p2(float %p1.i179, float %j.f.i178, i32 2, i32 0, i32 %arg4) #0
+  %p1.i179 = call float @llvm.amdgcn.interp.p1(float %i.f.i177, i32 2, i32 0, i32 %arg4) nounwind
+  %p2.i180 = call float @llvm.amdgcn.interp.p2(float %p1.i179, float %j.f.i178, i32 2, i32 0, i32 %arg4) nounwind
   %i.i169 = extractelement <2 x i32> %arg6, i32 0
   %j.i170 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i171 = bitcast i32 %i.i169 to float
   %j.f.i172 = bitcast i32 %j.i170 to float
-  %p1.i173 = call float @llvm.amdgcn.interp.p1(float %i.f.i171, i32 3, i32 0, i32 %arg4) #0
-  %p2.i174 = call float @llvm.amdgcn.interp.p2(float %p1.i173, float %j.f.i172, i32 3, i32 0, i32 %arg4) #0
+  %p1.i173 = call float @llvm.amdgcn.interp.p1(float %i.f.i171, i32 3, i32 0, i32 %arg4) nounwind
+  %p2.i174 = call float @llvm.amdgcn.interp.p2(float %p1.i173, float %j.f.i172, i32 3, i32 0, i32 %arg4) nounwind
   %i.i163 = extractelement <2 x i32> %arg6, i32 0
   %j.i164 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i165 = bitcast i32 %i.i163 to float
   %j.f.i166 = bitcast i32 %j.i164 to float
-  %p1.i167 = call float @llvm.amdgcn.interp.p1(float %i.f.i165, i32 0, i32 1, i32 %arg4) #0
-  %p2.i168 = call float @llvm.amdgcn.interp.p2(float %p1.i167, float %j.f.i166, i32 0, i32 1, i32 %arg4) #0
+  %p1.i167 = call float @llvm.amdgcn.interp.p1(float %i.f.i165, i32 0, i32 1, i32 %arg4) nounwind
+  %p2.i168 = call float @llvm.amdgcn.interp.p2(float %p1.i167, float %j.f.i166, i32 0, i32 1, i32 %arg4) nounwind
   %i.i157 = extractelement <2 x i32> %arg6, i32 0
   %j.i158 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i159 = bitcast i32 %i.i157 to float
   %j.f.i160 = bitcast i32 %j.i158 to float
-  %p1.i161 = call float @llvm.amdgcn.interp.p1(float %i.f.i159, i32 1, i32 1, i32 %arg4) #0
-  %p2.i162 = call float @llvm.amdgcn.interp.p2(float %p1.i161, float %j.f.i160, i32 1, i32 1, i32 %arg4) #0
+  %p1.i161 = call float @llvm.amdgcn.interp.p1(float %i.f.i159, i32 1, i32 1, i32 %arg4) nounwind
+  %p2.i162 = call float @llvm.amdgcn.interp.p2(float %p1.i161, float %j.f.i160, i32 1, i32 1, i32 %arg4) nounwind
   %i.i151 = extractelement <2 x i32> %arg6, i32 0
   %j.i152 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i153 = bitcast i32 %i.i151 to float
   %j.f.i154 = bitcast i32 %j.i152 to float
-  %p1.i155 = call float @llvm.amdgcn.interp.p1(float %i.f.i153, i32 2, i32 1, i32 %arg4) #0
-  %p2.i156 = call float @llvm.amdgcn.interp.p2(float %p1.i155, float %j.f.i154, i32 2, i32 1, i32 %arg4) #0
+  %p1.i155 = call float @llvm.amdgcn.interp.p1(float %i.f.i153, i32 2, i32 1, i32 %arg4) nounwind
+  %p2.i156 = call float @llvm.amdgcn.interp.p2(float %p1.i155, float %j.f.i154, i32 2, i32 1, i32 %arg4) nounwind
   %i.i145 = extractelement <2 x i32> %arg6, i32 0
   %j.i146 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i147 = bitcast i32 %i.i145 to float
   %j.f.i148 = bitcast i32 %j.i146 to float
-  %p1.i149 = call float @llvm.amdgcn.interp.p1(float %i.f.i147, i32 3, i32 1, i32 %arg4) #0
-  %p2.i150 = call float @llvm.amdgcn.interp.p2(float %p1.i149, float %j.f.i148, i32 3, i32 1, i32 %arg4) #0
+  %p1.i149 = call float @llvm.amdgcn.interp.p1(float %i.f.i147, i32 3, i32 1, i32 %arg4) nounwind
+  %p2.i150 = call float @llvm.amdgcn.interp.p2(float %p1.i149, float %j.f.i148, i32 3, i32 1, i32 %arg4) nounwind
   %i.i139 = extractelement <2 x i32> %arg6, i32 0
   %j.i140 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i141 = bitcast i32 %i.i139 to float
   %j.f.i142 = bitcast i32 %j.i140 to float
-  %p1.i143 = call float @llvm.amdgcn.interp.p1(float %i.f.i141, i32 0, i32 2, i32 %arg4) #0
-  %p2.i144 = call float @llvm.amdgcn.interp.p2(float %p1.i143, float %j.f.i142, i32 0, i32 2, i32 %arg4) #0
+  %p1.i143 = call float @llvm.amdgcn.interp.p1(float %i.f.i141, i32 0, i32 2, i32 %arg4) nounwind
+  %p2.i144 = call float @llvm.amdgcn.interp.p2(float %p1.i143, float %j.f.i142, i32 0, i32 2, i32 %arg4) nounwind
   %i.i133 = extractelement <2 x i32> %arg6, i32 0
   %j.i134 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i135 = bitcast i32 %i.i133 to float
   %j.f.i136 = bitcast i32 %j.i134 to float
-  %p1.i137 = call float @llvm.amdgcn.interp.p1(float %i.f.i135, i32 1, i32 2, i32 %arg4) #0
-  %p2.i138 = call float @llvm.amdgcn.interp.p2(float %p1.i137, float %j.f.i136, i32 1, i32 2, i32 %arg4) #0
+  %p1.i137 = call float @llvm.amdgcn.interp.p1(float %i.f.i135, i32 1, i32 2, i32 %arg4) nounwind
+  %p2.i138 = call float @llvm.amdgcn.interp.p2(float %p1.i137, float %j.f.i136, i32 1, i32 2, i32 %arg4) nounwind
   %i.i127 = extractelement <2 x i32> %arg6, i32 0
   %j.i128 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i129 = bitcast i32 %i.i127 to float
   %j.f.i130 = bitcast i32 %j.i128 to float
-  %p1.i131 = call float @llvm.amdgcn.interp.p1(float %i.f.i129, i32 2, i32 2, i32 %arg4) #0
-  %p2.i132 = call float @llvm.amdgcn.interp.p2(float %p1.i131, float %j.f.i130, i32 2, i32 2, i32 %arg4) #0
+  %p1.i131 = call float @llvm.amdgcn.interp.p1(float %i.f.i129, i32 2, i32 2, i32 %arg4) nounwind
+  %p2.i132 = call float @llvm.amdgcn.interp.p2(float %p1.i131, float %j.f.i130, i32 2, i32 2, i32 %arg4) nounwind
   %i.i121 = extractelement <2 x i32> %arg6, i32 0
   %j.i122 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i123 = bitcast i32 %i.i121 to float
   %j.f.i124 = bitcast i32 %j.i122 to float
-  %p1.i125 = call float @llvm.amdgcn.interp.p1(float %i.f.i123, i32 3, i32 2, i32 %arg4) #0
-  %p2.i126 = call float @llvm.amdgcn.interp.p2(float %p1.i125, float %j.f.i124, i32 3, i32 2, i32 %arg4) #0
+  %p1.i125 = call float @llvm.amdgcn.interp.p1(float %i.f.i123, i32 3, i32 2, i32 %arg4) nounwind
+  %p2.i126 = call float @llvm.amdgcn.interp.p2(float %p1.i125, float %j.f.i124, i32 3, i32 2, i32 %arg4) nounwind
   %i.i115 = extractelement <2 x i32> %arg6, i32 0
   %j.i116 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i117 = bitcast i32 %i.i115 to float
   %j.f.i118 = bitcast i32 %j.i116 to float
-  %p1.i119 = call float @llvm.amdgcn.interp.p1(float %i.f.i117, i32 0, i32 3, i32 %arg4) #0
-  %p2.i120 = call float @llvm.amdgcn.interp.p2(float %p1.i119, float %j.f.i118, i32 0, i32 3, i32 %arg4) #0
+  %p1.i119 = call float @llvm.amdgcn.interp.p1(float %i.f.i117, i32 0, i32 3, i32 %arg4) nounwind
+  %p2.i120 = call float @llvm.amdgcn.interp.p2(float %p1.i119, float %j.f.i118, i32 0, i32 3, i32 %arg4) nounwind
   %i.i109 = extractelement <2 x i32> %arg6, i32 0
   %j.i110 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i111 = bitcast i32 %i.i109 to float
   %j.f.i112 = bitcast i32 %j.i110 to float
-  %p1.i113 = call float @llvm.amdgcn.interp.p1(float %i.f.i111, i32 1, i32 3, i32 %arg4) #0
-  %p2.i114 = call float @llvm.amdgcn.interp.p2(float %p1.i113, float %j.f.i112, i32 1, i32 3, i32 %arg4) #0
+  %p1.i113 = call float @llvm.amdgcn.interp.p1(float %i.f.i111, i32 1, i32 3, i32 %arg4) nounwind
+  %p2.i114 = call float @llvm.amdgcn.interp.p2(float %p1.i113, float %j.f.i112, i32 1, i32 3, i32 %arg4) nounwind
   %i.i103 = extractelement <2 x i32> %arg6, i32 0
   %j.i104 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i105 = bitcast i32 %i.i103 to float
   %j.f.i106 = bitcast i32 %j.i104 to float
-  %p1.i107 = call float @llvm.amdgcn.interp.p1(float %i.f.i105, i32 2, i32 3, i32 %arg4) #0
-  %p2.i108 = call float @llvm.amdgcn.interp.p2(float %p1.i107, float %j.f.i106, i32 2, i32 3, i32 %arg4) #0
+  %p1.i107 = call float @llvm.amdgcn.interp.p1(float %i.f.i105, i32 2, i32 3, i32 %arg4) nounwind
+  %p2.i108 = call float @llvm.amdgcn.interp.p2(float %p1.i107, float %j.f.i106, i32 2, i32 3, i32 %arg4) nounwind
   %i.i97 = extractelement <2 x i32> %arg6, i32 0
   %j.i98 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i99 = bitcast i32 %i.i97 to float
   %j.f.i100 = bitcast i32 %j.i98 to float
-  %p1.i101 = call float @llvm.amdgcn.interp.p1(float %i.f.i99, i32 3, i32 3, i32 %arg4) #0
-  %p2.i102 = call float @llvm.amdgcn.interp.p2(float %p1.i101, float %j.f.i100, i32 3, i32 3, i32 %arg4) #0
+  %p1.i101 = call float @llvm.amdgcn.interp.p1(float %i.f.i99, i32 3, i32 3, i32 %arg4) nounwind
+  %p2.i102 = call float @llvm.amdgcn.interp.p2(float %p1.i101, float %j.f.i100, i32 3, i32 3, i32 %arg4) nounwind
   %i.i91 = extractelement <2 x i32> %arg6, i32 0
   %j.i92 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i93 = bitcast i32 %i.i91 to float
   %j.f.i94 = bitcast i32 %j.i92 to float
-  %p1.i95 = call float @llvm.amdgcn.interp.p1(float %i.f.i93, i32 0, i32 4, i32 %arg4) #0
-  %p2.i96 = call float @llvm.amdgcn.interp.p2(float %p1.i95, float %j.f.i94, i32 0, i32 4, i32 %arg4) #0
+  %p1.i95 = call float @llvm.amdgcn.interp.p1(float %i.f.i93, i32 0, i32 4, i32 %arg4) nounwind
+  %p2.i96 = call float @llvm.amdgcn.interp.p2(float %p1.i95, float %j.f.i94, i32 0, i32 4, i32 %arg4) nounwind
   %i.i85 = extractelement <2 x i32> %arg6, i32 0
   %j.i86 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i87 = bitcast i32 %i.i85 to float
   %j.f.i88 = bitcast i32 %j.i86 to float
-  %p1.i89 = call float @llvm.amdgcn.interp.p1(float %i.f.i87, i32 1, i32 4, i32 %arg4) #0
-  %p2.i90 = call float @llvm.amdgcn.interp.p2(float %p1.i89, float %j.f.i88, i32 1, i32 4, i32 %arg4) #0
+  %p1.i89 = call float @llvm.amdgcn.interp.p1(float %i.f.i87, i32 1, i32 4, i32 %arg4) nounwind
+  %p2.i90 = call float @llvm.amdgcn.interp.p2(float %p1.i89, float %j.f.i88, i32 1, i32 4, i32 %arg4) nounwind
   %i.i79 = extractelement <2 x i32> %arg6, i32 0
   %j.i80 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i81 = bitcast i32 %i.i79 to float
   %j.f.i82 = bitcast i32 %j.i80 to float
-  %p1.i83 = call float @llvm.amdgcn.interp.p1(float %i.f.i81, i32 2, i32 4, i32 %arg4) #0
-  %p2.i84 = call float @llvm.amdgcn.interp.p2(float %p1.i83, float %j.f.i82, i32 2, i32 4, i32 %arg4) #0
+  %p1.i83 = call float @llvm.amdgcn.interp.p1(float %i.f.i81, i32 2, i32 4, i32 %arg4) nounwind
+  %p2.i84 = call float @llvm.amdgcn.interp.p2(float %p1.i83, float %j.f.i82, i32 2, i32 4, i32 %arg4) nounwind
   %i.i73 = extractelement <2 x i32> %arg6, i32 0
   %j.i74 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i75 = bitcast i32 %i.i73 to float
   %j.f.i76 = bitcast i32 %j.i74 to float
-  %p1.i77 = call float @llvm.amdgcn.interp.p1(float %i.f.i75, i32 3, i32 4, i32 %arg4) #0
-  %p2.i78 = call float @llvm.amdgcn.interp.p2(float %p1.i77, float %j.f.i76, i32 3, i32 4, i32 %arg4) #0
+  %p1.i77 = call float @llvm.amdgcn.interp.p1(float %i.f.i75, i32 3, i32 4, i32 %arg4) nounwind
+  %p2.i78 = call float @llvm.amdgcn.interp.p2(float %p1.i77, float %j.f.i76, i32 3, i32 4, i32 %arg4) nounwind
   %i.i67 = extractelement <2 x i32> %arg6, i32 0
   %j.i68 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i69 = bitcast i32 %i.i67 to float
   %j.f.i70 = bitcast i32 %j.i68 to float
-  %p1.i71 = call float @llvm.amdgcn.interp.p1(float %i.f.i69, i32 0, i32 5, i32 %arg4) #0
-  %p2.i72 = call float @llvm.amdgcn.interp.p2(float %p1.i71, float %j.f.i70, i32 0, i32 5, i32 %arg4) #0
+  %p1.i71 = call float @llvm.amdgcn.interp.p1(float %i.f.i69, i32 0, i32 5, i32 %arg4) nounwind
+  %p2.i72 = call float @llvm.amdgcn.interp.p2(float %p1.i71, float %j.f.i70, i32 0, i32 5, i32 %arg4) nounwind
   %i.i61 = extractelement <2 x i32> %arg6, i32 0
   %j.i62 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i63 = bitcast i32 %i.i61 to float
   %j.f.i64 = bitcast i32 %j.i62 to float
-  %p1.i65 = call float @llvm.amdgcn.interp.p1(float %i.f.i63, i32 1, i32 5, i32 %arg4) #0
-  %p2.i66 = call float @llvm.amdgcn.interp.p2(float %p1.i65, float %j.f.i64, i32 1, i32 5, i32 %arg4) #0
+  %p1.i65 = call float @llvm.amdgcn.interp.p1(float %i.f.i63, i32 1, i32 5, i32 %arg4) nounwind
+  %p2.i66 = call float @llvm.amdgcn.interp.p2(float %p1.i65, float %j.f.i64, i32 1, i32 5, i32 %arg4) nounwind
   %i.i55 = extractelement <2 x i32> %arg6, i32 0
   %j.i56 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i57 = bitcast i32 %i.i55 to float
   %j.f.i58 = bitcast i32 %j.i56 to float
-  %p1.i59 = call float @llvm.amdgcn.interp.p1(float %i.f.i57, i32 2, i32 5, i32 %arg4) #0
-  %p2.i60 = call float @llvm.amdgcn.interp.p2(float %p1.i59, float %j.f.i58, i32 2, i32 5, i32 %arg4) #0
+  %p1.i59 = call float @llvm.amdgcn.interp.p1(float %i.f.i57, i32 2, i32 5, i32 %arg4) nounwind
+  %p2.i60 = call float @llvm.amdgcn.interp.p2(float %p1.i59, float %j.f.i58, i32 2, i32 5, i32 %arg4) nounwind
   %i.i49 = extractelement <2 x i32> %arg6, i32 0
   %j.i50 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i51 = bitcast i32 %i.i49 to float
   %j.f.i52 = bitcast i32 %j.i50 to float
-  %p1.i53 = call float @llvm.amdgcn.interp.p1(float %i.f.i51, i32 3, i32 5, i32 %arg4) #0
-  %p2.i54 = call float @llvm.amdgcn.interp.p2(float %p1.i53, float %j.f.i52, i32 3, i32 5, i32 %arg4) #0
+  %p1.i53 = call float @llvm.amdgcn.interp.p1(float %i.f.i51, i32 3, i32 5, i32 %arg4) nounwind
+  %p2.i54 = call float @llvm.amdgcn.interp.p2(float %p1.i53, float %j.f.i52, i32 3, i32 5, i32 %arg4) nounwind
   %i.i43 = extractelement <2 x i32> %arg6, i32 0
   %j.i44 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i45 = bitcast i32 %i.i43 to float
   %j.f.i46 = bitcast i32 %j.i44 to float
-  %p1.i47 = call float @llvm.amdgcn.interp.p1(float %i.f.i45, i32 0, i32 6, i32 %arg4) #0
-  %p2.i48 = call float @llvm.amdgcn.interp.p2(float %p1.i47, float %j.f.i46, i32 0, i32 6, i32 %arg4) #0
+  %p1.i47 = call float @llvm.amdgcn.interp.p1(float %i.f.i45, i32 0, i32 6, i32 %arg4) nounwind
+  %p2.i48 = call float @llvm.amdgcn.interp.p2(float %p1.i47, float %j.f.i46, i32 0, i32 6, i32 %arg4) nounwind
   %i.i37 = extractelement <2 x i32> %arg6, i32 0
   %j.i38 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i39 = bitcast i32 %i.i37 to float
   %j.f.i40 = bitcast i32 %j.i38 to float
-  %p1.i41 = call float @llvm.amdgcn.interp.p1(float %i.f.i39, i32 1, i32 6, i32 %arg4) #0
-  %p2.i42 = call float @llvm.amdgcn.interp.p2(float %p1.i41, float %j.f.i40, i32 1, i32 6, i32 %arg4) #0
+  %p1.i41 = call float @llvm.amdgcn.interp.p1(float %i.f.i39, i32 1, i32 6, i32 %arg4) nounwind
+  %p2.i42 = call float @llvm.amdgcn.interp.p2(float %p1.i41, float %j.f.i40, i32 1, i32 6, i32 %arg4) nounwind
   %i.i31 = extractelement <2 x i32> %arg6, i32 0
   %j.i32 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i33 = bitcast i32 %i.i31 to float
   %j.f.i34 = bitcast i32 %j.i32 to float
-  %p1.i35 = call float @llvm.amdgcn.interp.p1(float %i.f.i33, i32 2, i32 6, i32 %arg4) #0
-  %p2.i36 = call float @llvm.amdgcn.interp.p2(float %p1.i35, float %j.f.i34, i32 2, i32 6, i32 %arg4) #0
+  %p1.i35 = call float @llvm.amdgcn.interp.p1(float %i.f.i33, i32 2, i32 6, i32 %arg4) nounwind
+  %p2.i36 = call float @llvm.amdgcn.interp.p2(float %p1.i35, float %j.f.i34, i32 2, i32 6, i32 %arg4) nounwind
   %i.i25 = extractelement <2 x i32> %arg6, i32 0
   %j.i26 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i27 = bitcast i32 %i.i25 to float
   %j.f.i28 = bitcast i32 %j.i26 to float
-  %p1.i29 = call float @llvm.amdgcn.interp.p1(float %i.f.i27, i32 3, i32 6, i32 %arg4) #0
-  %p2.i30 = call float @llvm.amdgcn.interp.p2(float %p1.i29, float %j.f.i28, i32 3, i32 6, i32 %arg4) #0
+  %p1.i29 = call float @llvm.amdgcn.interp.p1(float %i.f.i27, i32 3, i32 6, i32 %arg4) nounwind
+  %p2.i30 = call float @llvm.amdgcn.interp.p2(float %p1.i29, float %j.f.i28, i32 3, i32 6, i32 %arg4) nounwind
   %i.i19 = extractelement <2 x i32> %arg6, i32 0
   %j.i20 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i21 = bitcast i32 %i.i19 to float
   %j.f.i22 = bitcast i32 %j.i20 to float
-  %p1.i23 = call float @llvm.amdgcn.interp.p1(float %i.f.i21, i32 0, i32 7, i32 %arg4) #0
-  %p2.i24 = call float @llvm.amdgcn.interp.p2(float %p1.i23, float %j.f.i22, i32 0, i32 7, i32 %arg4) #0
+  %p1.i23 = call float @llvm.amdgcn.interp.p1(float %i.f.i21, i32 0, i32 7, i32 %arg4) nounwind
+  %p2.i24 = call float @llvm.amdgcn.interp.p2(float %p1.i23, float %j.f.i22, i32 0, i32 7, i32 %arg4) nounwind
   %i.i13 = extractelement <2 x i32> %arg6, i32 0
   %j.i14 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i15 = bitcast i32 %i.i13 to float
   %j.f.i16 = bitcast i32 %j.i14 to float
-  %p1.i17 = call float @llvm.amdgcn.interp.p1(float %i.f.i15, i32 1, i32 7, i32 %arg4) #0
-  %p2.i18 = call float @llvm.amdgcn.interp.p2(float %p1.i17, float %j.f.i16, i32 1, i32 7, i32 %arg4) #0
+  %p1.i17 = call float @llvm.amdgcn.interp.p1(float %i.f.i15, i32 1, i32 7, i32 %arg4) nounwind
+  %p2.i18 = call float @llvm.amdgcn.interp.p2(float %p1.i17, float %j.f.i16, i32 1, i32 7, i32 %arg4) nounwind
   %i.i7 = extractelement <2 x i32> %arg6, i32 0
   %j.i8 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i9 = bitcast i32 %i.i7 to float
   %j.f.i10 = bitcast i32 %j.i8 to float
-  %p1.i11 = call float @llvm.amdgcn.interp.p1(float %i.f.i9, i32 2, i32 7, i32 %arg4) #0
-  %p2.i12 = call float @llvm.amdgcn.interp.p2(float %p1.i11, float %j.f.i10, i32 2, i32 7, i32 %arg4) #0
+  %p1.i11 = call float @llvm.amdgcn.interp.p1(float %i.f.i9, i32 2, i32 7, i32 %arg4) nounwind
+  %p2.i12 = call float @llvm.amdgcn.interp.p2(float %p1.i11, float %j.f.i10, i32 2, i32 7, i32 %arg4) nounwind
   %i.i1 = extractelement <2 x i32> %arg6, i32 0
   %j.i2 = extractelement <2 x i32> %arg6, i32 1
   %i.f.i3 = bitcast i32 %i.i1 to float
   %j.f.i4 = bitcast i32 %j.i2 to float
-  %p1.i5 = call float @llvm.amdgcn.interp.p1(float %i.f.i3, i32 3, i32 7, i32 %arg4) #0
-  %p2.i6 = call float @llvm.amdgcn.interp.p2(float %p1.i5, float %j.f.i4, i32 3, i32 7, i32 %arg4) #0
+  %p1.i5 = call float @llvm.amdgcn.interp.p1(float %i.f.i3, i32 3, i32 7, i32 %arg4) nounwind
+  %p2.i6 = call float @llvm.amdgcn.interp.p2(float %p1.i5, float %j.f.i4, i32 3, i32 7, i32 %arg4) nounwind
   %tmp195 = fmul float %arg14, %tmp123
   %tmp196 = fadd float %tmp195, %tmp124
   %max.0.i = call float @llvm.maxnum.f32(float %tmp162, float 0.000000e+00)
@@ -1648,7 +1648,7 @@ ENDIF209:                                         ; preds = %ELSE214, %ELSE211, 
   %clamp.i2 = call float @llvm.minnum.f32(float %max.0.i1, float 1.000000e+00)
   %tmp776 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp768, float %tmp770)
   %tmp778 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp772, float %clamp.i2)
-  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp776, <2 x half> %tmp778, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp776, <2 x half> %tmp778, i1 true, i1 true) nounwind
   ret void
 
 ELSE214:                                          ; preds = %ELSE211
@@ -1664,32 +1664,28 @@ ELSE214:                                          ; preds = %ELSE211
   br label %ENDIF209
 }
 
-declare float @llvm.exp2.f32(float) #1
-declare float @llvm.ceil.f32(float) #1
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.pow.f32(float, float) #1
-declare float @llvm.minnum.f32(float, float) #1
-declare float @llvm.maxnum.f32(float, float) #1
-declare float @llvm.amdgcn.rsq.f32(float) #1
-declare float @llvm.amdgcn.cubeid(float, float, float) #1
-declare float @llvm.amdgcn.cubesc(float, float, float) #1
-declare float @llvm.amdgcn.cubetc(float, float, float) #1
-declare float @llvm.amdgcn.cubema(float, float, float) #1
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #1
-declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
-declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f32(i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind readonly }
+declare float @llvm.exp2.f32(float) nounwind readnone
+declare float @llvm.ceil.f32(float) nounwind readnone
+declare float @llvm.fabs.f32(float) nounwind readnone
+declare float @llvm.pow.f32(float, float) nounwind readnone
+declare float @llvm.minnum.f32(float, float) nounwind readnone
+declare float @llvm.maxnum.f32(float, float) nounwind readnone
+declare float @llvm.amdgcn.rsq.f32(float) nounwind readnone
+declare float @llvm.amdgcn.cubeid(float, float, float) nounwind readnone
+declare float @llvm.amdgcn.cubesc(float, float, float) nounwind readnone
+declare float @llvm.amdgcn.cubetc(float, float, float) nounwind readnone
+declare float @llvm.amdgcn.cubema(float, float, float) nounwind readnone
+declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) nounwind readnone
+declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) nounwind readnone
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) nounwind readnone
+declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) nounwind readnone
+declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) nounwind
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) nounwind readnone
+declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f32(i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) nounwind readonly
+declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) nounwind readnone
 
 !0 = !{!1, !1, i64 0, i32 1}
 !1 = !{!"const", !2}

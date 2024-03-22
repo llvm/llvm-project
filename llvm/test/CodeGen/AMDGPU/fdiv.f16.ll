@@ -130,7 +130,7 @@ define amdgpu_kernel void @v_fdiv_f16(
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) nounwind {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -144,7 +144,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @v_rcp_f16(ptr addrspace(1) %r, ptr addrspace(1) %b) #0 {
+define amdgpu_kernel void @v_rcp_f16(ptr addrspace(1) %r, ptr addrspace(1) %b) nounwind {
 ; SI-LABEL: v_rcp_f16:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -238,7 +238,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @v_rcp_f16_abs(ptr addrspace(1) %r, ptr addrspace(1) %b) #0 {
+define amdgpu_kernel void @v_rcp_f16_abs(ptr addrspace(1) %r, ptr addrspace(1) %b) nounwind {
 ; SI-LABEL: v_rcp_f16_abs:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -335,7 +335,7 @@ entry:
 
 ; We could not do 1/b -> rcp_f32(b) under !fpmath < 1ulp.
 
-define amdgpu_kernel void @reciprocal_f16_rounded(ptr addrspace(1) %r, ptr addrspace(1) %b) #0 {
+define amdgpu_kernel void @reciprocal_f16_rounded(ptr addrspace(1) %r, ptr addrspace(1) %b) nounwind {
 ; SI-LABEL: reciprocal_f16_rounded:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -429,7 +429,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @v_rcp_f16_afn(ptr addrspace(1) %r, ptr addrspace(1) %b) #0 {
+define amdgpu_kernel void @v_rcp_f16_afn(ptr addrspace(1) %r, ptr addrspace(1) %b) nounwind {
 ; SI-LABEL: v_rcp_f16_afn:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -510,7 +510,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @v_rcp_f16_neg(ptr addrspace(1) %r, ptr addrspace(1) %b) #0 {
+define amdgpu_kernel void @v_rcp_f16_neg(ptr addrspace(1) %r, ptr addrspace(1) %b) nounwind {
 ; SI-LABEL: v_rcp_f16_neg:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -604,7 +604,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @v_rsq_f16(ptr addrspace(1) %r, ptr addrspace(1) %b) #0 {
+define amdgpu_kernel void @v_rsq_f16(ptr addrspace(1) %r, ptr addrspace(1) %b) nounwind {
 ; SI-LABEL: v_rsq_f16:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -702,7 +702,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @v_rsq_f16_neg(ptr addrspace(1) %r, ptr addrspace(1) %b) #0 {
+define amdgpu_kernel void @v_rsq_f16_neg(ptr addrspace(1) %r, ptr addrspace(1) %b) nounwind {
 ; SI-LABEL: v_rsq_f16_neg:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -805,7 +805,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @v_rsq_f16_multi_use(ptr addrspace(1) %r, ptr addrspace(1) %b) #0 {
+define amdgpu_kernel void @v_rsq_f16_multi_use(ptr addrspace(1) %r, ptr addrspace(1) %b) nounwind {
 ; SI-LABEL: v_rsq_f16_multi_use:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -914,7 +914,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @v_rsq_f16_missing_contract0(ptr addrspace(1) %r, ptr addrspace(1) %b) #0 {
+define amdgpu_kernel void @v_rsq_f16_missing_contract0(ptr addrspace(1) %r, ptr addrspace(1) %b) nounwind {
 ; SI-LABEL: v_rsq_f16_missing_contract0:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1017,7 +1017,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @v_rsq_f16_missing_contract1(ptr addrspace(1) %r, ptr addrspace(1) %b) #0 {
+define amdgpu_kernel void @v_rsq_f16_missing_contract1(ptr addrspace(1) %r, ptr addrspace(1) %b) nounwind {
 ; SI-LABEL: v_rsq_f16_missing_contract1:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1120,7 +1120,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @v_neg_rsq_f16_missing_contract1(ptr addrspace(1) %r, ptr addrspace(1) %b) #0 {
+define amdgpu_kernel void @v_neg_rsq_f16_missing_contract1(ptr addrspace(1) %r, ptr addrspace(1) %b) nounwind {
 ; SI-LABEL: v_neg_rsq_f16_missing_contract1:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1223,7 +1223,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @v_fdiv_f16_afn(ptr addrspace(1) %r, ptr addrspace(1) %a, ptr addrspace(1) %b) #0 {
+define amdgpu_kernel void @v_fdiv_f16_afn(ptr addrspace(1) %r, ptr addrspace(1) %a, ptr addrspace(1) %b) nounwind {
 ; SI-LABEL: v_fdiv_f16_afn:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1334,7 +1334,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @v_fdiv_f16_unsafe(ptr addrspace(1) %r, ptr addrspace(1) %a, ptr addrspace(1) %b) #2 {
+define amdgpu_kernel void @v_fdiv_f16_unsafe(ptr addrspace(1) %r, ptr addrspace(1) %a, ptr addrspace(1) %b) nounwind "unsafe-fp-math"="true" {
 ; SI-LABEL: v_fdiv_f16_unsafe:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1445,7 +1445,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @div_afn_2_x_pat_f16(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @div_afn_2_x_pat_f16(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: div_afn_2_x_pat_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1512,7 +1512,7 @@ define amdgpu_kernel void @div_afn_2_x_pat_f16(ptr addrspace(1) %out) #0 {
   ret void
 }
 
-define amdgpu_kernel void @div_afn_k_x_pat_f16(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @div_afn_k_x_pat_f16(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: div_afn_k_x_pat_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1579,7 +1579,7 @@ define amdgpu_kernel void @div_afn_k_x_pat_f16(ptr addrspace(1) %out) #0 {
   ret void
 }
 
-define amdgpu_kernel void @div_afn_neg_k_x_pat_f16(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @div_afn_neg_k_x_pat_f16(ptr addrspace(1) %out) nounwind {
 ; SI-LABEL: div_afn_neg_k_x_pat_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -2145,11 +2145,7 @@ define <2 x half> @v_neg_rsq_v2f16(<2 x half> %a) {
   ret <2 x half> %fdiv
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-declare half @llvm.sqrt.f16(half) #2
-declare half @llvm.fabs.f16(half) #2
-declare <2 x half> @llvm.sqrt.v2f16(<2 x half>) #2
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "unsafe-fp-math"="true" }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind "unsafe-fp-math"="true"
+declare half @llvm.sqrt.f16(half) nounwind "unsafe-fp-math"="true"
+declare half @llvm.fabs.f16(half) nounwind "unsafe-fp-math"="true"
+declare <2 x half> @llvm.sqrt.v2f16(<2 x half>) nounwind "unsafe-fp-math"="true"

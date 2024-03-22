@@ -12,7 +12,7 @@
 ; CHECK: s_barrier
 ; CHECK: s_endpgm
 ; Function Attrs: nounwind
-define amdgpu_kernel void @test(ptr addrspace(3) nocapture %arg, ptr addrspace(1) nocapture readonly %arg1, ptr addrspace(1) nocapture readonly %arg2, ptr addrspace(1) nocapture %arg3, i32 %arg4, i64 %tmp9) #0 {
+define amdgpu_kernel void @test(ptr addrspace(3) nocapture %arg, ptr addrspace(1) nocapture readonly %arg1, ptr addrspace(1) nocapture readonly %arg2, ptr addrspace(1) nocapture %arg3, i32 %arg4, i64 %tmp9) nounwind {
 bb:
   %tmp10 = getelementptr inbounds i32, ptr addrspace(1) %arg2, i64 %tmp9
   %tmp13 = load i32, ptr addrspace(1) %tmp10, align 2
@@ -37,7 +37,4 @@ bb:
 }
 
 ; Function Attrs: convergent nounwind
-declare void @llvm.amdgcn.s.barrier() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { convergent nounwind }
+declare void @llvm.amdgcn.s.barrier() convergent nounwind

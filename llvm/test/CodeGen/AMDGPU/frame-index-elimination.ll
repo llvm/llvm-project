@@ -19,7 +19,7 @@
 ; MUBUF-NOT: v_mov
 
 ; GCN: ds_write_b32 v0, v0
-define void @func_mov_fi_i32() #0 {
+define void @func_mov_fi_i32() nounwind {
   %alloca = alloca i32, addrspace(5)
   store volatile ptr addrspace(5) %alloca, ptr addrspace(3) undef
   ret void
@@ -44,7 +44,7 @@ define void @func_mov_fi_i32() #0 {
 ; GFX9-MUBUF-NEXT:   v_add_u32_e32 v0, 4, [[SCALED]]
 ; GFX9-FLATSCR-NEXT: v_mov_b32_e32 v0, [[ADD]]
 ; GFX9-NEXT:         ds_write_b32 v0, v0
-define void @func_mov_fi_i32_offset() #0 {
+define void @func_mov_fi_i32_offset() nounwind {
   %alloca0 = alloca i32, addrspace(5)
   %alloca1 = alloca i32, addrspace(5)
   store volatile ptr addrspace(5) %alloca0, ptr addrspace(3) undef
@@ -69,7 +69,7 @@ define void @func_mov_fi_i32_offset() #0 {
 
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
-define void @func_add_constant_to_fi_i32() #0 {
+define void @func_add_constant_to_fi_i32() nounwind {
   %alloca = alloca [2 x i32], align 4, addrspace(5)
   %gep0 = getelementptr inbounds [2 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
   store volatile ptr addrspace(5) %gep0, ptr addrspace(3) undef
@@ -91,7 +91,7 @@ define void @func_add_constant_to_fi_i32() #0 {
 ; GCN-NEXT: v_mul_lo_u32 v0, v0, 9
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
-define void @func_other_fi_user_i32() #0 {
+define void @func_other_fi_user_i32() nounwind {
   %alloca = alloca [2 x i32], align 4, addrspace(5)
   %ptrtoint = ptrtoint ptr addrspace(5) %alloca to i32
   %mul = mul i32 %ptrtoint, 9
@@ -103,7 +103,7 @@ define void @func_other_fi_user_i32() #0 {
 ; GCN: v_mov_b32_e32 v1, 15{{$}}
 ; MUBUF:        buffer_store_dword v1, v0, s[0:3], 0 offen{{$}}
 ; GFX9-FLATSCR: scratch_store_dword v0, v1, off{{$}}
-define void @func_store_private_arg_i32_ptr(ptr addrspace(5) %ptr) #0 {
+define void @func_store_private_arg_i32_ptr(ptr addrspace(5) %ptr) nounwind {
   store volatile i32 15, ptr addrspace(5) %ptr
   ret void
 }
@@ -112,7 +112,7 @@ define void @func_store_private_arg_i32_ptr(ptr addrspace(5) %ptr) #0 {
 ; GCN: s_waitcnt
 ; MUBUF-NEXT:        buffer_load_dword v0, v0, s[0:3], 0 offen glc{{$}}
 ; GFX9-FLATSCR-NEXT: scratch_load_dword v0, v0, off glc{{$}}
-define void @func_load_private_arg_i32_ptr(ptr addrspace(5) %ptr) #0 {
+define void @func_load_private_arg_i32_ptr(ptr addrspace(5) %ptr) nounwind {
   %val = load volatile i32, ptr addrspace(5) %ptr
   ret void
 }
@@ -131,7 +131,7 @@ define void @func_load_private_arg_i32_ptr(ptr addrspace(5) %ptr) #0 {
 
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
-define void @void_func_byval_struct_i8_i32_ptr(ptr addrspace(5) byval({ i8, i32 }) %arg0) #0 {
+define void @void_func_byval_struct_i8_i32_ptr(ptr addrspace(5) byval({ i8, i32 }) %arg0) nounwind {
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 0
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 1
   %load1 = load i32, ptr addrspace(5) %gep1
@@ -145,7 +145,7 @@ define void @void_func_byval_struct_i8_i32_ptr(ptr addrspace(5) byval({ i8, i32 
 ; MUBUF-NEXT: buffer_load_dword v1, off, s[0:3], s32 offset:4
 ; GFX9-FLATSCR-NEXT: scratch_load_ubyte v0, off, s32
 ; GFX9-FLATSCR-NEXT: scratch_load_dword v1, off, s32 offset:4
-define void @void_func_byval_struct_i8_i32_ptr_value(ptr addrspace(5) byval({ i8, i32 }) %arg0) #0 {
+define void @void_func_byval_struct_i8_i32_ptr_value(ptr addrspace(5) byval({ i8, i32 }) %arg0) nounwind {
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 0
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 1
   %load0 = load i8, ptr addrspace(5) %gep0
@@ -172,7 +172,7 @@ define void @void_func_byval_struct_i8_i32_ptr_value(ptr addrspace(5) byval({ i8
 ; GFX9: v_add_u32_e32 [[GEP:v[0-9]+]], 4, [[SP]]
 
 ; GCN: ds_write_b32 v{{[0-9]+}}, [[GEP]]
-define void @void_func_byval_struct_i8_i32_ptr_nonentry_block(ptr addrspace(5) byval({ i8, i32 }) %arg0, i32 %arg2) #0 {
+define void @void_func_byval_struct_i8_i32_ptr_nonentry_block(ptr addrspace(5) byval({ i8, i32 }) %arg0, i32 %arg2) nounwind {
   %cmp = icmp eq i32 %arg2, 0
   br i1 %cmp, label %bb, label %ret
 
@@ -202,7 +202,7 @@ ret:
 
 ; GCN: v_mul_lo_u32 [[VZ]], [[VZ]], 9
 ; GCN: ds_write_b32 v0, [[VZ]]
-define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
+define void @func_other_fi_user_non_inline_imm_offset_i32() nounwind {
   %alloca0 = alloca [128 x i32], align 4, addrspace(5)
   %alloca1 = alloca [8 x i32], align 4, addrspace(5)
   %gep0 = getelementptr inbounds [128 x i32], ptr addrspace(5) %alloca0, i32 0, i32 65
@@ -227,7 +227,7 @@ define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
 
 ; GCN: v_mul_lo_u32 [[VZ]], [[VZ]], 9
 ; GCN: ds_write_b32 v0, [[VZ]]
-define void @func_other_fi_user_non_inline_imm_offset_i32_vcc_live() #0 {
+define void @func_other_fi_user_non_inline_imm_offset_i32_vcc_live() nounwind {
   %alloca0 = alloca [128 x i32], align 4, addrspace(5)
   %alloca1 = alloca [8 x i32], align 4, addrspace(5)
   %vcc = call i64 asm sideeffect "; def $0", "={vcc}"()
@@ -240,7 +240,7 @@ define void @func_other_fi_user_non_inline_imm_offset_i32_vcc_live() #0 {
   ret void
 }
 
-declare void @func(ptr addrspace(5) nocapture) #0
+declare void @func(ptr addrspace(5) nocapture) nounwind
 
 ; undef flag not preserved in eliminateFrameIndex when handling the
 ; stores in the middle block.
@@ -255,7 +255,7 @@ declare void @func(ptr addrspace(5) nocapture) #0
 ; FLATSCR: scratch_store_dword v0, off, s33 offset:
 ; FLATSCR: scratch_store_dword v0, off, s33 offset:
 ; FLATSCR: scratch_store_dword v{{[0-9]+}}, off, s33 offset:
-define void @undefined_stack_store_reg(float %arg, i32 %arg1) #0 {
+define void @undefined_stack_store_reg(float %arg, i32 %arg1) nounwind {
 bb:
   %tmp = alloca <4 x float>, align 16, addrspace(5)
   %tmp2 = insertelement <4 x float> undef, float %arg, i32 0
@@ -288,7 +288,7 @@ bb5:
 ; GFX9-FLATSCR-NEXT: v_or_b32_e32 [[PTR:v[0-9]+]], 4, [[SP]]
 
 ; GCN: ds_write_b32 v{{[0-9]+}}, [[PTR]]
-define void @alloca_ptr_nonentry_block(i32 %arg0) #0 {
+define void @alloca_ptr_nonentry_block(i32 %arg0) nounwind {
   %alloca0 = alloca { i8, i32 }, align 8, addrspace(5)
   %cmp = icmp eq i32 %arg0, 0
   br i1 %cmp, label %bb, label %ret
@@ -331,5 +331,3 @@ entry:
   store i16 %scratch0.load, ptr addrspace(3) %addr1, align 2
   ret void
 }
-
-attributes #0 = { nounwind }

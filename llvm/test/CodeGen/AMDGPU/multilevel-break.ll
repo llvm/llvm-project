@@ -108,7 +108,7 @@ ENDIF:                                            ; preds = %LOOP
   br i1 %tmp51, label %LOOP, label %LOOP.outer
 }
 
-define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @multi_if_break_loop(i32 %arg) nounwind {
 ; OPT-LABEL: @multi_if_break_loop(
 ; OPT-NEXT:  bb:
 ; OPT-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -246,7 +246,4 @@ bb9:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

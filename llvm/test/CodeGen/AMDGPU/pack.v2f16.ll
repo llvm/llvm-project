@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GFX7 %s
 
 
-define amdgpu_kernel void @s_pack_v2f16(ptr addrspace(4) %in0, ptr addrspace(4) %in1) #0 {
+define amdgpu_kernel void @s_pack_v2f16(ptr addrspace(4) %in0, ptr addrspace(4) %in1) nounwind {
 ; GFX9-LABEL: s_pack_v2f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -57,11 +57,11 @@ define amdgpu_kernel void @s_pack_v2f16(ptr addrspace(4) %in0, ptr addrspace(4) 
   %vec.1 = insertelement <2 x half> %vec.0, half %hi, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
 
-  call void asm sideeffect "; use $0", "s"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "s"(i32 %vec.i32) nounwind
   ret void
 }
 
-define amdgpu_kernel void @s_pack_v2f16_imm_lo(ptr addrspace(4) %in1) #0 {
+define amdgpu_kernel void @s_pack_v2f16_imm_lo(ptr addrspace(4) %in1) nounwind {
 ; GFX9-LABEL: s_pack_v2f16_imm_lo:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -106,11 +106,11 @@ define amdgpu_kernel void @s_pack_v2f16_imm_lo(ptr addrspace(4) %in1) #0 {
   %vec.1 = insertelement <2 x half> %vec.0, half %hi, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
 
-  call void asm sideeffect "; use $0", "s"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "s"(i32 %vec.i32) nounwind
   ret void
 }
 
-define amdgpu_kernel void @s_pack_v2f16_imm_hi(ptr addrspace(4) %in0) #0 {
+define amdgpu_kernel void @s_pack_v2f16_imm_hi(ptr addrspace(4) %in0) nounwind {
 ; GFX9-LABEL: s_pack_v2f16_imm_hi:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -155,11 +155,11 @@ define amdgpu_kernel void @s_pack_v2f16_imm_hi(ptr addrspace(4) %in0) #0 {
   %vec.1 = insertelement <2 x half> %vec.0, half 0xH1234, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
 
-  call void asm sideeffect "; use $0", "s"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "s"(i32 %vec.i32) nounwind
   ret void
 }
 
-define amdgpu_kernel void @v_pack_v2f16(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @v_pack_v2f16(ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; GFX9-LABEL: v_pack_v2f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -233,11 +233,11 @@ define amdgpu_kernel void @v_pack_v2f16(ptr addrspace(1) %in0, ptr addrspace(1) 
   %vec.0 = insertelement <2 x half> undef, half %lo, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %hi, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
-  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) nounwind
   ret void
 }
 
-define amdgpu_kernel void @v_pack_v2f16_user(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @v_pack_v2f16_user(ptr addrspace(1) %in0, ptr addrspace(1) %in1) nounwind {
 ; GFX9-LABEL: v_pack_v2f16_user:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -321,7 +321,7 @@ define amdgpu_kernel void @v_pack_v2f16_user(ptr addrspace(1) %in0, ptr addrspac
   ret void
 }
 
-define amdgpu_kernel void @v_pack_v2f16_imm_lo(ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @v_pack_v2f16_imm_lo(ptr addrspace(1) %in1) nounwind {
 ; GFX9-LABEL: v_pack_v2f16_imm_lo:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -379,11 +379,11 @@ define amdgpu_kernel void @v_pack_v2f16_imm_lo(ptr addrspace(1) %in1) #0 {
   %vec.0 = insertelement <2 x half> undef, half 0xH1234, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %hi, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
-  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) nounwind
   ret void
 }
 
-define amdgpu_kernel void @v_pack_v2f16_inline_imm_lo(ptr addrspace(1) %in1) #0 {
+define amdgpu_kernel void @v_pack_v2f16_inline_imm_lo(ptr addrspace(1) %in1) nounwind {
 ; GFX9-LABEL: v_pack_v2f16_inline_imm_lo:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -441,11 +441,11 @@ define amdgpu_kernel void @v_pack_v2f16_inline_imm_lo(ptr addrspace(1) %in1) #0 
   %vec.0 = insertelement <2 x half> undef, half 4.0, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %hi, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
-  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) nounwind
   ret void
 }
 
-define amdgpu_kernel void @v_pack_v2f16_imm_hi(ptr addrspace(1) %in0) #0 {
+define amdgpu_kernel void @v_pack_v2f16_imm_hi(ptr addrspace(1) %in0) nounwind {
 ; GFX9-LABEL: v_pack_v2f16_imm_hi:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -503,11 +503,11 @@ define amdgpu_kernel void @v_pack_v2f16_imm_hi(ptr addrspace(1) %in0) #0 {
   %vec.0 = insertelement <2 x half> undef, half %lo, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half 0xH1234, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
-  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) nounwind
   ret void
 }
 
-define amdgpu_kernel void @v_pack_v2f16_inline_f16imm_hi(ptr addrspace(1) %in0) #0 {
+define amdgpu_kernel void @v_pack_v2f16_inline_f16imm_hi(ptr addrspace(1) %in0) nounwind {
 ; GFX9-LABEL: v_pack_v2f16_inline_f16imm_hi:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -565,11 +565,11 @@ define amdgpu_kernel void @v_pack_v2f16_inline_f16imm_hi(ptr addrspace(1) %in0) 
   %vec.0 = insertelement <2 x half> undef, half %lo, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half 1.0, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
-  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) nounwind
   ret void
 }
 
-define amdgpu_kernel void @v_pack_v2f16_inline_imm_hi(ptr addrspace(1) %in0) #0 {
+define amdgpu_kernel void @v_pack_v2f16_inline_imm_hi(ptr addrspace(1) %in0) nounwind {
 ; GFX9-LABEL: v_pack_v2f16_inline_imm_hi:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -626,11 +626,8 @@ define amdgpu_kernel void @v_pack_v2f16_inline_imm_hi(ptr addrspace(1) %in0) #0 
   %vec.0 = insertelement <2 x half> undef, half %lo, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half 0xH0040, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
-  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) nounwind
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

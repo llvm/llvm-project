@@ -8,7 +8,7 @@
 ; CHECK-NOT: REG-CRIT
 ; CHECK-NOT: REG-EXCESS
 
-define amdgpu_kernel void @load_fma_store(ptr addrspace(3) nocapture readonly %arg, ptr addrspace(3) nocapture %arg1) #1 {
+define amdgpu_kernel void @load_fma_store(ptr addrspace(3) nocapture readonly %arg, ptr addrspace(3) nocapture %arg1) "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" {
 bb:
   %tmp0 = getelementptr inbounds float, ptr addrspace(3) %arg, i32 1
   %tmp1 = load float, ptr addrspace(3) %tmp0, align 4
@@ -104,7 +104,4 @@ bb:
 }
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.fmuladd.f32(float, float, float) #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" }
+declare float @llvm.fmuladd.f32(float, float, float) nounwind readnone

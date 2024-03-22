@@ -4,7 +4,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=CIVI,CI %s
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
 
-define amdgpu_kernel void @s_insertelement_v2i16_0(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr) #0 {
+define amdgpu_kernel void @s_insertelement_v2i16_0(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr) nounwind {
 ; GFX9-LABEL: s_insertelement_v2i16_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -51,7 +51,7 @@ define amdgpu_kernel void @s_insertelement_v2i16_0(ptr addrspace(1) %out, ptr ad
 }
 
 
-define amdgpu_kernel void @s_insertelement_v2i16_0_reg(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, [8 x i32], i16 %elt) #0 {
+define amdgpu_kernel void @s_insertelement_v2i16_0_reg(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, [8 x i32], i16 %elt) nounwind {
 ; GFX9-LABEL: s_insertelement_v2i16_0_reg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -118,7 +118,7 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reg(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @s_insertelement_v2i16_0_multi_use_hi_reg(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, [8 x i32], i16 %elt) #0 {
+define amdgpu_kernel void @s_insertelement_v2i16_0_multi_use_hi_reg(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, [8 x i32], i16 %elt) nounwind {
 ; GFX9-LABEL: s_insertelement_v2i16_0_multi_use_hi_reg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -200,11 +200,11 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_multi_use_hi_reg(ptr addrspac
   %vecins = insertelement <2 x i16> %vec, i16 %elt, i32 0
   store <2 x i16> %vecins, ptr addrspace(1) %out
   %use1 = zext i16 %elt1 to i32
-  call void asm sideeffect "; use $0", "s"(i32 %use1) #0
+  call void asm sideeffect "; use $0", "s"(i32 %use1) nounwind
   ret void
 }
 
-define amdgpu_kernel void @s_insertelement_v2i16_0_reghi(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, [8 x i32], i32 %elt.arg) #0 {
+define amdgpu_kernel void @s_insertelement_v2i16_0_reghi(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, [8 x i32], i32 %elt.arg) nounwind {
 ; GFX9-LABEL: s_insertelement_v2i16_0_reghi:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -271,7 +271,7 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reghi(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @s_insertelement_v2i16_0_reghi_multi_use_1(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, i32 %elt.arg) #0 {
+define amdgpu_kernel void @s_insertelement_v2i16_0_reghi_multi_use_1(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, i32 %elt.arg) nounwind {
 ; GFX9-LABEL: s_insertelement_v2i16_0_reghi_multi_use_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -352,11 +352,11 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reghi_multi_use_1(ptr addrspa
   %vecins = insertelement <2 x i16> %vec, i16 %elt, i32 0
   store <2 x i16> %vecins, ptr addrspace(1) %out
   %use1 = zext i16 %elt to i32
-  call void asm sideeffect "; use $0", "s"(i32 %use1) #0
+  call void asm sideeffect "; use $0", "s"(i32 %use1) nounwind
   ret void
 }
 
-define amdgpu_kernel void @s_insertelement_v2i16_0_reghi_both_multi_use_1(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, i32 %elt.arg) #0 {
+define amdgpu_kernel void @s_insertelement_v2i16_0_reghi_both_multi_use_1(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, i32 %elt.arg) nounwind {
 ; GFX9-LABEL: s_insertelement_v2i16_0_reghi_both_multi_use_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -454,12 +454,12 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reghi_both_multi_use_1(ptr ad
   %use1 = zext i16 %elt to i32
   %vec.hi.use1 = zext i16 %vec.hi to i32
 
-  call void asm sideeffect "; use $0", "s"(i32 %use1) #0
-  call void asm sideeffect "; use $0", "s"(i32 %vec.hi.use1) #0
+  call void asm sideeffect "; use $0", "s"(i32 %use1) nounwind
+  call void asm sideeffect "; use $0", "s"(i32 %vec.hi.use1) nounwind
   ret void
 }
 
-define amdgpu_kernel void @s_insertelement_v2i16_1(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr) #0 {
+define amdgpu_kernel void @s_insertelement_v2i16_1(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr) nounwind {
 ; GFX9-LABEL: s_insertelement_v2i16_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -505,7 +505,7 @@ define amdgpu_kernel void @s_insertelement_v2i16_1(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @s_insertelement_v2i16_1_reg(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, [8 x i32], i16 %elt) #0 {
+define amdgpu_kernel void @s_insertelement_v2i16_1_reg(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, [8 x i32], i16 %elt) nounwind {
 ; GFX9-LABEL: s_insertelement_v2i16_1_reg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -572,7 +572,7 @@ define amdgpu_kernel void @s_insertelement_v2i16_1_reg(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @s_insertelement_v2f16_0(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr) #0 {
+define amdgpu_kernel void @s_insertelement_v2f16_0(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr) nounwind {
 ; GFX9-LABEL: s_insertelement_v2f16_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -620,7 +620,7 @@ define amdgpu_kernel void @s_insertelement_v2f16_0(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @s_insertelement_v2f16_1(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr) #0 {
+define amdgpu_kernel void @s_insertelement_v2f16_1(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr) nounwind {
 ; GFX9-LABEL: s_insertelement_v2f16_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -666,7 +666,7 @@ define amdgpu_kernel void @s_insertelement_v2f16_1(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v2i16_0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_insertelement_v2i16_0(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX9-LABEL: v_insertelement_v2i16_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -729,7 +729,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_0(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
@@ -739,7 +739,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_0(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v2i16_0_reghi(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %elt.arg) #0 {
+define amdgpu_kernel void @v_insertelement_v2i16_0_reghi(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %elt.arg) nounwind {
 ; GFX9-LABEL: v_insertelement_v2i16_0_reghi:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -804,7 +804,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_0_reghi(ptr addrspace(1) %out, 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
@@ -816,7 +816,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_0_reghi(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v2i16_0_inlineimm(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_insertelement_v2i16_0_inlineimm(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX9-LABEL: v_insertelement_v2i16_0_inlineimm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -877,7 +877,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_0_inlineimm(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
@@ -888,7 +888,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_0_inlineimm(ptr addrspace(1) %o
 }
 
 ; FIXME: fold lshl_or c0, c1, v0 -> or (c0 << c1), v0
-define amdgpu_kernel void @v_insertelement_v2i16_1(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_insertelement_v2i16_1(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX9-LABEL: v_insertelement_v2i16_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -951,7 +951,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_1(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
@@ -961,7 +961,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_1(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v2i16_1_inlineimm(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_insertelement_v2i16_1_inlineimm(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX9-LABEL: v_insertelement_v2i16_1_inlineimm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1022,7 +1022,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_1_inlineimm(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
@@ -1032,7 +1032,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_1_inlineimm(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v2f16_0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_insertelement_v2f16_0(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX9-LABEL: v_insertelement_v2f16_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1095,7 +1095,7 @@ define amdgpu_kernel void @v_insertelement_v2f16_0(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %out, i64 %tid.ext
@@ -1105,7 +1105,7 @@ define amdgpu_kernel void @v_insertelement_v2f16_0(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v2f16_0_inlineimm(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_insertelement_v2f16_0_inlineimm(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX9-LABEL: v_insertelement_v2f16_0_inlineimm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1166,7 +1166,7 @@ define amdgpu_kernel void @v_insertelement_v2f16_0_inlineimm(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %out, i64 %tid.ext
@@ -1176,7 +1176,7 @@ define amdgpu_kernel void @v_insertelement_v2f16_0_inlineimm(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v2f16_1(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_insertelement_v2f16_1(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX9-LABEL: v_insertelement_v2f16_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1239,7 +1239,7 @@ define amdgpu_kernel void @v_insertelement_v2f16_1(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %out, i64 %tid.ext
@@ -1249,7 +1249,7 @@ define amdgpu_kernel void @v_insertelement_v2f16_1(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v2f16_1_inlineimm(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_insertelement_v2f16_1_inlineimm(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; GFX9-LABEL: v_insertelement_v2f16_1_inlineimm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1310,7 +1310,7 @@ define amdgpu_kernel void @v_insertelement_v2f16_1_inlineimm(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %out, i64 %tid.ext
@@ -1321,7 +1321,7 @@ define amdgpu_kernel void @v_insertelement_v2f16_1_inlineimm(ptr addrspace(1) %o
 }
 
 ; FIXME: Enable for others when argument load not split
-define amdgpu_kernel void @s_insertelement_v2i16_dynamic(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, ptr addrspace(4) %idx.ptr) #0 {
+define amdgpu_kernel void @s_insertelement_v2i16_dynamic(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, ptr addrspace(4) %idx.ptr) nounwind {
 ; GFX9-LABEL: s_insertelement_v2i16_dynamic:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
@@ -1406,7 +1406,7 @@ define amdgpu_kernel void @s_insertelement_v2i16_dynamic(ptr addrspace(1) %out, 
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v2i16_dynamic_sgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %idx) #0 {
+define amdgpu_kernel void @v_insertelement_v2i16_dynamic_sgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %idx) nounwind {
 ; GFX9-LABEL: v_insertelement_v2i16_dynamic_sgpr:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1480,7 +1480,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_dynamic_sgpr(ptr addrspace(1) %
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
@@ -1490,7 +1490,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_dynamic_sgpr(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v2f16_dynamic_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %idx.ptr) #0 {
+define amdgpu_kernel void @v_insertelement_v2f16_dynamic_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %idx.ptr) nounwind {
 ; GFX9-LABEL: v_insertelement_v2f16_dynamic_vgpr:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
@@ -1582,7 +1582,7 @@ define amdgpu_kernel void @v_insertelement_v2f16_dynamic_vgpr(ptr addrspace(1) %
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %idx.gep = getelementptr inbounds i32, ptr addrspace(1) %idx.ptr, i64 %tid.ext
@@ -1594,7 +1594,7 @@ define amdgpu_kernel void @v_insertelement_v2f16_dynamic_vgpr(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v4f16_0(ptr addrspace(1) %out, ptr addrspace(1) %in, [8 x i32], i32 %val) #0 {
+define amdgpu_kernel void @v_insertelement_v4f16_0(ptr addrspace(1) %out, ptr addrspace(1) %in, [8 x i32], i32 %val) nounwind {
 ; GFX9-LABEL: v_insertelement_v4f16_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1661,7 +1661,7 @@ define amdgpu_kernel void @v_insertelement_v4f16_0(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <4 x half>, ptr addrspace(1) %out, i64 %tid.ext
@@ -1673,7 +1673,7 @@ define amdgpu_kernel void @v_insertelement_v4f16_0(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v4f16_1(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val) #0 {
+define amdgpu_kernel void @v_insertelement_v4f16_1(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val) nounwind {
 ; GFX9-LABEL: v_insertelement_v4f16_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1739,7 +1739,7 @@ define amdgpu_kernel void @v_insertelement_v4f16_1(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <4 x half>, ptr addrspace(1) %out, i64 %tid.ext
@@ -1751,7 +1751,7 @@ define amdgpu_kernel void @v_insertelement_v4f16_1(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v4f16_2(ptr addrspace(1) %out, ptr addrspace(1) %in, [8 x i32], i32 %val) #0 {
+define amdgpu_kernel void @v_insertelement_v4f16_2(ptr addrspace(1) %out, ptr addrspace(1) %in, [8 x i32], i32 %val) nounwind {
 ; GFX9-LABEL: v_insertelement_v4f16_2:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1818,7 +1818,7 @@ define amdgpu_kernel void @v_insertelement_v4f16_2(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <4 x half>, ptr addrspace(1) %out, i64 %tid.ext
@@ -1830,7 +1830,7 @@ define amdgpu_kernel void @v_insertelement_v4f16_2(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v4f16_3(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val) #0 {
+define amdgpu_kernel void @v_insertelement_v4f16_3(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val) nounwind {
 ; GFX9-LABEL: v_insertelement_v4f16_3:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1896,7 +1896,7 @@ define amdgpu_kernel void @v_insertelement_v4f16_3(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <4 x half>, ptr addrspace(1) %out, i64 %tid.ext
@@ -1908,7 +1908,7 @@ define amdgpu_kernel void @v_insertelement_v4f16_3(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v4i16_2(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val) #0 {
+define amdgpu_kernel void @v_insertelement_v4i16_2(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val) nounwind {
 ; GFX9-LABEL: v_insertelement_v4i16_2:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1975,7 +1975,7 @@ define amdgpu_kernel void @v_insertelement_v4i16_2(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <4 x i16>, ptr addrspace(1) %out, i64 %tid.ext
@@ -1988,7 +1988,7 @@ define amdgpu_kernel void @v_insertelement_v4i16_2(ptr addrspace(1) %out, ptr ad
 }
 
 ; FIXME: Better code on CI?
-define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val) #0 {
+define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val) nounwind {
 ; GFX9-LABEL: v_insertelement_v4i16_dynamic_vgpr:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2083,7 +2083,7 @@ define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(ptr addrspace(1) %
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <4 x i16>, ptr addrspace(1) %out, i64 %tid.ext
@@ -2096,7 +2096,7 @@ define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @v_insertelement_v4f16_dynamic_sgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val, i32 %idxval) #0 {
+define amdgpu_kernel void @v_insertelement_v4f16_dynamic_sgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val, i32 %idxval) nounwind {
 ; GFX9-LABEL: v_insertelement_v4f16_dynamic_sgpr:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2184,7 +2184,7 @@ define amdgpu_kernel void @v_insertelement_v4f16_dynamic_sgpr(ptr addrspace(1) %
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <4 x half>, ptr addrspace(1) %out, i64 %tid.ext
@@ -2263,7 +2263,7 @@ define amdgpu_kernel void @v_insertelement_v8f16_3(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <8 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <8 x half>, ptr addrspace(1) %out, i64 %tid.ext
@@ -2343,7 +2343,7 @@ define amdgpu_kernel void @v_insertelement_v8i16_6(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <8 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <8 x i16>, ptr addrspace(1) %out, i64 %tid.ext
@@ -2570,7 +2570,7 @@ define amdgpu_kernel void @v_insertelement_v8f16_dynamic(ptr addrspace(1) %out, 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <8 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <8 x half>, ptr addrspace(1) %out, i64 %tid.ext
@@ -2671,7 +2671,7 @@ define amdgpu_kernel void @v_insertelement_v16f16_3(ptr addrspace(1) %out, ptr a
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <16 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <16 x half>, ptr addrspace(1) %out, i64 %tid.ext
@@ -2772,7 +2772,7 @@ define amdgpu_kernel void @v_insertelement_v16i16_6(ptr addrspace(1) %out, ptr a
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <16 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <16 x i16>, ptr addrspace(1) %out, i64 %tid.ext
@@ -3173,7 +3173,7 @@ define amdgpu_kernel void @v_insertelement_v16f16_dynamic(ptr addrspace(1) %out,
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <16 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <16 x half>, ptr addrspace(1) %out, i64 %tid.ext
@@ -3186,7 +3186,4 @@ define amdgpu_kernel void @v_insertelement_v16f16_dynamic(ptr addrspace(1) %out,
 }
 
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

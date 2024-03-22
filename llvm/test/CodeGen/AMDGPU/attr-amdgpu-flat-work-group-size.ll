@@ -6,33 +6,30 @@
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-define amdgpu_kernel void @min_64_max_64() #0 {
+define amdgpu_kernel void @min_64_max_64() "amdgpu-flat-work-group-size"="64,64" {
 entry:
   ret void
 }
-attributes #0 = {"amdgpu-flat-work-group-size"="64,64"}
 
 ; CHECK-LABEL: {{^}}min_64_max_128:
 ; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-define amdgpu_kernel void @min_64_max_128() #1 {
+define amdgpu_kernel void @min_64_max_128() "amdgpu-flat-work-group-size"="64,128" {
 entry:
   ret void
 }
-attributes #1 = {"amdgpu-flat-work-group-size"="64,128"}
 
 ; CHECK-LABEL: {{^}}min_128_max_128:
 ; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-define amdgpu_kernel void @min_128_max_128() #2 {
+define amdgpu_kernel void @min_128_max_128() "amdgpu-flat-work-group-size"="128,128" {
 entry:
   ret void
 }
-attributes #2 = {"amdgpu-flat-work-group-size"="128,128"}
 
 ; CHECK-LABEL: {{^}}min_1024_max_1024
 ; CHECK: SGPRBlocks: 0
@@ -40,7 +37,7 @@ attributes #2 = {"amdgpu-flat-work-group-size"="128,128"}
 ; CHECK: NumSGPRsForWavesPerEU: 2{{$}}
 ; CHECK: NumVGPRsForWavesPerEU: 43
 @var = addrspace(1) global float 0.0
-define amdgpu_kernel void @min_1024_max_1024() #3 {
+define amdgpu_kernel void @min_1024_max_1024() "amdgpu-flat-work-group-size"="1024,1024" {
   %val0 = load volatile float, ptr addrspace(1) @var
   %val1 = load volatile float, ptr addrspace(1) @var
   %val2 = load volatile float, ptr addrspace(1) @var
@@ -127,7 +124,6 @@ define amdgpu_kernel void @min_1024_max_1024() #3 {
 
   ret void
 }
-attributes #3 = {"amdgpu-flat-work-group-size"="1024,1024"}
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

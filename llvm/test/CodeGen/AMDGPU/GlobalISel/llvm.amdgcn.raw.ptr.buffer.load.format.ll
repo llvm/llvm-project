@@ -176,9 +176,7 @@ define amdgpu_ps <4 x float> @raw_ptr_buffer_load_format_v4f32__sgpr_rsrc__vgpr_
   ret <4 x float> %val
 }
 
-declare float @llvm.amdgcn.raw.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32 immarg) #0
-declare <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v2f32(ptr addrspace(8), i32, i32, i32 immarg) #0
-declare <3 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v3f32(ptr addrspace(8), i32, i32, i32 immarg) #0
-declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32 immarg) #0
-
-attributes #0 = { nounwind readonly }
+declare float @llvm.amdgcn.raw.ptr.buffer.load.format.f32(ptr addrspace(8), i32, i32, i32 immarg) nounwind readonly
+declare <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v2f32(ptr addrspace(8), i32, i32, i32 immarg) nounwind readonly
+declare <3 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v3f32(ptr addrspace(8), i32, i32, i32 immarg) nounwind readonly
+declare <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32 immarg) nounwind readonly

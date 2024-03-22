@@ -6,7 +6,7 @@
 ; SI-NOT: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] poison, align 4
 ; CI: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] poison, align 4
 
-define amdgpu_kernel void @promote_alloca_size_63(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #0 {
+define amdgpu_kernel void @promote_alloca_size_63(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-flat-work-group-size"="63,63" {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
   %0 = load i32, ptr addrspace(1) %in, align 4
@@ -27,7 +27,7 @@ entry:
 
 ; ALL: @promote_alloca_size_256.stack = internal unnamed_addr addrspace(3) global [256 x [5 x i32]] poison, align 4
 
-define amdgpu_kernel void @promote_alloca_size_256(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #1 {
+define amdgpu_kernel void @promote_alloca_size_256(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,3" "amdgpu-flat-work-group-size"="256,256" {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
   %0 = load i32, ptr addrspace(1) %in, align 4
@@ -50,7 +50,7 @@ entry:
 ; CI: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1024 x [5 x i32]] poison, align 4
 ; GFX10PLUS: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1024 x [5 x i32]] poison, align 4
 
-define amdgpu_kernel void @promote_alloca_size_1600(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #2 {
+define amdgpu_kernel void @promote_alloca_size_1600(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,9" "amdgpu-flat-work-group-size"="1024,1024" {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
   %0 = load i32, ptr addrspace(1) %in, align 4
@@ -72,7 +72,7 @@ entry:
 ; ALL-LABEL: @occupancy_0(
 ; CI-NOT: alloca [5 x i32]
 ; SI: alloca [5 x i32]
-define amdgpu_kernel void @occupancy_0(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #3 {
+define amdgpu_kernel void @occupancy_0(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,10" {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
   %0 = load i32, ptr addrspace(1) %in, align 4
@@ -94,7 +94,7 @@ entry:
 ; ALL-LABEL: @occupancy_max(
 ; CI-NOT: alloca [5 x i32]
 ; SI: alloca [5 x i32]
-define amdgpu_kernel void @occupancy_max(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #4 {
+define amdgpu_kernel void @occupancy_max(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,10" {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
   %0 = load i32, ptr addrspace(1) %in, align 4
@@ -117,7 +117,7 @@ entry:
 ; CI-LABEL: @occupancy_6(
 ; SI: alloca
 ; CI-NOT: alloca
-define amdgpu_kernel void @occupancy_6(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #5 {
+define amdgpu_kernel void @occupancy_6(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,6" "amdgpu-flat-work-group-size"="64,64" {
 entry:
   %stack = alloca [42 x i8], align 4, addrspace(5)
   %tmp = load i8, ptr addrspace(1) %in, align 1
@@ -142,7 +142,7 @@ entry:
 ; SICI: alloca [43 x i8]
 ; GFX10PLUS-NOT: alloca
 
-define amdgpu_kernel void @occupancy_6_over(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #5 {
+define amdgpu_kernel void @occupancy_6_over(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,6" "amdgpu-flat-work-group-size"="64,64" {
 entry:
   %stack = alloca [43 x i8], align 4, addrspace(5)
   %tmp = load i8, ptr addrspace(1) %in, align 1
@@ -167,7 +167,7 @@ entry:
 ; CI-LABEL: @occupancy_8(
 ; SI: alloca
 ; CI-NOT: alloca
-define amdgpu_kernel void @occupancy_8(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #6 {
+define amdgpu_kernel void @occupancy_8(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,8" "amdgpu-flat-work-group-size"="64,64" {
 entry:
   %stack = alloca [32 x i8], align 4, addrspace(5)
   %tmp = load i8, ptr addrspace(1) %in, align 1
@@ -192,7 +192,7 @@ entry:
 ; SICI: alloca [33 x i8]
 ; GFX10PLUS-NOT: alloca
 
-define amdgpu_kernel void @occupancy_8_over(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #6 {
+define amdgpu_kernel void @occupancy_8_over(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,8" "amdgpu-flat-work-group-size"="64,64" {
 entry:
   %stack = alloca [33 x i8], align 4, addrspace(5)
   %tmp = load i8, ptr addrspace(1) %in, align 1
@@ -217,7 +217,7 @@ entry:
 ; CI-LABEL: @occupancy_9(
 ; SI: alloca
 ; CI-NOT: alloca
-define amdgpu_kernel void @occupancy_9(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #7 {
+define amdgpu_kernel void @occupancy_9(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,9" "amdgpu-flat-work-group-size"="64,64" {
 entry:
   %stack = alloca [28 x i8], align 4, addrspace(5)
   %tmp = load i8, ptr addrspace(1) %in, align 1
@@ -242,7 +242,7 @@ entry:
 ; SICI: alloca [29 x i8]
 ; GFX10PLUS-NOT: alloca
 
-define amdgpu_kernel void @occupancy_9_over(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #7 {
+define amdgpu_kernel void @occupancy_9_over(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) nounwind "amdgpu-waves-per-eu"="1,9" "amdgpu-flat-work-group-size"="64,64" {
 entry:
   %stack = alloca [29 x i8], align 4, addrspace(5)
   %tmp = load i8, ptr addrspace(1) %in, align 1
@@ -262,12 +262,3 @@ entry:
   store i8 %tmp3, ptr addrspace(1) %arrayidx13, align 1
   ret void
 }
-
-attributes #0 = { nounwind "amdgpu-flat-work-group-size"="63,63" }
-attributes #1 = { nounwind "amdgpu-waves-per-eu"="1,3" "amdgpu-flat-work-group-size"="256,256" }
-attributes #2 = { nounwind "amdgpu-waves-per-eu"="1,9" "amdgpu-flat-work-group-size"="1024,1024" }
-attributes #3 = { nounwind "amdgpu-waves-per-eu"="1,10" }
-attributes #4 = { nounwind "amdgpu-waves-per-eu"="1,10" }
-attributes #5 = { nounwind "amdgpu-waves-per-eu"="1,6" "amdgpu-flat-work-group-size"="64,64" }
-attributes #6 = { nounwind "amdgpu-waves-per-eu"="1,8" "amdgpu-flat-work-group-size"="64,64" }
-attributes #7 = { nounwind "amdgpu-waves-per-eu"="1,9" "amdgpu-flat-work-group-size"="64,64" }

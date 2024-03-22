@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs -misched-cluster=0  < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs -misched-cluster=0 -amdgpu-igrouplp-exact-solver-max-branches=250000 < %s | FileCheck -check-prefix=EXACTCUTOFF %s
 
-define amdgpu_kernel void @test_sched_group_barrier() #0 {
+define amdgpu_kernel void @test_sched_group_barrier() nounwind "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_sched_group_barrier:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000000) size(1) SyncID(2)
@@ -19,14 +19,14 @@ define amdgpu_kernel void @test_sched_group_barrier() #0 {
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x0000000F) size(10000) SyncID(-1)
 ; EXACTCUTOFF-NEXT:    s_endpgm
 entry:
-  call void @llvm.amdgcn.sched.group.barrier(i32 0, i32 1, i32 2) #1
-  call void @llvm.amdgcn.sched.group.barrier(i32 1, i32 2, i32 4) #1
-  call void @llvm.amdgcn.sched.group.barrier(i32 4, i32 8, i32 16) #1
-  call void @llvm.amdgcn.sched.group.barrier(i32 15, i32 10000, i32 -1) #1
+  call void @llvm.amdgcn.sched.group.barrier(i32 0, i32 1, i32 2) nounwind
+  call void @llvm.amdgcn.sched.group.barrier(i32 1, i32 2, i32 4) nounwind
+  call void @llvm.amdgcn.sched.group.barrier(i32 4, i32 8, i32 16) nounwind
+  call void @llvm.amdgcn.sched.group.barrier(i32 15, i32 10000, i32 -1) nounwind
   ret void
 }
 
-define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) #0 {
+define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) nounwind "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_READ_VALU_WRITE:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -160,7 +160,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(30) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000040) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #2
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %gep1 = getelementptr <32 x i32>, ptr addrspace(1) %in, i32 %tid
   %load = load <32 x i32>, ptr addrspace(1) %gep1
   %mul = mul <32 x i32> %load, %load
@@ -175,7 +175,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr
   ret void
 }
 
-define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VALU(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) #0 {
+define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VALU(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) nounwind "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_alternating_READ_VALU:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -335,7 +335,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000040) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #2
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %gep1 = getelementptr <32 x i32>, ptr addrspace(1) %in, i32 %tid
   %load = load <32 x i32>, ptr addrspace(1) %gep1
   %mul = mul <32 x i32> %load, %load
@@ -378,7 +378,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
   ret void
 }
 
-define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VALU_WRITE(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) #0 {
+define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VALU_WRITE(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) nounwind "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_alternating_READ_VALU_WRITE:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -554,7 +554,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000040) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_endpgm
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() #2
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
   %gep1 = getelementptr <32 x i32>, ptr addrspace(1) %in, i32 %tid
   %load = load <32 x i32>, ptr addrspace(1) %gep1
   %mul = mul <32 x i32> %load, %load
@@ -611,7 +611,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
   ret void
 }
 
-define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
+define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) nounwind "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_MFMA_cluster:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -859,7 +859,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
+define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) nounwind "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1185,7 +1185,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out, <5 x float> %in1) #0 {
+define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out, <5 x float> %in1) nounwind "amdgpu-flat-work-group-size"="1,256" {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_interleave_EXP_MFMA:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x44
@@ -1613,11 +1613,7 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-declare void @llvm.amdgcn.sched.group.barrier(i32, i32, i32) #1
-declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32) #1
-declare float @llvm.exp.f32(float) #2
-
-attributes #0 = { nounwind "amdgpu-flat-work-group-size"="1,256" }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind readnone speculatable }
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
+declare void @llvm.amdgcn.sched.group.barrier(i32, i32, i32) nounwind
+declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32) nounwind
+declare float @llvm.exp.f32(float) nounwind readnone speculatable

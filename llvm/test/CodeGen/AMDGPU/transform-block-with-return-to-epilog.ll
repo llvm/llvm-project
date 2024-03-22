@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs -stop-after=si-pre-emit-peephole -o - %s | FileCheck -check-prefix=GCN %s
 ; If the block containing the SI_RETURN_TO_EPILOG is not the last block, insert an empty block at the end and
 ; insert an unconditional jump there.
-define amdgpu_ps float @simple_test_return_to_epilog(float %a) #0 {
+define amdgpu_ps float @simple_test_return_to_epilog(float %a) nounwind {
   ; GCN-LABEL: name: simple_test_return_to_epilog
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   liveins: $vgpr0
@@ -12,7 +12,7 @@ entry:
   ret float %a
 }
 
-define amdgpu_ps float @test_return_to_epilog_into_end_block(i32 inreg %a, float %b) #0 {
+define amdgpu_ps float @test_return_to_epilog_into_end_block(i32 inreg %a, float %b) nounwind {
   ; GCN-LABEL: name: test_return_to_epilog_into_end_block
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
@@ -45,7 +45,7 @@ else:                                             ; preds = %entry
   unreachable
 }
 
-define amdgpu_ps float @test_unify_return_to_epilog_into_end_block(i32 inreg %a, i32 inreg %b, float %c, float %d) #0 {
+define amdgpu_ps float @test_unify_return_to_epilog_into_end_block(i32 inreg %a, i32 inreg %b, float %c, float %d) nounwind {
   ; GCN-LABEL: name: test_unify_return_to_epilog_into_end_block
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
@@ -97,7 +97,7 @@ else:                                             ; preds = %else.if.cond
   unreachable
 }
 
-define amdgpu_ps { <4 x float> } @test_return_to_epilog_with_optimized_kill(float %val) #0 {
+define amdgpu_ps { <4 x float> } @test_return_to_epilog_with_optimized_kill(float %val) nounwind {
   ; GCN-LABEL: name: test_return_to_epilog_with_optimized_kill
   ; GCN: bb.0 (%ir-block.0):
   ; GCN-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
@@ -189,6 +189,4 @@ end:                                              ; preds = %kill0, %kill1, %flo
   ret { <4 x float> } undef
 }
 
-declare void @llvm.amdgcn.kill(i1) #0
-
-attributes #0 = { nounwind }
+declare void @llvm.amdgcn.kill(i1) nounwind

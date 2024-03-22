@@ -2,7 +2,7 @@
 ; RUN:  opt -S -mtriple=amdgcn-- -passes='amdgpu-atomic-optimizer<strategy=iterative>,verify<domtree>' %s | FileCheck -check-prefix=IR-ITERATIVE %s
 ; RUN:  opt -S -mtriple=amdgcn-- -passes='amdgpu-atomic-optimizer<strategy=dpp>,verify<domtree>' %s | FileCheck -check-prefix=IR-DPP %s
 declare i32 @llvm.amdgcn.workitem.id.x()
-define amdgpu_kernel void @global_atomic_fadd_uni_value(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_uni_value(ptr addrspace(1) %ptr) "target-cpu"="gfx906" {
 ; IR-ITERATIVE-LABEL: @global_atomic_fadd_uni_value(
 ; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
 ; IR-ITERATIVE-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
@@ -46,7 +46,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_value(ptr addrspace(1) %ptr) #
 }
 
 
-define amdgpu_kernel void @global_atomic_fadd_div_value(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_div_value(ptr addrspace(1) %ptr) "target-cpu"="gfx906" {
 ; IR-ITERATIVE-LABEL: @global_atomic_fadd_div_value(
 ; IR-ITERATIVE-NEXT:    [[ID_X:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; IR-ITERATIVE-NEXT:    [[DIVVALUE:%.*]] = bitcast i32 [[ID_X]] to float
@@ -124,7 +124,7 @@ define amdgpu_kernel void @global_atomic_fadd_div_value(ptr addrspace(1) %ptr) #
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fsub_uni_value(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fsub_uni_value(ptr addrspace(1) %ptr) "target-cpu"="gfx906" {
 ; IR-ITERATIVE-LABEL: @global_atomic_fsub_uni_value(
 ; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
 ; IR-ITERATIVE-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
@@ -168,7 +168,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_value(ptr addrspace(1) %ptr) #
 }
 
 
-define amdgpu_kernel void @global_atomic_fsub_div_value(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fsub_div_value(ptr addrspace(1) %ptr) "target-cpu"="gfx906" {
 ; IR-ITERATIVE-LABEL: @global_atomic_fsub_div_value(
 ; IR-ITERATIVE-NEXT:    [[ID_X:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; IR-ITERATIVE-NEXT:    [[DIVVALUE:%.*]] = bitcast i32 [[ID_X]] to float
@@ -245,5 +245,3 @@ define amdgpu_kernel void @global_atomic_fsub_div_value(ptr addrspace(1) %ptr) #
   %result = atomicrmw fsub ptr addrspace(1) %ptr, float %divValue seq_cst
   ret void
 }
-
-attributes #0 = {"target-cpu"="gfx906"}

@@ -3,10 +3,10 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
-declare float @llvm.fabs.f32(float) #1
-declare double @llvm.fabs.f64(double) #1
+declare float @llvm.fabs.f32(float) nounwind readnone
+declare double @llvm.fabs.f64(double) nounwind readnone
 
-define amdgpu_kernel void @test_isinf_pattern(ptr addrspace(1) nocapture %out, float %x) #0 {
+define amdgpu_kernel void @test_isinf_pattern(ptr addrspace(1) nocapture %out, float %x) nounwind {
 ; SI-LABEL: test_isinf_pattern:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -47,14 +47,14 @@ define amdgpu_kernel void @test_isinf_pattern(ptr addrspace(1) nocapture %out, f
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %fabs = tail call float @llvm.fabs.f32(float %x) #1
+  %fabs = tail call float @llvm.fabs.f32(float %x) nounwind readnone
   %cmp = fcmp oeq float %fabs, 0x7FF0000000000000
   %ext = zext i1 %cmp to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_not_isinf_pattern_0(ptr addrspace(1) nocapture %out, float %x) #0 {
+define amdgpu_kernel void @test_not_isinf_pattern_0(ptr addrspace(1) nocapture %out, float %x) nounwind {
 ; SI-LABEL: test_not_isinf_pattern_0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -95,14 +95,14 @@ define amdgpu_kernel void @test_not_isinf_pattern_0(ptr addrspace(1) nocapture %
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %fabs = tail call float @llvm.fabs.f32(float %x) #1
+  %fabs = tail call float @llvm.fabs.f32(float %x) nounwind readnone
   %cmp = fcmp ueq float %fabs, 0x7FF0000000000000
   %ext = zext i1 %cmp to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_not_isinf_pattern_1(ptr addrspace(1) nocapture %out, float %x) #0 {
+define amdgpu_kernel void @test_not_isinf_pattern_1(ptr addrspace(1) nocapture %out, float %x) nounwind {
 ; SI-LABEL: test_not_isinf_pattern_1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -132,14 +132,14 @@ define amdgpu_kernel void @test_not_isinf_pattern_1(ptr addrspace(1) nocapture %
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %fabs = tail call float @llvm.fabs.f32(float %x) #1
+  %fabs = tail call float @llvm.fabs.f32(float %x) nounwind readnone
   %cmp = fcmp oeq float %fabs, 0xFFF0000000000000
   %ext = zext i1 %cmp to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_isfinite_pattern_0(ptr addrspace(1) nocapture %out, float %x) #0 {
+define amdgpu_kernel void @test_isfinite_pattern_0(ptr addrspace(1) nocapture %out, float %x) nounwind {
 ; SI-LABEL: test_isfinite_pattern_0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -181,7 +181,7 @@ define amdgpu_kernel void @test_isfinite_pattern_0(ptr addrspace(1) nocapture %o
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
-  %x.fabs = tail call float @llvm.fabs.f32(float %x) #1
+  %x.fabs = tail call float @llvm.fabs.f32(float %x) nounwind readnone
   %ninf = fcmp une float %x.fabs, 0x7FF0000000000000
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
@@ -189,7 +189,7 @@ define amdgpu_kernel void @test_isfinite_pattern_0(ptr addrspace(1) nocapture %o
   ret void
 }
 
-define amdgpu_kernel void @test_isfinite_pattern_1(ptr addrspace(1) nocapture %out, float %x) #0 {
+define amdgpu_kernel void @test_isfinite_pattern_1(ptr addrspace(1) nocapture %out, float %x) nounwind {
 ; SI-LABEL: test_isfinite_pattern_1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -238,7 +238,7 @@ define amdgpu_kernel void @test_isfinite_pattern_1(ptr addrspace(1) nocapture %o
 }
 
 ; Use negative infinity
-define amdgpu_kernel void @test_isfinite_not_pattern_0(ptr addrspace(1) nocapture %out, float %x) #0 {
+define amdgpu_kernel void @test_isfinite_not_pattern_0(ptr addrspace(1) nocapture %out, float %x) nounwind {
 ; SI-LABEL: test_isfinite_not_pattern_0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -278,7 +278,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_0(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
-  %x.fabs = tail call float @llvm.fabs.f32(float %x) #1
+  %x.fabs = tail call float @llvm.fabs.f32(float %x) nounwind readnone
   %ninf = fcmp une float %x.fabs, 0xFFF0000000000000
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
@@ -287,7 +287,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_0(ptr addrspace(1) nocaptur
 }
 
 ; No fabs
-define amdgpu_kernel void @test_isfinite_not_pattern_1(ptr addrspace(1) nocapture %out, float %x) #0 {
+define amdgpu_kernel void @test_isfinite_not_pattern_1(ptr addrspace(1) nocapture %out, float %x) nounwind {
 ; SI-LABEL: test_isfinite_not_pattern_1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -343,7 +343,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_1(ptr addrspace(1) nocaptur
 }
 
 ; fabs of different value
-define amdgpu_kernel void @test_isfinite_not_pattern_2(ptr addrspace(1) nocapture %out, float %x, float %y) #0 {
+define amdgpu_kernel void @test_isfinite_not_pattern_2(ptr addrspace(1) nocapture %out, float %x, float %y) nounwind {
 ; SI-LABEL: test_isfinite_not_pattern_2:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -389,7 +389,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_2(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
-  %x.fabs = tail call float @llvm.fabs.f32(float %y) #1
+  %x.fabs = tail call float @llvm.fabs.f32(float %y) nounwind readnone
   %ninf = fcmp une float %x.fabs, 0x7FF0000000000000
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
@@ -398,7 +398,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_2(ptr addrspace(1) nocaptur
 }
 
 ; Wrong ordered compare type
-define amdgpu_kernel void @test_isfinite_not_pattern_3(ptr addrspace(1) nocapture %out, float %x) #0 {
+define amdgpu_kernel void @test_isfinite_not_pattern_3(ptr addrspace(1) nocapture %out, float %x) nounwind {
 ; SI-LABEL: test_isfinite_not_pattern_3:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -446,7 +446,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_3(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp uno float %x, 0.000000e+00
-  %x.fabs = tail call float @llvm.fabs.f32(float %x) #1
+  %x.fabs = tail call float @llvm.fabs.f32(float %x) nounwind readnone
   %ninf = fcmp une float %x.fabs, 0x7FF0000000000000
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
@@ -454,7 +454,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_3(ptr addrspace(1) nocaptur
   ret void
 }
 
-define amdgpu_kernel void @test_isfinite_pattern_4(ptr addrspace(1) nocapture %out, float %x) #0 {
+define amdgpu_kernel void @test_isfinite_pattern_4(ptr addrspace(1) nocapture %out, float %x) nounwind {
 ; SI-LABEL: test_isfinite_pattern_4:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -496,7 +496,7 @@ define amdgpu_kernel void @test_isfinite_pattern_4(ptr addrspace(1) nocapture %o
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
-  %x.fabs = tail call float @llvm.fabs.f32(float %x) #1
+  %x.fabs = tail call float @llvm.fabs.f32(float %x) nounwind readnone
   %ninf = fcmp one float %x.fabs, 0x7FF0000000000000
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
@@ -504,7 +504,7 @@ define amdgpu_kernel void @test_isfinite_pattern_4(ptr addrspace(1) nocapture %o
   ret void
 }
 
-define amdgpu_kernel void @test_isfinite_pattern_4_commute_and(ptr addrspace(1) nocapture %out, float %x) #0 {
+define amdgpu_kernel void @test_isfinite_pattern_4_commute_and(ptr addrspace(1) nocapture %out, float %x) nounwind {
 ; SI-LABEL: test_isfinite_pattern_4_commute_and:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -546,7 +546,7 @@ define amdgpu_kernel void @test_isfinite_pattern_4_commute_and(ptr addrspace(1) 
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
-  %x.fabs = tail call float @llvm.fabs.f32(float %x) #1
+  %x.fabs = tail call float @llvm.fabs.f32(float %x) nounwind readnone
   %ninf = fcmp one float %x.fabs, 0x7FF0000000000000
   %and = and i1 %ninf, %ord
   %ext = zext i1 %and to i32
@@ -554,7 +554,7 @@ define amdgpu_kernel void @test_isfinite_pattern_4_commute_and(ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_kernel void @test_not_isfinite_pattern_4_wrong_ord_test(ptr addrspace(1) nocapture %out, float %x, [8 x i32], float %y) #0 {
+define amdgpu_kernel void @test_not_isfinite_pattern_4_wrong_ord_test(ptr addrspace(1) nocapture %out, float %x, [8 x i32], float %y) nounwind {
 ; SI-LABEL: test_not_isfinite_pattern_4_wrong_ord_test:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0x14
@@ -607,7 +607,7 @@ define amdgpu_kernel void @test_not_isfinite_pattern_4_wrong_ord_test(ptr addrsp
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, %y
-  %x.fabs = tail call float @llvm.fabs.f32(float %x) #1
+  %x.fabs = tail call float @llvm.fabs.f32(float %x) nounwind readnone
   %ninf = fcmp one float %x.fabs, 0x7FF0000000000000
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
@@ -615,7 +615,7 @@ define amdgpu_kernel void @test_not_isfinite_pattern_4_wrong_ord_test(ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @test_isinf_pattern_f16(ptr addrspace(1) nocapture %out, half %x) #0 {
+define amdgpu_kernel void @test_isinf_pattern_f16(ptr addrspace(1) nocapture %out, half %x) nounwind {
 ; SI-LABEL: test_isinf_pattern_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -657,14 +657,14 @@ define amdgpu_kernel void @test_isinf_pattern_f16(ptr addrspace(1) nocapture %ou
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %fabs = tail call half @llvm.fabs.f16(half %x) #1
+  %fabs = tail call half @llvm.fabs.f16(half %x) nounwind readnone
   %cmp = fcmp oeq half %fabs, 0xH7C00
   %ext = zext i1 %cmp to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_isfinite_pattern_0_f16(ptr addrspace(1) nocapture %out, half %x) #0 {
+define amdgpu_kernel void @test_isfinite_pattern_0_f16(ptr addrspace(1) nocapture %out, half %x) nounwind {
 ; SI-LABEL: test_isfinite_pattern_0_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -710,7 +710,7 @@ define amdgpu_kernel void @test_isfinite_pattern_0_f16(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord half %x, 0.0
-  %x.fabs = tail call half @llvm.fabs.f16(half %x) #1
+  %x.fabs = tail call half @llvm.fabs.f16(half %x) nounwind readnone
   %ninf = fcmp une half %x.fabs, 0xH7C00
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
@@ -718,7 +718,7 @@ define amdgpu_kernel void @test_isfinite_pattern_0_f16(ptr addrspace(1) nocaptur
   ret void
 }
 
-define amdgpu_kernel void @test_isfinite_pattern_4_f16(ptr addrspace(1) nocapture %out, half %x) #0 {
+define amdgpu_kernel void @test_isfinite_pattern_4_f16(ptr addrspace(1) nocapture %out, half %x) nounwind {
 ; SI-LABEL: test_isfinite_pattern_4_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -764,7 +764,7 @@ define amdgpu_kernel void @test_isfinite_pattern_4_f16(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord half %x, 0.0
-  %x.fabs = tail call half @llvm.fabs.f16(half %x) #1
+  %x.fabs = tail call half @llvm.fabs.f16(half %x) nounwind readnone
   %ninf = fcmp one half %x.fabs, 0xH7C00
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
@@ -772,7 +772,4 @@ define amdgpu_kernel void @test_isfinite_pattern_4_f16(ptr addrspace(1) nocaptur
   ret void
 }
 
-declare half @llvm.fabs.f16(half) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+declare half @llvm.fabs.f16(half) nounwind readnone

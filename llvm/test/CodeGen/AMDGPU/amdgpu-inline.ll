@@ -51,7 +51,7 @@ bb:
   ret float %call
 }
 
-define void @foo_noinline(ptr addrspace(5) nocapture %p) #0 {
+define void @foo_noinline(ptr addrspace(5) nocapture %p) noinline {
 entry:
   %tmp1 = load float, ptr addrspace(5) %p, align 4
   %mul = fmul float %tmp1, 2.000000e+00
@@ -171,9 +171,6 @@ bb.2:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @_Z3sinf(float) #1
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare float @_Z3sinf(float) nounwind readnone
 declare void @forbid_sroa(ptr addrspace(5) nocapture %p)
-
-attributes #0 = { noinline }
-attributes #1 = { nounwind readnone }

@@ -8,7 +8,7 @@ target datalayout = "A5"
 ; OPT: <8 x i64>
 ; LIMIT32: alloca
 ; LIMIT32-NOT: <8 x i64>
-define amdgpu_kernel void @alloca_8xi64_max1024(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @alloca_8xi64_max1024(ptr addrspace(1) %out, i32 %index) "amdgpu-flat-work-group-size"="1,1024" {
 entry:
   %tmp = alloca [8 x i64], addrspace(5)
   store i64 0, ptr addrspace(5) %tmp
@@ -23,7 +23,7 @@ entry:
 ; OPT-NOT: <9 x i64>
 ; LIMIT32: alloca
 ; LIMIT32-NOT: <9 x i64>
-define amdgpu_kernel void @alloca_9xi64_max1024(ptr addrspace(1) %out, i32 %index) #0 {
+define amdgpu_kernel void @alloca_9xi64_max1024(ptr addrspace(1) %out, i32 %index) "amdgpu-flat-work-group-size"="1,1024" {
 entry:
   %tmp = alloca [9 x i64], addrspace(5)
   store i64 0, ptr addrspace(5) %tmp
@@ -38,7 +38,7 @@ entry:
 ; OPT: <16 x i64>
 ; LIMIT32: alloca
 ; LIMIT32-NOT: <16 x i64>
-define amdgpu_kernel void @alloca_16xi64_max512(ptr addrspace(1) %out, i32 %index) #1 {
+define amdgpu_kernel void @alloca_16xi64_max512(ptr addrspace(1) %out, i32 %index) "amdgpu-flat-work-group-size"="1,512" {
 entry:
   %tmp = alloca [16 x i64], addrspace(5)
   store i64 0, ptr addrspace(5) %tmp
@@ -53,7 +53,7 @@ entry:
 ; OPT-NOT: <17 x i64>
 ; LIMIT32: alloca
 ; LIMIT32-NOT: <17 x i64>
-define amdgpu_kernel void @alloca_17xi64_max512(ptr addrspace(1) %out, i32 %index) #1 {
+define amdgpu_kernel void @alloca_17xi64_max512(ptr addrspace(1) %out, i32 %index) "amdgpu-flat-work-group-size"="1,512" {
 entry:
   %tmp = alloca [17 x i64], addrspace(5)
   store i64 0, ptr addrspace(5) %tmp
@@ -68,7 +68,7 @@ entry:
 ; OPT-NOT: <9 x i128>
 ; LIMIT32: alloca
 ; LIMIT32-NOT: <9 x i128>
-define amdgpu_kernel void @alloca_9xi128_max512(ptr addrspace(1) %out, i32 %index) #1 {
+define amdgpu_kernel void @alloca_9xi128_max512(ptr addrspace(1) %out, i32 %index) "amdgpu-flat-work-group-size"="1,512" {
 entry:
   %tmp = alloca [9 x i128], addrspace(5)
   store i128 0, ptr addrspace(5) %tmp
@@ -83,7 +83,7 @@ entry:
 ; OPT: <9 x i128>
 ; LIMIT32: alloca
 ; LIMIT32-NOT: <9 x i128>
-define amdgpu_kernel void @alloca_9xi128_max256(ptr addrspace(1) %out, i32 %index) #2 {
+define amdgpu_kernel void @alloca_9xi128_max256(ptr addrspace(1) %out, i32 %index) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %tmp = alloca [9 x i128], addrspace(5)
   store i128 0, ptr addrspace(5) %tmp
@@ -98,7 +98,7 @@ entry:
 ; OPT: <16 x i128>
 ; LIMIT32: alloca
 ; LIMIT32-NOT: <16 x i128>
-define amdgpu_kernel void @alloca_16xi128_max256(ptr addrspace(1) %out, i32 %index) #2 {
+define amdgpu_kernel void @alloca_16xi128_max256(ptr addrspace(1) %out, i32 %index) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %tmp = alloca [16 x i128], addrspace(5)
   store i128 0, ptr addrspace(5) %tmp
@@ -113,7 +113,7 @@ entry:
 ; OPT-NOT: <9 x i256>
 ; LIMIT32: alloca
 ; LIMIT32-NOT: <9 x i256>
-define amdgpu_kernel void @alloca_9xi256_max256(ptr addrspace(1) %out, i32 %index) #2 {
+define amdgpu_kernel void @alloca_9xi256_max256(ptr addrspace(1) %out, i32 %index) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %tmp = alloca [9 x i256], addrspace(5)
   store i256 0, ptr addrspace(5) %tmp
@@ -128,7 +128,7 @@ entry:
 ; OPT: <9 x i64>
 ; LIMIT32: alloca
 ; LIMIT32-NOT: <9 x i64>
-define amdgpu_kernel void @alloca_9xi64_max256(ptr addrspace(1) %out, i32 %index) #2 {
+define amdgpu_kernel void @alloca_9xi64_max256(ptr addrspace(1) %out, i32 %index) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %tmp = alloca [9 x i64], addrspace(5)
   store i64 0, ptr addrspace(5) %tmp
@@ -143,7 +143,7 @@ entry:
 ; OPT-NOT: <9 x i64>
 ; LIMIT32: alloca
 ; LIMIT32-NOT: <9 x i64>
-define void @func_alloca_9xi64_max256(ptr addrspace(1) %out, i32 %index) #2 {
+define void @func_alloca_9xi64_max256(ptr addrspace(1) %out, i32 %index) "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %tmp = alloca [9 x i64], addrspace(5)
   store i64 0, ptr addrspace(5) %tmp
@@ -158,7 +158,7 @@ entry:
 ; OPT: <9 x i64>
 ; LIMIT32: alloca
 ; LIMIT32-NOT: <9 x i64>
-define void @alwaysinlined_func_alloca_9xi64_max256(ptr addrspace(1) %out, i32 %index) #3 {
+define void @alwaysinlined_func_alloca_9xi64_max256(ptr addrspace(1) %out, i32 %index) alwaysinline "amdgpu-flat-work-group-size"="1,256" {
 entry:
   %tmp = alloca [9 x i64], addrspace(5)
   store i64 0, ptr addrspace(5) %tmp
@@ -167,8 +167,3 @@ entry:
   store i64 %tmp2, ptr addrspace(1) %out
   ret void
 }
-
-attributes #0 = { "amdgpu-flat-work-group-size"="1,1024" }
-attributes #1 = { "amdgpu-flat-work-group-size"="1,512" }
-attributes #2 = { "amdgpu-flat-work-group-size"="1,256" }
-attributes #3 = { alwaysinline "amdgpu-flat-work-group-size"="1,256" }

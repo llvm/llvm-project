@@ -6,15 +6,13 @@
 ; GCN: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
 ; GCN: .amdhsa_user_sgpr_queue_ptr 1
 define amdgpu_kernel void @test(ptr addrspace(1) %out) {
-  %queue_ptr = call noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
+  %queue_ptr = call noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr() nounwind readnone
   %value = load i32, ptr addrspace(4) %queue_ptr
   store i32 %value, ptr addrspace(1) %out
   ret void
 }
 
-declare noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
-
-attributes #0 = { nounwind readnone }
+declare noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr() nounwind readnone
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

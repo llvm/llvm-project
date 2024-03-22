@@ -4,7 +4,7 @@
 ; Kernels are not called, so there is no call preserved mask.
 ; GCN-LABEL: {{^}}kernel:
 ; GCN: flat_store_dword
-define amdgpu_kernel void @kernel(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @kernel(ptr addrspace(1) %out) nounwind {
 entry:
   store i32 0, ptr addrspace(1) %out
   ret void
@@ -12,8 +12,8 @@ entry:
 
 ; GCN-LABEL: {{^}}func:
 ; GCN: ; NumVgprs: 8
-define hidden void @func() #1 {
-  call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() #0
+define hidden void @func() nounwind noinline "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
+  call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() nounwind
   ret void
 }
 
@@ -32,7 +32,7 @@ define hidden void @func() #1 {
 
 ; GCN: ; NumSgprs: 37
 ; GCN: ; NumVgprs: 9
-define amdgpu_kernel void @kernel_call() #0 {
+define amdgpu_kernel void @kernel_call() nounwind {
   %vgpr = load volatile i32, ptr addrspace(1) undef
   tail call void @func()
   store volatile i32 %vgpr, ptr addrspace(1) undef
@@ -50,7 +50,7 @@ define amdgpu_kernel void @kernel_call() #0 {
 
 ; GCN: ; NumSgprs: 34
 ; GCN: ; NumVgprs: 10
-define void @func_regular_call() #1 {
+define void @func_regular_call() nounwind noinline "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
   %vgpr = load volatile i32, ptr addrspace(1) undef
   tail call void @func()
   store volatile i32 %vgpr, ptr addrspace(1) undef
@@ -66,7 +66,7 @@ define void @func_regular_call() #1 {
 
 ; GCN: ; NumSgprs: 32
 ; GCN: ; NumVgprs: 8
-define void @func_tail_call() #1 {
+define void @func_tail_call() nounwind noinline "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
   tail call void @func()
   ret void
 }
@@ -79,7 +79,7 @@ define void @func_tail_call() #1 {
 
 ; GCN: ; NumSgprs: 34
 ; GCN: ; NumVgprs: 10
-define void @func_call_tail_call() #1 {
+define void @func_call_tail_call() nounwind noinline "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" {
   %vgpr = load volatile i32, ptr addrspace(1) undef
   tail call void @func()
   store volatile i32 %vgpr, ptr addrspace(1) undef
@@ -99,7 +99,7 @@ define void @void_func_void() noinline {
 ; GCN: s_swappc_b64
 ; GCN-NOT: s32
 ; GCN: s_swappc_b64
-define void @test_funcx2() #0 {
+define void @test_funcx2() nounwind {
   call void @void_func_void()
   call void @void_func_void()
   ret void
@@ -108,13 +108,13 @@ define void @test_funcx2() #0 {
 ; GCN-LABEL: {{^}}wombat:
 define weak amdgpu_kernel void @wombat(ptr %arg, ptr %arg2) {
 bb:
-  call void @hoge() #0
+  call void @hoge() nounwind
   ret void
 }
 
 ; Make sure we save/restore the return address around the call.
 ; Function Attrs: norecurse
-define internal void @hoge() #2 {
+define internal void @hoge() norecurse {
 bb:
 ; GCN-LABEL: {{^}}hoge:
 ; GCN-DAG: v_writelane_b32 [[CSR_VGPR:v[0-9]+]], s30,
@@ -129,8 +129,3 @@ bb:
 }
 
 declare dso_local void @eggs()
-
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind noinline "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
-attributes #2 = { norecurse }

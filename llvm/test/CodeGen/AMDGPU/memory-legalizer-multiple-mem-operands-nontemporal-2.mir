@@ -2,7 +2,7 @@
 
 --- |
 
-  define amdgpu_kernel void @multiple_mem_operands(ptr addrspace(1) %out, i32 %cond, i32 %if_offset, i32 %else_offset) #0 {
+  define amdgpu_kernel void @multiple_mem_operands(ptr addrspace(1) %out, i32 %cond, i32 %if_offset, i32 %else_offset) "target-cpu"="gfx803" {
   entry:
     %scratch0 = alloca [8192 x i32], addrspace(5)
     %scratch1 = alloca [8192 x i32], addrspace(5)
@@ -28,10 +28,6 @@
     store i32 %value, ptr addrspace(1) %out
     ret void
   }
-
-  attributes #0 = { "target-cpu"="gfx803" }
-  attributes #1 = { convergent nounwind }
-  attributes #2 = { convergent nounwind readnone }
 
   !0 = !{}
   !1 = !{i32 1}

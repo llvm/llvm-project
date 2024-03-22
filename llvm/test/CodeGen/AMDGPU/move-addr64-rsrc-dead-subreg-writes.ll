@@ -18,7 +18,7 @@
 ; GCN: v_addc_u32_e32 v[[PTRHI:[0-9]+]], vcc, v[[LDPTRHI]], v[[VARG1HI]]
 ; GCN: buffer_load_ubyte v{{[0-9]+}}, v[[[PTRLO]]:[[PTRHI]]],
 
-define amdgpu_kernel void @clobber_vgpr_pair_pointer_add(i64 %arg1, [8 x i32], ptr addrspace(1) %ptrarg, i32 %arg3) #0 {
+define amdgpu_kernel void @clobber_vgpr_pair_pointer_add(i64 %arg1, [8 x i32], ptr addrspace(1) %ptrarg, i32 %arg3) nounwind {
 bb:
   %tmp = icmp sgt i32 %arg3, 0
   br i1 %tmp, label %bb4, label %bb17
@@ -32,5 +32,3 @@ bb4:
 bb17:
   ret void
 }
-
-attributes #0 = { nounwind }

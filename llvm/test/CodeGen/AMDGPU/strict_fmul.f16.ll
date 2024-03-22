@@ -14,7 +14,7 @@
 
 ; FIXME: promotion not handled without f16 insts
 
-define half @v_constained_fmul_f16_fpexcept_strict(half %x, half %y) #0 {
+define half @v_constained_fmul_f16_fpexcept_strict(half %x, half %y) strictfp {
 ; GCN-LABEL: v_constained_fmul_f16_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -30,7 +30,7 @@ define half @v_constained_fmul_f16_fpexcept_strict(half %x, half %y) #0 {
   ret half %val
 }
 
-define half @v_constained_fmul_f16_fpexcept_ignore(half %x, half %y) #0 {
+define half @v_constained_fmul_f16_fpexcept_ignore(half %x, half %y) strictfp {
 ; GCN-LABEL: v_constained_fmul_f16_fpexcept_ignore:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -46,7 +46,7 @@ define half @v_constained_fmul_f16_fpexcept_ignore(half %x, half %y) #0 {
   ret half %val
 }
 
-define half @v_constained_fmul_f16_fpexcept_maytrap(half %x, half %y) #0 {
+define half @v_constained_fmul_f16_fpexcept_maytrap(half %x, half %y) strictfp {
 ; GCN-LABEL: v_constained_fmul_f16_fpexcept_maytrap:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -62,7 +62,7 @@ define half @v_constained_fmul_f16_fpexcept_maytrap(half %x, half %y) #0 {
   ret half %val
 }
 
-define <2 x half> @v_constained_fmul_v2f16_fpexcept_strict(<2 x half> %x, <2 x half> %y) #0 {
+define <2 x half> @v_constained_fmul_v2f16_fpexcept_strict(<2 x half> %x, <2 x half> %y) strictfp {
 ; GFX9-LABEL: v_constained_fmul_v2f16_fpexcept_strict:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -94,7 +94,7 @@ define <2 x half> @v_constained_fmul_v2f16_fpexcept_strict(<2 x half> %x, <2 x h
   ret <2 x half> %val
 }
 
-define <2 x half> @v_constained_fmul_v2f16_fpexcept_ignore(<2 x half> %x, <2 x half> %y) #0 {
+define <2 x half> @v_constained_fmul_v2f16_fpexcept_ignore(<2 x half> %x, <2 x half> %y) strictfp {
 ; GFX9-LABEL: v_constained_fmul_v2f16_fpexcept_ignore:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -126,7 +126,7 @@ define <2 x half> @v_constained_fmul_v2f16_fpexcept_ignore(<2 x half> %x, <2 x h
   ret <2 x half> %val
 }
 
-define <2 x half> @v_constained_fmul_v2f16_fpexcept_maytrap(<2 x half> %x, <2 x half> %y) #0 {
+define <2 x half> @v_constained_fmul_v2f16_fpexcept_maytrap(<2 x half> %x, <2 x half> %y) strictfp {
 ; GFX9-LABEL: v_constained_fmul_v2f16_fpexcept_maytrap:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -158,7 +158,7 @@ define <2 x half> @v_constained_fmul_v2f16_fpexcept_maytrap(<2 x half> %x, <2 x 
   ret <2 x half> %val
 }
 
-define <3 x half> @v_constained_fmul_v3f16_fpexcept_strict(<3 x half> %x, <3 x half> %y) #0 {
+define <3 x half> @v_constained_fmul_v3f16_fpexcept_strict(<3 x half> %x, <3 x half> %y) strictfp {
 ; GFX9-SDAG-LABEL: v_constained_fmul_v3f16_fpexcept_strict:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -223,7 +223,7 @@ define <3 x half> @v_constained_fmul_v3f16_fpexcept_strict(<3 x half> %x, <3 x h
 }
 
 ; FIXME: Scalarized
-define <4 x half> @v_constained_fmul_v4f16_fpexcept_strict(<4 x half> %x, <4 x half> %y) #0 {
+define <4 x half> @v_constained_fmul_v4f16_fpexcept_strict(<4 x half> %x, <4 x half> %y) strictfp {
 ; GFX9-SDAG-LABEL: v_constained_fmul_v4f16_fpexcept_strict:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -308,7 +308,7 @@ define <4 x half> @v_constained_fmul_v4f16_fpexcept_strict(<4 x half> %x, <4 x h
   ret <4 x half> %val
 }
 
-define amdgpu_ps half @s_constained_fmul_f16_fpexcept_strict(half inreg %x, half inreg %y) #0 {
+define amdgpu_ps half @s_constained_fmul_f16_fpexcept_strict(half inreg %x, half inreg %y) strictfp {
 ; GCN-LABEL: s_constained_fmul_f16_fpexcept_strict:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, s3
@@ -323,7 +323,7 @@ define amdgpu_ps half @s_constained_fmul_f16_fpexcept_strict(half inreg %x, half
   ret half %val
 }
 
-define amdgpu_ps <2 x half> @s_constained_fmul_v2f16_fpexcept_strict(<2 x half> inreg %x, <2 x half> inreg %y) #0 {
+define amdgpu_ps <2 x half> @s_constained_fmul_v2f16_fpexcept_strict(<2 x half> inreg %x, <2 x half> inreg %y) strictfp {
 ; GFX9-LABEL: s_constained_fmul_v2f16_fpexcept_strict:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s3
@@ -362,13 +362,10 @@ define amdgpu_ps <2 x half> @s_constained_fmul_v2f16_fpexcept_strict(<2 x half> 
   ret <2 x half> %val
 }
 
-declare half @llvm.experimental.constrained.fmul.f16(half, half, metadata, metadata) #1
-declare <2 x half> @llvm.experimental.constrained.fmul.v2f16(<2 x half>, <2 x half>, metadata, metadata) #1
-declare <3 x half> @llvm.experimental.constrained.fmul.v3f16(<3 x half>, <3 x half>, metadata, metadata) #1
-declare <4 x half> @llvm.experimental.constrained.fmul.v4f16(<4 x half>, <4 x half>, metadata, metadata) #1
-
-attributes #0 = { strictfp }
-attributes #1 = { inaccessiblememonly nounwind willreturn }
+declare half @llvm.experimental.constrained.fmul.f16(half, half, metadata, metadata) inaccessiblememonly nounwind willreturn
+declare <2 x half> @llvm.experimental.constrained.fmul.v2f16(<2 x half>, <2 x half>, metadata, metadata) inaccessiblememonly nounwind willreturn
+declare <3 x half> @llvm.experimental.constrained.fmul.v3f16(<3 x half>, <3 x half>, metadata, metadata) inaccessiblememonly nounwind willreturn
+declare <4 x half> @llvm.experimental.constrained.fmul.v4f16(<4 x half>, <4 x half>, metadata, metadata) inaccessiblememonly nounwind willreturn
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GFX10: {{.*}}
 ; GFX11: {{.*}}

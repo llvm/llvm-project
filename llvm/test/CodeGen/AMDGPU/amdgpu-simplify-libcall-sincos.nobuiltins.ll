@@ -8,7 +8,7 @@ declare float @_Z3cosf(float noundef)
 declare <2 x float> @_Z3sinDv2_f(<2 x float> noundef)
 declare <2 x float> @_Z3cosDv2_f(<2 x float> noundef)
 
-define void @sincos_f32_nobuiltin(float noundef %x, ptr addrspace(1) nocapture noundef writeonly %sin_out, ptr addrspace(1) nocapture noundef writeonly %cos_out) #0 {
+define void @sincos_f32_nobuiltin(float noundef %x, ptr addrspace(1) nocapture noundef writeonly %sin_out, ptr addrspace(1) nocapture noundef writeonly %cos_out) nobuiltin {
 ; CHECK: Function Attrs: nobuiltin
 ; CHECK-LABEL: define void @sincos_f32_nobuiltin
 ; CHECK-SAME: (float noundef [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture noundef writeonly [[COS_OUT:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -29,7 +29,7 @@ entry:
   ret void
 }
 
-define void @sincos_v2f32_nobuiltin(<2 x float> noundef %x, ptr addrspace(1) nocapture noundef writeonly %sin_out, ptr addrspace(1) nocapture noundef writeonly %cos_out) #0 {
+define void @sincos_v2f32_nobuiltin(<2 x float> noundef %x, ptr addrspace(1) nocapture noundef writeonly %sin_out, ptr addrspace(1) nocapture noundef writeonly %cos_out) nobuiltin {
 ; CHECK: Function Attrs: nobuiltin
 ; CHECK-LABEL: define void @sincos_v2f32_nobuiltin
 ; CHECK-SAME: (<2 x float> noundef [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture noundef writeonly [[COS_OUT:%.*]]) #[[ATTR0]] {
@@ -50,7 +50,7 @@ entry:
   ret void
 }
 
-define void @sincos_f32_no_builtins(float noundef %x, ptr addrspace(1) nocapture noundef writeonly %sin_out, ptr addrspace(1) nocapture noundef writeonly %cos_out) #1 {
+define void @sincos_f32_no_builtins(float noundef %x, ptr addrspace(1) nocapture noundef writeonly %sin_out, ptr addrspace(1) nocapture noundef writeonly %cos_out) "no-builtins" {
 ; CHECK-LABEL: define void @sincos_f32_no_builtins
 ; CHECK-SAME: (float noundef [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture noundef writeonly [[COS_OUT:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -70,7 +70,7 @@ entry:
   ret void
 }
 
-define void @sincos_v2f32_no_builtins(<2 x float> noundef %x, ptr addrspace(1) nocapture noundef writeonly %sin_out, ptr addrspace(1) nocapture noundef writeonly %cos_out) #1 {
+define void @sincos_v2f32_no_builtins(<2 x float> noundef %x, ptr addrspace(1) nocapture noundef writeonly %sin_out, ptr addrspace(1) nocapture noundef writeonly %cos_out) "no-builtins" {
 ; CHECK-LABEL: define void @sincos_v2f32_no_builtins
 ; CHECK-SAME: (<2 x float> noundef [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture noundef writeonly [[COS_OUT:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
@@ -101,9 +101,9 @@ define void @sincos_f32_nobuiltin_callsite(float noundef %x, ptr addrspace(1) no
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %call = tail call contract float @_Z3sinf(float noundef %x) #0
+  %call = tail call contract float @_Z3sinf(float noundef %x) nobuiltin
   store float %call, ptr addrspace(1) %sin_out, align 4
-  %call1 = tail call contract float @_Z3cosf(float noundef %x) #0
+  %call1 = tail call contract float @_Z3cosf(float noundef %x) nobuiltin
   store float %call1, ptr addrspace(1) %cos_out, align 4
   ret void
 }
@@ -119,7 +119,7 @@ define void @sincos_f32_nobuiltin_callsite0(float noundef %x, ptr addrspace(1) n
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %call = tail call contract float @_Z3sinf(float noundef %x) #0
+  %call = tail call contract float @_Z3sinf(float noundef %x) nobuiltin
   store float %call, ptr addrspace(1) %sin_out, align 4
   %call1 = tail call contract float @_Z3cosf(float noundef %x)
   store float %call1, ptr addrspace(1) %cos_out, align 4
@@ -139,7 +139,7 @@ define void @sincos_f32_nobuiltin_callsite1(float noundef %x, ptr addrspace(1) n
 entry:
   %call = tail call contract float @_Z3sinf(float noundef %x)
   store float %call, ptr addrspace(1) %sin_out, align 4
-  %call1 = tail call contract float @_Z3cosf(float noundef %x) #0
+  %call1 = tail call contract float @_Z3cosf(float noundef %x) nobuiltin
   store float %call1, ptr addrspace(1) %cos_out, align 4
   ret void
 }
@@ -155,16 +155,14 @@ define void @sincos_v2f32_nobuiltin_callsite(<2 x float> noundef %x, ptr addrspa
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %call = tail call contract <2 x float> @_Z3sinDv2_f(<2 x float> noundef %x) #0
+  %call = tail call contract <2 x float> @_Z3sinDv2_f(<2 x float> noundef %x) nobuiltin
   store <2 x float> %call, ptr addrspace(1) %sin_out, align 8
-  %call1 = tail call contract <2 x float> @_Z3cosDv2_f(<2 x float> noundef %x) #0
+  %call1 = tail call contract <2 x float> @_Z3cosDv2_f(<2 x float> noundef %x) nobuiltin
   store <2 x float> %call1, ptr addrspace(1) %cos_out, align 8
   ret void
 }
 
 ; TODO: Handle single function forms
-attributes #0 = { nobuiltin }
-attributes #1 = { "no-builtins" }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nobuiltin }
 ; CHECK: attributes #[[ATTR1]] = { "no-builtins" }

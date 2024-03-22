@@ -7,7 +7,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+auto-waitcnt-before-barrier -verify-machineinstrs < %s | FileCheck --check-prefix=VARIANT5 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck --check-prefix=VARIANT6 %s
 
-define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
+define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) nounwind {
 ; VARIANT0-LABEL: test_barrier:
 ; VARIANT0:       ; %bb.0: ; %entry
 ; VARIANT0-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -169,9 +169,5 @@ entry:
   ret void
 }
 
-declare void @llvm.amdgcn.s.barrier() #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
-attributes #0 = { nounwind }
-attributes #1 = { convergent nounwind }
-attributes #2 = { nounwind readnone }
+declare void @llvm.amdgcn.s.barrier() convergent nounwind
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

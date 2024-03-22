@@ -5,22 +5,22 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
 
-declare float @llvm.fabs.f32(float) #0
-declare float @llvm.canonicalize.f32(float) #0
-declare <2 x float> @llvm.canonicalize.v2f32(<2 x float>) #0
-declare <3 x float> @llvm.canonicalize.v3f32(<3 x float>) #0
-declare <4 x float> @llvm.canonicalize.v4f32(<4 x float>) #0
-declare <8 x float> @llvm.canonicalize.v8f32(<8 x float>) #0
-declare double @llvm.fabs.f64(double) #0
-declare double @llvm.canonicalize.f64(double) #0
-declare <2 x double> @llvm.canonicalize.v2f64(<2 x double>) #0
-declare <3 x double> @llvm.canonicalize.v3f64(<3 x double>) #0
-declare <4 x double> @llvm.canonicalize.v4f64(<4 x double>) #0
-declare half @llvm.canonicalize.f16(half) #0
-declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) #0
-declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare float @llvm.fabs.f32(float) nounwind readnone
+declare float @llvm.canonicalize.f32(float) nounwind readnone
+declare <2 x float> @llvm.canonicalize.v2f32(<2 x float>) nounwind readnone
+declare <3 x float> @llvm.canonicalize.v3f32(<3 x float>) nounwind readnone
+declare <4 x float> @llvm.canonicalize.v4f32(<4 x float>) nounwind readnone
+declare <8 x float> @llvm.canonicalize.v8f32(<8 x float>) nounwind readnone
+declare double @llvm.fabs.f64(double) nounwind readnone
+declare double @llvm.canonicalize.f64(double) nounwind readnone
+declare <2 x double> @llvm.canonicalize.v2f64(<2 x double>) nounwind readnone
+declare <3 x double> @llvm.canonicalize.v3f64(<3 x double>) nounwind readnone
+declare <4 x double> @llvm.canonicalize.v4f64(<4 x double>) nounwind readnone
+declare half @llvm.canonicalize.f16(half) nounwind readnone
+declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-define amdgpu_kernel void @v_test_canonicalize_var_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_var_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_var_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -75,7 +75,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_f32(ptr addrspace(1) %out) #1
   ret void
 }
 
-define amdgpu_kernel void @s_test_canonicalize_var_f32(ptr addrspace(1) %out, float %val) #1 {
+define amdgpu_kernel void @s_test_canonicalize_var_f32(ptr addrspace(1) %out, float %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: s_test_canonicalize_var_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -136,7 +136,7 @@ define amdgpu_kernel void @s_test_canonicalize_var_f32(ptr addrspace(1) %out, fl
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fabs_var_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fabs_var_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_fabs_var_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -192,7 +192,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f32(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_fneg_fabs_var_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -249,7 +249,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f32(ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fneg_var_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fneg_var_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_fneg_var_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -305,7 +305,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f32(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_undef_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_undef_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_undef_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -348,7 +348,7 @@ define amdgpu_kernel void @test_fold_canonicalize_undef_f32(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_p0_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_p0_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_p0_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -391,7 +391,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_f32(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_n0_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_n0_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_n0_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -437,7 +437,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_f32(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_p1_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_p1_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_p1_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -481,7 +481,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_f32(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_n1_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_n1_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_n1_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -525,7 +525,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_f32(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_literal_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_literal_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_literal_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -569,7 +569,7 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_f32(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_no_denormals_fold_canonicalize_denormal0_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -612,7 +612,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32(ptr
   ret void
 }
 
-define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dynamic(ptr addrspace(1) %out) #5 {
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dynamic(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="dynamic,dynamic" {
 ; GFX678-LABEL: test_no_denormals_fold_canonicalize_denormal0_f32_dynamic:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -660,7 +660,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dyn
   ret void
 }
 
-define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_out(ptr addrspace(1) %out) #6 {
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_out(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="dynamic,ieee" {
 ; GFX678-LABEL: test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_out:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -708,7 +708,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dyn
   ret void
 }
 
-define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_in(ptr addrspace(1) %out) #7 {
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_in(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="ieee,dynamic" {
 ; GFX678-LABEL: test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_in:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -756,7 +756,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dyn
   ret void
 }
 
-define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f32(ptr addrspace(1) %out) #3 {
+define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math"="ieee,ieee" {
 ; GFX678-LABEL: test_denormals_fold_canonicalize_denormal0_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -800,7 +800,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f32(ptr ad
   ret void
 }
 
-define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_no_denormals_fold_canonicalize_denormal1_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -846,7 +846,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_f32(ptr
   ret void
 }
 
-define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f32(ptr addrspace(1) %out) #3 {
+define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math"="ieee,ieee" {
 ; GFX678-LABEL: test_denormals_fold_canonicalize_denormal1_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -890,7 +890,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f32(ptr ad
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_qnan_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -934,7 +934,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_f32(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_qnan_value_neg1_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -978,7 +978,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f32(ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_qnan_value_neg2_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1022,7 +1022,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f32(ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_snan0_value_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1066,7 +1066,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f32(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_snan1_value_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1110,7 +1110,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f32(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_snan2_value_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1154,7 +1154,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f32(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f32(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f32(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_snan3_value_f32:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1198,7 +1198,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f32(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_var_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_var_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_var_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1253,7 +1253,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_f64(ptr addrspace(1) %out) #1
   ret void
 }
 
-define amdgpu_kernel void @s_test_canonicalize_var_f64(ptr addrspace(1) %out, double %val) #1 {
+define amdgpu_kernel void @s_test_canonicalize_var_f64(ptr addrspace(1) %out, double %val) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: s_test_canonicalize_var_f64:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1309,7 +1309,7 @@ define amdgpu_kernel void @s_test_canonicalize_var_f64(ptr addrspace(1) %out, do
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fabs_var_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fabs_var_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_fabs_var_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1365,7 +1365,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f64(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_fneg_fabs_var_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1422,7 +1422,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f64(ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fneg_var_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fneg_var_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_fneg_var_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1478,7 +1478,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f64(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_p0_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_p0_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_p0_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1527,7 +1527,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_f64(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_n0_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_n0_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_n0_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1574,7 +1574,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_f64(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_p1_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_p1_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_p1_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1619,7 +1619,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_f64(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_n1_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_n1_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_n1_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1664,7 +1664,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_f64(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_literal_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_literal_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_literal_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1709,7 +1709,7 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_f64(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f64(ptr addrspace(1) %out) #2 {
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_no_denormals_fold_canonicalize_denormal0_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1758,7 +1758,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f64(ptr
   ret void
 }
 
-define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f64(ptr addrspace(1) %out) #3 {
+define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math"="ieee,ieee" {
 ; GFX678-LABEL: test_denormals_fold_canonicalize_denormal0_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1806,7 +1806,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f64(ptr ad
   ret void
 }
 
-define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_f64(ptr addrspace(1) %out) #2 {
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_no_denormals_fold_canonicalize_denormal1_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1853,7 +1853,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_f64(ptr
   ret void
 }
 
-define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f64(ptr addrspace(1) %out) #3 {
+define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math"="ieee,ieee" {
 ; GFX678-LABEL: test_denormals_fold_canonicalize_denormal1_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1901,7 +1901,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f64(ptr ad
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_qnan_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1946,7 +1946,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_f64(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_qnan_value_neg1_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1991,7 +1991,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f64(ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_qnan_value_neg2_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -2036,7 +2036,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f64(ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_snan0_value_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -2081,7 +2081,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f64(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_snan1_value_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -2126,7 +2126,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f64(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_snan2_value_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -2171,7 +2171,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f64(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: test_fold_canonicalize_snan3_value_f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -2216,7 +2216,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f64(ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @test_canonicalize_value_f64_flush(ptr addrspace(1) %arg, ptr addrspace(1) %out) #4 {
+define amdgpu_kernel void @test_canonicalize_value_f64_flush(ptr addrspace(1) %arg, ptr addrspace(1) %out) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: test_canonicalize_value_f64_flush:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2296,7 +2296,7 @@ define amdgpu_kernel void @test_canonicalize_value_f64_flush(ptr addrspace(1) %a
   ret void
 }
 
-define amdgpu_kernel void @test_canonicalize_value_f32_flush(ptr addrspace(1) %arg, ptr addrspace(1) %out) #4 {
+define amdgpu_kernel void @test_canonicalize_value_f32_flush(ptr addrspace(1) %arg, ptr addrspace(1) %out) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: test_canonicalize_value_f32_flush:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2376,7 +2376,7 @@ define amdgpu_kernel void @test_canonicalize_value_f32_flush(ptr addrspace(1) %a
   ret void
 }
 
-define amdgpu_kernel void @test_canonicalize_value_f16_flush(ptr addrspace(1) %arg, ptr addrspace(1) %out) #4 {
+define amdgpu_kernel void @test_canonicalize_value_f16_flush(ptr addrspace(1) %arg, ptr addrspace(1) %out) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: test_canonicalize_value_f16_flush:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2458,7 +2458,7 @@ define amdgpu_kernel void @test_canonicalize_value_f16_flush(ptr addrspace(1) %a
 }
 
 
-define amdgpu_kernel void @test_canonicalize_value_v2f16_flush(ptr addrspace(1) %arg, ptr addrspace(1) %out) #4 {
+define amdgpu_kernel void @test_canonicalize_value_v2f16_flush(ptr addrspace(1) %arg, ptr addrspace(1) %out) nounwind "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: test_canonicalize_value_v2f16_flush:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2547,7 +2547,7 @@ define amdgpu_kernel void @test_canonicalize_value_v2f16_flush(ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_kernel void @test_canonicalize_value_f64_denorm(ptr addrspace(1) %arg, ptr addrspace(1) %out) #3 {
+define amdgpu_kernel void @test_canonicalize_value_f64_denorm(ptr addrspace(1) %arg, ptr addrspace(1) %out) nounwind "denormal-fp-math"="ieee,ieee" {
 ; GFX6-LABEL: test_canonicalize_value_f64_denorm:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2627,7 +2627,7 @@ define amdgpu_kernel void @test_canonicalize_value_f64_denorm(ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @test_canonicalize_value_f32_denorm(ptr addrspace(1) %arg, ptr addrspace(1) %out) #3 {
+define amdgpu_kernel void @test_canonicalize_value_f32_denorm(ptr addrspace(1) %arg, ptr addrspace(1) %out) nounwind "denormal-fp-math"="ieee,ieee" {
 ; GFX6-LABEL: test_canonicalize_value_f32_denorm:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2708,7 +2708,7 @@ define amdgpu_kernel void @test_canonicalize_value_f32_denorm(ptr addrspace(1) %
 }
 
 ; FIXME: Conversion to float should count as the canonicalize pre-gfx8
-define amdgpu_kernel void @test_canonicalize_value_f16_denorm(ptr addrspace(1) %arg, ptr addrspace(1) %out) #3 {
+define amdgpu_kernel void @test_canonicalize_value_f16_denorm(ptr addrspace(1) %arg, ptr addrspace(1) %out) nounwind "denormal-fp-math"="ieee,ieee" {
 ; GFX6-LABEL: test_canonicalize_value_f16_denorm:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2791,7 +2791,7 @@ define amdgpu_kernel void @test_canonicalize_value_f16_denorm(ptr addrspace(1) %
 
 
 
-define amdgpu_kernel void @test_canonicalize_value_v2f16_denorm(ptr addrspace(1) %arg, ptr addrspace(1) %out) #3 {
+define amdgpu_kernel void @test_canonicalize_value_v2f16_denorm(ptr addrspace(1) %arg, ptr addrspace(1) %out) nounwind "denormal-fp-math"="ieee,ieee" {
 ; GFX6-LABEL: test_canonicalize_value_v2f16_denorm:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2879,7 +2879,7 @@ define amdgpu_kernel void @test_canonicalize_value_v2f16_denorm(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX6-LABEL: v_test_canonicalize_var_v2f64:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -2965,7 +2965,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) 
 }
 
 
-define <2 x float> @v_test_canonicalize_v2f32_flush(<2 x float> %arg) #1 {
+define <2 x float> @v_test_canonicalize_v2f32_flush(<2 x float> %arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_v2f32_flush:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3000,7 +3000,7 @@ define <2 x float> @v_test_canonicalize_v2f32_flush(<2 x float> %arg) #1 {
 }
 
 
-define <3 x float> @v_test_canonicalize_v3f32_flush(<3 x float> %arg) #1 {
+define <3 x float> @v_test_canonicalize_v3f32_flush(<3 x float> %arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_v3f32_flush:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3039,7 +3039,7 @@ define <3 x float> @v_test_canonicalize_v3f32_flush(<3 x float> %arg) #1 {
 }
 
 
-define <4 x float> @v_test_canonicalize_v4f32_flush(<4 x float> %arg) #1 {
+define <4 x float> @v_test_canonicalize_v4f32_flush(<4 x float> %arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_v4f32_flush:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3080,7 +3080,7 @@ define <4 x float> @v_test_canonicalize_v4f32_flush(<4 x float> %arg) #1 {
 }
 
 
-define <8 x float> @v_test_canonicalize_v8f32_flush(<8 x float> %arg) #1 {
+define <8 x float> @v_test_canonicalize_v8f32_flush(<8 x float> %arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_v8f32_flush:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3132,7 +3132,7 @@ define <8 x float> @v_test_canonicalize_v8f32_flush(<8 x float> %arg) #1 {
   ret <8 x float> %canon
 }
 
-define <2 x double> @v_test_canonicalize_v2f64(<2 x double> %arg) #1 {
+define <2 x double> @v_test_canonicalize_v2f64(<2 x double> %arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_v2f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3168,7 +3168,7 @@ define <2 x double> @v_test_canonicalize_v2f64(<2 x double> %arg) #1 {
   ret <2 x double> %canon
 }
 
-define <3 x double> @v_test_canonicalize_v3f64(<3 x double> %arg) #1 {
+define <3 x double> @v_test_canonicalize_v3f64(<3 x double> %arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_v3f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3208,7 +3208,7 @@ define <3 x double> @v_test_canonicalize_v3f64(<3 x double> %arg) #1 {
   ret <3 x double> %canon
 }
 
-define <4 x double> @v_test_canonicalize_v4f64(<4 x double> %arg) #1 {
+define <4 x double> @v_test_canonicalize_v4f64(<4 x double> %arg) nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
 ; GFX678-LABEL: v_test_canonicalize_v4f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3251,12 +3251,3 @@ define <4 x double> @v_test_canonicalize_v4f64(<4 x double> %arg) #1 {
   %canon = call <4 x double> @llvm.canonicalize.v4f64(<4 x double> %arg)
   ret <4 x double> %canon
 }
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #2 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #3 = { nounwind "denormal-fp-math"="ieee,ieee" }
-attributes #4 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #5 = { nounwind "denormal-fp-math-f32"="dynamic,dynamic" }
-attributes #6 = { nounwind "denormal-fp-math-f32"="dynamic,ieee" }
-attributes #7 = { nounwind "denormal-fp-math-f32"="ieee,dynamic" }

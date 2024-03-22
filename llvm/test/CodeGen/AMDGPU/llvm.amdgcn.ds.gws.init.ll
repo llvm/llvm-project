@@ -25,7 +25,7 @@
 ; LOOP-NEXT: s_getreg_b32 [[GETREG:s[0-9]+]], hwreg(HW_REG_TRAPSTS, 8, 1)
 ; LOOP-NEXT: s_cmp_lg_u32 [[GETREG]], 0
 ; LOOP-NEXT: s_cbranch_scc1 [[LOOP]]
-define amdgpu_kernel void @gws_init_offset0(i32 %val) #0 {
+define amdgpu_kernel void @gws_init_offset0(i32 %val) nounwind {
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 0)
   ret void
 }
@@ -46,7 +46,7 @@ define amdgpu_kernel void @gws_init_offset0(i32 %val) #0 {
 ; LOOP-NEXT: s_getreg_b32 [[GETREG:s[0-9]+]], hwreg(HW_REG_TRAPSTS, 8, 1)
 ; LOOP-NEXT: s_cmp_lg_u32 [[GETREG]], 0
 ; LOOP-NEXT: s_cbranch_scc1 [[LOOP]]
-define amdgpu_kernel void @gws_init_offset63(i32 %val) #0 {
+define amdgpu_kernel void @gws_init_offset63(i32 %val) nounwind {
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 63)
   ret void
 }
@@ -62,7 +62,7 @@ define amdgpu_kernel void @gws_init_offset63(i32 %val) #0 {
 
 ; NOLOOP-DAG: v_mov_b32_e32 [[GWS_VAL:v[0-9]+]], s[[BAR_NUM]]
 ; NOLOOP: ds_gws_init [[GWS_VAL]] gds{{$}}
-define amdgpu_kernel void @gws_init_sgpr_offset(i32 %val, i32 %offset) #0 {
+define amdgpu_kernel void @gws_init_sgpr_offset(i32 %val, i32 %offset) nounwind {
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 %offset)
   ret void
 }
@@ -78,7 +78,7 @@ define amdgpu_kernel void @gws_init_sgpr_offset(i32 %val, i32 %offset) #0 {
 
 ; NOLOOP-DAG: v_mov_b32_e32 [[GWS_VAL:v[0-9]+]], s[[BAR_NUM]]
 ; NOLOOP: ds_gws_init [[GWS_VAL]] offset:1 gds{{$}}
-define amdgpu_kernel void @gws_init_sgpr_offset_add1(i32 %val, i32 %offset.base) #0 {
+define amdgpu_kernel void @gws_init_sgpr_offset_add1(i32 %val, i32 %offset.base) nounwind {
   %offset = add i32 %offset.base, 1
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 %offset)
   ret void
@@ -95,7 +95,7 @@ define amdgpu_kernel void @gws_init_sgpr_offset_add1(i32 %val, i32 %offset.base)
 
 ; NOLOOP-DAG: v_mov_b32_e32 v0, [[BAR_NUM]]
 ; NOLOOP: ds_gws_init v0 gds{{$}}
-define amdgpu_kernel void @gws_init_vgpr_offset(i32 %val) #0 {
+define amdgpu_kernel void @gws_init_vgpr_offset(i32 %val) nounwind {
   %vgpr.offset = call i32 @llvm.amdgcn.workitem.id.x()
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 %vgpr.offset)
   ret void
@@ -113,7 +113,7 @@ define amdgpu_kernel void @gws_init_vgpr_offset(i32 %val) #0 {
 
 ; NOLOOP-DAG: v_mov_b32_e32 v0, [[BAR_NUM]]
 ; NOLOOP: ds_gws_init v0 offset:3 gds{{$}}
-define amdgpu_kernel void @gws_init_vgpr_offset_add(i32 %val) #0 {
+define amdgpu_kernel void @gws_init_vgpr_offset_add(i32 %val) nounwind {
   %vgpr.offset.base = call i32 @llvm.amdgcn.workitem.id.x()
   %vgpr.offset = add i32 %vgpr.offset.base, 3
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 %vgpr.offset)
@@ -136,7 +136,7 @@ define amdgpu_kernel void @gws_init_vgpr_offset_add(i32 %val) #0 {
 
 ; LOOP: s_mov_b32 m0, -1
 ; LOOP: ds_write_b32
-define amdgpu_kernel void @gws_init_save_m0_init_constant_offset(i32 %val) #0 {
+define amdgpu_kernel void @gws_init_save_m0_init_constant_offset(i32 %val) nounwind {
   store volatile i32 1, ptr addrspace(3) @lds
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 10)
   store i32 2, ptr addrspace(3) @lds
@@ -159,15 +159,11 @@ define void @gws_init_lgkmcnt(i32 %val) {
 ; NOLOOP-NOT: s_waitcnt
 ; NOLOOP: ds_gws_init
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-define amdgpu_kernel void @gws_init_wait_before(i32 %val, ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @gws_init_wait_before(i32 %val, ptr addrspace(1) %ptr) nounwind {
   store i32 0, ptr addrspace(1) %ptr
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 7)
   ret void
 }
 
-declare void @llvm.amdgcn.ds.gws.init(i32, i32) #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
-attributes #0 = { nounwind }
-attributes #1 = { convergent inaccessiblememonly nounwind writeonly }
-attributes #2 = { nounwind readnone speculatable }
+declare void @llvm.amdgcn.ds.gws.init(i32, i32) convergent inaccessiblememonly nounwind writeonly
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
