@@ -23,3 +23,60 @@ namespace PR41576 {
   }
   static_assert(f(3, 4) == 6); // expected-note {{instantiation}}
 }
+
+namespace PR85667 {
+
+template <class T>
+struct identity {
+  using type = T;
+};
+
+template <class = void> void f() {
+
+  static_assert([]<class... Is>(Is... x) {
+    return ([I(x)] {
+      return I;
+    }() + ...);
+  }(1, 2) == 3);
+
+  static_assert([]<class... Is>(Is... x) {
+    return ([](auto y = Is()) { return y + 1; } + ...);
+  }(0, 0, 0) == 3);
+
+  []<class... Is>() {
+    return ([]() noexcept(Is()) { return 0; }() + ...);
+  }.template operator()<int, int>();
+
+  static_assert(__is_same(decltype([]<class... Is>() {
+                            return ([]() -> decltype(Is()) { return {}; }(),
+                                    ...);
+                          }.template operator()<int, char>()),
+                          char));
+
+  []<class... Is>() {
+    return ([]<class... Ts>() -> decltype(Is()) { return Ts(); }() + ...);
+    // expected-error@-1 {{unexpanded parameter pack 'Ts'}}
+  }.template operator()<int, int>();
+
+  // Note that GCC and EDG reject this case currently.
+  // GCC says the fold expression "has no unexpanded parameter packs", while
+  // EDG says the constraint is not allowed on a non-template function.
+  // MSVC is happy with it.
+  []<class... Is>() {
+    ([]()
+       requires(Is())
+     {},
+     ...);
+  }.template operator()<bool, bool>();
+
+  // https://github.com/llvm/llvm-project/issues/56852
+  []<class... Is>(Is...) {
+    ([] {
+      using T = identity<Is>::type;
+    }(), ...);
+  }(1, 2);
+}
+
+template void f();
+
+}

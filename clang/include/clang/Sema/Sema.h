@@ -11201,6 +11201,14 @@ public:
   void collectUnexpandedParameterPacks(
       QualType T, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
 
+  /// Collect the set of unexpanded parameter packs from a lambda call operator.
+  ///
+  /// \param LambdaCall The lambda call operator that will be traversed to find
+  /// unexpanded parameter packs.
+  void collectUnexpandedParameterPacksFromLambda(
+      CXXMethodDecl *LambdaCall,
+      SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
+
   /// Collect the set of unexpanded parameter packs within the given
   /// type.
   ///

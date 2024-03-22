@@ -8,14 +8,15 @@
 //  This file implements semantic analysis for C++0x variadic templates.
 //===----------------------------------------------------------------------===/
 
-#include "clang/Sema/Sema.h"
 #include "TypeLocBuilder.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include <optional>
@@ -61,8 +62,9 @@ namespace {
 
   public:
     explicit CollectUnexpandedParameterPacksVisitor(
-        SmallVectorImpl<UnexpandedParameterPack> &Unexpanded)
-        : Unexpanded(Unexpanded) {}
+        SmallVectorImpl<UnexpandedParameterPack> &Unexpanded,
+        bool InLambda = false)
+        : Unexpanded(Unexpanded), InLambda(InLambda) {}
 
     bool shouldWalkTypesOfTypeLocs() const { return false; }
 
@@ -542,6 +544,14 @@ void Sema::collectUnexpandedParameterPacks(TemplateArgumentLoc Arg,
 void Sema::collectUnexpandedParameterPacks(QualType T,
                    SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
   CollectUnexpandedParameterPacksVisitor(Unexpanded).TraverseType(T);
+}
+
+void Sema::collectUnexpandedParameterPacksFromLambda(
+    CXXMethodDecl *LambdaCall,
+    SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
+  assert(isLambdaCallOperator(LambdaCall) && "Expected a lambda call operator");
+  CollectUnexpandedParameterPacksVisitor(Unexpanded, /*InLambda=*/true)
+      .TraverseDecl(LambdaCall);
 }
 
 void Sema::collectUnexpandedParameterPacks(TypeLoc TL,
