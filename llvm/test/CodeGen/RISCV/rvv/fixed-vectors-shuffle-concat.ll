@@ -5,59 +5,6 @@
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+v -riscv-v-vector-bits-max=128 -verify-machineinstrs | FileCheck -check-prefixes=CHECK,VLS %s
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -verify-machineinstrs | FileCheck -check-prefixes=CHECK,VLS %s
 
-define <8 x i16> @concat_2xv4i16(<4 x i16> %a, <4 x i16> %b) {
-; CHECK-LABEL: concat_2xv4i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 4
-; CHECK-NEXT:    ret
-  %ab = shufflevector <4 x i16> %a, <4 x i16> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  ret <8 x i16> %ab
-}
-
-define <8 x i16> @concat_4xv2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d) {
-; CHECK-LABEL: concat_4xv2i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vi v10, v11, 2
-; CHECK-NEXT:    vslideup.vi v8, v9, 2
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 4
-; CHECK-NEXT:    ret
-  %ab = shufflevector <2 x i16> %a, <2 x i16> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %cd = shufflevector <2 x i16> %c, <2 x i16> %d, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %abcd = shufflevector <4 x i16> %ab, <4 x i16> %cd, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  ret <8 x i16> %abcd
-}
-
-define <8 x i16> @concat_8xv1i16(<1 x i16> %a, <1 x i16> %b, <1 x i16> %c, <1 x i16> %d, <1 x i16> %e, <1 x i16> %f, <1 x i16> %g, <1 x i16> %h) {
-; CHECK-LABEL: concat_8xv1i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v12, v13, 1
-; CHECK-NEXT:    vsetivli zero, 3, e16, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v12, v14, 2
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vi v12, v15, 3
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 1
-; CHECK-NEXT:    vsetivli zero, 3, e16, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 2
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v11, 3
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v12, 4
-; CHECK-NEXT:    ret
-  %ab = shufflevector <1 x i16> %a, <1 x i16> %b, <2 x i32> <i32 0, i32 1>
-  %cd = shufflevector <1 x i16> %c, <1 x i16> %d, <2 x i32> <i32 0, i32 1>
-  %abcd = shufflevector <2 x i16> %ab, <2 x i16> %cd, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %ef = shufflevector <1 x i16> %e, <1 x i16> %f, <2 x i32> <i32 0, i32 1>
-  %gh = shufflevector <1 x i16> %g, <1 x i16> %h, <2 x i32> <i32 0, i32 1>
-  %efgh = shufflevector <2 x i16> %ef, <2 x i16> %gh, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %abcdefgh = shufflevector <4 x i16> %abcd, <4 x i16> %efgh, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  ret <8 x i16> %abcdefgh
-}
-
 define <8 x i32> @concat_2xv4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: concat_2xv4i32:
 ; CHECK:       # %bb.0:

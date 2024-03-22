@@ -1945,6 +1945,19 @@ auto partition(R &&Range, UnaryPredicate P) {
   return std::partition(adl_begin(Range), adl_end(Range), P);
 }
 
+/// Provide wrappers to std::binary_search which take ranges instead of having
+/// to pass begin/end explicitly.
+template <typename R, typename T> auto binary_search(R &&Range, T &&Value) {
+  return std::binary_search(adl_begin(Range), adl_end(Range),
+                            std::forward<T>(Value));
+}
+
+template <typename R, typename T, typename Compare>
+auto binary_search(R &&Range, T &&Value, Compare C) {
+  return std::binary_search(adl_begin(Range), adl_end(Range),
+                            std::forward<T>(Value), C);
+}
+
 /// Provide wrappers to std::lower_bound which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename T> auto lower_bound(R &&Range, T &&Value) {

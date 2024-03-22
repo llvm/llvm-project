@@ -607,6 +607,29 @@ static void instantiateDependentAMDGPUWavesPerEUAttr(
   S.addAMDGPUWavesPerEUAttr(New, Attr, MinExpr, MaxExpr);
 }
 
+static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const AMDGPUMaxNumWorkGroupsAttr &Attr, Decl *New) {
+  EnterExpressionEvaluationContext Unevaluated(
+      S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  ExprResult ResultX = S.SubstExpr(Attr.getMaxNumWorkGroupsX(), TemplateArgs);
+  if (!ResultX.isUsable())
+    return;
+  ExprResult ResultY = S.SubstExpr(Attr.getMaxNumWorkGroupsY(), TemplateArgs);
+  if (!ResultY.isUsable())
+    return;
+  ExprResult ResultZ = S.SubstExpr(Attr.getMaxNumWorkGroupsZ(), TemplateArgs);
+  if (!ResultZ.isUsable())
+    return;
+
+  Expr *XExpr = ResultX.getAs<Expr>();
+  Expr *YExpr = ResultY.getAs<Expr>();
+  Expr *ZExpr = ResultZ.getAs<Expr>();
+
+  S.addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
+}
+
 // This doesn't take any template parameters, but we have a custom action that
 // needs to happen when the kernel itself is instantiated. We need to run the
 // ItaniumMangler to mark the names required to name this kernel.
@@ -790,6 +813,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
             dyn_cast<AMDGPUWavesPerEUAttr>(TmplAttr)) {
       instantiateDependentAMDGPUWavesPerEUAttr(*this, TemplateArgs,
                                                *AMDGPUFlatWorkGroupSize, New);
+    }
+
+    if (const auto *AMDGPUMaxNumWorkGroups =
+            dyn_cast<AMDGPUMaxNumWorkGroupsAttr>(TmplAttr)) {
+      instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
+          *this, TemplateArgs, *AMDGPUMaxNumWorkGroups, New);
     }
 
     if (const auto *ParamAttr = dyn_cast<HLSLParamModifierAttr>(TmplAttr)) {
@@ -1698,6 +1727,7 @@ Decl *TemplateDeclInstantiator::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     assert(!Owner->isDependentContext());
     Inst->setLexicalDeclContext(Owner);
     RecordInst->setLexicalDeclContext(Owner);
+    Inst->setObjectOfFriendDecl();
 
     if (PrevClassTemplate) {
       Inst->setCommonPtr(PrevClassTemplate->getCommonPtr());

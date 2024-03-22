@@ -148,6 +148,14 @@ inline Expr<SomeType> AsGenericExpr(Expr<SomeType> &&x) { return std::move(x); }
 std::optional<Expr<SomeType>> AsGenericExpr(DataRef &&);
 std::optional<Expr<SomeType>> AsGenericExpr(const Symbol &);
 
+// Propagate std::optional from input to output.
+template <typename A>
+std::optional<Expr<SomeType>> AsGenericExpr(std::optional<A> &&x) {
+  if (!x)
+    return std::nullopt;
+  return AsGenericExpr(std::move(*x));
+}
+
 template <typename A>
 common::IfNoLvalue<Expr<SomeKind<ResultType<A>::category>>, A> AsCategoryExpr(
     A &&x) {
@@ -428,6 +436,28 @@ template <typename A> std::optional<CoarrayRef> ExtractCoarrayRef(const A &x) {
   } else {
     return ExtractCoindexedObjectHelper{}(x);
   }
+}
+
+struct ExtractSubstringHelper {
+  template <typename T> static std::optional<Substring> visit(T &&) {
+    return std::nullopt;
+  }
+
+  static std::optional<Substring> visit(const Substring &e) { return e; }
+
+  template <typename T>
+  static std::optional<Substring> visit(const Designator<T> &e) {
+    return std::visit([](auto &&s) { return visit(s); }, e.u);
+  }
+
+  template <typename T>
+  static std::optional<Substring> visit(const Expr<T> &e) {
+    return std::visit([](auto &&s) { return visit(s); }, e.u);
+  }
+};
+
+template <typename A> std::optional<Substring> ExtractSubstring(const A &x) {
+  return ExtractSubstringHelper::visit(x);
 }
 
 // If an expression is simply a whole symbol data designator,
@@ -1195,6 +1225,20 @@ std::optional<bool> AreEquivalentInInterface(
 bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
+
+/// Check if any of the symbols part of the expression has a cuda data
+/// attribute.
+inline bool HasCUDAAttrs(const Expr<SomeType> &expr) {
+  for (const Symbol &sym : CollectSymbols(expr)) {
+    if (const auto *details =
+            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+      if (details->cudaDataAttr()) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 } // namespace Fortran::evaluate
 

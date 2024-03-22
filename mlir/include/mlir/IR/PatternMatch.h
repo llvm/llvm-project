@@ -736,6 +736,8 @@ protected:
       : OpBuilder(ctx, listener) {}
   explicit RewriterBase(const OpBuilder &otherBuilder)
       : OpBuilder(otherBuilder) {}
+  explicit RewriterBase(Operation *op, OpBuilder::Listener *listener = nullptr)
+      : OpBuilder(op, listener) {}
   virtual ~RewriterBase();
 
 private:
@@ -756,6 +758,8 @@ public:
   explicit IRRewriter(MLIRContext *ctx, OpBuilder::Listener *listener = nullptr)
       : RewriterBase(ctx, listener) {}
   explicit IRRewriter(const OpBuilder &builder) : RewriterBase(builder) {}
+  explicit IRRewriter(Operation *op, OpBuilder::Listener *listener = nullptr)
+      : RewriterBase(op, listener) {}
 };
 
 //===----------------------------------------------------------------------===//

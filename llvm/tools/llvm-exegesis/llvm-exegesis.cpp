@@ -423,10 +423,9 @@ static void runBenchmarkConfigurations(
         if (Err) {
           // Errors from executing the snippets are fine.
           // All other errors are a framework issue and should fail.
-          if (!Err.isA<SnippetExecutionFailure>()) {
-            llvm::errs() << "llvm-exegesis error: " << toString(std::move(Err));
-            exit(1);
-          }
+          if (!Err.isA<SnippetExecutionFailure>())
+            ExitOnErr(std::move(Err));
+
           BenchmarkResult.Error = toString(std::move(Err));
         }
         AllResults.push_back(std::move(BenchmarkResult));

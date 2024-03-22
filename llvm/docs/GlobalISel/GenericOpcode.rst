@@ -607,6 +607,17 @@ See the LLVM LangRef entry on '``llvm.lround.*'`` for details on behaviour.
 Vector Specific Operations
 --------------------------
 
+G_VSCALE
+^^^^^^^^
+
+Puts the value of the runtime ``vscale`` multiplied by the value in the source
+operand into the destination register. This can be useful in determining the
+actual runtime number of elements in a vector.
+
+.. code-block::
+
+  %0:_(s32) = G_VSCALE 4
+
 G_INSERT_SUBVECTOR
 ^^^^^^^^^^^^^^^^^^
 
@@ -779,11 +790,17 @@ G_ATOMIC_CMPXCHG
 Generic atomic cmpxchg. Expects a MachineMemOperand in addition to explicit
 operands.
 
-G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
-G_ATOMICRMW_NAND, G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MAX,
-G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD,
-G_ATOMICRMW_FSUB, G_ATOMICRMW_FMAX, G_ATOMICRMW_FMIN
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+|all_g_atomicrmw|
+^^^^^^^^^^^^^^^^^
+
+.. |all_g_atomicrmw| replace:: G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD,
+                               G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
+                               G_ATOMICRMW_NAND, G_ATOMICRMW_OR,
+                               G_ATOMICRMW_XOR, G_ATOMICRMW_MAX,
+                               G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX,
+                               G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD,
+                               G_ATOMICRMW_FSUB, G_ATOMICRMW_FMAX,
+                               G_ATOMICRMW_FMIN
 
 Generic atomicrmw. Expects a MachineMemOperand in addition to explicit
 operands.

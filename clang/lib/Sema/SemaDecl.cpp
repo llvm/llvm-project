@@ -1192,9 +1192,13 @@ Corrected:
     return ParsedType::make(T);
   }
 
-  if (isa<ConceptDecl>(FirstDecl))
+  if (isa<ConceptDecl>(FirstDecl)) {
+    // We want to preserve the UsingShadowDecl for concepts.
+    if (auto *USD = dyn_cast<UsingShadowDecl>(Result.getRepresentativeDecl()))
+      return NameClassification::Concept(TemplateName(USD));
     return NameClassification::Concept(
         TemplateName(cast<TemplateDecl>(FirstDecl)));
+  }
 
   if (auto *EmptyD = dyn_cast<UnresolvedUsingIfExistsDecl>(FirstDecl)) {
     (void)DiagnoseUseOfDecl(EmptyD, NameLoc);
@@ -2266,12 +2270,6 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
                             << D << FD << FD->getParent());
       }
       ShadowingDecls.erase(ShadowI);
-    }
-
-    if (!getLangOpts().CPlusPlus && S->isClassScope()) {
-      if (auto *FD = dyn_cast<FieldDecl>(TmpD);
-          FD && FD->hasAttr<CountedByAttr>())
-        CheckCountedByAttr(S, FD);
     }
   }
 
@@ -16111,7 +16109,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
               FD->setInvalidDecl();
           }
         }
-      } else if (getLangOpts().CPlusPlus11 && isLambdaCallOperator(FD)) {
+      } else if (getLangOpts().CPlusPlus && isLambdaCallOperator(FD)) {
         // In C++11, we don't use 'auto' deduction rules for lambda call
         // operators because we don't support return type deduction.
         auto *LSI = getCurLambda();

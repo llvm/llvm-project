@@ -139,6 +139,7 @@ Clang-Tidy Checks
    :doc:`bugprone-suspicious-realloc-usage <bugprone/suspicious-realloc-usage>`,
    :doc:`bugprone-suspicious-semicolon <bugprone/suspicious-semicolon>`, "Yes"
    :doc:`bugprone-suspicious-string-compare <bugprone/suspicious-string-compare>`, "Yes"
+   :doc:`bugprone-suspicious-stringview-data-usage <bugprone/suspicious-stringview-data-usage>`,
    :doc:`bugprone-swapped-arguments <bugprone/swapped-arguments>`, "Yes"
    :doc:`bugprone-switch-missing-default-case <bugprone/switch-missing-default-case>`,
    :doc:`bugprone-terminating-continue <bugprone/terminating-continue>`, "Yes"

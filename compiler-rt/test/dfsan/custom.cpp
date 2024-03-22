@@ -175,7 +175,7 @@ void test_stat() {
 
   s.st_dev = i;
   SAVE_ORIGINS(s)
-  ret = stat("/nonexistent", &s);
+  ret = stat("/nonexistent_581cb021aba7", &s);
   assert(-1 == ret);
   ASSERT_ZERO_LABEL(ret);
   ASSERT_LABEL(s.st_dev, i_label);
