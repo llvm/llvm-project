@@ -1250,6 +1250,11 @@ LLVMMetadataRef LLVMDIBuilderCreateTempGlobalVariableFwdDecl(
 
 /*
  * Insert a new Declare DbgRecord before the given instruction.
+ *
+ * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
+ * Use LLVMSetIsNewDbgInfoFormat(LLVMBool) to convert between formats.
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
+ *
  * \param Builder     The DIBuilder.
  * \param Storage     The storage of the variable to declare.
  * \param VarInfo     The variable's debug info descriptor.
@@ -1298,6 +1303,11 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordBefore(
  * Insert a new Declare DbgRecord at the end of the given basic block. If the
  * basic block has a terminator instruction, the intrinsic is inserted before
  * that terminator instruction.
+ *
+ * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
+ * Use LLVMSetIsNewDbgInfoFormat(LLVMBool) to convert between formats.
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
+ *
  * \param Builder     The DIBuilder.
  * \param Storage     The storage of the variable to declare.
  * \param VarInfo     The variable's debug info descriptor.
@@ -1347,6 +1357,11 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordAtEnd(
 
 /**
  * Insert a new Value DbgRecord before the given instruction.
+ *
+ * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
+ * Use LLVMSetIsNewDbgInfoFormat(LLVMBool) to convert between formats.
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
+ *
  * \param Builder     The DIBuilder.
  * \param Val         The value of the variable.
  * \param VarInfo     The variable's debug info descriptor.
@@ -1395,6 +1410,11 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
  * Insert a new Value DbgRecord at the end of the given basic block. If the
  * basic block has a terminator instruction, the intrinsic is inserted before
  * that terminator instruction.
+ *
+ * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
+ * Use LLVMSetIsNewDbgInfoFormat(LLVMBool) to convert between formats.
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
+ *
  * \param Builder     The DIBuilder.
  * \param Val         The value of the variable.
  * \param VarInfo     The variable's debug info descriptor.
