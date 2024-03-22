@@ -256,6 +256,10 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   Error readBugTable();
 
+  /// Do no process functions containing instruction annotated with
+  /// \p Annotation.
+  void skipFunctionsWithAnnotation(StringRef Annotation) const;
+
   /// Handle alternative instruction info from .altinstructions.
   Error readAltInstructions();
   Error rewriteAltInstructions();
@@ -1134,23 +1138,27 @@ Error LinuxKernelRewriter::readParaInstructions() {
   return Error::success();
 }
 
-Error LinuxKernelRewriter::rewriteParaInstructions() {
-  // Disable output of functions with paravirtual instructions before the
-  // rewrite support is complete.
+void LinuxKernelRewriter::skipFunctionsWithAnnotation(
+    StringRef Annotation) const {
   for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
     if (!BC.shouldEmit(BF))
       continue;
     for (const BinaryBasicBlock &BB : BF) {
-      if (!BC.shouldEmit(BF))
+      const bool HasAnnotation = llvm::any_of(BB, [&](const MCInst &Inst) {
+        return BC.MIB->hasAnnotation(Inst, Annotation);
+      });
+      if (HasAnnotation) {
+        BF.setSimple(false);
         break;
-      for (const MCInst &Inst : BB) {
-        if (BC.MIB->hasAnnotation(Inst, "ParaSite")) {
-          BF.setSimple(false);
-          break;
-        }
       }
     }
   }
+}
+
+Error LinuxKernelRewriter::rewriteParaInstructions() {
+  // Disable output of functions with paravirtual instructions before the
+  // rewrite support is complete.
+  skipFunctionsWithAnnotation("ParaSite");
 
   return Error::success();
 }
@@ -1337,20 +1345,7 @@ Error LinuxKernelRewriter::readAltInstructions() {
 Error LinuxKernelRewriter::rewriteAltInstructions() {
   // Disable output of functions with alt instructions before the rewrite
   // support is complete.
-  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
-    if (!BC.shouldEmit(BF))
-      continue;
-    for (const BinaryBasicBlock &BB : BF) {
-      if (!BC.shouldEmit(BF))
-        break;
-      for (const MCInst &Inst : BB) {
-        if (BC.MIB->hasAnnotation(Inst, "AltInst")) {
-          BF.setSimple(false);
-          break;
-        }
-      }
-    }
-  }
+  skipFunctionsWithAnnotation("AltInst");
 
   return Error::success();
 }
