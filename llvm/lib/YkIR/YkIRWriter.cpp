@@ -431,7 +431,9 @@ private:
       serialiseOperand(I, VLMap, I->getOperand(OI));
     }
 
-    VLMap[I] = {BBIdx, InstIdx};
+    if (!I->getType()->isVoidTy()) {
+      VLMap[I] = {BBIdx, InstIdx};
+    }
     InstIdx++;
   }
 
@@ -447,8 +449,6 @@ private:
       // num_operands:
       // We don't serialise any operands, because traces will guide us.
       OutStreamer.emitInt32(0);
-
-      VLMap[I] = {BBIdx, InstIdx};
     } else {
       // type_index:
       OutStreamer.emitSizeT(typeIndex(I->getType()));
