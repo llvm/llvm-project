@@ -2529,34 +2529,22 @@ static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(IsAdd ? ISD::SUB : ISD::ADD, DL, VT, C1, LowBit);
 }
 
-// Attempt to form avgceilu(A, B) from (A | B) - ((A ^ B) >> 1)
-static SDValue combineFixedwidthToAVGCEILU(SDNode *N, SelectionDAG &DAG) {
+// Attempt to form avgceil(A, B) from (A | B) - ((A ^ B) >> 1)
+static SDValue combineFixedwidthToAVGCEIL(SDNode *N, SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
   SDLoc DL(N);
-  if (TLI.isOperationLegal(ISD::AVGCEILU, VT)) {
+  if (TLI.isOperationLegal(ISD::AVGCEILU, VT) ||
+      TLI.isOperationLegal(ISD::AVGCEILS, VT)) {
     SDValue A, B;
     if (sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
                           m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
                                 m_SpecificInt(1))))) {
       return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
-    }
-  }
-  return SDValue();
-}
-
-// Attempt to form avgceils(A, B) from (A | B) - ((A ^ B) >> 1)
-static SDValue combineFixedwidthToAVGCEILS(SDNode *N, SelectionDAG &DAG) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SDValue N0 = N->getOperand(0);
-  EVT VT = N0.getValueType();
-  SDLoc DL(N);
-  if (TLI.isOperationLegal(ISD::AVGCEILS, VT)) {
-    SDValue A, B;
-    if (sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
-                          m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
-                                m_SpecificInt(1))))) {
+    } else if (sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
+                                 m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
+                                       m_SpecificInt(1))))) {
       return DAG.getNode(ISD::AVGCEILS, DL, VT, A, B);
     }
   }
@@ -2854,36 +2842,24 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   return SDValue();
 }
 
-// Attempt to form avgflooru(A, B) from (A & B) + ((A ^ B) >> 1)
-static SDValue combineFixedwidthToAVGFLOORU(SDNode *N, SelectionDAG &DAG) {
+// Attempt to form avgfloor(A, B) from (A & B) + ((A ^ B) >> 1)
+static SDValue combineFixedwidthToAVGFLOOR(SDNode *N, SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
   SDLoc DL(N);
-  if (TLI.isOperationLegal(ISD::AVGFLOORU, VT)) {
+  if (TLI.isOperationLegal(ISD::AVGFLOORU, VT) ||
+      TLI.isOperationLegal(ISD::AVGFLOORS, VT)) {
     SDValue A, B;
     if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
                           m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
                                 m_SpecificInt(1))))) {
       return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
     }
-  }
-  return SDValue();
-}
-
-// Attempt to form avgfloors(A, B) from (A & B) + ((A ^ B) >> 1)
-static SDValue combineFixedwidthToAVGFLOORS(SDNode *N, SelectionDAG &DAG) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SDValue N0 = N->getOperand(0);
-  EVT VT = N0.getValueType();
-  SDLoc DL(N);
-  if (TLI.isOperationLegal(ISD::AVGFLOORS, VT)) {
-    SDValue A, B;
-    if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
-                          m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
-                                m_SpecificInt(1))))) {
-      return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
-    }
+  } else if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
+                               m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
+                                     m_SpecificInt(1))))) {
+    return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
   }
   return SDValue();
 }
@@ -2903,12 +2879,8 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   if (SDValue V = foldAddSubOfSignBit(N, DAG))
     return V;
 
-  // Try to match AVGFLOORU fixedwidth pattern
-  if (SDValue V = combineFixedwidthToAVGFLOORU(N, DAG))
-    return V;
-  
-  // Try to match AVGFLOORU fixedwidth pattern
-  if (SDValue V = combineFixedwidthToAVGFLOORS(N, DAG))
+  // Try to match AVGFLOOR fixedwidth pattern
+  if (SDValue V = combineFixedwidthToAVGFLOOR(N, DAG))
     return V;
 
   // fold (a+b) -> (a|b) iff a and b share no bits.
@@ -3901,12 +3873,8 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   if (SDValue V = foldAddSubOfSignBit(N, DAG))
     return V;
 
-  // Try to match AVGCEILU fixedwidth pattern
-  if (SDValue V = combineFixedwidthToAVGCEILU(N, DAG))
-    return V;
-
-  // Try to match AVGCEILS fixedwidth pattern
-  if (SDValue V = combineFixedwidthToAVGCEILS(N, DAG))
+  // Try to match AVGCEIL fixedwidth pattern
+  if (SDValue V = combineFixedwidthToAVGCEIL(N, DAG))
     return V;
 
   if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, SDLoc(N)))
