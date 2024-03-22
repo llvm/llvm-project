@@ -119,6 +119,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
                  "parsing"),
         cl::location(useExplicitModuleFlag), cl::init(false));
 
+    static cl::opt<bool, /*ExternalStorage=*/true> loadAllAvailableDialects(
+        "load-all-available-dialects",
+        cl::desc("Load all available dialects in the context"),
+        cl::location(loadAllAvailableDialectsFlag), cl::init(false));
+
     static cl::opt<bool, /*ExternalStorage=*/true> runReproducer(
         "run-reproducer", cl::desc("Run the pipeline stored in the reproducer"),
         cl::location(runReproducerFlag), cl::init(false));
@@ -453,6 +458,10 @@ static LogicalResult processBuffer(raw_ostream &os,
   if (threadPool)
     context.setThreadPool(*threadPool);
 
+  // Load all the available dialects in context if requested.
+  if (config.shouldLoadAllAvailableDialects())
+    context.loadAllAvailableDialects();
+
   StringRef irdlFile = config.getIrdlFile();
   if (!irdlFile.empty() && failed(loadIRDLDialects(irdlFile, context)))
     return failure();
@@ -552,15 +561,10 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
                                config.outputSplitMarker());
 }
 
-LogicalResult mlir::MlirOptMain(int argc, char **argv,
-                                llvm::StringRef inputFilename,
+LogicalResult mlir::MlirOptMain(llvm::StringRef inputFilename,
                                 llvm::StringRef outputFilename,
-                                DialectRegistry &registry) {
-
-  InitLLVM y(argc, argv);
-
-  MlirOptMainConfig config = MlirOptMainConfig::createFromCLOptions();
-
+                                DialectRegistry &registry,
+                                const MlirOptMainConfig &config) {
   if (config.shouldShowDialects())
     return printRegisteredDialects(registry);
 
@@ -591,6 +595,15 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv,
   // Keep the output file if the invocation of MlirOptMain was successful.
   output->keep();
   return success();
+}
+
+LogicalResult mlir::MlirOptMain(int argc, char **argv,
+                                llvm::StringRef inputFilename,
+                                llvm::StringRef outputFilename,
+                                DialectRegistry &registry) {
+  InitLLVM y(argc, argv);
+  MlirOptMainConfig config = MlirOptMainConfig::createFromCLOptions();
+  return MlirOptMain(inputFilename, outputFilename, registry, config);
 }
 
 LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,

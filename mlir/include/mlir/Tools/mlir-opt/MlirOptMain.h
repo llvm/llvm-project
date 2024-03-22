@@ -62,6 +62,17 @@ public:
     return allowUnregisteredDialectsFlag;
   }
 
+  /// Load all available dialects in the context.
+  /// This option is for convenience during testing only and discouraged in
+  /// general.
+  MlirOptMainConfig &loadAllAvailableDialects(bool shouldLoad) {
+    loadAllAvailableDialectsFlag = shouldLoad;
+    return *this;
+  }
+  bool shouldLoadAllAvailableDialects() const {
+    return loadAllAvailableDialectsFlag;
+  }
+
   /// Set the debug configuration to use.
   MlirOptMainConfig &setDebugConfig(tracing::DebugConfig config) {
     debugConfig = std::move(config);
@@ -211,6 +222,9 @@ protected:
   /// IRDL file to register before processing the input.
   std::string irdlFileFlag = "";
 
+  /// Load all available dialects in the context.
+  bool loadAllAvailableDialectsFlag = false;
+
   /// Location Breakpoints to filter the action logging.
   std::vector<tracing::BreakpointManager *> logActionLocationFilter;
 
@@ -271,6 +285,16 @@ registerAndParseCLIOptions(int argc, char **argv, llvm::StringRef toolName,
 /// - config contains the configuration options for the tool.
 LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
                           std::unique_ptr<llvm::MemoryBuffer> buffer,
+                          DialectRegistry &registry,
+                          const MlirOptMainConfig &config);
+
+/// Implementation for tools like `mlir-opt`.
+/// - inputFilename is the name of the input mlir file.
+/// - outputFilename is the name of the output file.
+/// - registry should contain all the dialects that can be parsed in the source.
+/// - config contains the configuration options for the tool.
+LogicalResult MlirOptMain(llvm::StringRef inputFilename,
+                          llvm::StringRef outputFilename,
                           DialectRegistry &registry,
                           const MlirOptMainConfig &config);
 
