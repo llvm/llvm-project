@@ -3473,6 +3473,11 @@ static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
     return SDValue();
   if (Opcode != ISD::UADDO && Opcode != ISD::USUBO)
     return SDValue();
+  // Guarantee identical type of CarryOut
+  EVT CarryOutType = N->getValueType(0);
+  if (CarryOutType != Carry0.getValue(1).getValueType() ||
+      CarryOutType != Carry1.getValue(1).getValueType())
+    return SDValue();
 
   // Canonicalize the add/sub of A and B (the top node in the above ASCII art)
   // as Carry0 and the add/sub of the carry in as Carry1 (the middle node).
@@ -3520,7 +3525,7 @@ static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
   // TODO: match other operations that can merge flags (ADD, etc)
   DAG.ReplaceAllUsesOfValueWith(Carry1.getValue(0), Merged.getValue(0));
   if (N->getOpcode() == ISD::AND)
-    return DAG.getConstant(0, DL, MVT::i1);
+    return DAG.getConstant(0, DL, CarryOutType);
   return Merged.getValue(1);
 }
 
@@ -4019,13 +4024,13 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   }
 
   // smax(a,b) - smin(a,b) --> abds(a,b)
-  if (hasOperation(ISD::ABDS, VT)  && 
+  if (hasOperation(ISD::ABDS, VT) &&
       sd_match(N0, m_SMax(m_Value(A), m_Value(B))) &&
       sd_match(N1, m_SMin(m_Specific(A), m_Specific(B))))
     return DAG.getNode(ISD::ABDS, DL, VT, A, B);
 
   // umax(a,b) - umin(a,b) --> abdu(a,b)
-  if (hasOperation(ISD::ABDU, VT)  && 
+  if (hasOperation(ISD::ABDU, VT) &&
       sd_match(N0, m_UMax(m_Value(A), m_Value(B))) &&
       sd_match(N1, m_UMin(m_Specific(A), m_Specific(B))))
     return DAG.getNode(ISD::ABDU, DL, VT, A, B);
