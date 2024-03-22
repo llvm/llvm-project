@@ -38,10 +38,10 @@ struct STestB6 {int a:1; char b; int c:13; } stb6;
 // CHECK-NEXT: ]>
 
 // CHECK-LABEL: LLVMType:%struct.STestB2 =
-// CHECK-SAME: type { i8, i8, i8 }
+// CHECK-SAME: type <{ i8, i16 }>
 // CHECK: BitFields:[
-// CHECK-NEXT: <CGBitFieldInfo Offset:0 Size:5 IsSigned:1 StorageSize:8 StorageOffset:1
-// CHECK-NEXT: <CGBitFieldInfo Offset:0 Size:4 IsSigned:1 StorageSize:8 StorageOffset:2
+// CHECK-NEXT: <CGBitFieldInfo Offset:0 Size:5 IsSigned:1 StorageSize:16 StorageOffset:1
+// CHECK-NEXT: <CGBitFieldInfo Offset:8 Size:4 IsSigned:1 StorageSize:16 StorageOffset:1
 // CHECK-NEXT: ]>
 
 // CHECK-LABEL: LLVMType:%struct.STestB3 =
