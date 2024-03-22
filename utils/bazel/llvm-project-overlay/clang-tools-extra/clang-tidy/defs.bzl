@@ -16,8 +16,8 @@ _common_library_deps = [
 ]
 
 def clang_tidy_library(name, **kwargs):
-    kwargs["srcs"] = kwargs.get("srcs", native.glob([paths.join(name, "*.cpp")]))
-    kwargs["hdrs"] = kwargs.get("hdrs", native.glob([paths.join(name, "*.h")]))
+    kwargs["srcs"] = kwargs.get("srcs", native.glob([paths.join(name, "*.cpp")], allow_empty = True))
+    kwargs["hdrs"] = kwargs.get("hdrs", native.glob([paths.join(name, "*.h")], allow_empty=True))
     kwargs["deps"] = kwargs.get("deps", []) + _common_library_deps
     cc_library(
         name = name,

@@ -187,7 +187,6 @@ cc_library(
     name = "MinGW",
     srcs = glob([
         "MinGW/*.cpp",
-        "MinGW/*.h",
     ]),
     includes = ["MinGW"],
     deps = [
@@ -296,7 +295,6 @@ cc_binary(
     name = "lld",
     srcs = glob([
         "tools/lld/*.cpp",
-        "tools/lld/*.h",
     ]) + ["lld-driver.cpp"],
     deps = [
         ":COFF",

@@ -818,7 +818,6 @@ cc_library(
 cc_library(
     name = "TestMesh",
     srcs = glob(["lib/Dialect/Mesh/**/*.cpp"]),
-    hdrs = glob(["lib/Dialect/Mesh/**/*.h"]),
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
@@ -1043,18 +1042,6 @@ cc_library(
         "//mlir:VectorToSCF",
         "//mlir:VectorTransforms",
         "//mlir:X86VectorDialect",
-    ],
-)
-
-cc_library(
-    name = "TestTypeDialect",
-    srcs = glob([
-        "lib/Dialect/LLVMIR/*.cpp",
-    ]),
-    deps = [
-        ":TestDialect",
-        "//mlir:IR",
-        "//mlir:LLVMDialect",
     ],
 )
 
