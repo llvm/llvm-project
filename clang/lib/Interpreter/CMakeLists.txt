@@ -105,6 +105,5 @@ if(MSVC)
     set(clangInterpreter_link_str "${clangInterpreter_link_str} /EXPORT:${sym}")
   endforeach(sym ${clangInterpreter_exports})
 
-  set_property(TARGET clangInterpreter APPEND_STRING PROPERTY LINK_FLAGS ${clangInterpreter_link_str})
-
+  target_link_options(clangInterpreter PUBLIC "${clangInterpreter_link_str}")
 endif(MSVC)
