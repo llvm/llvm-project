@@ -673,6 +673,135 @@ enum class MatchConvolutionResult {
 };
 } // namespace mlir::linalg::detail
 
+SmallVector<int64_t, 2>
+mlir::linalg::detail::convolution_impl::getStrides(ConvolutionOpInterface op) {
+  auto maybeStridesAttr = op->getAttrOfType<DenseIntElementsAttr>("strides");
+  if (!maybeStridesAttr) {
+    OpBuilder builder(op.getContext());
+    return SmallVector<int64_t, 2>(op.getSpatialRank(), 1);
+  }
+  return llvm::to_vector(maybeStridesAttr.getValues<int64_t>());
+}
+
+SmallVector<int64_t, 2> mlir::linalg::detail::convolution_impl::getDilations(
+    ConvolutionOpInterface op) {
+  auto maybeDilationsAttr =
+      op->getAttrOfType<DenseIntElementsAttr>("dilations");
+  if (!maybeDilationsAttr) {
+    OpBuilder builder(op.getContext());
+    return SmallVector<int64_t, 2>(op.getSpatialRank(), 1);
+  }
+  return llvm::to_vector(maybeDilationsAttr.getValues<int64_t>());
+}
+
+int64_t mlir::linalg::detail::grouped_convolution_impl::getSpatialRank(
+    GroupedConvolutionOpInterface op) {
+  return cast<ShapedType>(op.image().getType()).getRank() - 3;
+}
+
+ArrayAttr mlir::linalg::detail::grouped_convolution_impl::getIteratorTypes(
+    GroupedConvolutionOpInterface op) {
+  int64_t numSpatialDims = op.getSpatialRank();
+  SmallVector<Attribute> iteratorTypes(
+      3 + numSpatialDims, IteratorTypeAttr::get(op.getContext(), par));
+  SmallVector<Attribute> reductions(
+      numSpatialDims + 1, IteratorTypeAttr::get(op.getContext(), red));
+  iteratorTypes.insert(iteratorTypes.end(), reductions.begin(),
+                       reductions.end());
+
+  return Builder(op.getContext()).getArrayAttr(iteratorTypes);
+}
+
+ArrayAttr
+mlir::linalg::detail::grouped_convolution_impl::createCommonIndexingMaps(
+    MLIRContext *ctx, int64_t numSpatial,
+    const SmallVector<SmallVector<utils::GroupedConvDim>> &layouts,
+    const SmallVectorImpl<int64_t> &strides,
+    const SmallVectorImpl<int64_t> &dilations) {
+  assert(layouts.size() == 3 && "expected 3 layouts: image, filter, init");
+
+  // Domain: (n, g, f, os, c, ks)
+  AffineExpr n = getAffineDimExpr(0, ctx);
+  AffineExpr g = getAffineDimExpr(1, ctx);
+  AffineExpr f = getAffineDimExpr(2, ctx);
+  SmallVector<AffineExpr> s(
+      llvm::map_range(llvm::seq<int64_t>(3, numSpatial + 3),
+                      [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
+  AffineExpr c = getAffineDimExpr(numSpatial + 3, ctx);
+  SmallVector<AffineExpr> ks(llvm::map_range(
+      llvm::seq<int64_t>(numSpatial + 4, 2 * (numSpatial + 1) + 2),
+      [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
+
+  SmallVector<AffineExpr> inSpatials;
+  inSpatials.reserve(numSpatial);
+  for (const auto &[sp, ksp, st, di] : llvm::zip(s, ks, strides, dilations)) {
+    inSpatials.push_back(sp * st + ksp * di);
+  }
+
+  auto getExprs = [&](const SmallVector<utils::GroupedConvDim> &layout,
+                      const SmallVector<AffineExpr> &spatials) {
+    SmallVector<AffineExpr> exprs(layout.size());
+    int64_t spatialDim;
+    for (const auto &[i, dim] : llvm::enumerate(layout)) {
+      switch (dim) {
+      case utils::GroupedConvDim::n:
+        exprs[i] = n;
+        break;
+      case utils::GroupedConvDim::g:
+        exprs[i] = g;
+        break;
+      case utils::GroupedConvDim::f:
+        exprs[i] = f;
+        break;
+      case utils::GroupedConvDim::s:
+        exprs[i] = spatials[0];
+        spatialDim = i;
+        break;
+      case utils::GroupedConvDim::c:
+        exprs[i] = c;
+        break;
+      default:
+        assert(false);
+      }
+    }
+    if (spatials.size() > 1)
+      exprs.insert(exprs.begin() + spatialDim + 1, spatials.begin() + 1,
+                   spatials.end());
+    return exprs;
+  };
+  SmallVector<AffineExpr> inExprs = getExprs(layouts[0], inSpatials);
+  SmallVector<AffineExpr> kExprs = getExprs(layouts[1], ks);
+  SmallVector<AffineExpr> outExprs = getExprs(layouts[2], s);
+  SmallVector<AffineMap> maps(
+      {AffineMap::get(4 + 2 * numSpatial, 0, getExprs(layouts[0], inSpatials),
+                      ctx),
+       AffineMap::get(4 + 2 * numSpatial, 0, getExprs(layouts[1], ks), ctx),
+       AffineMap::get(4 + 2 * numSpatial, 0, getExprs(layouts[2], s), ctx)});
+
+  return Builder(ctx).getAffineMapArrayAttr(maps);
+}
+
+LogicalResult
+mlir::linalg::detail::verifyGroupedConvolutionInterface(Operation *op) {
+  if (failed(verifyConvolutionInterface(op)))
+    return failure();
+  if (GroupedConvolutionOpInterface conv =
+          dyn_cast<GroupedConvolutionOpInterface>(op)) {
+    const auto imageType = conv.image().getType().dyn_cast<ShapedType>();
+    const auto imageRank = imageType.getRank();
+    const auto kernelRank =
+        conv.filter().getType().cast<ShapedType>().getRank();
+    const auto initType =
+        cast<LinalgOp>(op).getDpsInits()[0].getType().dyn_cast<ShapedType>();
+    const auto initRank = initType.getRank();
+    if (imageRank != kernelRank || imageRank != initRank)
+      return op->emitError(
+          "Rank relationship must be `in_rank == out_rank == kernel_rank`");
+    return success();
+  }
+  return failure();
+}
+
 mlir::linalg::detail::MatchConvolutionResult
 mlir::linalg::detail::isConvolutionInterfaceImpl(
     Operation *op, ConvolutionDimensions *dimensions) {

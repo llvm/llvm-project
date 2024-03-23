@@ -175,6 +175,101 @@ def LinalgConvolutionOpInterface : OpInterface<"ConvolutionOpInterface"> {
         return $_op.getOperation()->getOperand(1);
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/"Return the spatial rank.",
+      /*retTy=*/"int64_t",
+      /*methodName=*/"getSpatialRank",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        // Most convolution's inputs have batch, channel and spatial dims
+        return cast<ShapedType>(image().getType()).getRank() - 2;
+      }]
+    >
+  ];
+}
+
+def LinalgGroupedConvolutionOpInterface : OpInterface<"GroupedConvolutionOpInterface", [
+  LinalgConvolutionOpInterface]> {
+  let description = [{
+    A grouped convolution is defined in general terms:
+    1. It is a convolution as defined by `ConvolutionOpInterface`.
+    2. Operands have a the following distinct dimensions (excluding batch in input/output): group, channel, spatial
+    3. `input_rank == kernel_rank == output_rank` (including batch in input/output)
+    4. Reductions are along the input channel and spatial dimensions while group, output channel
+       and output spatial dimensions are parallel.
+  }];
+  let cppNamespace = "::mlir::linalg";
+  let verify = [{ return detail::verifyGroupedConvolutionInterface($_op); }];
+  let methods = [
+    InterfaceMethod<[{
+      Returns the groups position for the input.
+    }],
+    "SmallVector<SmallVector<::mlir::utils::GroupedConvDim>>", "getLayoutsEnums", (ins)
+    >,
+    InterfaceMethod<[{
+      Returns the groups position for the input.
+    }],
+    "int64_t", "getInputGroupsPosition", (ins)
+    >,
+    InterfaceMethod<[{
+      Returns the channel position for the input.
+    }],
+    "int64_t", "getInputChannelPosition", (ins)
+    >,
+    InterfaceMethod<[{
+      Returns the channel position for the output.
+    }],
+    "int64_t", "getOutputChannelPosition", (ins)
+    >,
+    InterfaceMethod<[{
+      Get number of groups. 
+    }],
+    "int64_t", "getNumGroups", (ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+      return cast<ShapedType>($_op.image().getType()).getShape()[$_op.getInputGroupsPosition() - 1];
+    }]>,
+    InterfaceMethod<[{
+      Get number of input channels. 
+    }],
+    "int64_t", "getNumInputChannels", (ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+      return cast<ShapedType>($_op.image().getType()).getShape()[$_op.getInputChannelPosition()];
+    }]>,
+    InterfaceMethod<[{
+      Get number of output channels. 
+    }],
+    "int64_t", "getNumOutputChannels", (ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+      return cast<ShapedType>($_op.getDpsInits()[0].getType()).getShape()[$_op.getOutputChannelPosition()];
+    }]>,
+    InterfaceMethod<[{
+      Returns indexing maps for any spatial dimension.
+    }],
+    "::mlir::ArrayAttr", "getIteratorTypes", (ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return detail::grouped_convolution_impl::getIteratorTypes($_op);
+      }]>,
+    InterfaceMethod<[{
+      Returns strides.
+    }],
+    "::llvm::SmallVector<int64_t, 2>", "getStridesVector", (ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return detail::convolution_impl::getStrides($_op);
+    }]>,
+    InterfaceMethod<[{
+      Returns dilations.
+    }],
+    "::llvm::SmallVector<int64_t, 2>", "getDilationsVector", (ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return detail::convolution_impl::getDilations($_op);
+    }]>
   ];
 }
 

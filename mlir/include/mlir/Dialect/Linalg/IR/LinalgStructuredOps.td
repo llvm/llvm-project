@@ -384,6 +384,147 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// GroupedConvNDOp ops.
+//===----------------------------------------------------------------------===//
+
+def GroupedConvNDOp : LinalgStructuredBase_Op<"grouped_conv_nd",
+  [AttrSizedOperandSegments, LinalgGroupedConvolutionOpInterface]> {
+    
+  let summary = [{
+    Performs N-D grouped convolution with switchable channel position; either first or last.
+  }];
+  let description = [{
+    Allows any number of spatial dimensions but treats all of them as contiguous.  Throughout, `S`,
+    will represent all spatial dimensions.  Operand layouts are determined by the `layouts`
+    `StrArrayAttr` attritbute.  Each element of the array is a string representing the layout of the
+    corresponding operand and should be be mappable to a `GroupedConvDim` enum, i.e. one of
+      n: (batch dim)
+      g: (group dim)
+      f: (feature or output channel dim)
+      s: (all spatial dims)
+      c: (input channel dim).
+    
+    The domain will always be in the order `(N, G, F, S, C, KS)`.
+
+  }];
+
+    let arguments = (ins
+      Variadic<TensorOrMemref>:$inputs,
+      Variadic<TensorOrMemref>:$inits,
+      DefaultValuedAttr<StrArrayAttr, "{\"ngcs\", \"gfcs\", \"ngfs\"}">:$layouts,
+      OptionalAttr<I64ElementsAttr>:$strides,
+      OptionalAttr<I64ElementsAttr>:$dilations
+    );
+    let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+    let regions = (region AnyRegion:$region);
+
+    let skipDefaultBuilders = 1;
+    let builders = [
+      OpBuilder<
+      (ins "Value":$input, "Value":$filter, "Value":$init,
+            CArg<"ArrayRef<int64_t>", "{}">:$strides, CArg<"ArrayRef<int64_t>", "{}">:$dilations,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        int64_t numSpatialDims = input.getType().cast<ShapedType>().getRank() - 3;
+        if (strides.empty())
+          strides = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        if (dilations.empty())
+          dilations = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        $_state.addAttribute(getStridesAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), strides));
+        $_state.addAttribute(getDilationsAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), dilations));
+        buildStructuredOp($_builder, $_state, std::nullopt, {input, filter}, init,
+          attributes, GroupedConvNDOp::getRegionBuilder());
+      }]>,
+      OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter, 
+            "Value":$init,
+            CArg<"ArrayRef<int64_t>", "{}">:$strides, CArg<"ArrayRef<int64_t>", "{}">:$dilations,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        int64_t numSpatialDims = input.getType().cast<ShapedType>().getRank() - 3;
+        if (strides.empty())
+          strides = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        if (dilations.empty())
+          dilations = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        $_state.addAttribute(getStridesAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), strides));
+        $_state.addAttribute(getDilationsAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), dilations));
+        buildStructuredOp($_builder, $_state, resultTensorTypes,
+          {input, filter}, init, attributes, GroupedConvNDOp::getRegionBuilder());
+      }]>,
+      OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter, 
+      "Value":$init, "Attribute":$strides, "Attribute":$dilations,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute(getStridesAttrName($_state.name), strides);
+        $_state.addAttribute(getDilationsAttrName($_state.name), dilations);
+        buildStructuredOp($_builder, $_state, resultTensorTypes, {input, filter}, init,
+          attributes, GroupedConvNDOp::getRegionBuilder());
+      }]>
+    ];
+
+    // TODO: Figure out how to move this to the interface
+    let extraClassDeclaration = structuredOpsBaseDecls # [{
+      void print(::mlir::OpAsmPrinter &printer) {
+        return detail::convolution_impl::print(*this, printer);
+      }
+      static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser,
+                                        ::mlir::OperationState &result) {
+        return detail::convolution_impl::parse(parser, result);
+      }
+      static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
+                                mlir::ArrayRef<mlir::NamedAttribute>)>
+      getRegionBuilder() {
+        return detail::convolution_impl::regionBuilder;
+      }
+      // Implement functions necessary for DestinationStyleOpInterface.
+      MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
+
+      // Implement functions necessary for LinalgOp.
+      ArrayAttr getIndexingMaps();
+
+      // Implement functions necessary for GroupedConvolutionOpInterface
+      int64_t getSpatialRank() {
+        return detail::grouped_convolution_impl::getSpatialRank(*this);
+      }
+
+      SmallVector<SmallVector<::mlir::utils::GroupedConvDim>> getLayoutsEnums() {
+        SmallVector<SmallVector<::mlir::utils::GroupedConvDim>> layouts;
+        for (auto attr : (*this).getLayoutsAttr().getValue()) {
+          std::string layoutStr = cast<StringAttr>(attr).getValue().str();
+          SmallVector<::mlir::utils::GroupedConvDim> layout(layoutStr.size());
+          for (size_t i = 0; i < layoutStr.size(); i++) {
+            auto maybeDimEnum = ::mlir::utils::symbolizeGroupedConvDim(layoutStr.substr(i, 1).c_str());
+            assert(maybeDimEnum);
+            layout[i] = maybeDimEnum.value(); 
+          }
+          layouts.push_back(layout);
+        }
+        return layouts;
+      }
+
+      int64_t getOutputChannelPosition() {
+          return 2;
+      }
+
+      int64_t getInputChannelPosition() {
+          return 2;
+      }
+
+      int64_t getInputGroupsPosition() {
+          return 1;
+      }
+    }];
+}
 
 //===----------------------------------------------------------------------===//
 // Transpose op.
