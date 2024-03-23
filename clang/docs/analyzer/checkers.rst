@@ -804,9 +804,27 @@ Check for performance anti-patterns when using Grand Central Dispatch.
 
 .. _optin-performance-Padding:
 
-optin.performance.Padding
-"""""""""""""""""""""""""
+optin.performance.Padding (PaddingChecker)
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Check for excessively padded structs.
+
+.. code-block:: objc
+
+ struct TestStruct {
+      int data1;   // 4 bytes
+      char data2;  // 1 byte
+      char padding[27];  // 27 bytes of padding
+    };  // Total size: 32 bytes 
+  
+  void TestFunction() {
+      struct TestStruct struct1;  // Warning is generated due to excessive padding.
+    }
+
+   // Reports are only generated if the excessive padding exceeds 'AllowedPad' in bytes.
+
+  // AllowedPad: Default Value: 24 bytes
+
+   Usage: `AllowedPad=<value>`
 
 .. _optin-portability-UnixAPI:
 
