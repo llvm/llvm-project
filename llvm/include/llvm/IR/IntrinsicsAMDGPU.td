@@ -297,10 +297,17 @@ def int_amdgcn_sched_barrier : ClangBuiltin<"__builtin_amdgcn_sched_barrier">,
 // matching instructions that will be associated with this sched_group_barrier.
 // The third parameter is an identifier which is used to describe what other
 // sched_group_barriers should be synchronized with.
-def int_amdgcn_sched_group_barrier : ClangBuiltin<"__builtin_amdgcn_sched_group_barrier">,
-  Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-  [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrNoMem, IntrHasSideEffects,
-   IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+multiclass SCHED_GROUP_BARRIER_I {
+  def NAME:   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+    [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrNoMem, IntrHasSideEffects,
+    IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+  def _rule:   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+    [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, IntrNoMem, IntrHasSideEffects,
+    IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+}
+
+
+defm int_amdgcn_sched_group_barrier : SCHED_GROUP_BARRIER_I;
 
 // Scheduler optimization hint.
 //     MASK = 0: Small gemm opt
