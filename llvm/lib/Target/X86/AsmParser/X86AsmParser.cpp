@@ -4068,7 +4068,7 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
 
   if (UseApxExtendedReg && !X86II::canUseApxExtendedReg(MCID))
     return Match_Unsupported;
-  if (ForcedNoFlag != !!(MCID.TSFlags & X86II::EVEX_NF))
+  if (ForcedNoFlag == !(MCID.TSFlags & X86II::EVEX_NF) && !X86::isCFCMOVCC(Opc))
     return Match_Unsupported;
 
   if (ForcedVEXEncoding == VEXEncoding_EVEX &&

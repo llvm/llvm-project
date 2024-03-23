@@ -209,7 +209,7 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   // spv_assign_ptr_type intrinsic or otherwise use default pointer element
   // type.
   Argument *Arg = F.getArg(ArgIdx);
-  if (Arg->hasByValAttr() || Arg->hasByRefAttr()) {
+  if (HasPointeeTypeAttr(Arg)) {
     Type *ByValRefType = Arg->hasByValAttr() ? Arg->getParamByValType()
                                              : Arg->getParamByRefType();
     SPIRVType *ElementType = GR->getOrCreateSPIRVType(ByValRefType, MIRBuilder);
@@ -316,6 +316,12 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       if (Arg.hasAttribute(Attribute::NoAlias)) {
         auto Attr =
             static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoAlias);
+        buildOpDecorate(VRegs[i][0], MIRBuilder,
+                        SPIRV::Decoration::FuncParamAttr, {Attr});
+      }
+      if (Arg.hasAttribute(Attribute::ByVal)) {
+        auto Attr =
+            static_cast<unsigned>(SPIRV::FunctionParameterAttribute::ByVal);
         buildOpDecorate(VRegs[i][0], MIRBuilder,
                         SPIRV::Decoration::FuncParamAttr, {Attr});
       }

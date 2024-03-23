@@ -16,7 +16,7 @@
 #include <__config>
 #include <__iterator/segmented_iterator.h>
 #include <__type_traits/common_type.h>
-#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_constructible.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 

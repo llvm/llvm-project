@@ -14,9 +14,9 @@
 #include "environment.h"
 #include "io-error.h"
 #include "flang/Common/Fortran.h"
+#include "flang/Common/optional.h"
 #include "flang/Decimal/decimal.h"
 #include <cinttypes>
-#include <optional>
 
 namespace Fortran::runtime {
 class Descriptor;
@@ -64,9 +64,9 @@ struct DataEdit {
   static constexpr char DefinedDerivedType{'d'}; // DT defined I/O
 
   char variation{'\0'}; // N, S, or X for EN, ES, EX; G/l for original G/list
-  std::optional<int> width; // the 'w' field; optional for A
-  std::optional<int> digits; // the 'm' or 'd' field
-  std::optional<int> expoDigits; // 'Ee' field
+  Fortran::common::optional<int> width; // the 'w' field; optional for A
+  Fortran::common::optional<int> digits; // the 'm' or 'd' field
+  Fortran::common::optional<int> expoDigits; // 'Ee' field
   MutableModes modes;
   int repeat{1};
 
@@ -102,7 +102,8 @@ public:
   // Extracts the next data edit descriptor, handling control edit descriptors
   // along the way.  If maxRepeat==0, this is a peek at the next data edit
   // descriptor.
-  std::optional<DataEdit> GetNextDataEdit(Context &, int maxRepeat = 1);
+  Fortran::common::optional<DataEdit> GetNextDataEdit(
+      Context &, int maxRepeat = 1);
 
   // Emit any remaining character literals after the last data item (on output)
   // and perform remaining record positioning actions.

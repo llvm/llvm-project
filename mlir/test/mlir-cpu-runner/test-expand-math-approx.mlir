@@ -683,6 +683,24 @@ func.func @cosh() {
  return
 }
 
+// -------------------------------------------------------------------------- //
+// Tanh.
+// -------------------------------------------------------------------------- //
+
+func.func @tanh_8xf32(%a : vector<8xf32>) {
+  %r = math.tanh %a : vector<8xf32>
+  vector.print %r : vector<8xf32>
+  return
+}
+
+func.func @tanh() {
+  // CHECK: -1, -0.761594, -0.291313, 0, 0.291313, 0.761594, 1, 1
+  %v3 = arith.constant dense<[0xff800000, -1.0, -0.3, 0.0, 0.3, 1.0, 10.0, 0x7f800000]> : vector<8xf32>
+  call @tanh_8xf32(%v3) : (vector<8xf32>) -> ()
+
+ return
+}
+
 func.func @main() {
   call @exp2f() : () -> ()
   call @roundf() : () -> ()
@@ -690,5 +708,6 @@ func.func @main() {
   call @roundeven() : () -> ()
   call @sinh() : () -> ()
   call @cosh() : () -> ()
+  call @tanh() : () -> ()
   return
 }

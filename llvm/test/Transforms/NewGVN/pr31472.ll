@@ -9,11 +9,13 @@ target triple = "x86_64-apple-macosx10.12.0"
 define i32 @main() personality ptr @__gxx_personality_v0{
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:    [[TMP1:%.*]] = invoke i32 @foo()
-; CHECK-NEXT:    to label %good unwind label %bad
+; CHECK-NEXT:            to label [[GOOD:%.*]] unwind label [[BAD:%.*]]
 ; CHECK:       good:
 ; CHECK-NEXT:    ret i32 5
 ; CHECK:       bad:
-; CHECK-NEXT:    [[TMP2:%.*]] = landingpad { ptr, i32
+; CHECK-NEXT:    [[TMP2:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    resume { ptr, i32 } [[TMP2]]
 ;
   %1 = invoke i32 @foo()
   to label %good unwind label %bad

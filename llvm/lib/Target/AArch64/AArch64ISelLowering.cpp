@@ -1131,6 +1131,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           ISD::FMUL,           ISD::FDIV,           ISD::FMA,
           ISD::FNEG,           ISD::FABS,           ISD::FCEIL,
           ISD::FSQRT,          ISD::FFLOOR,         ISD::FNEARBYINT,
+          ISD::FSIN,           ISD::FCOS,           ISD::FPOW,
+          ISD::FLOG,           ISD::FLOG2,          ISD::FLOG10,
+          ISD::FEXP,           ISD::FEXP2,          ISD::FEXP10,
           ISD::FRINT,          ISD::FROUND,         ISD::FROUNDEVEN,
           ISD::FTRUNC,         ISD::FMINNUM,        ISD::FMAXNUM,
           ISD::FMINIMUM,       ISD::FMAXIMUM,       ISD::STRICT_FADD,
@@ -5270,13 +5273,13 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         AArch64ISD::SMSTART, DL, MVT::Other,
         Op->getOperand(0), // Chain
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+        DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
   case Intrinsic::aarch64_sme_za_disable:
     return DAG.getNode(
         AArch64ISD::SMSTOP, DL, MVT::Other,
         Op->getOperand(0), // Chain
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+        DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
   }
 }
 
@@ -7197,11 +7200,11 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
           getRegClassFor(PStateSM.getValueType().getSimpleVT()));
       FuncInfo->setPStateSMReg(Reg);
       Chain = DAG.getCopyToReg(Chain, DL, Reg, PStateSM);
-    } else {
-      PStateSM = DAG.getConstant(0, DL, MVT::i64);
-    }
-    Chain = changeStreamingMode(DAG, DL, /*Enable*/ true, Chain, Glue, PStateSM,
-                                /*Entry*/ true);
+      Chain = changeStreamingMode(DAG, DL, /*Enable*/ true, Chain, Glue,
+                                  AArch64SME::IfCallerIsNonStreaming, PStateSM);
+    } else
+      Chain = changeStreamingMode(DAG, DL, /*Enable*/ true, Chain, Glue,
+                                  AArch64SME::Always);
 
     // Ensure that the SMSTART happens after the CopyWithChain such that its
     // chain result is used.
@@ -7786,9 +7789,11 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   }
 }
 
-SDValue AArch64TargetLowering::changeStreamingMode(
-    SelectionDAG &DAG, SDLoc DL, bool Enable,
-    SDValue Chain, SDValue InGlue, SDValue PStateSM, bool Entry) const {
+SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
+                                                   bool Enable, SDValue Chain,
+                                                   SDValue InGlue,
+                                                   unsigned Condition,
+                                                   SDValue PStateSM) const {
   MachineFunction &MF = DAG.getMachineFunction();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   FuncInfo->setHasStreamingModeChanges(true);
@@ -7797,16 +7802,32 @@ SDValue AArch64TargetLowering::changeStreamingMode(
   SDValue RegMask = DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask());
   SDValue MSROp =
       DAG.getTargetConstant((int32_t)AArch64SVCR::SVCRSM, DL, MVT::i32);
-
-  SDValue ExpectedSMVal =
-      DAG.getTargetConstant(Entry ? Enable : !Enable, DL, MVT::i64);
-  SmallVector<SDValue> Ops = {Chain, MSROp, PStateSM, ExpectedSMVal, RegMask};
+  SDValue ConditionOp = DAG.getTargetConstant(Condition, DL, MVT::i64);
+  SmallVector<SDValue> Ops = {Chain, MSROp, ConditionOp};
+  if (Condition != AArch64SME::Always) {
+    assert(PStateSM && "PStateSM should be defined");
+    Ops.push_back(PStateSM);
+  }
+  Ops.push_back(RegMask);
 
   if (InGlue)
     Ops.push_back(InGlue);
 
   unsigned Opcode = Enable ? AArch64ISD::SMSTART : AArch64ISD::SMSTOP;
   return DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
+}
+
+static unsigned getSMCondition(const SMEAttrs &CallerAttrs,
+                               const SMEAttrs &CalleeAttrs) {
+  if (!CallerAttrs.hasStreamingCompatibleInterface() ||
+      CallerAttrs.hasStreamingBody())
+    return AArch64SME::Always;
+  if (CalleeAttrs.hasNonStreamingInterface())
+    return AArch64SME::IfCallerIsStreaming;
+  if (CalleeAttrs.hasStreamingInterface())
+    return AArch64SME::IfCallerIsNonStreaming;
+
+  llvm_unreachable("Unsupported attributes");
 }
 
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,
@@ -8028,7 +8049,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = DAG.getNode(
         AArch64ISD::SMSTOP, DL, MVT::Other, Chain,
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+        DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
@@ -8299,9 +8320,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue InGlue;
   if (RequiresSMChange) {
-    SDValue NewChain =
-        changeStreamingMode(DAG, DL, CalleeAttrs.hasStreamingInterface(), Chain,
-                            InGlue, PStateSM, true);
+    SDValue NewChain = changeStreamingMode(
+        DAG, DL, CalleeAttrs.hasStreamingInterface(), Chain, InGlue,
+        getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
     Chain = NewChain.getValue(0);
     InGlue = NewChain.getValue(1);
   }
@@ -8455,8 +8476,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (RequiresSMChange) {
     assert(PStateSM && "Expected a PStateSM to be set");
-    Result = changeStreamingMode(DAG, DL, !CalleeAttrs.hasStreamingInterface(),
-                                 Result, InGlue, PStateSM, false);
+    Result = changeStreamingMode(
+        DAG, DL, !CalleeAttrs.hasStreamingInterface(), Result, InGlue,
+        getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
   }
 
   if (CallerAttrs.requiresEnablingZAAfterCall(CalleeAttrs))
@@ -8464,7 +8486,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Result = DAG.getNode(
         AArch64ISD::SMSTART, DL, MVT::Other, Result,
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+        DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
 
   if (ShouldPreserveZT0)
     Result =
@@ -8599,13 +8621,12 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       Register Reg = FuncInfo->getPStateSMReg();
       assert(Reg.isValid() && "PStateSM Register is invalid");
       SDValue PStateSM = DAG.getCopyFromReg(Chain, DL, Reg, MVT::i64);
-      Chain =
-          changeStreamingMode(DAG, DL, /*Enable*/ false, Chain,
-                              /*Glue*/ SDValue(), PStateSM, /*Entry*/ false);
+      Chain = changeStreamingMode(DAG, DL, /*Enable*/ false, Chain,
+                                  /*Glue*/ SDValue(),
+                                  AArch64SME::IfCallerIsNonStreaming, PStateSM);
     } else
-      Chain = changeStreamingMode(
-          DAG, DL, /*Enable*/ false, Chain,
-          /*Glue*/ SDValue(), DAG.getConstant(1, DL, MVT::i64), /*Entry*/ true);
+      Chain = changeStreamingMode(DAG, DL, /*Enable*/ false, Chain,
+                                  /*Glue*/ SDValue(), AArch64SME::Always);
     Glue = Chain.getValue(1);
   }
 
@@ -16595,6 +16616,38 @@ bool AArch64TargetLowering::isLegalAddImmediate(int64_t Immed) const {
   return IsLegal;
 }
 
+bool AArch64TargetLowering::isLegalAddScalableImmediate(int64_t Imm) const {
+  // We will only emit addvl/inc* instructions for SVE2
+  if (!Subtarget->hasSVE2())
+    return false;
+
+  // addvl's immediates are in terms of the number of bytes in a register.
+  // Since there are 16 in the base supported size (128bits), we need to
+  // divide the immediate by that much to give us a useful immediate to
+  // multiply by vscale. We can't have a remainder as a result of this.
+  if (Imm % 16 == 0)
+    return isInt<6>(Imm / 16);
+
+  // Inc[b|h|w|d] instructions take a pattern and a positive immediate
+  // multiplier. For now, assume a pattern of 'all'. Incb would be a subset
+  // of addvl as a result, so only take h|w|d into account.
+  // Dec[h|w|d] will cover subtractions.
+  // Immediates are in the range [1,16], so we can't do a 2's complement check.
+  // FIXME: Can we make use of other patterns to cover other immediates?
+
+  // inch|dech
+  if (Imm % 8 == 0)
+    return std::labs(Imm / 8) <= 16;
+  // incw|decw
+  if (Imm % 4 == 0)
+    return std::labs(Imm / 4) <= 16;
+  // incd|decd
+  if (Imm % 2 == 0)
+    return std::labs(Imm / 2) <= 16;
+
+  return false;
+}
+
 // Return false to prevent folding
 // (mul (add x, c1), c2) -> (add (mul x, c2), c2*c1) in DAGCombine,
 // if the folding leads to worse code.
@@ -16671,14 +16724,28 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   if (Ty->isScalableTy()) {
     if (isa<ScalableVectorType>(Ty)) {
+      // See if we have a foldable vscale-based offset, for vector types which
+      // are either legal or smaller than the minimum; more work will be
+      // required if we need to consider addressing for types which need
+      // legalization by splitting.
+      uint64_t VecNumBytes = DL.getTypeSizeInBits(Ty).getKnownMinValue() / 8;
+      if (AM.HasBaseReg && !AM.BaseOffs && AM.ScalableOffset && !AM.Scale &&
+          (AM.ScalableOffset % VecNumBytes == 0) && VecNumBytes <= 16 &&
+          isPowerOf2_64(VecNumBytes))
+        return isInt<4>(AM.ScalableOffset / (int64_t)VecNumBytes);
+
       uint64_t VecElemNumBytes =
           DL.getTypeSizeInBits(cast<VectorType>(Ty)->getElementType()) / 8;
-      return AM.HasBaseReg && !AM.BaseOffs &&
+      return AM.HasBaseReg && !AM.BaseOffs && !AM.ScalableOffset &&
              (AM.Scale == 0 || (uint64_t)AM.Scale == VecElemNumBytes);
     }
 
-    return AM.HasBaseReg && !AM.BaseOffs && !AM.Scale;
+    return AM.HasBaseReg && !AM.BaseOffs && !AM.ScalableOffset && !AM.Scale;
   }
+
+  // No scalable offsets allowed for non-scalable types.
+  if (AM.ScalableOffset)
+    return false;
 
   // check reg + imm case:
   // i.e., reg + 0, reg + imm9, reg + SIZE_IN_BYTES * uimm12
