@@ -243,6 +243,10 @@ private:
   bool translateMemFunc(const CallInst &CI, MachineIRBuilder &MIRBuilder,
                         unsigned Opcode);
 
+  /// Translate an LLVM trap intrinsic (trap, debugtrap, ubsantrap).
+  bool translateTrap(const CallInst &U, MachineIRBuilder &MIRBuilder,
+                     unsigned Opcode);
+
   // Translate @llvm.experimental.vector.interleave2 and
   // @llvm.experimental.vector.deinterleave2 intrinsics for fixed-width vector
   // types into vector shuffles.

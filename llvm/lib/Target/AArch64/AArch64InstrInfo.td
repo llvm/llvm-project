@@ -8436,6 +8436,9 @@ def ubsan_trap_xform : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() | ('U' << 8), SDLoc(N), MVT::i32);
 }]>;
 
+def gi_ubsan_trap_xform : GICustomOperandRenderer<"renderUbsanTrap">,
+  GISDNodeXFormEquiv<ubsan_trap_xform>;
+
 def ubsan_trap_imm : TImmLeaf<i32, [{
   return isUInt<8>(Imm);
 }], ubsan_trap_xform>;

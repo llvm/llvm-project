@@ -1867,6 +1867,17 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
+  case TargetOpcode::G_UBSANTRAP: {
+    const MachineOperand &KindOp = MI->getOperand(0);
+    if (!MI->getOperand(0).isImm()) {
+      report("Crash kind must be an immediate", &KindOp, 0);
+      break;
+    }
+    int64_t Kind = MI->getOperand(0).getImm();
+    if (!isInt<8>(Kind))
+      report("Crash kind must be 8 bit wide", &KindOp, 0);
+    break;
+  }
   case TargetOpcode::G_VECREDUCE_SEQ_FADD:
   case TargetOpcode::G_VECREDUCE_SEQ_FMUL: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
