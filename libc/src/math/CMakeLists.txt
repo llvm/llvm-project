@@ -119,6 +119,8 @@ add_math_entrypoint_object(fminf128)
 
 add_math_entrypoint_object(fmod)
 add_math_entrypoint_object(fmodf)
+add_math_entrypoint_object(fmodl)
+add_math_entrypoint_object(fmodf128)
 
 add_math_entrypoint_object(frexp)
 add_math_entrypoint_object(frexpf)
@@ -183,10 +185,12 @@ add_math_entrypoint_object(lroundf128)
 add_math_entrypoint_object(modf)
 add_math_entrypoint_object(modff)
 add_math_entrypoint_object(modfl)
+add_math_entrypoint_object(modff128)
 
 add_math_entrypoint_object(nan)
 add_math_entrypoint_object(nanf)
 add_math_entrypoint_object(nanl)
+add_math_entrypoint_object(nanf128)
 
 add_math_entrypoint_object(nearbyint)
 add_math_entrypoint_object(nearbyintf)
@@ -195,10 +199,21 @@ add_math_entrypoint_object(nearbyintl)
 add_math_entrypoint_object(nextafter)
 add_math_entrypoint_object(nextafterf)
 add_math_entrypoint_object(nextafterl)
+add_math_entrypoint_object(nextafterf128)
 
 add_math_entrypoint_object(nexttoward)
 add_math_entrypoint_object(nexttowardf)
 add_math_entrypoint_object(nexttowardl)
+
+add_math_entrypoint_object(nextdown)
+add_math_entrypoint_object(nextdownf)
+add_math_entrypoint_object(nextdownl)
+add_math_entrypoint_object(nextdownf128)
+
+add_math_entrypoint_object(nextup)
+add_math_entrypoint_object(nextupf)
+add_math_entrypoint_object(nextupl)
+add_math_entrypoint_object(nextupf128)
 
 add_math_entrypoint_object(pow)
 add_math_entrypoint_object(powf)

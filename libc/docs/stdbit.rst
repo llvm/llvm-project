@@ -96,11 +96,11 @@ stdc_bit_floor_us            |check|
 stdc_bit_floor_ui            |check|
 stdc_bit_floor_ul            |check|
 stdc_bit_floor_ull           |check|
-stdc_bit_ceil_uc
-stdc_bit_ceil_us
-stdc_bit_ceil_ui
-stdc_bit_ceil_ul
-stdc_bit_ceil_ull
+stdc_bit_ceil_uc             |check|
+stdc_bit_ceil_us             |check|
+stdc_bit_ceil_ui             |check|
+stdc_bit_ceil_ul             |check|
+stdc_bit_ceil_ull            |check|
 ============================ =========
 
 
@@ -110,10 +110,10 @@ Macros
 =========================  =========
 Macro Name                 Available
 =========================  =========
-__STDC_VERSION_STDBIT_H__
-__STDC_ENDIAN_LITTLE__
-__STDC_ENDIAN_BIG__
-__STDC_ENDIAN_NATIVE__
+__STDC_VERSION_STDBIT_H__  |check|
+__STDC_ENDIAN_LITTLE__     |check|
+__STDC_ENDIAN_BIG__        |check|
+__STDC_ENDIAN_NATIVE__     |check|
 stdc_leading_zeros         |check|
 stdc_leading_ones          |check|
 stdc_trailing_zeros        |check|
@@ -127,7 +127,7 @@ stdc_count_ones            |check|
 stdc_has_single_bit        |check|
 stdc_bit_width             |check|
 stdc_bit_floor             |check|
-stdc_bit_ceil
+stdc_bit_ceil              |check|
 =========================  =========
 
 Standards

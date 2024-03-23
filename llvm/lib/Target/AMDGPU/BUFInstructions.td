@@ -2616,7 +2616,6 @@ defm BUFFER_ATOMIC_CMPSWAP_X2     : MUBUF_Real_Atomic_gfx11_gfx12<0x042, "buffer
 defm BUFFER_ATOMIC_FCMPSWAP       : MUBUF_Real_Atomic_gfx11<0x050, "buffer_atomic_cmpswap_f32">;
 defm BUFFER_ATOMIC_COND_SUB_U32   : MUBUF_Real_Atomic_gfx12<0x050>;
 defm BUFFER_ATOMIC_CSUB           : MUBUF_Real_Atomic_gfx11_gfx12<0x037, "buffer_atomic_sub_clamp_u32", "buffer_atomic_csub_u32">;
-def : Mnem_gfx11_gfx12<"buffer_atomic_csub", "buffer_atomic_csub_u32">;
 defm BUFFER_ATOMIC_DEC            : MUBUF_Real_Atomic_gfx11_gfx12<0x040, "buffer_atomic_dec_u32">;
 defm BUFFER_ATOMIC_DEC_X2         : MUBUF_Real_Atomic_gfx11_gfx12<0x04D, "buffer_atomic_dec_u64">;
 defm BUFFER_ATOMIC_INC            : MUBUF_Real_Atomic_gfx11_gfx12<0x03F, "buffer_atomic_inc_u32">;
@@ -2691,9 +2690,8 @@ defm BUFFER_LOAD_SBYTE_D16        : MUBUF_Real_AllAddr_gfx10<0x022>;
 defm BUFFER_LOAD_SBYTE_D16_HI     : MUBUF_Real_AllAddr_gfx10<0x023>;
 defm BUFFER_LOAD_SHORT_D16        : MUBUF_Real_AllAddr_gfx10<0x024>;
 defm BUFFER_LOAD_SHORT_D16_HI     : MUBUF_Real_AllAddr_gfx10<0x025>;
-// FIXME-GFX10: Add following instructions:
-//defm BUFFER_LOAD_FORMAT_D16_HI_X  : MUBUF_Real_AllAddr_gfx10<0x026>;
-//defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Real_AllAddr_gfx10<0x027>;
+defm BUFFER_LOAD_FORMAT_D16_HI_X  : MUBUF_Real_AllAddr_gfx10<0x026>;
+defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Real_AllAddr_gfx10<0x027>;
 defm BUFFER_LOAD_FORMAT_D16_X     : MUBUF_Real_AllAddr_gfx10<0x080>;
 defm BUFFER_LOAD_FORMAT_D16_XY    : MUBUF_Real_AllAddr_gfx10<0x081>;
 defm BUFFER_LOAD_FORMAT_D16_XYZ   : MUBUF_Real_AllAddr_gfx10<0x082>;

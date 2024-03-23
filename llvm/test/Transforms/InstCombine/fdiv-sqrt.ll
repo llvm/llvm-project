@@ -6,9 +6,9 @@ declare double @llvm.sqrt.f64(double)
 define double @sqrt_div_fast(double %x, double %y, double %z) {
 ; CHECK-LABEL: @sqrt_div_fast(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast double [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[DIV]])
-; CHECK-NEXT:    [[DIV1:%.*]] = fdiv fast double [[X:%.*]], [[SQRT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fdiv fast double [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.sqrt.f64(double [[TMP0]])
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast double [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret double [[DIV1]]
 ;
 entry:
@@ -36,9 +36,9 @@ entry:
 define double @sqrt_div_reassoc_arcp(double %x, double %y, double %z) {
 ; CHECK-LABEL: @sqrt_div_reassoc_arcp(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc arcp double [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[SQRT:%.*]] = call reassoc arcp double @llvm.sqrt.f64(double [[DIV]])
-; CHECK-NEXT:    [[DIV1:%.*]] = fdiv reassoc arcp double [[X:%.*]], [[SQRT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fdiv reassoc arcp double [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc arcp double @llvm.sqrt.f64(double [[TMP0]])
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul reassoc arcp double [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret double [[DIV1]]
 ;
 entry:
@@ -96,9 +96,9 @@ entry:
 define double @sqrt_div_arcp_missing(double %x, double %y, double %z) {
 ; CHECK-LABEL: @sqrt_div_arcp_missing(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc double [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[SQRT:%.*]] = call reassoc arcp double @llvm.sqrt.f64(double [[DIV]])
-; CHECK-NEXT:    [[DIV1:%.*]] = fdiv reassoc arcp double [[X:%.*]], [[SQRT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fdiv reassoc double [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc arcp double @llvm.sqrt.f64(double [[TMP0]])
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul reassoc arcp double [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret double [[DIV1]]
 ;
 entry:
@@ -173,3 +173,19 @@ entry:
   ret double %div1
 }
 
+define float @sqrt_non_div_operator(float %a) {
+; CHECK-LABEL: @sqrt_non_div_operator(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[A:%.*]] to double
+; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[CONV]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast double [[CONV]], [[SQRT]]
+; CHECK-NEXT:    [[CONV2:%.*]] = fptrunc double [[DIV]] to float
+; CHECK-NEXT:    ret float [[CONV2]]
+;
+entry:
+  %conv = fpext float %a to double
+  %sqrt = call fast double @llvm.sqrt.f64(double %conv)
+  %div = fdiv fast double %conv, %sqrt
+  %conv2 = fptrunc double %div to float
+  ret float %conv2
+}
