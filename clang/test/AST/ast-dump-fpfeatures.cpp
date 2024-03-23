@@ -214,11 +214,38 @@ float func_20(float x, float y) try {
 
 struct C21 {
   C21(float x, float y);
+  __attribute__((optnone)) float a_method(float x, float y) {
+    return x * y;
+  }
   float member;
 };
+
+// CHECK-LABEL: CXXMethodDecl {{.*}} a_method 'float (float, float)'
+// CHECK:         CompoundStmt {{.*}} ConstRoundingMode=downward MathErrno=1
+// CHECK:           ReturnStmt
+// CHECK:             BinaryOperator {{.*}} 'float' '*' ConstRoundingMode=downward MathErrno=1
 
 __attribute__((optnone)) C21::C21(float x, float y) : member(x + y) {}
 
 // CHECK-LABEL: CXXConstructorDecl {{.*}} C21 'void (float, float)'
 // CHECK:         CXXCtorInitializer {{.*}} 'member' 'float'
 // CHECK:           BinaryOperator {{.*}} 'float' '+' ConstRoundingMode=downward MathErrno=1
+
+template <typename T>
+__attribute__((optnone)) T func_22(T x, T y) {
+  return x + y;
+}
+
+// CHECK-LABEL: FunctionTemplateDecl {{.*}} func_22
+// CHECK:         FunctionDecl {{.*}} func_22 'T (T, T)'
+// CHECK:           CompoundStmt {{.*}} ConstRoundingMode=downward MathErrno=1
+// CHECK:             ReturnStmt
+// CHECK:               BinaryOperator {{.*}} '+' ConstRoundingMode=downward MathErrno=1
+// CHECK:         FunctionDecl {{.*}} func_22 'float (float, float)'
+// CHECK:           CompoundStmt {{.*}} ConstRoundingMode=downward MathErrno=1
+// CHECK:             ReturnStmt
+// CHECK:               BinaryOperator {{.*}} 'float' '+' ConstRoundingMode=downward MathErrno=1
+
+float func_23(float x, float y) {
+  return func_22(x, y);
+}

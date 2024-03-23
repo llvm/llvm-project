@@ -603,6 +603,11 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
   // to be re-used for method bodies as well.
   ParseScope FnScope(this, Scope::FnScope | Scope::DeclScope |
                                Scope::CompoundStmtScope);
+
+  // Some function attributes (like OptimizeNoneAttr) affect FP options.
+  Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
+  Actions.applyFunctionAttributesBeforeParsingBody(LM.D);
+
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
 
   if (Tok.is(tok::kw_try)) {

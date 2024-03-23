@@ -15911,6 +15911,10 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
 }
 
 void Sema::applyFunctionAttributesBeforeParsingBody(Decl *FD) {
+  if (!FD || FD->isInvalidDecl())
+    return;
+  if (auto *TD = dyn_cast<FunctionTemplateDecl>(FD))
+    FD = TD->getTemplatedDecl();
   if (FD && FD->hasAttr<OptimizeNoneAttr>()) {
     FPOptionsOverride FPO;
     FPO.setDisallowOptimizations();
