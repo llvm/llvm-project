@@ -217,6 +217,7 @@ set(files
   __algorithm/shift_right.h
   __algorithm/shuffle.h
   __algorithm/sift_down.h
+  __algorithm/simd_utils.h
   __algorithm/sort.h
   __algorithm/sort_heap.h
   __algorithm/stable_partition.h
