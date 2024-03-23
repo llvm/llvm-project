@@ -74,45 +74,29 @@ void genObjectList2(const Fortran::parser::OmpObjectList &objectList,
   }
 }
 
+mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
+                          std::size_t loopVarTypeSize) {
+  // OpenMP runtime requires 32-bit or 64-bit loop variables.
+  loopVarTypeSize = loopVarTypeSize * 8;
+  if (loopVarTypeSize < 32) {
+    loopVarTypeSize = 32;
+  } else if (loopVarTypeSize > 64) {
+    loopVarTypeSize = 64;
+    mlir::emitWarning(converter.getCurrentLocation(),
+                      "OpenMP loop iteration variable cannot have more than 64 "
+                      "bits size and will be narrowed into 64 bits.");
+  }
+  assert((loopVarTypeSize == 32 || loopVarTypeSize == 64) &&
+         "OpenMP loop iteration variable size must be transformed into 32-bit "
+         "or 64-bit");
+  return converter.getFirOpBuilder().getIntegerType(loopVarTypeSize);
+}
+
 void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause) {
   for (const Object &object : objects)
     symbolAndClause.emplace_back(clause, *object.id());
-}
-
-const parser::StructureComponent *getStructComp(const parser::DataRef &x) {
-  const parser::StructureComponent *comp = nullptr;
-  common::visit(
-      common::visitors{
-          [&](const parser::Name &name) { comp = nullptr; },
-          [&](const common::Indirection<parser::StructureComponent> &sc) {
-            comp = &sc.value();
-          },
-          [&](const common::Indirection<parser::ArrayElement> &ae) {
-            comp = getStructComp(ae.value().base);
-          },
-          [&](const common::Indirection<parser::CoindexedNamedObject> &ci) {
-            comp = getStructComp(ci.value().base);
-          },
-      },
-      x.u);
-
-  return comp;
-}
-
-const parser::StructureComponent *getStructComp(const parser::Substring &x) {
-  return getStructComp(std::get<parser::DataRef>(x.t));
-}
-
-const parser::StructureComponent *getStructComp(const parser::Designator &x) {
-  const parser::StructureComponent *comp = nullptr;
-  common::visit(
-      common::visitors{
-          [&](const auto &y) { comp = getStructComp(y); },
-      },
-      x.u);
-  return comp;
 }
 
 int getComponentPlacementInParent(
@@ -122,36 +106,46 @@ int getComponentPlacementInParent(
           .derivedTypeSpec()
           ->typeSymbol()
           .detailsIf<Fortran::semantics::DerivedTypeDetails>();
-
   assert(derived &&
          "expected derived type details when processing component symbol");
-
   int placement = 0;
   for (auto t : derived->componentNames()) {
     if (t == componentSym->name())
       return placement;
     placement++;
   }
-
   return -1;
 }
 
-llvm::SmallVector<int>
-generateMemberPlacementIndices(const Fortran::parser::OmpObject &ompObject) {
-  assert(getOmpObjectSymbol(ompObject)->owner().IsDerivedType() &&
-         "Expected an OmpObject that was a component of a derived type");
-  const auto *designator =
-      Fortran::parser::Unwrap<Fortran::parser::Designator>(ompObject.u);
-  assert(designator && "Expected a designator from derived type "
-                       "component during map clause processing");
-  const Fortran::parser::StructureComponent *curComp =
-      getStructComp(*designator);
+std::optional<Object>
+getCompObjOrNull(std::optional<Object> object,
+                 Fortran::semantics::SemanticsContext &semaCtx) {
+  if (!object)
+    return std::nullopt;
 
+  auto ref = evaluate::ExtractDataRef(*object.value().ref());
+  if (!ref)
+    return std::nullopt;
+
+  if (std::get_if<evaluate::Component>(&ref->u))
+    return object;
+
+  auto baseObj = getBaseObject(object.value(), semaCtx);
+  if (!baseObj)
+    return std::nullopt;
+
+  return getCompObjOrNull(baseObj.value(), semaCtx);
+}
+
+llvm::SmallVector<int>
+generateMemberPlacementIndices(const Object &object,
+                               Fortran::semantics::SemanticsContext &semaCtx) {
   std::list<int> indices;
-  while (curComp) {
-    indices.push_front(
-        getComponentPlacementInParent(curComp->component.symbol));
-    curComp = getStructComp(curComp->base);
+  auto compObj = getCompObjOrNull(object, semaCtx);
+  while (compObj) {
+    indices.push_front(getComponentPlacementInParent(compObj->id()));
+    compObj =
+        getCompObjOrNull(getBaseObject(compObj.value(), semaCtx), semaCtx);
   }
 
   return llvm::SmallVector<int>{std::begin(indices), std::end(indices)};

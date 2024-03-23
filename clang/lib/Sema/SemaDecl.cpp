@@ -2271,12 +2271,6 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
       }
       ShadowingDecls.erase(ShadowI);
     }
-
-    if (!getLangOpts().CPlusPlus && S->isClassScope()) {
-      if (auto *FD = dyn_cast<FieldDecl>(TmpD);
-          FD && FD->hasAttr<CountedByAttr>())
-        CheckCountedByAttr(S, FD);
-    }
   }
 
   llvm::sort(DeclDiags,
@@ -16115,7 +16109,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
               FD->setInvalidDecl();
           }
         }
-      } else if (getLangOpts().CPlusPlus11 && isLambdaCallOperator(FD)) {
+      } else if (getLangOpts().CPlusPlus && isLambdaCallOperator(FD)) {
         // In C++11, we don't use 'auto' deduction rules for lambda call
         // operators because we don't support return type deduction.
         auto *LSI = getCurLambda();
@@ -18254,10 +18248,8 @@ CreateNewDecl:
   if (PrevDecl)
     mergeDeclAttributes(New, PrevDecl);
 
-  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(New)) {
+  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(New))
     inferGslOwnerPointerAttribute(CXXRD);
-    inferNullableClassAttribute(CXXRD);
-  }
 
   // If there's a #pragma GCC visibility in scope, set the visibility of this
   // record.

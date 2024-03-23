@@ -1131,6 +1131,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           ISD::FMUL,           ISD::FDIV,           ISD::FMA,
           ISD::FNEG,           ISD::FABS,           ISD::FCEIL,
           ISD::FSQRT,          ISD::FFLOOR,         ISD::FNEARBYINT,
+          ISD::FSIN,           ISD::FCOS,           ISD::FPOW,
+          ISD::FLOG,           ISD::FLOG2,          ISD::FLOG10,
+          ISD::FEXP,           ISD::FEXP2,          ISD::FEXP10,
           ISD::FRINT,          ISD::FROUND,         ISD::FROUNDEVEN,
           ISD::FTRUNC,         ISD::FMINNUM,        ISD::FMAXNUM,
           ISD::FMINIMUM,       ISD::FMAXIMUM,       ISD::STRICT_FADD,
@@ -16613,6 +16616,38 @@ bool AArch64TargetLowering::isLegalAddImmediate(int64_t Immed) const {
   return IsLegal;
 }
 
+bool AArch64TargetLowering::isLegalAddScalableImmediate(int64_t Imm) const {
+  // We will only emit addvl/inc* instructions for SVE2
+  if (!Subtarget->hasSVE2())
+    return false;
+
+  // addvl's immediates are in terms of the number of bytes in a register.
+  // Since there are 16 in the base supported size (128bits), we need to
+  // divide the immediate by that much to give us a useful immediate to
+  // multiply by vscale. We can't have a remainder as a result of this.
+  if (Imm % 16 == 0)
+    return isInt<6>(Imm / 16);
+
+  // Inc[b|h|w|d] instructions take a pattern and a positive immediate
+  // multiplier. For now, assume a pattern of 'all'. Incb would be a subset
+  // of addvl as a result, so only take h|w|d into account.
+  // Dec[h|w|d] will cover subtractions.
+  // Immediates are in the range [1,16], so we can't do a 2's complement check.
+  // FIXME: Can we make use of other patterns to cover other immediates?
+
+  // inch|dech
+  if (Imm % 8 == 0)
+    return std::labs(Imm / 8) <= 16;
+  // incw|decw
+  if (Imm % 4 == 0)
+    return std::labs(Imm / 4) <= 16;
+  // incd|decd
+  if (Imm % 2 == 0)
+    return std::labs(Imm / 2) <= 16;
+
+  return false;
+}
+
 // Return false to prevent folding
 // (mul (add x, c1), c2) -> (add (mul x, c2), c2*c1) in DAGCombine,
 // if the folding leads to worse code.
@@ -16689,14 +16724,28 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   if (Ty->isScalableTy()) {
     if (isa<ScalableVectorType>(Ty)) {
+      // See if we have a foldable vscale-based offset, for vector types which
+      // are either legal or smaller than the minimum; more work will be
+      // required if we need to consider addressing for types which need
+      // legalization by splitting.
+      uint64_t VecNumBytes = DL.getTypeSizeInBits(Ty).getKnownMinValue() / 8;
+      if (AM.HasBaseReg && !AM.BaseOffs && AM.ScalableOffset && !AM.Scale &&
+          (AM.ScalableOffset % VecNumBytes == 0) && VecNumBytes <= 16 &&
+          isPowerOf2_64(VecNumBytes))
+        return isInt<4>(AM.ScalableOffset / (int64_t)VecNumBytes);
+
       uint64_t VecElemNumBytes =
           DL.getTypeSizeInBits(cast<VectorType>(Ty)->getElementType()) / 8;
-      return AM.HasBaseReg && !AM.BaseOffs &&
+      return AM.HasBaseReg && !AM.BaseOffs && !AM.ScalableOffset &&
              (AM.Scale == 0 || (uint64_t)AM.Scale == VecElemNumBytes);
     }
 
-    return AM.HasBaseReg && !AM.BaseOffs && !AM.Scale;
+    return AM.HasBaseReg && !AM.BaseOffs && !AM.ScalableOffset && !AM.Scale;
   }
+
+  // No scalable offsets allowed for non-scalable types.
+  if (AM.ScalableOffset)
+    return false;
 
   // check reg + imm case:
   // i.e., reg + 0, reg + imm9, reg + SIZE_IN_BYTES * uimm12

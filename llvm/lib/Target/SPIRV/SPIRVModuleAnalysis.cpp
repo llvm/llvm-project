@@ -1309,5 +1309,8 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
   if (MAI.MS[SPIRV::MB_EntryPoints].empty())
     MAI.Reqs.addCapability(SPIRV::Capability::Linkage);
 
+  // Set maximum ID used.
+  GR->setBound(MAI.MaxID);
+
   return false;
 }

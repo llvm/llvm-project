@@ -64,13 +64,14 @@ struct OmpMapMemberIndicesData {
 };
 
 llvm::SmallVector<int>
-generateMemberPlacementIndices(const Fortran::parser::OmpObject &ompObject);
+generateMemberPlacementIndices(const Object &object,
+                               Fortran::semantics::SemanticsContext &semaCtx);
 
 mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
-                mlir::SmallVector<mlir::Value> bounds,
-                mlir::SmallVector<mlir::Value> members,
+                mlir::ArrayRef<mlir::Value> bounds,
+                mlir::ArrayRef<mlir::Value> members,
                 mlir::DenseIntElementsAttr membersIndex, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool partialMap = false);
@@ -83,6 +84,9 @@ void insertChildMapInfoIntoParent(
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
     llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols);
+
+mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
+                          std::size_t loopVarTypeSize);
 
 void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,

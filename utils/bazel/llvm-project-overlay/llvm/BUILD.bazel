@@ -2585,6 +2585,7 @@ cc_library(
     hdrs = glob([
         "include/llvm/Passes/*.h",
         "include/llvm/Passes/*.def",
+        "include/llvm/Passes/*.inc",
     ]) + ["include/llvm-c/Transforms/PassBuilder.h"],
     copts = llvm_copts,
     deps = [
