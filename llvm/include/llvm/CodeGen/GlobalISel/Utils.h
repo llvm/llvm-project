@@ -528,6 +528,12 @@ bool isConstTrueVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
 bool isConstFalseVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
                     bool IsFP);
 
+/// Returns true if register has been defined with G_IMPLICIT_DEF
+/// If source register came from Merge-Like instruction, returns true only if
+/// all sources have been defined by G_IMPLICIT_DEF
+bool isImpDefVRegValWithLookThrough(Register VReg,
+                                    const MachineRegisterInfo &MRI);
+
 /// Returns an integer representing true, as defined by the
 /// TargetBooleanContents.
 int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector, bool IsFP);

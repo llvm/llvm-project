@@ -359,6 +359,108 @@ public:
     return false;
   }
 
+  // Try to combine illegal G_CONCAT_VECTORS instructions
+  // Combine if the G_CONCAT_VECTORS instruction is illegal and
+  // Source Registers are:
+  //  - Previously defined by a G_BITCAST instruction
+  //  - Defined by G_IMPLICIT_DEF with look through
+  // ===============
+  //
+  // %0(s32) = G_LOAD %ptr
+  // %1(<4 x s8>) = G_BITCAST %0(s32)
+  // %2(s8) = G_IMPLICIT_DEF
+  // %3(<4 x s8>) = G_BUILD_VECTOR %2(s8), %2(s8), %2(s8), %2(s8)
+  // %4(<16 x s8>) = G_CONCAT_VECTORS %1(<4 x s8>), %3(<4 x s8>), %3(<4 x s8>),
+  // %3(<4 x s8>)
+  //
+  // ====>
+  //
+  // %0(s32) = G_LOAD %ptr
+  // %1(s32) = G_IMPLICIT_DEF
+  // %2(<4 x s32>) = G_BUILD_VECTOR %0(s32), %1(s32), %1(s32), %1(s32)
+  // %3(<16 x s8>) = G_BITCAST %2(<4 x s32>)
+  bool tryCombineConcat(GConcatVectors &MI,
+                        SmallVectorImpl<MachineInstr *> &DeadInsts,
+                        SmallVectorImpl<Register> &UpdatedDefs,
+                        GISelObserverWrapper &WrapperObserver) {
+    Register SrcReg0 = MI.getSourceReg(0);
+    LLT SrcTy = MRI.getType(SrcReg0);
+    unsigned NumSrc = MI.getNumSources();
+
+    Register DstReg = MI.getReg(0);
+    LLT DstTy = MRI.getType(DstReg);
+
+    // Do not attempt combine if it is already legal
+    if (isInstLegal({TargetOpcode::G_CONCAT_VECTORS, {DstTy, SrcTy}}))
+      return false;
+
+    // CHECK if this instruction should be combined before building instructions
+    SmallVector<Register> SrcRegs;
+    unsigned NumUndef = 0;
+    for (unsigned i = 0; i < NumSrc; i++) {
+      Register CurrReg = MI.getSourceReg(i);
+      LLT CurrTy = MRI.getType(CurrReg);
+
+      // Only handle cases where all source types are the same type
+      if (CurrTy.getSizeInBits() != SrcTy.getSizeInBits())
+        return false;
+
+      // Register defined with G_IMPLIT_DEF
+      if (isImpDefVRegValWithLookThrough(CurrReg, MRI)) {
+        NumUndef++;
+        SrcRegs.push_back(CurrReg);
+      }
+
+      else if (MachineInstr *DefMI = getDefIgnoringCopies(CurrReg, MRI);
+               DefMI->getOpcode() == TargetOpcode::G_BITCAST) {
+        Register DefSrcReg = DefMI->getOperand(1).getReg();
+        LLT DefSrcTy = MRI.getType(DefSrcReg);
+
+        // Only handle cases where G_BITCAST source type is scalar
+        if (DefSrcTy.isScalar())
+          SrcRegs.push_back(DefSrcReg);
+        else
+          return false;
+      } else {
+        return false;
+      }
+    }
+
+    // Ignore if all sources are G_IMPLICIT_DEF
+    if (NumUndef == NumSrc)
+      return false;
+
+    // Combine the instruction, matches the condition
+    Builder.setInstrAndDebugLoc(MI);
+    SmallVector<Register> BuildRegs;
+    MachineInstr *UndefMI = nullptr;
+
+    for (Register CurrReg : SrcRegs) {
+      LLT CurrTy = MRI.getType(CurrReg);
+      if (CurrTy == LLT::scalar(SrcTy.getSizeInBits())) {
+        BuildRegs.push_back(CurrReg);
+      } else if (isImpDefVRegValWithLookThrough(CurrReg, MRI)) {
+        UndefMI = !UndefMI
+                      ? Builder.buildUndef(LLT::scalar(SrcTy.getSizeInBits()))
+                      : UndefMI;
+        BuildRegs.push_back(UndefMI->getOperand(0).getReg());
+      } else {
+        return false;
+      }
+    }
+
+    // Build the vector of scalars
+    LLT buildTy = LLT::fixed_vector(MI.getNumSources(), SrcTy.getSizeInBits());
+    Register BuildDstReg =
+        Builder.buildBuildVector(buildTy, BuildRegs).getReg(0);
+
+    // Bitcast them back to the intended type
+    Builder.buildBitcast(DstReg, BuildDstReg);
+
+    DeadInsts.push_back(&MI);
+    return true;
+  }
+
   /// Try to fold G_[ASZ]EXT (G_IMPLICIT_DEF).
   bool tryFoldImplicitDef(MachineInstr &MI,
                           SmallVectorImpl<MachineInstr *> &DeadInsts,
@@ -1321,9 +1423,14 @@ public:
       Changed = tryCombineUnmergeValues(cast<GUnmerge>(MI), DeadInsts,
                                         UpdatedDefs, WrapperObserver);
       break;
+    case TargetOpcode::G_CONCAT_VECTORS:
+      Changed = tryCombineConcat(cast<GConcatVectors>(MI), DeadInsts,
+                                 UpdatedDefs, WrapperObserver);
+      if (Changed)
+        break;
+      [[fallthrough]];
     case TargetOpcode::G_MERGE_VALUES:
     case TargetOpcode::G_BUILD_VECTOR:
-    case TargetOpcode::G_CONCAT_VECTORS:
       // If any of the users of this merge are an unmerge, then add them to the
       // artifact worklist in case there's folding that can be done looking up.
       for (MachineInstr &U : MRI.use_instructions(MI.getOperand(0).getReg())) {
