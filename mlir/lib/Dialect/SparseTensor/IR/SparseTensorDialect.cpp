@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -1956,6 +1957,10 @@ void SparseTensorDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorOps.cpp.inc"
       >();
+  declarePromisedInterfaces<
+      bufferization::BufferizableOpInterface, ConcatenateOp, ConvertOp, LoadOp,
+      NewOp, NumberOfEntriesOp, AssembleOp, DisassembleOp,
+      ToCoordinatesBufferOp, ToCoordinatesOp, ToPositionsOp, ToValuesOp>();
 }
 
 #define GET_OP_CLASSES

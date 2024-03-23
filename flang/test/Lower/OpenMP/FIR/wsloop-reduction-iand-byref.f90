@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-fir -hlfir=false -fopenmp --force-byref-reduction %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp -mmlir --force-byref-reduction %s -o - | FileCheck %s
 
-!CHECK-LABEL:   omp.reduction.declare @iand_i_32_byref : !fir.ref<i32>
+!CHECK-LABEL:   omp.declare_reduction @iand_byref_i32 : !fir.ref<i32>
 !CHECK-SAME:    init {
 !CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
 !CHECK:            %[[C0_1:.*]] = arith.constant -1 : i32
@@ -23,7 +23,7 @@
 !CHECK-SAME: %[[Y_BOX:.*]]: !fir.box<!fir.array<?xi32>>
 !CHECK: %[[X_REF:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFreduction_iandEx"}
 !CHECK: omp.parallel
-!CHECK: omp.wsloop byref reduction(@iand_i_32_byref %[[X_REF]] -> %[[PRV:.+]] : !fir.ref<i32>) for
+!CHECK: omp.wsloop byref reduction(@iand_byref_i32 %[[X_REF]] -> %[[PRV:.+]] : !fir.ref<i32>) for
 !CHECK: %[[LPRV:.+]] = fir.load %[[PRV]] : !fir.ref<i32>
 !CHECK: %[[Y_I_REF:.*]] = fir.coordinate_of %[[Y_BOX]]
 !CHECK: %[[Y_I:.*]] = fir.load %[[Y_I_REF]] : !fir.ref<i32>
