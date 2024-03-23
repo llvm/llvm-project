@@ -796,3 +796,33 @@ int f() {
   }();
 }
 }
+
+namespace GH86398 {
+struct function {}; // expected-note 2 {{not viable}}
+int f() {
+  function list;
+  [&list](this auto self) {
+    list = self; // expected-error {{no viable overloaded '='}}
+  }(); // expected-note {{in instantiation of}}
+}
+
+struct function2 {
+  function2& operator=(function2 const&) = delete; // expected-note {{candidate function not viable}}
+};
+int g() {
+  function2 list;
+  [&list](this auto self) {
+    list = self; // expected-error {{no viable overloaded '='}}
+  }(); // expected-note {{in instantiation of}}
+}
+
+struct function3 {
+  function3& operator=(function3 const&) = delete; // expected-note {{has been explicitly deleted}}
+};
+int h() {
+  function3 list;
+  [&list](this auto self) {
+    list = function3{}; // expected-error {{selected deleted operator '='}}
+  }();
+}
+}
