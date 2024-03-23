@@ -415,7 +415,7 @@ bool Sema::DiagnoseUnexpandedParameterPack(Expr *E,
   // FunctionParmPackExpr, but diagnosing unexpected parameter packs may still
   // see such an expression in a lambda body.
   // We'll bail out early in this case to avoid triggering an assertion.
-  if (isa<FunctionParmPackExpr>(E) && getEnclosingLambda())
+  if (isa<FunctionParmPackExpr>(E->IgnoreParens()) && getEnclosingLambda())
     return false;
 
   SmallVector<UnexpandedParameterPack, 2> Unexpanded;
