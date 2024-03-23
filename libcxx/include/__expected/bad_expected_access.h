@@ -27,6 +27,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Err>
 class bad_expected_access;
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 template <>
 class bad_expected_access<void> : public exception {
 protected:
@@ -58,6 +60,7 @@ public:
 private:
   _Err __unex_;
 };
+_LIBCPP_DIAGNOSTIC_POP
 
 _LIBCPP_END_NAMESPACE_STD
 
