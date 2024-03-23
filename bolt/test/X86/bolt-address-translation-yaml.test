@@ -49,4 +49,4 @@ YAML-BAT-CHECK-NEXT:       hash:  0xD70DC695320E0010
 YAML-BAT-CHECK-NEXT:       succ:  {{.*}} { bid: 2, cnt: [[#]] }
 
 CHECK-BOLT-YAML:      pre-processing profile using YAML profile reader
-CHECK-BOLT-YAML-NEXT: 1 out of 16 functions in the binary (6.2%) have non-empty execution profile
+CHECK-BOLT-YAML-NEXT: 5 out of 16 functions in the binary (31.2%) have non-empty execution profile

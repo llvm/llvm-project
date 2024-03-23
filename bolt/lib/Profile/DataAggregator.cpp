@@ -30,7 +30,6 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <map>
 #include <optional>
 #include <unordered_map>
@@ -2331,27 +2330,27 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
       YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
-      const auto &BlockMap = BAT->getBBHashMap(FuncAddress);
+      const BoltAddressTranslation::BBHashMapTy &BlockMap =
+          BAT->getBBHashMap(FuncAddress);
 
-      auto addBBProfile = [&](yaml::bolt::BinaryBasicBlockProfile &YamlBB,
-          uint64_t Offset) {
-        if (!Branches.IntraIndex.contains(Offset))
-          return;
-        for (const auto &[SuccOffset, SuccIdx] :
-             Branches.IntraIndex.at(Offset)) {
-          const llvm::bolt::BranchInfo &BI = Branches.Data.at(SuccIdx);
-          yaml::bolt::SuccessorInfo SI;
-          SI.Index = BAT->getBBIndex(BlockMap, SuccOffset);
-          SI.Count = BI.Branches;
-          SI.Mispreds = BI.Mispreds;
-          YamlBB.Successors.emplace_back(SI);
-        }
+      auto addSuccProfile = [&](yaml::bolt::BinaryBasicBlockProfile &YamlBB,
+                                uint64_t SuccOffset, unsigned SuccDataIdx) {
+        const llvm::bolt::BranchInfo &BI = Branches.Data.at(SuccDataIdx);
+        yaml::bolt::SuccessorInfo SI;
+        SI.Index = BlockMap.getBBIndex(SuccOffset);
+        SI.Count = BI.Branches;
+        SI.Mispreds = BI.Mispreds;
+        YamlBB.Successors.emplace_back(SI);
       };
 
-      for (const auto &[Offset, Val] : BlockMap) {
+      for (const auto &[FromOffset, SuccKV] : Branches.IntraIndex) {
         yaml::bolt::BinaryBasicBlockProfile YamlBB;
-        std::tie(YamlBB.Index, YamlBB.Hash) = Val;
-        addBBProfile(YamlBB, Offset);
+        if (!BlockMap.isInputBlock(FromOffset))
+          continue;
+        YamlBB.Index = BlockMap.getBBIndex(FromOffset);
+        YamlBB.Hash = BlockMap.getBBHash(FromOffset);
+        for (const auto &[SuccOffset, SuccDataIdx] : SuccKV)
+          addSuccProfile(YamlBB, SuccOffset, SuccDataIdx);
         if (YamlBB.ExecCount || !YamlBB.Successors.empty())
           YamlBF.Blocks.emplace_back(YamlBB);
       }

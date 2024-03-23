@@ -33,6 +33,7 @@ using namespace llvm;
 
 static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
+  case Intrinsic::abs:
   case Intrinsic::exp:
   case Intrinsic::dx_any:
   case Intrinsic::dx_clamp:
@@ -44,6 +45,26 @@ static bool isIntrinsicExpansion(Function &F) {
     return true;
   }
   return false;
+}
+
+static bool expandAbs(CallInst *Orig) {
+  Value *X = Orig->getOperand(0);
+  IRBuilder<> Builder(Orig->getParent());
+  Builder.SetInsertPoint(Orig);
+  Type *Ty = X->getType();
+  Type *EltTy = Ty->getScalarType();
+  Constant *Zero = Ty->isVectorTy()
+                       ? ConstantVector::getSplat(
+                             ElementCount::getFixed(
+                                 cast<FixedVectorType>(Ty)->getNumElements()),
+                             ConstantInt::get(EltTy, 0))
+                       : ConstantInt::get(EltTy, 0);
+  auto *V = Builder.CreateSub(Zero, X);
+  auto *MaxCall =
+      Builder.CreateIntrinsic(Ty, Intrinsic::smax, {X, V}, nullptr, "dx.max");
+  Orig->replaceAllUsesWith(MaxCall);
+  Orig->eraseFromParent();
+  return true;
 }
 
 static bool expandIntegerDot(CallInst *Orig, Intrinsic::ID DotIntrinsic) {
@@ -213,6 +234,8 @@ static bool expandClampIntrinsic(CallInst *Orig, Intrinsic::ID ClampIntrinsic) {
 
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
   switch (F.getIntrinsicID()) {
+  case Intrinsic::abs:
+    return expandAbs(Orig);
   case Intrinsic::exp:
     return expandExpIntrinsic(Orig);
   case Intrinsic::dx_any:
