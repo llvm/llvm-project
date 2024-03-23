@@ -146,8 +146,8 @@ public:
     assert(hasInitializer() && "GV doesn't have initializer!");
     return static_cast<Constant*>(Op<0>().get());
   }
-  /// setInitializer - Sets the initializer for this global variable, removing
-  /// any existing initializer if InitVal==NULL.  If this GV has type T*, the
+  /// setInitializer - Sets the initializer for this global variable to
+  /// InitVal, which must be non-null.  If this GV has type T*, the
   /// initializer must have type T.
   void setInitializer(Constant *InitVal);
 
