@@ -263,7 +263,7 @@ Miscellaneous
   the option.
 
 - Fixed ``--verify-check`` option not properly parsing checks when using the 
-  literal operator in the ``.clang-tidy`` config
+  literal operator in the ``.clang-tidy`` config.
 
 Improvements to include-fixer
 -----------------------------
