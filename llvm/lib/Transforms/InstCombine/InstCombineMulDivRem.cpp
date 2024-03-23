@@ -287,7 +287,8 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     }
   }
 
-  if (Instruction *FoldedMul = foldBinOpIntoSelectOrPhi(I))
+  if (Instruction *FoldedMul =
+          foldBinOpIntoSelectOrPhi(I, /*AllowMultiUseSelect=*/true))
     return FoldedMul;
 
   if (Value *FoldedMul = foldMulSelectToNegate(I, Builder))
@@ -1096,12 +1097,9 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
   // If the divisor is a select-of-constants, try to constant fold all div ops:
   // C / (select Cond, TrueC, FalseC) --> select Cond, (C / TrueC), (C / FalseC)
   // TODO: Adapt simplifyDivRemOfSelectWithZeroOp to allow this and other folds.
-  if (match(Op0, m_ImmConstant()) &&
-      match(Op1, m_Select(m_Value(), m_ImmConstant(), m_ImmConstant()))) {
-    if (Instruction *R = FoldOpIntoSelect(I, cast<SelectInst>(Op1),
-                                          /*FoldWithMultiUse*/ true))
-      return R;
-  }
+  if (Instruction *R = foldBinOpIntoSelect(I,
+                                           /*AllowMultiUse=*/true))
+    return R;
 
   const APInt *C2;
   if (match(Op1, m_APInt(C2))) {
@@ -1184,7 +1182,8 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     }
 
     if (!C2->isZero()) // avoid X udiv 0
-      if (Instruction *FoldedDiv = foldBinOpIntoSelectOrPhi(I))
+      if (Instruction *FoldedDiv =
+              foldBinOpIntoSelectOrPhi(I, /*AllowMultiUseSelect=*/true))
         return FoldedDiv;
   }
 
@@ -2049,12 +2048,9 @@ Instruction *InstCombinerImpl::commonIRemTransforms(BinaryOperator &I) {
   // If the divisor is a select-of-constants, try to constant fold all rem ops:
   // C % (select Cond, TrueC, FalseC) --> select Cond, (C % TrueC), (C % FalseC)
   // TODO: Adapt simplifyDivRemOfSelectWithZeroOp to allow this and other folds.
-  if (match(Op0, m_ImmConstant()) &&
-      match(Op1, m_Select(m_Value(), m_ImmConstant(), m_ImmConstant()))) {
-    if (Instruction *R = FoldOpIntoSelect(I, cast<SelectInst>(Op1),
-                                          /*FoldWithMultiUse*/ true))
-      return R;
-  }
+  if (Instruction *R = foldBinOpIntoSelect(I,
+                                           /*AllowMultiUse=*/true))
+    return R;
 
   if (isa<Constant>(Op1)) {
     if (Instruction *Op0I = dyn_cast<Instruction>(Op0)) {

@@ -611,8 +611,13 @@ public:
   Instruction *FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
                                 bool FoldWithMultiUse = false);
 
-  /// This is a convenience wrapper function for the above two functions.
-  Instruction *foldBinOpIntoSelectOrPhi(BinaryOperator &I);
+  /// This is a convenience wrapper function for the above function.
+  Instruction *foldBinOpIntoSelect(BinaryOperator &I,
+                                   bool AllowMultiUse = false);
+
+  /// This is a convenience wrapper function for the above three functions.
+  Instruction *foldBinOpIntoSelectOrPhi(BinaryOperator &I,
+                                        bool AllowMultiUseSelect = false);
 
   Instruction *foldAddWithConstant(BinaryOperator &Add);
 

@@ -1957,14 +1957,60 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
   return NewPhi;
 }
 
-Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
+// Return std::nullopt if we should not fold. Return true if we should fold
+// multi-use select and false for single-use select.
+static std::optional<bool> shouldFoldOpIntoSelect(BinaryOperator &I, Value *Op,
+                                                  Value *OpOther,
+                                                  bool AllowMultiUse) {
+  if (!AllowMultiUse && !Op->hasOneUse())
+    return std::nullopt;
+  if (isa<SelectInst>(Op))
+    // If we will be able to constant fold the incorperated binop, then
+    // multi-use. Otherwise single-use.
+    return match(OpOther, m_ImmConstant()) &&
+           match(Op, m_Select(m_Value(), m_ImmConstant(), m_ImmConstant()));
+
+  return std::nullopt;
+}
+
+Instruction *InstCombinerImpl::foldBinOpIntoSelect(BinaryOperator &I,
+                                                   bool AllowMultiUse) {
+  std::optional<bool> CanSpeculativelyExecuteRes;
+  for (unsigned OpIdx = 0; OpIdx < 2; ++OpIdx) {
+    // Slightly more involved logic for select. For select we use the condition
+    // to to infer information about the arm. This allows us to constant-fold
+    // even when the select arm(s) are not constant. For example if we have: `(X
+    // == 10 ? 19 : Y) * X`, we can entirely contant fold the true arm as `X ==
+    // 10` dominates it. So we end up with `X == 10 ? 190 : (X * Y))`.
+    if (auto MultiUse = shouldFoldOpIntoSelect(
+            I, I.getOperand(OpIdx), I.getOperand(1 - OpIdx), AllowMultiUse)) {
+      if (!*MultiUse) {
+        if (!CanSpeculativelyExecuteRes.has_value()) {
+          const SimplifyQuery Q = SQ.getWithInstruction(&I);
+          CanSpeculativelyExecuteRes =
+              isSafeToSpeculativelyExecute(&I, Q.CxtI, Q.AC, Q.DT, &TLI);
+        }
+        if (!*CanSpeculativelyExecuteRes)
+          return nullptr;
+      }
+      if (Instruction *NewSel = FoldOpIntoSelect(
+              I, cast<SelectInst>(I.getOperand(OpIdx)), *MultiUse))
+        return NewSel;
+    }
+  }
+  return nullptr;
+}
+
+Instruction *
+InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I,
+                                           bool AllowMultiUseSelect) {
+  if (auto *SI = foldBinOpIntoSelect(I, AllowMultiUseSelect))
+    return SI;
+
   if (!isa<Constant>(I.getOperand(1)))
     return nullptr;
 
-  if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(0))) {
-    if (Instruction *NewSel = FoldOpIntoSelect(I, Sel))
-      return NewSel;
-  } else if (auto *PN = dyn_cast<PHINode>(I.getOperand(0))) {
+  if (auto *PN = dyn_cast<PHINode>(I.getOperand(0))) {
     if (Instruction *NewPhi = foldOpIntoPhi(I, PN))
       return NewPhi;
   }
