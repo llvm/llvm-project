@@ -171,3 +171,14 @@ void f() {
   [&x](this auto&&) {return x;}();
 }
 }
+
+namespace GH70604 {
+auto dothing(int num)
+{
+  auto fun =  [&num](this auto&& self) -> void {
+    auto copy = num;
+  };
+
+  fun();
+}
+}
