@@ -1125,8 +1125,7 @@ else:
 
 define i1 @icmp_eq_range_attr(i8 range(i8 1, 0) %i) {
 ; CHECK-LABEL: @icmp_eq_range_attr(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I:%.*]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp eq i8 %i, 0
   ret i1 %cmp
@@ -1147,8 +1146,7 @@ declare range(i8 -1, 1) i8 @returns_contain_zero_range_helper()
 define i1 @icmp_eq_range_return() {
 ; CHECK-LABEL: @icmp_eq_range_return(
 ; CHECK-NEXT:    [[I:%.*]] = call i8 @returns_non_zero_range_helper()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %i = call i8 @returns_non_zero_range_helper()
   %cmp = icmp eq i8 %i, 0
@@ -1171,8 +1169,7 @@ declare i8 @returns_i8_helper()
 define i1 @icmp_eq_range_call() {
 ; CHECK-LABEL: @icmp_eq_range_call(
 ; CHECK-NEXT:    [[I:%.*]] = call range(i8 1, 0) i8 @returns_i8_helper()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %i = call range(i8 1, 0) i8 @returns_i8_helper()
   %cmp = icmp eq i8 %i, 0
