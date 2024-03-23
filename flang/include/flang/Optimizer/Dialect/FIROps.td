@@ -2466,7 +2466,7 @@ def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
   let assemblyFormat = [{
     $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
         $block_y `,` $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
-        `` `(` ( $args^ `:` type($args) )? `)` attr-dict
+        `` `(` $args `)` ( `:` `(` type($args)^ `)` )? attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -3130,6 +3130,16 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
 
 def fir_CUDAKernelOp : fir_Op<"cuda_kernel", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+
+  let description = [{
+    Represent the CUDA Fortran kernel directive. The operation is a loop like
+    operation that represents the iteration range of the embedded loop nest.
+
+    When grid or block variadic operands are empty, a `*` only syntax was used
+    in the Fortran code.
+    If the `*` is mixed with values for either grid or block, these are
+    represented by a 0 constant value.
+  }];
 
   let arguments = (ins
     Variadic<I32>:$grid, // empty means `*`

@@ -573,6 +573,12 @@ private:
       rewriter.modifyOpInPlace(linalgOp, [&]() {
         linalgOp->setOperand(t->getOperandNumber(), dst);
       });
+
+      // Release the transposed form afterwards.
+      // TODO: CSE when used in more than one following op?
+      rewriter.setInsertionPointAfter(linalgOp);
+      rewriter.create<bufferization::DeallocTensorOp>(dst.getLoc(), dst);
+
       return success();
     }
     // Cannot be resolved with a single conversion.

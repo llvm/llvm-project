@@ -1982,7 +1982,7 @@ level and debug info format.
   llvm-debuginfo-analyzer --attribute=level,format
                           --output-sort=offset
                           --print=scopes,symbols,types,lines,instructions
-                          test-clang.wasm
+                          test-clang.o
 
 or
 
@@ -1991,7 +1991,7 @@ or
   llvm-debuginfo-analyzer --attribute=level,format
                           --output-sort=offset
                           --print=elements
-                          test-clang.wasm
+                          test-clang.o
 
 Each row represents an element that is present within the debug
 information. The first column represents the scope level, followed by
@@ -2001,7 +2001,7 @@ the element.
 .. code-block:: none
 
   Logical View:
-  [000]           {File} 'test-clang.wasm' -> WASM
+  [000]           {File} 'test-clang.o' -> WASM
 
   [001]             {CompileUnit} 'test.cpp'
   [002]     2         {Function} extern not_inlined 'foo' -> 'int'
@@ -2099,10 +2099,10 @@ layout and given the number of matches.
                           --select=BLOCK --select=.store
                           --report=list
                           --print=symbols,types,instructions,summary
-                          test-clang.wasm
+                          test-clang.o
 
   Logical View:
-  [000]           {File} 'test-clang.wasm'
+  [000]           {File} 'test-clang.o'
 
   [001]           {CompileUnit} 'test.cpp'
   [003]           {Code} 'block'
@@ -2139,10 +2139,10 @@ with the printing mode to obtain the following logical view output.
                           --select-regex --select-nocase --select=INTe
                           --report=list
                           --print=symbols,types
-                          test-clang.wasm test-dwarf-gcc.o
+                          test-clang.o test-dwarf-gcc.o
 
   Logical View:
-  [000]           {File} 'test-clang.wasm'
+  [000]           {File} 'test-clang.o'
 
   [001]           {CompileUnit} 'test.cpp'
   [003]     4     {TypeAlias} 'INTEGER' -> 'int'
@@ -2175,13 +2175,13 @@ giving more context by swapping the reference and target object files.
                           --compare=types
                           --report=view
                           --print=symbols,types
-                          test-clang.wasm test-dwarf-gcc.o
+                          test-clang.o test-dwarf-gcc.o
 
-  Reference: 'test-clang.wasm'
+  Reference: 'test-clang.o'
   Target:    'test-dwarf-gcc.o'
 
   Logical View:
-   [000]           {File} 'test-clang.wasm'
+   [000]           {File} 'test-clang.o'
 
    [001]             {CompileUnit} 'test.cpp'
    [002]     1         {TypeAlias} 'INTPTR' -> '* const int'
@@ -2209,9 +2209,9 @@ includes the name, source code location, type, lexical scope level.
                           --compare=types
                           --report=list
                           --print=symbols,types,summary
-                          test-clang.wasm test-dwarf-gcc.o
+                          test-clang.o test-dwarf-gcc.o
 
-  Reference: 'test-clang.wasm'
+  Reference: 'test-clang.o'
   Target:    'test-dwarf-gcc.o'
 
   (1) Missing Types:
@@ -2238,10 +2238,10 @@ Changing the *Reference* and *Target* order:
                           --compare=types
                           --report=list
                           --print=symbols,types,summary
-                          test-dwarf-gcc.o test-clang.wasm
+                          test-dwarf-gcc.o test-clang.o
 
   Reference: 'test-dwarf-gcc.o'
-  Target:    'test-clang.wasm'
+  Target:    'test-clang.o'
 
   (1) Missing Types:
   -[004]     4     {TypeAlias} 'INTEGER' -> 'int'

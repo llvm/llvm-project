@@ -15,8 +15,8 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include <fenv.h>
-#include <math.h>
 #include <stdio.h>
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
@@ -32,7 +32,6 @@ public:
 private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
   const T inf = FPBits::inf(Sign::POS).get_val();
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();

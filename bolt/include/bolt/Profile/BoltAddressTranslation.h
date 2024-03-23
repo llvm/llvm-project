@@ -115,6 +115,20 @@ public:
   /// Save function and basic block hashes used for metadata dump.
   void saveMetadata(BinaryContext &BC);
 
+  /// Returns BB hash by function output address (after BOLT) and basic block
+  /// input offset.
+  size_t getBBHash(uint64_t FuncOutputAddress, uint32_t BBInputOffset) const;
+
+  /// Returns BF hash by function output address (after BOLT).
+  size_t getBFHash(uint64_t OutputAddress) const;
+
+  /// Returns BB index by function output address (after BOLT) and basic block
+  /// input offset.
+  unsigned getBBIndex(uint64_t FuncOutputAddress, uint32_t BBInputOffset) const;
+
+  /// True if a given \p Address is a function with translation table entry.
+  bool isBATFunction(uint64_t Address) const { return Maps.count(Address); }
+
 private:
   /// Helper to update \p Map by inserting one or more BAT entries reflecting
   /// \p BB for function located at \p FuncAddress. At least one entry will be
@@ -144,11 +158,18 @@ private:
 
   std::map<uint64_t, MapTy> Maps;
 
-  using BBHashMap = std::unordered_map<uint32_t, size_t>;
+  /// Map basic block input offset to a basic block index and hash pair.
+  using BBHashMap = std::unordered_map<uint32_t, std::pair<unsigned, size_t>>;
   std::unordered_map<uint64_t, std::pair<size_t, BBHashMap>> FuncHashes;
+
+  /// Map a function to its basic blocks count
+  std::unordered_map<uint64_t, size_t> NumBasicBlocksMap;
 
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;
+
+  /// Links output address of a main fragment back to input address.
+  std::unordered_map<uint64_t, uint64_t> ReverseMap;
 
   /// Identifies the address of a control-flow changing instructions in a
   /// translation map entry

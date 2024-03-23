@@ -156,8 +156,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
     if (NeedsDuplicating) {
       if (ScalarVFOnly)
         continue;
-      Instruction *I = cast<Instruction>(
-          cast<VPReplicateRecipe>(SinkCandidate)->getUnderlyingValue());
+      Instruction *I = SinkCandidate->getUnderlyingInstr();
       auto *Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
@@ -815,27 +814,6 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   }
 }
 
-/// Returns true is \p V is constant one.
-static bool isConstantOne(VPValue *V) {
-  if (!V->isLiveIn())
-    return false;
-  auto *C = dyn_cast<ConstantInt>(V->getLiveInIRValue());
-  return C && C->isOne();
-}
-
-/// Returns the llvm::Instruction opcode for \p R.
-static unsigned getOpcodeForRecipe(VPRecipeBase &R) {
-  if (auto *WidenR = dyn_cast<VPWidenRecipe>(&R))
-    return WidenR->getUnderlyingInstr()->getOpcode();
-  if (auto *WidenC = dyn_cast<VPWidenCastRecipe>(&R))
-    return WidenC->getOpcode();
-  if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R))
-    return RepR->getUnderlyingInstr()->getOpcode();
-  if (auto *VPI = dyn_cast<VPInstruction>(&R))
-    return VPI->getOpcode();
-  return 0;
-}
-
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // Try to remove redundant blend recipes.
@@ -849,24 +827,9 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  switch (getOpcodeForRecipe(R)) {
-  case Instruction::Mul: {
-    VPValue *A = R.getOperand(0);
-    VPValue *B = R.getOperand(1);
-    if (isConstantOne(A))
-      return R.getVPSingleValue()->replaceAllUsesWith(B);
-    if (isConstantOne(B))
-      return R.getVPSingleValue()->replaceAllUsesWith(A);
-    break;
-  }
-  case Instruction::Trunc: {
-    VPRecipeBase *Ext = R.getOperand(0)->getDefiningRecipe();
-    if (!Ext)
-      break;
-    unsigned ExtOpcode = getOpcodeForRecipe(*Ext);
-    if (ExtOpcode != Instruction::ZExt && ExtOpcode != Instruction::SExt)
-      break;
-    VPValue *A = Ext->getOperand(0);
+  using namespace llvm::VPlanPatternMatch;
+  VPValue *A;
+  if (match(&R, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
     VPValue *Trunc = R.getVPSingleValue();
     Type *TruncTy = TypeInfo.inferScalarType(Trunc);
     Type *ATy = TypeInfo.inferScalarType(A);
@@ -875,8 +838,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     } else {
       // Don't replace a scalarizing recipe with a widened cast.
       if (isa<VPReplicateRecipe>(&R))
-        break;
+        return;
       if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
+
+        unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
+                                 ? Instruction::SExt
+                                 : Instruction::ZExt;
         auto *VPC =
             new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
         VPC->insertBefore(&R);
@@ -902,11 +869,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         assert(TypeInfo.inferScalarType(VPV) == TypeInfo2.inferScalarType(VPV));
     }
 #endif
-    break;
   }
-  default:
-    break;
-  }
+
+  if (match(&R, m_CombineOr(m_Mul(m_VPValue(A), m_SpecificInt(1)),
+                            m_Mul(m_SpecificInt(1), m_VPValue(A)))))
+    return R.getVPSingleValue()->replaceAllUsesWith(A);
 }
 
 /// Try to simplify the recipes in \p Plan.

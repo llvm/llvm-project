@@ -40,6 +40,18 @@ let TargetPrefix = "spv" in {
   def int_spv_assume : Intrinsic<[], [llvm_i1_ty]>;
   def int_spv_expect : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
 
+  // Memory Use Markers
+  def int_spv_lifetime_start : Intrinsic<[],
+                                [llvm_i64_ty, llvm_anyptr_ty],
+                                [IntrArgMemOnly, IntrWillReturn,
+                                NoCapture<ArgIndex<1>>,
+                                ImmArg<ArgIndex<0>>]>;
+  def int_spv_lifetime_end   : Intrinsic<[],
+                                [llvm_i64_ty, llvm_anyptr_ty],
+                                [IntrArgMemOnly, IntrWillReturn,
+                                NoCapture<ArgIndex<1>>,
+                                ImmArg<ArgIndex<0>>]>;
+
   // The following intrinsic(s) are mirrored from IntrinsicsDirectX.td for HLSL support.
   def int_spv_thread_id : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
   def int_spv_create_handle : ClangBuiltin<"__builtin_hlsl_create_handle">,
