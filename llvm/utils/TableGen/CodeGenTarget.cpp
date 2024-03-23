@@ -480,8 +480,11 @@ void CodeGenTarget::ReadInstructions() const {
     PrintFatalError("No 'Instruction' subclasses defined!");
 
   // Parse the instructions defined in the .td file.
-  for (unsigned i = 0, e = Insts.size(); i != e; ++i)
-    Instructions[Insts[i]] = std::make_unique<CodeGenInstruction>(Insts[i]);
+  for (Record *R : Insts) {
+    Instructions[R] = std::make_unique<CodeGenInstruction>(R);
+    if (Instructions[R]->isVariableLengthEncoding())
+      HasVariableLengthEncodings = true;
+  }
 }
 
 static const CodeGenInstruction *GetInstByName(

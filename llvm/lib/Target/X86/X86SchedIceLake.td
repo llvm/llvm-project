@@ -402,9 +402,9 @@ defm : ICXWriteResPair<WriteBlendZ,[ICXPort15], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteVarBlend, [ICXPort015], 2, [2], 2, 6>; // Vector variable blends.
 defm : ICXWriteResPair<WriteVarBlendY,[ICXPort015], 2, [2], 2, 6>;
 defm : ICXWriteResPair<WriteVarBlendZ,[ICXPort05],  2, [1], 1, 6>;
-defm : ICXWriteResPair<WriteMPSAD,   [ICXPort5], 4, [2], 2, 6>; // Vector MPSAD.
-defm : ICXWriteResPair<WriteMPSADY,  [ICXPort5], 4, [2], 2, 7>;
-defm : ICXWriteResPair<WriteMPSADZ,  [ICXPort5], 4, [2], 2, 7>;
+defm : ICXWriteResPair<WriteMPSAD,   [ICXPort15,ICXPort5], 4, [1,1], 2, 6>; // Vector MPSAD.
+defm : ICXWriteResPair<WriteMPSADY,  [ICXPort15,ICXPort5], 4, [1,1], 2, 7>;
+defm : ICXWriteResPair<WriteMPSADZ,  [ICXPort15,ICXPort5], 4, [1,1], 2, 7>;
 defm : ICXWriteResPair<WritePSADBW,  [ICXPort5], 3, [1], 1, 5>; // Vector PSADBW.
 defm : ICXWriteResPair<WritePSADBWX, [ICXPort5], 3, [1], 1, 6>;
 defm : ICXWriteResPair<WritePSADBWY, [ICXPort5], 3, [1], 1, 7>;

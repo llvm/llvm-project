@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDKernelCodeT.h"
+#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIDefines.h"
@@ -1816,6 +1817,7 @@ private:
 
 public:
   void onBeginOfFile() override;
+  bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
   ParseStatus parseCustomOperand(OperandVector &Operands, unsigned MCK);
 
@@ -8328,6 +8330,59 @@ void AMDGPUAsmParser::onBeginOfFile() {
 
   if (isHsaAbi(getSTI()))
     getTargetStreamer().EmitDirectiveAMDGCNTarget();
+}
+
+/// Parse AMDGPU specific expressions.
+///
+///  expr ::= or(expr, ...) |
+///           max(expr, ...)
+///
+bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
+  using AGVK = AMDGPUVariadicMCExpr::VariadicKind;
+
+  if (isToken(AsmToken::Identifier)) {
+    StringRef TokenId = getTokenStr();
+    AGVK VK = StringSwitch<AGVK>(TokenId)
+                  .Case("max", AGVK::AGVK_Max)
+                  .Case("or", AGVK::AGVK_Or)
+                  .Default(AGVK::AGVK_None);
+
+    if (VK != AGVK::AGVK_None && peekToken().is(AsmToken::LParen)) {
+      SmallVector<const MCExpr *, 4> Exprs;
+      uint64_t CommaCount = 0;
+      lex(); // Eat 'max'/'or'
+      lex(); // Eat '('
+      while (true) {
+        if (trySkipToken(AsmToken::RParen)) {
+          if (Exprs.empty()) {
+            Error(getToken().getLoc(),
+                  "empty " + Twine(TokenId) + " expression");
+            return true;
+          }
+          if (CommaCount + 1 != Exprs.size()) {
+            Error(getToken().getLoc(),
+                  "mismatch of commas in " + Twine(TokenId) + " expression");
+            return true;
+          }
+          Res = AMDGPUVariadicMCExpr::create(VK, Exprs, getContext());
+          return false;
+        }
+        const MCExpr *Expr;
+        if (getParser().parseExpression(Expr, EndLoc))
+          return true;
+        Exprs.push_back(Expr);
+        bool LastTokenWasComma = trySkipToken(AsmToken::Comma);
+        if (LastTokenWasComma)
+          CommaCount++;
+        if (!LastTokenWasComma && !isToken(AsmToken::RParen)) {
+          Error(getToken().getLoc(),
+                "unexpected token in " + Twine(TokenId) + " expression");
+          return true;
+        }
+      }
+    }
+  }
+  return getParser().parsePrimaryExpr(Res, EndLoc, nullptr);
 }
 
 ParseStatus AMDGPUAsmParser::parseOModSI(OperandVector &Operands) {

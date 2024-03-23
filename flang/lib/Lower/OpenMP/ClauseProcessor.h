@@ -12,6 +12,7 @@
 #ifndef FORTRAN_LOWER_CLAUASEPROCESSOR_H
 #define FORTRAN_LOWER_CLAUASEPROCESSOR_H
 
+#include "Clauses.h"
 #include "DirectivesCommon.h"
 #include "ReductionProcessor.h"
 #include "Utils.h"
@@ -45,23 +46,20 @@ namespace omp {
 /// methods that relate to clauses that can impact the lowering of that
 /// construct.
 class ClauseProcessor {
-  using ClauseTy = Fortran::parser::OmpClause;
-
 public:
   ClauseProcessor(Fortran::lower::AbstractConverter &converter,
                   Fortran::semantics::SemanticsContext &semaCtx,
                   const Fortran::parser::OmpClauseList &clauses)
-      : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
+      : converter(converter), semaCtx(semaCtx),
+        clauses(makeList(clauses, semaCtx)) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
-  bool
-  processCollapse(mlir::Location currentLocation,
-                  Fortran::lower::pft::Evaluation &eval,
-                  llvm::SmallVectorImpl<mlir::Value> &lowerBound,
-                  llvm::SmallVectorImpl<mlir::Value> &upperBound,
-                  llvm::SmallVectorImpl<mlir::Value> &step,
-                  llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv,
-                  std::size_t &loopVarTypeSize) const;
+  bool processCollapse(
+      mlir::Location currentLocation, Fortran::lower::pft::Evaluation &eval,
+      llvm::SmallVectorImpl<mlir::Value> &lowerBound,
+      llvm::SmallVectorImpl<mlir::Value> &upperBound,
+      llvm::SmallVectorImpl<mlir::Value> &step,
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv) const;
   bool processDefault() const;
   bool processDevice(Fortran::lower::StatementContext &stmtCtx,
                      mlir::Value &result) const;
@@ -103,9 +101,8 @@ public:
                      llvm::SmallVectorImpl<mlir::Value> &dependOperands) const;
   bool
   processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
-  bool
-  processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
-            mlir::Value &result) const;
+  bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
+                 mlir::Value &result) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
 
@@ -125,6 +122,7 @@ public:
   bool
   processReduction(mlir::Location currentLocation,
                    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+                   llvm::SmallVectorImpl<mlir::Type> &reductionTypes,
                    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
                    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
                        *reductionSymbols = nullptr) const;
@@ -155,7 +153,7 @@ public:
                    llvm::omp::Directive directive) const;
 
 private:
-  using ClauseIterator = std::list<ClauseTy>::const_iterator;
+  using ClauseIterator = List<Clause>::const_iterator;
 
   /// Utility to find a clause within a range in the clause list.
   template <typename T>
@@ -172,7 +170,7 @@ private:
   /// if at least one instance was found.
   template <typename T>
   bool findRepeatableClause(
-      std::function<void(const T *, const Fortran::parser::CharBlock &source)>
+      std::function<void(const T &, const Fortran::parser::CharBlock &source)>
           callbackFn) const;
 
   /// Set the `result` to a new `mlir::UnitAttr` if the clause is present.
@@ -181,7 +179,7 @@ private:
 
   Fortran::lower::AbstractConverter &converter;
   Fortran::semantics::SemanticsContext &semaCtx;
-  const Fortran::parser::OmpClauseList &clauses;
+  List<Clause> clauses;
 };
 
 template <typename T>
@@ -189,31 +187,30 @@ bool ClauseProcessor::processMotionClauses(
     Fortran::lower::StatementContext &stmtCtx,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands) {
   return findRepeatableClause<T>(
-      [&](const T *motionClause, const Fortran::parser::CharBlock &source) {
+      [&](const T &clause, const Fortran::parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-        static_assert(std::is_same_v<T, ClauseProcessor::ClauseTy::To> ||
-                      std::is_same_v<T, ClauseProcessor::ClauseTy::From>);
+        static_assert(std::is_same_v<T, omp::clause::To> ||
+                      std::is_same_v<T, omp::clause::From>);
 
         // TODO Support motion modifiers: present, mapper, iterator.
         constexpr llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
-            std::is_same_v<T, ClauseProcessor::ClauseTy::To>
+            std::is_same_v<T, omp::clause::To>
                 ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
                 : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
 
-        for (const Fortran::parser::OmpObject &ompObject : motionClause->v.v) {
+        for (const omp::Object &object : clause.v) {
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
           Fortran::lower::AddrAndBoundsInfo info =
               Fortran::lower::gatherDataOperandAddrAndBounds<
-                  Fortran::parser::OmpObject, mlir::omp::DataBoundsOp,
-                  mlir::omp::DataBoundsType>(
-                  converter, firOpBuilder, semaCtx, stmtCtx, ompObject,
-                  clauseLocation, asFortran, bounds, treatIndexAsSection);
+                  mlir::omp::MapBoundsOp, mlir::omp::MapBoundsType>(
+                  converter, firOpBuilder, semaCtx, stmtCtx, *object.id(),
+                  object.ref(), clauseLocation, asFortran, bounds,
+                  treatIndexAsSection);
 
-          auto origSymbol =
-              converter.getSymbolAddress(*getOmpObjectSymbol(ompObject));
+          auto origSymbol = converter.getSymbolAddress(*object.id());
           mlir::Value symAddr = info.addr;
           if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
             symAddr = origSymbol;
@@ -237,19 +234,17 @@ bool ClauseProcessor::processMotionClauses(
 template <typename... Ts>
 void ClauseProcessor::processTODO(mlir::Location currentLocation,
                                   llvm::omp::Directive directive) const {
-  auto checkUnhandledClause = [&](const auto *x) {
+  auto checkUnhandledClause = [&](llvm::omp::Clause id, const auto *x) {
     if (!x)
       return;
     TODO(currentLocation,
-         "Unhandled clause " +
-             llvm::StringRef(Fortran::parser::ParseTreeDumper::GetNodeName(*x))
-                 .upper() +
+         "Unhandled clause " + llvm::omp::getOpenMPClauseName(id).upper() +
              " in " + llvm::omp::getOpenMPDirectiveName(directive).upper() +
              " construct");
   };
 
-  for (ClauseIterator it = clauses.v.begin(); it != clauses.v.end(); ++it)
-    (checkUnhandledClause(std::get_if<Ts>(&it->u)), ...);
+  for (ClauseIterator it = clauses.begin(); it != clauses.end(); ++it)
+    (checkUnhandledClause(it->id, std::get_if<Ts>(&it->u)), ...);
 }
 
 template <typename T>
@@ -266,8 +261,8 @@ ClauseProcessor::findClause(ClauseIterator begin, ClauseIterator end) {
 template <typename T>
 const T *ClauseProcessor::findUniqueClause(
     const Fortran::parser::CharBlock **source) const {
-  ClauseIterator it = findClause<T>(clauses.v.begin(), clauses.v.end());
-  if (it != clauses.v.end()) {
+  ClauseIterator it = findClause<T>(clauses.begin(), clauses.end());
+  if (it != clauses.end()) {
     if (source)
       *source = &it->source;
     return &std::get<T>(it->u);
@@ -277,15 +272,15 @@ const T *ClauseProcessor::findUniqueClause(
 
 template <typename T>
 bool ClauseProcessor::findRepeatableClause(
-    std::function<void(const T *, const Fortran::parser::CharBlock &source)>
+    std::function<void(const T &, const Fortran::parser::CharBlock &source)>
         callbackFn) const {
   bool found = false;
-  ClauseIterator nextIt, endIt = clauses.v.end();
-  for (ClauseIterator it = clauses.v.begin(); it != endIt; it = nextIt) {
+  ClauseIterator nextIt, endIt = clauses.end();
+  for (ClauseIterator it = clauses.begin(); it != endIt; it = nextIt) {
     nextIt = findClause<T>(it, endIt);
 
     if (nextIt != endIt) {
-      callbackFn(&std::get<T>(nextIt->u), nextIt->source);
+      callbackFn(std::get<T>(nextIt->u), nextIt->source);
       found = true;
       ++nextIt;
     }

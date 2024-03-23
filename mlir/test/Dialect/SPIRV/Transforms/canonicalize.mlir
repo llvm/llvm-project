@@ -1347,6 +1347,52 @@ func.func @convert_logical_or_true_false_vector(%arg: vector<3xi1>) -> (vector<3
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.Select
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @convert_select_scalar
+// CHECK-SAME: %[[ARG1:.+]]: i32, %[[ARG2:.+]]: i32
+func.func @convert_select_scalar(%arg1: i32, %arg2: i32) -> (i32, i32) {
+  %true = spirv.Constant true
+  %false = spirv.Constant false
+  %0 = spirv.Select %true, %arg1, %arg2 : i1, i32
+  %1 = spirv.Select %false, %arg1, %arg2 : i1, i32
+
+  // CHECK: return %[[ARG1]], %[[ARG2]]
+  return %0, %1 : i32, i32
+}
+
+// CHECK-LABEL: @convert_select_vector
+// CHECK-SAME: %[[ARG1:.+]]: vector<3xi32>, %[[ARG2:.+]]: vector<3xi32>
+func.func @convert_select_vector(%arg1: vector<3xi32>, %arg2: vector<3xi32>) -> (vector<3xi32>, vector<3xi32>) {
+  %true = spirv.Constant dense<true> : vector<3xi1>
+  %false = spirv.Constant dense<false> : vector<3xi1>
+  %0 = spirv.Select %true, %arg1, %arg2 : vector<3xi1>, vector<3xi32>
+  %1 = spirv.Select %false, %arg1, %arg2 : vector<3xi1>, vector<3xi32>
+
+  // CHECK: return %[[ARG1]], %[[ARG2]]
+  return %0, %1: vector<3xi32>, vector<3xi32>
+}
+
+// CHECK-LABEL: @convert_select_vector_extra
+// CHECK-SAME: %[[CONDITIONS:.+]]: vector<2xi1>, %[[ARG1:.+]]: vector<2xi32>
+func.func @convert_select_vector_extra(%conditions: vector<2xi1>, %arg1: vector<2xi32>) -> (vector<2xi32>, vector<2xi32>) {
+  %true_false = spirv.Constant dense<[true, false]> : vector<2xi1>
+  %cvec_1 = spirv.Constant dense<[42, -132]> : vector<2xi32>
+  %cvec_2 = spirv.Constant dense<[0, 42]> : vector<2xi32>
+
+  // CHECK: %[[RES:.+]] = spirv.Constant dense<42>
+  %0 = spirv.Select %true_false, %cvec_1, %cvec_2: vector<2xi1>, vector<2xi32>
+
+  %1 = spirv.Select %conditions, %arg1, %arg1 : vector<2xi1>, vector<2xi32>
+
+  // CHECK: return %[[RES]], %[[ARG1]]
+  return %0, %1: vector<2xi32>, vector<2xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.IEqual
 //===----------------------------------------------------------------------===//
 

@@ -855,10 +855,10 @@ def note_strncat_wrong_size : Note<
 def warn_assume_side_effects : Warning<
   "the argument to %0 has side effects that will be discarded">,
   InGroup<DiagGroup<"assume">>;
-def warn_assume_attribute_string_unknown : Warning<
+def warn_omp_assume_attribute_string_unknown : Warning<
   "unknown assumption string '%0'; attribute is potentially ignored">,
   InGroup<UnknownAssumption>;
-def warn_assume_attribute_string_unknown_suggested : Warning<
+def warn_omp_assume_attribute_string_unknown_suggested : Warning<
   "unknown assumption string '%0' may be misspelled; attribute is potentially "
   "ignored, did you mean '%1'?">,
   InGroup<MisspelledAssumption>;
@@ -910,6 +910,22 @@ def warn_fortify_scanf_overflow : Warning<
 
 def err_function_start_invalid_type: Error<
   "argument must be a function">;
+
+def err_ptrauth_disabled :
+  Error<"this target does not support pointer authentication">;
+def err_ptrauth_invalid_key :
+  Error<"%0 does not identify a valid pointer authentication key for "
+        "the current target">;
+def err_ptrauth_value_bad_type :
+  Error<"%select{signed value|extra discriminator|blended pointer|blended "
+        "integer}0 must have %select{pointer|integer|pointer or integer}1 "
+        "type; type here is %2">;
+def warn_ptrauth_sign_null_pointer :
+  Warning<"signing a null pointer will yield a non-null pointer">,
+  InGroup<PtrAuthNullPointers>;
+def warn_ptrauth_auth_null_pointer :
+  Warning<"authenticating a null pointer will almost certainly trap">,
+  InGroup<PtrAuthNullPointers>;
 
 /// main()
 // static main() is not an error in C, just in C++.
@@ -6503,12 +6519,18 @@ def err_flexible_array_count_not_in_same_struct : Error<
   "'counted_by' field %0 isn't within the same struct as the flexible array">;
 def err_counted_by_attr_not_on_flexible_array_member : Error<
   "'counted_by' only applies to C99 flexible array members">;
-def err_counted_by_attr_refers_to_flexible_array : Error<
-  "'counted_by' cannot refer to the flexible array %0">;
+def err_counted_by_attr_refer_to_itself : Error<
+  "'counted_by' cannot refer to the flexible array member %0">;
 def err_counted_by_must_be_in_structure : Error<
   "field %0 in 'counted_by' not inside structure">;
-def err_flexible_array_counted_by_attr_field_not_integer : Error<
-  "field %0 in 'counted_by' must be a non-boolean integer type">;
+def err_counted_by_attr_argument_not_integer : Error<
+  "'counted_by' requires a non-boolean integer type argument">;
+def err_counted_by_attr_only_support_simple_decl_reference : Error<
+  "'counted_by' argument must be a simple declaration reference">;
+def err_counted_by_attr_in_union : Error<
+  "'counted_by' cannot be applied to a union member">;
+def err_counted_by_attr_refer_to_union : Error<
+  "'counted_by' argument cannot refer to a union member">;
 def note_flexible_array_counted_by_attr_field : Note<
   "field %0 declared here">;
 
@@ -9036,7 +9058,7 @@ def warn_bad_function_cast : Warning<
   InGroup<BadFunctionCast>, DefaultIgnore;
 def warn_cast_function_type : Warning<
   "cast %diff{from $ to $ |}0,1converts to incompatible function type">,
-  InGroup<CastFunctionType>, DefaultIgnore;
+  InGroup<CastFunctionTypeMismatch>, DefaultIgnore;
 def warn_cast_function_type_strict : Warning<warn_cast_function_type.Summary>,
   InGroup<CastFunctionTypeStrict>, DefaultIgnore;
 def err_cast_pointer_to_non_pointer_int : Error<
@@ -9115,6 +9137,8 @@ def ext_cxx17_attr : Extension<
   "use of the %0 attribute is a C++17 extension">, InGroup<CXX17Attrs>;
 def ext_cxx20_attr : Extension<
   "use of the %0 attribute is a C++20 extension">, InGroup<CXX20Attrs>;
+def ext_cxx23_attr : Extension<
+  "use of the %0 attribute is a C++23 extension">, InGroup<CXX23Attrs>;
 
 def warn_unused_comparison : Warning<
   "%select{equality|inequality|relational|three-way}0 comparison result unused">,
@@ -10169,6 +10193,9 @@ def err_fallthrough_attr_outside_switch : Error<
 def err_fallthrough_attr_invalid_placement : Error<
   "fallthrough annotation does not directly precede switch label">;
 
+def err_assume_attr_args : Error<
+  "attribute '%0' requires a single expression argument">;
+
 def warn_unreachable_default : Warning<
   "default label in switch which covers all enumeration values">,
   InGroup<CoveredSwitchDefault>, DefaultIgnore;
@@ -10243,14 +10270,14 @@ def warn_second_parameter_to_va_arg_never_compatible : Warning<
 
 def warn_return_missing_expr : Warning<
   "non-void %select{function|method}1 %0 should return a value">, DefaultError,
-  InGroup<ReturnType>;
+  InGroup<ReturnMismatch>;
 def ext_return_missing_expr : ExtWarn<
   "non-void %select{function|method}1 %0 should return a value">, DefaultError,
-  InGroup<ReturnType>;
+  InGroup<ReturnMismatch>;
 def ext_return_has_expr : ExtWarn<
   "%select{void function|void method|constructor|destructor}1 %0 "
   "should not return a value">,
-  DefaultError, InGroup<ReturnType>;
+  DefaultError, InGroup<ReturnMismatch>;
 def ext_return_has_void_expr : Extension<
   "void %select{function|method|block}1 %0 should not return void expression">;
 def err_return_init_list : Error<
@@ -11511,8 +11538,6 @@ def err_module_not_defined : Error<
 def err_module_redeclaration : Error<
   "translation unit contains multiple module declarations">;
 def note_prev_module_declaration : Note<"previous module declaration is here">;
-def err_module_declaration_missing : Error<
-  "missing 'export module' declaration in module interface unit">;
 def err_module_declaration_missing_after_global_module_introducer : Error<
   "missing 'module' declaration at end of global module fragment "
   "introduced here">;
@@ -11995,13 +12020,14 @@ def err_builtin_launder_invalid_arg : Error<
   "'__builtin_launder' is not allowed">;
 
 def err_builtin_invalid_arg_type: Error <
-  "%ordinal0 argument must be a "
-  "%select{vector, integer or floating point type|matrix|"
-  "pointer to a valid matrix element type|"
-  "signed integer or floating point type|vector type|"
-  "floating point type|"
-  "vector of integers|"
-  "type of unsigned integer}1 (was %2)">;
+  "%ordinal0 argument must be "
+  "%select{a vector, integer or floating point type|a matrix|"
+  "a pointer to a valid matrix element type|"
+  "a signed integer or floating point type|a vector type|"
+  "a floating point type|"
+  "a vector of integers|"
+  "an unsigned integer|"
+  "an 'int'}1 (was %2)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;

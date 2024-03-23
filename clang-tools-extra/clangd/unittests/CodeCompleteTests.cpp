@@ -2648,12 +2648,15 @@ TEST(CompletionTest, CompletionFunctionArgsDisabled) {
       class foo_class{};
       template <class T>
       using foo_alias = T**;
+      template <class T>
+      T foo_var = T{};
       void f() { foo_^ })cpp",
         {}, Opts);
     EXPECT_THAT(
         Results.Completions,
         UnorderedElementsAre(AllOf(named("foo_class"), snippetSuffix("<$0>")),
-                             AllOf(named("foo_alias"), snippetSuffix("<$0>"))));
+                             AllOf(named("foo_alias"), snippetSuffix("<$0>")),
+                             AllOf(named("foo_var"), snippetSuffix("<$0>"))));
   }
   {
     auto Results = completions(
