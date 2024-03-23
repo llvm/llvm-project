@@ -13786,6 +13786,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         }
         NewVDs.push_back(NewVD);
         getSema().addInitCapture(LSI, NewVD, C->getCaptureKind() == LCK_ByRef);
+        // The initializer might be expanded later. This may happen
+        // if the lambda is within a folded expression. 
         LSI->ContainsUnexpandedParameterPack |=
             Init.get()->containsUnexpandedParameterPack();
       }
@@ -13855,6 +13857,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       continue;
     }
 
+    // The captured variable might be expanded later. This may happen
+    // if the lambda is within a folded expression. 
     if (auto *PVD = dyn_cast<VarDecl>(CapturedVar);
         PVD && !C->isPackExpansion())
       LSI->ContainsUnexpandedParameterPack |= PVD->isParameterPack();
