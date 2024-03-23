@@ -1,0 +1,16 @@
+# RUN: lld-link /dll %p/Inputs/directive-multiple.obj /out:%t.dll
+# RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix=EXPORTS %s
+
+EXPORTS: Format: COFF-x86-64
+EXPORTS: Arch: x86_64
+EXPORTS: AddressSize: 64bit
+EXPORTS: Export {
+EXPORTS:   Ordinal: 1
+EXPORTS:   Name: Add
+EXPORTS:   RVA: 0x1010
+EXPORTS: }
+EXPORTS: Export {
+EXPORTS:   Ordinal: 2
+EXPORTS:   Name: Subtract
+EXPORTS:   RVA: 0x1020
+EXPORTS: }

@@ -368,111 +368,116 @@ bool LinkerDriver::isDecorated(StringRef sym) {
 // Parses .drectve section contents and returns a list of files
 // specified by /defaultlib.
 void LinkerDriver::parseDirectives(InputFile *file) {
-  StringRef s = file->getDirectives();
-  if (s.empty())
+  std::vector<StringRef> directivesList = file->getDirectives();
+  if (directivesList.empty())
     return;
 
-  log("Directives: " + toString(file) + ": " + s);
-
-  ArgParser parser(ctx);
-  // .drectve is always tokenized using Windows shell rules.
-  // /EXPORT: option can appear too many times, processing in fastpath.
-  ParsedDirectives directives = parser.parseDirectives(s);
-
-  for (StringRef e : directives.exports) {
-    // If a common header file contains dllexported function
-    // declarations, many object files may end up with having the
-    // same /EXPORT options. In order to save cost of parsing them,
-    // we dedup them first.
-    if (!directivesExports.insert(e).second)
+  for (StringRef s : directivesList) {
+    if (s.empty())
       continue;
 
-    Export exp = parseExport(e);
-    if (ctx.config.machine == I386 && ctx.config.mingw) {
-      if (!isDecorated(exp.name))
-        exp.name = saver().save("_" + exp.name);
-      if (!exp.extName.empty() && !isDecorated(exp.extName))
-        exp.extName = saver().save("_" + exp.extName);
-    }
-    exp.source = ExportSource::Directives;
-    ctx.config.exports.push_back(exp);
-  }
+    log("Directives: " + toString(file) + ": " + s);
 
-  // Handle /include: in bulk.
-  for (StringRef inc : directives.includes)
-    addUndefined(inc);
+    ArgParser parser(ctx);
+    // .drectve is always tokenized using Windows shell rules.
+    // /EXPORT: option can appear too many times, processing in fastpath.
+    ParsedDirectives directives = parser.parseDirectives(s);
 
-  // Handle /exclude-symbols: in bulk.
-  for (StringRef e : directives.excludes) {
-    SmallVector<StringRef, 2> vec;
-    e.split(vec, ',');
-    for (StringRef sym : vec)
-      excludedSymbols.insert(mangle(sym));
-  }
+    for (StringRef e : directives.exports) {
+      // If a common header file contains dllexported function
+      // declarations, many object files may end up with having the
+      // same /EXPORT options. In order to save cost of parsing them,
+      // we dedup them first.
+      if (!directivesExports.insert(e).second)
+        continue;
 
-  // https://docs.microsoft.com/en-us/cpp/preprocessor/comment-c-cpp?view=msvc-160
-  for (auto *arg : directives.args) {
-    switch (arg->getOption().getID()) {
-    case OPT_aligncomm:
-      parseAligncomm(arg->getValue());
-      break;
-    case OPT_alternatename:
-      parseAlternateName(arg->getValue());
-      break;
-    case OPT_defaultlib:
-      if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
-        enqueuePath(*path, false, false);
-      break;
-    case OPT_entry:
-      ctx.config.entry = addUndefined(mangle(arg->getValue()));
-      break;
-    case OPT_failifmismatch:
-      checkFailIfMismatch(arg->getValue(), file);
-      break;
-    case OPT_incl:
-      addUndefined(arg->getValue());
-      break;
-    case OPT_manifestdependency:
-      ctx.config.manifestDependencies.insert(arg->getValue());
-      break;
-    case OPT_merge:
-      parseMerge(arg->getValue());
-      break;
-    case OPT_nodefaultlib:
-      ctx.config.noDefaultLibs.insert(findLib(arg->getValue()).lower());
-      break;
-    case OPT_release:
-      ctx.config.writeCheckSum = true;
-      break;
-    case OPT_section:
-      parseSection(arg->getValue());
-      break;
-    case OPT_stack:
-      parseNumbers(arg->getValue(), &ctx.config.stackReserve,
-                   &ctx.config.stackCommit);
-      break;
-    case OPT_subsystem: {
-      bool gotVersion = false;
-      parseSubsystem(arg->getValue(), &ctx.config.subsystem,
-                     &ctx.config.majorSubsystemVersion,
-                     &ctx.config.minorSubsystemVersion, &gotVersion);
-      if (gotVersion) {
-        ctx.config.majorOSVersion = ctx.config.majorSubsystemVersion;
-        ctx.config.minorOSVersion = ctx.config.minorSubsystemVersion;
+      Export exp = parseExport(e);
+      if (ctx.config.machine == I386 && ctx.config.mingw) {
+        if (!isDecorated(exp.name))
+          exp.name = saver().save("_" + exp.name);
+        if (!exp.extName.empty() && !isDecorated(exp.extName))
+          exp.extName = saver().save("_" + exp.extName);
       }
-      break;
+      exp.source = ExportSource::Directives;
+      ctx.config.exports.push_back(exp);
     }
-    // Only add flags here that link.exe accepts in
-    // `#pragma comment(linker, "/flag")`-generated sections.
-    case OPT_editandcontinue:
-    case OPT_guardsym:
-    case OPT_throwingnew:
-    case OPT_inferasanlibs:
-    case OPT_inferasanlibs_no:
-      break;
-    default:
-      error(arg->getSpelling() + " is not allowed in .drectve (" +
-            toString(file) + ")");
+
+    // Handle /include: in bulk.
+    for (StringRef inc : directives.includes)
+      addUndefined(inc);
+
+    // Handle /exclude-symbols: in bulk.
+    for (StringRef e : directives.excludes) {
+      SmallVector<StringRef, 2> vec;
+      e.split(vec, ',');
+      for (StringRef sym : vec)
+        excludedSymbols.insert(mangle(sym));
+    }
+
+    // https://docs.microsoft.com/en-us/cpp/preprocessor/comment-c-cpp?view=msvc-160
+    for (auto *arg : directives.args) {
+      switch (arg->getOption().getID()) {
+      case OPT_aligncomm:
+        parseAligncomm(arg->getValue());
+        break;
+      case OPT_alternatename:
+        parseAlternateName(arg->getValue());
+        break;
+      case OPT_defaultlib:
+        if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
+          enqueuePath(*path, false, false);
+        break;
+      case OPT_entry:
+        ctx.config.entry = addUndefined(mangle(arg->getValue()));
+        break;
+      case OPT_failifmismatch:
+        checkFailIfMismatch(arg->getValue(), file);
+        break;
+      case OPT_incl:
+        addUndefined(arg->getValue());
+        break;
+      case OPT_manifestdependency:
+        ctx.config.manifestDependencies.insert(arg->getValue());
+        break;
+      case OPT_merge:
+        parseMerge(arg->getValue());
+        break;
+      case OPT_nodefaultlib:
+        ctx.config.noDefaultLibs.insert(findLib(arg->getValue()).lower());
+        break;
+      case OPT_release:
+        ctx.config.writeCheckSum = true;
+        break;
+      case OPT_section:
+        parseSection(arg->getValue());
+        break;
+      case OPT_stack:
+        parseNumbers(arg->getValue(), &ctx.config.stackReserve,
+                    &ctx.config.stackCommit);
+        break;
+      case OPT_subsystem: {
+        bool gotVersion = false;
+        parseSubsystem(arg->getValue(), &ctx.config.subsystem,
+                      &ctx.config.majorSubsystemVersion,
+                      &ctx.config.minorSubsystemVersion, &gotVersion);
+        if (gotVersion) {
+          ctx.config.majorOSVersion = ctx.config.majorSubsystemVersion;
+          ctx.config.minorOSVersion = ctx.config.minorSubsystemVersion;
+        }
+        break;
+      }
+      // Only add flags here that link.exe accepts in
+      // `#pragma comment(linker, "/flag")`-generated sections.
+      case OPT_editandcontinue:
+      case OPT_guardsym:
+      case OPT_throwingnew:
+      case OPT_inferasanlibs:
+      case OPT_inferasanlibs_no:
+        break;
+      default:
+        error(arg->getSpelling() + " is not allowed in .drectve (" +
+              toString(file) + ")");
+      }
     }
   }
 }
