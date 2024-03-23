@@ -235,11 +235,17 @@ LIBC_INLINE constexpr void quick_mul_hi(cpp::array<word, N> &dst,
   dst.back() = acc.carry();
 }
 
+template <typename word, size_t N>
+LIBC_INLINE constexpr bool is_negative(cpp::array<word, N> &array) {
+  using signed_word = cpp::make_signed_t<word>;
+  return cpp::bit_cast<signed_word>(array.back()) < 0;
+}
+
 // An enum for the shift function below.
 enum Direction { LEFT, RIGHT };
 
 // A bitwise shift on an array of elements.
-template <Direction direction, typename word, size_t N>
+template <Direction direction, bool is_signed, typename word, size_t N>
 LIBC_INLINE constexpr void shift(cpp::array<word, N> &array, size_t offset) {
   constexpr size_t WORD_BITS = cpp::numeric_limits<word>::digits;
   constexpr size_t TOTAL_BITS = N * WORD_BITS;
@@ -249,6 +255,7 @@ LIBC_INLINE constexpr void shift(cpp::array<word, N> &array, size_t offset) {
     array = {};
     return;
   }
+  const bool is_neg = is_signed && is_negative(array);
   const auto at = [&](size_t index) -> int {
     // reverse iteration when direction == LEFT.
     if constexpr (direction == LEFT)
@@ -256,9 +263,13 @@ LIBC_INLINE constexpr void shift(cpp::array<word, N> &array, size_t offset) {
     return int(index);
   };
   const auto safe_get_at = [&](size_t index) -> word {
-    // return 0 when accessing out of bound elements.
+    // return appropriate value when accessing out of bound elements.
     const int i = at(index);
-    return i >= 0 && i < int(N) ? array[i] : 0;
+    if (i < 0)
+      return 0;
+    if (i >= int(N))
+      return is_neg ? -1 : 0;
+    return array[i];
   };
   const size_t index_offset = offset / WORD_BITS;
   const size_t bit_offset = offset % WORD_BITS;
@@ -736,7 +747,7 @@ struct BigInt {
   }
 
   LIBC_INLINE constexpr BigInt &operator<<=(size_t s) {
-    multiword::shift<multiword::LEFT>(val, s);
+    multiword::shift<multiword::LEFT, SIGNED>(val, s);
     return *this;
   }
 
@@ -747,7 +758,7 @@ struct BigInt {
   }
 
   LIBC_INLINE constexpr BigInt &operator>>=(size_t s) {
-    multiword::shift<multiword::RIGHT>(val, s);
+    multiword::shift<multiword::RIGHT, SIGNED>(val, s);
     return *this;
   }
 
