@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Compression.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
@@ -51,6 +52,18 @@ void compression::compress(Params P, ArrayRef<uint8_t> Input,
     break;
   case compression::Format::Zstd:
     zstd::compress(Input, Output, P.level, P.zstdEnableLdm);
+    break;
+  }
+}
+
+void compression::compressToStream(Params P, ArrayRef<uint8_t> Input,
+                                   raw_ostream &OS) {
+  switch (P.format) {
+  case compression::Format::Zlib:
+    zlib::compressToStream(Input, OS, P.level);
+    break;
+  case compression::Format::Zstd:
+    zstd::compressToStream(Input, OS, P.level, P.zstdEnableLdm);
     break;
   }
 }
@@ -120,6 +133,49 @@ void zlib::compress(ArrayRef<uint8_t> Input,
     CompressedBuffer.truncate(CompressedSize);
 }
 
+void zlib::compressToStream(ArrayRef<uint8_t> Input, raw_ostream &OS,
+                            int Level) {
+  // Allocate a fixed size buffer to hold the output.
+  constexpr size_t OutBufferSize = 4096;
+  auto OutBuffer = std::make_unique<Bytef[]>(OutBufferSize);
+
+  z_stream ZStream;
+  ZStream.zalloc = Z_NULL;
+  ZStream.zfree = Z_NULL;
+  ZStream.opaque = Z_NULL;
+
+  int ZErr = deflateInit(&ZStream, Level);
+  if (ZErr != Z_OK)
+    report_bad_alloc_error("Failed to create ZStream");
+
+  // Ensure that the z_stream is cleaned up on all exit paths.
+  auto DeflateEndOnExit = make_scope_exit([&]() { deflateEnd(&ZStream); });
+
+  ZStream.next_in =
+      reinterpret_cast<Bytef *>(const_cast<uint8_t *>(Input.data()));
+  ZStream.avail_in = Input.size();
+
+  // Repeatedly deflate into the output buffer and flush it into the
+  // output stream. Repeat until we have drained the entire compression
+  // state.
+  while (ZErr != Z_STREAM_END) {
+    ZStream.next_out = OutBuffer.get();
+    ZStream.avail_out = OutBufferSize;
+
+    ZErr = deflate(&ZStream, Z_FINISH);
+    if (ZErr == Z_STREAM_ERROR || ZErr == Z_BUF_ERROR)
+      report_fatal_error(convertZlibCodeToString(ZErr));
+
+    // Tell MemorySanitizer that zlib output buffer is fully initialized.
+    // This avoids a false report when running LLVM with uninstrumented ZLib.
+    __msan_unpoison(OutputBuffer.data(), OutBufferSize - ZStream.avail_out);
+
+    if (ZStream.avail_out < OutBufferSize)
+      OS.write(reinterpret_cast<char *>(OutBuffer.get()),
+               OutBufferSize - ZStream.avail_out);
+  }
+}
+
 Error zlib::decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                        size_t &UncompressedSize) {
   int Res = ::uncompress((Bytef *)Output, (uLongf *)&UncompressedSize,
@@ -147,6 +203,10 @@ bool zlib::isAvailable() { return false; }
 void zlib::compress(ArrayRef<uint8_t> Input,
                     SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
   llvm_unreachable("zlib::compress is unavailable");
+}
+void zlib::compressToStream(ArrayRef<uint8_t> Input, raw_ostream &OS,
+                            int Level = DefaultCompression) {
+  llvm_unreachable("zlib::compressToStream is unavailable");
 }
 Error zlib::decompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
                        size_t &UncompressedSize) {
@@ -201,6 +261,51 @@ void zstd::compress(ArrayRef<uint8_t> Input,
     CompressedBuffer.truncate(CompressedSize);
 }
 
+void zstd::compressToStream(ArrayRef<uint8_t> Input, raw_ostream &OS, int Level,
+                            bool EnableLdm) {
+  // Allocate a buffer to hold the output.
+  size_t OutBufferSize = ZSTD_CStreamOutSize();
+  auto OutBuffer = std::make_unique<char[]>(OutBufferSize);
+
+  ZSTD_CStream *CStream = ZSTD_createCStream();
+  if (!CStream)
+    report_bad_alloc_error("Failed to create ZSTD_CCtx");
+
+  // Ensure that the ZSTD_CStream is cleaned up on all exit paths.
+  auto FreeCStreamOnExit =
+      make_scope_exit([=]() { ZSTD_freeCStream(CStream); });
+
+  if (ZSTD_isError(ZSTD_CCtx_setParameter(
+          CStream, ZSTD_c_enableLongDistanceMatching, EnableLdm ? 1 : 0))) {
+    report_bad_alloc_error("Failed to set ZSTD_c_enableLongDistanceMatching");
+  }
+
+  if (ZSTD_isError(
+          ZSTD_CCtx_setParameter(CStream, ZSTD_c_compressionLevel, Level))) {
+    report_bad_alloc_error("Failed to set ZSTD_c_compressionLevel");
+  }
+
+  ZSTD_inBuffer ZInput = {Input.data(), Input.size(), 0};
+
+  // Repeatedly compress into the output buffer and flush it into the
+  // output stream. Repeat until we have drained the entire compression
+  // state.
+  size_t ZRet;
+  do {
+    ZSTD_outBuffer ZOutput = {OutBuffer.get(), OutBufferSize, 0};
+    ZRet = ZSTD_compressStream2(CStream, &ZOutput, &ZInput, ZSTD_e_end);
+    if (ZSTD_isError(ZRet))
+      report_fatal_error(ZSTD_getErrorName(ZRet));
+
+    // Tell MemorySanitizer that zstd output buffer is fully initialized.
+    // This avoids a false report when running LLVM with uninstrumented ZStd.
+    __msan_unpoison(OutputBuffer.data(), ZOutput.pos);
+
+    if (ZOutput.pos > 0)
+      OS.write(reinterpret_cast<char *>(OutBuffer.get()), ZOutput.pos);
+  } while (ZRet != 0);
+}
+
 Error zstd::decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                        size_t &UncompressedSize) {
   const size_t Res = ::ZSTD_decompress(
@@ -230,6 +335,11 @@ void zstd::compress(ArrayRef<uint8_t> Input,
                     SmallVectorImpl<uint8_t> &CompressedBuffer, int Level,
                     bool EnableLdm) {
   llvm_unreachable("zstd::compress is unavailable");
+}
+void zstd::compressToStream(ArrayRef<uint8_t> Input, raw_ostream &OS,
+                            int Level = DefaultCompression,
+                            bool EnableLdm = false) {
+  llvm_unreachable("zstd::compressToStream is unavailable");
 }
 Error zstd::decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                        size_t &UncompressedSize) {

@@ -144,9 +144,7 @@ struct ELFWriter {
 
   uint64_t align(Align Alignment);
 
-  bool maybeWriteCompression(uint32_t ChType, uint64_t Size,
-                             SmallVectorImpl<uint8_t> &CompressedContents,
-                             Align Alignment);
+  bool maybeWriteCompression(uint32_t ChType, uint64_t Size, Align Alignment);
 
 public:
   ELFWriter(ELFObjectWriter &OWriter, raw_pwrite_stream &OS,
@@ -841,12 +839,9 @@ MCSectionELF *ELFWriter::createRelocationSection(MCContext &Ctx,
 }
 
 // Include the debug info compression header.
-bool ELFWriter::maybeWriteCompression(
-    uint32_t ChType, uint64_t Size,
-    SmallVectorImpl<uint8_t> &CompressedContents, Align Alignment) {
-  uint64_t HdrSize =
-      is64Bit() ? sizeof(ELF::Elf64_Chdr) : sizeof(ELF::Elf32_Chdr);
-  if (Size <= HdrSize + CompressedContents.size())
+bool ELFWriter::maybeWriteCompression(uint32_t ChType, uint64_t Size,
+                                      Align Alignment) {
+  if (Size <= 128)
     return false;
   // Platform specific header is followed by compressed data.
   if (is64Bit()) {
@@ -897,10 +892,8 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
     ChType = ELF::ELFCOMPRESS_ZSTD;
     break;
   }
-  compression::compress(compression::Params(CompressionType), Uncompressed,
-                        Compressed);
-  if (!maybeWriteCompression(ChType, UncompressedData.size(), Compressed,
-                             Sec.getAlign())) {
+
+  if (!maybeWriteCompression(ChType, UncompressedData.size(), Sec.getAlign())) {
     W.OS << UncompressedData;
     return;
   }
@@ -909,7 +902,8 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
   // Alignment field should reflect the requirements of
   // the compressed section header.
   Section.setAlignment(is64Bit() ? Align(8) : Align(4));
-  W.OS << toStringRef(Compressed);
+  compression::compressToStream(compression::Params(CompressionType),
+                                Uncompressed, W.OS);
 }
 
 void ELFWriter::WriteSecHdrEntry(uint32_t Name, uint32_t Type, uint64_t Flags,

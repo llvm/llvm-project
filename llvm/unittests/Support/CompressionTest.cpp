@@ -28,6 +28,15 @@ static void testZlibCompression(StringRef Input, int Level) {
   SmallVector<uint8_t, 0> Uncompressed;
   zlib::compress(arrayRefFromStringRef(Input), Compressed, Level);
 
+  // Check that stream compression results are the same as bulk compression.
+  SmallVector<char, 0> StreamCompressed;
+  raw_svector_ostream Stream(StreamCompressed);
+  zlib::compressToStream(arrayRefFromStringRef(Input), Stream, Level);
+  EXPECT_EQ(StreamCompressed.size(), Compressed.size());
+  for (size_t i = 0, e = StreamCompressed.size(); i != e; ++i) {
+    EXPECT_EQ(llvm::bit_cast<uint8_t>(StreamCompressed[i]), Compressed[i]);
+  }
+
   // Check that uncompressed buffer is the same as original.
   Error E = zlib::decompress(Compressed, Uncompressed, Input.size());
   EXPECT_FALSE(std::move(E));
@@ -72,6 +81,15 @@ static void testZstdCompression(StringRef Input, int Level) {
   SmallVector<uint8_t, 0> Compressed;
   SmallVector<uint8_t, 0> Uncompressed;
   zstd::compress(arrayRefFromStringRef(Input), Compressed, Level);
+
+  // Check that stream compression results are the same as bulk compression.
+  SmallVector<char, 0> StreamCompressed;
+  raw_svector_ostream Stream(StreamCompressed);
+  zstd::compressToStream(arrayRefFromStringRef(Input), Stream, Level);
+  EXPECT_EQ(StreamCompressed.size(), Compressed.size());
+  for (size_t i = 0, e = StreamCompressed.size(); i != e; ++i) {
+    EXPECT_EQ(llvm::bit_cast<uint8_t>(StreamCompressed[i]), Compressed[i]);
+  }
 
   // Check that uncompressed buffer is the same as original.
   Error E = zstd::decompress(Compressed, Uncompressed, Input.size());
