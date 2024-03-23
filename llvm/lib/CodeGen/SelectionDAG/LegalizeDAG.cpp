@@ -3582,6 +3582,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   }
+  case ISD::UCMP:
+  case ISD::SCMP:
+  // FIX: add logic here
+    break;
   case ISD::FMINNUM:
   case ISD::FMAXNUM: {
     if (SDValue Expanded = TLI.expandFMINNUM_FMAXNUM(Node, DAG))
@@ -5134,6 +5138,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(DAG.getNode(TruncOp, dl, OVT, Tmp1));
     break;
   }
+  case ISD::UCMP:
+  case ISD::SCMP:
+    // FIX: add logic here
+    break;
   case ISD::UMUL_LOHI:
   case ISD::SMUL_LOHI: {
     // Promote to a multiply in a wider integer type.
