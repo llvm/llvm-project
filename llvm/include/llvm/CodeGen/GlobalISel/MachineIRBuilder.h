@@ -2113,6 +2113,11 @@ public:
                                 DstMMO, SrcMMO);
   }
 
+  /// Build and insert G_TRAP or G_DEBUGTRAP
+  MachineInstrBuilder buildTrap(bool Debug = false) {
+    return buildInstr(Debug ? TargetOpcode::G_DEBUGTRAP : TargetOpcode::G_TRAP);
+  }
+
   /// Build and insert \p Dst = G_SBFX \p Src, \p LSB, \p Width.
   MachineInstrBuilder buildSbfx(const DstOp &Dst, const SrcOp &Src,
                                 const SrcOp &LSB, const SrcOp &Width) {
