@@ -400,6 +400,9 @@ if( LLVM_USE_LINKER )
   endif()
 endif()
 
+if (NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
+  option(LLVM_ENABLE_PIC "Build Position-Independent Code" ON)
+endif()
 if( LLVM_ENABLE_PIC )
   if( XCODE )
     # Xcode has -mdynamic-no-pic on by default, which overrides -fPIC. I don't
@@ -437,6 +440,17 @@ if( LLVM_ENABLE_PIC )
     llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O[23]" "-O")
   endif()
 endif()
+
+if(WIN32 OR CYGWIN)
+  if(BUILD_SHARED_LIBS OR LLVM_BUILD_LLVM_DYLIB)
+    set(LLVM_ENABLE_PLUGINS_default ON)
+  else()
+    set(LLVM_ENABLE_PLUGINS_default OFF)
+  endif()
+else()
+  set(LLVM_ENABLE_PLUGINS_default ${LLVM_ENABLE_PIC})
+endif()
+option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default})
 
 if((NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX")) AND
    (NOT (WIN32 OR CYGWIN) OR (MINGW AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")))
