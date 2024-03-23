@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Mesh/IR/MeshDialect.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
 #include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -199,6 +200,7 @@ struct ShardingPropagation
 
     LLVM_DEBUG(DBGS() << "After reversed order propagation:\n"
                       << funcOp << "\n");
+    LLVM_DEBUG(assert(succeeded(mlir::verify(funcOp))));
 
     // 2. propagate in original order
     for (Operation &op : llvm::make_early_inc_range(block))

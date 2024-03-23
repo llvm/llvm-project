@@ -499,8 +499,6 @@ TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder, MeshOp mesh,
 TypedValue<ShapedType> reshard(OpBuilder &builder, MeshOp mesh, ShardOp source,
                                ShardOp target,
                                TypedValue<ShapedType> sourceShardValue) {
-  assert(!source.getAnnotateForUsers());
-  assert(target.getAnnotateForUsers());
   assert(source.getResult() == target.getOperand());
   ImplicitLocOpBuilder implicitLocOpBuilder(target->getLoc(), builder);
   return reshard(
@@ -635,7 +633,6 @@ spmdizeOperation(ShardOp shardOp, IRMapping &spmdizationMap,
     targetSpmdValue = spmdizationMap.lookup(shardOp.getOperand());
   } else {
     // Insert resharding.
-    assert(!srcShardOp.getAnnotateForUsers() && shardOp.getAnnotateForUsers());
     TypedValue<ShapedType> srcSpmdValue =
         spmdizationMap.lookup(srcShardOp.getOperand())
             .cast<TypedValue<ShapedType>>();

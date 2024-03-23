@@ -399,11 +399,6 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
                                 AffineMap map,
                                 ArrayRef<utils::IteratorType> loopTypes,
                                 ArrayRef<ReductionKind> reductionLoopKinds) {
-  FailureOr<std::pair<bool, MeshShardingAttr>> maybeSharding =
-      getMeshShardingAttr(result);
-  if (succeeded(maybeSharding) && !maybeSharding->first)
-    return success();
-
   auto resultType = result.getType().cast<RankedTensorType>();
   SmallVector<SmallVector<MeshAxis>> splitAxes(resultType.getRank());
   SmallVector<MeshAxis> partialAxes;
@@ -440,11 +435,8 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
   removeTrailingEmptySubArray(splitAxes);
   MeshShardingAttr shardAttr = MeshShardingAttr::get(
       b.getContext(), shardingOption.mesh, splitAxes, partialAxes, partialType);
-  OpBuilder::InsertionGuard guard(b);
-  b.setInsertionPointAfterValue(result);
-  auto shardOp = b.create<ShardOp>(result.getLoc(), resultType, result,
-                                   shardAttr, /*annotate_for_users*/ false);
-  result.replaceAllUsesExcept(shardOp, shardOp);
+  maybeInsertTargetShardingAnnotation(shardAttr, result, b);
+
   return success();
 }
 
@@ -453,11 +445,8 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
 static LogicalResult addShardOp(OpBuilder &b, OpOperand &opOperand,
                                 const ShardingOption &shardingOption,
                                 AffineMap map) {
-  auto maybeShardingAttr = getMeshShardingAttr(opOperand);
-  if (succeeded(maybeShardingAttr) && maybeShardingAttr->first)
-    return success();
-  Value operand = opOperand.get();
-  auto operandType = operand.getType().cast<RankedTensorType>();
+  Value operandValue = opOperand.get();
+  auto operandType = operandValue.getType().cast<RankedTensorType>();
   SmallVector<SmallVector<MeshAxis>> splitAxes(operandType.getRank());
   unsigned numDims = map.getNumDims();
   for (auto it : llvm::enumerate(map.getResults())) {
@@ -486,10 +475,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpOperand &opOperand,
   MeshShardingAttr shardAttr =
       MeshShardingAttr::get(b.getContext(), shardingOption.mesh, splitAxes);
   OpBuilder::InsertionGuard guard(b);
-  b.setInsertionPoint(opOperand.getOwner());
-  auto shardOp = b.create<ShardOp>(operand.getLoc(), operandType, operand,
-                                   shardAttr, true);
-  opOperand.set(shardOp);
+  maybeInsertSourceShardingAnnotation(shardAttr, opOperand, b);
 
   return success();
 }
