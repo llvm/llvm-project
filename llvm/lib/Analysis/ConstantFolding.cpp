@@ -751,7 +751,7 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
 Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
                                              const DataLayout &DL) {
   APInt Offset(DL.getIndexTypeSizeInBits(C->getType()), 0);
-  return ConstantFoldLoadFromConstPtr(C, Ty, Offset, DL);
+  return ConstantFoldLoadFromConstPtr(C, Ty, std::move(Offset), DL);
 }
 
 Constant *llvm::ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
