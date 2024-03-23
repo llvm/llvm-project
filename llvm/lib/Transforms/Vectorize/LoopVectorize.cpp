@@ -5846,10 +5846,9 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
     // and phi nodes.
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     if (isScalarWithPredication(I, VF) && !I->getType()->isVoidTy()) {
-      ScalarCost += TTI.getScalarizationOverhead(
+      ScalarCost += TTI.getBuildVectorCost(
           cast<VectorType>(ToVectorTy(I->getType(), VF)),
-          APInt::getAllOnes(VF.getFixedValue()), /*Insert*/ true,
-          /*Extract*/ false, CostKind);
+          APInt::getAllOnes(VF.getFixedValue()), CostKind);
       ScalarCost +=
           VF.getFixedValue() * TTI.getCFInstrCost(Instruction::PHI, CostKind);
     }
@@ -5865,10 +5864,9 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
         if (canBeScalarized(J))
           Worklist.push_back(J);
         else if (needsExtract(J, VF)) {
-          ScalarCost += TTI.getScalarizationOverhead(
+          ScalarCost += TTI.getExplodeVectorCost(
               cast<VectorType>(ToVectorTy(J->getType(), VF)),
-              APInt::getAllOnes(VF.getFixedValue()), /*Insert*/ false,
-              /*Extract*/ true, CostKind);
+              APInt::getAllOnes(VF.getFixedValue()), CostKind);
         }
       }
 
@@ -6011,9 +6009,8 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
     // Add the cost of an i1 extract and a branch
     auto *Vec_i1Ty =
         VectorType::get(IntegerType::getInt1Ty(ValTy->getContext()), VF);
-    Cost += TTI.getScalarizationOverhead(
-        Vec_i1Ty, APInt::getAllOnes(VF.getKnownMinValue()),
-        /*Insert=*/false, /*Extract=*/true, CostKind);
+    Cost += TTI.getExplodeVectorCost(
+        Vec_i1Ty, APInt::getAllOnes(VF.getKnownMinValue()), CostKind);
     Cost += TTI.getCFInstrCost(Instruction::Br, CostKind);
 
     if (useEmulatedMaskMemRefHack(I, VF))
@@ -6386,10 +6383,9 @@ InstructionCost LoopVectorizationCostModel::getScalarizationOverhead(
   Type *RetTy = ToVectorTy(I->getType(), VF);
   if (!RetTy->isVoidTy() &&
       (!isa<LoadInst>(I) || !TTI.supportsEfficientVectorElementLoadStore()))
-    Cost += TTI.getScalarizationOverhead(
+    Cost += TTI.getBuildVectorCost(
         cast<VectorType>(RetTy), APInt::getAllOnes(VF.getKnownMinValue()),
-        /*Insert*/ true,
-        /*Extract*/ false, CostKind);
+        CostKind);
 
   // Some targets keep addresses scalar.
   if (isa<LoadInst>(I) && !TTI.prefersVectorizedAddressing())
@@ -6827,9 +6823,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       auto *Vec_i1Ty =
           VectorType::get(IntegerType::getInt1Ty(RetTy->getContext()), VF);
       return (
-          TTI.getScalarizationOverhead(
-              Vec_i1Ty, APInt::getAllOnes(VF.getFixedValue()),
-              /*Insert*/ false, /*Extract*/ true, CostKind) +
+          TTI.getExplodeVectorCost(
+              Vec_i1Ty, APInt::getAllOnes(VF.getFixedValue()), CostKind) +
           (TTI.getCFInstrCost(Instruction::Br, CostKind) * VF.getFixedValue()));
     } else if (I->getParent() == TheLoop->getLoopLatch() || VF.isScalar())
       // The back-edge branch will remain, as will all scalar branches.
