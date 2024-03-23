@@ -2031,7 +2031,8 @@ SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT) {
   return getStepVector(DL, ResVT, One);
 }
 
-SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT, APInt StepVal) {
+SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT,
+                                    const APInt &StepVal) {
   assert(ResVT.getScalarSizeInBits() == StepVal.getBitWidth());
   if (ResVT.isScalableVector())
     return getNode(

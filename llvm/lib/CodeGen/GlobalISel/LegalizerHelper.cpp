@@ -7855,7 +7855,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerBswap(MachineInstr &MI) {
 
 //{ (Src & Mask) >> N } | { (Src << N) & Mask }
 static MachineInstrBuilder SwapN(unsigned N, DstOp Dst, MachineIRBuilder &B,
-                                 MachineInstrBuilder Src, APInt Mask) {
+                                 MachineInstrBuilder Src, const APInt &Mask) {
   const LLT Ty = Dst.getLLTTy(*B.getMRI());
   MachineInstrBuilder C_N = B.buildConstant(Ty, N);
   MachineInstrBuilder MaskLoNTo0 = B.buildConstant(Ty, Mask);

@@ -217,7 +217,7 @@ struct SizeOffsetAPInt : public SizeOffsetType<APInt, SizeOffsetAPInt> {
   SizeOffsetAPInt() = default;
   SizeOffsetAPInt(APInt Size, APInt Offset) : SizeOffsetType(Size, Offset) {}
 
-  static bool known(APInt V) { return V.getBitWidth() > 1; }
+  static bool known(const APInt &V) { return V.getBitWidth() > 1; }
 };
 
 /// Evaluate the size and offset of an object pointed to by a Value*
