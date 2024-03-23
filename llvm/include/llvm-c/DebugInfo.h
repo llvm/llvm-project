@@ -186,7 +186,30 @@ typedef unsigned LLVMMetadataKind;
 
 /**
  * An LLVM DWARF type encoding.
+ * @note Values are from DW_ATE_* constants in the DWARF specification.
  */
+enum {
+  LLVMDWARFTypeEncodingAddress = 0x1,
+  LLVMDWARFTypeEncodingBoolean = 0x2,
+  LLVMDWARFTypeEncodingComplexFloat = 0x3,
+  LLVMDWARFTypeEncodingFloat = 0x4,
+  LLVMDWARFTypeEncodingSigned = 0x5,
+  LLVMDWARFTypeEncodingSignedChar = 0x6,
+  LLVMDWARFTypeEncodingUnsigned = 0x7,
+  LLVMDWARFTypeEncodingUnsignedChar = 0x8,
+  LLVMDWARFTypeEncodingImaginaryFloat = 0x9,
+  LLVMDWARFTypeEncodingPackedDecimal = 0xa,
+  LLVMDWARFTypeEncodingNumericString = 0xb,
+  LLVMDWARFTypeEncodingEdited = 0xc,
+  LLVMDWARFTypeEncodingSignedFixed = 0xd,
+  LLVMDWARFTypeEncodingUnsignedFixed = 0xe,
+  LLVMDWARFTypeEncodingDecimalFloat = 0xf,
+  LLVMDWARFTypeEncodingUTF = 0x10,
+  LLVMDWARFTypeEncodingUCS = 0x11,
+  LLVMDWARFTypeEncodingASCII = 0x12,
+  LLVMDWARFTypeEncodingLoUser = 0x80,
+  LLVMDWARFTypeEncodingHiUser = 0xff,
+};
 typedef unsigned LLVMDWARFTypeEncoding;
 
 /**
@@ -199,7 +222,15 @@ typedef enum {
   LLVMDWARFMacinfoRecordTypeMacro = 0x02,
   LLVMDWARFMacinfoRecordTypeStartFile = 0x03,
   LLVMDWARFMacinfoRecordTypeEndFile = 0x04,
-  LLVMDWARFMacinfoRecordTypeVendorExt = 0xff
+  LLVMDWARFMacinfoRecordTypeDefineStrp = 0x05,
+  LLVMDWARFMacinfoRecordTypeUndefStrp = 0x06,
+  LLVMDWARFMacinfoRecordTypeImport = 0x07,
+  LLVMDWARFMacinfoRecordTypeDefineSup = 0x08,
+  LLVMDWARFMacinfoRecordTypeUndefSup = 0x09,
+  LLVMDWARFMacinfoRecordTypeImportSup = 0x0a,
+  LLVMDWARFMacinfoRecordTypeDefineStrx = 0x0b,
+  LLVMDWARFMacinfoRecordTypeUndefStrx = 0x0c,
+  LLVMDWARFMacinfoRecordTypeVendorExt = 0xff,
 } LLVMDWARFMacinfoRecordType;
 
 /**
