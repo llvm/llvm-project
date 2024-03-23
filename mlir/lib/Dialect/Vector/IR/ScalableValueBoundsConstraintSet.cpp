@@ -47,17 +47,26 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
     unsigned vscaleMax, presburger::BoundType boundType, bool closedUB,
     StopConditionFn stopCondition) {
   using namespace presburger;
-
   assert(vscaleMin <= vscaleMax);
-  ScalableValueBoundsConstraintSet scalableCstr(value.getContext(), vscaleMin,
-                                                vscaleMax);
 
-  int64_t pos = scalableCstr.populateConstraintsSet(value, dim, stopCondition);
+  // No stop condition specified: Keep adding constraints until the worklist
+  // is empty.
+  auto defaultStopCondition = [&](Value v, std::optional<int64_t> dim,
+                                  mlir::ValueBoundsConstraintSet &cstr) {
+    return false;
+  };
+
+  ScalableValueBoundsConstraintSet scalableCstr(
+      value.getContext(), stopCondition ? stopCondition : defaultStopCondition,
+      vscaleMin, vscaleMax);
+  int64_t pos = scalableCstr.populateConstraintsSet(value, dim);
 
   // Project out all variables apart from vscale.
   // This should result in constraints in terms of vscale only.
-  scalableCstr.projectOut(
-      [&](ValueDim p) { return p.first != scalableCstr.getVscaleValue(); });
+  auto projectOutFn = [&](ValueDim p) {
+    return p.first != scalableCstr.getVscaleValue();
+  };
+  scalableCstr.projectOut(projectOutFn);
 
   assert(scalableCstr.cstr.getNumDimAndSymbolVars() ==
              scalableCstr.positionToValueDim.size() &&

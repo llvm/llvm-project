@@ -117,14 +117,17 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
 
       // Prepare stop condition. By default, reify in terms of the op's
       // operands. No stop condition is used when a constant was requested.
-      std::function<bool(Value, std::optional<int64_t>)> stopCondition =
-          [&](Value v, std::optional<int64_t> d) {
+      std::function<bool(Value, std::optional<int64_t>,
+                         ValueBoundsConstraintSet & cstr)>
+          stopCondition = [&](Value v, std::optional<int64_t> d,
+                              ValueBoundsConstraintSet &cstr) {
             // Reify in terms of SSA values that are different from `value`.
             return v != value;
           };
       if (reifyToFuncArgs) {
         // Reify in terms of function block arguments.
-        stopCondition = stopCondition = [](Value v, std::optional<int64_t> d) {
+        stopCondition = [](Value v, std::optional<int64_t> d,
+                           ValueBoundsConstraintSet &cstr) {
           auto bbArg = dyn_cast<BlockArgument>(v);
           if (!bbArg)
             return false;
