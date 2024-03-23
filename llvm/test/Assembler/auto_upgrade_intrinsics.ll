@@ -60,7 +60,7 @@ define void @test.coro.end(ptr %ptr) {
 declare i32 @llvm.objectsize.i32(ptr, i1) nounwind readonly
 define i32 @test.objectsize() {
 ; CHECK-LABEL: @test.objectsize(
-; CHECK: @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false)
+; CHECK: @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false, i1 true, i64 0)
   %s = call i32 @llvm.objectsize.i32(ptr @a, i1 false)
   ret i32 %s
 }
@@ -68,7 +68,7 @@ define i32 @test.objectsize() {
 declare i64 @llvm.objectsize.i64.p0(ptr, i1) nounwind readonly
 define i64 @test.objectsize.2() {
 ; CHECK-LABEL: @test.objectsize.2(
-; CHECK: @llvm.objectsize.i64.p0(ptr @a, i1 false, i1 false, i1 false)
+; CHECK: @llvm.objectsize.i64.p0(ptr @a, i1 false, i1 false, i1 false, i1 true, i64 0)
   %s = call i64 @llvm.objectsize.i64.p0(ptr @a, i1 false)
   ret i64 %s
 }
@@ -78,14 +78,14 @@ define i64 @test.objectsize.2() {
 declare i32 @llvm.objectsize.i32.unnamed(ptr, i1) nounwind readonly
 define i32 @test.objectsize.unnamed() {
 ; CHECK-LABEL: @test.objectsize.unnamed(
-; CHECK: @llvm.objectsize.i32.p0(ptr @u, i1 false, i1 false, i1 false)
+; CHECK: @llvm.objectsize.i32.p0(ptr @u, i1 false, i1 false, i1 false, i1 true, i64 0)
   %s = call i32 @llvm.objectsize.i32.unnamed(ptr @u, i1 false)
   ret i32 %s
 }
 
 define i64 @test.objectsize.unnamed.2() {
 ; CHECK-LABEL: @test.objectsize.unnamed.2(
-; CHECK: @llvm.objectsize.i64.p0(ptr @u, i1 false, i1 false, i1 false)
+; CHECK: @llvm.objectsize.i64.p0(ptr @u, i1 false, i1 false, i1 false, i1 true, i64 0)
   %s = call i64 @llvm.objectsize.i64.p0(ptr @u, i1 false)
   ret i64 %s
 }

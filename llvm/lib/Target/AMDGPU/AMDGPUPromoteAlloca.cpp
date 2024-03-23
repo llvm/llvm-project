@@ -1573,7 +1573,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
 
       CallInst *NewCall = Builder.CreateCall(
           ObjectSize,
-          {Src, Intr->getOperand(1), Intr->getOperand(2), Intr->getOperand(3)});
+          {Src, Intr->getOperand(1), Intr->getOperand(2), Intr->getOperand(3),
+           Intr->getOperand(4), Intr->getOperand(5)});
       Intr->replaceAllUsesWith(NewCall);
       Intr->eraseFromParent();
       continue;

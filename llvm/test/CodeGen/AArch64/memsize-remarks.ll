@@ -8,7 +8,7 @@ target triple = "arm64-apple-ios7.0.0"
 declare ptr @__memmove_chk(ptr, ptr, i64, i64) #1
 declare ptr @__memcpy_chk(ptr, ptr, i64, i64) #1
 declare ptr @__memset_chk(ptr, i32, i64, i64) #1
-declare i64 @llvm.objectsize.i64.p0(ptr, i1 immarg, i1 immarg, i1 immarg) #2
+declare i64 @llvm.objectsize.i64.p0(ptr, i1 immarg, i1 immarg, i1 immarg, i1 immarg, i64 immarg) #2
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) argmemonly nounwind willreturn writeonly
 declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1 immarg) argmemonly nounwind willreturn
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) argmemonly nounwind willreturn
@@ -18,7 +18,7 @@ declare ptr @memset(ptr, i32, i64)
 
 define void @memcpy_dynamic(ptr %d, ptr %s, i64 %l) #0 !dbg !14 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false), !dbg !16
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0), !dbg !16
 ; GISEL: remark: memsize.c:4:3: Call to memcpy.{{$}}
   %call = call ptr @__memcpy_chk(ptr %d, ptr %s, i64 %l, i64 %0) #4, !dbg !17
   ret void, !dbg !18
@@ -26,7 +26,7 @@ entry:
 
 define void @memcpy_single(ptr %d, ptr %s, i64 %l) #0 !dbg !23 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false), !dbg !24
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0), !dbg !24
 ; GISEL: remark: memsize.c:10:3: Call to memcpy. Memory operation size: 1 bytes.
   %call = call ptr @__memcpy_chk(ptr %d, ptr %s, i64 1, i64 %0) #4, !dbg !25
   ret void, !dbg !26
@@ -34,7 +34,7 @@ entry:
 
 define void @memcpy_intrinsic(ptr %d, ptr %s, i64 %l) #0 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false)
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0)
 ; GISEL: remark: <unknown>:0:0: Call to memcpy. Memory operation size: 1 bytes.
   call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 1, i1 false)
   ret void
@@ -42,7 +42,7 @@ entry:
 
 define void @memcpy_static(ptr %d, ptr %s, i64 %l) #0 !dbg !27 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false), !dbg !28
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0), !dbg !28
 ; GISEL: remark: memsize.c:13:3: Call to memcpy. Memory operation size: 100 bytes.
   %call = call ptr @__memcpy_chk(ptr %d, ptr %s, i64 100, i64 %0) #4, !dbg !29
   ret void, !dbg !30
@@ -50,7 +50,7 @@ entry:
 
 define void @memcpy_huge(ptr %d, ptr %s, i64 %l) #0 !dbg !31 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false), !dbg !32
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0), !dbg !32
 ; GISEL: remark: memsize.c:16:3: Call to memcpy. Memory operation size: 100000 bytes.
   %call = call ptr @__memcpy_chk(ptr %d, ptr %s, i64 100000, i64 %0) #4, !dbg !33
   ret void, !dbg !34
@@ -58,7 +58,7 @@ entry:
 
 define void @memmove_dynamic(ptr %d, ptr %s, i64 %l) #0 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false)
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0)
 ; GISEL: remark: <unknown>:0:0: Call to memmove.{{$}}
   %call = call ptr @__memmove_chk(ptr %d, ptr %s, i64 %l, i64 %0) #4
   ret void
@@ -66,7 +66,7 @@ entry:
 
 define void @memmove_single(ptr %d, ptr %s, i64 %l) #0 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false)
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0)
 ; GISEL: remark: <unknown>:0:0: Call to memmove. Memory operation size: 1 bytes.
   %call = call ptr @__memmove_chk(ptr %d, ptr %s, i64 1, i64 %0) #4
   ret void
@@ -74,7 +74,7 @@ entry:
 
 define void @memmove_static(ptr %d, ptr %s, i64 %l) #0 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false)
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0)
 ; GISEL: remark: <unknown>:0:0: Call to memmove. Memory operation size: 100 bytes.
   %call = call ptr @__memmove_chk(ptr %d, ptr %s, i64 100, i64 %0) #4
   ret void
@@ -82,7 +82,7 @@ entry:
 
 define void @memmove_huge(ptr %d, ptr %s, i64 %l) #0 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false)
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0)
 ; GISEL: remark: <unknown>:0:0: Call to memmove. Memory operation size: 100000 bytes.
   %call = call ptr @__memmove_chk(ptr %d, ptr %s, i64 100000, i64 %0) #4
   ret void
@@ -90,7 +90,7 @@ entry:
 
 define void @memset_dynamic(ptr %d, i64 %l) #0 !dbg !38 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false), !dbg !39
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0), !dbg !39
 ; GISEL: remark: memsize.c:22:3: Call to memset.{{$}}
   %call = call ptr @__memset_chk(ptr %d, i32 0, i64 %l, i64 %0) #4, !dbg !40
   ret void, !dbg !41
@@ -98,7 +98,7 @@ entry:
 
 define void @memset_single(ptr %d, i64 %l) #0 !dbg !46 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false), !dbg !47
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0), !dbg !47
 ; GISEL: remark: memsize.c:28:3: Call to memset. Memory operation size: 1 bytes.
   %call = call ptr @__memset_chk(ptr %d, i32 0, i64 1, i64 %0) #4, !dbg !48
   ret void, !dbg !49
@@ -106,7 +106,7 @@ entry:
 
 define void @memset_static(ptr %d, i64 %l) #0 !dbg !50 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false), !dbg !51
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0), !dbg !51
 ; GISEL: remark: memsize.c:31:3: Call to memset. Memory operation size: 100 bytes.
   %call = call ptr @__memset_chk(ptr %d, i32 0, i64 100, i64 %0) #4, !dbg !52
   ret void, !dbg !53
@@ -114,7 +114,7 @@ entry:
 
 define void @memset_huge(ptr %d, i64 %l) #0 !dbg !54 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false), !dbg !55
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0), !dbg !55
 ; GISEL: remark: memsize.c:34:3: Call to memset. Memory operation size: 100000 bytes.
   %call = call ptr @__memset_chk(ptr %d, i32 0, i64 100000, i64 %0) #4, !dbg !56
   ret void, !dbg !57
@@ -122,7 +122,7 @@ entry:
 
 define void @memset_empty(ptr %d, i64 %l) #0 !dbg !42 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false), !dbg !43
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0), !dbg !43
 ; GISEL: remark: memsize.c:25:3: Call to memset. Memory operation size: 0 bytes.
   %call = call ptr @__memset_chk(ptr %d, i32 0, i64 0, i64 %0) #4, !dbg !44
   ret void, !dbg !45
@@ -131,7 +131,7 @@ entry:
 ; YAML-LABEL: Function:        memcpy_empty
 define void @memcpy_empty(ptr %d, ptr %s, i64 %l) #0 !dbg !19 {
 entry:
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false), !dbg !20
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %d, i1 false, i1 true, i1 false, i1 true, i64 0), !dbg !20
 ; GISEL: remark: memsize.c:7:3: Call to memcpy. Memory operation size: 0 bytes.
   %call = call ptr @__memcpy_chk(ptr %d, ptr %s, i64 0, i64 %0) #4, !dbg !21
   ret void, !dbg !22

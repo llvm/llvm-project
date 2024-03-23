@@ -6,7 +6,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 declare dso_local noalias noundef ptr @malloc(i64 noundef) local_unnamed_addr allocsize(0)
-declare i64 @llvm.objectsize.i64.p0(ptr, i1 immarg, i1 immarg, i1 immarg)
+declare i64 @llvm.objectsize.i64.p0(ptr, i1 immarg, i1 immarg, i1 immarg, i1 immarg, i64 immarg)
 
 @buffer = dso_local global [4 x i8] zeroinitializer, align 1
 
@@ -32,7 +32,7 @@ if.else:
 
 if.end:
   %p = phi ptr [ %malloced, %if.else ], [ @buffer, %entry ]
-  %size = call i64 @llvm.objectsize.i64.p0(ptr %p, i1 false, i1 true, i1 false)
+  %size = call i64 @llvm.objectsize.i64.p0(ptr %p, i1 false, i1 true, i1 false, i1 true, i64 0)
   ret i64 %size
 }
 
@@ -58,7 +58,7 @@ if.else:
 
 if.end:
   %p = phi ptr [ %malloced, %if.else ], [ @buffer, %entry ]
-  %size = call i64 @llvm.objectsize.i64.p0(ptr %p, i1 true, i1 true, i1 false)
+  %size = call i64 @llvm.objectsize.i64.p0(ptr %p, i1 true, i1 true, i1 false, i1 true, i64 0)
   ret i64 %size
 }
 
@@ -86,7 +86,7 @@ if.else:
 
 if.end:
   %p = phi ptr [ %offseted, %if.else ], [ %buffer, %entry ]
-  %size = call i64 @llvm.objectsize.i64.p0(ptr %p, i1 false, i1 true, i1 false)
+  %size = call i64 @llvm.objectsize.i64.p0(ptr %p, i1 false, i1 true, i1 false, i1 true, i64 0)
   ret i64 %size
 }
 
@@ -114,6 +114,6 @@ if.else:
 
 if.end:
   %p = phi ptr [ %offseted, %if.else ], [ %buffer, %entry ]
-  %size = call i64 @llvm.objectsize.i64.p0(ptr %p, i1 true, i1 true, i1 false)
+  %size = call i64 @llvm.objectsize.i64.p0(ptr %p, i1 true, i1 true, i1 false, i1 true, i64 0)
   ret i64 %size
 }

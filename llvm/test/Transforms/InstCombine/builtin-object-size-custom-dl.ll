@@ -6,7 +6,7 @@ define i64 @objsize1_custom_idx(i64 %sz) {
 entry:
   %ptr = call ptr @malloc(i64 %sz)
   %ptr2 = getelementptr inbounds i8, ptr %ptr, i32 2
-  %calc_size = call i64 @llvm.objectsize.i64.p0(ptr %ptr2, i1 false, i1 true, i1 true)
+  %calc_size = call i64 @llvm.objectsize.i64.p0(ptr %ptr2, i1 false, i1 true, i1 true, i1 true, i64 0)
   ret i64 %calc_size
 }
 
@@ -17,7 +17,7 @@ entry:
   %var = alloca %struct.V, align 4
   call void @llvm.lifetime.start.p0(i64 28, ptr %var) #3
   %arrayidx = getelementptr inbounds [10 x i8], ptr %var, i64 0, i64 1
-  %0 = call i64 @llvm.objectsize.i64.p0(ptr %arrayidx, i1 false, i1 false, i1 false)
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %arrayidx, i1 false, i1 false, i1 false, i1 true, i64 0)
   %conv = trunc i64 %0 to i32
   call void @llvm.lifetime.end.p0(i64 28, ptr %var) #3
   ret i32 %conv
@@ -27,4 +27,4 @@ entry:
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 declare ptr @malloc(i64)
-declare i64 @llvm.objectsize.i64.p0(ptr, i1, i1, i1)
+declare i64 @llvm.objectsize.i64.p0(ptr, i1, i1, i1, i1, i64)

@@ -19,7 +19,7 @@ void test(void) {
 void foo(void) {
   union { int i; } u;
   u.i=1;
-  // PARTIAL:      %[[SIZE:.*]] = call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 false)
+  // PARTIAL:      %[[SIZE:.*]] = call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 false, i1 true, i64 0)
   // PARTIAL-NEXT: %[[CHECK0:.*]] = icmp uge i64 %[[SIZE]], 4
 
   // PARTIAL:      br i1 %[[CHECK0]], {{.*}} !nosanitize

@@ -4,8 +4,8 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10.0.0"
 
-declare i64 @llvm.objectsize.i64(ptr, i1, i1, i1) nounwind readonly
-declare i64 @llvm.objectsize.i64.p1(ptr addrspace(1), i1, i1, i1) nounwind readonly
+declare i64 @llvm.objectsize.i64(ptr, i1, i1, i1, i1, i64) nounwind readonly
+declare i64 @llvm.objectsize.i64.p1(ptr addrspace(1), i1, i1, i1, i1, i64) nounwind readonly
 declare void @llvm.trap() nounwind
 
 ; objectsize should fold to a constant, which causes the branch to fold to an
@@ -18,7 +18,7 @@ define i32 @test1(ptr %ptr) nounwind ssp noredzone align 2 {
 ; CHECK-NEXT:    ret i32 4
 ;
 entry:
-  %0 = tail call i64 @llvm.objectsize.i64(ptr %ptr, i1 false, i1 false, i1 false)
+  %0 = tail call i64 @llvm.objectsize.i64(ptr %ptr, i1 false, i1 false, i1 false, i1 true, i64 0)
   %1 = icmp ugt i64 %0, 3
   br i1 %1, label %T, label %trap
 
@@ -37,7 +37,7 @@ define i64 @test_objectsize_null_flag(ptr %ptr) {
 ; CHECK-NEXT:    ret i64 -1
 ;
 entry:
-  %0 = tail call i64 @llvm.objectsize.i64(ptr null, i1 false, i1 true, i1 false)
+  %0 = tail call i64 @llvm.objectsize.i64(ptr null, i1 false, i1 true, i1 false, i1 true, i64 0)
   ret i64 %0
 }
 
@@ -47,7 +47,7 @@ define i64 @test_objectsize_null_flag_min(ptr %ptr) {
 ; CHECK-NEXT:    ret i64 0
 ;
 entry:
-  %0 = tail call i64 @llvm.objectsize.i64(ptr null, i1 true, i1 true, i1 false)
+  %0 = tail call i64 @llvm.objectsize.i64(ptr null, i1 true, i1 true, i1 false, i1 true, i64 0)
   ret i64 %0
 }
 
@@ -60,7 +60,7 @@ define i64 @test_objectsize_null_flag_noas0() {
 ;
 entry:
   %0 = tail call i64 @llvm.objectsize.i64.p1(ptr addrspace(1) null, i1 false,
-  i1 true, i1 false)
+  i1 true, i1 false, i1 true, i64 0)
   ret i64 %0
 }
 
@@ -71,7 +71,7 @@ define i64 @test_objectsize_null_flag_min_noas0() {
 ;
 entry:
   %0 = tail call i64 @llvm.objectsize.i64.p1(ptr addrspace(1) null, i1 true,
-  i1 true, i1 false)
+  i1 true, i1 false, i1 true, i64 0)
   ret i64 %0
 }
 
@@ -82,7 +82,7 @@ define i64 @test_objectsize_null_known_flag_noas0() {
 ;
 entry:
   %0 = tail call i64 @llvm.objectsize.i64.p1(ptr addrspace(1) null, i1 false,
-  i1 false, i1 false)
+  i1 false, i1 false, i1 true, i64 0)
   ret i64 %0
 }
 
@@ -93,7 +93,7 @@ define i64 @test_objectsize_null_known_flag_min_noas0() {
 ;
 entry:
   %0 = tail call i64 @llvm.objectsize.i64.p1(ptr addrspace(1) null, i1 true,
-  i1 false, i1 false)
+  i1 false, i1 false, i1 true, i64 0)
   ret i64 %0
 }
 
@@ -101,7 +101,7 @@ define i64 @test_objectsize_byval_arg(ptr byval([42 x i8]) %ptr) {
 ; CHECK-LABEL: @test_objectsize_byval_arg(
 ; CHECK-NEXT:    ret i64 42
 ;
-  %size = tail call i64 @llvm.objectsize.i64(ptr %ptr, i1 true, i1 false, i1 false)
+  %size = tail call i64 @llvm.objectsize.i64(ptr %ptr, i1 true, i1 false, i1 false, i1 true, i64 0)
   ret i64 %size
 }
 
@@ -109,7 +109,7 @@ define i64 @test_objectsize_byref_arg(ptr byref([42 x i8]) %ptr) {
 ; CHECK-LABEL: @test_objectsize_byref_arg(
 ; CHECK-NEXT:    ret i64 42
 ;
-  %size = tail call i64 @llvm.objectsize.i64(ptr %ptr, i1 true, i1 false, i1 false)
+  %size = tail call i64 @llvm.objectsize.i64(ptr %ptr, i1 true, i1 false, i1 false, i1 true, i64 0)
   ret i64 %size
 }
 
@@ -131,7 +131,7 @@ define i64 @vla_pointer_size_mismatch(i42 %x) {
 ;
   %A = alloca i8, i42 %x, align 1
   %G1 = getelementptr i8, ptr %A, i8 17
-  %objsize = call i64 @llvm.objectsize.i64(ptr %G1, i1 false, i1 true, i1 true)
+  %objsize = call i64 @llvm.objectsize.i64(ptr %G1, i1 false, i1 true, i1 true, i1 true, i64 0)
   ret i64 %objsize
 }
 
@@ -143,7 +143,7 @@ define i64 @test_objectsize_malloc() {
 ; CHECK-NEXT:    ret i64 16
 ;
   %ptr = call ptr @malloc(i64 16)
-  %objsize = call i64 @llvm.objectsize.i64(ptr %ptr, i1 false, i1 true, i1 true)
+  %objsize = call i64 @llvm.objectsize.i64(ptr %ptr, i1 false, i1 true, i1 true, i1 true, i64 0)
   ret i64 %objsize
 }
 
@@ -153,7 +153,7 @@ define i32 @promote_with_objectsize_min_false() {
 ; CHECK-LABEL: @promote_with_objectsize_min_false(
 ; CHECK-NEXT:    ret i32 -1
 ;
-  %size = call i32 @llvm.objectsize.i32.p0(ptr @gv_weak, i1 false, i1 false, i1 false)
+  %size = call i32 @llvm.objectsize.i32.p0(ptr @gv_weak, i1 false, i1 false, i1 false, i1 true, i64 0)
   ret i32 %size
 }
 
@@ -161,7 +161,7 @@ define i32 @promote_with_objectsize_min_true() {
 ; CHECK-LABEL: @promote_with_objectsize_min_true(
 ; CHECK-NEXT:    ret i32 8
 ;
-  %size = call i32 @llvm.objectsize.i32.p0(ptr @gv_weak, i1 true, i1 false, i1 false)
+  %size = call i32 @llvm.objectsize.i32.p0(ptr @gv_weak, i1 true, i1 false, i1 false, i1 true, i64 0)
   ret i32 %size
 }
 
@@ -171,7 +171,7 @@ define i32 @promote_with_objectsize_nullunknown_false() {
 ; CHECK-LABEL: @promote_with_objectsize_nullunknown_false(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %size = call i32 @llvm.objectsize.i32.p0(ptr @gv_extern, i1 true, i1 false, i1 false)
+  %size = call i32 @llvm.objectsize.i32.p0(ptr @gv_extern, i1 true, i1 false, i1 false, i1 true, i64 0)
   ret i32 %size
 }
 
@@ -179,8 +179,8 @@ define i32 @promote_with_objectsize_nullunknown_true() {
 ; CHECK-LABEL: @promote_with_objectsize_nullunknown_true(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %size = call i32 @llvm.objectsize.i32.p0(ptr @gv_extern, i1 true, i1 true, i1 false)
+  %size = call i32 @llvm.objectsize.i32.p0(ptr @gv_extern, i1 true, i1 true, i1 false, i1 true, i64 0)
   ret i32 %size
 }
 
-declare i32 @llvm.objectsize.i32.p0(ptr, i1, i1, i1)
+declare i32 @llvm.objectsize.i32.p0(ptr, i1, i1, i1, i1, i64)

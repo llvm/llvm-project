@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare i64 @llvm.objectsize.i64.p0(ptr, i1 immarg, i1 immarg, i1 immarg)
+declare i64 @llvm.objectsize.i64.p0(ptr, i1 immarg, i1 immarg, i1 immarg, i1 immarg, i64 immarg)
 
 
 define dso_local i64 @check_store_load(i1 %cond) local_unnamed_addr {
@@ -37,7 +37,7 @@ if.end:
 
 return:
   %held = load ptr, ptr %holder
-  %objsize = call i64 @llvm.objectsize.i64.p0(ptr %held, i1 false, i1 true, i1 false)
+  %objsize = call i64 @llvm.objectsize.i64.p0(ptr %held, i1 false, i1 true, i1 false, i1 true, i64 0)
   ret i64 %objsize
 
 }

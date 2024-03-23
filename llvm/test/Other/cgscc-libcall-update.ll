@@ -14,7 +14,7 @@ bb:
   %tmp = alloca [1024 x i8], align 16
   call void @llvm.memcpy.p0.p0.i64(ptr %tmp, ptr %arg1, i64 1024, i1 false)
 ; CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(1024) 
-  %tmp3 = call i64 @llvm.objectsize.i64.p0(ptr %tmp, i1 false, i1 true, i1 false)
+  %tmp3 = call i64 @llvm.objectsize.i64.p0(ptr %tmp, i1 false, i1 true, i1 false, i1 true, i64 0)
   %tmp4 = call ptr @__strncpy_chk(ptr %arg2, ptr %tmp, i64 1023, i64 %tmp3)
 ; CHECK-NOT:     call
 ; CHECK:         call ptr @strncpy(ptr noundef nonnull dereferenceable(1) %arg2, ptr noundef nonnull dereferenceable(1) %tmp, i64 1023)
@@ -34,7 +34,7 @@ bb:
 
 declare ptr @my_special_strncpy(ptr %arg1, ptr %arg2, i64 %size)
 
-declare i64 @llvm.objectsize.i64.p0(ptr, i1, i1, i1)
+declare i64 @llvm.objectsize.i64.p0(ptr, i1, i1, i1, i1, i64)
 
 declare ptr @__strncpy_chk(ptr, ptr, i64, i64)
 

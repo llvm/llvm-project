@@ -15,7 +15,7 @@ define i64 @weird_identity_but_ok(i64 %sz) {
 ;
 entry:
   %call = tail call ptr @malloc(i64 %sz)
-  %calc_size = tail call i64 @llvm.objectsize.i64.p0(ptr %call, i1 false, i1 true, i1 true)
+  %calc_size = tail call i64 @llvm.objectsize.i64.p0(ptr %call, i1 false, i1 true, i1 true, i1 true, i64 0)
   tail call void @free(ptr %call)
   ret i64 %calc_size
 }
@@ -46,7 +46,7 @@ second_label:
 
 join_label:
   %joined = phi ptr [ %first_call, %first_label ], [ %second_call, %second_label ]
-  %calc_size = tail call i64 @llvm.objectsize.i64.p0(ptr %joined, i1 false, i1 true, i1 true)
+  %calc_size = tail call i64 @llvm.objectsize.i64.p0(ptr %joined, i1 false, i1 true, i1 true, i1 true, i64 0)
   ret i64 %calc_size
 }
 
@@ -60,18 +60,18 @@ define i64 @internal_pointer(i64 %sz) {
 entry:
   %ptr = call ptr @malloc(i64 %sz)
   %ptr2 = getelementptr inbounds i8, ptr %ptr, i32 2
-  %calc_size = call i64 @llvm.objectsize.i64.p0(ptr %ptr2, i1 false, i1 true, i1 true)
+  %calc_size = call i64 @llvm.objectsize.i64.p0(ptr %ptr2, i1 false, i1 true, i1 true, i1 true, i64 0)
   ret i64 %calc_size
 }
 
 define i64 @uses_nullptr_no_fold() {
 ; CHECK-LABEL: define i64 @uses_nullptr_no_fold() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr null, i1 false, i1 true, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr null, i1 false, i1 true, i1 true, i1 true, i64 0)
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
-  %res = call i64 @llvm.objectsize.i64.p0(ptr null, i1 false, i1 true, i1 true)
+  %res = call i64 @llvm.objectsize.i64.p0(ptr null, i1 false, i1 true, i1 true, i1 true, i64 0)
   ret i64 %res
 }
 
@@ -82,7 +82,7 @@ define i64 @uses_nullptr_fold() {
 ;
 entry:
   ; NOTE: the third parameter to this call is false, unlike above.
-  %res = call i64 @llvm.objectsize.i64.p0(ptr null, i1 false, i1 false, i1 true)
+  %res = call i64 @llvm.objectsize.i64.p0(ptr null, i1 false, i1 false, i1 true, i1 true, i64 0)
   ret i64 %res
 }
 
@@ -98,7 +98,7 @@ define void @f() {
 ; CHECK-NEXT:    br i1 [[TOBOOL4]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[DP_05:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ @d, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.objectsize.i64.p0(ptr [[DP_05]], i1 false, i1 true, i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.objectsize.i64.p0(ptr [[DP_05]], i1 false, i1 true, i1 true, i1 true, i64 0)
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    tail call void @bury(i32 [[CONV]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @c, align 4
@@ -118,7 +118,7 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %dp.05 = phi ptr [ %add.ptr, %for.body ], [ @d, %entry ]
-  %0 = tail call i64 @llvm.objectsize.i64.p0(ptr %dp.05, i1 false, i1 true, i1 true)
+  %0 = tail call i64 @llvm.objectsize.i64.p0(ptr %dp.05, i1 false, i1 true, i1 true, i1 true, i64 0)
   %conv = trunc i64 %0 to i32
   tail call void @bury(i32 %conv) #3
   %1 = load i32, ptr @c, align 4
@@ -153,7 +153,7 @@ define void @bdos_cmpm1(i64 %alloc) {
 ;
 entry:
   %obj = call ptr @malloc(i64 %alloc)
-  %objsize = call i64 @llvm.objectsize.i64.p0(ptr %obj, i1 0, i1 0, i1 1)
+  %objsize = call i64 @llvm.objectsize.i64.p0(ptr %obj, i1 0, i1 0, i1 1, i1 1, i64 0)
   %cmp.not = icmp eq i64 %objsize, -1
   br i1 %cmp.not, label %if.else, label %if.then
 
@@ -189,7 +189,7 @@ define void @bdos_cmpm1_expr(i64 %alloc, i64 %part) {
 entry:
   %sz = udiv i64 %alloc, %part
   %obj = call ptr @malloc(i64 %sz)
-  %objsize = call i64 @llvm.objectsize.i64.p0(ptr %obj, i1 0, i1 0, i1 1)
+  %objsize = call i64 @llvm.objectsize.i64.p0(ptr %obj, i1 0, i1 0, i1 1, i1 1, i64 0)
   %cmp.not = icmp eq i64 %objsize, -1
   br i1 %cmp.not, label %if.else, label %if.then
 
@@ -220,7 +220,7 @@ entry:
   %gep = getelementptr i8, ptr addrspace(7) @p7, i32 1
   %as = addrspacecast ptr addrspace(7) %gep to ptr
   %select = select i1 %c, ptr %p0, ptr %as
-  %calc_size = tail call i64 @llvm.objectsize.i64.p0(ptr %select, i1 false, i1 true, i1 true)
+  %calc_size = tail call i64 @llvm.objectsize.i64.p0(ptr %select, i1 false, i1 true, i1 true, i1 true, i64 0)
   ret i64 %calc_size
 }
 
@@ -234,7 +234,7 @@ define i64 @constexpr_as_cast(i1 %c) {
 entry:
   %p0 = tail call ptr @malloc(i64 64)
   %select = select i1 %c, ptr %p0, ptr addrspacecast (ptr addrspace(7) getelementptr (i8, ptr addrspace(7) @p7, i32 1) to ptr)
-  %calc_size = tail call i64 @llvm.objectsize.i64.p0(ptr %select, i1 false, i1 true, i1 true)
+  %calc_size = tail call i64 @llvm.objectsize.i64.p0(ptr %select, i1 false, i1 true, i1 true, i1 true, i64 0)
   ret i64 %calc_size
 }
 
@@ -249,7 +249,7 @@ declare ptr @get_unknown_buffer()
 declare void @free(ptr nocapture) nounwind allockind("free") "alloc-family"="malloc"
 
 ; Function Attrs: nounwind readnone speculatable
-declare i64 @llvm.objectsize.i64.p0(ptr, i1, i1, i1)
+declare i64 @llvm.objectsize.i64.p0(ptr, i1, i1, i1, i1, i64)
 
 declare void @fortified_chk(ptr, i64)
 

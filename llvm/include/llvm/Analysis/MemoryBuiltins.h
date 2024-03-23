@@ -161,6 +161,14 @@ struct ObjectSizeOpts {
   /// though they can't be evaluated. Otherwise, null is always considered to
   /// point to a 0 byte region of memory.
   bool NullIsUnknownSize = false;
+  /// If this is true, return the whole size of the object. Otherwise, return
+  /// the size of the closest surrounding subobject.
+  /// FIXME: The default before being added was to return the whole size of the
+  /// object. Review if this is the correct default.
+  bool WholeObjectSize = true;
+  /// The layout of the sub-object: Size/Offset pair. Useful if WholeObjectSize
+  /// is false.
+  uint64_t SubobjectSize = 0;
   /// If set, used for more accurate evaluation
   AAResults *AA = nullptr;
 };

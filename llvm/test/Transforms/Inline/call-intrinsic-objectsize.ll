@@ -4,12 +4,12 @@
 @numa_nodes_parsed = external constant %struct.nodemask_t, align 8
 
 declare void @foo()
-declare i64 @llvm.objectsize.i64.p0(ptr, i1 immarg, i1 immarg, i1 immarg)
+declare i64 @llvm.objectsize.i64.p0(ptr, i1 immarg, i1 immarg, i1 immarg, i1 immarg, i64 immarg)
 
 ; Test that we inline @callee into @caller.
 define i64 @caller() {
 ; CHECK-LABEL: @caller(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.objectsize.i64.p0(ptr @numa_nodes_parsed, i1 false, i1 false, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.objectsize.i64.p0(ptr @numa_nodes_parsed, i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[TMP1]], 128
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[CALLEE_EXIT:.*]], label %[[HANDLER_TYPE_MISMATCH94_I:.*]]
 ; CHECK:       [[HANDLER_TYPE_MISMATCH94_I]]:
@@ -31,7 +31,7 @@ define i64 @caller() {
 ; Do not change the linkage of @callee; that will give it a severe discount in
 ; cost (LastCallToStaticBonus).
 define i64 @callee() {
-  %1 = tail call i64 @llvm.objectsize.i64.p0(ptr @numa_nodes_parsed, i1 false, i1 false, i1 false)
+  %1 = tail call i64 @llvm.objectsize.i64.p0(ptr @numa_nodes_parsed, i1 false, i1 false, i1 false, i1 true, i64 0)
   %2 = icmp uge i64 %1, 128
   br i1 %2, label %cont95, label %handler.type_mismatch94
 

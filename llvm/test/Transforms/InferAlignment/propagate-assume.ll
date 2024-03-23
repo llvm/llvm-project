@@ -193,7 +193,7 @@ define void @complex_backpropagate(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[LOAD_A:%.*]] = load i32, ptr [[A]], align 32
 ; CHECK-NEXT:    [[LOAD_B:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    store i32 [[LOAD_B]], ptr [[A]], align 32
-; CHECK-NEXT:    [[OBJ_SIZE:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[C]], i1 false, i1 false, i1 false)
+; CHECK-NEXT:    [[OBJ_SIZE:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[C]], i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    store i64 [[OBJ_SIZE]], ptr [[ALLOCA]], align 8
 ; CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
@@ -225,7 +225,7 @@ define void @complex_backpropagate_bundle(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[LOAD_A:%.*]] = load i32, ptr [[A]], align 32
 ; CHECK-NEXT:    [[LOAD_B:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    store i32 [[LOAD_B]], ptr [[A]], align 32
-; CHECK-NEXT:    [[OBJ_SIZE:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[C]], i1 false, i1 false, i1 false)
+; CHECK-NEXT:    [[OBJ_SIZE:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[C]], i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    store i64 [[OBJ_SIZE]], ptr [[ALLOCA]], align 8
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i32 32) ]
 ; CHECK-NEXT:    ret void

@@ -106,15 +106,14 @@ define void @f4(i64 %x) nounwind {
 
 define void @f5(i64 %x) nounwind {
 ; CHECK-LABEL: @f5(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[X:%.*]]
-; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds [8 x i8], ptr @.str, i64 0, i64 [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 8, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 8, [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[TRAP:%.*]], label [[TMP6:%.*]]
-; CHECK:       6:
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[IDX]], align 4
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds [8 x i8], ptr @.str, i64 0, i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 8, [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 8, [[X]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[TRAP:%.*]], label [[TMP5:%.*]]
+; CHECK:       5:
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[IDX]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap() #[[ATTR6]]
@@ -128,15 +127,14 @@ define void @f5(i64 %x) nounwind {
 define void @f5_as1(i64 %x) nounwind {
 ; CHECK-LABEL: @f5_as1(
 ; CHECK-NEXT:    [[X_C:%.*]] = trunc i64 [[X:%.*]] to i16
-; CHECK-NEXT:    [[TMP1:%.*]] = add i16 0, [[X_C]]
 ; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds [8 x i8], ptr addrspace(1) @.str_as1, i64 0, i64 [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i16 8, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i16 8, [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i16 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[TRAP:%.*]], label [[TMP6:%.*]]
-; CHECK:       6:
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr addrspace(1) [[IDX]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 8, [[X_C]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i16 8, [[X_C]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i16 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[TRAP:%.*]], label [[TMP5:%.*]]
+; CHECK:       5:
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr addrspace(1) [[IDX]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap() #[[ATTR6]]
@@ -150,15 +148,14 @@ define void @f5_as1(i64 %x) nounwind {
 define void @f5_as2(i32 %x) nounwind {;
 ; CHECK-LABEL: @f5_as2(
 ; CHECK-NEXT:    [[X_C:%.*]] = sext i32 [[X:%.*]] to i48
-; CHECK-NEXT:    [[TMP1:%.*]] = add i48 0, [[X_C]]
 ; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds [8 x i8], ptr addrspace(2) @.str_as2, i32 0, i32 [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i48 8, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i48 8, [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i48 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[TRAP:%.*]], label [[TMP6:%.*]]
-; CHECK:       6:
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr addrspace(2) [[IDX]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i48 8, [[X_C]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i48 8, [[X_C]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i48 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[TRAP:%.*]], label [[TMP5:%.*]]
+; CHECK:       5:
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr addrspace(2) [[IDX]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap() #[[ATTR6]]
@@ -293,18 +290,17 @@ define i64 @f12(i64 %x, i64 %y) nounwind {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 1, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call ptr @calloc(i64 1, i64 [[X]])
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[Y:%.*]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 0, [[DOTIDX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 [[Y]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[TMP5]], 8
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i64 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[TMP8]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[TRAP:%.*]], label [[TMP11:%.*]]
-; CHECK:       11:
-; CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP4]], align 8
-; CHECK-NEXT:    ret i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 [[Y]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], [[DOTIDX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP1]], [[DOTIDX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i64 [[DOTIDX]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[TRAP:%.*]], label [[TMP10:%.*]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP3]], align 8
+; CHECK-NEXT:    ret i64 [[TMP11]]
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
@@ -367,14 +363,13 @@ define i8 @f14(i1 %i) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ 32, [[BB1]] ]
 ; CHECK-NEXT:    [[ALLOC:%.*]] = phi ptr [ null, [[ENTRY]] ], [ [[G]], [[BB1]] ]
 ; CHECK-NEXT:    [[IND:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ -4, [[BB1]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[IND]]
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[ALLOC]], i64 [[IND]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[TRAP:%.*]], label [[TMP7:%.*]]
-; CHECK:       7:
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], [[IND]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[IND]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TRAP:%.*]], label [[TMP6:%.*]]
+; CHECK:       6:
 ; CHECK-NEXT:    [[RET:%.*]] = load i8, ptr [[P]], align 1
 ; CHECK-NEXT:    ret i8 [[RET]]
 ; CHECK:       trap:
@@ -443,16 +438,15 @@ define <4 x i32> @load_vector(i64 %y) nounwind {
 ; CHECK-LABEL: @load_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @calloc(i64 1, i64 256)
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[Y:%.*]], 8
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 0, [[DOTIDX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i64 [[Y]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 256, [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 256, [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP4]], 16
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[TRAP:%.*]], label [[TMP8:%.*]]
-; CHECK:       8:
-; CHECK-NEXT:    [[TMP9:%.*]] = load <4 x i32>, ptr [[TMP3]], align 8
-; CHECK-NEXT:    ret <4 x i32> [[TMP9]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i64 [[Y]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 256, [[DOTIDX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 256, [[DOTIDX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP3]], 16
+; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[TRAP:%.*]], label [[TMP7:%.*]]
+; CHECK:       7:
+; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i32>, ptr [[TMP2]], align 8
+; CHECK-NEXT:    ret <4 x i32> [[TMP8]]
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
@@ -467,18 +461,17 @@ define <vscale x 1 x i32> @load_scalable_vector(i64 %y) nounwind {
 ; CHECK-LABEL: @load_scalable_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @calloc(i64 1, i64 256)
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[Y:%.*]], 8
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 0, [[DOTIDX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i64 [[Y]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 256, [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i64 256, [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[TRAP:%.*]], label [[TMP10:%.*]]
-; CHECK:       10:
-; CHECK-NEXT:    [[TMP11:%.*]] = load <vscale x 1 x i32>, ptr [[TMP3]], align 8
-; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP11]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i64 [[Y]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 256, [[DOTIDX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 256, [[DOTIDX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TRAP:%.*]], label [[TMP9:%.*]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = load <vscale x 1 x i32>, ptr [[TMP2]], align 8
+; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP10]]
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
