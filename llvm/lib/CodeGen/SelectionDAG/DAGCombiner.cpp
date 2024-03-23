@@ -24200,7 +24200,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   // TODO: Use "BaseIndexOffset" to make this more effective.
   SDValue NewAddr = DAG.getMemBasePlusOffset(Ld->getBasePtr(), Offset, DL);
 
-  LocationSize StoreSize = MemoryLocation::getSizeOrUnknown(VT.getStoreSize());
+  LocationSize StoreSize = LocationSize::precise(VT.getStoreSize());
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO;
   if (Offset.isScalable()) {
@@ -27845,14 +27845,10 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
                  : (LSN->getAddressingMode() == ISD::PRE_DEC)
                      ? -1 * C->getSExtValue()
                      : 0;
-      LocationSize Size =
-          MemoryLocation::getSizeOrUnknown(LSN->getMemoryVT().getStoreSize());
-      return {LSN->isVolatile(),
-              LSN->isAtomic(),
-              LSN->getBasePtr(),
-              Offset /*base offset*/,
-              Size,
-              LSN->getMemOperand()};
+      TypeSize Size = LSN->getMemoryVT().getStoreSize();
+      return {LSN->isVolatile(),           LSN->isAtomic(),
+              LSN->getBasePtr(),           Offset /*base offset*/,
+              LocationSize::precise(Size), LSN->getMemOperand()};
     }
     if (const auto *LN = cast<LifetimeSDNode>(N))
       return {false /*isVolatile*/,
@@ -27894,6 +27890,13 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
       return false;
   }
 
+  // If NumBytes is scalable and offset is not 0, conservatively return may
+  // alias
+  if ((MUC0.NumBytes.hasValue() && MUC0.NumBytes.isScalable() &&
+       MUC0.Offset != 0) ||
+      (MUC1.NumBytes.hasValue() && MUC1.NumBytes.isScalable() &&
+       MUC1.Offset != 0))
+    return true;
   // Try to prove that there is aliasing, or that there is no aliasing. Either
   // way, we can return now. If nothing can be proved, proceed with more tests.
   bool IsAlias;
@@ -27924,18 +27927,22 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
   Align OrigAlignment1 = MUC1.MMO->getBaseAlign();
   LocationSize Size0 = MUC0.NumBytes;
   LocationSize Size1 = MUC1.NumBytes;
+
   if (OrigAlignment0 == OrigAlignment1 && SrcValOffset0 != SrcValOffset1 &&
-      Size0.hasValue() && Size1.hasValue() && Size0 == Size1 &&
-      OrigAlignment0 > Size0.getValue() &&
-      SrcValOffset0 % Size0.getValue() == 0 &&
-      SrcValOffset1 % Size1.getValue() == 0) {
+      Size0.hasValue() && Size1.hasValue() && !Size0.isScalable() &&
+      !Size1.isScalable() && Size0 == Size1 &&
+      OrigAlignment0 > Size0.getValue().getKnownMinValue() &&
+      SrcValOffset0 % Size0.getValue().getKnownMinValue() == 0 &&
+      SrcValOffset1 % Size1.getValue().getKnownMinValue() == 0) {
     int64_t OffAlign0 = SrcValOffset0 % OrigAlignment0.value();
     int64_t OffAlign1 = SrcValOffset1 % OrigAlignment1.value();
 
     // There is no overlap between these relatively aligned accesses of
     // similar size. Return no alias.
-    if ((OffAlign0 + (int64_t)Size0.getValue()) <= OffAlign1 ||
-        (OffAlign1 + (int64_t)Size1.getValue()) <= OffAlign0)
+    if ((OffAlign0 + static_cast<int64_t>(
+                         Size0.getValue().getKnownMinValue())) <= OffAlign1 ||
+        (OffAlign1 + static_cast<int64_t>(
+                         Size1.getValue().getKnownMinValue())) <= OffAlign0)
       return false;
   }
 
@@ -27952,12 +27959,18 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
       Size0.hasValue() && Size1.hasValue()) {
     // Use alias analysis information.
     int64_t MinOffset = std::min(SrcValOffset0, SrcValOffset1);
-    int64_t Overlap0 = Size0.getValue() + SrcValOffset0 - MinOffset;
-    int64_t Overlap1 = Size1.getValue() + SrcValOffset1 - MinOffset;
+    int64_t Overlap0 =
+        Size0.getValue().getKnownMinValue() + SrcValOffset0 - MinOffset;
+    int64_t Overlap1 =
+        Size1.getValue().getKnownMinValue() + SrcValOffset1 - MinOffset;
+    LocationSize Loc0 =
+        Size0.isScalable() ? Size0 : LocationSize::precise(Overlap0);
+    LocationSize Loc1 =
+        Size1.isScalable() ? Size1 : LocationSize::precise(Overlap1);
     if (AA->isNoAlias(
-            MemoryLocation(MUC0.MMO->getValue(), Overlap0,
+            MemoryLocation(MUC0.MMO->getValue(), Loc0,
                            UseTBAA ? MUC0.MMO->getAAInfo() : AAMDNodes()),
-            MemoryLocation(MUC1.MMO->getValue(), Overlap1,
+            MemoryLocation(MUC1.MMO->getValue(), Loc1,
                            UseTBAA ? MUC1.MMO->getAAInfo() : AAMDNodes())))
       return false;
   }
