@@ -783,3 +783,16 @@ int f() {
   g(); // expected-note {{in instantiation of}}
 }
 }
+
+namespace GH86054 {
+template<typename M>
+struct unique_lock {
+  unique_lock(M&) {}
+};
+int f() {
+  struct mutex {} cursor_guard;
+  [&cursor_guard](this auto self) {
+    unique_lock a(cursor_guard);
+  }();
+}
+}
