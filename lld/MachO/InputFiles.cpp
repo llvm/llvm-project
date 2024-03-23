@@ -157,6 +157,11 @@ static bool checkCompatibility(const InputFile *input) {
   if (platformInfos.empty())
     return true;
 
+  // Swift LLVM fork downstream change start
+  error("This version of lld does not support linking for platform " + getPlatformName(platformInfos.front().target.Platform));
+  return false;
+  // Swift LLVM fork downstream change end
+
   auto it = find_if(platformInfos, [&](const PlatformInfo &info) {
     return removeSimulator(info.target.Platform) ==
            removeSimulator(config->platform());
