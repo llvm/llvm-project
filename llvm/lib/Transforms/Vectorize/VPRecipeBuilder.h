@@ -52,9 +52,8 @@ class VPRecipeBuilder {
   EdgeMaskCacheTy EdgeMaskCache;
   BlockMaskCacheTy BlockMaskCache;
 
-  // VPlan-VPlan transformations support: Hold a mapping from ingredients to
-  // their recipe. To save on memory, only do so for selected ingredients,
-  // marked by having a nullptr entry in this map.
+  // VPlan construction support: Hold a mapping from ingredients to
+  // their recipe.
   DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
 
   /// Cross-iteration reduction & first-order recurrence phis for which we need
@@ -117,13 +116,10 @@ public:
                                        ArrayRef<VPValue *> Operands,
                                        VFRange &Range, VPBasicBlock *VPBB);
 
-  /// Set the recipe created for given ingredient. This operation is a no-op for
-  /// ingredients that were not marked using a nullptr entry in the map.
+  /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {
-    if (!Ingredient2Recipe.count(I))
-      return;
-    assert(Ingredient2Recipe[I] == nullptr &&
-           "Recipe already set for ingredient");
+    assert(!Ingredient2Recipe.contains(I) &&
+           "Cannot reset recipe for instruction.");
     Ingredient2Recipe[I] = R;
   }
 
@@ -146,14 +142,6 @@ public:
   /// between SRC and DST.
   VPValue *getEdgeMask(BasicBlock *Src, BasicBlock *Dst) const;
 
-  /// Mark given ingredient for recording its recipe once one is created for
-  /// it.
-  void recordRecipeOf(Instruction *I) {
-    assert((!Ingredient2Recipe.count(I) || Ingredient2Recipe[I] == nullptr) &&
-           "Recipe already set for ingredient");
-    Ingredient2Recipe[I] = nullptr;
-  }
-
   /// Return the recipe created for given ingredient.
   VPRecipeBase *getRecipe(Instruction *I) {
     assert(Ingredient2Recipe.count(I) &&
@@ -171,6 +159,19 @@ public:
   /// Add the incoming values from the backedge to reduction & first-order
   /// recurrence cross-iteration phis.
   void fixHeaderPhis();
+
+  /// Returns a range mapping the values of the range \p Operands to their
+  /// corresponding VPValues.
+  iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
+  mapToVPValues(User::op_range Operands);
+
+  VPValue *getVPValueOrAddLiveIn(Value *V, VPlan &Plan) {
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      if (auto *R = Ingredient2Recipe.lookup(I))
+        return R->getVPSingleValue();
+    }
+    return Plan.getVPValueOrAddLiveIn(V);
+  }
 };
 } // end namespace llvm
 

@@ -7898,6 +7898,18 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
   }
 }
 
+iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
+VPRecipeBuilder::mapToVPValues(User::op_range Operands) {
+  std::function<VPValue *(Value *)> Fn = [this](Value *Op) {
+    if (auto *I = dyn_cast<Instruction>(Op)) {
+      if (auto *R = Ingredient2Recipe.lookup(I))
+        return R->getVPSingleValue();
+    }
+    return Plan.getVPValueOrAddLiveIn(Op);
+  };
+  return map_range(Operands, Fn);
+}
+
 VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst) {
   assert(is_contained(predecessors(Dst), Src) && "Invalid edge");
 
@@ -7922,7 +7934,7 @@ VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst) {
   if (OrigLoop->isLoopExiting(Src))
     return EdgeMaskCache[Edge] = SrcMask;
 
-  VPValue *EdgeMask = Plan.getVPValueOrAddLiveIn(BI->getCondition());
+  VPValue *EdgeMask = getVPValueOrAddLiveIn(BI->getCondition(), Plan);
   assert(EdgeMask && "No Edge Mask found for condition");
 
   if (BI->getSuccessor(0) != Dst)
@@ -8383,7 +8395,7 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(Instruction *I,
     BlockInMask = getBlockInMask(I->getParent());
   }
 
-  auto *Recipe = new VPReplicateRecipe(I, Plan.mapToVPValues(I->operands()),
+  auto *Recipe = new VPReplicateRecipe(I, mapToVPValues(I->operands()),
                                        IsUniform, BlockInMask);
   return Recipe;
 }
@@ -8398,10 +8410,6 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   if (auto Phi = dyn_cast<PHINode>(Instr)) {
     if (Phi->getParent() != OrigLoop->getHeader())
       return tryToBlend(Phi, Operands);
-
-    // Always record recipes for header phis. Later first-order recurrence phis
-    // can have earlier phis as incoming values.
-    recordRecipeOf(Phi);
 
     if ((Recipe = tryToOptimizeInductionPHI(Phi, Operands, Range)))
       return Recipe;
@@ -8426,14 +8434,6 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
       // directly, enabling more efficient codegen.
       PhiRecipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV);
     }
-
-    // Record the incoming value from the backedge, so we can add the incoming
-    // value from the backedge after all recipes have been created.
-    auto *Inc = cast<Instruction>(
-        Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-    auto RecipeIter = Ingredient2Recipe.find(Inc);
-    if (RecipeIter == Ingredient2Recipe.end())
-      recordRecipeOf(Inc);
 
     PhisToFix.push_back(PhiRecipe);
     return PhiRecipe;
@@ -8522,7 +8522,7 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
 // Add exit values to \p Plan. VPLiveOuts are added for each LCSSA phi in the
 // original exit block.
 static void addUsersInExitBlock(VPBasicBlock *HeaderVPBB, Loop *OrigLoop,
-                                VPlan &Plan) {
+                                VPRecipeBuilder &Builder, VPlan &Plan) {
   BasicBlock *ExitBB = OrigLoop->getUniqueExitBlock();
   BasicBlock *ExitingBB = OrigLoop->getExitingBlock();
   // Only handle single-exit loops with unique exit blocks for now.
@@ -8533,7 +8533,7 @@ static void addUsersInExitBlock(VPBasicBlock *HeaderVPBB, Loop *OrigLoop,
   for (PHINode &ExitPhi : ExitBB->phis()) {
     Value *IncomingValue =
         ExitPhi.getIncomingValueForBlock(ExitingBB);
-    VPValue *V = Plan.getVPValueOrAddLiveIn(IncomingValue);
+    VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue, Plan);
     Plan.addLiveOut(&ExitPhi, V);
   }
 }
@@ -8603,9 +8603,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     if (!getDecisionAndClampRange(applyIG, Range))
       continue;
     InterleaveGroups.insert(IG);
-    for (unsigned i = 0; i < IG->getFactor(); i++)
-      if (Instruction *Member = IG->getMember(i))
-        RecipeBuilder.recordRecipeOf(Member);
   };
 
   // ---------------------------------------------------------------------------
@@ -8647,7 +8644,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         Operands.push_back(Plan->getVPValueOrAddLiveIn(
             Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader())));
       } else {
-        auto OpRange = Plan->mapToVPValues(Instr->operands());
+        auto OpRange = RecipeBuilder.mapToVPValues(Instr->operands());
         Operands = {OpRange.begin(), OpRange.end()};
       }
 
@@ -8662,10 +8659,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
           RecipeBuilder.tryToCreateWidenRecipe(Instr, Operands, Range, VPBB);
       if (!Recipe)
         Recipe = RecipeBuilder.handleReplication(Instr, Range);
-      for (auto *Def : Recipe->definedValues()) {
-        auto *UV = Def->getUnderlyingValue();
-        Plan->addVPValue(UV, Def);
-      }
 
       RecipeBuilder.setRecipe(Instr, Recipe);
       if (isa<VPHeaderPHIRecipe>(Recipe)) {
@@ -8697,7 +8690,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     // and there is nothing to fix from vector loop; phis should have incoming
     // from scalar loop only.
   } else
-    addUsersInExitBlock(HeaderVPBB, OrigLoop, *Plan);
+    addUsersInExitBlock(HeaderVPBB, OrigLoop, RecipeBuilder, *Plan);
 
   assert(isa<VPRegionBlock>(Plan->getVectorLoopRegion()) &&
          !Plan->getVectorLoopRegion()->getEntryBasicBlock()->empty() &&
@@ -8764,10 +8757,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     // new live-in in those cases.
     Plan->getVPValueOrAddLiveIn(StrideV)->replaceAllUsesWith(ConstVPV);
   }
-
-  // From this point onwards, VPlan-to-VPlan transformations may change the plan
-  // in ways that accessing values using original IR values is incorrect.
-  Plan->disableValue2VPValue();
 
   VPlanTransforms::dropPoisonGeneratingRecipes(*Plan, [this](BasicBlock *BB) {
     return Legal->blockNeedsPredication(BB);
