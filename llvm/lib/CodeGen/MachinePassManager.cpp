@@ -121,27 +121,11 @@ PassManager<MachineFunction>::run(MachineFunction &MF,
   for (auto &Pass : Passes) {
     if (!PI.runBeforePass<MachineFunction>(*Pass, MF))
       continue;
-    auto &MFProps = MF.getProperties();
-#ifndef NDEBUG
-    auto RequiredProperties = Pass->getRequiredProperties();
-    if (!MFProps.verifyRequiredProperties(RequiredProperties)) {
-      errs() << "MachineFunctionProperties required by " << Pass->name()
-             << " pass are not met by function " << F.getName() << ".\n"
-             << "Required properties: ";
-      RequiredProperties.print(errs());
-      errs() << "\nCurrent properties: ";
-      MFProps.print(errs());
-      errs() << '\n';
-      report_fatal_error("MachineFunctionProperties check failed");
-    }
-#endif
 
     PreservedAnalyses PassPA = Pass->run(MF, MFAM);
     if (MMI.getMachineFunction(F)) {
       MFAM.invalidate(MF, PassPA);
       PI.runAfterPass(*Pass, MF, PassPA);
-      MFProps.set(Pass->getSetProperties());
-      MFProps.reset(Pass->getClearedProperties());
     } else {
       MFAM.clear(MF, F.getName());
       PI.runAfterPassInvalidated<MachineFunction>(*Pass, PassPA);
