@@ -142,9 +142,8 @@ private:
               std::optional<BPThreadPool> &TP) const;
 
   /// Run bisection iterations
-  void runIterations(const FunctionNodeRange Nodes, unsigned RecDepth,
-                     unsigned LeftBucket, unsigned RightBucket,
-                     std::mt19937 &RNG) const;
+  void runIterations(const FunctionNodeRange Nodes, unsigned LeftBucket,
+                     unsigned RightBucket, std::mt19937 &RNG) const;
 
   /// Run a bisection iteration to improve the optimization goal
   /// \returns the total number of moved FunctionNodes
