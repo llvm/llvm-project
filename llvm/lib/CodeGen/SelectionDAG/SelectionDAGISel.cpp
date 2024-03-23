@@ -341,9 +341,34 @@ void TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 // SelectionDAGISel code
 //===----------------------------------------------------------------------===//
 
-SelectionDAGISel::SelectionDAGISel(char &ID, TargetMachine &tm,
-                                   CodeGenOptLevel OL)
-    : MachineFunctionPass(ID), TM(tm), FuncInfo(new FunctionLoweringInfo()),
+SelectionDAGISelLegacy::SelectionDAGISelLegacy(
+    char &ID, std::unique_ptr<SelectionDAGISel> S)
+    : MachineFunctionPass(ID), Selector(std::move(S)) {
+  initializeGCModuleInfoPass(*PassRegistry::getPassRegistry());
+  initializeBranchProbabilityInfoWrapperPassPass(
+      *PassRegistry::getPassRegistry());
+  initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
+  initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
+}
+
+bool SelectionDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
+  // If we already selected that function, we do not need to run SDISel.
+  if (MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::Selected))
+    return false;
+
+  // Do some sanity-checking on the command-line options.
+  assert((!EnableFastISelAbort || Selector->TM.Options.EnableFastISel) &&
+         "-fast-isel-abort > 0 requires -fast-isel");
+
+  Selector->MF = &MF;
+  Selector->prepare(MF);
+  Selector->initialize(*this);
+  return Selector->runOnMachineFunction(MF, skipFunction(MF.getFunction()));
+}
+
+SelectionDAGISel::SelectionDAGISel(TargetMachine &tm, CodeGenOptLevel OL)
+    : TM(tm), FuncInfo(new FunctionLoweringInfo()),
       SwiftError(new SwiftErrorValueTracking()),
       CurDAG(new SelectionDAG(tm, OL)),
       SDB(std::make_unique<SelectionDAGBuilder>(*CurDAG, *FuncInfo, *SwiftError,
@@ -361,7 +386,8 @@ SelectionDAGISel::~SelectionDAGISel() {
   delete SwiftError;
 }
 
-void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
+void SelectionDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+  const auto &OptLevel = Selector->OptLevel;
   if (OptLevel != CodeGenOptLevel::None)
       AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<GCModuleInfo>();
@@ -406,24 +432,142 @@ static void computeUsesMSVCFloatingPoint(const Triple &TT, const Function &F,
   }
 }
 
-bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
+PreservedAnalyses
+SelectionDAGISelPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
   // If we already selected that function, we do not need to run SDISel.
-  if (mf.getProperties().hasProperty(
+  if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::Selected))
-    return false;
+    return PreservedAnalyses::all();
+
   // Do some sanity-checking on the command-line options.
-  assert((!EnableFastISelAbort || TM.Options.EnableFastISel) &&
+  assert((!EnableFastISelAbort || Selector->TM.Options.EnableFastISel) &&
          "-fast-isel-abort > 0 requires -fast-isel");
 
-  const Function &Fn = mf.getFunction();
-  MF = &mf;
+  Selector->MF = &MF;
+  Selector->prepare(MF);
+  Selector->initialize(MFAM);
+  Selector->runOnMachineFunction(MF, false);
 
+  return PreservedAnalyses::none();
+}
+
+void SelectionDAGISel::initialize(MachineFunctionAnalysisManager &MFAM) {
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(*MF)
+                  .getManager();
+  auto &MAMP = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(*MF);
+  Function &Fn = MF->getFunction();
 #ifndef NDEBUG
-  StringRef FuncName = Fn.getName();
+  FuncName = Fn.getName();
   MatchFilterFuncName = isFunctionInPrintList(FuncName);
 #else
   (void)MatchFilterFuncName;
 #endif
+
+  TII = MF->getSubtarget().getInstrInfo();
+  TLI = MF->getSubtarget().getTargetLowering();
+  RegInfo = &MF->getRegInfo();
+  LibInfo = &FAM.getResult<TargetLibraryAnalysis>(Fn);
+  GFI = Fn.hasGC() ? &FAM.getResult<GCFunctionAnalysis>(Fn) : nullptr;
+  ORE = std::make_unique<OptimizationRemarkEmitter>(&Fn);
+  AC = &FAM.getResult<AssumptionAnalysis>(Fn);
+  auto *PSI = MAMP.getCachedResult<ProfileSummaryAnalysis>(*Fn.getParent());
+  BlockFrequencyInfo *BFI = nullptr;
+  FAM.getResult<BlockFrequencyAnalysis>(Fn);
+  if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOptLevel::None)
+    BFI = &FAM.getResult<BlockFrequencyAnalysis>(Fn);
+
+  FunctionVarLocs const *FnVarLocs = nullptr;
+  if (isAssignmentTrackingEnabled(*Fn.getParent()))
+    FnVarLocs = &FAM.getResult<DebugAssignmentTrackingAnalysis>(Fn);
+
+  ISEL_DUMP(dbgs() << "\n\n\n=== " << FuncName << "\n");
+
+  auto *UA = FAM.getCachedResult<UniformityInfoAnalysis>(Fn);
+  CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, FnVarLocs);
+  FuncInfo->set(Fn, *MF, CurDAG);
+  SwiftError->setFunction(*MF);
+
+  // Now get the optional analyzes if we want to.
+  // This is based on the possibly changed OptLevel (after optnone is taken
+  // into account).  That's unfortunate but OK because it just means we won't
+  // ask for passes that have been required anyway.
+
+  FAM.getResult<BranchProbabilityAnalysis>(Fn);
+  if (UseMBPI && OptLevel != CodeGenOptLevel::None)
+    FuncInfo->BPI = &FAM.getResult<BranchProbabilityAnalysis>(Fn);
+
+  if (OptLevel != CodeGenOptLevel::None)
+    AA = &FAM.getResult<AAManager>(Fn);
+
+  SP = &FAM.getResult<SSPLayoutAnalysis>(Fn);
+
+#ifndef NDEBUG
+  TTI = &FAM.getResult<TargetIRAnalysis>(Fn);
+#endif
+}
+
+void SelectionDAGISel::initialize(MachineFunctionPass &MFP) {
+  Function &Fn = MF->getFunction();
+#ifndef NDEBUG
+  FuncName = Fn.getName();
+  MatchFilterFuncName = isFunctionInPrintList(FuncName);
+#else
+  (void)MatchFilterFuncName;
+#endif
+
+  TII = MF->getSubtarget().getInstrInfo();
+  TLI = MF->getSubtarget().getTargetLowering();
+  RegInfo = &MF->getRegInfo();
+  LibInfo = &MFP.getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(Fn);
+  GFI = Fn.hasGC() ? &MFP.getAnalysis<GCModuleInfo>().getFunctionInfo(Fn)
+                   : nullptr;
+  ORE = std::make_unique<OptimizationRemarkEmitter>(&Fn);
+  AC = &MFP.getAnalysis<AssumptionCacheTracker>().getAssumptionCache(Fn);
+  auto *PSI = &MFP.getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  BlockFrequencyInfo *BFI = nullptr;
+  if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOptLevel::None)
+    BFI = &MFP.getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
+
+  FunctionVarLocs const *FnVarLocs = nullptr;
+  if (isAssignmentTrackingEnabled(*Fn.getParent()))
+    FnVarLocs = MFP.getAnalysis<AssignmentTrackingAnalysis>().getResults();
+
+  ISEL_DUMP(dbgs() << "\n\n\n=== " << FuncName << "\n");
+
+  UniformityInfo *UA = nullptr;
+  if (auto *UAPass = MFP.getAnalysisIfAvailable<UniformityInfoWrapperPass>())
+    UA = &UAPass->getUniformityInfo();
+  CurDAG->init(*MF, *ORE, &MFP, LibInfo, UA, PSI, BFI, FnVarLocs);
+  FuncInfo->set(Fn, *MF, CurDAG);
+  SwiftError->setFunction(*MF);
+
+  // Now get the optional analyzes if we want to.
+  // This is based on the possibly changed OptLevel (after optnone is taken
+  // into account).  That's unfortunate but OK because it just means we won't
+  // ask for passes that have been required anyway.
+
+  if (UseMBPI && OptLevel != CodeGenOptLevel::None)
+    FuncInfo->BPI =
+        &MFP.getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+  else
+    FuncInfo->BPI = nullptr;
+
+  if (OptLevel != CodeGenOptLevel::None)
+    AA = &MFP.getAnalysis<AAResultsWrapperPass>().getAAResults();
+  else
+    AA = nullptr;
+
+  SP = &MFP.getAnalysis<StackProtector>().getLayoutInfo();
+
+#ifndef NDEBUG
+  TTI =
+      &MFP.getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*FuncInfo->Fn);
+#endif
+}
+
+bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf, bool Skipped) {
+  const Function &Fn = mf.getFunction();
 
   // Decide what flavour of variable location debug-info will be used, before
   // we change the optimisation level.
@@ -438,49 +582,11 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   TM.resetTargetOptions(Fn);
   // Reset OptLevel to None for optnone functions.
   CodeGenOptLevel NewOptLevel = OptLevel;
-  if (OptLevel != CodeGenOptLevel::None && skipFunction(Fn))
+  if (OptLevel != CodeGenOptLevel::None && Skipped)
     NewOptLevel = CodeGenOptLevel::None;
   OptLevelChanger OLC(*this, NewOptLevel);
 
-  TII = MF->getSubtarget().getInstrInfo();
-  TLI = MF->getSubtarget().getTargetLowering();
-  RegInfo = &MF->getRegInfo();
-  LibInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(Fn);
-  GFI = Fn.hasGC() ? &getAnalysis<GCModuleInfo>().getFunctionInfo(Fn) : nullptr;
-  ORE = std::make_unique<OptimizationRemarkEmitter>(&Fn);
-  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(mf.getFunction());
-  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  BlockFrequencyInfo *BFI = nullptr;
-  if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOptLevel::None)
-    BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
-
-  FunctionVarLocs const *FnVarLocs = nullptr;
-  if (isAssignmentTrackingEnabled(*Fn.getParent()))
-    FnVarLocs = getAnalysis<AssignmentTrackingAnalysis>().getResults();
-
   ISEL_DUMP(dbgs() << "\n\n\n=== " << FuncName << "\n");
-
-  UniformityInfo *UA = nullptr;
-  if (auto *UAPass = getAnalysisIfAvailable<UniformityInfoWrapperPass>())
-    UA = &UAPass->getUniformityInfo();
-  CurDAG->init(*MF, *ORE, this, LibInfo, UA, PSI, BFI, FnVarLocs);
-  FuncInfo->set(Fn, *MF, CurDAG);
-  SwiftError->setFunction(*MF);
-
-  // Now get the optional analyzes if we want to.
-  // This is based on the possibly changed OptLevel (after optnone is taken
-  // into account).  That's unfortunate but OK because it just means we won't
-  // ask for passes that have been required anyway.
-
-  if (UseMBPI && OptLevel != CodeGenOptLevel::None)
-    FuncInfo->BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
-  else
-    FuncInfo->BPI = nullptr;
-
-  if (OptLevel != CodeGenOptLevel::None)
-    AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  else
-    AA = nullptr;
 
   SDB->init(GFI, AA, AC, LibInfo);
 
@@ -779,11 +885,8 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   StringRef GroupName = "sdag";
   StringRef GroupDescription = "Instruction Selection and Scheduling";
   std::string BlockName;
-  bool MatchFilterBB = false; (void)MatchFilterBB;
-#ifndef NDEBUG
-  TargetTransformInfo &TTI =
-      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*FuncInfo->Fn);
-#endif
+  bool MatchFilterBB = false;
+  (void)MatchFilterBB;
 
   // Pre-type legalization allow creation of any node types.
   CurDAG->NewNodesMustHaveLegalTypes = false;
@@ -808,7 +911,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
             CurDAG->dump());
 
 #ifndef NDEBUG
-  if (TTI.hasBranchDivergence())
+  if (TTI->hasBranchDivergence())
     CurDAG->VerifyDAGDivergence();
 #endif
 
@@ -828,7 +931,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
             CurDAG->dump());
 
 #ifndef NDEBUG
-  if (TTI.hasBranchDivergence())
+  if (TTI->hasBranchDivergence())
     CurDAG->VerifyDAGDivergence();
 #endif
 
@@ -850,7 +953,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
             CurDAG->dump());
 
 #ifndef NDEBUG
-  if (TTI.hasBranchDivergence())
+  if (TTI->hasBranchDivergence())
     CurDAG->VerifyDAGDivergence();
 #endif
 
@@ -874,7 +977,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
               CurDAG->dump());
 
 #ifndef NDEBUG
-    if (TTI.hasBranchDivergence())
+    if (TTI->hasBranchDivergence())
       CurDAG->VerifyDAGDivergence();
 #endif
   }
@@ -892,7 +995,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
               CurDAG->dump());
 
 #ifndef NDEBUG
-    if (TTI.hasBranchDivergence())
+    if (TTI->hasBranchDivergence())
       CurDAG->VerifyDAGDivergence();
 #endif
 
@@ -908,7 +1011,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
               CurDAG->dump());
 
 #ifndef NDEBUG
-    if (TTI.hasBranchDivergence())
+    if (TTI->hasBranchDivergence())
       CurDAG->VerifyDAGDivergence();
 #endif
 
@@ -928,7 +1031,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
               CurDAG->dump());
 
 #ifndef NDEBUG
-    if (TTI.hasBranchDivergence())
+    if (TTI->hasBranchDivergence())
       CurDAG->VerifyDAGDivergence();
 #endif
   }
@@ -948,7 +1051,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
             CurDAG->dump());
 
 #ifndef NDEBUG
-  if (TTI.hasBranchDivergence())
+  if (TTI->hasBranchDivergence())
     CurDAG->VerifyDAGDivergence();
 #endif
 
@@ -968,7 +1071,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
             CurDAG->dump());
 
 #ifndef NDEBUG
-  if (TTI.hasBranchDivergence())
+  if (TTI->hasBranchDivergence())
     CurDAG->VerifyDAGDivergence();
 #endif
 
@@ -1554,7 +1657,6 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   }
 
   // Iterate over all basic blocks in the function.
-  StackProtector &SP = getAnalysis<StackProtector>();
   for (const BasicBlock *LLVMBB : RPOT) {
     if (OptLevel != CodeGenOptLevel::None) {
       bool AllPredsVisited = true;
@@ -1730,7 +1832,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
       FastIS->recomputeInsertPt();
     }
 
-    if (SP.shouldEmitSDCheck(*LLVMBB)) {
+    if (SP->shouldEmitSDCheck(*LLVMBB)) {
       bool FunctionBasedInstrumentation =
           TLI->getSSPStackGuardCheck(*Fn.getParent());
       SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->MBBMap[LLVMBB],
@@ -1767,7 +1869,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   if (Fn.getParent()->getModuleFlag("eh-asynch"))
     reportIPToStateForBlocks(MF);
 
-  SP.copyToMachineFrameInfo(MF->getFrameInfo());
+  SP->copyToMachineFrameInfo(MF->getFrameInfo());
 
   SwiftError->propagateVRegs();
 
