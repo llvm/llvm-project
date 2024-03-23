@@ -454,55 +454,31 @@ static constexpr StringLiteral VerifyConfigWarningEnd = " [-verify-config]\n";
 
 static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
                          StringRef Source) {
-  llvm::StringRef Cur = CheckGlob;
-  llvm::StringRef Rest = CheckGlob;
+  GlobList Globs(CheckGlob);
   bool AnyInvalid = false;
-  while (!Cur.empty() || !Rest.empty()) {
-    Cur = Rest.substr(0, Rest.find_first_of(",\n"));
-    Rest = Rest.substr(Cur.size() + 1);
-    Cur = Cur.trim();
-
-    if (Cur.empty())
+  for (const auto &Item : Globs.getItems()) {
+    const llvm::Regex &Reg = Item.Regex;
+    const llvm::StringRef Text = Item.Text;
+    if (Text.starts_with("clang-diagnostic"))
       continue;
-    Cur.consume_front("-");
-    if (Cur.starts_with("clang-diagnostic"))
-      continue;
-    if (Cur.contains('*')) {
-      SmallString<128> RegexText("^");
-      StringRef MetaChars("()^$|*+?.[]\\{}");
-      for (char C : Cur) {
-        if (C == '*')
-          RegexText.push_back('.');
-        else if (MetaChars.contains(C))
-          RegexText.push_back('\\');
-        RegexText.push_back(C);
-      }
-      RegexText.push_back('$');
-      llvm::Regex Glob(RegexText);
-      std::string Error;
-      if (!Glob.isValid(Error)) {
-        AnyInvalid = true;
-        llvm::WithColor::error(llvm::errs(), Source)
-            << "building check glob '" << Cur << "' " << Error << "'\n";
-        continue;
-      }
-      if (llvm::none_of(AllChecks.keys(),
-                        [&Glob](StringRef S) { return Glob.match(S); })) {
-        AnyInvalid = true;
-        llvm::WithColor::warning(llvm::errs(), Source)
-            << "check glob '" << Cur << "' doesn't match any known check"
-            << VerifyConfigWarningEnd;
-      }
-    } else {
-      if (AllChecks.contains(Cur))
-        continue;
+    if (llvm::none_of(AllChecks.keys(), [&Reg](StringRef S) {
+          llvm::errs() << S << '\n';
+          return Reg.match(S);
+        })) {
       AnyInvalid = true;
-      llvm::raw_ostream &Output = llvm::WithColor::warning(llvm::errs(), Source)
-                                  << "unknown check '" << Cur << '\'';
-      llvm::StringRef Closest = closest(Cur, AllChecks);
-      if (!Closest.empty())
-        Output << "; did you mean '" << Closest << '\'';
-      Output << VerifyConfigWarningEnd;
+      if (Item.Text.contains('*'))
+        llvm::WithColor::warning(llvm::errs(), Source)
+            << "check glob '" << Text << "' doesn't match any known check"
+            << VerifyConfigWarningEnd;
+      else {
+        llvm::raw_ostream &Output =
+            llvm::WithColor::warning(llvm::errs(), Source)
+            << "unknown check '" << Text << '\'';
+        llvm::StringRef Closest = closest(Text, AllChecks);
+        if (!Closest.empty())
+          Output << "; did you mean '" << Closest << '\'';
+        Output << VerifyConfigWarningEnd;
+      }
     }
   }
   return AnyInvalid;
