@@ -8046,11 +8046,11 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   if (match(Op0, m_Instruction(LHSI)) && match(Op1, m_Constant(RHSC))) {
     switch (LHSI->getOpcode()) {
     case Instruction::Select:
-      if ((Pred == FCmpInst::FCMP_UEQ || Pred == FCmpInst::FCMP_OEQ ||
-           Pred == FCmpInst::FCMP_UNE || Pred == FCmpInst::FCMP_ONE) &&
-          match(LHSI, m_Select(m_Value(), m_Value(X), m_FNeg(m_Value(Y)))) &&
-          X == Y && match(RHSC, m_AnyZeroFP()))
-        return new FCmpInst(Pred, X, RHSC);
+      if (FCmpInst::isEquality(Pred) && match(RHSC, m_AnyZeroFP()) &&
+          (match(LHSI,
+                 m_Select(m_Value(), m_Value(X), m_FNeg(m_Deferred(X)))) ||
+           match(LHSI, m_Select(m_Value(), m_FNeg(m_Value(X)), m_Deferred(X)))))
+        return new FCmpInst(Pred, X, RHSC, "", &I);
       break;
     case Instruction::PHI:
       if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
