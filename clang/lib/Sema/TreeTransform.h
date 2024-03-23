@@ -13786,8 +13786,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         }
         NewVDs.push_back(NewVD);
         getSema().addInitCapture(LSI, NewVD, C->getCaptureKind() == LCK_ByRef);
-        // The initializer might be expanded later. This may happen
-        // if the lambda is within a folded expression. 
+        // If the lambda is written within a fold expression, the initializer
+        // may be expanded later. Preserve the ContainsUnexpandedParameterPack
+        // flag because CXXFoldExpr uses it for the pattern.
         LSI->ContainsUnexpandedParameterPack |=
             Init.get()->containsUnexpandedParameterPack();
       }
@@ -13848,6 +13849,17 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
       EllipsisLoc = C->getEllipsisLoc();
     }
+#if 0
+    else if (auto *PVD = cast<VarDecl>(C->getCapturedVar()); PVD->isParameterPack()) {
+      // If the lambda is written within a fold expression, the captured
+      // variable may be expanded later. Preserve the
+      // ContainsUnexpandedParameterPack flag because CXXFoldExpr uses it for the
+      // pattern.
+      LSI->ContainsUnexpandedParameterPack |= true;
+      getSema().tryCaptureVariable(PVD, C->getLocation(), Kind, EllipsisLoc);
+      continue;
+    }
+#endif
 
     // Transform the captured variable.
     auto *CapturedVar = cast_or_null<ValueDecl>(
@@ -13857,11 +13869,15 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       continue;
     }
 
-    // The captured variable might be expanded later. This may happen
-    // if the lambda is within a folded expression. 
+    // If the lambda is written within a fold expression, the captured
+    // variable may be expanded later. Preserve the
+    // ContainsUnexpandedParameterPack flag because CXXFoldExpr uses it for the
+    // pattern.
+#if 1
     if (auto *PVD = dyn_cast<VarDecl>(CapturedVar);
         PVD && !C->isPackExpansion())
       LSI->ContainsUnexpandedParameterPack |= PVD->isParameterPack();
+#endif
 
     // Capture the transformed variable.
     getSema().tryCaptureVariable(CapturedVar, C->getLocation(), Kind,
@@ -13984,12 +14000,10 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
                                     /*IsInstantiation*/ true);
   SavedContext.pop();
 
-  // The lambda may contain a pack that would be expanded by a fold expression
-  // outside. We should preserve the ContainsUnexpandedParameterPack flag here
-  // because CXXFoldExprs use it for the pattern.
-  // For example,
+  // The lambda function might contain a pack that would be expanded by a fold
+  // expression outside. For example,
   //
-  // []<class... Is>() { ([I = Is()]() {}, ...); }
+  // []<class... Is>() { ([](auto P = Is()) {}, ...); }
   //
   // forgetting the flag will result in getPattern() of CXXFoldExpr returning
   // null in terms of the inner lambda.
@@ -13997,7 +14011,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     llvm::SmallVector<UnexpandedParameterPack> UnexpandedPacks;
     getSema().collectUnexpandedParameterPacksFromLambda(NewCallOperator,
                                                         UnexpandedPacks);
-    // Should we call DiagnoseUnexpandedParameterPacks() instead?
+    // FIXME: Should we call DiagnoseUnexpandedParameterPacks() instead?
     LSICopy.ContainsUnexpandedParameterPack = !UnexpandedPacks.empty();
   }
   return getSema().BuildLambdaExpr(E->getBeginLoc(), Body.get()->getEndLoc(),
