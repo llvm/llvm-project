@@ -6706,9 +6706,22 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::UCMP:
   case ISD::SCMP:
+    // FIX: This cast is clearly wrong
+    assert(cast<SignedInt>(N1.getValueType) && "This operator should have signed types");
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() && N1.getValueType() == VT &&
 	       "Binary operator types must match");
+    // FIX: This logic should probably go in a separate function to deduplicate it from ucmp. Suggestions?
+    if (N1C > N2C) {
+      // FIX: All of these casts are horrible, I couldn't find the proper way to fold the constants in
+      return cast<ConstantInt>(1);
+    }
+    if (N1C == N2C) {
+      return cast<ConstantInt>(0);
+    }
+    if (N1C < N2C) {
+      return cast<ConstantInt>(-1);
+    }
       break;
   case ISD::MUL:
     assert(VT.isInteger() && "This operator does not apply to FP types!");
