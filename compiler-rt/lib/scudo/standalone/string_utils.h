@@ -32,8 +32,10 @@ public:
   uptr capacity() { return String.capacity() - 1; }
 
 private:
-  void appendNumber(u64 AbsoluteValue, u8 Base, u8 MinNumberLength, bool PadWithZero, bool Negative, bool Upper);
-  void appendUnsigned(u64 Num, u8 Base, u8 MinNumberLength, bool PadWithZero, bool Upper);
+  void appendNumber(u64 AbsoluteValue, u8 Base, u8 MinNumberLength,
+                    bool PadWithZero, bool Negative, bool Upper);
+  void appendUnsigned(u64 Num, u8 Base, u8 MinNumberLength, bool PadWithZero,
+                      bool Upper);
   void appendSignedDecimal(s64 Num, u8 MinNumberLength, bool PadWithZero);
   void appendString(int Width, int MaxChars, const char *S);
   void appendPointer(u64 ptr_value);

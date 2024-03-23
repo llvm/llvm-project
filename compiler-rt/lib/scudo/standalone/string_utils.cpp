@@ -17,9 +17,8 @@ namespace scudo {
 // Appends number in a given Base to buffer. If its length is less than
 // |MinNumberLength|, it is padded with leading zeroes or spaces, depending
 // on the value of |PadWithZero|.
-void ScopedString::appendNumber(u64 AbsoluteValue,
-                        u8 Base, u8 MinNumberLength, bool PadWithZero,
-                        bool Negative, bool Upper) {
+void ScopedString::appendNumber(u64 AbsoluteValue, u8 Base, u8 MinNumberLength,
+                                bool PadWithZero, bool Negative, bool Upper) {
   constexpr uptr MaxLen = 30;
   RAW_CHECK(Base == 10 || Base == 16);
   RAW_CHECK(Base == 10 || !Negative);
@@ -59,21 +58,20 @@ void ScopedString::appendNumber(u64 AbsoluteValue,
   }
 }
 
-void ScopedString::appendUnsigned(u64 Num,
-                          u8 Base, u8 MinNumberLength, bool PadWithZero,
-                          bool Upper) {
-  appendNumber(Num, Base, MinNumberLength,
-                      PadWithZero, /*Negative=*/false, Upper);
+void ScopedString::appendUnsigned(u64 Num, u8 Base, u8 MinNumberLength,
+                                  bool PadWithZero, bool Upper) {
+  appendNumber(Num, Base, MinNumberLength, PadWithZero, /*Negative=*/false,
+               Upper);
 }
 
-void ScopedString::appendSignedDecimal(s64 Num,
-                               u8 MinNumberLength, bool PadWithZero) {
+void ScopedString::appendSignedDecimal(s64 Num, u8 MinNumberLength,
+                                       bool PadWithZero) {
   const bool Negative = (Num < 0);
   const u64 UnsignedNum = (Num == INT64_MIN)
                               ? static_cast<u64>(INT64_MAX) + 1
                               : static_cast<u64>(Negative ? -Num : Num);
-  appendNumber(UnsignedNum, 10, MinNumberLength,
-                      PadWithZero, Negative, /*Upper=*/false);
+  appendNumber(UnsignedNum, 10, MinNumberLength, PadWithZero, Negative,
+               /*Upper=*/false);
 }
 
 #include <stdio.h>
@@ -103,8 +101,8 @@ void ScopedString::appendString(int Width, int MaxChars, const char *S) {
 
 void ScopedString::appendPointer(u64 ptr_value) {
   appendString(0, -1, "0x");
-  appendUnsigned(ptr_value, 16,
-                 SCUDO_POINTER_FORMAT_LENGTH, /*PadWithZero=*/true,
+  appendUnsigned(ptr_value, 16, SCUDO_POINTER_FORMAT_LENGTH,
+                 /*PadWithZero=*/true,
                  /*Upper=*/false);
 }
 
@@ -166,8 +164,7 @@ void ScopedString::vappend(const char *Format, va_list &Args) {
              : HaveZ ? va_arg(Args, uptr)
                      : va_arg(Args, unsigned);
       const bool Upper = (*Cur == 'X');
-      appendUnsigned(UVal, (*Cur == 'u') ? 10 : 16,
-                            Width, PadWithZero, Upper);
+      appendUnsigned(UVal, (*Cur == 'u') ? 10 : 16, Width, PadWithZero, Upper);
       break;
     }
     case 'p': {
@@ -179,7 +176,8 @@ void ScopedString::vappend(const char *Format, va_list &Args) {
       RAW_CHECK_MSG(!HaveLength, PrintfFormatsHelp);
       // Only left-justified Width is supported.
       CHECK(!HaveWidth || LeftJustified);
-      appendString(LeftJustified ? -Width : Width, Precision, va_arg(Args, char *));
+      appendString(LeftJustified ? -Width : Width, Precision,
+                   va_arg(Args, char *));
       break;
     }
     case 'c': {

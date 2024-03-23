@@ -43,7 +43,8 @@ void NORETURN reportUnmapError(uptr Addr, uptr Size) {
 
 void NORETURN reportProtectError(uptr Addr, uptr Size, int Prot) {
   ScopedString Error;
-  Error.append("Scudo ERROR: internal protect failure (error desc=%s) Addr 0x%zx "
+  Error.append(
+      "Scudo ERROR: internal protect failure (error desc=%s) Addr 0x%zx "
       "Size %zu Prot %x\n",
       strerror(errno), Addr, Size, Prot);
   reportRawError(Error.data());

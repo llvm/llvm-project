@@ -98,7 +98,8 @@ private:
 
     MemMapT NewExternalBuffer;
     NewCapacity = roundUp(NewCapacity * sizeof(T), getPageSizeCached());
-    if (!NewExternalBuffer.map(/*Addr=*/0U, NewCapacity, "scudo:vector", MAP_ALLOWNOMEM)) {
+    if (!NewExternalBuffer.map(/*Addr=*/0U, NewCapacity, "scudo:vector",
+                               MAP_ALLOWNOMEM)) {
       return false;
     }
     T *NewExternalData = reinterpret_cast<T *>(NewExternalBuffer.getBase());
