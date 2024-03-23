@@ -6611,6 +6611,30 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // better than going through the stack, as the default expansion does.
     SDLoc DL(Op);
     MVT VT = Op.getSimpleValueType();
+    MVT ContainerVT = VT;
+    if (VT.isFixedLengthVector())
+      ContainerVT = ::getContainerForFixedLengthVector(DAG, VT, Subtarget);
+
+    // Recursively split concat_vectors with more than 2 operands:
+    //
+    // concat_vector op1, op2, op3, op4
+    // ->
+    // concat_vector (concat_vector op1, op2), (concat_vector op3, op4)
+    //
+    // This reduces the length of the chain of vslideups and allows us to
+    // perform the vslideups at a smaller LMUL, limited to MF2.
+    if (Op.getNumOperands() > 2 &&
+        ContainerVT.bitsGE(getLMUL1VT(ContainerVT))) {
+      MVT HalfVT = VT.getHalfNumVectorElementsVT();
+      assert(isPowerOf2_32(Op.getNumOperands()));
+      size_t HalfNumOps = Op.getNumOperands() / 2;
+      SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                               Op->ops().take_front(HalfNumOps));
+      SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                               Op->ops().drop_front(HalfNumOps));
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
+
     unsigned NumOpElts =
         Op.getOperand(0).getSimpleValueType().getVectorMinNumElements();
     SDValue Vec = DAG.getUNDEF(VT);
@@ -10340,9 +10364,15 @@ RISCVTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
       RISCVTargetLowering::computeVLMAXBounds(ContainerVT, Subtarget);
   if (MinVLMAX == MaxVLMAX && MinVLMAX == VT.getVectorNumElements() &&
       getLMUL1VT(ContainerVT).bitsLE(ContainerVT)) {
+    MachineMemOperand *MMO = Load->getMemOperand();
+    MachineFunction &MF = DAG.getMachineFunction();
+    MMO = MF.getMachineMemOperand(
+        MMO, MMO->getPointerInfo(),
+        MMO->getMemoryType().isValid()
+            ? LLT::scalable_vector(1, MMO->getMemoryType().getSizeInBits())
+            : MMO->getMemoryType());
     SDValue NewLoad =
-        DAG.getLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
-                    Load->getMemOperand());
+        DAG.getLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(), MMO);
     SDValue Result = convertFromScalableVector(VT, NewLoad, DAG, Subtarget);
     return DAG.getMergeValues({Result, NewLoad.getValue(1)}, DL);
   }
@@ -10400,9 +10430,17 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
   const auto [MinVLMAX, MaxVLMAX] =
       RISCVTargetLowering::computeVLMAXBounds(ContainerVT, Subtarget);
   if (MinVLMAX == MaxVLMAX && MinVLMAX == VT.getVectorNumElements() &&
-      getLMUL1VT(ContainerVT).bitsLE(ContainerVT))
+      getLMUL1VT(ContainerVT).bitsLE(ContainerVT)) {
+    MachineMemOperand *MMO = Store->getMemOperand();
+    MachineFunction &MF = DAG.getMachineFunction();
+    MMO = MF.getMachineMemOperand(
+        MMO, MMO->getPointerInfo(),
+        MMO->getMemoryType().isValid()
+            ? LLT::scalable_vector(1, MMO->getMemoryType().getSizeInBits())
+            : MMO->getMemoryType());
     return DAG.getStore(Store->getChain(), DL, NewValue, Store->getBasePtr(),
-                        Store->getMemOperand());
+                        MMO);
+  }
 
   SDValue VL = getVLOp(VT.getVectorNumElements(), ContainerVT, DL, DAG,
                        Subtarget);
@@ -13691,12 +13729,8 @@ struct NodeExtensionHelper {
 
       SDValue NarrowElt = OrigOperand.getOperand(0);
       MVT NarrowVT = NarrowElt.getSimpleValueType();
-
-      unsigned ScalarBits = VT.getScalarSizeInBits();
-      unsigned NarrowScalarBits = NarrowVT.getScalarSizeInBits();
-
-      // Ensure the extension's semantic is equivalent to rvv vzext or vsext.
-      if (ScalarBits != NarrowScalarBits * 2)
+      // i1 types are legal but we can't select V{S,Z}EXT_VLs with them.
+      if (NarrowVT.getVectorElementType() == MVT::i1)
         break;
 
       SupportsZExt = Opc == ISD::ZERO_EXTEND;
