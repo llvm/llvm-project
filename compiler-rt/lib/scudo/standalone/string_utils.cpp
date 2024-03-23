@@ -74,8 +74,6 @@ void ScopedString::appendSignedDecimal(s64 Num, u8 MinNumberLength,
                /*Upper=*/false);
 }
 
-#include <stdio.h>
-
 // Use the fact that explicitly requesting 0 Width (%0s) results in UB and
 // interpret Width == 0 as "no Width requested":
 // Width == 0 - no Width requested

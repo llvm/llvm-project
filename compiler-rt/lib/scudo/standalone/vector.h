@@ -36,7 +36,6 @@ public:
     if (Size == capacity()) {
       const uptr NewCapacity = roundUpPowerOfTwo(Size + 1);
       if (!reallocate(NewCapacity)) {
-        // Silently discard the data, otherwise the whole system will crash.
         return;
       }
     }
