@@ -939,18 +939,11 @@ void ELFWriter::writeRelocations(const MCAssembler &Asm,
                                        const MCSectionELF &Sec) {
   std::vector<ELFRelocationEntry> &Relocs = OWriter.Relocations[&Sec];
 
-  // We record relocations by pushing to the end of a vector. Reverse the vector
-  // to get the relocations in the order they were created.
-  // In most cases that is not important, but it can be for special sections
-  // (.eh_frame) or specific relocations (TLS optimizations on SystemZ).
-  std::reverse(Relocs.begin(), Relocs.end());
-
   // Sort the relocation entries. MIPS needs this.
   OWriter.TargetObjectWriter->sortRelocs(Asm, Relocs);
 
   const bool Rela = usesRela(Sec);
-  for (unsigned i = 0, e = Relocs.size(); i != e; ++i) {
-    const ELFRelocationEntry &Entry = Relocs[e - i - 1];
+  for (const ELFRelocationEntry &Entry : Relocs) {
     unsigned Index = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
 
     if (is64Bit()) {
