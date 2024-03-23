@@ -42,6 +42,7 @@ func.func @_QQmain() {
 // PASSES-NEXT: SimplifyRegionLite
 // PASSES-NEXT: SimplifyIntrinsics
 // PASSES-NEXT: AlgebraicSimplification
+// PASSES-NEXT: ConstantArgumentGlobalisationOpt
 // PASSES-NEXT: CSE
 // PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
