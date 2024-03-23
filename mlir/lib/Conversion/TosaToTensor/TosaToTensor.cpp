@@ -26,13 +26,35 @@ using namespace tosa;
 
 namespace {
 
+// Infer the type to which the input of a 'tosa.reshape' op must be cast when
+// lowered.
+TensorType inferReshapeInputType(TypedValue<TensorType> input,
+                                 ArrayRef<int64_t> newShape) {
+  // No need to cast input for non-empty target shape
+  if (!newShape.empty())
+    return input.getType();
+
+  // The input type must be cast into a tensor with the same rank and all static
+  // dimensions set to 1. This prevents the generation of a tensor.collapse_shape
+  // op that converts a dynamically shaped tensor into a 0D tensor. While such
+  // construct is not incorrect on its own, bufferization cannot properly handle
+  // it at the moment, so we avoid it.
+  SmallVector<int64_t> shape(input.getType().getRank(), 1);
+  return input.getType().clone(shape);
+}
+
 // Infer the result type of 'tensor.expand_shape' in the collapse-expand
 // pair emitted for a 'tosa.reshape' op.
-TensorType inferReshapedType(TypedValue<TensorType> input,
-                             ArrayRef<int64_t> newShape) {
+TensorType inferReshapeExpandedType(TensorType inputType,
+                                    ArrayRef<int64_t> newShape) {
+  // Special case for 0D output tensor. Note: Watch out when using Type::clone()
+  // with just '{}', as it will invoke the incorrect overload.
+  if (newShape.empty())
+    return inputType.clone(ArrayRef<int64_t>{});
+
   // Check if the input is static, and if so, get its total size
-  bool inputIsStatic = input.getType().hasStaticShape();
-  int64_t totalSize = inputIsStatic ? input.getType().getNumElements() : -1;
+  bool inputIsStatic = inputType.hasStaticShape();
+  int64_t totalSize = inputIsStatic ? inputType.getNumElements() : -1;
  
   // Compute result shape
   bool resultIsStatic = true;
@@ -74,20 +96,20 @@ TensorType inferReshapedType(TypedValue<TensorType> input,
   assert(!inputIsStatic || resultIsStatic);
 
   // Create result type
-  return input.getType().clone(resultShape);
+  return inputType.clone(resultShape);
 }
 
 // Infer the result type of 'tensor.collapse_shape' in the collapse-expand
 // pair emitted for a 'tosa.reshape' op.
-TensorType inferIntermediateType(TensorType lhsType, TensorType rhsType) {
+TensorType inferReshapeCollapsedType(TensorType lhsType, TensorType rhsType) {
   auto lhsShape = lhsType.getShape();
   auto rhsShape = rhsType.getShape();
 
+  if (lhsShape.empty() || rhsShape.empty())
+    return lhsType.clone(ArrayRef<int64_t>{});
+
   if (ShapedType::isDynamicShape(lhsShape) || ShapedType::isDynamicShape(rhsShape))
     return lhsType.clone({ShapedType::kDynamic});
-
-  if (lhsShape.empty() || rhsShape.empty())
-    return lhsType.clone({});
 
   SmallVector<int64_t> intermediateShape;
   unsigned currLhsDim = 0, currRhsDim = 0;
@@ -128,19 +150,20 @@ TensorType inferIntermediateType(TensorType lhsType, TensorType rhsType) {
 }
 
 SmallVector<ReassociationExprs>
-createReassociationMapForCollapse(OpBuilder &builder,
-                                  ArrayRef<int64_t> srcShape,
-                                  ArrayRef<int64_t> dstShape) {
+createReassociationMapForCollapse(OpBuilder &builder, Type srcType, Type dstType) {
+  auto srcShape = cast<TensorType>(srcType).getShape();
+  auto dstShape = cast<TensorType>(dstType).getShape();
+
+  if (srcShape.empty() || dstShape.empty())
+    return {};
+
   if (ShapedType::isDynamicShape(srcShape) || ShapedType::isDynamicShape(dstShape)) {
     assert(dstShape.size() == 1);
     SmallVector<AffineExpr, 2> exprs;
-    for (int64_t i = 0, s = srcShape.size(); i < s; ++i)
+    for (auto i : llvm::seq<int64_t>(srcShape.size()))
       exprs.push_back(builder.getAffineDimExpr(i));
     return {exprs};
   }
-
-  if (dstShape.empty())
-    return {};
 
   SmallVector<ReassociationExprs> reassociationMap(dstShape.size());
   unsigned currSrcDim = 0, currDstDim = 0;
@@ -175,28 +198,23 @@ createReassociationMapForCollapse(OpBuilder &builder,
 }
 
 // Create a tensor.collapse_shape op that reshapes the input into the given
-// result type. Both 'returnType' and 'input' must be statically shaped.
-TypedValue<TensorType> createCollapse(OpBuilder &builder, Location loc,
-                                      TensorType resultType,
-                                      TypedValue<TensorType> input) {
-  auto reassociationMap = createReassociationMapForCollapse(
-      builder, input.getType().getShape(), resultType.getShape());
-  auto result = builder.createOrFold<tensor::CollapseShapeOp>(
-      loc, resultType, input, reassociationMap);
-  return cast<TypedValue<TensorType>>(result);
+// result type.
+Value createCollapse(OpBuilder &builder, Location loc, TensorType resultType,
+                     Value input) {
+  auto reassociationMap =
+      createReassociationMapForCollapse(builder, input.getType(), resultType);
+  return builder.createOrFold<tensor::CollapseShapeOp>(loc, resultType, input,
+                                                       reassociationMap);
 }
 
 // Create a tensor.expand_shape op that reshapes the input into the given result
-// type. Both 'returnType' and 'input' must be statically shaped.
-TypedValue<TensorType> createExpand(OpBuilder &builder, Location loc,
-                                    TensorType resultType,
-                                    TypedValue<TensorType> input) {
-  // Emit tensor.expand_shape op
-  auto reassociationMap = createReassociationMapForCollapse(
-      builder, resultType.getShape(), input.getType().getShape());
-  auto result = builder.createOrFold<tensor::ExpandShapeOp>(
-      loc, resultType, input, reassociationMap);
-  return cast<TypedValue<TensorType>>(result);
+// type.
+Value createExpand(OpBuilder &builder, Location loc, TensorType resultType,
+                   Value input) {
+  auto reassociationMap =
+      createReassociationMapForCollapse(builder, resultType, input.getType());
+  return builder.createOrFold<tensor::ExpandShapeOp>(loc, resultType, input,
+                                                     reassociationMap);
 }
 
 class ReshapeConverter : public OpConversionPattern<tosa::ReshapeOp> {
@@ -211,13 +229,17 @@ public:
     auto input = reshape.getInput1();
     auto newShape = reshape.getNewShape();
 
-    // Infer the result types for the subsequently emitted ops.
-    auto reshapedType = inferReshapedType(input, newShape);
-    auto intermediateType = inferIntermediateType(input.getType(), reshapedType);
+    // Infer all intermediate types
+    auto inputType = inferReshapeInputType(input, newShape);
+    auto expandedType = inferReshapeExpandedType(inputType, newShape);
+    auto collapsedType = inferReshapeCollapsedType(inputType, expandedType);
+
+    // Cast input if needed
+    auto castInput = rewriter.createOrFold<tensor::CastOp>(loc, inputType, input);
 
     // Emit collaspe-expand pair
-    auto collapsed = createCollapse(rewriter, loc, intermediateType, input);
-    auto expanded = createExpand(rewriter, loc, reshapedType, collapsed);
+    auto collapsed = createCollapse(rewriter, loc, collapsedType, castInput);
+    auto expanded = createExpand(rewriter, loc, expandedType, collapsed);
 
     // Cast to final result type if needed
     auto result = rewriter.createOrFold<tensor::CastOp>(loc, resultType, expanded);

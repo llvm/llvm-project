@@ -971,9 +971,9 @@ mlir::LogicalResult tosa::ReshapeOp::verify() {
     }
   }
 
-  int missingDims = std::count(getNewShape().begin(), getNewShape().end(), -1);
+  int missingDims = llvm::count(getNewShape(), -1);
   if (missingDims > 1)
-    return emitOpError() << "At most one target dim can be -1";
+    return emitOpError() << "At most one target dimension can be -1";
 
   return mlir::success();
 }
