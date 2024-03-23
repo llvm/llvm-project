@@ -132,7 +132,8 @@ void f() {
 }
 
 namespace GH84163 {
-// Just check that this doesn't crash.
+// Just check that this doesn't crash (we were previously not instantiating
+// everything that needs instantiating in here).
 template <typename> struct S {};
 
 void a() {
@@ -143,7 +144,7 @@ void a() {
 }
 
 namespace GH84425 {
-// Check that this doesn't crash.
+// As above.
 void do_thing(int x) {
     auto second = [&](this auto const& self, int b) -> int {
         if (x) return x;
@@ -160,5 +161,13 @@ void do_thing2(int x) {
     };
 
      second();
+}
+}
+
+namespace GH79754 {
+// As above.
+void f() {
+  int x;
+  [&x](this auto&&) {return x;}();
 }
 }
