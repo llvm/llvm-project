@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/Mem2Reg.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
@@ -14,10 +15,8 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
@@ -119,8 +118,9 @@ struct MemorySlotPromotionInfo {
 /// promotion. This does not mutate IR.
 class MemorySlotPromotionAnalyzer {
 public:
-  MemorySlotPromotionAnalyzer(MemorySlot slot, DominanceInfo &dominance)
-      : slot(slot), dominance(dominance) {}
+  MemorySlotPromotionAnalyzer(MemorySlot slot, DominanceInfo &dominance,
+                              const DataLayout &dataLayout)
+      : slot(slot), dominance(dominance), dataLayout(dataLayout) {}
 
   /// Computes the information for slot promotion if promotion is possible,
   /// returns nothing otherwise.
@@ -155,6 +155,7 @@ private:
 
   MemorySlot slot;
   DominanceInfo &dominance;
+  const DataLayout &dataLayout;
 };
 
 /// The MemorySlotPromoter handles the state of promoting a memory slot. It
@@ -269,10 +270,12 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     // If the operation decides it cannot deal with removing the blocking uses,
     // promotion must fail.
     if (auto promotable = dyn_cast<PromotableOpInterface>(user)) {
-      if (!promotable.canUsesBeRemoved(blockingUses, newBlockingUses))
+      if (!promotable.canUsesBeRemoved(blockingUses, newBlockingUses,
+                                       dataLayout))
         return failure();
     } else if (auto promotable = dyn_cast<PromotableMemOpInterface>(user)) {
-      if (!promotable.canUsesBeRemoved(slot, blockingUses, newBlockingUses))
+      if (!promotable.canUsesBeRemoved(slot, blockingUses, newBlockingUses,
+                                       dataLayout))
         return failure();
     } else {
       // An operation that has blocking uses must be promoted. If it is not
@@ -612,7 +615,8 @@ void MemorySlotPromoter::promoteSlot() {
 
 LogicalResult mlir::tryToPromoteMemorySlots(
     ArrayRef<PromotableAllocationOpInterface> allocators,
-    RewriterBase &rewriter, Mem2RegStatistics statistics) {
+    RewriterBase &rewriter, const DataLayout &dataLayout,
+    Mem2RegStatistics statistics) {
   bool promotedAny = false;
 
   for (PromotableAllocationOpInterface allocator : allocators) {
@@ -621,7 +625,7 @@ LogicalResult mlir::tryToPromoteMemorySlots(
         continue;
 
       DominanceInfo dominance;
-      MemorySlotPromotionAnalyzer analyzer(slot, dominance);
+      MemorySlotPromotionAnalyzer analyzer(slot, dominance, dataLayout);
       std::optional<MemorySlotPromotionInfo> info = analyzer.computeInfo();
       if (info) {
         MemorySlotPromoter(slot, allocator, rewriter, dominance,
@@ -635,13 +639,6 @@ LogicalResult mlir::tryToPromoteMemorySlots(
   return success(promotedAny);
 }
 
-LogicalResult
-Mem2RegPattern::matchAndRewrite(PromotableAllocationOpInterface allocator,
-                                PatternRewriter &rewriter) const {
-  hasBoundedRewriteRecursion();
-  return tryToPromoteMemorySlots({allocator}, rewriter, statistics);
-}
-
 namespace {
 
 struct Mem2Reg : impl::Mem2RegBase<Mem2Reg> {
@@ -650,17 +647,40 @@ struct Mem2Reg : impl::Mem2RegBase<Mem2Reg> {
   void runOnOperation() override {
     Operation *scopeOp = getOperation();
 
-    Mem2RegStatistics statictics{&promotedAmount, &newBlockArgumentAmount};
+    Mem2RegStatistics statistics{&promotedAmount, &newBlockArgumentAmount};
 
-    GreedyRewriteConfig config;
-    config.enableRegionSimplification = enableRegionSimplification;
+    bool changed = false;
 
-    RewritePatternSet rewritePatterns(&getContext());
-    rewritePatterns.add<Mem2RegPattern>(&getContext(), statictics);
-    FrozenRewritePatternSet frozen(std::move(rewritePatterns));
+    for (Region &region : scopeOp->getRegions()) {
+      if (region.getBlocks().empty())
+        continue;
 
-    if (failed(applyPatternsAndFoldGreedily(scopeOp, frozen, config)))
-      signalPassFailure();
+      OpBuilder builder(&region.front(), region.front().begin());
+      IRRewriter rewriter(builder);
+
+      // Promoting a slot can allow for further promotion of other slots,
+      // promotion is tried until no promotion succeeds.
+      while (true) {
+        SmallVector<PromotableAllocationOpInterface> allocators;
+        // Build a list of allocators to attempt to promote the slots of.
+        region.walk([&](PromotableAllocationOpInterface allocator) {
+          allocators.emplace_back(allocator);
+        });
+
+        auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
+        const DataLayout &dataLayout = dataLayoutAnalysis.getAtOrAbove(scopeOp);
+
+        // Attempt promoting until no promotion succeeds.
+        if (failed(tryToPromoteMemorySlots(allocators, rewriter, dataLayout,
+                                           statistics)))
+          break;
+
+        changed = true;
+        getAnalysisManager().invalidate({});
+      }
+    }
+    if (!changed)
+      markAllAnalysesPreserved();
   }
 };
 

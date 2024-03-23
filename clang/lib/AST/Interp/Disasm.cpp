@@ -16,6 +16,7 @@
 #include "FunctionPointer.h"
 #include "Integral.h"
 #include "IntegralAP.h"
+#include "InterpFrame.h"
 #include "Opcode.h"
 #include "PrimType.h"
 #include "Program.h"
@@ -183,7 +184,7 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BLUE, true});
     if (const auto *ND = dyn_cast_if_present<NamedDecl>(asDecl()))
-      OS << ND->getName();
+      ND->printQualifiedName(OS);
     else if (asExpr())
       OS << "expr (TODO)";
   }
@@ -205,4 +206,30 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
 
   if (isDummy())
     OS << " dummy";
+}
+
+LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
+                                        unsigned Indent) const {
+  unsigned Spaces = Indent * 2;
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BLUE, true});
+    OS.indent(Spaces);
+    if (getCallee())
+      describe(OS);
+    else
+      OS << "Frame (Depth: " << getDepth() << ")";
+    OS << "\n";
+  }
+  OS.indent(Spaces) << "Function: " << getFunction();
+  if (const Function *F = getFunction()) {
+    OS << " (" << F->getName() << ")";
+  }
+  OS << "\n";
+  OS.indent(Spaces) << "This: " << getThis() << "\n";
+  OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
+
+  while (const InterpFrame *F = this->Caller) {
+    F->dump(OS, Indent + 1);
+    F = F->Caller;
+  }
 }

@@ -1111,6 +1111,35 @@ hlfir::createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
   return {hlfir::Entity{declareOp.getBase()}, isHeapAlloc};
 }
 
+hlfir::Entity hlfir::createStackTempFromMold(mlir::Location loc,
+                                             fir::FirOpBuilder &builder,
+                                             hlfir::Entity mold) {
+  llvm::SmallVector<mlir::Value> lenParams;
+  hlfir::genLengthParameters(loc, builder, mold, lenParams);
+  llvm::StringRef tmpName{".tmp"};
+  mlir::Value alloc;
+  mlir::Value shape{};
+  fir::FortranVariableFlagsAttr declAttrs;
+
+  if (mold.isPolymorphic()) {
+    // genAllocatableApplyMold does heap allocation
+    TODO(loc, "createStackTempFromMold for polymorphic type");
+  } else if (mold.isArray()) {
+    mlir::Type sequenceType =
+        hlfir::getFortranElementOrSequenceType(mold.getType());
+    shape = hlfir::genShape(loc, builder, mold);
+    auto extents = hlfir::getIndexExtents(loc, builder, shape);
+    alloc =
+        builder.createTemporary(loc, sequenceType, tmpName, extents, lenParams);
+  } else {
+    alloc = builder.createTemporary(loc, mold.getFortranElementType(), tmpName,
+                                    /*shape=*/std::nullopt, lenParams);
+  }
+  auto declareOp = builder.create<hlfir::DeclareOp>(loc, alloc, tmpName, shape,
+                                                    lenParams, declAttrs);
+  return hlfir::Entity{declareOp.getBase()};
+}
+
 hlfir::EntityWithAttributes
 hlfir::convertCharacterKind(mlir::Location loc, fir::FirOpBuilder &builder,
                             hlfir::Entity scalarChar, int toKind) {

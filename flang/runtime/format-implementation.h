@@ -233,7 +233,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
     }
   }
   while (true) {
-    std::optional<int> repeat;
+    Fortran::common::optional<int> repeat;
     bool unlimited{false};
     auto maybeReversionPoint{offset_};
     CharType ch{GetNextChar(context)};
@@ -419,7 +419,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
 
 // Returns the next data edit descriptor
 template <typename CONTEXT>
-std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
+Fortran::common::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
     Context &context, int maxRepeat) {
   int repeat{CueUpNextDataEdit(context)};
   auto start{offset_};
@@ -451,7 +451,7 @@ std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
         }
         if (edit.ioTypeChars >= edit.maxIoTypeChars) {
           ReportBadFormat(context, "Excessive DT'iotype' in FORMAT", start);
-          return std::nullopt;
+          return Fortran::common::nullopt;
         }
         edit.ioType[edit.ioTypeChars++] = ch;
         if (ch == quote) {
@@ -460,7 +460,7 @@ std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
       }
       if (!ok) {
         ReportBadFormat(context, "Unclosed DT'iotype' in FORMAT", start);
-        return std::nullopt;
+        return Fortran::common::nullopt;
       }
     }
     if (PeekNext() == '(') {
@@ -475,7 +475,7 @@ std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
         }
         if (edit.vListEntries >= edit.maxVListEntries) {
           ReportBadFormat(context, "Excessive DT(v_list) in FORMAT", start);
-          return std::nullopt;
+          return Fortran::common::nullopt;
         }
         edit.vList[edit.vListEntries++] = n;
         auto ch{static_cast<char>(GetNextChar(context))};
@@ -486,7 +486,7 @@ std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
       }
       if (!ok) {
         ReportBadFormat(context, "Unclosed DT(v_list) in FORMAT", start);
-        return std::nullopt;
+        return Fortran::common::nullopt;
       }
     }
   } else { // not DT'iotype'

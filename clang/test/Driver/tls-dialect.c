@@ -2,6 +2,7 @@
 // RUN: %clang -### --target=riscv64-linux -mtls-dialect=trad %s 2>&1 | FileCheck --check-prefix=NODESC %s
 // RUN: %clang -### --target=riscv64-linux %s 2>&1 | FileCheck --check-prefix=NODESC %s
 // RUN: %clang -### --target=x86_64-linux -mtls-dialect=gnu %s 2>&1 | FileCheck --check-prefix=NODESC %s
+// RUN: %clang -### --target=x86_64-linux -mtls-dialect=gnu2 %s 2>&1 | FileCheck --check-prefix=DESC %s
 
 /// Android supports TLSDESC by default on RISC-V
 /// TLSDESC is not on by default in Linux, even on RISC-V, and is covered above
@@ -18,7 +19,6 @@
 
 /// Unsupported argument
 // RUN: not %clang -### --target=riscv64-linux -mtls-dialect=gnu2 %s 2>&1 | FileCheck --check-prefix=UNSUPPORTED-ARG %s
-// RUN: not %clang -### --target=x86_64-linux -mtls-dialect=gnu2 %s 2>&1 | FileCheck --check-prefix=UNSUPPORTED-ARG %s
 
 // DESC:       "-cc1" {{.*}}"-enable-tlsdesc"
 // NODESC-NOT: "-enable-tlsdesc"

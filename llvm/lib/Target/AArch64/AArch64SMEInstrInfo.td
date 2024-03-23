@@ -164,6 +164,8 @@ def : Pat<(int_aarch64_sme_set_tpidr2 i64:$val),
 def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
           (MRS 0xde85)>;
 
+} // End let Predicates = [HasSME]
+
 multiclass CoalescerBarrierPseudo<RegisterClass rc, list<ValueType> vts> {
   def NAME : Pseudo<(outs rc:$dst), (ins rc:$src), []>, Sched<[]> {
     let Constraints = "$dst = $src";
@@ -182,8 +184,6 @@ multiclass CoalescerBarriers {
 }
 
 defm COALESCER_BARRIER : CoalescerBarriers;
-
-} // End let Predicates = [HasSME]
 
 // Pseudo to match to smstart/smstop. This expands:
 //

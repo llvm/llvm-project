@@ -11,6 +11,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/InstallAPI/DylibVerifier.h"
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/InstallAPI/MachO.h"
 #include "llvm/ADT/DenseMap.h"
@@ -44,6 +45,9 @@ struct InstallAPIContext {
 
   /// DiagnosticsEngine for all error reporting.
   DiagnosticsEngine *Diags = nullptr;
+
+  /// Verifier when binary dylib is passed as input.
+  std::unique_ptr<DylibVerifier> Verifier = nullptr;
 
   /// File Path of output location.
   llvm::StringRef OutputLoc{};
