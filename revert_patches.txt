@@ -11,3 +11,7 @@ Revert :breaks hip catch tests.
 
 Revert: breaks sles build 
 36146d2b6be [ELF] Make LinkerDrive::link a template. NFC  
+
+Revert: breaks openmp aomp build
+dcbddc252501 [Libomptarget] Unify and simplify plugin CMake (#86191) 
+
