@@ -755,10 +755,7 @@ set(files
   __type_traits/is_constant_evaluated.h
   __type_traits/is_constructible.h
   __type_traits/is_convertible.h
-  __type_traits/is_copy_assignable.h
-  __type_traits/is_copy_constructible.h
   __type_traits/is_core_convertible.h
-  __type_traits/is_default_constructible.h
   __type_traits/is_destructible.h
   __type_traits/is_empty.h
   __type_traits/is_enum.h
@@ -774,17 +771,10 @@ set(files
   __type_traits/is_member_function_pointer.h
   __type_traits/is_member_object_pointer.h
   __type_traits/is_member_pointer.h
-  __type_traits/is_move_assignable.h
-  __type_traits/is_move_constructible.h
   __type_traits/is_nothrow_assignable.h
   __type_traits/is_nothrow_constructible.h
   __type_traits/is_nothrow_convertible.h
-  __type_traits/is_nothrow_copy_assignable.h
-  __type_traits/is_nothrow_copy_constructible.h
-  __type_traits/is_nothrow_default_constructible.h
   __type_traits/is_nothrow_destructible.h
-  __type_traits/is_nothrow_move_assignable.h
-  __type_traits/is_nothrow_move_constructible.h
   __type_traits/is_null_pointer.h
   __type_traits/is_object.h
   __type_traits/is_pod.h
@@ -805,14 +795,9 @@ set(files
   __type_traits/is_trivial.h
   __type_traits/is_trivially_assignable.h
   __type_traits/is_trivially_constructible.h
-  __type_traits/is_trivially_copy_assignable.h
-  __type_traits/is_trivially_copy_constructible.h
   __type_traits/is_trivially_copyable.h
-  __type_traits/is_trivially_default_constructible.h
   __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
-  __type_traits/is_trivially_move_assignable.h
-  __type_traits/is_trivially_move_constructible.h
   __type_traits/is_trivially_relocatable.h
   __type_traits/is_unbounded_array.h
   __type_traits/is_union.h

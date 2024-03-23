@@ -1554,6 +1554,11 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
     mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym,
     fir::FortranVariableFlagsEnum extraFlags) {
   fir::FortranVariableFlagsEnum flags = extraFlags;
+  if (sym.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
+    // CrayPointee are represented as pointers.
+    flags = flags | fir::FortranVariableFlagsEnum::pointer;
+    return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
+  }
   const auto &attrs = sym.attrs();
   if (attrs.test(Fortran::semantics::Attr::ALLOCATABLE))
     flags = flags | fir::FortranVariableFlagsEnum::allocatable;
@@ -1615,8 +1620,6 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       (!Fortran::semantics::IsProcedure(sym) ||
        Fortran::semantics::IsPointer(sym)) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
-    bool isCrayPointee =
-        sym.test(Fortran::semantics::Symbol::Flag::CrayPointee);
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
     mlir::Value shapeOrShift;
@@ -1636,31 +1639,21 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
         Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
                                                          sym);
 
-    if (isCrayPointee) {
-      mlir::Type baseType =
-          hlfir::getFortranElementOrSequenceType(base.getType());
-      if (auto seqType = mlir::dyn_cast<fir::SequenceType>(baseType)) {
-        // The pointer box's sequence type must be with unknown shape.
-        llvm::SmallVector<int64_t> shape(seqType.getDimension(),
-                                         fir::SequenceType::getUnknownExtent());
-        baseType = fir::SequenceType::get(shape, seqType.getEleTy());
-      }
-      fir::BoxType ptrBoxType =
-          fir::BoxType::get(fir::PointerType::get(baseType));
+    if (sym.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
+      mlir::Type ptrBoxType =
+          Fortran::lower::getCrayPointeeBoxType(base.getType());
       mlir::Value boxAlloc = builder.createTemporary(loc, ptrBoxType);
 
       // Declare a local pointer variable.
-      attributes = fir::FortranVariableFlagsAttr::get(
-          builder.getContext(), fir::FortranVariableFlagsEnum::pointer);
       auto newBase = builder.create<hlfir::DeclareOp>(
           loc, boxAlloc, name, /*shape=*/nullptr, lenParams, attributes);
-      mlir::Value nullAddr =
-          builder.createNullConstant(loc, ptrBoxType.getEleTy());
+      mlir::Value nullAddr = builder.createNullConstant(
+          loc, llvm::cast<fir::BaseBoxType>(ptrBoxType).getEleTy());
 
       // If the element type is known-length character, then
       // EmboxOp does not need the length parameters.
       if (auto charType = mlir::dyn_cast<fir::CharacterType>(
-              fir::unwrapSequenceType(baseType)))
+              hlfir::getFortranElementType(base.getType())))
         if (!charType.hasDynamicLen())
           lenParams.clear();
 
@@ -2260,19 +2253,20 @@ void Fortran::lower::instantiateVariable(AbstractConverter &converter,
     instantiateLocal(converter, var, symMap);
 }
 
-void Fortran::lower::mapCallInterfaceSymbols(
-    AbstractConverter &converter, const Fortran::lower::CallerInterface &caller,
-    SymMap &symMap) {
+static void
+mapCallInterfaceSymbol(const Fortran::semantics::Symbol &interfaceSymbol,
+                       Fortran::lower::AbstractConverter &converter,
+                       const Fortran::lower::CallerInterface &caller,
+                       Fortran::lower::SymMap &symMap) {
   Fortran::lower::AggregateStoreMap storeMap;
-  const Fortran::semantics::Symbol &result = caller.getResultSymbol();
   for (Fortran::lower::pft::Variable var :
-       Fortran::lower::pft::getDependentVariableList(result)) {
+       Fortran::lower::pft::getDependentVariableList(interfaceSymbol)) {
     if (var.isAggregateStore()) {
       instantiateVariable(converter, var, symMap, storeMap);
       continue;
     }
     const Fortran::semantics::Symbol &sym = var.getSymbol();
-    if (&sym == &result)
+    if (&sym == &interfaceSymbol)
       continue;
     const auto *hostDetails =
         sym.detailsIf<Fortran::semantics::HostAssocDetails>();
@@ -2293,7 +2287,8 @@ void Fortran::lower::mapCallInterfaceSymbols(
       // instantiateVariable that would try to allocate a new storage.
       continue;
     }
-    if (Fortran::semantics::IsDummy(sym) && sym.owner() == result.owner()) {
+    if (Fortran::semantics::IsDummy(sym) &&
+        sym.owner() == interfaceSymbol.owner()) {
       // Get the argument for the dummy argument symbols of the current call.
       symMap.addSymbol(sym, caller.getArgumentValue(sym));
       // All the properties of the dummy variable may not come from the actual
@@ -2305,6 +2300,19 @@ void Fortran::lower::mapCallInterfaceSymbols(
     // properties.
     instantiateVariable(converter, var, symMap, storeMap);
   }
+}
+
+void Fortran::lower::mapCallInterfaceSymbolsForResult(
+    AbstractConverter &converter, const Fortran::lower::CallerInterface &caller,
+    SymMap &symMap) {
+  const Fortran::semantics::Symbol &result = caller.getResultSymbol();
+  mapCallInterfaceSymbol(result, converter, caller, symMap);
+}
+
+void Fortran::lower::mapCallInterfaceSymbolsForDummyArgument(
+    AbstractConverter &converter, const Fortran::lower::CallerInterface &caller,
+    SymMap &symMap, const Fortran::semantics::Symbol &dummySymbol) {
+  mapCallInterfaceSymbol(dummySymbol, converter, caller, symMap);
 }
 
 void Fortran::lower::mapSymbolAttributes(
@@ -2331,16 +2339,13 @@ void Fortran::lower::createRuntimeTypeInfoGlobal(
   defineGlobal(converter, var, globalName, linkage);
 }
 
-Fortran::semantics::SymbolRef
-Fortran::lower::getCrayPointer(Fortran::semantics::SymbolRef sym) {
-  assert(!sym->GetUltimate().owner().crayPointers().empty() &&
-         "empty Cray pointer/pointee map");
-  for (const auto &[pointee, pointer] :
-       sym->GetUltimate().owner().crayPointers()) {
-    if (pointee == sym->name()) {
-      Fortran::semantics::SymbolRef v{pointer.get()};
-      return v;
-    }
+mlir::Type Fortran::lower::getCrayPointeeBoxType(mlir::Type fortranType) {
+  mlir::Type baseType = hlfir::getFortranElementOrSequenceType(fortranType);
+  if (auto seqType = mlir::dyn_cast<fir::SequenceType>(baseType)) {
+    // The pointer box's sequence type must be with unknown shape.
+    llvm::SmallVector<int64_t> shape(seqType.getDimension(),
+                                     fir::SequenceType::getUnknownExtent());
+    baseType = fir::SequenceType::get(shape, seqType.getEleTy());
   }
-  llvm_unreachable("corresponding Cray pointer cannot be found");
+  return fir::BoxType::get(fir::PointerType::get(baseType));
 }

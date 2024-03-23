@@ -52,6 +52,14 @@ def IntTypesAPI : PublicAPI<"inttypes.h"> {
   let Types = ["imaxdiv_t"];
 }
 
+def MathAPI : PublicAPI<"math.h"> {
+  let Types = ["double_t", "float_t"];
+}
+
+def StdIOAPI : PublicAPI<"stdio.h"> {
+  let Types = ["size_t"];
+}
+
 def StdlibAPI : PublicAPI<"stdlib.h"> {
   let Types = [
     "div_t",
@@ -60,12 +68,20 @@ def StdlibAPI : PublicAPI<"stdlib.h"> {
     "size_t",
     "__bsearchcompare_t",
     "__qsortcompare_t",
-    "__atexithandler_t",
   ];
 }
 
 def StringAPI : PublicAPI<"string.h"> {
   let Types = ["size_t"];
+}
+
+def TimeAPI : PublicAPI<"time.h"> {
+  let Types = [
+    "clock_t",
+    "time_t",
+    "struct tm",
+    "struct timespec",
+  ];
 }
 
 def UCharAPI : PublicAPI<"uchar.h"> {

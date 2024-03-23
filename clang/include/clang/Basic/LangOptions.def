@@ -161,6 +161,8 @@ LANGOPT(DllExportInlines  , 1, 1, "dllexported classes dllexport inline methods"
 LANGOPT(RelaxedTemplateTemplateArgs, 1, 0, "C++17 relaxed matching of template template arguments")
 LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library features")
 
+LANGOPT(PointerAuthIntrinsics, 1, 0, "pointer authentication intrinsics")
+
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
 
 COMPATIBLE_LANGOPT(RecoveryAST, 1, 1, "Preserve expressions in AST when encountering errors")

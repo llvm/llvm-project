@@ -274,7 +274,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
         DbgAssign->replaceVariableLocationOp(FillC, FillVal);
     };
     for_each(at::getAssignmentMarkers(S), replaceOpForAssignmentMarkers);
-    for_each(at::getDPVAssignmentMarkers(S), replaceOpForAssignmentMarkers);
+    for_each(at::getDVRAssignmentMarkers(S), replaceOpForAssignmentMarkers);
 
     S->setAlignment(Alignment);
     if (isa<AtomicMemSetInst>(MI))
@@ -2093,8 +2093,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
     bool IsSigned = IID == Intrinsic::sadd_with_overflow;
-    bool HasNWAdd = IsSigned ? match(Arg0, m_NSWAdd(m_Value(X), m_APInt(C0)))
-                             : match(Arg0, m_NUWAdd(m_Value(X), m_APInt(C0)));
+    bool HasNWAdd = IsSigned
+                        ? match(Arg0, m_NSWAddLike(m_Value(X), m_APInt(C0)))
+                        : match(Arg0, m_NUWAddLike(m_Value(X), m_APInt(C0)));
     if (HasNWAdd && match(Arg1, m_APInt(C1))) {
       bool Overflow;
       APInt NewC =
@@ -2472,6 +2473,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *X;
     if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X))))
       return replaceOperand(*II, 1, X);
+
+    // Clear sign-bit of constant magnitude:
+    // copysign -MagC, X --> copysign MagC, X
+    // TODO: Support constant folding for fabs
+    const APFloat *MagC;
+    if (match(Mag, m_APFloat(MagC)) && MagC->isNegative()) {
+      APFloat PosMagC = *MagC;
+      PosMagC.clearSign();
+      return replaceOperand(*II, 0, ConstantFP::get(Mag->getType(), PosMagC));
+    }
 
     // Peek through changes of magnitude's sign-bit. This call rewrites those:
     // copysign (fabs X), Sign --> copysign X, Sign

@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_DIRENT_H
 #define LLVM_LIBC_TYPES_STRUCT_DIRENT_H
 
-#include <llvm-libc-types/ino_t.h>
-#include <llvm-libc-types/off_t.h>
+#include "llvm-libc-types/ino_t.h"
+#include "llvm-libc-types/off_t.h"
 
 struct dirent {
   ino_t d_ino;
