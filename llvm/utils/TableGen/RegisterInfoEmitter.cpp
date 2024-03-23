@@ -1867,11 +1867,12 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     OS << "SubRegIndex " << SRI.getName() << ":\n";
     OS << "\tLaneMask: " << PrintLaneMask(SRI.LaneMask) << '\n';
     OS << "\tAllSuperRegsCovered: " << SRI.AllSuperRegsCovered << '\n';
-    OS << "\tOffset, Size: {";
-    for (unsigned M = 0; M != NumModes; ++M) {
-      const SubRegRange &Range = SRI.Range.get(M);
-      OS << ' ' << getModeName(M) << ':' << Range.Offset << ", " << Range.Size;
-    }
+    OS << "\tOffset: {";
+    for (unsigned M = 0; M != NumModes; ++M)
+      OS << ' ' << getModeName(M) << ':' << SRI.Range.get(M).Offset;
+    OS << " }\n\tSize: {";
+    for (unsigned M = 0; M != NumModes; ++M)
+      OS << ' ' << getModeName(M) << ':' << SRI.Range.get(M).Size;
     OS << " }\n";
   }
 
