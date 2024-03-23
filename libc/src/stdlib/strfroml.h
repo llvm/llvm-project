@@ -1,4 +1,4 @@
-//===-- Implementation header for strfromf ------------------------*- C++--===//
+//===-- Implementation header for strfroml ------------------------*- C++--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDLIB_STRFROMF_H
-#define LLVM_LIBC_SRC_STDLIB_STRFROMF_H
+#ifndef LLVM_LIBC_SRC_STDLIB_STRFROML_H
+#define LLVM_LIBC_SRC_STDLIB_STRFROML_H
 
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE {
 
-int strfromf(char *__restrict s, size_t n, const char *__restrict format,
-             float fp);
+int strfroml(char *__restrict s, size_t n, const char *__restrict format,
+             long double fp);
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_STDLIB_STRFROMF_H
+#endif // LLVM_LIBC_SRC_STDLIB_STRFROML_H
