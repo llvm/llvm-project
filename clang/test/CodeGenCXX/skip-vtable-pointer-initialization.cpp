@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -emit-llvm -o - | FileCheck %s
 
 // See Test9 for test description.
 // CHECK: @_ZTTN5Test91BE = linkonce_odr unnamed_addr constant
@@ -196,5 +197,67 @@ struct C : virtual B {
   virtual ~C();
 };
 C::~C() {}
+
+}
+
+namespace Test10 {
+
+// Check that we don't initialize the vtable pointer in A::~A(), since the class has an anonymous union which
+// never has its destructor invoked.
+struct A {
+    virtual void f();
+    ~A();
+
+    union
+    {
+        int i;
+        unsigned u;
+    };
+};
+
+// CHECK-LABEL: define{{.*}} void @_ZN6Test101AD2Ev
+// CHECK-NOT: store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN6Test101AE, i32 0, inrange i32 0, i32 2), ptr
+A::~A() {
+}
+
+}
+
+namespace Test11 {
+
+// Check that we don't initialize the vtable pointer in A::~A(), even if the base class has a non trivial destructor.
+struct Field {
+    ~Field();
+};
+
+struct A : public Field {
+    virtual void f();
+    ~A();
+};
+
+// CHECK-LABEL: define{{.*}} void @_ZN6Test111AD2Ev
+// CHECK-NOT: store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN6Test111AE, i32 0, inrange i32 0, i32 2), ptr
+A::~A() {
+}
+
+}
+
+namespace Test12 {
+
+// Check that we don't initialize the vtable pointer in A::~A(), since the class has an anonymous struct with trivial fields.
+struct A {
+    virtual void f();
+    ~A();
+
+    struct
+    {
+        int i;
+        unsigned u;
+    };
+};
+
+// CHECK-LABEL: define{{.*}} void @_ZN6Test121AD2Ev
+// CHECK-NOT: store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN6Test121AE, i32 0, inrange i32 0, i32 2), ptr
+A::~A() {
+}
 
 }
